@@ -355,11 +355,12 @@ async function doRunCommand(options) {
     lintAppAndLocalPackages: !options['no-lint'],
     includePackages: includePackages,
   });
+  await projectContext.init();
 
-  main.captureAndExit("=> Errors while initializing project:", function () {
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we'll wait to do the full build
     // preparation until after we've started listening on the proxy, etc.
-    projectContext.readProjectMetadata();
+    return projectContext.readProjectMetadata();
   });
 
   if (release.explicit) {
@@ -407,15 +408,16 @@ async function doRunCommand(options) {
     }
   }
   webArchs = filterWebArchs(webArchs, options['exclude-archs']);
-  const buildMode = options.production ? 'production' : 'development'
+  const buildMode = options.production ? 'production' : 'development';
 
   let cordovaRunner;
   if (!_.isEmpty(runTargets)) {
 
-    function prepareCordovaProject() {
+    async function prepareCordovaProject() {
       import { CordovaProject } from '../cordova/project.js';
 
-      main.captureAndExit('', 'preparing Cordova project', () => {
+      await main.captureAndExit('', 'preparing Cordova project', () => {
+        // TODO -> Have to change CordovaProject constructor here.
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
@@ -429,12 +431,12 @@ async function doRunCommand(options) {
       });
     }
 
-    ensureDevBundleDependencies();
-    prepareCordovaProject();
+    await ensureDevBundleDependencies();
+    await prepareCordovaProject();
   }
 
   var runAll = require('../runners/run-all.js');
-  return await runAll.run({
+  return runAll.run({
     projectContext: projectContext,
     proxyPort: parsedServerUrl.port,
     proxyHost: parsedServerUrl.hostname,
@@ -465,9 +467,9 @@ async function doRunCommand(options) {
 main.registerCommand(Object.assign(
   { name: 'debug' },
   runCommandOptions
-), async function (options) {
+), function (options) {
   options["inspect-brk"] = options["inspect-brk"] || "9229";
-  return await doRunCommand(options);
+  return doRunCommand(options);
 });
 
 ///////////////////////////////////////////////////////////////////////////////

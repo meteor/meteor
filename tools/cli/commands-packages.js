@@ -103,6 +103,7 @@ main.registerCommand({
     neverWritePackageMap: true,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
+  await projectContext.init();
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.initializeCatalog();
   });
@@ -148,6 +149,7 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
+  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.prepareProjectForBuild();
@@ -300,6 +302,8 @@ main.registerCommand({
       lintPackageWithSourceRoot: options['no-lint'] ? null : options.packageDir,
     });
   }
+
+  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     // Just get up to initializing the catalog. We're going to mutate the

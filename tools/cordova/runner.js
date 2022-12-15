@@ -69,11 +69,12 @@ export class CordovaRunner {
     }
   }
 
-  prepareProject(bundlePath, pluginVersions, options) {
+  async prepareProject(bundlePath, pluginVersions, options) {
     buildmessage.assertInCapture();
 
-    buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
-      this.cordovaProject.prepareFromAppBundle(bundlePath,
+    await buildmessage.enterJob({ title: "preparing Cordova project" }, async () => {
+      // TODO -> Cordova Setup
+      await this.cordovaProject.prepareFromAppBundle(bundlePath,
         pluginVersions, options);
 
       if (buildmessage.jobHasMessages()) {
@@ -81,7 +82,7 @@ export class CordovaRunner {
       }
 
       for (let platform of this.platformsForRunTargets) {
-        this.cordovaProject.prepareForPlatform(platform, options);
+        await this.cordovaProject.prepareForPlatform(platform, options);
       }
     });
 

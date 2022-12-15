@@ -116,185 +116,180 @@ var findMongoPids;
 if (process.platform === 'win32') {
   // Windows doesn't have a ps equivalent that (reliably) includes the command
   // line, so approximate using the combined output of tasklist and netstat.
-  findMongoPids = function(dbDir_unused, port) {
-    return new Promise((resolve, reject) => {
+  findMongoPids = async function(dbDir_unused, port) {
+    var promise = fiberHelpers.makeFulfillablePromise();
 
-      child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"', function(
-        error,
-        stdout,
-        stderr
-      ) {
-        if (error) {
-          var additionalInfo = JSON.stringify(error);
-          if (error.code === 'ENOENT') {
-            additionalInfo =
-              "tasklist wasn't found on your system, it usually can be found at C:\\Windows\\System32\\.";
-          }
-          reject(
-            new Error("Couldn't run tasklist.exe: " + additionalInfo)
-          );
-          return;
-        } else {
-          // Find the pids of all mongod processes
-          var mongo_pids = [];
-          stdout.split('\n')
-            .forEach(function(line) {
-              var m = line.match(/^mongod.exe\s+(\d+) /);
-              if (m) {
-                mongo_pids[m[1]] = true;
-              }
-            });
-
-          // Now get the corresponding port numbers
-          child_process.exec(
-            'netstat -ano',
-            { maxBuffer: 1024 * 1024 * 10 },
-            function(error, stdout, stderr) {
-              if (error) {
-                promise.reject(
-                  new Error("Couldn't run netstat -ano: " + JSON.stringify(error))
-                );
-                return;
-              } else {
-                var pids = [];
-                stdout.split('\n')
-                  .forEach(function(line) {
-                    var m = line.match(
-                      /^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/
-                    );
-                    if (m) {
-                      var found_pid = parseInt(m[2], 10);
-                      var found_port = parseInt(m[1], 10);
-
-                      // We can't check the path app_dir so assume it always matches
-                      if (mongo_pids[found_pid] && (!port || port === found_port)) {
-                        // Note that if the mongo rest interface is enabled the
-                        // initial port + 1000 is also likely to be open.
-                        // So remove the pid so we only match it once.
-                        delete mongo_pids[found_pid];
-                        pids.push({
-                          pid: found_pid,
-                          port: found_port,
-                          app_dir: null,
-                        });
-                      }
-                    }
-                  });
-
-                resolve(pids);
-              }
-            }
-          );
+    child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"', function(
+      error,
+      stdout,
+      stderr
+    ) {
+      if (error) {
+        var additionalInfo = JSON.stringify(error);
+        if (error.code === 'ENOENT') {
+          additionalInfo =
+            "tasklist wasn't found on your system, it usually can be found at C:\\Windows\\System32\\.";
         }
-      });
+        promise.reject(
+          new Error("Couldn't run tasklist.exe: " + additionalInfo)
+        );
+        return;
+      } else {
+        // Find the pids of all mongod processes
+        var mongo_pids = [];
+        stdout.split('\n').forEach(function(line) {
+          var m = line.match(/^mongod.exe\s+(\d+) /);
+          if (m) {
+            mongo_pids[m[1]] = true;
+          }
+        });
+
+        // Now get the corresponding port numbers
+        child_process.exec(
+          'netstat -ano',
+          { maxBuffer: 1024 * 1024 * 10 },
+          function(error, stdout, stderr) {
+            if (error) {
+              promise.reject(
+                new Error("Couldn't run netstat -ano: " + JSON.stringify(error))
+              );
+              return;
+            } else {
+              var pids = [];
+              stdout.split('\n').forEach(function(line) {
+                var m = line.match(
+                  /^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/
+                );
+                if (m) {
+                  var found_pid = parseInt(m[2], 10);
+                  var found_port = parseInt(m[1], 10);
+
+                  // We can't check the path app_dir so assume it always matches
+                  if (mongo_pids[found_pid] && (!port || port === found_port)) {
+                    // Note that if the mongo rest interface is enabled the
+                    // initial port + 1000 is also likely to be open.
+                    // So remove the pid so we only match it once.
+                    delete mongo_pids[found_pid];
+                    pids.push({
+                      pid: found_pid,
+                      port: found_port,
+                      app_dir: null,
+                    });
+                  }
+                }
+              });
+
+              promise.resolve(pids);
+            }
+          }
+        );
+      }
     });
+
+    return await promise;
   };
 } else {
-  findMongoPids = function(dbDir, port) {
-    return new Promise((resolve, reject) => {
+  findMongoPids = async function(dbDir, port) {
+    var promise = fiberHelpers.makeFulfillablePromise();
 
-      // 'ps ax' should be standard across all MacOS and Linux.
-      // However, ps on OS X corrupts some non-ASCII characters in arguments,
-      // such as т (CYRILLIC SMALL LETTER TE), leading to this function
-      // failing to properly match pathnames with those characters.  #3999
-      //
-      // pgrep appears to do a better job (and has output that is roughly
-      // similar; it lacks a few fields that we don't care about).  Plus,
-      // it can do some of the grepping for us.
-      //
-      // However, 'pgrep' only started shipping with OS X 10.8 (and may be less
-      // common on Linux too), so we check to see if it exists and fall back to
-      // 'ps' if we can't find it.
-      //
-      // We avoid using pgrep on Linux, because some versions of Linux pgrep
-      // require you to pass -a/--list-full to include the arguments in the
-      // output, and other versions fail if you pass that option. We have not
-      // observed the Unicode corruption on Linux, so using ps ax there is fine.
-      var psScript = 'ps ax';
-      if (process.platform === 'darwin') {
-        psScript =
-          'if type pgrep >/dev/null 2>&1; then ' +
-          // -lf means to display and match against full argument lists.
-          // pgrep exits 1 if no processes match the argument; we're OK
-          // considering this as a success, but we don't want other errors
-          // to be ignored.  Note that this is sh not bash, so we can't use
-          // [[.
-          'pgrep -lf mongod; test "$?" -eq 0 -o "$?" -eq 1;' +
-          'else ps ax; fi';
-      }
+    // 'ps ax' should be standard across all MacOS and Linux.
+    // However, ps on OS X corrupts some non-ASCII characters in arguments,
+    // such as т (CYRILLIC SMALL LETTER TE), leading to this function
+    // failing to properly match pathnames with those characters.  #3999
+    //
+    // pgrep appears to do a better job (and has output that is roughly
+    // similar; it lacks a few fields that we don't care about).  Plus,
+    // it can do some of the grepping for us.
+    //
+    // However, 'pgrep' only started shipping with OS X 10.8 (and may be less
+    // common on Linux too), so we check to see if it exists and fall back to
+    // 'ps' if we can't find it.
+    //
+    // We avoid using pgrep on Linux, because some versions of Linux pgrep
+    // require you to pass -a/--list-full to include the arguments in the
+    // output, and other versions fail if you pass that option. We have not
+    // observed the Unicode corruption on Linux, so using ps ax there is fine.
+    var psScript = 'ps ax';
+    if (process.platform === 'darwin') {
+      psScript =
+        'if type pgrep >/dev/null 2>&1; then ' +
+        // -lf means to display and match against full argument lists.
+        // pgrep exits 1 if no processes match the argument; we're OK
+        // considering this as a success, but we don't want other errors
+        // to be ignored.  Note that this is sh not bash, so we can't use
+        // [[.
+        'pgrep -lf mongod; test "$?" -eq 0 -o "$?" -eq 1;' +
+        'else ps ax; fi';
+    }
 
-      // If the child process output includes unicode, make sure it's
-      // handled properly.
-      const {
-        LANG = 'en_US.UTF-8',
-        LC_ALL = LANG,
-        LANGUAGE = LANG,
-        // Remainder of process.env without above properties.
-        ...env
-      } = process.env;
+    // If the child process output includes unicode, make sure it's
+    // handled properly.
+    const {
+      LANG = 'en_US.UTF-8',
+      LC_ALL = LANG,
+      LANGUAGE = LANG,
+      // Remainder of process.env without above properties.
+      ...env
+    } = process.env;
 
-      // Make sure all three properties are set to the same value, which
-      // defaults to "en_US.UTF-8" or whatever LANG was already set to.
-      Object.assign(env, {
-        LANG,
-        LC_ALL,
-        LANGUAGE
-      });
+    // Make sure all three properties are set to the same value, which
+    // defaults to "en_US.UTF-8" or whatever LANG was already set to.
+    Object.assign(env, { LANG, LC_ALL, LANGUAGE });
 
-      child_process.exec(
-        psScript,
-        {
-          env,
-          // we don't want this to randomly fail just because you're running
-          // lots of processes. 10MB should be more than ps ax will ever
-          // spit out; the default is 200K, which at least one person hit
-          // (#2158).
-          maxBuffer: 1024 * 1024 * 10,
-        },
-        function(error, stdout, stderr) {
-          if (error) {
-            reject(
-              new Error(
-                "Couldn't run ps ax: " +
+    child_process.exec(
+      psScript,
+      {
+        env,
+        // we don't want this to randomly fail just because you're running
+        // lots of processes. 10MB should be more than ps ax will ever
+        // spit out; the default is 200K, which at least one person hit
+        // (#2158).
+        maxBuffer: 1024 * 1024 * 10,
+      },
+      function(error, stdout, stderr) {
+        if (error) {
+          promise.reject(
+            new Error(
+              "Couldn't run ps ax: " +
                 JSON.stringify(error) +
                 '; ' +
                 error.message
-              )
-            );
-            return;
-          }
-
-          var ret = [];
-          stdout.split('\n')
-            .forEach(function(line) {
-              // Matches mongos we start. Note that this matches
-              // 'fake-mongod' (our mongod stub for automated tests) as well
-              // as 'mongod'.
-              var m = line.match(
-                /^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+(?:\/|\\)db)/
-              );
-              if (m && m.length === 4) {
-                var foundPid = parseInt(m[1], 10);
-                var foundPort = parseInt(m[2], 10);
-                var foundPath = m[3];
-
-                if (
-                  (!port || port === foundPort) &&
-                  (!dbDir || dbDir === foundPath)
-                ) {
-                  ret.push({
-                    pid: foundPid,
-                    port: foundPort,
-                    dbDir: foundPath,
-                  });
-                }
-              }
-            });
-
-          resolve(ret);
+            )
+          );
+          return;
         }
-      );
-    });
+
+        var ret = [];
+        stdout.split('\n').forEach(function(line) {
+          // Matches mongos we start. Note that this matches
+          // 'fake-mongod' (our mongod stub for automated tests) as well
+          // as 'mongod'.
+          var m = line.match(
+            /^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+(?:\/|\\)db)/
+          );
+          if (m && m.length === 4) {
+            var foundPid = parseInt(m[1], 10);
+            var foundPort = parseInt(m[2], 10);
+            var foundPath = m[3];
+
+            if (
+              (!port || port === foundPort) &&
+              (!dbDir || dbDir === foundPath)
+            ) {
+              ret.push({
+                pid: foundPid,
+                port: foundPort,
+                dbDir: foundPath,
+              });
+            }
+          }
+        });
+
+        promise.resolve(ret);
+      }
+    );
+
+    return await promise;
   };
 }
 
@@ -366,41 +361,42 @@ if (process.platform === 'win32') {
 //
 // This is a big hammer for dealing with still running mongos, but
 // smaller hammers have failed before and it is getting tiresome.
-var findMongoAndKillItDead = function(port, dbPath) {
-  var pids = findMongoPids(null, port);
+var findMongoAndKillItDead = async function(port, dbPath) {
+  var pids = await findMongoPids(null, port);
 
   // Go through the list serially. There really should only ever be
   // at most one but we're not taking any chances.
-  _.each(pids, function(processInfo) {
-    var pid = processInfo.pid;
+  pidsLoop:
+    for (const processInfo of pids) {
+      var pid = processInfo.pid;
 
-    // Send kill attempts and wait. First a SIGINT, then if it isn't
-    // dead within 2 sec, SIGKILL. Check every 100ms to see if it's
-    // dead.
-    for (var attempts = 1; attempts <= 40; attempts++) {
-      var signal = 0;
-      if (attempts === 1) {
-        signal = 'SIGINT';
-      } else if (attempts === 20 || attempts === 30) {
-        signal = 'SIGKILL';
+      // Send kill attempts and wait. First a SIGINT, then if it isn't
+      // dead within 2 sec, SIGKILL. Check every 100ms to see if it's
+      // dead.
+      for (var attempts = 1; attempts <= 40; attempts++) {
+        var signal = 0;
+        if (attempts === 1) {
+          signal = 'SIGINT';
+        } else if (attempts === 20 || attempts === 30) {
+          signal = 'SIGKILL';
+        }
+
+        try {
+          process.kill(pid, signal);
+        } catch (e) {
+          // it's dead. on to the next one
+          break pidsLoop;
+        }
+
+        await utils.sleepMs(100);
       }
 
-      try {
-        process.kill(pid, signal);
-      } catch (e) {
-        // it's dead. on to the next one
-        return;
-      }
-
-      utils.sleepMs(100);
+      // give up after 4 seconds.
+      // XXX should actually catch this higher up and print a nice
+      // error. foreseeable conditions should never result in exceptions
+      // for the user.
+      throw new Error("Can't kill running mongo (pid " + pid + ').');
     }
-
-    // give up after 4 seconds.
-    // XXX should actually catch this higher up and print a nice
-    // error. foreseeable conditions should never result in exceptions
-    // for the user.
-    throw new Error("Can't kill running mongo (pid " + pid + ').');
-  });
 
   // If we had to kill mongod with SIGKILL, or on Windows where all calls to
   // `process.kill` work like SIGKILL, mongod will not have the opportunity to
@@ -427,7 +423,7 @@ var StoppedDuringLaunch = function() {};
 // are killed (and onExit is then invoked). Also, the entirety of all three
 // databases is deleted before starting up.  This is mode intended for testing
 // mongo failover, not for normal development or production use.
-var launchMongo = function(options) {
+var launchMongo = async function(options) {
   var onExit = options.onExit || function() {};
 
   var noOplog = false;
@@ -483,18 +479,18 @@ var launchMongo = function(options) {
     };
   });
 
-  var yieldingMethod = function(object, methodName, ...args) {
-    return Promise.race([
+  var yieldingMethod = async function(object, methodName, ...args) {
+    return await Promise.race([
       stopPromise,
       new Promise((resolve, reject) => {
         object[methodName](...args, (err, res) => {
           err ? reject(err) : resolve(res);
         });
       }),
-    ]).await();
+    ]);
   };
 
-  var launchOneMongoAndWaitForReadyForInitiate = function(
+  var launchOneMongoAndWaitForReadyForInitiate = async function(
     dbPath,
     port,
     portFile
@@ -504,13 +500,13 @@ var launchMongo = function(options) {
     var proc = null;
 
     if (options.allowKilling) {
-      findMongoAndKillItDead(port, dbPath);
+      await findMongoAndKillItDead(port, dbPath);
     }
 
     if (options.multiple) {
       // This is only for testing, so we're OK with incurring the replset
       // setup on each startup.
-      files.rm_recursive(dbPath);
+      await files.rm_recursive(dbPath);
       files.mkdir_p(dbPath, 0o755);
     } else if (portFile) {
       var portFileExists = false;
@@ -574,17 +570,17 @@ var launchMongo = function(options) {
     require('../tool-env/cleanup.js').onExit(stop);
     subHandles.push({ stop });
 
-    var procExitHandler = fiberHelpers.bindEnvironment(function(code, signal) {
+    var procExitHandler = await fiberHelpers.bindEnvironment(async function(code, signal) {
       // Defang subHandle.stop().
       proc = null;
 
       // Kill any other processes too. This will also remove
       // procExitHandler from the other processes, so onExit will only be called
       // once.
-      handle.stop();
+      await handle.stop();
 
       // Invoke the outer onExit callback.
-      onExit(code, signal, stderrOutput, detectedErrors);
+      await onExit(code, signal, stderrOutput, detectedErrors);
     });
     proc.on('exit', procExitHandler);
 
@@ -678,15 +674,15 @@ var launchMongo = function(options) {
       stderrOutput += data;
     });
 
-    stopOrReadyPromise.await();
+    await stopOrReadyPromise;
   };
 
-  var initiateReplSetAndWaitForReady = function () {
+  var initiateReplSetAndWaitForReady = async function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      const {MongoClient} = loadIsopackage(
+      const {MongoClient} = (await loadIsopackage(
           'npm-mongo'
-      ).NpmModuleMongodb;
+      )).NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
       const client = new MongoClient(
@@ -712,9 +708,9 @@ var launchMongo = function(options) {
       };
 
       try {
-        const config = yieldingMethod(db.admin(), 'command', {
+        const config = (await yieldingMethod(db.admin(), 'command', {
           replSetGetConfig: 1,
-        }).config;
+        })).config;
 
         // If a replication set configuration already exists, it's
         // important that the new version number is greater than the old.
@@ -740,12 +736,12 @@ var launchMongo = function(options) {
       }
 
       try {
-        yieldingMethod(db.admin(), 'command', {
+        await yieldingMethod(db.admin(), 'command', {
           replSetInitiate: configuration,
         });
       } catch (e) {
         if (e.message === 'already initialized') {
-          yieldingMethod(db.admin(), 'command', {
+          await yieldingMethod(db.admin(), 'command', {
             replSetReconfig: configuration,
             force: true,
           });
@@ -763,7 +759,7 @@ var launchMongo = function(options) {
       // Wait until the primary is writable. If it isn't writable after one
       // minute, throw an error and report the replica set status.
       while (!stopped) {
-        const {ismaster} = yieldingMethod(db.admin(), 'command', {
+        const {ismaster} = await yieldingMethod(db.admin(), 'command', {
           isMaster: 1,
         });
 
@@ -773,13 +769,13 @@ var launchMongo = function(options) {
           // We are explicitly setting it to 1 when there is only 1 node, as we do simulate replica sets with only 1 node
           // when running locally or in test environments.
           // ref: https://docs.mongodb.com/manual/reference/write-concern/#mongodb-writeconcern-writeconcern.-majority-
-          yieldingMethod(db.admin(), 'command', {
+          await yieldingMethod(db.admin(), 'command', {
             setDefaultRWConcern: 1,
             ...( options.multiple ? {} : {defaultWriteConcern: {w: 1}})
           });
           break;
         } else if (Date.now() - writableTimestamp > 60000) {
-          const status = yieldingMethod(db.admin(), 'command', {
+          const status = await yieldingMethod(db.admin(), 'command', {
             replSetGetStatus: 1,
           });
 
@@ -789,7 +785,7 @@ var launchMongo = function(options) {
           );
         }
 
-        utils.sleepMs(50);
+        await utils.sleepMs(50);
       }
 
       client.close(true /* means "the app is closing the connection" */);
@@ -805,24 +801,27 @@ var launchMongo = function(options) {
   try {
     if (options.multiple) {
       var dbBasePath = files.pathJoin(options.projectLocalDir, 'dbs');
-      _.each(_.range(3), function(i) {
+      let i = 2;
+      while (i >= 0) {
         // Did we get stopped (eg, by one of the processes exiting) by now? Then
         // don't start anything new.
         if (stopped) {
           return;
         }
         var dbPath = files.pathJoin(options.projectLocalDir, 'dbs', '' + i);
-        launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
-      });
+        await launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
+        i--;
+      }
+
       if (!stopped) {
-        initiateReplSetAndWaitForReady();
+        await initiateReplSetAndWaitForReady();
       }
     } else {
       var dbPath = files.pathJoin(options.projectLocalDir, 'db');
       var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
-      launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
+      await launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
       if (!stopped && !noOplog) {
-        initiateReplSetAndWaitForReady();
+        await initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.
           files.writeFile(portFile, '' + options.port);
@@ -874,14 +873,14 @@ Object.assign(MRp, {
   //
   // If the server fails to start for the first time (after a few
   // restarts), we'll print a message and give up.
-  start: function() {
+  start: async function() {
     var self = this;
 
     if (self.handle) {
       throw new Error('already running?');
     }
 
-    self._startOrRestart();
+    await self._startOrRestart();
 
     // Did we properly start up? Great!
     if (self.handle) {
@@ -895,9 +894,9 @@ Object.assign(MRp, {
 
     // Otherwise, wait for a successful _startOrRestart, or a failure.
     if (!self.resolveStartupPromise) {
-      new Promise(function(resolve) {
+      await new Promise(function(resolve) {
         self.resolveStartupPromise = resolve;
-      }).await();
+      });
     }
   },
 
@@ -912,7 +911,7 @@ Object.assign(MRp, {
   //
   // In case (a), self.handle will be the handle returned from launchMongo; in
   // case (b) self.handle will be null.
-  _startOrRestart: function() {
+  _startOrRestart: async function() {
     var self = this;
 
     if (self.handle) {
@@ -926,7 +925,7 @@ Object.assign(MRp, {
       // shouldn't annoy the user by telling it that we couldn't start up.
       self.suppressExitMessage = true;
     }
-    self.handle = launchMongo({
+    self.handle = await launchMongo({
       projectLocalDir: self.projectLocalDir,
       port: self.port,
       multiple: self.multiple,
@@ -945,7 +944,7 @@ Object.assign(MRp, {
     }
   },
 
-  _exited: function(code, signal, stderr, detectedErrors) {
+  _exited: async function(code, signal, stderr, detectedErrors) {
     var self = this;
 
     self.handle = null;
@@ -996,10 +995,10 @@ Object.assign(MRp, {
 
     if (self.errorCount < 3) {
       // Wait a second, then restart.
-      self.restartTimer = setTimeout(
-        fiberHelpers.bindEnvironment(function() {
+      self.restartTimer = await setTimeout(
+        fiberHelpers.bindEnvironment(async function() {
           self.restartTimer = null;
-          self._startOrRestart();
+          await self._startOrRestart();
         }),
         1000
       );

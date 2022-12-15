@@ -20,7 +20,7 @@ var packageMapModule = require('./package-map.js');
  * options: showBanner
  */
 var checkInProgress = false;
-exports.tryToDownloadUpdate = function (options) {
+exports.tryToDownloadUpdate = async function (options) {
   options = options || {};
   // Don't run more than one check simultaneously. It should be
   // harmless but having two downloads happening simultaneously (and
@@ -29,16 +29,16 @@ exports.tryToDownloadUpdate = function (options) {
     return;
   }
   checkInProgress = true;
-  checkForUpdate(!! options.showBanner, !! options.printErrors);
+  await checkForUpdate(!! options.showBanner, !! options.printErrors);
   checkInProgress = false;
 };
 
 var firstCheck = true;
 
-var checkForUpdate = function (showBanner, printErrors) {
+var checkForUpdate = async function (showBanner, printErrors) {
   // While we're doing background stuff, try to revoke any old tokens in our
   // session file.
-  auth.tryRevokeOldTokens({ timeout: 15 * 1000 });
+  await auth.tryRevokeOldTokens({ timeout: 15 * 1000 });
 
   if (firstCheck) {
     // We want to avoid a potential race condition here, because we run an
@@ -50,7 +50,7 @@ var checkForUpdate = function (showBanner, printErrors) {
     firstCheck = false;
   } else {
     try {
-      catalog.official.refresh();
+      await catalog.official.refresh();
     } catch (err) {
       Console.debug("Failed to refresh catalog, ignoring error", err);
       return;

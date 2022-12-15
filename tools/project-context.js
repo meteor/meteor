@@ -318,8 +318,8 @@ Object.assign(ProjectContext.prototype, {
     // because all we do here is read a handful of files.
     return this._completeStagesThrough(STAGE.READ_PROJECT_METADATA);
   },
-  initializeCatalog: async function () {
-    return await Profile.run('ProjectContext initializeCatalog', () => {
+  initializeCatalog: function () {
+    return Profile.run('ProjectContext initializeCatalog', () => {
       return this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
     });
   },
@@ -333,21 +333,21 @@ Object.assign(ProjectContext.prototype, {
       return this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
     });
   },
-  buildLocalPackages: async function () {
+  buildLocalPackages: function () {
     return Profile.run('ProjectContext buildLocalPackages', () => {
       return this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
     });
   },
-  saveChangedMetadata: async function () {
-    return await Profile.run('ProjectContext saveChangedMetadata', async () => {
-      return await this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+  saveChangedMetadata: function () {
+    return Profile.run('ProjectContext saveChangedMetadata', () => {
+      return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },
-  prepareProjectForBuild: async function () {
+  prepareProjectForBuild: function () {
     // This is the same as saveChangedMetadata, but if we insert stages after
     // that one it will continue to mean "fully finished".
-    return await Profile.run('ProjectContext prepareProjectForBuild', async () => {
-      return await this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    return Profile.run('ProjectContext prepareProjectForBuild', () => {
+      return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },
 
@@ -620,6 +620,7 @@ Object.assign(ProjectContext.prototype, {
         resolverRunCount++;
 
         var solution;
+        debugger;
         try {
           await Profile.time(
             "Select Package Versions" +
@@ -962,8 +963,8 @@ Object.assign(ProjectContext.prototype, {
           ? null : self._forceRebuildPackages);
     }
 
-    await buildmessage.enterJob('building local packages', async function () {
-      await self.isopackCache.buildLocalPackages();
+    await buildmessage.enterJob('building local packages', function () {
+      return self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
   }),

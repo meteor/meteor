@@ -111,7 +111,7 @@ Object.assign(ServiceConnection.prototype, {
     return this.apply(name, args);
   },
 
-  apply: function (...args) {
+  apply: async function (...args) {
     var self = this;
 
     if (self.currentPromise) {
@@ -136,7 +136,7 @@ Object.assign(ServiceConnection.prototype, {
 
     self.connection.apply(...args);
 
-    return self.currentPromise.await();
+    return await self.currentPromise;
   },
 
   // XXX derived from _subscribeAndWait in ddp_connection.js

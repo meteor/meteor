@@ -1,4 +1,4 @@
-var { asyncLocalStorage } = require('../utils/fiber-helpers');
+var Fiber = require('fibers');
 var files = require('../fs/files');
 var runLog = require('./run-log.js');
 var utils = require('../utils/utils.js');
@@ -69,13 +69,13 @@ Object.assign(Selenium.prototype, {
     Promise.await(self.driver.getSession());
     Promise.await(self.driver.get(self.url));
 
-    asyncLocalStorage.run({}, function () {
+    Fiber(function () {
       try {
         self._pollLogs();
       } catch (err) {
         runLog.log("Log polling exited unexpectedly: " + err);
       }
-    });
+    }).run();
   },
 
   stop: function () {

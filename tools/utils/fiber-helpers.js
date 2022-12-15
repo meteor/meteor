@@ -98,7 +98,7 @@ Object.assign(exports.EnvironmentVariable.prototype, {
 // Experimentally, we are NOT including onException or _this in this version.
 exports.bindEnvironment = function (func) {
   var dynamics = getValueFromAslStore("_meteor_dynamics");
-  var boundValues = _.clone(dynamics || {});
+  var boundValues = Array.isArray(dynamics) ? dynamics.slice() : [];
 
   return function (...args) {
     const self = this;
@@ -112,6 +112,8 @@ exports.bindEnvironment = function (func) {
         // TODO -> Probably not needed
         updateAslStore("_meteor_dynamics", boundValues.slice());
         ret = await func.apply(self, args);
+      } catch (e) {
+        console.error(e);
       } finally {
         updateAslStore("_meteor_dynamics", savedValues);
       }
