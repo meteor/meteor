@@ -13,7 +13,7 @@
 ///
 /// Sometimes, there is a phrase that shouldn't be split up over multiple
 /// lines (for example, 'meteor update'). When applicable, please use the
-/// following functions (Some of them add aditional formatting, especially when
+/// following functions (Some of them add additional formatting, especially when
 /// pretty-print is turned on):
 ///
 ///    - Console.command: things to enter on the command-line, such as
@@ -715,7 +715,7 @@ class Console extends ConsoleBase {
   // Passing in both options will offset the bulletPoint by the indentation,
   // like so:
   //  "  this message is indented by two."
-  //  "  => this mesage indented by two and
+  //  "  => this message indented by two and
   //        and also starts with an arrow."
   //
   options(o) {
@@ -1321,4 +1321,19 @@ class Console extends ConsoleBase {
   }
 }
 
+const yellow  = (text) => `\x1b[33m${ text }\x1b[0m`;
+const red = (text) => `\x1b[31m${ text }\x1b[0m`;
+const purple = (text) => `\x1b[35m${ text }\x1b[0m`;
+const green = (text) => `\x1b[32m${ text }\x1b[0m`;
+const blue = (text) => `\x1b[34m${ text }\x1b[0m`;
+
+const colors = {
+  yellow,
+  red,
+  purple,
+  green,
+  blue,
+};
+
+exports.colors = colors;
 exports.Console = new Console;

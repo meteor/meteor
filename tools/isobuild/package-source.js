@@ -506,7 +506,7 @@ Object.assign(PackageSource.prototype, {
     var initFromPackageDirOptions = options;
 
     // If we know what package we are initializing, we pass in a
-    // name. Otherwise, we are intializing the base package specified by 'name:'
+    // name. Otherwise, we are initializing the base package specified by 'name:'
     // field in Package.Describe. In that case, it is clearly not a test
     // package. (Though we could be initializing a specific package without it
     // being a test, for a variety of reasons).
@@ -1420,7 +1420,7 @@ Object.assign(PackageSource.prototype, {
           // subdirectories, so that we know whether we need to descend
           // further. If sources is still empty after we handle everything
           // else in dir, then nothing in this node_modules subdir can be
-          // imported by anthing outside of it, so we can ignore it.
+          // imported by anything outside of it, so we can ignore it.
           nodeModulesDir = subdir;
 
           // A "local" node_modules directory is one that's managed by the

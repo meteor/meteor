@@ -297,7 +297,7 @@ export function findAssignedGlobals(source, hash) {
   programScope.implicit.left.forEach(entry => {
     if (entry.identifier &&
         entry.identifier.type === "Identifier" &&
-        // Only consider identifers that are assigned a value.
+        // Only consider identifiers that are assigned a value.
         entry.writeExpr) {
       assignedGlobals[entry.identifier.name] = true;
     }

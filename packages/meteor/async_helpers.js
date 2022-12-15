@@ -33,36 +33,22 @@ class AsynchronousQueue {
     this._draining = false;
   }
 
-  queueTask(task) {
+  async queueTask(task) {
     this._taskHandles.push({
       task: task,
       name: task.name
     });
-    return this._scheduleRun();
+    await this._scheduleRun();
   }
 
-  _scheduleRun() {
+  async _scheduleRun() {
     // Already running or scheduled? Do nothing.
     if (this._runningOrRunScheduled)
       return;
 
     this._runningOrRunScheduled = true;
 
-    let resolver;
-    const returnValue = new Promise(r => resolver = r);
-    setImmediate(() => {
-      Meteor._runAsync(async () => {
-        await this._run();
-
-        if (!resolver) {
-          throw new Error("Resolver not found for task");
-        }
-
-        resolver();
-      });
-    });
-
-    return returnValue;
+    await this._run();
   }
 
   async _run() {
@@ -89,7 +75,7 @@ class AsynchronousQueue {
     await this._scheduleRun();
   }
 
-  runTask(task) {
+  async runTask(task) {
     const handle = {
       task: Meteor.bindEnvironment(task, function(e) {
         Meteor._debug('Exception from task', e);
@@ -98,7 +84,7 @@ class AsynchronousQueue {
       name: task.name
     };
     this._taskHandles.push(handle);
-    return this._scheduleRun();
+    await this._scheduleRun();
   }
 
   flush() {

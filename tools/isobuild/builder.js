@@ -63,7 +63,7 @@ export default class Builder {
     outputPath,
     previousBuilder,
     // Even though in-place builds are disabled by default on some
-    // platforms (Windows), they can be forcibly reenabled with this
+    // platforms (Windows), they can be forcibly re-enabled with this
     // option, in cases where it's safe and/or necessary to avoid
     // clobbering existing files.
     forceInPlaceBuild = false,

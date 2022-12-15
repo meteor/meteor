@@ -127,7 +127,7 @@ export default class Resolver {
 
   // Resolve the given module identifier to an object { path, stat } or
   // null, relative to an absolute parent path. The _seenDirPaths
-  // parameter is for internal use only and should be ommitted.
+  // parameter is for internal use only and should be omitted.
   public resolve(
     id: string,
     absParentPath: string,

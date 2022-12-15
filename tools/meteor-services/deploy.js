@@ -488,7 +488,7 @@ export async function bundleAndDeploy(options) {
   let preflightPassword = null;
 
   if (options.isBuildOnly) {
-    Console.info('Skipping pre authentication as the option --build-only was provded.');
+    Console.info('Skipping pre authentication as the option --build-only was provided.');
   } else {
     site = options.site && canonicalizeSite(options.site)
     if (! site) {
