@@ -72,7 +72,7 @@ SQp.flush = function () {
   self.runTask(function () {});
 };
 
-SQp.drain = function () {
+SQp.drain = async function () {
   var self = this;
   if (!self.safeToRunTask()) {
     return;

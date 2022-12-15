@@ -207,7 +207,7 @@ if (Meteor.isServer) {
 
       logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad"}]);
       await logger.expectNoResult();
-      handle.stop();
+      await handle.stop();
     });
   });
 }

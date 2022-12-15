@@ -957,9 +957,9 @@ _.extend(OplogObserveDriver.prototype, {
       await handle.stop();
     }
   },
-  stop: function() {
+  stop: async function() {
     const self = this;
-    return self._stop();
+    return await self._stop();
   },
 
   _registerPhaseChange: function (phase) {

@@ -434,8 +434,8 @@ Object.assign(Mongo.Collection, {
     // possibly calling _publishCursor on multiple returned cursors.
 
     // register stop callback (expects lambda w/ no args).
-    sub.onStop(function() {
-      return observeHandle.stop();
+    sub.onStop(async function() {
+      return await observeHandle.stop();
     });
 
     // return the observeHandle in case it needs to be stopped early
@@ -558,7 +558,8 @@ Object.assign(Mongo.Collection.prototype, {
     );
 
     if (this._isRemoteCollection()) {
-      const result = this._callMutatorMethod('insert', [doc], wrappedCallback);
+      const result = this._callMutatorMethodAsync('insert', [doc], wrappedCallback);
+
       return chooseReturnValueFromCollectionResult(result);
     }
 
@@ -648,7 +649,7 @@ Object.assign(Mongo.Collection.prototype, {
     if (this._isRemoteCollection()) {
       const args = [selector, modifier, options];
 
-      return this._callMutatorMethod('update', args, wrappedCallback);
+      return this._callMutatorMethodAsync('update', args);
     }
 
     // it's my collection.  descend into the collection object
@@ -687,7 +688,7 @@ Object.assign(Mongo.Collection.prototype, {
     const wrappedCallback = wrapCallback(callback);
 
     if (this._isRemoteCollection()) {
-      return this._callMutatorMethod('remove', [selector], wrappedCallback);
+      return this._callMutatorMethodAsync('remove', [selector]);
     }
 
     // it's my collection.  descend into the collection1 object

@@ -46,9 +46,9 @@ CallbackLogger.prototype._yield = function (arg) {
   return y;
 };
 
-CallbackLogger.prototype.expectResult = function (callbackName, args) {
+CallbackLogger.prototype.expectResult = async function (callbackName, args) {
   var self = this;
-  self._waitForLengthOrTimeout(1);
+  await self._waitForLengthOrTimeout(3);
   if (_.isEmpty(self._log)) {
     self._test.fail(["Expected callback " + callbackName + " got none"]);
     return;
@@ -64,21 +64,8 @@ CallbackLogger.prototype.expectResultOnly = function (callbackName, args) {
   self._expectNoResultImpl();
 }
 
-CallbackLogger.prototype._waitForLengthOrTimeout = function (len) {
-  var self = this;
-  if (self.fiber) {
-    var timeLeft = TIMEOUT;
-    var startTime = new Date();
-    var handle = setTimeout(function () {
-      self.fiber.run(handle);
-    }, TIMEOUT);
-    while (self._log.length < len) {
-      if (self._yield() === handle) {
-        break;
-      }
-    }
-    clearTimeout(handle);
-  }
+CallbackLogger.prototype._waitForLengthOrTimeout = async function (len) {
+  return new Promise(resolve => setTimeout(() => resolve(), len));
 };
 
 CallbackLogger.prototype.expectResultUnordered = function (list) {

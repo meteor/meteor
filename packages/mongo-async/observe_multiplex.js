@@ -116,10 +116,10 @@ ObserveMultiplexer = class {
   // observeChanges calls) to throw the error.
   async queryError(err) {
     var self = this;
-    await this._queue.runTask(function () {
+    await this._queue.runTask(async function () {
       if (self._ready())
         throw Error("can't claim query has an error after it worked!");
-      self._stop({fromQueryError: true});
+      await self._stop({fromQueryError: true});
       throw err;
     });
   }
@@ -189,6 +189,8 @@ ObserveMultiplexer = class {
       return;
     // note: docs may be an _IdMap or an OrderedDict
     await this._cache.docs.forEachAsync(async (doc, id) => {
+      //TODO FIXME
+      if (!this._handles) console.log({this:this});
       if (!_.has(this._handles, handle._id))
         throw Error("handle got removed before sending initial adds!");
       const { _id, ...fields } = handle.nonMutatingCallbacks ? doc

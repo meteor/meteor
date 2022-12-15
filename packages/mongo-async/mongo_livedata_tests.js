@@ -83,18 +83,18 @@ var compareResults = function (test, skipIds, actual, expected) {
   test.equal(actual, expected);
 };
 
-var upsert = function (coll, useUpdate, query, mod, options, callback) {
+var upsert = async function (coll, useUpdate, query, mod, options, callback) {
   if (! callback && typeof options === "function") {
     callback = options;
     options = {};
   }
 
   if (!useUpdate) {
-    return coll.upsert(query, mod, options, callback);
+    return await coll.upsert(query, mod, options, callback);
   }
 
   if (callback) {
-    return coll.update(query, mod,
+    return await coll.update(query, mod,
         _.extend({ upsert: true }, options),
         function (err, result) {
           callback(err, ! err && {
@@ -393,7 +393,7 @@ _.each( ['STRING'], function(idGeneration) {
       test.equal(await coll.find({run: run}).count(), 0);
     });
 
-    obs.stop();
+    await obs.stop();
   });
 
   // TODO -> Related to DDP? Cannot read properties of undefined (reading '_CurrentMethodInvocation')
@@ -653,9 +653,9 @@ _.each( ['STRING'], function(idGeneration) {
       added: function addedFromTest(doc) {
         output.push({added: doc._id});
       },
-      changed: function changedFromTest() {
+      changed: async function changedFromTest() {
         output.push('changed');
-        handle.stop();
+        await handle.stop();
       }
     });
 
@@ -828,8 +828,7 @@ _.each( ['STRING'], function(idGeneration) {
       var coll = new Mongo.Collection(cname);
       var doc = { foo: "bar" };
       var x = 0;
-      coll.insert(doc, function (err, result) {
-        test.equal(err, null);
+      coll.insert(doc).then((result) => {
         test.equal(x, 1);
         onComplete();
       });
@@ -1339,10 +1338,10 @@ _.each( ['STRING'], function(idGeneration) {
 
 
   testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
-    function (test, expect) {
+    async function (test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     }, async function (test) {
@@ -1357,10 +1356,10 @@ _.each( ['STRING'], function(idGeneration) {
 
 // Regression test for #2413.
   testAsyncMulti('mongo-livedata - upsert without callback, ' + idGeneration, [
-    function (test, expect) {
+    async function (test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     }, async function () {
@@ -1377,10 +1376,10 @@ _.each( ['STRING'], function(idGeneration) {
 
 // Regression test for https://github.com/meteor/meteor/issues/8666.
   testAsyncMulti('mongo-livedata - upsert with an undefined selector, ' + idGeneration, [
-    function (test, expect) {
+    async function (test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     }, async function (test) {
@@ -1399,10 +1398,10 @@ _.each( ['STRING'], function(idGeneration) {
 
 // See https://github.com/meteor/meteor/issues/594.
   testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
-    function (test, expect) {
+    async function (test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     }, async function (test) {
@@ -1426,10 +1425,10 @@ _.each( ['STRING'], function(idGeneration) {
   ]);
 
   testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
-    function (test, expect) {
+    async function (test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     }, async function (test) {
@@ -1443,7 +1442,7 @@ _.each( ['STRING'], function(idGeneration) {
 
 // FIXME
   testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGeneration, [
-    function (test, expect) {
+    async function (test, expect) {
       var self = this;
       var seconds = function (doc) {
         doc.seconds = function () {return doc.d.getSeconds();};
@@ -1457,7 +1456,7 @@ _.each( ['STRING'], function(idGeneration) {
       };
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     }, async function (test, expect) {
@@ -1467,9 +1466,9 @@ _.each( ['STRING'], function(idGeneration) {
       var expectAdd = expect(function (doc) {
         test.equal(doc.seconds(), 50);
       });
-      var expectRemove = expect(function (doc) {
+      var expectRemove = expect(async function (doc) {
         test.equal(doc.seconds(), 50);
-        return obs.stop();
+        return await obs.stop();
       });
       const id = await runAndThrowIfNeeded(() => self.coll.insert({d: new Date(1356152390004)}), test, false);
       test.isTrue(id);
@@ -1498,7 +1497,7 @@ _.each( ['STRING'], function(idGeneration) {
   ]);
 
   testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGeneration, [
-    function (test, expect) {
+    async function (test, expect) {
       var self = this;
       var justId = function (doc) {
         return _.omit(doc, '_id');
@@ -1511,7 +1510,7 @@ _.each( ['STRING'], function(idGeneration) {
       };
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     }, async function (test) {
@@ -1533,11 +1532,11 @@ _.each( ['STRING'], function(idGeneration) {
       "dCB2ZWhlbWVuY2Ugb2YgYW55IGNhcm5hbCBwbGVhc3VyZS4=");
 
   testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
-    function (test, expect) {
+    async function (test, expect) {
       // XXX probably shouldn't use EJSON's private test symbols
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     }, async function (test) {
@@ -1552,10 +1551,10 @@ _.each( ['STRING'], function(idGeneration) {
   ]);
 
   testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, [
-    function (test, expect) {
+    async function (test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        await Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     },
@@ -1581,18 +1580,27 @@ _.each( ['STRING'], function(idGeneration) {
 
     function (test, expect) {
       var self = this;
-      self.coll.insert(new Dog("rover", "orange"), expect(function (err, id) {
-        test.isTrue(err);
-        test.isFalse(id);
-      }));
+      self.coll.insert(new Dog("rover", "orange")).then(id => {
+        expect(function () {
+          test.isFalse(id);
+        });
+      }).catch(err => {
+        expect(function () {
+          test.isTrue(err);
+        });
+      });
     },
 
-    async function (test, expect) {
+    function (test, expect) {
       var self = this;
       self.coll.update(
-          self.docId, new Dog("rover", "orange"), expect(function (err) {
-            test.isTrue(err);
-          }));
+          self.docId, new Dog("rover", "orange")).then(id => {
+            console.log(id);
+          }).catch(err => {
+            expect(function () {
+              test.isTrue(err);
+            });
+      });
     }
   ]);
 
@@ -1688,7 +1696,7 @@ _.each( ['STRING'], function(idGeneration) {
           {all: 1, id1Direct: 1, id1InQuery: 1, id2Direct: 1, id2InQuery: 1,
             bothIds: 1});
 
-      _.each(handlesToStop, function (h) {h.stop();});
+      _.each(handlesToStop, async function (h) { await h.stop();});
     });
 
     Tinytest.addAsync("mongo-livedata - upsert error parse, " + idGeneration, async function (test) {
@@ -1895,7 +1903,7 @@ if (Meteor.isServer) {
   _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
     _.each(useNetwork ? [false] : [true, false], function (useDirectCollection) {
       _.each([true, false], function (useUpdate) {
-        Tinytest.addAsync(asyncUpsertTestName(useNetwork, useDirectCollection, useUpdate, idGeneration), function (test, onComplete) {
+        Tinytest.addAsync(asyncUpsertTestName(useNetwork, useDirectCollection, useUpdate, idGeneration), async function (test, onComplete) {
           var coll;
           var run = test.runId();
           var collName = "livedata_upsert_collection_"+run+
@@ -1903,13 +1911,13 @@ if (Meteor.isServer) {
               (useNetwork ? "_network_" : "") +
               (useDirectCollection ? "_direct_" : "");
 
-          var next0 = function () {
+          var next0 = async function () {
             // Test starts here.
-            upsert(coll, useUpdate, {_id: 'foo'}, {_id: 'foo', foo: 'bar'}, next1);
+            await upsert(coll, useUpdate, {_id: 'foo'}, {_id: 'foo', foo: 'bar'}, next1);
           };
 
           if (useNetwork) {
-            Meteor.call("createInsecureCollection", collName, collectionOptions);
+            await Meteor.callAsync("createInsecureCollection", collName, collectionOptions);
             coll = new Mongo.Collection(collName, collectionOptions);
             Meteor.subscribe("c-" + collName, next0);
           } else {
@@ -2071,11 +2079,11 @@ if (Meteor.isServer) {
 }
 
   if (Meteor.isClient) {
-    Tinytest.addAsync("mongo-livedata - async update/remove return values over network " + idGeneration, function (test, onComplete) {
+    Tinytest.addAsync("mongo-livedata - async update/remove return values over network " + idGeneration, async function (test, onComplete) {
       var coll;
       var run = test.runId();
       var collName = "livedata_upsert_collection_"+run;
-      Meteor.call("createInsecureCollection", collName, collectionOptions);
+      await Meteor.callAsync("createInsecureCollection", collName, collectionOptions);
       coll = new Mongo.Collection(collName, collectionOptions);
       Meteor.subscribe("c-" + collName, function () {
         coll.insert({ _id: "foo" }, (e1) => {
@@ -2239,10 +2247,10 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
 
 // TODO -> FIXME
 testAsyncMulti('mongo-livedata - specified _id', [
-  function (test, expect) {
+  async function (test, expect) {
     this.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', this.collectionName);
+      await Meteor.callAsync('createInsecureCollection', this.collectionName);
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
   }, async function (test) {
@@ -2253,7 +2261,9 @@ testAsyncMulti('mongo-livedata - specified _id', [
     test.equal(doc._id, "foo");
 
     Meteor._suppress_log(1);
-    await runAndThrowIfNeeded(() => coll.insert({_id: "foo", name: "bar"}), test, true);
+    console.log(await coll.find({}).fetch());
+    const id2 = await runAndThrowIfNeeded(() => coll.insertAsync({_id: "foo", name: "bar"}), test, true);
+    console.log({id1, id2}, await coll.find({}).fetch());
     const doc2 = await coll.findOne();
     test.equal(doc2.name, "foo");
   }
@@ -2440,7 +2450,7 @@ testAsyncMulti('mongo-livedata - empty string _id', [
     var self = this;
     self.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', self.collectionName);
+      await Meteor.callAsync('createInsecureCollection', self.collectionName);
       Meteor.subscribe('c-' + self.collectionName, expect());
     }
     self.coll = new Mongo.Collection(self.collectionName);
@@ -3101,21 +3111,23 @@ Meteor.isServer && Tinytest.addAsync("mongo-livedata - cursor dedup stop", async
 });
 
 testAsyncMulti("mongo-livedata - undefined find options", [
-  function (test, expect) {
+  async function (test, expect) {
     var self = this;
     self.collName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call("createInsecureCollection", self.collName);
+      await Meteor.callAsync("createInsecureCollection", self.collName);
       Meteor.subscribe("c-" + self.collName, expect());
     }
   },
-  function (test, expect) {
+  async function (test, expect) {
     var self = this;
     self.coll = new Mongo.Collection(self.collName);
     self.doc = { foo: 1, bar: 2, _id: "foobar" };
-    self.coll.insert(self.doc, expect(function (err, id) {
-      test.isFalse(err);
-    }));
+    await self.coll.insert(self.doc).catch(err => {
+      expect(() => {
+        test.isFalse(err);
+      });
+    });
   },
   async function (test, expect) {
     var self = this;

@@ -147,10 +147,10 @@ export default class LocalCollection {
       }
     });
 
-    // TODO -> Check here.
-    Promise.resolve(this._observeQueue.drain()).then(() => {
+    this._observeQueue.drain().then(() => {
       // Defer because the caller likely doesn't expect the callback to be run
       // immediately.
+
       if (callback) {
         Meteor.defer(() => {
           callback(null, id);

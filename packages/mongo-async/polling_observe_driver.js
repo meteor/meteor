@@ -52,7 +52,7 @@ PollingObserveDriver = function (options) {
         self._ensurePollIsScheduled();
     }
   );
-  self._stopCallbacks.push(function () { listenersHandle.stop(); });
+  self._stopCallbacks.push(async function () { await listenersHandle.stop(); });
 
   // every once and a while, poll even if we don't think we're dirty, for
   // eventual consistency with database writes from outside the Meteor

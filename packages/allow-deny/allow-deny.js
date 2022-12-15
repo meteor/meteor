@@ -413,21 +413,7 @@ CollectionPrototype._validatedRemove = function(userId, selector) {
   return self._collection.remove.call(self._collection, selector);
 };
 
-CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args, callback) {
-  if (Meteor.isClient && !callback && !alreadyInSimulation()) {
-    // Client can't block, so it can't report errors by exception,
-    // only by callback. If they forget the callback, give them a
-    // default one that logs the error, so they aren't totally
-    // baffled if their writes don't work because their database is
-    // down.
-    // Don't give a default callback in simulation, because inside stubs we
-    // want to return the results from the local collection immediately and
-    // not force a callback.
-    callback = function (err) {
-      if (err)
-        Meteor._debug(name + " failed", err);
-    };
-  }
+CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethod(name, args) {
 
   // For two out of three mutator methods, the first argument is a selector
   const firstArgIsSelector = name === "update" || name === "remove";
@@ -439,8 +425,8 @@ CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args,
   }
 
   const mutatorMethodName = this._prefix + name;
-  return this._connection.apply(
-    mutatorMethodName, args, { returnStubValue: true }, callback);
+  return await this._connection.applyAsync(
+      mutatorMethodName, args, { returnStubValue: true , throwStubExceptions: true });
 }
 
 function transformDoc(validator, doc) {
