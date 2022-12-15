@@ -13,7 +13,7 @@ var urls = {
 };
 
 // https://dev.twitter.com/docs/api/1.1/get/account/verify_credentials
-Twitter.whitelistedFields = ['profile_image_url', 'profile_image_url_https', 'lang', 'email','name'];
+Twitter.whitelistedFields = ['profile_image_url', 'profile_image_url_https', 'lang', 'email',"name"];
 
 OAuth.registerService('twitter', 1, urls, async function(oauthBinding) {
   const response = await oauthBinding.getAsync('https://api.twitter.com/1.1/account/verify_credentials.json?include_email=true');
