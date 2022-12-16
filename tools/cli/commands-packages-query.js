@@ -594,7 +594,7 @@ Object.assign(PackageQuery.prototype, {
         deprecatedMessage: local.deprecatedMessage
       };
     } else {
-      var mainlineRecord = catalog.official.getLatestMainlineVersion(self.name);
+      var mainlineRecord = await catalog.official.getLatestMainlineVersion(self.name);
       if (mainlineRecord) {
         var pkgExports = new PkgExports(mainlineRecord.exports);
         var implies = new PkgImplies(mainlineRecord.dependencies);
@@ -1533,7 +1533,7 @@ main.registerCommand({
   }
 
   // Do not return true on broken packages, unless requested in options.
-  var filterBroken = function (match, isRelease, name) {
+  var filterBroken = async function (match, isRelease, name) {
     // If the package does not match, or it is not a package at all or if we
     // don't want to filter anyway, we do not care.
     if (!match || isRelease) {
@@ -1543,12 +1543,12 @@ main.registerCommand({
     if (!options["show-all"]) {
       // If we can't find a version in the local catalog, we want to get the
       // latest mainline (ie: non-RC) version from the official catalog.
-      vr = projectContext.localCatalog.getLatestVersion(name) ||
-        catalog.official.getLatestMainlineVersion(name);
+      vr = await projectContext.localCatalog.getLatestVersion(name) ||
+        await catalog.official.getLatestMainlineVersion(name);
     } else {
       // We want the latest version of this package, and we don't care if it is
       // a release candidate.
-      vr = projectContext.projectCatalog.getLatestVersion(name);
+      vr = await projectContext.projectCatalog.getLatestVersion(name);
     }
     if (!vr) {
       return false;
@@ -1604,16 +1604,16 @@ main.registerCommand({
     };
   }
 
-  buildmessage.enterJob({ title: 'Searching packages' }, function () {
-    _.each(allPackages, function (pack) {
-      if (selector(pack, false)) {
+  await buildmessage.enterJob({ title: 'Searching packages' }, async function () {
+    for (const pack of allPackages) {
+      if (await selector(pack, false)) {
         var vr;
         if (!options['show-all']) {
           vr =
-            projectContext.localCatalog.getLatestVersion(pack) ||
-            catalog.official.getLatestMainlineVersion(pack);
+              await projectContext.localCatalog.getLatestVersion(pack) ||
+              await catalog.official.getLatestMainlineVersion(pack);
         } else {
-          vr = projectContext.projectCatalog.getLatestVersion(pack);
+          vr = await projectContext.projectCatalog.getLatestVersion(pack);
         }
         if (vr) {
           matchingPackages.push({
@@ -1624,9 +1624,10 @@ main.registerCommand({
           });
         }
       }
-    });
-    _.each(allReleases, function (track) {
-      if (selector(track, true)) {
+    }
+
+    for (const track of allReleases) {
+      if (await selector(track, true)) {
         var vr = catalog.official.getDefaultReleaseVersionRecord(track);
         if (vr) {
           matchingReleases.push({
@@ -1637,7 +1638,7 @@ main.registerCommand({
           });
         }
       }
-    });
+    }
   });
 
   if (options.ejson) {

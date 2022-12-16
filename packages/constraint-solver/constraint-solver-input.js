@@ -141,14 +141,14 @@ CS.Input.prototype.loadFromCatalog = async function (catalogLoader) {
   await catalogLoader.loadAllVersionsRecursive(getMentionedPackages(this));
 };
 
-CS.Input.prototype.loadOnlyPreviousSolution = function (catalogLoader) {
+CS.Input.prototype.loadOnlyPreviousSolution = async function (catalogLoader) {
   var self = this;
 
   // load just the exact versions from the previousSolution
   if (self.previousSolution) {
-    _.each(self.previousSolution, function (version, pkg) {
-      catalogLoader.loadSingleVersion(pkg, version);
-    });
+    for (const [pkg, version] of Object.entries(self.previousSolution)) {
+      await catalogLoader.loadSingleVersion(pkg, version);
+    }
   }
 };
 

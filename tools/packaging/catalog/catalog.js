@@ -203,14 +203,14 @@ Object.assign(LayeredCatalog.prototype, {
       "getSortedVersionRecords", args, ACCEPT_NON_EMPTY);
   },
 
-  getVersion: function (name, version) {
+  getVersion: async function (name, version) {
     var self = this;
     var result = self.localCatalog.getVersion(name, version);
     if (!result) {
       if (/\+/.test(version)) {
         return null;
       }
-      result = self.otherCatalog.getVersion(name, version);
+      result = await self.otherCatalog.getVersion(name, version);
     }
     return result;
   },

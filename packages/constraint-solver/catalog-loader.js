@@ -60,7 +60,7 @@ CS.CatalogLoader.prototype._getSortedVersionRecords = async function (pkg) {
   return this._sortedVersionRecordsCache[pkg];
 };
 
-CS.CatalogLoader.prototype.loadSingleVersion = function (pkg, version) {
+CS.CatalogLoader.prototype.loadSingleVersion = async function (pkg, version) {
   var self = this;
   var cache = self.catalogCache;
   if (! cache.hasPackageVersion(pkg, version)) {
@@ -71,7 +71,7 @@ CS.CatalogLoader.prototype.loadSingleVersion = function (pkg, version) {
                      return r.version === version;
                    });
     } else {
-      rec = self.catalog.getVersion(pkg, version);
+      rec = await self.catalog.getVersion(pkg, version);
     }
     if (rec) {
       var deps = convertDeps(rec.dependencies);

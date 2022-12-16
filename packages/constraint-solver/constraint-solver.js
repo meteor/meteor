@@ -9,6 +9,7 @@ CS.PackagesResolver = function (catalog, options) {
 
   self.catalog = catalog;
   self.catalogCache = new CS.CatalogCache();
+  debugger;
   self.catalogLoader = new CS.CatalogLoader(self.catalog, self.catalogCache);
 
   self._options = {
@@ -48,9 +49,9 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
   options = options || {};
   var Profile = (self._options.Profile || CS.DummyProfile);
 
-  var input;
-  await Profile.time("new CS.Input", function () {
-    input = new CS.Input(dependencies, constraints, self.catalogCache,
+  debugger;
+  var input = await Profile.time("new CS.Input", function () {
+    return new CS.Input(dependencies, constraints, self.catalogCache,
                          _.pick(options,
                                 'upgrade',
                                 'anticipatedPrereleases',
@@ -69,7 +70,8 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
   // server). The unsoundness can cause problems for tests, however, so it
   // may be a good idea to set this environment variable to "true" to
   // disable the caching entirely.
-  const disableCaching = !! JSON.parse(
+  //TODO -> [FIBERS] - Re-enable caching here.
+  const disableCaching = true || !! JSON.parse(
     process.env.METEOR_DISABLE_CONSTRAINT_SOLVER_CACHING || "false"
   );
 
@@ -168,22 +170,23 @@ CS.PackagesResolver._resolveWithInput = async function (input, options) {
     console.log(JSON.stringify(input.toJSONable(), null, 2));
   }
 
-  var solver;
-  await (options.Profile || CS.DummyProfile).time("new CS.Solver", function () {
-    solver = new CS.Solver(input, {
+  var solver = await (options.Profile || CS.DummyProfile).time("new CS.Solver", async function () {
+    const _solver = new CS.Solver(input, {
       nudge: options.nudge,
       Profile: options.Profile
     });
+    await _solver.init();
+
+    return _solver;
   });
 
   // Disable runtime type checks (they slow things down a bunch)
-  return Logic.disablingAssertions(async function () {
-    var result = await solver.getAnswer({
-      allAnswers: options.allAnswers
-    });
+  return await Logic.disablingAssertions(function () {
     // if we're here, no conflicts were found (or an error would have
     // been thrown)
-    return result;
+    return solver.getAnswer({
+      allAnswers: options.allAnswers
+    });
   });
 };
 
