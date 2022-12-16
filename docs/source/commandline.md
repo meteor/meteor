@@ -203,6 +203,10 @@ Create a basic [Solid](https://www.solidjs.com/) app.
 you what is the name of the model you want to generate, if you do want methods for your api and publications. It can be
 used as a command line only operation as well.
 
+> _Important to note:_
+> By default, the generator will use JavaScript but if it detects that you have a
+``tsconfig.json`` file in your project, it will use TypeScript instead.
+
 running 
 ```bash
 meteor generate customer
