@@ -15,9 +15,9 @@ var urls = {
 // https://dev.twitter.com/docs/api/1.1/get/account/verify_credentials
 Twitter.whitelistedFields = ['profile_image_url', 'profile_image_url_https', 'lang', 'email'];
 
-OAuth.registerService('twitter', 1, urls, function(oauthBinding) {
-  var identity = oauthBinding.get('https://api.twitter.com/1.1/account/verify_credentials.json?include_email=true').data;
-
+OAuth.registerService('twitter', 1, urls, async function(oauthBinding) {
+  const response = await oauthBinding.getAsync('https://api.twitter.com/1.1/account/verify_credentials.json?include_email=true');
+  const  { data: identity } = response;
   var serviceData = {
     id: identity.id_str,
     screenName: identity.screen_name,
@@ -26,8 +26,8 @@ OAuth.registerService('twitter', 1, urls, function(oauthBinding) {
   };
 
   // include helpful fields from twitter
-  var fields = _.pick(identity, Twitter.whitelistedFields);
-  _.extend(serviceData, fields);
+  const { identity: fields } = Twitter.whitelistedFields;
+  Object.assign(serviceData, fields);
 
   return {
     serviceData: serviceData,
