@@ -9,7 +9,9 @@
 
 #### Breaking Changes
 
-N/A
+* `accounts-password@2.3.3`
+  - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
+
 
 ####  Internal API changes
 
