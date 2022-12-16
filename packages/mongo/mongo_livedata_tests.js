@@ -1518,7 +1518,7 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
   function (test, expect) {
     var self = this;
     var justId = function (doc) {
-      const docWithoutId = doc;
+      const docWithoutId = {...doc};
       delete docWithoutId._id;
       return docWithoutId;
     };
@@ -1722,7 +1722,7 @@ if (Meteor.isServer) {
       {all: 1, id1Direct: 1, id1InQuery: 1, id2Direct: 1, id2InQuery: 1,
        bothIds: 1});
 
-       handlesToStop.forEach(function (h) {h.stop();});
+    handlesToStop.forEach(function (h) {h.stop();});
     onComplete();
   });
 
@@ -3248,7 +3248,8 @@ Meteor.isServer && Tinytest.add(
 
       // Same as `MongoInternals.defaultRemoteCollectionDriver`.
       Promise.await(connection.client.connect());
-    }
+    });
+  }
 );
 
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
