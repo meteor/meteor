@@ -3002,7 +3002,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", async function (
       meteorRelease: releaseName,
       nodeVersion: process.versions.node,
       npmVersion: meteorNpm.npmVersion,
-      gitCommitHash: process.env.METEOR_GIT_COMMIT_HASH || files.findGitCommitHash(sourceRoot),
+      gitCommitHash: process.env.METEOR_GIT_COMMIT_HASH || await files.findGitCommitHash(sourceRoot),
     };
 
     // Tell the deploy server what version of the dependency kit we're using, so
@@ -3430,7 +3430,7 @@ async function bundle({
           await writeClientTarget(target);
         }
       } else {
-        starResult = writeSiteArchive(targets, outputPath, {
+        starResult = await writeSiteArchive(targets, outputPath, {
           buildMode: buildOptions.buildMode,
           previousBuilders,
           sourceRoot: packageSource.sourceRoot,

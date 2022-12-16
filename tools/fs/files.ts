@@ -147,7 +147,7 @@ export function findGitCommitHash(path: string) {
     } else {
       resolve();
     }
-  }).await();
+  });
 }
 
 // create a .gitignore file in dirPath if one doesn't exist. add

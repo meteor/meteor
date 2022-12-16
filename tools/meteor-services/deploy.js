@@ -546,7 +546,7 @@ export async function bundleAndDeploy(options) {
   }
 
   const projectDir = options.projectContext.getProjectLocalDirectory('');
-  const gitCommitHash = process.env.METEOR_GIT_COMMIT_HASH || findGitCommitHash(projectDir);
+  const gitCommitHash = process.env.METEOR_GIT_COMMIT_HASH || await findGitCommitHash(projectDir);
 
   const buildCache = options.projectContext.getBuildCache();
   let isCacheBuildValid = options.isCacheBuildEnabled;
@@ -590,7 +590,7 @@ export async function bundleAndDeploy(options) {
   Console.info('Preparing to build your app...');
 
   var settings = null;
-  var messages = buildmessage.capture({
+  var messages = await buildmessage.capture({
     title: "preparing to deploy",
     rootPath: process.cwd()
   }, function () {
