@@ -25,7 +25,9 @@
 body {
     height: 100vh;
     width: 100vw;
+    background-color: #18181b !important;
     background-color: var(--bg-black) !important;
+    color: #F9FAFB !important;
     color: var(--primary-white) !important;
 
 }
@@ -54,20 +56,24 @@ body {
 }
 
 .header.in-progress {
+    color: #fef2f2;
     color: var(--red-50);
 }
 
 .header.pass {
-    color: #090; /* green */
+    color: #16a34a; /* green */
+    color: var(--green-600); /* green */
 }
 
 .header.fail {
-    color: #900; /* red */
+    color: #7f1d1d; /* red */
+    color: var(--red-900); /* red */
     font-weight: bold;
 }
 
 .header .time {
     color: var(--gray-500);
+    color: #737373;
     font-size: 14px;
 }
 
@@ -77,7 +83,8 @@ body {
 }
 
 .test_table .group {
-    border-left: 1px solid #ddd;
+    border-left: 1px solid #fef2f2;
+    border-left: 1px solid var(--red-50);
 }
 
 .test_table .group .group {
@@ -99,17 +106,20 @@ body {
 .test_table .groupname {
     font-weight: bold;
     background: var(--neutral-black);
+    background: #262626;
     padding-left: 5px;
     line-height: 24px;
     vertical-align: middle;
     font-size: 16px;
     color: var(--primary-white);
+    color: #F9FAFB;
 }
 
 .test_table .event {
     margin-left: 20px;
     font-size: 14px;
     border-left: 2px solid var(--blue-50);
+    border-left: 2px solid #eef2ff;
     padding: 4px;
     position: relative;
 }
@@ -121,14 +131,17 @@ body {
 
 .test_table .running .testname {
     color: var(--blue-500);
+    color: #6366f1;
 }
 
 .test_table .failed .testname {
     color: var(--red-900);
+    color: #7f1d1d;
 }
 
 .test_table .succeeded .testname {
     color: var(--green-600);
+    color: #16a34a;
 }
 
 .test_table .teststatus {
@@ -154,40 +167,51 @@ body {
     vertical-align: middle;
     font-size: 14px;
     color: var(--gray-500);
+    color: #737373;
 }
 
 .test_table .succeeded .teststatus {
     color: var(--green-600);
     background: var(--bg-black);
+    color: #16a34a;
+    background: #18181b;
 }
 
 .test_table .failed .teststatus {
     color: var(--red-900); /* red */
     background: var(--bg-black);
+    color:  #7F1D1D; /* red */
+    background: #18181b;
 }
 
 .test_table .running .teststatus {
     color: var(--red-50);
+    color: #fef2f2;
 }
 
 .test_table .event .expected_fail {
     color: var(--red-900);
+    color: #7f1d1d;
 }
 
 .test_table .event .fail {
     color: var(--red-600);
+    color: #dc2626;
 }
 
 .test_table .event .exception {
     color: var(--red-600);
+    color: #dc2626;
 }
 
 .exception pre {
     color: var(--primary-white);
+    color: #F9FAFB;
 }
 
 .test_table .event .nodata {
     color: var(--red-50);
+    color: #fef2f2;
     font-style: italic;
 }
 
@@ -202,6 +226,7 @@ body {
 .test_table .event:hover .debug {
     display: inline;
     color: var(--gray-500);
+    color: #737373;
     text-decoration: underline;
     cursor: pointer;
 }
@@ -223,18 +248,23 @@ body {
 
 .string_equal_expected ins {
     background: var(--yellow-400);
+    background: #f59e0b;
 }
 
 .string_equal_actual ins {
     color: var(--red-600);
     background: var(--red-200);
+    color: #dc2626;
+    background: #fecaca;
 }
 
 #current-client-test {
     color: var(--gray-300);
+    color: #d6d3d1;
     margin-right: 15px;
 }
 
 .failedTests {
     color: var(--red-900);
+    color: #7f1d1d;
 }
