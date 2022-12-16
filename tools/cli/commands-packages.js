@@ -883,7 +883,7 @@ main.registerCommand({
 
     relConf.packages = {};
     var toPublish = [];
-
+    Console.info(`Will publish new version for MeteorJS: ${relConf.version}`);
     main.captureAndExit("=> Errors in release packages:", function () {
       _.each(allPackages, function (packageName) {
         buildmessage.enterJob("checking consistency of " + packageName, function () {
