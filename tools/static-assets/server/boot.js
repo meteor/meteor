@@ -12,8 +12,6 @@ var MIN_NODE_VERSION = 'v14.0.0';
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
-const IS_FIBERS_ENABLED = !!!process.env.DISABLE_FIBERS;
-
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
     'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -419,7 +417,7 @@ var loadServerBundles = Profile("Load server bundles", async function () {
       });
     } else {
       // Allows us to use code-coverage if the debugger is not enabled
-      Profile(fileInfo.path, func).apply(global, args);
+      await Profile(fileInfo.path, func).apply(global, args);
     }
   }
 
@@ -477,7 +475,7 @@ var runMain = Profile("Run main()", async function () {
   }
 });
 
-async function startServerProcess() {
+(async function startServerProcess() {
   const { AsyncLocalStorage } = require('async_hooks');
   global.asyncLocalStorage = new AsyncLocalStorage();
 
@@ -488,7 +486,5 @@ async function startServerProcess() {
         await runMain();
       });
   });
-}
-
-startServerProcess();
+})();
 

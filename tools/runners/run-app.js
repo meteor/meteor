@@ -93,14 +93,13 @@ Object.assign(AppProcess.prototype, {
         // connections.  (It does this because we told it to with
         // $METEOR_PRINT_ON_LISTEN.)
         self.onListen && await self.onListen();
-
       } else {
-        runLog.logAppOutput(line);
+        await runLog.logAppOutput(line);
       }
     });
 
-    eachline(self.proc.stderr, function (line) {
-      runLog.logAppOutput(line, true);
+    eachline(self.proc.stderr, async function (line) {
+      await runLog.logAppOutput(line, true);
     });
 
     // Watch for exit and for stdio to be fully closed (so that we don't miss

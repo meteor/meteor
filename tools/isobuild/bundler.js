@@ -2988,6 +2988,9 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", async function (
     forceInPlaceBuild: true,
   });
 
+  await builder.init();
+  await builders.star.init();
+
   try {
     Object.keys(targets).forEach(key => {
       // Both makeClientTarget and makeServerTarget get their sourceRoot
