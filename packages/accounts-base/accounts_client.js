@@ -798,6 +798,11 @@ if (Package.blaze) {
    */
   Template.registerHelper('currentUser', () => Meteor.user());
 
+  // TODO: the code above needs to be changed to Meteor.userAsync() when we have
+  // a way to make it reactive using async.
+  // Template.registerHelper('currentUserAsync',
+  //  async () => await Meteor.userAsync());
+
   /**
    * @global
    * @name  loggingIn

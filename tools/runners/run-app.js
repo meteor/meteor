@@ -947,7 +947,7 @@ Object.assign(AppRunner.prototype, {
       var runResult = self._runOnce({
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun) {
-            runLog.logRestart();
+            runLog.logRestart(self);
             Console.enableProgressDisplay(false);
           }
         },
