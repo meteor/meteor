@@ -136,7 +136,7 @@ OAuth._checkRedirectUrlOrigin = redirectUrl => {
   );
 };
 
-const middleware = (req, res, next) => {
+const middleware = async (req, res, next) => {
   let requestData;
 
   // Make sure to catch any exceptions because otherwise we'd crash
@@ -168,7 +168,7 @@ const middleware = (req, res, next) => {
       requestData = req.body;
     }
 
-    handler(service, requestData, res);
+    await handler(service, requestData, res);
   } catch (err) {
     // if we got thrown an error, save it off, it will get passed to
     // the appropriate login call (if any) and reported there.
@@ -472,4 +472,32 @@ OAuth.openSecrets = (serviceData, userId) => {
     result[key] = OAuth.openSecret(serviceData[key], userId)
   );
   return result;
+};
+
+OAuth._addValuesToQueryParams = (
+  values = {},
+  queryParams = new URLSearchParams()
+) => {
+  Object.entries(values).forEach(([key, value]) => {
+    queryParams.set(key, `${value}`);
+  });
+  return queryParams;
+};
+
+OAuth._fetch = async (
+  url,
+  method = 'GET',
+  { headers = {}, queryParams = {}, body, ...options } = {}
+) => {
+  const urlWithParams = new URL(url);
+
+  OAuth._addValuesToQueryParams(queryParams, urlWithParams.searchParams);
+
+  const requestOptions = {
+    method: method.toUpperCase(),
+    headers,
+    ...(body ? { body } : {}),
+    ...options,
+  };
+  return fetch(urlWithParams.toString(), requestOptions);
 };
