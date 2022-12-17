@@ -11,7 +11,10 @@
   - `Accounts.sendResetPasswordEmail` is now async
   - `Accounts.sendEnrollmentEmail` is now async
   - `Accounts.sendVerificationEmail` is now async
-
+  
+* `accounts-passwordless`:
+  - `Accounts.sendLoginTokenEmail` is now async
+  
 ####  Internal API changes
 
 
