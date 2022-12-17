@@ -7,6 +7,11 @@
 * `email`:
  `Email.send` is no longer available. Use `Email.sendAsync` instead.
 
+* `accounts-password`:
+  - `Accounts.sendResetPasswordEmail` is now async
+  - `Accounts.sendEnrollmentEmail` is now async
+  - `Accounts.sendVerificationEmail` is now async
+
 ####  Internal API changes
 
 
