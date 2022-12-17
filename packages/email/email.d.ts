@@ -17,7 +17,9 @@ export namespace Email {
     packageSettings?: unknown;
   }
 
+  /** @deprecated */
   function send(options: EmailOptions): void;
+  function sendAsync(options: EmailOptions): Promise<void>;
   function hookSend(fn: (options: EmailOptions) => boolean): void;
   function customTransport(fn: (options: CustomEmailOptions) => void): void;
 }
