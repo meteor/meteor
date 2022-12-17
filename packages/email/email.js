@@ -256,3 +256,22 @@ Email.sendAsync = async function (options) {
   }
   return devModeSendAsync(email, options);
 };
+
+/**
+ * @deprecated use Email.sendAsync
+ * @param options
+ */
+Email.send = function(options) {
+  Email.sendAsync(options)
+    .then(() =>
+      console.warn(
+        `Email.send is no longer recommended, you should use Email.sendAsync`
+      )
+    )
+    .catch(e =>
+      console.error(
+        `Email.send is no longer recommended and an error happened`,
+        e
+      )
+    );
+};
