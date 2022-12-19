@@ -110,7 +110,7 @@ function generateSequence() {
 }
 
 Meteor.methods({
-  requestLoginTokenForUser: ({ selector, userData, options = {} }) => {
+  requestLoginTokenForUser: async ({ selector, userData, options = {} }) => {
     let user = Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
@@ -189,14 +189,15 @@ Meteor.methods({
       : true;
 
     if (shouldSendLoginTokenEmail) {
-      tokens.forEach(({ email, sequence }) => {
+      const sendLogins = tokens.map(({ email, sequence }) =>
         Accounts.sendLoginTokenEmail({
           userId: user._id,
           sequence,
           email,
           ...(options.extra ? { extra: options.extra } : {}),
-        });
-      });
+        })
+      );
+      await Promise.all(sendLogins);
     }
 
     return result;
@@ -213,7 +214,7 @@ Meteor.methods({
  * @param {Object} options.extra Optional. Extra properties
  * @returns {Object} Object with {email, user, token, url, options} values.
  */
-Accounts.sendLoginTokenEmail = ({ userId, sequence, email, extra = {} }) => {
+Accounts.sendLoginTokenEmail = async ({ userId, sequence, email, extra = {} }) => {
   const user = getUserById(userId);
   const url = Accounts.urls.loginToken(email, sequence);
   const options = Accounts.generateOptionsForEmail(
@@ -223,7 +224,7 @@ Accounts.sendLoginTokenEmail = ({ userId, sequence, email, extra = {} }) => {
     'sendLoginToken',
     { ...extra, sequence }
   );
-  Email.send({ ...options, extra });
+  await Email.sendAsync({ ...options, extra });
   if (Meteor.isDevelopment) {
     console.log(`\nLogin Token url: ${url}`);
   }

@@ -161,4 +161,5 @@ function _call (method, url, options, callback) {
     .catch(err => callback(err));
 }
 
+// we are keeping wrapAsync here as this package is deprecated
 HTTP.call = Meteor.wrapAsync(_call);

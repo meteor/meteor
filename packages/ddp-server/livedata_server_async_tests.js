@@ -150,7 +150,7 @@ async function getAllNames(shouldThrow = false) {
     throw new Meteor.Error('Expected error');
   }
   if (count <= 0) {
-    collection.insert({ name: 'async' });
+    await collection.insertAsync({ name: 'async' });
   }
 }
 Meteor.publish('asyncPublishCursor', async function() {
