@@ -222,6 +222,9 @@ const bindEnvironmentFibers = (func, onException, _this) => {
   };
 };
 
+// This function has two reasons:
+// 1. Return the function to be executed on the MeteorJS context, having it assinged in the async localstorage.
+// 2. Better error handling, the error message will be more clear.
 const bindEnvironmentAsync = (func, onException, _this) => {
   const dynamics = Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
   const currentSlot = Meteor._getValueFromAslStore(SLOT_CALL_KEY);

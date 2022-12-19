@@ -745,16 +745,29 @@ Object.assign(Mongo.Collection.prototype, {
 
   // We'll actually design an index API later. For now, we just pass through to
   // Mongo's, but make it synchronous.
-  _ensureIndex(index, options) {
+  /**
+   * @summary Creates the specified index on the collection.
+   * @locus server
+   * @method _ensureIndex
+   * @deprecated in 3.0
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} index A document that contains the field and value pairs where the field is the index key and the value describes the type of index for that field. For an ascending index on a field, specify a value of `1`; for descending index, specify a value of `-1`. Use `text` for text indexes.
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#options)
+   * @param {String} options.name Name of the index
+   * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
+   * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
+   */
+  async _ensureIndex(index, options) {
     var self = this;
     if (!self._collection._ensureIndex || !self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
     if (self._collection.createIndex) {
-      self._collection.createIndex(index, options);
+      await self._collection.createIndex(index, options);
     } else {
       import { Log } from 'meteor/logging';
-      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
-      self._collection._ensureIndex(index, options);
+      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${ options?.name ? `, index name: ${ options.name }` : `, index: ${ JSON.stringify(index) }` }`)
+      await self._collection._ensureIndex(index, options);
     }
   },
 
@@ -770,37 +783,37 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
    * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
    */
-  createIndex(index, options) {
+  async createIndex(index, options) {
     var self = this;
     if (!self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
     try {
-      self._collection.createIndex(index, options);
+      await self._collection.createIndex(index, options);
     } catch (e) {
       if (e.message.includes('An equivalent index already exists with the same name but different options.') && Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch) {
         import { Log } from 'meteor/logging';
-
-        Log.info(`Re-creating index ${index} for ${self._name} due to options mismatch.`);
-        self._collection._dropIndex(index);
-        self._collection.createIndex(index, options);
+        Log.info(`Re-creating index ${ index } for ${ self._name } due to options mismatch.`);
+        await self._collection._dropIndex(index);
+        await self._collection.createIndex(index, options);
       } else {
-        throw new Meteor.Error(`An error occurred when creating an index for collection "${self._name}: ${e.message}`);
+        console.error(e);
+        throw new Meteor.Error(`An error occurred when creating an index for collection "${ self._name }: ${ e.message }`);
       }
     }
   },
 
-  _dropIndex(index) {
+  async _dropIndex(index) {
     var self = this;
     if (!self._collection._dropIndex)
       throw new Error('Can only call _dropIndex on server collections');
     self._collection._dropIndex(index);
   },
 
-  _dropCollection() {
+  async _dropCollection() {
     var self = this;
     if (!self._collection.dropCollection)
       throw new Error('Can only call _dropCollection on server collections');
-    self._collection.dropCollection();
+   await  self._collection.dropCollection();
   },
 
   _createCappedCollection(byteSize, maxDocuments) {

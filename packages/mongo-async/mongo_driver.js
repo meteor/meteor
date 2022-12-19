@@ -426,19 +426,25 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   }
 };
 
-MongoConnection.prototype._dropCollection = function (collectionName, cb) {
+MongoConnection.prototype._dropCollection = async function (collectionName, cb) {
   var self = this;
 
   var write = self._maybeBeginWrite();
   var refresh = function () {
-    Meteor.refresh({collection: collectionName, id: null,
-                    dropCollection: true});
+    return Meteor.refresh({
+      collection: collectionName,
+      id: null,
+      dropCollection: true
+    });
   };
-  cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
+  // TODO[FIBERS]: Check if this is correct after the DDP changes.
+  const fn = bindEnvironmentForWrite(
+    writeCallback(write, refresh, cb)
+  );
 
   try {
     var collection = self.rawCollection(collectionName);
-    collection.drop(cb);
+    await Meteor.promisify(collection.drop)(fn);
   } catch (e) {
     write.committed();
     throw e;
@@ -447,17 +453,17 @@ MongoConnection.prototype._dropCollection = function (collectionName, cb) {
 
 // For testing only.  Slightly better than `c.rawDatabase().dropDatabase()`
 // because it lets the test's fence wait for it to be complete.
-MongoConnection.prototype._dropDatabase = function (cb) {
+MongoConnection.prototype._dropDatabase = async function (cb) {
   var self = this;
 
   var write = self._maybeBeginWrite();
   var refresh = function () {
     Meteor.refresh({ dropDatabase: true });
   };
-  cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
+  const fn = Meteor.bindEnvironment(writeCallback(write, refresh, cb))
 
   try {
-    self.db.dropDatabase(cb);
+    await Meteor.promisify(self.db.dropDatabase)(fn);
   } catch (e) {
     write.committed();
     throw e;
@@ -838,8 +844,8 @@ MongoConnection.prototype.createIndex = async function (collectionName, index,
 
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
-  var collection = self.rawCollection(collectionName);
-  var indexName = await collection.createIndex(index, options);
+  var collection = self.rawCollection(collectionName)
+  var indexName = await collection.createIndex(index, options)
 };
 
 MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
@@ -850,7 +856,7 @@ MongoConnection.prototype._dropIndex = async function (collectionName, index) {
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
-  var indexName = await collection.dropIndex(index);
+  var indexName =  await collection.dropIndex(index)
 };
 
 // CURSORS
