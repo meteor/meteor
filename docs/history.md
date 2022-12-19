@@ -6,7 +6,8 @@
 * Fix fetch() type declaration [PR](https://github.com/meteor/meteor/pull/12352) by [zarvox](https://github.com/zarvox).
 * update svelte skeleton [PR](https://github.com/meteor/meteor/pull/12350) by [tosinek](https://github.com/tosinek).
 * Bump to node 14.21.2.0 [PR](https://github.com/meteor/meteor/pull/12370) by [Grubba27](https://github.com/Grubba27).
-
+* resetPassword and verifyEmail to no longer sign in the user automatically [PR](https://github.com/meteor/meteor/pull/12385) by [denihs](https://github.com/denihs).
+* 
 #### Breaking Changes
 
 * `accounts-password@2.3.3`
@@ -25,8 +26,12 @@ N/a
 
 * `fetch@0.1.3`:
   - Updated fetch type definition.
+  
 * `fetch@1.10.4:
   - Added back meteor type definitions that were removed by mistake in earlier version.
+
+* `accounts-password@2.3.3`
+  - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
 
 * `Comand line`:
   - Updated Svelte skeleton to now be able to support typescript out of the box and some idioms to the skeleton
@@ -36,6 +41,7 @@ N/a
 - [@zarvox](https://github.com/zarvox).
 - [@tosinek](https://github.com/tosinek).
 - [@Grubba27](https://github.com/Grubba27).
+- [@denihs](https://github.com/denihs)
 
 For making this great framework even better!
 
