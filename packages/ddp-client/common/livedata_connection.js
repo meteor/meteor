@@ -682,7 +682,7 @@ export class Connection {
       options = Object.create(null);
     }
     options = options || Object.create(null);
-
+    console.log({name, callback, options});
     if (callback) {
       // XXX would it be better form to do the binding in stream.on,
       // or caller, instead of here?

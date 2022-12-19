@@ -94,16 +94,14 @@ var upsert = async function (coll, useUpdate, query, mod, options, callback) {
   }
 
   if (callback) {
-    return await coll.update(query, mod,
-        _.extend({ upsert: true }, options),
-        function (err, result) {
-          callback(err, ! err && {
-            numberAffected: result
-          });
+    await coll.update(query, mod,
+        _.extend({ upsert: true }, options))
+        .then(result => {
+          callback(null, {numberAffected: result});
         });
   }
 
-  return Promise.resolve(coll.update(query, mod,
+  return await Promise.resolve(coll.update(query, mod,
       _.extend({ upsert: true }, options))).then(r => ({numberAffected: r}));
 };
 
@@ -1578,9 +1576,9 @@ _.each( ['STRING'], function(idGeneration) {
       inColl && test.isNull(inColl.d.color);
     },
 
-    function (test, expect) {
+    async function (test, expect) {
       var self = this;
-      self.coll.insert(new Dog("rover", "orange")).then(id => {
+      await self.coll.insertAsync(new Dog("rover", "orange")).then(id => {
         expect(function () {
           test.isFalse(id);
         });
@@ -1591,16 +1589,18 @@ _.each( ['STRING'], function(idGeneration) {
       });
     },
 
-    function (test, expect) {
+    async function (test, expect) {
       var self = this;
-      self.coll.update(
+      await self.coll.update(
           self.docId, new Dog("rover", "orange")).then(id => {
-            console.log(id);
+            console.log({id});
+            expect();
           }).catch(err => {
-            expect(function () {
-              test.isTrue(err);
-            });
+            console.log({err});
+            test.isTrue(err);
+            expect();
       });
+      //console.log({expect});
     }
   ]);
 
@@ -1731,7 +1731,7 @@ _.each( ['STRING'], function(idGeneration) {
   _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
     _.each([true, false], function (useUpdate) {
       _.each([true, false], function (useDirectCollection) {
-        Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert" + (minimongo ? " minimongo" : "") + (useDirectCollection ? " direct collection " : "") + ", " + idGeneration, async function (test) {
+        Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert" + (minimongo ? " minimongo" : "") + (useDirectCollection ? " direct collection " : "") + ", " + idGeneration, async function (test, onComplete) {
           var run = test.runId();
           var options = collectionOptions;
           // We don't get ids back when we use update() to upsert, or when we are
@@ -1938,11 +1938,11 @@ if (Meteor.isServer) {
               test.equal(result1.insertedId, 'foo');
             }
             compareResults(test, useUpdate, await coll.find().fetch(), [{foo: 'bar', _id: 'foo'}]);
-            upsert(coll, useUpdate, {_id: 'foo'}, {foo: 'baz'}, next2);
+            await upsert(coll, useUpdate, {_id: 'foo'}, {foo: 'baz'}, next2);
           };
 
           if (! useNetwork) {
-            next0();
+            await next0();
           }
 
           var t1, t2, result2;
@@ -1959,7 +1959,7 @@ if (Meteor.isServer) {
 
             t1 = new Mongo.ObjectID();
             t2 = new Mongo.ObjectID();
-            upsert(coll, useUpdate, {_id: t1}, {_id: t1, foo: 'bar'}, next3);
+            await upsert(coll, useUpdate, {_id: t1}, {_id: t1, foo: 'bar'}, next3);
           };
 
           var result3;
@@ -1972,7 +1972,7 @@ if (Meteor.isServer) {
             }
             compareResults(test, useUpdate, await coll.find().fetch(), [{_id: t1, foo: 'bar'}]);
 
-            upsert(coll, useUpdate, {_id: t1}, {foo: t2}, next4);
+            await upsert(coll, useUpdate, {_id: t1}, {foo: t2}, next4);
           };
 
           var next4 = async function (err, result4) {
@@ -1984,7 +1984,7 @@ if (Meteor.isServer) {
             await coll.remove({_id: t1});
 
             // Test modification by upsert
-            upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 1}}, next5);
+            await upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 1}}, next5);
           };
 
           var result5;
@@ -2003,10 +2003,10 @@ if (Meteor.isServer) {
               // The stub throws an exception about the invalid modifier, which
               // livedata logs (so we suppress it).
               Meteor._suppress_log(1);
-              upsert(coll, useUpdate, {_id: 'David'}, {$blah: {foo: 2}}, function (err) {
+              await upsert(coll, useUpdate, {_id: 'David'}, {$blah: {foo: 2}}, async function (err) {
                 if (! (Meteor.isClient && useDirectCollection))
                   test.isTrue(err);
-                upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 2}}, next6);
+                await upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 2}}, next6);
               });
             } else {
               // XXX skip this test for now for LocalCollection; the fact that
@@ -2014,7 +2014,7 @@ if (Meteor.isServer) {
               // Meteor.defer, which means the exception just gets
               // logged. Something should be done about this at some point?  Maybe
               // LocalCollection callbacks don't really have to be deferred.
-              upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 2}}, next6);
+              await upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 2}}, next6);
             }
           };
 
@@ -2033,7 +2033,7 @@ if (Meteor.isServer) {
             // multi update by upsert.
             // We can't actually update multiple documents since we have to do it by
             // id, but at least make sure the multi flag doesn't mess anything up.
-            upsert(coll, useUpdate, {_id: 'Emily'},
+            await upsert(coll, useUpdate, {_id: 'Emily'},
                 {$set: {bar: 7},
                   $setOnInsert: {name: 'Fred', foo: 2}},
                 {multi: true}, next7);
@@ -2049,7 +2049,7 @@ if (Meteor.isServer) {
               {_id: 'Emily', foo: 2, bar: 7}]);
 
             // insert by multi upsert
-            upsert(coll, useUpdate, {_id: 'Fred'},
+            await upsert(coll, useUpdate, {_id: 'Fred'},
                 {$set: {bar: 7},
                   $setOnInsert: {name: 'Fred', foo: 2}},
                 {multi: true}, next8);
@@ -2777,7 +2777,7 @@ if (Meteor.isServer) {
 }
 
 // This is a VERY white-box test.
-Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - _disableOplog", async function (test) {
+Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - _disableOplog", async function (test, onComplete) {
   var collName = Random.id();
   var coll = new Mongo.Collection(collName);
   if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
@@ -2790,6 +2790,7 @@ Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - _disableOplog", a
       .observeChanges({added: function () {}});
   test.isFalse(observeWithoutOplog._multiplexer._observeDriver._usesOplog);
   await observeWithoutOplog.stop();
+  onComplete();
 });
 
 Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - include selector fields", async function (test) {

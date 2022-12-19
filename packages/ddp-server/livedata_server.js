@@ -1791,6 +1791,7 @@ Object.assign(Server.prototype, {
   applyAsync: function (name, args, options) {
     // Run the handler
     var handler = this.method_handlers[name];
+    console.log({name});
     if (! handler) {
       return Promise.reject(
         new Meteor.Error(404, `Method '${name}' not found`)

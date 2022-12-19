@@ -324,7 +324,7 @@ var bindEnvironmentForWrite = function (callback) {
   return Meteor.bindEnvironment(callback, "Mongo write");
 };
 
-MongoConnection.prototype._insert = function (collection_name, document,
+MongoConnection.prototype._insert = async function (collection_name, document,
                                               callback) {
   var self = this;
 
@@ -353,22 +353,20 @@ MongoConnection.prototype._insert = function (collection_name, document,
     Meteor.refresh({collection: collection_name, id: document._id });
   };
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
-  try {
-    var collection = self.rawCollection(collection_name);
-    collection.insertOne(
-      replaceTypes(document, replaceMeteorAtomWithMongo),
-      {
-        safe: true,
-      }
-    ).then(({insertedId}) => {
-      callback(null, insertedId);
-    }).catch((e) => {
-      callback(e, null);
-    });
-  } catch (err) {
+  var collection = self.rawCollection(collection_name);
+  return collection.insertOne(
+    replaceTypes(document, replaceMeteorAtomWithMongo),
+    {
+      safe: true,
+    }
+  ).then(({insertedId}) => {
+    callback(null, insertedId);
+    return insertedId;
+  }).catch((e) => {
+    callback(e, null);
     write.committed();
-    throw err;
-  }
+    throw e;
+  });
 };
 
 // Cause queries that may be affected by the selector to poll in this write
@@ -389,7 +387,7 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   }
 };
 
-MongoConnection.prototype._remove = function (collection_name, selector,
+MongoConnection.prototype._remove = async function (collection_name, selector,
                                               callback) {
   var self = this;
 
@@ -407,9 +405,20 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   var refresh = function () {
     self._refresh(collection_name, selector);
   };
-  callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
 
-  try {
+  return new Promise((resolve, reject) => {
+    if (!callback) {
+      callback = (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      };
+    }
+
+    callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
+
     var collection = self.rawCollection(collection_name);
     collection
       .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
@@ -418,12 +427,10 @@ MongoConnection.prototype._remove = function (collection_name, selector,
       .then(({ deletedCount }) => {
         callback(null, transformResult({ result : {modifiedCount : deletedCount} }).numberAffected);
       }).catch((err) => {
+      write.committed();
       callback(err);
     });
-  } catch (err) {
-    write.committed();
-    throw err;
-  }
+  });
 };
 
 MongoConnection.prototype._dropCollection = function (collectionName, cb) {
@@ -464,7 +471,7 @@ MongoConnection.prototype._dropDatabase = function (cb) {
   }
 };
 
-MongoConnection.prototype._update = function (collection_name, selector, mod,
+MongoConnection.prototype._update = async function (collection_name, selector, mod,
                                               options, callback) {
   var self = this;
 
@@ -517,8 +524,17 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   var refresh = function () {
     self._refresh(collection_name, selector);
   };
-  callback = writeCallback(write, refresh, callback);
-  try {
+  return new Promise((resolve, reject) => {
+    if (!callback) {
+      callback = (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      };
+    }
+    callback = writeCallback(write, refresh, callback);
     var collection = self.rawCollection(collection_name);
     var mongoOpts = {safe: true};
     // Add support for filtered positional operator
@@ -565,7 +581,6 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         }
       }
     }
-
     if (options.upsert &&
         ! isModify &&
         ! knownId &&
@@ -599,7 +614,6 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         }
       );
     } else {
-
       if (options.upsert && !knownId && options.insertedId && isModify) {
         if (!mongoMod.hasOwnProperty('$setOnInsert')) {
           mongoMod.$setOnInsert = {};
@@ -620,6 +634,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
           bindEnvironmentForWrite(function (err = null, result) {
           if (! err) {
             var meteorResult = transformResult({result});
+            console.log({meteorResult});
             if (meteorResult && options._returnObject) {
               // If this was an upsert() call, and we ended up
               // inserting a new doc and we know its id, then
@@ -641,10 +656,10 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
           }
         }));
     }
-  } catch (e) {
+  }).catch(e => {
     write.committed();
     throw e;
-  }
+  });
 };
 
 var transformResult = function (driverResult) {
@@ -784,6 +799,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
+    //return self[`_${method}`](...arguments);
     return Meteor.promisify(self[`_${method}`]).apply(self, arguments);
   };
 });
@@ -791,7 +807,7 @@ _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], functio
 // XXX MongoConnection.upsert() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
 // doc).
-MongoConnection.prototype.upsert = function (collectionName, selector, mod,
+MongoConnection.prototype.upsert = async function (collectionName, selector, mod,
                                              options, callback) {
   var self = this;
   if (typeof options === "function" && ! callback) {

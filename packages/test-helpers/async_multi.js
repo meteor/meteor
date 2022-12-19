@@ -88,7 +88,7 @@ _.extend(ExpectationManager.prototype, {
   done: function () {
     var self = this;
     self.closed = true;
-    self._check_complete();
+    return self._check_complete();
   },
 
   cancel: function () {
@@ -104,7 +104,7 @@ _.extend(ExpectationManager.prototype, {
     var self = this;
     if (!self.outstanding && self.closed && !self.dead) {
       self.dead = true;
-      self.onComplete();
+      return self.onComplete();
     }
   }
 });
@@ -114,53 +114,52 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
   var timeout = 180000;
 
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
-  addFunction(name, function (test, onComplete) {
+  addFunction(name, async function (test, onComplete) {
     var remaining = _.clone(funcs);
     var context = {};
     var i = 0;
 
-    var runNext = function () {
+    var runNext = async function () {
       var func = remaining.shift();
       if (!func) {
         delete test.extraDetails.asyncBlock;
         onComplete();
       }
-      else {
-        var em = new ExpectationManager(test, function () {
-          Meteor.clearTimeout(timer);
-          runNext();
-        });
+      var em = new ExpectationManager(test, function () {
+        Meteor.clearTimeout(timer);
+        return runNext();
+      });
 
-        var timer = Meteor.setTimeout(function () {
-          if (em.cancel()) {
-            test.fail({type: "timeout", message: "Async batch timed out"});
-            onComplete();
-          }
-          return;
-        }, timeout);
+      var timer = Meteor.setTimeout(async function () {
+        if (em.cancel()) {
+          test.fail({type: "timeout", message: "Async batch timed out"});
+          onComplete();
+        }
+        return;
+      }, timeout);
 
-        test.extraDetails.asyncBlock = i++;
+      test.extraDetails.asyncBlock = i++;
 
-        new Promise(resolve => {
-          const result = func.apply(context, [test, _.bind(em.expect, em)]);
-          if (result && typeof result.then === "function") {
-            return result.then((r) => resolve(r))
-          }
-
-          return resolve(result);
-        }).then(() => {
-          em.done();
-        }, exception => {
-          if (em.cancel()) {
-            test.exception(exception);
-            // Because we called test.exception, we're not to call onComplete.
-          }
-          Meteor.clearTimeout(timer);
-        });
-      }
+      await new Promise(resolve => {
+        const result = func.apply(context, [test, _.bind(em.expect, em)]);
+        if (result && typeof result.then === "function") {
+          //console.log({result});
+          return result.then((r) => resolve(r));
+        }
+        return resolve(result);
+      }).then(() => {
+        return em.done();
+      }).catch(exception => {
+        if (em.cancel()) {
+          test.exception(exception);
+          // Because we called test.exception, we're not to call onComplete.
+        }
+        Meteor.clearTimeout(timer);
+        runNext();
+      });
     };
 
-    runNext();
+    await runNext();
   });
 };
 
@@ -212,8 +211,6 @@ runAndThrowIfNeeded = async (fn, test, shouldErrorOut) => {
   } catch (e) {
     err = e;
   }
-
   test[shouldErrorOut ? "isTrue" : "isFalse"](err);
-
   return result;
 };

@@ -219,6 +219,7 @@ Object.assign(Mongo.Collection.prototype, {
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
         // value meaning "remove it".)
+        console.log({msg});
         if (msg.msg === 'replace') {
           var replace = msg.replace;
           if (!replace) {
@@ -575,7 +576,7 @@ Object.assign(Mongo.Collection.prototype, {
       } else {
         // If we don't have the callback, we assume the user is using the promise.
         // We can't just pass this._collection.insert to the promisify because it would lose the context.
-        result = Meteor.promisify((cb) => this._collection.insert(doc, cb))();
+        result = this._collection.insert(doc);
       }
 
       return chooseReturnValueFromCollectionResult(result);
@@ -615,7 +616,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
-  update(selector, modifier, ...optionsAndCallback) {
+  async update(selector, modifier, ...optionsAndCallback) {
     const callback = popCallbackFromArgs(optionsAndCallback);
 
     // We've already popped off the callback, so we are left with an array
@@ -654,23 +655,26 @@ Object.assign(Mongo.Collection.prototype, {
 
     // it's my collection.  descend into the collection object
     // and propagate any exception.
-    try {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
+    //console.log({callback, options, selector, modifier, coll: this._collection});
       return this._collection.update(
         selector,
         modifier,
-        options,
-        wrappedCallback
-      );
-    } catch (e) {
-      if (callback) {
-        callback(e);
-        return null;
-      }
-      throw e;
-    }
+        options
+      ).then(result => {
+        if (callback) {
+          callback(null, result);
+        }
+        return result;
+      }).catch (e => {
+        if (callback) {
+          callback(e);
+          return null;
+        }
+        throw e;
+      });
   },
 
   /**
@@ -906,6 +910,6 @@ function popCallbackFromArgs(args) {
 ASYNC_COLLECTION_METHODS.forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
-    return Promise.resolve(this[methodName](...args));
+    return this[methodName](...args);
   };
 });
