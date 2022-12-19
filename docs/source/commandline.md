@@ -91,6 +91,12 @@ You can pass an absolute or relative path.
 
 **Flags for default packages**
 
+`--prototype`
+
+Creates a package with the prototype packages. 
+It can be used together with other flags that create apps such as `--react` or `--typescript`.
+
+
 `--bare`
 
 Creates a basic, blaze project.
