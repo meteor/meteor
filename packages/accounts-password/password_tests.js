@@ -10,19 +10,24 @@ function hashPassword(password) {
 if (Meteor.isServer) {
   Accounts.removeDefaultRateLimit();
 
-  Meteor.methods({
-    getResetToken: function () {
-      const token = Meteor.users.findOne(this.userId).services.password.reset;
-      return token;
-    },
-    addSkipCaseInsensitiveChecksForTest: value => {
-      Accounts._skipCaseInsensitiveChecksForTest[value] = true;
-    },
-    removeSkipCaseInsensitiveChecksForTest: value => {
-      delete Accounts._skipCaseInsensitiveChecksForTest[value];
-    },
-    countUsersOnServer: query => Meteor.users.find(query).count(),
-  });
+  Meteor.methods(
+    {
+      getResetToken:
+        async function () {
+          const user = await Meteor.users.findOne(this.userId);
+          return user.services.password.reset;
+        },
+
+      addSkipCaseInsensitiveChecksForTest:
+        value => Accounts._skipCaseInsensitiveChecksForTest[value] = true,
+
+      removeSkipCaseInsensitiveChecksForTest:
+        value => delete Accounts._skipCaseInsensitiveChecksForTest[value],
+
+      countUsersOnServer:
+        async query => await Meteor.users.find(query).count(),
+    }
+  );
 }
 
 if (Meteor.isClient) (() => {
@@ -276,7 +281,7 @@ if (Meteor.isClient) (() => {
     },
     // Make sure the new user has not been inserted
     function (test, expect) {
-      Meteor.call('countUsersOnServer',
+      Meteor.callAsync('countUsersOnServer',
         { username: this.newUsername },
         expect(function (error, result) {
           test.equal(result, 0);
@@ -383,7 +388,7 @@ if (Meteor.isClient) (() => {
     },
     // Make sure the new user has not been inserted
     function (test, expect) {
-      Meteor.call('countUsersOnServer',
+      Meteor.callAsync('countUsersOnServer',
         { 'emails.address': this.newEmail },
         expect (function (error, result) {
           test.equal(result, 0);
@@ -413,7 +418,7 @@ if (Meteor.isClient) (() => {
       }));
     },
     function (test, expect) {
-      Meteor.call("getResetToken", expect((err, token) => {
+      Meteor.callAsync("getResetToken", expect((err, token) => {
         test.isFalse(err);
         test.isTrue(token);
         this.token = token;
@@ -439,7 +444,7 @@ if (Meteor.isClient) (() => {
                               loggedInAs(this.username, test, expect));
     },
     function (test, expect) {
-      Meteor.call("getResetToken", expect((err, token) => {
+      Meteor.callAsync("getResetToken", expect((err, token) => {
         test.isFalse(err);
         test.isFalse(token);
       }));
