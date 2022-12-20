@@ -1384,30 +1384,34 @@ if (Meteor.isServer) (() => {
         /Incorrect password/);
     });
 
-  Tinytest.add('forgotPassword - different error messages returned depending' +
-  ' on whether ambiguousErrorMessages flag is passed in Account.config',
-    test =>{
-        const username = Random.id();
-        const email = `${Random.id()}-intercept@example.com`;
-        const randomEmail = `${Random.id()}-Ada_intercept@some.com`;
-        const wrongOptions = {email: randomEmail}
-        const password = 'password';
-        const options = Accounts._options
+  Tinytest.addAsync('forgotPassword - different error messages returned depending' +
+    ' on whether ambiguousErrorMessages flag is passed in Account.config',
+    async test => {
+      const username = Random.id();
+      const email = `${ Random.id() }-intercept@example.com`;
+      const randomEmail = `${ Random.id() }-Ada_intercept@some.com`;
+      const wrongOptions = { email: randomEmail }
+      const password = 'password';
+      const options = Accounts._options
 
-        Accounts.createUser(
-          { username: username, email: email, password: hashPassword(password) },
-          );
+      await Accounts.createUser(
+        {
+          username: username,
+          email: email,
+          password: hashPassword(password)
+        },
+      );
 
-        Accounts._options.ambiguousErrorMessages = true
-        test.throws(
-          ()=> Meteor.call('forgotPassword', wrongOptions),
-          'Something went wrong. Please check your credentials'
-        )
+      Accounts._options.ambiguousErrorMessages = true
+      await test.throwsAsync(
+        async () => await Meteor.callAsync('forgotPassword', wrongOptions),
+        'Something went wrong. Please check your credentials'
+      )
 
         Accounts._options.ambiguousErrorMessages = false
-        test.throws(
-          ()=> Meteor.call('forgotPassword', wrongOptions),
-          'User not found'
+        await test.throwsAsync(
+          async ()=> await Meteor.callAsync('forgotPassword', wrongOptions),
+          /Can't find user/
         )
         // return accounts as it were
         Accounts._options = options
@@ -1416,8 +1420,8 @@ if (Meteor.isServer) (() => {
   Tinytest.addAsync(
     'passwords - reset tokens with reasons get cleaned up',
     async test => {
-      const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
+      const email = `${ test.id }-intercept@example.com`;
+      const userId = Accounts.createUser({ email: email, password: hashPassword('password') });
       await Accounts.sendResetPasswordEmail(userId, email);
       test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
 
@@ -1429,10 +1433,10 @@ if (Meteor.isServer) (() => {
   Tinytest.addAsync(
     'passwords - reset tokens without reasons get cleaned up',
     async test => {
-      const email = `${test.id}-intercept@example.com`;
-      const userId = await Accounts.createUser({email: email, password: hashPassword('password')});
+      const email = `${ test.id }-intercept@example.com`;
+      const userId = await Accounts.createUser({ email: email, password: hashPassword('password') });
       await Accounts.sendResetPasswordEmail(userId, email);
-      await Meteor.users.update({_id: userId}, {$unset: {"services.password.reset.reason": 1}});
+      await Meteor.users.update({ _id: userId }, { $unset: { "services.password.reset.reason": 1 } });
       test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
       test.isUndefined(Meteor.users.findOne(userId).services.password.reset.reason);
 
