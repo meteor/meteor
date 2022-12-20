@@ -1492,7 +1492,7 @@ export class AccountsServer extends AccountsCommon {
     await this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
     await this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
 
-    const userId = this.insertUserDoc(options, newUser);
+    const userId = await this.insertUserDoc(options, newUser);
     // Perform another check after insert, in case a matching user has been
     // inserted in the meantime
     try {
@@ -1500,7 +1500,7 @@ export class AccountsServer extends AccountsCommon {
       await this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
     } catch (ex) {
       // Remove inserted user if the check fails
-      Meteor.users.remove(userId);
+      await Meteor.users.remove(userId);
       throw ex;
     }
     return userId;
