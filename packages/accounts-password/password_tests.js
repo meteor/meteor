@@ -1600,11 +1600,11 @@ if (Meteor.isServer) (() => {
 
     const newUsername = Random.id();
     await Accounts.setUsername(userId, newUsername);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).username, newUsername);
+    const u1 = await Accounts._findUserByQuery({id: userId})
+    test.equal(u1.username, newUsername);
 
     // Test findUserByUsername as well while we're here
-    let user = Accounts.findUserByUsername(newUsername);
+    let user = await Accounts.findUserByUsername(newUsername);
     test.equal(user._id, userId, 'userId - ignore');
     test.isNotUndefined(user[ignoreFieldName], 'field - no ignore');
 
