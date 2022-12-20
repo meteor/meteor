@@ -1830,8 +1830,8 @@ if (Meteor.isServer) (() => {
       // Verify that a bcrypt hash generated for a new account uses the
       let username = Random.id();
       const password = hashPassword('abc123');
-      const userId1 = Accounts.createUser({ username, password });
-      let user1 = Meteor.users.findOne(userId1);
+      const userId1 = await Accounts.createUser({ username, password });
+      let user1 =  await Meteor.users.findOne(userId1);
       let rounds = getUserHashRounds(user1);
       test.equal(rounds, Accounts._bcryptRounds());
 
@@ -1843,27 +1843,28 @@ if (Meteor.isServer) (() => {
       const customRounds = 11;
       Accounts._options.bcryptRounds = customRounds;
       await Accounts._checkPasswordAsync(user1, password);
-      Meteor.setTimeout(() => {
-        user1 = Meteor.users.findOne(userId1);
+      Meteor.setTimeout(async () => {
+        user1 = await Meteor.users.findOne(userId1);
         rounds = getUserHashRounds(user1);
         test.equal(rounds, customRounds);
 
         // When a custom number of bcrypt rounds is set, make sure it's
         // used for new bcrypt password hashes.
         username = Random.id();
-        const userId2 = Accounts.createUser({ username, password });
-        const user2 = Meteor.users.findOne(userId2);
+        const userId2 = await Accounts.createUser({ username, password });
+        const user2 = await Meteor.users.findOne(userId2);
         rounds = getUserHashRounds(user2);
         test.equal(rounds, customRounds);
 
         // Cleanup
         Accounts._options.bcryptRounds = defaultRounds;
-        Meteor.users.remove(userId1);
-        Meteor.users.remove(userId2);
-        done();
+        await Meteor.users.remove(userId1);
+        await Meteor.users.remove(userId2);
+        done()
       }, 5000);
     }
-  );
+  );      // default number of rounds.
+
 
   Tinytest.add('passwords - extra params in email urls', (test) => {
     const username = Random.id();
