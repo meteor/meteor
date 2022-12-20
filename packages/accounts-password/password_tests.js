@@ -1739,7 +1739,8 @@ if (Meteor.isServer) (() => {
   });
 
   Tinytest.addAsync("passwords - add email when the user has an existing email " +
-    "only differing in case", async test => {
+    "only differing in case",
+    async test => {
     const origEmail = `${ Random.id() }@turing.com`;
     const userId = await Accounts.createUser({
       email: origEmail
@@ -1757,29 +1758,30 @@ if (Meteor.isServer) (() => {
     ]);
   });
 
-  Tinytest.add("passwords - add email should fail when there is an existing " +
-    "user with an email only differing in case", test => {
+  Tinytest.addAsync("passwords - add email should fail when there is an existing " +
+    "user with an email only differing in case", async test => {
     const user1Email = `${ Random.id() }@turing.com`;
-    const userId1 = Accounts.createUser({
+    const userId1 = await Accounts.createUser({
       email: user1Email
     });
 
     const user2Email = `${ Random.id() }@turing.com`;
-    const userId2 = Accounts.createUser({
+    const userId2 = await Accounts.createUser({
       email: user2Email
     });
 
     const dupEmail = user1Email.toUpperCase();
-    test.throws(
-      () => Accounts.addEmail(userId2, dupEmail),
+    await test.throwsAsync(
+     async () => await Accounts.addEmail(userId2, dupEmail),
       /Email already exists/
     );
 
-    test.equal(Accounts._findUserByQuery({ id: userId1 }).emails, [
+    const u1 = await Accounts._findUserByQuery({ id: userId1 })
+    test.equal(u1.emails, [
       { address: user1Email, verified: false }
     ]);
-
-    test.equal(Accounts._findUserByQuery({ id: userId2 }).emails, [
+    const u2 = await Accounts._findUserByQuery({ id: userId2 })
+    test.equal(u2.emails, [
       { address: user2Email, verified: false }
     ]);
   });
