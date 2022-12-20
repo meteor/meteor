@@ -1735,15 +1735,16 @@ if (Meteor.isServer) (() => {
       Accounts._options = options;
     });
 
-  Tinytest.add("passwords - add email when user has not an existing email", test => {
-    const userId = Accounts.createUser({
+  Tinytest.addAsync("passwords - add email when user has not an existing email",
+      async test => {
+    const userId = await Accounts.createUser({
       username: `user${ Random.id() }`
     });
 
     const newEmail = `${ Random.id() }@turing.com`;
-    Accounts.addEmail(userId, newEmail);
-
-    test.equal(Accounts._findUserByQuery({ id: userId }).emails, [
+    await Accounts.addEmail(userId, newEmail);
+    const u1 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u1.emails, [
       { address: newEmail, verified: false },
     ]);
   });
