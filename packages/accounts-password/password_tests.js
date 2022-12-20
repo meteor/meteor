@@ -1464,43 +1464,43 @@ if (Meteor.isServer) (() => {
 
   Tinytest.addAsync(
     'passwords - enroll password should work when token is not expired',
-    (test, onComplete) => {
+    async test => {
       const username = Random.id();
       const email = `${username}-intercept@example.com`;
 
-      const userId = Accounts.createUser({
+      const userId = await Accounts.createUser({
         username: username,
         email: email
       });
 
-      const user = Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOne(userId);
+      await Accounts.sendEnrollmentEmail(userId, email);
 
-      Accounts.sendEnrollmentEmail(userId, email);
-
-      const enrollPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      const [enrollPasswordEmailOptions] =
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/enroll-account/(\\S*)`);
       const match = enrollPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const enrollPasswordToken = match[1];
 
-      makeTestConnection(
-        test,
-        clientConn => {
-          test.isTrue(clientConn.call(
-            "resetPassword",
-            enrollPasswordToken,
-            hashPassword("new-password")
-          ));
+      const {
+        clientConn
+      } = makeTestConnAsync(test)
 
-          test.isTrue(clientConn.call("login", {
-            user: { username },
-            password: hashPassword("new-password")
-          }));
+      test.isTrue(
+        await clientConn.callAsync(
+          "resetPassword",
+          enrollPasswordToken,
+          hashPassword("new-password"))
+      );
+      test.isTrue(
+        await clientConn.callAsync("login", {
+          user: { username },
+          password: hashPassword("new-password")
+        })
+      );
 
-          onComplete();
-        });
     });
 
   Tinytest.add(
@@ -1516,10 +1516,10 @@ if (Meteor.isServer) (() => {
 
       const user = Meteor.users.findOne(userId);
 
-      Accounts.sendEnrollmentEmail(userId, email);
+       Accounts.sendEnrollmentEmail(userId, email);
 
-      const enrollPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      const [enrollPasswordEmailOptions] =
+        Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/enroll-account/(\\S*)`);
       const match = enrollPasswordEmailOptions.text.match(re);
@@ -1538,7 +1538,7 @@ if (Meteor.isServer) (() => {
     const email = `${test.id}-intercept@example.com`;
     const userId = Accounts.createUser({email: email, password: hashPassword('password')});
 
-    Accounts.sendEnrollmentEmail(userId, email);
+     Accounts.sendEnrollmentEmail(userId, email);
     test.isTrue(!!Meteor.users.findOne(userId).services.password.enroll);
     Accounts._expirePasswordEnrollTokens(new Date(), userId);
     test.isUndefined(Meteor.users.findOne(userId).services.password.enroll);
@@ -1550,7 +1550,7 @@ if (Meteor.isServer) (() => {
       const email = `${test.id}-intercept@example.com`;
       const userId = Accounts.createUser({email: email, password: hashPassword('password')});
 
-      Accounts.sendEnrollmentEmail(userId, email);
+       Accounts.sendEnrollmentEmail(userId, email);
       const enrollToken = Meteor.users.findOne(userId).services.password.enroll;
       test.isTrue(enrollToken);
 
@@ -1852,10 +1852,10 @@ if (Meteor.isServer) (() => {
     });
 
     const extraParams = { test: 'success' };
-    Accounts.sendEnrollmentEmail(userId, email, null, extraParams);
+     Accounts.sendEnrollmentEmail(userId, email, null, extraParams);
 
-    const enrollPasswordEmailOptions =
-      Meteor.call("getInterceptedEmails", email)[0];
+    const [enrollPasswordEmailOptions] =
+      Meteor.callAsync("getInterceptedEmails", email);
 
     const re = new RegExp(`${Meteor.absoluteUrl()}(\\S*)`);
     const match = enrollPasswordEmailOptions.text.match(re);
