@@ -1481,7 +1481,7 @@ export class AccountsServer extends AccountsCommon {
     }
   };
 
-  _createUserCheckingDuplicates({ user, email, username, options }) {
+  async _createUserCheckingDuplicates({ user, email, username, options }) {
     const newUser = {
       ...user,
       ...(username ? { username } : {}),
@@ -1489,15 +1489,15 @@ export class AccountsServer extends AccountsCommon {
     };
 
     // Perform a case insensitive check before insert
-    this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
-    this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
+    await this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
+    await this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
 
     const userId = this.insertUserDoc(options, newUser);
     // Perform another check after insert, in case a matching user has been
     // inserted in the meantime
     try {
-      this._checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
-      this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
+      await this._checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
+      await this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
     } catch (ex) {
       // Remove inserted user if the check fails
       Meteor.users.remove(userId);
