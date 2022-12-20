@@ -282,22 +282,7 @@ export function Profile<
 export namespace Profile {
   export let enabled = !! process.env.METEOR_PROFILE;
 
-  export function time<TResult>(bucket: string, f: () => TResult) {
-    return Profile(bucket, f)();
-  }
-
-  export async function run<TResult>(bucket: string, f: () => TResult) {
-    if (! Profile.enabled) {
-      return f();
-    }
-
-    if (running) {
-      // We've kept the calls to Profile.run in the tool disjoint so far,
-      // and should probably keep doing so, but if we mess up, warn and continue.
-      console.log("Warning: Nested Profile.run at " + bucket);
-      return await time(bucket, f);
-    }
-
+  async function _runAsync(bucket, f) {
     runningName = bucket;
     print(`(#${reportNum}) Profiling: ${runningName}`);
     start();
@@ -307,6 +292,42 @@ export namespace Profile {
       report();
       reportNum++;
     }
+  }
+
+  function _runSync(bucket, f) {
+    runningName = bucket;
+    print(`(#${reportNum}) Profiling: ${runningName}`);
+    start();
+    try {
+      return time(bucket, f);
+    } finally {
+      report();
+      reportNum++;
+    }
+  }
+
+  export function time<TResult>(bucket: string, f: () => TResult) {
+    return Profile(bucket, f)();
+  }
+
+  export function run<TResult>(bucket: string, f: () => TResult) {
+    if (! Profile.enabled) {
+      return f();
+    }
+
+    if (running) {
+      // We've kept the calls to Profile.run in the tool disjoint so far,
+      // and should probably keep doing so, but if we mess up, warn and continue.
+      console.log("Warning: Nested Profile.run at " + bucket);
+      return time(bucket, f);
+    }
+
+    const isAsyncFn = f.constructor.name === "AsyncFunction";
+    if (!isAsyncFn) {
+      return _runSync(bucket, f);
+    }
+
+    return _runAsync(bucket, f);
   }
 
   function start() {
