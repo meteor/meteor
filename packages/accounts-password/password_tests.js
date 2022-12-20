@@ -1219,8 +1219,6 @@ if (Meteor.isServer) (() => {
         test.isFalse(Accounts._getUserObserve(serverConn.id));
       })
       // TODO: continue later
-      console.log('here is ok3');
-
       const result = await clientConn.callAsync('login', {
         user: { username: username },
         password: hashPassword('password')
@@ -1230,7 +1228,6 @@ if (Meteor.isServer) (() => {
       test.isTrue(result);
       const token = Accounts._getAccountData(serverConn.id, 'loginToken');
       test.isTrue(token)
-      console.log('here is ok');
       const simplePollAsync =
         () => new Promise((resolve, reject) =>
           simplePoll(
@@ -1262,39 +1259,48 @@ if (Meteor.isServer) (() => {
   Tinytest.addAsync(
     "passwords - reset password doesn't work if email changed after email sent",
     async test => {
-      const username = Random.id();
+      const username = Random.id() + 'reset-password-doesnt-work-if-email-changed'
       const email = `${username}-intercept@example.com`;
+      console.log('here is ok0', hashPassword('password'));
 
       const userId = await Accounts.createUser({
         username: username,
         email: email,
         password: hashPassword("old-password")
       });
-
+      console.log(userId);
       const user = await Meteor.users.findOne(userId);
 
       await Accounts.sendResetPasswordEmail(userId, email);
-
-      const resetPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      const [resetPasswordEmailOptions] =
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/reset-password/(\\S*)`);
+      console.log('reset',resetPasswordEmailOptions)
+
       const match = resetPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const resetPasswordToken = match[1];
 
       const newEmail = `${Random.id()}-new@example.com`;
       await Meteor.users.update(userId, {$set: {"emails.0.address": newEmail}});
+      console.log('token',resetPasswordToken)
+      console.log('match',match)
+      console.log('password',hashPassword("new-password"))
 
-      test.throws(
-        () => Meteor.call("resetPassword", resetPasswordToken, hashPassword("new-password")),
+      await test.throwsAsync(
+        async () =>
+          await Meteor.callAsync("resetPassword", resetPasswordToken,  hashPassword("new-password")),
         /Token has invalid email address/
       );
-      test.throws(
-        () => Meteor.call(
+      await test.throwsAsync(
+        async () =>
+          await Meteor.callAsync(
           "login",
-          {user: {username: username},
-          password: hashPassword("new-password")}
+          {
+            user: { username: username },
+            password: hashPassword("new-password")
+          }
         ),
         /Incorrect password/);
     });
