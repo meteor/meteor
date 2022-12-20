@@ -604,7 +604,6 @@ Meteor.methods(
           async () => {
             check(token, String);
             check(newPassword, passwordValidator);
-
             let user = await Meteor.users.findOne(
               { "services.password.reset.token": token },
               {

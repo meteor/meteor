@@ -1343,7 +1343,7 @@ if (Meteor.isServer) (() => {
     'passwords - reset password should not work when token is expired',
     async test => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      const email = `${ username }-intercept@example.com`;
 
       const userId = await Accounts.createUser({
         username: username,
@@ -1355,20 +1355,24 @@ if (Meteor.isServer) (() => {
 
       await Accounts.sendResetPasswordEmail(userId, email);
 
-      const resetPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      const [resetPasswordEmailOptions] =
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/reset-password/(\\S*)`);
       const match = resetPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const resetPasswordToken = match[1];
 
-      await Meteor.users.update(userId, {$set: {"services.password.reset.when":  new Date(Date.now() + -5 * 24 * 3600 * 1000) }});
+      await Meteor.users.update(userId, { $set: { "services.password.reset.when": new Date(Date.now() + -5 * 24 * 3600 * 1000) } });
 
-      test.throws(
-        () => Meteor.call("resetPassword", resetPasswordToken, hashPassword("new-password")),
-        /Token expired/
-      );
+      try {
+        await Meteor.callAsync("resetPassword", resetPasswordToken, hashPassword("new-password"))
+      } catch (e) {
+        test.throws(() => {
+          throw e;
+        })
+      }
+
       await test.throwsAsync(
         async () => await Meteor.callAsync(
           "login",
