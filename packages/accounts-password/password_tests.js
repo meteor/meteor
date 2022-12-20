@@ -9,17 +9,6 @@ const makeTestConnAsync =
       );
     })
 
-const simplePollAsync =
-  (testFn) =>
-    new Promise((resolve, reject) =>
-      simplePoll(testFn,
-        () => {
-          resolve(true)
-        }, () => {
-          reject(false)
-        }))
-
-
 function hashPassword(password) {
   return {
     digest: SHA256(password),
@@ -1749,20 +1738,20 @@ if (Meteor.isServer) (() => {
     ]);
   });
 
-  Tinytest.add("passwords - add email when the user has an existing email " +
-    "only differing in case", test => {
+  Tinytest.addAsync("passwords - add email when the user has an existing email " +
+    "only differing in case", async test => {
     const origEmail = `${ Random.id() }@turing.com`;
-    const userId = Accounts.createUser({
+    const userId = await Accounts.createUser({
       email: origEmail
     });
 
     const newEmail = `${ Random.id() }@turing.com`;
-    Accounts.addEmail(userId, newEmail);
+    await Accounts.addEmail(userId, newEmail);
 
     const thirdEmail = origEmail.toUpperCase();
-    Accounts.addEmail(userId, thirdEmail, true);
-
-    test.equal(Accounts._findUserByQuery({ id: userId }).emails, [
+    await Accounts.addEmail(userId, thirdEmail, true);
+    const u1 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u1.emails, [
       { address: thirdEmail, verified: true },
       { address: newEmail, verified: false }
     ]);
