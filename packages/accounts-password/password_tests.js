@@ -1502,33 +1502,33 @@ if (Meteor.isServer) (() => {
 
     });
 
-  Tinytest.add(
+  Tinytest.addAsync(
     'passwords - enroll password should not work when token is expired',
-    test => {
+    async test => {
       const username = Random.id();
       const email = `${username}-intercept@example.com`;
 
-      const userId = Accounts.createUser({
+      const userId = await Accounts.createUser({
         username: username,
         email: email
       });
 
-      const user = Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOne(userId);
 
-       Accounts.sendEnrollmentEmail(userId, email);
+       await Accounts.sendEnrollmentEmail(userId, email);
 
       const [enrollPasswordEmailOptions] =
-        Meteor.callAsync("getInterceptedEmails", email);
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/enroll-account/(\\S*)`);
       const match = enrollPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const enrollPasswordToken = match[1];
 
-      Meteor.users.update(userId, {$set: {"services.password.enroll.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) }});
+      await Meteor.users.update(userId, {$set: {"services.password.enroll.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) }});
 
-      test.throws(
-        () => Meteor.call("resetPassword", enrollPasswordToken, hashPassword("new-password")),
+      await test.throwsAsync(
+        async () => await Meteor.callAsync("resetPassword", enrollPasswordToken, hashPassword("new-password")),
         /Token expired/
       );
     });
