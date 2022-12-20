@@ -1571,15 +1571,18 @@ if (Meteor.isServer) (() => {
   Tinytest.addAsync(
     "passwords - reset tokens don't get cleaned up when enroll tokens are cleaned up",
     async test => {
-      const email = `${test.id}-intercept@example.com`;
-      const userId = await Accounts.createUser({email: email, password: hashPassword('password')});
+      const email = `${ test.id }-intercept@example.com`;
+      const userId =
+        await Accounts.createUser({ email: email, password: hashPassword('password') });
 
       await Accounts.sendResetPasswordEmail(userId, email);
-      const resetToken = Meteor.users.findOne(userId).services.password.reset;
+      const user1 = await Meteor.users.findOne(userId);
+      const resetToken = user1.services.password.reset;
       test.isTrue(resetToken);
 
       await Accounts._expirePasswordEnrollTokens(new Date(), userId);
-      test.equal(resetToken,Meteor.users.findOne(userId).services.password.reset);
+      const user2 = await Meteor.users.findOne(userId);
+      test.equal(resetToken, user2.services.password.reset);
     }
   )
 
