@@ -448,21 +448,21 @@ Accounts.generateResetToken =
   // store the token record in 'services.password.enroll' db field
   // else store the token record in in 'services.password.reset' db field
   if(reason === 'enrollAccount') {
-    Meteor.users.update({_id: user._id}, {
+    await Meteor.users.update({_id: user._id}, {
       $set : {
         'services.password.enroll': tokenRecord
       }
     });
     // before passing to template, update user object with new token
-    Meteor._ensure(user, 'services', 'password').enroll = tokenRecord;
+     Meteor._ensure(user, 'services', 'password').enroll = tokenRecord;
   } else {
-    Meteor.users.update({_id: user._id}, {
+    await Meteor.users.update({_id: user._id}, {
       $set : {
         'services.password.reset': tokenRecord
       }
     });
     // before passing to template, update user object with new token
-    Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
+     Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
   }
 
   return {email, user, token};
