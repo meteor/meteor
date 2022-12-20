@@ -1185,9 +1185,12 @@ if (Meteor.isServer) (() => {
 
   // This test properly belongs in accounts-base/accounts_tests.js, but
   // this is where the tests that actually log in are.
-  Tinytest.add('accounts - user() out of context', test => {
+  Tinytest.addAsync('accounts - user() out of context', async test => {
     // basic server context, no method.
-    test.throws(() => Meteor.user());
+    await test.throwsAsync(
+      async () =>
+        await Meteor.user()
+    );
   });
 
   // XXX would be nice to test
