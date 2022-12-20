@@ -561,7 +561,6 @@ Object.assign(ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInJob();
 
-    debugger;
     var depsAndConstraints = self._getRootDepsAndConstraints();
     // If this is in the runner and we have reset this ProjectContext for a
     // rebuild, use the versions we calculated last time in this process (which
@@ -621,7 +620,6 @@ Object.assign(ProjectContext.prototype, {
         resolverRunCount++;
 
         var solution;
-        debugger;
         try {
           await Profile.time(
             "Select Package Versions" +

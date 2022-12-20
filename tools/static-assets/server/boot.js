@@ -476,15 +476,17 @@ var runMain = Profile("Run main()", async function () {
 });
 
 (async function startServerProcess() {
-  const { AsyncLocalStorage } = require('async_hooks');
-  global.asyncLocalStorage = new AsyncLocalStorage();
+  if (!global.asyncLocalStorage) {
+    const { AsyncLocalStorage } = require('async_hooks');
+    global.asyncLocalStorage = new AsyncLocalStorage();
+  }
 
-  await Profile.run('Server startup', function() {
-      return global.asyncLocalStorage.run({}, async () => {
-        await loadServerBundles();
-        await callStartupHooks();
-        await runMain();
-      });
+  Profile.run('Server startup', function() {
+    return global.asyncLocalStorage.run({}, async () => {
+      await loadServerBundles();
+      await callStartupHooks();
+      await runMain();
+    });
   });
 })();
 

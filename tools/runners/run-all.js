@@ -208,8 +208,8 @@ class Runner {
     }
 
     if (! self.stopped) {
-      await buildmessage.enterJob({ title: "starting your app" }, function () {
-        return self.appRunner.start();
+      await buildmessage.enterJob({ title: "starting your app" }, async function () {
+        await self.appRunner.start();
       });
       if (! self.quiet && ! self.stopped) {
         runLog.log("Started your app.",  { arrow: true });

@@ -822,21 +822,21 @@ export default class ImportScanner {
       // Remove previously seen missing module identifiers from
       // newlyMissing and merge the new identifiers back into
       // this.allMissingModules.
-      Object.keys(newlyMissing).forEach(id => {
+      for (const id of Object.keys(newlyMissing)) {
         const skipScan = has(previousAllMissingModules, id) &&
-          !isHigherStatus(
-            getParentStatus(newlyMissing[id]),
-            getParentStatus(previousAllMissingModules[id]));
+            !isHigherStatus(
+                getParentStatus(newlyMissing[id]),
+                getParentStatus(previousAllMissingModules[id]));
 
         if (skipScan) {
           delete newlyMissing[id];
         } else {
-          ImportScanner.mergeMissing(
-            previousAllMissingModules,
-            { [id]: newlyMissing[id] }
+          await ImportScanner.mergeMissing(
+              previousAllMissingModules,
+              { [id]: newlyMissing[id] }
           );
         }
-      });
+      }
     }
 
     return {
@@ -1233,9 +1233,6 @@ export default class ImportScanner {
       }
     });
 
-    console.log(info.data)
-    console.log(info.hash)
-    console.log(info.dataString)
     info.dataString = jsonDataToCommonJS(jsonData);
     info.data = Buffer.from(info.dataString, "utf8");
     info.hash = sha1(info.data);

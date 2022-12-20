@@ -405,7 +405,7 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    await self._runApp();
+    self._runApp();
 
     await self.startPromise;
     self.startPromise = null;

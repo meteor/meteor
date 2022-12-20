@@ -9,7 +9,6 @@ CS.PackagesResolver = function (catalog, options) {
 
   self.catalog = catalog;
   self.catalogCache = new CS.CatalogCache();
-  debugger;
   self.catalogLoader = new CS.CatalogLoader(self.catalog, self.catalogCache);
 
   self._options = {
@@ -49,7 +48,6 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
   options = options || {};
   var Profile = (self._options.Profile || CS.DummyProfile);
 
-  debugger;
   var input = await Profile.time("new CS.Input", function () {
     return new CS.Input(dependencies, constraints, self.catalogCache,
                          _.pick(options,

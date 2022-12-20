@@ -14,7 +14,7 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
-const {asyncLocalStorage} = require("../utils/fiber-helpers");
+const { makeGlobalAsyncLocalStorage } = require("../utils/fiber-helpers");
 const archinfo = require('../utils/archinfo');
 import { isEmacs } from "../utils/utils.js";
 
@@ -590,7 +590,7 @@ var oldSpringboard = async function (toolsVersion) {
 // finding the requested command in the commands table, and making
 // sure that you're using the version of the Meteor tools that match
 // your project.
-asyncLocalStorage.run({}, async function () {
+makeGlobalAsyncLocalStorage().run({}, async function () {
   // If running inside the Emacs shell, set stdin to be blocking,
   // reversing node's normal setting of O_NONBLOCK on the evaluation
   // of process.stdin (because Node unblocks stdio when forking). This

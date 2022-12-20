@@ -79,7 +79,7 @@ Object.assign(ServiceConnection.prototype, {
     self.connection._stream.on('disconnect', function (error) {
       self.connected = false;
       if (error && error.errorType === "DDP.ForcedReconnectError") {
-        // OK, we requested this, probably due to version negotation failure.
+        // OK, we requested this, probably due to version negotiation failure.
         //
         // This ought to have happened before we successfully connect, unless
         // somebody adds other calls to forced reconnect to Meteor...

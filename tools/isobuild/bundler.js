@@ -1126,7 +1126,7 @@ class Target {
         }
 
         let sourcePath;
-        if (resource.data && resource.sourceRoot && resource.sourcePath) {
+        if ((await resource.data) && resource.sourceRoot && resource.sourcePath) {
           sourcePath = files.pathJoin(resource.sourceRoot, resource.sourcePath);
         }
 
@@ -1286,7 +1286,7 @@ class Target {
           }
 
           let sourcePath;
-          if (resource.data && resource.sourceRoot && resource.sourcePath) {
+          if ((await resource.data) && resource.sourceRoot && resource.sourcePath) {
             sourcePath = files.pathJoin(resource.sourceRoot, resource.sourcePath);
           }
           const f = new File({
@@ -1319,13 +1319,13 @@ class Target {
           }
 
           // Both CSS and JS files can have source maps
-          if (resource.sourceMap) {
+          if (await resource.sourceMap) {
             // XXX we used to set sourceMapRoot to
             // files.pathDirname(relPath) but it's unclear why.  With the
             // currently generated source map file names, it works without it
             // and doesn't work well with it... maybe?  we were getting
             // 'packages/packages/foo/bar.js'
-            f.setSourceMap(resource.sourceMap, null);
+            f.setSourceMap(await resource.sourceMap, null);
           }
 
           this[resource.type].push(f);
@@ -1437,7 +1437,7 @@ class Target {
 
     const js = [];
 
-    function handle(source, dynamic) {
+    async function handle(source, dynamic) {
       // Allows minifiers to be compatible with HMR without being
       // updated to support it.
       // In development most minifiers add the file to itself with no
@@ -1447,23 +1447,24 @@ class Target {
       // and believe HMR will still update the client correctly.
       const possiblyReplaceable = source._minifiedFiles.length === 1 && source._source.replaceable;
 
-      source._minifiedFiles.forEach(file => {
-        if (typeof file.data === 'string') {
-          file.data = Buffer.from(file.data, "utf8");
+      for (const file of source._minifiedFiles) {
+        const fileData = await file.data;
+        if (typeof fileData === 'string') {
+          file.data = Buffer.from(fileData, "utf8");
         }
         const replaceable = possiblyReplaceable &&
-          file.data.equals(source._source.contents());
+            file.data.equals(source._source.contents());
 
         const newFile = new File({
           info: 'minified js',
           arch,
-          data: file.data,
+          data: await file.data,
           hash: inputHashesByJsFile.get(source),
           replaceable
         });
 
-        if (file.sourceMap) {
-          newFile.setSourceMap(file.sourceMap, '/');
+        if (await file.sourceMap) {
+          newFile.setSourceMap(await file.sourceMap, '/');
         }
 
         if (file.path) {
@@ -1501,7 +1502,7 @@ class Target {
 
           statsFile.url = newFile.url.replace(/\.js\b/, ".stats.json");
           statsFile.targetPath =
-            newFile.targetPath.replace(/\.js\b/, ".stats.json");
+              newFile.targetPath.replace(/\.js\b/, ".stats.json");
           statsFile.cacheable = true;
           statsFile.type = "json";
 
@@ -1515,11 +1516,16 @@ class Target {
             js.push(statsFile);
           }
         }
-      });
+      }
     }
 
-    staticFiles.forEach(file => handle(file, false));
-    dynamicFiles.forEach(file => handle(file, true));
+    for (const file of staticFiles) {
+      await handle(file, false);
+    }
+
+    for (const file of dynamicFiles) {
+      await handle(file, true);
+    }
 
     this.js = js;
   }

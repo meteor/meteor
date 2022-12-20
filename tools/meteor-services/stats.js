@@ -64,7 +64,7 @@ var recordPackages = async function (options) {
 
   try {
     var conn = await connectToPackagesStatsServer();
-    var accountsConfiguration = auth.getAccountsConfiguration(conn);
+    var accountsConfiguration = await auth.getAccountsConfiguration(conn);
 
     if (auth.isLoggedIn()) {
       try {

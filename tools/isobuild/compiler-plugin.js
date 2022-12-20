@@ -1417,12 +1417,12 @@ export class PackageSourceBatch {
           }
 
           if (! found) {
-            return;
+            continue;
           }
         }
 
         if (! scannerMap.has(name)) {
-          return;
+          continue;
         }
 
         if (! missingMap.has(name)) {
@@ -1440,8 +1440,8 @@ export class PackageSourceBatch {
       for (const [name, missing] of missingMap) {
         const { newlyAdded, newlyMissing } =
             await scannerMap.get(name).scanMissingModules(missing);
-        ImportScanner.mergeMissing(allRelocatedModules, newlyAdded);
-        ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
+        await ImportScanner.mergeMissing(allRelocatedModules, newlyAdded);
+        await ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
       }
 
       if (! _.isEmpty(nextMissingModules)) {

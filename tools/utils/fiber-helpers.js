@@ -1,14 +1,20 @@
 var _ = require("underscore");
 
-const { AsyncLocalStorage } = require('async_hooks');
 const {debug} = require("util");
-const asyncLocalStorage = new AsyncLocalStorage();
+const makeGlobalAsyncLocalStorage = () => {
+  if (!global.asyncLocalStorage) {
+    const { AsyncLocalStorage } = require('async_hooks');
+    global.asyncLocalStorage = new AsyncLocalStorage();
+  }
+
+  return global.asyncLocalStorage;
+};
 
 const getAslStore = () => asyncLocalStorage.getStore();
 const getValueFromAslStore = key => getAslStore()[key];
 const updateAslStore = (key, value) => getAslStore()[key] = value;
 
-exports.asyncLocalStorage = asyncLocalStorage;
+exports.makeGlobalAsyncLocalStorage = makeGlobalAsyncLocalStorage;
 
 exports.parallelEach = async function (collection, callback, context) {
   const errors = [];
