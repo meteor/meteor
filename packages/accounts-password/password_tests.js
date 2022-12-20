@@ -1547,18 +1547,24 @@ if (Meteor.isServer) (() => {
     test.isUndefined(user2.services.password.enroll);
   });
 
-  Tinytest.add(
+  Tinytest.addAsync(
     "passwords - enroll tokens don't get cleaned up when reset tokens are cleaned up",
-    test => {
+    async test => {
       const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
+      const userId =
+        await Accounts.createUser({
+          email: email,
+          password: hashPassword('password')
+        });
 
-       Accounts.sendEnrollmentEmail(userId, email);
-      const enrollToken = Meteor.users.findOne(userId).services.password.enroll;
+      await Accounts.sendEnrollmentEmail(userId, email);
+      const user1 = await Meteor.users.findOne(userId);
+      const enrollToken =  user1.services.password.enroll;
       test.isTrue(enrollToken);
 
-      Accounts._expirePasswordResetTokens(new Date(), userId);
-      test.equal(enrollToken, Meteor.users.findOne(userId).services.password.enroll);
+      await Accounts._expirePasswordResetTokens(new Date(), userId);
+      const user2 = await Meteor.users.findOne(userId)
+      test.equal(enrollToken, user2.services.password.enroll);
     }
   )
 
