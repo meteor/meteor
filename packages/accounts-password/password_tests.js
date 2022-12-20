@@ -39,7 +39,7 @@ if (Meteor.isServer) {
   );
 }
 
-if (Meteor.isClient && false) (() => {
+if (Meteor.isClient) (() => {
 
   // XXX note, only one test can do login/logout things at once! for
   // now, that is this test.
