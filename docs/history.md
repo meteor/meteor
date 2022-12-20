@@ -5,7 +5,7 @@
 #### Breaking Changes
 
 * `email`:
- `Email.send` is no longer available. Use `Email.sendAsync` instead.
+  - `Email.send` is no longer available. Use `Email.sendAsync` instead.
 
 * `accounts-password`:
   - `Accounts.sendResetPasswordEmail` is now async
@@ -14,6 +14,9 @@
   
 * `accounts-passwordless`:
   - `Accounts.sendLoginTokenEmail` is now async
+
+* `boilerplate-generator`:
+  - `toHTML` is no longer available (it was already deprecated). Use `toHTMLStream` instead.
   
 ####  Internal API changes
 
