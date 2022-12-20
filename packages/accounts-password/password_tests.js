@@ -1637,7 +1637,7 @@ if (Meteor.isServer) (() => {
     test.isTrue(userId);
 
     const newUsername = username.toLowerCase();
-    Accounts.setUsername(userId, newUsername);
+    await Accounts.setUsername(userId, newUsername);
     const u1 = await Accounts._findUserByQuery({id: userId})
     test.equal(u1.username, newUsername);
   });
