@@ -12,7 +12,12 @@ const makeTestConnAsync =
 const simplePollAsync =
   (testFn) =>
     new Promise((resolve, reject) =>
-      simplePoll(testFn, () => resolve(true), reject))
+      simplePoll(testFn,
+        () => {
+        resolve(true)
+      }, () => {
+        reject(false)
+      }))
 
 
 function hashPassword(password) {
@@ -1215,42 +1220,45 @@ if (Meteor.isServer) (() => {
   //TODO[FIBERS] Continue later
   Tinytest.addAsync(
     'passwords - login token observes get cleaned up',
-    async (test) => {
+    (test, onComplete) => {
       const username = Random.id();
-      await Accounts.createUser({
+      Accounts.createUser({
         username: username,
         password: hashPassword('password')
-      });
-
-      const { clientConn, serverConn } = await makeTestConnAsync(test);
-      serverConn.onClose(() => {
-        test.isFalse(Accounts._getUserObserve(serverConn.id));
       })
+        .then(userId => makeTestConnAsync(test))
+        .then(async ({ clientConn, serverConn }) => {
+          serverConn.onClose(() => {
+            test.isFalse(Accounts._getUserObserve(serverConn.id));
+            onComplete();
+          })
+          const result = await clientConn.callAsync('login', {
+            user: { username: username },
+            password: hashPassword('password')
+          });
 
-      const result = await clientConn.callAsync('login', {
-        user: { username: username },
-        password: hashPassword('password')
-      });
-
-      test.isTrue(result);
-      const token = Accounts._getAccountData(serverConn.id, 'loginToken');
-      test.isTrue(token)
-
-      // We poll here, instead of just checking `_getUserObserve`
-      // once, because the login method defers the creation of the
-      // observe, and setting up the observe yields, so we could end
-      // up here before the observe has been set up.
-      try {
-        const t = await simplePollAsync(() => !!Accounts._getUserObserve(serverConn.id));
-        test.isTrue(t)
-        test.isTrue(Accounts._getUserObserve(serverConn.id));
-        clientConn.disconnect();
-      } catch (e) {
-        test.fail(
-          `timed out waiting for user observe for connection ${ serverConn.id }`
-        );
-      }
-
+          test.isTrue(result);
+          const token = Accounts._getAccountData(serverConn.id, 'loginToken');
+          test.isTrue(token)
+          // We poll here, instead of just checking `_getUserObserve`
+          // once, because the login method defers the creation of the
+          // observe, and setting up the observe yields, so we could end
+          // up here before the observe has been set up.
+          simplePoll(
+            () => !!Accounts._getUserObserve(serverConn.id),
+            () => {
+              test.isTrue(Accounts._getUserObserve(serverConn.id));
+              clientConn.disconnect()
+              onComplete();
+            },
+            () => {
+              test.fail(
+                `timed out waiting for user observe for connection ${ serverConn.id }`
+              );
+              onComplete();
+            }
+          )
+        })
     }
   );
 
