@@ -1090,11 +1090,13 @@ Accounts.createUser =
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
 // TODO[FIBERS]: Need TLA
-(async function(){
+const init = async () => {
   await Meteor.users.createIndex('services.email.verificationTokens.token',
     { unique: true, sparse: true });
   await Meteor.users.createIndex('services.password.reset.token',
     { unique: true, sparse: true });
   await Meteor.users.createIndex('services.password.enroll.token',
     { unique: true, sparse: true });
-})()
+}
+// TODO[FIBERS]: Need TLA
+init()
