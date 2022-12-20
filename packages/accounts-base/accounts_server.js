@@ -297,12 +297,12 @@ export class AccountsServer extends AccountsCommon {
     return {$and: [{$or: orClause}, caseInsensitiveClause]};
   }
 
-  _findUserByQuery = (query, options) => {
+  _findUserByQuery = async (query, options) => {
     let user = null;
 
     if (query.id) {
       // default field selector is added within getUserById()
-      user = Meteor.users.findOne(query.id, this._addDefaultFieldSelector(options));
+      user = await Meteor.users.findOne(query.id, this._addDefaultFieldSelector(options));
     } else {
       options = this._addDefaultFieldSelector(options);
       let fieldName;
@@ -318,11 +318,11 @@ export class AccountsServer extends AccountsCommon {
       }
       let selector = {};
       selector[fieldName] = fieldValue;
-      user = Meteor.users.findOne(selector, options);
+      user = await Meteor.users.findOne(selector, options);
       // If user is not found, try a case insensitive lookup
       if (!user) {
         selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-        const candidateUsers = Meteor.users.find(selector, { ...options, limit: 2 }).fetch();
+        const candidateUsers = await Meteor.users.find(selector, { ...options, limit: 2 }).fetch();
         // No match if multiple candidates are found
         if (candidateUsers.length === 1) {
           user = candidateUsers[0];
