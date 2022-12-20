@@ -1191,6 +1191,7 @@ if (Meteor.isServer) (() => {
       async () =>
         await Meteor.user()
     );
+    await Meteor.users.remove({});
   });
 
   // XXX would be nice to test
@@ -1255,7 +1256,8 @@ if (Meteor.isServer) (() => {
 
     }
   );
-
+  
+  //TODO[FIBERS] Continue later
   Tinytest.addAsync(
     "passwords - reset password doesn't work if email changed after email sent",
     async test => {
