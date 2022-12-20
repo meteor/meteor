@@ -702,12 +702,12 @@ export class AccountsServer extends AccountsCommon {
     // Removes all tokens except the token associated with the current
     // connection. Throws an error if the connection is not logged
     // in. Returns nothing on success.
-    methods.removeOtherTokens = function () {
+    methods.removeOtherTokens = async function () {
       if (! this.userId) {
         throw new Meteor.Error("You are not logged in.");
       }
       const currentToken = accounts._getLoginToken(this.connection.id);
-      accounts.users.update(this.userId, {
+      await accounts.users.update(this.userId, {
         $pull: {
           "services.resume.loginTokens": { hashedToken: { $ne: currentToken } }
         }
@@ -1054,7 +1054,7 @@ export class AccountsServer extends AccountsCommon {
   // tests. oldestValidDate is simulate expiring tokens without waiting
   // for them to actually expire. userId is used by tests to only expire
   // tokens for the test user.
-  _expirePasswordResetTokens(oldestValidDate, userId) {
+  async _expirePasswordResetTokens(oldestValidDate, userId) {
     const tokenLifetimeMs = this._getPasswordResetTokenLifetimeMs();
 
     // when calling from a test with extra arguments, you must specify both!
@@ -1072,7 +1072,7 @@ export class AccountsServer extends AccountsCommon {
       ]
     };
 
-    expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
+   await expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
   }
 
   // Deletes expired password enroll tokens from the database.
@@ -1081,7 +1081,7 @@ export class AccountsServer extends AccountsCommon {
   // tests. oldestValidDate is simulate expiring tokens without waiting
   // for them to actually expire. userId is used by tests to only expire
   // tokens for the test user.
-  _expirePasswordEnrollTokens(oldestValidDate, userId) {
+  async _expirePasswordEnrollTokens(oldestValidDate, userId) {
     const tokenLifetimeMs = this._getPasswordEnrollTokenLifetimeMs();
 
     // when calling from a test with extra arguments, you must specify both!
@@ -1096,7 +1096,7 @@ export class AccountsServer extends AccountsCommon {
       "services.password.enroll.reason": "enroll"
     };
 
-    expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
+    await expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
   }
 
   // Deletes expired tokens from the database and closes all open connections
@@ -1262,13 +1262,14 @@ export class AccountsServer extends AccountsCommon {
     // that would give a lot of power to an attacker with a stolen login
     // token and the ability to crash the server.
     Meteor.startup(async () => {
-      await this.users.find({
+      const users = await this.users.find({
         "services.resume.haveLoginTokensToDelete": true
       }, {
         fields: {
           "services.resume.loginTokensToDelete": 1
         }
-      }).forEach(user => {
+      })
+      users.forEach(user => {
         this._deleteSavedTokensForUser(
           user._id,
           user.services.resume.loginTokensToDelete
@@ -1707,10 +1708,10 @@ const expirePasswordToken =
   };
 
 const setExpireTokensInterval = accounts => {
-  accounts.expireTokenInterval = Meteor.setInterval(() => {
-    accounts._expireTokens();
-    accounts._expirePasswordResetTokens();
-    accounts._expirePasswordEnrollTokens();
+  accounts.expireTokenInterval = Meteor.setInterval(async () => {
+   await accounts._expireTokens();
+   await accounts._expirePasswordResetTokens();
+   await accounts._expirePasswordEnrollTokens();
   }, EXPIRE_TOKENS_INTERVAL_MS);
 };
 
