@@ -18,8 +18,6 @@ function appendToStream(chunk, stream) {
   }
 }
 
-let shouldWarnAboutToHTMLDeprecation = ! Meteor.isProduction;
-
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
     const { headTemplate, closeTemplate } = getTemplate(arch);
@@ -34,17 +32,10 @@ export class Boilerplate {
   }
 
   toHTML(extraData) {
-    if (shouldWarnAboutToHTMLDeprecation) {
-      shouldWarnAboutToHTMLDeprecation = false;
-      console.error(
-        "The Boilerplate#toHTML method has been deprecated. " +
-          "Please use Boilerplate#toHTMLStream instead."
-      );
-      console.trace();
-    }
-
-    // Calling .await() requires a Fiber.
-    return this.toHTMLAsync(extraData).await();
+    throw new Error(
+      "The Boilerplate#toHTML method has been removed. " +
+        "Please use Boilerplate#toHTMLStream instead."
+    );
   }
 
   // Returns a Promise that resolves to a string of HTML.
