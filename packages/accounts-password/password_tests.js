@@ -1475,7 +1475,6 @@ if (Meteor.isServer) (() => {
 
       const user = await Meteor.users.findOne(userId);
       await Accounts.sendEnrollmentEmail(userId, email);
-
       const [enrollPasswordEmailOptions] =
         await Meteor.callAsync("getInterceptedEmails", email);
 
@@ -1486,7 +1485,7 @@ if (Meteor.isServer) (() => {
 
       const {
         clientConn
-      } = makeTestConnAsync(test)
+      } = await makeTestConnAsync(test)
 
       test.isTrue(
         await clientConn.callAsync(
