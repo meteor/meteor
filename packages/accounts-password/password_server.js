@@ -246,7 +246,7 @@ Accounts.setUsername =
   const oldUsername = user.username;
 
   // Perform a case insensitive check for duplicates before update
-  Accounts._checkForCaseInsensitiveDuplicates('username',
+  await Accounts._checkForCaseInsensitiveDuplicates('username',
     'Username', newUsername, user._id);
 
   Meteor.users.update({_id: user._id}, {$set: {username: newUsername}});
@@ -254,7 +254,7 @@ Accounts.setUsername =
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    Accounts._checkForCaseInsensitiveDuplicates('username',
+    await Accounts._checkForCaseInsensitiveDuplicates('username',
       'Username', newUsername, user._id);
   } catch (ex) {
     // Undo update if the check fails
@@ -839,26 +839,29 @@ Accounts.addEmail =
   const caseInsensitiveRegExp =
     new RegExp(`^${Meteor._escapeRegExp(newEmail)}$`, 'i');
 
-  // TODO: make this async
   // TODO: This is a linear search. If we have a lot of emails.
-  // we should consider using a different data structure.
-  const didUpdateOwnEmail = (user.emails || []).reduce(
-    (prev, email) => {
-      if (caseInsensitiveRegExp.test(email.address)) {
-        Meteor.users.update({
-          _id: user._id,
-          'emails.address': email.address
-        }, {$set: {
-          'emails.$.address': newEmail,
-          'emails.$.verified': verified
-        }});
-        return true;
-      } else {
-        return prev;
+  //  we should consider using a different data structure.
+    const updatedEmail =
+      async (emails = [], _id) => {
+        let updated = false;
+        for (const email of emails) {
+          if (caseInsensitiveRegExp.test(email.address)) {
+            await Meteor.users.update({
+              _id: _id,
+              'emails.address': email.address
+            }, {
+              $set: {
+                'emails.$.address': newEmail,
+                'emails.$.verified': verified
+              }
+            });
+            updated = true;
+          }
+        }
+        return updated;
       }
-    },
-    false
-  );
+    const didUpdateOwnEmail =
+      await updatedEmail(user.emails, user._id);
 
   // In the other updates below, we have to do another call to
   // checkForCaseInsensitiveDuplicates to make sure that no conflicting values
@@ -872,7 +875,7 @@ Accounts.addEmail =
   }
 
   // Perform a case insensitive check for duplicates before update
-  Accounts._checkForCaseInsensitiveDuplicates('emails.address',
+  await Accounts._checkForCaseInsensitiveDuplicates('emails.address',
     'Email', newEmail, user._id);
 
   await Meteor.users.update({
@@ -889,7 +892,7 @@ Accounts.addEmail =
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    Accounts._checkForCaseInsensitiveDuplicates('emails.address',
+    await Accounts._checkForCaseInsensitiveDuplicates('emails.address',
       'Email', newEmail, user._id);
   } catch (ex) {
     // Undo update if the check fails
@@ -1059,15 +1062,18 @@ Accounts.createUser =
   !Meteor._isFibersEnabled
     ? Accounts.createUserAsync
     : (options, callback) =>
-      Promise.await(Accounts.createUserAsync(options, callback));
+        Promise.await(Accounts.createUserAsync(options, callback));
 
 
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
-Meteor.users.createIndex('services.email.verificationTokens.token',
-                          { unique: true, sparse: true });
-Meteor.users.createIndex('services.password.reset.token',
-                          { unique: true, sparse: true });
-Meteor.users.createIndex('services.password.enroll.token',
-                          { unique: true, sparse: true });
+// TODO[FIBERS]: Need TLA
+(async function(){
+  await Meteor.users.createIndex('services.email.verificationTokens.token',
+    { unique: true, sparse: true });
+  await Meteor.users.createIndex('services.password.reset.token',
+    { unique: true, sparse: true });
+  await Meteor.users.createIndex('services.password.enroll.token',
+    { unique: true, sparse: true });
+})()
