@@ -374,7 +374,7 @@ const pluckAddresses = (emails = []) => emails.map(email => email.address);
 
 // Method called by a user to request a password reset email. This is
 // the start of the reset process.
-Meteor.methods({forgotPassword: options => {
+Meteor.methods({forgotPassword: async options => {
   check(options, {email: String})
 
   const user = Accounts.findUserByEmail(options.email, { fields: { emails: 1 } });
@@ -388,7 +388,7 @@ Meteor.methods({forgotPassword: options => {
     email => email.toLowerCase() === options.email.toLowerCase()
   );
 
-  Accounts.sendResetPasswordEmail(user._id, caseSensitiveEmail);
+  await Accounts.sendResetPasswordEmail(user._id, caseSensitiveEmail);
 }});
 
 /**
@@ -540,12 +540,12 @@ Accounts.generateVerificationToken =
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendResetPasswordEmail = (userId, email, extraTokenData, extraParams) => {
+Accounts.sendResetPasswordEmail = async (userId, email, extraTokenData, extraParams) => {
   const {email: realEmail, user, token} =
     Accounts.generateResetToken(userId, email, 'resetPassword', extraTokenData);
   const url = Accounts.urls.resetPassword(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
-  Email.send(options);
+  await Email.sendAsync(options);
   if (Meteor.isDevelopment) {
     console.log(`\nReset password URL: ${url}`);
   }
@@ -570,12 +570,12 @@ Accounts.sendResetPasswordEmail = (userId, email, extraTokenData, extraParams) =
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendEnrollmentEmail = (userId, email, extraTokenData, extraParams) => {
+Accounts.sendEnrollmentEmail = async (userId, email, extraTokenData, extraParams) => {
   const {email: realEmail, user, token} =
     Accounts.generateResetToken(userId, email, 'enrollAccount', extraTokenData);
   const url = Accounts.urls.enrollAccount(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
-  Email.send(options);
+  await Email.sendAsync(options);
   if (Meteor.isDevelopment) {
     console.log(`\nEnrollment email URL: ${url}`);
   }
@@ -729,7 +729,7 @@ Accounts.sendVerificationEmail =
       await Accounts.generateVerificationToken(userId, email, extraTokenData);
     const url = Accounts.urls.verifyEmail(token, extraParams);
     const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
-    Email.send(options);
+    await Email.sendAsync(options);
     if (Meteor.isDevelopment) {
       console.log(`\nVerification email URL: ${ url }`);
     }
@@ -1008,9 +1008,9 @@ Accounts.createUserVerifyingEmail =
     // that address.
     if (options.email && Accounts._options.sendVerificationEmail) {
       if (options.password) {
-        Accounts.sendVerificationEmail(userId, options.email);
+        awaitAccounts.sendVerificationEmail(userId, options.email);
       } else {
-        Accounts.sendEnrollmentEmail(userId, options.email);
+        awaitAccounts.sendEnrollmentEmail(userId, options.email);
       }
     }
 

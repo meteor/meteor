@@ -90,12 +90,12 @@ extends CachingCompilerBase {
       cacheKeyMap.set(importPath, this._getCacheKeyWithPath(inputFile));
     });
 
-    inputFiles.forEach(inputFile => {
+    for (const inputFile of inputFiles) {
       if (arches) {
         arches[inputFile.getArch()] = 1;
       }
 
-      const getResult = () => {
+      const getResult = async () => {
         const absoluteImportPath = this.getAbsoluteImportPath(inputFile);
         const cacheKey = cacheKeyMap.get(absoluteImportPath);
         let cacheEntry = this._cache.get(cacheKey);
@@ -110,7 +110,7 @@ extends CachingCompilerBase {
           cacheMisses.push(inputFile.getDisplayPath());
 
           const compileOneFileReturn =
-            Promise.await(this.compileOneFile(inputFile, allFiles));
+              await this.compileOneFile(inputFile, allFiles);
 
           if (! compileOneFileReturn) {
             // compileOneFile should have called inputFile.error.
@@ -162,14 +162,14 @@ extends CachingCompilerBase {
           // that might be roots to this.compileOneFileLater.
           inputFile.getFileOptions().lazy = true;
         }
-        this.compileOneFileLater(inputFile, getResult);
+        await this.compileOneFileLater(inputFile, getResult);
       } else if (this.isRoot(inputFile)) {
-        const result = getResult();
+        const result = await getResult();
         if (result) {
           this.addCompileResult(inputFile, result);
         }
       }
-    });
+    }
 
     if (this._cacheDebugEnabled) {
       this._afterLinkCallbacks.push(() => {

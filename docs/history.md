@@ -1,3 +1,33 @@
+## v3.0, TBD
+
+### Highlights
+
+#### Breaking Changes
+
+* `email`:
+ `Email.send` is no longer available. Use `Email.sendAsync` instead.
+
+* `accounts-password`:
+  - `Accounts.sendResetPasswordEmail` is now async
+  - `Accounts.sendEnrollmentEmail` is now async
+  - `Accounts.sendVerificationEmail` is now async
+  
+* `accounts-passwordless`:
+  - `Accounts.sendLoginTokenEmail` is now async
+  
+####  Internal API changes
+
+
+#### Migration Steps
+
+You can follow in [here](https://guide.meteor.com/3.0-migration.html).
+
+#### Meteor Version Release
+
+#### Special thanks to
+
+For making this great framework even better!
+
 ## v2.9, 2022-12-12
 
 ### Highlights
