@@ -1113,25 +1113,25 @@ if (Meteor.isServer) (() => {
   });
 
 
-  Tinytest.add('passwords - createUser hooks', test => {
-      const username = Random.id();
-      // should fail the new user validators
-      test.throws(() => Accounts.createUser(
-        {username: username, profile: {invalid: true}}
-      ));
+  Tinytest.addAsync('passwords - createUser hooks', async test => {
+    const username = Random.id();
+    // should fail the new user validators
+    await test.throwsAsync(
+      async () =>
+        await Accounts.createUser({ username: username, profile: { invalid: true } }));
 
-      const userId = Accounts.createUser({username: username,
-                                        testOnCreateUserHook: true});
+    const userId = await Accounts
+      .createUser({ username: username, testOnCreateUserHook: true });
 
-      test.isTrue(userId);
-      const user = Meteor.users.findOne(userId);
-      test.equal(user.profile.touchedByOnCreateUser, true);
-    });
+    test.isTrue(userId);
+    const user = await Meteor.users.findOne(userId);
+    test.equal(user.profile.touchedByOnCreateUser, true);
+  });
 
 
-  Tinytest.add(
+  Tinytest.addAsync(
     'passwords - setPassword',
-    test => {
+    async test => {
       const username = Random.id();
       const email = `${username}-intercept@example.com`;
 
