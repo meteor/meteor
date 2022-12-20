@@ -1644,30 +1644,30 @@ if (Meteor.isServer) (() => {
 
   // We should not be able to change the username to one that only
   // differs in case from an existing one
-  Tinytest.add("passwords - change username should fail when there are " +
-      "existing users with a username only differing in case", test => {
+  Tinytest.addAsync("passwords - change username should fail when there are " +
+      "existing users with a username only differing in case", async test => {
     const username = `${Random.id()}user`;
     const usernameUpper = username.toUpperCase();
 
-    const userId1 = Accounts.createUser({
+    const userId1 = await Accounts.createUser({
       username: username
     });
 
     const user2OriginalUsername = Random.id();
-    const userId2 = Accounts.createUser({
+    const userId2 = await Accounts.createUser({
       username: user2OriginalUsername
     });
 
     test.isTrue(userId1);
     test.isTrue(userId2);
 
-    test.throws(
-      () => Accounts.setUsername(userId2, usernameUpper),
+    await test.throwsAsync(
+      async () => await Accounts.setUsername(userId2, usernameUpper),
       /Username already exists/
     );
 
-    test.equal(Accounts._findUserByQuery({id: userId2}).username,
-      user2OriginalUsername);
+    const u2 = await Accounts._findUserByQuery({id: userId2})
+    test.equal(u2.username, user2OriginalUsername);
   });
 
   Tinytest.add("passwords - add email & findUserByEmail", test => {
