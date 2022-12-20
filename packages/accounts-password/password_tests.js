@@ -1135,49 +1135,51 @@ if (Meteor.isServer) (() => {
       const username = Random.id();
       const email = `${username}-intercept@example.com`;
 
-      const userId = Accounts.createUser({username: username, email: email});
+      const userId = await Accounts.createUser({username: username, email: email});
 
-      let user = Meteor.users.findOne(userId);
+      let user = await Meteor.users.findOne(userId);
       // no services yet.
       test.equal(user.services.password, undefined);
 
       // set a new password.
-      Accounts.setPassword(userId, 'new password');
-      user = Meteor.users.findOne(userId);
+      await Accounts.setPasswordAsync(userId, 'new password');
+      user = await Meteor.users.findOne(userId);
       const oldSaltedHash = user.services.password.bcrypt;
       test.isTrue(oldSaltedHash);
-
       // Send a reset password email (setting a reset token) and insert a login
       // token.
-      Accounts.sendResetPasswordEmail(userId, email);
-      Accounts._insertLoginToken(userId, Accounts._generateStampedLoginToken());
-      test.isTrue(Meteor.users.findOne(userId).services.password.reset);
-      test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
+      await Accounts.sendResetPasswordEmail(userId, email);
+      await Accounts._insertLoginToken(userId, Accounts._generateStampedLoginToken());
+      const user2 = await Meteor.users.findOne(userId)
+      test.isTrue(user2.services.password.reset);
+      test.isTrue(user2.services.resume.loginTokens);
 
       // reset with the same password, see we get a different salted hash
-      Accounts.setPassword(userId, 'new password', {logout: false});
-      user = Meteor.users.findOne(userId);
+      await Accounts.setPasswordAsync(userId, 'new password', {logout: false});
+      user = await Meteor.users.findOne(userId);
       const newSaltedHash = user.services.password.bcrypt;
       test.isTrue(newSaltedHash);
       test.notEqual(oldSaltedHash, newSaltedHash);
       // No more reset token.
-      test.isFalse(Meteor.users.findOne(userId).services.password.reset);
+      const user3 = await Meteor.users.findOne(userId)
+      test.isFalse(user3.services.password.reset);
       // But loginTokens are still here since we did logout: false.
-      test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
+      test.isTrue(user3.services.resume.loginTokens);
 
       // reset again, see that the login tokens are gone.
-      Accounts.setPassword(userId, 'new password');
-      user = Meteor.users.findOne(userId);
+      await Accounts.setPasswordAsync(userId, 'new password');
+      user = await Meteor.users.findOne(userId);
       const newerSaltedHash = user.services.password.bcrypt;
       test.isTrue(newerSaltedHash);
       test.notEqual(oldSaltedHash, newerSaltedHash);
       test.notEqual(newSaltedHash, newerSaltedHash);
       // No more tokens.
-      test.isFalse(Meteor.users.findOne(userId).services.password.reset);
-      test.isFalse(Meteor.users.findOne(userId).services.resume.loginTokens);
+      const user4 = await Meteor.users.findOne(userId)
+      test.isFalse(user4.services.password.reset);
+      test.isFalse(user4.services.resume.loginTokens);
 
       // cleanup
-      Meteor.users.remove(userId);
+      await Meteor.users.remove(userId);
     });
 
 
