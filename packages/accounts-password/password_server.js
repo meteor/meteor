@@ -575,17 +575,23 @@ Accounts.sendResetPasswordEmail =
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendEnrollmentEmail = async (userId, email, extraTokenData, extraParams) => {
-  const {email: realEmail, user, token} =
-    Accounts.generateResetToken(userId, email, 'enrollAccount', extraTokenData);
-  const url = Accounts.urls.enrollAccount(token, extraParams);
-  const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
-  await Email.sendAsync(options);
-  if (Meteor.isDevelopment) {
-    console.log(`\nEnrollment email URL: ${url}`);
-  }
-  return {email: realEmail, user, token, url, options};
-};
+Accounts.sendEnrollmentEmail =
+  async (userId, email, extraTokenData, extraParams) => {
+
+    const { email: realEmail, user, token } =
+      await Accounts.generateResetToken(userId, email, 'enrollAccount', extraTokenData);
+
+    const url = Accounts.urls.enrollAccount(token, extraParams);
+
+    const options =
+      Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
+
+    await Email.sendAsync(options);
+    if (Meteor.isDevelopment) {
+      console.log(`\nEnrollment email URL: ${ url }`);
+    }
+    return { email: realEmail, user, token, url, options };
+  };
 
 
 // Take token from sendResetPasswordEmail or sendEnrollmentEmail, change
