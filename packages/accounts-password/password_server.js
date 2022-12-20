@@ -234,36 +234,38 @@ Accounts.registerLoginHandler("password", async options => {
  */
 Accounts.setUsername =
   async (userId, newUsername) => {
-  check(userId, NonEmptyString);
-  check(newUsername, NonEmptyString);
+    check(userId, NonEmptyString);
+    check(newUsername, NonEmptyString);
 
-  const user = await getUserById(userId, {fields: {
-    username: 1,
-  }});
+    const user = await getUserById(userId, {
+      fields: {
+        username: 1,
+      }
+    });
 
-  if (!user) {
-    Accounts._handleError("User not found");
-  }
+    if (!user) {
+      Accounts._handleError("User not found");
+    }
 
-  const oldUsername = user.username;
+    const oldUsername = user.username;
 
-  // Perform a case insensitive check for duplicates before update
-  await Accounts._checkForCaseInsensitiveDuplicates('username',
-    'Username', newUsername, user._id);
-
-  Meteor.users.update({_id: user._id}, {$set: {username: newUsername}});
-
-  // Perform another check after update, in case a matching user has been
-  // inserted in the meantime
-  try {
+    // Perform a case insensitive check for duplicates before update
     await Accounts._checkForCaseInsensitiveDuplicates('username',
       'Username', newUsername, user._id);
-  } catch (ex) {
-    // Undo update if the check fails
-    Meteor.users.update({_id: user._id}, {$set: {username: oldUsername}});
-    throw ex;
-  }
-};
+
+    await Meteor.users.update({ _id: user._id }, { $set: { username: newUsername } });
+
+    // Perform another check after update, in case a matching user has been
+    // inserted in the meantime
+    try {
+      await Accounts._checkForCaseInsensitiveDuplicates('username',
+        'Username', newUsername, user._id);
+    } catch (ex) {
+      // Undo update if the check fails
+      await Meteor.users.update({ _id: user._id }, { $set: { username: oldUsername } });
+      throw ex;
+    }
+  };
 
 // Let the user change their own password if they know the old
 // password. `oldPassword` and `newPassword` should be objects with keys
