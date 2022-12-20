@@ -1627,10 +1627,10 @@ if (Meteor.isServer) (() => {
     Accounts._options = options;
   });
 
-  Tinytest.add("passwords - change username to a new one only differing " +
-      "in case", test => {
+  Tinytest.addAsync("passwords - change username to a new one only differing " +
+      "in case", async test => {
     const username = `${Random.id()}user`;
-    const userId = Accounts.createUser({
+    const userId = await Accounts.createUser({
       username: username.toUpperCase()
     });
 
@@ -1638,8 +1638,8 @@ if (Meteor.isServer) (() => {
 
     const newUsername = username.toLowerCase();
     Accounts.setUsername(userId, newUsername);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).username, newUsername);
+    const u1 = await Accounts._findUserByQuery({id: userId})
+    test.equal(u1.username, newUsername);
   });
 
   // We should not be able to change the username to one that only
