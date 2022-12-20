@@ -1,5 +1,13 @@
 Accounts._connectionCloseDelayMsForTests = 1000;
-
+const makeTestConnAsync =
+  (test) =>
+    new Promise((resolve, reject) => {
+      makeTestConnection(
+        test,
+        (clientConn, serverConn) => resolve({ clientConn, serverConn }),
+        reject
+      );
+    })
 function hashPassword(password) {
   return {
     digest: SHA256(password),
@@ -1256,21 +1264,18 @@ if (Meteor.isServer) (() => {
 
     }
   );
-  
-  //TODO[FIBERS] Continue later
+
   Tinytest.addAsync(
     "passwords - reset password doesn't work if email changed after email sent",
     async test => {
       const username = Random.id() + 'reset-password-doesnt-work-if-email-changed'
       const email = `${username}-intercept@example.com`;
-      console.log('here is ok0', hashPassword('password'));
 
       const userId = await Accounts.createUser({
         username: username,
         email: email,
         password: hashPassword("old-password")
       });
-      console.log(userId);
       const user = await Meteor.users.findOne(userId);
 
       await Accounts.sendResetPasswordEmail(userId, email);
@@ -1309,45 +1314,37 @@ if (Meteor.isServer) (() => {
 
   Tinytest.addAsync(
     'passwords - reset password should work when token is not expired',
-    (test, onComplete) => {
-      const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+    async (test) => {
+      const username = Random.id() + 'reset-password-should-work-when-token-is-not-expired';
+      const email = `${ username }-intercept-reset@example.com`;
 
-      const userId = Accounts.createUser({
+      const userId = await Accounts.createUser({
         username: username,
         email: email,
         password: hashPassword("old-password")
       });
 
-      const user = Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOne(userId);
 
-      Accounts.sendResetPasswordEmail(userId, email);
+      await Accounts.sendResetPasswordEmail(userId, email);
 
-      const resetPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      const [resetPasswordEmailOptions] =
+        Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/reset-password/(\\S*)`);
       const match = resetPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const resetPasswordToken = match[1];
-
-      makeTestConnection(
-        test,
-        clientConn => {
-          test.isTrue(clientConn.call(
-            "resetPassword",
-            resetPasswordToken,
-            hashPassword("new-password")
-          ));
-
-          test.isTrue(clientConn.call("login", {
-            user: { username },
-            password: hashPassword("new-password")
-          }));
-
-          onComplete();
-        }
-      );
+      const { clientConn } = await makeTestConnAsync(test)
+      test.isTrue(await clientConn.callAsync(
+        "resetPassword",
+        resetPasswordToken,
+        hashPassword("new-password")
+      ));
+      test.isTrue(await clientConn.callAsync("login", {
+        user: { username },
+        password: hashPassword("new-password")
+      }));
     });
 
   Tinytest.addAsync(
