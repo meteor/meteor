@@ -1421,13 +1421,20 @@ if (Meteor.isServer) (() => {
     'passwords - reset tokens with reasons get cleaned up',
     async test => {
       const email = `${ test.id }-intercept@example.com`;
-      const userId = Accounts.createUser({ email: email, password: hashPassword('password') });
+      const userId =
+        await Accounts.createUser(
+          {
+            email: email,
+            password: hashPassword('password')
+          }
+        );
       await Accounts.sendResetPasswordEmail(userId, email);
-      test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
+      const user1 = await Meteor.users.findOne(userId);
+      test.isTrue(!!user1.services.password.reset);
 
-      Accounts._expirePasswordResetTokens(new Date(), userId);
-
-      test.isUndefined(Meteor.users.findOne(userId).services.password.reset);
+      await Accounts._expirePasswordResetTokens(new Date(), userId);
+      const user2 = await Meteor.users.findOne(userId);
+      test.isUndefined(user2.services.password.reset);
     });
 
   Tinytest.addAsync(
