@@ -1866,20 +1866,21 @@ if (Meteor.isServer) (() => {
   );      // default number of rounds.
 
 
-  Tinytest.add('passwords - extra params in email urls', (test) => {
+  Tinytest.addAsync('passwords - extra params in email urls',
+    async (test) => {
     const username = Random.id();
     const email = `${ username }-intercept@example.com`;
 
-    const userId = Accounts.createUser({
+    const userId = await Accounts.createUser({
       username: username,
       email: email
     });
 
     const extraParams = { test: 'success' };
-    Accounts.sendEnrollmentEmail(userId, email, null, extraParams);
+    await Accounts.sendEnrollmentEmail(userId, email, null, extraParams);
 
     const [enrollPasswordEmailOptions] =
-      Meteor.callAsync("getInterceptedEmails", email);
+     await Meteor.callAsync("getInterceptedEmails", email);
 
     const re = new RegExp(`${Meteor.absoluteUrl()}(\\S*)`);
     const match = enrollPasswordEmailOptions.text.match(re);
