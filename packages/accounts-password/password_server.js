@@ -326,7 +326,8 @@ Meteor.methods(
  * @param {Object} options.logout Logout all current connections with this userId (default: true)
  * @importFromPackage accounts-base
  */
-Accounts.setPasswordAsync = async (userId, newPlaintextPassword, options) => {
+Accounts.setPasswordAsync =
+  async (userId, newPlaintextPassword, options) => {
   check(userId, String);
   check(newPlaintextPassword, Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256));
   check(options, Match.Maybe({ logout: Boolean }));
@@ -348,7 +349,7 @@ Accounts.setPasswordAsync = async (userId, newPlaintextPassword, options) => {
     update.$unset['services.resume.loginTokens'] = 1;
   }
 
-  Meteor.users.update({_id: user._id}, update);
+  await Meteor.users.update({_id: user._id}, update);
 };
 
 /**
@@ -540,17 +541,19 @@ Accounts.generateVerificationToken =
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendResetPasswordEmail = async (userId, email, extraTokenData, extraParams) => {
-  const {email: realEmail, user, token} =
-    Accounts.generateResetToken(userId, email, 'resetPassword', extraTokenData);
-  const url = Accounts.urls.resetPassword(token, extraParams);
-  const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
-  await Email.sendAsync(options);
-  if (Meteor.isDevelopment) {
-    console.log(`\nReset password URL: ${url}`);
-  }
-  return {email: realEmail, user, token, url, options};
-};
+Accounts.sendResetPasswordEmail =
+  async (userId, email, extraTokenData, extraParams) => {
+    const { email: realEmail, user, token } =
+      await Accounts.generateResetToken(userId, email, 'resetPassword', extraTokenData);
+    const url = Accounts.urls.resetPassword(token, extraParams);
+    const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
+    await Email.sendAsync(options);
+
+    if (Meteor.isDevelopment) {
+      console.log(`\nReset password URL: ${ url }`);
+    }
+    return { email: realEmail, user, token, url, options };
+  };
 
 // send the user an email informing them that their account was created, with
 // a link that when opened both marks their email as verified and forces them
