@@ -1759,7 +1759,8 @@ if (Meteor.isServer) (() => {
   });
 
   Tinytest.addAsync("passwords - add email should fail when there is an existing " +
-    "user with an email only differing in case", async test => {
+    "user with an email only differing in case",
+    async test => {
     const user1Email = `${ Random.id() }@turing.com`;
     const userId1 = await Accounts.createUser({
       email: user1Email
@@ -1786,34 +1787,35 @@ if (Meteor.isServer) (() => {
     ]);
   });
 
-  Tinytest.add("passwords - remove email", test => {
+  Tinytest.addAsync("passwords - remove email",
+    async test => {
     const origEmail = `${ Random.id() }@turing.com`;
-    const userId = Accounts.createUser({
+    const userId = await Accounts.createUser({
       email: origEmail
     });
 
     const newEmail = `${ Random.id() }@turing.com`;
-    Accounts.addEmail(userId, newEmail);
+    await Accounts.addEmail(userId, newEmail);
 
     const thirdEmail = `${ Random.id() }@turing.com`;
-    Accounts.addEmail(userId, thirdEmail, true);
-
-    test.equal(Accounts._findUserByQuery({ id: userId }).emails, [
+    await Accounts.addEmail(userId, thirdEmail, true);
+    const u1 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u1.emails, [
       { address: origEmail, verified: false },
       { address: newEmail, verified: false },
       { address: thirdEmail, verified: true }
     ]);
 
-    Accounts.removeEmail(userId, newEmail);
-
-    test.equal(Accounts._findUserByQuery({ id: userId }).emails, [
+    await Accounts.removeEmail(userId, newEmail);
+    const u2 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u2.emails, [
       { address: origEmail, verified: false },
       { address: thirdEmail, verified: true }
     ]);
 
-    Accounts.removeEmail(userId, origEmail);
-
-    test.equal(Accounts._findUserByQuery({ id: userId }).emails, [
+    await Accounts.removeEmail(userId, origEmail);
+    const u3 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u3.emails, [
       { address: thirdEmail, verified: true }
     ]);
   });
@@ -1826,7 +1828,6 @@ if (Meteor.isServer) (() => {
 
 
       // Verify that a bcrypt hash generated for a new account uses the
-      // default number of rounds.
       let username = Random.id();
       const password = hashPassword('abc123');
       const userId1 = Accounts.createUser({ username, password });
