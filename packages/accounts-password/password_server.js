@@ -125,7 +125,8 @@ Accounts._checkPasswordAsync =  checkPasswordAsync;
  * @importFromPackage accounts-base
  */
 Accounts.findUserByUsername =
-  (username, options) => Accounts._findUserByQuery({ username }, options);
+  async (username, options) =>
+    await Accounts._findUserByQuery({ username }, options);
 
 /**
  * @summary Finds the user with the specified email.
@@ -140,7 +141,8 @@ Accounts.findUserByUsername =
  * @importFromPackage accounts-base
  */
 Accounts.findUserByEmail =
-  (email, options) => Accounts._findUserByQuery({ email }, options);
+  async (email, options) =>
+    await Accounts._findUserByQuery({ email }, options);
 
 // XXX maybe this belongs in the check package
 const NonEmptyString = Match.Where(x => {
