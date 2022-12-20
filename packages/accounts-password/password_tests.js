@@ -1280,7 +1280,6 @@ if (Meteor.isServer) (() => {
         await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/reset-password/(\\S*)`);
-      console.log('reset',resetPasswordEmailOptions)
 
       const match = resetPasswordEmailOptions.text.match(re);
       test.isTrue(match);
@@ -1288,9 +1287,6 @@ if (Meteor.isServer) (() => {
 
       const newEmail = `${Random.id()}-new@example.com`;
       await Meteor.users.update(userId, {$set: {"emails.0.address": newEmail}});
-      console.log('token',resetPasswordToken)
-      console.log('match',match)
-      console.log('password',hashPassword("new-password"))
 
       await test.throwsAsync(
         async () =>
@@ -1324,9 +1320,8 @@ if (Meteor.isServer) (() => {
       const user = await Meteor.users.findOne(userId);
 
       await Accounts.sendResetPasswordEmail(userId, email);
-
       const [resetPasswordEmailOptions] =
-        Meteor.callAsync("getInterceptedEmails", email);
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/reset-password/(\\S*)`);
       const match = resetPasswordEmailOptions.text.match(re);
