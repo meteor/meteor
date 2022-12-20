@@ -1443,7 +1443,7 @@ export class AccountsServer extends AccountsCommon {
     return options;
   };
 
-  _checkForCaseInsensitiveDuplicates(
+  async _checkForCaseInsensitiveDuplicates(
     fieldName,
     displayName,
     fieldValue,
@@ -1457,7 +1457,7 @@ export class AccountsServer extends AccountsCommon {
     );
 
     if (fieldValue && !skipCheck) {
-      const matchedUsers = Meteor.users
+      const matchedUsers = await Meteor.users
         .find(
           this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
           {
