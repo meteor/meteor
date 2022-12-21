@@ -348,10 +348,11 @@ MongoConnection.prototype._insert = async function (collection_name, document) {
     }
   ).then(({insertedId}) => {
     refresh();
-    write.committed();
     return insertedId;
   }).catch((e) => {
     throw e;
+  }).finally(() => {
+    write.committed();
   });
 };
 
@@ -373,18 +374,13 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   }
 };
 
-MongoConnection.prototype._remove = async function (collection_name, selector,
-                                              callback) {
+MongoConnection.prototype._remove = async function (collection_name, selector) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e._expectedByTest = true;
-    if (callback) {
-      return callback(e);
-    } else {
-      throw e;
-    }
+    throw e;
   }
 
   var write = self._maybeBeginWrite();
@@ -392,34 +388,19 @@ MongoConnection.prototype._remove = async function (collection_name, selector,
     self._refresh(collection_name, selector);
   };
 
-  return new Promise((resolve, reject) => {
-    if (!callback) {
-      callback = (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      };
-    }
-
-    callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
-
-    var collection = self.rawCollection(collection_name);
-    collection
-      .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
-        safe: true,
-      })
-      .then(({ deletedCount }) => {
-        callback(null, transformResult({ result : {modifiedCount : deletedCount} }).numberAffected);
-      }).catch((err) => {
-      write.committed();
-      callback(err);
+  return self.rawCollection(collection_name)
+    .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
+      safe: true,
+    })
+    .then(({ deletedCount }) => {
+      refresh();
+      return transformResult({ result : {modifiedCount : deletedCount} }).numberAffected;
+    }).finally(() => {
+        write.committed();
     });
-  });
 };
 
-MongoConnection.prototype._dropCollection = async function (collectionName, cb) {
+MongoConnection.prototype._dropCollection = async function (collectionName) {
   var self = this;
 
   var write = self._maybeBeginWrite();
@@ -430,18 +411,13 @@ MongoConnection.prototype._dropCollection = async function (collectionName, cb) 
       dropCollection: true
     });
   };
-  // TODO[FIBERS]: Check if this is correct after the DDP changes.
-  const fn = bindEnvironmentForWrite(
-    writeCallback(write, refresh, cb)
-  );
-
-  try {
-    var collection = self.rawCollection(collectionName);
-    await Meteor.promisify(collection.drop)(fn);
-  } catch (e) {
-    write.committed();
-    throw e;
-  }
+  return self.rawCollection(collectionName).drop()
+      .then(result => {
+        refresh();
+        return result;
+      }).finally(() => {
+        write.committed();
+      });
 };
 
 // For testing only.  Slightly better than `c.rawDatabase().dropDatabase()`
@@ -599,15 +575,13 @@ MongoConnection.prototype._update = async function (collection_name, selector, m
               }
             }
             refresh();
-            write.committed();
             return meteorResult;
           } else {
             refresh();
-            write.committed();
             return meteorResult.numberAffected;
           }
-        }).catch(err => {
-          throw err;
+        }).finally(() => {
+          write.committed();
         });
   }
 };
@@ -741,19 +715,14 @@ _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], functio
 // XXX MongoConnection.upsert() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
 // doc).
-MongoConnection.prototype.upsert = async function (collectionName, selector, mod,
-                                             options, callback) {
+MongoConnection.prototype.upsert = async function (collectionName, selector, mod, options) {
   var self = this;
-  if (typeof options === "function" && ! callback) {
-    callback = options;
-    options = {};
-  }
 
   return self.update(collectionName, selector, mod,
                      _.extend({}, options, {
                        upsert: true,
                        _returnObject: true
-                     }), callback);
+                     }));
 };
 
 MongoConnection.prototype.find = function (collectionName, selector, options) {
