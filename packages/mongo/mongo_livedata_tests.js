@@ -585,8 +585,7 @@ _.each( ['STRING'], function(idGeneration) {
         return new Proxy(obj, denyModifications);
       }
 
-      // TODO -> Maybe revisit this? Probably when we are back to just "mongo" it will work again.
-      const ObserveMultiplexer = Package['mongo-async'].ObserveMultiplexer;
+      const ObserveMultiplexer = Package['mongo'].ObserveMultiplexer;
       const origApplyCallback = ObserveMultiplexer.prototype._applyCallback;
       ObserveMultiplexer.prototype._applyCallback = function(callback, args) {
         // Make sure that if anything touches the original object, this will throw
