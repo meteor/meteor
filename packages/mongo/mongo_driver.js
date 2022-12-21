@@ -480,13 +480,6 @@ MongoConnection.prototype._update = async function (collection_name, selector, m
   if (!mod || typeof mod !== 'object') {
     const error = new Error("Invalid modifier. Modifier must be an object.");
 
-    if (callback) {
-      return callback(error);
-    } else {
-      throw error;
-    }
-  }
-
     throw error;
   }
 
@@ -587,34 +580,35 @@ MongoConnection.prototype._update = async function (collection_name, selector, m
     const strings = Object.keys(mongoMod).filter((key) => !key.startsWith("$"));
     let updateMethod = strings.length > 0 ? 'replaceOne' : 'updateMany';
     updateMethod =
-      updateMethod === 'updateMany' && !mongoOpts.multi
-        ? 'updateOne'
-        : updateMethod;
-    return collection[updateMethod].bind(collection)(
-      mongoSelector, mongoMod, mongoOpts).then(result => {
-      var meteorResult = transformResult({result});
-      if (meteorResult && options._returnObject) {
-        // If this was an upsert() call, and we ended up
-        // inserting a new doc and we know its id, then
-        // return that id as well.
-        if (options.upsert && meteorResult.insertedId) {
-          if (knownId) {
-            meteorResult.insertedId = knownId;
-          } else if (meteorResult.insertedId instanceof MongoDB.ObjectID) {
-            meteorResult.insertedId = new Mongo.ObjectID(meteorResult.insertedId.toHexString());
+        updateMethod === 'updateMany' && !mongoOpts.multi
+            ? 'updateOne'
+            : updateMethod;
+    return collection[updateMethod]
+        .bind(collection)(mongoSelector, mongoMod, mongoOpts)
+        .then(result => {
+          var meteorResult = transformResult({result});
+          if (meteorResult && options._returnObject) {
+            // If this was an upsert() call, and we ended up
+            // inserting a new doc and we know its id, then
+            // return that id as well.
+            if (options.upsert && meteorResult.insertedId) {
+              if (knownId) {
+                meteorResult.insertedId = knownId;
+              } else if (meteorResult.insertedId instanceof MongoDB.ObjectID) {
+                meteorResult.insertedId = new Mongo.ObjectID(meteorResult.insertedId.toHexString());
+              }
+            }
+            refresh();
+            write.committed();
+            return meteorResult;
+          } else {
+            refresh();
+            write.committed();
+            return meteorResult.numberAffected;
           }
-        }
-        refresh();
-        write.committed();
-        return meteorResult;
-      } else {
-        refresh();
-        write.committed();
-        return meteorResult.numberAffected;
-      }
-    }).catch(err => {
-      throw err;
-    });
+        }).catch(err => {
+          throw err;
+        });
   }
 };
 
