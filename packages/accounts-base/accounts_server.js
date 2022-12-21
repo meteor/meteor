@@ -455,7 +455,7 @@ export class AccountsServer extends AccountsCommon {
 
     let user;
     if (result.userId)
-      user = this.users.findOne(result.userId, {fields: this._options.defaultFieldSelector});
+      user = await this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
 
     const attempt = {
       type: result.type || "unknown",
