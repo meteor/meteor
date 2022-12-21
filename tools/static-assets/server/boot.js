@@ -222,13 +222,13 @@ var specialArgPaths = {
 
 var loadServerBundles = Profile("Load server bundles", async function () {
   var infos = [];
+  var nonLocalNodeModulesPaths = new Set();
 
   for (const fileInfo of serverJson.load) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
-    var nonLocalNodeModulesPaths = [];
 
     function addNodeModulesPath(path) {
-      nonLocalNodeModulesPaths.push(
+      nonLocalNodeModulesPaths.add(
           files.pathResolve(serverDir, path)
       );
     }
@@ -266,25 +266,35 @@ var loadServerBundles = Profile("Load server bundles", async function () {
       require: Profile(function getBucketName(name) {
         return "Npm.require(" + JSON.stringify(name) + ")";
       }, function (name, error) {
-        if (nonLocalNodeModulesPaths.length > 0) {
+        if (fileInfo.node_modules || nonLocalNodeModulesPaths.size > 0) {
           var fullPath;
 
           // Replace all backslashes with forward slashes, just in case
           // someone passes a Windows-y module identifier.
           name = name.split("\\").join("/");
 
-          nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
-            var packageBase = files.convertToOSPath(files.pathResolve(
-                nodeModuleBase,
-                name.split("/", 1)[0]
-            ));
-
+          if (fileInfo.node_modules) {
+            const packageBase = files.convertToOSPath(files.pathResolve(fileInfo.node_modules, name.split("/", 1)[0]));
             if (statOrNull(packageBase)) {
-              return fullPath = files.convertToOSPath(
-                  files.pathResolve(nodeModuleBase, name)
+              fullPath = files.convertToOSPath(
+                  files.pathResolve(fileInfo.node_modules, name)
               );
             }
-          });
+          } else {
+            for (const nodeModuleBase of nonLocalNodeModulesPaths) {
+              var packageBase = files.convertToOSPath(files.pathResolve(
+                  nodeModuleBase,
+                  name.split("/", 1)[0]
+              ));
+
+              if (statOrNull(packageBase)) {
+                fullPath = files.convertToOSPath(
+                    files.pathResolve(nodeModuleBase, name)
+                );
+                break;
+              }
+            }
+          }
 
           if (fullPath) {
             return require(fullPath);
@@ -399,7 +409,7 @@ var loadServerBundles = Profile("Load server bundles", async function () {
     var scriptPath =
         parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
-    var func = require('vm').runInThisContext(wrapped, {
+    var func = await require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
       displayErrors: true
     });
