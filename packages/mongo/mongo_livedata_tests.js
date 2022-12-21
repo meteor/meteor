@@ -206,8 +206,8 @@ _.each( ['STRING'], function(idGeneration) {
         };
 
         const toAwait = ["insert", "remove", "update"].map(async (op) => {
-          var arg = (op === "insert" ? {} : 'bla');
-          var arg2 = {};
+          const arg = (op === "insert" ? {} : 'bla');
+          const arg2 = {};
 
           var callOp = async function () {
             if (op === "update") {
@@ -1342,7 +1342,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
       const id = await runAndThrowIfNeeded(() => coll.insert({}), test);
@@ -1361,7 +1361,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test, expect) {
+    }, async function () {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
       // No callback!  Before fixing #2413, this method never returned and
@@ -1382,7 +1382,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const testWidget = {
         name: 'Widget name'
@@ -1405,7 +1405,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const self = this;
       const coll = self.coll = new Mongo.Collection(self.collectionName, collectionOptions);
 
@@ -1492,7 +1492,7 @@ _.each( ['STRING'], function(idGeneration) {
       })).seconds, 50);
       await self.coll.remove(id);
     },
-    async function (test, expect) {
+    async function (test) {
       var self = this;
       self.id1 = await runAndThrowIfNeeded(() => self.coll.insert({d: new Date(1356152390004)}), test, false);
       test.isTrue(self.id1);
@@ -1521,7 +1521,7 @@ _.each( ['STRING'], function(idGeneration) {
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     },
-    async function (test, expect) {
+    async function (test) {
       var self = this;
       self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const id = await runAndThrowIfNeeded(() => self.coll.insert({}), test);
@@ -1548,7 +1548,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const id = await runAndThrowIfNeeded(() => coll.insert({b: bin}), test);
       test.isTrue(id);
@@ -1569,7 +1569,7 @@ _.each( ['STRING'], function(idGeneration) {
       }
     },
 
-    async function (test, expect) {
+    async function (test) {
       var self = this;
       self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
       var docId;

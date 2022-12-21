@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.16.3'
+  version: '1.16.0'
 });
 
 Npm.depends({
@@ -82,7 +82,6 @@ Package.onUse(function (api) {
   api.addFiles('remote_collection_driver.js', 'server');
   api.addFiles('collection.js', ['client', 'server']);
   api.addFiles('connection_options.js', 'server');
-  api.addAssets('mongo.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

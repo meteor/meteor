@@ -23,7 +23,7 @@ import {
 MongoInternals = {};
 
 // TODO remove after test
-MongoInternals.__packageName = 'mongo'
+MongoInternals.__packageName = 'mongo-async';
 
 MongoInternals.NpmModules = {
   mongodb: {
@@ -480,6 +480,13 @@ MongoConnection.prototype._update = async function (collection_name, selector, m
   // error here.
   if (!mod || typeof mod !== 'object') {
     const error = new Error("Invalid modifier. Modifier must be an object.");
+
+    if (callback) {
+      return callback(error);
+    } else {
+      throw error;
+    }
+  }
 
     throw error;
   }
