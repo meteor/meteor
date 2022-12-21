@@ -7,7 +7,8 @@
 * update svelte skeleton [PR](https://github.com/meteor/meteor/pull/12350) by [tosinek](https://github.com/tosinek).
 * Bump to node 14.21.2.0 [PR](https://github.com/meteor/meteor/pull/12370) by [Grubba27](https://github.com/Grubba27).
 * resetPassword and verifyEmail to no longer sign in the user automatically [PR](https://github.com/meteor/meteor/pull/12385) by [denihs](https://github.com/denihs).
-* 
+* Added missing vue2 declaration for skeletons [PR](https://github.com/meteor/meteor/pull/12396) by [Grubba27](https://github.com/Grubba27) & [planning](https://github.com/mlanning)
+
 #### Breaking Changes
 
 * `accounts-password@2.3.3`
@@ -33,16 +34,16 @@ N/a
 * `accounts-password@2.3.3`
   - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
 
-* `Comand line`:
+* `Command line`:
   - Updated Svelte skeleton to now be able to support typescript out of the box and some idioms to the skeleton
   - Updated node to 14.21.2 changes can be seen [here](https://github.com/nodejs/node/releases/tag/v14.21.2)
-  - 
+  - Solved [issue](https://github.com/meteor/meteor/issues/12395) that could not allow vue2 apps being created in command line
 #### Special thanks to
 - [@zarvox](https://github.com/zarvox).
 - [@tosinek](https://github.com/tosinek).
 - [@Grubba27](https://github.com/Grubba27).
 - [@denihs](https://github.com/denihs)
-
+- [mlanning](https://github.com/mlanning)
 For making this great framework even better!
 
 
