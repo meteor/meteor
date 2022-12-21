@@ -344,11 +344,11 @@ export default class LocalCollection {
 
   // XXX atomicity: if multi is true, and one modification fails, do
   // we rollback the whole operation, or what?
-  update(selector, mod, options, callback) {
-    if (! callback && options instanceof Function) {
-      callback = options;
-      options = null;
-    }
+  async update(selector, mod, options) {
+    // if (! callback && options instanceof Function) {
+    //   callback = options;
+    //   options = null;
+    // }
 
     if (!options) {
       options = {};
@@ -444,7 +444,7 @@ export default class LocalCollection {
       }
     });
 
-    this._observeQueue.drain();
+    await this._observeQueue.drain();
 
     // If we are doing an upsert, and we didn't modify any documents yet, then
     // it's time to do an insert. Figure out what document we are inserting, and
@@ -456,7 +456,7 @@ export default class LocalCollection {
         doc._id = options.insertedId;
       }
 
-      insertedId = this.insert(doc);
+      insertedId = await this.insert(doc);
       updateCount = 1;
     }
 
@@ -474,11 +474,11 @@ export default class LocalCollection {
       result = updateCount;
     }
 
-    if (callback) {
-      Meteor.defer(() => {
-        callback(null, result);
-      });
-    }
+    // if (callback) {
+    //   Meteor.defer(() => {
+    //     callback(null, result);
+    //   });
+    // }
 
     return result;
   }

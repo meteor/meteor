@@ -198,7 +198,7 @@ _.each( ['STRING'], function(idGeneration) {
   var collectionOptions = { idGeneration: idGeneration};
 
   Tinytest.addAsync("mongo-livedata - database error reporting. " + idGeneration,
-      async function (test, expect) {
+      async function (test) {
         const ftc = Meteor._FailureTestCollection;
 
         const exception = function (err) {
@@ -206,27 +206,27 @@ _.each( ['STRING'], function(idGeneration) {
         };
 
         const toAwait = ["insert", "remove", "update"].map(async (op) => {
-          const arg = (op === "insert" ? {} : 'bla');
-          const arg2 = {};
+          var arg = (op === "insert" ? {} : 'bla');
+          var arg2 = {};
 
-          const callOp = async function (callback) {
+          var callOp = async function () {
             if (op === "update") {
-              await ftc[op](arg, arg2, callback);
+              return ftc[op](arg, arg2);
             } else {
-              await ftc[op](arg, callback);
+              return ftc[op](arg);
             }
           };
 
           if (Meteor.isServer) {
-            await test.throwsAsync(async function () {
-              await callOp();
+            await test.throwsAsync(function () {
+              return callOp();
             });
 
-            await callOp(expect(exception));
+            await callOp().catch(exception);
           }
 
           if (Meteor.isClient) {
-            await callOp(expect(exception));
+            await callOp().catch(exception);
 
             // This would log to console in normal operation.
             Meteor._suppress_log(1);
@@ -839,7 +839,7 @@ _.each( ['STRING'], function(idGeneration) {
       const coll = new Mongo.Collection(cname);
       const doc = { foo: "bar" };
       let x = 0;
-      coll.insert(doc, (_, id) => {
+      coll.insert(doc).then((id) => {
         coll.update(id, { $set: { foo: "baz" } }, function (err, result) {
           test.equal(err, null);
           test.equal(result, 1);
@@ -857,7 +857,7 @@ _.each( ['STRING'], function(idGeneration) {
       const coll = new Mongo.Collection(cname);
       const doc = { foo: "bar" };
       let x = 0;
-      coll.insert(doc, (_, id) => {
+      coll.insert(doc).then((id) => {
         coll.remove(id, async function (err, _) {
           test.equal(err, null);
           test.isFalse(await coll.findOne(id));
@@ -1342,13 +1342,14 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test) {
+    }, async function (test, expect) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
       const id = await runAndThrowIfNeeded(() => coll.insert({}), test);
 
       test.isTrue(id);
       test.equal(await coll.find().count(), 1);
+      expect();
     }
   ]);
 
@@ -1360,7 +1361,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function () {
+    }, async function (test, expect) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
       // No callback!  Before fixing #2413, this method never returned and
@@ -1369,6 +1370,7 @@ _.each( ['STRING'], function(idGeneration) {
       // Do something else on the same method and expect it to actually work.
       // (If the bug comes back, this will 'async batch timeout'.)
       await coll.insert({});
+      expect();
     }
   ]);
 
@@ -1380,7 +1382,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test) {
+    }, async function (test, expect) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const testWidget = {
         name: 'Widget name'
@@ -1391,6 +1393,7 @@ _.each( ['STRING'], function(idGeneration) {
           await coll.findOne(insertDetails.insertedId),
           Object.assign({ _id: insertDetails.insertedId }, testWidget)
       );
+      expect();
     }
   ]);
 
@@ -1402,7 +1405,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test) {
+    }, async function (test, expect) {
       const self = this;
       const coll = self.coll = new Mongo.Collection(self.collectionName, collectionOptions);
 
@@ -1411,14 +1414,16 @@ _.each( ['STRING'], function(idGeneration) {
       self.docId = id;
       test.equal(await coll.findOne(self.docId),
           {_id: self.docId, foo: 'x', length: 0});
+      expect();
     },
-    async function (test) {
+    async function (test, expect) {
       const self = this;
       const coll = self.coll;
 
       await runAndThrowIfNeeded(() => coll.update(self.docId, {$set: {length: 5}}), test);
       test.equal(await coll.findOne(self.docId),
           {_id: self.docId, foo: 'x', length: 5});
+      expect();
     }
   ]);
 
@@ -1429,12 +1434,13 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test) {
+    }, async function (test, expect) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const id = await runAndThrowIfNeeded(() => coll.insert({d: new Date(1356152390004)}), test);
       test.isTrue(id);
       test.equal(await coll.find().count(), 1);
       test.equal((await coll.findOne()).d.getFullYear(), 2012);
+      expect();
     }
   ]);
 
@@ -1464,10 +1470,12 @@ _.each( ['STRING'], function(idGeneration) {
       var expectAdd = expect(function (doc) {
         test.equal(doc.seconds(), 50);
       });
-      var expectRemove = expect(async function (doc) {
+      var expectRemove = async function (doc) {
         test.equal(doc.seconds(), 50);
-        return await obs.stop();
-      });
+        console.log({doc});
+        await obs.stop();
+        expect();
+      };
       const id = await runAndThrowIfNeeded(() => self.coll.insert({d: new Date(1356152390004)}), test, false);
       test.isTrue(id);
       var cursor = self.coll.find();
@@ -1484,7 +1492,7 @@ _.each( ['STRING'], function(idGeneration) {
       })).seconds, 50);
       await self.coll.remove(id);
     },
-    async function (test) {
+    async function (test, expect) {
       var self = this;
       self.id1 = await runAndThrowIfNeeded(() => self.coll.insert({d: new Date(1356152390004)}), test, false);
       test.isTrue(self.id1);
@@ -1498,6 +1506,7 @@ _.each( ['STRING'], function(idGeneration) {
     async function (test, expect) {
       var self = this;
       var justId = function (doc) {
+        console.log({doc});
         return _.omit(doc, '_id');
       };
       TRANSFORMS["justId"] = justId;
@@ -1511,12 +1520,14 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test) {
+    },
+    async function (test, expect) {
       var self = this;
       self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const id = await runAndThrowIfNeeded(() => self.coll.insert({}), test);
       test.isTrue(id);
       test.equal((await self.coll.findOne())._id, id);
+      expect();
     }
   ]);
 
@@ -1537,7 +1548,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test) {
+    }, async function (test, expect) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const id = await runAndThrowIfNeeded(() => coll.insert({b: bin}), test);
       test.isTrue(id);
@@ -1545,6 +1556,7 @@ _.each( ['STRING'], function(idGeneration) {
       var inColl = await coll.findOne();
       test.isTrue(EJSON.isBinary(inColl.b));
       test.equal(inColl.b, bin);
+      expect();
     }
   ]);
 
@@ -1557,7 +1569,7 @@ _.each( ['STRING'], function(idGeneration) {
       }
     },
 
-    async function (test) {
+    async function (test, expect) {
       var self = this;
       self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
       var docId;
@@ -1574,6 +1586,7 @@ _.each( ['STRING'], function(idGeneration) {
       test.isTrue(inColl);
       inColl && test.equal(inColl.d.speak(), "woof");
       inColl && test.isNull(inColl.d.color);
+      expect();
     },
 
     async function (test, expect) {
