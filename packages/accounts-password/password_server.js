@@ -1040,9 +1040,9 @@ Accounts.createUserVerifyingEmail =
     // that address.
     if (options.email && Accounts._options.sendVerificationEmail) {
       if (options.password) {
-        awaitAccounts.sendVerificationEmail(userId, options.email);
+        await Accounts.sendVerificationEmail(userId, options.email);
       } else {
-        awaitAccounts.sendEnrollmentEmail(userId, options.email);
+        await Accounts.sendEnrollmentEmail(userId, options.email);
       }
     }
 
