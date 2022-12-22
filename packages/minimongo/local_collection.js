@@ -345,11 +345,6 @@ export default class LocalCollection {
   // XXX atomicity: if multi is true, and one modification fails, do
   // we rollback the whole operation, or what?
   async update(selector, mod, options) {
-    // if (! callback && options instanceof Function) {
-    //   callback = options;
-    //   options = null;
-    // }
-
     if (!options) {
       options = {};
     }
@@ -486,17 +481,11 @@ export default class LocalCollection {
   // A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
   // equivalent to LocalCollection.update(sel, mod, {upsert: true,
   // _returnObject: true}).
-  upsert(selector, mod, options, callback) {
-    if (!callback && typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-
+  async upsert(selector, mod, options) {
     return this.update(
       selector,
       mod,
-      Object.assign({}, options, {upsert: true, _returnObject: true}),
-      callback
+      Object.assign({}, options, {upsert: true, _returnObject: true})
     );
   }
 
@@ -739,9 +728,9 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
       DiffSequence.applyChanges(doc, fields);
     };
 
-    this.applyChange.removed = id => {
+    this.applyChange.removed = async id => {
       if (callbacks.removed) {
-        callbacks.removed.call(this, id);
+        await callbacks.removed.call(this, id);
       }
 
       this.docs.remove(id);
@@ -1472,7 +1461,7 @@ LocalCollection._observeFromObserveChangesNoFibers = async (cursor, observeCallb
       },
       removed(id) {
         if (observeCallbacks.removed) {
-          observeCallbacks.removed(transform(this.docs.get(id)));
+          return observeCallbacks.removed(transform(this.docs.get(id)));
         }
       },
     };

@@ -127,9 +127,9 @@ ObserveMultiplexer = class {
   // Calls "cb" once the effects of all "ready", "addHandleAndSendInitialAdds"
   // and observe callbacks which came before this call have been propagated to
   // all handles. "ready" must have already been called on this multiplexer.
-  onFlush(cb) {
+  async onFlush(cb) {
     var self = this;
-    return this._queue.queueTask(async function () {
+    return await this._queue.queueTask(async function () {
       if (!self._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();

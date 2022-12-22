@@ -480,78 +480,76 @@ _.extend(OplogObserveDriver.prototype, {
   },
   _fetchModifiedDocuments: function () {
     var self = this;
-    Meteor._noYieldsAllowed(function () {
-      self._registerPhaseChange(PHASE.FETCHING);
-      // Defer, because nothing called from the oplog entry handler may yield,
-      // but fetch() yields.
-      Meteor.defer(finishIfNeedToPollQuery(async function () {
-        while (!self._stopped && !self._needToFetch.empty()) {
-          if (self._phase === PHASE.QUERYING) {
-            // While fetching, we decided to go into QUERYING mode, and then we
-            // saw another oplog entry, so _needToFetch is not empty. But we
-            // shouldn't fetch these documents until AFTER the query is done.
-            break;
-          }
-
-          // Being in steady phase here would be surprising.
-          if (self._phase !== PHASE.FETCHING)
-            throw new Error("phase in fetchModifiedDocuments: " + self._phase);
-
-          self._currentlyFetching = self._needToFetch;
-          var thisGeneration = ++self._fetchGeneration;
-          self._needToFetch = new LocalCollection._IdMap;
-          var waiting = 0;
-
-          let promiseResolver = null;
-          const awaitablePromise = new Promise(r => promiseResolver = r);
-          // This loop is safe, because _currentlyFetching will not be updated
-          // during this loop (in fact, it is never mutated).
-          self._currentlyFetching.forEach(function (op, id) {
-            waiting++;
-            self._mongoHandle._docFetcher.fetch(
-              self._cursorDescription.collectionName, id, op,
-              finishIfNeedToPollQuery(function (err, doc) {
-                try {
-                  if (err) {
-                    Meteor._debug("Got exception while fetching documents",
-                                  err);
-                    // If we get an error from the fetcher (eg, trouble
-                    // connecting to Mongo), let's just abandon the fetch phase
-                    // altogether and fall back to polling. It's not like we're
-                    // getting live updates anyway.
-                    if (self._phase !== PHASE.QUERYING) {
-                      self._needToPollQuery();
-                    }
-                  } else if (!self._stopped && self._phase === PHASE.FETCHING
-                             && self._fetchGeneration === thisGeneration) {
-                    // We re-check the generation in case we've had an explicit
-                    // _pollQuery call (eg, in another fiber) which should
-                    // effectively cancel this round of fetches.  (_pollQuery
-                    // increments the generation.)
-                    self._handleDoc(id, doc);
-                  }
-                } finally {
-                  waiting--;
-                  // Because fetch() never calls its callback synchronously,
-                  // this is safe (ie, we won't call fut.return() before the
-                  // forEach is done).
-                  if (waiting === 0)
-                    promiseResolver();
-                }
-              }));
-          });
-          await awaitablePromise;
-          // Exit now if we've had a _pollQuery call (here or in another fiber).
-          if (self._phase === PHASE.QUERYING)
-            return;
-          self._currentlyFetching = null;
+    self._registerPhaseChange(PHASE.FETCHING);
+    // Defer, because nothing called from the oplog entry handler may yield,
+    // but fetch() yields.
+    Meteor.defer(finishIfNeedToPollQuery(async function () {
+      while (!self._stopped && !self._needToFetch.empty()) {
+        if (self._phase === PHASE.QUERYING) {
+          // While fetching, we decided to go into QUERYING mode, and then we
+          // saw another oplog entry, so _needToFetch is not empty. But we
+          // shouldn't fetch these documents until AFTER the query is done.
+          break;
         }
-        // We're done fetching, so we can be steady, unless we've had a
-        // _pollQuery call (here or in another fiber).
-        if (self._phase !== PHASE.QUERYING)
-          await self._beSteady();
-      }));
-    });
+
+        // Being in steady phase here would be surprising.
+        if (self._phase !== PHASE.FETCHING)
+          throw new Error("phase in fetchModifiedDocuments: " + self._phase);
+
+        self._currentlyFetching = self._needToFetch;
+        var thisGeneration = ++self._fetchGeneration;
+        self._needToFetch = new LocalCollection._IdMap;
+        var waiting = 0;
+
+        let promiseResolver = null;
+        const awaitablePromise = new Promise(r => promiseResolver = r);
+        // This loop is safe, because _currentlyFetching will not be updated
+        // during this loop (in fact, it is never mutated).
+        self._currentlyFetching.forEach(function (op, id) {
+          waiting++;
+          self._mongoHandle._docFetcher.fetch(
+            self._cursorDescription.collectionName, id, op,
+            finishIfNeedToPollQuery(function (err, doc) {
+              try {
+                if (err) {
+                  Meteor._debug("Got exception while fetching documents",
+                                err);
+                  // If we get an error from the fetcher (eg, trouble
+                  // connecting to Mongo), let's just abandon the fetch phase
+                  // altogether and fall back to polling. It's not like we're
+                  // getting live updates anyway.
+                  if (self._phase !== PHASE.QUERYING) {
+                    self._needToPollQuery();
+                  }
+                } else if (!self._stopped && self._phase === PHASE.FETCHING
+                           && self._fetchGeneration === thisGeneration) {
+                  // We re-check the generation in case we've had an explicit
+                  // _pollQuery call (eg, in another fiber) which should
+                  // effectively cancel this round of fetches.  (_pollQuery
+                  // increments the generation.)
+                  self._handleDoc(id, doc);
+                }
+              } finally {
+                waiting--;
+                // Because fetch() never calls its callback synchronously,
+                // this is safe (ie, we won't call fut.return() before the
+                // forEach is done).
+                if (waiting === 0)
+                  promiseResolver();
+              }
+            }));
+        });
+        await awaitablePromise;
+        // Exit now if we've had a _pollQuery call (here or in another fiber).
+        if (self._phase === PHASE.QUERYING)
+          return;
+        self._currentlyFetching = null;
+      }
+      // We're done fetching, so we can be steady, unless we've had a
+      // _pollQuery call (here or in another fiber).
+      if (self._phase !== PHASE.QUERYING)
+        await self._beSteady();
+    }));
   },
   _beSteady: async function () {
     var self = this;

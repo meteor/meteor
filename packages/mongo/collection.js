@@ -684,12 +684,9 @@ Object.assign(Mongo.Collection.prototype, {
    * @memberof Mongo.Collection
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
-   * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
    */
-  remove(selector, callback) {
+  async remove(selector) {
     selector = Mongo.Collection._rewriteSelector(selector);
-
-    const wrappedCallback = wrapCallback(callback);
 
     if (this._isRemoteCollection()) {
       return this._callMutatorMethodAsync('remove', [selector]);
@@ -697,18 +694,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     // it's my collection.  descend into the collection1 object
     // and propagate any exception.
-    try {
-      // If the user provided a callback and the collection implements this
-      // operation asynchronously, then queryRet will be undefined, and the
-      // result will be returned through the callback instead.
-      return this._collection.remove(selector, wrappedCallback);
-    } catch (e) {
-      if (callback) {
-        callback(e);
-        return null;
-      }
-      throw e;
-    }
+    return this._collection.remove(selector);
   },
 
   // Determine if this collection is simply a minimongo representation of a real
@@ -728,14 +714,8 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {MongoModifier} modifier Specifies how to modify the documents
    * @param {Object} [options]
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
-   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
-  upsert(selector, modifier, options, callback) {
-    if (!callback && typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-
+  async upsert(selector, modifier, options) {
     return this.update(
       selector,
       modifier,
@@ -743,9 +723,7 @@ Object.assign(Mongo.Collection.prototype, {
         ...options,
         _returnObject: true,
         upsert: true,
-      },
-      callback
-    );
+      });
   },
 
   // We'll actually design an index API later. For now, we just pass through to

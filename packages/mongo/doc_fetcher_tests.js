@@ -14,15 +14,14 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
     // Test basic operation.
     const fakeOp1 = {};
     const fakeOp2 = {};
-    fetcher.fetch(collName, id1, fakeOp1, expect(null, {_id: id1, x: 1}));
-    fetcher.fetch(collName, "nonexistent!", fakeOp2, expect(null, null));
+    await fetcher.fetch(collName, id1, fakeOp1).then(() => expect(null, {_id: id1, x: 1}));
+    await fetcher.fetch(collName, "nonexistent!", fakeOp2, expect(null, null));
 
     var fetched = false;
     var fakeOp3 = {};
     var expected = {_id: id2, y: 2};
-    fetcher.fetch(collName, id2, fakeOp3, expect(function (e, d) {
+    await fetcher.fetch(collName, id2, fakeOp3).then(d => expect(function () {
       fetched = true;
-      test.isFalse(e);
       test.equal(d, expected);
     }));
     // The fetcher yields.
@@ -31,8 +30,7 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
     // Now ask for another document with the same op reference. Because a
     // fetch for that op is in flight, we will get the other fetch's
     // document, not this random document.
-    fetcher.fetch(collName, Random.id(), fakeOp3, expect(function (e, d) {
-      test.isFalse(e);
+    await fetcher.fetch(collName, Random.id(), fakeOp3).then(d => expect(function () {
       test.equal(d, expected);
     }));
   }

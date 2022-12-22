@@ -83,26 +83,13 @@ var compareResults = function (test, skipIds, actual, expected) {
   test.equal(actual, expected);
 };
 
-var upsert = async function (coll, useUpdate, query, mod, options, callback) {
-  if (! callback && typeof options === "function") {
-    callback = options;
-    options = {};
-  }
-
+var upsert = async function (coll, useUpdate, query, mod, options) {
   if (!useUpdate) {
-    return await coll.upsert(query, mod, options, callback);
+    return await coll.upsert(query, mod, options);
   }
 
-  if (callback) {
-    await coll.update(query, mod,
-        _.extend({ upsert: true }, options))
-        .then(result => {
-          callback(null, {numberAffected: result});
-        });
-  }
-
-  return await Promise.resolve(coll.update(query, mod,
-      _.extend({ upsert: true }, options))).then(r => ({numberAffected: r}));
+  return coll.update(query, mod, _.extend({ upsert: true }, options))
+      .then(r => ({numberAffected: r}));
 };
 
 var upsertTestMethod = "livedata_upsert_test_method";
@@ -1465,13 +1452,12 @@ _.each( ['STRING'], function(idGeneration) {
       var self = this;
       self.coll = new Mongo.Collection(self.collectionName, self.collectionOptions);
       var obs;
-      var expectAdd = function (doc) {
+      var expectAdd = expect(function (doc) {
         test.equal(doc.seconds(), 50);
-      };
-      var expectRemove = async function (doc) {
+      });
+      var expectRemove = expect(function (doc) {
         test.equal(doc.seconds(), 50);
-        await obs.stop();
-      };
+      });
       const id = await runAndThrowIfNeeded(() => self.coll.insert({d: new Date(1356152390004)}), test, false);
       test.isTrue(id);
       var cursor = self.coll.find();
@@ -1479,15 +1465,15 @@ _.each( ['STRING'], function(idGeneration) {
         added: expectAdd,
         removed: expectRemove
       });
-      // test.equal(await cursor.count(), 1);
-      // test.equal((await cursor.fetch())[0].seconds(), 50);
-      // test.equal((await self.coll.findOne()).seconds(), 50);
-      // test.equal((await self.coll.findOne({}, {transform: null})).seconds, undefined);
-      // test.equal((await self.coll.findOne({}, {
-      //   transform: function (doc) {return {seconds: doc.d.getSeconds()};}
-      // })).seconds, 50);
+      test.equal(await cursor.count(), 1);
+      test.equal((await cursor.fetch())[0].seconds(), 50);
+      test.equal((await self.coll.findOne()).seconds(), 50);
+      test.equal((await self.coll.findOne({}, {transform: null})).seconds, undefined);
+      test.equal((await self.coll.findOne({}, {
+        transform: function (doc) {return {seconds: doc.d.getSeconds()};}
+      })).seconds, 50);
       await self.coll.remove(id);
-      expect();
+      obs.stop();
     },
     async function (test) {
       var self = this;
@@ -1518,7 +1504,7 @@ _.each( ['STRING'], function(idGeneration) {
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     },
-    async function (test) {
+    async function (test, expect) {
       var self = this;
       self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const id = await runAndThrowIfNeeded(() => self.coll.insert({}), test);
@@ -1545,7 +1531,7 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test) {
+    }, async function (test, expect) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const id = await runAndThrowIfNeeded(() => coll.insert({b: bin}), test);
       test.isTrue(id);
@@ -1566,7 +1552,7 @@ _.each( ['STRING'], function(idGeneration) {
       }
     },
 
-    async function (test) {
+    async function (test, expect) {
       var self = this;
       self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
       var docId;
@@ -2263,7 +2249,7 @@ testAsyncMulti('mongo-livedata - specified _id', [
       await Meteor.callAsync('createInsecureCollection', this.collectionName);
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
-  }, async function (test) {
+  }, async function (test, expect) {
     var coll = new Mongo.Collection(this.collectionName);
     const id1 = await runAndThrowIfNeeded(() => coll.insert({ _id: "foo", name: "foo" }), test);
     test.equal(id1, "foo");
@@ -2276,6 +2262,7 @@ testAsyncMulti('mongo-livedata - specified _id', [
     console.log({id1, id2}, await coll.find({}).fetch());
     const doc2 = await coll.findOne();
     test.equal(doc2.name, "foo");
+    expect();
   }
 ]);
 
@@ -2477,6 +2464,7 @@ testAsyncMulti('mongo-livedata - empty string _id', [
     var self = this;
     var docs = await self.coll.find().fetch();
     test.equal(docs, [{_id: "realid", f: "bar"}]);
+    expect();
   },
   async function (test, expect) {
     var self = this;
@@ -2484,6 +2472,7 @@ testAsyncMulti('mongo-livedata - empty string _id', [
       await self.coll._collection.insert({_id: "", f: "baz"});
       test.equal((await self.coll.find().fetch()).length, 2);
     }
+    expect();
   }
 ]);
 
@@ -3149,6 +3138,7 @@ testAsyncMulti("mongo-livedata - undefined find options", [
       skip: undefined
     });
     test.equal(result, self.doc);
+    expect();
   }
 ]);
 
@@ -3197,6 +3187,7 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - observe limit bug", [
       return self.coll.remove({toDelete: true});
     });
     test.equal(_.keys(state), [self.id1]);
+    expect();
   }
 ]);
 
@@ -3218,6 +3209,7 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidde
       return c.update(id, { foo3: "bar3", $set: { blah: 1 } });
     }, "cannot have both modifier and non-modifier fields");
     test.equal(await c.findOne(id), { _id: id, foo2: "bar2" });
+    expect();
   }
 ]);
 

@@ -527,23 +527,15 @@ MongoConnection.prototype._update = async function (collection_name, selector, m
     // - The id is defined by query or mod we can just add it to the replacement doc
     // - The user did not specify any id preference and the id is a Mongo ObjectId,
     //     then we can just let Mongo generate the id
-
-    simulateUpsertWithInsertedId(
-      collection, mongoSelector, mongoMod, options,
-      // This callback does not need to be bindEnvironment'ed because
-      // simulateUpsertWithInsertedId() wraps it and then passes it through
-      // bindEnvironmentForWrite.
-      function (error, result) {
-        // If we got here via a upsert() call, then options._returnObject will
-        // be set and we should return the whole object. Otherwise, we should
-        // just return the number of affected docs to match the mongo API.
-        if (result && ! options._returnObject) {
-          callback(error, result.numberAffected);
-        } else {
-          callback(error, result);
-        }
-      }
-    );
+    return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options)
+        .then(result => {
+          refresh();
+          if (result && ! options._returnObject) {
+            return result.numberAffected;
+          } else {
+            return result;
+          }
+        });
   } else {
     if (options.upsert && !knownId && options.insertedId && isModify) {
       if (!mongoMod.hasOwnProperty('$setOnInsert')) {
