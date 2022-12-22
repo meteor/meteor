@@ -522,7 +522,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // outputs. This is only valid because it does nothing with its inputs
   // and outputs other than send pass them to other methods.)
   async writeToGeneratedFilename(relPath, writeOptions) {
-    const generated = this.generateFilename(relPath);
+    const generated = await this.generateFilename(relPath);
     await this.write(generated, writeOptions);
     return generated;
   }

@@ -1103,9 +1103,9 @@ Object.assign(Isopack.prototype, {
         // Make up a filename for this unibuild
         var baseUnibuildName = unibuild.arch;
         var unibuildDir =
-            builder.generateFilename(baseUnibuildName, { directory: true });
+            await builder.generateFilename(baseUnibuildName, { directory: true });
         var unibuildJsonFile =
-            builder.generateFilename(baseUnibuildName + ".json");
+            await builder.generateFilename(baseUnibuildName + ".json");
         mainJson.builds.push({
           kind: unibuild.kind,
           arch: unibuild.arch,
@@ -1160,7 +1160,7 @@ Object.assign(Isopack.prototype, {
         for (const plugin of Object.values(pluginsByArch)) {
           // XXX the name of the plugin doesn't typically contain a colon, but
           // escape it just in case.
-          var pluginDir = builder.generateFilename(
+          var pluginDir = await builder.generateFilename(
               'plugin.' + colonConverter.convert(name) + '.' + plugin.arch,
               { directory: true });
           var pluginBuild = await plugin.write(await builder.enter(pluginDir));
@@ -1206,7 +1206,7 @@ Object.assign(Isopack.prototype, {
           var unibuildJson = unibuildInfo.unibuildJson;
           var jsResourcesForLegacyPrelink =
               unibuildInfo.jsResourcesForLegacyPrelink;
-          var legacyFilename = builder.generateFilename(
+          var legacyFilename = await builder.generateFilename(
               unibuild.arch + '-legacy.json');
           var legacyDir = unibuild.arch + '-legacy';
           mainLegacyJson.builds.push({
