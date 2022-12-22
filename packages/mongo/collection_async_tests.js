@@ -19,14 +19,3 @@ Tinytest.add('async collection - check for methods presence', function (test) {
   isFunction(cursor.mapAsync);
   isFunction(cursor[Symbol.asyncIterator]);
 });
-
-['countDocuments', 'estimatedDocumentCount'].forEach(method => {
-  Tinytest.addAsync(`async collection - ${method}`, async test => {
-    const collection = new Mongo.Collection(method + test.id);
-    for (let index = 0; index < 10; ++index) {
-      test.instanceOf(collection[method](), Promise);
-      test.equal(await collection[method](), index);
-      collection.insert({});
-    }
-  });
-});

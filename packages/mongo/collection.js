@@ -13,7 +13,6 @@ import { normalizeProjection } from "./mongo_utils";
  */
 Mongo = {};
 
-console.log('Using package: mongo');
 /**
  * @summary Constructor for a Collection
  * @locus Anywhere
@@ -320,33 +319,6 @@ Object.assign(Mongo.Collection.prototype, {
   ///
   /// Main collection API
   ///
-  /**
-   * @summary Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
-   * @locus Anywhere
-   * @method countDocuments
-   * @memberof Mongo.Collection
-   * @instance
-   * @param {MongoSelector} [selector] A query describing the documents to count
-   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
-   * @returns {Promise<number>}
-   */
-  countDocuments(...args) {
-    return this._collection.countDocuments(...args);
-  },
-
-  /**
-   * @summary Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
-   * @locus Anywhere
-   * @method estimatedDocumentCount
-   * @memberof Mongo.Collection
-   * @instance
-   * @param {MongoSelector} [selector] A query describing the documents to count
-   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/EstimatedDocumentCountOptions.html). Please note that not all of them are available on the client.
-   * @returns {Promise<number>}
-   */
-  estimatedDocumentCount(...args) {
-    return this._collection.estimatedDocumentCount(...args);
-  },
 
   _getFindSelector(args) {
     if (args.length == 0) return {};
@@ -440,22 +412,22 @@ Object.assign(Mongo.Collection.prototype, {
 });
 
 Object.assign(Mongo.Collection, {
-  _publishCursor(cursor, sub, collection) {
-    var observeHandle = cursor.observeChanges(
-      {
-        added: function(id, fields) {
-          sub.added(collection, id, fields);
+  async _publishCursor(cursor, sub, collection) {
+    var observeHandle = await cursor.observeChanges(
+        {
+          added: function(id, fields) {
+            sub.added(collection, id, fields);
+          },
+          changed: function(id, fields) {
+            sub.changed(collection, id, fields);
+          },
+          removed: function(id) {
+            sub.removed(collection, id);
+          },
         },
-        changed: function(id, fields) {
-          sub.changed(collection, id, fields);
-        },
-        removed: function(id) {
-          sub.removed(collection, id);
-        },
-      },
-      // Publications don't mutate the documents
-      // This is tested by the `livedata - publish callbacks clone` test
-      { nonMutatingCallbacks: true }
+        // Publications don't mutate the documents
+        // This is tested by the `livedata - publish callbacks clone` test
+        { nonMutatingCallbacks: true }
     );
 
     // We don't call sub.ready() here: it gets called in livedata_server, after
@@ -463,7 +435,7 @@ Object.assign(Mongo.Collection, {
 
     // register stop callback (expects lambda w/ no args).
     sub.onStop(function() {
-      observeHandle.stop();
+      return observeHandle.stop();
     });
 
     // return the observeHandle in case it needs to be stopped early
@@ -524,17 +496,7 @@ Object.assign(Mongo.Collection.prototype, {
   // generating their result until the database has acknowledged
   // them. In the future maybe we should provide a flag to turn this
   // off.
-
-  /**
-   * @summary Insert a document in the collection.  Returns its unique _id.
-   * @locus Anywhere
-   * @method  insert
-   * @memberof Mongo.Collection
-   * @instance
-   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
-   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
-   */
-  insert(doc, callback) {
+  _insert(doc, callback) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -542,17 +504,17 @@ Object.assign(Mongo.Collection.prototype, {
 
     // Make a shallow clone of the document, preserving its prototype.
     doc = Object.create(
-      Object.getPrototypeOf(doc),
-      Object.getOwnPropertyDescriptors(doc)
+        Object.getPrototypeOf(doc),
+        Object.getOwnPropertyDescriptors(doc)
     );
 
     if ('_id' in doc) {
       if (
-        !doc._id ||
-        !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
+          !doc._id ||
+          !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
       ) {
         throw new Error(
-          'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
+            'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
         );
       }
     } else {
@@ -576,6 +538,8 @@ Object.assign(Mongo.Collection.prototype, {
     // On inserts, always return the id that we generated; on all other
     // operations, just return the result from the collection.
     var chooseReturnValueFromCollectionResult = function(result) {
+      if (Meteor._isPromise(result)) return result;
+
       if (doc._id) {
         return doc._id;
       }
@@ -589,8 +553,8 @@ Object.assign(Mongo.Collection.prototype, {
     };
 
     const wrappedCallback = wrapCallback(
-      callback,
-      chooseReturnValueFromCollectionResult
+        callback,
+        chooseReturnValueFromCollectionResult
     );
 
     if (this._isRemoteCollection()) {
@@ -604,7 +568,15 @@ Object.assign(Mongo.Collection.prototype, {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
-      const result = this._collection.insert(doc, wrappedCallback);
+      let result;
+      if (!!wrappedCallback) {
+        this._collection.insert(doc, wrappedCallback);
+      } else {
+        // If we don't have the callback, we assume the user is using the promise.
+        // We can't just pass this._collection.insert to the promisify because it would lose the context.
+        result = Meteor.promisify((cb) => this._collection.insert(doc, cb))();
+      }
+
       return chooseReturnValueFromCollectionResult(result);
     } catch (e) {
       if (callback) {
@@ -613,6 +585,19 @@ Object.assign(Mongo.Collection.prototype, {
       }
       throw e;
     }
+  },
+
+  /**
+   * @summary Insert a document in the collection.  Returns its unique _id.
+   * @locus Anywhere
+   * @method  insert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
+   */
+  insert(doc, callback) {
+    return this._insert(doc, callback);
   },
 
   /**
@@ -705,7 +690,7 @@ Object.assign(Mongo.Collection.prototype, {
       return this._callMutatorMethod('remove', [selector], wrappedCallback);
     }
 
-    // it's my collection.  descend into the collection object
+    // it's my collection.  descend into the collection1 object
     // and propagate any exception.
     try {
       // If the user provided a callback and the collection implements this
@@ -760,16 +745,29 @@ Object.assign(Mongo.Collection.prototype, {
 
   // We'll actually design an index API later. For now, we just pass through to
   // Mongo's, but make it synchronous.
-  _ensureIndex(index, options) {
+  /**
+   * @summary Creates the specified index on the collection.
+   * @locus server
+   * @method _ensureIndex
+   * @deprecated in 3.0
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} index A document that contains the field and value pairs where the field is the index key and the value describes the type of index for that field. For an ascending index on a field, specify a value of `1`; for descending index, specify a value of `-1`. Use `text` for text indexes.
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#options)
+   * @param {String} options.name Name of the index
+   * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
+   * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
+   */
+  async _ensureIndex(index, options) {
     var self = this;
     if (!self._collection._ensureIndex || !self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
     if (self._collection.createIndex) {
-      self._collection.createIndex(index, options);
+      await self._collection.createIndex(index, options);
     } else {
       import { Log } from 'meteor/logging';
-      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
-      self._collection._ensureIndex(index, options);
+      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${ options?.name ? `, index name: ${ options.name }` : `, index: ${ JSON.stringify(index) }` }`)
+      await self._collection._ensureIndex(index, options);
     }
   },
 
@@ -785,37 +783,37 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
    * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
    */
-  createIndex(index, options) {
+  async createIndex(index, options) {
     var self = this;
     if (!self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
     try {
-      self._collection.createIndex(index, options);
+      await self._collection.createIndex(index, options);
     } catch (e) {
       if (e.message.includes('An equivalent index already exists with the same name but different options.') && Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch) {
         import { Log } from 'meteor/logging';
-
-        Log.info(`Re-creating index ${index} for ${self._name} due to options mismatch.`);
-        self._collection._dropIndex(index);
-        self._collection.createIndex(index, options);
+        Log.info(`Re-creating index ${ index } for ${ self._name } due to options mismatch.`);
+        await self._collection._dropIndex(index);
+        await self._collection.createIndex(index, options);
       } else {
-        throw new Meteor.Error(`An error occurred when creating an index for collection "${self._name}: ${e.message}`);
+        console.error(e);
+        throw new Meteor.Error(`An error occurred when creating an index for collection "${ self._name }: ${ e.message }`);
       }
     }
   },
 
-  _dropIndex(index) {
+  async _dropIndex(index) {
     var self = this;
     if (!self._collection._dropIndex)
       throw new Error('Can only call _dropIndex on server collections');
     self._collection._dropIndex(index);
   },
 
-  _dropCollection() {
+  async _dropCollection() {
     var self = this;
     if (!self._collection.dropCollection)
       throw new Error('Can only call _dropCollection on server collections');
-    self._collection.dropCollection();
+   await  self._collection.dropCollection();
   },
 
   _createCappedCollection(byteSize, maxDocuments) {
