@@ -1725,7 +1725,7 @@ var maybeUpdateRelease = async function (options) {
     await projectContext.prepareProjectForBuild();
   });
 
-  projectContext.writeReleaseFileAndDevBundleLink(releaseName);
+  await projectContext.writeReleaseFileAndDevBundleLink(releaseName);
 
   projectContext.packageMapDelta.displayOnConsole({
     title: ("Changes to your project's package version selections from " +
@@ -2734,7 +2734,7 @@ main.registerCommand({
       throw Error("missing tool for " + osArch);
     }
 
-    tmpTropo.linkToLatestMeteor(files.pathJoin(
+    await tmpTropo.linkToLatestMeteor(files.pathJoin(
         tmpTropo.packagePath(toolPackage, toolVersion, true),
         toolRecord.path,
         'meteor'));

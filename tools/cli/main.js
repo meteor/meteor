@@ -928,6 +928,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
     appReleaseFile = new projectContextModule.ReleaseFile({
       projectDir: appDir
     });
+    await appReleaseFile.init();
     // This is what happens if the file exists and is empty. This really
     // shouldn't happen unless the user did it manually.
     if (appReleaseFile.noReleaseSpecified()) {

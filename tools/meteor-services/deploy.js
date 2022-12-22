@@ -580,7 +580,7 @@ export async function bundleAndDeploy(options) {
 
   if (options.isCacheBuildEnabled) {
     Console.info('Saving build in cache (--cache-build)...');
-    options.projectContext.saveBuildCache({
+    await options.projectContext.saveBuildCache({
       buildDir,
       bundlePath,
       gitCommitHash

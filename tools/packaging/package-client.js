@@ -39,10 +39,10 @@ var generateBlankReadme = function () {
 };
 
 // Save a readme file to a temporary path.
-var saveReadmeToTmp = function (readmeInfo) {
+var saveReadmeToTmp = async function (readmeInfo) {
   var tempReadmeDir = files.mkdtemp('readme');
   var readmePath = files.pathJoin(tempReadmeDir, "Readme.md");
-  files.writeFileAtomically(readmePath, readmeInfo.contents);
+  await files.writeFileAtomically(readmePath, readmeInfo.contents);
   return readmePath;
 };
 

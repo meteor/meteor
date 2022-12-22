@@ -97,7 +97,7 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
 
   if (cacheFilePath) {
     Promise.resolve().then(
-      () => writeFileAtomically(cacheFilePath, result),
+      async () => await writeFileAtomically(cacheFilePath, result),
     );
   }
 

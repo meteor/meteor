@@ -618,10 +618,10 @@ Object.assign(exports.Tropohouse.prototype, {
     return files.readLinkToMeteorScript(linkPath, self.platform);
   },
 
-  linkToLatestMeteor: function (scriptLocation) {
+  linkToLatestMeteor: async function (scriptLocation) {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
-    files.linkToMeteorScript(scriptLocation, linkPath, self.platform);
+    await files.linkToMeteorScript(scriptLocation, linkPath, self.platform);
   },
 
   _getPlatform: function () {

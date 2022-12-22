@@ -391,9 +391,9 @@ Object.assign(ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    await buildmessage.enterJob('reading project metadata', function () {
+    await buildmessage.enterJob('reading project metadata', async function () {
       // Ensure this is actually a project directory.
-      self._ensureProjectDir();
+      await self._ensureProjectDir();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -402,6 +402,7 @@ Object.assign(ProjectContext.prototype, {
         projectDir: self.projectDir,
         catalog: self._officialCatalog,
       });
+      await self.releaseFile.init();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -424,6 +425,7 @@ Object.assign(ProjectContext.prototype, {
       self.cordovaPluginsFile = new exports.CordovaPluginsFile({
         projectDir: self.projectDir
       });
+      await self.cordovaPluginsFile.init();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -431,11 +433,13 @@ Object.assign(ProjectContext.prototype, {
       self.platformList = new exports.PlatformList({
         projectDir: self.projectDir
       });
+      await self.platformList._init();
+
       if (buildmessage.jobHasMessages())
         return;
 
       // Read .meteor/.id, creating it if necessary.
-      self._ensureAppIdentifier();
+      await self._ensureAppIdentifier();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -460,12 +464,12 @@ Object.assign(ProjectContext.prototype, {
 
   // Write the new release to .meteor/release and create a
   // .meteor/dev_bundle symlink to the corresponding dev_bundle.
-  writeReleaseFileAndDevBundleLink(releaseName) {
+  async writeReleaseFileAndDevBundleLink(releaseName) {
     assert.strictEqual(files.inCheckout(), false);
-    this.releaseFile.write(releaseName);
+    await this.releaseFile.write(releaseName);
   },
 
-  _ensureProjectDir: function () {
+  _ensureProjectDir: async function () {
     var self = this;
     files.mkdir_p(files.pathJoin(self.projectDir, '.meteor'));
 
@@ -473,13 +477,13 @@ Object.assign(ProjectContext.prototype, {
     // so let's make sure it exists!
     var constraintFilePath = files.pathJoin(self.projectDir, '.meteor', 'packages');
     if (! files.exists(constraintFilePath)) {
-      files.writeFileAtomically(constraintFilePath, '');
+      await files.writeFileAtomically(constraintFilePath, '');
     }
 
     // Let's also make sure we have a minimal gitignore.
     var gitignorePath = files.pathJoin(self.projectDir, '.meteor', '.gitignore');
     if (! files.exists(gitignorePath)) {
-      files.writeFileAtomically(gitignorePath, 'local\n');
+      await files.writeFileAtomically(gitignorePath, 'local\n');
     }
   },
 
@@ -526,7 +530,7 @@ Object.assign(ProjectContext.prototype, {
     return self.isopackCache.getLintingMessagesForLocalPackages();
   },
 
-  _ensureAppIdentifier: function () {
+  _ensureAppIdentifier: async function () {
     var self = this;
     var identifierFile = files.pathJoin(self.projectDir, '.meteor', '.id');
 
@@ -551,7 +555,7 @@ Object.assign(ProjectContext.prototype, {
 "#   - ensuring you don't accidentally deploy one app on top of another\n" +
 "#   - providing package authors with aggregated statistics\n" +
 "\n");
-      files.writeFileAtomically(identifierFile, comment + appId + '\n');
+      await files.writeFileAtomically(identifierFile, comment + appId + '\n');
     }
 
     self.appIdentifier = appId;
@@ -660,7 +664,7 @@ Object.assign(ProjectContext.prototype, {
 
         await self.packageMapDelta.init();
 
-        self._saveResolverResultCache();
+        await self._saveResolverResultCache();
 
         self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
       });
@@ -684,8 +688,8 @@ Object.assign(ProjectContext.prototype, {
     return this._resolverResultCache;
   },
 
-  _saveResolverResultCache() {
-    files.writeFileAtomically(
+  async _saveResolverResultCache() {
+    await files.writeFileAtomically(
       files.pathJoin(
         this.projectLocalDir,
         "resolver-result-cache.json"
@@ -705,8 +709,8 @@ Object.assign(ProjectContext.prototype, {
     }
   },
 
-  saveBuildCache(buildCache) {
-    files.writeFileAtomically(
+  async saveBuildCache(buildCache) {
+    await files.writeFileAtomically(
       files.pathJoin(
         this.projectLocalDir,
         "build-cache.json"
@@ -968,12 +972,12 @@ Object.assign(ProjectContext.prototype, {
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
   }),
 
-  _saveChangedMetadata: Profile('_saveChangedMetadata', function () {
+  _saveChangedMetadata: Profile('_saveChangedMetadata', async function () {
     var self = this;
 
     // Save any changes to .meteor/packages.
     if (! self._neverWriteProjectConstraintsFile)
-      self.projectConstraintsFile.writeIfModified();
+      await self.projectConstraintsFile.writeIfModified();
 
     // Write .meteor/versions if the command always wants to (create/update),
     // or if the release of the app matches the release of the process.
@@ -983,7 +987,7 @@ Object.assign(ProjectContext.prototype, {
          (! release.current.isCheckout() &&
           release.current.name === self.releaseFile.fullReleaseName))) {
 
-      self.packageMapFile.write(self.packageMap);
+      await self.packageMapFile.write(self.packageMap);
     }
 
     self._completedStage = STAGE.SAVE_CHANGED_METADATA;
@@ -1098,12 +1102,12 @@ Object.assign(exports.ProjectConstraintsFile.prototype, {
     });
   },
 
-  writeIfModified: function () {
+  writeIfModified: async function () {
     var self = this;
-    self._modified && self._write();
+    self._modified && (await self._write());
   },
 
-  _write: function () {
+  _write: async function () {
     var self = this;
     var lines = _.map(self._constraintLines, function (lineRecord) {
       // Don't write packages that were not loaded from .meteor/packages
@@ -1119,7 +1123,7 @@ Object.assign(exports.ProjectConstraintsFile.prototype, {
       lineParts.push(lineRecord.trailingSpaceAndComment, '\n');
       return lineParts.join('');
     });
-    files.writeFileAtomically(self.filename, lines.join(''));
+    await files.writeFileAtomically(self.filename, lines.join(''));
     var messages = buildmessage.capture(
       { title: 're-reading .meteor/packages' },
       function () {
@@ -1299,7 +1303,7 @@ Object.assign(exports.PackageMapFile.prototype, {
     return _.clone(self._versions);
   },
 
-  write: function (packageMap) {
+  write: async function (packageMap) {
     var self = this;
     var newVersions = packageMap.toVersionMap();
 
@@ -1316,7 +1320,7 @@ Object.assign(exports.PackageMapFile.prototype, {
       lines.push(packageName + "@" + self._versions[packageName] + "\n");
     });
     var fileContents = Buffer.from(lines.join(''));
-    files.writeFileAtomically(self.filename, fileContents);
+    await files.writeFileAtomically(self.filename, fileContents);
 
     // Replace our watchSet with one for the new contents of the file.
     var hash = watch.sha1(fileContents);
@@ -1335,15 +1339,17 @@ exports.PlatformList = function (options) {
   self.filename = files.pathJoin(options.projectDir, '.meteor', 'platforms');
   self.watchSet = null;
   self._platforms = null;
-
-  self._readFile();
 };
 
 // These platforms are always present and can be neither added or removed
 exports.PlatformList.DEFAULT_PLATFORMS = ['browser', 'server'];
 
 Object.assign(exports.PlatformList.prototype, {
-  _readFile: function () {
+  _init: async function() {
+    const self = this;
+    await self._readFile();
+  },
+  _readFile: async function () {
     var self = this;
 
     // Reset the WatchSet.
@@ -1363,7 +1369,7 @@ Object.assign(exports.PlatformList.prototype, {
       // Write the platforms to disk (automatically adding DEFAULT_PLATFORMS and
       // sorting), which automatically calls this function recursively to
       // re-reads them.
-      self.write(platforms);
+      await self.write(platforms);
       return;
     }
 
@@ -1372,14 +1378,14 @@ Object.assign(exports.PlatformList.prototype, {
 
   // Replaces the current platform file with the given list and resets this
   // object (and its WatchSet) to track the new value.
-  write: function (platforms) {
+  write: async function (platforms) {
     var self = this;
     self._platforms = null;
     platforms = _.uniq(
       platforms.concat(exports.PlatformList.DEFAULT_PLATFORMS));
     platforms.sort();
-    files.writeFileAtomically(self.filename, platforms.join('\n') + '\n');
-    self._readFile();
+    await files.writeFileAtomically(self.filename, platforms.join('\n') + '\n');
+    await self._readFile();
   },
 
   getPlatforms: function () {
@@ -1426,11 +1432,13 @@ exports.CordovaPluginsFile = function (options) {
   self.watchSet = null;
   // Map from plugin name to version.
   self._plugins = null;
-
-  self._readFile();
 };
 
 Object.assign(exports.CordovaPluginsFile.prototype, {
+  init: async function() {
+    const self = this;
+    await self._readFile();
+  },
   _readFile: function () {
     var self = this;
     buildmessage.assertInCapture();
@@ -1476,18 +1484,18 @@ Object.assign(exports.CordovaPluginsFile.prototype, {
     return _.clone(self._plugins);
   },
 
-  write: function (plugins) {
+  write: async function (plugins) {
     var self = this;
     var pluginNames = Object.keys(plugins);
     pluginNames.sort();
     var lines = _.map(pluginNames, function (pluginName) {
       return pluginName + '@' + plugins[pluginName] + '\n';
     });
-    files.writeFileAtomically(self.filename, lines.join(''));
-    var messages = buildmessage.capture(
+    await files.writeFileAtomically(self.filename, lines.join(''));
+    var messages = await buildmessage.capture(
       { title: 're-reading .meteor/cordova-plugins' },
-      function () {
-        self._readFile();
+      async function () {
+        await self._readFile();
       });
     // We shouldn't choke on something we just wrote!
     if (messages.hasMessages())
@@ -1516,10 +1524,13 @@ exports.ReleaseFile = function (options) {
   // Just the track.
   self.releaseTrack = null;
   self.releaseVersion = null;
-  self._readFile();
 };
 
 Object.assign(exports.ReleaseFile.prototype, {
+  init: async function() {
+    const self = this;
+    await self._readFile();
+  },
   fileMissing: function () {
     var self = this;
     return self.unnormalizedReleaseName === null;
@@ -1538,7 +1549,7 @@ Object.assign(exports.ReleaseFile.prototype, {
               || self.isCheckout());
   },
 
-  _readFile: function () {
+  _readFile: async function () {
     var self = this;
 
     // Start a new watchSet, in case we just overwrote this.
@@ -1566,7 +1577,7 @@ Object.assign(exports.ReleaseFile.prototype, {
     self.releaseTrack = parts[0];
     self.releaseVersion = parts[1];
 
-    self.ensureDevBundleLink();
+    await self.ensureDevBundleLink();
   },
 
   // Returns an absolute path to the dev_bundle appropriate for the
@@ -1598,7 +1609,7 @@ Object.assign(exports.ReleaseFile.prototype, {
   },
 
   // Make a symlink from .meteor/local/dev_bundle to the actual dev_bundle.
-  ensureDevBundleLink() {
+  async ensureDevBundleLink() {
     import { makeLink, readLink } from "./cli/dev-bundle-links.js";
 
     const dotMeteorDir = files.pathDirname(this.filename);
@@ -1608,7 +1619,7 @@ Object.assign(exports.ReleaseFile.prototype, {
     if (this.isCheckout()) {
       // Only create .meteor/local/dev_bundle if .meteor/release refers to
       // an actual release, and remove it otherwise.
-      files.rm_recursive(devBundleLink);
+      await files.rm_recursive(devBundleLink);
       return;
     }
 
@@ -1643,10 +1654,10 @@ Object.assign(exports.ReleaseFile.prototype, {
     }
   },
 
-  write: function (releaseName) {
+  write: async function (releaseName) {
     var self = this;
-    files.writeFileAtomically(self.filename, releaseName + '\n');
-    self._readFile();
+    await files.writeFileAtomically(self.filename, releaseName + '\n');
+    await self._readFile();
   }
 });
 

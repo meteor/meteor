@@ -2503,7 +2503,7 @@ class JsImage {
     // them, and 'meteor run' symlinks them. If these contain
     // arch-specific code then the target will end up having an
     // appropriately specific arch.
-    _.each(nodeModulesDirectories, function (nmd) {
+    for (const nmd of Object.values(nodeModulesDirectories)) {
       assert.strictEqual(typeof nmd.preferredBundlePath, "string");
 
       // Skip calculating isPortable in 'meteor run' since the
@@ -2522,15 +2522,15 @@ class JsImage {
         };
 
         const prodPackagePredicate =
-          // This condition essentially means we don't strip devDependencies
-          // when running tests, which is important for use cases like the one
-          // described in #7953. Note that devDependencies can still be used
-          // when buildMode === "development" because the app has access to
-          // the original node_modules.
-          (buildMode === "production" ||
-           buildMode === "development") &&
-          nmd.local && // Only filter local node_modules directories.
-          nmd.getProdPackagePredicate();
+            // This condition essentially means we don't strip devDependencies
+            // when running tests, which is important for use cases like the one
+            // described in #7953. Note that devDependencies can still be used
+            // when buildMode === "development" because the app has access to
+            // the original node_modules.
+            (buildMode === "production" ||
+                buildMode === "development") &&
+            nmd.local && // Only filter local node_modules directories.
+            nmd.getProdPackagePredicate();
 
         if (prodPackagePredicate) {
           // When copying a local node_modules directory, ignore any npm
@@ -2546,9 +2546,9 @@ class JsImage {
           copyOptions.filter = prodPackagePredicate;
         }
 
-        builder.copyNodeModulesDirectory(copyOptions);
+        await builder.copyNodeModulesDirectory(copyOptions);
       }
-    });
+    }
 
     // This JSON file will be read by npm-rebuild.js, which is executed to
     // trigger rebuilds for all non-portable npm packages.

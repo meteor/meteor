@@ -312,7 +312,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     const absPath = files.pathJoin(this.buildPath, relPath);
 
     if (symlink) {
-      symlinkWithOverwrite(symlink, absPath);
+      await symlinkWithOverwrite(symlink, absPath);
     } else {
       hash = hash || sha1(getData());
 
@@ -604,7 +604,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return this._copyDirectory(options);
   }
 
-  _copyDirectory({
+  async _copyDirectory({
     from, to,
     ignore,
     specificFiles,
@@ -642,12 +642,12 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     const rootDir = realpath(from);
 
-    const walk = (absFrom, relTo) => {
+    const walk = async (absFrom, relTo) => {
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
         if (this.previousCreatedSymlinks[absFrom] !== relTo) {
-          symlinkWithOverwrite(absFrom, absTo);
+          await symlinkWithOverwrite(absFrom, absTo);
         }
         this.usedAsFile[relTo] = false;
         this.createdSymlinks[absFrom] = relTo;
@@ -656,12 +656,12 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
       this._ensureDirectory(relTo);
 
-      optimisticReaddir(absFrom).forEach(item => {
+      for (const item of optimisticReaddir(absFrom)) {
         let thisAbsFrom = files.pathResolve(absFrom, item);
         const thisRelTo = files.pathJoin(relTo, item);
 
         if (specificPaths && !(thisRelTo in specificPaths)) {
-          return;
+          continue;
         }
 
         // Returns files.realpath(thisAbsFrom), if it is external to
@@ -684,7 +684,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           const isExternal =
-            files.pathRelative(rootDir, real).startsWith("..");
+              files.pathRelative(rootDir, real).startsWith("..");
 
           // Now cachedExternalPath is either a string or false.
           return cachedExternalPath = isExternal && real;
@@ -709,7 +709,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         if (! fileStatus) {
           // If the file did not exist, skip it.
-          return;
+          continue;
         }
 
         let itemForMatch = item;
@@ -720,22 +720,22 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         // skip excluded files
         if (ignore.some(pattern => itemForMatch.match(pattern))) {
-          return;
+          continue;
         }
 
         if (typeof filter === "function" &&
             ! filter(thisAbsFrom, isDirectory)) {
-          return;
+          continue;
         }
 
         if (npmDiscards instanceof NpmDiscards &&
             npmDiscards.shouldDiscard(thisAbsFrom, isDirectory)) {
-          return;
+          continue;
         }
 
         if (isDirectory) {
-          walk(thisAbsFrom, thisRelTo);
-          return;
+          await walk(thisAbsFrom, thisRelTo);
+          continue;
         }
 
         if (fileStatus.isSymbolicLink()) {
@@ -743,16 +743,16 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // portable than absolute links, so getExternalPath() is
           // preferred if it returns a path.
           const linkSource = getExternalPath() ||
-            files.readlink(thisAbsFrom);
+              files.readlink(thisAbsFrom);
 
           const linkTarget =
-            files.pathResolve(this.buildPath, thisRelTo);
+              files.pathResolve(this.buildPath, thisRelTo);
 
-          if (symlinkIfPossible(linkSource, linkTarget)) {
+          if (await symlinkIfPossible(linkSource, linkTarget)) {
             // A symlink counts as a file, as far as "can you put
             // something under it" goes.
             this.usedAsFile[thisRelTo] = true;
-            return;
+            continue;
           }
         }
 
@@ -767,28 +767,28 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
             const content = optimisticReadFile(thisAbsFrom);
 
             files.writeFile(
-              files.pathResolve(this.buildPath, thisRelTo),
-              // The reason we call files.writeFile here instead of
-              // files.copyFile is so that we can read the file using
-              // optimisticReadFile instead of files.createReadStream.
-              content,
-              // Logic borrowed from files.copyFile: "Create the file as
-              // readable and writable by everyone, and executable by everyone
-              // if the original file is executably by owner. (This mode will be
-              // modified by umask.) We don't copy the mode *directly* because
-              // this function is used by 'meteor create' which is copying from
-              // the read-only tools tree into a writable app."
-              { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
+                files.pathResolve(this.buildPath, thisRelTo),
+                // The reason we call files.writeFile here instead of
+                // files.copyFile is so that we can read the file using
+                // optimisticReadFile instead of files.createReadStream.
+                content,
+                // Logic borrowed from files.copyFile: "Create the file as
+                // readable and writable by everyone, and executable by everyone
+                // if the original file is executably by owner. (This mode will be
+                // modified by umask.) We don't copy the mode *directly* because
+                // this function is used by 'meteor create' which is copying from
+                // the read-only tools tree into a writable app."
+                { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
             );
           }
 
           this.writtenHashes[thisRelTo] = hash;
           this.usedAsFile[thisRelTo] = true;
         }
-      });
+      }
     };
 
-    walk(rootDir, to);
+    await walk(rootDir, to);
   }
 
   // Returns a new Builder-compatible object that works just like a
@@ -801,7 +801,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //
   // TODO(benjamn) This nonsense should be ripped out by any means
   // necessary... whenever someone has the time.
-  enter(relPath) {
+  async enter(relPath) {
     const subBuilder = {};
     const relPathWithSep = relPath + files.pathSep;
     const methods = [
@@ -814,8 +814,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       "enter",
     ];
 
-    methods.forEach(method => {
-      subBuilder[method] = (...args) => {
+    for (const method of methods) {
+      subBuilder[method] = async (...args) => {
         if (method === "copyDirectory" ||
             method === "copyNodeModulesDirectory") {
           // The copy methods take their relative paths via options.to.
@@ -825,7 +825,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           args[0] = files.pathJoin(relPath, args[0]);
         }
 
-        let ret = this[method](...args);
+        let ret = await this[method](...args);
 
         if (method === "generateFilename") {
           // fix up the returned path to be relative to the
@@ -835,14 +835,14 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
           if (ret.substr(0, relPathWithSep.length) !== relPathWithSep) {
             throw new Error("generateFilename returned path outside of " +
-                            "sub-bundle?");
+                "sub-bundle?");
           }
           ret = ret.substr(relPathWithSep.length);
         }
 
         return ret;
       };
-    });
+    }
 
     // Methods that don't have to fix up arguments or return values, because
     // they are implemented purely in terms of other methods which do.
@@ -943,9 +943,9 @@ async function atomicallyRewriteFile(path, data, options) {
   }
 }
 
-function symlinkIfPossible(source, target) {
+async function symlinkIfPossible(source, target) {
   try {
-    symlinkWithOverwrite(source, target);
+    await symlinkWithOverwrite(source, target);
     return true;
   } catch (e) {
     return false;

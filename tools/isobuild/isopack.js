@@ -1163,7 +1163,7 @@ Object.assign(Isopack.prototype, {
           var pluginDir = builder.generateFilename(
               'plugin.' + colonConverter.convert(name) + '.' + plugin.arch,
               { directory: true });
-          var pluginBuild = await plugin.write(builder.enter(pluginDir));
+          var pluginBuild = await plugin.write(await builder.enter(pluginDir));
           var pluginEntry = {
             name: name,
             arch: plugin.arch,

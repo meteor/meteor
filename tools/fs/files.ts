@@ -487,7 +487,7 @@ function pathIsDirectory(path: string) {
 // If options.ignore is present, it should be a list of regexps. Any
 // file whose basename matches one of the regexps, before
 // transformation, will be skipped.
-export function cp_r(from: string, to: string, options: {
+export async function cp_r(from: string, to: string, options: {
   preserveSymlinks?: boolean;
   ignore?: RegExp[];
   transformFilename?: (f: string) => string;
@@ -531,7 +531,7 @@ export function cp_r(from: string, to: string, options: {
   mkdir_p(pathDirname(to));
 
   if (stat.isSymbolicLink()) {
-    symlinkWithOverwrite(readlink(from), to);
+    await symlinkWithOverwrite(readlink(from), to);
 
   } else if (options.transformContents) {
     writeFile(to, options.transformContents(
@@ -557,7 +557,7 @@ export function cp_r(from: string, to: string, options: {
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
 export const symlinkWithOverwrite =
-Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(
+Profile("files.symlinkWithOverwrite", async function symlinkWithOverwrite(
   source: string,
   target: string,
 ) {
@@ -586,7 +586,7 @@ Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(
         return;
       }
       // overwrite existing link, file, or directory
-      rm_recursive(target);
+      await rm_recursive(target);
       symlink(...args);
     } else {
       throw e;
@@ -746,10 +746,10 @@ export function changeTempDirStatus(dir: string, status: boolean) {
 
 if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function () {
-    Object.entries(tempDirs).filter(([_, isTmp]) => !!isTmp).map(([dir]) => dir).forEach(dir => {
+    return Object.entries(tempDirs).filter(([_, isTmp]) => !!isTmp).map(([dir]) => dir).map(async dir => {
       delete tempDirs[dir];
       try {
-        rm_recursive(dir);
+        await rm_recursive(dir);
       } catch (err) {
         // Don't crash and print a stack trace because we failed to delete
         // a temp directory. This happens sometimes on Windows and seems
@@ -768,7 +768,7 @@ type TarOptions = {
 // into a destination directory. destPath should not exist yet, and
 // the archive should contain a single top-level directory, which will
 // be renamed atomically to destPath.
-export function extractTarGz(
+export async function extractTarGz(
   buffer: Buffer,
   destPath: string,
   options: TarOptions = {},
@@ -784,9 +784,7 @@ export function extractTarGz(
   const startTime = +new Date;
 
   // standardize only one way of extracting, as native ones can be tricky
-  const promise = tryExtractWithNpmTar(buffer, tempDir, options)
-
-  promise.await();
+  await tryExtractWithNpmTar(buffer, tempDir, options);
 
   // succeed!
   const topLevelOfArchive = readdir(tempDir)
@@ -800,8 +798,8 @@ export function extractTarGz(
   }
 
   const extractDir = pathJoin(tempDir, topLevelOfArchive[0]);
-  rename(extractDir, destPath);
-  rm_recursive(tempDir);
+  await rename(extractDir, destPath);
+  await rm_recursive(tempDir);
 
   if (options.verbose) {
     console.log("Finished extracting in", Date.now() - startTime, "ms");
@@ -978,7 +976,7 @@ Profile("files.renameDirAlmostAtomically", async (fromDir: string, toDir: string
 });
 
 export const writeFileAtomically =
-Profile("files.writeFileAtomically", function (filename: string, contents: string | Buffer) {
+Profile("files.writeFileAtomically", async function (filename: string, contents: string | Buffer) {
   const parentDir = pathDirname(filename);
   mkdir_p(parentDir);
 
@@ -988,19 +986,19 @@ Profile("files.writeFileAtomically", function (filename: string, contents: strin
   );
 
   writeFile(tmpFile, contents);
-  rename(tmpFile, filename);
+  await rename(tmpFile, filename);
 });
 
 // Like fs.symlinkSync, but creates a temporary link and renames it over the
 // file; this means it works even if the file already exists.
 // Do not use this function on Windows, it won't work.
-export function symlinkOverSync(linkText: string, file: string) {
+export async function symlinkOverSync(linkText: string, file: string) {
   file = pathResolve(file);
   const tmpSymlink = pathJoin(
     pathDirname(file),
     "." + pathBasename(file) + ".tmp" + utils.randomToken());
   symlink(linkText, tmpSymlink);
-  rename(tmpSymlink, file);
+  await rename(tmpSymlink, file);
 }
 
 // Return the result of evaluating `code` using
@@ -1375,7 +1373,7 @@ export function _getLocationFromScriptLinkToMeteorScript(script: string | Buffer
   return convertToPosixPath(scriptLocation, ! isAbsolute);
 }
 
-export function linkToMeteorScript(
+export async function linkToMeteorScript(
   scriptLocation: string,
   linkLocation: string,
   platform: string,
@@ -1390,7 +1388,7 @@ export function linkToMeteorScript(
     writeFile(linkLocation, script, { encoding: "ascii" });
   } else {
     // Symlink meteor tool
-    symlinkOverSync(scriptLocation, linkLocation);
+    await symlinkOverSync(scriptLocation, linkLocation);
   }
 }
 
@@ -1615,11 +1613,11 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
       }
     }
     attempt();
-  }).catch((error: any) => {
+  }).catch(async (error: any) => {
     if (error.code === 'EPERM' ||
         error.code === 'EACCESS') {
       cp_r(from, to, { preserveSymlinks: true });
-      rm_recursive(from);
+      await rm_recursive(from);
     } else {
       throw error;
     }
