@@ -30,7 +30,7 @@ export class DocFetcher {
     const callbacks = [callback];
     self._callbacksForOp.set(op, callbacks);
 
-    return Meteor._runAsync(async function () {
+    Meteor._runAsync(async function () {
       try {
         var doc = await self._mongoConnection.findOne(
           collectionName, {_id: id}) || null;

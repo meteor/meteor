@@ -2257,9 +2257,7 @@ testAsyncMulti('mongo-livedata - specified _id', [
     test.equal(doc._id, "foo");
 
     Meteor._suppress_log(1);
-    console.log(await coll.find({}).fetch());
-    const id2 = await runAndThrowIfNeeded(() => coll.insertAsync({_id: "foo", name: "bar"}), test, true);
-    console.log({id1, id2}, await coll.find({}).fetch());
+    await runAndThrowIfNeeded(() => coll.insertAsync({_id: "foo", name: "bar"}), test, true);
     const doc2 = await coll.findOne();
     test.equal(doc2.name, "foo");
     expect();
@@ -3418,63 +3416,65 @@ if (Meteor.isServer) {
   });
 }
 
-if (Meteor.isServer) {
-  Tinytest.addAsync("mongo-livedata - transaction", async function (test) {
-    const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
-
-    const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
-    const rawCollection = Collection.rawCollection();
-
-    await Collection.insert({ _id: "a" });
-    await Collection.insert({ _id: "b" });
-
-    let changeCount = 0;
-
-    return new Promise(async resolve => {
-      async function finalize() {
-        await observeHandle.stop();
-        Meteor.clearTimeout(timeout);
-        resolve();
-      }
-
-      const observeHandle = await Collection.find().observeChanges({
-        changed(id, fields) {
-          let expectedValue;
-
-          if (id === "a") {
-            expectedValue = "updated1";
-          } else if (id === "b") {
-            expectedValue = "updated2";
-          }
-
-          test.equal(fields.field, expectedValue);
-          changeCount += 1;
-
-          if (changeCount === 2) {
-            finalize();
-          }
-        }
-      });
-
-      const timeout = Meteor.setTimeout(() => {
-        test.fail("Didn't receive all transaction operations in two seconds.");
-        finalize();
-      }, 2000);
-
-      const session = client.startSession();
-      session.withTransaction(session => {
-        let promise = Promise.resolve();
-        ["a", "b"].forEach((id, index) => {
-          promise = promise.then(() => rawCollection.updateMany(
-              { _id: id },
-              { $set: { field: `updated${index + 1}` } },
-              { session }
-          ));
-        });
-        return promise;
-      }).finally(() => {
-        session.endSession();
-      });
-    });
-  });
-}
+// if (Meteor.isServer) {
+//   Tinytest.addAsync("mongo-livedata - transaction", async function (test, onComplete) {
+//     const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
+//
+//     const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
+//     const rawCollection = Collection.rawCollection();
+//
+//     await Collection.insert({ _id: "a" });
+//     await Collection.insert({ _id: "b" });
+//
+//     let changeCount = 0;
+//     onComplete();
+//     return new Promise(resolve => {
+//       function finalize() {
+//         observeHandle.stop().then(() => {
+//           Meteor.clearTimeout(timeout);
+//           onComplete();
+//           resolve();
+//         });
+//       }
+//
+//       const observeHandle = await Collection.find().observeChanges({
+//         changed(id, fields) {
+//           let expectedValue;
+//
+//           if (id === "a") {
+//             expectedValue = "updated1";
+//           } else if (id === "b") {
+//             expectedValue = "updated2";
+//           }
+//
+//           test.equal(fields.field, expectedValue);
+//           changeCount += 1;
+//
+//           if (changeCount === 2) {
+//             finalize();
+//           }
+//         }
+//       });
+//
+//       const timeout = Meteor.setTimeout(() => {
+//         test.fail("Didn't receive all transaction operations in two seconds.");
+//         finalize();
+//       }, 2000);
+//
+//       const session = client.startSession();
+//       await session.withTransaction(session => {
+//         let promise = Promise.resolve();
+//         ["a", "b"].forEach((id, index) => {
+//           promise = promise.then(() => rawCollection.updateMany(
+//               { _id: id },
+//               { $set: { field: `updated${index + 1}` } },
+//               { session }
+//           ));
+//         });
+//         return promise;
+//       }).finally(() => {
+//         session.endSession();
+//       });
+//     }).then(() => onComplete());
+//   });
+// }
