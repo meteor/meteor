@@ -2265,6 +2265,11 @@ class JsImage {
       }
     });
 
+    var promise = ret['core-runtime'].waitUntilAllLoaded();
+    if (promise) {
+      promise.await();
+    }
+
     return ret;
   }
 
