@@ -107,8 +107,28 @@ function runEagerModules(config, callback) {
   evaluateNextModule();
 }
 
+// For this to be accurate, all bundles must be queued before calling this
+// If all are loaded, returns null. Otherwise, returns a promise
 function waitUntilAllLoaded() {
+  var pendingNames = Object.keys(pending);
+  
+  if (pendingNames.length === 0) {
+    // If there are no async packages, then there might not be a promise
+    // polyfill loaded either, so we don't create a promise to return
+    return null;
+  }
 
+  return new Promise(function (resolve) {
+    var pendingCount = pendingNames.length;
+    pendingNames.forEach(function (name) {
+      pending[name].push(function () {
+        pendingCount -= 1;
+        if (pendingCount === 0) {
+          resolve();
+        }
+      });
+    });
+  })
 }
 
 // Since the package.js doesn't export load or waitUntilReady

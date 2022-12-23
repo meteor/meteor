@@ -488,6 +488,12 @@ var runMain = Profile("Run main()", function () {
 Fiber(function () {
   Profile.run("Server startup", function () {
     loadServerBundles();
+
+    let promise = global.Package['core-runtime'].waitUntilAllLoaded();
+    if (promise) {
+      promise.await();
+    }
+
     callStartupHooks();
     runMain();
   });
