@@ -17,7 +17,5 @@ exports.plugins = [
   require("@babel/plugin-syntax-object-rest-spread"),
   require("@babel/plugin-proposal-object-rest-spread"),
 
-  require("@babel/plugin-proposal-logical-assignment-operators"),
-
-  require("@babel/plugin-syntax-top-level-await"),
+  require("@babel/plugin-proposal-logical-assignment-operators")
 ];
