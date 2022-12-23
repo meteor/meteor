@@ -10,4 +10,5 @@ Package.onUse(function (api) {
 
   api.use('meteor', { unordered: true });
   api.addFiles('package-registry.js');
+  api.addFiles('load-js-image.js');
 });

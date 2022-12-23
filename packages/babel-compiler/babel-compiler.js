@@ -1,5 +1,6 @@
 var semver = Npm.require("semver");
 var JSON5 = Npm.require("json5");
+
 /**
  * A compiler that can be instantiated with features and used inside
  * Plugin.registerCompiler
@@ -20,6 +21,8 @@ var hasOwn = Object.prototype.hasOwnProperty;
 // There's no way to tell the current Meteor version, but we can infer
 // whether it's Meteor 1.4.4 or earlier by checking the Node version.
 var isMeteorPre144 = semver.lt(process.version, "4.8.1");
+
+var enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
 
 BCp.processFilesForTarget = function (inputFiles) {
   var compiler = this;
@@ -87,13 +90,11 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
       features.nodeMajorVersion = parseInt(process.versions.node, 10);
-      
-      features.topLevelAwait = true;
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
-
-      // TODO: add an env var to enable top level await for the client
     }
+
+    features.topLevelAwait = arch.startsWith('os.') || enableClientTLA
 
     if (! features.hasOwnProperty("jscript")) {
       // Perform some additional transformations to improve compatibility

@@ -68,7 +68,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 24; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 25; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -1690,6 +1690,7 @@ export class PackageSourceBatch {
       imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
       includeSourceMapInstructions: isWeb,
+      uses: self.unibuild.uses
     };
 
     const fileHashes = [];

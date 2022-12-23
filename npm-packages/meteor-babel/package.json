@@ -41,7 +41,7 @@
     "@babel/template": "^7.16.7",
     "@babel/traverse": "^7.17.0",
     "@babel/types": "^7.17.0",
-    "@meteorjs/reify": "meteor/reify#eace2425af6e69ce12c293959c7da56ebb629f79",
+    "@meteorjs/reify": "meteor/reify#bce9840a6a1d52b6cdb87efb6443fb97ef65fbbe",
     "babel-preset-meteor": "^7.10.0",
     "babel-preset-minify": "^0.5.1",
     "convert-source-map": "^1.6.0",
