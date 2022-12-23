@@ -1124,10 +1124,10 @@ Object.assign(exports.ProjectConstraintsFile.prototype, {
       return lineParts.join('');
     });
     await files.writeFileAtomically(self.filename, lines.join(''));
-    var messages = buildmessage.capture(
+    var messages = await buildmessage.capture(
       { title: 're-reading .meteor/packages' },
       function () {
-        self._readFile();
+        return self._readFile();
       });
     // We shouldn't choke on something we just wrote!
     if (messages.hasMessages())

@@ -1790,7 +1790,7 @@ main.registerCommand(Object.assign(
   return doTestCommand(options);
 });
 
-function doTestCommand(options) {
+async function doTestCommand(options) {
   // This "metadata" is accessed in a few places. Using a global
   // variable here was more expedient than navigating the many layers
   // of abstraction across the the build process.
@@ -1843,8 +1843,9 @@ function doTestCommand(options) {
 
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
-  var serverArchitectures = [archinfo.host()];
-  if (options.deploy && DEPLOY_ARCH !== archinfo.host()) {
+  const archInfoHost = await archinfo.host();
+  var serverArchitectures = [archInfoHost];
+  if (options.deploy && DEPLOY_ARCH !== archInfoHost) {
     serverArchitectures.push(DEPLOY_ARCH);
   }
 
@@ -1881,7 +1882,8 @@ function doTestCommand(options) {
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
     try {
-      require("./default-npm-deps.js").install(testRunnerAppDir);
+      const { install } = require("./default-npm-deps.js");
+      await install(testRunnerAppDir);
     } catch (error) {
       if (error.code === 'EACCES' && options['test-app-path']) {
         Console.error(
@@ -1911,23 +1913,24 @@ function doTestCommand(options) {
     //     repeated test-packages calls with some sort of shared or semi-shared
     //     isopack cache that's specific to test-packages?  See #3012.
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
+    await projectContext.init();
 
-    main.captureAndExit("=> Errors while initializing project:", function () {
+    await main.captureAndExit("=> Errors while initializing project:", function () {
       // We're just reading metadata here --- we'll wait to do the full build
       // preparation until after we've started listening on the proxy, etc.
-      projectContext.readProjectMetadata();
+      return projectContext.readProjectMetadata();
     });
 
-    main.captureAndExit("=> Errors while setting up tests:", function () {
+    await main.captureAndExit("=> Errors while setting up tests:", function () {
       // Read metadata and initialize catalog.
-      projectContext.initializeCatalog();
+      return projectContext.initializeCatalog();
     });
 
     // Overwrite .meteor/release.
-    projectContext.releaseFile.write(
+    await projectContext.releaseFile.write(
       release.current.isCheckout() ? "none" : release.current.name);
 
-    var packagesToAdd = getTestPackageNames(projectContext, options.args);
+    var packagesToAdd = await getTestPackageNames(projectContext, options.args);
 
     // filter out excluded packages
     var excludedPackages = options.exclude && options.exclude.split(',');
@@ -1961,7 +1964,7 @@ function doTestCommand(options) {
     // Write these changes to disk now, so that if the first attempt to prepare
     // the project for build hits errors, we don't lose them on
     // projectContext.reset.
-    projectContext.projectConstraintsFile.writeIfModified();
+    await projectContext.projectConstraintsFile.writeIfModified();
   } else if (options["test"]) {
     if (!options['driver-package']) {
       throw new Error("You must specify a driver package with --driver-package");
@@ -1976,7 +1979,7 @@ function doTestCommand(options) {
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
     // Copy the existing build and isopacks to speed up the initial start
-    function copyDirIntoTestRunnerApp(allowSymlink, ...parts) {
+    async function copyDirIntoTestRunnerApp(allowSymlink, ...parts) {
       // Depending on whether the user has run `meteor run` or other commands, they
       // may or may not exist yet
       const appDirPath = files.pathJoin(options.appDir, ...parts);
@@ -1990,23 +1993,24 @@ function doTestCommand(options) {
         // privileges since both paths refer to directories.
         files.symlink(appDirPath, testDirPath, "junction");
       } else {
-        files.cp_r(appDirPath, testDirPath, {
+        await files.cp_r(appDirPath, testDirPath, {
           preserveSymlinks: true
         });
       }
     }
 
-    copyDirIntoTestRunnerApp(false, '.meteor', 'local', 'build');
-    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
-    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
-    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
-    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
+    await copyDirIntoTestRunnerApp(false, '.meteor', 'local', 'build');
+    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
+    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
+    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
+    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
 
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
+    await projectContext.init();
 
-    main.captureAndExit("=> Errors while setting up tests:", function () {
+    await main.captureAndExit("=> Errors while setting up tests:", function () {
       // Read metadata and initialize catalog.
-      projectContext.initializeCatalog();
+      return projectContext.initializeCatalog();
     });
   } else {
     throw new Error("Unexpected: neither test-packages nor test");
@@ -2018,25 +2022,28 @@ function doTestCommand(options) {
 
   let cordovaRunner;
 
+  // TODO [FIBERS] -> Check cordova
   if (!_.isEmpty(runTargets)) {
     function prepareCordovaProject() {
-      main.captureAndExit('', 'preparing Cordova project', () => {
+      return main.captureAndExit('', 'preparing Cordova project', async () => {
         import { CordovaProject } from '../cordova/project.js';
 
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
           cordovaServerPort: parsedCordovaServerPort });
+        await cordovaProject.init();
+
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
-        projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
-        cordovaRunner.checkPlatformsForRunTargets();
+        await projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
+        await cordovaRunner.checkPlatformsForRunTargets();
       });
     }
 
-    ensureDevBundleDependencies();
-    prepareCordovaProject();
+    await ensureDevBundleDependencies();
+    await prepareCordovaProject();
   }
 
   options.cordovaRunner = cordovaRunner;
@@ -2054,27 +2061,27 @@ function doTestCommand(options) {
 
 // Returns the "local-test:*" package names for the given package names (or for
 // all local packages if packageNames is empty/unspecified).
-var getTestPackageNames = function (projectContext, packageNames) {
+var getTestPackageNames = async function (projectContext, packageNames) {
   var packageNamesSpecifiedExplicitly = ! _.isEmpty(packageNames);
   if (_.isEmpty(packageNames)) {
     // If none specified, test all local packages. (We don't have tests for
     // non-local packages.)
-    packageNames = projectContext.localCatalog.getAllPackageNames();
+    packageNames = await projectContext.localCatalog.getAllPackageNames();
   }
   var testPackages = [];
-  main.captureAndExit("=> Errors while collecting tests:", function () {
-    _.each(packageNames, function (p) {
-      buildmessage.enterJob("trying to test package `" + p + "`", function () {
+  await main.captureAndExit("=> Errors while collecting tests:", async function () {
+    for (const p of packageNames) {
+      await buildmessage.enterJob("trying to test package `" + p + "`", async function () {
         // If it's a package name, look it up the normal way.
         if (p.indexOf('/') === -1) {
           if (p.indexOf('@') !== -1) {
             buildmessage.error(
-              "You may not specify versions for local packages: " + p );
+                "You may not specify versions for local packages: " + p );
             return;  // recover by ignoring
           }
           // Check to see if this is a real local package, and if it is a real
           // local package, if it has tests.
-          var version = projectContext.localCatalog.getLatestVersion(p);
+          var version = await projectContext.localCatalog.getLatestVersion(p);
           if (! version) {
             buildmessage.error("Not a known local package, cannot test");
           } else if (version.testName) {
@@ -2088,7 +2095,7 @@ var getTestPackageNames = function (projectContext, packageNames) {
         } else {
           // Otherwise, it's a directory; find it by source root.
           version = projectContext.localCatalog.getVersionBySourceRoot(
-            files.pathResolve(p));
+              files.pathResolve(p));
           if (! version) {
             buildmessage.error("Package not found in local catalog");
             return;
@@ -2102,13 +2109,13 @@ var getTestPackageNames = function (projectContext, packageNames) {
           // packages that don't have tests.
         }
       });
-    });
+    }
   });
 
   return testPackages;
 };
 
-var runTestAppForPackages = function (projectContext, options) {
+var runTestAppForPackages = async function (projectContext, options) {
   var buildOptions = {
     minifyMode: options.production ? 'production' : 'development'
   };
@@ -2121,8 +2128,8 @@ var runTestAppForPackages = function (projectContext, options) {
 
   if (options.deploy) {
     // Run the constraint solver and build local packages.
-    main.captureAndExit("=> Errors while initializing project:", function () {
-      projectContext.prepareProjectForBuild();
+    await main.captureAndExit("=> Errors while initializing project:", function () {
+      return projectContext.prepareProjectForBuild();
     });
     // No need to display the PackageMapDelta here, since it would include all
     // of the packages!

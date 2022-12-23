@@ -20,11 +20,11 @@ export class CordovaRunner {
     return _.uniq(this.runTargets.map((runTarget) => runTarget.platform));
   }
 
-  checkPlatformsForRunTargets() {
+  async checkPlatformsForRunTargets() {
     this.cordovaProject.ensurePlatformsAreSynchronized();
 
     let satisfied = true;
-    const messages = buildmessage.capture(
+    const messages = await buildmessage.capture(
       { title: `checking platform requirements` }, () => {
       for (const platform of this.platformsForRunTargets) {
         satisfied =
