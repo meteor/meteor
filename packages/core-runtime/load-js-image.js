@@ -65,10 +65,20 @@ function runEagerModules(config, callback) {
   
   var index = -1;
   var mainExports = {};
+  var mainModuleAsync = false;
 
   function evaluateNextModule() {
     index += 1;
     if (index === config.eagerModulePaths.length) {
+      if (mainModuleAsync) {
+        // Now that the package has loaded, mark the main module as sync
+        // This allows other packages and the app to `require` the package
+        // and for it to work the same, regardless of if it uses TLA or not
+        // XXX: this is a temporary hack until we find a better way to do this
+        const reify = config.require('/node_modules/meteor/modules/node_modules/@meteorjs/reify/lib/runtime');
+        reify._requireAsSync(config.mainModulePath);
+      }
+
       return callback(mainExports);
     }
 
@@ -77,22 +87,12 @@ function runEagerModules(config, callback) {
 
     // TODO: create better way to detect to avoid including sync modules that export a promise
     if (exports && typeof exports === 'object' && typeof exports.then === 'function') {
+      mainModuleAsync = true;
+
       // Is an async module
       exports.then(function (exports) {
         if (path === config.mainModulePath) {
           mainExports = exports;
-          try {
-            var ReifyEntry = config.require('/node_modules/meteor/modules/node_modules/@meteorjs/reify/lib/runtime/entry.js');
-            var entry = ReifyEntry.getOrCreate(path);
-            // XXX hack so you can require a package and it won't return
-            // a promise. This hopefully is temporary until the module system
-            // supports a different entry point for commonjs.
-            // At this point the module is already loaded, so it shouldn't
-            // mater as much
-            entry.asyncEvaluation = false;
-          } catch (e) {
-            console.log(e);
-          }
         }
         evaluateNextModule();
       });
