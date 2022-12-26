@@ -19,8 +19,7 @@ let Fiber;
 let Future;
 if (Meteor.isServer) {
   Fiber = Npm.require('fibers');
-  // TODO Review fiber use
-  Future = Meteor._isFibersEnabled ? Npm.require('fibers/future') : null;
+  Future = Npm.require('fibers/future');
 }
 
 class MongoIDMap extends IdMap {
