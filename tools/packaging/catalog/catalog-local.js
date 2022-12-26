@@ -1,4 +1,3 @@
-
 var _ = require('underscore');
 var buildmessage = require('../../utils/buildmessage.js');
 var files = require('../../fs/files');

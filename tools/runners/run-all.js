@@ -269,7 +269,7 @@ class Runner {
     await self.updater.stop();
     await self.mongoRunner && self.mongoRunner.stop();
     await self.appRunner.stop();
-    await self.selenium && self.selenium.stop();
+    await (self.selenium && self.selenium.stop());
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?
     runLog.finish();

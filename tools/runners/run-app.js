@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var Fiber = require('fibers');
 var files = require('../fs/files');
 var watch = require('../fs/watch');
 var bundler = require('../isobuild/bundler.js');
