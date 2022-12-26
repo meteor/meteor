@@ -8,9 +8,6 @@ var packageJson = {
   name: "meteor-dev-bundle",
   private: true,
   dependencies: {
-    // Keep the versions of these packages consistent with the versions
-    // found in dev-bundle-tool-package.js.
-    "meteor-promise": "0.9.0",
     promise: "8.1.0",
     "@meteorjs/reify": "0.24.0",
     "@babel/parser": "7.15.3",

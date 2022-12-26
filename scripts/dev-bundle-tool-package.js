@@ -16,9 +16,6 @@ var packageJson = {
     "node-pre-gyp": "0.15.0",
     typescript: "4.5.4",
     "@meteorjs/babel": "7.18.0-beta.4",
-    // Keep the versions of these packages consistent with the versions
-    // found in dev-bundle-server-package.js.
-    "meteor-promise": "0.9.0",
     "@meteorjs/reify": "0.24.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.15.3",
