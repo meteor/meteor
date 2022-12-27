@@ -35,7 +35,7 @@ N/A
   - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
 
 * `Command line`:
-  - Updated Svelte skeleton to now be able to support typescript out of the box and some idioms to the skeleton
+  - Updated Svelte skeleton to now be able to support typescript out of the box and added ``#each`` in links in the skeleton.
   - Updated node to 14.21.2 changes can be seen [here](https://github.com/nodejs/node/releases/tag/v14.21.2)
   - Solved [issue](https://github.com/meteor/meteor/issues/12395) that could not allow vue2 apps being created in command line
   
