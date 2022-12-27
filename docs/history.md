@@ -1,4 +1,4 @@
-## v2.9.1, 2022-XX-XX
+## v2.9.1, 2022-12-27
 
 ### Highlights
 
@@ -7,7 +7,7 @@
 * update svelte skeleton [PR](https://github.com/meteor/meteor/pull/12350) by [tosinek](https://github.com/tosinek).
 * Bump to node 14.21.2.0 [PR](https://github.com/meteor/meteor/pull/12370) by [Grubba27](https://github.com/Grubba27).
 * resetPassword and verifyEmail to no longer sign in the user automatically [PR](https://github.com/meteor/meteor/pull/12385) by [denihs](https://github.com/denihs).
-* Added missing vue2 declaration for skeletons [PR](https://github.com/meteor/meteor/pull/12396) by [Grubba27](https://github.com/Grubba27) & [planning](https://github.com/mlanning)
+* Added missing vue2 declaration for skeletons [PR](https://github.com/meteor/meteor/pull/12396) by [Grubba27](https://github.com/Grubba27) & [mlanning](https://github.com/mlanning)
 
 #### Breaking Changes
 
@@ -21,14 +21,14 @@ N/A
 
 #### Migration Steps
 
-N/a
+N/A
 
 #### Meteor Version Release
 
 * `fetch@0.1.3`:
   - Updated fetch type definition.
   
-* `fetch@1.10.4:
+* `meteor@1.10.4`:
   - Added back meteor type definitions that were removed by mistake in earlier version.
 
 * `accounts-password@2.3.3`
@@ -38,12 +38,14 @@ N/a
   - Updated Svelte skeleton to now be able to support typescript out of the box and some idioms to the skeleton
   - Updated node to 14.21.2 changes can be seen [here](https://github.com/nodejs/node/releases/tag/v14.21.2)
   - Solved [issue](https://github.com/meteor/meteor/issues/12395) that could not allow vue2 apps being created in command line
+  
 #### Special thanks to
 - [@zarvox](https://github.com/zarvox).
 - [@tosinek](https://github.com/tosinek).
 - [@Grubba27](https://github.com/Grubba27).
-- [@denihs](https://github.com/denihs)
-- [mlanning](https://github.com/mlanning)
+- [@denihs](https://github.com/denihs).
+- [@mlanning](https://github.com/mlanning).
+
 For making this great framework even better!
 
 
