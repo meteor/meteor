@@ -82,7 +82,7 @@ For making this great framework even better!
   by [henriquealbert](https://github.com/henriquealbert).
 
 #### Breaking Changes
- N/A
+* `Accounts.createUserVerifyingEmail` is now async
 
 ####  Internal API changes
 * Internal methods from `OAuth` that are now async:
