@@ -13,7 +13,7 @@
   - `Accounts.destroyToken` is now async
 
 * `accounts-password`:
-  - Some methods are now async:
+  - Some server methods are now async:
   - `Accounts.sendResetPasswordEmail` 
   - `Accounts.sendEnrollmentEmail` 
   - `Accounts.sendVerificationEmail` 
