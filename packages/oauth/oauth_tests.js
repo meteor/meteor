@@ -33,18 +33,19 @@ Tinytest.addAsync("oauth - pendingCredential handles Meteor.Errors",
 
 Tinytest.addAsync("oauth - null, undefined key for pendingCredential",
   async test => {
-  const cred = Random.id();
-  await test.throwsAsync(() => OAuth._storePendingCredential(null, cred));
-  await test.throwsAsync(() => OAuth._storePendingCredential(undefined, cred));
-});
+    const cred = Random.id();
+    await test.throwsAsync(() => OAuth._storePendingCredential(null, cred));
+    await test.throwsAsync(() => OAuth._storePendingCredential(undefined, cred));
+  });
 
-Tinytest.add("oauth - pendingCredential handles duplicate key", test => {
+Tinytest.addAsync("oauth - pendingCredential handles duplicate key",
+    async test => {
   const key = Random.id();
   const cred = Random.id();
-  OAuth._storePendingCredential(key, cred);
+  await OAuth._storePendingCredential(key, cred);
   const newCred = Random.id();
-  OAuth._storePendingCredential(key, newCred);
-  test.equal(OAuth._retrievePendingCredential(key), newCred);
+  await OAuth._storePendingCredential(key, newCred);
+  test.equal(await OAuth._retrievePendingCredential(key), newCred);
 });
 
 Tinytest.add("oauth - pendingCredential requires credential secret", test => {
