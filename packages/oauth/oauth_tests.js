@@ -13,15 +13,15 @@ Tinytest.addAsync("oauth - pendingCredential handles Errors",
     test.equal(result.stack, testError.stack);
   });
 
-Tinytest.add("oauth - pendingCredential handles Meteor.Errors", test => {
+Tinytest.addAsync("oauth - pendingCredential handles Meteor.Errors", async test => {
   const credentialToken = Random.id();
 
   const testError = new Meteor.Error(401, "This is a test error");
   testError.stack = 'test stack';
-  OAuth._storePendingCredential(credentialToken, testError);
+  await OAuth._storePendingCredential(credentialToken, testError);
 
   // Test that the result for the token is the expected error
-  const result = OAuth._retrievePendingCredential(credentialToken);
+  const result = await OAuth._retrievePendingCredential(credentialToken);
   test.instanceOf(result, Meteor.Error);
   test.equal(result.error, testError.error);
   test.equal(result.message, testError.message);
