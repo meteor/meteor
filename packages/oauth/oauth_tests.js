@@ -39,23 +39,24 @@ Tinytest.addAsync("oauth - null, undefined key for pendingCredential",
   });
 
 Tinytest.addAsync("oauth - pendingCredential handles duplicate key",
-    async test => {
-  const key = Random.id();
-  const cred = Random.id();
-  await OAuth._storePendingCredential(key, cred);
-  const newCred = Random.id();
-  await OAuth._storePendingCredential(key, newCred);
-  test.equal(await OAuth._retrievePendingCredential(key), newCred);
-});
+  async test => {
+    const key = Random.id();
+    const cred = Random.id();
+    await OAuth._storePendingCredential(key, cred);
+    const newCred = Random.id();
+    await OAuth._storePendingCredential(key, newCred);
+    test.equal(await OAuth._retrievePendingCredential(key), newCred);
+  });
 
-Tinytest.add("oauth - pendingCredential requires credential secret", test => {
-  const key = Random.id();
-  const cred = Random.id();
-  const secret = Random.id();
-  OAuth._storePendingCredential(key, cred, secret);
-  test.equal(OAuth._retrievePendingCredential(key), undefined);
-  test.equal(OAuth._retrievePendingCredential(key, secret), cred);
-});
+Tinytest.addAsync("oauth - pendingCredential requires credential secret",
+  async test => {
+    const key = Random.id();
+    const cred = Random.id();
+    const secret = Random.id();
+    await OAuth._storePendingCredential(key, cred, secret);
+    test.equal(await OAuth._retrievePendingCredential(key), undefined);
+    test.equal(await OAuth._retrievePendingCredential(key, secret), cred);
+  });
 
 Tinytest.add("oauth - _endOfLoginResponse with popup loginStyle supports unspecified ROOT_URL_PATH_PREFIX",
   test => {
