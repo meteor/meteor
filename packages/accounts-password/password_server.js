@@ -382,7 +382,7 @@ const pluckAddresses = (emails = []) => emails.map(email => email.address);
 Meteor.methods({forgotPassword: async options => {
   check(options, {email: String})
 
-  const user = Accounts.findUserByEmail(options.email, { fields: { emails: 1 } });
+  const user = await Accounts.findUserByEmail(options.email, { fields: { emails: 1 } });
 
   if (!user) {
     Accounts._handleError("User not found");

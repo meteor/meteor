@@ -24,7 +24,7 @@ if (Meteor.isServer) {
     {
       getResetToken:
         async function () {
-          const user = await Meteor.users.findOne(this.userId);
+          const user = await Meteor.users.findOneAsync(this.userId);
           return user.services.password.reset;
         },
 
@@ -34,8 +34,9 @@ if (Meteor.isServer) {
       removeSkipCaseInsensitiveChecksForTest:
         value => delete Accounts._skipCaseInsensitiveChecksForTest[value],
 
-      countUsersOnServer:
-        async query => await Meteor.users.find(query).count(),
+      async countUsersOnServer(query) {
+        return await Meteor.users.find(query).count();
+      }
     }
   );
 }
@@ -290,12 +291,11 @@ if (Meteor.isClient) (() => {
           expect));
     },
     // Make sure the new user has not been inserted
-    function (test, expect) {
-      Meteor.callAsync('countUsersOnServer',
-        { username: this.newUsername },
-        expect(function (error, result) {
-          test.equal(result, 0);
-        }));
+    async function (test) {
+      const result = await Meteor.callAsync('countUsersOnServer', {
+        username: this.newUsername,
+      });
+      test.equal(result, 0);
     }
   ]);
 
@@ -399,13 +399,11 @@ if (Meteor.isClient) (() => {
           expect));
     },
     // Make sure the new user has not been inserted
-    function (test, expect) {
-      Meteor.callAsync('countUsersOnServer',
-        { 'emails.address': this.newEmail },
-        expect(function (error, result) {
-          test.equal(result, 0);
-        })
-      );
+    async function (test) {
+      const result = await Meteor.callAsync('countUsersOnServer', {
+        'emails.address': this.newEmail,
+      });
+      test.equal(result, 0);
     }
   ]);
 
@@ -429,12 +427,10 @@ if (Meteor.isClient) (() => {
           test.isFalse(error);
         }));
     },
-    function (test, expect) {
-      Meteor.callAsync("getResetToken", expect((err, token) => {
-        test.isFalse(err);
-        test.isTrue(token);
-        this.token = token;
-      }));
+    async function (test) {
+      const token = await Meteor.callAsync("getResetToken");
+      test.isTrue(token);
+      this.token = token;
     },
     // change password with bad old password. we stay logged in.
     function (test, expect) {
@@ -455,11 +451,9 @@ if (Meteor.isClient) (() => {
       Accounts.changePassword(this.password, this.password2,
         loggedInAs(this.username, test, expect));
     },
-    function (test, expect) {
-      Meteor.callAsync("getResetToken", expect((err, token) => {
-        test.isFalse(err);
-        test.isFalse(token);
-      }));
+    async function (test) {
+      const token = await Meteor.callAsync("getResetToken");
+      test.isFalse(token);
     },
     logoutStep,
     // old password, failed login
@@ -716,13 +710,20 @@ if (Meteor.isClient) (() => {
         test.equal(err, undefined);
       }));
     },
-    function (test, expect) {
+    async function (test, expect) {
       // Test that even with no published fields, we still have a document.
-      Accounts.connection.call('clearUsernameAndProfile', expect(() => {
-        test.isTrue(Meteor.userId());
-        const user = Meteor.user();
-        test.equal(user, { _id: Meteor.userId() });
-      }));
+      await Accounts.connection.callAsync('clearUsernameAndProfile');
+      test.isTrue(Meteor.userId());
+      // TODO [FIBERS]: this is a big workaround. The Tracker is now receiving promises,
+        // so it's finishing before time. Hopefully this PR will fix this behavior
+        // https://github.com/meteor/meteor/pull/12294
+      let resolve;
+      const promise = new Promise(res => resolve = res);
+      Meteor.setTimeout(() => {
+        test.equal(Meteor.user(), { _id: Meteor.userId() });
+        resolve();
+      }, 100);
+      return promise;
     },
     logoutStep,
     function (test, expect) {
@@ -795,14 +796,12 @@ if (Meteor.isClient) (() => {
       ));
       test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
     },
-    function (test, expect) {
+    async function (test) {
       // Can update own profile using ID.
-      Meteor.users.update(
+      await Meteor.users.update(
         this.userId, { $set: { 'profile.updated': 42 } },
-        expect(err => {
-          test.isFalse(err);
-          test.equal(42, Meteor.user().profile.updated);
-        }));
+       );
+      test.equal(42, Meteor.user().profile.updated);
     },
     logoutStep
   ]);
@@ -1418,7 +1417,7 @@ if (Meteor.isServer) (() => {
       Accounts._options.ambiguousErrorMessages = false
       await test.throwsAsync(
         async () => await Meteor.callAsync('forgotPassword', wrongOptions),
-        /Can't find user/
+        /User not found/
       )
       // return accounts as it were
       Accounts._options = options
@@ -1822,50 +1821,56 @@ if (Meteor.isServer) (() => {
     ]);
   });
 
-  Tinytest.addAsync(
-    'passwords - allow custom bcrypt rounds',
-    async (test, done) => {
-      const getUserHashRounds = user =>
-        Number(user.services.password.bcrypt.substring(4, 6));
-
-
+  const getUserHashRounds = user =>
+    Number(user.services.password.bcrypt.substring(4, 6));
+  testAsyncMulti("passwords - allow custom bcrypt rounds",[
+    async function (test) {
       // Verify that a bcrypt hash generated for a new account uses the
       let username = Random.id();
-      const password = hashPassword('abc123');
-      const userId1 = await Accounts.createUser({ username, password });
-      let user1 =  await Meteor.users.findOne(userId1);
-      let rounds = getUserHashRounds(user1);
+      this.password = hashPassword('abc123');
+      this.userId1 = await Accounts.createUser({ username, password: this.password });
+      this.user1 =  await Meteor.users.findOneAsync(this.userId1);
+      let rounds = getUserHashRounds(this.user1);
       test.equal(rounds, Accounts._bcryptRounds());
 
       // When a custom number of bcrypt rounds is set via Accounts.config,
       // and an account was already created using the default number of rounds,
       // make sure that a new hash is created (and stored) using the new number
       // of rounds, the next time the password is checked.
+      this.customRounds = 11;
+      Accounts._options.bcryptRounds = this.customRounds;
+      await Accounts._checkPasswordAsync(this.user1, this.password);
+    },
+    async function(test) {
       const defaultRounds = Accounts._bcryptRounds();
-      const customRounds = 11;
-      Accounts._options.bcryptRounds = customRounds;
-      await Accounts._checkPasswordAsync(user1, password);
-      Meteor.setTimeout(async () => {
-        user1 = await Meteor.users.findOne(userId1);
-        rounds = getUserHashRounds(user1);
-        test.equal(rounds, customRounds);
+      let rounds;
+      let username;
 
+      let resolve;
+      const promise = new Promise(res => resolve = res);
+
+      Meteor.setTimeout(async () => {
+        this.user1 = await Meteor.users.findOneAsync(this.userId1);
+        rounds = getUserHashRounds(this.user1);
+        test.equal(rounds, this.customRounds);
         // When a custom number of bcrypt rounds is set, make sure it's
         // used for new bcrypt password hashes.
         username = Random.id();
-        const userId2 = await Accounts.createUser({ username, password });
+        const userId2 = await Accounts.createUser({ username, password: this.password });
         const user2 = await Meteor.users.findOne(userId2);
         rounds = getUserHashRounds(user2);
-        test.equal(rounds, customRounds);
+        test.equal(rounds, this.customRounds);
 
         // Cleanup
         Accounts._options.bcryptRounds = defaultRounds;
-        await Meteor.users.remove(userId1);
+        await Meteor.users.remove(this.userId1);
         await Meteor.users.remove(userId2);
-        done()
+        resolve();
       }, 5000);
+
+      return promise;
     }
-  );      // default number of rounds.
+  ]); // default number of rounds.
 
 
   Tinytest.addAsync('passwords - extra params in email urls',

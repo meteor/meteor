@@ -411,7 +411,7 @@ export class TestCase {
   // test raised (or voluntarily reported) an exception.
   run(onEvent, onComplete, onException, stop_at_offset) {
     let completed = false;
-
+    const self = this;
     return new Promise((resolve, reject) => {
       const results = new TestCaseResults(
         this,
@@ -421,6 +421,7 @@ export class TestCase {
           // test will display as "waiting" even when it counts as passed
           // or failed.
           if (completed) {
+            console.warn('Test name:', self.name);
             console.trace("event after complete!");
           }
           return onEvent(event);
