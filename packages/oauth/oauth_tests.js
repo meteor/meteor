@@ -58,8 +58,8 @@ Tinytest.addAsync("oauth - pendingCredential requires credential secret",
     test.equal(await OAuth._retrievePendingCredential(key, secret), cred);
   });
 
-Tinytest.add("oauth - _endOfLoginResponse with popup loginStyle supports unspecified ROOT_URL_PATH_PREFIX",
-  test => {
+Tinytest.addAsync("oauth - _endOfLoginResponse with popup loginStyle supports unspecified ROOT_URL_PATH_PREFIX",
+  async test => {
     const res = {
       writeHead: () => {},
       end: content => {
@@ -73,7 +73,7 @@ Tinytest.add("oauth - _endOfLoginResponse with popup loginStyle supports unspeci
       credentials: {},
       loginStyle: 'popup'
     };
-    OAuth._endOfLoginResponse(res, details);
+    await OAuth._endOfLoginResponse(res, details);
   }
 );
 
