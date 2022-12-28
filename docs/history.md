@@ -7,6 +7,14 @@
 * `email`:
   - `Email.send` is no longer available. Use `Email.sendAsync` instead.
 
+* `accounts-2fa`:
+  - Some methods are now async. See below:
+  - `Accounts._is2faEnabledForUser`
+  - `(Meteor Method) - generate2faActivationQrCode`
+  - `(Meteor Method) - enableUser2fa`
+  - `(Meteor Method) - disableUser2fa`
+  - `(Meteor Method) - has2faEnabled`
+
 * `accounts-password`:
   - `Accounts.sendResetPasswordEmail` is now async
   - `Accounts.sendEnrollmentEmail` is now async
