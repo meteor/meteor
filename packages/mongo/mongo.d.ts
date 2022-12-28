@@ -269,7 +269,7 @@ export namespace Mongo {
       transform?: Fn | undefined;
     }): boolean;
     dropCollectionAsync(): Promise<void>;
-    dropIndexAsync(indexName: string): void;
+    dropIndexAsync(indexName: string): Promise<void>;
     /**
      * Find the documents in a collection that match the selector.
      * @param selector A query describing the documents to find
@@ -541,8 +541,8 @@ export namespace Mongo {
       callbacks: ObserveChangesCallbacks<T>,
       options?: { nonMutatingCallbacks?: boolean | undefined }
     ): Meteor.LiveQueryHandle;
-    [Symbol.iterator](): Iterator<T, never, never>;
-    [Symbol.asyncIterator](): AsyncIterator<T, never, never>;
+    [Symbol.iterator](): Iterator<T>;
+    [Symbol.asyncIterator](): AsyncIterator<T>;
   }
 
   var ObjectID: ObjectIDStatic;
