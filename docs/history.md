@@ -34,6 +34,10 @@
   - `OAuth.renderEndOfLoginResponse`
   - `OAuth._storePendingCredential`
   - `OAuth._retrievePendingCredential`
+  - `ensureConfigured`
+  - `_cleanStaleResults`
+
+
 ####  Internal API changes
 
 
