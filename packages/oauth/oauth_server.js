@@ -286,14 +286,17 @@ OAuth._renderOauthResults = (res, query, credentialSecret) => {
   }
 };
 
+const getAsset = async (name) => {
+  return await new Promise((resolve, reject) => Assets.getText(
+    `${name}.html`,
+    (err, data) => err ? reject(err) : resolve(data)))
+}
 // This "template" (not a real Spacebars template, just an HTML file
 // with some ##PLACEHOLDER##s) communicates the credential secret back
 // to the main window and then closes the popup.
-OAuth._endOfPopupResponseTemplate = Assets.getText(
-  "end_of_popup_response.html");
+OAuth._endOfPopupResponseTemplate = getAsset('end_of_popup_response')
 
-OAuth._endOfRedirectResponseTemplate = Assets.getText(
-  "end_of_redirect_response.html");
+OAuth._endOfRedirectResponseTemplate = getAsset('end_of_redirect_response')
 
 // Renders the end of login response template into some HTML and JavaScript
 // that closes the popup or redirects at the end of the OAuth flow.
