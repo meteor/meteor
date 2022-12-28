@@ -122,11 +122,11 @@ Tinytest.addAsync("oauth1 - duplicate key for request token", async test => {
   test.equal(result.requestTokenSecret, newSecret);
 });
 
-Tinytest.add("oauth1 - null, undefined key for request token", test => {
+Tinytest.addAsync("oauth1 - null, undefined key for request token", async test => {
   const token = Random.id();
   const secret = Random.id();
-  test.throws(() => OAuth._storeRequestToken(null, token, secret));
-  test.throws(() => OAuth._storeRequestToken(undefined, token, secret));
+  await test.throwsAsync(() => OAuth._storeRequestToken(null, token, secret));
+  await test.throwsAsync(() => OAuth._storeRequestToken(undefined, token, secret));
 });
 
 Tinytest.add("oauth1 - signature is built correctly", test => {
