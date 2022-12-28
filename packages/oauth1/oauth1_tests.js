@@ -109,15 +109,15 @@ Tinytest.addAsync("oauth1 - pendingCredential is stored and can be retrieved (wi
   }
 });
 
-Tinytest.add("oauth1 - duplicate key for request token", test => {
+Tinytest.addAsync("oauth1 - duplicate key for request token", async test => {
   const key = Random.id();
   const token = Random.id();
   const secret = Random.id();
-  OAuth._storeRequestToken(key, token, secret);
+  await OAuth._storeRequestToken(key, token, secret);
   const newToken = Random.id();
   const newSecret = Random.id();
-  OAuth._storeRequestToken(key, newToken, newSecret);
-  const result = OAuth._retrieveRequestToken(key);
+  await OAuth._storeRequestToken(key, newToken, newSecret);
+  const result = await  OAuth._retrieveRequestToken(key);
   test.equal(result.requestToken, newToken);
   test.equal(result.requestTokenSecret, newSecret);
 });
