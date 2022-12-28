@@ -352,7 +352,6 @@ if (process.platform === 'win32') {
       client.on('error', () => resolve(null));
     })
       .catch(() => null)
-      .await();
   };
 }
 

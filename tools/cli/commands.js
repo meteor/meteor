@@ -1459,7 +1459,7 @@ main.registerCommand({
   maxArgs: 1,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   if (options.args.length !== 0) {
     Console.error("meteor reset only affects the locally stored database.");
     Console.error();
@@ -1481,7 +1481,7 @@ main.registerCommand({
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
   var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-  var isRunning = !! findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
+  var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
   if (isRunning) {
     Console.error("reset: Meteor is running.");
     Console.error();
