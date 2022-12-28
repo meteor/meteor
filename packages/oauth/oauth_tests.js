@@ -13,27 +13,29 @@ Tinytest.addAsync("oauth - pendingCredential handles Errors",
     test.equal(result.stack, testError.stack);
   });
 
-Tinytest.addAsync("oauth - pendingCredential handles Meteor.Errors", async test => {
-  const credentialToken = Random.id();
+Tinytest.addAsync("oauth - pendingCredential handles Meteor.Errors",
+  async test => {
+    const credentialToken = Random.id();
 
-  const testError = new Meteor.Error(401, "This is a test error");
-  testError.stack = 'test stack';
-  await OAuth._storePendingCredential(credentialToken, testError);
+    const testError = new Meteor.Error(401, "This is a test error");
+    testError.stack = 'test stack';
+    await OAuth._storePendingCredential(credentialToken, testError);
 
-  // Test that the result for the token is the expected error
-  const result = await OAuth._retrievePendingCredential(credentialToken);
-  test.instanceOf(result, Meteor.Error);
-  test.equal(result.error, testError.error);
-  test.equal(result.message, testError.message);
-  test.equal(result.reason, testError.reason);
-  test.equal(result.stack, testError.stack);
-  test.isUndefined(result.meteorError);
-});
+    // Test that the result for the token is the expected error
+    const result = await OAuth._retrievePendingCredential(credentialToken);
+    test.instanceOf(result, Meteor.Error);
+    test.equal(result.error, testError.error);
+    test.equal(result.message, testError.message);
+    test.equal(result.reason, testError.reason);
+    test.equal(result.stack, testError.stack);
+    test.isUndefined(result.meteorError);
+  });
 
-Tinytest.add("oauth - null, undefined key for pendingCredential", test => {
+Tinytest.addAsync("oauth - null, undefined key for pendingCredential",
+  async test => {
   const cred = Random.id();
-  test.throws(() => OAuth._storePendingCredential(null, cred));
-  test.throws(() => OAuth._storePendingCredential(undefined, cred));
+  await test.throwsAsync(() => OAuth._storePendingCredential(null, cred));
+  await test.throwsAsync(() => OAuth._storePendingCredential(undefined, cred));
 });
 
 Tinytest.add("oauth - pendingCredential handles duplicate key", test => {
