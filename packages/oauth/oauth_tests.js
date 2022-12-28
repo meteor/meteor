@@ -77,8 +77,8 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with popup loginStyle supports un
   }
 );
 
-Tinytest.add("oauth - _endOfLoginResponse with popup loginStyle supports ROOT_URL_PATH_PREFIX",
-  test => {
+Tinytest.addAsync("oauth - _endOfLoginResponse with popup loginStyle supports ROOT_URL_PATH_PREFIX",
+  async test => {
     const rootUrlPathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
     __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = '/test-root-url-prefix';
     const res = {
@@ -95,7 +95,7 @@ Tinytest.add("oauth - _endOfLoginResponse with popup loginStyle supports ROOT_UR
       credentials: {},
       loginStyle: 'popup'
     };
-    OAuth._endOfLoginResponse(res, details);
+    await OAuth._endOfLoginResponse(res, details);
   }
 );
 
