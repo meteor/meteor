@@ -23,7 +23,7 @@ const testPendingCredential = async (test, method) => {
     this.accessTokenSecret = twitterfooAccessTokenSecret;
   };
 
-  ServiceConfiguration.configurations.insert({service: serviceName});
+  await ServiceConfiguration.configurations.insert({service: serviceName});
 
   try {
     // register a fake login service
@@ -40,7 +40,7 @@ const testPendingCredential = async (test, method) => {
     }));
 
     // simulate logging in using twitterfoo
-    OAuth._storeRequestToken(credentialToken, twitterfooAccessToken);
+    await OAuth._storeRequestToken(credentialToken, twitterfooAccessToken);
 
     const req = {
       method,
@@ -73,9 +73,8 @@ const testPendingCredential = async (test, method) => {
     };
     await OAuthTest.middleware(req, res);
     const credentialSecret = respData;
-
     // Test that the result for the token is available
-    let result = OAuth._retrievePendingCredential(credentialToken,
+    let result = await OAuth._retrievePendingCredential(credentialToken,
                                                   credentialSecret);
     const serviceData = OAuth.openSecrets(result.serviceData);
     test.equal(result.serviceName, serviceName);
@@ -86,7 +85,7 @@ const testPendingCredential = async (test, method) => {
     test.equal(result.options.option1, twitterOption1);
 
     // Test that pending credential is removed after being retrieved
-    result = OAuth._retrievePendingCredential(credentialToken);
+    result = await OAuth._retrievePendingCredential(credentialToken);
     test.isUndefined(result);
 
   } finally {
