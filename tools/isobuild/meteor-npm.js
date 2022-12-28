@@ -339,10 +339,10 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
   // directory paths.
   const tempPkgDirs = {};
 
-  dirsToRebuild.splice(0).forEach(pkgPath => {
+  for (const pkgPath of dirsToRebuild.splice(0)) {
     const tempPkgDir = tempPkgDirs[pkgPath] = files.pathJoin(
-      tempNodeModules,
-      files.pathRelative(nodeModulesDir, pkgPath)
+        tempNodeModules,
+        files.pathRelative(nodeModulesDir, pkgPath)
     );
 
     // It's possible the pkgPath directory may have been deleted since we
@@ -352,7 +352,7 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
       // original package will be left untouched if the rebuild fails. We
       // could just run files.cp_r(pkgPath, tempPkgDir) here, except that we
       // want to handle nested node_modules directories specially.
-      copyNpmPackageWithSymlinkedNodeModules(pkgPath, tempPkgDir);
+      await copyNpmPackageWithSymlinkedNodeModules(pkgPath, tempPkgDir);
 
       // Record the current process.versions so that we can avoid
       // copying/rebuilding/renaming next time.
@@ -360,7 +360,7 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
 
       dirsToRebuild.push(pkgPath);
     }
-  });
+  }
 
   // The `npm rebuild` command must be run in the parent directory of the
   // relevant node_modules directory, which in this case is tempDir.
@@ -411,23 +411,23 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
 // Copy an npm package directory to another location, but attempt to
 // symlink all of its node_modules rather than recursively copying them,
 // which potentially saves a lot of time.
-function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
+async function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
   files.mkdir_p(toPkgDir);
 
   let needToHandleNodeModules = false;
 
-  files.readdir(fromPkgDir).forEach(item => {
+  for (const item of readdir(fromPkgDir)) {
     if (item === "node_modules") {
       // We'll link or copy node_modules in a follow-up step.
       needToHandleNodeModules = true;
       return;
     }
 
-    files.cp_r(
-      files.pathJoin(fromPkgDir, item),
-      files.pathJoin(toPkgDir, item)
+    await files.cp_r(
+        files.pathJoin(fromPkgDir, item),
+        files.pathJoin(toPkgDir, item)
     );
-  });
+  }
 
   if (! needToHandleNodeModules) {
     return;
@@ -438,7 +438,7 @@ function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
 
   files.mkdir(nodeModulesToPath);
 
-  files.readdir(nodeModulesFromPath).forEach(depPath => {
+  for (const depPath of files.readdir(nodeModulesFromPath)) {
     if (depPath === ".bin") {
       // Avoid copying node_modules/.bin because commands like
       // .bin/node-gyp and .bin/node-pre-gyp tend to cause problems.
@@ -460,9 +460,9 @@ function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
     try {
       files.symlink(absDepFromPath, absDepToPath, "junction");
     } catch (e) {
-      files.cp_r(absDepFromPath, absDepToPath);
+      await files.cp_r(absDepFromPath, absDepToPath);
     }
-  });
+  }
 }
 
 const portableCache = Object.create(null);

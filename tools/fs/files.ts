@@ -506,7 +506,7 @@ export async function cp_r(from: string, to: string, options: {
   if (stat.isDirectory()) {
     mkdir_p(to, 0o755);
 
-    readdir(from).forEach(f => {
+    for (const f of readdir(from)) {
       if (options.ignore &&
           options.ignore.some(pattern => f.match(pattern))) {
         return;
@@ -515,15 +515,15 @@ export async function cp_r(from: string, to: string, options: {
       const fullFrom = pathJoin(from, f);
 
       if (options.transformFilename) {
-        f = options.transformFilename(f);
+        f = await options.transformFilename(f);
       }
 
-      cp_r(
-        fullFrom,
-        pathJoin(to, f),
-        options
+      await cp_r(
+          fullFrom,
+          pathJoin(to, f),
+          options
       );
-    })
+    }
 
     return;
   }
@@ -532,9 +532,8 @@ export async function cp_r(from: string, to: string, options: {
 
   if (stat.isSymbolicLink()) {
     await symlinkWithOverwrite(readlink(from), to);
-
   } else if (options.transformContents) {
-    writeFile(to, options.transformContents(
+    writeFile(to, await options.transformContents(
       readFile(from),
       pathBasename(from)
     ), {
@@ -702,6 +701,7 @@ export function mkdtemp(prefix: string): string {
         mkdir(dirPath, 0o700);
         return dirPath;
       } catch (err) {
+        console.error(err);
         tries--;
       }
     }
@@ -963,7 +963,7 @@ Profile("files.renameDirAlmostAtomically", async (fromDir: string, toDir: string
   // limitations, we'll resort to copying.
   if (forceCopy) {
     await rm_recursive(toDir);
-    cp_r(fromDir, toDir, {
+    await cp_r(fromDir, toDir, {
       preserveSymlinks: true,
     });
   }
@@ -1616,7 +1616,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
   }).catch(async (error: any) => {
     if (error.code === 'EPERM' ||
         error.code === 'EACCESS') {
-      cp_r(from, to, { preserveSymlinks: true });
+      await cp_r(from, to, { preserveSymlinks: true });
       await rm_recursive(from);
     } else {
       throw error;

@@ -1517,7 +1517,7 @@ main.registerCommand({
   var allPackages = _.union(
     catalog.official.getAllPackageNames(),
     projectContext.localCatalog.getAllPackageNames());
-  var allReleases = catalog.official.getAllReleaseTracks();
+  var allReleases = await catalog.official.getAllReleaseTracks();
   var matchingPackages = [];
   var matchingReleases = [];
 

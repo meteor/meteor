@@ -614,7 +614,7 @@ main.registerCommand({
       return 1;
     }
 
-    var transform = function (x) {
+    var transform = async function (x) {
       var xn =
         x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
 
@@ -625,7 +625,7 @@ main.registerCommand({
       var relString;
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
-        var rel = catalog.official.getDefaultReleaseVersion();
+        var rel = await catalog.official.getDefaultReleaseVersion();
         // the no-release case should never happen except in tests.
         relString = rel ? rel.version : "no-release";
       } else {
@@ -638,13 +638,13 @@ main.registerCommand({
     };
 
     try {
-      files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel-pack'), packageDir, {
+      await files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
         },
-        transformContents: function (contents, f) {
+        transformContents: async function (contents, f) {
           if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
-            return Buffer.from(transform(contents.toString()));
+            return Buffer.from(await transform(contents.toString()));
           } else {
             return contents;
           }
@@ -682,7 +682,7 @@ main.registerCommand({
   // this version of the tools, and then stamp on the correct release
   // at the end.)
   if (! release.current.isCheckout() && !release.forced) {
-    if (release.current.name !== release.latestKnown()) {
+    if (release.current.name !== await release.latestKnown()) {
       throw new main.SpringboardToLatestRelease();
     }
   }
@@ -801,7 +801,7 @@ main.registerCommand({
   const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
     !!options[skeleton]);
   const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
-  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
+  await files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
     `skel-${skeleton}`), appPath, {
     transformFilename: function (f) {
       return transform(f);

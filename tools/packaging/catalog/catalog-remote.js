@@ -593,8 +593,8 @@ Object.assign(RemoteCatalog.prototype, {
     return self.getVersion(name, latest);
   },
 
-  getPackage: function (name, options) {
-    var result = this._contentQuery(
+  getPackage: async function (name) {
+    var result = await this._contentQuery(
       "SELECT content FROM packages WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
@@ -604,8 +604,8 @@ Object.assign(RemoteCatalog.prototype, {
     return result[0];
   },
 
-  getAllBuilds: function (name, version) {
-    var result = this._contentQuery(
+  getAllBuilds: async function (name, version) {
+    var result = await this._contentQuery(
       "SELECT content FROM builds WHERE builds.versionId = " +
         "(SELECT _id FROM versions WHERE versions.packageName=? AND " +
         "versions.version=?)",
@@ -619,11 +619,11 @@ Object.assign(RemoteCatalog.prototype, {
   // which cover all of the required arches, or null if it is impossible to
   // cover them all (or if the version does not exist).
   // Note that this method is specific to RemoteCatalog.
-  getBuildsForArches: function (name, version, arches) {
+  getBuildsForArches: async function (name, version, arches) {
     var self = this;
 
     var solution = null;
-    var allBuilds = self.getAllBuilds(name, version) || [];
+    var allBuilds = await self.getAllBuilds(name, version) || [];
 
     utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
       // This build subset works if for all the arches we need, at least one
@@ -651,9 +651,9 @@ Object.assign(RemoteCatalog.prototype, {
 
   // Returns general (non-version-specific) information about a
   // release track, or null if there is no such release track.
-  getReleaseTrack: function (name) {
+  getReleaseTrack: async function (name) {
     var self = this;
-    var result = self._contentQuery(
+    var result = await self._contentQuery(
       "SELECT content FROM releaseTracks WHERE name=?", name);
     return filterExactRows(result, { name });
   },
@@ -668,24 +668,27 @@ Object.assign(RemoteCatalog.prototype, {
 
   // Used by make-bootstrap-tarballs. Only should be used on catalogs that are
   // specially constructed for bootstrap tarballs.
-  forceRecommendRelease: function (track, version) {
+  forceRecommendRelease: async function (track, version) {
     var self = this;
-    var releaseVersionData = self.getReleaseVersion(track, version);
+    var releaseVersionData = await self.getReleaseVersion(track, version);
     if (!releaseVersionData) {
       throw Error("Can't force-recommend unknown release " + track + "@"
                   + version);
     }
     releaseVersionData.recommended = true;
-    self._insertReleaseVersions([releaseVersionData]);
+    await self._insertReleaseVersions([releaseVersionData]);
   },
 
-  getAllReleaseTracks: function () {
-    return _.pluck(this._columnsQuery("SELECT name FROM releaseTracks"),
-                   'name');
+  getAllReleaseTracks: async function () {
+    const result = await this._columnsQuery("SELECT name FROM releaseTracks");
+
+    return result.map(({name}) => name);
   },
 
-  getAllPackageNames: function () {
-    return _.pluck(this._columnsQuery("SELECT name FROM packages"), 'name');
+  getAllPackageNames: async function () {
+    const results = await this._columnsQuery("SELECT name FROM packages");
+
+    return results.map(({name}) => name);
   },
 
   initialize: async function (options) {
@@ -794,21 +797,21 @@ Object.assign(RemoteCatalog.prototype, {
   // Given a release track, returns all recommended versions for this track,
   // sorted by their orderKey. Returns the empty array if the release track does
   // not exist or does not have any recommended versions.
-  getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
+  getSortedRecommendedReleaseVersions: async function (track, laterThanOrderKey) {
     var self = this;
     var versions =
-          self.getSortedRecommendedReleaseRecords(track, laterThanOrderKey);
+          await self.getSortedRecommendedReleaseRecords(track, laterThanOrderKey);
     return _.pluck(versions, "version");
   },
 
   // Given a release track, returns all recommended version *records* for this
   // track, sorted by their orderKey. Returns the empty array if the release
   // track does not exist or does not have any recommended versions.
-  getSortedRecommendedReleaseRecords: function (track, laterThanOrderKey) {
+  getSortedRecommendedReleaseRecords: async function (track, laterThanOrderKey) {
     var self = this;
     // XXX releaseVersions content objects are kinda big; if we put
     // 'recommended' and 'orderKey' in their own columns this could be faster
-    var result = self._contentQuery(
+    var result = await self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
 
     var recommended = _.filter(result, function (v) {
@@ -825,27 +828,27 @@ Object.assign(RemoteCatalog.prototype, {
   },
 
   // Given a release track, returns all version records for this track.
-  getReleaseVersionRecords: function (track) {
+  getReleaseVersionRecords: async function (track) {
     var self = this;
-    var result = self._contentQuery(
+    var result = await self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
     return result;
   },
 
   // For a given track, returns the total number of release versions on that
   // track.
-  getNumReleaseVersions: function (track) {
+  getNumReleaseVersions: async function (track) {
     var self = this;
-    var result = self._columnsQuery(
+    var result = await self._columnsQuery(
       "SELECT count(*) FROM releaseVersions WHERE track=?", track);
     return result[0]["count(*)"];
   },
 
   // Returns the default release version on the DEFAULT_TRACK, or for a
   // given release track.
-  getDefaultReleaseVersion: function (track) {
+  getDefaultReleaseVersion: async function (track) {
     var self = this;
-    var versionRecord = self.getDefaultReleaseVersionRecord(track);
+    var versionRecord = await self.getDefaultReleaseVersionRecord(track);
     if (! versionRecord)
       throw new Error("Can't get default release version for track " + track);
     return _.pick(versionRecord, ["track", "version" ]);
@@ -853,21 +856,21 @@ Object.assign(RemoteCatalog.prototype, {
 
   // Returns the default release version record for the DEFAULT_TRACK, or for a
   // given release track.
-  getDefaultReleaseVersionRecord: function (track) {
+  getDefaultReleaseVersionRecord: async function (track) {
     var self = this;
 
     if (!track)
       track = exports.DEFAULT_TRACK;
 
-    var versions = self.getSortedRecommendedReleaseRecords(track);
+    var versions = await self.getSortedRecommendedReleaseRecords(track);
     if (!versions.length)
       return null;
     return  versions[0];
   },
 
-  getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
+  getBuildWithPreciseBuildArchitectures: async function (versionRecord, buildArchitectures) {
     var self = this;
-    var matchingBuilds = this._contentQuery(
+    var matchingBuilds = await this._contentQuery(
       "SELECT content FROM builds WHERE versionId=?", versionRecord._id);
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
@@ -894,28 +897,28 @@ Object.assign(RemoteCatalog.prototype, {
   _insertReleaseVersions: function(releaseVersions) {
     var self = this;
     return self.db.runInTransaction(function (txn) {
-      self.tableReleaseVersions.upsert(txn, releaseVersions);
+      return self.tableReleaseVersions.upsert(txn, releaseVersions);
     });
   },
 
   //Given data from troposphere, add it into the local store
   insertData: function(serverData, syncComplete) {
     var self = this;
-    return self.db.runInTransaction(function (txn) {
-      self.tablePackages.upsert(txn, serverData.collections.packages);
-      self.tableBuilds.upsert(txn, serverData.collections.builds);
-      self.tableVersions.upsert(txn, serverData.collections.versions);
-      self.tableReleaseTracks.upsert(txn, serverData.collections.releaseTracks);
-      self.tableReleaseVersions.upsert(txn, serverData.collections.releaseVersions);
+    return self.db.runInTransaction(async function (txn) {
+      await self.tablePackages.upsert(txn, serverData.collections.packages);
+      await self.tableBuilds.upsert(txn, serverData.collections.builds);
+      await self.tableVersions.upsert(txn, serverData.collections.versions);
+      await self.tableReleaseTracks.upsert(txn, serverData.collections.releaseTracks);
+      await self.tableReleaseVersions.upsert(txn, serverData.collections.releaseVersions);
 
       var syncToken = serverData.syncToken;
       Console.debug("Adding syncToken: ", JSON.stringify(syncToken));
       syncToken._id = SYNCTOKEN_ID; //Add fake _id so it fits the pattern
-      self.tableSyncToken.upsert(txn, [syncToken]);
+      await self.tableSyncToken.upsert(txn, [syncToken]);
 
       if (syncComplete) {
         var lastSync = {timestamp: Date.now()};
-        self._setMetadata(txn, METADATA_LAST_SYNC, lastSync);
+        await self._setMetadata(txn, METADATA_LAST_SYNC, lastSync);
       }
     });
   },
@@ -947,17 +950,17 @@ Object.assign(RemoteCatalog.prototype, {
     return undefined;
   },
 
-  setMetadata: function(key, value) {
+  setMetadata: async function(key, value) {
     var self = this;
-    self.db.runInTransaction(function (txn) {
-      self._setMetadata(txn, key, value);
+    await self.db.runInTransaction(function (txn) {
+      return self._setMetadata(txn, key, value);
     });
   },
 
-  _setMetadata: function(txn, key, value) {
+  _setMetadata: async function(txn, key, value) {
     var self = this;
     value._id = key;
-    self.tableMetadata.upsert(txn, [value]);
+    await self.tableMetadata.upsert(txn, [value]);
   },
 
   shouldShowBanner: function (releaseName, bannerDate) {

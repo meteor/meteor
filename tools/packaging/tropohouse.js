@@ -367,7 +367,7 @@ Object.assign(exports.Tropohouse.prototype, {
   // and download; download is a method which should be called in a buildmessage
   // capture which actually downloads the package (registering any errors with
   // buildmessage).
-  _makeDownloader: function (options) {
+  _makeDownloader: async function (options) {
     var self = this;
     buildmessage.assertInJob();
 
@@ -404,7 +404,7 @@ Object.assign(exports.Tropohouse.prototype, {
     // local package check), we can use the official catalog here. (This is
     // important, since springboarding calls this function before the complete
     // catalog is ready!)
-    var buildsToDownload = catalog.official.getBuildsForArches(
+    var buildsToDownload = await catalog.official.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
       buildmessage.error(
@@ -499,7 +499,7 @@ Object.assign(exports.Tropohouse.prototype, {
           await buildmessage.enterJob({
             title: "extracting " + packageName + "@" + version + "..."
           }, async () => {
-            const buildTempDir = exports._extractAndConvert(packageTarball);
+            const buildTempDir = await exports._extractAndConvert(packageTarball);
             buildInputDirs.push(buildTempDir);
             buildTempDirs.push(buildTempDir);
           });
@@ -514,7 +514,7 @@ Object.assign(exports.Tropohouse.prototype, {
         }, async () => {
           // We need to turn our builds into a single isopack.
           var isopack = new Isopack();
-          for (let i = 0; i <= buildInputDirs.length; i++) {
+          for (let i = 0; i < buildInputDirs.length; i++) {
             const buildTempDir = buildInputDirs[i];
             await isopack._loadUnibuildsFromPath(packageName, buildTempDir, {
               firstIsopack: i === 0,
@@ -562,8 +562,8 @@ Object.assign(exports.Tropohouse.prototype, {
       }
       await buildmessage.enterJob(
         "checking for " + packageName + "@" + info.version,
-        function () {
-          downloader = self._makeDownloader({
+        async function () {
+          downloader = await self._makeDownloader({
             packageName: packageName,
             version: info.version,
             architectures: serverArchs

@@ -436,7 +436,7 @@ var springboard = async function (rel, options) {
   );
 
   if (serverArchitectures.length === 0) {
-    var release = catalog.official.getDefaultReleaseVersion();
+    var release = await catalog.official.getDefaultReleaseVersion();
     var releaseName = release.track + "@" + release.version;
 
     Console.error(
@@ -977,7 +977,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
     } else {
       // Run outside an app dir with no --release flag. Use the latest
       // release we know about (in the default track).
-      releaseName = release.latestKnown();
+      releaseName = await release.latestKnown();
       if (!releaseName) {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
@@ -985,7 +985,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         await Console.withProgressDisplayVisible(async function () {
           await catalog.refreshOrWarn();
         });
-        releaseName = release.latestKnown();
+        releaseName = await release.latestKnown();
       }
       if (!releaseName) {
         if (catalog.refreshFailed) {

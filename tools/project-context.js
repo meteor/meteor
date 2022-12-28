@@ -565,7 +565,7 @@ Object.assign(ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInJob();
 
-    var depsAndConstraints = self._getRootDepsAndConstraints();
+    var depsAndConstraints = await self._getRootDepsAndConstraints();
     // If this is in the runner and we have reset this ProjectContext for a
     // rebuild, use the versions we calculated last time in this process (which
     // may not have been written to disk if our release doesn't match the
@@ -825,14 +825,14 @@ Object.assign(ProjectContext.prototype, {
     });
   }),
 
-  _getRootDepsAndConstraints: function () {
+  _getRootDepsAndConstraints: async function () {
     const depsAndConstraints = {
       deps: [],
       constraints: [],
     };
 
     this._addAppConstraints(depsAndConstraints);
-    this._addLocalPackageConstraints(depsAndConstraints);
+    await this._addLocalPackageConstraints(depsAndConstraints);
     this._addReleaseConstraints(depsAndConstraints);
 
     return depsAndConstraints;
@@ -847,16 +847,17 @@ Object.assign(ProjectContext.prototype, {
     });
   },
 
-  _addLocalPackageConstraints: function (depsAndConstraints) {
+  _addLocalPackageConstraints: async function (depsAndConstraints) {
     var self = this;
-    _.each(self.localCatalog.getAllPackageNames(), function (packageName) {
+    const packageNames = await self.localCatalog.getAllPackageNames();
+    packageNames.forEach((packageName) => {
       var versionRecord = self.localCatalog.getLatestVersion(packageName);
       var constraint = utils.parsePackageConstraint(
-        packageName + "@=" + versionRecord.version);
+          packageName + "@=" + versionRecord.version);
       // Add a constraint ("this is the only version available") but no
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
-    });
+    })
   },
 
   _addReleaseConstraints: function (depsAndConstraints) {
@@ -1582,13 +1583,13 @@ Object.assign(exports.ReleaseFile.prototype, {
 
   // Returns an absolute path to the dev_bundle appropriate for the
   // release specified in the .meteor/release file.
-  getDevBundle() {
+  async getDevBundle() {
     let devBundle = files.getDevBundle();
     const devBundleParts = devBundle.split(files.pathSep);
     const meteorToolIndex = devBundleParts.lastIndexOf("meteor-tool");
 
     if (meteorToolIndex >= 0) {
-      const releaseVersion = this.catalog.getReleaseVersion(
+      const releaseVersion = await this.catalog.getReleaseVersion(
         this.releaseTrack,
         this.releaseVersion
       );
@@ -1628,7 +1629,7 @@ Object.assign(exports.ReleaseFile.prototype, {
       return;
     }
 
-    const newTarget = this.getDevBundle();
+    const newTarget = await this.getDevBundle();
     if (! newTarget) {
       return;
     }
