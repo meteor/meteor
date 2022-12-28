@@ -40,28 +40,29 @@ const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 // @param credentialSecret {string} A secret that must be presented in
 //   addition to the `key` to retrieve the credential
 //
-OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
-  check(key, String);
-  check(credentialSecret, Match.Maybe(String));
+OAuth._storePendingCredential =
+  async (key, credential, credentialSecret = null) => {
+    check(key, String);
+    check(credentialSecret, Match.Maybe(String));
 
-  if (credential instanceof Error) {
-    credential = storableError(credential);
-  } else {
-    credential = OAuth.sealSecret(credential);
-  }
+    if (credential instanceof Error) {
+      credential = storableError(credential);
+    } else {
+      credential = OAuth.sealSecret(credential);
+    }
 
-  // We do an upsert here instead of an insert in case the user happens
-  // to somehow send the same `state` parameter twice during an OAuth
-  // login; we don't want a duplicate key error.
-  OAuth._pendingCredentials.upsert({
-    key,
-  }, {
-    key,
-    credential,
-    credentialSecret,
-    createdAt: new Date()
-  });
-};
+    // We do an upsert here instead of an insert in case the user happens
+    // to somehow send the same `state` parameter twice during an OAuth
+    // login; we don't want a duplicate key error.
+    await OAuth._pendingCredentials.upsert({
+      key,
+    }, {
+      key,
+      credential,
+      credentialSecret,
+      createdAt: new Date()
+    });
+  };
 
 
 // Retrieves and removes a credential from the _pendingCredentials collection
@@ -69,24 +70,25 @@ OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
 // @param key {string}
 // @param credentialSecret {string}
 //
-OAuth._retrievePendingCredential = (key, credentialSecret = null) => {
-  check(key, String);
+OAuth._retrievePendingCredential =
+  async (key, credentialSecret = null) => {
+    check(key, String);
 
-  const pendingCredential = OAuth._pendingCredentials.findOne({
-    key,
-    credentialSecret,
-  });
+    const pendingCredential = await OAuth._pendingCredentials.findOne({
+      key,
+      credentialSecret,
+    });
 
-  if (pendingCredential) {
-    OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
-    if (pendingCredential.credential.error)
-      return recreateError(pendingCredential.credential.error);
-    else
-      return OAuth.openSecret(pendingCredential.credential);
-  } else {
-    return undefined;
-  }
-};
+    if (pendingCredential) {
+      await OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
+      if (pendingCredential.credential.error)
+        return recreateError(pendingCredential.credential.error);
+      else
+        return OAuth.openSecret(pendingCredential.credential);
+    } else {
+      return undefined;
+    }
+  };
 
 
 // Convert an Error into an object that can be stored in mongo

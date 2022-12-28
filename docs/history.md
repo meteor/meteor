@@ -26,6 +26,14 @@
 * `boilerplate-generator`:
   - `toHTML` is no longer available (it was already deprecated). Use `toHTMLStream` instead.
   
+* `oauth`:
+  - `_endOfPopupResponseTemplate` and `_endOfRedirectResponseTemplate` are no longer a property but now a function that returns a promise of the same value as before
+  - the following methods are now async: 
+  - `OAuth._renderOauthResults`
+  - `OAuth._endOfLoginResponse`
+  - `OAuth.renderEndOfLoginResponse`
+  - `OAuth._storePendingCredential`
+  - `OAuth._retrievePendingCredential`
 ####  Internal API changes
 
 
