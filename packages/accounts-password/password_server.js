@@ -304,7 +304,7 @@ Meteor.methods(
   // be tricky, so we'll settle for just replacing all tokens other than
   // the one for the current connection.
   const currentToken = Accounts._getLoginToken(this.connection.id);
-  Meteor.users.update(
+  await Meteor.users.update(
     { _id: this.userId },
     {
       $set: { 'services.password.bcrypt': hashed },

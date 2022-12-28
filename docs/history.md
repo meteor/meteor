@@ -7,10 +7,28 @@
 * `email`:
   - `Email.send` is no longer available. Use `Email.sendAsync` instead.
 
+* `accounts-base`:
+  **TODO**
+  - `methods.removeOtherTokens` is now async
+  - `Accounts.destroyToken` is now async
+
 * `accounts-password`:
   - `Accounts.sendResetPasswordEmail` is now async
   - `Accounts.sendEnrollmentEmail` is now async
   - `Accounts.sendVerificationEmail` is now async
+  - `Accounts.addEmail` is now async
+  - `Accounts.removeEmail` is now async
+  - `Accounts.verifyEmail` is now async
+  - `Accounts.createUserVerifyingEmail` is now async
+  - `Accounts.createUser` is now async
+  - `Accounts.generateVerificationToken` is now async
+  - `Accounts.generateResetToken` is now async
+  - `Accounts.forgotPassword` is now async
+  - `Accounts.setPassword` is now async
+  - `Accounts.changePassword` is now async
+  - `Accounts.setUsername` is now async
+  - `Accounts.findUserByEmail` is now async
+  - `Accounts.findUserByUsername` is now async
   
 * `accounts-passwordless`:
   - `Accounts.sendLoginTokenEmail` is now async
