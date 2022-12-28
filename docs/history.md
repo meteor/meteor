@@ -13,22 +13,23 @@
   - `Accounts.destroyToken` is now async
 
 * `accounts-password`:
-  - `Accounts.sendResetPasswordEmail` is now async
-  - `Accounts.sendEnrollmentEmail` is now async
-  - `Accounts.sendVerificationEmail` is now async
-  - `Accounts.addEmail` is now async
-  - `Accounts.removeEmail` is now async
-  - `Accounts.verifyEmail` is now async
-  - `Accounts.createUserVerifyingEmail` is now async
-  - `Accounts.createUser` is now async
-  - `Accounts.generateVerificationToken` is now async
-  - `Accounts.generateResetToken` is now async
-  - `Accounts.forgotPassword` is now async
-  - `Accounts.setPassword` is now async
-  - `Accounts.changePassword` is now async
-  - `Accounts.setUsername` is now async
-  - `Accounts.findUserByEmail` is now async
-  - `Accounts.findUserByUsername` is now async
+  - Some methods are now async:
+  - `Accounts.sendResetPasswordEmail` 
+  - `Accounts.sendEnrollmentEmail` 
+  - `Accounts.sendVerificationEmail` 
+  - `Accounts.addEmail` 
+  - `Accounts.removeEmail` 
+  - `Accounts.verifyEmail` 
+  - `Accounts.createUserVerifyingEmail` 
+  - `Accounts.createUser` 
+  - `Accounts.generateVerificationToken` 
+  - `Accounts.generateResetToken` 
+  - `Accounts.forgotPassword` 
+  - `Accounts.setPassword` 
+  - `Accounts.changePassword` 
+  - `Accounts.setUsername` 
+  - `Accounts.findUserByEmail` 
+  - `Accounts.findUserByUsername` 
   
 * `accounts-passwordless`:
   - `Accounts.sendLoginTokenEmail` is now async
