@@ -489,7 +489,7 @@ main.registerCommand({
   requiresApp: true,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   if (!options.appDir) {
     Console.error(
       "The " + Console.command("'meteor shell'") + " command must be run",
@@ -499,6 +499,7 @@ main.registerCommand({
     var projectContext = new projectContextModule.ProjectContext({
       projectDir: options.appDir
     });
+    await projectContext.init();
 
     // Convert to OS path here because shell/server.js doesn't know how to
     // convert paths, since it exists in the app and in the tool.
