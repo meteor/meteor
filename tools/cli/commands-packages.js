@@ -1165,12 +1165,14 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await main.captureAndExit("=> Errors while initializing project:", async function () {
-    await projectContext.prepareProjectForBuild();
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while initializing project:", function () {
+    return projectContext.prepareProjectForBuild();
   });
+
   // No need to display the PackageMapDelta here, since we're about to list all
   // of the packages anyway!
-
   const showJson = !!options['json'];
   const showTree = !!options['tree'];
 
@@ -1180,7 +1182,7 @@ main.registerCommand({
     weak: '[weak]',
     skipped: 'package skipped',
     missing: 'missing?'
-  }
+  };
 
   if (showJson && showTree) {
     throw new Error('can only run for one option,found --json and --tree');
@@ -1192,7 +1194,7 @@ main.registerCommand({
     const showDetails = !!options['details'];
     // Load package details of all used packages (inc. dependencies)
     const packageDetails = new Map;
-    projectContext.packageMap.eachPackage(function (name, info) {
+    await projectContext.packageMap.eachPackage(function (name, info) {
       packageDetails.set(name, projectContext.projectCatalog.getVersion(name, info.version));
     });
 
@@ -1206,7 +1208,7 @@ main.registerCommand({
     const dontExpand = new Set(topLevelSet.values());
 
     // Recursive function that outputs each package
-    const printPackage = function ({ packageToPrint, isWeak, indent1, indent2, parent }) {
+    const printPackage = async function ({ packageToPrint, isWeak, indent1, indent2, parent }) {
       const packageName = packageToPrint.packageName;
       const depsObj = packageToPrint.dependencies || {};
       let deps = Object.keys(depsObj).sort();
@@ -1266,7 +1268,7 @@ main.registerCommand({
             version: packageToPrint.version,
             local: isLocal,
             weak: isWeak,
-            newerVersion: !isLocal && getNewerVersion(packageName, packageToPrint.version, catalog.official)
+            newerVersion: !isLocal && await getNewerVersion(packageName, packageToPrint.version, catalog.official)
           });
 
           Object.entries(infoSource).forEach(([key, value]) => {
@@ -1283,7 +1285,7 @@ main.registerCommand({
 
       if (shouldExpand) {
         dontExpand.add(packageName);
-        deps.forEach((dep, index) => {
+        for (const [index, dep] of shouldExpand.entries()) {
           const references = depsObj[dep].references || [];
           const weakRef = references.length > 0 && references.every(r => r.weak);
           const last = ((index + 1) === deps.length);
@@ -1294,7 +1296,7 @@ main.registerCommand({
             const newIndent1 = indent2 + (last ? '└─' : '├─');
             const newIndent2 = indent2 + (last ? '  ' : '│ ');
             if (child) {
-              printPackage({
+              await printPackage({
                 packageToPrint: child,
                 isWeak: weakRef,
                 indent1: newIndent1,
@@ -1309,7 +1311,7 @@ main.registerCommand({
 
           if (showJson) {
             if (child) {
-              printPackage({
+              await printPackage({
                 packageToPrint: child,
                 isWeak: weakRef,
                 parent: parent[packageName].dependencies
@@ -1320,17 +1322,17 @@ main.registerCommand({
               parent[packageName].dependencies = suffixes.missing;
             }
           }
-        });
+        }
       }
     };
 
     const topLevelNames = Array.from(topLevelSet.values()).sort();
-    topLevelNames.forEach((dep, index) => {
+    for (const dep of topLevelNames) {
       const topLevelPackage = packageDetails.get(dep);
       if (topLevelPackage) {
         // Force top level packages to be expanded
         dontExpand.delete(topLevelPackage.packageName);
-        printPackage({
+        await printPackage({
           packageToPrint: topLevelPackage,
           isWeak: false,
           indent1: '',
@@ -1338,7 +1340,7 @@ main.registerCommand({
           parent: jsonOut
         })
       }
-    });
+    }
 
     if (showJson) {
       // we can't use Console here, because it pretty prints the output with
@@ -1356,7 +1358,7 @@ main.registerCommand({
 
   // Iterate over packages that are used directly by this app (not indirect
   // dependencies).
-  projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+  await projectContext.projectConstraintsFile.eachConstraintAsync(async function (constraint) {
     var packageName = constraint.package;
 
     // Skip isobuild:* pseudo-packages.
@@ -1368,7 +1370,7 @@ main.registerCommand({
     if (! mapInfo) {
       throw Error("no version for used package " + packageName);
     }
-    var versionRecord = projectContext.projectCatalog.getVersion(
+    var versionRecord = await projectContext.projectCatalog.getVersion(
       packageName, mapInfo.version);
     if (! versionRecord) {
       throw Error("no version record for " + packageName + "@" +
@@ -1380,7 +1382,7 @@ main.registerCommand({
       versionAddendum = "+";
       anyBuiltLocally = true;
     } else if (mapInfo.kind === 'versioned') {
-      if (getNewerVersion(packageName, mapInfo.version, catalog.official)) {
+      if (await getNewerVersion(packageName, mapInfo.version, catalog.official)) {
         versionAddendum = "*";
         newVersionsAvailable = true;
       }
@@ -2139,10 +2141,12 @@ main.registerCommand({
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
 
-  await main.captureAndExit("=> Errors while initializing project:", async function () {
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
     // constraints until after we've made our changes.
-    await projectContext.initializeCatalog();
+    return projectContext.initializeCatalog();
   });
 
   let exitCode = 0;
@@ -2180,8 +2184,8 @@ main.registerCommand({
       changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    ensureDevBundleDependencies();
-    cordovaPluginAdd();
+    await ensureDevBundleDependencies();
+    await cordovaPluginAdd();
   }
 
   if (_.isEmpty(packagesToAdd)) {
@@ -2196,9 +2200,9 @@ main.registerCommand({
   // constraints. Don't run the constraint solver until you have added all of
   // them -- add should be an atomic operation regardless of the package
   // order.
-  var messages = await buildmessage.capture(function () {
-    _.each(packagesToAdd, function (packageReq) {
-      buildmessage.enterJob("adding package " + packageReq, function () {
+  var messages = await buildmessage.capture(async function () {
+    for (const packageReq of packagesToAdd) {
+      await buildmessage.enterJob("adding package " + packageReq, async function () {
         var constraint = utils.parsePackageConstraint(packageReq, {
           useBuildmessage: true
         });
@@ -2209,39 +2213,39 @@ main.registerCommand({
         // It's OK to make errors based on looking at the catalog, because this
         // is a OnceAtStart command.
         var packageRecord = projectContext.projectCatalog.getPackage(
-          constraint.package);
+            constraint.package);
         if (! packageRecord) {
           buildmessage.error("no such package");
           return;
         }
 
-        _.each(constraint.versionConstraint.alternatives, function (subConstr) {
+        for (const subConstr of constraint.versionConstraint.alternatives) {
           if (subConstr.versionString === null) {
-            return;
+            continue;
           }
           // Figure out if this version exists either in the official catalog or
           // the local catalog. (This isn't the same as using the combined
           // catalog, since it's OK to type "meteor add foo@1.0.0" if the local
           // package is 1.1.0 as long as 1.0.0 exists.)
-          var versionRecord = projectContext.localCatalog.getVersion(
-            constraint.package, subConstr.versionString);
+          var versionRecord = await projectContext.localCatalog.getVersion(
+              constraint.package, subConstr.versionString);
           if (! versionRecord) {
             // XXX #2846 here's an example of something that might require a
             // refresh
-            versionRecord = catalog.official.getVersion(
-              constraint.package, subConstr.versionString);
+            versionRecord = await catalog.official.getVersion(
+                constraint.package, subConstr.versionString);
           }
           if (! versionRecord) {
             buildmessage.error("no such version " + constraint.package + "@" +
-                               subConstr.versionString);
+                subConstr.versionString);
           }
-        });
+        }
         if (buildmessage.jobHasMessages()) {
           return;
         }
 
         var current = projectContext.projectConstraintsFile.getConstraint(
-          constraint.package);
+            constraint.package);
 
         // Check that the constraint is new. If we are already using the package
         // at the same constraint in the app, we will log an info message later
@@ -2250,35 +2254,35 @@ main.registerCommand({
         if (! current) {
           constraintsToAdd.push(constraint);
         } else if (! current.constraintString &&
-                   ! constraint.constraintString) {
+            ! constraint.constraintString) {
           infoMessages.push(
-            constraint.package +
+              constraint.package +
               " without a version constraint has already been added.");
         } else if (current.constraintString === constraint.constraintString) {
           infoMessages.push(
-            constraint.package + " with version constraint " +
+              constraint.package + " with version constraint " +
               constraint.constraintString + " has already been added.");
         } else {
           // We are changing an existing constraint.
           if (current.constraintString) {
             infoMessages.push(
-              "Currently using " + constraint.package +
+                "Currently using " + constraint.package +
                 " with version constraint " + current.constraintString + ".");
           } else {
             infoMessages.push(
-              "Currently using " +  constraint.package +
+                "Currently using " +  constraint.package +
                 " without any version constraint.");
           }
           if (constraint.constraintString) {
             infoMessages.push("The version constraint will be changed to " +
-                              constraint.constraintString + ".");
+                constraint.constraintString + ".");
           } else {
             infoMessages.push("The version constraint will be removed.");
           }
           constraintsToAdd.push(constraint);
         }
       });
-    });
+    }
   });
   if (messages.hasMessages()) {
     Console.arrowError("Errors while parsing arguments:", 1);
@@ -2290,8 +2294,8 @@ main.registerCommand({
   projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
 
   // Run the constraint solver, download packages, etc.
-  messages = await buildmessage.capture(async function () {
-    await projectContext.prepareProjectForBuild();
+  messages = await buildmessage.capture(function () {
+    return projectContext.prepareProjectForBuild();
   });
   if (messages.hasMessages()) {
     Console.arrowError("Errors while adding packages:", 1);
@@ -2307,23 +2311,23 @@ main.registerCommand({
 
   // Show descriptions of directly added packages.
   Console.info();
-  _.each(constraintsToAdd, function (constraint) {
+  for (const constraint of constraintsToAdd) {
     var version = projectContext.packageMap.getInfo(constraint.package).version;
-    var versionRecord = projectContext.projectCatalog.getVersion(
-      constraint.package, version);
-    var deprecatedMessage = ""
+    var versionRecord = await projectContext.projectCatalog.getVersion(
+        constraint.package, version);
+    var deprecatedMessage = "";
     if (versionRecord.deprecated) {
       if (versionRecord.deprecatedMessage) {
         deprecatedMessage = ` - DEPRECATED: ${versionRecord.deprecatedMessage}`
       } else {
-        deprecatedMessage = ' - DEPRECATED'
+        deprecatedMessage = ' - DEPRECATED';
       }
     }
     Console.info(
-      constraint.package +
+        constraint.package +
         (versionRecord.description ? (": " + versionRecord.description) : "") + deprecatedMessage
     );
-  });
+  }
 
   return exitCode;
 });
@@ -2346,10 +2350,12 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-  await main.captureAndExit("=> Errors while initializing project:", async function () {
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
     // constraints until after we've made our changes.
-   await projectContext.readProjectMetadata();
+   return projectContext.readProjectMetadata();
   });
 
   let exitCode = 0;
@@ -2387,7 +2393,7 @@ main.registerCommand({
       changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    ensureDevBundleDependencies();
+    await ensureDevBundleDependencies();
     cordovaPluginRemove();
   }
 
@@ -2422,8 +2428,8 @@ main.registerCommand({
 
   // Run the constraint solver, rebuild local packages, etc. This will write
   // our changes to .meteor/packages if it succeeds.
-  await main.captureAndExit("=> Errors after removing packages", async function () {
-    await projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors after removing packages", function () {
+    return projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
 

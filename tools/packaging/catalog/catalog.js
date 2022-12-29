@@ -228,7 +228,7 @@ Object.assign(LayeredCatalog.prototype, {
     });
     if (!latest)
       return null;
-    return self.getVersion(name, latest);
+    return await self.getVersion(name, latest);
   }
 });
 

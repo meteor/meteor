@@ -1145,6 +1145,14 @@ Object.assign(exports.ProjectConstraintsFile.prototype, {
     });
   },
 
+  eachConstraintAsync: async function (iterator){
+    const self = this;
+    for (const lineRecord of self._constraintLines) {
+      if (! lineRecord.skipOnRead && lineRecord.constraint)
+        await iterator(lineRecord.constraint);
+    }
+  },
+
   // Returns the constraint in the format returned by
   // utils.parsePackageConstraint, or null.
   getConstraint: function (name) {

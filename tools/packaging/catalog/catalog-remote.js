@@ -545,11 +545,11 @@ Object.assign(RemoteCatalog.prototype, {
 
   // As getVersion, but returns info on the latest version of the
   // package, or null if the package doesn't exist or has no versions.
-  getLatestVersion: function (name) {
+  getLatestVersion: async function (name) {
     var self = this;
 
-    var versions = self.getSortedVersions(name);
-    return self.getVersion(name, _.last(versions));
+    var versions = await self.getSortedVersions(name);
+    return await self.getVersion(name, _.last(versions));
   },
 
   getSortedVersions: async function (name) {
@@ -581,16 +581,16 @@ Object.assign(RemoteCatalog.prototype, {
     return versionRecords;
   },
 
-  getLatestMainlineVersion: function (name) {
+  getLatestMainlineVersion: async function (name) {
     var self = this;
-    var versions = self.getSortedVersions(name);
+    var versions = await self.getSortedVersions(name);
     versions.reverse();
     var latest = _.find(versions, function (version) {
       return !/-/.test(version);
     });
     if (!latest)
       return null;
-    return self.getVersion(name, latest);
+    return await self.getVersion(name, latest);
   },
 
   getPackage: async function (name) {
