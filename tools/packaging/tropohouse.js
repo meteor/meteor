@@ -604,11 +604,10 @@ Object.assign(exports.Tropohouse.prototype, {
     // Download multiple packages in parallel.
     // XXX use a better progress bar that shows how many you've
     // finished downloading.
-    await buildmessage.forkJoin({
+    await buildmessage.enterJob({
       title: 'downloading ' + downloaders.length + ' packages',
-      parallel: true
-    }, downloaders, async function (downloader) {
-      await downloader.download();
+    }, function () {
+      return Promise.all(downloaders.map(d => d.download()));
     });
   },
 

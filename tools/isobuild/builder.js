@@ -127,7 +127,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     // Build the output from scratch
     if (this.resetBuildPath) {
       await files.rm_recursive(this.buildPath);
-      files.mkdir_p(this.buildPath, 0o755);
+      await files.mkdir_p(this.buildPath, 0o755);
       this.watchSet = new WatchSet();
     }
   }

@@ -2396,7 +2396,7 @@ class JsImage {
         node_modules: {}
       };
 
-      for (const nmd of Object.values(item.nodeModulesDirectories)) {
+      for (const nmd of Object.values(item.nodeModulesDirectories || {})) {
         // We need to make sure to use the directory name we got from
         // builder.generateFilename here.
         // XXX these two parallel data structures of self.jsToLoad and
