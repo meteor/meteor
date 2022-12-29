@@ -251,7 +251,7 @@ const isSafe = value => {
 };
 
 // Internal: used by the oauth1 and oauth2 packages
-OAuth._renderOauthResults = (res, query, credentialSecret) => {
+OAuth._renderOauthResults = async (res, query, credentialSecret) => {
   // For tests, we support the `only_credential_secret_for_test`
   // parameter, which just returns the credential secret without any
   // surrounding HTML. (The test needs to be able to easily grab the
@@ -282,18 +282,23 @@ OAuth._renderOauthResults = (res, query, credentialSecret) => {
       }
     }
 
-    OAuth._endOfLoginResponse(res, details);
+    await OAuth._endOfLoginResponse(res, details);
   }
 };
 
+const getAsset = (name) => {
+  return new Promise((resolve, reject) => Assets.getText(
+    `${name}.html`,
+    (err, data) => err ? reject(err) : resolve(data)))
+}
 // This "template" (not a real Spacebars template, just an HTML file
 // with some ##PLACEHOLDER##s) communicates the credential secret back
 // to the main window and then closes the popup.
-OAuth._endOfPopupResponseTemplate = Assets.getText(
-  "end_of_popup_response.html");
+OAuth._endOfPopupResponseTemplate =
+  async () => await getAsset('end_of_popup_response')
 
-OAuth._endOfRedirectResponseTemplate = Assets.getText(
-  "end_of_redirect_response.html");
+OAuth._endOfRedirectResponseTemplate =
+  async () => await getAsset('end_of_redirect_response')
 
 // Renders the end of login response template into some HTML and JavaScript
 // that closes the popup or redirects at the end of the OAuth flow.
@@ -306,7 +311,7 @@ OAuth._endOfRedirectResponseTemplate = Assets.getText(
 //   - redirectUrl
 //   - isCordova (boolean)
 //
-const renderEndOfLoginResponse = options => {
+const renderEndOfLoginResponse = async options => {
   // It would be nice to use Blaze here, but it's a little tricky
   // because our mustaches would be inside a <script> tag, and Blaze
   // would treat the <script> tag contents as text (e.g. encode '&' as
@@ -338,13 +343,12 @@ const renderEndOfLoginResponse = options => {
 
   let template;
   if (options.loginStyle === 'popup') {
-    template = OAuth._endOfPopupResponseTemplate;
+    template = await OAuth._endOfPopupResponseTemplate();
   } else if (options.loginStyle === 'redirect') {
-    template = OAuth._endOfRedirectResponseTemplate;
+    template = await OAuth._endOfRedirectResponseTemplate();
   } else {
     throw new Error(`invalid loginStyle: ${options.loginStyle}`);
   }
-
   const result = template.replace(/##CONFIG##/, JSON.stringify(config))
     .replace(
       /##ROOT_URL_PATH_PREFIX##/, __meteor_runtime_config__.ROOT_URL_PATH_PREFIX
@@ -384,7 +388,7 @@ const renderEndOfLoginResponse = options => {
 //        so shouldn't be trusted for security decisions or included in
 //        the response without sanitizing it first. Only one of `error`
 //        or `credentials` should be set.
-OAuth._endOfLoginResponse = (res, details) => {
+OAuth._endOfLoginResponse = async (res, details) => {
   res.writeHead(200, {'Content-Type': 'text/html'});
 
   let redirectUrl;
@@ -406,7 +410,7 @@ OAuth._endOfLoginResponse = (res, details) => {
     Log.warn("Error in OAuth Server: " +
              (details.error instanceof Error ?
               details.error.message : details.error));
-    res.end(renderEndOfLoginResponse({
+    res.end(await renderEndOfLoginResponse({
       loginStyle: details.loginStyle,
       setCredentialToken: false,
       redirectUrl,
@@ -418,7 +422,7 @@ OAuth._endOfLoginResponse = (res, details) => {
   // If we have a credentialSecret, report it back to the parent
   // window, with the corresponding credentialToken. The parent window
   // uses the credentialToken and credentialSecret to log in over DDP.
-  res.end(renderEndOfLoginResponse({
+  res.end(await renderEndOfLoginResponse({
     loginStyle: details.loginStyle,
     setCredentialToken: true,
     credentialToken: details.credentials.token,
