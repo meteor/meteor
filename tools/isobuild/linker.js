@@ -1005,7 +1005,7 @@ function getImportCode(imports, header, omitVar) {
   return buf;
 }
 
-var getFooter = function ({
+function getFooter ({
   name,
   exported,
   mainModulePath,
@@ -1017,41 +1017,42 @@ var getFooter = function ({
     return '\n})();\n';
   }
 
-  var chunks = [];
+  let chunks = [];
+  let returnObj = Object.create(null);
 
-    chunks.push("\n\n/* Exports */\n");
-    chunks.push('return {\n');
+  if (! _.isEmpty(exported)) {
+    const scratch = {};
+    _.each(exported, symbol => scratch[symbol] = symbol);
+    const symbolTree = writeSymbolTree(buildSymbolTree(scratch), 4);
+    returnObj.export = `function () { return ${symbolTree};}`;
+  }
 
-    // Even if there are no exports, we need to define Package.foo,
-    // because the existence of Package.foo is how another package
-    // (e.g., one that weakly depends on foo) can tell if foo is loaded.
 
-    if (! _.isEmpty(exported)) {
-      const scratch = {};
-      _.each(exported, symbol => scratch[symbol] = symbol);
-      const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
-      chunks.push("export: function () { return ", symbolTree);
-      chunks.push(';},\n');
+  if (eagerModulePaths && eagerModulePaths.length > 0) {
+    returnObj.require = 'require';
+
+    let modulePaths = eagerModulePaths.map(path => `    ${JSON.stringify(path)}`);
+    returnObj.eagerModulePaths = `[\n${modulePaths.join(',\n')}\n  ]`;
+  }
+  if (mainModulePath) {
+    returnObj.mainModulePath = JSON.stringify(mainModulePath);
+  }
+
+  chunks.push("\n\n/* Exports */\n");
+  chunks.push('return {\n');
+
+  let entries = Object.entries(returnObj);
+  entries.forEach(([ key, value ], index) => {
+    chunks.push(`  ${key}: ${value}`);
+    if (index !== entries.length - 1) {
+      chunks.push(',\n');
     }
-    if (eagerModulePaths && eagerModulePaths.length > 0) {
-      chunks.push('  require: require,\n  eagerModulePaths: [\n');
-      eagerModulePaths.forEach((path, index) => {
-        if (index > 0) {
-          chunks.push(',\n');
-        }
-        chunks.push(`    ${JSON.stringify(path)}`);
-      });
-      chunks.push('\n  ]');
-    }
-    if (mainModulePath) {
-      chunks.push(`,\n  mainModulePath: ${JSON.stringify(mainModulePath)}`);
-    }
-    chunks.push('};\n');
+  });
 
-    chunks.push("\n});\n");
+  chunks.push("\n}});\n");
 
   return chunks.join('');
-};
+}
 
 function wrapWithHeaderAndFooter(files, header, footer) {
   // Bias the source map by the length of the header without
