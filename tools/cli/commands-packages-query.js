@@ -27,7 +27,7 @@ var MAX_RECENT_VERSIONS = 5;
 // Estimate the publication date for a release. Since we have failed to keep
 // track of publication times of release versions in the past, we will try to
 // guess that the release was published at the same time as the tool.
-var getReleaseVersionPublishedOn = function (versionRecord) {
+var getReleaseVersionPublishedOn = async function (versionRecord) {
   if (versionRecord.published) {
     return new Date(versionRecord.published);
   }
@@ -38,7 +38,7 @@ var getReleaseVersionPublishedOn = function (versionRecord) {
   var toolPackage = versionRecord.tool.split('@');
   var toolName = toolPackage[0];
   var toolVersion = toolPackage[1];
-  var toolRecord = catalog.official.getVersion(toolName, toolVersion);
+  var toolRecord = await catalog.official.getVersion(toolName, toolVersion);
   if (! toolRecord || ! toolRecord.published) {
     return null;
   }
@@ -155,15 +155,17 @@ var getTempContext = async function (options) {
       explicitlyAddedLocalPackageDirs: currentPackageDir
     });
   }
+  await projectContext.init();
 
   // It is possible that we can't process package.js files in our local packages
   // and have to exit early. This is unfortunate, but we can't search local
   // packages if we can't read them. If this turns out to be a frequent problem,
   // we can give a warning, instead of failing in the future. For now, we want
   // to err on the side of consistency.
-  await main.captureAndExit("=> Errors while reading local packages:", async function () {
-    await projectContext.initializeCatalog();
+  await main.captureAndExit("=> Errors while reading local packages:", function () {
+    return projectContext.initializeCatalog();
   });
+
   return projectContext;
 };
 
@@ -412,43 +414,35 @@ var PackageQuery = function (options) {
   // We don't want to show pre-releases and un-migrated versions to the user
   // unless they explicitly ask us about it.
   self.showHiddenVersions = options.showHiddenVersions;
+  self.version = options.version;
+};
 
-  // Collect the data for this package, including looking up any specific
-  // package version that we care about.
-  return new Promise(resolve => {
-    console.log('init .....');
-    if (options.version) {
-      var versionRecord = self._getVersionRecord(options.version);
+Object.assign(PackageQuery.prototype, {
+  init: async function() {
+    const self = this;
+    // Collect the data for this package, including looking up any specific
+    // package version that we care about.
+    if (self.version) {
+      var versionRecord = await self._getVersionRecord(self.version);
       if (! versionRecord) {
         self.data = null;
         return;
       }
-      if (versionRecord.local) {
-        self._getLocalVersion(versionRecord).then(res => {
-          self.data = res;
-          console.log('init .....', {res});
-          resolve();
-        });
-      } else {
-        self.data = self._getOfficialVersion(versionRecord);
-      }
-
+      self.data = versionRecord.local ?
+          await self._getLocalVersion(versionRecord) :
+          await self._getOfficialVersion(versionRecord);
     } else {
-      self.data = self._collectPackageData();
-      resolve();
+      self.data = await self._collectPackageData();
     }
-  });
-};
-
-Object.assign(PackageQuery.prototype, {
+  },
   // Find and return a version record for a given version. Mark the version
   // record as local, if it is a local version of the package.
-  _getVersionRecord: function (version) {
+  _getVersionRecord: async function (version) {
     var self = this;
 
     // We allow local version to override remote versions in meteor show, so we
     // should start by checking if this is a local version first.
-    var versionRecord = self.localCatalog.getLatestVersion(self.name);
+    var versionRecord = await self.localCatalog.getLatestVersion(self.name);
 
     // If we asked for "local" as the version number, and found any local version
     // at all, we are done.
@@ -465,7 +459,7 @@ Object.assign(PackageQuery.prototype, {
     // If we haven't found a local record, or if the local record that we found
     // doesn't match the version that we asked for, then we have to go look in
     // the server catalog.
-    versionRecord = catalog.official.getVersion(self.name, version);
+    versionRecord = await catalog.official.getVersion(self.name, version);
     return versionRecord;
   },
   // Print the query information to screen.
@@ -518,7 +512,7 @@ Object.assign(PackageQuery.prototype, {
     // Collect surface information about available versions, starting with the
     // versions available on the server.
     var serverVersionRecords =
-          catalog.official.getSortedVersionRecords(self.name);
+          await catalog.official.getSortedVersionRecords(self.name);
     var totalVersions = serverVersionRecords.length;
 
     // If we are not going to show hidden versions, then we shouldn't waste time
@@ -560,13 +554,14 @@ Object.assign(PackageQuery.prototype, {
 
     // Process the catalog records into our preferred format, and look up any
     // other per-version information that we might need.
-    data["versions"] = _.map(serverVersionRecords, function (versionRecord) {
-      return self._getOfficialVersion(versionRecord);
-    });
+    data["versions"] = [];
+    for (const versionRecord of serverVersionRecords) {
+      data["versions"].push(await self._getOfficialVersion(versionRecord))
+    }
 
     // The local version doesn't count against the version limit. Look up relevant
     // information about the local version.
-    var localVersion = self.localCatalog.getLatestVersion(self.name);
+    var localVersion = await self.localCatalog.getLatestVersion(self.name);
     var local;
     if (localVersion) {
       local = await self._getLocalVersion(localVersion);
@@ -634,7 +629,7 @@ Object.assign(PackageQuery.prototype, {
   //     - packageName: name of the dependency
   //     - constraint: constraint for that dependency
   //     - weak: true if this is a weak dependency.
-  _getOfficialVersion: function (versionRecord) {
+  _getOfficialVersion: async function (versionRecord) {
     var self = this;
     var version = versionRecord.version;
     var name = self.name;
@@ -659,7 +654,7 @@ Object.assign(PackageQuery.prototype, {
     // Processing and formatting architectures takes time, so we don't want to
     // do this if we don't have to.
     if (self.showArchitecturesOS) {
-      var allBuilds = catalog.official.getAllBuilds(self.name, version);
+      var allBuilds = await catalog.official.getAllBuilds(self.name, version);
       var architectures = _.map(allBuilds, function (build) {
         if (! build['buildArchitectures']) {
           return "unknown";
@@ -1098,12 +1093,14 @@ var ReleaseQuery = function (options) {
   // Aggregate the query data. If we are asking for a specific version, get data
   // for a specific version, otherwise aggregate the data about this release
   // track in general.
-  self.data = options.version ?
-    self._getVersionDetails(options.version) :
-    self._getReleaseData();
+  self.version = options.version;
 };
 
 Object.assign(ReleaseQuery.prototype, {
+  init: async function () {
+    const self = this;
+    self.data = self.version ? await self._getVersionDetails(self.version) : await self._getReleaseData();
+  },
   // Prints the data from this ReleaseQuery to the terminal. Takes the following
   // options:
   //   - ejson: Don't pretty-print the data. Return a machine-readable ejson
@@ -1144,14 +1141,14 @@ Object.assign(ReleaseQuery.prototype, {
   //  - publishedOn: date this version was published
   //  - packages: map of packages that go into this version
   //  - tool: the tool package@version for this release version
-  _getVersionDetails: function (version) {
+  _getVersionDetails: async function (version) {
     var self = this;
     var versionRecord =
-       catalog.official.getReleaseVersion(self.name, version);
+       await catalog.official.getReleaseVersion(self.name, version);
     if (! versionRecord) {
       return null;
     }
-    var publishDate = getReleaseVersionPublishedOn(versionRecord);
+    var publishDate = await getReleaseVersionPublishedOn(versionRecord);
     return {
       track: self.name,
       version: version,
@@ -1180,14 +1177,14 @@ Object.assign(ReleaseQuery.prototype, {
   //           this version.
   //         - publishedBy: username of the publisher
   //         - publishedOn: date the version was published
-  _getReleaseData: function () {
+  _getReleaseData: async function () {
     var self = this;
     var data = {
       track: self.metaRecord.name,
       maintainers: _.pluck(self.metaRecord.maintainers, "username")
     };
     data["defaultVersion"] =
-      catalog.official.getDefaultReleaseVersionRecord(self.name);
+      await catalog.official.getDefaultReleaseVersionRecord(self.name);
 
     // Collect information about versions.
     var versions;
@@ -1195,9 +1192,9 @@ Object.assign(ReleaseQuery.prototype, {
       // There is no obvious way to get an absolute ranking of all release
       // versions, so this is unsorted. If we have to, we will deal with sorting
       // this at display time.
-      versions = catalog.official.getReleaseVersionRecords(self.name);
+      versions = await catalog.official.getReleaseVersionRecords(self.name);
     } else {
-      versions = catalog.official.getSortedRecommendedReleaseRecords(self.name);
+      versions = await catalog.official.getSortedRecommendedReleaseRecords(self.name);
       versions.reverse();
     }
 
@@ -1212,13 +1209,14 @@ Object.assign(ReleaseQuery.prototype, {
     if (self.showHiddenVersions) {
       versionFields.push("orderKey");
     }
-    data["versions"] = _.map(versions, function (versionRecord) {
-      var data = _.pick(versionRecord, versionFields);
-      data.publishedBy = versionRecord.publishedBy["username"];
-      data.publishedOn = getReleaseVersionPublishedOn(versionRecord);
-      return data;
-    });
-    data["totalVersions"] = catalog.official.getNumReleaseVersions(self.name);
+    data["versions"] = [];
+    for (const versionRecord of versions) {
+      const pickedValues = _.pick(versionRecord, versionFields);
+      pickedValues.publishedBy = versionRecord.publishedBy["username"];
+      pickedValues.publishedOn = await getReleaseVersionPublishedOn(versionRecord);
+      data["versions"].push(pickedValues);
+    }
+    data["totalVersions"] = await catalog.official.getNumReleaseVersions(self.name);
     return data;
   },
   // Displays information about a specific release version in a human-readable
@@ -1427,7 +1425,7 @@ main.registerCommand({
     }
     // Use the projectContext to get the name of the package.
     var currentVersion =
-          projectContext.localCatalog.getVersionBySourceRoot(options.packageDir);
+          await projectContext.localCatalog.getVersionBySourceRoot(options.packageDir);
     name = currentVersion.packageName;
     version = "local";
     fullName = name + "@local";
@@ -1442,10 +1440,10 @@ main.registerCommand({
   // remote record contains data like 'homepage' and 'maintainers', that the
   // local record does not).
   var packageRecord =
-        catalog.official.getPackage(name) ||
-        projectContext.localCatalog.getPackage(name);
+        await catalog.official.getPackage(name) ||
+        await projectContext.localCatalog.getPackage(name);
   if (packageRecord) {
-    query = await new PackageQuery({
+    query =  new PackageQuery({
       metaRecord: packageRecord,
       version: version,
       projectContext: projectContext,
@@ -1453,19 +1451,21 @@ main.registerCommand({
       showArchitecturesOS: options.ejson,
       showDependencies: !! version
     });
+    await query.init();
   }
 
   // If this is not a package, it might be a release. Let's check if there is
   // a release by this name. There are no local releases, so we only need to
   // check the official catalog.
   if (! query) {
-    var releaseRecord = catalog.official.getReleaseTrack(name);
+    var releaseRecord = await catalog.official.getReleaseTrack(name);
     if (releaseRecord) {
       query = new ReleaseQuery({
         metaRecord: releaseRecord,
         version: version,
         showHiddenVersions: options["show-all"]
       });
+      await query.init();
     }
   }
   // If we have failed to create a query, or if we have created a query and it
@@ -1515,8 +1515,8 @@ main.registerCommand({
 
   // XXX We should push the queries into SQLite!
   var allPackages = _.union(
-    catalog.official.getAllPackageNames(),
-    projectContext.localCatalog.getAllPackageNames());
+    await catalog.official.getAllPackageNames(),
+    await projectContext.localCatalog.getAllPackageNames());
   var allReleases = await catalog.official.getAllReleaseTracks();
   var matchingPackages = [];
   var matchingReleases = [];
@@ -1584,15 +1584,15 @@ main.registerCommand({
     // little sense to require you to be online to find out what packages you
     // own; and the consequence of not mentioning your group packages until
     // you update to a new version of meteor is not that dire.
-    selector = function (name, isRelease) {
+    selector = async function (name, isRelease) {
       var record;
       // XXX make sure search works while offline
       if (isRelease) {
-        record = catalog.official.getReleaseTrack(name);
+        record = await catalog.official.getReleaseTrack(name);
       } else {
-        record = catalog.official.getPackage(name);
+        record = await catalog.official.getPackage(name);
       }
-      return filterBroken(
+      return await filterBroken(
         (name.match(search) &&
          record && !!_.findWhere(record.maintainers, {username: username})),
         isRelease, name);
@@ -1625,10 +1625,9 @@ main.registerCommand({
         }
       }
     }
-
     for (const track of allReleases) {
-      if (await selector(track, true)) {
-        var vr = catalog.official.getDefaultReleaseVersionRecord(track);
+      if (selector(track, true)) {
+        var vr = await catalog.official.getDefaultReleaseVersionRecord(track);
         if (vr) {
           matchingReleases.push({
             name: track,
