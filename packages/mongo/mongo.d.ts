@@ -446,8 +446,8 @@ export namespace Mongo {
       callbacks: ObserveChangesCallbacks<T>,
       options?: { nonMutatingCallbacks?: boolean | undefined }
     ): Meteor.LiveQueryHandle;
-    [Symbol.iterator](): Iterator<T, never, never>;
-    [Symbol.asyncIterator](): AsyncIterator<T, never, never>;
+    [Symbol.iterator](): Iterator<T>;
+    [Symbol.asyncIterator](): AsyncIterator<T>;
   }
 
   var ObjectID: ObjectIDStatic;
