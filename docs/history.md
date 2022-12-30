@@ -1,3 +1,52 @@
+## v3.0, TBD
+
+### Highlights
+
+#### Breaking Changes
+
+* `email`:
+  - `Email.send` is no longer available. Use `Email.sendAsync` instead.
+
+* `accounts-2fa`:
+  - Some methods are now async. See below:
+  - `Accounts._is2faEnabledForUser`
+  - `(Meteor Method) - generate2faActivationQrCode`
+  - `(Meteor Method) - enableUser2fa`
+  - `(Meteor Method) - disableUser2fa`
+  - `(Meteor Method) - has2faEnabled`
+
+* `accounts-password`:
+  - `Accounts.sendResetPasswordEmail` is now async
+  - `Accounts.sendEnrollmentEmail` is now async
+  - `Accounts.sendVerificationEmail` is now async
+  
+* `accounts-passwordless`:
+  - `Accounts.sendLoginTokenEmail` is now async
+
+* `boilerplate-generator`:
+  - `toHTML` is no longer available (it was already deprecated). Use `toHTMLStream` instead.
+  
+* `oauth`:
+  - `_endOfPopupResponseTemplate` and `_endOfRedirectResponseTemplate` are no longer a property but now a function that returns a promise of the same value as before
+  - the following methods are now async: 
+  - `OAuth._renderOauthResults`
+  - `OAuth._endOfLoginResponse`
+  - `OAuth.renderEndOfLoginResponse`
+  - `OAuth._storePendingCredential`
+  - `OAuth._retrievePendingCredential`
+####  Internal API changes
+
+
+#### Migration Steps
+
+You can follow in [here](https://guide.meteor.com/3.0-migration.html).
+
+#### Meteor Version Release
+
+#### Special thanks to
+
+For making this great framework even better!
+
 ## v2.9, 2022-12-12
 
 ### Highlights

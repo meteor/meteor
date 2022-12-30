@@ -14,6 +14,7 @@ const NonEmptyString = Match.Where(x => {
   return x.length > 0;
 });
 
+
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
  * @locus Server
@@ -71,8 +72,6 @@ export class AccountsServer extends AccountsCommon {
 
     // list of all registered handlers.
     this._loginHandlers = [];
-
-    setupUsersCollection(this.users);
     setupDefaultLoginHandlers(this);
     setExpireTokensInterval(this);
 
@@ -124,6 +123,10 @@ export class AccountsServer extends AccountsCommon {
     if (!currentInvocation)
       throw new Error("Meteor.userId can only be invoked in method calls or publications.");
     return currentInvocation.userId;
+  }
+
+  async init() {
+    await setupUsersCollection(this.users);
   }
 
   ///
@@ -259,11 +262,11 @@ export class AccountsServer extends AccountsCommon {
     });
   };
 
-  _successfulLogout(connection, userId) {
+  async _successfulLogout(connection, userId) {
     // don't fetch the user object unless there are some callbacks registered
     let user;
-    this._onLogoutHook.each(callback => {
-      if (!user && userId) user = this.users.findOne(userId, {fields: this._options.defaultFieldSelector});
+    await this._onLogoutHook.forEachAsync(async callback => {
+      if (!user && userId) user = await this.users.findOne(userId, { fields: this._options.defaultFieldSelector });
       callback({ user, connection });
       return true;
     });
@@ -399,10 +402,10 @@ export class AccountsServer extends AccountsCommon {
   // indicates that the login token has already been inserted into the
   // database and doesn't need to be inserted again.  (It's used by the
   // "resume" login handler).
-  _loginUser(methodInvocation, userId, stampedLoginToken) {
+  async _loginUser(methodInvocation, userId, stampedLoginToken) {
     if (! stampedLoginToken) {
       stampedLoginToken = this._generateStampedLoginToken();
-      this._insertLoginToken(userId, stampedLoginToken);
+      await this._insertLoginToken(userId, stampedLoginToken);
     }
 
     // This order (and the avoidance of yields) is important to make
@@ -473,12 +476,13 @@ export class AccountsServer extends AccountsCommon {
     this._validateLogin(methodInvocation.connection, attempt);
 
     if (attempt.allowed) {
+      const o = await this._loginUser(
+        methodInvocation,
+        result.userId,
+        result.stampedLoginToken
+      )
       const ret = {
-        ...this._loginUser(
-          methodInvocation,
-          result.userId,
-          result.stampedLoginToken
-        ),
+        ...o,
         ...result.options
       };
       ret.type = attempt.type;
@@ -615,8 +619,8 @@ export class AccountsServer extends AccountsCommon {
   // Any connections associated with old-style unhashed tokens will be
   // in the process of becoming associated with hashed tokens and then
   // they'll get closed.
-  destroyToken(userId, loginToken) {
-    this.users.update(userId, {
+  async destroyToken(userId, loginToken) {
+    await this.users.update(userId, {
       $pull: {
         "services.resume.loginTokens": {
           $or: [
@@ -653,13 +657,13 @@ export class AccountsServer extends AccountsCommon {
       return await accounts._attemptLogin(this, "login", arguments, result);
     };
 
-    methods.logout = function () {
+    methods.logout = async function () {
       const token = accounts._getLoginToken(this.connection.id);
       accounts._setLoginToken(this.userId, this.connection, null);
       if (token && this.userId) {
-        accounts.destroyToken(this.userId, token);
+       await accounts.destroyToken(this.userId, token);
       }
-      accounts._successfulLogout(this.connection, this.userId);
+      await accounts._successfulLogout(this.connection, this.userId);
       this.setUserId(null);
     };
 
@@ -671,8 +675,8 @@ export class AccountsServer extends AccountsCommon {
     // @returns Object
     //   If successful, returns { token: <new token>, id: <user id>,
     //   tokenExpires: <expiration date> }.
-    methods.getNewToken = function () {
-      const user = accounts.users.findOne(this.userId, {
+    methods.getNewToken = async function () {
+      const user = await accounts.users.findOne(this.userId, {
         fields: { "services.resume.loginTokens": 1 }
       });
       if (! this.userId || ! user) {
@@ -691,8 +695,8 @@ export class AccountsServer extends AccountsCommon {
       }
       const newStampedToken = accounts._generateStampedLoginToken();
       newStampedToken.when = currentStampedToken.when;
-      accounts._insertLoginToken(this.userId, newStampedToken);
-      return accounts._loginUser(this, this.userId, newStampedToken);
+      await accounts._insertLoginToken(this.userId, newStampedToken);
+      return await accounts._loginUser(this, this.userId, newStampedToken);
     };
 
     // Removes all tokens except the token associated with the current
@@ -896,10 +900,10 @@ export class AccountsServer extends AccountsCommon {
   // Using $addToSet avoids getting an index error if another client
   // logging in simultaneously has already inserted the new hashed
   // token.
-  _insertHashedLoginToken(userId, hashedToken, query) {
+  async _insertHashedLoginToken(userId, hashedToken, query) {
     query = query ? { ...query } : {};
     query._id = userId;
-    this.users.update(query, {
+    await this.users.update(query, {
       $addToSet: {
         "services.resume.loginTokens": hashedToken
       }
@@ -907,14 +911,20 @@ export class AccountsServer extends AccountsCommon {
   };
 
   // Exported for tests.
-  _insertLoginToken(userId, stampedToken, query) {
-    this._insertHashedLoginToken(
+  async _insertLoginToken(userId, stampedToken, query) {
+    await this._insertHashedLoginToken(
       userId,
       this._hashStampedToken(stampedToken),
       query
     );
   };
 
+  /**
+   *
+   * @param userId
+   * @private
+   * @returns {Promise<void>}
+   */
   _clearAllLoginTokens(userId) {
     this.users.update(userId, {
       $set: {
@@ -972,7 +982,7 @@ export class AccountsServer extends AccountsCommon {
       // already -- in this case we just clean up the observe that we started).
       const myObserveNumber = ++this._nextUserObserveNumber;
       this._userObservesForConnections[connection.id] = myObserveNumber;
-      Meteor.defer(() => {
+      Meteor.defer(async () => {
         // If something else happened on this connection in the meantime (it got
         // closed, or another call to _setLoginToken happened), just do
         // nothing. We don't need to start an observe for an old connection or old
@@ -985,7 +995,7 @@ export class AccountsServer extends AccountsCommon {
         // Because we upgrade unhashed login tokens to hashed tokens at
         // login time, sessions will only be logged in with a hashed
         // token. Thus we only need to observe hashed tokens here.
-        const observe = this.users.find({
+        const observe = await this.users.find({
           _id: userId,
           'services.resume.loginTokens.hashedToken': newToken
         }, { fields: { _id: 1 } }).observeChanges({
@@ -1096,7 +1106,14 @@ export class AccountsServer extends AccountsCommon {
   // tests. oldestValidDate is simulate expiring tokens without waiting
   // for them to actually expire. userId is used by tests to only expire
   // tokens for the test user.
-  _expireTokens(oldestValidDate, userId) {
+  /**
+   *
+   * @param oldestValidDate
+   * @param userId
+   * @private
+   * @return {Promise<void>}
+   */
+  async _expireTokens(oldestValidDate, userId) {
     const tokenLifetimeMs = this._getTokenLifetimeMs();
 
     // when calling from a test with extra arguments, you must specify both!
@@ -1111,7 +1128,7 @@ export class AccountsServer extends AccountsCommon {
 
     // Backwards compatible with older versions of meteor that stored login token
     // timestamps as numbers.
-    this.users.update({ ...userFilter,
+    await this.users.update({ ...userFilter,
       $or: [
         { "services.resume.loginTokens.when": { $lt: oldestValidDate } },
         { "services.resume.loginTokens.when": { $lt: +oldestValidDate } }
@@ -1148,7 +1165,7 @@ export class AccountsServer extends AccountsCommon {
   };
 
   // Called by accounts-password
-  insertUserDoc(options, user) {
+  async insertUserDoc(options, user) {
     // - clone user document, to protect from modification
     // - add createdAt timestamp
     // - prepare an _id, so that you can modify other collections (eg
@@ -1193,7 +1210,7 @@ export class AccountsServer extends AccountsCommon {
 
     let userId;
     try {
-      userId = this.users.insert(fullUser);
+      userId = await this.users.insert(fullUser);
     } catch (e) {
       // XXX string parsing sucks, maybe
       // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
@@ -1223,9 +1240,9 @@ export class AccountsServer extends AccountsCommon {
   /// CLEAN UP FOR `logoutOtherClients`
   ///
 
-  _deleteSavedTokensForUser(userId, tokensToDelete) {
+  async _deleteSavedTokensForUser(userId, tokensToDelete) {
     if (tokensToDelete) {
-      this.users.update(userId, {
+      await this.users.update(userId, {
         $unset: {
           "services.resume.haveLoginTokensToDelete": 1,
           "services.resume.loginTokensToDelete": 1
@@ -1244,16 +1261,23 @@ export class AccountsServer extends AccountsCommon {
     // shouldn't happen very often. We shouldn't put a delay here because
     // that would give a lot of power to an attacker with a stolen login
     // token and the ability to crash the server.
-    Meteor.startup(() => {
-      this.users.find({
+    Meteor.startup(async () => {
+      await this.users.find({
         "services.resume.haveLoginTokensToDelete": true
-      }, {fields: {
+      }, {
+        fields: {
           "services.resume.loginTokensToDelete": 1
-        }}).forEach(user => {
+        }
+      }).forEach(user => {
         this._deleteSavedTokensForUser(
           user._id,
           user.services.resume.loginTokensToDelete
-        );
+        )
+          // We don't need to wait for this to complete.
+          .then(_ => _)
+          .catch(err => {
+            console.log(err);
+          });
       });
     });
   };
@@ -1273,7 +1297,7 @@ export class AccountsServer extends AccountsCommon {
   // @returns {Object} Object with token and id keys, like the result
   //        of the "login" method.
   //
-  updateOrCreateUserFromExternalService(
+  async updateOrCreateUserFromExternalService(
     serviceName,
     serviceData,
     options
@@ -1308,13 +1332,11 @@ export class AccountsServer extends AccountsCommon {
     } else {
       selector[serviceIdKey] = serviceData.id;
     }
-
-    let user = this.users.findOne(selector, {fields: this._options.defaultFieldSelector});
-
+    let user = await this.users.findOne(selector, {fields: this._options.defaultFieldSelector});
     // Check to see if the developer has a custom way to find the user outside
     // of the general selectors above.
     if (!user && this._additionalFindUserOnExternalLogin) {
-      user = this._additionalFindUserOnExternalLogin({serviceName, serviceData, options})
+      user = await this._additionalFindUserOnExternalLogin({serviceName, serviceData, options})
     }
 
     // Before continuing, run user hook to see if we should continue
@@ -1334,7 +1356,7 @@ export class AccountsServer extends AccountsCommon {
     }
 
     if (user) {
-      pinEncryptedFieldsToUser(serviceData, user._id);
+      await pinEncryptedFieldsToUser(serviceData, user._id);
 
       let setAttrs = {};
       Object.keys(serviceData).forEach(key =>
@@ -1344,7 +1366,7 @@ export class AccountsServer extends AccountsCommon {
       // XXX Maybe we should re-use the selector above and notice if the update
       //     touches nothing?
       setAttrs = { ...setAttrs, ...opts };
-      this.users.update(user._id, {
+      await this.users.update(user._id, {
         $set: setAttrs
       });
 
@@ -1356,9 +1378,10 @@ export class AccountsServer extends AccountsCommon {
       // Create a new user with the service data.
       user = {services: {}};
       user.services[serviceName] = serviceData;
+      const userId = await this.insertUserDoc(opts, user);
       return {
         type: serviceName,
-        userId: this.insertUserDoc(opts, user)
+        userId
       };
     }
   };
@@ -1540,7 +1563,7 @@ const setupDefaultLoginHandlers = accounts => {
 };
 
 // Login handler for resume tokens.
-const defaultResumeLoginHandler = (accounts, options) => {
+const defaultResumeLoginHandler = async (accounts, options) => {
   if (!options.resume)
     return undefined;
 
@@ -1551,7 +1574,7 @@ const defaultResumeLoginHandler = (accounts, options) => {
   // First look for just the new-style hashed login token, to avoid
   // sending the unhashed token to the database in a query if we don't
   // need to.
-  let user = accounts.users.findOne(
+  let user = await accounts.users.findOne(
     {"services.resume.loginTokens.hashedToken": hashedToken},
     {fields: {"services.resume.loginTokens.$": 1}});
 
@@ -1561,7 +1584,7 @@ const defaultResumeLoginHandler = (accounts, options) => {
     // the old-style token OR the new-style token, because another
     // client connection logging in simultaneously might have already
     // converted the token.
-    user = accounts.users.findOne({
+    user =  await accounts.users.findOne({
         $or: [
           {"services.resume.loginTokens.hashedToken": hashedToken},
           {"services.resume.loginTokens.token": options.resume}
@@ -1580,13 +1603,13 @@ const defaultResumeLoginHandler = (accounts, options) => {
   // {hashedToken, when} for a hashed token or {token, when} for an
   // unhashed token.
   let oldUnhashedStyleToken;
-  let token = user.services.resume.loginTokens.find(token =>
+  let token = await user.services.resume.loginTokens.find(token =>
     token.hashedToken === hashedToken
   );
   if (token) {
     oldUnhashedStyleToken = false;
   } else {
-    token = user.services.resume.loginTokens.find(token =>
+     token = await user.services.resume.loginTokens.find(token =>
       token.token === options.resume
     );
     oldUnhashedStyleToken = true;
@@ -1606,7 +1629,7 @@ const defaultResumeLoginHandler = (accounts, options) => {
     // after we read it).  Using $addToSet avoids getting an index
     // error if another client logging in simultaneously has already
     // inserted the new hashed token.
-    accounts.users.update(
+    await accounts.users.update(
       {
         _id: user._id,
         "services.resume.loginTokens.token": options.resume
@@ -1622,7 +1645,7 @@ const defaultResumeLoginHandler = (accounts, options) => {
     // Remove the old token *after* adding the new, since otherwise
     // another client trying to login between our removing the old and
     // adding the new wouldn't find a token to login with.
-    accounts.users.update(user._id, {
+    await accounts.users.update(user._id, {
       $pull: {
         "services.resume.loginTokens": { "token": options.resume }
       }
@@ -1638,49 +1661,50 @@ const defaultResumeLoginHandler = (accounts, options) => {
   };
 };
 
-const expirePasswordToken = (
-  accounts,
-  oldestValidDate,
-  tokenFilter,
-  userId
-) => {
-  // boolean value used to determine if this method was called from enroll account workflow
-  let isEnroll = false;
-  const userFilter = userId ? {_id: userId} : {};
-  // check if this method was called from enroll account workflow
-  if(tokenFilter['services.password.enroll.reason']) {
-    isEnroll = true;
-  }
-  let resetRangeOr = {
-    $or: [
-      { "services.password.reset.when": { $lt: oldestValidDate } },
-      { "services.password.reset.when": { $lt: +oldestValidDate } }
-    ]
-  };
-  if(isEnroll) {
-    resetRangeOr = {
+const expirePasswordToken =
+  async (
+    accounts,
+    oldestValidDate,
+    tokenFilter,
+    userId
+  ) => {
+    // boolean value used to determine if this method was called from enroll account workflow
+    let isEnroll = false;
+    const userFilter = userId ? { _id: userId } : {};
+    // check if this method was called from enroll account workflow
+    if (tokenFilter['services.password.enroll.reason']) {
+      isEnroll = true;
+    }
+    let resetRangeOr = {
       $or: [
-        { "services.password.enroll.when": { $lt: oldestValidDate } },
-        { "services.password.enroll.when": { $lt: +oldestValidDate } }
+        { "services.password.reset.when": { $lt: oldestValidDate } },
+        { "services.password.reset.when": { $lt: +oldestValidDate } }
       ]
     };
-  }
-  const expireFilter = { $and: [tokenFilter, resetRangeOr] };
-  if(isEnroll) {
-    accounts.users.update({...userFilter, ...expireFilter}, {
-      $unset: {
-        "services.password.enroll": ""
-      }
-    }, { multi: true });
-  } else {
-    accounts.users.update({...userFilter, ...expireFilter}, {
-      $unset: {
-        "services.password.reset": ""
-      }
-    }, { multi: true });
-  }
+    if (isEnroll) {
+      resetRangeOr = {
+        $or: [
+          { "services.password.enroll.when": { $lt: oldestValidDate } },
+          { "services.password.enroll.when": { $lt: +oldestValidDate } }
+        ]
+      };
+    }
+    const expireFilter = { $and: [tokenFilter, resetRangeOr] };
+    if (isEnroll) {
+      await accounts.users.update({ ...userFilter, ...expireFilter }, {
+        $unset: {
+          "services.password.enroll": ""
+        }
+      }, { multi: true });
+    } else {
+      await accounts.users.update({ ...userFilter, ...expireFilter }, {
+        $unset: {
+          "services.password.reset": ""
+        }
+      }, { multi: true });
+    }
 
-};
+  };
 
 const setExpireTokensInterval = accounts => {
   accounts.expireTokenInterval = Meteor.setInterval(() => {
@@ -1747,7 +1771,7 @@ function defaultValidateNewUserHook(user) {
   }
 }
 
-const setupUsersCollection = users => {
+const setupUsersCollection = async users => {
   ///
   /// RESTRICTING WRITES TO USER OBJECTS
   ///
@@ -1773,21 +1797,21 @@ const setupUsersCollection = users => {
   });
 
   /// DEFAULT INDEXES ON USERS
-  users.createIndex('username', { unique: true, sparse: true });
-  users.createIndex('emails.address', { unique: true, sparse: true });
-  users.createIndex('services.resume.loginTokens.hashedToken',
+  await users.createIndex('username', { unique: true, sparse: true });
+  await users.createIndex('emails.address', { unique: true, sparse: true });
+  await users.createIndex('services.resume.loginTokens.hashedToken',
     { unique: true, sparse: true });
-  users.createIndex('services.resume.loginTokens.token',
+  await users.createIndex('services.resume.loginTokens.token',
     { unique: true, sparse: true });
   // For taking care of logoutOtherClients calls that crashed before the
   // tokens were deleted.
-  users.createIndex('services.resume.haveLoginTokensToDelete',
+  await users.createIndex('services.resume.haveLoginTokensToDelete',
     { sparse: true });
   // For expiring login tokens
-  users.createIndex("services.resume.loginTokens.when", { sparse: true });
+  await users.createIndex("services.resume.loginTokens.when", { sparse: true });
   // For expiring password tokens
-  users.createIndex('services.password.reset.when', { sparse: true });
-  users.createIndex('services.password.enroll.when', { sparse: true });
+  await users.createIndex('services.password.reset.when', { sparse: true });
+  await users.createIndex('services.password.enroll.when', { sparse: true });
 };
 
 

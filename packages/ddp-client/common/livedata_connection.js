@@ -15,13 +15,6 @@ import {
   last,
 } from "meteor/ddp-common/utils.js";
 
-let Fiber;
-let Future;
-if (Meteor.isServer) {
-  Fiber = Npm.require('fibers');
-  Future = Npm.require('fibers/future');
-}
-
 class MongoIDMap extends IdMap {
   constructor() {
     super(MongoID.idStringify, MongoID.idParse);
@@ -494,30 +487,6 @@ export class Connection {
     return handle;
   }
 
-  // options:
-  // - onLateError {Function(error)} called if an error was received after the ready event.
-  //     (errors received before ready cause an error to be thrown)
-  _subscribeAndWait(name, args, options) {
-    const self = this;
-    const f = new Future();
-    let ready = false;
-    args = args || [];
-    args.push({
-      onReady() {
-        ready = true;
-        f['return']();
-      },
-      onError(e) {
-        if (!ready) f['throw'](e);
-        else options && options.onLateError && options.onLateError(e);
-      }
-    });
-
-    const handle = self.subscribe.apply(self, [name].concat(args));
-    f.wait();
-    return handle;
-  }
-
   methods(methods) {
     Object.entries(methods).forEach(([name, func]) => {
       if (typeof func !== 'function') {
@@ -606,14 +575,12 @@ export class Connection {
     DDP._CurrentMethodInvocation._set();
     DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
     return new Promise((resolve, reject) => {
-      this.applyAsync(name, args, { isFromCallAsync: true }, (err, result) => {
-        DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false);
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(result);
-      });
+      this.applyAsync(name, args, { isFromCallAsync: true })
+        .then(result => {
+          DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false);
+          resolve(result);
+        })
+        .catch(reject);
     });
   }
 
@@ -669,9 +636,8 @@ export class Connection {
    * @param {Boolean} options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
-   * @param {Function} [asyncCallback] Optional callback.
    */
-  async applyAsync(name, args, options, callback) {
+  async applyAsync(name, args, options) {
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args), options);
     if (stubOptions.hasStub) {
       if (
@@ -695,14 +661,7 @@ export class Connection {
           invocation
         );
         try {
-          const resultOrThenable = stubInvocation();
-          const isThenable =
-            resultOrThenable && typeof resultOrThenable.then === 'function';
-          if (isThenable) {
-            stubOptions.stubReturnValue = await resultOrThenable;
-          } else {
-            stubOptions.stubReturnValue = resultOrThenable;
-          }
+          stubOptions.stubReturnValue = await stubInvocation();
         } finally {
           DDP._CurrentMethodInvocation._set(currentContext);
         }
@@ -710,7 +669,7 @@ export class Connection {
         stubOptions.exception = e;
       }
     }
-    return this._apply(name, stubOptions, args, options, callback);
+    return this._apply(name, stubOptions, args, options, null);
   }
 
   _apply(name, stubCallValue, args, options, callback) {
@@ -810,8 +769,24 @@ export class Connection {
       } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
-        future = new Future();
-        callback = future.resolver();
+        // TODO fibers: before this was a future, now it's a promise.
+        //  Do more tests around this.
+
+        if (!options.isFromCallAsync) {
+          throw new Error("Can't create a future for Meteor.call()");
+        }
+
+        future = new Promise((resolve, reject) => {
+          callback = (...allArgs) => {
+            let args = Array.from(allArgs);
+            let err = args.shift();
+            if (err) {
+              reject(err);
+              return;
+            }
+            resolve(...args);
+          }
+        });
       }
     }
 
@@ -856,7 +831,7 @@ export class Connection {
     // If we're using the default callback on the server,
     // block waiting for the result.
     if (future) {
-      return future.wait();
+      return future;
     }
     return options.returnStubValue ? stubReturnValue : undefined;
   }

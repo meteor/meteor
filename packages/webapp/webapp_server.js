@@ -572,6 +572,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   res,
   next
 ) {
+  // console.log(String(arguments.callee));
   var pathname = parseRequest(req).pathname;
   try {
     pathname = decodeURIComponent(pathname);
@@ -1121,6 +1122,7 @@ function runWebAppServer() {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function(req, res, next) {
+    // console.log(String(arguments.callee));
     WebAppInternals.staticFilesMiddleware(
       WebAppInternals.staticFilesByArch,
       req,

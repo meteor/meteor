@@ -14,13 +14,7 @@ var MIN_NODE_VERSION = 'v14.0.0';
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
-//  For now it's a function to ensure we don't get a falsy value.
-//  Once we figure out the best place to create this EV (maybe it's here),
-//  it won't need to be a function anymore.
-
-global._isFibersEnabled = function () {
-  return !process.env.DISABLE_FIBERS;
-};
+const IS_FIBERS_ENABLED = !!!process.env.DISABLE_FIBERS;
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -485,16 +479,31 @@ var runMain = Profile("Run main()", function () {
   }
 });
 
-Fiber(function () {
-  Profile.run("Server startup", function () {
-    loadServerBundles();
+function startServerProcess() {
+  const { AsyncLocalStorage } = require('async_hooks');
+  global.asyncLocalStorage = new AsyncLocalStorage();
 
-    let promise = global.Package['core-runtime'].waitUntilAllLoaded();
-    if (promise) {
-      promise.await();
+  Profile.run('Server startup', function() {
+    // TODO[FIBERS] the if around loadServerBundles should be enough
+    if (IS_FIBERS_ENABLED) {
+      loadServerBundles();
+      callStartupHooks();
+      runMain();
+    } else {
+      global.asyncLocalStorage.run({ level: 'boot' }, () => {
+        loadServerBundles();
+        callStartupHooks();
+        runMain();
+      });
     }
-
-    callStartupHooks();
-    runMain();
   });
-}).run();
+}
+
+if (IS_FIBERS_ENABLED) {
+  Fiber(function() {
+    startServerProcess();
+  }).run();
+  return;
+} else {
+  startServerProcess();
+}
