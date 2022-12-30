@@ -6,7 +6,7 @@
 //
 // Because of this, we do have to be careful that the files used by this code
 // and the files used by tropohouse.js (the modern version of the warehouse)
-// don't overlap. tropohouse does not use tools or releases directorys, and
+// don't overlap. tropohouse does not use tools or releases directories, and
 // while they both have packages directories with similar structures, the
 // version names should not overlap: warehouse versions are SHAs and tropohouse
 // versions are semvers.  Additionally, while they do both use the 'meteor'

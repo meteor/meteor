@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@meteorjs/babel": {
-      "version": "7.16.0-beta.1",
+      "version": "7.18.0-beta.4",
       "dependencies": {
         "@ampproject/remapping": {
           "version": "2.1.1",
@@ -1695,9 +1695,9 @@
           "integrity": "sha1-3F5pjL0HkmW8c+A3doGk5Og/YW4="
         },
         "typescript": {
-          "version": "4.5.4",
-          "resolved": "https://registry.npmjs.org/typescript/-/typescript-4.5.4.tgz",
-          "integrity": "sha512-VgYs2A2QIRuGphtzFV7aQJduJ2gyfTljngLzjpfW9FoYZF6xuw1W0vW9ghCKLfcWrCFxK81CSGRAvS1pn4fIUg=="
+          "version": "4.6.4",
+          "resolved": "https://registry.npmjs.org/typescript/-/typescript-4.6.4.tgz",
+          "integrity": "sha512-9ia/jWHIEbo49HfjrLGfKbZSuWo9iTMwXO+Ca3pRsSpbsMbc7/IU8NKdCZVRRBafVPGnoJeFL76ZOAA84I9fEg=="
         },
         "unbox-primitive": {
           "version": "1.0.1",
