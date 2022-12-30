@@ -620,7 +620,7 @@
         },
         "@meteorjs/reify": {
           "version": "0.24.0",
-          "resolved": "github:meteor/reify#bce9840a6a1d52b6cdb87efb6443fb97ef65fbbe",
+          "resolved": "github:meteor/reify#46e208eebcaa0a424397149401ce6a03d91f1a1b",
           "dependencies": {
             "semver": {
               "version": "5.7.1",
