@@ -15,78 +15,11 @@ export type UnionOmit<T, K extends keyof any> = T extends T
   : never;
 
 export namespace Mongo {
-  // prettier-ignore
-  type BsonType = 1 | "double" |
-            2 | "string" |
-            3 | "object" |
-            4 | "array" |
-            5 | "binData" |
-            6 | "undefined" |
-            7 | "objectId" |
-            8 | "bool" |
-            9 | "date" |
-            10 | "null" |
-            11 | "regex" |
-            12 | "dbPointer" |
-            13 | "javascript" |
-            14 | "symbol" |
-            15 | "javascriptWithScope" |
-            16 | "int" |
-            17 | "timestamp" |
-            18 | "long" |
-            19 | "decimal" |
-            -1 | "minKey" |
-            127 | "maxKey" | "number";
 
-  type FieldExpression<T> = {
-    $eq?: T | undefined;
-    $gt?: T | undefined;
-    $gte?: T | undefined;
-    $lt?: T | undefined;
-    $lte?: T | undefined;
-    $in?: T[] | undefined;
-    $nin?: T[] | undefined;
-    $ne?: T | undefined;
-    $exists?: boolean | undefined;
-    $type?: BsonType[] | BsonType | undefined;
-    $not?: FieldExpression<T> | undefined;
-    $expr?: FieldExpression<T> | undefined;
-    $jsonSchema?: any;
-    $mod?: number[] | undefined;
-    $regex?: RegExp | string | undefined;
-    $options?: string | undefined;
-    $text?:
-      | {
-          $search: string;
-          $language?: string | undefined;
-          $caseSensitive?: boolean | undefined;
-          $diacriticSensitive?: boolean | undefined;
-        }
-      | undefined;
-    $where?: string | Function | undefined;
-    $geoIntersects?: any;
-    $geoWithin?: any;
-    $near?: any;
-    $nearSphere?: any;
-    $all?: T[] | undefined;
-    $elemMatch?: T extends {} ? Query<T> : FieldExpression<T> | undefined;
-    $size?: number | undefined;
-    $bitsAllClear?: any;
-    $bitsAllSet?: any;
-    $bitsAnyClear?: any;
-    $bitsAnySet?: any;
-    $comment?: string | undefined;
-  };
-
-  type Flatten<T> = T extends any[] ? T[0] : T;
-
-  type Query<T> = {
-    [P in keyof T]?: Flatten<T[P]> | RegExp | FieldExpression<Flatten<T[P]>>;
-  } & {
-    $or?: Query<T>[] | undefined;
-    $and?: Query<T>[] | undefined;
-    $nor?: Query<T>[] | undefined;
-  } & Dictionary<any>;
+  /**
+   * Alias for {@link MongoNpmModule.Filter}
+   */
+  type Query<T> = MongoNpmModule.Filter<T>;
 
   type QueryWithModifiers<T> = {
     $query: Query<T>;
@@ -122,41 +55,13 @@ export namespace Mongo {
           $sort?: 1 | -1 | Dictionary<number> | undefined;
         };
   };
-  type ArraysOrEach<T> = {
-    [P in keyof T]?: OnlyElementsOfArrays<T[P]> | { $each: T[P] };
-  };
-  type CurrentDateModifier = { $type: 'timestamp' | 'date' } | true;
-  type Modifier<T> =
-    | T
-    | {
-        $currentDate?:
-          | (Partial<Record<keyof T, CurrentDateModifier>> &
-              Dictionary<CurrentDateModifier>)
-          | undefined;
-        $inc?: (PartialMapTo<T, number> & Dictionary<number>) | undefined;
-        $min?:
-          | (PartialMapTo<T, Date | number> & Dictionary<Date | number>)
-          | undefined;
-        $max?:
-          | (PartialMapTo<T, Date | number> & Dictionary<Date | number>)
-          | undefined;
-        $mul?: (PartialMapTo<T, number> & Dictionary<number>) | undefined;
-        $rename?: (PartialMapTo<T, string> & Dictionary<string>) | undefined;
-        $set?: (Partial<T> & Dictionary<any>) | undefined;
-        $setOnInsert?: (Partial<T> & Dictionary<any>) | undefined;
-        $unset?:
-          | (PartialMapTo<T, string | boolean | 1 | 0> & Dictionary<any>)
-          | undefined;
-        $addToSet?: (ArraysOrEach<T> & Dictionary<any>) | undefined;
-        $push?: (PushModifier<T> & Dictionary<any>) | undefined;
-        $pull?: (ElementsOf<T> & Dictionary<any>) | undefined;
-        $pullAll?: (Partial<T> & Dictionary<any>) | undefined;
-        $pop?: (PartialMapTo<T, 1 | -1> & Dictionary<1 | -1>) | undefined;
-      };
+  
+  type Modifier<T> = MongoNpmModule.UpdateFilter<T>;
 
   type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: any };
 
-  interface SortSpecifier {}
+  type SortSpecifier = MongoNpmModule.Sort;
+
   interface FieldSpecifier {
     [id: string]: Number;
   }
