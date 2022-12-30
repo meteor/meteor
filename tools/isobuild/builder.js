@@ -128,8 +128,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     if (this.resetBuildPath) {
       await files.rm_recursive(this.buildPath);
       await files.mkdir_p(this.buildPath, 0o755);
-      this.watchSet = new WatchSet();
     }
+    this.watchSet = new WatchSet();
   }
 
   // Like mkdir_p, but records in self.usedAsFile that we have created
