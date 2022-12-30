@@ -20,8 +20,7 @@ function getReifyOptions(features) {
   const reifyOptions = {
     avoidModernSyntax: true,
     enforceStrictMode: false,
-    dynamicImport: true,
-    topLevelAwait: features.topLevelAwait
+    dynamicImport: true
   };
 
   if (features) {
@@ -35,6 +34,10 @@ function getReifyOptions(features) {
       // If we're compiling code to run in the Node REPL; we never want to
       // wrap it with a function to rename the `module` identifier.
       reifyOptions.moduleAlias = "module";
+    }
+
+    if (features.topLevelAwait) {
+      reifyOptions.topLevelAwait = true;
     }
   }
 
