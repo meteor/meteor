@@ -430,6 +430,12 @@ var loadServerBundles = Profile("Load server bundles", function () {
   infos.forEach(info => {
     info.fn.apply(global, info.args);
   });
+
+  if (global.Package['core-runtime']) {
+    return global.Package['core-runtime'].waitUntilAllLoaded();
+  }
+
+  return null;
 });
 
 var callStartupHooks = Profile("Call Meteor.startup hooks", function () {
@@ -486,12 +492,21 @@ function startServerProcess() {
   Profile.run('Server startup', function() {
     // TODO[FIBERS] the if around loadServerBundles should be enough
     if (IS_FIBERS_ENABLED) {
-      loadServerBundles();
+      let potentialPromise = loadServerBundles();
+      if (potentialPromise) {
+        potentialPromise.await();
+      }
+
       callStartupHooks();
       runMain();
     } else {
-      global.asyncLocalStorage.run({ level: 'boot' }, () => {
-        loadServerBundles();
+      global.asyncLocalStorage.run({ level: 'boot' }, async () => {
+        let potentialPromise = loadServerBundles();
+        // TODO: For consistency, should this always await?
+        if (potentialPromise) {
+          await potentialPromise;
+        }
+
         callStartupHooks();
         runMain();
       });
