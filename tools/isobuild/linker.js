@@ -1176,7 +1176,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     eagerModulePaths ||
     mainModulePath
   )) {
-    throw new Error('Runtime is not available, but it uses features needing the runtime');
+    throw new Error(`Runtime is not available, but it uses features needing the runtime: ${name}`);
   }
 
   // If we're in the app, then we just add the import code as its own file in
