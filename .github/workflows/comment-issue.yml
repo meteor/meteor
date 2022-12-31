@@ -1,0 +1,31 @@
+name: Add immediate comment on new issues
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  createComment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Comment
+        uses: peter-evans/create-or-update-comment@v1.4.2
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Thank you for submitting this issue!
+            
+            We, the Members of Meteor Community Packages take every issue seriously.
+            Our goal is to provide long-term lifecycles for packages and keep up
+            with the newest changes in Meteor and the overall NodeJs/JavaScript ecosystem.
+            
+            However, we contribute to these packages mostly in our free time.
+            Therefore, we can't guarantee your issues to be solved within certain time.
+            
+            If you think this issue is trivial to solve, don't hesitate to submit
+            a pull request, too! We will accompany you in the process with reviews and hints
+            on how to get development set up.
+            
+            Please also consider sponsoring the maintainers of the package.
+            If you don't know who is currently maintaining this package, just leave a comment
+            and we'll let you know
