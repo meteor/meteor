@@ -3286,54 +3286,54 @@ if (Meteor.isServer) {
 //    the future. (Well, the invocation happened earlier but the use of the
 //    Future sequences it so that the confirmation only gets read at this point.)
 // TODO -> Fix me
-// if (Meteor.isClient) {
-//   testAsyncMulti("mongo-livedata - fence onBeforeFire error", [
-//     function (test, expect) {
-//       var self = this;
-//       self.nonce = Random.id();
-//       Meteor.call('fenceOnBeforeFireError1', self.nonce, expect(function (err) {
-//         test.isFalse(err);
-//       }));
-//     },
-//     function (test, expect) {
-//       var self = this;
-//       Meteor.call('fenceOnBeforeFireError2', self.nonce, expect(
-//           function (err, success) {
-//             test.isFalse(err);
-//             test.isTrue(success);
-//           }
-//       ));
-//     }
-//   ]);
-// } else {
-//   var fenceOnBeforeFireErrorCollection = new Mongo.Collection("FOBFE");
-//   var Future = Npm.require('fibers/future');
-//   var futuresByNonce = {};
-//   Meteor.methods({
-//     fenceOnBeforeFireError1: function (nonce) {
-//       futuresByNonce[nonce] = new Future;
-//       var observe = fenceOnBeforeFireErrorCollection.find({nonce: nonce})
-//           .observeChanges({added: function (){}});
-//       Meteor.setTimeout(function () {
-//         fenceOnBeforeFireErrorCollection.insert(
-//             {nonce: nonce},
-//             function (err, result) {
-//               var success = !err && result;
-//               futuresByNonce[nonce].return(success);
-//               observe.stop();
-//             }
-//         );
-//       }, 10);
-//     },
-//     fenceOnBeforeFireError2: function (nonce) {
-//       try {
-//         return futuresByNonce[nonce].wait();
-//       } finally {
-//         delete futuresByNonce[nonce];
-//       }
-//     }
-//   });
-// }
+if (Meteor.isClient) {
+  testAsyncMulti("mongo-livedata - fence onBeforeFire error", [
+    function (test, expect) {
+      var self = this;
+      self.nonce = Random.id();
+      Meteor.call('fenceOnBeforeFireError1', self.nonce, expect(function (err) {
+        test.isFalse(err);
+      }));
+    },
+    function (test, expect) {
+      var self = this;
+      Meteor.call('fenceOnBeforeFireError2', self.nonce, expect(
+          function (err, success) {
+            test.isFalse(err);
+            test.isTrue(success);
+          }
+      ));
+    }
+  ]);
+} else {
+  var fenceOnBeforeFireErrorCollection = new Mongo.Collection("FOBFE");
+  var Future = Npm.require('fibers/future');
+  var futuresByNonce = {};
+  Meteor.methods({
+    fenceOnBeforeFireError1: function (nonce) {
+      futuresByNonce[nonce] = new Future;
+      var observe = fenceOnBeforeFireErrorCollection.find({nonce: nonce})
+          .observeChanges({added: function (){}});
+      Meteor.setTimeout(function () {
+        fenceOnBeforeFireErrorCollection.insert(
+            {nonce: nonce},
+            function (err, result) {
+              var success = !err && result;
+              futuresByNonce[nonce].return(success);
+              observe.stop();
+            }
+        );
+      }, 10);
+    },
+    fenceOnBeforeFireError2: function (nonce) {
+      try {
+        return futuresByNonce[nonce].wait();
+      } finally {
+        delete futuresByNonce[nonce];
+      }
+    }
+  });
+}
 
 if (Meteor.isServer) {
   Tinytest.addAsync('mongo update/upsert - returns nMatched as numberAffected', async function (test) {
@@ -3366,115 +3366,115 @@ if (Meteor.isServer) {
     test.equal(result.numberAffected, 4);
   });
 
-  Tinytest.addAsync('mongo livedata - update/upsert callback returns nMatched as numberAffected', function (test, onComplete) {
+  Tinytest.addAsync('mongo livedata - update/upsert callback returns nMatched as numberAffected', async function (test, onComplete) {
     var collName = Random.id();
     var coll = new Mongo.Collection('update_nmatched'+collName);
 
-    Promise.all([{animal: 'cat', legs: 4}, {animal: 'dog', legs: 4}, {animal: 'echidna', legs: 4},{animal: 'platypus', legs: 4}, {animal: 'starfish', legs: 5}]
-        .map(({animal, legs}) => coll.insert({animal, legs}))).then(() => {
-      var test1 = function () {
-        coll.update({legs: 4}, {$set: {category: 'quadruped'}}, function (err, result) {
-          test.equal(result, 1);
-          test2();
-        });
-      };
+    await coll.insert({animal: 'cat', legs: 4});
+    await coll.insert({animal: 'dog', legs: 4});
+    await coll.insert({animal: 'echidna', legs: 4});
+    await coll.insert({animal: 'platypus', legs: 4});
+    await coll.insert({animal: 'starfish', legs: 5});
 
-      var test2 = function () {
-        //Changes only 3 but matched 4 documents
-        coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
-          test.equal(result, 4);
-          test3();
-        });
-      };
+    var test1 = async function () {
+      await coll.update({legs: 4}, {$set: {category: 'quadruped'}}).then(async result => {
+        test.equal(result, 1);
+        await test2();
+      });
+    };
 
-      var test3 = function () {
-        //Again, changes nothing but returns nModified
-        coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
-          test.equal(result, 4);
-          test4();
-        });
-      };
+    var test2 = async function () {
+      //Changes only 3 but matched 4 documents
+      await coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}).then(async result => {
+        test.equal(result, 4);
+        await test3();
+      });
+    };
 
-      var test4 = function () {
-        //upsert:true changes nothing, 4 modified
-        coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true, upsert:true}, function (err, result) {
-          test.equal(result, 4);
-          test5();
-        });
-      };
+    var test3 = async function () {
+      //Again, changes nothing but returns nModified
+      await coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}).then(async result => {
+        test.equal(result, 4);
+        await test4();
+      });
+    };
 
-      var test5 = function () {
-        //upsert method works as upsert:true
-        coll.upsert({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
-          test.equal(result.numberAffected, 4);
-          onComplete();
-        });
-      };
+    var test4 = async function () {
+      //upsert:true changes nothing, 4 modified
+      await coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true, upsert:true}).then(async result => {
+        test.equal(result, 4);
+        await test5();
+      });
+    };
 
-      test1();
-    });
+    var test5 = async function () {
+      //upsert method works as upsert:true
+      await coll.upsert({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}).then(async result => {
+        test.equal(result.numberAffected, 4);
+        onComplete();
+      });
+    };
+    await test1();
   });
 }
 
-// if (Meteor.isServer) {
-//   Tinytest.addAsync("mongo-livedata - transaction", async function (test, onComplete) {
-//     const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
-//
-//     const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
-//     const rawCollection = Collection.rawCollection();
-//
-//     await Collection.insert({ _id: "a" });
-//     await Collection.insert({ _id: "b" });
-//
-//     let changeCount = 0;
-//     onComplete();
-//     return new Promise(resolve => {
-//       function finalize() {
-//         observeHandle.stop().then(() => {
-//           Meteor.clearTimeout(timeout);
-//           onComplete();
-//           resolve();
-//         });
-//       }
-//
-//       const observeHandle = await Collection.find().observeChanges({
-//         changed(id, fields) {
-//           let expectedValue;
-//
-//           if (id === "a") {
-//             expectedValue = "updated1";
-//           } else if (id === "b") {
-//             expectedValue = "updated2";
-//           }
-//
-//           test.equal(fields.field, expectedValue);
-//           changeCount += 1;
-//
-//           if (changeCount === 2) {
-//             finalize();
-//           }
-//         }
-//       });
-//
-//       const timeout = Meteor.setTimeout(() => {
-//         test.fail("Didn't receive all transaction operations in two seconds.");
-//         finalize();
-//       }, 2000);
-//
-//       const session = client.startSession();
-//       await session.withTransaction(session => {
-//         let promise = Promise.resolve();
-//         ["a", "b"].forEach((id, index) => {
-//           promise = promise.then(() => rawCollection.updateMany(
-//               { _id: id },
-//               { $set: { field: `updated${index + 1}` } },
-//               { session }
-//           ));
-//         });
-//         return promise;
-//       }).finally(() => {
-//         session.endSession();
-//       });
-//     }).then(() => onComplete());
-//   });
-// }
+if (Meteor.isServer) {
+  Tinytest.addAsync("mongo-livedata - transaction", async function (test) {
+    const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
+
+    const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
+    const rawCollection = Collection.rawCollection();
+
+    await Collection.insert({ _id: "a" });
+    await Collection.insert({ _id: "b" });
+
+    let changeCount = 0;
+
+    return new Promise(async resolve => {
+      async function finalize() {
+        await observeHandle.stop();
+        Meteor.clearTimeout(timeout);
+        resolve();
+      }
+
+      const observeHandle = await Collection.find().observeChanges({
+        changed(id, fields) {
+          let expectedValue;
+
+          if (id === "a") {
+            expectedValue = "updated1";
+          } else if (id === "b") {
+            expectedValue = "updated2";
+          }
+
+          test.equal(fields.field, expectedValue);
+          changeCount += 1;
+
+          if (changeCount === 2) {
+            finalize();
+          }
+        }
+      });
+
+      const timeout = Meteor.setTimeout(() => {
+        test.fail("Didn't receive all transaction operations in two seconds.");
+        finalize();
+      }, 2000);
+
+      const session = client.startSession();
+      session.withTransaction(session => {
+        let promise = Promise.resolve();
+        ["a", "b"].forEach((id, index) => {
+          promise = promise.then(() => rawCollection.updateMany(
+              { _id: id },
+              { $set: { field: `updated${index + 1}` } },
+              { session }
+          ));
+        });
+        return promise;
+      }).finally(() => {
+        session.endSession();
+      });
+    });
+  });
+}

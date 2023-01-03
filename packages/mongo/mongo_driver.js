@@ -1402,7 +1402,6 @@ Object.assign(MongoConnection.prototype, {
           return observeDriver.stop();
         }
       });
-      self._observeMultiplexers[observeKey] = multiplexer;
     }
 
     var observeHandle = new ObserveHandle(multiplexer,
@@ -1466,7 +1465,7 @@ Object.assign(MongoConnection.prototype, {
       // This field is only set for use in tests.
       multiplexer._observeDriver = observeDriver;
     }
-
+    self._observeMultiplexers[observeKey] = multiplexer;
     // Blocks until the initial adds have been sent.
     await multiplexer.addHandleAndSendInitialAdds(observeHandle);
 

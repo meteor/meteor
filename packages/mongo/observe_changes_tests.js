@@ -15,48 +15,49 @@ _.each ([{added: 'added', forceOrdered: true},
   Tinytest.addAsync("observeChanges - single id - basics " + added
                     + (forceOrdered ? " force ordered" : ""),
                     async function (test, onComplete) {
-    var c = makeCollection();
-    var counter = 0;
-    var callbacks = [added, "changed", "removed"];
-    if (forceOrdered)
-      callbacks.push("movedBefore");
-    await withCallbackLogger(test,
-                       callbacks,
-                       Meteor.isServer,
-                       async function (logger) {
-    var barid = await c.insert({thing: "stuff"});
-    var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+      var c = makeCollection();
+      var counter = 0;
+      var callbacks = [added, "changed", "removed"];
+      if (forceOrdered)
+        callbacks.push("movedBefore");
+      await withCallbackLogger(test,
+                         callbacks,
+                         Meteor.isServer,
+                         async function (logger) {
+        var barid = await c.insert({thing: "stuff"});
+        var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
 
-    var handle = await c.find(fooid).observeChanges(logger);
-    if (added === 'added') {
-      logger.expectResult(added, [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
-    } else {
-      logger.expectResult(added,
-                          [fooid, {noodles: "good", bacon: "bad", apples: "ok"}, null]);
-    }
-    await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
-    logger.expectResult("changed",
-                        [fooid, {noodles: "alright", potatoes: "tasty", bacon: undefined}]);
+        var handle = await c.find(fooid).observeChanges(logger);
+        if (added === 'added') {
+          await logger.expectResult(added, [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
+        } else {
+          await logger.expectResult(added,
+                              [fooid, {noodles: "good", bacon: "bad", apples: "ok"}, null]);
+        }
+        await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
+        await logger.expectResult("changed",
+                            [fooid, {noodles: "alright", potatoes: "tasty", bacon: undefined}]);
 
-    await c.remove(fooid);
-    logger.expectResult("removed", [fooid]);
+        await c.remove(fooid);
+        await logger.expectResult("removed", [fooid]);
 
-    await logger.expectNoResult(async () => {
-      await c.remove(barid);
-      await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+        await logger.expectNoResult(async () => {
+          await c.remove(barid);
+          await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+        });
+
+       await handle.stop();
+
+       const badCursor = c.find({}, {fields: {noodles: 1, _id: false}});
+       await test.throwsAsync(function () {
+         return badCursor.observeChanges(logger);
+       });
     });
-
-    await handle.stop();
-
-   const badCursor = c.find({}, {fields: {noodles: 1, _id: false}});
-   await test.throwsAsync(function () {
-     return badCursor.observeChanges(logger);
-   });
-  });
+    onComplete();
   });
 });
 
-Tinytest.addAsync("observeChanges - callback isolation", async function (test) {
+Tinytest.addAsync("observeChanges - callback isolation", async function (test, onComplete) {
   var c = makeCollection();
   await withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async function (logger) {
     var handles = [];
@@ -73,26 +74,29 @@ Tinytest.addAsync("observeChanges - callback isolation", async function (test) {
     }));
 
     var fooid = await c.insert({apples: "ok"});
-    logger.expectResult("added", [fooid, {apples: "ok"}]);
+    await logger.expectResult("added", [fooid, {apples: "ok"}]);
 
     await c.update(fooid, {apples: "not ok"});
-    logger.expectResult("changed", [fooid, {apples: "not ok"}]);
+    await logger.expectResult("changed", [fooid, {apples: "not ok"}]);
 
     test.equal((await c.findOne(fooid)).apples, "not ok");
 
-    await Promise.all(handles.map(h => h.stop()));
+    //await Promise.all(handles.map(h => h.stop())).then(() => onComplete());
+    await _.each(handles, async function(handle) { await handle.stop(); });
+    onComplete();
   });
 });
 
-Tinytest.addAsync("observeChanges - single id - initial adds", async function (test) {
+Tinytest.addAsync("observeChanges - single id - initial adds", async function (test, onComplete) {
   var c = makeCollection();
   await withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async function (logger) {
-  var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
-  var handle = await c.find(fooid).observeChanges(logger);
-  logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
-  await logger.expectNoResult();
-  await handle.stop();
+    var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+    var handle = await c.find(fooid).observeChanges(logger);
+    await logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
+    await logger.expectNoResult();
+    await handle.stop();
   });
+  onComplete();
 });
 
 
@@ -103,7 +107,7 @@ Tinytest.addAsync("observeChanges - unordered - initial adds", async function (t
   var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
   var barid = await c.insert({noodles: "good", bacon: "weird", apples: "ok"});
   var handle = await c.find().observeChanges(logger);
-  logger.expectResultUnordered([
+  await logger.expectResultUnordered([
     {callback: "added",
      args: [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]},
     {callback: "added",
@@ -114,31 +118,32 @@ Tinytest.addAsync("observeChanges - unordered - initial adds", async function (t
   });
 });
 
-Tinytest.addAsync("observeChanges - unordered - basics", async function (test) {
+Tinytest.addAsync("observeChanges - unordered - basics", async function (test, onComplete) {
   var c = makeCollection();
-  await withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async function (logger) {
-  var handle = await c.find().observeChanges(logger);
-  var barid = await c.insert({thing: "stuff"});
-  logger.expectResultOnly("added", [barid, {thing: "stuff"}]);
+  withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async function (logger) {
+    var handle = await c.find().observeChanges(logger);
+    var barid = await c.insert({thing: "stuff"});
+    await logger.expectResultOnly("added", [barid, {thing: "stuff"}]);
 
-  var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+    var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
 
-  logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
+    await logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
 
-  await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
-  await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
-  logger.expectResultOnly("changed",
-                      [fooid, {noodles: "alright", potatoes: "tasty", bacon: undefined}]);
-  await c.remove(fooid);
-  logger.expectResultOnly("removed", [fooid]);
-  await c.remove(barid);
-  logger.expectResultOnly("removed", [barid]);
+    await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
+    await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
+    await logger.expectResultOnly("changed",
+                        [fooid, {noodles: "alright", potatoes: "tasty", bacon: undefined}]);
+    await c.remove(fooid);
+    await logger.expectResultOnly("removed", [fooid]);
+    await c.remove(barid);
+    await logger.expectResultOnly("removed", [barid]);
 
-  fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+    fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
 
-  logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
-  await logger.expectNoResult();
-  await handle.stop();
+    await logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
+    await logger.expectNoResult();
+    await handle.stop();
+    onComplete();
   });
 });
 
@@ -148,48 +153,50 @@ if (Meteor.isServer) {
     await withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async function (logger) {
       var handle = await c.find({}, {fields:{noodles: 1, bacon: 1}}).observeChanges(logger);
       var barid = await c.insert({thing: "stuff"});
-      logger.expectResultOnly("added", [barid, {}]);
+      await logger.expectResultOnly("added", [barid, {}]);
 
       var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
 
-      logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
+      await logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
 
       await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
-      logger.expectResultOnly("changed",
+      await logger.expectResultOnly("changed",
                               [fooid, {noodles: "alright", bacon: undefined}]);
       await c.update(fooid, {noodles: "alright", potatoes: "meh", apples: "ok"});
       await c.remove(fooid);
-      logger.expectResultOnly("removed", [fooid]);
+      await logger.expectResultOnly("removed", [fooid]);
       await c.remove(barid);
-      logger.expectResultOnly("removed", [barid]);
+      await logger.expectResultOnly("removed", [barid]);
 
       fooid = await c.insert({noodles: "good", bacon: "bad"});
 
-      logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad"}]);
+      await logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad"}]);
       await logger.expectNoResult();
       await handle.stop();
     });
+    onComplete();
   });
 
-  Tinytest.addAsync("observeChanges - unordered - specific fields + selector on excluded fields", async function (test) {
+  Tinytest.addAsync("observeChanges - unordered - specific fields + selector on excluded fields", async function (test, onComplete) {
     var c = makeCollection();
-    await withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async  function (logger) {
+    withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async  function (logger) {
       var handle = await c.find({ mac: 1, cheese: 2 },
                           {fields:{noodles: 1, bacon: 1, eggs: 1}}).observeChanges(logger);
       var barid = await c.insert({thing: "stuff", mac: 1, cheese: 2});
-      logger.expectResultOnly("added", [barid, {}]);
-
+      console.log('a1');
+      await logger.expectResultOnly("added", [barid, {}]);
+      console.log('a2');
       var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok", mac: 1, cheese: 2});
 
-      logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
+      await logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
 
       await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok", mac: 1, cheese: 2});
-      logger.expectResultOnly("changed",
+      await logger.expectResultOnly("changed",
                               [fooid, {noodles: "alright", bacon: undefined}]);
 
       // Doesn't get update event, since modifies only hidden fields
-      await logger.expectNoResult(() =>
-        c.update(fooid, {
+      await logger.expectNoResult(async () =>
+        await c.update(fooid, {
           noodles: "alright",
           potatoes: "meh",
           apples: "ok",
@@ -199,15 +206,17 @@ if (Meteor.isServer) {
       );
 
       await c.remove(fooid);
-      logger.expectResultOnly("removed", [fooid]);
+      await logger.expectResultOnly("removed", [fooid]);
       await c.remove(barid);
-      logger.expectResultOnly("removed", [barid]);
+      await logger.expectResultOnly("removed", [barid]);
 
       fooid = await c.insert({noodles: "good", bacon: "bad", mac: 1, cheese: 2});
 
-      logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad"}]);
+      await logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad"}]);
       await logger.expectNoResult();
       await handle.stop();
+    }).then(() => {
+      onComplete();
     });
   });
 }
@@ -219,16 +228,16 @@ Tinytest.addAsync("observeChanges - unordered - specific fields + modify on excl
                         {fields:{noodles: 1, bacon: 1, eggs: 1}}).observeChanges(logger);
     var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok", mac: 1, cheese: 2});
 
-    logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
+    await logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
 
 
     // Noodles go into shadow, mac appears as eggs
     await c.update(fooid, {$rename: { noodles: 'shadow', apples: 'eggs' }});
-    logger.expectResultOnly("changed",
+    await logger.expectResultOnly("changed",
                             [fooid, {eggs:"ok", noodles: undefined}]);
 
     await c.remove(fooid);
-    logger.expectResultOnly("removed", [fooid]);
+    await logger.expectResultOnly("removed", [fooid]);
     await logger.expectNoResult();
     await handle.stop();
   });
@@ -243,11 +252,11 @@ Tinytest.addAsync(
       async function (logger) {
         var handle = await c.find({}, {fields: {'type.name': 1}}).observeChanges(logger);
         var id = await c.insert({ type: { name: 'foobar' } });
-        logger.expectResultOnly('added', [id, { type: { name: 'foobar' } }]);
+        await logger.expectResultOnly('added', [id, { type: { name: 'foobar' } }]);
 
         await c.update(id, { $unset: { type: 1 } });
         test.equal(await c.find().fetch(), [{ _id: id }]);
-        logger.expectResultOnly('changed', [id, { type: undefined }]);
+        await logger.expectResultOnly('changed', [id, { type: undefined }]);
 
         await handle.stop();
       }
@@ -260,23 +269,23 @@ Tinytest.addAsync(
 Tinytest.addAsync("observeChanges - unordered - enters and exits result set through change", async function (test) {
   var c = makeCollection();
   await withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async function (logger) {
-  var handle = await c.find({noodles: "good"}).observeChanges(logger);
-  var barid = await c.insert({thing: "stuff"});
+    var handle = await c.find({noodles: "good"}).observeChanges(logger);
+    var barid = await c.insert({thing: "stuff"});
 
-  var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
-  logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
+    var fooid = await c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+    await logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
 
-  await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
-  logger.expectResultOnly("removed",
+    await c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
+    await logger.expectResultOnly("removed",
                       [fooid]);
-  await c.remove(fooid);
-  await c.remove(barid);
+    await c.remove(fooid);
+    await c.remove(barid);
 
-  fooid = await c.insert({noodles: "ok", bacon: "bad", apples: "ok"});
-  await c.update(fooid, {noodles: "good", potatoes: "tasty", apples: "ok"});
-  logger.expectResult("added", [fooid, {noodles: "good", potatoes: "tasty", apples: "ok"}]);
-  await logger.expectNoResult();
-  await handle.stop();
+    fooid = await c.insert({noodles: "ok", bacon: "bad", apples: "ok"});
+    await c.update(fooid, {noodles: "good", potatoes: "tasty", apples: "ok"});
+    await logger.expectResult("added", [fooid, {noodles: "good", potatoes: "tasty", apples: "ok"}]);
+    await logger.expectNoResult();
+    await handle.stop();
   });
 });
 
@@ -353,14 +362,15 @@ if (Meteor.isServer) {
 testAsyncMulti("observeChanges - bad query", [
   async function (test, expect) {
     var c = makeCollection();
-    var observeThrows = function () {
-      return test.throwsAsync(function () {
-        return c.find({__id: {$in: null}}).observeChanges({
-          added: function () {
+    var observeThrows = async function () {
+      await test.throwsAsync(async function () {
+        await c.find({__id: {$in: null}}).observeChanges({
+          added: function added() {
             test.fail("added shouldn't be called");
           }
         });
       }, '$in needs an array');
+
     };
 
     if (Meteor.isClient) {
@@ -370,25 +380,30 @@ testAsyncMulti("observeChanges - bad query", [
 
     // Test that if two copies of the same bad observeChanges run in parallel
     // and are de-duped, both observeChanges calls will throw.
-    await Promise.all(['ob1', 'ob2'].map(() => observeThrows()));
+
+    await Promise.all([observeThrows(), observeThrows()]).then(() => {
+      expect();
+    });
   }
 ]);
 
 if (Meteor.isServer) {
   Tinytest.addAsync(
     "observeChanges - EnvironmentVariable",
-    async function (test) {
+    function (test, onComplete) {
       var c = makeCollection();
       var environmentVariable = new Meteor.EnvironmentVariable;
-      await environmentVariable.withValue(true, async function() {
+      environmentVariable.withValue(true, async function() {
         var handle = await c.find({}, { fields: { 'type.name': 1 }}).observeChanges({
-          added: function() {
+          added: async function() {
             test.isTrue(environmentVariable.get());
-            handle.stop();
+            await handle.stop();
+            onComplete();
           }
         });
+      }).then(() => {
+        c.insert({ type: { name: 'foobar' } });
       });
-      await c.insert({ type: { name: 'foobar' } });
     }
   );
 }

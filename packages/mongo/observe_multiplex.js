@@ -116,12 +116,10 @@ ObserveMultiplexer = class {
   // observeChanges calls) to throw the error.
   async queryError(err) {
     var self = this;
-    await this._queue.runTask(async function () {
-      if (self._ready())
-        throw Error("can't claim query has an error after it worked!");
-      await self._stop({fromQueryError: true});
-      throw err;
-    });
+    if (self._ready())
+      throw Error("can't claim query has an error after it worked!");
+    await self._stop({fromQueryError: true});
+    throw err;
   }
 
   // Calls "cb" once the effects of all "ready", "addHandleAndSendInitialAdds"

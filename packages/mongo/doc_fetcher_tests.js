@@ -1,22 +1,19 @@
 import { DocFetcher } from "./doc_fetcher.js";
 
 testAsyncMulti("mongo-livedata - doc fetcher", [
-  function (test, expect) {
+  async function (test, expect) {
     var self = this;
     var collName = "docfetcher-" + Random.id();
     var collection = new Mongo.Collection(collName);
-    // var id1 = await ;
-    // var id2 = await collection.insert({y: 2});
-    Promise.all([collection.insert({x: 1}), collection.insert({y: 2})]).then(([id1, id2]) => {
-      console.trace({id1, id2});
-    });
-    //
-    // var fetcher = new DocFetcher(
-    //   MongoInternals.defaultRemoteCollectionDriver().mongo);
-    //
-    // // Test basic operation.
-    // const fakeOp1 = {};
-    // const fakeOp2 = {};
+    var id1 = await collection.insert({x: 1});
+    var id2 = await collection.insert({y: 2});
+
+    var fetcher = new DocFetcher(
+      MongoInternals.defaultRemoteCollectionDriver().mongo);
+
+    // Test basic operation.
+    const fakeOp1 = {};
+    const fakeOp2 = {};
     // fetcher.fetch(collName, id1, fakeOp1, expect(null, {_id: id1, x: 1}));
     // fetcher.fetch(collName, "nonexistent!", fakeOp2, expect(null, null));
     //
