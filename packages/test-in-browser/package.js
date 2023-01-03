@@ -27,8 +27,6 @@ Package.onUse(function (api) {
     'tracker',
   ], 'client');
 
-  api.addFiles('diff_match_patch_uncompressed.js', 'client');
-
   api.addFiles([
     'driver.html',
     'driver.js',
