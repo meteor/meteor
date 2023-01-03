@@ -91,6 +91,16 @@ You can pass an absolute or relative path.
 
 **Flags for default packages**
 
+`--prototype`
+
+Creates a package with the prototype purpose packages(`autopublish` and `insecure`) 
+if you use them you can change your collections quickly, 
+but it is not supposed to be used in production.
+For more information about security you can check
+it [here](https://guide.meteor.com/security.html#checklist)
+It can be used together with other flags that create apps such as `--react` or `--typescript`.
+
+
 `--bare`
 
 Creates a basic, blaze project.
