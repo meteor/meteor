@@ -19,15 +19,13 @@ Package.onUse(function (api) {
 
   api.use([
     'webapp',
-    'blaze@2.3.4',
+    'blaze@2.6.1',
     'templating@1.3.2',
     'spacebars@1.0.15',
     'jquery@3.0.0',
     'ddp',
     'tracker',
   ], 'client');
-
-  api.addFiles('diff_match_patch_uncompressed.js', 'client');
 
   api.addFiles([
     'driver.html',
