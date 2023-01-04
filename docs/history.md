@@ -61,6 +61,9 @@
   - `OAuth._storeRequestToken`
   - `OAuth._retrieveRequestToken`
 
+* `oauth2`:
+  - `OAuth._requestHandlers['2']` is now async.
+  
 ####  Internal API changes
 
 
