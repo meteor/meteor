@@ -1,3 +1,50 @@
+## v2.10.0, 2023-01-XX
+
+### Highlights
+
+* Update skeletons to use React 18 [PR](https://github.com/meteor/meteor/pull/12419) by [StorytellerCZ](https://github.com/StorytellerCZ).
+* Use MongoDB types instead of the homebuilt [PR](https://github.com/meteor/meteor/pull/12415) by [perbergland](https://github.com/perbergland).
+* Fixing wrong type definitions in MongoDB package [PR](https://github.com/meteor/meteor/pull/12409) by [ebroder](https://github.com/ebroder).
+* Typescript to version v4.7.4 [PR](https://github.com/meteor/meteor/pull/12393) by [StorytellerCZ](https://github.com/StorytellerCZ).
+* Update test-in-browser dependencies [PR](https://github.com/meteor/meteor/pull/12384) by [harryadel](https://github.com/harryadel).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+N/A
+
+#### Meteor Version Release
+
+* `mongo@1.16.4`:
+  - Fixed wrong type definitions.
+  - switch to using MongoDB types instead of the homebuilt.
+
+* `test-in-browser@1.3.3`:
+  - Updated dependencies and removed unused libs.
+
+* `typescript@4.7.4`
+  - Updated typescript to version 4.7.4.
+
+* `Command line`:
+  - Updated React skeletons to use react 18
+
+#### Special thanks to
+  - [@StorytellerCZ](https://github.com/StorytellerCZ).
+  - [@perbergland](https://github.com/perbergland).
+  - [@ebroder](https://github.com/ebroder).
+  - [@harryadel](https://github.com/harryadel).
+
+For making this great framework even better!
+
+
+
 ## v2.9.1, 2022-12-27
 
 ### Highlights
