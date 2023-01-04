@@ -33,7 +33,7 @@ N/A
   - Updated typescript to version 4.7.4.
 
 * `Command line`:
-  - Updated React skeletons to use react 18
+  - Updated React skeletons to use React 18
 
 #### Special thanks to
   - [@StorytellerCZ](https://github.com/StorytellerCZ).
