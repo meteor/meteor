@@ -926,7 +926,7 @@ from npm to your `node_modules` directory and save its usage in your
 Using the `meteor npm ...` commands in place of traditional `npm ...` commands
 is particularly important when using Node.js modules that have binary
 dependencies that make native C calls (like [`bcrypt`](https://www.npmjs.com/package/bcrypt))
-because doing so ensures that they are built using the same libaries.
+because doing so ensures that they are built using the same libraries.
 
 Additionally, this access to the npm that comes with Meteor avoids the need to
 download and install npm separately.
