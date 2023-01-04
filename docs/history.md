@@ -28,12 +28,20 @@
   
 * `oauth`:
   - `_endOfPopupResponseTemplate` and `_endOfRedirectResponseTemplate` are no longer a property but now a function that returns a promise of the same value as before
-  - the following methods are now async: 
+  - the following server methods are now async: 
   - `OAuth._renderOauthResults`
   - `OAuth._endOfLoginResponse`
   - `OAuth.renderEndOfLoginResponse`
   - `OAuth._storePendingCredential`
   - `OAuth._retrievePendingCredential`
+  - `ensureConfigured`
+  - `_cleanStaleResults`
+
+* `oauth1`:
+  - the following server methods are now async:
+  - `OAuth._storeRequestToken`
+  - `OAuth._retrieveRequestToken`
+
 ####  Internal API changes
 
 
