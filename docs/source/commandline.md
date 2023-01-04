@@ -91,6 +91,16 @@ You can pass an absolute or relative path.
 
 **Flags for default packages**
 
+`--prototype`
+
+Creates a package with the prototype purpose packages(`autopublish` and `insecure`) 
+if you use them you can change your collections quickly, 
+but it is not supposed to be used in production.
+For more information about security you can check
+it [here](https://guide.meteor.com/security.html#checklist)
+It can be used together with other flags that create apps such as `--react` or `--typescript`.
+
+
 `--bare`
 
 Creates a basic, blaze project.
@@ -202,6 +212,10 @@ Create a basic [Solid](https://www.solidjs.com/) app.
 ``meteor generate`` is a command for generating scaffolds for your current project. When ran without arguments, it will ask
 you what is the name of the model you want to generate, if you do want methods for your api and publications. It can be
 used as a command line only operation as well.
+
+> _Important to note:_
+> By default, the generator will use JavaScript but if it detects that you have a
+``tsconfig.json`` file in your project, it will use TypeScript instead.
 
 running 
 ```bash
@@ -912,7 +926,7 @@ from npm to your `node_modules` directory and save its usage in your
 Using the `meteor npm ...` commands in place of traditional `npm ...` commands
 is particularly important when using Node.js modules that have binary
 dependencies that make native C calls (like [`bcrypt`](https://www.npmjs.com/package/bcrypt))
-because doing so ensures that they are built using the same libaries.
+because doing so ensures that they are built using the same libraries.
 
 Additionally, this access to the npm that comes with Meteor avoids the need to
 download and install npm separately.
