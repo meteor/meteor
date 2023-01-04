@@ -45,7 +45,7 @@ export namespace Mongo {
     [id: string]: Number;
   }
 
-  type Transform<T> = ((doc: T) => any) | null | undefined;
+  export type Transform<T> = ((doc: T) => any) | null | undefined;
 
   export type Options<T> = {
     /** Sort order (default: natural order) */
