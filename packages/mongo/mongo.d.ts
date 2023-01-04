@@ -153,7 +153,7 @@ export namespace Mongo {
       transform?: Fn | undefined;
     }): boolean;
     dropCollectionAsync(): Promise<void>;
-    dropIndexAsync(indexName: string): void;
+    dropIndexAsync(indexName: string): Promise<void>;
     /**
      * Find the documents in a collection that match the selector.
      * @param selector A query describing the documents to find
