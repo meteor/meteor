@@ -170,16 +170,19 @@ simplePoll = function (fn, success, failed, timeout, step) {
   timeout = timeout || 10000;
   step = step || 100;
   var start = (new Date()).valueOf();
+  let timeOutId;
   var helper = function () {
     if (fn()) {
       success();
+      Meteor.clearTimeout(timeOutId);
       return;
     }
     if (start + timeout < (new Date()).valueOf()) {
       failed();
+      Meteor.clearTimeout(timeOutId);
       return;
     }
-    Meteor.setTimeout(helper, step);
+    timeOutId = Meteor.setTimeout(helper, step);
   };
   helper();
 };

@@ -297,12 +297,12 @@ export class AccountsServer extends AccountsCommon {
     return {$and: [{$or: orClause}, caseInsensitiveClause]};
   }
 
-  _findUserByQuery = (query, options) => {
+  _findUserByQuery = async (query, options) => {
     let user = null;
 
     if (query.id) {
       // default field selector is added within getUserById()
-      user = Meteor.users.findOne(query.id, this._addDefaultFieldSelector(options));
+      user = await Meteor.users.findOne(query.id, this._addDefaultFieldSelector(options));
     } else {
       options = this._addDefaultFieldSelector(options);
       let fieldName;
@@ -318,11 +318,11 @@ export class AccountsServer extends AccountsCommon {
       }
       let selector = {};
       selector[fieldName] = fieldValue;
-      user = Meteor.users.findOne(selector, options);
+      user = await Meteor.users.findOne(selector, options);
       // If user is not found, try a case insensitive lookup
       if (!user) {
         selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-        const candidateUsers = Meteor.users.find(selector, { ...options, limit: 2 }).fetch();
+        const candidateUsers = await Meteor.users.find(selector, { ...options, limit: 2 }).fetch();
         // No match if multiple candidates are found
         if (candidateUsers.length === 1) {
           user = candidateUsers[0];
@@ -455,7 +455,7 @@ export class AccountsServer extends AccountsCommon {
 
     let user;
     if (result.userId)
-      user = this.users.findOne(result.userId, {fields: this._options.defaultFieldSelector});
+      user = await this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
 
     const attempt = {
       type: result.type || "unknown",
@@ -702,12 +702,12 @@ export class AccountsServer extends AccountsCommon {
     // Removes all tokens except the token associated with the current
     // connection. Throws an error if the connection is not logged
     // in. Returns nothing on success.
-    methods.removeOtherTokens = function () {
+    methods.removeOtherTokens = async function () {
       if (! this.userId) {
         throw new Meteor.Error("You are not logged in.");
       }
       const currentToken = accounts._getLoginToken(this.connection.id);
-      accounts.users.update(this.userId, {
+      await accounts.users.update(this.userId, {
         $pull: {
           "services.resume.loginTokens": { hashedToken: { $ne: currentToken } }
         }
@@ -1054,7 +1054,7 @@ export class AccountsServer extends AccountsCommon {
   // tests. oldestValidDate is simulate expiring tokens without waiting
   // for them to actually expire. userId is used by tests to only expire
   // tokens for the test user.
-  _expirePasswordResetTokens(oldestValidDate, userId) {
+  async _expirePasswordResetTokens(oldestValidDate, userId) {
     const tokenLifetimeMs = this._getPasswordResetTokenLifetimeMs();
 
     // when calling from a test with extra arguments, you must specify both!
@@ -1072,7 +1072,7 @@ export class AccountsServer extends AccountsCommon {
       ]
     };
 
-    expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
+   await expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
   }
 
   // Deletes expired password enroll tokens from the database.
@@ -1081,7 +1081,7 @@ export class AccountsServer extends AccountsCommon {
   // tests. oldestValidDate is simulate expiring tokens without waiting
   // for them to actually expire. userId is used by tests to only expire
   // tokens for the test user.
-  _expirePasswordEnrollTokens(oldestValidDate, userId) {
+  async _expirePasswordEnrollTokens(oldestValidDate, userId) {
     const tokenLifetimeMs = this._getPasswordEnrollTokenLifetimeMs();
 
     // when calling from a test with extra arguments, you must specify both!
@@ -1096,7 +1096,7 @@ export class AccountsServer extends AccountsCommon {
       "services.password.enroll.reason": "enroll"
     };
 
-    expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
+    await expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
   }
 
   // Deletes expired tokens from the database and closes all open connections
@@ -1262,13 +1262,14 @@ export class AccountsServer extends AccountsCommon {
     // that would give a lot of power to an attacker with a stolen login
     // token and the ability to crash the server.
     Meteor.startup(async () => {
-      await this.users.find({
+      const users = await this.users.find({
         "services.resume.haveLoginTokensToDelete": true
       }, {
         fields: {
           "services.resume.loginTokensToDelete": 1
         }
-      }).forEach(user => {
+      })
+      users.forEach(user => {
         this._deleteSavedTokensForUser(
           user._id,
           user.services.resume.loginTokensToDelete
@@ -1443,7 +1444,7 @@ export class AccountsServer extends AccountsCommon {
     return options;
   };
 
-  _checkForCaseInsensitiveDuplicates(
+  async _checkForCaseInsensitiveDuplicates(
     fieldName,
     displayName,
     fieldValue,
@@ -1457,7 +1458,7 @@ export class AccountsServer extends AccountsCommon {
     );
 
     if (fieldValue && !skipCheck) {
-      const matchedUsers = Meteor.users
+      const matchedUsers = await Meteor.users
         .find(
           this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
           {
@@ -1481,7 +1482,7 @@ export class AccountsServer extends AccountsCommon {
     }
   };
 
-  _createUserCheckingDuplicates({ user, email, username, options }) {
+  async _createUserCheckingDuplicates({ user, email, username, options }) {
     const newUser = {
       ...user,
       ...(username ? { username } : {}),
@@ -1489,18 +1490,18 @@ export class AccountsServer extends AccountsCommon {
     };
 
     // Perform a case insensitive check before insert
-    this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
-    this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
+    await this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
+    await this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
 
-    const userId = this.insertUserDoc(options, newUser);
+    const userId = await this.insertUserDoc(options, newUser);
     // Perform another check after insert, in case a matching user has been
     // inserted in the meantime
     try {
-      this._checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
-      this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
+      await this._checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
+      await this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
     } catch (ex) {
       // Remove inserted user if the check fails
-      Meteor.users.remove(userId);
+      await Meteor.users.remove(userId);
       throw ex;
     }
     return userId;
@@ -1707,10 +1708,10 @@ const expirePasswordToken =
   };
 
 const setExpireTokensInterval = accounts => {
-  accounts.expireTokenInterval = Meteor.setInterval(() => {
-    accounts._expireTokens();
-    accounts._expirePasswordResetTokens();
-    accounts._expirePasswordEnrollTokens();
+  accounts.expireTokenInterval = Meteor.setInterval(async () => {
+   await accounts._expireTokens();
+   await accounts._expirePasswordResetTokens();
+   await accounts._expirePasswordEnrollTokens();
   }, EXPIRE_TOKENS_INTERVAL_MS);
 };
 

@@ -15,10 +15,29 @@
   - `(Meteor Method) - disableUser2fa`
   - `(Meteor Method) - has2faEnabled`
 
+* `accounts-base`:
+  **TODO**
+  - `methods.removeOtherTokens` is now async
+  - `Accounts.destroyToken` is now async
+
 * `accounts-password`:
-  - `Accounts.sendResetPasswordEmail` is now async
-  - `Accounts.sendEnrollmentEmail` is now async
-  - `Accounts.sendVerificationEmail` is now async
+  - Some server methods are now async:
+  - `Accounts.sendResetPasswordEmail` 
+  - `Accounts.sendEnrollmentEmail` 
+  - `Accounts.sendVerificationEmail` 
+  - `Accounts.addEmail` 
+  - `Accounts.removeEmail` 
+  - `Accounts.verifyEmail` 
+  - `Accounts.createUserVerifyingEmail` 
+  - `Accounts.createUser` 
+  - `Accounts.generateVerificationToken` 
+  - `Accounts.generateResetToken` 
+  - `Accounts.forgotPassword` 
+  - `Accounts.setPassword` 
+  - `Accounts.changePassword` 
+  - `Accounts.setUsername` 
+  - `Accounts.findUserByEmail` 
+  - `Accounts.findUserByUsername` 
   
 * `accounts-passwordless`:
   - `Accounts.sendLoginTokenEmail` is now async

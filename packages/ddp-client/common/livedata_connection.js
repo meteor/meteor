@@ -758,7 +758,7 @@ export class Connection {
     // If the caller didn't give a callback, decide what to do.
     let future;
     if (!callback) {
-      if (Meteor.isClient) {
+      if (Meteor.isClient && !options.isFromCallAsync) {
         // On the client, we don't have fibers, so we can't block. The
         // only thing we can do is to return undefined and discard the
         // result of the RPC. If an error occurred then print the error
