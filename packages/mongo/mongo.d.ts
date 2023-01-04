@@ -16,12 +16,9 @@ export type UnionOmit<T, K extends keyof any> = T extends T
 
 export namespace Mongo {
 
-  /**
-   * Alias for {@link MongoNpmModule.Filter}
-   */
   type Query<T> = MongoNpmModule.Filter<T>;
 
-  type QueryWithModifiers<T> = {
+  export type QueryWithModifiers<T> = {
     $query: Query<T>;
     $comment?: string | undefined;
     $explain?: any;
@@ -36,39 +33,21 @@ export namespace Mongo {
     $natural?: any;
   };
 
-  type Selector<T> = Query<T> | QueryWithModifiers<T>;
+  export type Selector<T> = Query<T> | QueryWithModifiers<T>;
 
-  type Dictionary<T> = { [key: string]: T };
-  type PartialMapTo<T, M> = Partial<Record<keyof T, M>>;
-  type OnlyArrays<T> = T extends any[] ? T : never;
-  type OnlyElementsOfArrays<T> = T extends any[] ? Partial<T[0]> : never;
-  type ElementsOf<T> = {
-    [P in keyof T]?: OnlyElementsOfArrays<T[P]>;
-  };
-  type PushModifier<T> = {
-    [P in keyof T]?:
-      | OnlyElementsOfArrays<T[P]>
-      | {
-          $each?: T[P] | undefined;
-          $position?: number | undefined;
-          $slice?: number | undefined;
-          $sort?: 1 | -1 | Dictionary<number> | undefined;
-        };
-  };
-  
   type Modifier<T> = MongoNpmModule.UpdateFilter<T>;
 
-  type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: any };
+  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: any };
 
   type SortSpecifier = MongoNpmModule.Sort;
 
-  interface FieldSpecifier {
+  export interface FieldSpecifier {
     [id: string]: Number;
   }
 
   type Transform<T> = ((doc: T) => any) | null | undefined;
 
-  type Options<T> = {
+  export type Options<T> = {
     /** Sort order (default: natural order) */
     sort?: SortSpecifier | undefined;
     /** Number of results to skip at the beginning */
