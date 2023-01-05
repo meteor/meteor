@@ -147,6 +147,42 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'accounts async - make async call onLogin',
+  (test, done) => {
+    const onLogin = Accounts.onLogin( async () => {
+      const sleep =
+        (ms) => new Promise(resolve => setTimeout(() => resolve(true), ms));
+      const async = await sleep(10)
+      test.isTrue(async);
+      onLogin.stop()
+      removeTestUser(done);
+    });
+    logoutAndCreateUser(test, done, () => {});
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - make async call onLoginFailure',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      const onLoginFailure = Accounts.onLoginFailure( async () => {
+        const sleep =
+          (ms) => new Promise(resolve => setTimeout(() => resolve(true), ms));
+        const async = await sleep(10)
+        test.isTrue(async);
+        onLoginFailure.stop()
+        removeTestUser(done);
+      });
+
+      Meteor.loginWithPassword(username, "somewrongstring", () => {
+        test.isFalse(Meteor.loggingIn());
+        removeTestUser(done);
+      });
+
+    });
+  }
+);
+Tinytest.addAsync(
   'accounts - onLogin callback receives { type: "resume" } param on ' +
   'reconnect, if already logged in',
   (test, done) => {
