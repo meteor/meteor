@@ -36,6 +36,9 @@ N/A
 * `webapp@1.13.3`
   - The forEach method on Hook will stop iterating unless the iterator function returns a truthy value.
   Previously, this meant that only the first registered runtime config hook would be called.
+  
+* `callback-hook@1.5.0`
+  - Added forEachAsync .
 
 * `Command line`:
   - Updated React skeletons to use React 18
