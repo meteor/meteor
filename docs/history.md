@@ -7,6 +7,7 @@
 * Fixing wrong type definitions in MongoDB package [PR](https://github.com/meteor/meteor/pull/12409) by [ebroder](https://github.com/ebroder).
 * Typescript to version v4.7.4 [PR](https://github.com/meteor/meteor/pull/12393) by [StorytellerCZ](https://github.com/StorytellerCZ).
 * Update test-in-browser dependencies [PR](https://github.com/meteor/meteor/pull/12384) by [harryadel](https://github.com/harryadel).
+* Allow multiple runtime config and updated runtime hooks [PR](https://github.com/meteor/meteor/pull/12426) by [ebroder](https://github.com/ebroder).
 
 #### Breaking Changes
 
@@ -30,7 +31,11 @@ N/A
   - Updated dependencies and removed unused libs.
 
 * `typescript@4.7.4`
-  - Updated typescript to version 4.7.4.
+  - Updated typescript to version 4.7.4. 
+
+* `webapp@1.13.3`
+  - The forEach method on Hook will stop iterating unless the iterator function returns a truthy value.
+  Previously, this meant that only the first registered runtime config hook would be called.
 
 * `Command line`:
   - Updated React skeletons to use React 18
