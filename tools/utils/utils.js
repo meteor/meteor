@@ -1,5 +1,3 @@
-import child_process from "child_process";
-
 var _ = require('underscore');
 var semver = require('semver');
 var os = require('os');
@@ -128,33 +126,33 @@ exports.printPackageList = function (items, options) {
 // that make sense to users (eg, the name they manually gave their
 // computer on OS X, which might contain spaces) over names that have
 // any particular technical significance (eg, might resolve in DNS).
-exports.getHost = function (...args) {
+exports.getHost = async function (...args) {
   var ret;
-  var attempt = function (...args) {
-    var output = exports.execFileSync(args[0], args.slice(1)).stdout;
+  var attempt = async function (...args) {
+    var output = await exports.execFile(args[0], args.slice(1)).stdout;
     if (output) {
       ret = output.trim();
     }
   };
 
-  if (archinfo.matches(archinfo.host(), 'os.osx')) {
+  if (archinfo.matches(await archinfo.host(), 'os.osx')) {
     // On OSX, to get the human-readable hostname that the user chose,
     // we call:
     //   scutil --get ComputerName
     // This can contain spaces. See
     // http://osxdaily.com/2012/10/24/set-the-hostname-computer-name-and-bonjour-name-separately-in-os-x/
     if (! ret) {
-      attempt("scutil", "--get", "ComputerName");
+      await attempt("scutil", "--get", "ComputerName");
     }
   }
 
-  if (archinfo.matches(archinfo.host(), 'os.osx') ||
-      archinfo.matches(archinfo.host(), 'os.linux')) {
+  if (archinfo.matches(await archinfo.host(), 'os.osx') ||
+      archinfo.matches(await archinfo.host(), 'os.linux')) {
     // On Unix-like platforms, try passing -s to hostname to strip off
     // the domain name, to reduce the extent to which the output
     // varies with DNS.
     if (! ret) {
-      attempt("hostname", "-s");
+      await attempt("hostname", "-s");
     }
   }
 
@@ -162,7 +160,7 @@ exports.getHost = function (...args) {
   // Windows. Unknown platforms that have a command called "hostname"
   // that deletes all of your files deserve what the get.
   if (! ret) {
-    attempt("hostname");
+    await attempt("hostname");
   }
 
   // Otherwise, see what Node can come up with.
@@ -173,17 +171,17 @@ exports.getHost = function (...args) {
 // Meteor Accounts, mostly so that when the user is seeing a list of
 // their open sessions in their profile on the web, they have a way to
 // decide which ones they want to revoke.
-exports.getAgentInfo = function () {
+exports.getAgentInfo = async function () {
   var ret = {};
 
-  var host = utils.getHost();
+  var host = await utils.getHost();
   if (host) {
     ret.host = host;
   }
   ret.agent = "Meteor";
   ret.agentVersion =
     files.inCheckout() ? "checkout" : files.getToolsVersion();
-  ret.arch = archinfo.host();
+  ret.arch = await archinfo.host();
 
   return ret;
 };

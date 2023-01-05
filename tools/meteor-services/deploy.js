@@ -115,7 +115,7 @@ async function deployRpc(options) {
 
   // XXX: Reintroduce progress for upload
   try {
-    var result = request(Object.assign(options, {
+    var result = await request(Object.assign(options, {
       url: deployURLBase + '/' + options.operation +
         operand,
       method: options.method || 'GET',
@@ -221,7 +221,7 @@ async function authedRpc(options) {
 
     // Our authentication didn't validate, so prompt the user to log in
     // again, and resend the RPC if the login succeeds.
-    var username = Console.readLine({
+    var username = await Console.readLine({
       prompt: "Username: ",
       stream: process.stderr
     });
@@ -229,7 +229,7 @@ async function authedRpc(options) {
       username: username,
       suppressErrorMessage: true
     };
-    if (doInteractivePasswordLogin(loginOptions)) {
+    if (await doInteractivePasswordLogin(loginOptions)) {
       return authedRpc(options);
     } else {
       return {
@@ -815,13 +815,13 @@ export function temporaryMongoUrl(site) {
   }
 };
 
-export function listAuthorized(site) {
+export async function listAuthorized(site) {
   site = canonicalizeSite(site);
   if (! site) {
     return 1;
   }
 
-  var result = deployRpc({
+  var result = await deployRpc({
     operation: 'info',
     site: site,
     expectPayload: [],
@@ -859,14 +859,14 @@ export function listAuthorized(site) {
 };
 
 // action is "add", "transfer" or "remove"
-export function changeAuthorized(site, action, username) {
+export async function changeAuthorized(site, action, username) {
   site = canonicalizeSite(site);
   if (! site) {
     // canonicalizeSite will have already printed an error
     return 1;
   }
 
-  var result = authedRpc({
+  var result = await authedRpc({
     method: 'POST',
     operation: 'authorized',
     site: site,
@@ -889,8 +889,8 @@ export function changeAuthorized(site, action, username) {
   return 0;
 };
 
-export function listSites() {
-  var result = deployRpc({
+export async function listSites() {
+  var result = await deployRpc({
     method: "GET",
     operation: "authorized-apps",
     promptIfAuthFails: true,

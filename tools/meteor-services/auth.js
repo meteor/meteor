@@ -33,7 +33,7 @@ var withAccountsConnection = function (f) {
     var conn = await openAccountsConnection();
     args.push(conn);
     try {
-      var result = f.apply(self, args);
+      var result = await f.apply(self, args);
     } finally {
       conn.close();
     }
@@ -178,8 +178,7 @@ var writeSessionData = function (data) {
 
     // Atomically remove the old file (if any) and replace it with
     // the temporary file we just created.
-    files.rename(tempPath, sessionPath);
-    return;
+    return files.rename(tempPath, sessionPath);
   }
 };
 
@@ -216,7 +215,7 @@ var writeMeteorAccountsUsername = function (username) {
   var data = readSessionData();
   var session = getSession(data, config.getAccountsDomain());
   session.username = username;
-  writeSessionData(data);
+  return writeSessionData(data);
 };
 
 // Given an object 'data' in the format returned by readSessionData,
@@ -274,7 +273,7 @@ var removePendingRevoke = function (domain, tokenIds) {
   if (! session.pendingRevoke.length) {
     delete session.pendingRevoke;
   }
-  writeSessionData(data);
+  return writeSessionData(data);
 };
 
 // If there are any logged out (pendingRevoke) tokens that haven't
@@ -330,7 +329,7 @@ var tryRevokeOldTokens = async function (options) {
           timeout: options.timeout,
           connection: options.connection
         })(tokenIds);
-        removePendingRevoke(domain, tokenIds);
+        await removePendingRevoke(domain, tokenIds);
       } catch (err) {
         logoutFailWarning(domain);
       }
@@ -339,7 +338,7 @@ var tryRevokeOldTokens = async function (options) {
       // These are tokens from a legacy Galaxy prototype, which cannot be
       // revoked (because the prototype no longer exists), but we can at least
       // remove them from the file.
-      removePendingRevoke(domain, tokenIds);
+      await removePendingRevoke(domain, tokenIds);
     } else {
       // don't know how to revoke tokens of this type
       logoutFailWarning(domain);
@@ -348,7 +347,7 @@ var tryRevokeOldTokens = async function (options) {
   }
 };
 
-var sendAuthorizeRequest = function (clientId, redirectUri, state) {
+var sendAuthorizeRequest = async function (clientId, redirectUri, state) {
   var authCodeUrl = config.getOauthUrl() + "/authorize?" +
         querystring.stringify({
           state: state,
@@ -361,7 +360,7 @@ var sendAuthorizeRequest = function (clientId, redirectUri, state) {
   // redirect for us, but instead issue the second request ourselves,
   // since request would pass our credentials along to the redirected
   // URL. See comments in http-helpers.js.
-  var codeResult = httpHelpers.request({
+  var codeResult = await httpHelpers.request({
     url: authCodeUrl,
     method: 'POST',
     strictSSL: true,
@@ -397,11 +396,11 @@ var sendAuthorizeRequest = function (clientId, redirectUri, state) {
 // All options are required.
 //
 // Throws an error if the login is not successful.
-var oauthFlow = function (conn, options) {
+var oauthFlow = async function (conn, options) {
   var crypto = require('crypto');
   var credentialToken = crypto.randomBytes(16).toString('hex');
 
-  var authorizeResult = sendAuthorizeRequest(
+  var authorizeResult = await sendAuthorizeRequest(
     options.clientId,
     options.redirectUri,
     credentialToken
@@ -411,7 +410,7 @@ var oauthFlow = function (conn, options) {
   // credential secret (instead of a bunch of code that communicates the
   // credential secret somewhere else); this should be temporary until
   // we give this a nicer name and make it not just test only.
-  var redirectResult = httpHelpers.request({
+  var redirectResult = await httpHelpers.request({
     url: authorizeResult.location + '&only_credential_secret_for_test=1',
     method: 'GET',
     strictSSL: true
@@ -426,7 +425,7 @@ var oauthFlow = function (conn, options) {
   }
 
   // XXX tokenId???
-  var loginResult = conn.apply('login', [{
+  var loginResult = await conn.apply('login', [{
     oauth: {
       credentialToken: credentialToken,
       credentialSecret: response.body
@@ -438,7 +437,7 @@ var oauthFlow = function (conn, options) {
     var session = getSession(data, options.domain);
     ensureSessionType(session, options.sessionType);
     session.token = loginResult.token;
-    writeSessionData(data);
+    await writeSessionData(data);
     return true;
   } else {
     throw new Error('login-failed');
@@ -487,7 +486,7 @@ var doInteractivePasswordLogin = async function (options) {
 
   while (true) {
     if (! _.has(loginData, 'password')) {
-      loginData.password = Console.readLine({
+      loginData.password = await Console.readLine({
         echo: false,
         prompt: "Password: ",
         stream: process.stderr
@@ -495,10 +494,10 @@ var doInteractivePasswordLogin = async function (options) {
     }
 
     try {
-      var result = conn.call('login', {
+      var result = await conn.callAsync('login', {
         session: auth.getSessionId(config.getAccountsDomain()),
         meteorAccountsLoginInfo: loginData,
-        clientInfo: utils.getAgentInfo()
+        clientInfo: await utils.getAgentInfo()
       });
     } catch (err) {
     }
@@ -529,21 +528,21 @@ var doInteractivePasswordLogin = async function (options) {
   session.userId = result.id;
   session.token = result.token;
   session.tokenId = result.tokenId;
-  writeSessionData(data);
+  await writeSessionData(data);
   maybeCloseConnection();
   return true;
 };
 
 // options are the same as for doInteractivePasswordLogin, except without
 // username and email.
-exports.doUsernamePasswordLogin = function (options) {
+exports.doUsernamePasswordLogin = async function (options) {
   var username;
 
   do {
-    username = Console.readLine({
+    username = (await Console.readLine({
       prompt: "Username: ",
       stream: process.stderr
-    }).trim();
+    })).trim();
   } while (username.length === 0);
 
   return doInteractivePasswordLogin(Object.assign({}, options, {
@@ -562,12 +561,12 @@ exports.loginCommand = withAccountsConnection(async function (options,
     var loginOptions = {};
 
     if (options.email) {
-      loginOptions.email = Console.readLine({
+      loginOptions.email = await Console.readLine({
         prompt: "Email: ",
         stream: process.stderr
       });
     } else {
-      loginOptions.username = Console.readLine({
+      loginOptions.username = await Console.readLine({
         prompt: "Username: ",
         stream: process.stderr
       });
@@ -590,13 +589,13 @@ exports.loginCommand = withAccountsConnection(async function (options,
   return 0;
 });
 
-exports.logoutCommand = function (options) {
+exports.logoutCommand = async function (options) {
   var data = readSessionData();
   var wasLoggedIn = !! loggedIn(data);
   logOutAllSessions(data);
-  writeSessionData(data);
+  await writeSessionData(data);
 
-  tryRevokeOldTokens({ firstTry: true });
+  await tryRevokeOldTokens({ firstTry: true });
 
   if (wasLoggedIn) {
     Console.error("Logged out.");
@@ -617,7 +616,7 @@ exports.logoutCommand = function (options) {
 //    if a caller wants to do its own error handling for invalid
 //    credentials). Defaults to false.
 var alreadyPolledForRegistration = false;
-exports.pollForRegistrationCompletion = function (options) {
+exports.pollForRegistrationCompletion = async function (options) {
   if (alreadyPolledForRegistration) {
     return;
   }
@@ -634,7 +633,7 @@ exports.pollForRegistrationCompletion = function (options) {
   // We are logged in but we don't yet have a username. Ask the server
   // if a username was chosen since we last checked.
   var username = null;
-  var connection = loggedInAccountsConnection(session.token);
+  var connection = await loggedInAccountsConnection(session.token);
   var timer;
 
   if (! connection) {
@@ -644,12 +643,12 @@ exports.pollForRegistrationCompletion = function (options) {
     // will try to explicitly revoke the credential ourselves).
     if (! options.noLogout) {
       logOutSession(session);
-      writeSessionData(data);
+      await writeSessionData(data);
     }
     return;
   }
 
-  new Promise(function (resolve) {
+  return new Promise(function (resolve) {
     connection.call('getUsername', function (err, username) {
       // If anything went wrong, return null just as we would have if we
       // hadn't bothered to ask the server.
@@ -662,17 +661,17 @@ exports.pollForRegistrationCompletion = function (options) {
 
   // Intentionally calling bindEnvironment on the .then callback rather
   // than the function that calls resolve.
-  }).then(fiberHelpers.bindEnvironment(function (username) {
+  }).then(fiberHelpers.bindEnvironment(async function (username) {
     connection.close();
     clearTimeout(timer);
 
     if (username) {
-      writeMeteorAccountsUsername(username);
+      await writeMeteorAccountsUsername(username);
     }
 
   // We don't actually care about the result, just that the side-effects
   // of writeMeteorAccountsUsername happen.
-  })).await();
+  }));
 };
 
 exports.registrationUrl = function () {
@@ -681,8 +680,8 @@ exports.registrationUrl = function () {
   return url;
 };
 
-exports.whoAmICommand = function (options) {
-  auth.pollForRegistrationCompletion();
+exports.whoAmICommand = async function (options) {
+  await auth.pollForRegistrationCompletion();
 
   var data = readSessionData();
   if (! loggedIn(data)) {
@@ -715,11 +714,11 @@ exports.whoAmICommand = function (options) {
 // try to log the user into it. Returns true on success (user is now
 // logged in) or false on failure (user gave up, can't talk to
 // network..)
-exports.registerOrLogIn = withAccountsConnection(function (connection) {
+exports.registerOrLogIn = withAccountsConnection(async function (connection) {
   var result;
   // Get their email
   while (true) {
-    var email = Console.readLine({
+    var email = await Console.readLine({
       prompt: "Email: ",
       stream: process.stderr
     });
@@ -730,7 +729,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
         'tryRegister',
         { connection: connection }
       );
-      result = methodCaller(email, utils.getAgentInfo());
+      result = await methodCaller(email, await utils.getAgentInfo());
       break;
     } catch (err) {
       if (err.error === 400 && ! utils.validEmail(email)) {
@@ -757,7 +756,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
     session.tokenId = result.tokenId;
     session.userId = result.userId;
     session.registrationUrl = result.registrationUrl;
-    writeSessionData(data);
+    await writeSessionData(data);
     return true;
   } else if (result.alreadyExisted && result.sentRegistrationEmail) {
     Console.error();
@@ -799,7 +798,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
 
     stopSpinner();
     Console.error("Username: " + waitForRegistrationResult.username);
-    loginResult = doInteractivePasswordLogin({
+    loginResult = await doInteractivePasswordLogin({
       username: waitForRegistrationResult.username,
       retry: true,
       connection: connection
@@ -808,7 +807,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
   } else if (result.alreadyExisted && result.username) {
     Console.error("\nLogging in as " + Console.command(result.username) + ".");
 
-    loginResult = doInteractivePasswordLogin({
+    loginResult = await doInteractivePasswordLogin({
       username: result.username,
       retry: true,
       connection: connection
@@ -825,10 +824,10 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
 
 // options: firstTime, leadingNewline
 // returns true if it printed something
-exports.maybePrintRegistrationLink = function (options) {
+exports.maybePrintRegistrationLink = async function (options) {
   options = options || {};
 
-  auth.pollForRegistrationCompletion();
+  await auth.pollForRegistrationCompletion();
 
   var data = readSessionData();
   var session = getSession(data, config.getAccountsDomain());
@@ -925,11 +924,11 @@ exports.getAccountsConfiguration = async function (conn) {
 // Given a ServiceConnection, log in with OAuth using Meteor developer
 // accounts. Assumes the user is already logged in to the developer
 // accounts server.
-exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
+exports.loginWithTokenOrOAuth = async function (conn, accountsConfiguration,
                                           url, domain, sessionType) {
   var setUpOnReconnect = function () {
     conn.onReconnect = function () {
-      conn.apply('login', [{
+      return conn.apply('login', [{
         resume: auth.getSessionToken(domain)
       }], { wait: true }, function () { });
     };
@@ -942,7 +941,7 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
   var existingToken = auth.getSessionToken(domain);
   if (existingToken) {
     try {
-      loginResult = conn.apply('login', [{
+      loginResult = await conn.apply('login', [{
         resume: existingToken
       }], { wait: true });
     } catch (err) {
@@ -956,7 +955,7 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
 
     if (loginResult && loginResult.token && loginResult.id) {
       // Success!
-      setUpOnReconnect();
+      await setUpOnReconnect();
       return;
     }
   }
@@ -977,14 +976,14 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
   if (! accountsConfiguration.loginStyle) {
     redirectUri = redirectUri + "?close";
   }
-  loginResult = oauthFlow(conn, {
+  loginResult = await oauthFlow(conn, {
     clientId: clientId,
     redirectUri: redirectUri,
     domain: domain,
     sessionType: sessionType
   });
 
-  setUpOnReconnect();
+  await setUpOnReconnect();
 };
 
 exports.loggedInAccountsConnection = loggedInAccountsConnection;

@@ -1671,7 +1671,7 @@ main.registerCommand({
     return options.add || options.remove || options.transfer;
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
 
   if (Object.keys(_.pick(options, 'add', 'remove', 'transfer', 'list')).length > 1) {
     Console.error(
@@ -1679,7 +1679,7 @@ main.registerCommand({
     return 1;
   }
 
-  auth.pollForRegistrationCompletion();
+  await auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
   if (! auth.isLoggedIn()) {
@@ -2213,8 +2213,8 @@ main.registerCommand({
     email: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, async function (options) {
-  return await auth.loginCommand(Object.assign({
+},  function (options) {
+  return auth.loginCommand(Object.assign({
     overwriteExistingToken: true
   }, options));
 });
@@ -2540,8 +2540,8 @@ main.registerCommand({
   maxArgs: 0,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  auth.pollForRegistrationCompletion();
+}, async function (options) {
+  await auth.pollForRegistrationCompletion();
   if (! auth.isLoggedIn()) {
     Console.error(
       "You must be logged in for that. Try " +

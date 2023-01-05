@@ -1317,7 +1317,7 @@ class Console extends ConsoleBase {
         this._setProgressDisplay(previousProgressDisplay);
         resolve(line);
       });
-    }).await();
+    });
   }
 }
 
