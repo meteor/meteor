@@ -295,8 +295,8 @@ if (process.platform === 'win32') {
 
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
-var findMongoPort = function(dbDir) {
-  var pids = findMongoPids(dbDir);
+var findMongoPort = async function(dbDir) {
+  var pids = await findMongoPids(dbDir);
 
   if (pids.length !== 1) {
     return null;
@@ -351,7 +351,7 @@ if (process.platform === 'win32') {
       );
       client.on('error', () => resolve(null));
     })
-      .catch(() => null)
+      .catch(() => null);
   };
 }
 

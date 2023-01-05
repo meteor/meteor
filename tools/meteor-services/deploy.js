@@ -732,8 +732,8 @@ export function deleteApp(site) {
 // messages.  Returns the result of the RPC if successful, or null
 // otherwise (including if auth failed or if the user is not authorized
 // for this site).
-function checkAuthThenSendRpc(site, operation, what) {
-  var preflight = authedRpc({
+async function checkAuthThenSendRpc(site, operation, what) {
+  var preflight = await authedRpc({
     operation: operation,
     site: site,
     preflight: true,
@@ -751,7 +751,7 @@ function checkAuthThenSendRpc(site, operation, what) {
     if (! isLoggedIn()) {
       // Maybe the user is authorized for this app but not logged in
       // yet, so give them a login prompt.
-      var loginResult = doUsernamePasswordLogin({ retry: true });
+      var loginResult = await doUsernamePasswordLogin({ retry: true });
       if (loginResult) {
         // Once we've logged in, retry the whole operation. We need to
         // do the preflight request again instead of immediately moving
@@ -759,7 +759,7 @@ function checkAuthThenSendRpc(site, operation, what) {
         // logged-in user is authorized for this app, and if they
         // aren't, then we want to print the nice unauthorized error
         // message.
-        return checkAuthThenSendRpc(site, operation, what);
+        return await checkAuthThenSendRpc(site, operation, what);
       } else {
         // Shouldn't ever get here because we set the retry flag on the
         // login, but just in case.
@@ -781,7 +781,7 @@ function checkAuthThenSendRpc(site, operation, what) {
 
   // User is authorized for the app; go ahead and do the actual RPC.
 
-  var result = authedRpc({
+  var result = await authedRpc({
     operation: operation,
     site: site,
     expectMessage: true,
@@ -799,14 +799,14 @@ function checkAuthThenSendRpc(site, operation, what) {
 // On failure, prints a message to stderr and returns null. Otherwise,
 // returns a temporary authenticated Mongo URL allowing access to this
 // site's database.
-export function temporaryMongoUrl(site) {
+export async function temporaryMongoUrl(site) {
   site = canonicalizeSite(site);
   if (! site) {
     // canonicalizeSite printed an error
     return null;
   }
 
-  var result = checkAuthThenSendRpc(site, 'mongo', 'open a mongo connection');
+  var result = await checkAuthThenSendRpc(site, 'mongo', 'open a mongo connection');
 
   if (result !== null) {
     return result.message;

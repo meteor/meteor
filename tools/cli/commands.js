@@ -1395,7 +1395,7 @@ main.registerCommand({
   },
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   var mongoUrl;
   var usedMeteorAccount = false;
 
@@ -1403,7 +1403,7 @@ main.registerCommand({
     // localhost mode
     var findMongoPort =
       require('../runners/run-mongo.js').findMongoPort;
-    var mongoPort = findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
+    var mongoPort = await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
 
     // XXX detect the case where Meteor is running, but MONGO_URL was
     // specified?
@@ -1429,7 +1429,7 @@ to this command.`);
     // remote mode
     var site = qualifySitename(options.args[0]);
 
-    mongoUrl = deploy.temporaryMongoUrl(site);
+    mongoUrl = await deploy.temporaryMongoUrl(site);
     usedMeteorAccount = true;
 
     if (! mongoUrl) {
@@ -1441,12 +1441,12 @@ to this command.`);
     console.log(mongoUrl);
   } else {
     if (usedMeteorAccount) {
-      auth.maybePrintRegistrationLink();
+      await auth.maybePrintRegistrationLink();
     }
     process.stdin.pause();
     var runMongo = require('../runners/run-mongo.js');
-    runMongo.runMongoShell(mongoUrl);
-    throw new main.WaitForExit;
+    await runMongo.runMongoShell(mongoUrl);
+    throw new main.WaitForExit();
   }
 });
 
