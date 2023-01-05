@@ -68,8 +68,7 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
   // server). The unsoundness can cause problems for tests, however, so it
   // may be a good idea to set this environment variable to "true" to
   // disable the caching entirely.
-  //TODO -> [FIBERS] - Re-enable caching here.
-  const disableCaching = true || !! JSON.parse(
+  const disableCaching = !! JSON.parse(
     process.env.METEOR_DISABLE_CONSTRAINT_SOLVER_CACHING || "false"
   );
 

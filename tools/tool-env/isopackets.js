@@ -1,5 +1,3 @@
-import {debug} from "util";
-
 var assert = require('assert');
 var _ = require('underscore');
 
@@ -125,7 +123,6 @@ export async function loadIsopackage(packageName, isopacketName = "combined") {
   }
 
   const isopacket = await load();
-  // TODO -> Check here.
   if (!_.has(isopacket, packageName)) {
     throw new Error("Unknown isopacket dependency: " + packageName);
   }
@@ -171,7 +168,7 @@ export async function ensureIsopacketsLoadable() {
         var isopacketRoot = isopacketPath(isopacketName);
         var existingBuildinfo = files.readJSONOrNull(
             files.pathJoin(isopacketRoot, 'isopacket-buildinfo.json'));
-        var needRebuild = true;
+        var needRebuild = !existingBuildinfo;
         if (!needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
           needRebuild = true;
         }
