@@ -147,6 +147,21 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'accounts async - make async call onLogin',
+  (test, done) => {
+    const onLogin = Accounts.onLogin( async () => {
+      const sleep =
+        (ms) => new Promise(resolve => setTimeout(() => resolve(true), ms));
+      const async = await sleep(10)
+      test.isTrue(async);
+      onLogin.stop()
+      removeTestUser(done);
+    });
+    logoutAndCreateUser(test, done, () => {});
+  }
+);
+
+Tinytest.addAsync(
   'accounts - onLogin callback receives { type: "resume" } param on ' +
   'reconnect, if already logged in',
   (test, done) => {
