@@ -16,18 +16,22 @@ OAuth._pendingCredentials = new Mongo.Collection(
     _preventAutopublish: true
   });
 
-OAuth._pendingCredentials.createIndex('key', { unique: true });
-OAuth._pendingCredentials.createIndex('credentialSecret');
-OAuth._pendingCredentials.createIndex('createdAt');
+// TODO[FIBERS]: I Need TLA
+async function init() {
+  await OAuth._pendingCredentials.createIndex('key', { unique: true });
+  await OAuth._pendingCredentials.createIndex('credentialSecret');
+  await OAuth._pendingCredentials.createIndex('createdAt');
+}
+init()
 
 
 
 // Periodically clear old entries that were never retrieved
-const _cleanStaleResults = () => {
+const _cleanStaleResults = async () => {
   // Remove credentials older than 1 minute
   const timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
-  OAuth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
+  await OAuth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
 };
 const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
@@ -78,7 +82,6 @@ OAuth._retrievePendingCredential =
       key,
       credentialSecret,
     });
-
     if (pendingCredential) {
       await OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
       if (pendingCredential.credential.error)
