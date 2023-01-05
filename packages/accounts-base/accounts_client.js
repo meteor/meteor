@@ -228,15 +228,15 @@ export class AccountsClient extends AccountsCommon {
         called = true;
         this._loginCallbacksCalled = true;
         if (!error) {
-          this._onLoginHook.forEach(callback => {
-            callback(loginDetails);
+          this._onLoginHook.forEachAsync(async callback => {
+            await callback(loginDetails);
             return true;
-          });
+          }).then();
         } else {
-          this._onLoginFailureHook.forEach(callback => {
-            callback({ error });
+          this._onLoginFailureHook.forEachAsync(async callback => {
+            await callback({ error });
             return true;
-          });
+          }).then();
         }
         options.userCallback(error, loginDetails);
       }
@@ -377,10 +377,10 @@ export class AccountsClient extends AccountsCommon {
   makeClientLoggedOut() {
     // Ensure client was successfully logged in before running logout hooks.
     if (this.connection._userId) {
-      this._onLogoutHook.each(callback => {
-        callback();
+      this._onLogoutHook.forEachAsync(async callback => {
+        await callback();
         return true;
-      });
+      }).then();
     }
     this._unstoreLoginToken();
     this.connection.setUserId(null);
