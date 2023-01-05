@@ -901,11 +901,11 @@ export const createTarball = Profile(function (_: string, tarball: string) {
   return "files.createTarball " + pathBasename(tarball);
 }, function (dirPath: string, tarball: string) {
   const out = createWriteStream(tarball);
-  new Promise(function (resolve, reject) {
+  return new Promise(function (resolve, reject) {
     out.on('error', reject);
     out.on('close', resolve);
     createTarGzStream(dirPath).pipe(out);
-  }).await();
+  });
 });
 
 // Use this if you'd like to replace a directory with another

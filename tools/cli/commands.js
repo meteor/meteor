@@ -986,10 +986,10 @@ var buildCommands = {
 main.registerCommand({
   name: "build",
   ...buildCommands,
-}, async function (options) {
+}, function (options) {
   return Profile.run(
     "meteor build",
-    () => Promise.await(buildCommand(options))
+    () => buildCommand(options)
   );
 });
 
@@ -1001,7 +1001,7 @@ main.registerCommand({
   name: "bundle",
   hidden: true,
   ...buildCommands,
-}, async function (options) {
+}, function (options) {
   Console.error(
     "This command has been deprecated in favor of " +
     Console.command("'meteor build'") + ", which allows you to " +
@@ -1012,14 +1012,14 @@ main.registerCommand({
 
   return Profile.run(
     "meteor bundle",
-    () => Promise.await(buildCommand({
+    () => buildCommand({
       ...options,
       _bundleOnly: true,
-    }))
+    })
   );
 });
 
-var buildCommand = function (options) {
+var buildCommand = async function (options) {
   Console.setVerbose(!!options.verbose);
   if (options.headless) {
     // There's no point in spinning the spinner when we're running
@@ -1040,18 +1040,19 @@ var buildCommand = function (options) {
     showInvalidArchMsg(options.architecture);
     return 1;
   }
-  var bundleArch = options.architecture || archinfo.host();
+  var bundleArch = options.architecture || await archinfo.host();
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([bundleArch, archinfo.host()]),
+    serverArchitectures: _.uniq([bundleArch, await archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
+  await projectContext.init();
 
-  main.captureAndExit("=> Errors while initializing project:", function () {
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // TODO Fix the nested Profile.run warning here, without interfering
     // with METEOR_PROFILE output for other commands, like `meteor run`.
-    projectContext.prepareProjectForBuild();
+    return projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
 
@@ -1154,13 +1155,13 @@ ${Console.command("meteor build ../output")}`,
       files.pathJoin(outputPath, 'bundle')) :
       files.pathJoin(buildDir, 'bundle');
 
-  stats.recordPackages({
+  await stats.recordPackages({
     what: "sdk.bundle",
     projectContext: projectContext
   });
 
   var bundler = require('../isobuild/bundler.js');
-  var bundleResult = bundler.bundle({
+  var bundleResult = await bundler.bundle({
     projectContext: projectContext,
     outputPath: bundlePath,
     buildOptions: {
@@ -1186,15 +1187,15 @@ ${Console.command("meteor build ../output")}`,
   }
 
   if (!options.directory) {
-    main.captureAndExit('', 'creating server tarball', () => {
+    await main.captureAndExit('', 'creating server tarball', async () => {
       try {
         var outputTar = options._bundleOnly ? outputPath :
           files.pathJoin(outputPath, appName + '.tar.gz');
 
-        files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);
+        await files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);
       } catch (err) {
         buildmessage.exception(err);
-        files.rm_recursive(buildDir);
+        await files.rm_recursive(buildDir);
       }
     });
   }
@@ -1202,16 +1203,16 @@ ${Console.command("meteor build ../output")}`,
   if (!_.isEmpty(cordovaPlatforms)) {
 
     let cordovaProject;
-    main.captureAndExit('', () => {
+    await main.captureAndExit('', async () => {
 
       import {
         pluginVersionsFromStarManifest,
         displayNameForPlatform,
       } from '../cordova/index.js';
 
-      ensureDevBundleDependencies();
+      await ensureDevBundleDependencies();
 
-      buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
+      await buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
         import { CordovaProject } from '../cordova/project.js';
 
         cordovaProject = new CordovaProject(projectContext, {
@@ -1227,9 +1228,9 @@ ${Console.command("meteor build ../output")}`,
       });
 
       for (platform of cordovaPlatforms) {
-        buildmessage.enterJob(
+        await buildmessage.enterJob(
           { title: `building Cordova app for \
-${displayNameForPlatform(platform)}` }, () => {
+${displayNameForPlatform(platform)}` }, async () => {
             let buildOptions = { release: !options.debug };
 
             const buildPath = files.pathJoin(
@@ -1248,7 +1249,7 @@ ${displayNameForPlatform(platform)}` }, () => {
             }
 
             // Once prepared, copy the bundle to the final location.
-            files.cp_r(buildPath,
+            await files.cp_r(buildPath,
               files.pathJoin(platformOutputPath, 'project'));
 
             // Make some platform-specific adjustments to the resulting build.
@@ -1267,7 +1268,7 @@ https://guide.meteor.com/cordova.html#submitting-ios
               const apkPath = files.pathJoin(buildPath, `app/build/outputs/${packageType}/${options.debug ? 'debug' : 'release'}`,
                 options.debug ? `app-debug.${packageExtension}` : `${packageName}.${packageExtension}`);
 
-              console.log(apkPath)
+              console.log(apkPath);
               if (files.exists(apkPath)) {
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
                 options.debug ? `app-debug.${packageExtension}` : `${packageName}.${packageExtension}`));
@@ -1286,7 +1287,7 @@ https://guide.meteor.com/cordova.html#submitting-android
     });
   }
 
-  files.rm_recursive(buildDir);
+  await files.rm_recursive(buildDir);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
