@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Npm.depends({
-  parse5: '3.0.2',
+  parse5: '6.0.1',
   'stream-to-string': '1.1.0'
 });
 
