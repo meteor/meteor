@@ -120,13 +120,14 @@ function checkAsyncModule (exports) {
      Object.getOwnPropertyDescriptor(exports, '__reifyAsyncModule');
 }
 
-// For this to be accurate, all bundles must be queued before calling this
+// For this to be accurate, all linked files must be queued before calling this
 // If all are loaded, returns null. Otherwise, returns a promise
 function waitUntilAllLoaded() {
   var pendingNames = Object.keys(pending);
   
   if (pendingNames.length === 0) {
-    // If there are no async packages, then there might not be a promise
+    // All packages are loaded
+    // If there were no async packages, then there might not be a promise
     // polyfill loaded either, so we don't create a promise to return
     return null;
   }
