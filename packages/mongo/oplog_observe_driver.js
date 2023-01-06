@@ -164,7 +164,7 @@ OplogObserveDriver = function (options) {
           if (driver._stopped)
             return;
 
-          var write = fence.beginWrite();
+          var write = await fence.beginWrite();
           if (driver._phase === PHASE.STEADY) {
             // Make sure that all of the callbacks have made it through the
             // multiplexer and been delivered to ObserveHandles before committing

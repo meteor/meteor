@@ -47,13 +47,13 @@ const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 // @param requestToken {string}
 // @param requestTokenSecret {string}
 //
-OAuth._storeRequestToken = (key, requestToken, requestTokenSecret) => {
+OAuth._storeRequestToken = async (key, requestToken, requestTokenSecret) => {
   check(key, String);
 
   // We do an upsert here instead of an insert in case the user happens
   // to somehow send the same `state` parameter twice during an OAuth
   // login; we don't want a duplicate key error.
-  OAuth._pendingRequestTokens.upsert({
+  await OAuth._pendingRequestTokens.upsert({
     key,
   }, {
     key,
@@ -69,12 +69,12 @@ OAuth._storeRequestToken = (key, requestToken, requestTokenSecret) => {
 //
 // @param key {string}
 //
-OAuth._retrieveRequestToken = key => {
+OAuth._retrieveRequestToken = async key => {
   check(key, String);
 
-  const pendingRequestToken = OAuth._pendingRequestTokens.findOne({ key: key });
+  const pendingRequestToken =  await OAuth._pendingRequestTokens.findOne({ key: key });
   if (pendingRequestToken) {
-    OAuth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
+    await OAuth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
     return {
       requestToken: OAuth.openSecret(pendingRequestToken.requestToken),
       requestTokenSecret: OAuth.openSecret(
