@@ -502,10 +502,7 @@ function startServerProcess() {
     } else {
       global.asyncLocalStorage.run({ level: 'boot' }, async () => {
         let potentialPromise = loadServerBundles();
-        // TODO: For consistency, should this always await?
-        if (potentialPromise) {
-          await potentialPromise;
-        }
+        await potentialPromise;
 
         callStartupHooks();
         runMain();
