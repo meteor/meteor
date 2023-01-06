@@ -448,7 +448,7 @@ Object.assign(Module.prototype, {
   }
 });
 
-  // Insert the given value into the tree by splitting the path and
+// Insert the given value into the tree by splitting the path and
 // creating/following nested objects properties named by each component of
 // the split path.
 export function addToTree(value, path, tree) {
@@ -1171,7 +1171,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     }
   });
 
-  if (!hasRuntime&& (
+  if (!hasRuntime && (
     Object.keys(declaredExports).length > 0 ||
     eagerModulePaths ||
     mainModulePath
@@ -1194,8 +1194,8 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
         uses
       });
       let footer = getFooter({
-        exported: {},
         name: null,
+        exported: {},
         eagerModulePaths,
         hasRuntime
       });
@@ -1256,11 +1256,11 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   });
 
   var footer = getFooter({
-    exported: declaredExports,
     name,
-    imports,
+    exported: declaredExports,
     mainModulePath,
     eagerModulePaths,
+    imports,
     hasRuntime
   });
 
