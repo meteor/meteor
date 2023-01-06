@@ -124,6 +124,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
       if (!func) {
         delete test.extraDetails.asyncBlock;
         onComplete();
+        return;
       }
       var em = new ExpectationManager(test, function () {
         Meteor.clearTimeout(timer);
