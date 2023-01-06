@@ -9,7 +9,7 @@ module.exports = function (babel) {
       Function: {
         exit: function (path) {
           const node = path.node;
-          if (! node.async) {
+          if (!node.async) {
             return;
           }
 

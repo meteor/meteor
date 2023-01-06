@@ -11,6 +11,7 @@ blaze-html-templates    # Compile .html files into Meteor Blaze views
 jquery                  # Wrapper package for npm-installed jquery
 reactive-var            # Reactive variable for tracker
 tracker                 # Meteor's client-side reactive programming library
+~prototype~
 
 standard-minifier-css   # CSS minifier run for production mode
 standard-minifier-js    # JS minifier run for production mode
