@@ -85,7 +85,9 @@ function runEagerModules(config, callback) {
     var exports = config.require(path);
 
     if (checkAsyncModule(exports)) {
-      mainModuleAsync = true;
+      if (path === config.mainModulePath) {
+        mainModuleAsync = true;
+      }
 
       // Is an async module
       exports.then(function (exports) {
