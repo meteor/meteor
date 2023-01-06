@@ -127,11 +127,11 @@ ObserveMultiplexer = class {
   // all handles. "ready" must have already been called on this multiplexer.
   async onFlush(cb) {
     var self = this;
-    return await this._queue.queueTask(async function () {
+    //return await this._queue.queueTask(async function () {
       if (!self._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();
-    });
+    //});
   }
   callbackNames() {
     if (this._ordered)
@@ -142,9 +142,9 @@ ObserveMultiplexer = class {
   _ready() {
     return !!this._isReady;
   }
-  _applyCallback(callbackName, args) {
+  async _applyCallback(callbackName, args) {
     const self = this;
-    this._queue.queueTask(async function () {
+    //this._queue.queueTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;
@@ -174,7 +174,7 @@ ObserveMultiplexer = class {
       });
 
       await Promise.all(toAwait);
-    });
+    //});
   }
 
   // Sends initial adds to a handle. It should only be called from within a task

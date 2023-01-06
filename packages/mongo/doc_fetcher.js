@@ -62,6 +62,10 @@ export class DocFetcher {
           } finally {
             // XXX consider keeping the doc around for a period of time before
             // removing from the cache
+            const evEmmiter = self._callbacksForOp.get(op);
+            if (evEmmiter && evEmmiter.removeAllListeners) {
+              evEmmiter.removeAllListeners();
+            }
             self._callbacksForOp.delete(op);
           }
         }

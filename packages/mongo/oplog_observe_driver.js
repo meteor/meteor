@@ -505,15 +505,31 @@ _.extend(OplogObserveDriver.prototype, {
         const awaitablePromise = new Promise(r => promiseResolver = r);
         // This loop is safe, because _currentlyFetching will not be updated
         // during this loop (in fact, it is never mutated).
-        self._currentlyFetching.forEach(function (op, id) {
+        await self._currentlyFetching.forEachAsync(async function (op, id) {
           waiting++;
-          self._mongoHandle._docFetcher.fetch(
-            self._cursorDescription.collectionName, id, op,
-            finishIfNeedToPollQuery(function (err, doc) {
-              try {
-                if (err) {
+          await self._mongoHandle._docFetcher.fetch(self._cursorDescription.collectionName, id, op)
+              .then(finishIfNeedToPollQuery(function (doc) {
+                  try {
+                    if (!self._stopped && self._phase === PHASE.FETCHING
+                               && self._fetchGeneration === thisGeneration) {
+                      // We re-check the generation in case we've had an explicit
+                      // _pollQuery call (eg, in another fiber) which should
+                      // effectively cancel this round of fetches.  (_pollQuery
+                      // increments the generation.)
+
+                      self._handleDoc(id, doc);
+                    }
+                  } finally {
+                    waiting--;
+                    // Because fetch() never calls its callback synchronously,
+                    // this is safe (ie, we won't call fut.return() before the
+                    // forEach is done).
+                    if (waiting === 0)
+                      promiseResolver();
+                  }
+                })).catch(err => {
                   Meteor._debug("Got exception while fetching documents",
-                                err);
+                      err);
                   // If we get an error from the fetcher (eg, trouble
                   // connecting to Mongo), let's just abandon the fetch phase
                   // altogether and fall back to polling. It's not like we're
@@ -521,23 +537,13 @@ _.extend(OplogObserveDriver.prototype, {
                   if (self._phase !== PHASE.QUERYING) {
                     self._needToPollQuery();
                   }
-                } else if (!self._stopped && self._phase === PHASE.FETCHING
-                           && self._fetchGeneration === thisGeneration) {
-                  // We re-check the generation in case we've had an explicit
-                  // _pollQuery call (eg, in another fiber) which should
-                  // effectively cancel this round of fetches.  (_pollQuery
-                  // increments the generation.)
-                  self._handleDoc(id, doc);
-                }
-              } finally {
-                waiting--;
-                // Because fetch() never calls its callback synchronously,
-                // this is safe (ie, we won't call fut.return() before the
-                // forEach is done).
-                if (waiting === 0)
-                  promiseResolver();
-              }
-            }));
+                  waiting--;
+                  // Because fetch() never calls its callback synchronously,
+                  // this is safe (ie, we won't call fut.return() before the
+                  // forEach is done).
+                  if (waiting === 0)
+                    promiseResolver();
+              });
         });
         await awaitablePromise;
         // Exit now if we've had a _pollQuery call (here or in another fiber).

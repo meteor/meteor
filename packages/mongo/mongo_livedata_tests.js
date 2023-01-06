@@ -226,7 +226,7 @@ _.each( ['STRING'], function(idGeneration) {
   );
 
 
-  Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, async function (test) {
+  Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, async function (test, onComplete) {
     var run = test.runId();
     var coll, coll2;
     if (Meteor.isClient) {
@@ -270,8 +270,8 @@ _.each( ['STRING'], function(idGeneration) {
     var expectObserve = async function (expected, f) {
       if (!(expected instanceof Array))
         expected = [expected];
-
-      test.include(expected, await captureObserve(f));
+      const currentValue = await captureObserve(f);
+      test.include(expected, currentValue);
     };
 
     test.equal(await coll.find({run: run}).count(), 0);
@@ -350,8 +350,8 @@ _.each( ['STRING'], function(idGeneration) {
     await expectObserve('c(3,0,1)c(6,1,4)', async function () {
       var count = await coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
       test.equal(count, 2);
-      test.equal(_.pluck(await coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
-          [6, 3]);
+      const res = _.pluck(await coll.find({run: run}, {sort: {x: -1}}).fetch(), 'x');
+      test.equal(res, [6, 3]);
     });
 
     await expectObserve(['c(13,0,3)m(13,0,1)', 'm(6,1,0)c(13,1,3)',
@@ -863,7 +863,7 @@ _.each( ['STRING'], function(idGeneration) {
     // TODO -> Also uses oplog
     // This test mainly checks the correctness of oplog code dealing with limited
     // queries. Compitablity with poll-diff is added as well.
-    Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, async function (test) {
+    Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, async function (test, onComplete) {
       var run = test.runId();
       var coll = new Mongo.Collection("observeLimit-"+run, collectionOptions);
 
@@ -1025,7 +1025,7 @@ _.each( ['STRING'], function(idGeneration) {
 
       // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
       // schedule a repoll.
-      await rem({ bar: { $lt: 10 } });
+      await rem({ bar: { $lt: 10 } }, '{ bar: { $lt: 10 } }');
       // State: [ 17:8 18:7 19:6 | ]!
 
       // XXX the oplog code analyzes the events one by one: one remove after
@@ -1130,6 +1130,7 @@ _.each( ['STRING'], function(idGeneration) {
       testSafeAppendToBufferFlag(false);
 
       await o.handle.stop();
+      onComplete();
     });
     // TODO -> Also uses oplog
     Tinytest.addAsync("mongo-livedata - observe sorted, limited, sort fields " + idGeneration, async function (test) {
@@ -1487,9 +1488,7 @@ _.each( ['STRING'], function(idGeneration) {
 
   testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGeneration, [
     async function (test, expect) {
-      var self = this;
       var justId = function (doc) {
-        console.log({doc});
         return _.omit(doc, '_id');
       };
       TRANSFORMS["justId"] = justId;
@@ -1589,14 +1588,11 @@ _.each( ['STRING'], function(idGeneration) {
       var self = this;
       await self.coll.update(
           self.docId, new Dog("rover", "orange")).then(id => {
-            console.log({id});
             expect();
           }).catch(err => {
-            console.log({err});
             test.isTrue(err);
             expect();
       });
-      //console.log({expect});
     }
   ]);
 
