@@ -416,7 +416,7 @@ async function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
 
   let needToHandleNodeModules = false;
 
-  for (const item of readdir(fromPkgDir)) {
+  for (const item of files.readdir(fromPkgDir)) {
     if (item === "node_modules") {
       // We'll link or copy node_modules in a follow-up step.
       needToHandleNodeModules = true;
