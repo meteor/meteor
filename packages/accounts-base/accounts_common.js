@@ -14,6 +14,8 @@ const VALID_CONFIG_KEYS = [
   'ambiguousErrorMessages',
   'bcryptRounds',
   'defaultFieldSelector',
+  'loginTokenExpirationHours',
+  'tokenSequenceLength',
 ];
 
 /**
@@ -77,40 +79,6 @@ export class AccountsCommon {
     // should come up with a more generic way to do this (eg, with some sort of
     // symbolic error code rather than a number).
     this.LoginCancelledError.numericError = 0x8acdc2f;
-
-    // loginServiceConfiguration and ConfigError are maintained for backwards compatibility
-    Meteor.startup(() => {
-      const { ServiceConfiguration } = Package['service-configuration'];
-      this.loginServiceConfiguration = ServiceConfiguration.configurations;
-      this.ConfigError = ServiceConfiguration.ConfigError;
-
-      const settings = Meteor.settings?.packages?.['accounts-base'];
-      if (settings) {
-        if (settings.oauthSecretKey) {
-          if (!Package['oauth-encryption']) {
-            throw new Error(
-              'The oauth-encryption package must be loaded to set oauthSecretKey'
-            );
-          }
-          Package['oauth-encryption'].OAuthEncryption.loadKey(
-            settings.oauthSecretKey
-          );
-          delete settings.oauthSecretKey;
-        }
-        // Validate config options keys
-        Object.keys(settings).forEach(key => {
-          if (!VALID_CONFIG_KEYS.includes(key)) {
-            // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-            throw new Meteor.Error(
-              `Accounts configuration: Invalid key: ${key}`
-            );
-          } else {
-            // set values in Accounts._options
-            this._options[key] = settings[key];
-          }
-        });
-      }
-    });
   }
 
   /**
@@ -168,6 +136,18 @@ export class AccountsCommon {
       : null;
   }
 
+  /**
+   * @summary Get the current user record, or `null` if no user is logged in.
+   * @locus Anywhere
+   * @param {Object} [options]
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   */
+  async userAsync(options) {
+    const userId = this.userId();
+    return userId
+      ? this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
+      : null;
+  }
   // Set up config for the accounts system. Call this on both the client
   // and the server.
   //
@@ -218,6 +198,8 @@ export class AccountsCommon {
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`. Beware when using this. If, for instance, you do not include `email` when excluding the fields, you can have problems with functions like `forgotPassword` that will break because they won't have the required data available. It's recommend that you always keep the fields `_id`, `username`, and `email`.
+   * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
+   * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
    */
   config(options) {
     // We don't want users to accidentally only call Accounts.config on the
@@ -260,6 +242,7 @@ export class AccountsCommon {
     // Validate config options keys
     Object.keys(options).forEach(key => {
       if (!VALID_CONFIG_KEYS.includes(key)) {
+        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
         throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
       }
     });
@@ -414,6 +397,15 @@ Meteor.userId = () => Accounts.userId();
  */
 Meteor.user = options => Accounts.user(options);
 
+/**
+ * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @locus Anywhere but publish functions
+ * @importFromPackage meteor
+ * @param {Object} [options]
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+ */
+Meteor.userAsync = options => Accounts.userAsync(options);
+
 // how long (in days) until a login token expires
 const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
 // how long (in days) until reset password token expires
@@ -426,9 +418,6 @@ const DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS = 30;
 const MIN_TOKEN_LIFETIME_CAP_SECS = 3600; // one hour
 // how often (in milliseconds) we check for expired tokens
 export const EXPIRE_TOKENS_INTERVAL_MS = 600 * 1000; // 10 minutes
-// how long we wait before logging out clients when Meteor.logoutOtherClients is
-// called
-export const CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
 // A large number of expiration days (approximately 100 years worth) that is
 // used when creating unexpiring tokens.
 const LOGIN_UNEXPIRING_TOKEN_DAYS = 365 * 100;

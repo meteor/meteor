@@ -516,7 +516,7 @@ var compileUnibuild = Profile(function (options) {
       // addAssets or putting it in the public/private directories in an app.
       //
       // This is a backwards-incompatible change, but it doesn't affect
-      // previously-published packages (because the check is occuring in the
+      // previously-published packages (because the check is occurring in the
       // compiler), and it doesn't affect apps (where random files outside of
       // private/public never end up in the source list anyway).
       //
@@ -786,10 +786,10 @@ function runLinters({inputSourceArch, isopackCache, sources,
         `Unexpected classification for ${ relPath }: ${ classification.type }`);
     }
 
-    // Read the file and add it to the WatchSet.
-    const {hash, contents} = watch.readAndWatchFileWithHash(
-      watchSet,
-      files.pathResolve(inputSourceArch.sourceRoot, relPath));
+    const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
+    const hash = optimisticHashOrNull(absPath);
+    const contents = optimisticReadFile(absPath);
+    watchSet.addFile(absPath, hash);
 
     if (classification.type === "meteor-ignore") {
       // Return after watching .meteorignore files but before adding them

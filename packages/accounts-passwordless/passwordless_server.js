@@ -1,47 +1,13 @@
 import { Accounts } from 'meteor/accounts-base';
-import { getUserById, tokenValidator } from './server_utils';
+import {
+  DEFAULT_TOKEN_SEQUENCE_LENGTH,
+  getUserById,
+  NonEmptyString,
+  tokenValidator,
+  checkToken,
+} from './server_utils';
 import { Random } from 'meteor/random';
 
-const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
-
-const checkToken = ({ user, sequence, selector }) => {
-  const result = {
-    userId: user._id,
-  };
-
-  const { createdAt, token: userToken } = user.services.passwordless;
-
-  if (
-    new Date(
-      createdAt.getTime() +
-        Accounts._options.loginTokenExpirationHours * ONE_HOUR_IN_MILLISECONDS
-    ) >= new Date()
-  ) {
-    result.error = Accounts._handleError('Expired token', false);
-  }
-
-  if (selector.email) {
-    const foundTokenEmail = user.services.passwordless.tokens.find(
-      ({ email: tokenEmail, token }) =>
-        SHA256(selector.email + sequence) === token &&
-        selector.email === tokenEmail
-    );
-    if (foundTokenEmail) {
-      return { ...result, verifiedEmail: foundTokenEmail.email };
-    }
-
-    result.error = Accounts._handleError('Email or token mismatch', false);
-    return result;
-  }
-
-  if (sequence && SHA256(user._id + sequence) === userToken) {
-    return result;
-  }
-
-  result.error = Accounts._handleError('Token mismatch', false);
-
-  return result;
-};
 const findUserWithOptions = ({ selector }) => {
   if (!selector) {
     Accounts._handleError('A selector is necessary');
@@ -63,6 +29,7 @@ Accounts.registerLoginHandler('passwordless', options => {
 
   check(options, {
     token: tokenValidator(),
+    code: Match.Optional(NonEmptyString),
     selector: Accounts._userQueryValidator,
   });
 
@@ -87,6 +54,25 @@ Accounts.registerLoginHandler('passwordless', options => {
   const { verifiedEmail, error } = result;
 
   if (!error && verifiedEmail) {
+    // This method is added by the package accounts-2fa
+    if (Accounts._check2faEnabled?.(user)) {
+      if (!options.code) {
+        Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
+        return;
+      }
+      if (
+        !Accounts._isTokenValid(
+          user.services.twoFactorAuthentication.secret,
+          options.code
+        )
+      ) {
+        Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
+        return;
+      }
+    }
+    // It's necessary to make sure we don't remove the token if the user has 2fa enabled
+    // otherwise, it would be necessary to generate a new one if this method is called without
+    // a 2fa code
     Meteor.users.update(
       { _id: user._id, 'emails.address': verifiedEmail },
       {
@@ -119,7 +105,7 @@ const createUser = userData => {
 
 function generateSequence() {
   return Random.hexString(
-    Accounts._options.tokenSequenceLength || 6
+    Accounts._options.tokenSequenceLength || DEFAULT_TOKEN_SEQUENCE_LENGTH
   ).toUpperCase();
 }
 
@@ -129,7 +115,11 @@ Meteor.methods({
       fields: { emails: 1 },
     });
 
-    if (!user && (options.userCreationDisabled || Accounts._options.forbidClientAccountCreation)) {
+    if (
+      !user &&
+      (options.userCreationDisabled ||
+        Accounts._options.forbidClientAccountCreation)
+    ) {
       Accounts._handleError('User not found');
     }
 
@@ -162,13 +152,21 @@ Meteor.methods({
     const tokens = emails
       .map(email => {
         // if the email was informed we will notify only this email
-        if (selector.email && selector.email !== email) {
+        if (
+          selector.email &&
+          selector.email.toLowerCase() !== email.toLowerCase()
+        ) {
           return null;
         }
         const sequence = generateSequence();
         return { email, sequence };
       })
       .filter(Boolean);
+
+    if (!tokens.length) {
+      Accounts._handleError(`Login tokens could not be generated`);
+    }
+
     Meteor.users.update(user._id, {
       $set: {
         'services.passwordless': {

@@ -13,7 +13,7 @@ Meteor.methods({
 // *are* validated, but Accounts._options is global state which makes this hard
 // (impossible?)
 Tinytest.add(
-  'accounts - config validates keys', 
+  'accounts - config validates keys',
   test => test.throws(() => Accounts.config({foo: "bar"}))
 );
 
@@ -202,7 +202,7 @@ Tinytest.add('accounts - insertUserDoc username', test => {
 
   // run the hook again. now the user exists, so it throws an error.
   test.throws(
-    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn), 
+    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
     'Username already exists.'
   );
 
@@ -238,13 +238,13 @@ Tinytest.add('accounts - insertUserDoc email', test => {
   );
 
   // now with only one of them.
-  test.throws(() => 
-    Accounts.insertUserDoc({}, {emails: [{address: email1}]}), 
+  test.throws(() =>
+    Accounts.insertUserDoc({}, {emails: [{address: email1}]}),
     'Email already exists.'
   );
 
-  test.throws(() => 
-    Accounts.insertUserDoc({}, {emails: [{address: email2}]}), 
+  test.throws(() =>
+    Accounts.insertUserDoc({}, {emails: [{address: email2}]}),
     'Email already exists.'
   );
 
@@ -452,14 +452,14 @@ Tinytest.add(
       test.equal(Meteor.userId(), validateAttemptExpectedUserId, "validateLoginAttempt");
       return true;
     });
-    const onLoginStopper = Accounts.onLogin(attempt => 
+    const onLoginStopper = Accounts.onLogin(attempt =>
       test.equal(Meteor.userId(), onLoginExpectedUserId, "onLogin")
     );
     const onLogoutStopper = Accounts.onLogout(logoutContext => {
       test.equal(logoutContext.user._id, onLogoutExpectedUserId, "onLogout");
       test.instanceOf(logoutContext.connection, Object);
     });
-    const onLoginFailureStopper = Accounts.onLoginFailure(attempt => 
+    const onLoginFailureStopper = Accounts.onLoginFailure(attempt =>
       test.equal(Meteor.userId(), onLoginFailureExpectedUserId, "onLoginFailure")
     );
 
@@ -552,7 +552,8 @@ Tinytest.add(
   'accounts - Meteor.user() obeys options.defaultFieldSelector',
   test => {
     const ignoreFieldName = "bigArray";
-    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
+    const customField = "customField";
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
     const stampedToken = Accounts._generateStampedLoginToken();
     Accounts._insertLoginToken(userId, stampedToken);
     const options = Accounts._options;
@@ -589,11 +590,76 @@ Tinytest.add(
     test.isNotUndefined(user[ignoreFieldName], 'full selector');
     test.isNotUndefined(user.username, 'full selector username');
 
+    Accounts._options = {};
+
+    // Test that a custom field gets retrieved properly
+    Accounts.config({defaultFieldSelector: {[customField]: 1}});
+    user = Meteor.user()
+    test.isNotUndefined(user[customField]);
+    test.isUndefined(user.username);
+    test.isUndefined(user[ignoreFieldName]);
+
     Accounts._options = options;
     Accounts.userId = origAccountsUserId;
   }
 );
 
+
+Tinytest.addAsync(
+  'accounts async - Meteor.userAsync() obeys options.defaultFieldSelector',
+  async test => {
+    const ignoreFieldName = "bigArray";
+    const customField = "customField";
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
+    const stampedToken = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, stampedToken);
+    const options = Accounts._options;
+
+    // stub Meteor.userId() so it works outside methods and returns the correct user:
+    const origAccountsUserId = Accounts.userId;
+    Accounts.userId = () => userId;
+
+    Accounts._options = {};
+
+    // test the field is included by default
+    let user = await Meteor.userAsync();
+    test.isNotUndefined(user[ignoreFieldName], 'included by default');
+
+    // test the field is excluded
+    Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
+    user = await Meteor.userAsync();
+    test.isUndefined(user[ignoreFieldName], 'excluded');
+    user = await Meteor.userAsync({});
+    test.isUndefined(user[ignoreFieldName], 'excluded {}');
+
+    // test the field can still be retrieved if required
+    user = await Meteor.userAsync({ fields: { [ignoreFieldName]: 1 } });
+    test.isNotUndefined(user[ignoreFieldName], 'field can be retrieved');
+    test.isUndefined(user.username, 'field can be retrieved username');
+
+    // test a combined negative field specifier
+    user = await Meteor.userAsync({ fields: { username: 0 } });
+    test.isUndefined(user[ignoreFieldName], 'combined field selector');
+    test.isUndefined(user.username, 'combined field selector username');
+
+    // test an explicit request for the full user object
+    user = await Meteor.userAsync({ fields: {} });
+    test.isNotUndefined(user[ignoreFieldName], 'full selector');
+    test.isNotUndefined(user.username, 'full selector username');
+
+    Accounts._options = {};
+
+    // Test that a custom field gets retrieved properly
+    Accounts.config({ defaultFieldSelector: { [customField]: 1 } });
+    user = await Meteor.userAsync();
+    test.isNotUndefined(user[customField]);
+    test.isUndefined(user.username);
+    test.isUndefined(user[ignoreFieldName]);
+
+    Accounts._options = options;
+    Accounts.userId = origAccountsUserId;
+  }
+);
 Tinytest.add(
   'accounts - verify onExternalLogin hook can update oauth user profiles',
   test => {
@@ -702,14 +768,14 @@ Tinytest.add(
       // create test user, without a google service
       const testEmail = "test@testdomain.com"
       const uid0 = Accounts.createUser({email: testEmail})
-      
+
       // Verify that user is found from email and service merged
       Accounts.setAdditionalFindUserOnExternalLogin(({serviceName, serviceData}) => {
         if (serviceName === "google") {
           return Accounts.findUserByEmail(serviceData.email)
         }
       })
-      
+
       let googleId = Random.id();
       const uid1 = Accounts.updateOrCreateUserFromExternalService(
           'google',

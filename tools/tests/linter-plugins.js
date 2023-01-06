@@ -1,5 +1,4 @@
 var selftest = require('../tool-testing/selftest.js');
-var files = require('../fs/files');
 
 var Sandbox = selftest.Sandbox;
 

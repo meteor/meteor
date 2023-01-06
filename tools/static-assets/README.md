@@ -28,6 +28,26 @@ Similar to `skel`, `skel-pack` is copied on `meteor create --package` command.
 
 Similar to `skel`, `skel-react` is copied on `meteor create --react` command.
 
+## skel-tailwind - Package Skeleton
+
+Similar to `skel`, `skel-tailwind` is copied on `meteor create --tailwind` command.
+
+## skel-chakra-ui - Package Skeleton
+
+Similar to `skel`, `skel-chakra-ui` is copied on `meteor create --chakra-ui` command.
+
+## skel-solid - Package Skeleton
+
+Similar to `skel`, `skel-solid` is copied on `meteor create --solid` command.
+
+## skel-vue - Package Skeleton
+
+Similar to `skel`, `skel-vue` is copied on `meteor create --vue` command.
+
+## skel-vue-2 - Package Skeleton
+
+Similar to `skel`, `skel-vue-2` is copied on `meteor create --vue-2` command.
+
 ## server - Bundled App's Bootstrap
 
 The `server` folder is copied by Isobuild when the app is bundled (on

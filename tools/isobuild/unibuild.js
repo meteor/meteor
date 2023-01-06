@@ -153,7 +153,10 @@ export class Unibuild {
           usesDefaultSourceProcessor: true,
           legacyPrelink: {
             packageVariables: unibuildJson.packageVariables || []
-          }
+          },
+          // Only published packages still use prelink resources,
+          // so there is no need to mark this file to be watched
+          _dataUsed: false
         };
 
         if (resource.sourceMap) {

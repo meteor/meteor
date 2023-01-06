@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=14.18.3.6
+BUNDLE_VERSION=14.21.1.7
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
-UNAME=$(uname)
+# Use of : "${ARCH:=$(uname)}" assignment permits users to set their
+# architecture manually; this is useful for multi-arch systems whose
+# uname executables may sometimes return different architectures in
+# different contexts.
+#   Ex: ARCH=arm64 meteor ARGS...;
+UNAME="$(uname)"
 if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
     echo "Sorry, this OS is not supported."
     exit 1
@@ -12,7 +17,7 @@ fi
 
 if [ "$UNAME" = "Darwin" ] ; then
     if [ "arm64" == "$(uname -m)" ]; then
-      ARCH="arm64"
+      : "${ARCH:=arm64}"
     else
       if [ "i386" != "$(uname -p)" -o "1" != "$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)" ] ; then
 
@@ -21,10 +26,10 @@ if [ "$UNAME" = "Darwin" ] ; then
           echo "Only 64-bit and arm64 processors are supported at this time."
           exit 1
       fi
-      ARCH="x86_64"
+      : "${ARCH:=x86_64}"
     fi
 elif [ "$UNAME" = "Linux" ] ; then
-    ARCH="$(uname -m)"
+    : "${ARCH:=$(uname -m)}"
     if [ "$ARCH" != "x86_64" ] ; then
         echo "Unsupported architecture: $ARCH"
         echo "Meteor only supports x86_64"

@@ -71,15 +71,40 @@ Meteor.startup(() => {
 // Send an OAuth login method to the server. If the user authorized
 // access in the popup this should log the user in, otherwise
 // nothing should happen.
-Accounts.oauth.tryLoginAfterPopupClosed = (credentialToken, callback) => {
-  const credentialSecret = OAuth._retrieveCredentialSecret(credentialToken) || null;
+Accounts.oauth.tryLoginAfterPopupClosed = (
+  credentialToken,
+  callback,
+  shouldRetry = true
+) => {
+  const credentialSecret =
+    OAuth._retrieveCredentialSecret(credentialToken);
+
+  // In some case the function OAuth._retrieveCredentialSecret() can return null, because the local storage might not
+  // be ready. So we retry after a timeout.
+
+  if (!credentialSecret) {
+    if (!shouldRetry) {
+      return;
+    }
+    Meteor.setTimeout(
+      () =>
+        Accounts.oauth.tryLoginAfterPopupClosed(
+          credentialToken,
+          callback,
+          false
+        ),
+      500
+    );
+    return;
+  }
+  // continue with the rest of the function
   Accounts.callLoginMethod({
-    methodArguments: [{oauth: { credentialToken, credentialSecret }}],
+    methodArguments: [{ oauth: { credentialToken, credentialSecret } }],
     userCallback: callback && (err => callback(convertError(err))),
-    });
+  });
 };
 
-Accounts.oauth.credentialRequestCompleteHandler = callback => 
+Accounts.oauth.credentialRequestCompleteHandler = callback =>
   credentialTokenOrError => {
     if(credentialTokenOrError && credentialTokenOrError instanceof Error) {
       callback && callback(credentialTokenOrError);

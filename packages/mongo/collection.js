@@ -1,5 +1,9 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
+import {
+  ASYNC_COLLECTION_METHODS,
+  getAsyncMethodName
+} from "meteor/minimongo/constants";
 
 import { normalizeProjection } from "./mongo_utils";
 
@@ -315,6 +319,33 @@ Object.assign(Mongo.Collection.prototype, {
   ///
   /// Main collection API
   ///
+  /**
+   * @summary Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
+   * @locus Anywhere
+   * @method countDocuments
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to count
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
+   * @returns {Promise<number>}
+   */
+  countDocuments(...args) {
+    return this._collection.countDocuments(...args);
+  },
+
+  /**
+   * @summary Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
+   * @locus Anywhere
+   * @method estimatedDocumentCount
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to count
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/EstimatedDocumentCountOptions.html). Please note that not all of them are available on the client.
+   * @returns {Promise<number>}
+   */
+  estimatedDocumentCount(...args) {
+    return this._collection.estimatedDocumentCount(...args);
+  },
 
   _getFindSelector(args) {
     if (args.length == 0) return {};
@@ -757,7 +788,19 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
-    self._collection.createIndex(index, options);
+    try {
+      self._collection.createIndex(index, options);
+    } catch (e) {
+      if (e.message.includes('An equivalent index already exists with the same name but different options.') && Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch) {
+        import { Log } from 'meteor/logging';
+
+        Log.info(`Re-creating index ${index} for ${self._name} due to options mismatch.`);
+        self._collection._dropIndex(index);
+        self._collection.createIndex(index, options);
+      } else {
+        throw new Meteor.Error(`An error occurred when creating an index for collection "${self._name}: ${e.message}`);
+      }
+    }
   },
 
   _dropIndex(index) {
@@ -872,3 +915,10 @@ function popCallbackFromArgs(args) {
     return args.pop();
   }
 }
+
+ASYNC_COLLECTION_METHODS.forEach(methodName => {
+  const methodNameAsync = getAsyncMethodName(methodName);
+  Mongo.Collection.prototype[methodNameAsync] = function(...args) {
+    return Promise.resolve(this[methodName](...args));
+  };
+});

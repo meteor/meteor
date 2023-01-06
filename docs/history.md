@@ -1,12 +1,524 @@
-## vNEXT, UNRELEASED
+## v2.9, 2022-12-12
+
+### Highlights
+
+* TypeScript update to v4.6.4 [PR](https://github.com/meteor/meteor/pull/12204) by [@StorytellerCZ](https://github.com/StorytellerCZ).
+* Create Email.sendAsync method without using Fibers [PR](https://github.com/meteor/meteor/pull/12101)
+  by [edimarlnx](https://github.com/edimarlnx).
+* Create async method CssTools.minifyCssAsync [PR](https://github.com/meteor/meteor/pull/12105)
+  by  [edimarlnx](https://github.com/edimarlnx).
+* Change Accounts and Oauth to use Async methods [PR](https://github.com/meteor/meteor/pull/12156)
+  by [edimarlnx](https://github.com/edimarlnx).
+* TinyTest package without Future [PR](https://github.com/meteor/meteor/pull/12222)
+  by [matheusccastroo](https://github.com/matheusccastroo).
+* Feat: user accounts base async [PR](https://github.com/meteor/meteor/pull/12274)
+  by [Grubba27](https://github.com/Grubba27).
+* Move somed methods from OAuth of out of accounts-base [PR](https://github.com/meteor/meteor/pull/12202)
+  by [StorytellerCZ](https://github.com/StorytellerCZ).
+* Feat: not using insecure & autopublish [PR](https://github.com/meteor/meteor/pull/12220)
+  by [Grubba27](https://github.com/Grubba27).
+* Don't apply babel async-await plugin when not running on Fibers [PR](https://github.com/meteor/meteor/pull/12221).
+  by [matheusccastroo](https://github.com/matheusccastroo).
+* Implemented Fibers-less MongoDB count methods [PR](https://github.com/meteor/meteor/pull/12295)
+  by [radekmie](https://github.com/radekmie).
+* Feat: Generate scaffold in cli [PR](https://github.com/meteor/meteor/pull/12298)
+  by [Grubba27](https://github.com/Grubba27).
+* Update types [PR](https://github.com/meteor/meteor/pull/12306) by [piotrpospiech](https://github.com/piotrpospiech).
+* Remove underscore from package-version-parser [PR](https://github.com/meteor/meteor/pull/12248)
+  by [harryadel](https://github.com/harryadel).
+* Update MongoDB driver version [PR](https://github.com/meteor/meteor/pull/12333) by [Grubba27](https://github.com/Grubba27).
+* New Vue3 Skeleton [PR](https://github.com/meteor/meteor/pull/12302)
+  by [henriquealbert](https://github.com/henriquealbert).
+
+#### Breaking Changes
+* `Accounts.createUserVerifyingEmail` is now async
+
+####  Internal API changes
+* Internal methods from `OAuth` that are now async:
+  - _attemptLogin
+  - _loginMethod
+  - _runLoginHandlers
+  - OAuth.registerService now accepts async functions
+
+OAuth related code has been moved from `accounts-base` to `accounts-oauth`, removing the dependency on `service-configuration`
+more can be seen in this [discussion](https://github.com/meteor/meteor/discussions/12171) and in the [PR](https://github.com/meteor/meteor/pull/12202). 
+This means that if you don’t use third-party login on your project, you don’t need to add the package service-configuration anymore.
+
+#### Migration Steps
+
+You can follow in [here](https://guide.meteor.com/2.9-migration.html).
+
+#### Meteor Version Release
+
+* `eslint-plugin-meteor@7.4.0`:
+  - updated Typescript deps and meteor babel.
+* `eslint-plugin-meteor@7.4.0`:
+  - updated Typescript deps and meteor babel.
+* `accounts-base@2.2.6`
+  - Moved some functions to accounts-oauth.
+* `accounts-oauth@1.4.2`
+  - Received functions from accounts-base.
+* `accounts-password@2.3.2`
+  - Asyncfied functions such as `changePassword`, `forgotPassword`, `resetPassword`, `verifyEmail`, `setPasswordAsync`.
+* `babel-compiler@7.10.1`
+  - Updated babel to 7.17.1.
+* `email@2.2.3`
+  - Create Email.sendAsync method without using Fibers.
+* `facebook-oauth@1.11.2`
+  - Updated facebook-oauth to use async functions.
+* `github-oauth@1.4.1`
+  - Updated github-oauth to use async functions.
+* `google-oauth@1.4.3`
+  - Updated google-oauth to use async functions.
+* `meetup-oauth@1.1.2`
+  - Updated meetup-oauth to use async functions.
+* `meteor-developer-oauth@1.3.2`
+  - Updated meteor-developer-oauth to use async functions.
+* `meteor@1.10.3`
+  - Added Async Local Storage helpers.
+* `minifier-css@1.6.2`
+  - Asyncfied `minifyCss` function.
+* `minimongo@1.9.1`
+  - Implemented Fibers-less MongoDB count methods.
+* `mongo@1.16.2`
+  - Implemented Fibers-less MongoDB count methods.
+* `npm-mongo@4.12.1`
+  - Updated npm-mongo to 4.12.
+* `oauth@2.1.3`
+  - Asyncfied methods.
+* `oauth1@1.5.1`
+  - Asyncfied methods.
+* `oauth2@1.3.2`
+  - Asyncfied methods.
+* `package-version-parser@3.2.1`
+  - Removed underscore.
+* `promise@0.12.2`
+  - Added DISABLE_FIBERS flag.
+* `standard-minifier-css@1.8.3`
+  - Asyncfied minify method.
+* `test-helpers@1.3.1`
+  - added runAndThrowIfNeeded function.
+* `test-in-browser@1.3.2`
+  - Adjusted e[type] to e.type
+* `tinytest@1.2.2`
+  - TinyTest package without Future.
+* `twitter-oauth@1.3.2`
+  - Asyncfied methods.
+* `typescript@4.6.4`
+  - updated typescript to 4.6.4.
+* `weibo-oauth@1.3.2`
+  - Asyncfied methods.
+
+#### Special thanks to
+- [@henriquealbert](https://github.com/henriquealbert);
+- [@edimarlnx](https://github.com/edimarlnx);
+- [@matheusccastroo](https://github.com/matheusccastroo);
+- [@Grubba27](https://github.com/Grubba27);
+- [@StorytellerCZ](https://github.com/StorytellerCZ);
+- [@radekmie](https://github.com/radekmie);
+- [@piotrpospiech](https://github.com/piotrpospiech);
+- [@harryadel](https://github.com/harryadel);
+
+For making this great framework even better!
+
+
+## v2.8.2, 2022-11-29
+
+#### Highlights
+* `mongo@1.16.2`:
+  - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
+* `meteorjs/babel@7.16.1-beta.0`
+  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327).
+  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0.
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `mongo@1.16.2`:
+  - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
+
+#### Special thanks to
+- [@henriquealbert](https://github.com/henriquealbert);
+- [@znewsham](https://github.com/znewsham);
+
+For making this great framework even better!
+
+
+
+## v2.8.1, 2022-11-14
+
+#### Highlights
+
+- modernize tools/run-updater.js by [afrokick](https://github.com/afrokick)
+- feat(error message): Especifing error message when cross-boundary by [Grubba27](https://github.com/Grubba27)
+- Type definitions for core packages by [piotrpospiech](https://github.com/piotrpospiech)
+- Add https proxy support to meteor-installer by [heschong](https://github.com/heschong)
+- Fix case insensitive lookup resource overuse by [ToyboxZach](https://github.com/ToyboxZach)
+- Update default Facebook API to v15 and fix local changelog by [StorytellerCZ](https://github.com/StorytellerCZ)
+- Bump to Node v14.21.1 by [StorytellerCZ](https://github.com/StorytellerCZ)
+- Use true mongo binary types by [znewsham](https://github.com/znewsham)
+- Add docs for Accounts.registerLoginHandler by [shivam1646](https://github.com/shivam1646)
+- Updated MongoDB driver to 4.11 by [radekmie](https://github.com/radekmie)
+- Show port in restart message by [harryadel](https://github.com/harryadel)
+- In the client, don't wait if the stub doesn't return a promise by [denihs](https://github.com/denihs)
+- The rest of type definitions for core packages by [piotrpospiech](https://github.com/piotrpospiech)
+- Removing underscore in packages by [harryadel](https://github.com/harryadel):
+  - [twitter-oauth] Remove underscore 
+  - [test-in-browser] Remove underscore 
+  - [webapp-hashing] Remove underscore 
+  - [browser-policy] Remove underscore 
+  - [ecmascript] Remove underscore 
+  - [browser-policy-framing] Remove underscore 
+  - [diff-sequence] Remove underscore 
+  - [facts-ui] Remove underscore
+  - [geojson-utils] Remove underscore 
+
+#### Breaking Changes
+
+N/A
+
+#### Migration Steps
+
+_In case you want types in your app using the core packages types/zodern:types (now you do have the option)_
+
+1. Remove `@types/meteor` package
+2. Install [`zodern:types`](https://github.com/zodern/meteor-types) package
+3. Follow [installation guide for the Meteor Apps](https://github.com/zodern/meteor-types#meteor-apps) to update
+
+#### Meteor Version Release
+
+* `accounts-base@2.2.5`
+  - added types for package.
+* `browser-policy@1.1.1`
+  - adjusted package tests.
+* `browser-policy-common@1.0.12`
+  - added types for package.
+* `browser-policy-framing@1.1.1`
+  - removed underscore.
+* `check@1.3.2`
+  - added types for package.
+* `ddp@1.4.0`
+  - added types for package.
+* `ddp-client@2.6.1`
+  - In the client, don't wait if the stub doesn't return a promise.
+* `ddp-rate-limiter@1.1.1`
+  - added types for package.
+* `diff-sequence@1.1.2`
+  - removed underscore.
+* `ecmascript@0.16.3`
+  - removed underscore.
+* `ejson@1.1.3`
+  - added types for package. 
+* `ejson@2.2.2`
+  - added types for package.
+* `facebook-oauth@1.12.0`
+  - Updated default version of Facebook GraphAPI to v15
+* `facts-ui@1.0.1`
+  - removed underscore.
+* `fetch@0.1.2`
+  - added types for package.
+* `geojson-utils@1.0.11`
+  - removed underscore.
+* `hot-module-replacement@0.5.2`
+  - added types for package.
+* `meteor@1.10.2`
+  - added types for package.
+* `modern-browsers@0.1.9`
+  - added types for package.
+* `modules-runtime@0.13.2`
+  - added accurate error messages.
+* `modules-runtime-hot@0.14.1`
+  - added accurate error messages.
+* `mongo@1.16.1`
+  - added types for package.
+  - added true mongo binary
+* `npm-mongo@4.11.0`
+  - updated npm mongo version to match npm one.
+* `promise@0.13.0`
+  - added types for package.
+* `random@1.2.1`
+  - added types for package.
+* `reactive-dict@1.3.1`
+  - added types for package.
+* `reactive-dict@1.0.12`
+  - added types for package.
+* `server-render@0.4.1`
+  - added types for package.
+* `service-configuration@1.3.1`
+  - added types for package.
+* `session@1.2.1`
+  - added types for package.
+* `test-in-browser@1.3.1`
+  - removed underscore.
+* `tracker@1.2.1`
+- added types for package.
+* `twitter-oauth@1.3.1`
+  - removed underscore.
+* `underscore@1.0.11`
+  - added types for package.
+* `webapp@1.13.2`
+  - added types for package.
+* `webapp-hashing@1.1.1`
+  - added types for package.
+## v2.8, 2022-10-19
+
+#### Highlights
+* New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
+* Node update to [v14.20.1](https://nodejs.org/en/blog/release/v14.20.1/) as part of the [September 22nd security release](https://nodejs.org/en/blog/vulnerability/september-2022-security-releases/)
+* Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
+* Meteor.callAsync method. [PR](https://github.com/meteor/meteor/pull/12196)
+* Added new Chakra-ui Skeleton. [PR](https://github.com/meteor/meteor/pull/12181)
+* Added new Solid Skeleton. [PR](https://github.com/meteor/meteor/pull/12186)
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+Read our [Migration Guide](https://guide.meteor.com/2.8-migration.html) for this version.
+
+#### Meteor Version Release
+* `modules@0.19.0`:
+  - Updating reify version. [PR](https://github.com/meteor/meteor/pull/12055).
+* `minimongo@1.9.0`:
+  - New methods to work with the Async API. [PR](https://github.com/meteor/meteor/pull/12028).
+  - Solved invalid dates in Minimongo Matcher [PR](https://github.com/meteor/meteor/pull/12165).
+* `mongo@1.16.0`:
+  - Adding async counterparts that allows gradual migration from Fibers. [PR](https://github.com/meteor/meteor/pull/12028).
+  - Improved oplogV2V1Converter implementation. [PR](https://github.com/meteor/meteor/pull/12116).
+  - Exit on MongoDB connection error. [PR](https://github.com/meteor/meteor/pull/12115).
+  - Fixed MongoConnection._onFailover hook. [PR](https://github.com/meteor/meteor/pull/12125).
+  - Fixed handling objects in oplogV2V1Converter. [PR](https://github.com/meteor/meteor/pull/12107).
+* `meteor@1.10.1`:
+  - Create method to check if Fibers is enabled by flag DISABLE_FIBERS. [PR](https://github.com/meteor/meteor/pull/12100).
+  - Fix bugs for linter build plugins. [PR](https://github.com/meteor/meteor/pull/12120).
+  - Document meteor show METEOR. [PR](https://github.com/meteor/meteor/pull/12124).
+  - Update Cordova Android to 10.1.2. [PR](https://github.com/meteor/meteor/pull/12131).
+  - Fixed flaky test. [PR](https://github.com/meteor/meteor/pull/12129).
+  - Refactoring/Remove unused imports from tools folder. [PR](https://github.com/meteor/meteor/pull/12084).
+  - Fix problem when publishing async methods. [PR](https://github.com/meteor/meteor/pull/12152).
+  - Update skeletons Apollo[PR](https://github.com/meteor/meteor/pull/12091) and other skeletons [PR](https://github.com/meteor/meteor/pull/12099)
+  - Added callAsync method for calling async methods [PR](https://github.com/meteor/meteor/pull/12196).
+* `meteor-installer@2.7.5`:
+  - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
+* `npm-mongo@4.9.0`:
+  - Updated MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12163).
+* `@meteorjs/babel@7.17.0`
+  - Upgrade TypeScript to `4.6.4`
+* `babel-compiler@7.10.0`
+  - Upgrade TypeScript to `4.6.4`
+* `ecmascript@0.16.3`
+  - Upgrade TypeScript to `4.6.4`
+* `typescript@4.6.4`
+  - Upgrade TypeScript to `4.6.4`
+* `eslint-plugin-meteor@7.4.0`
+  - Upgrade TypeScript to `4.6.4`
+
+#### Independent Releases
+* `accounts-passwordless@2.1.3`:
+  - Fixing bug where tokens where never expiring. [PR](https://github.com/meteor/meteor/pull/12088).
+* `accounts-base@2.2.4`:
+  - Adding new options to the `Accounts.config()` method: `loginTokenExpirationHours` and `tokenSequenceLength`. [PR](https://github.com/meteor/meteor/pull/12088).
+* `Meteor Repo`:
+  - Included githubactions in the dependabot config. [PR](https://github.com/meteor/meteor/pull/12061).
+  - Visual rework in meteor readme. [PR](https://github.com/meteor/meteor/pull/12133).
+  - Remove useraccounts from Guide. [PR](https://github.com/meteor/meteor/pull/12090).
+* `minifier-css@1.6.1`:
+  - Update postcss package to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12136).
+* `minifier-js@2.7.5`:
+  - Update terser package due to security fixes and to take advantage of terser improvements. [PR](https://github.com/meteor/meteor/pull/12137).
+* `standard-minifier-css@1.8.2`:
+  - Update dependencies to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12141).
+* `standard-minifier-js@2.8.1`:
+  - Update dependencies to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12142).
+* `ddp-server@2.5.1`:
+  - Rename setPublicationStrategy and getPublicationStrategy arguments. [PR](https://github.com/meteor/meteor/pull/12166).
+
+#### Special thanks to
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+- [@radekmie](https://github.com/radekmie)
+- [@naveensrinivasan](https://github.com/naveensrinivasan)
+- [@zodern](https://github.com/zodern)
+- [@brucejo75](https://github.com/brucejo75)
+- [@matheusccastroo](https://github.com/matheusccastroo)
+- [@victoriaquasar](https://github.com/victoriaquasar)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@Grubba27](https://github.com/Grubba27)
+- [@denihs](https://github.com/denihs)
+- [@edimarlnx](https://github.com/edimarlnx)
+
+For making this great framework even better!
+
+## v2.7.3, 2022-05-3
+
+#### Highlights
+* `accounts-passwordless@2.1.2`:
+  - Throwing an error when the login tokens are not generated well calling requestLoginTokenForUser. [PR](https://github.com/meteor/meteor/pull/12047/files).
+* Node updated to v14.19.3
+* npm update to v6.14.17
+* Fix recompiling npm packages for web arch. [PR](https://github.com/meteor/meteor/pull/12023).
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `accounts-passwordless@2.1.2`:
+  - Throwing an error when the login tokens are not generated well calling requestLoginTokenForUser. [PR](https://github.com/meteor/meteor/pull/12047/files).
+* `babel-runtime@1.5.1`:
+  - Make client 25kb smaller. [PR](https://github.com/meteor/meteor/pull/12051).
+* Node updated to v14.19.3
+* npm update to v6.14.17
+* Fix win style paths being added to watch sets.
+* Fix recompiling npm packages for web arch. [PR](https://github.com/meteor/meteor/pull/12023).
+
+## v2.7.2, 2022-05-10
+
+#### Highlights
+
+#### Breaking Changes
+N/A
+#### Migration Steps
+
+#### Meteor Version Release
+
+* `mongo@1.15.0`
+  - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created. 
+  - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured. [PR](https://github.com/meteor/meteor/pull/11995).
+* `modern-browsers@0.1.8`
+  - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
+* `socket-stream-client@0.5.0`
+  - Ability to disable sockjs on client side. [PR](https://github.com/meteor/meteor/pull/12007/).
+* `meteor-node-stubs@1.2.3`:
+  - Fix using meteor-node-stubs in IE. [PR](https://github.com/meteor/meteor/pull/12014).
+* New ARCH environment variable that permit users to set uname info. [PR](https://github.com/meteor/meteor/pull/12020).
+* Skeleton dependencies updated.
+* New Tailwind skeleton. [PR](https://github.com/meteor/meteor/pull/12000).
+
+#### Independent Releases
+
+## v2.7.1, 2022-03-31
 
 #### Highlights
 
 #### Breaking Changes
 
+* `accounts-2fa@2.0.0`
+  - The method `has2faEnabled` no longer takes a selector as an argument, just the callback.
+  - `generate2faActivationQrCode` now throws an error if it's being called when the user already has 2FA enabled.
+
 #### Migration Steps
 
 #### Meteor Version Release
+
+* `accounts-2fa@2.0.0`
+  - Reduce one DB call on 2FA login. [PR](https://github.com/meteor/meteor/pull/11985)
+  - Throw error when user is not found on `Accounts._is2faEnabledForUser`
+  - Remove vulnerability from the method `has2faEnabled`
+  - Now the package auto-publish the field `services.twoFactorAuthentication.type` for logged in users.
+* `accounts-password@2.3.1`
+  - Use method `Accounts._check2faEnabled` when validating 2FA
+* `accounts-passwordless@2.1.1`
+  - Use method `Accounts._check2faEnabled` when validating 2FA
+* `oauth@2.1.2`
+  - Check effectively if popup was blocked by browser. [PR](https://github.com/meteor/meteor/pull/11984)
+* `standard-minifier-css@1.8.1`
+  - PostCSS bug fixes. [PR](https://github.com/meteor/meteor/pull/11987/files)
+
+#### Independent Releases
+
+## v2.7, 2022-03-24
+
+#### Highlights
+* Bump node version to 14.19.1
+* TailwindCSS 3.x support
+* Typescript `4.5.4` upgrade
+* New core package: `accounts-2fa`
+* Support for 2FA in `accounts-password` and `accounts-passwordless`
+* PostCSS's plugins are run by `standard-minifier-css` if the app has PostCSS configured
+* App skeletons and test packages were updated to `meteor-node-stubs@1.2.1`
+
+#### Breaking Changes
+
+N/A
+
+#### Migration Steps
+
+Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this version.
+
+#### Meteor Version Release
+
+* `standard-minifier-css@1.8.0`
+  - Runs PostCSS plugins if the app has a PostCSS config and the `postcss-load-config` npm package installed. Supports TailwindCSS 3.x [PR 1](https://github.com/Meteor-Community-Packages/meteor-postcss/pull/56) [PR 2](https://github.com/meteor/meteor/pull/11903)
+
+* `react-fast-refresh@0.2.3`
+  - Fix tracking states with circular dependencies. [PR](https://github.com/meteor/meteor/pull/11923)
+  
+* `accounts-2fa@1.0.0`
+  - New package to provide 2FA support
+  
+* `accounts-password@2.3.0`
+  - 2FA support
+  
+* `accounts-passwordless@2.1.0`
+  - 2FA support
+
+* `@meteorjs/babel@7.16.0`
+  - Upgrade TypeScript to `4.5.4`
+
+* `babel-compiler@7.9.0`
+  - Upgrade TypeScript to `4.5.4`
+
+* `ecmascript@0.16.2`
+  - Upgrade TypeScript to `4.5.4`
+
+* `typescript@4.5.4`
+  - Upgrade TypeScript to `4.5.4` [PR](https://github.com/meteor/meteor/pull/11846)
+
+* `accounts-ui-unstyled@1.6.0`
+  - `Accounts.ui.config` can now be set via `Meteor.settings.public.packages.accounts-ui-unstyled`.
+
+* `meteor-tool@2.7`
+  - CSS minifiers must now handle any caching themselves [PR](https://github.com/meteor/meteor/pull/11882)
+  - CSS minifiers are always given lazy css resources instead of only during production builds [PR](https://github.com/meteor/meteor/pull/11897)
+  - Files passed to CSS minifiers now have `file.readAndWatchFileWithHash`, same as for compilers [PR](https://github.com/meteor/meteor/pull/11882)
+  - If a minifier has a `beforeMinify` function, it will be called once during each build before the minifier is run the first time [PR](https://github.com/meteor/meteor/pull/11882)
+  - Add `Plugin.fs.readdirWithTypesSync` [PR](https://github.com/meteor/meteor/pull/11882)
+
+* `ejson@1.1.2`
+  - Fixing error were EJSON.equals fail to compare object and array if first param is object and second is array. [PR](https://github.com/meteor/meteor/pull/11866), [Issue](https://github.com/meteor/meteor/issues/11864).
+  
+* `oauth@1.4.1`
+  - If OAuth._retrieveCredentialSecret() fails trying to get credentials inside Accounts.oauth.tryLoginAfterPopupClosed(), we call it again once more.
+
+* `accounts-base@2.2.2`
+  - Fix an issue where an extra field defined in `defaultFieldSelector` would not get published to the client
+  - Proving the login results to the `_onLoginHook` when finishing login inside `callLoginMethod`. [PR](https://github.com/meteor/meteor/pull/11913).
+
+* `github-oauth@1.4.0`
+  - More data will be retrieved and saved under `services.github` on the user account.
+  - Add option to disallow sign-up on GitHub using `allow_signup` [parameter](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#parameters), this will be activated based on your Accounts settings, specifically if the option `forbidClientAccountCreation` is set to `true`.
+
+* `email@2.2.1`
+  - Throwing error when trying to send email in a production environment but without a mail URL set. [PR](https://github.com/meteor/meteor/pull/11891), [Issue](https://github.com/meteor/meteor/issues/11709).
+
+* `facebook-oauth@1.11.0`
+  - Updated Facebook API to version 12.0
+
+* `google-oauth@1.4.2`
+  - Migrate from `http` to `fetch`
+
+* `modules-runtime@0.13.0`
+  - Fix some npm modules being imported as an empty object. [PR](https://github.com/meteor/meteor/pull/11954), [Issue 1](https://github.com/meteor/meteor/issues/11900), [Issue 2](https://github.com/meteor/meteor/issues/11853).
+
+* `meteor-node-stubs@1.2.1`
+  - Adds support for [node:](https://nodejs.org/api/esm.html#node-imports) imports.
+
+* `minifier-jss@2.8.0`
+  - Updating terser. It will fix this [issue](https://github.com/meteor/meteor/issues/11721) and [this](https://github.com/meteor/meteor/issues/11930) one. [PR](https://github.com/meteor/meteor/pull/11983).
 
 #### Independent Releases
 
@@ -85,13 +597,13 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
 #### Meteor Version Release
 
 * `mongo@1.14.0`
+    - `applySkipLimit` option for count() on find cursors is no longer supported. Read more about it [here](https://guide.meteor.com/2.6-migration.html), in the `Cursor.count()` section.
     - internal result of operations inside Node.js MongoDB driver have changed. If you are depending on rawCollection results (not only the effect inside the DB), please review the expected format as we have done [here](https://github.com/meteor/meteor/blob/155ae639ee590bae66237fc1c29295072ec92aef/packages/mongo/mongo_driver.js#L658)
     - useUnifiedTopology is not an option anymore, it defaults to true.
     - native parser is not an option anymore, it defaults to false in the mongo connection.
     - poolSize not an option anymore, we are using max/minPoolSize for the same behavior on mongo connection.
     - fields option is deprecated, we are maintaining a translation layer to "projection" field (now prefered) until the next minor version, where we will start showing alerts.
     - _ensureIndex is now showing a deprecation message
-    - applySkipLimit option for count() on find cursors is no longer supported.
     - we are maintaining a translation layer for the new oplog format, so if you read or rely on any behavior of it please read our oplog_v2_converter.js code
     - update/insert/remove behavior is maintained in the Meteor way, documented in our docs, but we are now using replaceOne/updateOne/updateMany internally. This is subject to changes in the API rewrite of MongoDB without Fibers AND if you are using rawCollection directly you have to review your methods otherwise you will see deprecation messages if you are still using the old mongodb style directly.
     - waitForStepDownOnNonCommandShutdown=false is not needed anymore when spawning the mongodb process
@@ -117,6 +629,40 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
     - Custom message support for `throws`
 
 #### Independent Releases
+
+## v2.5.8, 2022-05-31
+
+#### Highlights
+
+* Fixed 2.5.7 MongoDB error
+* Patch release to update Node to version 14.19.3 and npm version to 6.14.17.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+## v2.5.7, 2022-05-31
+
+#### Highlights
+
+* Patch release to update Node and npm versions.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.7`
+  - Patch release to update Node and npm versions.
 
 ## v2.5.6, 2022-01-25
 
@@ -200,6 +746,8 @@ This version should be ignored. Proceed to 2.5.5 above.
 * HMR Fixes
 
 #### Breaking Changes
+
+* If a module calls `module.hot.decline()`, calling `module.hot.accept()` later now does nothing instead of overriding `module.hot.decline()`.
 
 #### Migration Steps
 
@@ -396,7 +944,7 @@ This version should be ignored. Proceed to 2.5.5 above.
 * Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
 * Email package now allows setting `Email.customTransport` to override sending method.
 * Use `createIndex` instead of `_ensureIndex` to align with new MongoDB naming.
-* Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300)
+* Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG_historical.md#v300)
 * `reify` has been updated to v0.22.2 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
 * Meteor NPM installer is [now available for all platforms](https://github.com/meteor/meteor/pull/11590).
 * DDP server now allows you to set publication strategies for your publications to control mergebox behavior
@@ -766,7 +1314,7 @@ This version should be ignored. Proceed to 2.5.5 above.
     - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
     - Skeletons dependencies updated to latest version
     - Svelte skeleton now has HMR
-    - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-only)
+    - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://galaxy-guide.meteor.com/deploy-command-line.html#cache-only)
     - Improved watched system to properly rebuild `client` even when a file is outside of `client` or `imports` folders. See [PR](https://github.com/meteor/meteor/pull/11474) for details.
     - Fix an issue when `App.appendToConfig` crashed Cordova build.
     - Reify compiler now uses cache in runtime. [Read more](https://github.com/meteor/meteor/pull/11400)
@@ -1254,7 +1802,7 @@ N/A
 
 * `meteor create --vue` is now available thanks to [@chris-visser](https://github.com/chris-visser). PR [#11086](https://github.com/meteor/meteor/pull/11086)
 
-* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-build).
+* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://galaxy-guide.meteor.com/deploy-command-line.html#cache-build)
 
 * Multiple optimizations in build performance, many of them for Windows thanks to [@zodern](https://github.com/zodern). PRs [#10838](https://github.com/meteor/meteor/pull/10838), [#11114](https://github.com/meteor/meteor/pull/11114), [#11115](https://github.com/meteor/meteor/pull/11115), [#11102](https://github.com/meteor/meteor/pull/11102), [#10839](https://github.com/meteor/meteor/pull/10839)
 
@@ -3636,9 +4184,9 @@ N/A
 
 > Note: With this version of Reify, `import` declarations are compiled to
 `module.watch(require(id), ...)` instead of `module.importSync(id, ...)`
-or the older `module.import(id, ...)`. The behavior of the compiled code
-should be the same as before, but the details seemed different enough to
-warrant a note.
+> or the older `module.import(id, ...)`. The behavior of the compiled code
+> should be the same as before, but the details seemed different enough to
+> warrant a note.
 
 * The `install` npm package has been upgraded to version 0.10.1.
 
@@ -3982,15 +4530,15 @@ https://github.com/meteor/meteor/commit/0cbd25111d1249a61ca7adce23fad5215408c821
   are once again constrained by the current Meteor release.
 
 > Before Meteor 1.4, the current release dictated the exact version of
-every installed core package, which meant newer core packages could not
-be installed without publishing a new Meteor release. In order to
-support incremental development of core packages, Meteor 1.4 removed all
-release-based constraints on core package versions
+> every installed core package, which meant newer core packages could not
+> be installed without publishing a new Meteor release. In order to
+> support incremental development of core packages, Meteor 1.4 removed all
+> release-based constraints on core package versions
 ([#7084](https://github.com/meteor/meteor/pull/7084)). Now, in Meteor
-1.4.3, core package versions must remain patch-compatible with the
-versions they had when the Meteor release was published. This middle
-ground restores meaning to Meteor releases, yet still permits patch
-updates to core packages.
+> 1.4.3, core package versions must remain patch-compatible with the
+> versions they had when the Meteor release was published. This middle
+> ground restores meaning to Meteor releases, yet still permits patch
+> updates to core packages.
 
 * The `cordova-lib` npm package has been updated to 6.4.0, along with
   cordova-android (6.1.1) and cordova-ios (4.3.0), and various plugins.
@@ -4080,11 +4628,11 @@ updates to core packages.
   change was deemed too significant for this release.
 
 > Note: The decision to revert the above change was made late in the
-Meteor 1.4.2.4 release process, before it was ever recommended but too
-late in the process to avoid the additional increment of the version number.
-See [#8311](https://github.com/meteor/meteor/pull/8311) for additional
-information. This change will still be released in an upcoming version
-of Meteor with a more seamless upgrade.
+> Meteor 1.4.2.4 release process, before it was ever recommended but too
+> late in the process to avoid the additional increment of the version number.
+> See [#8311](https://github.com/meteor/meteor/pull/8311) for additional
+> information. This change will still be released in an upcoming version
+> of Meteor with a more seamless upgrade.
 
 ## v1.4.2.4, 2017-02-02
 
@@ -4093,7 +4641,7 @@ of Meteor with a more seamless upgrade.
 * The `npm` npm package has been upgraded from version 3.10.9 to 4.1.2.
 
 > Note: This change was later deemed too substantial for a point release
-and was reverted in Meteor 1.4.2.7.
+> and was reverted in Meteor 1.4.2.7.
 
 * Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
 
@@ -4120,9 +4668,9 @@ and was reverted in Meteor 1.4.2.7.
 
 > Note: Meteor 1.4.2.2 was finalized before
 [#8045](https://github.com/meteor/meteor/pull/8045) was merged, but
-those changes were [deemed important
+> those changes were [deemed important
 enough](https://github.com/meteor/meteor/pull/8044#issuecomment-260913739)
-to skip recommending 1.4.2.2 and instead immediately release 1.4.2.3.
+> to skip recommending 1.4.2.2 and instead immediately release 1.4.2.3.
 
 ## v1.4.2.2, 2016-11-15
 
@@ -4209,10 +4757,10 @@ to skip recommending 1.4.2.2 and instead immediately release 1.4.2.3.
   See https://github.com/meteor/meteor/pull/7668 for more details.
 
 > Note: the `METEOR_PROFILE` environment variable now provides data for
-server startup time as well as build time, which should make it easier
-to tell which of your packages are responsible for slow startup times.
-Please include the output of `METEOR_PROFILE=10 meteor run` with any
-GitHub issue about rebuild performance.
+> server startup time as well as build time, which should make it easier
+> to tell which of your packages are responsible for slow startup times.
+> Please include the output of `METEOR_PROFILE=10 meteor run` with any
+> GitHub issue about rebuild performance.
 
 * `npm` has been upgraded to version 3.10.9.
 
@@ -4789,8 +5337,8 @@ GitHub issue about rebuild performance.
 ## v1.3.2.4, 2016-04-20
 
 > Meteor 1.3.2.4 was published because publishing 1.3.2.3 failed in an
-unrecoverable way. Meteor 1.3.2.4 contains no additional changes beyond
-the changes in 1.3.2.3.
+> unrecoverable way. Meteor 1.3.2.4 contains no additional changes beyond
+> the changes in 1.3.2.3.
 
 ## v1.3.2.3, 2016-04-20
 

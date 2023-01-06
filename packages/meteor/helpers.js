@@ -71,6 +71,38 @@ Meteor._delete = function (obj /*, arguments */) {
   }
 };
 
+
+/**
+ * Takes a function that has a callback argument as the last one and promissify it.
+ * One option would be to use node utils.promisify, but it won't work on the browser.
+ * @param fn
+ * @param context
+ * @param errorFirst - If the callback follows the errorFirst style
+ * @returns {function(...[*]): Promise<unknown>}
+ */
+Meteor.promisify = function (fn, context, errorFirst = true) {
+  return function (...fnArgs) {
+    return new Promise((resolve, reject) => {
+      const callback = Meteor.bindEnvironment((error, result) => {
+        let _error = error, _result = result;
+        if (!errorFirst) {
+          _error = result;
+          _result = error;
+        }
+
+        if (_error) {
+          return reject(_error);
+        }
+
+        resolve(_result);
+      });
+
+      const filteredArgs = [...fnArgs, callback].filter(i => i !== undefined);
+      return fn.apply(context || this, filteredArgs);
+    });
+  };
+};
+
 // wrapAsync can wrap any function that takes some number of arguments that
 // can't be undefined, followed by some optional arguments, where the callback
 // is the last optional argument.

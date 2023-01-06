@@ -19,6 +19,7 @@ const {
   isSudo,
   isMac,
   METEOR_LATEST_VERSION,
+  shouldSetupExecPath,
 } = require('./config.js');
 const { uninstall } = require('./uninstall');
 const {
@@ -29,13 +30,23 @@ const {
 const semver = require('semver');
 const isInstalledGlobally = process.env.npm_config_global === 'true';
 
+const { engines } = require('./package');
+const nodeVersion = engines.node;
+const npmVersion = engines.npm;
+
+// Compare installed NodeJs version with required NodeJs version
+if (!semver.satisfies(process.version, nodeVersion)) {
+  console.warn(`WARNING: Recommended versions are Node.js ${nodeVersion} and npm ${npmVersion}.`);
+  console.warn(`We recommend using a Node version manager like NVM or Volta to install Node.js and npm.\n`);
+}
+
 if (!isInstalledGlobally) {
   console.error('******************************************');
   console.error(
     'You are not using a global npm context to install, you should never add meteor to your package.json.'
   );
   console.error('Make sure you pass -g to npm install.');
-  console.error('Aborting');
+  console.error('Aborting...');
   console.error('******************************************');
   process.exit(1);
 }
@@ -132,6 +143,17 @@ try {
 
 download();
 
+function generateProxyAgent() {
+  const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY;
+  if (!proxyUrl) {
+    return undefined;
+  }
+
+  const HttpsProxyAgent = require('https-proxy-agent');
+
+  return new HttpsProxyAgent(proxyUrl);
+}
+
 function download() {
   const start = Date.now();
   const downloadProgress = new cliProgress.SingleBar(
@@ -147,6 +169,9 @@ function download() {
     retry: { maxRetries: 5, delay: 5000 },
     override: true,
     fileName: tarGzName,
+    httpsRequestOptions: {
+      agent: generateProxyAgent()
+    }
   });
 
   dl.on('progress', ({ progress }) => {
@@ -246,7 +271,10 @@ async function extract() {
 }
 async function setup() {
   fs.unlinkSync(startedPath);
-  await setupExecPath();
+  if (shouldSetupExecPath()) {
+    await setupExecPath();
+  }
+  await fixOwnership();
   showGettingStarted();
 }
 async function setupExecPath() {
@@ -267,8 +295,9 @@ async function setupExecPath() {
     await appendPathToFile('.bashrc');
     await appendPathToFile('.bash_profile');
   }
-
-  if (isSudo()) {
+}
+async function fixOwnership() {
+  if (!isWindows() && isSudo()) {
     // if we identified sudo is being used, we need to change the ownership of the meteorpath folder
     child_process.execSync(`chown -R ${sudoUser} "${meteorPath}"`);
   }

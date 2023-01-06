@@ -1,8 +1,5 @@
-import bcrypt from 'bcrypt'
-import {Accounts} from "meteor/accounts-base";
-
-const bcryptHash = Meteor.wrapAsync(bcrypt.hash);
-const bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
+import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
+import { Accounts } from "meteor/accounts-base";
 
 // Utility for grabbing user
 const getUserById = (id, options) => Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
@@ -48,9 +45,9 @@ const getPasswordString = password => {
 // SHA256 before bcrypt) or an object with properties `digest` and
 // `algorithm` (in which case we bcrypt `password.digest`).
 //
-const hashPassword = password => {
+const hashPassword = async password => {
   password = getPasswordString(password);
-  return bcryptHash(password, Accounts._bcryptRounds());
+  return await bcryptHash(password, Accounts._bcryptRounds());
 };
 
 // Extract the number of rounds used in the specified bcrypt hash.
@@ -74,7 +71,7 @@ const getRoundsFromBcryptHash = hash => {
 // The user parameter needs at least user._id and user.services
 Accounts._checkPasswordUserFields = {_id: 1, services: 1};
 //
-Accounts._checkPassword = (user, password) => {
+const checkPasswordAsync = async (user, password) => {
   const result = {
     userId: user._id
   };
@@ -83,15 +80,16 @@ Accounts._checkPassword = (user, password) => {
   const hash = user.services.password.bcrypt;
   const hashRounds = getRoundsFromBcryptHash(hash);
 
-  if (! bcryptCompare(formattedPassword, hash)) {
+  if (! await bcryptCompare(formattedPassword, hash)) {
     result.error = Accounts._handleError("Incorrect password", false);
   } else if (hash && Accounts._bcryptRounds() != hashRounds) {
     // The password checks out, but the user's bcrypt hash needs to be updated.
-    Meteor.defer(() => {
+
+    Meteor.defer(async () => {
       Meteor.users.update({ _id: user._id }, {
         $set: {
           'services.password.bcrypt':
-            bcryptHash(formattedPassword, Accounts._bcryptRounds())
+            await bcryptHash(formattedPassword, Accounts._bcryptRounds())
         }
       });
     });
@@ -99,7 +97,13 @@ Accounts._checkPassword = (user, password) => {
 
   return result;
 };
-const checkPassword = Accounts._checkPassword;
+
+const checkPassword = (user, password) => {
+  return Promise.await(checkPasswordAsync(user, password));
+};
+
+Accounts._checkPassword = checkPassword;
+Accounts._checkPasswordAsync =  checkPasswordAsync;
 
 ///
 /// LOGIN
@@ -163,13 +167,14 @@ const passwordValidator = Match.OneOf(
 //
 // Note that neither password option is secure without SSL.
 //
-Accounts.registerLoginHandler("password", options => {
+Accounts.registerLoginHandler("password", async options => {
   if (!options.password)
     return undefined; // don't handle
 
   check(options, {
     user: Accounts._userQueryValidator,
-    password: passwordValidator
+    password: passwordValidator,
+    code: Match.Optional(NonEmptyString),
   });
 
 
@@ -181,15 +186,33 @@ Accounts.registerLoginHandler("password", options => {
     Accounts._handleError("User not found");
   }
 
+
   if (!user.services || !user.services.password ||
       !user.services.password.bcrypt) {
     Accounts._handleError("User has no password set");
   }
 
-  return checkPassword(
-    user,
-    options.password
-  );
+  const result = await checkPasswordAsync(user, options.password);
+  // This method is added by the package accounts-2fa
+  // First the login is validated, then the code situation is checked
+  if (
+    !result.error &&
+    Accounts._check2faEnabled?.(user)
+  ) {
+    if (!options.code) {
+      Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
+    }
+    if (
+      !Accounts._isTokenValid(
+        user.services.twoFactorAuthentication.secret,
+        options.code
+      )
+    ) {
+      Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
+    }
+  }
+
+  return result;
 });
 
 ///
@@ -239,7 +262,7 @@ Accounts.setUsername = (userId, newUsername) => {
 // Let the user change their own password if they know the old
 // password. `oldPassword` and `newPassword` should be objects with keys
 // `digest` and `algorithm` (representing the SHA256 of the password).
-Meteor.methods({changePassword: function (oldPassword, newPassword) {
+Meteor.methods({changePassword: async function (oldPassword, newPassword) {
   check(oldPassword, passwordValidator);
   check(newPassword, passwordValidator);
 
@@ -259,12 +282,12 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
     Accounts._handleError("User has no password set");
   }
 
-  const result = checkPassword(user, oldPassword);
+  const result = await checkPasswordAsync(user, oldPassword);
   if (result.error) {
     throw result.error;
   }
 
-  const hashed = hashPassword(newPassword);
+  const hashed = await hashPassword(newPassword);
 
   // It would be better if this removed ALL existing tokens and replaced
   // the token for the current connection with a new one, but that would
@@ -297,10 +320,10 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
  * @param {Object} options.logout Logout all current connections with this userId (default: true)
  * @importFromPackage accounts-base
  */
-Accounts.setPassword = (userId, newPlaintextPassword, options) => {
-  check(userId, String)
-  check(newPlaintextPassword, Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256))
-  check(options, Match.Maybe({ logout: Boolean }))
+Accounts.setPasswordAsync = async (userId, newPlaintextPassword, options) => {
+  check(userId, String);
+  check(newPlaintextPassword, Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256));
+  check(options, Match.Maybe({ logout: Boolean }));
   options = { logout: true , ...options };
 
   const user = getUserById(userId, {fields: {_id: 1}});
@@ -312,7 +335,7 @@ Accounts.setPassword = (userId, newPlaintextPassword, options) => {
     $unset: {
       'services.password.reset': 1
     },
-    $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)}
+    $set: {'services.password.bcrypt': await hashPassword(newPlaintextPassword)}
   };
 
   if (options.logout) {
@@ -320,6 +343,19 @@ Accounts.setPassword = (userId, newPlaintextPassword, options) => {
   }
 
   Meteor.users.update({_id: user._id}, update);
+};
+
+/**
+ * @summary Forcibly change the password for a user.
+ * @locus Server
+ * @param {String} userId The id of the user to update.
+ * @param {String} newPassword A new password for the user.
+ * @param {Object} [options]
+ * @param {Object} options.logout Logout all current connections with this userId (default: true)
+ * @importFromPackage accounts-base
+ */
+Accounts.setPassword = (userId, newPlaintextPassword, options) => {
+  return Promise.await(Accounts.setPasswordAsync(userId, newPlaintextPassword, options));
 };
 
 
@@ -541,15 +577,15 @@ Accounts.sendEnrollmentEmail = (userId, email, extraTokenData, extraParams) => {
 
 // Take token from sendResetPasswordEmail or sendEnrollmentEmail, change
 // the users password, and log them in.
-Meteor.methods({resetPassword: function (...args) {
+Meteor.methods({resetPassword: async function (...args) {
   const token = args[0];
   const newPassword = args[1];
-  return Accounts._loginMethod(
+  return await Accounts._loginMethod(
     this,
     "resetPassword",
     args,
     "password",
-    () => {
+    async () => {
       check(token, String);
       check(newPassword, passwordValidator);
 
@@ -598,7 +634,7 @@ Meteor.methods({resetPassword: function (...args) {
           error: new Meteor.Error(403, "Token has invalid email address")
         };
 
-      const hashed = hashPassword(newPassword);
+      const hashed = await hashPassword(newPassword);
 
       // NOTE: We're about to invalidate tokens on the user, who we might be
       // logged in as. Make sure to avoid logging ourselves out if this
@@ -693,9 +729,9 @@ Accounts.sendVerificationEmail = (userId, email, extraTokenData, extraParams) =>
 
 // Take token from sendVerificationEmail, mark the email as verified,
 // and log them in.
-Meteor.methods({verifyEmail: function (...args) {
+Meteor.methods({verifyEmail: async function (...args) {
   const token = args[0];
-  return Accounts._loginMethod(
+  return await Accounts._loginMethod(
     this,
     "verifyEmail",
     args,
@@ -869,7 +905,7 @@ Accounts.removeEmail = (userId, email) => {
 // does the actual user insertion.
 //
 // returns the user id
-const createUser = options => {
+const createUser = async options => {
   // Unknown keys allowed, because a onCreateUserHook can take arbitrary
   // options.
   check(options, Match.ObjectIncluding({
@@ -884,22 +920,22 @@ const createUser = options => {
 
   const user = {services: {}};
   if (password) {
-    const hashed = hashPassword(password);
+    const hashed = await hashPassword(password);
     user.services.password = { bcrypt: hashed };
   }
 
-  return Accounts._createUserCheckingDuplicates({ user, email, username, options })
+  return Accounts._createUserCheckingDuplicates({ user, email, username, options });
 };
 
 // method for create user. Requests come from the client.
-Meteor.methods({createUser: function (...args) {
+Meteor.methods({createUser: async function (...args) {
   const options = args[0];
-  return Accounts._loginMethod(
+  return await Accounts._loginMethod(
     this,
     "createUser",
     args,
     "password",
-    () => {
+    async () => {
       // createUser() above does more checking.
       check(options, Object);
       if (Accounts._options.forbidClientAccountCreation)
@@ -907,7 +943,7 @@ Meteor.methods({createUser: function (...args) {
           error: new Meteor.Error(403, "Signups forbidden")
         };
 
-      const userId = Accounts.createUserVerifyingEmail(options);
+      const userId = await Accounts.createUserVerifyingEmail(options);
 
       // client gets logged in as the new user afterwards.
       return {userId: userId};
@@ -929,10 +965,10 @@ Meteor.methods({createUser: function (...args) {
  * @param {Object} options.profile The user's profile, typically including the `name` field.
  * @importFromPackage accounts-base
  * */
-Accounts.createUserVerifyingEmail = (options) => {
+Accounts.createUserVerifyingEmail = async (options) => {
   options = { ...options };
   // Create user. result contains id and token.
-  const userId = createUser(options);
+  const userId = await createUser(options);
   // safety belt. createUser is supposed to throw on error. send 500 error
   // instead of sending a verification email with empty userid.
   if (! userId)
@@ -957,14 +993,15 @@ Accounts.createUserVerifyingEmail = (options) => {
 // Unlike the client version, this does not log you in as this user
 // after creation.
 //
-// returns userId or throws an error if it can't create
+// returns Promise<userId> or throws an error if it can't create
 //
 // XXX add another argument ("server options") that gets sent to onCreateUser,
 // which is always empty when called from the createUser method? eg, "admin:
 // true", which we want to prevent the client from setting, but which a custom
 // method calling Accounts.createUser could set?
 //
-Accounts.createUser = (options, callback) => {
+
+Accounts.createUserAsync = async (options, callback) => {
   options = { ...options };
 
   // XXX allow an optional callback?
@@ -973,6 +1010,23 @@ Accounts.createUser = (options, callback) => {
   }
 
   return createUser(options);
+};
+
+// Create user directly on the server.
+//
+// Unlike the client version, this does not log you in as this user
+// after creation.
+//
+// returns userId or throws an error if it can't create
+//
+// XXX add another argument ("server options") that gets sent to onCreateUser,
+// which is always empty when called from the createUser method? eg, "admin:
+// true", which we want to prevent the client from setting, but which a custom
+// method calling Accounts.createUser could set?
+//
+
+Accounts.createUser = (options, callback) => {
+  return Promise.await(Accounts.createUserAsync(options, callback));
 };
 
 ///

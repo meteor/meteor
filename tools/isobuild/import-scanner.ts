@@ -80,7 +80,7 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
   if (cacheFilePath) {
     try {
       return readFile(cacheFilePath, "utf8");
-    } catch (e) {
+    } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
     }
   }
@@ -291,7 +291,7 @@ function setImportedStatus(file: File, status: string | boolean) {
 // of ImportScanner (which do not persist across builds).
 const LRU = require("lru-cache");
 const IMPORT_SCANNER_CACHE = new LRU({
-  max: 1024*1024,
+  max: Math.pow(2, 23),
   length(ids: Record<string, ImportInfo>) {
     let total = 40; // size of key
     each(ids, (_info, id) => { total += id.length; });
@@ -1090,7 +1090,7 @@ export default class ImportScanner {
 
     try {
       file.deps = file.deps || this.findImportedModuleIdentifiers(file);
-    } catch (e) {
+    } catch (e: any) {
       if (e.$ParseError) {
         (buildmessage as any).error(e.message, {
           file: file.sourcePath,
@@ -1214,7 +1214,7 @@ export default class ImportScanner {
   private readPackageJson(absPath: string) {
     try {
       var info = this.readFile(absPath);
-    } catch (e) {
+    } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
       return null;
     }
@@ -1257,7 +1257,7 @@ export default class ImportScanner {
 
     try {
       var info = this.readFile(absPath);
-    } catch (e) {
+    } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
       return null;
     }

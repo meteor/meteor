@@ -5,7 +5,6 @@ var colonConverter = require('../utils/colon-converter.js');
 var files = require('../fs/files');
 var compiler = require('./compiler.js');
 var linker = require('./linker.js');
-var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
@@ -22,7 +21,6 @@ import {cssToCommonJS} from "./css-modules";
 import Resolver from "./resolver";
 import {
   optimisticStatOrNull,
-  optimisticReadJsonOrNull,
   optimisticHashOrNull,
 } from "../fs/optimistic";
 
@@ -304,7 +302,7 @@ class InputFile extends buildPluginModule.InputFile {
     const sourceBatch = this._resourceSlot.packageSourceBatch;
     return readAndWatchFileWithHash(
       sourceBatch.unibuild.watchSet,
-      files.convertToOSPath(path),
+      files.convertToPosixPath(path),
     );
   }
 
@@ -892,6 +890,7 @@ class OutputResource {
       sourcePath,
       targetPath,
       servePath,
+      sourceRoot: resourceSlot.packageSourceBatch.sourceRoot,
       // Remember the source hash so that changes to the source that
       // disappear after compilation can still contribute to the hash.
       // Bypassing SourceResource.hash getter so if the compiler plugin doesn't

@@ -31,6 +31,7 @@ nativeNames.forEach((id: string) => {
   // identifier will not be imported at runtime, but the modules it
   // depends on are necessary for the original import to succeed.
   nativeModulesMap[id] =  "meteor-node-stubs/deps/" + id;
+  nativeModulesMap[`node:${id}`] =  "meteor-node-stubs/deps/" + id;
 });
 
 export type ResolverOptions = {
@@ -126,7 +127,7 @@ export default class Resolver {
 
   // Resolve the given module identifier to an object { path, stat } or
   // null, relative to an absolute parent path. The _seenDirPaths
-  // parameter is for internal use only and should be ommitted.
+  // parameter is for internal use only and should be omitted.
   public resolve(
     id: string,
     absParentPath: string,

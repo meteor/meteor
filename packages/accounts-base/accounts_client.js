@@ -219,7 +219,7 @@ export class AccountsClient extends AccountsCommon {
     ['validateResult', 'userCallback'].forEach(f => {
       if (!options[f])
         options[f] = () => null;
-    })
+    });
 
     let called;
     // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
@@ -228,19 +228,19 @@ export class AccountsClient extends AccountsCommon {
         called = true;
         this._loginCallbacksCalled = true;
         if (!error) {
-          this._onLoginHook.each(callback => {
+          this._onLoginHook.forEach(callback => {
             callback(loginDetails);
             return true;
           });
         } else {
-          this._onLoginFailureHook.each(callback => {
+          this._onLoginFailureHook.forEach(callback => {
             callback({ error });
             return true;
           });
         }
         options.userCallback(error, loginDetails);
       }
-    }
+    };
 
     let reconnected = false;
 
@@ -361,7 +361,7 @@ export class AccountsClient extends AccountsCommon {
 
       // Make the client logged in. (The user data should already be loaded!)
       this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
-      loginCallbacks({ loginDetails: { type: result.type } });
+      loginCallbacks({ loginDetails: result });
     };
 
     if (!options._suppressLoggingIn) {
@@ -797,6 +797,11 @@ if (Package.blaze) {
    * @summary Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in.
    */
   Template.registerHelper('currentUser', () => Meteor.user());
+
+  // TODO: the code above needs to be changed to Meteor.userAsync() when we have
+  // a way to make it reactive using async.
+  // Template.registerHelper('currentUserAsync',
+  //  async () => await Meteor.userAsync());
 
   /**
    * @global

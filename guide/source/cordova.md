@@ -91,11 +91,16 @@ A shortcut is to run `sudo xcodebuild -license accept` from the command line. (Y
 
 <h4>Enabling Xcode command line tools</h4>
 
-After installing Xcode from the Mac App Store, it is still necesssary to enable those tools in the terminal environment.  This can be accompilshed by running the following from the command prompt:
+After installing Xcode from the Mac App Store, it is still necessary to enable those tools in the terminal environment.  This can be accomplished by running the following from the command prompt:
 ```
     sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ```
 <h3 id="installing-prerequisites-android">Android</h3>
+
+{% youtube vhlNO0dVvjE %}
+
+> For Mac OSX Intel and Linux architectures, follow the following instructions. Mac M1 users, keep scrolling to the next section.
+> Note: if you want to target the SDK 31 of Android, you will need to use Java 11 or higher and also have the latest cmdline-tools installed.
 
 In order to build and run Android apps, you will need to:
 
@@ -123,15 +128,15 @@ In order to build and run Android apps, you will need to:
 
 <h4>Installing Android Studio</h4>
 
-The easiest way to get a working Android development environment is by installing [Android Studio](http://developer.android.com/sdk/index.html), which offers a setup wizard on first launch that installs the Android SDK for you, and downloads a default set of tools, platforms, and other components that you will need to start developing.
+The easiest way to get a working Android development environment is by installing [Android Studio](https://developer.android.com/studio), which offers a setup wizard on first launch that installs the Android SDK for you, and downloads a default set of tools, platforms, and other components that you will need to start developing.
 
-Please refer to [the Android Studio installation instructions](http://developer.android.com/sdk/installing/index.html?pkg=studio) for more details on the exact steps to follow.
+Please refer to [the Android Studio installation instructions](https://developer.android.com/studio/install) for more details on the exact steps to follow.
 
-> There is no need to use Android Studio if you prefer a stand-alone install. Just make sure you install the most recent versions of the [Android SDK Tools](http://developer.android.com/sdk/index.html#Other) and download the required [additional packages](http://developer.android.com/sdk/installing/adding-packages.html) yourself using the [Android SDK Manager](http://developer.android.com/tools/help/sdk-manager.html).
+> There is no need to use Android Studio if you prefer a stand-alone install. Just make sure you install the most recent versions of the [Android Command Line Tools](https://developer.android.com/studio#command-tools).
 
-Make sure to select the correct version of the [Android Studio SDK Tools](https://developer.android.com/studio/releases/sdk-tools.html):
+Make sure to select the correct version of the [Android Studio SDK Tools](https://developer.android.com/studio/intro/update):
 
- * Meteor 1.4.3.1 or later: Android SDK Tools v.25.**2**.x ([mac](https://dl.google.com/android/repository/tools_r25.2.3-macosx.zip), [linux](https://dl.google.com/android/repository/tools_r25.2.3-linux.zip), [windows](https://dl.google.com/android/repository/tools_r25.2.3-windows.zip)) or v.26.0.0 or later
+ * Meteor 1.4.3.1 onward: Android SDK Tools v.25.**2**.x ([mac](https://dl.google.com/android/repository/tools_r25.2.3-macosx.zip), [linux](https://dl.google.com/android/repository/tools_r25.2.3-linux.zip), [windows](https://dl.google.com/android/repository/tools_r25.2.3-windows.zip)) or v.26.0.0 or later
  * v.25.**3.0** **will not work** due to [extensive changes](https://developer.android.com/studio/releases/sdk-tools.html).  See [issue #8464](https://github.com/meteor/meteor/issues/8464) for more information.
  * Meteor 1.4.2.x or before: Android SDK Tools v.23 ([mac](https://dl.google.com/android/repository/tools_r23.0.1-macosx.zip), [linux](https://dl.google.com/android/repository/tools_r23.0.1-linux.zip), [windows](https://dl.google.com/android/repository/tools_r23.0.1-windows.zip))
 
@@ -179,6 +184,22 @@ You will then have to reload `.bash_profile` (by executing `source ~/.bash_profi
 The current Android emulator tends to be rather slow and can be unstable, so our recommendation is to run your app on a physical device instead.
 
 If you do want to run on an emulator however, you will have to create an Android Virtual Device (AVD) using the [AVD Manager](http://developer.android.com/tools/devices/managing-avds.html). Make sure to configure an AVD with an API level that is supported by the version of [Cordova Android](https://github.com/apache/cordova-android/blob/master/RELEASENOTES.md) you are using.
+
+<h4>Mac M1</h4>
+In order to make Android run on m1 machines:
+
+- Install Java Development Kit (JDK) 8 from [here](https://cdn.azul.com/zulu/bin/zulu8.62.0.19-ca-jdk8.0.332-macosx_aarch64.dmg) 
+- Install the Android SDK and download the required tools, platforms, and other components (which is done most easily by installing Android Studio) from the [official website](https://developer.android.com/studio#downloads) and for the ARM architecture.
+- Create a Virtual Device on Android Studio, add any model (e.g. Pixel 4) with Android 11 (API 30)
+- Set up the following PATHs in your `.bashrc` or `.zshrc` file:
+```
+export ANDROID_HOME=$HOME/Library/Android/sdk
+export ANDROID_SDK_ROOT=${ANDROID_HOME}
+export PATH=${PATH}:${ANDROID_HOME}/emulator
+export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+```
+> Remember to reload your configuration using `source ~/.zshrc` or `source ~/.bashrc`
+- Install `gradle` using `brew install gradle`
 
 <h2 id ="running-your-app">Developing on a device</h2>
 

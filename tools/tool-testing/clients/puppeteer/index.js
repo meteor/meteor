@@ -3,7 +3,7 @@ import { enterJob } from '../../../utils/buildmessage.js';
 import { ensureDependencies } from '../../../cli/dev-bundle-helpers.js';
 
 const NPM_DEPENDENCIES = {
-  puppeteer: '8.0.0'
+  puppeteer: '13.2.0'
 };
 
 export default class PuppeteerClient extends Client {

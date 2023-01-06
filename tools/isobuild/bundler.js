@@ -149,7 +149,6 @@
 // wait until later.
 
 var assert = require('assert');
-var util = require('util');
 var Fiber = require('fibers');
 var _ = require('underscore');
 
@@ -160,7 +159,6 @@ var compilerPluginModule = require('./compiler-plugin.js');
 import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
 import { addToTree, File as LinkerFile } from "./linker.js";
-
 var files = require('../fs/files');
 var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
@@ -476,7 +474,7 @@ class NodeModulesDirectory {
 
       if (start >= parts.length) {
         // If "node_modules" is the final part, then there's nothing
-        // futher to examine, yet.
+        // further to examine, yet.
         return true;
       }
 
@@ -835,7 +833,7 @@ class Target {
 
   // Top-level entry point for building a target. Generally to build a
   // target, you create with 'new', call make() to specify its sources
-  // and build options and actually do the work of buliding the
+  // and build options and actually do the work of building the
   // target, and finally you retrieve the build product with a
   // target-type-dependent function such as write() or toJsImage().
   //
@@ -1042,7 +1040,7 @@ class Target {
             buildmessage.error(
               "circular dependency between packages " +
                 unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
-            // recover by not enforcing one of the depedencies
+            // recover by not enforcing one of the dependencies
             return;
           }
           onStack[usedUnibuild.id] = true;
@@ -1119,13 +1117,16 @@ class Target {
 
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.
-      // TODO Cache result by resource hash?
-      minifyCssResource(resource) {
-        if (! minifiersByExt.css ||
-            minifyMode === "development") {
+      minifyCssResource: (resource) => {
+        if (! minifiersByExt.css) {
           // Indicates the caller should use the original resource.data
           // without minification.
           return null;
+        }
+
+        let sourcePath;
+        if (resource.data && resource.sourceRoot && resource.sourcePath) {
+          sourcePath = files.pathJoin(resource.sourceRoot, resource.sourcePath);
         }
 
         const file = new File({
@@ -1133,6 +1134,7 @@ class Target {
           arch: target.arch,
           data: resource.data,
           hash: resource.hash,
+          sourcePath
         });
 
         file.setTargetPathFromRelPath(
@@ -1142,6 +1144,7 @@ class Target {
           arch: target.arch,
           minifier: minifiersByExt.css,
           minifyMode,
+          watchSet: this.watchSet
         }).map(file => file.contents("utf8")).join("\n");
       }
     });
@@ -1280,13 +1283,18 @@ class Target {
             return;
           }
 
+          let sourcePath;
+          if (resource.data && resource.sourceRoot && resource.sourcePath) {
+            sourcePath = files.pathJoin(resource.sourceRoot, resource.sourcePath);
+          }
           const f = new File({
             info: 'resource ' + resource.servePath,
             arch: this.arch,
             data: resource.data,
             hash: resource.hash,
             cacheable: false,
-            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable
+            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable,
+            sourcePath
           });
 
           const relPath = stripLeadingSlash(resource.servePath);
@@ -1568,7 +1576,7 @@ class Target {
   // we always add the exact version specified, overriding any other
   // version that has already been added.
   // Additionally we need to be sure that a cordova-plugin-name gets
-  // overriden with @scope/cordova-plugin-name.
+  // overridden with @scope/cordova-plugin-name.
   _addCordovaDependency(name, version, override) {
     if (! this.cordovaDependencies) {
       return;
@@ -1691,6 +1699,7 @@ class ClientTarget extends Target {
       arch: this.arch,
       minifier: minifierDef,
       minifyMode,
+      watchSet: this.watchSet
     });
   }
 
@@ -1896,15 +1905,15 @@ class ClientTarget extends Target {
   }
 }
 
-const { wrap, defaultMakeCacheKey } = require("optimism");
-const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
+function minifyCssFiles (files, {
   arch,
   minifier,
   minifyMode,
+  watchSet
 }) {
   const inputHashesByCssFile = new Map;
   const sources = files.map(file => {
-    const cssFile = new CssFile(file, { arch });
+    const cssFile = new CssFile(file, { arch, watchSet });
     inputHashesByCssFile.set(cssFile, file.hash());
     return cssFile;
   });
@@ -1943,16 +1952,7 @@ const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
       return newFile;
     });
   }));
-}, {
-  makeCacheKey(files, { arch, minifier, minifyMode }) {
-    return defaultMakeCacheKey(
-      minifier,
-      arch,
-      minifyMode,
-      hashOfFiles(files),
-    );
-  }
-}));
+}
 
 const { createHash } = require("crypto");
 function hashOfFiles(files) {
@@ -2855,7 +2855,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
 // return the provided buffer without modification.
 function removeSourceMappingURLs(data) {
   if (Buffer.isBuffer(data)) {
-    // Unfortuantely there is no way to search a Buffer using a RegExp, so
+    // Unfortunately there is no way to search a Buffer using a RegExp, so
     // there's a chance of false positives here, which could lead to
     // unnecessarily stringifying and re-Buffer.from-ing the data, though
     // that should not cause any logical problems.
@@ -3088,7 +3088,7 @@ Find out more about Meteor at meteor.com.
     builder.complete();
 
     // Now, go and "fix up" the outputPath properties of the sub-builders.
-    // Since the sub-builders originally were targetted at a temporary
+    // Since the sub-builders originally were targeted at a temporary
     // buildPath of the main builder, their outputPath properties need to
     // be adjusted so we can later pass them as previousBuilder's
     Object.keys(builders).forEach(name => {
@@ -3340,6 +3340,13 @@ function bundle({
       return mergeAppWatchSets();
     }
 
+    // Call any beforeMinify callbacks defined by minifier plugins
+    minifiers.forEach(minifier => {
+      if (typeof minifier.userPlugin.beforeMinify === 'function') {
+        minifier.userPlugin.beforeMinify();
+      }
+    });
+
     const targets = Object.create(null);
     const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -3385,7 +3392,7 @@ function bundle({
           // Tell the webapp package to pause responding to requests from
           // clients that use this arch, because we're about to write a
           // new version of this bundle to disk. If the message fails
-          // becuase the child process exited, proceed with writing the
+          // because the child process exited, proceed with writing the
           // target anyway.
           await pauseClient(arch).catch(ignoreHarmlessErrors);
 

@@ -24,7 +24,7 @@ By default Meteor will build certain files as controlled by your application [fi
 
 <h3 id="concatenate-and-minify">Combines and minifies code</h3>
 
-Another important feature of the Meteor build tool is that it automatically concatenates your application asset files, and in production minifies these bundles. This lets you add all of the comments and whitespace you want to your source code and split your code into as many files as necessary, all without worrying about app performance and load times. This is enabled by the [`standard-minifier-js`](https://atmospherejs.com/meteor/standard-minifiers-js) and [`standard-minifier-css`](https://atmospherejs.com/meteor/standard-minifiers-css) packages, which are included in all Meteor apps by default. If you need different minification behavior, you can replace these packages. See adding [PostCSS to your build process](#postcss) as an example.
+Another important feature of the Meteor build tool is that it automatically concatenates your application asset files, and in production minifies these bundles. This lets you add all of the comments and whitespace you want to your source code and split your code into as many files as necessary, all without worrying about app performance and load times. This is enabled by the [`standard-minifier-js`](https://atmospherejs.com/meteor/standard-minifiers-js) and [`standard-minifier-css`](https://atmospherejs.com/meteor/standard-minifiers-css) packages, which are included in all Meteor apps by default. If you need different minification behavior, you can replace these packages (see [zodern:standard-minifier-js](https://atmospherejs.com/zodern/standard-minifier-js) as an example).
 
 <h3 id="dev-vs-prod">Development vs. production</h3>
 
@@ -238,44 +238,9 @@ The best Stylus build plugin for Meteor is [coagmano:stylus](https://atmospherej
 
 In addition to CSS pre-processors like Sass, Less, and Stylus, there is now an ecosystem of CSS post-processors. Regardless of which CSS pre-processor you use, a post-processor can give you additional benefits like cross-browser compatibility.
 
-The most popular CSS post-processor right now is [PostCSS](https://github.com/postcss/postcss), which supports a variety of plugins. [Autoprefixer](https://github.com/postcss/autoprefixer) is perhaps the most useful plugin, since it enables you to stop worrying about browser prefixes and compatibility and write standards-compliant CSS. No more copying 5 different statements every time you want a CSS gradient - you can write a standard gradient without any prefixes and Autoprefixer handles it for you.
+The most popular CSS post-processor right now is [PostCSS](https://github.com/postcss/postcss), which supports a variety of plugins. [Autoprefixer](https://github.com/postcss/autoprefixer) is perhaps the most useful plugin, autoprefixer has an [online version](https://goonlinetools.com/autoprefixer/) that allows you to enter your non-prefixed CSS and gives you a prefix-added CSS, since it enables you to stop worrying about browser prefixes and compatibility and write standards-compliant CSS. No more copying 5 different statements every time you want a CSS gradient - you can write a standard gradient without any prefixes and Autoprefixer handles it for you.
 
-Currently, Meteor doesn't have a separate build step for post-processing CSS, so the only way to integrate it is to build it into the minifier. Thankfully, there is a community package that has integrated PostCSS with plugin support into a replacement for Meteor's standard minification package.
-
-<h3 id="juliancwirko-postcss">juliancwirko:postcss</h3>
-
->Note: This package is no longer actively maintained, therefore compatibility with newer versions of Meteor is not guaranteed. If you encouter problems with this, please let us know by [opening an issue on the Guide](https://github.com/meteor/guide/issues).
-
-Use the package [juliancwirko:postcss](https://atmospherejs.com/juliancwirko/postcss) to your app to enable PostCSS for your Meteor app. To do so, we remove the standard CSS minifier and replace it with the postcss package:
-
-```
-meteor remove standard-minifier-css
-meteor add juliancwirko:postcss
-```
-
-As well as installing the postcss NPM package:
-
-```
-meteor npm install postcss@^6.0.22  --save-dev
-meteor npm install postcss-load-config@^1.2.0 --save-dev
-```
-
-Then we can install any npm CSS processing packages that we'd like to use and reference them from a `postcss` section of our `package.json`. In the Todos example app, we use `autoprefixer` package to increase browser support:
-
-```
-{
-  "devDependencies": {
-    "autoprefixer": "^6.3.1"
-  },
-  "postcss": {
-    "plugins": {
-      "autoprefixer": {"browsers": ["last 2 versions"]}
-    }
-  }
-}
-```
-
-After doing the above, you'll need to ensure you `npm install` and restart the `meteor` process running your app to make sure the PostCSS system has had a chance to set itself up.
+Meteor automatically runs PostCSS for you once you've configured it. Learn more about enabling it in the docs for [standard-minifier-css](https://docs.meteor.com/packages/standard-minifier-css.html).
 
 <h2 id="hot-module-replacement">Hot Module Replacement</h2>
 

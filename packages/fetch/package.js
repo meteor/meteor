@@ -1,6 +1,6 @@
 Package.describe({
   name: "fetch",
-  version: "0.1.1",
+  version: '0.1.2',
   summary: "Isomorphic modern/legacy/Node polyfill for WHATWG fetch()",
   documentation: "README.md"
 });
@@ -19,6 +19,7 @@ Package.onUse(function(api) {
   api.mainModule("legacy.js", "legacy");
   api.mainModule("server.js", "server");
 
+  api.addAssets("fetch.d.ts", "server");
   // The other exports (Headers, Request, Response) can be imported
   // explicitly from the "meteor/fetch" package.
   api.export("fetch");
