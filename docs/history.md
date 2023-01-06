@@ -1,3 +1,54 @@
+## v2.9.1, 2022-12-27
+
+### Highlights
+
+* Reverted missing types [PR](https://github.com/meteor/meteor/pull/12366) by [Grubba27](https://github.com/Grubba27).
+* Fix fetch() type declaration [PR](https://github.com/meteor/meteor/pull/12352) by [zarvox](https://github.com/zarvox).
+* update svelte skeleton [PR](https://github.com/meteor/meteor/pull/12350) by [tosinek](https://github.com/tosinek).
+* Bump to node 14.21.2.0 [PR](https://github.com/meteor/meteor/pull/12370) by [Grubba27](https://github.com/Grubba27).
+* resetPassword and verifyEmail to no longer sign in the user automatically [PR](https://github.com/meteor/meteor/pull/12385) by [denihs](https://github.com/denihs).
+* Added missing vue2 declaration for skeletons [PR](https://github.com/meteor/meteor/pull/12396) by [Grubba27](https://github.com/Grubba27) & [mlanning](https://github.com/mlanning).
+
+#### Breaking Changes
+
+* `accounts-password@2.3.3`
+  - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
+
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+N/A
+
+#### Meteor Version Release
+
+* `fetch@0.1.3`:
+  - Updated fetch type definition.
+  
+* `meteor@1.10.4`:
+  - Added back meteor type definitions that were removed by mistake in earlier version.
+
+* `accounts-password@2.3.3`
+  - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
+
+* `Command line`:
+  - Updated Svelte skeleton to now be able to support typescript out of the box and added ``#each`` in links in the skeleton.
+  - Updated node to 14.21.2 changes can be seen [here](https://github.com/nodejs/node/releases/tag/v14.21.2).
+  - Solved [issue](https://github.com/meteor/meteor/issues/12395) that could not allow vue2 apps being created in command line.
+  
+#### Special thanks to
+- [@zarvox](https://github.com/zarvox).
+- [@tosinek](https://github.com/tosinek).
+- [@Grubba27](https://github.com/Grubba27).
+- [@denihs](https://github.com/denihs).
+- [@mlanning](https://github.com/mlanning).
+
+For making this great framework even better!
+
+
 ## v2.9, 2022-12-12
 
 ### Highlights
