@@ -1,9 +1,9 @@
 // This file needs to work in old web browsers and old node versions
-// It should not use new js syntax.
+// It should not use js features newer than EcmaScript 5.
 //
 // Handles loading linked code for packages and apps
 // Ensures packages and eager requires run in the correct order
-// when there the code uses top level await
+// when there is code that uses top level await
 
 var pending = Object.create(null);
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -26,9 +26,9 @@ function queue(name, deps, runImage) {
       pendingDepsCount += 1;
       pending[dep].push(onDepLoaded);
     } else {
-      // load must always be called for a package's dependencies first
+      // load must always be called for a package's dependencies first.
       // If the package is not pending, then it must have already loaded
-      // or is a weak dependency, and the dependency is not being used
+      // or is a weak dependency, and the dependency is not being used.
     }
   });
 
@@ -46,7 +46,6 @@ function load(name, runImage) {
     if (config.mainModulePath) {
       Package._define(name, mainModuleExports, exports);
     } else {
-      // TODO: need default value?
       Package._define(name, exports);
     }
 
@@ -85,8 +84,7 @@ function runEagerModules(config, callback) {
     var path = config.eagerModulePaths[index];
     var exports = config.require(path);
 
-    // TODO: create better way to detect to avoid including sync modules that export a promise
-    if (exports && typeof exports === 'object' && typeof exports.then === 'function') {
+    if (checkAsyncModule(exports)) {
       mainModuleAsync = true;
 
       // Is an async module
@@ -105,6 +103,19 @@ function runEagerModules(config, callback) {
   }
 
   evaluateNextModule();
+}
+
+function checkAsyncModule (exports) {
+  // Uses descriptor to avoid running any getters
+  var isPromise = exports && hasOwn.call(exports, 'then') &&
+    typeof Object.getOwnPropertyDescriptor(exports, 'then').value === 'function';
+
+  if (!isPromise) {
+    return false;
+  }
+
+  return hasOwn.call(exports, '__reifyAsyncModule') &&
+     Object.getOwnPropertyDescriptor(exports, '__reifyAsyncModule');
 }
 
 // For this to be accurate, all bundles must be queued before calling this
