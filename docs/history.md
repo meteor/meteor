@@ -8,6 +8,8 @@
 * Typescript to version v4.7.4 [PR](https://github.com/meteor/meteor/pull/12393) by [StorytellerCZ](https://github.com/StorytellerCZ).
 * Update test-in-browser dependencies [PR](https://github.com/meteor/meteor/pull/12384) by [harryadel](https://github.com/harryadel).
 * Allow multiple runtime config and updated runtime hooks [PR](https://github.com/meteor/meteor/pull/12426) by [ebroder](https://github.com/ebroder).
+* Added async forEach and clear for method Hooks [PR](https://github.com/meteor/meteor/pull/12427) by [Grubba27](https://github.com/Grubba27).
+* Implemented async Tracker with explicit values [PR](https://github.com/meteor/meteor/pull/12294) by [radekmie](https://github.com/radekmie).
 
 #### Breaking Changes
 
@@ -39,15 +41,21 @@ N/A
   
 * `callback-hook@1.5.0`
   - Added forEachAsync .
-
+  
+* `Tracker@1.3.0`:
+  - Implemented async Tracker with explicit values
+  
 * `Command line`:
   - Updated React skeletons to use React 18
+
 
 #### Special thanks to
   - [@StorytellerCZ](https://github.com/StorytellerCZ).
   - [@perbergland](https://github.com/perbergland).
   - [@ebroder](https://github.com/ebroder).
   - [@harryadel](https://github.com/harryadel).
+  - [@radekmie](https://github.com/radekmie).
+  - [@Grubba27](https://github.com/Grubba27).
 
 For making this great framework even better!
 
