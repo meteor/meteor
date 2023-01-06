@@ -6,9 +6,11 @@ var makeCollection = function () {
   }
 };
 
-_.each ([{added: 'added', forceOrdered: true},
-         {added: 'added', forceOrdered: false},
-         {added: 'addedBefore', forceOrdered: false}], function (options) {
+_.each ([
+    {added: 'added', forceOrdered: true},
+    {added: 'added', forceOrdered: false},
+    {added: 'addedBefore', forceOrdered: false}
+], function (options) {
   var added = options.added;
   var forceOrdered = options.forceOrdered;
 
@@ -118,7 +120,7 @@ Tinytest.addAsync("observeChanges - unordered - initial adds", async function (t
   });
 });
 
-Tinytest.addAsync("observeChanges - unordered - basics", async function (test, onComplete) {
+Tinytest.addAsync("observeChanges - unordered - basics", async function (test) {
   var c = makeCollection();
   withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async function (logger) {
     var handle = await c.find().observeChanges(logger);
@@ -143,12 +145,12 @@ Tinytest.addAsync("observeChanges - unordered - basics", async function (test, o
     await logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
     await logger.expectNoResult();
     await handle.stop();
-    onComplete();
+    //onComplete();
   });
 });
 
 if (Meteor.isServer) {
-  Tinytest.addAsync("observeChanges - unordered - specific fields", async function (test, onComplete) {
+  Tinytest.addAsync("observeChanges - unordered - specific fields", async function (test) {
     var c = makeCollection();
     await withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, async function (logger) {
       var handle = await c.find({}, {fields:{noodles: 1, bacon: 1}}).observeChanges(logger);
@@ -174,7 +176,6 @@ if (Meteor.isServer) {
       await logger.expectNoResult();
       await handle.stop();
     });
-    onComplete();
   });
 
   Tinytest.addAsync("observeChanges - unordered - specific fields + selector on excluded fields", async function (test, onComplete) {

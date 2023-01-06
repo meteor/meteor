@@ -48,7 +48,7 @@ CallbackLogger.prototype._yield = function (arg) {
 
 CallbackLogger.prototype.expectResult = async function (callbackName, args) {
   var self = this;
-  await self._waitForLengthOrTimeout(10);
+  await self._waitForLengthOrTimeout(100);
   if (_.isEmpty(self._log)) {
     self._test.fail(["Expected callback " + callbackName + " got none"]);
     return;

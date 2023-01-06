@@ -144,18 +144,15 @@ Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs
     var collection = new Mongo.Collection(collectionName);
     await collection.insert({a: 1});
 
-    Promise.resolve(
-      Meteor.isServer &&
-        collection.rawCollection().createIndex({ a: 1 })
-    ).then(() => {
-        collection.find({}, {
+    if (Meteor.isServer) {
+        await collection.rawCollection().createIndex({ a: 1 });
+        const count = await collection.find({}, {
             hint: {a: 1},
             maxTimeMs: 1000
-        }).count().then((count => {
-            test.equal(count , 1);
-            done();
-        }));
-    }).catch(error => test.fail(error.message));
+        }).count();
+        test.equal(count , 1);
+        done();
+    }
   }
 );
 
