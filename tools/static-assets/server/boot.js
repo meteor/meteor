@@ -501,9 +501,9 @@ function startServerProcess() {
       runMain();
     } else {
       global.asyncLocalStorage.run({ level: 'boot' }, async () => {
-        let potentialPromise = loadServerBundles();
-        await potentialPromise;
+        await loadServerBundles();
 
+        // TODO: should wait for async startup hooks to finish before running main
         callStartupHooks();
         runMain();
       });
