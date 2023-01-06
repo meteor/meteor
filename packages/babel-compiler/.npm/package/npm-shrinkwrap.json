@@ -619,8 +619,8 @@
           "integrity": "sha512-vFv9ttIedivx0ux3QSjhgtCVjPZd5l46ZOMDSCwnH1yUO2e964gO8LZGyv2QkqcgR6TnBU1v+1IFqmeoG+0UJQ=="
         },
         "@meteorjs/reify": {
-          "version": "0.24.0",
-          "resolved": "github:meteor/reify#46e208eebcaa0a424397149401ce6a03d91f1a1b",
+          "version": "https://github.com/meteor/reify/tarball/5078da9d0827cc17741504762f3a7f71c3b01448",
+          "integrity": "sha512-LEdx+3A7wV8XeTFWrfkOu0PtX+Vjgl28b4mW8bsM3lZPWIqx0PXTfpbXfDy61MgmmYXR7/cWjVJ8xqgSunF3Mg==",
           "dependencies": {
             "semver": {
               "version": "5.7.1",
@@ -638,11 +638,6 @@
           "version": "8.8.1",
           "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.8.1.tgz",
           "integrity": "sha512-7zFpHzhnqYKrkYdUjF1HI1bzd0VygEGX8lFk4k5zVMqHEoES+P+7TKI+EvLO9WVMJ8eekdO0aDEK044xTXwPPA=="
-        },
-        "acorn-dynamic-import": {
-          "version": "4.0.0",
-          "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
-          "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
         },
         "ansi-colors": {
           "version": "3.2.3",
