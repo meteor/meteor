@@ -480,7 +480,10 @@ var runMain = Profile("Run main()", function () {
 });
 
 function startServerProcess() {
-  Meteor._initAsyncLocalStorage();
+  if (!global.asyncLocalStorage) {
+    const { AsyncLocalStorage } = require('async_hooks');
+    global.asyncLocalStorage = new AsyncLocalStorage();
+  }
 
   Profile.run('Server startup', function() {
     // TODO[FIBERS] the if around loadServerBundles should be enough
