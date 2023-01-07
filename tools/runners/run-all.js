@@ -14,7 +14,7 @@ const Selenium = require('./run-selenium.js').Selenium;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
 const HMRServer = require('./run-hmr').HMRServer;
-const Updater = require('./run-updater.js').Updater;
+const Updater = require('./run-updater').Updater;
 
 class Runner {
   constructor({
@@ -123,7 +123,7 @@ class Runner {
         hmrPath: HMRPath,
         secret: hmrSecret,
         projectContext: self.projectContext,
-        cordovaServerPort 
+        cordovaServerPort
       });
     }
 
