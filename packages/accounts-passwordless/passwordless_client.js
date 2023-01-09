@@ -15,7 +15,7 @@ const transformSelector = selector => {
   }
 
   if (selector.includes('@')) {
-    return { email: selector.toLowerCase() };
+    return { email: selector };
   }
 
   return { username: selector };
