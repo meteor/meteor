@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.0.10'
+  version: '1.0.11'
 });
 
 Package.onUse(function (api) {
@@ -27,6 +27,8 @@ Package.onUse(function (api) {
   // numeric length field whose constructor === Object are still treated as
   // objects, not as arrays.  Search for looksLikeArray.
   api.addFiles(['pre.js', 'underscore.js', 'post.js']);
+
+  api.addAssets('underscore.d.ts', 'server');
 });
 
 
