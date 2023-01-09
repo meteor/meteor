@@ -7,6 +7,8 @@
 * Fixing wrong type definitions in MongoDB package [PR](https://github.com/meteor/meteor/pull/12409) by [ebroder](https://github.com/ebroder).
 * Typescript to version v4.7.4 [PR](https://github.com/meteor/meteor/pull/12393) by [StorytellerCZ](https://github.com/StorytellerCZ).
 * Update test-in-browser dependencies [PR](https://github.com/meteor/meteor/pull/12384) by [harryadel](https://github.com/harryadel).
+* Update boilerplate-generator-tests [PR](https://github.com/meteor/meteor/pull/12429) by [harryadel](https://github.com/harryadel).
+* Replace double-ended-queue with denque [PR](https://github.com/meteor/meteor/pull/12430) by [harryadel](https://github.com/harryadel).
 * Allow multiple runtime config and updated runtime hooks [PR](https://github.com/meteor/meteor/pull/12426) by [ebroder](https://github.com/ebroder).
 * Added async forEach and clear for method Hooks [PR](https://github.com/meteor/meteor/pull/12427) by [Grubba27](https://github.com/Grubba27).
 * Implemented async Tracker with explicit values [PR](https://github.com/meteor/meteor/pull/12294) by [radekmie](https://github.com/radekmie).
@@ -32,6 +34,9 @@ N/A
 * `test-in-browser@1.3.3`:
   - Updated dependencies and removed unused libs.
 
+* `boilerplate-generator-tests@1.5.1`:
+  - Updated parse5 and turned streamToString into a local function.
+
 * `typescript@4.7.4`
   - Updated typescript to version 4.7.4. 
 
@@ -44,6 +49,9 @@ N/A
   
 * `Tracker@1.3.0`:
   - Implemented async Tracker with explicit values
+
+* `Meteor@1.10.4`:
+  - Replaced double-ended-queue with denque
   
 * `Command line`:
   - Updated React skeletons to use React 18
