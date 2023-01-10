@@ -31,9 +31,8 @@ if (isWindows() && !localAppData) {
   throw new Error('LOCALAPPDATA env var is not set.');
 }
 
-const shouldSetupExecPath = () => {
-  return !process.env.npm_config_ignore_meteor_setup_exec_path;
-}
+const shouldSetupExecPath = () =>
+  !process.env.npm_config_ignore_meteor_setup_exec_path;
 
 const meteorLocalFolder = '.meteor';
 const meteorPath = path.resolve(rootPath, meteorLocalFolder);
