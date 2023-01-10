@@ -12,6 +12,7 @@
 * Allow multiple runtime config and updated runtime hooks [PR](https://github.com/meteor/meteor/pull/12426) by [ebroder](https://github.com/ebroder).
 * Added async forEach and clear for method Hooks [PR](https://github.com/meteor/meteor/pull/12427) by [Grubba27](https://github.com/Grubba27).
 * Implemented async Tracker with explicit values [PR](https://github.com/meteor/meteor/pull/12294) by [radekmie](https://github.com/radekmie).
+* Improved eslint config [PR](https://github.com/meteor/meteor/pull/12309) by [afrokick](https://github.com/afrokick).
 
 #### Breaking Changes
 
@@ -56,6 +57,7 @@ N/A
 
 * `Meteor@1.11.0`:
   - Replaced double-ended-queue with [denque](https://github.com/invertase/denque) 
+
   
 * `Command line`:
   - Updated React skeletons to use React 18
@@ -68,6 +70,7 @@ N/A
   - [@harryadel](https://github.com/harryadel).
   - [@radekmie](https://github.com/radekmie).
   - [@Grubba27](https://github.com/Grubba27).
+  - [@afrokick](https://github.com/afrokick).
 
 For making this great framework even better!
 
