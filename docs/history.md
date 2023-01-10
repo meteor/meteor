@@ -30,6 +30,10 @@ N/A
 * `mongo@1.16.4`:
   - Fixed wrong type definitions.
   - switch to using MongoDB types instead of the homebuilt.
+  - Fixed wrong type definitions in MongoDB package related to dropIndexAsync
+  
+* `babel-compiler@7.10.2`:
+  - Updated @meteorjs/babel to version 7.18.0.
 
 * `test-in-browser@1.3.3`:
   - Updated dependencies and removed unused libs.
@@ -50,8 +54,8 @@ N/A
 * `Tracker@1.3.0`:
   - Implemented async Tracker with explicit values
 
-* `Meteor@1.10.4`:
-  - Replaced double-ended-queue with denque
+* `Meteor@1.11.0`:
+  - Replaced double-ended-queue with [denque](https://github.com/invertase/denque) 
   
 * `Command line`:
   - Updated React skeletons to use React 18
