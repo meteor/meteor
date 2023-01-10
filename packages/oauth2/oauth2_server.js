@@ -1,5 +1,5 @@
 // connect middleware
-OAuth._requestHandlers['2'] = (service, query, res) => {
+OAuth._requestHandlers['2'] = async (service, query, res) => {
   let credentialSecret;
 
   // check if user authorized access
@@ -7,7 +7,7 @@ OAuth._requestHandlers['2'] = (service, query, res) => {
     // Prepare the login results before returning.
 
     // Run service-specific handler.
-    const oauthResult = service.handleOauthRequest(query);
+    const oauthResult = await service.handleOauthRequest(query);
     credentialSecret = Random.secret();
 
     const credentialToken = OAuth._credentialTokenFromQuery(query);

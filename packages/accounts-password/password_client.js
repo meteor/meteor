@@ -7,12 +7,10 @@ const reportError = (error, callback) => {
    }
 };
 
-
 const internalLoginWithPassword = ({ selector, password, code, callback }) => {
   if (typeof selector === 'string')
     if (!selector.includes('@')) selector = { username: selector };
     else selector = { email: selector };
-
   Accounts.callLoginMethod({
     methodArguments: [
       {
@@ -203,7 +201,7 @@ Accounts.forgotPassword = (options, callback) => {
 // @param callback (optional) {Function(error|undefined)}
 
 /**
- * @summary Reset the password for a user using a token received in email. Logs the user in afterwards.
+ * @summary Reset the password for a user using a token received in email. Logs the user in afterwards if the user doesn't have 2FA enabled.
  * @locus Client
  * @param {String} token The token retrieved from the reset password URL.
  * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.
@@ -236,7 +234,7 @@ Accounts.resetPassword = (token, newPassword, callback) => {
 // @param callback (optional) {Function(error|undefined)}
 
 /**
- * @summary Marks the user's email address as verified. Logs the user in afterwards.
+ * @summary Marks the user's email address as verified. Logs the user in afterwards if the user doesn't have 2FA enabled.
  * @locus Client
  * @param {String} token The token retrieved from the verification URL.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.

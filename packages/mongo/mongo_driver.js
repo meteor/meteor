@@ -826,6 +826,18 @@ MongoConnection.prototype.createIndex = function (collectionName, index,
   future.wait();
 };
 
+MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.countDocuments(...args);
+};
+
+MongoConnection.prototype.estimatedDocumentCount = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.estimatedDocumentCount(...args);
+};
+
 MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
@@ -907,11 +919,24 @@ function setupSynchronousCursor(cursor, method) {
   return cursor._synchronousCursor;
 }
 
+
+Cursor.prototype.count = function () {
+  const collection = this._mongo.rawCollection(this._cursorDescription.collectionName);
+  return Promise.await(collection.countDocuments(
+    replaceTypes(this._cursorDescription.selector, replaceMeteorAtomWithMongo),
+    replaceTypes(this._cursorDescription.options, replaceMeteorAtomWithMongo),
+  ));
+};
+
 [...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
-  Cursor.prototype[methodName] = function (...args) {
-    const cursor = setupSynchronousCursor(this, methodName);
-    return cursor[methodName](...args);
-  };
+  // count is handled specially since we don't want to create a cursor.
+  // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
+  if (methodName !== 'count') {
+    Cursor.prototype[methodName] = function (...args) {
+      const cursor = setupSynchronousCursor(this, methodName);
+      return cursor[methodName](...args);
+    };
+  }
 
   // These methods are handled separately.
   if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) {
