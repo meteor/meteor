@@ -28,40 +28,48 @@ N/A
 
 #### Meteor Version Release
 
-* `mongo@1.16.4`:
-  - Fixed wrong type definitions.
-  - switch to using MongoDB types instead of the homebuilt.
-  - Fixed wrong type definitions in MongoDB package related to dropIndexAsync
-  
 * `babel-compiler@7.10.2`:
   - Updated @meteorjs/babel to version 7.18.0.
-
-* `test-in-browser@1.3.3`:
-  - Updated dependencies and removed unused libs.
+  - Updated to typescript to version v4.7.4.
 
 * `boilerplate-generator-tests@1.5.1`:
   - Updated parse5 and turned streamToString into a local function.
 
-* `typescript@4.7.4`
-  - Updated typescript to version 4.7.4. 
-
-* `webapp@1.13.3`
-  - The forEach method on Hook will stop iterating unless the iterator function returns a truthy value.
-  Previously, this meant that only the first registered runtime config hook would be called.
-  
 * `callback-hook@1.5.0`
-  - Added forEachAsync .
-  
-* `Tracker@1.3.0`:
-  - Implemented async Tracker with explicit values
+  - Added forEachAsync.
 
-* `Meteor@1.11.0`:
-  - Replaced double-ended-queue with [denque](https://github.com/invertase/denque) 
+* `ecmascript@0.16.5`
+  - Updated typescript to version 4.7.4.
 
-  
 * `Command line`:
   - Updated React skeletons to use React 18
 
+* `Meteor@1.11.0`:
+  - Replaced double-ended-queue with [denque](https://github.com/invertase/denque)
+
+* `mongo@1.16.4`:
+  - Fixed wrong type definitions.
+  - switch to using MongoDB types instead of the homebuilt.
+  - Fixed wrong type definitions in MongoDB package related to dropIndexAsync
+
+* `react-fast-refresh@0.2.5`:
+  - Updated react-refresh dependency.
+
+* `test-in-browser@1.3.3`:
+  - Updated dependencies and removed unused libs.
+
+* `Tracker@1.3.0`:
+  - Implemented async Tracker with explicit values
+
+* `typescript@4.7.4`
+  - Updated typescript to version 4.7.4.
+
+* `webapp@1.13.3`
+  - The forEach method on Hook will stop iterating unless the iterator function returns a truthy value.
+    Previously, this meant that only the first registered runtime config hook would be called.
+
+* `@meteorjs/babel@7.18.0-beta.5`
+  - Updated typescript to version 4.7.4.
 
 #### Special thanks to
   - [@StorytellerCZ](https://github.com/StorytellerCZ).
