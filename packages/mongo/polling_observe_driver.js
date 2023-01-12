@@ -91,9 +91,9 @@ _.extend(PollingObserveDriver.prototype, {
       return;
     ++self._pollsScheduledButNotStarted;
     //TODO check this change
-    //await self._taskQueue.queueTask(async function () {
+    await self._taskQueue.queueTask(async function () {
       await self._pollMongo();
-    //});
+    });
   },
 
   // test-only interface for controlling polling.

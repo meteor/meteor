@@ -13,27 +13,30 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
     // Test basic operation.
     const fakeOp1 = {};
     const fakeOp2 = {};
-    const promise1 = await fetcher.fetch(collName, id1, fakeOp1).then(expect({_id: id1, x: 1}));
-    const promise2 = fetcher.fetch(collName, "nonexistent!", fakeOp2).then(expect(null));
+    await fetcher.fetch(collName, id1, fakeOp1).then(expect({_id: id1, x: 1}));
+    await fetcher.fetch(collName, "nonexistent!", fakeOp2).then(expect(null));
 
     var fetched = false;
     var fakeOp3 = {};
     var expected = {_id: id2, y: 2};
-    const promise3 = fetcher.fetch(collName, id2, fakeOp3).then(expect(function (d) {
-      fetched = true;
-      test.equal(d, expected);
+    const promise1 = fetcher.fetch(collName, id2, fakeOp3).then(expect(function (d) {
+        fetched = true;
+        test.equal(d, expected);
     })).catch(expect(function (e) {
       test.isFalse(e);
     }));
     test.isFalse(fetched);
+
     // Now ask for another document with the same op reference. Because a
     // fetch for that op is in flight, we will get the other fetch's
     // document, not this random document.
-    const promise4 = fetcher.fetch(collName, Random.id(), fakeOp3).then(expect(function (d) {
+     const promise2 = fetcher.fetch(collName, Random.id(), fakeOp3).then(expect(function (d) {
       test.equal(d, expected);
-    })).catch(expect(function (e) {
+     })).catch(expect(function (e) {
       test.isFalse(e);
     }));
-    await Promise.all([promise1, promise2, promise3, promise4]);
+    await Promise.all([promise1, promise2]).then(() => {
+      expect();
+    });
   }
 ]);

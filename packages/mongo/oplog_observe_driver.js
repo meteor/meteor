@@ -559,15 +559,13 @@ _.extend(OplogObserveDriver.prototype, {
   },
   _beSteady: async function () {
     var self = this;
-    await Meteor._noYieldsAllowed(async function () {
-      self._registerPhaseChange(PHASE.STEADY);
-      var writes = self._writesToCommitWhenWeReachSteady;
-      self._writesToCommitWhenWeReachSteady = [];
-      await self._multiplexer.onFlush(async function () {
-        for (const w of writes) {
-          await w.committed();
-        }
-      });
+    self._registerPhaseChange(PHASE.STEADY);
+    var writes = self._writesToCommitWhenWeReachSteady;
+    self._writesToCommitWhenWeReachSteady = [];
+    await self._multiplexer.onFlush(async function () {
+      for (const w of writes) {
+        await w.committed();
+      }
     });
   },
   _handleOplogEntryQuerying: function (op) {

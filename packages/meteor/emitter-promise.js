@@ -1,6 +1,7 @@
-import { EventEmitter } from 'events';
+const { EventEmitter } = Npm.require('node:events');
 
-const DEFAULT_TIMEOUT = Meteor.settings?.EMITTER_PROMISE_DEFAULT_TIMEOUT || 3000;
+const DEFAULT_TIMEOUT =
+  Meteor.settings?.EMITTER_PROMISE_DEFAULT_TIMEOUT || 3000;
 
 /**
  *
@@ -10,45 +11,42 @@ const DEFAULT_TIMEOUT = Meteor.settings?.EMITTER_PROMISE_DEFAULT_TIMEOUT || 3000
  * @param onError {function(err)} - Function called when error or timeout occur.
  * @returns {{promise: Promise<unknown>, emitter: EventEmitter}}
  */
-const newPromiseResolver = ({emitter = new EventEmitter(), timeout = DEFAULT_TIMEOUT, onSuccess, onError } = {}) => {
-
+const newPromiseResolver = ({
+  emitter = new EventEmitter(),
+  timeout = DEFAULT_TIMEOUT,
+  onSuccess,
+  onError,
+} = {}) => {
   const promise = new Promise((resolve, reject) => {
-    console.trace({timeout});
     const handler = setTimeout(() => {
-      emitter.emit('error', new Meteor.Error(`EmitterPromise timeout: ${timeout}ms.`));
+      emitter.emit(
+        'error',
+        new Meteor.Error(`EmitterPromise timeout: ${timeout}ms.`)
+      );
     }, timeout);
     emitter.once('data', (data) => {
       clearTimeout(handler);
-      resolve(data);
       emitter.removeAllListeners();
+      resolve(data);
       if (onSuccess) {
         onSuccess(data);
       }
     });
     emitter.once('error', (err) => {
       clearTimeout(handler);
-      reject(err);
-      clearTimeout(handler);
-      reject(err);
       emitter.removeAllListeners();
+      reject(err);
       if (onError) {
         onError(err);
       }
     });
-
   });
   return {
     emitter,
-    promise: promise
+    promise,
   };
 };
 
-
-export const EmitterPromise = {
-  newPromiseResolver
+EmitterPromise = {
+  newPromiseResolver,
 };
-
-
-
-
-

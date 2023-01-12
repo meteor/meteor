@@ -224,6 +224,7 @@ Tinytest.addAsync('collection - inserting a document with a binary should return
         doc.binary.buffer,
         Buffer.from('hello world')
       );
+      await collection.dropCollectionAsync();
     }
   }
 );

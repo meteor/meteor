@@ -56,7 +56,7 @@ Tinytest.addAsync("mongo-livedata - oplog - cursorSupported", async function (te
   await supported(false, {}, { limit: 5 });
   await supported(false, {}, { skip: 2, limit: 5 });
   await supported(false, {}, { skip: 2 });
-  onComplete();
+  //onComplete();
 });
 
 process.env.MONGO_OPLOG_URL && testAsyncMulti(

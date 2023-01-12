@@ -39,11 +39,11 @@ ObserveMultiplexer = class {
         "mongo-livedata", "observe-handles", 1);
 
     const self = this;
-    await this._queue.runTask(function () {
+    await this._queue.runTask(async function () {
       self._handles[handle._id] = handle;
       // Send out whatever adds we have so far (whether the
       // multiplexer is ready).
-      self._sendAdds(handle);
+      await self._sendAdds(handle);
       --self._addHandleTasksScheduledButNotPerformed;
     });
     await this._readyPromise;
@@ -93,9 +93,9 @@ ObserveMultiplexer = class {
 
   // Allows all addHandleAndSendInitialAdds calls to return, once all preceding
   // adds have been processed. Does not block.
-  ready() {
+  async ready() {
     const self = this;
-    this._queue.queueTask(function () {
+    await this._queue.queueTask(function () {
       if (self._ready())
         throw Error("can't make ObserveMultiplex ready twice!");
 
@@ -127,11 +127,11 @@ ObserveMultiplexer = class {
   // all handles. "ready" must have already been called on this multiplexer.
   async onFlush(cb) {
     var self = this;
-    //return await this._queue.queueTask(async function () {
+    await this._queue.queueTask(async function () {
       if (!self._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();
-    //});
+    });
   }
   callbackNames() {
     if (this._ordered)
@@ -144,7 +144,7 @@ ObserveMultiplexer = class {
   }
   async _applyCallback(callbackName, args) {
     const self = this;
-    //this._queue.queueTask(async function () {
+    await this._queue.queueTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;
@@ -174,7 +174,7 @@ ObserveMultiplexer = class {
       });
 
       await Promise.all(toAwait);
-    //});
+    });
   }
 
   // Sends initial adds to a handle. It should only be called from within a task

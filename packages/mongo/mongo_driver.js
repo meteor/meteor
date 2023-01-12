@@ -348,11 +348,11 @@ MongoConnection.prototype._insert = async function (collection_name, document) {
     }
   ).then(({insertedId}) => {
     refresh();
+    write.committed();
     return insertedId;
   }).catch((e) => {
-    throw e;
-  }).finally(() => {
     write.committed();
+    throw e;
   });
 };
 
@@ -392,11 +392,13 @@ MongoConnection.prototype._remove = async function (collection_name, selector) {
     .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
       safe: true,
     })
-    .then(({ deletedCount }) => {
+    .then(async ({ deletedCount }) => {
       refresh();
+      write.committed();
       return transformResult({ result : {modifiedCount : deletedCount} }).numberAffected;
-    }).finally(() => {
+    }).catch(async (err) => {
         write.committed();
+        throw err;
     });
 };
 
@@ -553,7 +555,7 @@ MongoConnection.prototype._update = async function (collection_name, selector, m
             : updateMethod;
     return collection[updateMethod]
         .bind(collection)(mongoSelector, mongoMod, mongoOpts)
-        .then(result => {
+        .then(async result => {
           var meteorResult = transformResult({result});
           if (meteorResult && options._returnObject) {
             // If this was an upsert() call, and we ended up
@@ -567,13 +569,16 @@ MongoConnection.prototype._update = async function (collection_name, selector, m
               }
             }
             refresh();
+            write.committed();
             return meteorResult;
           } else {
             refresh();
+            write.committed();
             return meteorResult.numberAffected;
           }
-        }).finally(() => {
+        }).catch(async (err) => {
           write.committed();
+          throw err;
         });
   }
 };

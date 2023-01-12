@@ -2540,29 +2540,28 @@ testAsyncMulti('mongo-livedata - empty string _id', [
 //   ]);
 // }
 
-Tinytest.addAsync("mongo-livedata - local collections with different connections", function (test, onComplete) {
+Tinytest.addAsync("mongo-livedata - local collections with different connections", async function (test, onComplete) {
   var cname = Random.id();
   var cname2 = Random.id();
   var coll1 = new Mongo.Collection(cname);
   var doc = { foo: "bar" };
   var coll2 = new Mongo.Collection(cname2, { connection: null });
-  coll2.insert(doc, async function (err, id) {
+  await coll2.insert(doc).then(async id => {
     test.equal(await coll1.find(doc).count(), 0);
     test.equal(await coll2.find(doc).count(), 1);
     onComplete();
   });
 });
 
-Tinytest.addAsync("mongo-livedata - local collection with null connection, w/ callback", function (test, onComplete) {
-  var cname = Random.id();
-  var coll1 = new Mongo.Collection(cname, { connection: null });
-  var doc = { foo: "bar" };
-  var docId = coll1.insert(doc, async function (err, id) {
-    test.equal(docId, id);
-    test.equal(await coll1.findOne(doc)._id, id);
-    onComplete();
-  });
-});
+//TODO no more callbacks
+// Tinytest.addAsync("mongo-livedata - local collection with null connection, w/ callback", async function (test) {
+//   var cname = Random.id();
+//   var coll1 = new Mongo.Collection(cname, { connection: null });
+//   var doc = { foo: "bar" };
+//   await coll1.insert(doc).then(async id => {
+//     test.equal(coll1.findOne(doc)._id, id);
+//   });
+// });
 
 Tinytest.addAsync("mongo-livedata - local collection with null connection, w/o callback", async function (test, onComplete) {
   var cname = Random.id();

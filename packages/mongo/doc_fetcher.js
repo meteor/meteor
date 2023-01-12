@@ -1,10 +1,8 @@
-import { EventEmitter } from 'events';
-
 export class DocFetcher {
   constructor(mongoConnection) {
     this._mongoConnection = mongoConnection;
     // Map from op -> [callback]
-    this._callbacksForOp = new Map;
+    this._callbacksForOp = new Map();
   }
 
   // Fetches document "id" from collectionName, returning it or null if not
@@ -24,52 +22,33 @@ export class DocFetcher {
 
     // If there's already an in-progress fetch for this cache key, yield until
     // it's done and return whatever it returns.
-    // console.log(self._callbacksForOp, {op});
-    // if (self._callbacksForOp.has(op)) {
-    //   self._callbacksForOp.get(op).push(callback);
-    //   return callback;
-    // }
-    // self._callbacksForOp.set(op, [callback]);
     const inProgress = self._callbacksForOp.has(op);
-    if (!inProgress) {
-      self._callbacksForOp.set(op, new EventEmitter());
-    }
-    const emitter =  self._callbacksForOp.get(op);
-    const callback = new Promise((resolve, reject) => {
-      emitter.once('data', (data) => {
-        resolve(data);
-      });
-      emitter.once('error', reject);
+    const em = self._callbacksForOp.get(op);
+    const { promise: callback, emitter } = EmitterPromise.newPromiseResolver({
+      emitter: em
     });
+    if (!inProgress) {
+      self._callbacksForOp.set(op, emitter);
+    }
+
     if (inProgress) {
       return callback;
     }
     Meteor._runAsync(async function () {
-          try {
-            var doc = await self._mongoConnection.findOne(
-                collectionName, {_id: id}) || null;
-            // Return doc to all relevant callbacks. Note that this array can
-            // continue to grow during callback excecution.
-            const evEmmiter = self._callbacksForOp.get(op);
-            if (evEmmiter) {
-              evEmmiter.emit('data', doc);
-            }
-          } catch (e) {
-            const evEmmiter = self._callbacksForOp.get(op);
-            if (evEmmiter) {
-              evEmmiter.emit('error', e);
-            }
-          } finally {
-            // XXX consider keeping the doc around for a period of time before
-            // removing from the cache
-            const evEmmiter = self._callbacksForOp.get(op);
-            if (evEmmiter && evEmmiter.removeAllListeners) {
-              evEmmiter.removeAllListeners();
-            }
-            self._callbacksForOp.delete(op);
-          }
-        }
-    );
+      try {
+        var doc = await self._mongoConnection.findOne(
+            collectionName, {_id: id}) || null;
+        // Return doc to all relevant callbacks. Note that this array can
+        // continue to grow during callback excecution.
+        emitter.emit('data', doc);
+      } catch (e) {
+        emitter.emit('error', e);
+      } finally {
+        // XXX consider keeping the doc around for a period of time before
+        // removing from the cache
+        self._callbacksForOp.delete(op);
+      }
+    });
     return callback;
   }
 }

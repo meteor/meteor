@@ -1,4 +1,3 @@
-import { EmitterPromise } from './emitter-promise';
 
 Tinytest.addAsync(
   `emitter-promise - multiple events`,

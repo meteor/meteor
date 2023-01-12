@@ -799,13 +799,13 @@ Object.assign(Mongo.Collection.prototype, {
    await  self._collection.dropCollection();
   },
 
-  _createCappedCollection(byteSize, maxDocuments) {
+  async _createCappedCollection(byteSize, maxDocuments) {
     var self = this;
-    if (!self._collection._createCappedCollection)
+    if (! await self._collection._createCappedCollection)
       throw new Error(
         'Can only call _createCappedCollection on server collections'
       );
-    self._collection._createCappedCollection(byteSize, maxDocuments);
+    await self._collection._createCappedCollection(byteSize, maxDocuments);
   },
 
   /**

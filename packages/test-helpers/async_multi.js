@@ -104,7 +104,7 @@ _.extend(ExpectationManager.prototype, {
     var self = this;
     if (!self.outstanding && self.closed && !self.dead) {
       self.dead = true;
-      return self.onComplete();
+      self.onComplete();
     }
   }
 });
@@ -115,52 +115,81 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
   addFunction(name, async function (test, onComplete) {
-    var remaining = _.clone(funcs);
     var context = {};
-    var i = 0;
-
-    var runNext = async function () {
-      var func = remaining.shift();
-      if (!func) {
-        delete test.extraDetails.asyncBlock;
-        onComplete();
-        return;
-      }
-      var em = new ExpectationManager(test, function () {
-        clearTimeout(timer);
-        return runNext();
-      });
-
-      var timer = setTimeout(async function () {
-        if (em.cancel()) {
-          test.fail({type: "timeout", message: "Async batch timed out"});
-          onComplete();
+    const promises = [];
+    const taskQueue = new Meteor._SynchronousQueue(timeout);
+    _.each(funcs, func => {
+      promises.push(taskQueue.queueTask(async () => {
+        var em = new ExpectationManager(test, function () {});
+        try {
+          const result = func.apply(context, [test, _.bind(em.expect, em)]);
+          if (result && typeof result.then === "function") {
+            return result.then((r) => {
+              em.done();
+              return r;
+            });
+          }
+          em.done();
+          return result;
+        } catch(exception) {
+          if (em.cancel()) {
+            if (exception.reason === 'timeout') {
+              test.fail({type: "timeout", message: "Async batch timed out"});
+            } else {
+              test.exception(exception);
+            }
+            // Because we called test.exception, we're not to call onComplete.
+          }
         }
-        return;
-      }, timeout);
+      }));
+    });
 
-      test.extraDetails.asyncBlock = i++;
+    await Promise.all(promises).then(() => {
+      delete test.extraDetails.asyncBlock;
+      onComplete();
+    });
 
-      await new Promise(resolve => {
-        const result = func.apply(context, [test, _.bind(em.expect, em)]);
-        if (result && typeof result.then === "function") {
-          //console.log({result});
-          return result.then((r) => resolve(r));
-        }
-        return resolve(result);
-      }).then(() => {
-        return em.done();
-      }).catch(exception => {
-        if (em.cancel()) {
-          test.exception(exception);
-          // Because we called test.exception, we're not to call onComplete.
-        }
-        clearTimeout(timer);
-        runNext();
-      });
-    };
+    // var runNext = async function () {
+    //   var func = remaining.shift();
+    //   if (!func) {
+    //     delete test.extraDetails.asyncBlock;
+    //     onComplete();
+    //     return;
+    //   }
+    //   var em = new ExpectationManager(test, function () {
+    //     clearTimeout(timer);
+    //     return runNext();
+    //   });
+    //
+    //   var timer = setTimeout(async function () {
+    //     if (em.cancel()) {
+    //       test.fail({type: "timeout", message: "Async batch timed out"});
+    //       onComplete();
+    //     }
+    //     return;
+    //   }, timeout);
+    //
+    //   test.extraDetails.asyncBlock = i++;
+    //
+    //   await new Promise(resolve => {
+    //     const result = func.apply(context, [test, _.bind(em.expect, em)]);
+    //     if (result && typeof result.then === "function") {
+    //       //console.log({result});
+    //       return result.then((r) => resolve(r));
+    //     }
+    //     resolve(result);
+    //     em.done();
+    //   }).catch(exception => {
+    //     clearTimeout(timer);
+    //     if (em.cancel()) {
+    //       test.exception(exception);
+    //       // Because we called test.exception, we're not to call onComplete.
+    //     }
+    //     return runNext();
+    //   });
+    // };
 
-    await runNext();
+    //return runNext();
   });
 };
 

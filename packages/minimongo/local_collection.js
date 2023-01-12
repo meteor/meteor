@@ -96,7 +96,7 @@ export default class LocalCollection {
 
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
-  insert(doc, callback) {
+  async insert(doc, callback) {
     doc = EJSON.clone(doc);
 
     assertHasValidFieldNames(doc);
