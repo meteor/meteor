@@ -1,5 +1,8 @@
 import npmConnect from "connect";
-
+import npmExpress from "express";
+export function express(args) {
+  return npmExpress.apply(this, args);
+}
 export function connect(...connectArgs) {
   const handlers = npmConnect.apply(this, connectArgs);
   const originalUse = handlers.use;

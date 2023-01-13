@@ -5,7 +5,7 @@ import { userInfo } from 'os';
 import { join as pathJoin, dirname as pathDirname } from 'path';
 import { parse as parseUrl } from 'url';
 import { createHash } from 'crypto';
-import { connect } from './connect.js';
+import { connect, express } from './connect.js';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
@@ -37,6 +37,10 @@ WebAppInternals.NpmModules = {
     version: Npm.require('connect/package.json').version,
     module: connect,
   },
+  express : {
+    version: Npm.require('express/package.json').version,
+    module: express,
+  }
 };
 
 // Though we might prefer to use web.browser (modern) as the default
@@ -1038,11 +1042,11 @@ function runWebAppServer() {
   WebAppInternals.reloadClientPrograms();
 
   // webserver
-  var app = connect();
+  var app = express();
 
   // Packages and apps can add handlers that run before any other Meteor
   // handlers via WebApp.rawConnectHandlers.
-  var rawConnectHandlers = connect();
+  var rawConnectHandlers = express();
   app.use(rawConnectHandlers);
 
   // Auto-compress any json, javascript, or text.
@@ -1131,7 +1135,7 @@ function runWebAppServer() {
 
   // Core Meteor packages like dynamic-import can add handlers before
   // other handlers added by package and application code.
-  app.use((WebAppInternals.meteorInternalHandlers = connect()));
+  app.use((WebAppInternals.meteorInternalHandlers = express()));
 
   /**
    * @name connectHandlersCallback(req, res, next)
@@ -1172,7 +1176,7 @@ function runWebAppServer() {
    */
   // Packages and apps can add handlers to this via WebApp.connectHandlers.
   // They are inserted before our default handler.
-  var packageAndAppHandlers = connect();
+  var packageAndAppHandlers = express();
   app.use(packageAndAppHandlers);
 
   var suppressConnectErrors = false;
