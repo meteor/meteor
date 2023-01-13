@@ -5,12 +5,11 @@ import { userInfo } from 'os';
 import { join as pathJoin, dirname as pathDirname } from 'path';
 import { parse as parseUrl } from 'url';
 import { createHash } from 'crypto';
-import { connect, express } from './connect.js';
+import express from 'express';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
 import parseRequest from 'parseurl';
-import basicAuth from 'basic-auth-connect';
 import { lookup as lookupUserAgent } from 'useragent';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
@@ -29,14 +28,8 @@ export const WebAppInternals = {};
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
-// backwards compat to 2.0 of connect
-connect.basicAuth = basicAuth;
 
 WebAppInternals.NpmModules = {
-  connect: {
-    version: Npm.require('connect/package.json').version,
-    module: connect,
-  },
   express : {
     version: Npm.require('express/package.json').version,
     module: express,
@@ -1045,9 +1038,9 @@ function runWebAppServer() {
   var app = express();
 
   // Packages and apps can add handlers that run before any other Meteor
-  // handlers via WebApp.rawConnectHandlers.
-  var rawConnectHandlers = express();
-  app.use(rawConnectHandlers);
+  // handlers via WebApp.rawExpressHandlers.
+  var rawExpressHandlers = express();
+  app.use(rawExpressHandlers);
 
   // Auto-compress any json, javascript, or text.
   app.use(compress({ filter: shouldCompress }));
@@ -1138,10 +1131,10 @@ function runWebAppServer() {
   app.use((WebAppInternals.meteorInternalHandlers = express()));
 
   /**
-   * @name connectHandlersCallback(req, res, next)
+   * @name expressHandlersCallback(req, res, next)
    * @locus Server
    * @isprototype true
-   * @summary callback handler for `WebApp.connectHandlers`
+   * @summary callback handler for `WebApp.expressHandlers`
    * @param {Object} req
    * a Node.js
    * [IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
@@ -1159,7 +1152,7 @@ function runWebAppServer() {
    */
 
   /**
-   * @method connectHandlers
+   * @method expressHandlers
    * @memberof WebApp
    * @locus Server
    * @summary Register a handler for all HTTP requests.
@@ -1169,12 +1162,12 @@ function runWebAppServer() {
    *
    * For example, `/hello` will match `/hello/world` and
    * `/hello.world`, but not `/hello_world`.
-   * @param {connectHandlersCallback} handler
+   * @param {expressHandlersCallback} handler
    * A handler function that will be called on HTTP requests.
-   * See `connectHandlersCallback`
+   * See `expressHandlersCallback`
    *
    */
-  // Packages and apps can add handlers to this via WebApp.connectHandlers.
+  // Packages and apps can add handlers to this via WebApp.expressHandlers.
   // They are inserted before our default handler.
   var packageAndAppHandlers = express();
   app.use(packageAndAppHandlers);
@@ -1343,10 +1336,10 @@ function runWebAppServer() {
 
   // start up app
   _.extend(WebApp, {
-    connectHandlers: packageAndAppHandlers,
-    rawConnectHandlers: rawConnectHandlers,
+    expressHandlers: packageAndAppHandlers,
+    rawExpressHandlers: rawExpressHandlers,
     httpServer: httpServer,
-    connectApp: app,
+    expressApp: app,
     // For testing.
     suppressConnectErrors: function() {
       suppressConnectErrors = true;
