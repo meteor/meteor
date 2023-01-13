@@ -22,7 +22,7 @@ const server = new ApolloServer({
 
 export async function startApolloServer() {
   await server.start();
-  const app = WebApp.connectHandlers;
+  const app = WebApp.expressHandlers;
 
   server.applyMiddleware({
     app,
