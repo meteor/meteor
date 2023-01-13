@@ -1,8 +1,11 @@
 import npmConnect from "connect";
-
+import npmExpress from "express";
+export function express(args) {
+  return npmExpress.apply(this, args);
+}
 export function connect(...connectArgs) {
   if (!Meteor._isFibersEnabled) {
-    return npmConnect.apply(this, connectArgs);
+    return npmExpress.apply(this, connectArgs);
   }
 
   const handlers = npmConnect.apply(this, connectArgs);
