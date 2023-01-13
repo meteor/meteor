@@ -76,7 +76,7 @@ var respond = function(req, res) {
 };
 
 var run_responder = function() {
-  WebApp.connectHandlers.stack.unshift(
+  WebApp.expressHandlers.stack.unshift(
     { route: TEST_RESPONDER_ROUTE, handle: respond });
 };
 
