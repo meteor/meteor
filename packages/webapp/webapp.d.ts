@@ -1,5 +1,5 @@
 import * as http from 'http';
-import e from '@types/express';
+import express from 'express';
 
 export interface StaticFiles {
   [key: string]: {
