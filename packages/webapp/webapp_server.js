@@ -1045,6 +1045,8 @@ function runWebAppServer() {
   // Packages and apps can add handlers that run before any other Meteor
   // handlers via WebApp.rawExpressHandlers.
   var rawExpressHandlers = express();
+  rawExpressHandlers.set('x-powered-by', false);
+  rawExpressHandlers.set('etag', false);
   app.use(rawExpressHandlers);
 
   // Auto-compress any json, javascript, or text.
@@ -1133,7 +1135,10 @@ function runWebAppServer() {
 
   // Core Meteor packages like dynamic-import can add handlers before
   // other handlers added by package and application code.
-  app.use((WebAppInternals.meteorInternalHandlers = express()));
+  const internalHandlers = express();
+  internalHandlers.set('x-powered-by', false);
+  internalHandlers.set('etag', false);
+  app.use((WebAppInternals.meteorInternalHandlers = internalHandlers));
 
   /**
    * @name expressHandlersCallback(req, res, next)
@@ -1175,6 +1180,8 @@ function runWebAppServer() {
   // Packages and apps can add handlers to this via WebApp.expressHandlers.
   // They are inserted before our default handler.
   var packageAndAppHandlers = express();
+  packageAndAppHandlers.set('x-powered-by', false);
+  packageAndAppHandlers.set('etag', false);
   app.use(packageAndAppHandlers);
 
   var suppressConnectErrors = false;
