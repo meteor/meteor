@@ -1037,6 +1037,11 @@ function runWebAppServer() {
   // webserver
   var app = express();
 
+  // Security and performace headers
+  // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
+  app.set('x-powered-by', false);
+  app.set('etag', false);
+
   // Packages and apps can add handlers that run before any other Meteor
   // handlers via WebApp.rawExpressHandlers.
   var rawExpressHandlers = express();
