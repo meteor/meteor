@@ -9,6 +9,11 @@ const fs = require('fs');
 const { exec } = require("child_process");
 const { readdir } = require("fs/promises");
 
+/**
+ *
+ * @param command
+ * @return {Promise<string>}
+ */
 const runCommand = async (command) => {
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
@@ -34,6 +39,22 @@ const runCommand = async (command) => {
 async function getPackages() {
   return await runCommand("./get-diff.sh");
 }
+async function getReleaseNumber() {
+  // only works if you are in the release branch. it will return someting
+  // like release-2.4 or release-2.4.2
+  const gitBranch = await runCommand("./get-branch-name.sh");
+  if (!gitBranch.includes('release')) throw new Error('You are not in a release branch');
+
+  const releaseNumber =  gitBranch
+    .replace('release-', '')
+    .replace('.', '')
+    .replace('\n', '');
+
+  // this is when we have release-2.4 and we want to make sure that we have release-2.4.0
+  if (gitBranch.match(/\./g).length === 1) return `${ releaseNumber }0`;
+
+  return releaseNumber;
+}
 
 async function getFile(path) {
   try {
@@ -56,7 +77,7 @@ async function main() {
    * @type {string[]}
    */
   let args = process.argv.slice(2);
-
+  const releaseNumber = await getReleaseNumber();
   if (args[0].startsWith('@all')) {
     const [_, type] = args[0].split('.');
     const allPackages = await getDirectories('../../../packages');
@@ -119,7 +140,9 @@ async function main() {
        */
       function incrementNewVersion(release) {
         if (release.includes('beta') || release.includes('rc')) {
-          return semver.inc(currentVersion, 'prerelease', release);
+          const version =
+            semver.inc(currentVersion, 'prerelease', release);
+          return version.replace(release, `${release}${releaseNumber}`);
         }
         return semver.inc(currentVersion, release);
       }
