@@ -61,7 +61,8 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore']);
+  api.use('ecmascript');
+  api.use(['tinytest', 'ecmascript', 'webapp', 'fetch', 'underscore']);
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
   api.addFiles('socket_file_tests.js', 'server');
