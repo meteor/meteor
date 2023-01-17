@@ -74,13 +74,14 @@ Package.onTest(function (api) {
   api.addFiles('dynamics_test.js', ['client', 'server']);
 
   api.addFiles('fiber_helpers_test.js', ['server']);
+  api.addFiles('wrapasync_test.js', ['server']);
 
-  // api.addFiles('url_tests.js', ['client', 'server']);
+  api.addFiles('url_tests.js', ['client', 'server']);
 
-  // api.addFiles('timers_tests.js', ['client', 'server']);
+  api.addFiles('timers_tests.js', ['client', 'server']);
 
-  // api.addFiles('debug_test.js', 'client');
+  api.addFiles('debug_test.js', 'client');
 
-  // api.addFiles('bare_test_setup.js', 'client', {bare: true});
-  // api.addFiles('bare_tests.js', 'client');
+  api.addFiles('bare_test_setup.js', 'client', {bare: true});
+  api.addFiles('bare_tests.js', 'client');
 });
