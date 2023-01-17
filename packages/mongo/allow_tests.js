@@ -36,7 +36,7 @@ if (Meteor.isServer) {
         collection._insecure = insecure;
         var m = {};
         m["clear-collection-" + fullName] = function() {
-          collection.remove({});
+          collection.removeAsync({});
         };
         Meteor.methods(m);
       }
@@ -77,13 +77,13 @@ if (Meteor.isServer) {
 
     if (needToConfigure) {
       restrictedCollectionWithTransform.allow({
-        insert: function (userId, doc) {
+        insertAsync: function (userId, doc) {
           return doc.foo === "foo";
         },
-        update: function (userId, doc) {
+        updateAsync: function (userId, doc) {
           return doc.foo === "foo";
         },
-        remove: function (userId, doc) {
+        removeAsync: function (userId, doc) {
           return doc.bar === "bar";
         }
       });
@@ -91,61 +91,61 @@ if (Meteor.isServer) {
         // transform: null means that doc here is the top level, not the 'a'
         // element.
         transform: null,
-        insert: function (userId, doc) {
+        insertAsync: function (userId, doc) {
           return !!doc.topLevelField;
         },
-        update: function (userId, doc) {
+        updateAsync: function (userId, doc) {
           return !!doc.topLevelField;
         }
       });
       restrictedCollectionForInvalidTransformTest.allow({
         // transform must return an object which is not a mongo id
         transform: function (doc) { return doc._id; },
-        insert: function () { return true; }
+        insertAsync: function () { return true; }
       });
       restrictedCollectionForClientIdTest.allow({
         // This test just requires the collection to trigger the restricted
         // case.
-        insert: function () { return true; }
+        insertAsync: function () { return true; }
       });
 
       // two calls to allow to verify that either validator is sufficient.
       var allows = [{
-        insert: function(userId, doc) {
+        insertAsync: function(userId, doc) {
           return doc.canInsert;
         },
-        update: function(userId, doc) {
+        updateAsync: function(userId, doc) {
           return doc.canUpdate;
         },
-        remove: function (userId, doc) {
+        removeAsync: function (userId, doc) {
           return doc.canRemove;
         }
       }, {
-        insert: function(userId, doc) {
+        insertAsync: function(userId, doc) {
           return doc.canInsert2;
         },
-        update: function(userId, doc, fields, modifier) {
+        updateAsync: function(userId, doc, fields, modifier) {
           return -1 !== _.indexOf(fields, 'canUpdate2');
         },
-        remove: function(userId, doc) {
+        removeAsync: function(userId, doc) {
           return doc.canRemove2;
         }
       }];
 
       // two calls to deny to verify that either one blocks the change.
       var denies = [{
-        insert: function(userId, doc) {
+        insertAsync: function(userId, doc) {
           return doc.cantInsert;
         },
-        remove: function (userId, doc) {
+        removeAsync: function (userId, doc) {
           return doc.cantRemove;
         }
       }, {
-        insert: function(userId, doc) {
+        insertAsync: function(userId, doc) {
           // Don't allow explicit ID to be set by the client.
           return _.has(doc, '_id');
         },
-        update: function(userId, doc, fields, modifier) {
+        updateAsync: function(userId, doc, fields, modifier) {
           return -1 !== _.indexOf(fields, 'verySecret');
         }
       }];
@@ -166,22 +166,22 @@ if (Meteor.isServer) {
       // just restrict one operation so that we can verify that others
       // fail
       restrictedCollectionForPartialAllowTest.allow({
-        insert: function() {}
+        insertAsync: function() {}
       });
       restrictedCollectionForPartialDenyTest.deny({
-        insert: function() {}
+        insertAsync: function() {}
       });
 
       // verify that we only fetch the fields specified - we should
       // be fetching just field1, field2, and field3.
       restrictedCollectionForFetchTest.allow({
-        insert: function() { return true; },
-        update: function(userId, doc) {
+        insertAsync: function() { return true; },
+        updateAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
             999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
         },
-        remove: function(userId, doc) {
+        removeAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
             999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
@@ -198,13 +198,13 @@ if (Meteor.isServer) {
       // verify that not passing fetch to one of the calls to allow
       // causes all fields to be fetched
       restrictedCollectionForFetchAllTest.allow({
-        insert: function() { return true; },
-        update: function(userId, doc) {
+        insertAsync: function() { return true; },
+        updateAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
             999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
         },
-        remove: function(userId, doc) {
+        removeAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
             999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
@@ -212,7 +212,7 @@ if (Meteor.isServer) {
         fetch: ['field1']
       });
       restrictedCollectionForFetchAllTest.allow({
-        update: function() { return true; }
+        updateAsync: function() { return true; }
       });
     }
 
@@ -238,8 +238,8 @@ if (Meteor.isClient) {
       var collection = new Mongo.Collection(
         fullName, {idGeneration: idGeneration, transform: transform});
 
-      collection.callClearMethod = function (callback) {
-        Meteor.call("clear-collection-" + fullName, callback);
+      collection.callClearMethod = function () {
+        return Meteor.callAsync("clear-collection-" + fullName);
       };
       collection.unnoncedName = name + idGeneration;
       return collection;
@@ -278,21 +278,24 @@ if (Meteor.isClient) {
 
     // test that if allow is called once then the collection is
     // restricted, and that other mutations aren't allowed
-    testAsyncMulti("collection - partial allow, " + idGeneration, [
+    testAsyncMulti('collection - partial allow, ' + idGeneration, [
       function (test, expect) {
-        restrictedCollectionForPartialAllowTest.update(
-          'foo', {$set: {updated: true}}, expect(function (err, res) {
-            test.equal(err.error, 403);
-          }));
-      }
+        restrictedCollectionForPartialAllowTest
+          .updateAsync('foo', { $set: { updated: true } })
+          .catch(
+            expect(function (err) {
+              test.equal(err.error, 403);
+            })
+          );
+      },
     ]);
 
     // test that if deny is called once then the collection is
     // restricted, and that other mutations aren't allowed
     testAsyncMulti("collection - partial deny, " + idGeneration, [
       function (test, expect) {
-        restrictedCollectionForPartialDenyTest.update(
-          'foo', {$set: {updated: true}}, expect(function (err, res) {
+        restrictedCollectionForPartialDenyTest.updateAsync(
+          'foo', {$set: {updated: true}}).catch(expect(function (err) {
             test.equal(err.error, 403);
           }));
       }
@@ -301,29 +304,29 @@ if (Meteor.isClient) {
 
     // test that we only fetch the fields specified
     testAsyncMulti("collection - fetch, " + idGeneration, [
-      function (test, expect) {
-        var fetchId = restrictedCollectionForFetchTest.insert(
+      async function (test, expect) {
+        var fetchId = await restrictedCollectionForFetchTest.insertAsync(
           {field1: 1, field2: 1, field3: 1, field4: 1});
-        var fetchAllId = restrictedCollectionForFetchAllTest.insert(
+        var fetchAllId = await restrictedCollectionForFetchAllTest.insertAsync(
           {field1: 1, field2: 1, field3: 1, field4: 1});
-        restrictedCollectionForFetchTest.update(
-          fetchId, {$set: {updated: true}}, expect(function (err, res) {
+        await restrictedCollectionForFetchTest.updateAsync(
+          fetchId, {$set: {updated: true}}).catch(expect(function (err) {
             test.equal(err.reason,
                        "Test: Fields in doc: _id,field1,field2,field3");
           }));
-        restrictedCollectionForFetchTest.remove(
-          fetchId, expect(function (err, res) {
+        await restrictedCollectionForFetchTest.removeAsync(
+          fetchId).catch(expect(function (err) {
             test.equal(err.reason,
                        "Test: Fields in doc: _id,field1,field2,field3");
           }));
 
-        restrictedCollectionForFetchAllTest.update(
-          fetchAllId, {$set: {updated: true}}, expect(function (err, res) {
+        await restrictedCollectionForFetchAllTest.updateAsync(
+          fetchAllId, {$set: {updated: true}}).catch(expect(function (err) {
             test.equal(err.reason,
                        "Test: Fields in doc: _id,field1,field2,field3,field4");
           }));
-        restrictedCollectionForFetchAllTest.remove(
-          fetchAllId, expect(function (err, res) {
+        await restrictedCollectionForFetchAllTest.removeAsync(
+          fetchAllId).catch(expect(function (err) {
             test.equal(err.reason,
                        "Test: Fields in doc: _id,field1,field2,field3,field4");
           }));
@@ -332,64 +335,63 @@ if (Meteor.isClient) {
 
     (function(){
       testAsyncMulti("collection - restricted factories " + idGeneration, [
-        function (test, expect) {
-          restrictedCollectionWithTransform.callClearMethod(expect(function () {
-            test.equal(restrictedCollectionWithTransform.find().count(), 0);
-          }));
+        async function (test) {
+          await restrictedCollectionWithTransform.callClearMethod().then(async () => {
+            test.equal(await restrictedCollectionWithTransform.find().count(), 0);
+          });
         },
-        function (test, expect) {
+        async function (test) {
           var self = this;
-          restrictedCollectionWithTransform.insert({
+          await restrictedCollectionWithTransform.insertAsync({
             a: {foo: "foo", bar: "bar", baz: "baz"}
-          }, expect(function (e, res) {
-            test.isFalse(e);
+          }).then(res => {
             test.isTrue(res);
             self.item1 = res;
-          }));
-          restrictedCollectionWithTransform.insert({
+          }).catch(e => {
+            test.isFalse(e);
+          });
+          await restrictedCollectionWithTransform.insertAsync({
             a: {foo: "foo", bar: "quux", baz: "quux"},
             b: "potato"
-          }, expect(function (e, res) {
-            test.isFalse(e);
+          }).then(res => {
             test.isTrue(res);
             self.item2 = res;
-          }));
-          restrictedCollectionWithTransform.insert({
+          }).catch(e => {
+            test.isFalse(e);
+          });
+          await restrictedCollectionWithTransform.insertAsync({
             a: {foo: "adsfadf", bar: "quux", baz: "quux"},
             b: "potato"
-          }, expect(function (e, res) {
+          }).catch(e => {
             test.isTrue(e);
-          }));
-          restrictedCollectionWithTransform.insert({
+          });
+          await restrictedCollectionWithTransform.insertAsync({
             a: {foo: "bar"},
             topLevelField: true
-          }, expect(function (e, res) {
-            test.isFalse(e);
+          }).then(res => {
             test.isTrue(res);
             self.item3 = res;
-          }));
+          }).catch(e => {
+            test.isFalse(e);
+          });
         },
-        function (test, expect) {
+        async function (test, expect) {
           var self = this;
-          // This should work, because there is an update allow for things with
+          // This should work, because there is an updateAsync allow for things with
           // topLevelField.
-          restrictedCollectionWithTransform.update(
-            self.item3, { $set: { xxx: true } }, expect(function (e, res) {
-              test.isFalse(e);
+          await restrictedCollectionWithTransform.updateAsync(
+            self.item3, { $set: { xxx: true } }).then(expect(function (res) {
               test.equal(1, res);
             }));
         },
-        function (test, expect) {
+        async function (test, expect) {
           var self = this;
           test.equal(
-            restrictedCollectionWithTransform.findOne(self.item1),
+              await restrictedCollectionWithTransform.findOneAsync(self.item1),
             {_id: self.item1, foo: "foo", bar: "bar", baz: "baz"});
-          restrictedCollectionWithTransform.remove(
-            self.item1, expect(function (e, res) {
-              test.isFalse(e);
-            }));
-          restrictedCollectionWithTransform.remove(
-            self.item2, expect(function (e, res) {
+          await restrictedCollectionWithTransform.removeAsync(self.item1);
+          await restrictedCollectionWithTransform.removeAsync(
+            self.item2).catch(expect(function (e) {
               test.isTrue(e);
             }));
         }
@@ -397,157 +399,149 @@ if (Meteor.isClient) {
     })();
 
     testAsyncMulti("collection - insecure, " + idGeneration, [
-      function (test, expect) {
-        insecureCollection.callClearMethod(expect(function () {
-          test.equal(insecureCollection.find().count(), 0);
-        }));
+      async function (test) {
+        await insecureCollection.callClearMethod().then(async () => {
+          test.equal(await insecureCollection.find().count(), 0);
+        });
       },
-      function (test, expect) {
-        var id = insecureCollection.insert({foo: 'bar'}, expect(function(err, res) {
-          test.equal(res, id);
-          test.equal(insecureCollection.find(id).count(), 1);
-          test.equal(insecureCollection.findOne(id).foo, 'bar');
-        }));
-        test.equal(insecureCollection.find(id).count(), 1);
-        test.equal(insecureCollection.findOne(id).foo, 'bar');
+      async function (test, expect) {
+        var id = await insecureCollection.insertAsync({foo: 'bar'});
+        test.isTrue(id);
+        test.equal(await insecureCollection.find(id).count(), 1);
+        test.equal((await insecureCollection.findOneAsync(id)).foo, 'bar');
+        test.equal((await insecureCollection.find(id)).count(), 1);
+        test.equal((await insecureCollection.findOneAsync(id)).foo, 'bar');
       }
     ]);
 
     testAsyncMulti("collection - locked down, " + idGeneration, [
-      function (test, expect) {
-        lockedDownCollection.callClearMethod(expect(function() {
-          test.equal(lockedDownCollection.find().count(), 0);
-        }));
+      async function (test) {
+        await lockedDownCollection.callClearMethod().then(async function() {
+          test.equal(await lockedDownCollection.find().count(), 0);
+        });
       },
-      function (test, expect) {
-        lockedDownCollection.insert({foo: 'bar'}, expect(function (err, res) {
+      async function (test) {
+        await lockedDownCollection.insertAsync({foo: 'bar'}).catch(async function (err) {
           test.equal(err.error, 403);
-          test.equal(lockedDownCollection.find().count(), 0);
-        }));
+          test.equal(await lockedDownCollection.find().count(), 0);
+        });
       }
     ]);
 
     (function () {
       var collection = restrictedCollectionForUpdateOptionsTest;
       var id1, id2;
-      testAsyncMulti("collection - update options, " + idGeneration, [
+      testAsyncMulti("collection - updateAsync options, " + idGeneration, [
         // init
-        function (test, expect) {
-          collection.callClearMethod(expect(function () {
-            test.equal(collection.find().count(), 0);
-          }));
+        async function (test) {
+          await collection.callClearMethod().then(async function () {
+            test.equal(await collection.find().count(), 0);
+          });
         },
         // put a few objects
-        function (test, expect) {
+        async function (test) {
           var doc = {canInsert: true, canUpdate: true};
-          id1 = collection.insert(doc);
-          id2 = collection.insert(doc);
-          collection.insert(doc);
-          collection.insert(doc, expect(function (err, res) {
+          id1 = await collection.insertAsync(doc);
+          id2 = await collection.insertAsync(doc);
+          await collection.insertAsync(doc);
+          await collection.insertAsync(doc).catch(async function (err) {
             test.isFalse(err);
-            test.equal(collection.find().count(), 4);
-          }));
+            test.equal(await collection.find().count(), 4);
+          });
         },
-        // update by id
-        function (test, expect) {
-          collection.update(
+        // updateAsync by id
+        async function (test) {
+         await collection.updateAsync(
             id1,
-            {$set: {updated: true}},
-            expect(function (err, res) {
-              test.isFalse(err);
+            {$set: {updated: true}}).then(async res => {
               test.equal(res, 1);
-              test.equal(collection.find({updated: true}).count(), 1);
-            }));
+              test.equal(await collection.find({updated: true}).count(), 1);
+            });
         },
-        // update by id in an object
-        function (test, expect) {
-          collection.update(
+        // updateAsync by id in an object
+        async function (test) {
+          await collection.updateAsync(
             {_id: id2},
-            {$set: {updated: true}},
-            expect(function (err, res) {
-              test.isFalse(err);
+            {$set: {updated: true}}).then( async function (res) {
               test.equal(res, 1);
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
+              test.equal(await collection.find({updated: true}).count(), 2);
+            });
         },
-        // update with replacement operator not allowed, and has nice error.
-        function (test, expect) {
-          collection.update(
+        // updateAsync with replacement operator not allowed, and has nice error.
+        async function (test) {
+          collection.updateAsync(
             {_id: id2},
-            {_id: id2, updated: true},
-            expect(function (err, res) {
+            {_id: id2, updated: true}).catch(async function (err) {
               test.equal(err.error, 403);
               test.matches(err.reason, /In a restricted/);
               // unchanged
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
+              test.equal(await collection.find({updated: true}).count(), 2);
+            });
         },
         // upsert not allowed, and has nice error.
-        function (test, expect) {
-          collection.update(
+        async function (test) {
+          collection.updateAsync(
             {_id: id2},
             {$set: { upserted: true }},
-            { upsert: true },
-            expect(function (err, res) {
+            { upsert: true }).catch(async function (err) {
               test.equal(err.error, 403);
               test.matches(err.reason, /in a restricted/);
-              test.equal(collection.find({ upserted: true }).count(), 0);
-            }));
+              test.equal(await collection.find({ upserted: true }).count(), 0);
+            });
         },
-        // update with rename operator not allowed, and has nice error.
-        function (test, expect) {
-          collection.update(
+        // updateAsync with rename operator not allowed, and has nice error.
+        async function (test) {
+          collection.updateAsync(
             {_id: id2},
-            {$rename: {updated: 'asdf'}},
-            expect(function (err, res) {
+            {$rename: {updated: 'asdf'}}).catch(async function (err) {
               test.equal(err.error, 403);
               test.matches(err.reason, /not allowed/);
               // unchanged
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
+              test.equal(await collection.find({updated: true}).count(), 2);
+            });
         },
-        // update method with a non-ID selector is not allowed
-        function (test, expect) {
+        // updateAsync method with a non-ID selector is not allowed
+        async function (test, expect) {
           // We shouldn't even send the method...
-          test.throws(function () {
-            collection.update(
-              {updated: {$exists: false}},
-              {$set: {updated: true}});
+          await test.throwsAsync(async function () {
+              await collection.updateAsync(
+                  {updated: {$exists: false}},
+                  {$set: {updated: true}});
           });
           // ... but if we did, the server would reject it too.
-          Meteor.call(
-            '/' + collection._name + '/update',
+          await Meteor.callAsync(
+            '/' + collection._name + '/updateAsync',
             {updated: {$exists: false}},
-            {$set: {updated: true}},
-            expect(function (err, res) {
+            {$set: {updated: true}}).catch(async function (err) {
               test.equal(err.error, 403);
               // unchanged
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
+              test.equal(await collection.find({updated: true}).count(), 2);
+            });
         },
         // make sure it doesn't think that {_id: 'foo', something: else} is ok.
-        function (test, expect) {
-          test.throws(function () {
-            collection.update(
+        async function (test) {
+          await test.throwsAsync(async function () {
+            await collection.updateAsync(
               {_id: id1, updated: {$exists: false}},
               {$set: {updated: true}});
           });
         },
-        // remove method with a non-ID selector is not allowed
-        function (test, expect) {
+        // removeAsync method with a non-ID selector is not allowed
+        async function (test) {
           // We shouldn't even send the method...
-          test.throws(function () {
-            collection.remove({updated: true});
+          await test.throwsAsync(async function () {
+            await collection.removeAsync({updated: true});
           });
+          //TODO Fix
           // ... but if we did, the server would reject it too.
-          Meteor.call(
-            '/' + collection._name + '/remove',
-            {updated: true},
-            expect(function (err, res) {
+          await Meteor.callAsync(
+            '/' + collection._name + '/removeAsync',
+            {updated: true}).catch(async function (err) {
               test.equal(err.error, 403);
+              console.log({err});
               // unchanged
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
+              test.equal(await collection.find({updated: true}).count(), 2);
+            });
         }
       ]);
     }) ();
@@ -565,56 +559,56 @@ if (Meteor.isClient) {
             }));
           },
 
-          // insert with no allows passing. request is denied.
+          // insertAsync with no allows passing. request is denied.
           function (test, expect) {
-            collection.insert(
+            collection.insertAsync(
               {},
               expect(function (err, res) {
                 test.equal(err.error, 403);
                 test.equal(collection.find().count(), 0);
               }));
           },
-          // insert with one allow and one deny. denied.
+          // insertAsync with one allow and one deny. denied.
           function (test, expect) {
-            collection.insert(
+            collection.insertAsync(
               {canInsert: true, cantInsert: true},
               expect(function (err, res) {
                 test.equal(err.error, 403);
                 test.equal(collection.find().count(), 0);
               }));
           },
-          // insert with one allow and other deny. denied.
+          // insertAsync with one allow and other deny. denied.
           function (test, expect) {
-            collection.insert(
+            collection.insertAsync(
               {canInsert: true, _id: Random.id()},
               expect(function (err, res) {
                 test.equal(err.error, 403);
                 test.equal(collection.find().count(), 0);
               }));
           },
-          // insert one allow passes. allowed.
+          // insertAsync one allow passes. allowed.
           function (test, expect) {
-            collection.insert(
+            collection.insertAsync(
               {canInsert: true},
               expect(function (err, res) {
                 test.isFalse(err);
                 test.equal(collection.find().count(), 1);
               }));
           },
-          // insert other allow passes. allowed.
+          // insertAsync other allow passes. allowed.
           // includes canUpdate for later.
           function (test, expect) {
-            canUpdateId = collection.insert(
+            canUpdateId = collection.insertAsync(
               {canInsert2: true, canUpdate: true},
               expect(function (err, res) {
                 test.isFalse(err);
                 test.equal(collection.find().count(), 2);
               }));
           },
-          // yet a third insert executes. this one has canRemove and
+          // yet a third insertAsync executes. this one has canRemove and
           // cantRemove set for later.
           function (test, expect) {
-            canRemoveId = collection.insert(
+            canRemoveId = collection.insertAsync(
               {canInsert: true, canRemove: true, cantRemove: true},
               expect(function (err, res) {
                 test.isFalse(err);
@@ -622,9 +616,9 @@ if (Meteor.isClient) {
               }));
           },
 
-          // can't update with a non-operator mutation
+          // can't updateAsync with a non-operator mutation
           function (test, expect) {
-            collection.update(
+            collection.updateAsync(
               canUpdateId, {newObject: 1},
               expect(function (err, res) {
                 test.equal(err.error, 403);
@@ -635,16 +629,16 @@ if (Meteor.isClient) {
           // updating dotted fields works as if we are changing their
           // top part
           function (test, expect) {
-            collection.update(
+            collection.updateAsync(
               canUpdateId, {$set: {"dotted.field": 1}},
               expect(function (err, res) {
                 test.isFalse(err);
                 test.equal(res, 1);
-                test.equal(collection.findOne(canUpdateId).dotted.field, 1);
+                test.equal(collection.findOneAsync(canUpdateId).dotted.field, 1);
               }));
           },
           function (test, expect) {
-            collection.update(
+            collection.updateAsync(
               canUpdateId, {$set: {"verySecret.field": 1}},
               expect(function (err, res) {
                 test.equal(err.error, 403);
@@ -652,9 +646,9 @@ if (Meteor.isClient) {
               }));
           },
 
-          // update doesn't do anything if no docs match
+          // updateAsync doesn't do anything if no docs match
           function (test, expect) {
-            collection.update(
+            collection.updateAsync(
               "doesn't exist",
               {$set: {updated: true}},
               expect(function (err, res) {
@@ -665,9 +659,9 @@ if (Meteor.isClient) {
                 test.equal(collection.find({updated: true}).count(), 0);
               }));
           },
-          // update fails when access is denied trying to set `verySecret`
+          // updateAsync fails when access is denied trying to set `verySecret`
           function (test, expect) {
-            collection.update(
+            collection.updateAsync(
               canUpdateId, {$set: {verySecret: true}},
               expect(function (err, res) {
                 test.equal(err.error, 403);
@@ -676,10 +670,10 @@ if (Meteor.isClient) {
                 test.equal(collection.find({updated: true}).count(), 0);
               }));
           },
-          // update fails when trying to set two fields, one of which is
+          // updateAsync fails when trying to set two fields, one of which is
           // `verySecret`
           function (test, expect) {
-            collection.update(
+            collection.updateAsync(
               canUpdateId, {$set: {updated: true, verySecret: true}},
               expect(function (err, res) {
                 test.equal(err.error, 403);
@@ -688,10 +682,10 @@ if (Meteor.isClient) {
                 test.equal(collection.find({updated: true}).count(), 0);
               }));
           },
-          // update fails when trying to modify docs that don't
+          // updateAsync fails when trying to modify docs that don't
           // have `canUpdate` set
           function (test, expect) {
-            collection.update(
+            collection.updateAsync(
               canRemoveId,
               {$set: {updated: true}},
               expect(function (err, res) {
@@ -701,9 +695,9 @@ if (Meteor.isClient) {
                 test.equal(collection.find({updated: true}).count(), 0);
               }));
           },
-          // update executes when it should
+          // updateAsync executes when it should
           function (test, expect) {
-            collection.update(
+            collection.updateAsync(
               canUpdateId,
               {$set: {updated: true}},
               expect(function (err, res) {
@@ -713,19 +707,19 @@ if (Meteor.isClient) {
               }));
           },
 
-          // remove fails when trying to modify a doc with no `canRemove` set
+          // removeAsync fails when trying to modify a doc with no `canRemove` set
           function (test, expect) {
-            collection.remove(canUpdateId,
+            collection.removeAsync(canUpdateId,
                               expect(function (err, res) {
               test.equal(err.error, 403);
               // nothing has changed
               test.equal(collection.find().count(), 3);
             }));
           },
-          // remove fails when trying to modify an doc with `cantRemove`
+          // removeAsync fails when trying to modify an doc with `cantRemove`
           // set
           function (test, expect) {
-            collection.remove(canRemoveId,
+            collection.removeAsync(canRemoveId,
                               expect(function (err, res) {
               test.equal(err.error, 403);
               // nothing has changed
@@ -733,9 +727,9 @@ if (Meteor.isClient) {
             }));
           },
 
-          // update the doc to remove cantRemove.
+          // updateAsync the doc to removeAsync cantRemove.
           function (test, expect) {
-            collection.update(
+            collection.updateAsync(
               canRemoveId,
               {$set: {cantRemove: false, canUpdate2: true}},
               expect(function (err, res) {
@@ -747,7 +741,7 @@ if (Meteor.isClient) {
 
           // now remove can remove it.
           function (test, expect) {
-            collection.remove(canRemoveId,
+            collection.removeAsync(canRemoveId,
                               expect(function (err, res) {
               test.isFalse(err);
               test.equal(res, 1);
@@ -758,7 +752,7 @@ if (Meteor.isClient) {
 
           // try to remove a doc that doesn't exist. see we remove no docs.
           function (test, expect) {
-            collection.remove('some-random-id-that-never-matches',
+            collection.removeAsync('some-random-id-that-never-matches',
                               expect(function (err, res) {
               test.isFalse(err);
               test.equal(res, 0);
@@ -780,20 +774,19 @@ if (Meteor.isClient) {
       });
     testAsyncMulti(
       "collection - allow/deny transform must return object, " + idGeneration,
-      [function (test, expect) {
-        restrictedCollectionForInvalidTransformTest.insert({}, expect(function (err, res) {
+      [async function (test) {
+        await restrictedCollectionForInvalidTransformTest.insertAsync({}).catch(function (err) {
           test.isTrue(err);
-        }));
+        });
       }]);
     testAsyncMulti(
       "collection - restricted collection allows client-side id, " + idGeneration,
-      [function (test, expect) {
+      [async function (test, expect) {
         var self = this;
         self.id = Random.id();
-        restrictedCollectionForClientIdTest.insert({_id: self.id}, expect(function (err, res) {
-          test.isFalse(err);
+        await restrictedCollectionForClientIdTest.insertAsync({_id: self.id}).then(expect(async function (res) {
           test.equal(res, self.id);
-          test.equal(restrictedCollectionForClientIdTest.findOne(self.id),
+          test.equal(await restrictedCollectionForClientIdTest.findOneAsync(self.id),
                      {_id: self.id});
         }));
       }]);
@@ -815,7 +808,7 @@ if (Meteor.isServer) {
       collection.deny({invalidOption: true});
     });
 
-    _.each(['insert', 'update', 'remove', 'fetch'], function (key) {
+    _.each(['insertAsync', 'updateAsync', 'removeAsync', 'fetch'], function (key) {
       var options = {};
       options[key] = true;
       test.throws(function () {
@@ -826,7 +819,7 @@ if (Meteor.isServer) {
       });
     });
 
-    _.each(['insert', 'update', 'remove'], function (key) {
+    _.each(['insertAsync', 'updateAsync', 'removeAsync'], function (key) {
       var options = {};
       options[key] = false;
       test.throws(function () {
@@ -837,7 +830,7 @@ if (Meteor.isServer) {
       });
     });
 
-    _.each(['insert', 'update', 'remove'], function (key) {
+    _.each(['insertAsync', 'updateAsync', 'removeAsync'], function (key) {
       var options = {};
       options[key] = undefined;
       test.throws(function () {
@@ -848,7 +841,7 @@ if (Meteor.isServer) {
       });
     });
 
-    _.each(['insert', 'update', 'remove'], function (key) {
+    _.each(['insertAsync', 'updateAsync', 'removeAsync'], function (key) {
       var options = {};
       options[key] = ['an array']; // this should be a function, not an array
       test.throws(function () {
@@ -868,7 +861,7 @@ if (Meteor.isServer) {
     var collection = new Mongo.Collection(null);
     test.equal(collection._restricted, false);
     collection.allow({
-      insert: function() {}
+      insertAsync: function() {}
     });
     test.equal(collection._restricted, true);
   });

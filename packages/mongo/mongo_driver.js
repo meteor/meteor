@@ -245,12 +245,12 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
   return self.db.collection(collectionName);
 };
 
-MongoConnection.prototype._createCappedCollection = async function (
+MongoConnection.prototype.createCappedCollectionAsync = async function (
     collectionName, byteSize, maxDocuments) {
   var self = this;
 
   if (! self.db)
-    throw Error("_createCappedCollection called before Connection created?");
+    throw Error("createCappedCollectionAsync called before Connection created?");
 
   await self.db.createCollection(collectionName,
     { capped: true, size: byteSize, max: maxDocuments });
@@ -323,7 +323,7 @@ var bindEnvironmentForWrite = function (callback) {
   return Meteor.bindEnvironment(callback, "Mongo write");
 };
 
-MongoConnection.prototype._insert = async function (collection_name, document) {
+MongoConnection.prototype.insertAsync = async function (collection_name, document) {
   const self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
@@ -374,7 +374,7 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   }
 };
 
-MongoConnection.prototype._remove = async function (collection_name, selector) {
+MongoConnection.prototype.removeAsync = async function (collection_name, selector) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
@@ -402,7 +402,7 @@ MongoConnection.prototype._remove = async function (collection_name, selector) {
     });
 };
 
-MongoConnection.prototype._dropCollection = async function (collectionName) {
+MongoConnection.prototype.dropCollectionAsync = async function (collectionName) {
   var self = this;
 
   var write = self._maybeBeginWrite();
@@ -424,24 +424,24 @@ MongoConnection.prototype._dropCollection = async function (collectionName) {
 
 // For testing only.  Slightly better than `c.rawDatabase().dropDatabase()`
 // because it lets the test's fence wait for it to be complete.
-MongoConnection.prototype._dropDatabase = async function (cb) {
+MongoConnection.prototype.dropDatabaseAsync = async function (cb) {
   var self = this;
 
   var write = self._maybeBeginWrite();
   var refresh = function () {
     Meteor.refresh({ dropDatabase: true });
   };
-  const fn = Meteor.bindEnvironment(writeCallback(write, refresh, cb))
+  const fn = Meteor.bindEnvironment(writeCallback(write, refresh, cb));
 
   try {
-    await Meteor.promisify(self.db.dropDatabase)(fn);
+    await self.db._dropDatabase();
   } catch (e) {
     write.committed();
     throw e;
   }
 };
 
-MongoConnection.prototype._update = async function (collection_name, selector, mod, options) {
+MongoConnection.prototype.updateAsync = async function (collection_name, selector, mod, options) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
@@ -558,7 +558,7 @@ MongoConnection.prototype._update = async function (collection_name, selector, m
         .then(async result => {
           var meteorResult = transformResult({result});
           if (meteorResult && options._returnObject) {
-            // If this was an upsert() call, and we ended up
+            // If this was an upsertAsync() call, and we ended up
             // inserting a new doc and we know its id, then
             // return that id as well.
             if (options.upsert && meteorResult.insertedId) {
@@ -701,21 +701,21 @@ var simulateUpsertWithInsertedId = async function (collection, selector, mod, op
   return doUpdate();
 };
 
-_.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
-  MongoConnection.prototype[method] = function (/* arguments */) {
-    var self = this;
-    return self[`_${method}`](...arguments);
-    //return Meteor.promisify(self[`_${method}`]).apply(self, arguments);
-  };
-});
+// _.each(["insertAsync", "updateAsync", "removeAsync", "dropCollectionAsync", "dropDatabaseAsync"], function (method) {
+//   MongoConnection.prototype[method] = function (/* arguments */) {
+//     var self = this;
+//     return self[`_${method}`](...arguments);
+//     //return Meteor.promisify(self[`_${method}`]).apply(self, arguments);
+//   };
+// });
 
-// XXX MongoConnection.upsert() does not return the id of the inserted document
+// XXX MongoConnection.upsertAsync() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
 // doc).
-MongoConnection.prototype.upsert = async function (collectionName, selector, mod, options) {
+MongoConnection.prototype.upsertAsync = async function (collectionName, selector, mod, options) {
   var self = this;
 
-  return self.update(collectionName, selector, mod,
+  return self.updateAsync(collectionName, selector, mod,
                      _.extend({}, options, {
                        upsert: true,
                        _returnObject: true
@@ -732,7 +732,7 @@ MongoConnection.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-MongoConnection.prototype.findOne = async function (collection_name, selector, options) {
+MongoConnection.prototype.findOneAsync = async function (collection_name, selector, options) {
   var self = this;
   if (arguments.length === 1) {
     selector = {};
@@ -748,25 +748,25 @@ MongoConnection.prototype.findOne = async function (collection_name, selector, o
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-MongoConnection.prototype.createIndex = async function (collectionName, index,
+MongoConnection.prototype.createIndexAsync = async function (collectionName, index,
                                                    options) {
   var self = this;
 
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
-  var collection = self.rawCollection(collectionName)
-  var indexName = await collection.createIndex(index, options)
+  var collection = self.rawCollection(collectionName);
+  await collection.createIndex(index, options);
 };
 
-MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
+MongoConnection.prototype.ensureIndexAsync = MongoConnection.prototype.createIndexAsync;
 
-MongoConnection.prototype._dropIndex = async function (collectionName, index) {
+MongoConnection.prototype.dropIndexAsync = async function (collectionName, index) {
   var self = this;
 
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
-  var indexName =  await collection.dropIndex(index)
+  var indexName =  await collection.dropIndex(index);
 };
 
 // CURSORS

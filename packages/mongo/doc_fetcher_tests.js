@@ -4,8 +4,8 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
   async function (test, expect) {
     var collName = "docfetcher-" + Random.id();
     var collection = new Mongo.Collection(collName);
-    var id1 = await collection.insert({x: 1});
-    var id2 = await collection.insert({y: 2});
+    var id1 = await collection.insertAsync({x: 1});
+    var id2 = await collection.insertAsync({y: 2});
 
     var fetcher = new DocFetcher(
       MongoInternals.defaultRemoteCollectionDriver().mongo);

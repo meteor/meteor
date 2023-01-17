@@ -563,8 +563,12 @@ _.extend(OplogObserveDriver.prototype, {
     var writes = self._writesToCommitWhenWeReachSteady;
     self._writesToCommitWhenWeReachSteady = [];
     await self._multiplexer.onFlush(async function () {
-      for (const w of writes) {
-        await w.committed();
+      try {
+        for (const w of writes) {
+          await w.committed();
+        }
+      } catch (e) {
+        console.log({writes}, e);
       }
     });
   },

@@ -9,6 +9,11 @@ import {
   projectionDetails,
 } from './common.js';
 
+import {
+  ASYNC_COLLECTION_METHODS,
+  getAsyncMethodName
+} from "./constants";
+
 // XXX type checking on selectors (graceful error if malformed)
 
 // LocalCollection: a set of documents that supports queries and modifiers.
@@ -94,9 +99,14 @@ export default class LocalCollection {
     return this.find(selector, options).fetch()[0];
   }
 
+  async findOneAsync(selector, options = {}) {
+    return Promise.resolve(this.findOne(selector, options));
+  }
+
+
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
-  async insert(doc, callback) {
+  insert(doc, callback) {
     doc = EJSON.clone(doc);
 
     assertHasValidFieldNames(doc);
@@ -147,14 +157,12 @@ export default class LocalCollection {
       }
     });
 
-    this._observeQueue.drain().then(() => {
+    // TODO -> Check here.
+    Promise.resolve(this._observeQueue.drain()).then(() => {
       // Defer because the caller likely doesn't expect the callback to be run
       // immediately.
-
       if (callback) {
-        Meteor.defer(() => {
-          callback(null, id);
-        });
+        (async () => callback(null, id))();
       }
     });
 
@@ -199,9 +207,7 @@ export default class LocalCollection {
       });
 
       if (callback) {
-        Meteor.defer(() => {
-          callback(null, result);
-        });
+        (async () => callback(null, result))();
       }
 
       return result;
@@ -266,9 +272,7 @@ export default class LocalCollection {
     const result = remove.length;
 
     if (callback) {
-      Meteor.defer(() => {
-        callback(null, result);
-      });
+      (async () => callback(null, result))();
     }
 
     return result;
@@ -344,7 +348,12 @@ export default class LocalCollection {
 
   // XXX atomicity: if multi is true, and one modification fails, do
   // we rollback the whole operation, or what?
-  async update(selector, mod, options) {
+  update(selector, mod, options, callback) {
+    if (! callback && options instanceof Function) {
+      callback = options;
+      options = null;
+    }
+
     if (!options) {
       options = {};
     }
@@ -439,7 +448,7 @@ export default class LocalCollection {
       }
     });
 
-    await this._observeQueue.drain();
+    this._observeQueue.drain();
 
     // If we are doing an upsert, and we didn't modify any documents yet, then
     // it's time to do an insert. Figure out what document we are inserting, and
@@ -451,7 +460,7 @@ export default class LocalCollection {
         doc._id = options.insertedId;
       }
 
-      insertedId = await this.insert(doc);
+      insertedId = this.insert(doc);
       updateCount = 1;
     }
 
@@ -469,11 +478,9 @@ export default class LocalCollection {
       result = updateCount;
     }
 
-    // if (callback) {
-    //   Meteor.defer(() => {
-    //     callback(null, result);
-    //   });
-    // }
+    if (callback) {
+      (async () => callback(null, result))();
+    }
 
     return result;
   }
@@ -481,11 +488,17 @@ export default class LocalCollection {
   // A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
   // equivalent to LocalCollection.update(sel, mod, {upsert: true,
   // _returnObject: true}).
-  async upsert(selector, mod, options) {
+  upsert(selector, mod, options, callback) {
+    if (!callback && typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+
     return this.update(
       selector,
       mod,
-      Object.assign({}, options, {upsert: true, _returnObject: true})
+      Object.assign({}, options, {upsert: true, _returnObject: true}),
+      callback
     );
   }
 
@@ -728,9 +741,9 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
       DiffSequence.applyChanges(doc, fields);
     };
 
-    this.applyChange.removed = async id => {
+    this.applyChange.removed = id => {
       if (callbacks.removed) {
-        await callbacks.removed.call(this, id);
+        callbacks.removed.call(this, id);
       }
 
       this.docs.remove(id);
@@ -1461,7 +1474,7 @@ LocalCollection._observeFromObserveChangesNoFibers = async (cursor, observeCallb
       },
       removed(id) {
         if (observeCallbacks.removed) {
-          return observeCallbacks.removed(transform(this.docs.get(id)));
+          observeCallbacks.removed(transform(this.docs.get(id)));
         }
       },
     };
@@ -2172,3 +2185,18 @@ function findModTarget(doc, keyparts, options = {}) {
 
   // notreached
 }
+
+// Wrap sync methods with callback to async.
+['insert', 'update', 'remove', 'upsert'].forEach(methodName => {
+  const methodNameAsync = getAsyncMethodName(methodName);
+  LocalCollection.prototype[methodNameAsync] = function(...args) {
+    const self = this;
+    return new Promise((resolve, reject) => self[methodName](...args,(err, result) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(result);
+      }
+    }));
+  };
+});

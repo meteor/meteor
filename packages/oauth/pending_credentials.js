@@ -18,9 +18,9 @@ OAuth._pendingCredentials = new Mongo.Collection(
 
 // TODO[FIBERS]: I Need TLA
 async function init() {
-  await OAuth._pendingCredentials.createIndex('key', { unique: true });
-  await OAuth._pendingCredentials.createIndex('credentialSecret');
-  await OAuth._pendingCredentials.createIndex('createdAt');
+  await OAuth._pendingCredentials.createIndexAsync('key', { unique: true });
+  await OAuth._pendingCredentials.createIndexAsync('credentialSecret');
+  await OAuth._pendingCredentials.createIndexAsync('createdAt');
 }
 init()
 

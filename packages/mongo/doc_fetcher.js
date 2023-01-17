@@ -36,7 +36,7 @@ export class DocFetcher {
     }
     Meteor._runAsync(async function () {
       try {
-        var doc = await self._mongoConnection.findOne(
+        var doc = await self._mongoConnection.findOneAsync(
             collectionName, {_id: id}) || null;
         // Return doc to all relevant callbacks. Note that this array can
         // continue to grow during callback excecution.

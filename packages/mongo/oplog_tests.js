@@ -65,7 +65,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       var self = this;
       self.collectionName = Random.id();
       self.collection = new Mongo.Collection(self.collectionName);
-      await self.collection.createIndex({ species: 1 });
+      await self.collection.createIndexAsync({ species: 1 });
 
       // Fill collection with lots of irrelevant objects (red cats) and some
       // relevant ones (blue dogs).
@@ -141,12 +141,12 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       // they might in theory be relevant (since they say "something you didn't
       // know about is now blue", and who knows, maybe it's a dog) which puts
       // the OplogObserveDriver into FETCHING mode, which performs poorly.
-      await self.collection.update({ species: 'cat' },
+      await self.collection.updateAsync({ species: 'cat' },
         { $set: { color: 'blue' } },
         { multi: true });
       test.isTrue(blueDog5Id);
       test.isFalse(gotSpot);
-      await self.collection.update(blueDog5Id, { $set: { name: 'spot' } });
+      await self.collection.updateAsync(blueDog5Id, { $set: { name: 'spot' } });
 
 
       // We ought to see the spot change soon!
@@ -163,7 +163,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
 
       await self.skipHandle.stop();
       await self.subHandle.stop();
-      await self.collection.remove({});
+      await self.collection.removeAsync({});
     }
   ]
 );

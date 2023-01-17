@@ -2,9 +2,9 @@ Tinytest.addAsync('mongo livedata - native upsert - id type MONGO with MODIFIERS
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'MONGO'});
 
-  coll.insert({foo: 1});
-  var result = await coll.upsert({foo: 1}, {$set: {foo:2}});
-  var updated = await coll.findOne({foo: 2});
+  coll.insertAsync({foo: 1});
+  var result = await coll.upsertAsync({foo: 1}, {$set: {foo:2}});
+  var updated = await coll.findOneAsync({foo: 2});
 
   test.equal(result.insertedId, undefined);
   test.equal(result.numberAffected, 1);
@@ -19,8 +19,8 @@ Tinytest.addAsync('mongo livedata - native upsert - id type MONGO with MODIFIERS
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'MONGO'});
 
-  var result = await coll.upsert({foo: 1}, {$set: {bar:2}});
-  var inserted = await coll.findOne({foo: 1});
+  var result = await coll.upsertAsync({foo: 1}, {$set: {bar:2}});
+  var inserted = await coll.findOneAsync({foo: 1});
 
   test.isTrue(result.insertedId !== undefined);
   test.equal(result.numberAffected, 1);
@@ -36,9 +36,9 @@ Tinytest.addAsync('mongo livedata - native upsert - id type MONGO PLAIN OBJECT u
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'MONGO'});
 
-  coll.insert({foo: 1, baz: 42});
-  var result = await coll.upsert({foo: 1}, {bar:2});
-  var updated = await coll.findOne({bar: 2});
+  coll.insertAsync({foo: 1, baz: 42});
+  var result = await coll.upsertAsync({foo: 1}, {bar:2});
+  var updated = await coll.findOneAsync({bar: 2});
 
   test.isTrue(result.insertedId === undefined);
   test.equal(result.numberAffected, 1);
@@ -53,8 +53,8 @@ Tinytest.addAsync('mongo livedata - native upsert - id type MONGO PLAIN OBJECT i
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'MONGO'});
 
-  var result = await coll.upsert({foo: 1}, {bar:2});
-  var inserted = await coll.findOne({bar: 2});
+  var result = await coll.upsertAsync({foo: 1}, {bar:2});
+  var inserted = await coll.findOneAsync({bar: 2});
 
   test.isTrue(result.insertedId !== undefined);
   test.equal(result.numberAffected, 1);
@@ -71,9 +71,9 @@ Tinytest.addAsync('mongo livedata - native upsert - id type STRING with MODIFIER
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'STRING'});
 
-  await coll.insert({foo: 1});
-  var result = await coll.upsert({foo: 1}, {$set: {foo:2}});
-  var updated = await coll.findOne({foo: 2});
+  await coll.insertAsync({foo: 1});
+  var result = await coll.upsertAsync({foo: 1}, {$set: {foo:2}});
+  var updated = await coll.findOneAsync({foo: 2});
 
   test.equal(result.insertedId, undefined);
   test.equal(result.numberAffected, 1);
@@ -88,8 +88,8 @@ Tinytest.addAsync('mongo livedata - native upsert - id type STRING with MODIFIER
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'STRING'});
 
-  var result = await coll.upsert({foo: 1}, {$set: {bar:2}});
-  var inserted = await coll.findOne({foo: 1});
+  var result = await coll.upsertAsync({foo: 1}, {$set: {bar:2}});
+  var inserted = await coll.findOneAsync({foo: 1});
 
   test.isTrue(result.insertedId !== undefined);
   test.equal(result.numberAffected, 1);
@@ -105,9 +105,9 @@ Tinytest.addAsync('mongo livedata - native upsert - id type STRING PLAIN OBJECT 
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'STRING'});
 
-  await coll.insert({foo: 1, baz: 42});
-  var result = await coll.upsert({foo: 1}, {bar:2});
-  var updated = await coll.findOne({bar: 2});
+  await coll.insertAsync({foo: 1, baz: 42});
+  var result = await coll.upsertAsync({foo: 1}, {bar:2});
+  var updated = await coll.findOneAsync({bar: 2});
 
   test.isTrue(result.insertedId === undefined);
   test.equal(result.numberAffected, 1);
@@ -122,8 +122,8 @@ Tinytest.addAsync('mongo livedata - native upsert - id type STRING PLAIN OBJECT 
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'STRING'});
 
-  var result = await coll.upsert({foo: 1}, {bar:2});
-  var inserted = await coll.findOne({bar: 2});
+  var result = await coll.upsertAsync({foo: 1}, {bar:2});
+  var inserted = await coll.findOneAsync({bar: 2});
 
   test.isTrue(result.insertedId !== undefined);
   test.equal(result.numberAffected, 1);
@@ -139,8 +139,8 @@ Tinytest.addAsync('mongo livedata - native upsert - MONGO passing id insert', as
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'MONGO'});
 
-  var result = await coll.upsert({foo: 1}, {_id: 'meu id'});
-  var inserted = await coll.findOne({_id: 'meu id'});
+  var result = await coll.upsertAsync({foo: 1}, {_id: 'meu id'});
+  var inserted = await coll.findOneAsync({_id: 'meu id'});
 
   test.equal(result.insertedId, 'meu id');
   test.equal(result.numberAffected, 1);

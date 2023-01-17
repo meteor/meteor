@@ -116,10 +116,9 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
   addFunction(name, async function (test, onComplete) {
     var context = {};
-    const promises = [];
-    const taskQueue = new Meteor._SynchronousQueue(timeout);
+    const toCall = [];
     _.each(funcs, func => {
-      promises.push(taskQueue.queueTask(async () => {
+      toCall.push(async () => {
         var em = new ExpectationManager(test, function () {});
         try {
           const result = func.apply(context, [test, _.bind(em.expect, em)]);
@@ -141,13 +140,23 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
             // Because we called test.exception, we're not to call onComplete.
           }
         }
-      }));
+      });
     });
-
-    await Promise.all(promises).then(() => {
-      delete test.extraDetails.asyncBlock;
-      onComplete();
-    });
+    for (const call of toCall) {
+      await new Promise((resolve, reject) => {
+        const execTime = setTimeout(() => {
+          test.fail({type: "timeout", message: "Async batch timed out"});
+          reject(new Meteor.Error("Async batch timed out", "timeout"));
+        }, timeout);
+        const result = call();
+        if (result && result.then) {
+          result.then(resolve).catch(reject);
+        } else {
+          resolve(result);
+        }
+      });
+    }
+    onComplete();
 
     // var runNext = async function () {
     //   var func = remaining.shift();
