@@ -43,8 +43,15 @@ MockResponse.prototype.end = function (data, encoding) {
 MockResponse.prototype.getBody = function () {
   return this.buffer;
 };
-
-Tinytest.add("webapp - content-type header", function (test) {
+const asyncGet =
+  (url, opt) =>
+    new Promise((resolve, reject) =>
+      HTTP.get(url, opt, (err, res) =>
+        err
+          ? reject(err)
+          : resolve(res)
+      ));
+Tinytest.addAsync("webapp - content-type header", async function (test) {
   const staticFiles = WebAppInternals.staticFilesByArch["web.browser"];
 
   const cssResource = _.find(
@@ -60,11 +67,10 @@ Tinytest.add("webapp - content-type header", function (test) {
       return staticFiles[url].type === "js";
     }
   );
-
-  let resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), cssResource));
+  let resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), cssResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "text/css; charset=utf-8");
-  resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), jsResource));
+  resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), jsResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "application/javascript; charset=utf-8");
 });
@@ -161,7 +167,7 @@ Tinytest.addAsync(
     WebAppInternals.setInlineScriptsAllowed(true);
 
     {
-      const { stream } = WebAppInternals.getBoilerplate({
+      const { stream } = await WebAppInternals.getBoilerplate({
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
       }, "web.browser");
@@ -194,7 +200,7 @@ Tinytest.addAsync(
     }
 
     {
-      const { stream } = WebAppInternals.getBoilerplate({
+      const { stream }  = await WebAppInternals.getBoilerplate({
         browser: "doesn't-matter",
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
@@ -275,7 +281,7 @@ Tinytest.addAsync(
     req.browser = { name: "headless" };
     req.dynamicHead = "so dynamic";
 
-    const { stream } = WebAppInternals.getBoilerplate(req, "web.browser");
+    const { stream } = await WebAppInternals.getBoilerplate(req, "web.browser");
     const html = await streamToString(stream);
 
     test.equal(callCount, 1);

@@ -63,6 +63,9 @@
 
 * `oauth2`:
   - `OAuth._requestHandlers['2']` is now async.
+
+* `webapp`:
+  - `WebAppInternals.getBoilerplate` is now async.
   
 ####  Internal API changes
 
