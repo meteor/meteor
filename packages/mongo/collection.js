@@ -185,7 +185,7 @@ Object.assign(Mongo.Collection.prototype, {
 
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
-      async updateAsync(msg) {
+      async update(msg) {
         var mongoId = MongoID.idParse(msg.id);
         var doc = self._collection._docs.get(mongoId);
 
