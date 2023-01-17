@@ -104,40 +104,38 @@ Tinytest.addAsync("webapp - modern/legacy static files", test => {
         modernUserAgent,
         legacyUserAgent,
       ].forEach(ua => promises.push(new Promise((resolve, reject) => {
-        HTTP.get(absUrl, {
+
+        fetch(absUrl, {
           headers: {
-            "User-Agent": ua
+            "User-Agent": ua,
           }
-        }, (error, response) => {
-          if (error) {
-            reject(error);
-            return;
-          }
+        })
+          .then(async res =>{
+            if (res.status !== 200) {
+              reject(new Error(
+                `Unexpected status code ${res.status} for ${absUrl}`
+              ));
+            }
 
-          if (response.statusCode !== 200) {
-            reject(new Error(`Bad status code ${
-              response.statusCode
-            } for ${path}`));
-            return;
-          }
+            const contentType = res.headers.get("content-type");
+            if (! contentType.startsWith("application/javascript")) {
+              reject(new Error(`Bad Content-Type ${contentType} for ${path}`));
+              return;
+            }
 
-          const contentType = response.headers["content-type"];
-          if (! contentType.startsWith("application/javascript")) {
-            reject(new Error(`Bad Content-Type ${contentType} for ${path}`));
-            return;
-          }
+            const expectedText = pathMatch[1].toUpperCase();
+            const actualText = await res.text();
+            const index = actualText.indexOf(expectedText);
+            if (index < 0) {
+              reject(new Error(`Missing ${
+                JSON.stringify(expectedText)
+              } text in ${path}`));
+              return;
+            }
+            resolve(path);
+          })
+          .catch(reject);
 
-          const expectedText = pathMatch[1].toUpperCase();
-          const index = response.content.indexOf(expectedText);
-          if (index < 0) {
-            reject(new Error(`Missing ${
-              JSON.stringify(expectedText)
-            } text in ${path}`));
-            return;
-          }
-
-          resolve(path);
-        });
       })));
     });
   });
