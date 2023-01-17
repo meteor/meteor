@@ -326,7 +326,7 @@ WebAppInternals.registerBoilerplateDataCallback = function(key, callback) {
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
 function getBoilerplate(request, arch) {
-  return getBoilerplateAsync(request, arch).await();
+  return getBoilerplateAsync(request, arch);
 }
 
 /**
