@@ -26,7 +26,6 @@ SQp._createWrappedTask = function(name, task) {
     promise,
     wrappedTask: () => {
       const result = task();
-      console.log(result);
       if (result && result.then) {
         result.then(resolve);
       } else {

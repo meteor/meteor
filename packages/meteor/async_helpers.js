@@ -156,13 +156,11 @@ class AsynchronousQueueEmitter {
   queueTask(task) {
     const { wrappedTask, promise } = this._createWrappedTask(task.name, task);
     this._taskHandles.push({
-      //task: task,
       task: wrappedTask,
       name: task.name,
     });
-    setTimeout(() => this._scheduleRun(), 1);
+    setTimeout(() => this._scheduleRun(), 0);
 
-    //console.log({promise}, this._eventEmitter);
     return promise;
   }
 
@@ -188,9 +186,9 @@ class AsynchronousQueueEmitter {
     const taskHandle = this._taskHandles.shift();
 
     // Run the task.
-    taskHandle.task().catch(err => {
+    taskHandle.task();/*.catch(err => {
       Meteor._debug("Exception in queued task", err);
-    });
+    });*/
   }
 
   async runTask(task) {

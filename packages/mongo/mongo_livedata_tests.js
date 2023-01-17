@@ -1325,12 +1325,12 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
     }, async function (test, expect) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
-      const id = await runAndThrowIfNeeded(() => coll.insertAsync({}), test);
+      const id = await runAndThrowIfNeeded(async () => await coll.insertAsync({}), test);
 
       test.isTrue(id);
       test.equal(await coll.find().count(), 1);
@@ -1344,7 +1344,7 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
     }, async function (test, expect) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
@@ -1365,7 +1365,7 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
     }, async function (test, expect) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
@@ -1388,27 +1388,25 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const self = this;
       const coll = self.coll = new Mongo.Collection(self.collectionName, collectionOptions);
 
-      const id = await runAndThrowIfNeeded(() => coll.insertAsync({foo: 'x', length: 0}), test);
+      const id = await runAndThrowIfNeeded(async () => await coll.insertAsync({foo: 'x', length: 0}), test);
       test.isTrue(id);
       self.docId = id;
       test.equal(await coll.findOneAsync(self.docId),
           {_id: self.docId, foo: 'x', length: 0});
-      expect();
     },
-    async function (test, expect) {
+    async function (test) {
       const self = this;
       const coll = self.coll;
 
       await runAndThrowIfNeeded(() => coll.updateAsync(self.docId, {$set: {length: 5}}), test);
       test.equal(await coll.findOneAsync(self.docId),
           {_id: self.docId, foo: 'x', length: 5});
-      expect();
     }
   ]);
 
@@ -1417,15 +1415,14 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const id = await runAndThrowIfNeeded(() => coll.insertAsync({d: new Date(1356152390004)}), test);
       test.isTrue(id);
       test.equal(await coll.find().count(), 1);
       test.equal((await coll.findOneAsync()).d.getFullYear(), 2012);
-      expect();
     }
   ]);
 
@@ -1446,7 +1443,7 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
     }, async function (test, expect) {
       var self = this;
@@ -1458,7 +1455,7 @@ _.each( ['STRING'], function(idGeneration) {
       var expectRemove = expect(function (doc) {
         test.equal(doc.seconds(), 50);
       });
-      const id = await runAndThrowIfNeeded(() => self.coll.insertAsync({d: new Date(1356152390004)}), test, false);
+      const id = await runAndThrowIfNeeded(async () => await self.coll.insertAsync({d: new Date(1356152390004)}), test, false);
       test.isTrue(id);
       var cursor = self.coll.find();
       obs = await cursor.observe({
@@ -1499,16 +1496,15 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
     },
-    async function (test, expect) {
+    async function (test) {
       var self = this;
       self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const id = await runAndThrowIfNeeded(() => self.coll.insertAsync({}), test);
       test.isTrue(id);
       test.equal((await self.coll.findOneAsync())._id, id);
-      expect();
     }
   ]);
 
@@ -1527,17 +1523,16 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
-      const id = await runAndThrowIfNeeded(() => coll.insertAsync({b: bin}), test);
+      const id = await runAndThrowIfNeeded(async () => await coll.insertAsync({b: bin}), test);
       test.isTrue(id);
       test.equal(await coll.find().count(), 1);
       var inColl = await coll.findOneAsync();
       test.isTrue(EJSON.isBinary(inColl.b));
       test.equal(inColl.b, bin);
-      expect();
     }
   ]);
 
@@ -1546,18 +1541,18 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
     },
 
-    async function (test, expect) {
+    async function (test) {
       var self = this;
       self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
       var docId;
       // Dog is implemented at the top of the file, outside of the idGeneration
       // loop (so that we only call EJSON.addType once).
       var d = new Dog("reginald", null);
-      const id = await runAndThrowIfNeeded(() => self.coll.insertAsync({d}), test, false);
+      const id = await runAndThrowIfNeeded(async () => await self.coll.insertAsync({d}), test, false);
       test.isTrue(id);
       docId = id;
       self.docId = docId;
@@ -1567,7 +1562,6 @@ _.each( ['STRING'], function(idGeneration) {
       test.isTrue(inColl);
       inColl && test.equal(inColl.d.speak(), "woof");
       inColl && test.isNull(inColl.d.color);
-      expect();
     },
 
     async function (test, expect) {
@@ -1583,14 +1577,10 @@ _.each( ['STRING'], function(idGeneration) {
       });
     },
 
-    async function (test, expect) {
+    async function (test) {
       var self = this;
-      await self.coll.updateAsync(
-          self.docId, new Dog("rover", "orange")).then(id => {
-            expect();
-          }).catch(err => {
-            test.isTrue(err);
-            expect();
+      await self.coll.updateAsync(self.docId, new Dog("rover", "orange")).catch(err => {
+          test.isTrue(err);
       });
     }
   ]);
@@ -1604,7 +1594,7 @@ _.each( ['STRING'], function(idGeneration) {
       await coll.insertAsync({ foo: "baz" });
       test.equal(await coll.updateAsync({}, { $set: { foo: "qux" } }, { multi: true }),
           2);
-      const result = await runAndThrowIfNeeded(() => coll.updateAsync({}, { $set: { foo: "quux" } }, { multi: true }), test);
+      const result = await runAndThrowIfNeeded(async () => await coll.updateAsync({}, { $set: { foo: "quux" } }, { multi: true }), test);
       test.equal(result, 2);
     });
 
@@ -1617,7 +1607,7 @@ _.each( ['STRING'], function(idGeneration) {
       test.equal(await coll.removeAsync({}), 2);
       await coll.insertAsync({ foo: "bar" });
       await coll.insertAsync({ foo: "baz" });
-      const result = await runAndThrowIfNeeded(() => coll.removeAsync({}), test);
+      const result = await runAndThrowIfNeeded(async () => await coll.removeAsync({}), test);
       test.equal(result, 2);
     });
 
@@ -2242,11 +2232,11 @@ testAsyncMulti('mongo-livedata - specified _id', [
     this.collectionName = Random.id();
     if (Meteor.isClient) {
       await Meteor.callAsync('createInsecureCollection', this.collectionName);
-      Meteor.subscribe('c-' + this.collectionName, expect());
+      Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
     }
-  }, async function (test, expect) {
+  }, async function (test) {
     var coll = new Mongo.Collection(this.collectionName);
-    const id1 = await runAndThrowIfNeeded(() => coll.insertAsync({ _id: "foo", name: "foo" }), test);
+    const id1 = await runAndThrowIfNeeded(async () => await coll.insertAsync({ _id: "foo", name: "foo" }), test);
     test.equal(id1, "foo");
     const doc = await coll.findOneAsync();
     test.equal(doc._id, "foo");
@@ -2255,7 +2245,6 @@ testAsyncMulti('mongo-livedata - specified _id', [
     await runAndThrowIfNeeded(() => coll.insertAsync({_id: "foo", name: "bar"}), test, true);
     const doc2 = await coll.findOneAsync();
     test.equal(doc2.name, "foo");
-    expect();
   }
 ]);
 
@@ -2441,7 +2430,7 @@ testAsyncMulti('mongo-livedata - empty string _id', [
     self.collectionName = Random.id();
     if (Meteor.isClient) {
       await Meteor.callAsync('createInsecureCollection', self.collectionName);
-      Meteor.subscribe('c-' + self.collectionName, expect());
+      Meteor.subscribe('c-' + self.collectionName, expect(() => {}));
     }
     self.coll = new Mongo.Collection(self.collectionName);
     try {
@@ -2453,19 +2442,17 @@ testAsyncMulti('mongo-livedata - empty string _id', [
     const res = await self.coll.insertAsync({_id: "realid", f: "bar"});
     test.equal(res, "realid");
   },
-  async function (test, expect) {
+  async function (test) {
     var self = this;
     var docs = await self.coll.find().fetch();
     test.equal(docs, [{_id: "realid", f: "bar"}]);
-    expect();
   },
-  async function (test, expect) {
+  async function (test) {
     var self = this;
     if (Meteor.isServer) {
       await self.coll._collection.insertAsync({_id: "", f: "baz"});
       test.equal((await self.coll.find().fetch()).length, 2);
     }
-    expect();
   }
 ]);
 
@@ -2913,8 +2900,8 @@ Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - drop collection/d
   await waitUntilOplogCaughtUp();
 
   // Drop the collection. Should remove all docs.
-  await runInFence(function () {
-    return coll.dropCollectionAsync();
+  await runInFence(async function () {
+    return await coll.dropCollectionAsync();
   });
 
   test.length(output, 2);
@@ -3108,7 +3095,7 @@ testAsyncMulti("mongo-livedata - undefined find options", [
     self.collName = Random.id();
     if (Meteor.isClient) {
       await Meteor.callAsync("createInsecureCollection", self.collName);
-      Meteor.subscribe("c-" + self.collName, expect());
+      Meteor.subscribe("c-" + self.collName, expect(() => {}));
     }
   },
   async function (test, expect) {
@@ -3121,7 +3108,7 @@ testAsyncMulti("mongo-livedata - undefined find options", [
       });
     });
   },
-  async function (test, expect) {
+  async function (test) {
     var self = this;
     var result = await self.coll.findOneAsync({ foo: 1 }, {
       fields: undefined,
@@ -3130,7 +3117,6 @@ testAsyncMulti("mongo-livedata - undefined find options", [
       skip: undefined
     });
     test.equal(result, self.doc);
-    expect();
   }
 ]);
 
@@ -3282,18 +3268,17 @@ if (Meteor.isServer) {
 // TODO -> Fix me
 if (Meteor.isClient) {
   testAsyncMulti("mongo-livedata - fence onBeforeFire error", [
-    function (test, expect) {
+    async function (test, expect) {
       var self = this;
       self.nonce = Random.id();
-      Meteor.call('fenceOnBeforeFireError1', self.nonce, expect(function (err) {
+      await Meteor.callAsync('fenceOnBeforeFireError1', self.nonce).catch(function (err) {
         test.isFalse(err);
-      }));
+      });
     },
-    function (test, expect) {
+    async function (test, expect) {
       var self = this;
-      Meteor.call('fenceOnBeforeFireError2', self.nonce, expect(
-          function (err, success) {
-            test.isFalse(err);
+      await Meteor.callAsync('fenceOnBeforeFireError2', self.nonce).then(expect(
+          function (success) {
             test.isTrue(success);
           }
       ));
@@ -3301,27 +3286,25 @@ if (Meteor.isClient) {
   ]);
 } else {
   var fenceOnBeforeFireErrorCollection = new Mongo.Collection("FOBFE");
-  var Future = Npm.require('fibers/future');
   var futuresByNonce = {};
+
   Meteor.methods({
     fenceOnBeforeFireError1: function (nonce) {
-      futuresByNonce[nonce] = new Future;
+      let resolve;
+      futuresByNonce[nonce] = new Promise(r => resolve = r);
       var observe = fenceOnBeforeFireErrorCollection.find({nonce: nonce})
           .observeChanges({added: function (){}});
-      Meteor.setTimeout(function () {
-        fenceOnBeforeFireErrorCollection.insertAsync(
-            {nonce: nonce},
-            function (err, result) {
-              var success = !err && result;
-              futuresByNonce[nonce].return(success);
+      Meteor.setTimeout(async function () {
+        await fenceOnBeforeFireErrorCollection.insertAsync({nonce: nonce})
+            .then(result => {
+              resolve(result);
               observe.stop();
-            }
-        );
+            });
       }, 10);
     },
-    fenceOnBeforeFireError2: function (nonce) {
+    fenceOnBeforeFireError2: async function (nonce) {
       try {
-        return futuresByNonce[nonce].wait();
+        return await futuresByNonce[nonce];
       } finally {
         delete futuresByNonce[nonce];
       }
