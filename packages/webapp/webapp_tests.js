@@ -1,6 +1,5 @@
 const url = require("url");
 const crypto = require("crypto");
-const http = require("http");
 const streamToString = require("stream-to-string");
 import { isModern } from "meteor/modern-browsers";
 
@@ -43,14 +42,10 @@ MockResponse.prototype.end = function (data, encoding) {
 MockResponse.prototype.getBody = function () {
   return this.buffer;
 };
-const asyncGet =
+const asyncGetContentType =
   (url, opt) =>
-    new Promise((resolve, reject) =>
-      HTTP.get(url, opt, (err, res) =>
-        err
-          ? reject(err)
-          : resolve(res)
-      ));
+      fetch(url, opt)
+        .then(res => res.headers.get("content-type"));
 Tinytest.addAsync("webapp - content-type header", async function (test) {
   const staticFiles = WebAppInternals.staticFilesByArch["web.browser"];
 
@@ -67,11 +62,11 @@ Tinytest.addAsync("webapp - content-type header", async function (test) {
       return staticFiles[url].type === "js";
     }
   );
-  let resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), cssResource));
-  test.equal(resp.headers["content-type"].toLowerCase(),
+  let resp = await asyncGetContentType(url.resolve(Meteor.absoluteUrl(), cssResource));
+  test.equal(resp.toLowerCase(),
              "text/css; charset=utf-8");
-  resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), jsResource));
-  test.equal(resp.headers["content-type"].toLowerCase(),
+  resp = await asyncGetContentType(url.resolve(Meteor.absoluteUrl(), jsResource));
+  test.equal(resp.toLowerCase(),
              "application/javascript; charset=utf-8");
 });
 
@@ -98,7 +93,7 @@ Tinytest.addAsync("webapp - modern/legacy static files", test => {
       }
 
       const pathMatch = /\/(modern|legacy)_test_asset\.js$/.exec(path);
-      if (! pathMatch) {
+      if (!pathMatch) {
         return;
       }
 
