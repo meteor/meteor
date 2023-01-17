@@ -187,8 +187,8 @@ main.registerCommand({
   requiresRelease: false,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  Console.rawInfo(archinfo.host() + "\n");
+}, async function () {
+  Console.rawInfo(await archinfo.host() + "\n");
 });
 
 // Prints the current release in use. Note that if there is not
