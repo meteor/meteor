@@ -97,13 +97,13 @@ if (Meteor.isServer) {
 
 Ledger = new Mongo.Collection('ledger');
 Ledger.allow({
-  insert: function() {
+  insertAsync: function() {
     return true;
   },
-  update: function() {
+  updateAsync: function() {
     return true;
   },
-  remove: function() {
+  removeAsync: function() {
     return true;
   },
   fetch: []
