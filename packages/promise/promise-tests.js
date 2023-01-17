@@ -7,14 +7,6 @@ Tinytest.addAsync("meteor-promise - sanity", function (test, done) {
     })
     .catch(function (error) {
       test.equal(error, expectedError);
-      if (Meteor.isServer) {
-        // TODO[FIBERS]: Remove this in 3.0
-        if (Meteor._isFibersEnabled) {
-          var Fiber = require("fibers");
-          // Make sure the Promise polyfill runs callbacks in a Fiber.
-          test.instanceOf(Fiber.current, Fiber);
-        }
-      }
     })
     .then(done, function (error) {
       test.exception(error);
