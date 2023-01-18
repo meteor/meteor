@@ -2426,7 +2426,7 @@ main.registerCommand({
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   if (! files.inCheckout()) {
     Console.error("self-test is only supported running from a checkout");
     return 1;
@@ -2438,7 +2438,7 @@ main.registerCommand({
   var offline = false;
   if (!options['force-online']) {
     try {
-      require('../utils/http-helpers.js').getUrl("http://www.google.com/");
+      await require('../utils/http-helpers.js').getUrl("http://www.google.com/");
     } catch (e) {
       if (e instanceof files.OfflineError) {
         offline = true;
@@ -2483,7 +2483,7 @@ main.registerCommand({
   }
 
   if (options.list) {
-    selftest.listTests({
+    await selftest.listTests({
       onlyChanged: options.changed,
       offline: offline,
       includeSlowTests: options.slow,

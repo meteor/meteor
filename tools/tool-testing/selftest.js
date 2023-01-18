@@ -30,7 +30,7 @@ export const fail = parseStackMarkTop(function (reason) {
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
 export const expectEqual = parseStackMarkTop(async function (actual, expected) {
-  if (! await loadIsopackage('ejson').EJSON.equals(actual, expected)) {
+  if (! (await loadIsopackage('ejson')).EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
       expected,
       actual,

@@ -1,7 +1,7 @@
 const selftest = require('../tool-testing/selftest.js');
 const bundler = require('../isobuild/bundler.js');
 
-selftest.define("bundle-ignore-files", () => {
+selftest.define("bundle-ignore-files", async () => {
   const patterns = bundler.ignoreFiles;
   const matchingInputs = [
     '.git/',
@@ -12,11 +12,15 @@ selftest.define("bundle-ignore-files", () => {
     'Thumbs.db'
   ];
 
-  matchingInputs.forEach(input => selftest.expectEqual(patterns.some(p => p.test(input)),true));
+  for (const input of matchingInputs) {
+    await selftest.expectEqual(patterns.some(p => p.test(input)), true);
+  }
 
   const nonMatchingInputs = [
     'Icon',
   ];
 
-  nonMatchingInputs.forEach(input => selftest.expectEqual(patterns.some(p => p.test(input)),false));
+  for (const input of nonMatchingInputs) {
+    await selftest.expectEqual(patterns.some(p => p.test(input)),false);
+  }
 });

@@ -235,11 +235,11 @@ export default class Sandbox {
   // For example:
   //   s.createPackage('me_mypack', me:mypack', 'empty');
   //   s.cd('me_mypack');
-  createPackage(packageDir, packageName, template) {
+  async createPackage(packageDir, packageName, template) {
     const packagePath = files.pathJoin(this.cwd, packageDir);
     const templatePackagePath = files.pathJoin(
       files.convertToStandardPath(__dirname), '..', 'tests', 'packages', template);
-    files.cp_r(templatePackagePath, packagePath, {
+    await files.cp_r(templatePackagePath, packagePath, {
       preserveSymlinks: true,
     });
 
