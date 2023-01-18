@@ -675,7 +675,7 @@ api.addAssets('${relPath}', 'client').`);
   var arch = inputSourceArch.arch;
   if (arch === "os" && ! isPortable) {
     // Contains non-portable compiled npm modules, so set arch correctly
-    arch = archinfo.host();
+    arch = await archinfo.host();
   }
 
   let nodeModulesDirsOrUndefined = nodeModulesDirectories;

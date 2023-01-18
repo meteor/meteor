@@ -404,9 +404,9 @@ Object.assign(exports, {
   //
   // (This has gone through a few refactors and it might be possible
   // to fully roll it into httpHelpers.request() at this point.)
-  getUrl: function (urlOrOptions) {
+  getUrl: async function (urlOrOptions) {
     try {
-      var result = httpHelpers.request(urlOrOptions);
+      var result = await httpHelpers.request(urlOrOptions);
     } catch (e) {
       throw new files.OfflineError(e);
     }
