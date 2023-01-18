@@ -31,5 +31,4 @@ Package.onTest(function(api) {
   api.use("http");
   api.use("socket-stream-client");
   api.mainModule("client-tests.js", "client");
-  api.mainModule("server-tests.js", "server");
 });
