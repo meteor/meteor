@@ -313,36 +313,65 @@ Object.assign(ProjectContext.prototype, {
     self._readResolverResultCache();
   },
 
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   readProjectMetadata: function () {
     // don't generate a profiling report for this stage (Profile.run),
     // because all we do here is read a handful of files.
     return this._completeStagesThrough(STAGE.READ_PROJECT_METADATA);
   },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   initializeCatalog: function () {
     return Profile.run('ProjectContext initializeCatalog', () => {
       return this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
     });
   },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   resolveConstraints: function () {
     return Profile.run('ProjectContext resolveConstraints', () => {
       return this._completeStagesThrough(STAGE.RESOLVE_CONSTRAINTS);
     });
   },
+
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   downloadMissingPackages: function () {
     return Profile.run('ProjectContext downloadMissingPackages', () => {
       return this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
     });
   },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   buildLocalPackages: function () {
     return Profile.run('ProjectContext buildLocalPackages', () => {
       return this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
     });
   },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   saveChangedMetadata: function () {
     return Profile.run('ProjectContext saveChangedMetadata', () => {
       return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   prepareProjectForBuild: function () {
     // This is the same as saveChangedMetadata, but if we insert stages after
     // that one it will continue to mean "fully finished".
@@ -351,6 +380,10 @@ Object.assign(ProjectContext.prototype, {
     });
   },
 
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   _completeStagesThrough: function (targetStage) {
     var self = this;
     buildmessage.assertInCapture();
@@ -387,6 +420,10 @@ Object.assign(ProjectContext.prototype, {
   //
   // This should be pretty fast --- for example, we shouldn't worry about
   // needing to wait for it to be done before we open the runner proxy.
+  /**
+   *
+   * @return {Promise<void>}
+   */
   _readProjectMetadata: Profile('_readProjectMetadata', async function () {
     var self = this;
     buildmessage.assertInCapture();
