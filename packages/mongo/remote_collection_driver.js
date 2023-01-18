@@ -8,10 +8,13 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
-    ['find', 'findOne', 'insert', 'update', 'upsert',
-      'remove', '_ensureIndex', 'createIndex', '_dropIndex', '_createCappedCollection',
-      'dropCollection', 'rawCollection'].forEach(
+    ['find', 'findOneAsync', 'insertAsync', 'updateAsync', 'upsertAsync',
+      'removeAsync', 'ensureIndexAsync', 'createIndexAsync', 'dropIndexAsync', 'createCappedCollectionAsync',
+      'dropCollectionAsync', 'rawCollection'].forEach(
       function (m) {
+        if (!self.mongo[m]) {
+          console.log('ERRROR:', m);
+        }
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
       });
     return ret;

@@ -39,11 +39,11 @@ ObserveMultiplexer = class {
         "mongo-livedata", "observe-handles", 1);
 
     const self = this;
-    await this._queue.runTask(function () {
+    await this._queue.runTask(async function () {
       self._handles[handle._id] = handle;
       // Send out whatever adds we have so far (whether the
       // multiplexer is ready).
-      self._sendAdds(handle);
+      await self._sendAdds(handle);
       --self._addHandleTasksScheduledButNotPerformed;
     });
     await this._readyPromise;
@@ -93,9 +93,9 @@ ObserveMultiplexer = class {
 
   // Allows all addHandleAndSendInitialAdds calls to return, once all preceding
   // adds have been processed. Does not block.
-  ready() {
+  async ready() {
     const self = this;
-    this._queue.queueTask(function () {
+    await this._queue.runTask(function () {
       if (self._ready())
         throw Error("can't make ObserveMultiplex ready twice!");
 
@@ -127,9 +127,9 @@ ObserveMultiplexer = class {
   // Calls "cb" once the effects of all "ready", "addHandleAndSendInitialAdds"
   // and observe callbacks which came before this call have been propagated to
   // all handles. "ready" must have already been called on this multiplexer.
-  onFlush(cb) {
+  async onFlush(cb) {
     var self = this;
-    return this._queue.queueTask(async function () {
+    await this._queue.runTask(async function () {
       if (!self._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();
@@ -144,9 +144,9 @@ ObserveMultiplexer = class {
   _ready() {
     return !!this._isReady;
   }
-  _applyCallback(callbackName, args) {
+  async _applyCallback(callbackName, args) {
     const self = this;
-    this._queue.queueTask(async function () {
+    await this._queue.runTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;
@@ -189,6 +189,8 @@ ObserveMultiplexer = class {
       return;
     // note: docs may be an _IdMap or an OrderedDict
     await this._cache.docs.forEachAsync(async (doc, id) => {
+      //TODO FIXME
+      if (!this._handles) console.log({this:this});
       if (!_.has(this._handles, handle._id))
         throw Error("handle got removed before sending initial adds!");
       const { _id, ...fields } = handle.nonMutatingCallbacks ? doc

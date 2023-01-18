@@ -60,6 +60,9 @@ Package.onUse(function (api) {
   // People expect process.exit() to not swallow console output.
   // On Windows, it sometimes does, so we fix it for all apps and packages
   api.addFiles('flush-buffers-on-exit-in-windows.js', 'server');
+
+  api.addFiles('emitter-promise.js', 'server');
+  api.export('EmitterPromise', 'server');
 });
 
 Package.onTest(function (api) {
@@ -83,4 +86,6 @@ Package.onTest(function (api) {
 
   api.addFiles('bare_test_setup.js', 'client', {bare: true});
   api.addFiles('bare_tests.js', 'client');
+  //api.addFiles('asl_helpers_test.js', 'server');
+  api.addFiles('emitter-promise-tests.js', 'server');
 });

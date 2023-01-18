@@ -7,14 +7,14 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Restrict default mutators on collection. allow() and deny() take the
 // same options:
 //
-// options.insert {Function(userId, doc)}
+// options.insertAsync {Function(userId, doc)}
 //   return true to allow/deny adding this document
 //
-// options.update {Function(userId, docs, fields, modifier)}
+// options.updateAsync {Function(userId, docs, fields, modifier)}
 //   return true to allow/deny updating these documents.
 //   `fields` is passed as an array of fields that are to be modified
 //
-// options.remove {Function(userId, docs)}
+// options.removeAsync {Function(userId, docs)}
 //   return true to allow/deny removing these documents
 //
 // options.fetch {Array}
@@ -49,7 +49,7 @@ const CollectionPrototype = AllowDeny.CollectionPrototype;
  * @memberOf Mongo.Collection
  * @instance
  * @param {Object} options
- * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be allowed.
+ * @param {Function} options.insertAsync,updateAsync,removeAsync Functions that look at a proposed modification to the database and return true if it should be allowed.
  * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
  * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
  */
@@ -64,7 +64,7 @@ CollectionPrototype.allow = function(options) {
  * @memberOf Mongo.Collection
  * @instance
  * @param {Object} options
- * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be denied, even if an [allow](#allow) rule says otherwise.
+ * @param {Function} options.insertAsync,updateAsync,removeAsync Functions that look at a proposed modification to the database and return true if it should be denied, even if an [allow](#allow) rule says otherwise.
  * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
  * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
  */
@@ -87,10 +87,10 @@ CollectionPrototype._defineMutationMethods = function(options) {
   self._insecure = undefined;
 
   self._validators = {
-    insert: {allow: [], deny: []},
-    update: {allow: [], deny: []},
-    remove: {allow: [], deny: []},
-    upsert: {allow: [], deny: []}, // dummy arrays; can't set these!
+    insertAsync: {allow: [], deny: []},
+    updateAsync: {allow: [], deny: []},
+    removeAsync: {allow: [], deny: []},
+    upsertAsync: {allow: [], deny: []}, // dummy arrays; can't set these!
     fetch: [],
     fetchAllFields: false
   };
@@ -99,7 +99,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
     return; // anonymous collection
 
   // XXX Think about method namespacing. Maybe methods should be
-  // "Meteor:Mongo:insert/NAME"?
+  // "Meteor:Mongo:insertAsync/NAME"?
   self._prefix = '/' + self._name + '/';
 
   // Mutation Methods
@@ -110,7 +110,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
   if (self._connection && (self._connection === Meteor.server || Meteor.isClient)) {
     const m = {};
 
-    ['insert', 'update', 'remove'].forEach((method) => {
+    ['insertAsync', 'updateAsync', 'removeAsync'].forEach((method) => {
       const methodName = self._prefix + method;
 
       if (options.useExisting) {
@@ -126,10 +126,10 @@ CollectionPrototype._defineMutationMethods = function(options) {
         check(arguments, [Match.Any]);
         const args = Array.from(arguments);
         try {
-          // For an insert, if the client didn't specify an _id, generate one
+          // For an insertAsync, if the client didn't specify an _id, generate one
           // now; because this uses DDP.randomStream, it will be consistent with
           // what the client generated. We generate it now rather than later so
-          // that if (eg) an allow/deny rule does an insert to the same
+          // that if (eg) an allow/deny rule does an insertAsync to the same
           // collection (not that it really should), the generated _id will
           // still be the first use of the stream and will be consistent.
           //
@@ -138,7 +138,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
           // between arbitrary client-specified _id fields and merely
           // client-controlled-via-randomSeed fields.
           let generatedId = null;
-          if (method === "insert" && !hasOwn.call(args[0], '_id')) {
+          if (method === "insertAsync" && !hasOwn.call(args[0], '_id')) {
             generatedId = self._makeNewID();
           }
 
@@ -155,7 +155,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
 
           // We don't allow arbitrary selectors in mutations from the client: only
           // single-ID selectors.
-          if (method !== 'insert')
+          if (method !== 'insertAsync')
             throwIfSelectorIsNotId(args[0], method);
 
           if (self._restricted) {
@@ -169,7 +169,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
             const validatedMethodName =
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
             args.unshift(this.userId);
-            method === 'insert' && args.push(generatedId);
+            method === 'insertAsync' && args.push(generatedId);
             return self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
             if (generatedId !== null)
@@ -237,37 +237,38 @@ CollectionPrototype._isInsecure = function () {
   return self._insecure;
 };
 
-CollectionPrototype._validatedInsert = function (userId, doc,
+CollectionPrototype._validatedInsertAsync = function (userId, doc,
                                                          generatedId) {
   const self = this;
 
   // call user validators.
   // Any deny returns true means denied.
-  if (self._validators.insert.deny.some((validator) => {
+  if (self._validators.insertAsync.deny.some((validator) => {
     return validator(userId, docToValidate(validator, doc, generatedId));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (self._validators.insert.allow.every((validator) => {
+
+  if (self._validators.insertAsync.allow.every((validator) => {
     return !validator(userId, docToValidate(validator, doc, generatedId));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
 
-  // If we generated an ID above, insert it now: after the validation, but
+  // If we generated an ID above, insertAsync it now: after the validation, but
   // before actually inserting.
   if (generatedId !== null)
     doc._id = generatedId;
 
-  self._collection.insert.call(self._collection, doc);
+  self._collection.insertAsync.call(self._collection, doc);
 };
 
 // Simulate a mongo `update` operation while validating that the access
 // control rules set by calls to `allow/deny` are satisfied. If all
 // pass, rewrite the mongo operation to use $in to set the list of
 // document ids to change ##ValidatedChange
-CollectionPrototype._validatedUpdate = function(
+CollectionPrototype._validatedUpdateAsync = async function(
     userId, selector, mutator, options) {
   const self = this;
 
@@ -280,7 +281,7 @@ CollectionPrototype._validatedUpdate = function(
 
   // We don't support upserts because they don't fit nicely into allow/deny
   // rules.
-  if (options.upsert)
+  if (options.upsertAsync)
     throw new Meteor.Error(403, "Access denied. Upserts not " +
                            "allowed in a restricted collection.");
 
@@ -326,13 +327,13 @@ CollectionPrototype._validatedUpdate = function(
     });
   }
 
-  const doc = self._collection.findOne(selector, findOptions);
+  const doc = await self._collection.findOneAsync(selector, findOptions);
   if (!doc)  // none satisfied!
     return 0;
 
   // call user validators.
   // Any deny returns true means denied.
-  if (self._validators.update.deny.some((validator) => {
+  if (self._validators.updateAsync.deny.some((validator) => {
     const factoriedDoc = transformDoc(validator, doc);
     return validator(userId,
                      factoriedDoc,
@@ -342,7 +343,7 @@ CollectionPrototype._validatedUpdate = function(
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (self._validators.update.allow.every((validator) => {
+  if (self._validators.updateAsync.allow.every((validator) => {
     const factoriedDoc = transformDoc(validator, doc);
     return !validator(userId,
                       factoriedDoc,
@@ -359,7 +360,7 @@ CollectionPrototype._validatedUpdate = function(
   // avoid races, but since selector is guaranteed to already just be an ID, we
   // don't have to any more.
 
-  return self._collection.update.call(
+  return self._collection.updateAsync.call(
     self._collection, selector, mutator, options);
 };
 
@@ -376,7 +377,7 @@ const ALLOWED_UPDATE_OPERATIONS = {
 
 // Simulate a mongo `remove` operation while validating access control
 // rules. See #ValidatedChange
-CollectionPrototype._validatedRemove = function(userId, selector) {
+CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
   const self = this;
 
   const findOptions = {transform: null};
@@ -387,19 +388,19 @@ CollectionPrototype._validatedRemove = function(userId, selector) {
     });
   }
 
-  const doc = self._collection.findOne(selector, findOptions);
+  const doc = await self._collection.findOneAsync(selector, findOptions);
   if (!doc)
     return 0;
 
   // call user validators.
   // Any deny returns true means denied.
-  if (self._validators.remove.deny.some((validator) => {
+  if (self._validators.removeAsync.deny.some((validator) => {
     return validator(userId, transformDoc(validator, doc));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (self._validators.remove.allow.every((validator) => {
+  if (self._validators.removeAsync.allow.every((validator) => {
     return !validator(userId, transformDoc(validator, doc));
   })) {
     throw new Meteor.Error(403, "Access denied");
@@ -410,27 +411,13 @@ CollectionPrototype._validatedRemove = function(userId, selector) {
   // Mongo to avoid races, but since selector is guaranteed to already just be
   // an ID, we don't have to any more.
 
-  return self._collection.remove.call(self._collection, selector);
+  return self._collection.removeAsync.call(self._collection, selector);
 };
 
-CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args, callback) {
-  if (Meteor.isClient && !callback && !alreadyInSimulation()) {
-    // Client can't block, so it can't report errors by exception,
-    // only by callback. If they forget the callback, give them a
-    // default one that logs the error, so they aren't totally
-    // baffled if their writes don't work because their database is
-    // down.
-    // Don't give a default callback in simulation, because inside stubs we
-    // want to return the results from the local collection immediately and
-    // not force a callback.
-    callback = function (err) {
-      if (err)
-        Meteor._debug(name + " failed", err);
-    };
-  }
+CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethod(name, args) {
 
   // For two out of three mutator methods, the first argument is a selector
-  const firstArgIsSelector = name === "update" || name === "remove";
+  const firstArgIsSelector = name === "updateAsync" || name === "removeAsync";
   if (firstArgIsSelector && !alreadyInSimulation()) {
     // If we're about to actually send an RPC, we should throw an error if
     // this is a non-ID selector, because the mutation methods only allow
@@ -439,8 +426,7 @@ CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args,
   }
 
   const mutatorMethodName = this._prefix + name;
-  return this._connection.apply(
-    mutatorMethodName, args, { returnStubValue: true }, callback);
+  return await this._connection.applyAsync(mutatorMethodName, args, { returnStubValue: true , throwStubExceptions: true });
 }
 
 function transformDoc(validator, doc) {
@@ -457,7 +443,7 @@ function docToValidate(validator, doc, generatedId) {
     // to tell the difference between "client specified the ID" and "server
     // generated the ID", because transforms expect to get _id.  If you want to
     // do that check, you can do it with a specific
-    // `C.allow({insert: f, transform: null})` validator.
+    // `C.allow({insertAsync: f, transform: null})` validator.
     if (generatedId !== null) {
       ret._id = generatedId;
     }
@@ -468,7 +454,7 @@ function docToValidate(validator, doc, generatedId) {
 
 function addValidator(collection, allowOrDeny, options) {
   // validate keys
-  const validKeysRegEx = /^(?:insert|update|remove|fetch|transform)$/;
+  const validKeysRegEx = /^(?:insertAsync|updateAsync|removeAsync|fetch|transform)$/;
   Object.keys(options).forEach((key) => {
     if (!validKeysRegEx.test(key))
       throw new Error(allowOrDeny + ": Invalid key: " + key);
@@ -476,7 +462,7 @@ function addValidator(collection, allowOrDeny, options) {
 
   collection._restricted = true;
 
-  ['insert', 'update', 'remove'].forEach((name) => {
+  ['insertAsync', 'updateAsync', 'removeAsync'].forEach((name) => {
     if (hasOwn.call(options, name)) {
       if (!(options[name] instanceof Function)) {
         throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
@@ -491,15 +477,14 @@ function addValidator(collection, allowOrDeny, options) {
         options[name].transform = LocalCollection.wrapTransform(
           options.transform);
       }
-
       collection._validators[name][allowOrDeny].push(options[name]);
     }
   });
 
-  // Only update the fetch fields if we're passed things that affect
-  // fetching. This way allow({}) and allow({insert: f}) don't result in
+  // Only updateAsync the fetch fields if we're passed things that affect
+  // fetching. This way allow({}) and allow({insertAsync: f}) don't result in
   // setting fetchAllFields
-  if (options.update || options.remove || options.fetch) {
+  if (options.updateAsync || options.removeAsync || options.fetch) {
     if (options.fetch && !(options.fetch instanceof Array)) {
       throw new Error(allowOrDeny + ": Value for `fetch` must be an array");
     }

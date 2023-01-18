@@ -1,4 +1,3 @@
-
 Meteor._noYieldsAllowed = function (f) {
   return f();
 };

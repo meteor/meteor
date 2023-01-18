@@ -25,7 +25,7 @@ module.exports = {
     'no-underscore-dangle': [
       'error',
       {
-        allow: ['_id', '_ensureIndex'],
+        allow: ['_id', 'ensureIndexAsync'],
       },
     ],
     'object-shorthand': [
