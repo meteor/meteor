@@ -16,10 +16,10 @@ Tinytest.add("environment - dynamic variables", function (test) {
   test.equal(CurrentFoo.get(), undefined);
 });
 
-Tinytest.add("environment - bindEnvironment", function (test) {
+Tinytest.addAsync("environment - bindEnvironment", async function (test) {
   var raised_f;
 
-  var f = CurrentFoo.withValue(17, function () {
+  var f = await CurrentFoo.withValue(17, function () {
     return Meteor.bindEnvironment(function (flag) {
       test.equal(CurrentFoo.get(), 17);
       if (flag)
@@ -31,24 +31,24 @@ Tinytest.add("environment - bindEnvironment", function (test) {
     });
   });
 
-  var test_f = function () {
+  var test_f = async function () {
     raised_f = null;
 
-    test.equal(f(false), 12);
+    test.equal(await f(false), 12);
     test.equal(raised_f, null);
 
-    test.equal(f(true), undefined);
+    test.equal(await f(true), undefined);
     test.equal(raised_f, "test");
   };
 
   // At top level
 
   test.equal(CurrentFoo.get(), undefined);
-  test_f();
+  await test_f();
 
   // Inside a withValue
 
-  CurrentFoo.withValue(22, function () {
+  await CurrentFoo.withValue(22, function () {
     test.equal(CurrentFoo.get(), 22);
     test_f();
     test.equal(CurrentFoo.get(), 22);
@@ -61,7 +61,7 @@ Tinytest.add("environment - bindEnvironment", function (test) {
 
   var raised_g;
 
-  var g = CurrentFoo.withValue(99, function () {
+  var g = await CurrentFoo.withValue(99, function () {
     return Meteor.bindEnvironment(function (flag) {
       test.equal(CurrentFoo.get(), 99);
 
@@ -76,19 +76,19 @@ Tinytest.add("environment - bindEnvironment", function (test) {
     });
   });
 
-  var test_g = function () {
+  var test_g = async function () {
     raised_g = null;
 
-    test.equal(g(false), 88);
+    test.equal(await g(false), 88);
     test.equal(raised_g, null);
 
-    test.equal(g(true), undefined);
+    test.equal(await g(true), undefined);
     test.equal(raised_g, "trial");
   };
 
-  test_g();
+  await test_g();
 
-  CurrentFoo.withValue(77, function () {
+  await CurrentFoo.withValue(77, function () {
     test.equal(CurrentFoo.get(), 77);
     test_g();
     test.equal(CurrentFoo.get(), 77);
