@@ -1700,9 +1700,9 @@
           "integrity": "sha1-3F5pjL0HkmW8c+A3doGk5Og/YW4="
         },
         "typescript": {
-          "version": "4.6.4",
-          "resolved": "https://registry.npmjs.org/typescript/-/typescript-4.6.4.tgz",
-          "integrity": "sha512-9ia/jWHIEbo49HfjrLGfKbZSuWo9iTMwXO+Ca3pRsSpbsMbc7/IU8NKdCZVRRBafVPGnoJeFL76ZOAA84I9fEg=="
+          "version": "4.7.4",
+          "resolved": "https://registry.npmjs.org/typescript/-/typescript-4.7.4.tgz",
+          "integrity": "sha512-C0WQT0gezHuw6AdY1M2jxUO83Rjf0HP7Sk1DtXj6j1EwkQNZrHAg2XPWlq62oqEhYvONq5pkC2Y9oPljWToLmQ=="
         },
         "unbox-primitive": {
           "version": "1.0.1",
@@ -1829,11 +1829,6 @@
       "version": "1.2.7",
       "resolved": "https://registry.npmjs.org/minimist/-/minimist-1.2.7.tgz",
       "integrity": "sha512-bzfL1YUZsP41gmu/qjrEk0Q6i2ix/cVeAhbCbqH9u3zYutS1cLg00qhrD0M2MVdCcx4Sc0UpP2eBWo9rotpq6g=="
-    },
-    "yallist": {
-      "version": "3.1.1",
-      "resolved": "https://registry.npmjs.org/yallist/-/yallist-3.1.1.tgz",
-      "integrity": "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="
     }
   }
 }
