@@ -112,11 +112,11 @@ export class IsopackCache {
     return self._isopacks[name];
   }
 
-  eachBuiltIsopack(iterator) {
+  async eachBuiltIsopack(iterator) {
     var self = this;
-    _.each(self._isopacks, function (isopack, packageName) {
-      iterator(packageName, isopack);
-    });
+    for (const [packageName, isopack] of Object.entries(self._isopacks)) {
+      await iterator(packageName, isopack)
+    }
   }
 
   getSourceRoot(name, arch) {

@@ -60,7 +60,7 @@ export default class Matcher {
   }
 
   match(pattern, timeout, strict) {
-    return this.matchAsync(pattern, { timeout, strict }).await();
+    return this.matchAsync(pattern, { timeout, strict });
   }
 
   // Like match, but returns a Promise without calling .await().
