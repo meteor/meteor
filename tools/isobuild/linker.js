@@ -36,6 +36,8 @@ var packageDot = function (name) {
   }
 };
 
+const enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
+
 ///////////////////////////////////////////////////////////////////////////////
 // Module
 ///////////////////////////////////////////////////////////////////////////////
@@ -191,7 +193,10 @@ Object.assign(Module.prototype, {
     if (haveMeteorInstallOptions) {
       const trees = await self._buildModuleTrees(results, sourceWidth);
       fileCount = await self._chunkifyModuleTrees(trees, chunks, sourceWidth);
-      result.exportsName = await self._chunkifyEagerRequires(chunks, fileCount, sourceWidth);
+      const { exportsName, eagerModulePaths, mainModulePath } = await self._chunkifyEagerRequires(chunks, fileCount, sourceWidth);
+      result.exportsName = exportsName;
+      result.eagerModulePaths = eagerModulePaths;
+      result.mainModulePath = mainModulePath;
     } else {
       for (const file of self.files) {
         if (file.lazy) {
@@ -255,8 +260,7 @@ Object.assign(Module.prototype, {
 
     for (const file of this.files) {
       if (file.bare) {
-        // Bare files will be added before the synchronous require calls
-        // in _chunkifyEagerRequires.
+        // Bare files will be added after the module tree
         continue;
       }
 
@@ -444,14 +448,22 @@ Object.assign(Module.prototype, {
     // non-lazy (eager) modules.
 
     const eagerModuleFiles = [];
+    const eagerModulePaths = [];
+    let mainModulePath = null;
 
     for (const file of this.files) {
       if (file.bare) {
         chunks.push("\n", await file.getPrelinkedOutput({
           sourceWidth,
         }));
-      } else if (moduleCount > 0 && ! file.lazy) {
-        eagerModuleFiles.push(file);
+      } else if (!file.lazy) {
+        if (moduleCount > 0) {
+          eagerModuleFiles.push(file);
+        }
+        eagerModulePaths.push(file.absModuleId);
+        if (file.mainModule) {
+          mainModulePath = file.absModuleId;
+        }
       }
     }
 
@@ -470,7 +482,7 @@ Object.assign(Module.prototype, {
       }
     }
 
-    return exportsName;
+    return { exportsName, eagerModulePaths, mainModulePath };
   }
 });
 
@@ -962,12 +974,34 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 ]);
 
 var getHeader = function (options) {
+  if (!options.hasRuntime) {
+    return '(function() {\n\n';
+  }
+
+  var isApp = options.name === null;
   var chunks = [];
+  let deps = [];
+  options.uses.forEach(uses => {
+    if (!uses.unordered) {
+      deps.push(JSON.stringify(uses.package))
+    }
+  });
 
   chunks.push(
-    "(function () {\n\n",
-    getImportCode(options.imports, "/* Imports */\n", false),
+      `Package["core-runtime"].queue("${options.name}", [`,
+      deps.join(', '),
+      '], function () {'
   );
+
+  if (isApp) {
+    chunks.push(
+      getImportCode(options.imports, "/* Imports for global scope */\n\n", true),
+    );
+  } else {
+    chunks.push(
+      getImportCode(options.imports, "/* Imports */\n", false),
+    );
+  }
 
   const packageVariables = _.filter(
     options.packageVariables,
@@ -1011,39 +1045,93 @@ function getImportCode(imports, header, omitVar) {
   return buf;
 }
 
-var getFooter = function ({
+function getFooter ({
   name,
   exported,
-  exportsName,
+  mainModulePath,
+  eagerModulePaths,
+  imports,
+  hasRuntime
 }) {
-  var chunks = [];
-
-  if (name && exported) {
-    chunks.push("\n\n/* Exports */\n");
-
-    // Even if there are no exports, we need to define Package.foo,
-    // because the existence of Package.foo is how another package
-    // (e.g., one that weakly depends on foo) can tell if foo is loaded.
-    chunks.push("Package._define(" + JSON.stringify(name));
-
-    if (exportsName) {
-      // If we have an exports object, use it as Package[name].
-      chunks.push(", ", exportsName);
-    }
-
-    if (! _.isEmpty(exported)) {
-      const scratch = {};
-      _.each(exported, symbol => scratch[symbol] = symbol);
-      const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
-      chunks.push(", ", symbolTree);
-    }
-
-    chunks.push(");\n");
+  if (!hasRuntime) {
+    return '\n})();\n';
   }
 
-  chunks.push("\n})();\n");
+  let chunks = [];
+  let returnObj = Object.create(null);
+
+  if (! _.isEmpty(exported)) {
+    const scratch = {};
+    _.each(exported, symbol => scratch[symbol] = symbol);
+    const symbolTree = writeSymbolTree(buildSymbolTree(scratch), 4);
+    returnObj.export = `function () { return ${symbolTree};}`;
+  }
+
+
+  if (eagerModulePaths && eagerModulePaths.length > 0) {
+    returnObj.require = 'require';
+
+    let modulePaths = eagerModulePaths.map(path => `    ${JSON.stringify(path)}`);
+    returnObj.eagerModulePaths = `[\n${modulePaths.join(',\n')}\n  ]`;
+  }
+  if (mainModulePath) {
+    returnObj.mainModulePath = JSON.stringify(mainModulePath);
+  }
+
+  chunks.push("\n\n/* Exports */\n");
+  chunks.push('return {\n');
+
+  let entries = Object.entries(returnObj);
+  entries.forEach(([ key, value ], index) => {
+    chunks.push(`  ${key}: ${value}`);
+    if (index !== entries.length - 1) {
+      chunks.push(',\n');
+    }
+  });
+
+  chunks.push("\n}});\n");
+
   return chunks.join('');
-};
+}
+
+function wrapWithHeaderAndFooter(files, header, footer) {
+  // Bias the source map by the length of the header without
+  // (fully) parsing and re-serializing it. (We used to do this
+  // with the source-map library, but it was incredibly slow,
+  // accounting for over half of bundling time.) It would be nice
+  // if we could use "index maps" for this (the 'sections' key),
+  // as that would let us avoid even JSON-parsing the source map,
+  // but that doesn't seem to be supported by Firefox yet.
+  if (header.charAt(header.length - 1) !== "\n") {
+    // make sure it's a whole number of lines
+    header += "\n";
+  }
+  var headerLines = header.split('\n').length - 1;
+  var headerContent = (new Array(headerLines + 1).join(';'));
+
+  return files.map(file => {
+    if (file.dynamic) {
+      return file;
+    }
+
+    if (file.sourceMap) {
+      var sourceMap = file.sourceMap;
+      sourceMap.mappings = headerContent + sourceMap.mappings;
+      return {
+        source: header + file.source + footer,
+        sourcePath: file.sourcePath,
+        servePath: file.servePath,
+        sourceMap: sourceMap
+      };
+    }
+
+    return {
+      source: header + file.source + footer,
+      sourcePath: file.sourcePath,
+      servePath: file.servePath
+    };
+  })
+}
 
 // This is the real entry point that's still used to produce Meteor apps.  It
 // takes in information about the files in the package including imports and
@@ -1089,6 +1177,9 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // True if JS files with source maps should have a comment explaining
   // how to use them in a browser.
   includeSourceMapInstructions,
+
+  // List of packages this bundle uses
+  uses
 }) {
   buildmessage.assertInJob();
 
@@ -1099,13 +1190,59 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
     combinedServePath,
   });
 
+  // Check if the core-runtime package will already be loaded
+  // It is a dependency of the meteor package, and all packages depend
+  // on the Meteor package, so if there are any packages loaded first,
+  // we can be sure the runtime will be available
+  // The main situations it is not available is the core-runtime
+  // package itself, or any build plugins with no dependencies
+  let hasRuntime = uses.some(entry => entry.unordered !== true);
+
   _.each(inputFiles, file => module.addFile(file));
 
   var prelinkedFiles = await module.getPrelinkedFiles();
 
+  let eagerModulePaths;
+  let mainModulePath;
+  _.each(prelinkedFiles, file => {
+    if (file.eagerModulePaths && file.eagerModulePaths.length > 0) {
+      eagerModulePaths = file.eagerModulePaths;
+      mainModulePath = file.mainModulePath;
+    }
+  });
+
+  if (!hasRuntime && (
+    Object.keys(declaredExports).length > 0 ||
+    eagerModulePaths ||
+    mainModulePath
+  )) {
+    throw new Error(`Runtime is not available, but it uses features needing the runtime: ${name}`);
+  }
+
   // If we're in the app, then we just add the import code as its own file in
   // the front.
   if (isApp) {
+    let wrapForTLA = hasRuntime &&
+      (bundleArch.startsWith('os.') || enableClientTLA);
+
+    if (wrapForTLA) {
+      let header = getHeader({
+        name: null,
+        imports,
+        packageVariables: [],
+        hasRuntime,
+        uses
+      });
+      let footer = getFooter({
+        name: null,
+        exported: {},
+        eagerModulePaths,
+        hasRuntime
+      });
+
+      return wrapWithHeaderAndFooter(prelinkedFiles, header, footer);
+    }
+
     if (! _.isEmpty(imports)) {
       prelinkedFiles.unshift({
         source: getImportCode(
@@ -1116,6 +1253,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
         servePath: "/global-imports.js"
       });
     }
+
     return prelinkedFiles;
   }
 
@@ -1150,61 +1288,25 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // Otherwise we're making a package and we have to actually combine the files
   // into a single scope.
   var header = getHeader({
+    name,
     imports,
-    packageVariables: _.union(assignedVariables, declaredExports)
-  });
-
-  let exportsName;
-  _.each(prelinkedFiles, file => {
-    if (file.exportsName) {
-      exportsName = file.exportsName;
-    }
+    packageVariables: _.union(assignedVariables, declaredExports),
+    hasRuntime,
+    uses
   });
 
   var footer = getFooter({
+    name,
     exported: declaredExports,
-    exportsName,
-    name
+    mainModulePath,
+    eagerModulePaths,
+    imports,
+    hasRuntime
   });
 
   if (includeSourceMapInstructions) {
     header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
   }
 
-  // Bias the source map by the length of the header without
-  // (fully) parsing and re-serializing it. (We used to do this
-  // with the source-map library, but it was incredibly slow,
-  // accounting for over half of bundling time.) It would be nice
-  // if we could use "index maps" for this (the 'sections' key),
-  // as that would let us avoid even JSON-parsing the source map,
-  // but that doesn't seem to be supported by Firefox yet.
-  if (header.charAt(header.length - 1) !== "\n") {
-    // make sure it's a whole number of lines
-    header += "\n";
-  }
-  var headerLines = header.split('\n').length - 1;
-  var headerContent = (new Array(headerLines + 1).join(';'));
-
-  return _.map(prelinkedFiles, function (file) {
-    if (file.dynamic) {
-      return file;
-    }
-
-    if (file.sourceMap) {
-      var sourceMap = file.sourceMap;
-      sourceMap.mappings = headerContent + sourceMap.mappings;
-      return {
-        source: header + file.source + footer,
-        sourcePath: file.sourcePath,
-        servePath: file.servePath,
-        sourceMap: sourceMap
-      };
-    } else {
-      return {
-        source: header + file.source + footer,
-        sourcePath: file.sourcePath,
-        servePath: file.servePath
-      };
-    }
-  });
+  return wrapWithHeaderAndFooter(prelinkedFiles, header, footer);
 });

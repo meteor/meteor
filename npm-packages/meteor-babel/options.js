@@ -35,6 +35,10 @@ function getReifyOptions(features) {
       // wrap it with a function to rename the `module` identifier.
       reifyOptions.moduleAlias = "module";
     }
+
+    if (features.topLevelAwait) {
+      reifyOptions.topLevelAwait = true;
+    }
   }
 
   return reifyOptions;

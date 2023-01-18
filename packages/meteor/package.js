@@ -16,6 +16,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
+  api.use('core-runtime');
 
   api.export('Meteor');
 
@@ -28,7 +29,6 @@ Package.onUse(function (api) {
   api.export("meteorEnv");
 
   api.addFiles('cordova_environment.js', 'web.cordova');
-  api.addFiles('define-package.js', ['client', 'server']);
   api.addFiles('helpers.js', ['client', 'server']);
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);
