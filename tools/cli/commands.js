@@ -1692,13 +1692,13 @@ main.registerCommand({
   }
 
   if (options.add) {
-    return deploy.changeAuthorized(site, "add", options.add);
+    return await deploy.changeAuthorized(site, "add", options.add);
   } else if (options.remove) {
-    return deploy.changeAuthorized(site, "remove", options.remove);
+    return await deploy.changeAuthorized(site, "remove", options.remove);
   } else if (options.transfer) {
-    return deploy.changeAuthorized(site, "transfer", options.transfer);
+    return await deploy.changeAuthorized(site, "transfer", options.transfer);
   } else {
-    return deploy.listAuthorized(site);
+    return await deploy.listAuthorized(site);
   }
 });
 
