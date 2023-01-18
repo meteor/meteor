@@ -2897,8 +2897,9 @@ main.registerCommand({
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  buildmessage.enterJob({ title: "A test progressbar" }, function () {
+}, async function (options) {
+  await buildmessage.enterJob({ title: "A test progressbar" }, async function () {
+
     var progress = buildmessage.getCurrentProgressTracker();
     var totalProgress = { current: 0, end: options.secs, done: false };
     var i = 0;
@@ -2908,7 +2909,7 @@ main.registerCommand({
       totalProgress.end = undefined;
     }
 
-    new Promise(function (resolve) {
+    await new Promise(function (resolve) {
       function updateProgress() {
         i++;
         if (! options.spinner) {
@@ -2926,7 +2927,7 @@ main.registerCommand({
       }
 
       setTimeout(updateProgress);
-    }).await();
+    })
   });
 });
 
