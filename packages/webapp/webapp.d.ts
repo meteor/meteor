@@ -23,10 +23,10 @@ export declare module WebApp {
       PUBLIC_SETTINGS: any;
     };
   };
-  var expressHandlers: e.Handler;
-  var rawExpressHandlers: e.Handler;
+  var expressHandlers: express.Handler;
+  var rawExpressHandlers: express.Handler;
   var httpServer: http.Server;
-  var expressApp: e.Application;
+  var expressApp: express.Application;
   function suppressConnectErrors(): void;
   function onListening(callback: Function): void;
 
