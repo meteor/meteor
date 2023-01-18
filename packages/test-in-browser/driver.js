@@ -1,7 +1,7 @@
 ////
 //// Setup
 ////
-
+import { diff_match_patch } from './diff_match_patch_uncompressed'
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // dependency for the count of tests running/passed/failed, etc. drives

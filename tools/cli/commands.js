@@ -524,6 +524,7 @@ export const AVAILABLE_SKELETONS = [
   DEFAULT_SKELETON,
   "typescript",
   "vue",
+  'vue-2',
   "svelte",
   "tailwind",
   "chakra-ui",
