@@ -346,12 +346,12 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
     {
       safe: true,
     }
-  ).then(({insertedId}) => {
+  ).then(async ({insertedId}) => {
     refresh();
-    write.committed();
+    await write.committed();
     return insertedId;
-  }).catch((e) => {
-    write.committed();
+  }).catch(async e => {
+    await write.committed();
     throw e;
   });
 };
@@ -394,10 +394,10 @@ MongoConnection.prototype.removeAsync = async function (collection_name, selecto
     })
     .then(async ({ deletedCount }) => {
       refresh();
-      write.committed();
+      await write.committed();
       return transformResult({ result : {modifiedCount : deletedCount} }).numberAffected;
     }).catch(async (err) => {
-        write.committed();
+        await write.committed();
         throw err;
     });
 };
@@ -569,15 +569,15 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
               }
             }
             refresh();
-            write.committed();
+            await write.committed();
             return meteorResult;
           } else {
             refresh();
-            write.committed();
+            await write.committed();
             return meteorResult.numberAffected;
           }
         }).catch(async (err) => {
-          write.committed();
+          await write.committed();
           throw err;
         });
   }

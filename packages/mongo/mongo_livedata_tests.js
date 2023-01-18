@@ -1325,16 +1325,15 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
-        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
+        Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
       const id = await runAndThrowIfNeeded(async () => await coll.insertAsync({}), test);
 
       test.isTrue(id);
       test.equal(await coll.find().count(), 1);
-      expect();
     }
   ]);
 
@@ -1344,9 +1343,9 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
-        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
+        Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
       // No callback!  Before fixing #2413, this method never returned and
@@ -1354,8 +1353,9 @@ _.each( ['STRING'], function(idGeneration) {
       await coll.upsertAsync('foo', {bar: 1});
       // Do something else on the same method and expect it to actually work.
       // (If the bug comes back, this will 'async batch timeout'.)
-      await coll.insertAsync({});
-      expect();
+      await coll.insertAsync({}).then(id => {
+        test.isTrue(id);
+      });
     }
   ]);
 
@@ -1365,21 +1365,20 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName);
-        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
+        Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, async function (test, expect) {
+    }, async function (test) {
       const coll = new Mongo.Collection(this.collectionName, collectionOptions);
       const testWidget = {
         name: 'Widget name'
       };
 
-      const insertDetails = await runAndThrowIfNeeded(() => coll.upsertAsync(testWidget._id, testWidget), test);
+      const insertDetails = await runAndThrowIfNeeded(async () => await coll.upsertAsync(testWidget._id, testWidget), test);
       test.equal(
           await coll.findOneAsync(insertDetails.insertedId),
           Object.assign({ _id: insertDetails.insertedId }, testWidget)
       );
-      expect();
-    }
+     }
   ]);
 
 // See https://github.com/meteor/meteor/issues/594.
@@ -1445,7 +1444,8 @@ _.each( ['STRING'], function(idGeneration) {
         await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
       }
-    }, async function (test, expect) {
+    },
+    async function (test, expect) {
       var self = this;
       self.coll = new Mongo.Collection(self.collectionName, self.collectionOptions);
       var obs;
@@ -1470,7 +1470,7 @@ _.each( ['STRING'], function(idGeneration) {
         transform: function (doc) {return {seconds: doc.d.getSeconds()};}
       })).seconds, 50);
       await self.coll.removeAsync(id);
-      obs.stop();
+      setTimeout(() => obs.stop(), 10);
     },
     async function (test) {
       var self = this;
@@ -1541,7 +1541,7 @@ _.each( ['STRING'], function(idGeneration) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         await Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect(() => {}));
+        Meteor.subscribe('c-' + this.collectionName, expect());
       }
     },
 
@@ -1566,15 +1566,9 @@ _.each( ['STRING'], function(idGeneration) {
 
     async function (test, expect) {
       var self = this;
-      await self.coll.insertAsync(new Dog("rover", "orange")).then(id => {
-        expect(function () {
-          test.isFalse(id);
-        });
-      }).catch(err => {
-        expect(function () {
+      await self.coll.insertAsync(new Dog("rover", "orange")).catch(expect(function (err) {
           test.isTrue(err);
-        });
-      });
+      }));
     },
 
     async function (test) {
@@ -3165,7 +3159,6 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - observe limit bug", [
       return self.coll.removeAsync({toDelete: true});
     });
     test.equal(_.keys(state), [self.id1]);
-    expect();
   }
 ]);
 
@@ -3187,7 +3180,6 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - updateAsync with replace for
       return c.updateAsync(id, { foo3: "bar3", $set: { blah: 1 } });
     }, "cannot have both modifier and non-modifier fields");
     test.equal(await c.findOneAsync(id), { _id: id, foo2: "bar2" });
-    expect();
   }
 ]);
 

@@ -426,8 +426,7 @@ CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethod(
   }
 
   const mutatorMethodName = this._prefix + name;
-  return await this._connection.applyAsync(
-      mutatorMethodName, args, { returnStubValue: true , throwStubExceptions: true });
+  return await this._connection.applyAsync(mutatorMethodName, args, { returnStubValue: true , throwStubExceptions: true });
 }
 
 function transformDoc(validator, doc) {

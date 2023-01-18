@@ -560,7 +560,7 @@ _.extend(OplogObserveDriver.prototype, {
   _beSteady: async function () {
     var self = this;
     self._registerPhaseChange(PHASE.STEADY);
-    var writes = self._writesToCommitWhenWeReachSteady;
+    var writes = self._writesToCommitWhenWeReachSteady || [];
     self._writesToCommitWhenWeReachSteady = [];
     await self._multiplexer.onFlush(async function () {
       try {

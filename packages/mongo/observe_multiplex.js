@@ -95,7 +95,7 @@ ObserveMultiplexer = class {
   // adds have been processed. Does not block.
   async ready() {
     const self = this;
-    await this._queue.queueTask(function () {
+    await this._queue.runTask(function () {
       if (self._ready())
         throw Error("can't make ObserveMultiplex ready twice!");
 
@@ -116,10 +116,12 @@ ObserveMultiplexer = class {
   // observeChanges calls) to throw the error.
   async queryError(err) {
     var self = this;
-    if (self._ready())
-      throw Error("can't claim query has an error after it worked!");
-    await self._stop({fromQueryError: true});
-    throw err;
+    await this._queue.runTask(function () {
+      if (self._ready())
+        throw Error("can't claim query has an error after it worked!");
+      self._stop({fromQueryError: true});
+      throw err;
+    });
   }
 
   // Calls "cb" once the effects of all "ready", "addHandleAndSendInitialAdds"
@@ -127,7 +129,7 @@ ObserveMultiplexer = class {
   // all handles. "ready" must have already been called on this multiplexer.
   async onFlush(cb) {
     var self = this;
-    await this._queue.queueTask(async function () {
+    await this._queue.runTask(async function () {
       if (!self._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();
@@ -144,7 +146,7 @@ ObserveMultiplexer = class {
   }
   async _applyCallback(callbackName, args) {
     const self = this;
-    await this._queue.queueTask(async function () {
+    await this._queue.runTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;

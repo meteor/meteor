@@ -88,7 +88,7 @@ _.extend(ExpectationManager.prototype, {
   done: function () {
     var self = this;
     self.closed = true;
-    return self._check_complete();
+    self._check_complete();
   },
 
   cancel: function () {
@@ -109,115 +109,58 @@ _.extend(ExpectationManager.prototype, {
   }
 });
 
-testAsyncMulti = async function (name, funcs, { isOnly = false } = {}) {
+testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
   // XXX Tests on remote browsers are _slow_. We need a better solution.
   var timeout = 180000;
 
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
-  addFunction(name, async function (test, onComplete) {
+  addFunction(name, function (test, onComplete) {
+    var remaining = _.clone(funcs);
     var context = {};
-    const toCall = [];
-    _.each(funcs, func => {
-      toCall.push(async () => {
-        return new Promise(resolve => {
-          let timer;
-          var em = new ExpectationManager(test, function () {
-            clearTimeout(timer);
-            resolve();
-          });
-          timer = setTimeout(function () {
-            if (em.cancel()) {
-              test.fail({type: "timeout", message: "Async batch timed out"});
-            }
-            return;
-          }, timeout);
-          try {
-            const result = func.apply(context, [test, _.bind(em.expect, em)]);
-            if (result && typeof result.then === "function") {
-              return result.then((r) => {
-                em.done();
-                resolve();
-                return r;
-              });
-            }
-            em.done();
-            resolve();
-            return result;
-          } catch(exception) {
-            if (em.cancel()) {
-              if (exception.reason === 'timeout') {
-                test.fail({type: "timeout", message: "Async batch timed out"});
-              } else {
-                test.exception(exception);
-              }
-              // Because we called test.exception, we're not to call onComplete.
-            }
-            resolve();
-          }
+    var i = 0;
+
+    var runNext = function () {
+      var func = remaining.shift();
+      if (!func) {
+        delete test.extraDetails.asyncBlock;
+        onComplete();
+      }
+      else {
+        var em = new ExpectationManager(test, function () {
+          clearTimeout(timer);
+          runNext();
         });
-      });
-    });
-    for (const call of toCall) {
-      await new Promise((resolve, reject) => {
-        // const execTime = setTimeout(() => {
-        //   test.fail({type: "timeout", message: "Async batch timed out"});
-        //   reject(new Meteor.Error("Async batch timed out", "timeout"));
-        // }, timeout);
-        const result = call();
-        if (result && result.then) {
-          result.then(res => {
-            resolve(res);
-          }).catch(err => {
-            reject(err);
-          });
-        } else {
-          resolve(result);
-        }
-      });
-    }
-    onComplete();
 
-    // var runNext = async function () {
-    //   var func = remaining.shift();
-    //   if (!func) {
-    //     delete test.extraDetails.asyncBlock;
-    //     onComplete();
-    //     return;
-    //   }
-    //   var em = new ExpectationManager(test, function () {
-    //     clearTimeout(timer);
-    //     return runNext();
-    //   });
-    //
-    //   var timer = setTimeout(async function () {
-    //     if (em.cancel()) {
-    //       test.fail({type: "timeout", message: "Async batch timed out"});
-    //       onComplete();
-    //     }
-    //     return;
-    //   }, timeout);
-    //
-    //   test.extraDetails.asyncBlock = i++;
-    //
-    //   await new Promise(resolve => {
-    //     const result = func.apply(context, [test, _.bind(em.expect, em)]);
-    //     if (result && typeof result.then === "function") {
-    //       //console.log({result});
-    //       return result.then((r) => resolve(r));
-    //     }
-    //     resolve(result);
-    //     em.done();
-    //   }).catch(exception => {
-    //     clearTimeout(timer);
-    //     if (em.cancel()) {
-    //       test.exception(exception);
-    //       // Because we called test.exception, we're not to call onComplete.
-    //     }
-    //     return runNext();
-    //   });
-    // };
+        var timer = setTimeout(function () {
+          if (em.cancel()) {
+            test.fail({type: "timeout", message: "Async batch timed out"});
+            onComplete();
+          }
+          return;
+        }, timeout);
 
-    //return runNext();
+        test.extraDetails.asyncBlock = i++;
+
+        new Promise(resolve => {
+          const result = func.apply(context, [test, _.bind(em.expect, em)]);
+          if (result && typeof result.then === "function") {
+            return result.then((r) => resolve(r))
+          }
+
+          return resolve(result);
+        }).then(() => {
+          em.done();
+        }, exception => {
+          if (em.cancel()) {
+            test.exception(exception);
+            // Because we called test.exception, we're not to call onComplete.
+          }
+          clearTimeout(timer);
+        });
+      }
+    };
+
+    runNext();
   });
 };
 
@@ -272,6 +215,8 @@ runAndThrowIfNeeded = async (fn, test, shouldErrorOut) => {
   } catch (e) {
     err = e;
   }
+
   test[shouldErrorOut ? "isTrue" : "isFalse"](err);
+
   return result;
 };

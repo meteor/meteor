@@ -32,22 +32,25 @@ class AsynchronousQueue {
     this._draining = false;
   }
 
-  async queueTask(task) {
-    this._taskHandles.push({
+  queueTask(task) {
+    const self = this;
+    self._taskHandles.push({
       task: task,
       name: task.name
     });
-    await this._scheduleRun();
+    self._scheduleRun();
   }
 
-  async _scheduleRun() {
+  _scheduleRun() {
     // Already running or scheduled? Do nothing.
     if (this._runningOrRunScheduled)
       return;
 
     this._runningOrRunScheduled = true;
 
-    await this._run();
+    setImmediate(() => {
+      this._run();
+    });
   }
 
   async _run() {
@@ -61,29 +64,56 @@ class AsynchronousQueue {
       return;
     }
     const taskHandle = this._taskHandles.shift();
-
+    let exception;
     // Run the task.
     try {
       await taskHandle.task();
     } catch (err) {
+      if (taskHandle.resolver) {
+        // We'll throw this exception through runTask.
+        exception = err;
+      } else {
         Meteor._debug("Exception in queued task", err);
+      }
     }
 
     // Soon, run the next task, if there is any.
     this._runningOrRunScheduled = false;
-    await this._scheduleRun();
+    this._scheduleRun();
+
+    if (taskHandle.resolver) {
+      if (exception) {
+        taskHandle.resolver(null, exception);
+      } else {
+        taskHandle.resolver();
+      }
+    }
   }
 
   async runTask(task) {
+    let resolver;
+    const promise = new Promise(
+      (resolve, reject) =>
+        (resolver = (res, rej) => {
+          if (rej) {
+            reject(rej);
+            return;
+          }
+          resolve(res);
+        })
+    );
+
     const handle = {
       task: Meteor.bindEnvironment(task, function(e) {
         Meteor._debug('Exception from task', e);
         throw e;
       }),
-      name: task.name
+      name: task.name,
+      resolver,
     };
     this._taskHandles.push(handle);
     await this._scheduleRun();
+    return promise;
   }
 
   flush() {
@@ -102,135 +132,8 @@ class AsynchronousQueue {
   }
 }
 
-class AsynchronousQueueEmitter {
-  constructor(taskRunTimeout = 3000) {
-    const { EventEmitter } = Npm.require('node:events');
-
-    this._taskHandles = new Meteor._DoubleEndedQueue();
-    this._runningOrRunScheduled = false;
-    // This is true if we're currently draining.  While we're draining, a further
-    // drain is a noop, to prevent infinite loops.  "drain" is a heuristic type
-    // operation, that has a meaning like unto "what a naive person would expect
-    // when modifying a table from an observe"
-    this._draining = false;
-    this._eventEmitter = new EventEmitter();
-    this._taskRunTimeout = taskRunTimeout;
-    this._eventEmitter.on('__runNext', () => {
-      this._scheduleRun();
-    });
-  }
-
-  _createWrappedTask(name, task) {
-    const uniqueId = `${new Date().toISOString()}_${Math.random() * 10000}`;
-    const wrappedTask = async () => {
-      const timeoutHandler = setTimeout(() => {
-        this._eventEmitter.emit(uniqueId, { error: new Meteor.Error(`AsynchronousQueue: execution timeout for task ${uniqueId}. Max time: ${this._taskRunTimeout}`, 'timeout') });
-      }, this._taskRunTimeout);
-      try {
-        const result = await task();
-        clearTimeout(timeoutHandler);
-        this._eventEmitter.emit(uniqueId, { result });
-      } catch (error) {
-        clearTimeout(timeoutHandler);
-        this._eventEmitter.emit(uniqueId, { error });
-      } finally {
-        this._runningOrRunScheduled = false;
-        this._eventEmitter.emit('__runNext', { lastId: uniqueId, lastName: name });
-      }
-    };
-    const promise = new Promise((resolve , reject) => {
-      this._eventEmitter.once(uniqueId, ({result, error}) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
-      });
-    });
-    return {
-      promise,
-      wrappedTask
-    };
-  }
-
-  queueTask(task) {
-    const { wrappedTask, promise } = this._createWrappedTask(task.name, task);
-    this._taskHandles.push({
-      task: wrappedTask,
-      name: task.name,
-    });
-    setTimeout(() => this._scheduleRun(), 0);
-
-    return promise;
-  }
-
-  _scheduleRun() {
-    // Already running or scheduled? Do nothing.
-    if (this._runningOrRunScheduled) return;
-
-    this._runningOrRunScheduled = true;
-
-    this._run();
-  }
-
-  _run() {
-    if (!this._runningOrRunScheduled)
-      throw new Error('expected to be _runningOrRunScheduled');
-
-    if (this._taskHandles.isEmpty()) {
-      // Done running tasks! Don't immediately schedule another run, but
-      // allow future tasks to do so.
-      this._runningOrRunScheduled = false;
-      return;
-    }
-    const taskHandle = this._taskHandles.shift();
-
-    // Run the task.
-    taskHandle.task();/*.catch(err => {
-      Meteor._debug("Exception in queued task", err);
-    });*/
-  }
-
-  async runTask(task) {
-    // const handle = {
-    //   task: Meteor.bindEnvironment(task, function(e) {
-    //     Meteor._debug('Exception from task', e);
-    //     throw e;
-    //   }),
-    //   name: task.name
-    // };
-    // this._taskHandles.push(handle);
-    // await this._scheduleRun();
-    const { wrappedTask, promise } = this._createWrappedTask(task.name, Meteor.bindEnvironment(task, function(e) {
-      Meteor._debug('Exception from task', e);
-      throw e;
-    }));
-    this._taskHandles.push({
-      //task: task,
-      task: wrappedTask,
-      name: task.name,
-    });
-    await this._scheduleRun();
-    return promise;
-  }
-
-  flush() {
-    return this.runTask(() => {});
-  }
-
-  async drain() {
-    if (this._draining) return;
-
-    this._draining = true;
-    while (!this._taskHandles.isEmpty()) {
-      await this.flush();
-    }
-    this._draining = false;
-  }
-}
-
-Meteor._AsynchronousQueue = AsynchronousQueueEmitter;
-Meteor._SynchronousQueue = AsynchronousQueueEmitter;
+Meteor._AsynchronousQueue = AsynchronousQueue;
+Meteor._SynchronousQueue = AsynchronousQueue;
 
 
 // Sleep. Mostly used for debugging (eg, inserting latency into server

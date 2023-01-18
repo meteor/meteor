@@ -390,9 +390,7 @@ testAsyncMulti("observeChanges - bad query", [
     // Test that if two copies of the same bad observeChanges run in parallel
     // and are de-duped, both observeChanges calls will throw.
 
-    await Promise.all([observeThrows(), observeThrows()]).then(() => {
-      expect();
-    });
+    await Promise.all([observeThrows(), observeThrows()]);
   }
 ]);
 
@@ -410,8 +408,8 @@ if (Meteor.isServer) {
             onComplete();
           }
         });
-      }).then(() => {
-        c.insertAsync({ type: { name: 'foobar' } });
+      }).then(async () => {
+        await c.insertAsync({ type: { name: 'foobar' } });
       });
     }
   );
