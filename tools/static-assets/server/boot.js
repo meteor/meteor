@@ -487,7 +487,7 @@ var runMain = Profile("Run main()", async function () {
 
 (async function startServerProcess() {
   if (!global.asyncLocalStorage) {
-    if (!global.asyncLocalStorage) {const { AsyncLocalStorage } = require('async_hooks');
+    const { AsyncLocalStorage } = require('async_hooks');
     global.asyncLocalStorage = new AsyncLocalStorage();
   }
 

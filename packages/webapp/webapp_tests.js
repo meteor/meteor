@@ -164,7 +164,7 @@ Tinytest.addAsync(
 
     // It's okay to set this global state because we're not going to yield
     // before setting it back to what it was originally.
-    WebAppInternals.setInlineScriptsAllowed(true);
+    await WebAppInternals.setInlineScriptsAllowed(true);
 
     {
       const { stream } = await WebAppInternals.getBoilerplate({
@@ -196,7 +196,7 @@ Tinytest.addAsync(
       // When inline scripts are disallowed, the script body should not be
       // inlined, and the script should be included in a <script src="..">
       // tag.
-      WebAppInternals.setInlineScriptsAllowed(false);
+      await WebAppInternals.setInlineScriptsAllowed(false);
     }
 
     {
@@ -227,7 +227,7 @@ Tinytest.addAsync(
     test.isTrue(resBody.indexOf(additionalScript) !== -1);
     test.equal(res.statusCode, 200);
 
-    WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
+    await WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
   }
 );
 

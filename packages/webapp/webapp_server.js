@@ -780,14 +780,14 @@ WebAppInternals.parsePort = port => {
 import { onMessage } from 'meteor/inter-process-messaging';
 
 onMessage('webapp-pause-client', async ({ arch }) => {
-  WebAppInternals.pauseClient(arch);
+  await WebAppInternals.pauseClient(arch);
 });
 
 onMessage('webapp-reload-client', async ({ arch }) => {
-  WebAppInternals.generateClientProgram(arch);
+  await WebAppInternals.generateClientProgram(arch);
 });
 
-function runWebAppServer() {
+async function runWebAppServer() {
   var shuttingDown = false;
   var syncQueue = new Meteor._SynchronousQueue();
 
@@ -795,8 +795,8 @@ function runWebAppServer() {
     return decodeURIComponent(parseUrl(itemUrl).pathname);
   };
 
-  WebAppInternals.reloadClientPrograms = function() {
-    syncQueue.runTask(function() {
+  WebAppInternals.reloadClientPrograms = async function() {
+    await syncQueue.runTask(function() {
       const staticFilesByArch = Object.create(null);
 
       const { configJson } = __meteor_bootstrap__;
@@ -817,8 +817,8 @@ function runWebAppServer() {
 
   // Pause any incoming requests and make them wait for the program to be
   // unpaused the next time generateClientProgram(arch) is called.
-  WebAppInternals.pauseClient = function(arch) {
-    syncQueue.runTask(() => {
+  WebAppInternals.pauseClient = async function(arch) {
+    await syncQueue.runTask(() => {
       const program = WebApp.clientPrograms[arch];
       const { unpause } = program;
       program.paused = new Promise(resolve => {
@@ -836,8 +836,8 @@ function runWebAppServer() {
     });
   };
 
-  WebAppInternals.generateClientProgram = function(arch) {
-    syncQueue.runTask(() => generateClientProgram(arch));
+  WebAppInternals.generateClientProgram = async function(arch) {
+    await syncQueue.runTask(() => generateClientProgram(arch));
   };
 
   function generateClientProgram(
@@ -1006,12 +1006,12 @@ function runWebAppServer() {
     },
   };
 
-  WebAppInternals.generateBoilerplate = function() {
+  WebAppInternals.generateBoilerplate = async function() {
     // This boilerplate will be served to the mobile devices when used with
     // Meteor/Cordova for the Hot-Code Push and since the file will be served by
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
-    syncQueue.runTask(function() {
+    await syncQueue.runTask(function() {
       Object.keys(WebApp.clientPrograms).forEach(generateBoilerplateForArch);
     });
   };
@@ -1036,7 +1036,7 @@ function runWebAppServer() {
     }));
   }
 
-  WebAppInternals.reloadClientPrograms();
+  await WebAppInternals.reloadClientPrograms();
 
   // webserver
   var app = connect();
@@ -1363,8 +1363,8 @@ function runWebAppServer() {
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
-  exports.main = argv => {
-    WebAppInternals.generateBoilerplate();
+  exports.main = async argv => {
+    await WebAppInternals.generateBoilerplate();
 
     const startHttpServer = listenOptions => {
       WebApp.startListening(
@@ -1449,26 +1449,26 @@ WebAppInternals.inlineScriptsAllowed = function() {
   return inlineScriptsAllowed;
 };
 
-WebAppInternals.setInlineScriptsAllowed = function(value) {
+WebAppInternals.setInlineScriptsAllowed = async function(value) {
   inlineScriptsAllowed = value;
-  WebAppInternals.generateBoilerplate();
+  await WebAppInternals.generateBoilerplate();
 };
 
 var sriMode;
 
-WebAppInternals.enableSubresourceIntegrity = function(use_credentials = false) {
+WebAppInternals.enableSubresourceIntegrity = async function(use_credentials = false) {
   sriMode = use_credentials ? 'use-credentials' : 'anonymous';
-  WebAppInternals.generateBoilerplate();
+  await WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssUrlRewriteHook = function(hookFn) {
+WebAppInternals.setBundledJsCssUrlRewriteHook = async function(hookFn) {
   bundledJsCssUrlRewriteHook = hookFn;
-  WebAppInternals.generateBoilerplate();
+  await WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssPrefix = function(prefix) {
+WebAppInternals.setBundledJsCssPrefix = async function(prefix) {
   var self = this;
-  self.setBundledJsCssUrlRewriteHook(function(url) {
+  await self.setBundledJsCssUrlRewriteHook(function(url) {
     return prefix + url;
   });
 };
@@ -1486,5 +1486,9 @@ WebAppInternals.addStaticJs = function(contents) {
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
-// Start the server!
-runWebAppServer();
+// TODO[fibers]: change this when we have TLA
+(async () => {
+  // Start the server!
+  await runWebAppServer();
+})();
+

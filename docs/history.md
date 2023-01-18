@@ -4,6 +4,17 @@
 
 #### Breaking Changes
 
+* `webapp`:
+  - These methods are now async:
+    - `WebAppInternals.reloadClientPrograms()`
+    - `WebAppInternals.pauseClient()`
+    - `WebAppInternals.generateClientProgram()`
+    - `WebAppInternals.generateBoilerplate()`
+    - `WebAppInternals.setInlineScriptsAllowed()`
+    - `WebAppInternals.enableSubresourceIntegrity()`
+    - `WebAppInternals.setBundledJsCssUrlRewriteHook()`
+    - `WebAppInternals.setBundledJsCssPrefix()`
+
 * `email`:
   - `Email.send` is no longer available. Use `Email.sendAsync` instead.
 
