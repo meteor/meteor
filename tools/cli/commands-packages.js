@@ -927,7 +927,7 @@ main.registerCommand({
               return;
             }
             toPublish.push(packageName);
-            Console.info("Will publish new version for " + packageName);
+            Console.info(`Will publish new version for ${ packageName }: ${ packageSource.version }`);
             return;
           } else {
             var isopk = projectContext.isopackCache.getIsopack(packageName);
