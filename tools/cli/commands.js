@@ -1306,8 +1306,8 @@ main.registerCommand({
     'allow-incompatible-updates': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  const {packageDir, appDir} = options;
+}, async function (options) {
+  const { packageDir, appDir } = options;
 
   let projectContext = null;
 
@@ -1325,10 +1325,11 @@ main.registerCommand({
       lintPackageWithSourceRoot: packageDir
     });
 
-    main.captureAndExit("=> Errors while setting up package:", () =>
+    await main.captureAndExit("=> Errors while setting up package:",
       // Read metadata and initialize catalog.
-      projectContext.initializeCatalog()
+      async () => await projectContext.initializeCatalog()
     );
+
     const versionRecord =
         projectContext.localCatalog.getVersionBySourceRoot(packageDir);
     if (! versionRecord) {
@@ -1344,19 +1345,20 @@ main.registerCommand({
   if (! projectContext && appDir) {
     projectContext = new projectContextModule.ProjectContext({
       projectDir: appDir,
-      serverArchitectures: [archinfo.host()],
+      serverArchitectures: [await archinfo.host()],
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintAppAndLocalPackages: true
     });
+    await projectContext.init()
   }
 
 
-  main.captureAndExit("=> Errors prevented the build:", () => {
-    projectContext.prepareProjectForBuild();
-  });
+  await main.captureAndExit("=> Errors prevented the build:",  async () =>
+    await projectContext.prepareProjectForBuild()
+  );
 
-  const bundler = require('../isobuild/bundler.js');
-  const bundle = bundler.bundle({
+  const bundler = await require('../isobuild/bundler.js');
+  const bundle = await bundler.bundle({
     projectContext: projectContext,
     outputPath: null,
     buildOptions: {
