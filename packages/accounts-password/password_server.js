@@ -722,7 +722,16 @@ Meteor.methods(
             // password should invalidate existing sessions).
             await Accounts._clearAllLoginTokens(user._id);
 
-            return { userId: user._id };
+            if (Accounts._check2faEnabled?.(user)) {
+        return {
+          userId: user._id,
+          error: Accounts._handleError(
+            'Changed password, but user not logged in because 2FA is enabled',
+            false,
+            '2fa-enabled'
+          ),
+        };
+      }return { userId: user._id };
           }
         );
       }
@@ -825,7 +834,16 @@ Meteor.methods(
               $pull: { 'services.email.verificationTokens': { address: tokenRecord.address } }
             });
 
-          return { userId: user._id };
+          if (Accounts._check2faEnabled?.(user)) {
+        return {
+          userId: user._id,
+          error: Accounts._handleError(
+            'Email verified, but user not logged in because 2FA is enabled',
+            false,
+            '2fa-enabled'
+          ),
+        };
+      }return { userId: user._id };
         }
       );
     }
