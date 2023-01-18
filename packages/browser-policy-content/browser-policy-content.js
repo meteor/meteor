@@ -301,9 +301,7 @@ _.each(resources,  function (resource) {
 });
 
 // TODO[fibers]: change this when we have TLA
-(async () => {
-  await setDefaultPolicy();
-})();
+await setDefaultPolicy();
 
 
 exports.BrowserPolicy = BrowserPolicy;
