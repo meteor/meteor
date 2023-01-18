@@ -33,22 +33,25 @@ class AsynchronousQueue {
     this._draining = false;
   }
 
-  async queueTask(task) {
-    this._taskHandles.push({
+  queueTask(task) {
+    const self = this;
+    self._taskHandles.push({
       task: task,
       name: task.name
     });
-    await this._scheduleRun();
+    self._scheduleRun();
   }
 
-  async _scheduleRun() {
+  _scheduleRun() {
     // Already running or scheduled? Do nothing.
     if (this._runningOrRunScheduled)
       return;
 
     this._runningOrRunScheduled = true;
 
-    await this._run();
+    setImmediate(() => {
+      this._run();
+    });
   }
 
   async _run() {
@@ -62,29 +65,56 @@ class AsynchronousQueue {
       return;
     }
     const taskHandle = this._taskHandles.shift();
-
+    let exception;
     // Run the task.
     try {
       await taskHandle.task();
     } catch (err) {
+      if (taskHandle.resolver) {
+        // We'll throw this exception through runTask.
+        exception = err;
+      } else {
         Meteor._debug("Exception in queued task", err);
+      }
     }
 
     // Soon, run the next task, if there is any.
     this._runningOrRunScheduled = false;
-    await this._scheduleRun();
+    this._scheduleRun();
+
+    if (taskHandle.resolver) {
+      if (exception) {
+        taskHandle.resolver(null, exception);
+      } else {
+        taskHandle.resolver();
+      }
+    }
   }
 
   async runTask(task) {
+    let resolver;
+    const promise = new Promise(
+      (resolve, reject) =>
+        (resolver = (res, rej) => {
+          if (rej) {
+            reject(rej);
+            return;
+          }
+          resolve(res);
+        })
+    );
+
     const handle = {
       task: Meteor.bindEnvironment(task, function(e) {
         Meteor._debug('Exception from task', e);
         throw e;
       }),
-      name: task.name
+      name: task.name,
+      resolver,
     };
     this._taskHandles.push(handle);
     await this._scheduleRun();
+    return promise;
   }
 
   flush() {
