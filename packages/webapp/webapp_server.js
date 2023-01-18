@@ -23,6 +23,14 @@ import whomst from '@vlasky/whomst';
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
 
+const createExpressApp = () => {
+  const app = express();
+  // Security and performace headers
+  // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
+  app.set('x-powered-by', false);
+  app.set('etag', false);
+  return app;
+}
 export const WebApp = {};
 export const WebAppInternals = {};
 
@@ -1036,18 +1044,11 @@ function runWebAppServer() {
   WebAppInternals.reloadClientPrograms();
 
   // webserver
-  var app = express();
-
-  // Security and performace headers
-  // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
-  app.set('x-powered-by', false);
-  app.set('etag', false);
+  var app = createExpressApp()
 
   // Packages and apps can add handlers that run before any other Meteor
   // handlers via WebApp.rawExpressHandlers.
-  var rawExpressHandlers = express();
-  rawExpressHandlers.set('x-powered-by', false);
-  rawExpressHandlers.set('etag', false);
+  var rawExpressHandlers = createExpressApp()
   app.use(rawExpressHandlers);
 
   // Auto-compress any json, javascript, or text.
@@ -1137,10 +1138,7 @@ function runWebAppServer() {
 
   // Core Meteor packages like dynamic-import can add handlers before
   // other handlers added by package and application code.
-  const internalHandlers = express();
-  internalHandlers.set('x-powered-by', false);
-  internalHandlers.set('etag', false);
-  app.use((WebAppInternals.meteorInternalHandlers = internalHandlers));
+  app.use((WebAppInternals.meteorInternalHandlers = createExpressApp()));
 
   /**
    * @name expressHandlersCallback(req, res, next)
