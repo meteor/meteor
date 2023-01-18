@@ -1179,9 +1179,7 @@ function runWebAppServer() {
    */
   // Packages and apps can add handlers to this via WebApp.expressHandlers.
   // They are inserted before our default handler.
-  var packageAndAppHandlers = express();
-  packageAndAppHandlers.set('x-powered-by', false);
-  packageAndAppHandlers.set('etag', false);
+  var packageAndAppHandlers = createExpressApp()
   app.use(packageAndAppHandlers);
 
   var suppressConnectErrors = false;
