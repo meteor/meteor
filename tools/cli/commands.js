@@ -1324,10 +1324,10 @@ main.registerCommand({
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintPackageWithSourceRoot: packageDir
     });
-
+    await projectContext.init()
     await main.captureAndExit("=> Errors while setting up package:",
       // Read metadata and initialize catalog.
-      async () => await projectContext.initializeCatalog()
+       () => projectContext.initializeCatalog()
     );
 
     const versionRecord =
@@ -1353,11 +1353,11 @@ main.registerCommand({
   }
 
 
-  await main.captureAndExit("=> Errors prevented the build:",  async () =>
-    await projectContext.prepareProjectForBuild()
+  await main.captureAndExit("=> Errors prevented the build:",
+     () => projectContext.prepareProjectForBuild()
   );
 
-  const bundler = await require('../isobuild/bundler.js');
+  const bundler = require('../isobuild/bundler.js');
   const bundle = await bundler.bundle({
     projectContext: projectContext,
     outputPath: null,
