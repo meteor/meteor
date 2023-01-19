@@ -145,7 +145,7 @@ function resolve(id) {
   if (res === null) {
     var idParts = id.split("/");
     var meteorAddTip = "";
-    // If it looks like `meteor/xxx`, the user may forgot to add the 
+    // If it looks like `meteor/xxx`, the user may forgot to add the
     // package before importing it.
     if (idParts.length === 2 &&
         idParts[0] === "meteor") {
@@ -162,7 +162,13 @@ function resolve(id) {
     resolveInLocalBuild(id) ||
     resolveInNodeModules(id) ||
     resolveInDevBundle(id) ||
+    // TODO[fibers]: this is a workaround, fix it
+    (id === '/node_modules/@babel/runtime/helpers/objectSpread2.js' && '/home/denyhs/Documents/work/meteor/meteor/packages/logging/.npm/package/node_modules/@babel/runtime/helpers/objectSpread2.js')||
+    (id === '/node_modules/@babel/runtime/helpers/objectWithoutProperties.js' && '/home/denyhs/Documents/work/meteor/meteor/packages/logging/.npm/package/node_modules/@babel/runtime/helpers/objectWithoutProperties.js')||
     null;
+  if (id === '/node_modules/@babel/runtime/helpers/objectWithoutProperties.js') {
+    console.log('resolveCache', resolveCache);
+  }
 
   return resolve(id);
 }

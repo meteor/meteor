@@ -639,16 +639,6 @@
           "resolved": "https://registry.npmjs.org/@types/estree/-/estree-0.0.50.tgz",
           "integrity": "sha512-C6N5s2ZFtuZRj54k2/zyRhNDjJwwcViAM3Nbm8zjBpbqAdZ00mr0CFxvSKeO8Y/e03WVFLpQMdHYVfUd6SB+Hw=="
         },
-        "acorn": {
-          "version": "6.4.2",
-          "resolved": "https://registry.npmjs.org/acorn/-/acorn-6.4.2.tgz",
-          "integrity": "sha512-XtGIhXwF8YM8bJhGxG5kXgjkEuNGLTkoYqVE+KMR+aspr4KGYmKYg7yUe3KghyQ9yheNwLnjmzh/7+gfDBmHCQ=="
-        },
-        "acorn-dynamic-import": {
-          "version": "4.0.0",
-          "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
-          "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
-        },
         "ansi-colors": {
           "version": "3.2.3",
           "resolved": "https://registry.npmjs.org/ansi-colors/-/ansi-colors-3.2.3.tgz",
@@ -1418,11 +1408,6 @@
           "resolved": "https://registry.npmjs.org/meteor-babel-helpers/-/meteor-babel-helpers-0.0.3.tgz",
           "integrity": "sha1-8uXZ+HlvvS6JAQI9dpnlsgLqn7A="
         },
-        "meteor-promise": {
-          "version": "0.9.0",
-          "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.9.0.tgz",
-          "integrity": "sha512-O1Fj1Oa5FfyIkAkDtZVnoYYEIC3miy7lvEeIQZVYunGSbOuivSbfAiPPsD+P45WNlcBALhUo94UzlHeIKBYNuQ=="
-        },
         "minimatch": {
           "version": "3.0.4",
           "resolved": "https://registry.npmjs.org/minimatch/-/minimatch-3.0.4.tgz",
@@ -1825,10 +1810,25 @@
       "resolved": "https://registry.npmjs.org/json5/-/json5-2.1.1.tgz",
       "integrity": "sha512-l+3HXD0GEI3huGq1njuqtzYK8OYJyXMkOLtQ53pjWh89tvWS2h6l+1zMkYWqlb57+SiQodKZyvMEFb2X+KrFhQ=="
     },
+    "lru-cache": {
+      "version": "6.0.0",
+      "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-6.0.0.tgz",
+      "integrity": "sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA=="
+    },
     "minimist": {
       "version": "1.2.7",
       "resolved": "https://registry.npmjs.org/minimist/-/minimist-1.2.7.tgz",
       "integrity": "sha512-bzfL1YUZsP41gmu/qjrEk0Q6i2ix/cVeAhbCbqH9u3zYutS1cLg00qhrD0M2MVdCcx4Sc0UpP2eBWo9rotpq6g=="
+    },
+    "semver": {
+      "version": "7.3.8",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-7.3.8.tgz",
+      "integrity": "sha512-NB1ctGL5rlHrPJtFDVIVzTyQylMLu9N9VICA6HSFJo8MCGVTMW6gfpicwKmmK/dAjTOrqu5l63JJOpDSrAis3A=="
+    },
+    "yallist": {
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/yallist/-/yallist-4.0.0.tgz",
+      "integrity": "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="
     }
   }
 }

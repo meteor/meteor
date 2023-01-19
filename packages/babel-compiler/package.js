@@ -7,7 +7,8 @@ Package.describe({
 Npm.depends({
   // '@meteorjs/babel': '7.18.0-beta.5',
   '@meteorjs/babel': 'file:///../../../../npm-packages/meteor-babel',
-  'json5': '2.1.1'
+  'json5': '2.1.1',
+  'semver': '7.3.8'
 });
 
 Package.onUse(function (api) {

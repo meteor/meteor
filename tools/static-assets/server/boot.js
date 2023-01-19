@@ -491,19 +491,17 @@ var runMain = Profile("Run main()", async function () {
 });
 
 // TODO[fibers]: change this when we have TLA
-async function startServerProcess() {
+(async function startServerProcess() {
   if (!global.asyncLocalStorage) {
     const { AsyncLocalStorage } = require('async_hooks');
     global.asyncLocalStorage = new AsyncLocalStorage();
   }
 
-  await Profile.run('Server startup', function() {
+  Profile.run('Server startup', function() {
     return global.asyncLocalStorage.run({}, async () => {
       await loadServerBundles();
       await callStartupHooks();
       await runMain();
     });
   });
-}
-
-await startServerProcess();
+})();
