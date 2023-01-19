@@ -289,7 +289,22 @@ function replaceFileContent(file, contents) {
   file.contents = moduleFunction;
 }
 
-function checkModuleAcceptsUpdate(moduleId, checked) {
+function checkImportingAccepts(checked, visited, importing) {
+  let accepts = null;
+  while (importing.length > 0 && accepts !== false) {
+    const depId = importing.pop();
+
+    // If already checked, assume it accepted and doesn't need to be checked for this chain.
+    // This is safe as a refusal or unknown result from another import chain will override
+    // this acceptance.
+    accepts = checked.has(depId) ? true : checkModuleAcceptsUpdate(depId, checked, visited);
+  }
+
+  return accepts === null ? false : accepts;
+}
+
+function checkModuleAcceptsUpdate(moduleId, checked, visited = []) {
+  // Set of all modules checked, tracked to later rerun if update is accepted
   checked.add(moduleId);
 
   if (moduleId === '/' ) {
@@ -304,31 +319,31 @@ function checkModuleAcceptsUpdate(moduleId, checked) {
     return moduleAccepts;
   }
 
-  let accepts = null;
-
   // The module did not accept the update. If the update is accepted depends
   // on if the modules that imported this module accept the update.
-  importedBy[moduleId].forEach(function (depId) {
+  const importingToCheck = Array.from(importedBy[moduleId]).filter(function (depId) {
     if (depId === '/' && importedBy[moduleId].size > 1) {
       // This module was eagerly required by Meteor.
       // Meteor won't know if the module can be updated
       // but we can check with the other modules that imported it.
-      return;
+      return false;
     }
 
-    if (checked.has(depId)) {
-      // There is a circular dependency
-      return;
+    if (visited.includes(depId)) {
+      // There is a circular dependency in the current import chain
+      return false;
     }
 
-    const depResult = checkModuleAcceptsUpdate(depId, checked);
-
-    if (accepts !== false) {
-      accepts = depResult;
-    }
+    return true;
   });
 
-  return accepts === null ? false : accepts;
+  // DFS for any importing modules that do not accept updates.
+  // Modules visited in the current import chain for detecting circular dependencies.
+  visited.push(moduleId)
+  const depsAccept = checkImportingAccepts(checked, visited, importingToCheck);
+  visited.pop();
+
+  return depsAccept;
 }
 
 function addFiles(addedFiles) {
