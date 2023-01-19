@@ -222,7 +222,7 @@ release.latestKnown = async function (track) {
 //   release because it's not locally cached and we're not online.
 // - warehouse.NoSuchReleaseError if no release called 'name' exists
 //   in the world (confirmed with server).
-release.load = function (name, options) {
+release.load = async function (name, options) {
   options = options || {};
 
   if (! name) {
@@ -244,7 +244,7 @@ release.load = function (name, options) {
     name = track + '@' + version;
   }
 
-  var releaseVersion = catalog.official.getReleaseVersion(track, version);
+  var releaseVersion = await catalog.official.getReleaseVersion(track, version);
   if (releaseVersion === null) {
     throw new release.NoSuchReleaseError;
   }

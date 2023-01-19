@@ -398,7 +398,7 @@ Object.assign(Db.prototype, {
     var prepared = self._prepared;
     self._prepared = {};
 
-    for (const statement of prepared) {
+    for (const statement of Object.values(prepared)) {
       var err = await new Promise(function (resolve) {
         // We resolve the promise with an error instead of rejecting it,
         // because we don't want to throw.
@@ -643,10 +643,15 @@ Object.assign(RemoteCatalog.prototype, {
     return solution;  // might be null!
   },
 
-  filterArchesWithBuilds: function (name, version, arches) {
-    return arches.filter(arch => {
-      return !! this.getBuildsForArches(name, version, [arch]);
-    });
+  filterArchesWithBuilds: async function (name, version, arches) {
+    const toReturn = [];
+    for (const arch of arches) {
+      if (!!await this.getBuildsForArches(name, version, [arch])) {
+        toReturn.push(arch);
+      }
+    }
+
+    return toReturn;
   },
 
   // Returns general (non-version-specific) information about a

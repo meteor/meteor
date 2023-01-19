@@ -350,7 +350,7 @@ exports.runUpgrader = function (projectContext, upgraderName) {
   // error handling is just an exception.
   if (! _.has(upgradersByName, upgraderName))
     throw new Error("Unknown upgrader: " + upgraderName);
-  upgradersByName[upgraderName](projectContext);
+  return upgradersByName[upgraderName](projectContext);
 };
 
 exports.upgradersToRun = function (projectContext) {

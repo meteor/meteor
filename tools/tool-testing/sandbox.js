@@ -212,14 +212,14 @@ export default class Sandbox {
     // Prepare the app (ie, build or download packages). We give this a nice
     // long timeout, which allows the next command to not need a bloated
     // timeout. (meteor create does this anyway.)
-    this.cd(to, () => {
+    await this.cd(to, async () => {
       const run = this.run("--prepare-app");
       // XXX Can we cache the output of running this once somewhere, so that
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
       // paths.
       run.waitSecs(120);
-      run.expectExit(0);
+      await run.expectExit(0);
     });
   }
 
@@ -516,7 +516,7 @@ async function setUpBuiltPackageTropohouse() {
   }
 
   const tropohouse = new Tropohouse(builtPackageTropohouseDir);
-  tropohouseLocalCatalog = newSelfTestCatalog();
+  tropohouseLocalCatalog = await newSelfTestCatalog();
   const versions = {};
   for (const packageName of tropohouseLocalCatalog.getAllNonTestPackageNames()) {
     versions[packageName] =
@@ -585,16 +585,17 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "typescript",
 ];
 
-function newSelfTestCatalog() {
+async function newSelfTestCatalog() {
   if (! files.inCheckout()) {
     throw Error("Only can build packages from a checkout");
   }
 
   const catalogLocal = require('../packaging/catalog/catalog-local.js');
   const selfTestCatalog = new catalogLocal.LocalCatalog;
-  const messages = capture(
+
+  const messages = await capture(
     { title: "scanning local core packages" },
-    () => {
+    async () => {
       const packagesDir =
         files.pathJoin(files.getCurrentToolsDir(), 'packages');
 
@@ -603,7 +604,7 @@ function newSelfTestCatalog() {
       // packages.  One side effect of this: we really really expect them to all
       // build, and we're fine with dying if they don't (there's no worries
       // about needing to springboard).
-      selfTestCatalog.initialize({
+      await selfTestCatalog.initialize({
         localPackageSearchDirs: [
           packagesDir,
           files.pathJoin(packagesDir, "non-core"),

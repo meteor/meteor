@@ -191,7 +191,7 @@ Object.assign(warehouse, {
   // fetches the manifest file for the given release version. also fetches
   // all of the missing versioned packages referenced from the release manifest
   // @param releaseVersion {String} eg "0.1"
-  _populateWarehouseForRelease: function (releaseVersion, showInstalling) {
+  _populateWarehouseForRelease: async function (releaseVersion, showInstalling) {
     var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0o755);
     var releaseManifestPath = files.pathJoin(releasesDir,
@@ -221,7 +221,7 @@ Object.assign(warehouse, {
       }
 
       try {
-        var result = httpHelpers.request(
+        var result = await httpHelpers.request(
           WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");
       } catch (e) {
         throw new files.OfflineError(e);
@@ -260,7 +260,7 @@ Object.assign(warehouse, {
     if (!releaseAlreadyExists) {
       if (newPieces && newPieces.tools && newPieces.tools.needsDownload) {
         try {
-          warehouse.downloadToolsToWarehouse(
+          await warehouse.downloadToolsToWarehouse(
             newPieces.tools.version,
             warehouse._platform(),
             warehouse.getWarehouseDir());
@@ -288,7 +288,7 @@ Object.assign(warehouse, {
       });
       if (!_.isEmpty(packagesToDownload)) {
         try {
-          warehouse.downloadPackagesToWarehouse(packagesToDownload,
+          await warehouse.downloadPackagesToWarehouse(packagesToDownload,
                                                 warehouse._platform(),
                                                 warehouse.getWarehouseDir());
         } catch (e) {
@@ -303,7 +303,7 @@ Object.assign(warehouse, {
       // try getting the releases's notices. only blessed releases have one, so
       // if we can't find it just proceed.
       try {
-        var notices = httpHelpers.getUrl(
+        var notices = await httpHelpers.getUrl(
           WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".notices.json");
 
         // Real notices are valid JSON.
@@ -360,7 +360,7 @@ Object.assign(warehouse, {
   },
 
   // this function is also used by bless-release.js
-  downloadToolsToWarehouse: function (
+  downloadToolsToWarehouse: async function (
       toolsVersion, platform, warehouseDirectory, dontWriteFreshFile) {
     // XXX this sucks. We store all the tarballs in memory. This is huge.
     // We should instead stream packages in parallel. Since the node stream
@@ -371,11 +371,11 @@ Object.assign(warehouse, {
           "meteor-tools-" + toolsVersion + "-" + platform + ".tar.gz";
     var toolsTarballPath = "/tools/" + toolsVersion + "/"
           + toolsTarballFilename;
-    var toolsTarball = httpHelpers.getUrl({
+    var toolsTarball = await httpHelpers.getUrl({
       url: WAREHOUSE_URLBASE + toolsTarballPath,
       encoding: null
     });
-    files.extractTarGz(
+    await files.extractTarGz(
       toolsTarball, files.pathJoin(warehouseDirectory, 'tools', toolsVersion));
     if (!dontWriteFreshFile) {
       files.writeFile(warehouse.getToolsFreshFile(toolsVersion), '');
@@ -383,24 +383,24 @@ Object.assign(warehouse, {
   },
 
   // this function is also used by bless-release.js
-  downloadPackagesToWarehouse: function (packagesToDownload,
+  downloadPackagesToWarehouse: async function (packagesToDownload,
                                          platform,
                                          warehouseDirectory,
                                          dontWriteFreshFile) {
-    fiberHelpers.parallelEach(
-      packagesToDownload, function (version, name) {
+    await fiberHelpers.parallelEach(
+      packagesToDownload, async function (version, name) {
         var packageDir = files.pathJoin(
           warehouseDirectory, 'packages', name, version);
         var packageUrl = WAREHOUSE_URLBASE + "/packages/" + name +
               "/" + version +
               "/" + name + '-' + version + "-" + platform + ".tar.gz";
 
-        var tarball = httpHelpers.getUrlWithResuming({
+        var tarball = await httpHelpers.getUrlWithResuming({
           url: packageUrl,
           encoding: null
         });
 
-        files.extractTarGz(tarball, packageDir);
+        await files.extractTarGz(tarball, packageDir);
 
         if (!dontWriteFreshFile) {
           files.writeFile(warehouse.getPackageFreshFile(name, version), '');

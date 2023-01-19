@@ -429,10 +429,10 @@ var springboard = async function (rel, options) {
 
   const toolsPkg = rel.getToolsPackage();
   const toolsVersion = rel.getToolsVersion();
-  const serverArchitectures = catalog.official.filterArchesWithBuilds(
+  const serverArchitectures = await catalog.official.filterArchesWithBuilds(
     toolsPkg,
     toolsVersion,
-    archinfo.acceptableMeteorToolArches(),
+    await archinfo.acceptableMeteorToolArches(),
   );
 
   if (serverArchitectures.length === 0) {
@@ -1037,14 +1037,14 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         // ATTEMPT 2: legacy release, on disk. (And it's a "real" release, not a
         // "red pill" release which has the same name as a modern release!)
         if (warehouse.realReleaseExistsInWarehouse(releaseName)) {
-          var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
+          var manifest = await warehouse.ensureReleaseExistsAndReturnManifest(
             releaseName);
           await oldSpringboard(manifest.tools);  // doesn't return
         }
 
         // ATTEMPT 3: modern release, troposphere sync needed.
-        await Console.withProgressDisplayVisible(async function () {
-          await catalog.refreshOrWarn();
+        await Console.withProgressDisplayVisible(function () {
+          return catalog.refreshOrWarn();
         });
 
         // Try to load the release even if the refresh failed, since it might
@@ -1062,7 +1062,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         // ATTEMPT 4: legacy release, loading from warehouse server.
         manifest = null;
         try {
-          manifest = warehouse.ensureReleaseExistsAndReturnManifest(
+          manifest = await warehouse.ensureReleaseExistsAndReturnManifest(
             releaseName);
         } catch (e) {
           // Note: this is WAREHOUSE's NoSuchReleaseError, not RELEASE's
@@ -1161,7 +1161,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         mayReturn: false,
       });
       // Does not return!
-    } else if (archinfo.canSwitchTo64Bit()) {
+    } else if (await archinfo.canSwitchTo64Bit()) {
       await springboard(release.current, {
         fromApp: releaseFromApp,
         // Switching to a 64-bit meteor-tool build may fail, in which case
@@ -1542,7 +1542,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
       // Load the metadata for the latest release (or at least, the latest
       // release we know about locally). We should only do this if we know there
       // is some latest release on this track.
-      var latestRelease = await release.load(release.latestKnown(e.track));
+      var latestRelease = await release.load(await release.latestKnown(e.track));
       await springboard(latestRelease, { releaseOverride: latestRelease.name });
       // (does not return)
     } else if (e instanceof main.SpringboardToSpecificRelease) {

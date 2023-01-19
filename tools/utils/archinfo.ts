@@ -189,7 +189,7 @@ export async function host() {
 // In order to springboard to earlier Meteor releases that did not have
 // 64-bit Windows builds, Windows installations must be allowed to
 // download 32-bit builds of meteor-tool.
-export function acceptableMeteorToolArches(): string[] {
+export async function acceptableMeteorToolArches(): Promise<string[]> {
   if (os.platform() === "win32") {
     switch (utils.architecture()) {
     case "x86_32":
@@ -202,20 +202,20 @@ export function acceptableMeteorToolArches(): string[] {
     }
   }
 
-  return [host()];
+  return [await host()];
 }
 
 // 64-bit Windows machines that have been using a 32-bit version of Meteor
 // are eligible to switch to 64-bit beginning with Meteor 1.6, which is
 // the first version of Meteor that contains this code.
-export function canSwitchTo64Bit(): boolean {
+export async function canSwitchTo64Bit(): Promise<boolean> {
   // Automatically switching from 32-bit to 64-bit Windows builds is
   // disabled for the time being, since downloading additional builds of
   // meteor-tool isn't stable enough at the moment (on Windows, at least)
   // to introduce in a release candidate.
   return false &&
     utils.architecture() === "x86_64" &&
-    host() === "os.windows.x86_32";
+    await host() === "os.windows.x86_32";
 }
 
 // True if `host` (an architecture name such as 'os.linux.x86_64') can run

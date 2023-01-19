@@ -1493,7 +1493,7 @@ var maybeUpdateRelease = async function (options) {
   // XXX better error checking on release.current.name
   // XXX add a method to release.current.
   var releaseTrack = release.current ?
-        release.current.getReleaseTrack() : catalog.DEFAULT_TRACK;
+        await release.current.getReleaseTrack() : catalog.DEFAULT_TRACK;
 
   // Unless --release was passed (in which case we ought to already have
   // springboarded to that release), go get the latest release and switch to
@@ -1504,7 +1504,7 @@ var maybeUpdateRelease = async function (options) {
   // double-springboard.  (We might miss an super recently published release,
   // but that's probably OK.)
   if (! release.forced) {
-    var latestRelease = release.latestKnown(releaseTrack);
+    var latestRelease = await release.latestKnown(releaseTrack);
 
     // Are we on some track without ANY recommended releases at all,
     // and the user ran 'meteor update' without specifying a release? We
@@ -1518,8 +1518,8 @@ var maybeUpdateRelease = async function (options) {
 
     if (release.current && ! release.current.isRecommended() &&
         options.appDir && ! options.patch) {
-      var releaseVersion = release.current.getReleaseVersion();
-      var newerRecommendedReleases = getLaterReleaseVersions(
+      var releaseVersion = await release.current.getReleaseVersion();
+      var newerRecommendedReleases = await getLaterReleaseVersions(
         releaseTrack, releaseVersion);
       if (!newerRecommendedReleases.length) {
         // When running 'meteor update' without --release in an app,
@@ -1561,7 +1561,7 @@ var maybeUpdateRelease = async function (options) {
     throw new Error("don't have a proper release?");
   }
 
-  updateMeteorToolSymlink(true);
+  await updateMeteorToolSymlink(true);
 
   // If we're not in an app, then we're basically done. The only thing left to
   // do is print out some messages explaining what happened (and advising the
@@ -1594,7 +1594,7 @@ var maybeUpdateRelease = async function (options) {
       // We get here if the user ran 'meteor update' and we didn't
       // find a new version.
       Console.info(
-        "The latest version of Meteor, " + release.current.getReleaseVersion() +
+        "The latest version of Meteor, " + await release.current.getReleaseVersion() +
         ", is already installed on this computer. Run " +
         Console.command("'meteor update'") + " inside of a particular " +
         "project directory to update that project to " +
@@ -1612,8 +1612,10 @@ var maybeUpdateRelease = async function (options) {
     alwaysWritePackageMap: true,
     allowIncompatibleUpdate: true // disregard `.meteor/versions` if necessary
   });
-  await main.captureAndExit("=> Errors while initializing project:", async function () {
-    await projectContext.readProjectMetadata();
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while initializing project:", function () {
+    return projectContext.readProjectMetadata();
   });
 
   if (projectContext.releaseFile.fullReleaseName === release.current.name) {
@@ -1647,7 +1649,7 @@ var maybeUpdateRelease = async function (options) {
         "Cannot patch update unless a release is set.");
       return 1;
     }
-    var record = catalog.official.getReleaseVersion(
+    var record = await catalog.official.getReleaseVersion(
       projectContext.releaseFile.releaseTrack,
       projectContext.releaseFile.releaseVersion);
     if (!record) {
@@ -1661,7 +1663,7 @@ var maybeUpdateRelease = async function (options) {
         "You are at the latest patch version.");
       return 0;
     }
-    var patchRecord = catalog.official.getReleaseVersion(
+    var patchRecord = await catalog.official.getReleaseVersion(
       projectContext.releaseFile.releaseTrack, updateTo);
     // It looks like you are not at the latest patch version,
     // technically. But, in practice, we cannot update you to the latest patch
@@ -1681,14 +1683,14 @@ var maybeUpdateRelease = async function (options) {
   } else if (release.explicit) {
     // You have explicitly specified a release, and we have springboarded to
     // it. So, we will use that release to update you to itself, if we can.
-    releaseVersion = release.current.getReleaseVersion();
+    releaseVersion = await release.current.getReleaseVersion();
   } else {
     // We are not doing a patch update, or a specific release update, so we need
     // to try all recommended releases on our track, whose order key is greater
     // than the app's.
-    releaseVersion = getLaterReleaseVersions(
+    releaseVersion = (await getLaterReleaseVersions(
       projectContext.releaseFile.releaseTrack,
-      projectContext.releaseFile.releaseVersion)[0];
+      projectContext.releaseFile.releaseVersion))[0];
 
     if (! releaseVersion) {
       // We could not find any releases newer than the one that we are on, on
@@ -1714,7 +1716,7 @@ var maybeUpdateRelease = async function (options) {
 
   // Update every package in .meteor/packages to be (semver)>= the version
   // set for that package in the release we are updating to
-  var releaseRecord = catalog.official.getReleaseVersion(releaseTrack, releaseVersion);
+  var releaseRecord = await catalog.official.getReleaseVersion(releaseTrack, releaseVersion);
   projectContext.projectConstraintsFile.updateReleaseConstraints(releaseRecord);
 
   // Download and build packages and write the new versions to .meteor/versions.
@@ -1723,8 +1725,8 @@ var maybeUpdateRelease = async function (options) {
   //     to upgrade packages and have to do it again. Maybe we shouldn't? Note
   //     that if we change this, that changes the upgraders interface, which
   //     expects a projectContext that is fully prepared for build.
-  await main.captureAndExit("=> Errors while initializing project:", async function () {
-    await projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors while initializing project:", function () {
+    return projectContext.prepareProjectForBuild();
   });
 
   await projectContext.writeReleaseFileAndDevBundleLink(releaseName);
@@ -1740,18 +1742,18 @@ var maybeUpdateRelease = async function (options) {
   // Now run the upgraders.
   // XXX should we also run upgraders on other random commands, in case there
   // was a crash after changing .meteor/release but before running them?
-  _.each(upgradersToRun, function (upgrader) {
-    upgraders.runUpgrader(projectContext, upgrader);
+  for (const upgrader of upgradersToRun) {
+    await upgraders.runUpgrader(projectContext, upgrader);
     projectContext.finishedUpgraders.appendUpgraders([upgrader]);
-  });
+  }
 
   // We are done, and we should pass the release that we upgraded to, to the
   // user.
   return 0;
 };
 
-function getLaterReleaseVersions(releaseTrack, releaseVersion) {
-  var releaseInfo = catalog.official.getReleaseVersion(
+async function getLaterReleaseVersions(releaseTrack, releaseVersion) {
+  var releaseInfo = await catalog.official.getReleaseVersion(
     releaseTrack, releaseVersion);
   var orderKey = (releaseInfo && releaseInfo.orderKey) || null;
 
@@ -1818,10 +1820,13 @@ main.registerCommand({
     alwaysWritePackageMap: true,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-  await main.captureAndExit("=> Errors while initializing project:", async function () {
-    await projectContext.readProjectMetadata();
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while initializing project:", function () {
+    return projectContext.readProjectMetadata();
   });
 
+  // tODO -> parei aqui
   // If no packages have been specified, then we will send in a request to
   // update all direct dependencies. If a specific list of packages has been
   // specified, then only upgrade those.
@@ -1868,7 +1873,7 @@ main.registerCommand({
   var releaseRecordForConstraints = null;
   if (! files.inCheckout() &&
       projectContext.releaseFile.normalReleaseSpecified()) {
-    releaseRecordForConstraints = catalog.official.getReleaseVersion(
+    releaseRecordForConstraints = await catalog.official.getReleaseVersion(
       projectContext.releaseFile.releaseTrack,
       projectContext.releaseFile.releaseVersion);
     if (! releaseRecordForConstraints) {
@@ -1906,7 +1911,7 @@ main.registerCommand({
   }
 
   // Try to resolve constraints, allowing the given packages to be upgraded.
-  projectContext.reset({
+  await projectContext.reset({
     releaseForConstraints: releaseRecordForConstraints,
     upgradePackageNames: upgradePackageNames,
     upgradeIndirectDepPatchVersions: upgradeIndirectDepPatchVersions
@@ -1914,7 +1919,7 @@ main.registerCommand({
   await main.captureAndExit(
     "=> Errors while upgrading packages:", "upgrading packages", async function () {
       await projectContext.resolveConstraints();
-      if (await buildmessage.jobHasMessages()) {
+      if (buildmessage.jobHasMessages()) {
         return;
       }
 
@@ -1960,10 +1965,10 @@ main.registerCommand({
     var nonlatestDirectDeps = [];
     var nonlatestIndirectDeps = [];
     var deprecatedDeps = [];
-    projectContext.packageMap.eachPackage(function (name, info) {
+    await projectContext.packageMap.eachPackage(async function (name, info) {
       var selectedVersion = info.version;
       var catalog = projectContext.projectCatalog;
-      var latestVersion = getNewerVersion(name, selectedVersion, catalog);
+      var latestVersion = await getNewerVersion(name, selectedVersion, catalog);
       if (latestVersion) {
         var rec = { name: name, selectedVersion: selectedVersion,
                     latestVersion: latestVersion };
@@ -1978,7 +1983,7 @@ main.registerCommand({
           name: name,
           selectedVersion: selectedVersion,
           deprecatedMessage: info.packageSource.deprecatedMessage
-        })
+        });
       }
     });
     var printItem = function (rec) {

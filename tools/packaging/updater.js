@@ -150,17 +150,17 @@ var maybeShowBanners = function () {
 
 // Update ~/.meteor/meteor to point to the tool binary from the tools of the
 // latest recommended release on the default release track.
-export function updateMeteorToolSymlink(printErrors) {
+export async function updateMeteorToolSymlink(printErrors) {
   // Get the latest release version of METEOR. (*Always* of the default
   // track, not of whatever we happen to be running: we always want the tool
   // symlink to go to the default track.)
-  var latestReleaseVersion = catalog.official.getDefaultReleaseVersion();
+  var latestReleaseVersion = await catalog.official.getDefaultReleaseVersion();
   // Maybe you're on some random track with nothing recommended. That's OK.
   if (!latestReleaseVersion) {
     return;
   }
 
-  var latestRelease = catalog.official.getReleaseVersion(
+  var latestRelease = await catalog.official.getReleaseVersion(
     latestReleaseVersion.track, latestReleaseVersion.version);
   if (!latestRelease) {
     throw Error("latest release doesn't exist?");
@@ -183,8 +183,8 @@ export function updateMeteorToolSymlink(printErrors) {
     // and then update the symlink.
     var packageMap =
           packageMapModule.PackageMap.fromReleaseVersion(latestRelease);
-    var messages = buildmessage.capture(function () {
-      tropohouse.default.downloadPackagesMissingFromMap(packageMap);
+    var messages = await buildmessage.capture(function () {
+      return tropohouse.default.downloadPackagesMissingFromMap(packageMap);
     });
     if (messages.hasMessages()) {
       // Ignore errors because we are running in the background, uness we
@@ -197,13 +197,13 @@ export function updateMeteorToolSymlink(printErrors) {
     }
 
     var toolIsopack = new isopack.Isopack;
-    toolIsopack.initFromPath(
+    await toolIsopack.initFromPath(
       latestReleaseToolPackage,
       tropohouse.default.packagePath(latestReleaseToolPackage,
                                      latestReleaseToolVersion));
 
     var toolRecord = null;
-    archinfo.acceptableMeteorToolArches().some(arch => {
+    (await archinfo.acceptableMeteorToolArches()).some(arch => {
       return toolRecord = _.findWhere(toolIsopack.toolsOnDisk, { arch });
     });
 
@@ -213,7 +213,7 @@ export function updateMeteorToolSymlink(printErrors) {
       throw Error("latest release has no tool?");
     }
 
-    tropohouse.default.linkToLatestMeteor(files.pathJoin(
+    await tropohouse.default.linkToLatestMeteor(files.pathJoin(
       relativeToolPath, toolRecord.path, 'meteor'));
   }
 }

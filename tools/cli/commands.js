@@ -1324,7 +1324,7 @@ main.registerCommand({
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintPackageWithSourceRoot: packageDir
     });
-    await projectContext.init()
+    await projectContext.init();
     await main.captureAndExit("=> Errors while setting up package:",
       // Read metadata and initialize catalog.
        () => projectContext.initializeCatalog()
