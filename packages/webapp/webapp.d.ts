@@ -1,5 +1,5 @@
 import * as http from 'http';
-import * as connect from 'connect';
+import express from 'express';
 
 export interface StaticFiles {
   [key: string]: {
@@ -23,10 +23,10 @@ export declare module WebApp {
       PUBLIC_SETTINGS: any;
     };
   };
-  var connectHandlers: connect.Server;
-  var rawConnectHandlers: connect.Server;
+  var expressHandlers: express.Handler;
+  var rawExpressHandlers: express.Handler;
   var httpServer: http.Server;
-  var connectApp: connect.Server;
+  var expressApp: express.Application;
   function suppressConnectErrors(): void;
   function onListening(callback: Function): void;
 

@@ -5,12 +5,11 @@ import { userInfo } from 'os';
 import { join as pathJoin, dirname as pathDirname } from 'path';
 import { parse as parseUrl } from 'url';
 import { createHash } from 'crypto';
-import { connect } from './connect.js';
+import express from 'express';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
 import parseRequest from 'parseurl';
-import basicAuth from 'basic-auth-connect';
 import { lookup as lookupUserAgent } from 'useragent';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
@@ -24,19 +23,25 @@ import whomst from '@vlasky/whomst';
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
 
+const createExpressApp = () => {
+  const app = express();
+  // Security and performace headers
+  // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
+  app.set('x-powered-by', false);
+  app.set('etag', false);
+  return app;
+}
 export const WebApp = {};
 export const WebAppInternals = {};
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
-// backwards compat to 2.0 of connect
-connect.basicAuth = basicAuth;
 
 WebAppInternals.NpmModules = {
-  connect: {
-    version: Npm.require('connect/package.json').version,
-    module: connect,
-  },
+  express : {
+    version: Npm.require('express/package.json').version,
+    module: express,
+  }
 };
 
 // Though we might prefer to use web.browser (modern) as the default
@@ -1041,12 +1046,12 @@ function runWebAppServer() {
   WebAppInternals.reloadClientPrograms();
 
   // webserver
-  var app = connect();
+  var app = createExpressApp()
 
   // Packages and apps can add handlers that run before any other Meteor
-  // handlers via WebApp.rawConnectHandlers.
-  var rawConnectHandlers = connect();
-  app.use(rawConnectHandlers);
+  // handlers via WebApp.rawExpressHandlers.
+  var rawExpressHandlers = createExpressApp()
+  app.use(rawExpressHandlers);
 
   // Auto-compress any json, javascript, or text.
   app.use(compress({ filter: shouldCompress }));
@@ -1135,13 +1140,13 @@ function runWebAppServer() {
 
   // Core Meteor packages like dynamic-import can add handlers before
   // other handlers added by package and application code.
-  app.use((WebAppInternals.meteorInternalHandlers = connect()));
+  app.use((WebAppInternals.meteorInternalHandlers = createExpressApp()));
 
   /**
-   * @name connectHandlersCallback(req, res, next)
+   * @name expressHandlersCallback(req, res, next)
    * @locus Server
    * @isprototype true
-   * @summary callback handler for `WebApp.connectHandlers`
+   * @summary callback handler for `WebApp.expressHandlers`
    * @param {Object} req
    * a Node.js
    * [IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
@@ -1159,7 +1164,7 @@ function runWebAppServer() {
    */
 
   /**
-   * @method connectHandlers
+   * @method expressHandlers
    * @memberof WebApp
    * @locus Server
    * @summary Register a handler for all HTTP requests.
@@ -1169,14 +1174,14 @@ function runWebAppServer() {
    *
    * For example, `/hello` will match `/hello/world` and
    * `/hello.world`, but not `/hello_world`.
-   * @param {connectHandlersCallback} handler
+   * @param {expressHandlersCallback} handler
    * A handler function that will be called on HTTP requests.
-   * See `connectHandlersCallback`
+   * See `expressHandlersCallback`
    *
    */
-  // Packages and apps can add handlers to this via WebApp.connectHandlers.
+  // Packages and apps can add handlers to this via WebApp.expressHandlers.
   // They are inserted before our default handler.
-  var packageAndAppHandlers = connect();
+  var packageAndAppHandlers = createExpressApp()
   app.use(packageAndAppHandlers);
 
   var suppressConnectErrors = false;
@@ -1343,10 +1348,10 @@ function runWebAppServer() {
 
   // start up app
   _.extend(WebApp, {
-    connectHandlers: packageAndAppHandlers,
-    rawConnectHandlers: rawConnectHandlers,
+    expressHandlers: packageAndAppHandlers,
+    rawExpressHandlers: rawExpressHandlers,
     httpServer: httpServer,
-    connectApp: app,
+    expressApp: app,
     // For testing.
     suppressConnectErrors: function() {
       suppressConnectErrors = true;
