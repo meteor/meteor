@@ -436,11 +436,6 @@ var loadServerBundles = Profile("Load server bundles", async function () {
   for (const info of infos) {
     await info.fn.apply(global, info.args);
   }
-  if (global.Package['core-runtime']) {
-    return global.Package['core-runtime'].waitUntilAllLoaded();
-  }
-
-  return null;
 });
 
 var callStartupHooks = Profile("Call Meteor.startup hooks", async function () {
@@ -490,18 +485,18 @@ var runMain = Profile("Run main()", async function () {
   }
 });
 
-// TODO[fibers]: change this when we have TLA
 (async function startServerProcess() {
   if (!global.asyncLocalStorage) {
     const { AsyncLocalStorage } = require('async_hooks');
     global.asyncLocalStorage = new AsyncLocalStorage();
   }
 
-  Profile.run('Server startup', function() {
+  await Profile.run('Server startup', function() {
     return global.asyncLocalStorage.run({}, async () => {
       await loadServerBundles();
       await callStartupHooks();
       await runMain();
     });
   });
-})();
+})().catch(e => console.log('error on boot.js', e));
+
