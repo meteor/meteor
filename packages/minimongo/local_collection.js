@@ -102,11 +102,13 @@ export default class LocalCollection {
   async findOneAsync(selector, options = {}) {
     return Promise.resolve(this.findOne(selector, options));
   }
-
-
+  //TODO[fibers]: probably reverse it
+  async insert(doc, isAsync, callback) {
+    throw new Error("calling insert");
+  }
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
-  insert(doc, callback) {
+  async insertAsync(doc, isAsync, callback) {
     doc = EJSON.clone(doc);
 
     assertHasValidFieldNames(doc);
@@ -129,7 +131,7 @@ export default class LocalCollection {
     const queriesToRecompute = [];
 
     // trigger live queries that match
-    Object.keys(this.queries).forEach(qid => {
+    for (const qid of Object.keys(this.queries)) {
       const query = this.queries[qid];
 
       if (query.dirty) {
@@ -146,10 +148,10 @@ export default class LocalCollection {
         if (query.cursor.skip || query.cursor.limit) {
           queriesToRecompute.push(qid);
         } else {
-          LocalCollection._insertInResults(query, doc);
+          await LocalCollection._insertInResults(query, doc);
         }
       }
-    });
+    }
 
     queriesToRecompute.forEach(qid => {
       if (this.queries[qid]) {
@@ -186,8 +188,12 @@ export default class LocalCollection {
       query.resultsSnapshot = EJSON.clone(query.results);
     });
   }
-
+  //TODO[fibers]: probably reverse it
   remove(selector, callback) {
+    throw new Error("calling async remove()");
+  }
+
+  async removeAsync(selector, callback) {
     // Easy special case: if we're not calling observeChanges callbacks and
     // we're not saving originals and we got asked to remove everything, then
     // just empty everything directly.
@@ -282,7 +288,7 @@ export default class LocalCollection {
   // notifications to bring them to the current state of the
   // database. Note that this is not just replaying all the changes that
   // happened during the pause, it is a smarter 'coalesced' diff.
-  resumeObservers() {
+  async resumeObservers() {
     // No-op if not paused.
     if (!this.paused) {
       return;
@@ -316,7 +322,7 @@ export default class LocalCollection {
       query.resultsSnapshot = null;
     });
 
-    this._observeQueue.drain();
+    await this._observeQueue.drain();
   }
 
   retrieveOriginals() {
@@ -345,10 +351,14 @@ export default class LocalCollection {
 
     this._savedOriginals = new LocalCollection._IdMap;
   }
+  //TODO[fibers]: probably reverse it
+  update(selector, mod, options, callback) {
+    throw new Error("calling sync update on server");
+  }
 
   // XXX atomicity: if multi is true, and one modification fails, do
   // we rollback the whole operation, or what?
-  update(selector, mod, options, callback) {
+  async updateAsync(selector, mod, options, callback) {
     if (! callback && options instanceof Function) {
       callback = options;
       options = null;
@@ -417,13 +427,13 @@ export default class LocalCollection {
 
     let updateCount = 0;
 
-    this._eachPossiblyMatchingDoc(selector, (doc, id) => {
+    await this._eachPossiblyMatchingDoc(selector, async (doc, id) => {
       const queryResult = matcher.documentMatches(doc);
 
       if (queryResult.result) {
         // XXX Should we save the original even if mod ends up being a no-op?
         this._saveOriginal(id, doc);
-        this._modifyAndNotify(
+        await this._modifyAndNotify(
           doc,
           mod,
           recomputeQids,
@@ -484,17 +494,21 @@ export default class LocalCollection {
 
     return result;
   }
+  //TODO[fibers]: probably reverse it
+  upsert(selector, mod, options, callback) {
+    throw new Error("calling sync upsert()");
+  }
 
   // A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
   // equivalent to LocalCollection.update(sel, mod, {upsert: true,
   // _returnObject: true}).
-  upsert(selector, mod, options, callback) {
+  async upsertAsync(selector, mod, options, callback) {
     if (!callback && typeof options === 'function') {
       callback = options;
       options = {};
     }
 
-    return this.update(
+    return this.updateAsync(
       selector,
       mod,
       Object.assign({}, options, {upsert: true, _returnObject: true}),
@@ -506,23 +520,24 @@ export default class LocalCollection {
   // fn(doc, id) on each of them.  Specifically, if selector specifies
   // specific _id's, it only looks at those.  doc is *not* cloned: it is the
   // same object that is in _docs.
-  _eachPossiblyMatchingDoc(selector, fn) {
+  async _eachPossiblyMatchingDoc(selector, fn) {
     const specificIds = LocalCollection._idsMatchedBySelector(selector);
 
     if (specificIds) {
-      specificIds.some(id => {
+      for (const id of specificIds) {
         const doc = this._docs.get(id);
 
         if (doc) {
-          return fn(doc, id) === false;
+          await fn(doc, id);
+          break
         }
-      });
+      }
     } else {
-      this._docs.forEach(fn);
+      await this._docs.forEachAsync(fn);
     }
   }
 
-  _modifyAndNotify(doc, mod, recomputeQids, arrayIndices) {
+  async _modifyAndNotify(doc, mod, recomputeQids, arrayIndices) {
     const matched_before = {};
 
     Object.keys(this.queries).forEach(qid => {
@@ -545,7 +560,7 @@ export default class LocalCollection {
 
     LocalCollection._modify(doc, mod, {arrayIndices});
 
-    Object.keys(this.queries).forEach(qid => {
+    for (const qid of Object.keys(this.queries)) {
       const query = this.queries[qid];
 
       if (query.dirty) {
@@ -574,11 +589,11 @@ export default class LocalCollection {
       } else if (before && !after) {
         LocalCollection._removeFromResults(query, doc);
       } else if (!before && after) {
-        LocalCollection._insertInResults(query, doc);
+        await LocalCollection._insertInResults(query, doc);
       } else if (before && after) {
-        LocalCollection._updateInResults(query, doc, old_doc);
+        await LocalCollection._updateInResults(query, doc, old_doc);
       }
-    });
+    }
   }
 
   // Recomputes the results of a query and runs observe callbacks for the
@@ -1041,14 +1056,14 @@ LocalCollection._idsMatchedBySelector = selector => {
   return null;
 };
 
-LocalCollection._insertInResults = (query, doc) => {
+LocalCollection._insertInResults = async (query, doc) => {
   const fields = EJSON.clone(doc);
 
   delete fields._id;
 
   if (query.ordered) {
     if (!query.sorter) {
-      query.addedBefore(doc._id, query.projectionFn(fields), null);
+      await query.addedBefore(doc._id, query.projectionFn(fields), null);
       query.results.push(doc);
     } else {
       const i = LocalCollection._insertInSortedList(
@@ -1367,9 +1382,13 @@ LocalCollection._observeFromObserveChangesNoFibers = async (cursor, observeCallb
 
     observeChangesCallbacks = {
       addedBefore(id, fields, before) {
-        if (suppressed || !(observeCallbacks.addedAt || observeCallbacks.added)) {
+        const check = suppressed || !(observeCallbacks.addedAt || observeCallbacks.added)
+        if (check) {
           return;
         }
+        //TODO[fibers]: remove comment
+        console.log('_observeFromObserveChangesNoFibers addedBefore');
+        console.trace();
 
         const doc = transform(Object.assign(fields, {_id: id}));
 
@@ -1388,6 +1407,10 @@ LocalCollection._observeFromObserveChangesNoFibers = async (cursor, observeCallb
         }
       },
       changed(id, fields) {
+        //TODO[fibers]: remove comment
+        console.log('_observeFromObserveChangesNoFibers changed');
+        console.trace();
+
         if (!(observeCallbacks.changedAt || observeCallbacks.changed)) {
           return;
         }
@@ -1559,7 +1582,7 @@ LocalCollection._selectorIsIdPerhapsAsObject = selector =>
   Object.keys(selector).length === 1
 ;
 
-LocalCollection._updateInResults = (query, doc, old_doc) => {
+LocalCollection._updateInResults = async (query, doc, old_doc) => {
   if (!EJSON.equals(doc._id, old_doc._id)) {
     throw new Error('Can\'t change a doc\'s _id while updating');
   }
@@ -1582,7 +1605,7 @@ LocalCollection._updateInResults = (query, doc, old_doc) => {
   const old_idx = LocalCollection._findInOrderedResults(query, doc);
 
   if (Object.keys(changedFields).length) {
-    query.changed(doc._id, changedFields);
+    await query.changed(doc._id, changedFields);
   }
 
   if (!query.sorter) {
@@ -2187,7 +2210,7 @@ function findModTarget(doc, keyparts, options = {}) {
 }
 
 // Wrap sync methods with callback to async.
-['insert', 'update', 'remove', 'upsert'].forEach(methodName => {
+['insertAsync', 'updateAsync', 'removeAsync', 'upsertAsync'].forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   LocalCollection.prototype[methodNameAsync] = function(...args) {
     const self = this;

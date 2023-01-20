@@ -291,15 +291,23 @@ export default class Cursor {
 
       const self = this;
       return function(/* args*/) {
+        //TODO[fibers]: remove comment
+        console.trace("wrapCallback")
         if (self.collection.paused) {
           return;
         }
+
+        let resolve;
+        const promise = new Promise(r => resolve = r);
 
         const args = arguments;
 
         self.collection._observeQueue.queueTask(() => {
           fn.apply(this, args);
+          resolve();
         });
+
+        return promise;
       };
     };
 

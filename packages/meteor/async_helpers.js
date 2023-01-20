@@ -41,16 +41,19 @@ class AsynchronousQueue {
     self._scheduleRun();
   }
 
-  _scheduleRun() {
+  async _scheduleRun() {
     // Already running or scheduled? Do nothing.
     if (this._runningOrRunScheduled)
       return;
 
     this._runningOrRunScheduled = true;
 
+    let resolve;
+    const promise = new Promise(r => resolve = r);
     setImmediate(() => {
-      this._run();
+      this._run().finally(() => resolve());
     });
+    return promise;
   }
 
   async _run() {
@@ -79,7 +82,7 @@ class AsynchronousQueue {
 
     // Soon, run the next task, if there is any.
     this._runningOrRunScheduled = false;
-    this._scheduleRun();
+    await this._scheduleRun();
 
     if (taskHandle.resolver) {
       if (exception) {
