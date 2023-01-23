@@ -436,6 +436,11 @@ var loadServerBundles = Profile("Load server bundles", async function () {
   for (const info of infos) {
     await info.fn.apply(global, info.args);
   }
+  if (global.Package['core-runtime']) {
+    return global.Package['core-runtime'].waitUntilAllLoaded();
+  }
+
+  return null;
 });
 
 var callStartupHooks = Profile("Call Meteor.startup hooks", async function () {
