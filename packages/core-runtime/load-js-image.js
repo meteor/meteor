@@ -20,7 +20,7 @@ function queue(name, deps, runImage) {
       load(name, runImage);
     }
   }
-  
+
   deps.forEach(function (dep) {
     if (hasOwn.call(pending, dep)) {
       pendingDepsCount += 1;
@@ -49,7 +49,7 @@ function load(name, runImage) {
       Package._define(name, exports);
     }
 
-    var pendingCallbacks = pending[name]; 
+    var pendingCallbacks = pending[name];
     delete pending[name];
     pendingCallbacks.forEach(function (callback) {
       callback();
@@ -61,7 +61,7 @@ function runEagerModules(config, callback) {
   if (!config.eagerModulePaths) {
     return callback();
   }
-  
+
   var index = -1;
   var mainExports = {};
   var mainModuleAsync = false;
@@ -83,8 +83,9 @@ function runEagerModules(config, callback) {
 
     var path = config.eagerModulePaths[index];
     var exports = config.require(path);
-
-    if (checkAsyncModule(exports)) {
+    // TODO[fibers]: retest the function checkAsyncModule. It looks like it's returning the wrong values
+      //  returning false when exports is a promise
+    if (exports && exports.then) {
       if (path === config.mainModulePath) {
         mainModuleAsync = true;
       }
@@ -124,7 +125,7 @@ function checkAsyncModule (exports) {
 // If all are loaded, returns null. Otherwise, returns a promise
 function waitUntilAllLoaded() {
   var pendingNames = Object.keys(pending);
-  
+
   if (pendingNames.length === 0) {
     // All packages are loaded
     // If there were no async packages, then there might not be a promise

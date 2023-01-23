@@ -193,10 +193,24 @@ Object.assign(Module.prototype, {
     if (haveMeteorInstallOptions) {
       const trees = await self._buildModuleTrees(results, sourceWidth);
       fileCount = await self._chunkifyModuleTrees(trees, chunks, sourceWidth);
-      const { exportsName, eagerModulePaths, mainModulePath } = await self._chunkifyEagerRequires(chunks, fileCount, sourceWidth);
-      result.exportsName = exportsName;
-      result.eagerModulePaths = eagerModulePaths;
-      result.mainModulePath = mainModulePath;
+
+      // During the full link, code will be added to pass these to the
+      // core runtime so it can handle evaluating the modules
+      result.eagerModulePaths = [];
+      result.mainModulePath = null;
+
+      for (const file of this.files) {
+        if (file.bare) {
+          chunks.push('\n', await file.getPrelinkedOutput({
+            sourceWidth
+          }));
+        } else if (!file.lazy) {
+          result.eagerModulePaths.push(file.absModuleId);
+          if (file.mainModule) {
+            result.mainModulePath = file.absModuleId;
+          }
+        }
+      }
     } else {
       for (const file of self.files) {
         if (file.lazy) {
@@ -430,59 +444,6 @@ Object.assign(Module.prototype, {
 
   _hasDynamicModules() {
     return this.files.some(file => file.isDynamic());
-  },
-
-  // Adds require calls to the chunks array for all modules that should be
-  // eagerly evaluated, and also includes any bare files before the
-  // require calls. Returns the name of the variable that holds the main
-  // exports object, if api.mainModule was used to define a main module.
-  async _chunkifyEagerRequires(chunks, moduleCount, sourceWidth) {
-    assert.ok(_.isArray(chunks));
-    assert.ok(_.isNumber(moduleCount));
-    assert.ok(_.isNumber(sourceWidth));
-
-    let exportsName;
-
-    // Now that we have installed everything in this package or
-    // application, first evaluate the bare files, then require the
-    // non-lazy (eager) modules.
-
-    const eagerModuleFiles = [];
-    const eagerModulePaths = [];
-    let mainModulePath = null;
-
-    for (const file of this.files) {
-      if (file.bare) {
-        chunks.push("\n", await file.getPrelinkedOutput({
-          sourceWidth,
-        }));
-      } else if (!file.lazy) {
-        if (moduleCount > 0) {
-          eagerModuleFiles.push(file);
-        }
-        eagerModulePaths.push(file.absModuleId);
-        if (file.mainModule) {
-          mainModulePath = file.absModuleId;
-        }
-      }
-    }
-
-    if (eagerModuleFiles.length > 0) {
-      for (const file of eagerModuleFiles) {
-        if (file.mainModule) {
-          exportsName = "exports";
-        }
-
-        chunks.push(
-            file.mainModule ? "\nvar " + exportsName + " = " : "\n",
-            "require(",
-            JSON.stringify(file.absModuleId),
-            ");"
-        );
-      }
-    }
-
-    return { exportsName, eagerModulePaths, mainModulePath };
   }
 });
 
