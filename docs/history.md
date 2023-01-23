@@ -80,7 +80,11 @@
 
 * `webapp`:
   - `WebAppInternals.getBoilerplate` is now async.
-
+  - Changed engine from connect to express and changed api naming to match express. See below: 
+  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.expressHandlers.use(middleware)`
+  - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawExpressHandlers.use(middleware)`
+  - `WebApp.connectApp` is now `WebApp.expressApp`
+  
 ####  Internal API changes
 
 
