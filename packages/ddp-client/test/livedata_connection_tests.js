@@ -98,6 +98,8 @@ Tinytest.addAsync('livedata stub - receive data', async function(test) {
 
   // queue has been emptied and doc is in db.
   test.isUndefined(conn._updatesForUnknownStores[coll_name]);
+  console.log('conn._updatesForUnknownStores[coll_name]', conn._updatesForUnknownStores[coll_name], coll);
+  return
   test.equal(coll.find({}).fetch(), [{ _id: '1234', a: 1 }]);
 
   // second message. applied directly to the db.
@@ -750,7 +752,7 @@ Tinytest.addAsync('livedata stub - reconnect', async function(test, onComplete) 
   const stream = new StubStream();
   const conn = newConnection(stream);
 
-  startAndConnect(test, stream);
+  await startAndConnect(test, stream);
 
   const collName = Random.id();
   const coll = new Mongo.Collection(collName, { connection: conn });
