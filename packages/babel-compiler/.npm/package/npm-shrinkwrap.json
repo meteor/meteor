@@ -623,9 +623,9 @@
           "integrity": "sha512-LEdx+3A7wV8XeTFWrfkOu0PtX+Vjgl28b4mW8bsM3lZPWIqx0PXTfpbXfDy61MgmmYXR7/cWjVJ8xqgSunF3Mg==",
           "dependencies": {
             "acorn": {
-              "version": "8.8.1",
-              "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.8.1.tgz",
-              "integrity": "sha512-7zFpHzhnqYKrkYdUjF1HI1bzd0VygEGX8lFk4k5zVMqHEoES+P+7TKI+EvLO9WVMJ8eekdO0aDEK044xTXwPPA=="
+              "version": "8.8.2",
+              "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.8.2.tgz",
+              "integrity": "sha512-xjIYgE8HBrkpd/sJqOGNspf8uHG+NOHGOw6a/Urj8taM2EXfdNAH2oFcPeIFfsv3+kz/mJrS5VuMqbNLjCa2vw=="
             },
             "semver": {
               "version": "5.7.1",
@@ -643,6 +643,11 @@
           "version": "8.8.2",
           "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.8.2.tgz",
           "integrity": "sha512-xjIYgE8HBrkpd/sJqOGNspf8uHG+NOHGOw6a/Urj8taM2EXfdNAH2oFcPeIFfsv3+kz/mJrS5VuMqbNLjCa2vw=="
+        },
+        "acorn-dynamic-import": {
+          "version": "4.0.0",
+          "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
+          "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
         },
         "ansi-colors": {
           "version": "3.2.3",

@@ -118,7 +118,9 @@ Mongo.Collection = function Collection(name, options) {
   this._name = name;
   this._driver = options._driver;
 
-  this._maybeSetUpReplication(name, options);
+  // TODO[fibers]: _maybeSetUpReplication is now async. Let's watch how not waiting for this function to finish
+    // will affect everything
+  this._settingUpReplicationPromise = this._maybeSetUpReplication(name, options);
 
   // XXX don't define these until allow or deny is actually used for this
   // collection. Could be hard if the security rules are only defined on the
@@ -152,7 +154,7 @@ Mongo.Collection = function Collection(name, options) {
 };
 
 Object.assign(Mongo.Collection.prototype, {
-  _maybeSetUpReplication(name, { _suppressSameNameError = false }) {
+  async _maybeSetUpReplication(name, { _suppressSameNameError = false }) {
     const self = this;
     if (!(self._connection && self._connection.registerStore)) {
       return;
@@ -161,7 +163,7 @@ Object.assign(Mongo.Collection.prototype, {
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
-    const ok = self._connection.registerStore(name, {
+    const ok = await self._connection.registerStore(name, {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
       //

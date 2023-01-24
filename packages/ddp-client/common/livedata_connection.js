@@ -1262,7 +1262,7 @@ export class Connection {
       self._bufferedWritesFlushAt =
         new Date().valueOf() + self._bufferedWritesMaxAge;
     } else if (self._bufferedWritesFlushAt < new Date().valueOf()) {
-      self._flushBufferedWrites();
+      await self._flushBufferedWrites();
       return;
     }
 
@@ -1270,7 +1270,13 @@ export class Connection {
       clearTimeout(self._bufferedWritesFlushHandle);
     }
     self._bufferedWritesFlushHandle = setTimeout(
-      self.__flushBufferedWrites,
+      () => {
+        // __flushBufferedWrites is a promise, so with this we can wait the promise to finish
+        // before doing something
+        self._liveDataWritesPromise = self
+          .__flushBufferedWrites()
+          .finally(() => (self._liveDataWritesPromise = undefined));
+      },
       self._bufferedWritesInterval
     );
   }
@@ -1586,14 +1592,14 @@ export class Connection {
     }
   }
 
-  _livedata_result(msg) {
+  async _livedata_result(msg) {
     // id, result or error. error has error (code), reason, details
 
     const self = this;
 
     // Lets make sure there are no buffered writes before returning result.
     if (! isEmpty(self._bufferedWrites)) {
-      self._flushBufferedWrites();
+      await self._flushBufferedWrites();
     }
 
     // find the outstanding request
@@ -1785,7 +1791,7 @@ export class Connection {
     } else if (msg.msg === 'nosub') {
       await this._livedata_nosub(msg);
     } else if (msg.msg === 'result') {
-      this._livedata_result(msg);
+      await this._livedata_result(msg);
     } else if (msg.msg === 'error') {
       this._livedata_error(msg);
     } else {
