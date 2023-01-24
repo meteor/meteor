@@ -166,9 +166,6 @@ function resolve(id) {
     (id === '/node_modules/@babel/runtime/helpers/objectSpread2.js' && '/home/denyhs/Documents/work/meteor/meteor/packages/logging/.npm/package/node_modules/@babel/runtime/helpers/objectSpread2.js')||
     (id === '/node_modules/@babel/runtime/helpers/objectWithoutProperties.js' && '/home/denyhs/Documents/work/meteor/meteor/packages/logging/.npm/package/node_modules/@babel/runtime/helpers/objectWithoutProperties.js')||
     null;
-  if (id === '/node_modules/@babel/runtime/helpers/objectWithoutProperties.js') {
-    console.log('resolveCache', resolveCache);
-  }
 
   return resolve(id);
 }
