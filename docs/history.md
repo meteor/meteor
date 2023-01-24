@@ -1,3 +1,38 @@
+## v2.11.0, 2023-02-XX
+
+### Highlights
+
+* MongoDB Server 6.x Support
+* Embedded Mongo now uses MongoDB 6.0.3
+* Optimized makeLookupFunction by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12462) 
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+N/A
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - Corrected typo in vue skeleton
+
+#### Special thanks to
+
+- [@radekmie](https://github.com/radekmie).
+
+
+For making this great framework even better!
+
+
+
 ## v2.10.0, 2023-01-13
 
 ### Highlights
