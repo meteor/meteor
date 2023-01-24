@@ -5,6 +5,7 @@
 * MongoDB Server 6.x Support
 * Embedded Mongo now uses MongoDB 6.0.3
 * Optimized makeLookupFunction by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12462) 
+* In async wrappers, catch exceptions and reject by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12469) 
 
 #### Breaking Changes
 
@@ -24,9 +25,21 @@ N/A
 * `Command line`:
   - Corrected typo in vue skeleton
 
+* `npm mongo @4.13.0`:
+  - Updated MongoDB driver to version 4.13.0
+
+* `Minimongo@1.9.2`:
+  - Updated performance of makeLookupFunction
+  - In async wrappers, catch exceptions and reject
+  
+* `mongo@1.16.5`:
+  - In async wrappers, catch exceptions and reject
+
 #### Special thanks to
 
 - [@radekmie](https://github.com/radekmie).
+- [@ebroder](https://github.com/ebroder).
+
 
 
 For making this great framework even better!
