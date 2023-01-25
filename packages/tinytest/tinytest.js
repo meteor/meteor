@@ -263,12 +263,10 @@ export class TestCaseResults {
     const predicate = this._guessPredicate(expected);
 
     try {
-      console.log('XXXXXXXXXXXXX', message);
       await f();
     } catch (exception) {
       actual = exception;
     }
-    console.log('XXXXXXXXXXXXX', message);
     this._assertActual(actual, predicate, message);
   }
 

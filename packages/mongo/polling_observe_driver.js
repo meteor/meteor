@@ -42,7 +42,7 @@ PollingObserveDriver = function (options) {
       // When someone does a transaction that might affect us, schedule a poll
       // of the database. If that transaction happens inside of a write fence,
       // block the fence until we've polled and notified observers.
-      var fence = DDPServer._CurrentWriteFence.get();
+      var fence = DDPServer._getCurrentFence();
       if (fence)
         self._pendingWrites.push(fence.beginWrite());
       // Ensure a poll is scheduled... but if we already know that one is,

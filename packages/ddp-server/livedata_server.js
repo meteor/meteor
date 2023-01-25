@@ -49,6 +49,14 @@ var SessionDocumentView = function () {
 
 DDPServer._SessionDocumentView = SessionDocumentView;
 
+DDPServer._getCurrentFence = function () {
+  let currentInvocation = this._CurrentWriteFence.get();
+  if (currentInvocation) {
+    return currentInvocation;
+  }
+  currentInvocation = DDP._CurrentPublicationInvocation.get();
+  return currentInvocation ? currentInvocation.fence : undefined;
+};
 
 _.extend(SessionDocumentView.prototype, {
 
@@ -682,7 +690,7 @@ Object.assign(Session.prototype, {
       self._stopSubscription(msg.id);
     },
 
-    method: function (msg, unblock) {
+    method: async function (msg, unblock) {
       var self = this;
 
       // Reject malformed messages.
@@ -709,8 +717,7 @@ Object.assign(Session.prototype, {
         // example, because the method waits for them) their
         // writes will be included in the fence.
         fence.retire();
-        self.send({
-          msg: 'updated', methods: [msg.id]});
+        self.send({msg: 'updated', methods: [msg.id]});
       });
 
       // Find the handler
@@ -733,7 +740,8 @@ Object.assign(Session.prototype, {
         setUserId: setUserId,
         unblock: unblock,
         connection: self.connectionHandle,
-        randomSeed: randomSeed
+        randomSeed: randomSeed,
+        fence,
       });
 
       const promise = new Promise((resolve, reject) => {
@@ -777,7 +785,6 @@ Object.assign(Session.prototype, {
               keyName: 'getCurrentMethodInvocationResult',
             }
           );
-
         resolve(
           DDPServer._CurrentWriteFence.withValue(
             fence,
@@ -790,8 +797,8 @@ Object.assign(Session.prototype, {
         );
       });
 
-      function finish() {
-        fence.arm();
+      async function finish() {
+        await fence.arm();
         unblock();
       }
 
@@ -799,15 +806,14 @@ Object.assign(Session.prototype, {
         msg: "result",
         id: msg.id
       };
-
-      promise.then(result => {
-        finish();
+      await promise.then(async result => {
+        await finish();
         if (result !== undefined) {
           payload.result = result;
         }
         self.send(payload);
-      }, (exception) => {
-        finish();
+      }, async (exception) => {
+        await finish();
         payload.error = wrapInternalException(
           exception,
           `while invoking method '${msg.method}'`
@@ -1791,7 +1797,7 @@ Object.assign(Server.prototype, {
   applyAsync: function (name, args, options) {
     // Run the handler
     var handler = this.method_handlers[name];
-    console.log({name});
+
     if (! handler) {
       return Promise.reject(
         new Meteor.Error(404, `Method '${name}' not found`)

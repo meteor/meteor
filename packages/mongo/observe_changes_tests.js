@@ -17,7 +17,6 @@ _.each ([
   Tinytest.addAsync("observeChanges - single id - basics " + added
                     + (forceOrdered ? " force ordered" : ""),
                     async function (test, onComplete) {
-    console.log({added});
       var c = makeCollection();
       var counter = 0;
       var callbacks = [added, "changed", "removed"];

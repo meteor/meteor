@@ -152,7 +152,7 @@ Mongo.Collection = function Collection(name, options) {
 };
 
 Object.assign(Mongo.Collection.prototype, {
-  _maybeSetUpReplication(name, { _suppressSameNameError = false }) {
+  async _maybeSetUpReplication(name, { _suppressSameNameError = false }) {
     const self = this;
     if (!(self._connection && self._connection.registerStore)) {
       return;
@@ -161,7 +161,7 @@ Object.assign(Mongo.Collection.prototype, {
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
-    const ok = self._connection.registerStore(name, {
+    const ok = await self._connection.registerStore(name, {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
       //
@@ -172,7 +172,7 @@ Object.assign(Mongo.Collection.prototype, {
       // message, and then we can either directly apply it at endUpdate time if
       // it was the only update, or do pauseObservers/apply/apply at the next
       // updateAsync() if there's another one.
-      beginUpdate(batchSize, reset) {
+      async beginUpdate(batchSize, reset) {
         // pause observers so users don't see flicker when updating several
         // objects at once (including the post-reconnect reset-and-reapply
         // stage), and so that a re-sorting of a query can take advantage of the
@@ -180,7 +180,7 @@ Object.assign(Mongo.Collection.prototype, {
         // time.
         if (batchSize > 1 || reset) self._collection.pauseObservers();
 
-        if (reset) self._collection.removeAsync({});
+        if (reset) await self._collection.removeAsync({});
       },
 
       // Apply an update.
@@ -275,8 +275,8 @@ Object.assign(Mongo.Collection.prototype, {
       },
 
       // Called at the end of a batch of updates.
-      endUpdate() {
-        self._collection.resumeObservers();
+      async endUpdate() {
+        await self._collection.resumeObservers();
       },
 
       // Called around method stub invocations to capture the original versions

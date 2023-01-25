@@ -150,22 +150,18 @@ export default class LocalCollection {
         }
       }
     });
-
     queriesToRecompute.forEach(qid => {
       if (this.queries[qid]) {
         this._recomputeResults(this.queries[qid]);
       }
     });
 
-    // TODO -> Check here.
-    Promise.resolve(this._observeQueue.drain()).then(() => {
-      // Defer because the caller likely doesn't expect the callback to be run
-      // immediately.
-      if (callback) {
-        (async () => callback(null, id))();
-      }
-    });
-
+    this._observeQueue.drain();
+    // Defer because the caller likely doesn't expect the callback to be run
+    // immediately.
+    if (callback) {
+      (async () => callback(null, id))();
+    }
     return id;
   }
 
@@ -282,7 +278,7 @@ export default class LocalCollection {
   // notifications to bring them to the current state of the
   // database. Note that this is not just replaying all the changes that
   // happened during the pause, it is a smarter 'coalesced' diff.
-  resumeObservers() {
+  async resumeObservers() {
     // No-op if not paused.
     if (!this.paused) {
       return;
@@ -316,7 +312,7 @@ export default class LocalCollection {
       query.resultsSnapshot = null;
     });
 
-    this._observeQueue.drain();
+    await this._observeQueue.drain();
   }
 
   retrieveOriginals() {

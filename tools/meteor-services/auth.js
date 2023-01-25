@@ -895,7 +895,7 @@ exports.loggedInUsername = function () {
   return loggedIn(data) ? currentUsername(data) : false;
 };
 
-exports.getAccountsConfiguration = function (conn) {
+exports.getAccountsConfiguration = async function (conn) {
   // Subscribe to the package server's service configurations so that we
   // can get the OAuth client ID to kick off the OAuth flow.
   var accountsConfiguration = null;

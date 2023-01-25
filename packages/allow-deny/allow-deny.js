@@ -261,7 +261,7 @@ CollectionPrototype._validatedInsertAsync = function (userId, doc,
   if (generatedId !== null)
     doc._id = generatedId;
 
-  self._collection.insertAsync.call(self._collection, doc);
+  return self._collection.insertAsync.call(self._collection, doc);
 };
 
 // Simulate a mongo `update` operation while validating that the access
@@ -426,7 +426,7 @@ CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethod(
   }
 
   const mutatorMethodName = this._prefix + name;
-  return await this._connection.applyAsync(mutatorMethodName, args, { returnStubValue: true , throwStubExceptions: true });
+  return await this._connection.applyAsync(mutatorMethodName, args, { returnStubValue: true , isFromCallAsync: true });
 }
 
 function transformDoc(validator, doc) {

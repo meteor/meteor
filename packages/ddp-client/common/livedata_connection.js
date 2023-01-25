@@ -282,7 +282,7 @@ export class Connection {
   // 'name' is the name of the data on the wire that should go in the
   // store. 'wrappedStore' should be an object with methods beginUpdate, update,
   // endUpdate, saveOriginals, retrieveOriginals. see Collection for an example.
-  registerStore(name, wrappedStore) {
+  async registerStore(name, wrappedStore) {
     const self = this;
 
     if (name in self._stores) return false;
@@ -310,11 +310,11 @@ export class Connection {
 
     const queued = self._updatesForUnknownStores[name];
     if (Array.isArray(queued)) {
-      store.beginUpdate(queued.length, false);
+      await store.beginUpdate(queued.length, false);
       queued.forEach(msg => {
         store.update(msg);
       });
-      store.endUpdate();
+      await store.endUpdate();
       delete self._updatesForUnknownStores[name];
     }
 
@@ -646,7 +646,7 @@ export class Connection {
           isFromCallAsync: stubOptions.isFromCallAsync,
         })
       ) {
-        this._saveOriginals();
+        await this._saveOriginals();
       }
       try {
         /*
@@ -915,9 +915,9 @@ export class Connection {
   // Before calling a method stub, prepare all stores to track changes and allow
   // _retrieveAndStoreOriginals to get the original versions of changed
   // documents.
-  _saveOriginals() {
+  async _saveOriginals() {
     if (! this._waitingForQuiescence()) {
-      this._flushBufferedWrites();
+      await this._flushBufferedWrites();
     }
 
     Object.values(this._stores).forEach((store) => {
@@ -1201,7 +1201,7 @@ export class Connection {
     }
   }
 
-  _livedata_data(msg) {
+  async _livedata_data(msg) {
     const self = this;
 
     if (self._waitingForQuiescence()) {
@@ -1254,7 +1254,7 @@ export class Connection {
       msg.msg === "removed";
 
     if (self._bufferedWritesInterval === 0 || ! standardWrite) {
-      self._flushBufferedWrites();
+      await self._flushBufferedWrites();
       return;
     }
 
@@ -1262,7 +1262,7 @@ export class Connection {
       self._bufferedWritesFlushAt =
         new Date().valueOf() + self._bufferedWritesMaxAge;
     } else if (self._bufferedWritesFlushAt < new Date().valueOf()) {
-      self._flushBufferedWrites();
+      await self._flushBufferedWrites();
       return;
     }
 
@@ -1275,7 +1275,7 @@ export class Connection {
     );
   }
 
-  _flushBufferedWrites() {
+  async _flushBufferedWrites() {
     const self = this;
     if (self._bufferedWritesFlushHandle) {
       clearTimeout(self._bufferedWritesFlushHandle);
@@ -1288,32 +1288,31 @@ export class Connection {
     //  will exit cleanly.
     const writes = self._bufferedWrites;
     self._bufferedWrites = Object.create(null);
-    self._performWrites(writes);
+    await self._performWrites(writes);
   }
 
-  _performWrites(updates) {
+  async _performWrites(updates) {
     const self = this;
 
     if (self._resetStores || ! isEmpty(updates)) {
       // Begin a transactional update of each store.
 
-      Object.entries(self._stores).forEach(([storeName, store]) => {
-        store.beginUpdate(
+      for (const [storeName, store] of Object.entries(self._stores) ) {
+        await store.beginUpdate(
           hasOwn.call(updates, storeName)
             ? updates[storeName].length
             : 0,
           self._resetStores
         );
-      });
+      }
 
       self._resetStores = false;
-
-      Object.entries(updates).forEach(([storeName, updateMessages]) => {
+      for (const [storeName, updateMessages] of Object.entries(updates) ) {
         const store = self._stores[storeName];
         if (store) {
-          updateMessages.forEach(updateMessage => {
-            store.update(updateMessage);
-          });
+          for (const updateMessage of updateMessages) {
+            await store.update(updateMessage);
+          }
         } else {
           // Nobody's listening for this data. Queue it up until
           // someone wants it.
@@ -1328,12 +1327,12 @@ export class Connection {
 
           updates[storeName].push(...updateMessages);
         }
-      });
+      }
 
       // End update transaction.
-      Object.values(self._stores).forEach((store) => {
-        store.endUpdate();
-      });
+      for (const store of Object.values(self._stores) ) {
+        await store.endUpdate();
+      };
     }
 
     self._runAfterUpdateCallbacks();
@@ -1544,12 +1543,12 @@ export class Connection {
     }
   }
 
-  _livedata_nosub(msg) {
+  async _livedata_nosub(msg) {
     const self = this;
 
     // First pass it through _livedata_data, which only uses it to help get
     // towards quiescence.
-    self._livedata_data(msg);
+    await self._livedata_data(msg);
 
     // Do the rest of our processing immediately, with no
     // buffering-until-quiescence.
@@ -1587,14 +1586,14 @@ export class Connection {
     }
   }
 
-  _livedata_result(msg) {
+  async _livedata_result(msg) {
     // id, result or error. error has error (code), reason, details
 
     const self = this;
 
     // Lets make sure there are no buffered writes before returning result.
     if (! isEmpty(self._bufferedWrites)) {
-      self._flushBufferedWrites();
+      await self._flushBufferedWrites();
     }
 
     // find the outstanding request
@@ -1735,7 +1734,7 @@ export class Connection {
     }
   }
 
-  onMessage(raw_msg) {
+  async onMessage(raw_msg) {
     let msg;
     try {
       msg = DDPCommon.parseDDP(raw_msg);
@@ -1780,11 +1779,11 @@ export class Connection {
     } else if (
       ['added', 'changed', 'removed', 'ready', 'updated'].includes(msg.msg)
     ) {
-      this._livedata_data(msg);
+      await this._livedata_data(msg);
     } else if (msg.msg === 'nosub') {
-      this._livedata_nosub(msg);
+      await this._livedata_nosub(msg);
     } else if (msg.msg === 'result') {
-      this._livedata_result(msg);
+      await this._livedata_result(msg);
     } else if (msg.msg === 'error') {
       this._livedata_error(msg);
     } else {

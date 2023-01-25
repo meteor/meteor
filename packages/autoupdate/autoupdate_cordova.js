@@ -13,10 +13,10 @@ const clientVersions = new ClientVersions();
 // Used by hot-module-replacement
 Autoupdate._clientVersions = clientVersions;
 
-Meteor.connection.registerStore(
+(async () => await Meteor.connection.registerStore(
   "meteor_autoupdate_clientVersions",
   clientVersions.createStore()
-);
+));
 
 Autoupdate.newClientAvailable = function () {
   return clientVersions.newClientAvailable(

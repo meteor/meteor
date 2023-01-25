@@ -3360,7 +3360,7 @@ Tinytest.add('minimongo - objectid', test => {
   test.equal(randomOid, new MongoID.ObjectID(randomOid.valueOf()));
 });
 
-Tinytest.add('minimongo - pause', test => {
+Tinytest.addAsync('minimongo - pause', async test => {
   const operations = [];
   const cbs = log_callbacks(operations);
 
@@ -3378,7 +3378,7 @@ Tinytest.add('minimongo - pause', test => {
   c.insert({_id: 1, a: 1});
   test.length(operations, 0);
 
-  c.resumeObservers();
+  await c.resumeObservers();
   test.length(operations, 0);
 
 

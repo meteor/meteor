@@ -95,7 +95,7 @@ ObserveMultiplexer = class {
   // adds have been processed. Does not block.
   async ready() {
     const self = this;
-    await this._queue.runTask(function () {
+    this._queue.queueTask(function () {
       if (self._ready())
         throw Error("can't make ObserveMultiplex ready twice!");
 
@@ -129,7 +129,7 @@ ObserveMultiplexer = class {
   // all handles. "ready" must have already been called on this multiplexer.
   async onFlush(cb) {
     var self = this;
-    await this._queue.runTask(async function () {
+    await this._queue.queueTask(async function () {
       if (!self._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();
@@ -146,7 +146,7 @@ ObserveMultiplexer = class {
   }
   async _applyCallback(callbackName, args) {
     const self = this;
-    await this._queue.runTask(async function () {
+    await this._queue.queueTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;

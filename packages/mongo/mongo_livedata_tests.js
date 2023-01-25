@@ -1540,7 +1540,7 @@ _.each( ['STRING'], function(idGeneration) {
     async function (test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        await Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     },
@@ -1556,6 +1556,7 @@ _.each( ['STRING'], function(idGeneration) {
       test.isTrue(id);
       docId = id;
       self.docId = docId;
+
       var cursor = self.coll.find();
       test.equal(await cursor.count(), 1);
       var inColl = await self.coll.findOneAsync();
@@ -1567,15 +1568,15 @@ _.each( ['STRING'], function(idGeneration) {
     async function (test, expect) {
       var self = this;
       await self.coll.insertAsync(new Dog("rover", "orange")).catch(expect(function (err) {
-          test.isTrue(err);
+        test.isTrue(err);
       }));
     },
 
-    async function (test) {
+    async function (test, expect) {
       var self = this;
-      await self.coll.updateAsync(self.docId, new Dog("rover", "orange")).catch(err => {
+      await self.coll.updateAsync(self.docId, new Dog("rover", "orange")).catch(expect(function(err) {
           test.isTrue(err);
-      });
+      }));
     }
   ]);
 
@@ -2107,6 +2108,7 @@ if (Meteor.isServer) {
         let err;
         try {
           await Meteor.callAsync(upsertTestMethod, run, useUpdate, collectionOptions);
+          console.log('xxxx');
         } catch (e) {
           err = e;
         }
@@ -3281,10 +3283,10 @@ if (Meteor.isClient) {
   var futuresByNonce = {};
 
   Meteor.methods({
-    fenceOnBeforeFireError1: function (nonce) {
+    fenceOnBeforeFireError1: async function (nonce) {
       let resolve;
       futuresByNonce[nonce] = new Promise(r => resolve = r);
-      var observe = fenceOnBeforeFireErrorCollection.find({nonce: nonce})
+      var observe = await fenceOnBeforeFireErrorCollection.find({nonce: nonce})
           .observeChanges({added: function (){}});
       Meteor.setTimeout(async function () {
         await fenceOnBeforeFireErrorCollection.insertAsync({nonce: nonce})
