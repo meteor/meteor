@@ -311,9 +311,9 @@ export class Connection {
     const queued = self._updatesForUnknownStores[name];
     if (Array.isArray(queued)) {
       await store.beginUpdate(queued.length, false);
-      queued.forEach(msg => {
-        store.update(msg);
-      });
+      for (const msg of queued) {
+        await store.update(msg);
+      }
       await store.endUpdate();
       delete self._updatesForUnknownStores[name];
     }
@@ -600,7 +600,7 @@ export class Connection {
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
-  apply(name, args, options, callback) {
+  async apply(name, args, options, callback) {
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
 
     if (stubOptions.hasStub) {
@@ -610,7 +610,7 @@ export class Connection {
           isFromCallAsync: stubOptions.isFromCallAsync,
         })
       ) {
-        this._saveOriginals();
+        await this._saveOriginals();
       }
       try {
         stubOptions.stubReturnValue = DDP._CurrentMethodInvocation
@@ -1171,8 +1171,9 @@ export class Connection {
     if (! self._waitingForQuiescence()) {
       if (self._resetStores) {
         Object.values(self._stores).forEach((store) => {
-          store.beginUpdate(0, true);
-          store.endUpdate();
+          store.beginUpdate(0, true).finally(async () => {
+            await store.endUpdate();
+          });
         });
         self._resetStores = false;
       }

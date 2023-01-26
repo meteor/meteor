@@ -2478,7 +2478,7 @@ if (Meteor.isClient) {
 
     // Buffer should already be flushed because of a non-update message.
     // And after a flush we really want subscription field to be 112.
-    conn._flushBufferedWrites();
+    await conn._flushBufferedWrites();
     test.equal((await coll.findOneAsync('aaa')).method, 222);
     test.equal((await coll.findOneAsync('aaa')).subscription, 112);
   });

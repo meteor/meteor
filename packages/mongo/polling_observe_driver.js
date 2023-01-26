@@ -202,7 +202,7 @@ _.extend(PollingObserveDriver.prototype, {
     // round, mark all the writes which existed before this call as
     // commmitted. (If new writes have shown up in the meantime, there'll
     // already be another _pollMongo task scheduled.)
-    self._multiplexer.onFlush(function () {
+    await self._multiplexer.onFlush(function () {
       _.each(writesForCycle, function (w) {
         w.committed();
       });

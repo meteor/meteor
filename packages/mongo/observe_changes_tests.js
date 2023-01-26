@@ -302,7 +302,7 @@ if (Meteor.isServer) {
 
       // Tailable observe shouldn't show things that are in the initial
       // contents.
-      self.insertAsync({x: 1});
+      await self.insertAsync({x: 1});
       // Wait for one added call before going to the next test function.
       self.expects.push(expect());
 
