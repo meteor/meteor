@@ -39,10 +39,10 @@ var generateBlankReadme = function () {
 };
 
 // Save a readme file to a temporary path.
-var saveReadmeToTmp = function (readmeInfo) {
+var saveReadmeToTmp = async function (readmeInfo) {
   var tempReadmeDir = files.mkdtemp('readme');
   var readmePath = files.pathJoin(tempReadmeDir, "Readme.md");
-  files.writeFileAtomically(readmePath, readmeInfo.contents);
+  await files.writeFileAtomically(readmePath, readmeInfo.contents);
   return readmePath;
 };
 
@@ -84,7 +84,7 @@ var callPackageServerBM = exports.callPackageServerBM = function (...args) {
 //  - syncToken: a new syncToken object, that we can pass to the server in the future.
 //  - collections: an object keyed by the name of server collections, with the
 //    records as an array of javascript objects.
-var loadRemotePackageData = function (conn, syncToken, options) {
+var loadRemotePackageData = async function (conn, syncToken, options) {
   options = options || {};
 
   // Did we get disconnected between retries somehow? Then we should open a new
@@ -92,7 +92,7 @@ var loadRemotePackageData = function (conn, syncToken, options) {
   // since we don't need to authenticate.
   if (!conn.connected) {
     conn.close();
-    conn =  openPackageServerConnection();
+    conn = await openPackageServerConnection();
   }
 
   var syncOpts = {};
@@ -130,7 +130,7 @@ exports.updateServerPackageData = function (dataStore, options) {
   });
 };
 
-var _updateServerPackageData = function (dataStore, options) {
+var _updateServerPackageData = async function (dataStore, options) {
   var self = this;
   options = options || {};
   if (dataStore === null) {
@@ -148,15 +148,15 @@ var _updateServerPackageData = function (dataStore, options) {
   var state = { current: 0, end: 60 * 60 * 1000, done: false};
   useProgressbar && buildmessage.reportProgress(state);
 
-  var conn = openPackageServerConnection(options.packageServerUrl);
+  var conn = await openPackageServerConnection(options.packageServerUrl);
 
   // Provide some progress indication for connection
   // XXX though it is just a hack
   state.current = 1;
   useProgressbar && buildmessage.reportProgress(state);
 
-  var getSomeData = function () {
-    var syncToken = dataStore.getSyncToken() || {format: "1.1"};
+  var getSomeData = async function () {
+    var syncToken = (await dataStore.getSyncToken()) || {format: "1.1"};
 
     if (!start) {
       start = {};
@@ -173,7 +173,7 @@ var _updateServerPackageData = function (dataStore, options) {
     var compress = !!process.env.METEOR_CATALOG_COMPRESS_RPCS;
 
     // (loadRemotePackageData may throw)
-    var remoteData = loadRemotePackageData(conn, syncToken, {
+    var remoteData = await loadRemotePackageData(conn, syncToken, {
       useShortPages: options.useShortPages,
       compressCollections: compress
     });
@@ -191,11 +191,11 @@ var _updateServerPackageData = function (dataStore, options) {
       var zlib = require('zlib');
       var colsGzippedBuffer = Buffer.from(
         remoteData.collectionsCompressed, 'base64');
-      var colsJSON = new Promise((resolve, reject) => {
+      var colsJSON = await new Promise((resolve, reject) => {
         zlib.gunzip(colsGzippedBuffer, (err, res) => {
           err ? reject(err) : resolve(res);
         });
-      }).await();
+      });
       remoteData.collections = JSON.parse(colsJSON);
       delete remoteData.collectionsCompressed;
     }
@@ -204,7 +204,7 @@ var _updateServerPackageData = function (dataStore, options) {
     // data!  e.g. the last-refresh timestamp
     var syncComplete =
           _.isEqual(remoteData.collections, {}) || remoteData.upToDate;
-    dataStore.insertData(remoteData, syncComplete);
+    await dataStore.insertData(remoteData, syncComplete);
 
     // If there is no new data from the server, don't bother writing things to
     // disk (unless we were just told to reset everything).
@@ -220,7 +220,7 @@ var _updateServerPackageData = function (dataStore, options) {
 
   try {
     while (!done) {
-      getSomeData();
+      await getSomeData();
       requestGarbageCollection();
     }
   } finally {

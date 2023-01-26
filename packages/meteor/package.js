@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.10.3'
+  version: '1.11.0'
 });
 
 Package.registerBuildPlugin({
@@ -11,11 +11,12 @@ Package.registerBuildPlugin({
 });
 
 Npm.depends({
-  "double-ended-queue": "2.1.0-0"
+  "denque": "2.1.0"
 });
 
 Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
+  api.use('core-runtime');
 
   api.export('Meteor');
 
@@ -28,7 +29,6 @@ Package.onUse(function (api) {
   api.export("meteorEnv");
 
   api.addFiles('cordova_environment.js', 'web.cordova');
-  api.addFiles('define-package.js', ['client', 'server']);
   api.addFiles('helpers.js', ['client', 'server']);
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);
@@ -63,6 +63,8 @@ Package.onUse(function (api) {
 
   api.addFiles('emitter-promise.js', 'server');
   api.export('EmitterPromise', 'server');
+
+  api.addAssets('meteor.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

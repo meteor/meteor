@@ -26,8 +26,6 @@ function babelRegister() {
     // Exclude files that are imported before we configure
     // meteor-babel/register (including this very file).
     .excludeFile(path.join(toolsPath, "index.js"))
-    .excludeFile(path.join(__dirname, "install-promise.js"))
-    .excludeFile(path.join(__dirname, "wrap-fibers.js"))
     .excludeFile(path.join(__dirname, "install-reify.js"))
     .excludeFile(path.join(toolsPath, "cli", "dev-bundle-bin-commands.js"))
     .excludeFile(path.join(toolsPath, "cli", "dev-bundle-bin-helpers.js"))

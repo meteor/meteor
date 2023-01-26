@@ -1,6 +1,3 @@
-if (Meteor.isServer)
-  var Future = Npm.require('fibers/future');
-
 if (typeof __meteor_runtime_config__ === 'object' &&
     __meteor_runtime_config__.meteorRelease) {
   /**
@@ -144,8 +141,7 @@ Meteor.wrapAsync = function (fn, context) {
       if (Meteor.isClient) {
         callback = logErr;
       } else {
-        var fut = new Future();
-        callback = fut.resolver();
+        callback = () => console.error("Tried to use wrapAsync.");
       }
       ++i; // Insert the callback just after arg.
     }

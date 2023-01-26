@@ -141,10 +141,10 @@ export const VALID_ARCHITECTURES: Record<string, boolean> = {
 // If you change this, also change scripts/admin/launch-meteor
 let _host: string | null = null; // memoize
 
-export function host() {
+export async function host() {
   if (!_host) {
-    const run = function (...args: Array<string | boolean>) {
-      const result = utils.execFileSync(args[0], args.slice(1)).stdout;
+    const run = async function (...args: Array<string | boolean>) {
+      const result = (await utils.execFile(args[0], args.slice(1))).stdout;
 
       if (! result) {
         throw new Error(`Can't get arch with ${args.join(" ")}?`);
@@ -158,10 +158,10 @@ export function host() {
     if (platform === "darwin") {
       // Can't just test uname -m = x86_64, because Snow Leopard can
       // return other values.
-      const arch = run('uname', '-p');
+      const arch = await run('uname', '-p');
 
       if ((arch !== "i386" && arch !== "arm") ||
-          run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
+          await run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel and M1 processors are supported on OS X");
       }
       if(arch === "arm"){
@@ -170,7 +170,7 @@ export function host() {
         _host  = "os.osx.x86_64";
       }
     } else if (platform === "linux") {
-      const machine = run('uname', '-m');
+      const machine = await run('uname', '-m');
       if (["x86_64", "amd64", "ia64"].includes(machine)) {
         _host = "os.linux.x86_64";
       } else {

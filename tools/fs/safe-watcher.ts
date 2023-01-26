@@ -388,7 +388,7 @@ async function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
       // proposed PR, which had a slightly different interface).
       error.errno === constants.ENOSPC &&
       // The only suggestion we currently have is for Linux.
-      archinfo.matches(archinfo.host(), 'os.linux')) {
+      archinfo.matches(await archinfo.host(), 'os.linux')) {
 
     // Check suggestedRaisingWatchLimit again because archinfo.host() may
     // have yielded.

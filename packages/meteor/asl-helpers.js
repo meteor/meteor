@@ -12,14 +12,6 @@ if (Meteor.isServer && !global.asyncLocalStorage) {
 }
 
 Meteor._runAsync = (fn, ctx, store = {}) => {
-    if (Meteor._isFibersEnabled) {
-      const Fiber = Npm.require('fibers');
-
-      return Fiber(() => {
-        fn.call(ctx);
-      }).run();
-    }
-
     return global.asyncLocalStorage.run(
       store || Meteor._getAslStore(),
       () => {

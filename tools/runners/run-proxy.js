@@ -26,7 +26,7 @@ Object.assign(Proxy.prototype, {
   // Start the proxy server, block (yield) until it is ready to go
   // (actively listening on outer and proxying to inner), and then
   // return.
-  start: function () {
+  start: async function () {
     var self = this;
 
     if (self.server) {
@@ -142,7 +142,7 @@ Object.assign(Proxy.prototype, {
       allowStart();
     });
 
-    promise.await();
+    await promise;
   },
 
   // Idempotent.

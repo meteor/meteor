@@ -187,8 +187,8 @@ main.registerCommand({
   requiresRelease: false,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  Console.rawInfo(archinfo.host() + "\n");
+}, async function () {
+  Console.rawInfo(await archinfo.host() + "\n");
 });
 
 // Prints the current release in use. Note that if there is not
@@ -201,7 +201,7 @@ main.registerCommand({
   requiresRelease: false,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   if (release.current === null) {
     if (! options.appDir) {
       throw new Error("missing release, but not in an app?");
@@ -215,9 +215,9 @@ main.registerCommand({
   }
 
   if (release.current.isCheckout()) {
-    var gitLog = utils.runGitInCheckout(
+    var gitLog = (await utils.runGitInCheckout(
       'log',
-      '--format=%h%d', '-n 1').trim();
+      '--format=%h%d', '-n 1')).trim();
     Console.error("Unreleased, running from a checkout at " + gitLog);
     return 1;
   }
@@ -342,7 +342,7 @@ main.registerCommand(Object.assign(
   runCommandOptions
 ), doRunCommand);
 
-function doRunCommand(options) {
+async function doRunCommand(options) {
   Console.setVerbose(!!options.verbose);
 
   // Additional args are interpreted as run targets
@@ -362,11 +362,12 @@ function doRunCommand(options) {
     lintAppAndLocalPackages: !options['no-lint'],
     includePackages: includePackages,
   });
+  await projectContext.init();
 
-  main.captureAndExit("=> Errors while initializing project:", function () {
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we'll wait to do the full build
     // preparation until after we've started listening on the proxy, etc.
-    projectContext.readProjectMetadata();
+    return projectContext.readProjectMetadata();
   });
 
   if (release.explicit) {
@@ -414,15 +415,16 @@ function doRunCommand(options) {
     }
   }
   webArchs = filterWebArchs(webArchs, options['exclude-archs']);
-  const buildMode = options.production ? 'production' : 'development'
+  const buildMode = options.production ? 'production' : 'development';
 
   let cordovaRunner;
   if (!_.isEmpty(runTargets)) {
 
-    function prepareCordovaProject() {
+    async function prepareCordovaProject() {
       import { CordovaProject } from '../cordova/project.js';
 
-      main.captureAndExit('', 'preparing Cordova project', () => {
+      await main.captureAndExit('', 'preparing Cordova project', () => {
+        // TODO -> Have to change CordovaProject constructor here.
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
@@ -436,8 +438,8 @@ function doRunCommand(options) {
       });
     }
 
-    ensureDevBundleDependencies();
-    prepareCordovaProject();
+    await ensureDevBundleDependencies();
+    await prepareCordovaProject();
   }
 
   var runAll = require('../runners/run-all.js');
@@ -487,7 +489,7 @@ main.registerCommand({
   requiresApp: true,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   if (!options.appDir) {
     Console.error(
       "The " + Console.command("'meteor shell'") + " command must be run",
@@ -497,6 +499,7 @@ main.registerCommand({
     var projectContext = new projectContextModule.ProjectContext({
       projectDir: options.appDir
     });
+    await projectContext.init();
 
     // Convert to OS path here because shell/server.js doesn't know how to
     // convert paths, since it exists in the app and in the tool.
@@ -521,6 +524,7 @@ export const AVAILABLE_SKELETONS = [
   DEFAULT_SKELETON,
   "typescript",
   "vue",
+  'vue-2',
   "svelte",
   "tailwind",
   "chakra-ui",
@@ -550,7 +554,7 @@ main.registerCommand({
     prototype: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   // Creating a package is much easier than creating an app, so if that's what
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
@@ -566,12 +570,12 @@ main.registerCommand({
     if (options.list || options.example) {
       Console.error("No package examples exist at this time.");
       Console.error();
-      throw new main.ShowUsage;
+      throw new main.ShowUsage();
     }
 
     if (!packageName) {
       Console.error("Please specify the name of the package.");
-      throw new main.ShowUsage;
+      throw new main.ShowUsage();
     }
 
     utils.validatePackageNameOrExit(
@@ -612,7 +616,7 @@ main.registerCommand({
       return 1;
     }
 
-    var transform = function (x) {
+    var transform = async function (x) {
       var xn =
         x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
 
@@ -623,7 +627,7 @@ main.registerCommand({
       var relString;
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
-        var rel = catalog.official.getDefaultReleaseVersion();
+        var rel = await catalog.official.getDefaultReleaseVersion();
         // the no-release case should never happen except in tests.
         relString = rel ? rel.version : "no-release";
       } else {
@@ -636,13 +640,13 @@ main.registerCommand({
     };
 
     try {
-      files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel-pack'), packageDir, {
+      await files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
         },
-        transformContents: function (contents, f) {
+        transformContents: async function (contents, f) {
           if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
-            return Buffer.from(transform(contents.toString()));
+            return Buffer.from(await transform(contents.toString()));
           } else {
             return contents;
           }
@@ -680,8 +684,8 @@ main.registerCommand({
   // this version of the tools, and then stamp on the correct release
   // at the end.)
   if (! release.current.isCheckout() && !release.forced) {
-    if (release.current.name !== release.latestKnown()) {
-      throw new main.SpringboardToLatestRelease;
+    if (release.current.name !== await release.latestKnown()) {
+      throw new main.SpringboardToLatestRelease();
     }
   }
 
@@ -727,7 +731,7 @@ main.registerCommand({
   if (options.args.length === 1) {
     appPathAsEntered = options.args[0];
   } else {
-    throw new main.ShowUsage;
+    throw new main.ShowUsage();
   }
   var appPath = files.pathResolve(appPathAsEntered);
 
@@ -799,7 +803,7 @@ main.registerCommand({
   const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
     !!options[skeleton]);
   const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
-  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
+  await files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
     `skel-${skeleton}`), appPath, {
     transformFilename: function (f) {
       return transform(f);
@@ -842,13 +846,15 @@ main.registerCommand({
     allowIncompatibleUpdate: true
   });
 
-  main.captureAndExit("=> Errors while creating your project", function () {
-    projectContext.readProjectMetadata();
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while creating your project", async function () {
+    await projectContext.readProjectMetadata();
     if (buildmessage.jobHasMessages()) {
       return;
     }
 
-    projectContext.releaseFile.write(
+    await projectContext.releaseFile.write(
       release.current.isCheckout() ? "none" : release.current.name);
     if (buildmessage.jobHasMessages()) {
       return;
@@ -868,7 +874,7 @@ main.registerCommand({
     var upgraders = require('../upgraders.js');
     projectContext.finishedUpgraders.appendUpgraders(upgraders.allUpgraders());
 
-    projectContext.prepareProjectForBuild();
+    await projectContext.prepareProjectForBuild();
   });
   // No need to display the PackageMapDelta here, since it would include all of
   // the packages (or maybe an unpredictable subset based on what happens to be
@@ -876,7 +882,7 @@ main.registerCommand({
 
   // Since some of the project skeletons include npm `devDependencies`, we need
   // to make sure they're included when running `npm install`.
-  require("./default-npm-deps.js").install(
+  await require("./default-npm-deps.js").install(
     appPath,
     { includeDevDependencies: true }
   );
@@ -981,10 +987,10 @@ var buildCommands = {
 main.registerCommand({
   name: "build",
   ...buildCommands,
-}, async function (options) {
+}, function (options) {
   return Profile.run(
     "meteor build",
-    () => Promise.await(buildCommand(options))
+    () => buildCommand(options)
   );
 });
 
@@ -996,7 +1002,7 @@ main.registerCommand({
   name: "bundle",
   hidden: true,
   ...buildCommands,
-}, async function (options) {
+}, function (options) {
   Console.error(
     "This command has been deprecated in favor of " +
     Console.command("'meteor build'") + ", which allows you to " +
@@ -1007,14 +1013,14 @@ main.registerCommand({
 
   return Profile.run(
     "meteor bundle",
-    () => Promise.await(buildCommand({
+    () => buildCommand({
       ...options,
       _bundleOnly: true,
-    }))
+    })
   );
 });
 
-var buildCommand = function (options) {
+var buildCommand = async function (options) {
   Console.setVerbose(!!options.verbose);
   if (options.headless) {
     // There's no point in spinning the spinner when we're running
@@ -1035,18 +1041,19 @@ var buildCommand = function (options) {
     showInvalidArchMsg(options.architecture);
     return 1;
   }
-  var bundleArch = options.architecture || archinfo.host();
+  var bundleArch = options.architecture || await archinfo.host();
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([bundleArch, archinfo.host()]),
+    serverArchitectures: _.uniq([bundleArch, await archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
+  await projectContext.init();
 
-  main.captureAndExit("=> Errors while initializing project:", function () {
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // TODO Fix the nested Profile.run warning here, without interfering
     // with METEOR_PROFILE output for other commands, like `meteor run`.
-    projectContext.prepareProjectForBuild();
+    return projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
 
@@ -1149,13 +1156,13 @@ ${Console.command("meteor build ../output")}`,
       files.pathJoin(outputPath, 'bundle')) :
       files.pathJoin(buildDir, 'bundle');
 
-  stats.recordPackages({
+  await stats.recordPackages({
     what: "sdk.bundle",
     projectContext: projectContext
   });
 
   var bundler = require('../isobuild/bundler.js');
-  var bundleResult = bundler.bundle({
+  var bundleResult = await bundler.bundle({
     projectContext: projectContext,
     outputPath: bundlePath,
     buildOptions: {
@@ -1181,15 +1188,15 @@ ${Console.command("meteor build ../output")}`,
   }
 
   if (!options.directory) {
-    main.captureAndExit('', 'creating server tarball', () => {
+    await main.captureAndExit('', 'creating server tarball', async () => {
       try {
         var outputTar = options._bundleOnly ? outputPath :
           files.pathJoin(outputPath, appName + '.tar.gz');
 
-        files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);
+        await files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);
       } catch (err) {
         buildmessage.exception(err);
-        files.rm_recursive(buildDir);
+        await files.rm_recursive(buildDir);
       }
     });
   }
@@ -1197,16 +1204,16 @@ ${Console.command("meteor build ../output")}`,
   if (!_.isEmpty(cordovaPlatforms)) {
 
     let cordovaProject;
-    main.captureAndExit('', () => {
+    await main.captureAndExit('', async () => {
 
       import {
         pluginVersionsFromStarManifest,
         displayNameForPlatform,
       } from '../cordova/index.js';
 
-      ensureDevBundleDependencies();
+      await ensureDevBundleDependencies();
 
-      buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
+      await buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
         import { CordovaProject } from '../cordova/project.js';
 
         cordovaProject = new CordovaProject(projectContext, {
@@ -1222,9 +1229,9 @@ ${Console.command("meteor build ../output")}`,
       });
 
       for (platform of cordovaPlatforms) {
-        buildmessage.enterJob(
+        await buildmessage.enterJob(
           { title: `building Cordova app for \
-${displayNameForPlatform(platform)}` }, () => {
+${displayNameForPlatform(platform)}` }, async () => {
             let buildOptions = { release: !options.debug };
 
             const buildPath = files.pathJoin(
@@ -1243,7 +1250,7 @@ ${displayNameForPlatform(platform)}` }, () => {
             }
 
             // Once prepared, copy the bundle to the final location.
-            files.cp_r(buildPath,
+            await files.cp_r(buildPath,
               files.pathJoin(platformOutputPath, 'project'));
 
             // Make some platform-specific adjustments to the resulting build.
@@ -1262,7 +1269,7 @@ https://guide.meteor.com/cordova.html#submitting-ios
               const apkPath = files.pathJoin(buildPath, `app/build/outputs/${packageType}/${options.debug ? 'debug' : 'release'}`,
                 options.debug ? `app-debug.${packageExtension}` : `${packageName}.${packageExtension}`);
 
-              console.log(apkPath)
+              console.log(apkPath);
               if (files.exists(apkPath)) {
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
                 options.debug ? `app-debug.${packageExtension}` : `${packageName}.${packageExtension}`));
@@ -1281,7 +1288,7 @@ https://guide.meteor.com/cordova.html#submitting-android
     });
   }
 
-  files.rm_recursive(buildDir);
+  await files.rm_recursive(buildDir);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1300,8 +1307,8 @@ main.registerCommand({
     'allow-incompatible-updates': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  const {packageDir, appDir} = options;
+}, async function (options) {
+  const { packageDir, appDir } = options;
 
   let projectContext = null;
 
@@ -1319,10 +1326,11 @@ main.registerCommand({
       lintPackageWithSourceRoot: packageDir
     });
 
-    main.captureAndExit("=> Errors while setting up package:", () =>
+    await main.captureAndExit("=> Errors while setting up package:",
       // Read metadata and initialize catalog.
-      projectContext.initializeCatalog()
+      async () => await projectContext.initializeCatalog()
     );
+
     const versionRecord =
         projectContext.localCatalog.getVersionBySourceRoot(packageDir);
     if (! versionRecord) {
@@ -1338,19 +1346,20 @@ main.registerCommand({
   if (! projectContext && appDir) {
     projectContext = new projectContextModule.ProjectContext({
       projectDir: appDir,
-      serverArchitectures: [archinfo.host()],
+      serverArchitectures: [await archinfo.host()],
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintAppAndLocalPackages: true
     });
+    await projectContext.init()
   }
 
 
-  main.captureAndExit("=> Errors prevented the build:", () => {
-    projectContext.prepareProjectForBuild();
-  });
+  await main.captureAndExit("=> Errors prevented the build:",  async () =>
+    await projectContext.prepareProjectForBuild()
+  );
 
-  const bundler = require('../isobuild/bundler.js');
-  const bundle = bundler.bundle({
+  const bundler = await require('../isobuild/bundler.js');
+  const bundle = await bundler.bundle({
     projectContext: projectContext,
     outputPath: null,
     buildOptions: {
@@ -1389,7 +1398,7 @@ main.registerCommand({
   },
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   var mongoUrl;
   var usedMeteorAccount = false;
 
@@ -1397,7 +1406,7 @@ main.registerCommand({
     // localhost mode
     var findMongoPort =
       require('../runners/run-mongo.js').findMongoPort;
-    var mongoPort = findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
+    var mongoPort = await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
 
     // XXX detect the case where Meteor is running, but MONGO_URL was
     // specified?
@@ -1423,7 +1432,7 @@ to this command.`);
     // remote mode
     var site = qualifySitename(options.args[0]);
 
-    mongoUrl = deploy.temporaryMongoUrl(site);
+    mongoUrl = await deploy.temporaryMongoUrl(site);
     usedMeteorAccount = true;
 
     if (! mongoUrl) {
@@ -1435,12 +1444,12 @@ to this command.`);
     console.log(mongoUrl);
   } else {
     if (usedMeteorAccount) {
-      auth.maybePrintRegistrationLink();
+      await auth.maybePrintRegistrationLink();
     }
     process.stdin.pause();
     var runMongo = require('../runners/run-mongo.js');
-    runMongo.runMongoShell(mongoUrl);
-    throw new main.WaitForExit;
+    await runMongo.runMongoShell(mongoUrl);
+    throw new main.WaitForExit();
   }
 });
 
@@ -1455,7 +1464,7 @@ main.registerCommand({
   maxArgs: 1,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   if (options.args.length !== 0) {
     Console.error("meteor reset only affects the locally stored database.");
     Console.error();
@@ -1477,7 +1486,7 @@ main.registerCommand({
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
   var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-  var isRunning = !! findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
+  var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
   if (isRunning) {
     Console.error("reset: Meteor is running.");
     Console.error();
@@ -1665,7 +1674,7 @@ main.registerCommand({
     return options.add || options.remove || options.transfer;
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
 
   if (Object.keys(_.pick(options, 'add', 'remove', 'transfer', 'list')).length > 1) {
     Console.error(
@@ -1673,7 +1682,7 @@ main.registerCommand({
     return 1;
   }
 
-  auth.pollForRegistrationCompletion();
+  await auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
   if (! auth.isLoggedIn()) {
@@ -1684,13 +1693,13 @@ main.registerCommand({
   }
 
   if (options.add) {
-    return deploy.changeAuthorized(site, "add", options.add);
+    return await deploy.changeAuthorized(site, "add", options.add);
   } else if (options.remove) {
-    return deploy.changeAuthorized(site, "remove", options.remove);
+    return await deploy.changeAuthorized(site, "remove", options.remove);
   } else if (options.transfer) {
-    return deploy.changeAuthorized(site, "transfer", options.transfer);
+    return await deploy.changeAuthorized(site, "transfer", options.transfer);
   } else {
-    return deploy.listAuthorized(site);
+    return await deploy.listAuthorized(site);
   }
 });
 
@@ -1786,7 +1795,7 @@ main.registerCommand(Object.assign(
   return doTestCommand(options);
 });
 
-function doTestCommand(options) {
+async function doTestCommand(options) {
   // This "metadata" is accessed in a few places. Using a global
   // variable here was more expedient than navigating the many layers
   // of abstraction across the the build process.
@@ -1839,8 +1848,9 @@ function doTestCommand(options) {
 
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
-  var serverArchitectures = [archinfo.host()];
-  if (options.deploy && DEPLOY_ARCH !== archinfo.host()) {
+  const archInfoHost = await archinfo.host();
+  var serverArchitectures = [archInfoHost];
+  if (options.deploy && DEPLOY_ARCH !== archInfoHost) {
     serverArchitectures.push(DEPLOY_ARCH);
   }
 
@@ -1877,7 +1887,8 @@ function doTestCommand(options) {
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
     try {
-      require("./default-npm-deps.js").install(testRunnerAppDir);
+      const { install } = require("./default-npm-deps.js");
+      await install(testRunnerAppDir);
     } catch (error) {
       if (error.code === 'EACCES' && options['test-app-path']) {
         Console.error(
@@ -1907,23 +1918,24 @@ function doTestCommand(options) {
     //     repeated test-packages calls with some sort of shared or semi-shared
     //     isopack cache that's specific to test-packages?  See #3012.
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
+    await projectContext.init();
 
-    main.captureAndExit("=> Errors while initializing project:", function () {
+    await main.captureAndExit("=> Errors while initializing project:", function () {
       // We're just reading metadata here --- we'll wait to do the full build
       // preparation until after we've started listening on the proxy, etc.
-      projectContext.readProjectMetadata();
+      return projectContext.readProjectMetadata();
     });
 
-    main.captureAndExit("=> Errors while setting up tests:", function () {
+    await main.captureAndExit("=> Errors while setting up tests:", function () {
       // Read metadata and initialize catalog.
-      projectContext.initializeCatalog();
+      return projectContext.initializeCatalog();
     });
 
     // Overwrite .meteor/release.
-    projectContext.releaseFile.write(
+    await projectContext.releaseFile.write(
       release.current.isCheckout() ? "none" : release.current.name);
 
-    var packagesToAdd = getTestPackageNames(projectContext, options.args);
+    var packagesToAdd = await getTestPackageNames(projectContext, options.args);
 
     // filter out excluded packages
     var excludedPackages = options.exclude && options.exclude.split(',');
@@ -1957,7 +1969,7 @@ function doTestCommand(options) {
     // Write these changes to disk now, so that if the first attempt to prepare
     // the project for build hits errors, we don't lose them on
     // projectContext.reset.
-    projectContext.projectConstraintsFile.writeIfModified();
+    await projectContext.projectConstraintsFile.writeIfModified();
   } else if (options["test"]) {
     if (!options['driver-package']) {
       throw new Error("You must specify a driver package with --driver-package");
@@ -1972,7 +1984,7 @@ function doTestCommand(options) {
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
     // Copy the existing build and isopacks to speed up the initial start
-    function copyDirIntoTestRunnerApp(allowSymlink, ...parts) {
+    async function copyDirIntoTestRunnerApp(allowSymlink, ...parts) {
       // Depending on whether the user has run `meteor run` or other commands, they
       // may or may not exist yet
       const appDirPath = files.pathJoin(options.appDir, ...parts);
@@ -1986,23 +1998,24 @@ function doTestCommand(options) {
         // privileges since both paths refer to directories.
         files.symlink(appDirPath, testDirPath, "junction");
       } else {
-        files.cp_r(appDirPath, testDirPath, {
+        await files.cp_r(appDirPath, testDirPath, {
           preserveSymlinks: true
         });
       }
     }
 
-    copyDirIntoTestRunnerApp(false, '.meteor', 'local', 'build');
-    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
-    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
-    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
-    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
+    await copyDirIntoTestRunnerApp(false, '.meteor', 'local', 'build');
+    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
+    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
+    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
+    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
 
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
+    await projectContext.init();
 
-    main.captureAndExit("=> Errors while setting up tests:", function () {
+    await main.captureAndExit("=> Errors while setting up tests:", function () {
       // Read metadata and initialize catalog.
-      projectContext.initializeCatalog();
+      return projectContext.initializeCatalog();
     });
   } else {
     throw new Error("Unexpected: neither test-packages nor test");
@@ -2014,25 +2027,28 @@ function doTestCommand(options) {
 
   let cordovaRunner;
 
+  // TODO [FIBERS] -> Check cordova
   if (!_.isEmpty(runTargets)) {
     function prepareCordovaProject() {
-      main.captureAndExit('', 'preparing Cordova project', () => {
+      return main.captureAndExit('', 'preparing Cordova project', async () => {
         import { CordovaProject } from '../cordova/project.js';
 
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
           cordovaServerPort: parsedCordovaServerPort });
+        await cordovaProject.init();
+
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
-        projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
-        cordovaRunner.checkPlatformsForRunTargets();
+        await projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
+        await cordovaRunner.checkPlatformsForRunTargets();
       });
     }
 
-    ensureDevBundleDependencies();
-    prepareCordovaProject();
+    await ensureDevBundleDependencies();
+    await prepareCordovaProject();
   }
 
   options.cordovaRunner = cordovaRunner;
@@ -2050,27 +2066,27 @@ function doTestCommand(options) {
 
 // Returns the "local-test:*" package names for the given package names (or for
 // all local packages if packageNames is empty/unspecified).
-var getTestPackageNames = function (projectContext, packageNames) {
+var getTestPackageNames = async function (projectContext, packageNames) {
   var packageNamesSpecifiedExplicitly = ! _.isEmpty(packageNames);
   if (_.isEmpty(packageNames)) {
     // If none specified, test all local packages. (We don't have tests for
     // non-local packages.)
-    packageNames = projectContext.localCatalog.getAllPackageNames();
+    packageNames = await projectContext.localCatalog.getAllPackageNames();
   }
   var testPackages = [];
-  main.captureAndExit("=> Errors while collecting tests:", function () {
-    _.each(packageNames, function (p) {
-      buildmessage.enterJob("trying to test package `" + p + "`", function () {
+  await main.captureAndExit("=> Errors while collecting tests:", async function () {
+    for (const p of packageNames) {
+      await buildmessage.enterJob("trying to test package `" + p + "`", async function () {
         // If it's a package name, look it up the normal way.
         if (p.indexOf('/') === -1) {
           if (p.indexOf('@') !== -1) {
             buildmessage.error(
-              "You may not specify versions for local packages: " + p );
+                "You may not specify versions for local packages: " + p );
             return;  // recover by ignoring
           }
           // Check to see if this is a real local package, and if it is a real
           // local package, if it has tests.
-          var version = projectContext.localCatalog.getLatestVersion(p);
+          var version = await projectContext.localCatalog.getLatestVersion(p);
           if (! version) {
             buildmessage.error("Not a known local package, cannot test");
           } else if (version.testName) {
@@ -2084,7 +2100,7 @@ var getTestPackageNames = function (projectContext, packageNames) {
         } else {
           // Otherwise, it's a directory; find it by source root.
           version = projectContext.localCatalog.getVersionBySourceRoot(
-            files.pathResolve(p));
+              files.pathResolve(p));
           if (! version) {
             buildmessage.error("Package not found in local catalog");
             return;
@@ -2098,13 +2114,13 @@ var getTestPackageNames = function (projectContext, packageNames) {
           // packages that don't have tests.
         }
       });
-    });
+    }
   });
 
   return testPackages;
 };
 
-var runTestAppForPackages = function (projectContext, options) {
+var runTestAppForPackages = async function (projectContext, options) {
   var buildOptions = {
     minifyMode: options.production ? 'production' : 'development'
   };
@@ -2117,8 +2133,8 @@ var runTestAppForPackages = function (projectContext, options) {
 
   if (options.deploy) {
     // Run the constraint solver and build local packages.
-    main.captureAndExit("=> Errors while initializing project:", function () {
-      projectContext.prepareProjectForBuild();
+    await main.captureAndExit("=> Errors while initializing project:", function () {
+      return projectContext.prepareProjectForBuild();
     });
     // No need to display the PackageMapDelta here, since it would include all
     // of the packages!
@@ -2200,7 +2216,7 @@ main.registerCommand({
     email: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+},  function (options) {
   return auth.loginCommand(Object.assign({
     overwriteExistingToken: true
   }, options));
@@ -2411,7 +2427,7 @@ main.registerCommand({
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   if (! files.inCheckout()) {
     Console.error("self-test is only supported running from a checkout");
     return 1;
@@ -2423,7 +2439,7 @@ main.registerCommand({
   var offline = false;
   if (!options['force-online']) {
     try {
-      require('../utils/http-helpers.js').getUrl("http://www.google.com/");
+      await require('../utils/http-helpers.js').getUrl("http://www.google.com/");
     } catch (e) {
       if (e instanceof files.OfflineError) {
         offline = true;
@@ -2468,7 +2484,7 @@ main.registerCommand({
   }
 
   if (options.list) {
-    selftest.listTests({
+    await selftest.listTests({
       onlyChanged: options.changed,
       offline: offline,
       includeSlowTests: options.slow,
@@ -2527,8 +2543,8 @@ main.registerCommand({
   maxArgs: 0,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  auth.pollForRegistrationCompletion();
+}, async function (options) {
+  await auth.pollForRegistrationCompletion();
   if (! auth.isLoggedIn()) {
     Console.error(
       "You must be logged in for that. Try " +
@@ -2882,8 +2898,9 @@ main.registerCommand({
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  buildmessage.enterJob({ title: "A test progressbar" }, function () {
+}, async function (options) {
+  await buildmessage.enterJob({ title: "A test progressbar" }, async function () {
+
     var progress = buildmessage.getCurrentProgressTracker();
     var totalProgress = { current: 0, end: options.secs, done: false };
     var i = 0;
@@ -2893,7 +2910,7 @@ main.registerCommand({
       totalProgress.end = undefined;
     }
 
-    new Promise(function (resolve) {
+    await new Promise(function (resolve) {
       function updateProgress() {
         i++;
         if (! options.spinner) {
@@ -2911,7 +2928,7 @@ main.registerCommand({
       }
 
       setTimeout(updateProgress);
-    }).await();
+    })
   });
 });
 

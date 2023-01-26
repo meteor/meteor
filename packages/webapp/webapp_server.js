@@ -5,12 +5,11 @@ import { userInfo } from 'os';
 import { join as pathJoin, dirname as pathDirname } from 'path';
 import { parse as parseUrl } from 'url';
 import { createHash } from 'crypto';
-import { connect } from './connect.js';
+import express from 'express';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
 import parseRequest from 'parseurl';
-import basicAuth from 'basic-auth-connect';
 import { lookup as lookupUserAgent } from 'useragent';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
@@ -24,19 +23,25 @@ import whomst from '@vlasky/whomst';
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
 
+const createExpressApp = () => {
+  const app = express();
+  // Security and performace headers
+  // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
+  app.set('x-powered-by', false);
+  app.set('etag', false);
+  return app;
+}
 export const WebApp = {};
 export const WebAppInternals = {};
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
-// backwards compat to 2.0 of connect
-connect.basicAuth = basicAuth;
 
 WebAppInternals.NpmModules = {
-  connect: {
-    version: Npm.require('connect/package.json').version,
-    module: connect,
-  },
+  express : {
+    version: Npm.require('express/package.json').version,
+    module: express,
+  }
 };
 
 // Though we might prefer to use web.browser (modern) as the default
@@ -429,10 +434,11 @@ function getBoilerplateAsync(request, arch) {
       encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
       updated: runtimeConfig.isUpdatedByArch[arch],
     });
-    if (!meteorRuntimeConfig) return;
+    if (!meteorRuntimeConfig) return true;
     boilerplate.baseData = Object.assign({}, boilerplate.baseData, {
       meteorRuntimeConfig,
     });
+    return true;
   });
   runtimeConfig.isUpdatedByArch[arch] = false;
   const data = Object.assign(
@@ -509,6 +515,7 @@ WebAppInternals.generateBoilerplateInstance = function(
   };
   runtimeConfig.updateHooks.forEach(cb => {
     cb({ arch, manifest, runtimeConfig: rtimeConfig });
+    return true;
   });
 
   const meteorRuntimeConfig = JSON.stringify(
@@ -780,14 +787,14 @@ WebAppInternals.parsePort = port => {
 import { onMessage } from 'meteor/inter-process-messaging';
 
 onMessage('webapp-pause-client', async ({ arch }) => {
-  WebAppInternals.pauseClient(arch);
+  await WebAppInternals.pauseClient(arch);
 });
 
 onMessage('webapp-reload-client', async ({ arch }) => {
-  WebAppInternals.generateClientProgram(arch);
+  await WebAppInternals.generateClientProgram(arch);
 });
 
-function runWebAppServer() {
+async function runWebAppServer() {
   var shuttingDown = false;
   var syncQueue = new Meteor._SynchronousQueue();
 
@@ -795,8 +802,8 @@ function runWebAppServer() {
     return decodeURIComponent(parseUrl(itemUrl).pathname);
   };
 
-  WebAppInternals.reloadClientPrograms = function() {
-    syncQueue.runTask(function() {
+  WebAppInternals.reloadClientPrograms = async function() {
+    await syncQueue.runTask(function() {
       const staticFilesByArch = Object.create(null);
 
       const { configJson } = __meteor_bootstrap__;
@@ -817,8 +824,8 @@ function runWebAppServer() {
 
   // Pause any incoming requests and make them wait for the program to be
   // unpaused the next time generateClientProgram(arch) is called.
-  WebAppInternals.pauseClient = function(arch) {
-    syncQueue.runTask(() => {
+  WebAppInternals.pauseClient = async function(arch) {
+    await syncQueue.runTask(() => {
       const program = WebApp.clientPrograms[arch];
       const { unpause } = program;
       program.paused = new Promise(resolve => {
@@ -836,8 +843,8 @@ function runWebAppServer() {
     });
   };
 
-  WebAppInternals.generateClientProgram = function(arch) {
-    syncQueue.runTask(() => generateClientProgram(arch));
+  WebAppInternals.generateClientProgram = async function(arch) {
+    await syncQueue.runTask(() => generateClientProgram(arch));
   };
 
   function generateClientProgram(
@@ -1006,12 +1013,12 @@ function runWebAppServer() {
     },
   };
 
-  WebAppInternals.generateBoilerplate = function() {
+  WebAppInternals.generateBoilerplate = async function() {
     // This boilerplate will be served to the mobile devices when used with
     // Meteor/Cordova for the Hot-Code Push and since the file will be served by
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
-    syncQueue.runTask(function() {
+    await syncQueue.runTask(function() {
       Object.keys(WebApp.clientPrograms).forEach(generateBoilerplateForArch);
     });
   };
@@ -1036,15 +1043,15 @@ function runWebAppServer() {
     }));
   }
 
-  WebAppInternals.reloadClientPrograms();
+  await WebAppInternals.reloadClientPrograms();
 
   // webserver
-  var app = connect();
+  var app = createExpressApp()
 
   // Packages and apps can add handlers that run before any other Meteor
-  // handlers via WebApp.rawConnectHandlers.
-  var rawConnectHandlers = connect();
-  app.use(rawConnectHandlers);
+  // handlers via WebApp.rawExpressHandlers.
+  var rawExpressHandlers = createExpressApp()
+  app.use(rawExpressHandlers);
 
   // Auto-compress any json, javascript, or text.
   app.use(compress({ filter: shouldCompress }));
@@ -1133,13 +1140,13 @@ function runWebAppServer() {
 
   // Core Meteor packages like dynamic-import can add handlers before
   // other handlers added by package and application code.
-  app.use((WebAppInternals.meteorInternalHandlers = connect()));
+  app.use((WebAppInternals.meteorInternalHandlers = createExpressApp()));
 
   /**
-   * @name connectHandlersCallback(req, res, next)
+   * @name expressHandlersCallback(req, res, next)
    * @locus Server
    * @isprototype true
-   * @summary callback handler for `WebApp.connectHandlers`
+   * @summary callback handler for `WebApp.expressHandlers`
    * @param {Object} req
    * a Node.js
    * [IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
@@ -1157,7 +1164,7 @@ function runWebAppServer() {
    */
 
   /**
-   * @method connectHandlers
+   * @method expressHandlers
    * @memberof WebApp
    * @locus Server
    * @summary Register a handler for all HTTP requests.
@@ -1167,14 +1174,14 @@ function runWebAppServer() {
    *
    * For example, `/hello` will match `/hello/world` and
    * `/hello.world`, but not `/hello_world`.
-   * @param {connectHandlersCallback} handler
+   * @param {expressHandlersCallback} handler
    * A handler function that will be called on HTTP requests.
-   * See `connectHandlersCallback`
+   * See `expressHandlersCallback`
    *
    */
-  // Packages and apps can add handlers to this via WebApp.connectHandlers.
+  // Packages and apps can add handlers to this via WebApp.expressHandlers.
   // They are inserted before our default handler.
-  var packageAndAppHandlers = connect();
+  var packageAndAppHandlers = createExpressApp()
   app.use(packageAndAppHandlers);
 
   var suppressConnectErrors = false;
@@ -1341,10 +1348,10 @@ function runWebAppServer() {
 
   // start up app
   _.extend(WebApp, {
-    connectHandlers: packageAndAppHandlers,
-    rawConnectHandlers: rawConnectHandlers,
+    expressHandlers: packageAndAppHandlers,
+    rawExpressHandlers: rawExpressHandlers,
     httpServer: httpServer,
-    connectApp: app,
+    expressApp: app,
     // For testing.
     suppressConnectErrors: function() {
       suppressConnectErrors = true;
@@ -1363,8 +1370,8 @@ function runWebAppServer() {
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
-  exports.main = argv => {
-    WebAppInternals.generateBoilerplate();
+  exports.main = async argv => {
+    await WebAppInternals.generateBoilerplate();
 
     const startHttpServer = listenOptions => {
       WebApp.startListening(
@@ -1449,26 +1456,26 @@ WebAppInternals.inlineScriptsAllowed = function() {
   return inlineScriptsAllowed;
 };
 
-WebAppInternals.setInlineScriptsAllowed = function(value) {
+WebAppInternals.setInlineScriptsAllowed = async function(value) {
   inlineScriptsAllowed = value;
-  WebAppInternals.generateBoilerplate();
+  await WebAppInternals.generateBoilerplate();
 };
 
 var sriMode;
 
-WebAppInternals.enableSubresourceIntegrity = function(use_credentials = false) {
+WebAppInternals.enableSubresourceIntegrity = async function(use_credentials = false) {
   sriMode = use_credentials ? 'use-credentials' : 'anonymous';
-  WebAppInternals.generateBoilerplate();
+  await WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssUrlRewriteHook = function(hookFn) {
+WebAppInternals.setBundledJsCssUrlRewriteHook = async function(hookFn) {
   bundledJsCssUrlRewriteHook = hookFn;
-  WebAppInternals.generateBoilerplate();
+  await WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssPrefix = function(prefix) {
+WebAppInternals.setBundledJsCssPrefix = async function(prefix) {
   var self = this;
-  self.setBundledJsCssUrlRewriteHook(function(url) {
+  await self.setBundledJsCssUrlRewriteHook(function(url) {
     return prefix + url;
   });
 };
@@ -1486,5 +1493,6 @@ WebAppInternals.addStaticJs = function(contents) {
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
-// Start the server!
-runWebAppServer();
+// TODO[fibers]: change this when we have TLA
+await runWebAppServer();
+

@@ -1,4 +1,3 @@
-var Fiber = require("fibers");
 var _ = require("underscore");
 
 var config = require('./config.js');
@@ -36,7 +35,7 @@ var packageList = function (projectContext) {
 //   from this before yielding.
 // - site: If it's a deploy, the name of the site ("foo.meteor.com") that we're
 //   deploying to.
-var recordPackages = function (options) {
+var recordPackages = async function (options) {
   // Before doing anything, look at the app's dependencies to see if the
   // opt-out package is there; if present, we don't record any stats.
   var packages = packageList(options.projectContext);
@@ -56,62 +55,59 @@ var recordPackages = function (options) {
   // This also gives it its own buildmessage state.
   // However, we do make sure to have already extracted the package list from
   // projectContext, since it might mutate out from under us otherwise.
-  Fiber(function () {
+  var details = {
+    what: options.what,
+    userAgent: httpHelpers.getUserAgent(),
+    sessionId: auth.getSessionId(config.getAccountsDomain()),
+    site: options.site
+  };
 
-    var details = {
-      what: options.what,
-      userAgent: httpHelpers.getUserAgent(),
-      sessionId: auth.getSessionId(config.getAccountsDomain()),
-      site: options.site
-    };
+  try {
+    var conn = await connectToPackagesStatsServer();
+    var accountsConfiguration = await auth.getAccountsConfiguration(conn);
 
-    try {
-      var conn = connectToPackagesStatsServer();
-      var accountsConfiguration = auth.getAccountsConfiguration(conn);
-
-      if (auth.isLoggedIn()) {
-        try {
-          auth.loginWithTokenOrOAuth(
-            conn,
-            accountsConfiguration,
-            config.getPackageStatsServerUrl(),
-            config.getPackageStatsServerDomain(),
-            "package-stats-server"
-          );
-        } catch (err) {
-          // Do nothing. If we can't log in, we should continue and report
-          // stats anonymously.
-          //
-          // We log other errors with `logErrorIfInCheckout`, but login
-          // errors can happen in normal operation when nothing is wrong
-          // (e.g. login token expired or revoked) so we don't log them.
-        }
+    if (auth.isLoggedIn()) {
+      try {
+        await auth.loginWithTokenOrOAuth(
+          conn,
+          accountsConfiguration,
+          config.getPackageStatsServerUrl(),
+          config.getPackageStatsServerDomain(),
+          "package-stats-server"
+        );
+      } catch (err) {
+        // Do nothing. If we can't log in, we should continue and report
+        // stats anonymously.
+        //
+        // We log other errors with `logErrorIfInCheckout`, but login
+        // errors can happen in normal operation when nothing is wrong
+        // (e.g. login token expired or revoked) so we don't log them.
       }
-
-      var result = conn.call("recordAppPackages",
-                             appIdentifier,
-                             packages,
-                             details);
-
-      // If the stats server sent us a new session, save it for use on
-      // subsequent requests.
-      if (result && result.newSessionId) {
-        auth.setSessionId(config.getAccountsDomain(), result.newSessionId);
-      }
-
-      if (process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
-        // Print some output for the 'report-stats' self-test.
-        process.stdout.write("PACKAGE STATS SENT\n");
-      }
-    } catch (err) {
-      logErrorIfInCheckout(err);
-      // Do nothing. A failure to record package stats shouldn't be
-      // visible to the end user and shouldn't affect whatever command
-      // they are running.
-    } finally {
-      conn && conn.close();
     }
-  }).run();
+
+    var result = await conn.call("recordAppPackages",
+                           appIdentifier,
+                           packages,
+                           details);
+
+    // If the stats server sent us a new session, save it for use on
+    // subsequent requests.
+    if (result && result.newSessionId) {
+      auth.setSessionId(config.getAccountsDomain(), result.newSessionId);
+    }
+
+    if (process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
+      // Print some output for the 'report-stats' self-test.
+      process.stdout.write("PACKAGE STATS SENT\n");
+    }
+  } catch (err) {
+    logErrorIfInCheckout(err);
+    // Do nothing. A failure to record package stats shouldn't be
+    // visible to the end user and shouldn't affect whatever command
+    // they are running.
+  } finally {
+    conn && conn.close();
+  }
 };
 
 var logErrorIfInCheckout = function (err) {
@@ -147,11 +143,14 @@ var getPackagesForAppIdInTest = function (projectContext) {
   return result;
 };
 
-var connectToPackagesStatsServer = function () {
-  return new ServiceConnection(
-    config.getPackageStatsServerUrl(),
-    {_dontPrintErrors: true}
+var connectToPackagesStatsServer = async function () {
+  const sc = new ServiceConnection(
+      config.getPackageStatsServerUrl(),
+      {_dontPrintErrors: true}
   );
+
+  await sc.init();
+  return sc;
 };
 
 exports.recordPackages = recordPackages;

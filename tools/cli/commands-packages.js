@@ -93,7 +93,7 @@ main.registerCommand({
   options: {
     'allow-incompatible-update': { type: Boolean }
   }
-}, function (options) {
+}, async function (options) {
 
   // If we're in an app, make sure that we can build the current app. Otherwise
   // just make sure that we can build some fake app.
@@ -103,8 +103,9 @@ main.registerCommand({
     neverWritePackageMap: true,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.initializeCatalog();
+  await projectContext.init();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.initializeCatalog();
   });
 
   // Add every local package (including tests) and every release package to this
@@ -122,8 +123,8 @@ main.registerCommand({
   }
 
   // Now finish building and downloading.
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.prepareProjectForBuild();
   });
   // We don't display package changes because they'd include all these packages
   // not actually in the app!
@@ -143,14 +144,15 @@ main.registerCommand({
   options: {
     'allow-incompatible-update': { type: Boolean }
   }
-}, function (options) {
+}, async function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
+  await projectContext.init();
 
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.prepareProjectForBuild();
   });
 
   projectContext.packageMapDelta.displayOnConsole();
@@ -167,7 +169,7 @@ main.registerCommand({
 //
 // Takes in a packageSource and a connection to the package server. Returns 0 on
 // success and an exit code on failure.
-var updatePackageMetadata = function (packageSource, conn) {
+var updatePackageMetadata = async function (packageSource, conn) {
     var name = packageSource.name;
     var version = packageSource.version;
 
@@ -184,7 +186,7 @@ var updatePackageMetadata = function (packageSource, conn) {
 
     // Load in the user's documentation, and check that it isn't blank.
     var readmeInfo;
-    main.captureAndExit(
+    await main.captureAndExit(
       "=> Errors while publishing:", "reading documentation",
       function () {
        readmeInfo = packageSource.processReadme();
@@ -200,11 +202,11 @@ var updatePackageMetadata = function (packageSource, conn) {
     };
 
     // Finally, call to the server.
-    main.captureAndExit(
+    await main.captureAndExit(
       "=> Errors while publishing:",
       "updating package metadata",
-      function () {
-        packageClient.updatePackageMetadata({
+      async function () {
+        await packageClient.updatePackageMetadata({
           packageSource: packageSource,
           readmeInfo: readmeInfo,
           connection: conn
@@ -244,7 +246,7 @@ main.registerCommand({
   // obviously incorrect submissions before they ever hit the wire.
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false }),
   'allow-incompatible-update': { type: Boolean }
-}, function (options) {
+}, async function (options) {
   if (options.create && options['existing-version']) {
     // Make up your mind!
     Console.error(
@@ -301,10 +303,12 @@ main.registerCommand({
     });
   }
 
-  main.captureAndExit("=> Errors while initializing project:", function () {
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
     // Just get up to initializing the catalog. We're going to mutate the
     // constraints file a bit before we prepare the build.
-    projectContext.initializeCatalog();
+    await projectContext.initializeCatalog();
   });
 
   if (!process.env.METEOR_TEST_NO_PUBLISH) {
@@ -353,7 +357,7 @@ main.registerCommand({
   // need. Don't bother building the package, just update the metadata and
   // return the result.
   if (options.update) {
-    return updatePackageMetadata(packageSource, conn);
+    return await updatePackageMetadata(packageSource, conn);
   }
 
   // Fail early if the package record exists, but we don't think that it does
@@ -402,8 +406,8 @@ main.registerCommand({
   });
 
   // Now resolve constraints and build packages.
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.prepareProjectForBuild();
   });
   // We don't display the package map delta here, because it includes adding the
   // package's test and all the test's dependencies.
@@ -438,11 +442,11 @@ main.registerCommand({
 
   // We have initialized everything, so perform the publish operation.
   var binary = isopack.platformSpecific();
-  main.captureAndExit(
+  await main.captureAndExit(
     "=> Errors while publishing:",
     "publishing the package",
-    function () {
-      packageClient.publishPackage({
+    async function () {
+      await packageClient.publishPackage({
         projectContext: projectContext,
         packageSource: packageSource,
         connection: conn,
@@ -502,7 +506,7 @@ main.registerCommand({
   // publish-for-arch you want to reproduce the exact same setup as when
   // you ran 'publish', but support the option in case it comes up.
   'allow-incompatible-update': { type: Boolean }
-}, function (options) {
+}, async function (options) {
   // argument processing
   var all = options.args[0].split('@');
   if (all.length !== 2) {
@@ -641,13 +645,13 @@ main.registerCommand({
   });
   // Just get up to initializing the catalog. We're going to mutate the
   // constraints file a bit before we prepare the build.
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.initializeCatalog();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.initializeCatalog();
   });
   projectContext.projectConstraintsFile.addConstraints(
     [utils.parsePackageConstraint(name + "@=" + versionString)]);
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole({
     title: "Some package versions changed since this package was published!"
@@ -666,12 +670,12 @@ main.registerCommand({
     return 1;
   }
 
-  main.captureAndExit(
+  await main.captureAndExit(
     "=> Errors while publishing build:",
     ("publishing package " + name + " for architecture "
      + isopk.buildArchitectures()),
-    function () {
-      packageClient.createAndPublishBuiltPackage(
+    async function () {
+      await packageClient.createAndPublishBuiltPackage(
         conn, isopk, projectContext.isopackCache);
     }
   );
@@ -704,7 +708,7 @@ main.registerCommand({
     'skip-tree-hashing': { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
+}, async function (options) {
   try {
     var conn = packageClient.loggedInPackagesConnection();
   } catch (err) {
@@ -726,7 +730,7 @@ main.registerCommand({
   }
 
   // Fill in the order key and any other generated release.json fields.
-  main.captureAndExit(
+  await main.captureAndExit(
     "=> Errors in release schema:",
     "double-checking release schema",
     function () {
@@ -858,8 +862,8 @@ main.registerCommand({
     });
 
     // Read metadata and initialize catalog.
-    main.captureAndExit("=> Errors while building for release:", function () {
-      projectContext.initializeCatalog();
+    await main.captureAndExit("=> Errors while building for release:", async function () {
+      await projectContext.initializeCatalog();
     });
 
     // Ensure that all packages and their tests are built. (We need to build
@@ -875,16 +879,16 @@ main.registerCommand({
     );
 
     // Build!
-    main.captureAndExit("=> Errors while building for release:", function () {
-      projectContext.prepareProjectForBuild();
+    await main.captureAndExit("=> Errors while building for release:", async function () {
+      await projectContext.prepareProjectForBuild();
     });
     // No need to display the PackageMapDelta here, since it would include all
     // of the packages!
 
     relConf.packages = {};
     var toPublish = [];
-    Console.info(`Will publish new version for MeteorJS: ${relConf.version}`);
-    main.captureAndExit("=> Errors in release packages:", function () {
+
+    await main.captureAndExit("=> Errors in release packages:", function () {
       _.each(allPackages, function (packageName) {
         buildmessage.enterJob("checking consistency of " + packageName, function () {
           var packageSource = projectContext.localCatalog.getPackageSource(
@@ -927,7 +931,7 @@ main.registerCommand({
               return;
             }
             toPublish.push(packageName);
-            Console.info("Will publish new version for " + packageName);
+            Console.info(`Will publish new version for ${ packageName }: ${ packageSource.version }`);
             return;
           } else {
             var isopk = projectContext.isopackCache.getIsopack(packageName);
@@ -988,7 +992,7 @@ main.registerCommand({
     });
 
     if (options['dry-run']) {
-      main.captureAndExit("=> Dry run", function () {
+      await main.captureAndExit("=> Dry run", function () {
           buildmessage.error(
             "This is not an error but it was just a validation" +
             " and nothing was published. Remove --dry-run to publish.");
@@ -999,8 +1003,8 @@ main.registerCommand({
     // We now have an object of packages that have new versions on disk that
     // don't exist in the server catalog. Publish them.
     var unfinishedBuilds = {};
-    _.each(toPublish, function (packageName) {
-      main.captureAndExit(
+    _.each(toPublish, async function (packageName) {
+      await main.captureAndExit(
         "=> Errors while publishing:",
         "publishing package " + packageName,
         function () {
@@ -1042,15 +1046,15 @@ main.registerCommand({
     delete relConf.packages["meteor-tool"];
   }
 
-  main.captureAndExit(
+  await main.captureAndExit(
     "=> Errors while publishing release:",
     "publishing release",
-    function () {
+    async function () {
       // Create the new track, if we have been told to.
       if (options['create-track']) {
         // XXX maybe this job title should be left on the screen too?  some sort
         // of enterJob/progress option that lets you do that?
-        buildmessage.enterJob("creating a new release track", function () {
+        await buildmessage.enterJob("creating a new release track", function () {
           packageClient.callPackageServerBM(
             conn, 'createReleaseTrack', { name: relConf.track } );
         });
@@ -1059,7 +1063,7 @@ main.registerCommand({
         }
       }
 
-      buildmessage.enterJob("creating a new release version", function () {
+      await buildmessage.enterJob("creating a new release version", function () {
         var record = {
           track: relConf.track,
           version: relConf.version,
@@ -1156,17 +1160,19 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
-}, function (options) {
+}, async function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.prepareProjectForBuild();
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while initializing project:", function () {
+    return projectContext.prepareProjectForBuild();
   });
+
   // No need to display the PackageMapDelta here, since we're about to list all
   // of the packages anyway!
-
   const showJson = !!options['json'];
   const showTree = !!options['tree'];
 
@@ -1176,7 +1182,7 @@ main.registerCommand({
     weak: '[weak]',
     skipped: 'package skipped',
     missing: 'missing?'
-  }
+  };
 
   if (showJson && showTree) {
     throw new Error('can only run for one option,found --json and --tree');
@@ -1188,7 +1194,7 @@ main.registerCommand({
     const showDetails = !!options['details'];
     // Load package details of all used packages (inc. dependencies)
     const packageDetails = new Map;
-    projectContext.packageMap.eachPackage(function (name, info) {
+    await projectContext.packageMap.eachPackage(function (name, info) {
       packageDetails.set(name, projectContext.projectCatalog.getVersion(name, info.version));
     });
 
@@ -1202,7 +1208,7 @@ main.registerCommand({
     const dontExpand = new Set(topLevelSet.values());
 
     // Recursive function that outputs each package
-    const printPackage = function ({ packageToPrint, isWeak, indent1, indent2, parent }) {
+    const printPackage = async function ({ packageToPrint, isWeak, indent1, indent2, parent }) {
       const packageName = packageToPrint.packageName;
       const depsObj = packageToPrint.dependencies || {};
       let deps = Object.keys(depsObj).sort();
@@ -1243,7 +1249,7 @@ main.registerCommand({
       if (showJson) {
         if (expandedAlready) {
           // on expanded packages we only want to add minimal information to
-          // keep the json file compact, so we make the value a string
+          // keep the json file compact, so we make the value a stirng
           if (topLevelSet.has(packageName)) {
             parent[packageName] = `${packageToPrint.version}-${suffixes.topLevel}`
           } else {
@@ -1262,7 +1268,7 @@ main.registerCommand({
             version: packageToPrint.version,
             local: isLocal,
             weak: isWeak,
-            newerVersion: !isLocal && getNewerVersion(packageName, packageToPrint.version, catalog.official)
+            newerVersion: !isLocal && await getNewerVersion(packageName, packageToPrint.version, catalog.official)
           });
 
           Object.entries(infoSource).forEach(([key, value]) => {
@@ -1279,7 +1285,7 @@ main.registerCommand({
 
       if (shouldExpand) {
         dontExpand.add(packageName);
-        deps.forEach((dep, index) => {
+        for (const [index, dep] of shouldExpand.entries()) {
           const references = depsObj[dep].references || [];
           const weakRef = references.length > 0 && references.every(r => r.weak);
           const last = ((index + 1) === deps.length);
@@ -1290,7 +1296,7 @@ main.registerCommand({
             const newIndent1 = indent2 + (last ? '└─' : '├─');
             const newIndent2 = indent2 + (last ? '  ' : '│ ');
             if (child) {
-              printPackage({
+              await printPackage({
                 packageToPrint: child,
                 isWeak: weakRef,
                 indent1: newIndent1,
@@ -1305,7 +1311,7 @@ main.registerCommand({
 
           if (showJson) {
             if (child) {
-              printPackage({
+              await printPackage({
                 packageToPrint: child,
                 isWeak: weakRef,
                 parent: parent[packageName].dependencies
@@ -1316,17 +1322,17 @@ main.registerCommand({
               parent[packageName].dependencies = suffixes.missing;
             }
           }
-        });
+        }
       }
     };
 
     const topLevelNames = Array.from(topLevelSet.values()).sort();
-    topLevelNames.forEach((dep, index) => {
+    for (const dep of topLevelNames) {
       const topLevelPackage = packageDetails.get(dep);
       if (topLevelPackage) {
         // Force top level packages to be expanded
         dontExpand.delete(topLevelPackage.packageName);
-        printPackage({
+        await printPackage({
           packageToPrint: topLevelPackage,
           isWeak: false,
           indent1: '',
@@ -1334,7 +1340,7 @@ main.registerCommand({
           parent: jsonOut
         })
       }
-    });
+    }
 
     if (showJson) {
       // we can't use Console here, because it pretty prints the output with
@@ -1352,7 +1358,7 @@ main.registerCommand({
 
   // Iterate over packages that are used directly by this app (not indirect
   // dependencies).
-  projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+  await projectContext.projectConstraintsFile.eachConstraintAsync(async function (constraint) {
     var packageName = constraint.package;
 
     // Skip isobuild:* pseudo-packages.
@@ -1364,7 +1370,7 @@ main.registerCommand({
     if (! mapInfo) {
       throw Error("no version for used package " + packageName);
     }
-    var versionRecord = projectContext.projectCatalog.getVersion(
+    var versionRecord = await projectContext.projectCatalog.getVersion(
       packageName, mapInfo.version);
     if (! versionRecord) {
       throw Error("no version record for " + packageName + "@" +
@@ -1376,7 +1382,7 @@ main.registerCommand({
       versionAddendum = "+";
       anyBuiltLocally = true;
     } else if (mapInfo.kind === 'versioned') {
-      if (getNewerVersion(packageName, mapInfo.version, catalog.official)) {
+      if (await getNewerVersion(packageName, mapInfo.version, catalog.official)) {
         versionAddendum = "*";
         newVersionsAvailable = true;
       }
@@ -1421,7 +1427,7 @@ main.registerCommand({
   return 0;
 });
 
-var getNewerVersion = function (packageName, curVersion, whichCatalog) {
+var getNewerVersion = async function (packageName, curVersion, whichCatalog) {
   // Check to see if there are later versions available, returning the
   // latest version if there are.
   //
@@ -1434,9 +1440,9 @@ var getNewerVersion = function (packageName, curVersion, whichCatalog) {
   // that we'll find something when we look in the catalog.
   var latest;
   if (/-/.test(curVersion)) {
-    latest = whichCatalog.getLatestVersion(packageName);
+    latest = await whichCatalog.getLatestVersion(packageName);
   } else {
-    latest = whichCatalog.getLatestMainlineVersion(packageName);
+    latest = await whichCatalog.getLatestMainlineVersion(packageName);
   }
   if (! latest) {
     // Shouldn't happen: we've chosen a published version of this package,
@@ -1464,7 +1470,7 @@ var getNewerVersion = function (packageName, curVersion, whichCatalog) {
 // decided not to with good reason. Returns something other than 0, if it is not
 // safe to proceed (ex: our release track is fundamentally unsafe or there is
 // weird catalog corruption).
-var maybeUpdateRelease = function (options) {
+var maybeUpdateRelease = async function (options) {
   // We are only updating packages, so we are not updating the release.
   if (options["packages-only"]) {
      return 0;
@@ -1606,8 +1612,8 @@ var maybeUpdateRelease = function (options) {
     alwaysWritePackageMap: true,
     allowIncompatibleUpdate: true // disregard `.meteor/versions` if necessary
   });
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.readProjectMetadata();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.readProjectMetadata();
   });
 
   if (projectContext.releaseFile.fullReleaseName === release.current.name) {
@@ -1717,11 +1723,11 @@ var maybeUpdateRelease = function (options) {
   //     to upgrade packages and have to do it again. Maybe we shouldn't? Note
   //     that if we change this, that changes the upgraders interface, which
   //     expects a projectContext that is fully prepared for build.
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.prepareProjectForBuild();
   });
 
-  projectContext.writeReleaseFileAndDevBundleLink(releaseName);
+  await projectContext.writeReleaseFileAndDevBundleLink(releaseName);
 
   projectContext.packageMapDelta.displayOnConsole({
     title: ("Changes to your project's package version selections from " +
@@ -1767,7 +1773,7 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: Infinity,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
-}, function (options) {
+}, async function (options) {
   // If you are specifying packages individually, you probably don't want to
   // update the release.
   if (options.args.length > 0) {
@@ -1791,7 +1797,7 @@ main.registerCommand({
     return 1;
   }
 
-  var releaseUpdateStatus = maybeUpdateRelease(options);
+  var releaseUpdateStatus = await maybeUpdateRelease(options);
   // If we encountered an error and cannot proceed, return.
   if (releaseUpdateStatus !== 0) {
     return releaseUpdateStatus;
@@ -1812,8 +1818,8 @@ main.registerCommand({
     alwaysWritePackageMap: true,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.readProjectMetadata();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.readProjectMetadata();
   });
 
   // If no packages have been specified, then we will send in a request to
@@ -1905,10 +1911,10 @@ main.registerCommand({
     upgradePackageNames: upgradePackageNames,
     upgradeIndirectDepPatchVersions: upgradeIndirectDepPatchVersions
   });
-  main.captureAndExit(
-    "=> Errors while upgrading packages:", "upgrading packages", function () {
-      projectContext.resolveConstraints();
-      if (buildmessage.jobHasMessages()) {
+  await main.captureAndExit(
+    "=> Errors while upgrading packages:", "upgrading packages", async function () {
+      await projectContext.resolveConstraints();
+      if (await buildmessage.jobHasMessages()) {
         return;
       }
 
@@ -1921,12 +1927,12 @@ main.registerCommand({
           }
         });
       }
-      if (buildmessage.jobHasMessages()) {
+      if (await buildmessage.jobHasMessages()) {
         return;
       }
 
       // Finish preparing the project.
-      projectContext.prepareProjectForBuild();
+      await projectContext.prepareProjectForBuild();
     }
   );
 
@@ -2022,13 +2028,13 @@ main.registerCommand({
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never(),
   'allow-incompatible-update': { type: Boolean }
-}, function (options) {
+}, async function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    await projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
 
@@ -2049,7 +2055,7 @@ main.registerCommand({
   name: 'admin run-background-updater',
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   updater.tryToDownloadUpdate({
     showBanner: true,
     printErrors: true
@@ -2065,7 +2071,7 @@ main.registerCommand({
   name: 'admin wipe-all-packages',
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   tropohouse.default.wipeAllPackages();
 });
 
@@ -2079,7 +2085,7 @@ main.registerCommand({
   name: 'admin check-package-versions',
   hidden: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
+}, async function (options) {
   if (!files.inCheckout()) {
     Console.error("Must run from checkout.");
     return 1;
@@ -2097,8 +2103,8 @@ main.registerCommand({
   });
 
   // Read metadata and initialize catalog.
-  main.captureAndExit("=> Errors while building for release:", function () {
-    projectContext.initializeCatalog();
+  await main.captureAndExit("=> Errors while building for release:", async function () {
+    await projectContext.initializeCatalog();
   });
 
   var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
@@ -2129,16 +2135,18 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
-}, function (options) {
+}, async function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
 
-  main.captureAndExit("=> Errors while initializing project:", function () {
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
     // constraints until after we've made our changes.
-    projectContext.initializeCatalog();
+    return projectContext.initializeCatalog();
   });
 
   let exitCode = 0;
@@ -2176,8 +2184,8 @@ main.registerCommand({
       changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    ensureDevBundleDependencies();
-    cordovaPluginAdd();
+    await ensureDevBundleDependencies();
+    await cordovaPluginAdd();
   }
 
   if (_.isEmpty(packagesToAdd)) {
@@ -2192,9 +2200,9 @@ main.registerCommand({
   // constraints. Don't run the constraint solver until you have added all of
   // them -- add should be an atomic operation regardless of the package
   // order.
-  var messages = buildmessage.capture(function () {
-    _.each(packagesToAdd, function (packageReq) {
-      buildmessage.enterJob("adding package " + packageReq, function () {
+  var messages = await buildmessage.capture(async function () {
+    for (const packageReq of packagesToAdd) {
+      await buildmessage.enterJob("adding package " + packageReq, async function () {
         var constraint = utils.parsePackageConstraint(packageReq, {
           useBuildmessage: true
         });
@@ -2205,39 +2213,39 @@ main.registerCommand({
         // It's OK to make errors based on looking at the catalog, because this
         // is a OnceAtStart command.
         var packageRecord = projectContext.projectCatalog.getPackage(
-          constraint.package);
+            constraint.package);
         if (! packageRecord) {
           buildmessage.error("no such package");
           return;
         }
 
-        _.each(constraint.versionConstraint.alternatives, function (subConstr) {
+        for (const subConstr of constraint.versionConstraint.alternatives) {
           if (subConstr.versionString === null) {
-            return;
+            continue;
           }
           // Figure out if this version exists either in the official catalog or
           // the local catalog. (This isn't the same as using the combined
           // catalog, since it's OK to type "meteor add foo@1.0.0" if the local
           // package is 1.1.0 as long as 1.0.0 exists.)
-          var versionRecord = projectContext.localCatalog.getVersion(
-            constraint.package, subConstr.versionString);
+          var versionRecord = await projectContext.localCatalog.getVersion(
+              constraint.package, subConstr.versionString);
           if (! versionRecord) {
             // XXX #2846 here's an example of something that might require a
             // refresh
-            versionRecord = catalog.official.getVersion(
-              constraint.package, subConstr.versionString);
+            versionRecord = await catalog.official.getVersion(
+                constraint.package, subConstr.versionString);
           }
           if (! versionRecord) {
             buildmessage.error("no such version " + constraint.package + "@" +
-                               subConstr.versionString);
+                subConstr.versionString);
           }
-        });
+        }
         if (buildmessage.jobHasMessages()) {
           return;
         }
 
         var current = projectContext.projectConstraintsFile.getConstraint(
-          constraint.package);
+            constraint.package);
 
         // Check that the constraint is new. If we are already using the package
         // at the same constraint in the app, we will log an info message later
@@ -2246,35 +2254,35 @@ main.registerCommand({
         if (! current) {
           constraintsToAdd.push(constraint);
         } else if (! current.constraintString &&
-                   ! constraint.constraintString) {
+            ! constraint.constraintString) {
           infoMessages.push(
-            constraint.package +
+              constraint.package +
               " without a version constraint has already been added.");
         } else if (current.constraintString === constraint.constraintString) {
           infoMessages.push(
-            constraint.package + " with version constraint " +
+              constraint.package + " with version constraint " +
               constraint.constraintString + " has already been added.");
         } else {
           // We are changing an existing constraint.
           if (current.constraintString) {
             infoMessages.push(
-              "Currently using " + constraint.package +
+                "Currently using " + constraint.package +
                 " with version constraint " + current.constraintString + ".");
           } else {
             infoMessages.push(
-              "Currently using " +  constraint.package +
+                "Currently using " +  constraint.package +
                 " without any version constraint.");
           }
           if (constraint.constraintString) {
             infoMessages.push("The version constraint will be changed to " +
-                              constraint.constraintString + ".");
+                constraint.constraintString + ".");
           } else {
             infoMessages.push("The version constraint will be removed.");
           }
           constraintsToAdd.push(constraint);
         }
       });
-    });
+    }
   });
   if (messages.hasMessages()) {
     Console.arrowError("Errors while parsing arguments:", 1);
@@ -2286,8 +2294,8 @@ main.registerCommand({
   projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
 
   // Run the constraint solver, download packages, etc.
-  messages = buildmessage.capture(function () {
-    projectContext.prepareProjectForBuild();
+  messages = await buildmessage.capture(function () {
+    return projectContext.prepareProjectForBuild();
   });
   if (messages.hasMessages()) {
     Console.arrowError("Errors while adding packages:", 1);
@@ -2303,23 +2311,23 @@ main.registerCommand({
 
   // Show descriptions of directly added packages.
   Console.info();
-  _.each(constraintsToAdd, function (constraint) {
+  for (const constraint of constraintsToAdd) {
     var version = projectContext.packageMap.getInfo(constraint.package).version;
-    var versionRecord = projectContext.projectCatalog.getVersion(
-      constraint.package, version);
-    var deprecatedMessage = ""
+    var versionRecord = await projectContext.projectCatalog.getVersion(
+        constraint.package, version);
+    var deprecatedMessage = "";
     if (versionRecord.deprecated) {
       if (versionRecord.deprecatedMessage) {
         deprecatedMessage = ` - DEPRECATED: ${versionRecord.deprecatedMessage}`
       } else {
-        deprecatedMessage = ' - DEPRECATED'
+        deprecatedMessage = ' - DEPRECATED';
       }
     }
     Console.info(
-      constraint.package +
+        constraint.package +
         (versionRecord.description ? (": " + versionRecord.description) : "") + deprecatedMessage
     );
-  });
+  }
 
   return exitCode;
 });
@@ -2337,15 +2345,17 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-  main.captureAndExit("=> Errors while initializing project:", function () {
+  await projectContext.init();
+
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
     // constraints until after we've made our changes.
-    projectContext.readProjectMetadata();
+   return projectContext.readProjectMetadata();
   });
 
   let exitCode = 0;
@@ -2383,7 +2393,7 @@ main.registerCommand({
       changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    ensureDevBundleDependencies();
+    await ensureDevBundleDependencies();
     cordovaPluginRemove();
   }
 
@@ -2418,14 +2428,14 @@ main.registerCommand({
 
   // Run the constraint solver, rebuild local packages, etc. This will write
   // our changes to .meteor/packages if it succeeds.
-  main.captureAndExit("=> Errors after removing packages", function () {
-    projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors after removing packages", function () {
+    return projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
-  // which is why we do this in addition to displaying the PackageMapDelta.
+  // which is why we do this in addition to dislpaying the PackageMapDelta.
   _.each(packagesToRemove, function (packageName) {
     Console.info(packageName + ": removed dependency");
   });
@@ -2441,7 +2451,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'refresh',
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
+}, async function (options) {
   // We already did it!
   return 0;
 });
@@ -2466,7 +2476,7 @@ main.registerCommand({
     list: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
+}, async function (options) {
   var name = options.args[0];
 
   // Yay, checking that options are correct.
@@ -2569,7 +2579,7 @@ main.registerCommand({
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
+}, async function (options) {
   var releaseNameAndVersion = options.args[0];
 
   // We get this as an argument, so it is an OS path. Make it a standard path.
@@ -2640,10 +2650,10 @@ main.registerCommand({
 
   // Before downloading anything, check that the catalog contains everything we
   // need for the OSes that the tool is built for.
-  main.captureAndExit("=> Errors finding builds:", function () {
+  await main.captureAndExit("=> Errors finding builds:", async function () {
     _.each(osArches, function (osArch) {
-      _.each(releaseRecord.packages, function (pkgVersion, pkgName) {
-        buildmessage.enterJob({
+      _.each(releaseRecord.packages, async function (pkgVersion, pkgName) {
+        await buildmessage.enterJob({
           title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
         }, function () {
           if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
@@ -2686,7 +2696,7 @@ main.registerCommand({
   var packageMap =
         packageMapModule.PackageMap.fromReleaseVersion(releaseRecord);
 
-  _.each(osArches, function (osArch) {
+  for (const osArche in osArches) {
     var tmpdir = files.mkdtemp();
     Console.info("Building tarball for " + osArch);
 
@@ -2702,7 +2712,7 @@ main.registerCommand({
       files.pathJoin(tmpdir, '.meteor'),
       { platform: targetPlatform });
 
-    main.captureAndExit(
+    await main.captureAndExit(
       "=> Errors downloading packages for " + osArch + ":",
       function () {
         tmpTropo.downloadPackagesMissingFromMap(packageMap, {
@@ -2730,7 +2740,7 @@ main.registerCommand({
       throw Error("missing tool for " + osArch);
     }
 
-    tmpTropo.linkToLatestMeteor(files.pathJoin(
+    await tmpTropo.linkToLatestMeteor(files.pathJoin(
         tmpTropo.packagePath(toolPackage, toolVersion, true),
         toolRecord.path,
         'meteor'));
@@ -2743,7 +2753,7 @@ main.registerCommand({
         files.pathJoin(outputDirectory,
           'meteor-bootstrap-' + osArch + '.tar.gz'));
     }
-  });
+  }
 
   return 0;
 });
@@ -2755,7 +2765,7 @@ main.registerCommand({
   maxArgs: 1,
   hidden: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
+}, async function (options) {
   var bannersFile = options.args[0];
   try {
     var bannersData = files.readFile(bannersFile, 'utf8');
@@ -2802,7 +2812,7 @@ main.registerCommand({
     unrecommend: { type: Boolean, short: "u" }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
+}, async function (options) {
 
   // We want the most recent information.
   //refreshOfficialCatalogOrDie();
@@ -2858,7 +2868,7 @@ main.registerCommand({
   minArgs: 2,
   maxArgs: 2,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
+}, async function (options) {
 
   // We want the most recent information.
   //refreshOfficialCatalogOrDie();
@@ -2906,7 +2916,7 @@ main.registerCommand({
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
+}, async function (options) {
 
   // We don't care about having the most recent information, but we do want the
   // option to either unmigrate a specific version, or to unmigrate an entire

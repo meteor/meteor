@@ -1479,7 +1479,7 @@ Server = function (options = {}) {
 
   self.sessions = new Map(); // map from id to session
 
-  self.stream_server = new StreamServer;
+  self.stream_server = new StreamServer();
 
   self.stream_server.register(function (socket) {
     // socket implements the SockJSConnection interface

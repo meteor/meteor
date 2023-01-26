@@ -480,7 +480,7 @@ By default, Helmet can be used to set various HTTP headers (see link above). The
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.connectHandlers.use(helmet())
+WebApp.expressHandlers.use(helmet())
 ```
 
 At a minimum, Meteor recommends users to set the following headers. Note that code examples shown below are specific to Helmet.
@@ -500,7 +500,7 @@ By default, Meteor recommends unsafe inline scripts and styles are allowed, sinc
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.connectHandlers.use(
+WebApp.expressHandlers.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
@@ -679,7 +679,7 @@ With Helmet, Frameguard sets the X-Frame-Options header.
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.connectHandlers.use(helmet.frameguard());  // defaults to sameorigin
+WebApp.expressHandlers.use(helmet.frameguard());  // defaults to sameorigin
 ```
 For more detail please read the following guide: [Frameguard](https://helmetjs.github.io/docs/frameguard/).
 

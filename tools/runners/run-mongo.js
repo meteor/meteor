@@ -116,7 +116,7 @@ var findMongoPids;
 if (process.platform === 'win32') {
   // Windows doesn't have a ps equivalent that (reliably) includes the command
   // line, so approximate using the combined output of tasklist and netstat.
-  findMongoPids = function(dbDir_unused, port) {
+  findMongoPids = async function(dbDir_unused, port) {
     var promise = fiberHelpers.makeFulfillablePromise();
 
     child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"', function(
@@ -186,10 +186,10 @@ if (process.platform === 'win32') {
       }
     });
 
-    return promise.await();
+    return await promise;
   };
 } else {
-  findMongoPids = function(dbDir, port) {
+  findMongoPids = async function(dbDir, port) {
     var promise = fiberHelpers.makeFulfillablePromise();
 
     // 'ps ax' should be standard across all MacOS and Linux.
@@ -289,14 +289,14 @@ if (process.platform === 'win32') {
       }
     );
 
-    return promise.await();
+    return await promise;
   };
 }
 
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
-var findMongoPort = function(dbDir) {
-  var pids = findMongoPids(dbDir);
+var findMongoPort = async function(dbDir) {
+  var pids = await findMongoPids(dbDir);
 
   if (pids.length !== 1) {
     return null;
@@ -351,8 +351,7 @@ if (process.platform === 'win32') {
       );
       client.on('error', () => resolve(null));
     })
-      .catch(() => null)
-      .await();
+      .catch(() => null);
   };
 }
 
@@ -361,41 +360,42 @@ if (process.platform === 'win32') {
 //
 // This is a big hammer for dealing with still running mongos, but
 // smaller hammers have failed before and it is getting tiresome.
-var findMongoAndKillItDead = function(port, dbPath) {
-  var pids = findMongoPids(null, port);
+var findMongoAndKillItDead = async function(port, dbPath) {
+  var pids = await findMongoPids(null, port);
 
   // Go through the list serially. There really should only ever be
   // at most one but we're not taking any chances.
-  _.each(pids, function(processInfo) {
-    var pid = processInfo.pid;
+  pidsLoop:
+    for (const processInfo of pids) {
+      var pid = processInfo.pid;
 
-    // Send kill attempts and wait. First a SIGINT, then if it isn't
-    // dead within 2 sec, SIGKILL. Check every 100ms to see if it's
-    // dead.
-    for (var attempts = 1; attempts <= 40; attempts++) {
-      var signal = 0;
-      if (attempts === 1) {
-        signal = 'SIGINT';
-      } else if (attempts === 20 || attempts === 30) {
-        signal = 'SIGKILL';
+      // Send kill attempts and wait. First a SIGINT, then if it isn't
+      // dead within 2 sec, SIGKILL. Check every 100ms to see if it's
+      // dead.
+      for (var attempts = 1; attempts <= 40; attempts++) {
+        var signal = 0;
+        if (attempts === 1) {
+          signal = 'SIGINT';
+        } else if (attempts === 20 || attempts === 30) {
+          signal = 'SIGKILL';
+        }
+
+        try {
+          process.kill(pid, signal);
+        } catch (e) {
+          // it's dead. on to the next one
+          break pidsLoop;
+        }
+
+        await utils.sleepMs(100);
       }
 
-      try {
-        process.kill(pid, signal);
-      } catch (e) {
-        // it's dead. on to the next one
-        return;
-      }
-
-      utils.sleepMs(100);
+      // give up after 4 seconds.
+      // XXX should actually catch this higher up and print a nice
+      // error. foreseeable conditions should never result in exceptions
+      // for the user.
+      throw new Error("Can't kill running mongo (pid " + pid + ').');
     }
-
-    // give up after 4 seconds.
-    // XXX should actually catch this higher up and print a nice
-    // error. foreseeable conditions should never result in exceptions
-    // for the user.
-    throw new Error("Can't kill running mongo (pid " + pid + ').');
-  });
 
   // If we had to kill mongod with SIGKILL, or on Windows where all calls to
   // `process.kill` work like SIGKILL, mongod will not have the opportunity to
@@ -422,7 +422,7 @@ var StoppedDuringLaunch = function() {};
 // are killed (and onExit is then invoked). Also, the entirety of all three
 // databases is deleted before starting up.  This is mode intended for testing
 // mongo failover, not for normal development or production use.
-var launchMongo = function(options) {
+var launchMongo = async function(options) {
   var onExit = options.onExit || function() {};
 
   var noOplog = false;
@@ -478,18 +478,18 @@ var launchMongo = function(options) {
     };
   });
 
-  var yieldingMethod = function(object, methodName, ...args) {
-    return Promise.race([
+  var yieldingMethod = async function(object, methodName, ...args) {
+    return await Promise.race([
       stopPromise,
       new Promise((resolve, reject) => {
         object[methodName](...args, (err, res) => {
           err ? reject(err) : resolve(res);
         });
       }),
-    ]).await();
+    ]);
   };
 
-  var launchOneMongoAndWaitForReadyForInitiate = function(
+  var launchOneMongoAndWaitForReadyForInitiate = async function(
     dbPath,
     port,
     portFile
@@ -499,13 +499,13 @@ var launchMongo = function(options) {
     var proc = null;
 
     if (options.allowKilling) {
-      findMongoAndKillItDead(port, dbPath);
+      await findMongoAndKillItDead(port, dbPath);
     }
 
     if (options.multiple) {
       // This is only for testing, so we're OK with incurring the replset
       // setup on each startup.
-      files.rm_recursive(dbPath);
+      await files.rm_recursive(dbPath);
       files.mkdir_p(dbPath, 0o755);
     } else if (portFile) {
       var portFileExists = false;
@@ -569,17 +569,17 @@ var launchMongo = function(options) {
     require('../tool-env/cleanup.js').onExit(stop);
     subHandles.push({ stop });
 
-    var procExitHandler = fiberHelpers.bindEnvironment(function(code, signal) {
+    var procExitHandler = await fiberHelpers.bindEnvironment(async function(code, signal) {
       // Defang subHandle.stop().
       proc = null;
 
       // Kill any other processes too. This will also remove
       // procExitHandler from the other processes, so onExit will only be called
       // once.
-      handle.stop();
+      await handle.stop();
 
       // Invoke the outer onExit callback.
-      onExit(code, signal, stderrOutput, detectedErrors);
+      await onExit(code, signal, stderrOutput, detectedErrors);
     });
     proc.on('exit', procExitHandler);
 
@@ -673,15 +673,15 @@ var launchMongo = function(options) {
       stderrOutput += data;
     });
 
-    stopOrReadyPromise.await();
+    await stopOrReadyPromise;
   };
 
-  var initiateReplSetAndWaitForReady = function () {
+  var initiateReplSetAndWaitForReady = async function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      const {MongoClient} = loadIsopackage(
+      const {MongoClient} = (await loadIsopackage(
           'npm-mongo'
-      ).NpmModuleMongodb;
+      )).NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
       const client = new MongoClient(
@@ -707,9 +707,9 @@ var launchMongo = function(options) {
       };
 
       try {
-        const config = yieldingMethod(db.admin(), 'command', {
+        const config = (await yieldingMethod(db.admin(), 'command', {
           replSetGetConfig: 1,
-        }).config;
+        })).config;
 
         // If a replication set configuration already exists, it's
         // important that the new version number is greater than the old.
@@ -735,12 +735,12 @@ var launchMongo = function(options) {
       }
 
       try {
-        yieldingMethod(db.admin(), 'command', {
+        await yieldingMethod(db.admin(), 'command', {
           replSetInitiate: configuration,
         });
       } catch (e) {
         if (e.message === 'already initialized') {
-          yieldingMethod(db.admin(), 'command', {
+          await yieldingMethod(db.admin(), 'command', {
             replSetReconfig: configuration,
             force: true,
           });
@@ -758,7 +758,7 @@ var launchMongo = function(options) {
       // Wait until the primary is writable. If it isn't writable after one
       // minute, throw an error and report the replica set status.
       while (!stopped) {
-        const {ismaster} = yieldingMethod(db.admin(), 'command', {
+        const {ismaster} = await yieldingMethod(db.admin(), 'command', {
           isMaster: 1,
         });
 
@@ -768,13 +768,13 @@ var launchMongo = function(options) {
           // We are explicitly setting it to 1 when there is only 1 node, as we do simulate replica sets with only 1 node
           // when running locally or in test environments.
           // ref: https://docs.mongodb.com/manual/reference/write-concern/#mongodb-writeconcern-writeconcern.-majority-
-          yieldingMethod(db.admin(), 'command', {
+          await yieldingMethod(db.admin(), 'command', {
             setDefaultRWConcern: 1,
             ...( options.multiple ? {} : {defaultWriteConcern: {w: 1}})
           });
           break;
         } else if (Date.now() - writableTimestamp > 60000) {
-          const status = yieldingMethod(db.admin(), 'command', {
+          const status = await yieldingMethod(db.admin(), 'command', {
             replSetGetStatus: 1,
           });
 
@@ -784,7 +784,7 @@ var launchMongo = function(options) {
           );
         }
 
-        utils.sleepMs(50);
+        await utils.sleepMs(50);
       }
 
       client.close(true /* means "the app is closing the connection" */);
@@ -800,24 +800,27 @@ var launchMongo = function(options) {
   try {
     if (options.multiple) {
       var dbBasePath = files.pathJoin(options.projectLocalDir, 'dbs');
-      _.each(_.range(3), function(i) {
+      let i = 2;
+      while (i >= 0) {
         // Did we get stopped (eg, by one of the processes exiting) by now? Then
         // don't start anything new.
         if (stopped) {
           return;
         }
         var dbPath = files.pathJoin(options.projectLocalDir, 'dbs', '' + i);
-        launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
-      });
+        await launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
+        i--;
+      }
+
       if (!stopped) {
-        initiateReplSetAndWaitForReady();
+        await initiateReplSetAndWaitForReady();
       }
     } else {
       var dbPath = files.pathJoin(options.projectLocalDir, 'db');
       var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
-      launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
+      await launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
       if (!stopped && !noOplog) {
-        initiateReplSetAndWaitForReady();
+        await initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.
           files.writeFile(portFile, '' + options.port);
@@ -869,14 +872,14 @@ Object.assign(MRp, {
   //
   // If the server fails to start for the first time (after a few
   // restarts), we'll print a message and give up.
-  start: function() {
+  start: async function() {
     var self = this;
 
     if (self.handle) {
       throw new Error('already running?');
     }
 
-    self._startOrRestart();
+    await self._startOrRestart();
 
     // Did we properly start up? Great!
     if (self.handle) {
@@ -890,9 +893,9 @@ Object.assign(MRp, {
 
     // Otherwise, wait for a successful _startOrRestart, or a failure.
     if (!self.resolveStartupPromise) {
-      new Promise(function(resolve) {
+      await new Promise(function(resolve) {
         self.resolveStartupPromise = resolve;
-      }).await();
+      });
     }
   },
 
@@ -907,7 +910,7 @@ Object.assign(MRp, {
   //
   // In case (a), self.handle will be the handle returned from launchMongo; in
   // case (b) self.handle will be null.
-  _startOrRestart: function() {
+  _startOrRestart: async function() {
     var self = this;
 
     if (self.handle) {
@@ -921,7 +924,7 @@ Object.assign(MRp, {
       // shouldn't annoy the user by telling it that we couldn't start up.
       self.suppressExitMessage = true;
     }
-    self.handle = launchMongo({
+    self.handle = await launchMongo({
       projectLocalDir: self.projectLocalDir,
       port: self.port,
       multiple: self.multiple,
@@ -940,7 +943,7 @@ Object.assign(MRp, {
     }
   },
 
-  _exited: function(code, signal, stderr, detectedErrors) {
+  _exited: async function(code, signal, stderr, detectedErrors) {
     var self = this;
 
     self.handle = null;
@@ -991,10 +994,10 @@ Object.assign(MRp, {
 
     if (self.errorCount < 3) {
       // Wait a second, then restart.
-      self.restartTimer = setTimeout(
-        fiberHelpers.bindEnvironment(function() {
+      self.restartTimer = await setTimeout(
+        fiberHelpers.bindEnvironment(async function() {
           self.restartTimer = null;
-          self._startOrRestart();
+          await self._startOrRestart();
         }),
         1000
       );
