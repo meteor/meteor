@@ -6,6 +6,7 @@
 * Embedded Mongo now uses MongoDB 6.0.3
 * Optimized makeLookupFunction by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12462) 
 * In async wrappers, catch exceptions and reject by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12469) 
+* Bump Typescript to v4.9.4  by [Firfi](https://github.com/Firfi) [PR](https://github.com/meteor/meteor/pull/12465) 
 
 #### Breaking Changes
 
@@ -34,6 +35,12 @@ N/A
   
 * `mongo@1.16.5`:
   - In async wrappers, catch exceptions and reject
+
+* `typescript@4.9.4`
+  - Updated typescript to version 4.9.4.
+
+* `@meteorjs/babel@7.18.0-beta.6`
+  - Updated typescript to version 4.9.4.
 
 #### Special thanks to
 
