@@ -1368,19 +1368,19 @@ if (Meteor.isClient) {
     const o = await observeCursor(test, coll.find());
 
     conn.methods({
-      insertSomething: function() {
+      insertSomething: async function() {
         // stub write
-        coll.insertAsync({ foo: 'bar' });
+        await coll.insertAsync({ foo: 'bar' });
       },
-      updateIt: function(id) {
-        coll.updateAsync(id, { $set: { baz: 42 } });
+      updateIt: async function(id) {
+        await coll.updateAsync(id, { $set: { baz: 42 } });
       }
     });
 
     test.equal(coll.find().count(), 0);
 
     // Call the insert method.
-    conn.call('insertSomething', _.identity);
+    await conn.applyAsync('insertSomething', []);
     // Stub write is visible.
     test.equal(coll.find({ foo: 'bar' }).count(), 1);
     const stubWrittenId = (await coll.findOneAsync({ foo: 'bar' }))._id;
@@ -1396,7 +1396,7 @@ if (Meteor.isClient) {
     test.equal(stream.sent.length, 0);
 
     // Call update method.
-    conn.call('updateIt', stubWrittenId, _.identity);
+    await conn.applyAsync('updateIt', [stubWrittenId]);
     // This stub write is visible too.
     test.equal(coll.find().count(), 1);
     test.equal(await coll.findOneAsync(stubWrittenId), {
