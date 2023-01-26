@@ -1741,8 +1741,6 @@ export class Connection {
   }
 
   async onMessage(raw_msg) {
-    //TODO[fibers]: remove comment
-    console.log('onMessage', raw_msg);
     let msg;
     try {
       msg = DDPCommon.parseDDP(raw_msg);

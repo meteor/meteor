@@ -678,18 +678,19 @@ if (Meteor.isClient) {
 
     // setup methods
     conn.methods({
-      do_something: function() {
-        conn.call('do_something_else');
+      do_something: async function() {
+        await conn.applyAsync('do_something_else', []);
       },
-      do_something_else: function() {
-        coll.insertAsync({ a: 1 });
+      do_something_else: async function() {
+        await coll.insertAsync({ a: 1 });
       }
     });
 
     const o = await observeCursor(test, coll.find());
 
-    // call method.
-    conn.call('do_something', _.identity);
+    // we use the applyAsync() instead of callAsync() because we want to control when to "pause"
+    // or "continue" the method execution by using the methods stream.receive()
+    await conn.applyAsync('do_something', []);
 
     // see we only send message for outer methods
     const message = testGotMessage(test, stream, {
