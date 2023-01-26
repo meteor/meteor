@@ -85,7 +85,7 @@ curl -L "${MONGO_URL}" | tar zx
 # Put Mongo binaries in the right spot (mongodb/bin)
 mkdir -p "mongodb/bin"
 mv "${MONGO_NAME}/bin/mongod" "mongodb/bin"
-mv "${MONGO_NAME}/bin/mongo" "mongodb/bin"
+mv "${MONGO_NAME}/bin/mongos" "mongodb/bin"
 rm -rf "${MONGO_NAME}"
 
 # export path so we use the downloaded node and npm
