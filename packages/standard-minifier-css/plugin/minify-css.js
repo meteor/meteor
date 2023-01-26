@@ -3,6 +3,10 @@ import { createHash } from "crypto";
 import LRU from "lru-cache";
 import { loadPostCss, watchAndHashDeps, usePostCss } from './postcss.js';
 
+const verbose = (process.env.DEBUG_CSS!=="false" && process.env.DEBUG_CSS!=="0" && (
+  process.env.DEBUG_CSS || process.argv.indexOf('--verbose') > -1 || process.argv.indexOf('--debug') > -1
+));
+
 Plugin.registerMinifier({
   extensions: ["css"],
   archMatching: "web"
@@ -18,10 +22,17 @@ class CssToolsMinifier {
     });
 
     this.depsHashCache = Object.create(null);
+    this.totalSize = 0;
+    this.totalMinifiedSize = 0;
+    this.haveHitAnyCache = false; // once we hit the cache, there's no point in showing 'Adding CSS', we know it will be fine and floods the terminal needlessly.
   }
 
   beforeMinify() {
     this.depsHashCache = Object.create(null);
+  }
+
+  formatSize(bytes) {
+    return bytes < 1024 ? `${bytes} bytes` : `${Math.round(bytes/1024)}k`;
   }
 
   watchAndHashDeps(deps, file) {
@@ -47,11 +58,28 @@ class CssToolsMinifier {
       cachedResult &&
       cachedResult.depsCacheKey === this.watchAndHashDeps(cachedResult.deps, files[0])
     ) {
+      if (verbose && !this.haveHitAnyCache) {
+        clearTimeout(this.tmrShowStats); // after we hit the cache, it's a good time to show stats
+        this.tmrShowStats = setTimeout( () => { // we use a timeout to give all files a chance to finish being minified
+          const stats = [`minifyStdCSS: Total CSS ${this.formatSize(this.totalSize)}`];
+          if (this.totalMinifiedSize!==0) {
+            stats.push(`minified ${this.formatSize(this.totalMinifiedSize)}`);
+            stats.push(`reduction ${Math.round(100-this.totalMinifiedSize*100/this.totalSize)}%`);
+          }
+          console.log(stats.join(", "));
+        }, 500);
+        this.haveHitAnyCache = true;
+      }
       return cachedResult.stylesheets;
     }
 
     let result = [];
+    if (verbose) process.stdout.write(` > Merging [ ${files.map( ({ _source:{ targetPath } }) => targetPath ).join(' ')} ]`);
     const merged = await mergeCss(files, postcssConfig);
+    if (verbose) {
+      process.stdout.write(` > ${this.formatSize(merged.code.length)}`);
+      this.totalSize += merged.code.length;
+    }
 
     if (mode === 'development') {
       result = [{
@@ -60,12 +88,19 @@ class CssToolsMinifier {
         path: 'merged-stylesheets.css'
       }];
     } else {
-      const minifiedFiles = await CssTools.minifyCssAsync(merged.code);
+      if (verbose) process.stdout.write(` > minifying`);
 
-      result = minifiedFiles.map(minified => ({
-        data: minified
-      }));
+      const minifiedFiles = await CssTools.minifyCssAsync(merged.code);
+      result = minifiedFiles.map( minified => ({ data:minified }) );
+
+      if (verbose) {
+        const minifiedSize = minifiedFiles.reduce( (sum, minifiedFile) => sum + minifiedFile.length, 0);
+        process.stdout.write(` > ${this.formatSize(minifiedSize)}`);
+        this.totalMinifiedSize += minifiedSize;
+      }
     }
+
+    if (verbose) process.stdout.write('\n');
 
     this.cache.set(cacheKey, {
       stylesheets: result,
@@ -81,13 +116,15 @@ class CssToolsMinifier {
     const { error, postcssConfig } = await loadPostCss();
 
     if (error) {
+      if (verbose) console.log('processFilesForBundle loadPostCss error', error);
       files[0].error(error);
       return;
     }
 
     const stylesheets = await this.minifyFiles(files, minifyMode, postcssConfig);
 
-    stylesheets.forEach(stylesheet => {
+    stylesheets.forEach( (stylesheet,i) => {
+      if (verbose && !this.haveHitAnyCache) process.stdout.write(`Adding CSS${i===0?'':' '+i+1}`);
       files[0].addStylesheet(stylesheet);
     });
   }
