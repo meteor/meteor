@@ -35,7 +35,9 @@ function testMeteorMongo(appDir) {
   // Make sure we match the DB version that's printed as part of the
   // non-quiet shell startup text, so that we don't confuse it with the
   // output of the db.version() command below.
-  mongoRun.match(/v5\.\d+\.\d+/);
+  mongoRun.match(/Current Mongosh Log ID:/);
+  mongoRun.match(/Using MongoDB:/);
+  mongoRun.match(/Using Mongosh:/);
 
   // Make sure the shell does not display the banner about Mongo's free
   // monitoring service.
@@ -43,7 +45,7 @@ function testMeteorMongo(appDir) {
 
   // Note: when mongo shell's input is not a tty, there is no prompt.
   mongoRun.write('db.version()\n');
-  mongoRun.match(/v5\.\d+\.\d+/);
+  mongoRun.match(/5\.\d+\.\d+/);
   mongoRun.stop();
 
   run.stop();
