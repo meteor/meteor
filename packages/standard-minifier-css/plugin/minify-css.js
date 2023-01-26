@@ -59,8 +59,8 @@ class CssToolsMinifier {
       cachedResult.depsCacheKey === this.watchAndHashDeps(cachedResult.deps, files[0])
     ) {
       if (verbose && !this.haveHitAnyCache) {
-        clearTimeout(this.tmrShowStats); // after we hit the cache, it's a good time to show stats
-        this.tmrShowStats = setTimeout( () => { // we use a timeout to give all files a chance to finish being minified
+        this.haveHitAnyCache = true;
+        setTimeout( () => { // we use a timeout to give all files a chance to finish being minified
           const stats = [`minifyStdCSS: Total CSS ${this.formatSize(this.totalSize)}`];
           if (this.totalMinifiedSize!==0) {
             stats.push(`minified ${this.formatSize(this.totalMinifiedSize)}`);
@@ -68,7 +68,6 @@ class CssToolsMinifier {
           }
           console.log(stats.join(", "));
         }, 500);
-        this.haveHitAnyCache = true;
       }
       return cachedResult.stylesheets;
     }
