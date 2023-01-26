@@ -637,7 +637,7 @@ export class Connection {
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    */
-  async applyAsync(name, args, options) {
+  async applyAsync(name, args, options, callback = null) {
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args), options);
     if (stubOptions.hasStub) {
       if (
@@ -669,7 +669,7 @@ export class Connection {
         stubOptions.exception = e;
       }
     }
-    return this._apply(name, stubOptions, args, options, null);
+    return this._apply(name, stubOptions, args, options, callback);
   }
 
   _apply(name, stubCallValue, args, options, callback) {

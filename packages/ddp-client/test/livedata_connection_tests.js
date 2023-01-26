@@ -495,8 +495,8 @@ if (Meteor.isClient) {
 
     // setup method
     conn.methods({
-      do_something: function(x) {
-        coll.insertAsync({ value: x });
+      do_something: async function(x) {
+        return coll.insertAsync({ value: x });
       }
     });
 
@@ -519,7 +519,10 @@ if (Meteor.isClient) {
 
     // call method with results callback
     let callback1Fired = false;
-    conn.call('do_something', 'friday!', function(err, res) {
+
+    // we use the applyAsync() instead of callAsync() because we want to control when to "pause"
+    // or "continue" the method execution by using the methods stream.receive()
+    await conn.applyAsync('do_something', ['friday!'], {},function(err, res) {
       test.isUndefined(err);
       test.equal(res, '1234');
       callback1Fired = true;
