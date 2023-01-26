@@ -1031,9 +1031,9 @@ if (Meteor.isClient) {
       const o = await observeCursor(test, coll.find());
 
       conn.methods({
-        writeSomething: function() {
+        writeSomething: async function() {
           // stub write
-          coll.insertAsync({ foo: 'bar' });
+          await coll.insertAsync({ foo: 'bar' });
         }
       });
 
@@ -1042,7 +1042,7 @@ if (Meteor.isClient) {
       // Call a method. We'll get the result but not data-done before reconnect.
       const callbackOutput = [];
       const onResultReceivedOutput = [];
-      conn.apply(
+      await conn.applyAsync(
         'writeSomething',
         [],
         {
@@ -1132,7 +1132,7 @@ if (Meteor.isClient) {
       // Run method again. We're going to do the same thing this time, except we're
       // also going to use an onReconnect to insert another method at reconnect
       // time, which will delay reconnect quiescence.
-      conn.apply(
+      await conn.applyAsync(
         'writeSomething',
         [],
         {
