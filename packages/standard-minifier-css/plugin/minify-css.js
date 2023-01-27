@@ -11,7 +11,7 @@ const verbose = (DEBUG_CSS!=="false" && DEBUG_CSS!=="0" && (
 
 Plugin.registerMinifier({
   extensions: ["css"],
-  archMatching: "web"
+  archMatching: "web",
 }, function () {
   const minifier = new CssToolsMinifier();
   return minifier;
@@ -20,7 +20,7 @@ Plugin.registerMinifier({
 class CssToolsMinifier {
   constructor() {
     this.cache = new LRU({
-      max: 100
+      max: 100,
     });
 
     this.depsHashCache = Object.create(null);
@@ -86,7 +86,7 @@ class CssToolsMinifier {
       result = [{
         data: merged.code,
         sourceMap: merged.sourceMap,
-        path: 'merged-stylesheets.css'
+        path: 'merged-stylesheets.css',
       }];
     } else {
       if (verbose) process.stdout.write(` > minifying`);
@@ -106,7 +106,7 @@ class CssToolsMinifier {
     this.cache.set(cacheKey, {
       stylesheets: result,
       deps: merged.deps,
-      depsCacheKey: this.watchAndHashDeps(merged.deps, files[0])
+      depsCacheKey: this.watchAndHashDeps(merged.deps, files[0]),
     });
     return result;
   }
@@ -166,7 +166,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
           postcssConfig.plugins
         ).process(content, {
           from: Plugin.convertToOSPath(file.getSourcePath()),
-          parser: postcssConfig.options.parser
+          parser: postcssConfig.options.parser,
         });
 
         result.warnings().forEach(warning => {
@@ -188,7 +188,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
         file.error({
           message: e.reason,
           line: e.line,
-          column: e.column
+          column: e.column,
         });
       } else {
         // Just in case it's not the normal error the library makes.
@@ -209,7 +209,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   const stringifiedCss = CssTools.stringifyCss(mergedCssAst, {
     sourcemap: true,
     // don't try to read the referenced sourcemaps from the input
-    inputSourcemaps: false
+    inputSourcemaps: false,
   });
 
   if (! stringifiedCss.code) {
@@ -258,7 +258,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
 
       let original = {
         line: mapping.originalLine,
-        column: mapping.originalColumn
+        column: mapping.originalColumn,
       };
 
       // If there is a source map for the original file, e.g., if it has been
@@ -294,7 +294,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
       newMap.addMapping({
         generated: {
           line: mapping.generatedLine,
-          column: mapping.generatedColumn
+          column: mapping.generatedColumn,
         },
         original,
         source,
@@ -319,7 +319,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   return {
     code: stringifiedCss.code,
     sourceMap: newMap.toString(),
-    deps
+    deps,
   };
 });
 
