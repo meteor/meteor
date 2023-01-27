@@ -3,8 +3,9 @@ import { createHash } from "crypto";
 import LRU from "lru-cache";
 import { loadPostCss, watchAndHashDeps, usePostCss } from './postcss.js';
 
-const verbose = (process.env.DEBUG_CSS!=="false" && process.env.DEBUG_CSS!=="0" && (
-  process.env.DEBUG_CSS || process.argv.indexOf('--verbose') > -1 || process.argv.indexOf('--debug') > -1
+const { argv, env:{ DEBUG_CSS } } = process;
+const verbose = (DEBUG_CSS!=="false" && DEBUG_CSS!=="0" && (
+  DEBUG_CSS || argv.indexOf('--verbose') > -1 || argv.indexOf('--debug') > -1
 ));
 
 Plugin.registerMinifier({
