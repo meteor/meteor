@@ -36,6 +36,9 @@ N/A
 * `mongo@1.16.5`:
   - In async wrappers, catch exceptions and reject
 
+* `Tracker@1.3.1`:
+  - Added missing withComputation method in types
+
 * `typescript@4.9.4`
   - Updated typescript to version 4.9.4.
 
