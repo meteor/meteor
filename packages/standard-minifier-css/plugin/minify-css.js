@@ -116,7 +116,7 @@ class CssToolsMinifier {
     const { error, postcssConfig } = await loadPostCss();
 
     if (error) {
-      if (verbose) console.log('processFilesForBundle loadPostCss error', error);
+      if (verbose) console.error('processFilesForBundle loadPostCss error', error);
       files[0].error(error);
       return;
     }
