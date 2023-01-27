@@ -52,7 +52,7 @@ export async function loadPostCss() {
 
     e.message = `While loading postcss config: ${e.message}`;
     return {
-      error: e
+      error: e,
     };
   }
 
