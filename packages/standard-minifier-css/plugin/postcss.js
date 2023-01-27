@@ -95,7 +95,7 @@ export function usePostCss(file, postcssConfig) {
   const path = file.getPathInBundle();
 
   const excluded = excludedPackages.some(name => {
-    return path.includes(`packages/${name.replace(':', '_')}`)
+    return path.includes(`packages/${name.replace(':', '_')}`);
   });
 
   return !excluded;
@@ -136,7 +136,7 @@ export const watchAndHashDeps = Profile(
         const entries = fs.readdirWithTypesSync(absDir);
         for (const entry of entries) {
           const relPath = path.join(relDir, entry.name);
-  
+
           if (entry.isFile() && matchers.some(isMatch => isMatch(relPath))) {
             const absPath = path.join(absDir, entry.name);
             fileCount += 1;
