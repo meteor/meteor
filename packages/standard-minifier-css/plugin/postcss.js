@@ -16,7 +16,7 @@ const missingPostCssError = new Error([
     'directory. Please run the following command to install it:',
     '    meteor npm install postcss@8',
     'or disable postcss by removing the postcss config.',
-    ''
+    '',
   ].join('\n'));
 
 export async function loadPostCss() {
@@ -73,7 +73,7 @@ export async function loadPostCss() {
       'directory. standard-minifier-css is only compatible with',
       'version 8 of PostCSS. Please restart Meteor after installing',
       'a supported version of PostCSS',
-      ''
+      '',
     ].join('\n'));
 
     return { error };

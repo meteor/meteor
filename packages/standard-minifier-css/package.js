@@ -2,7 +2,7 @@ Package.describe({
   name: 'standard-minifier-css',
   version: '1.9.0',
   summary: 'Standard css minifier used with Meteor apps by default.',
-  documentation: 'README.md'
+  documentation: 'README.md',
 });
 
 Package.registerBuildPlugin({
@@ -16,10 +16,10 @@ Package.registerBuildPlugin({
     "@babel/runtime": "7.18.9",
     "source-map": "0.7.4",
     "lru-cache": "6.0.0",
-    "micromatch": "4.0.5"
+    "micromatch": "4.0.5",
   },
   sources: [
-    'plugin/minify-css.js'
+    'plugin/minify-css.js',
   ]
 });
 
