@@ -2,6 +2,7 @@ import sourcemap from "source-map";
 import { createHash } from "crypto";
 import LRU from "lru-cache";
 import { loadPostCss, watchAndHashDeps, usePostCss } from './postcss.js';
+import { Log } from 'meteor/logging';
 
 const { argv, env:{ DEBUG_CSS } } = process;
 const verbose = (DEBUG_CSS!=="false" && DEBUG_CSS!=="0" && (
@@ -116,7 +117,7 @@ class CssToolsMinifier {
     const { error, postcssConfig } = await loadPostCss();
 
     if (error) {
-      if (verbose) console.error('processFilesForBundle loadPostCss error', error);
+      if (verbose) Log.error('processFilesForBundle loadPostCss error', error);
       files[0].error(error);
       return;
     }
@@ -326,5 +327,5 @@ function warnCb (filename, msg) {
   // XXX make this a buildmessage.warning call rather than a random log.
   //     this API would be like buildmessage.error, but wouldn't cause
   //     the build to fail.
-  console.log(`${filename}: warn: ${msg}`);
+  Log.warn(`${filename}: warn: ${msg}`);
 };

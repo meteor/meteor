@@ -9,7 +9,8 @@ Package.registerBuildPlugin({
   name: "minifyStdCSS",
   use: [
     'minifier-css',
-    'ecmascript'
+    'ecmascript',
+    'logging',
   ],
   npmDependencies: {
     "@babel/runtime": "7.18.9",
@@ -25,4 +26,5 @@ Package.registerBuildPlugin({
 Package.onUse(function(api) {
   api.use('minifier-css@1.5.4');
   api.use('isobuild:minifier-plugin@1.0.0');
+  api.use('logging@1.3.1');
 });
