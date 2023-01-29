@@ -766,6 +766,7 @@ export class AccountsServer extends AccountsCommon {
         const { ServiceConfiguration } = Package['service-configuration'];
         return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
       }
+      this.ready();
     }, {is_auto: true}); // not technically autopublish, but stops the warning.
 
     // Use Meteor.startup to give other packages a chance to call
