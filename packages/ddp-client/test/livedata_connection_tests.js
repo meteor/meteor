@@ -2427,7 +2427,7 @@ if (Meteor.isClient) {
       update_value: async function() {
         const value = (await coll.findOneAsync('aaa')).subscription;
         // Method should have access to the latest value of the collection.
-        coll.updateAsync('aaa', { $set: { method: value + 110 } });
+        await coll.updateAsync('aaa', { $set: { method: value + 110 } });
       }
     });
 
@@ -2467,7 +2467,7 @@ if (Meteor.isClient) {
     test.equal((await coll.findOneAsync('aaa')).subscription, 111);
 
     // Call updates the stub.
-    await conn.callAsync('update_value');
+    await conn.applyAsync('update_value', []);
 
     // Observe the stub-written value.
     test.equal((await coll.findOneAsync('aaa')).method, 222);
@@ -2501,7 +2501,7 @@ if (Meteor.isClient) {
 
     // Buffer should already be flushed because of a non-update message.
     // And after a flush we really want subscription field to be 112.
-    conn._flushBufferedWrites();
+    await conn._flushBufferedWrites();
     test.equal((await coll.findOneAsync('aaa')).method, 222);
     test.equal((await coll.findOneAsync('aaa')).subscription, 112);
   });
