@@ -187,8 +187,8 @@ main.registerCommand({
   requiresRelease: false,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, async function () {
-  Console.rawInfo(await archinfo.host() + "\n");
+}, function () {
+  Console.rawInfo(archinfo.host() + "\n");
 });
 
 // Prints the current release in use. Note that if there is not
@@ -1041,11 +1041,11 @@ var buildCommand = async function (options) {
     showInvalidArchMsg(options.architecture);
     return 1;
   }
-  var bundleArch = options.architecture || await archinfo.host();
+  var bundleArch = options.architecture || archinfo.host();
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([bundleArch, await archinfo.host()]),
+    serverArchitectures: _.uniq([bundleArch, archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   await projectContext.init();
@@ -1346,7 +1346,7 @@ main.registerCommand({
   if (! projectContext && appDir) {
     projectContext = new projectContextModule.ProjectContext({
       projectDir: appDir,
-      serverArchitectures: [await archinfo.host()],
+      serverArchitectures: [archinfo.host()],
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintAppAndLocalPackages: true
     });
@@ -1848,7 +1848,7 @@ async function doTestCommand(options) {
 
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
-  const archInfoHost = await archinfo.host();
+  const archInfoHost = archinfo.host();
   var serverArchitectures = [archInfoHost];
   if (options.deploy && DEPLOY_ARCH !== archInfoHost) {
     serverArchitectures.push(DEPLOY_ARCH);

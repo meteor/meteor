@@ -552,7 +552,7 @@ Object.assign(exports.Tropohouse.prototype, {
     var self = this;
     buildmessage.assertInCapture();
     options = options || {};
-    var serverArchs = options.serverArchitectures || [await archinfo.host()];
+    var serverArchs = options.serverArchitectures || [archinfo.host()];
 
     var downloader;
     var downloaders = [];

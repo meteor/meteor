@@ -495,7 +495,7 @@ var springboard = async function (rel, options) {
   });
 
   if (!toolRecord) {
-    throw Error("missing tool for " + await archinfo.host() + " in " +
+    throw Error("missing tool for " + archinfo.host() + " in " +
                 toolsPkg + "@" + toolsVersion);
   }
 

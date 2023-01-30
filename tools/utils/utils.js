@@ -135,7 +135,7 @@ exports.getHost = async function (...args) {
     }
   };
 
-  if (archinfo.matches(await archinfo.host(), 'os.osx')) {
+  if (archinfo.matches(archinfo.host(), 'os.osx')) {
     // On OSX, to get the human-readable hostname that the user chose,
     // we call:
     //   scutil --get ComputerName
@@ -146,8 +146,8 @@ exports.getHost = async function (...args) {
     }
   }
 
-  if (archinfo.matches(await archinfo.host(), 'os.osx') ||
-      archinfo.matches(await archinfo.host(), 'os.linux')) {
+  if (archinfo.matches(archinfo.host(), 'os.osx') ||
+      archinfo.matches(archinfo.host(), 'os.linux')) {
     // On Unix-like platforms, try passing -s to hostname to strip off
     // the domain name, to reduce the extent to which the output
     // varies with DNS.
@@ -181,7 +181,7 @@ exports.getAgentInfo = async function () {
   ret.agent = "Meteor";
   ret.agentVersion =
     files.inCheckout() ? "checkout" : files.getToolsVersion();
-  ret.arch = await archinfo.host();
+  ret.arch = archinfo.host();
 
   return ret;
 };

@@ -489,7 +489,7 @@ export default class Sandbox {
     // XXX this is hacky
     await files.linkToMeteorScript(
       files.pathJoin(this.warehouse, packagesDirectoryName, "meteor-tool", toolPackageVersion,
-        'mt-' + await archInfoHost(), 'meteor'),
+        'mt-' + archInfoHost(), 'meteor'),
       files.pathJoin(this.warehouse, 'meteor'));
   }
 }
