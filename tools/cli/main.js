@@ -1557,7 +1557,8 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
     } else if (e instanceof main.ExitWithCode) {
       process.exit(e.code);
     } else {
-      throw e;
+      console.error(e);
+      process.exit(1);
     }
   }
 
