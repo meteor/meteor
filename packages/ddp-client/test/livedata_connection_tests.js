@@ -2293,7 +2293,7 @@ if (Meteor.isClient) {
     test.length(stream.sent, 0);
 
     // Insert a document. The stub updates "conn" directly.
-    coll.insertAsync({ _id: 'foo', bar: 42 }, _.identity);
+    await coll.insertAsync({ _id: 'foo', bar: 42 }, _.identity);
     test.equal(coll.find().count(), 1);
     test.equal(await coll.findOneAsync(), { _id: 'foo', bar: 42 });
     // It also sends the method message.
