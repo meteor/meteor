@@ -7,7 +7,7 @@
 * Optimized makeLookupFunction by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12462) 
 * In async wrappers, catch exceptions and reject by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12469) 
 * Bump Typescript to v4.9.4  by [Firfi](https://github.com/Firfi) [PR](https://github.com/meteor/meteor/pull/12465) 
-
+* Ensure the meteor.loginServiceConfiguration subscription always becomes ready by [Torgen](https://github.com/Torgen) [PR](https://github.com/meteor/meteor/pull/12480)
 #### Breaking Changes
 
 N/A
@@ -49,6 +49,8 @@ N/A
 
 - [@radekmie](https://github.com/radekmie).
 - [@ebroder](https://github.com/ebroder).
+- [@Firfi](https://github.com/Firfi).
+- [@Torgen](https://github.com/Torgen).
 
 
 
