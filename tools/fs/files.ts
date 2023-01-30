@@ -506,7 +506,7 @@ export async function cp_r(from: string, to: string, options: {
   if (stat.isDirectory()) {
     mkdir_p(to, 0o755);
 
-    for (const f of readdir(from)) {
+    for (let f of readdir(from)) {
       if (options.ignore &&
           options.ignore.some(pattern => f.match(pattern))) {
         return;
