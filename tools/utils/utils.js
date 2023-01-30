@@ -512,6 +512,36 @@ exports.isValidVersion = function (version, {forCordova}) {
     || (forCordova ? exports.isUrlWithSha(version): exports.isNpmUrl(version));
 };
 
+exports.execFileSync = function (file, args, opts) {
+  var child_process = require('child_process');
+
+  opts = opts || {};
+  if (!_.has(opts, 'maxBuffer')) {
+    opts.maxBuffer = 1024 * 1024 * 10;
+  }
+
+  if (!_.has(opts, 'encoding')) {
+    opts.encoding = 'utf8';
+  }
+
+  let result;
+  try {
+    result = child_process.execFileSync(file, args, opts);
+  } catch (error) {
+    return {
+      success: false,
+      stdout: error.stdout,
+      stderr: error.stderr
+    };
+  }
+
+  return {
+    stdout: result,
+    success: true,
+    stderr: ''
+  };
+}
+
 
 exports.execFile = async function (file, args, opts) {
   var child_process = require('child_process');

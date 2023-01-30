@@ -135,22 +135,22 @@ export const VALID_ARCHITECTURES: Record<string, boolean> = {
 };
 
 // Returns the fully qualified arch of this host -- something like
-// "os.linux.x86_32" or "os.osx.x86_64". Must be called inside
-// a fiber. Throws an error if it's not a supported architecture.
+// "os.linux.x86_32" or "os.osx.x86_64". 
+// Throws an error if it's not a supported architecture.
 //
 // If you change this, also change scripts/admin/launch-meteor
 let _host: string | null = null; // memoize
 
-export async function host() {
+export function host() {
   if (!_host) {
-    const run = async function (...args: Array<string | boolean>) {
-      const result = (await utils.execFile(args[0], args.slice(1))).stdout;
+    const run = function (...args: Array<string | boolean>) {
+      const result = utils.execFileSync(args[0], args.slice(1)).stdout;
 
       if (! result) {
         throw new Error(`Can't get arch with ${args.join(" ")}?`);
       }
 
-      return result.replace(/\s*$/, ''); // trailing whitespace
+      return result.replace(/\s*$/, ''); // remove trailing whitespace
     };
 
     const platform = os.platform();
@@ -158,10 +158,10 @@ export async function host() {
     if (platform === "darwin") {
       // Can't just test uname -m = x86_64, because Snow Leopard can
       // return other values.
-      const arch = await run('uname', '-p');
+      const arch = run('uname', '-p');
 
       if ((arch !== "i386" && arch !== "arm") ||
-          await run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
+         run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel and M1 processors are supported on OS X");
       }
       if(arch === "arm"){
@@ -170,7 +170,7 @@ export async function host() {
         _host  = "os.osx.x86_64";
       }
     } else if (platform === "linux") {
-      const machine = await run('uname', '-m');
+      const machine = run('uname', '-m');
       if (["x86_64", "amd64", "ia64"].includes(machine)) {
         _host = "os.linux.x86_64";
       } else {
