@@ -110,6 +110,16 @@ export namespace Tracker {
   ): Computation;
 
   /**
+   * Helper function to make the tracker work with promises.
+   * @param computation Computation that tracked
+   * @param func async function that needs to be called and be reactive
+   */
+  function withComputation<T>(
+    computation: Computation,
+    func: () => Promise<T>
+  ): Promise<T>;
+
+  /**
    * Process all reactive updates immediately and ensure that all invalidated computations are rerun.
    */
   function flush(): void;
