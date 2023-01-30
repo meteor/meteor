@@ -314,7 +314,6 @@ testAsyncMulti('livedata - basic method invocation', [
       try {
         await Meteor.callAsync('exception', 'both', {
           intended: true,
-          throwThroughFuture: true,
         });
       } catch (e) {
         threw = true;
@@ -349,7 +348,6 @@ testAsyncMulti('livedata - basic method invocation', [
           'server',
           {
             intended: true,
-            throwThroughFuture: true,
           },
           expect(failure(test, 999, 'Client-visible test exception'))
         ),

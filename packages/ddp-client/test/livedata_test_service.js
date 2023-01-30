@@ -16,7 +16,6 @@ Meteor.methods({
       options,
       Match.Optional({
         intended: Match.Optional(Boolean),
-        throwThroughFuture: Match.Optional(Boolean)
       })
     );
     options = options || Object.create(null);
@@ -32,14 +31,6 @@ Meteor.methods({
       else e = new Error('Test method throwing an exception');
       e._expectedByTest = true;
 
-      // We used to improperly serialize errors that were thrown through a
-      // future first.
-      if (Meteor.isServer && options.throwThroughFuture) {
-        const Future = Npm.require('fibers/future');
-        const f = new Future();
-        f['throw'](e);
-        e = f.wait();
-      }
       throw e;
     }
   },
