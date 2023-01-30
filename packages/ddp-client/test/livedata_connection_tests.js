@@ -1661,30 +1661,30 @@ Tinytest.addAsync('livedata connection - two wait methods', async function(test)
   conn.methods({ do_something: function(x) {} });
 
   const responses = [];
-  conn.apply('do_something', ['one!'], function() {
+  await conn.applyAsync('do_something', ['one!'], function() {
     responses.push('one');
   });
   let one_message = JSON.parse(stream.sent.shift());
   test.equal(one_message.params, ['one!']);
 
-  conn.apply('do_something', ['two!'], { wait: true }, function() {
+  await conn.applyAsync('do_something', ['two!'], { wait: true }, function() {
     responses.push('two');
   });
   // 'two!' isn't sent yet, because it's a wait method.
   test.equal(stream.sent.length, 0);
 
-  conn.apply('do_something', ['three!'], function() {
+  await conn.applyAsync('do_something', ['three!'], function() {
     responses.push('three');
   });
-  conn.apply('do_something', ['four!'], function() {
+  await conn.applyAsync('do_something', ['four!'], function() {
     responses.push('four');
   });
 
-  conn.apply('do_something', ['five!'], { wait: true }, function() {
+  await conn.applyAsync('do_something', ['five!'], { wait: true }, function() {
     responses.push('five');
   });
 
-  conn.apply('do_something', ['six!'], function() {
+  await conn.applyAsync('do_something', ['six!'], function() {
     responses.push('six');
   });
 
