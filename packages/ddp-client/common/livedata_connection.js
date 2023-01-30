@@ -610,7 +610,7 @@ export class Connection {
           isFromCallAsync: stubOptions.isFromCallAsync,
         })
       ) {
-        this._saveOriginals();
+        stubOptions._saveOriginalsPromise = this._saveOriginals();
       }
       try {
         stubOptions.stubReturnValue = DDP._CurrentMethodInvocation
@@ -646,7 +646,7 @@ export class Connection {
           isFromCallAsync: stubOptions.isFromCallAsync,
         })
       ) {
-        this._saveOriginals();
+        await this._saveOriginals();
       }
       try {
         /*
@@ -697,7 +697,14 @@ export class Connection {
     // while because of a wait method).
     args = EJSON.clone(args);
 
-    const { hasStub, exception, stubReturnValue, alreadyInSimulation, randomSeed } = stubCallValue;
+    const {
+      hasStub,
+      exception,
+      stubReturnValue,
+      alreadyInSimulation,
+      randomSeed,
+      _saveOriginalsPromise,
+    } = stubCallValue;
 
     // If we're in a simulation, stop and return the result we have,
     // rather than going on to do an RPC. If there was no stub,
@@ -709,7 +716,11 @@ export class Connection {
       })
     ) {
       if (callback) {
-        callback(exception, stubReturnValue);
+        if (_saveOriginalsPromise) {
+          _saveOriginalsPromise.then(() => callback(exception, stubReturnValue));
+        } else {
+          callback(exception, stubReturnValue);
+        }
         return undefined;
       }
       if (exception) throw exception;
@@ -915,9 +926,9 @@ export class Connection {
   // Before calling a method stub, prepare all stores to track changes and allow
   // _retrieveAndStoreOriginals to get the original versions of changed
   // documents.
-  _saveOriginals() {
+  async _saveOriginals() {
     if (! this._waitingForQuiescence()) {
-      this._flushBufferedWrites();
+      await this._flushBufferedWrites();
     }
 
     Object.values(this._stores).forEach((store) => {
@@ -1180,12 +1191,12 @@ export class Connection {
     }
   }
 
-  _processOneDataMessage(msg, updates) {
+  async _processOneDataMessage(msg, updates) {
     const messageType = msg.msg;
 
     // msg is one of ['added', 'changed', 'removed', 'ready', 'updated']
     if (messageType === 'added') {
-      this._process_added(msg, updates);
+      await this._process_added(msg, updates);
     } else if (messageType === 'changed') {
       this._process_changed(msg, updates);
     } else if (messageType === 'removed') {
@@ -1232,17 +1243,17 @@ export class Connection {
       // and apply them all at once.
 
       const bufferedMessages = self._messagesBufferedUntilQuiescence;
-      Object.values(bufferedMessages).forEach(bufferedMessage => {
-        self._processOneDataMessage(
+      for (const bufferedMessage of Object.values(bufferedMessages)) {
+        await self._processOneDataMessage(
           bufferedMessage,
           self._bufferedWrites
         );
-      });
+      }
 
       self._messagesBufferedUntilQuiescence = [];
 
     } else {
-      self._processOneDataMessage(msg, self._bufferedWrites);
+      await self._processOneDataMessage(msg, self._bufferedWrites);
     }
 
     // Immediately flush writes when:
@@ -1372,7 +1383,7 @@ export class Connection {
     return serverDocsForCollection.get(id) || null;
   }
 
-  _process_added(msg, updates) {
+  async _process_added(msg, updates) {
     const self = this;
     const id = MongoID.idParse(msg.id);
     const serverDoc = self._getServerDoc(msg.collection, id);
@@ -1388,7 +1399,7 @@ export class Connection {
         // Always push an update so that document stays in the store after
         // reset. Use current version of the document for this update, so
         // that stub-written values are preserved.
-        const currentDoc = self._stores[msg.collection].getDoc(msg.id);
+        const currentDoc = await self._stores[msg.collection].getDoc(msg.id);
         if (currentDoc !== undefined) msg.fields = currentDoc;
 
         self._pushUpdate(updates, msg.collection, msg);

@@ -1386,9 +1386,6 @@ LocalCollection._observeFromObserveChangesNoFibers = async (cursor, observeCallb
         if (check) {
           return;
         }
-        //TODO[fibers]: remove comment
-        console.log('_observeFromObserveChangesNoFibers addedBefore');
-        console.trace();
 
         const doc = transform(Object.assign(fields, {_id: id}));
 
@@ -1407,9 +1404,6 @@ LocalCollection._observeFromObserveChangesNoFibers = async (cursor, observeCallb
         }
       },
       changed(id, fields) {
-        //TODO[fibers]: remove comment
-        console.log('_observeFromObserveChangesNoFibers changed');
-        console.trace();
 
         if (!(observeCallbacks.changedAt || observeCallbacks.changed)) {
           return;

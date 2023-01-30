@@ -555,9 +555,7 @@ Object.assign(Session.prototype, {
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
     if (self.heartbeat) {
-      Meteor._runAsync(function() {
-        self.heartbeat.messageReceived();
-      });
+      self.heartbeat.messageReceived();
     };
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
@@ -733,7 +731,8 @@ Object.assign(Session.prototype, {
         setUserId: setUserId,
         unblock: unblock,
         connection: self.connectionHandle,
-        randomSeed: randomSeed
+        randomSeed: randomSeed,
+        fence,
       });
 
       const promise = new Promise((resolve, reject) => {
@@ -1832,15 +1831,25 @@ Object.assign(Server.prototype, {
       randomSeed
     });
 
-    return new Promise(resolve => resolve(
-      DDP._CurrentMethodInvocation.withValue(
-        invocation,
-        () => maybeAuditArgumentChecks(
-          handler, invocation, EJSON.clone(args),
-          "internal call to '" + name + "'"
-        )
-      )
-    )).then(EJSON.clone);
+    return new Promise((resolve, reject) => {
+      let result;
+      try {
+        result = DDP._CurrentMethodInvocation.withValue(invocation, () =>
+          maybeAuditArgumentChecks(
+            handler,
+            invocation,
+            EJSON.clone(args),
+            "internal call to '" + name + "'"
+          )
+        );
+      } catch (e) {
+        return reject(e);
+      }
+      if (!Meteor._isPromise(result)) {
+        return resolve(result);
+      }
+      result.then(r => resolve(r)).catch(reject);
+    }).then(EJSON.clone);
   },
 
   _urlForSession: function (sessionId) {

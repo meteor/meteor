@@ -291,8 +291,6 @@ export default class Cursor {
 
       const self = this;
       return function(/* args*/) {
-        //TODO[fibers]: remove comment
-        console.trace("wrapCallback")
         if (self.collection.paused) {
           return;
         }
