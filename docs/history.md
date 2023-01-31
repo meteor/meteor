@@ -1,3 +1,140 @@
+## v2.10.0, 2023-01-13
+
+### Highlights
+
+* Update skeletons to use React 18 [PR](https://github.com/meteor/meteor/pull/12419) by [StorytellerCZ](https://github.com/StorytellerCZ).
+* Use MongoDB types instead of the homebuilt [PR](https://github.com/meteor/meteor/pull/12415) by [perbergland](https://github.com/perbergland).
+* Fixing wrong type definitions in MongoDB package [PR](https://github.com/meteor/meteor/pull/12409) by [ebroder](https://github.com/ebroder).
+* Typescript to version v4.7.4 [PR](https://github.com/meteor/meteor/pull/12393) by [StorytellerCZ](https://github.com/StorytellerCZ).
+* Update test-in-browser dependencies [PR](https://github.com/meteor/meteor/pull/12384) by [harryadel](https://github.com/harryadel).
+* Update boilerplate-generator-tests [PR](https://github.com/meteor/meteor/pull/12429) by [harryadel](https://github.com/harryadel).
+* Replace double-ended-queue with denque [PR](https://github.com/meteor/meteor/pull/12430) by [harryadel](https://github.com/harryadel).
+* Allow multiple runtime config and updated runtime hooks [PR](https://github.com/meteor/meteor/pull/12426) by [ebroder](https://github.com/ebroder).
+* Added async forEach and clear for method Hooks [PR](https://github.com/meteor/meteor/pull/12427) by [Grubba27](https://github.com/Grubba27).
+* Implemented async Tracker with explicit values [PR](https://github.com/meteor/meteor/pull/12294) by [radekmie](https://github.com/radekmie).
+* Improved eslint config [PR](https://github.com/meteor/meteor/pull/12309) by [afrokick](https://github.com/afrokick).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+N/A
+
+#### Meteor Version Release
+
+* `babel-compiler@7.10.2`:
+  - Updated @meteorjs/babel to version 7.18.0.
+  - Updated to typescript to version v4.7.4.
+
+* `boilerplate-generator-tests@1.5.1`:
+  - Updated parse5 and turned streamToString into a local function.
+
+* `callback-hook@1.5.0`
+  - Added forEachAsync.
+
+* `ecmascript@0.16.5`
+  - Updated typescript to version 4.7.4.
+
+* `Command line`:
+  - Updated React skeletons to use React 18
+
+* `Meteor@1.11.0`:
+  - Replaced double-ended-queue with [denque](https://github.com/invertase/denque)
+
+* `mongo@1.16.4`:
+  - Fixed wrong type definitions.
+  - switch to using MongoDB types instead of the homebuilt.
+  - Fixed wrong type definitions in MongoDB package related to dropIndexAsync
+
+* `react-fast-refresh@0.2.5`:
+  - Updated react-refresh dependency.
+
+* `test-in-browser@1.3.3`:
+  - Updated dependencies and removed unused libs.
+
+* `Tracker@1.3.0`:
+  - Implemented async Tracker with explicit values
+
+* `typescript@4.7.4`
+  - Updated typescript to version 4.7.4.
+
+* `webapp@1.13.3`
+  - The forEach method on Hook will stop iterating unless the iterator function returns a truthy value.
+    Previously, this meant that only the first registered runtime config hook would be called.
+
+* `@meteorjs/babel@7.18.0-beta.5`
+  - Updated typescript to version 4.7.4.
+
+#### Special thanks to
+  - [@StorytellerCZ](https://github.com/StorytellerCZ).
+  - [@perbergland](https://github.com/perbergland).
+  - [@ebroder](https://github.com/ebroder).
+  - [@harryadel](https://github.com/harryadel).
+  - [@radekmie](https://github.com/radekmie).
+  - [@Grubba27](https://github.com/Grubba27).
+  - [@afrokick](https://github.com/afrokick).
+
+For making this great framework even better!
+
+
+
+## v2.9.1, 2022-12-27
+
+### Highlights
+
+* Reverted missing types [PR](https://github.com/meteor/meteor/pull/12366) by [Grubba27](https://github.com/Grubba27).
+* Fix fetch() type declaration [PR](https://github.com/meteor/meteor/pull/12352) by [zarvox](https://github.com/zarvox).
+* update svelte skeleton [PR](https://github.com/meteor/meteor/pull/12350) by [tosinek](https://github.com/tosinek).
+* Bump to node 14.21.2.0 [PR](https://github.com/meteor/meteor/pull/12370) by [Grubba27](https://github.com/Grubba27).
+* resetPassword and verifyEmail to no longer sign in the user automatically [PR](https://github.com/meteor/meteor/pull/12385) by [denihs](https://github.com/denihs).
+* Added missing vue2 declaration for skeletons [PR](https://github.com/meteor/meteor/pull/12396) by [Grubba27](https://github.com/Grubba27) & [mlanning](https://github.com/mlanning).
+
+#### Breaking Changes
+
+* `accounts-password@2.3.3`
+  - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
+
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+N/A
+
+#### Meteor Version Release
+
+* `fetch@0.1.3`:
+  - Updated fetch type definition.
+  
+* `meteor@1.10.4`:
+  - Added back meteor type definitions that were removed by mistake in earlier version.
+
+* `accounts-password@2.3.3`
+  - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
+
+* `Command line`:
+  - Updated Svelte skeleton to now be able to support typescript out of the box and added ``#each`` in links in the skeleton.
+  - Updated node to 14.21.2 changes can be seen [here](https://github.com/nodejs/node/releases/tag/v14.21.2).
+  - Solved [issue](https://github.com/meteor/meteor/issues/12395) that could not allow vue2 apps being created in command line.
+  
+#### Special thanks to
+- [@zarvox](https://github.com/zarvox).
+- [@tosinek](https://github.com/tosinek).
+- [@Grubba27](https://github.com/Grubba27).
+- [@denihs](https://github.com/denihs).
+- [@mlanning](https://github.com/mlanning).
+
+For making this great framework even better!
+
+
 ## v2.9, 2022-12-12
 
 ### Highlights
@@ -31,7 +168,7 @@
   by [henriquealbert](https://github.com/henriquealbert).
 
 #### Breaking Changes
- N/A
+* `Accounts.createUserVerifyingEmail` is now async
 
 ####  Internal API changes
 * Internal methods from `OAuth` that are now async:

@@ -32,11 +32,6 @@ Tracker.active = false;
  */
 Tracker.currentComputation = null;
 
-function setCurrentComputation(c) {
-  Tracker.currentComputation = c;
-  Tracker.active = !! c;
-}
-
 function _debugFunc() {
   // We want this code to work without Meteor, and also without
   // "console" (which is technically non-standard and may be missing
@@ -300,14 +295,13 @@ Tracker.Computation = class Computation {
   _compute() {
     this.invalidated = false;
 
-    var previous = Tracker.currentComputation;
-    setCurrentComputation(this);
     var previousInCompute = inCompute;
     inCompute = true;
     try {
-      withNoYieldsAllowed(this._func)(this);
+      Tracker.withComputation(this, () => {
+        withNoYieldsAllowed(this._func)(this);
+      });
     } finally {
-      setCurrentComputation(previous);
       inCompute = previousInCompute;
     }
   }
@@ -597,12 +591,20 @@ Tracker.autorun = function (f, options) {
  * @param {Function} func A function to call immediately.
  */
 Tracker.nonreactive = function (f) {
-  var previous = Tracker.currentComputation;
-  setCurrentComputation(null);
+  return Tracker.withComputation(null, f);
+};
+
+Tracker.withComputation = function (computation, f) {
+  var previousComputation = Tracker.currentComputation;
+
+  Tracker.currentComputation = computation;
+  Tracker.active = !!computation;
+
   try {
     return f();
   } finally {
-    setCurrentComputation(previous);
+    Tracker.currentComputation = previousComputation;
+    Tracker.active = !!previousComputation;
   }
 };
 
