@@ -12,7 +12,7 @@ const main = async () => {
       .reverse();
     console.log('Giving some touches to the files');
     const filesContent = await Promise.all(filesStream);
-    await fs.writeFile('./history.md', filesContent);
+    await fs.writeFile('./history.md', filesContent.join(''));
     console.log('Finished :)');
 
   }catch (e) {
