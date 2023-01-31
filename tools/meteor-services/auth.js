@@ -46,6 +46,11 @@ var withAccountsConnection = function (f) {
 //
 // XXX if we reconnect we won't reauthenticate. Fix that before using
 // this for long-lived connections.
+/**
+ *
+ * @param token
+ * @return {Promise<*>}
+ */
 var loggedInAccountsConnection = async function (token) {
   var connection = (await loadDDP()).connect(
     config.getAuthDDPUrl()
