@@ -3,11 +3,11 @@ const fs = _fs.promises;
 const main = async () => {
   try {
     console.log('started concatenating files');
-    const files = await fs.readdir('./generators/changelog/docs', 'utf8');
+    const files = await fs.readdir('./generators/changelog/versions', 'utf8');
     const filesStream = files
       .map(file => {
         console.log(`reading file: ${ file }`);
-        return fs.readFile(`./generators/changelog/versions/${ file }`, 'utf8')
+        return fs.readFile(`./generators/changelog/versions/${ file }`, 'utf8');
       })
       .reverse();
     console.log('Giving some touches to the files');
