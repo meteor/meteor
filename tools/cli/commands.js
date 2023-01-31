@@ -2280,18 +2280,18 @@ main.registerCommand({
   maxArgs: 0,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
 
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     Console.error("You must be logged in to list your organizations.");
-    auth.doUsernamePasswordLogin({ retry: true });
+    await auth.doUsernamePasswordLogin({ retry: true });
     Console.info();
   }
 
   var url = config.getAccountsApiUrl() + "/organizations";
   try {
-    var result = httpHelpers.request({
+    var result = await httpHelpers.request({
       url: url,
       method: "GET",
       useSessionHeader: true,
