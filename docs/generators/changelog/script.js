@@ -11,7 +11,6 @@ const main = async () => {
       })
       .reverse();
     console.log('Giving some touches to the files');
-
     const filesContent = await Promise.all(filesStream);
     await fs.writeFile('./history.md', filesContent);
     console.log('Finished :)');
