@@ -7,7 +7,13 @@ const main = async () => {
     const filesStream = files
       .map(file => {
         console.log(`reading file: ${ file }`);
-        return fs.readFile(`./generators/changelog/versions/${ file }`, 'utf8');
+        const readStream = _fs.createReadStream(`./generators/changelog/versions/${ file }`, 'utf8');
+        return new Promise((resolve, reject) => {
+          let data = '';
+          readStream.on('data', chunk => data += chunk);
+          readStream.on('end', () => resolve(data));
+          readStream.on('error', reject);
+        });
       })
       .reverse();
     console.log('Giving some touches to the files');
