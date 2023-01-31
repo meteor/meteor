@@ -7,7 +7,7 @@ const main = async () => {
     const filesStream = files
       .map(file => {
         console.log(`reading file: ${ file }`);
-        return fs.readFile(`./generators/changelog/docs/${ file }`, 'utf8')
+        return fs.readFile(`./generators/changelog/versions/${ file }`, 'utf8')
       })
       .reverse();
     console.log('Giving some touches to the files');
