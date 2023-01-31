@@ -9,7 +9,7 @@
 * Bump Typescript to v4.9.4  by [Firfi](https://github.com/Firfi) [PR](https://github.com/meteor/meteor/pull/12465) 
 * Ensure the meteor.loginServiceConfiguration subscription always becomes ready by [Torgen](https://github.com/Torgen) [PR](https://github.com/meteor/meteor/pull/12480)
 * Deprecate appcache package by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12456)
-* Made standard-minifier-css debuggable by [softwarecreations](https://github.com/softwarecreations)[PR](https://github.com/meteor/meteor/pull/12478).
+* Made standard-minifier-css debuggable by [softwarecreations](https://github.com/softwarecreations) [PR](https://github.com/meteor/meteor/pull/12478).
 
 #### Breaking Changes
 
@@ -63,6 +63,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 - [@Firfi](https://github.com/Firfi).
 - [@Torgen](https://github.com/Torgen).
 - [@StorytellerCZ](https://github.com/StorytellerCZ).
+- [@softwarecreations](https://github.com/softwarecreations)
 
 
 For making this great framework even better!
