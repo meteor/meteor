@@ -8,17 +8,22 @@
 * In async wrappers, catch exceptions and reject by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12469) 
 * Bump Typescript to v4.9.4  by [Firfi](https://github.com/Firfi) [PR](https://github.com/meteor/meteor/pull/12465) 
 * Ensure the meteor.loginServiceConfiguration subscription always becomes ready by [Torgen](https://github.com/Torgen) [PR](https://github.com/meteor/meteor/pull/12480)
+* Deprecate appcache package by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12456)
+* Made standard-minifier-css debuggable by [softwarecreations](https://github.com/softwarecreations)[PR](https://github.com/meteor/meteor/pull/12478).
+
 #### Breaking Changes
 
 N/A
 
 ####  Internal API changes
 
-N/A
+App cache is now deprecated.
 
 #### Migration Steps
 
-N/A
+_ If you are using a version of MongoDB older than 6.0, you will need to upgrade your MongoDB server to 6.0 or later._
+
+Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for this version.
 
 #### Meteor Version Release
 
@@ -39,11 +44,17 @@ N/A
 * `Tracker@1.3.1`:
   - Added missing withComputation method in types
 
+* `standard-minifier-css@1.9.0`:
+  - standard-minifier-css is now debuggable
+
 * `typescript@4.9.4`
   - Updated typescript to version 4.9.4.
 
 * `@meteorjs/babel@7.18.0-beta.6`
   - Updated typescript to version 4.9.4.
+
+* `appcache@1.2.8`
+  - Depracated appcache package. [applicationCache](https://developer.mozilla.org/en-US/docs/Web/API/Window/applicationCache), which this package relies on, has been deprecated and is not available on the latest browsers.
 
 #### Special thanks to
 
@@ -51,7 +62,7 @@ N/A
 - [@ebroder](https://github.com/ebroder).
 - [@Firfi](https://github.com/Firfi).
 - [@Torgen](https://github.com/Torgen).
-
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
 
 
 For making this great framework even better!
