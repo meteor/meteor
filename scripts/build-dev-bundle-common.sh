@@ -41,7 +41,7 @@ elif [ "$UNAME" == "Darwin" ] ; then
           exit 1
       fi
     else
-      NODE_BUILD_NUMBER="186"
+      NODE_BUILD_NUMBER="${NODE_BUILD_NUMBER:="187"}"
     fi
 
     OS="macos"
