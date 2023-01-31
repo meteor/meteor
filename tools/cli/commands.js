@@ -2251,23 +2251,23 @@ main.registerCommand({
 // organizations
 ///////////////////////////////////////////////////////////////////////////////
 
-var loggedInAccountsConnectionOrPrompt = function (action) {
+var loggedInAccountsConnectionOrPrompt = async function (action) {
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     Console.error("You must be logged in to " + action + ".");
-    auth.doUsernamePasswordLogin({ retry: true });
+    await auth.doUsernamePasswordLogin({ retry: true });
     Console.info();
   }
 
   token = auth.getSessionToken(config.getAccountsDomain());
-  var conn = auth.loggedInAccountsConnection(token);
+  var conn = await auth.loggedInAccountsConnection(token);
   if (conn === null) {
     // Server rejected our token.
     Console.error("You must be logged in to " + action + ".");
-    auth.doUsernamePasswordLogin({ retry: true });
+    await auth.doUsernamePasswordLogin({ retry: true });
     Console.info();
     token = auth.getSessionToken(config.getAccountsDomain());
-    conn = auth.loggedInAccountsConnection(token);
+    conn = await auth.loggedInAccountsConnection(token);
   }
 
   return conn;
@@ -2340,7 +2340,7 @@ main.registerCommand({
     return options.add || options.remove;
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
 
   if (options.add && options.remove) {
     Console.error(
@@ -2350,13 +2350,13 @@ main.registerCommand({
 
   var username = options.add || options.remove;
 
-  var conn = loggedInAccountsConnectionOrPrompt(
+  var conn = await loggedInAccountsConnectionOrPrompt(
     username ? "edit organizations" : "show an organization's members");
 
   if (username ) {
     // Adding or removing members
     try {
-      conn.call(
+      await conn.callAsync(
         options.add ? "addOrganizationMember": "removeOrganizationMember",
         options.args[0], username);
     } catch (err) {
@@ -2372,7 +2372,7 @@ main.registerCommand({
   } else {
     // Showing the members of an org
     try {
-      var result = conn.call("showOrganization", options.args[0]);
+      var result = await conn.callAsync("showOrganization", options.args[0]);
     } catch (err) {
       Console.error("Error showing organization: " + err.reason);
       return 1;
