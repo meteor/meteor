@@ -2035,14 +2035,8 @@ function findModTarget(doc, keyparts, options = {}) {
 // Wrap sync methods with callback to async.
 ['insert', 'update', 'remove', 'upsert'].forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
-  LocalCollection.prototype[methodNameAsync] = function(...args) {
+  LocalCollection.prototype[methodNameAsync] = async function(...args) {
     const self = this;
-    return new Promise((resolve, reject) => self[methodName](...args,(err, result) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(result);
-      }
-    }));
+    return self[methodName](...args);
   };
 });
