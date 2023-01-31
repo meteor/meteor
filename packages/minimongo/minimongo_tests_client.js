@@ -71,11 +71,11 @@ Tinytest.add('minimongo - basics', test => {
   let fluffyKitten_id;
   let count;
 
-  fluffyKitten_id = c.insertAsync({type: 'kitten', name: 'fluffy'});
-  c.insertAsync({type: 'kitten', name: 'snookums'});
-  c.insertAsync({type: 'cryptographer', name: 'alice'});
-  c.insertAsync({type: 'cryptographer', name: 'bob'});
-  c.insertAsync({type: 'cryptographer', name: 'cara'});
+  fluffyKitten_id = c.insert({type: 'kitten', name: 'fluffy'});
+  c.insert({type: 'kitten', name: 'snookums'});
+  c.insert({type: 'cryptographer', name: 'alice'});
+  c.insert({type: 'cryptographer', name: 'bob'});
+  c.insert({type: 'cryptographer', name: 'cara'});
   test.equal(c.find().count(), 5);
   test.equal(c.find({type: 'kitten'}).count(), 2);
   test.equal(c.find({type: 'cryptographer'}).count(), 3);
@@ -90,7 +90,7 @@ Tinytest.add('minimongo - basics', test => {
   test.length(c.find({type: 'kitten'}).fetch(), 2);
   test.length(c.find({type: 'cryptographer'}).fetch(), 2);
 
-  count = c.updateAsync({name: 'snookums'}, {$set: {type: 'cryptographer'}});
+  count = c.update({name: 'snookums'}, {$set: {type: 'cryptographer'}});
   test.equal(count, 1);
   test.equal(c.find().count(), 4);
   test.equal(c.find({type: 'kitten'}).count(), 1);
@@ -114,9 +114,9 @@ Tinytest.add('minimongo - basics', test => {
   test.equal(count, 4);
   test.equal(c.find().count(), 0);
 
-  c.insertAsync({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
-  c.insertAsync({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
-  c.insertAsync({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
+  c.insert({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
+  c.insert({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
+  c.insert({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
 
   test.equal(c.find({tags: 'flower'}).count(), 1);
   test.equal(c.find({tags: 'fruit'}).count(), 2);
@@ -180,13 +180,13 @@ Tinytest.add('minimongo - basics', test => {
   test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
 
   // Regression test for #455.
-  c.insertAsync({foo: {bar: 'baz'}});
+  c.insert({foo: {bar: 'baz'}});
   test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
   test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
 
   // Regression test for #5301
   c.remove({});
-  c.insertAsync({a: 'a', b: 'b'});
+  c.insert({a: 'a', b: 'b'});
   const noop = () => null;
   test.equal(c.find({a: noop}).count(), 1);
   test.equal(c.find({a: 'a', b: noop}).count(), 1);
@@ -204,7 +204,7 @@ Tinytest.add('minimongo - basics', test => {
   Thing.prototype.c = 3;
   Thing.prototype.d = () => null;
   const before = new Thing();
-  c.insertAsync(before);
+  c.insert(before);
   const after = c.findOne();
   test.equal(after.a, 1);
   test.equal(after.b, undefined);

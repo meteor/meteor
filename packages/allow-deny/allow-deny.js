@@ -414,7 +414,7 @@ CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
   return self._collection.removeAsync.call(self._collection, selector);
 };
 
-CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethod(name, args) {
+CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethodAsync(name, args) {
 
   // For two out of three mutator methods, the first argument is a selector
   const firstArgIsSelector = name === "updateAsync" || name === "removeAsync";

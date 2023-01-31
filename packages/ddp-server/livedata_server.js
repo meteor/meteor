@@ -726,7 +726,7 @@ Object.assign(Session.prototype, {
         self.send({
           msg: 'result', id: msg.id,
           error: new Meteor.Error(404, `Method '${msg.method}' not found`)});
-        fence.arm();
+        await fence.arm();
         return;
       }
 

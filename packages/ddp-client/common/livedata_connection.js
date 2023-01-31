@@ -1065,7 +1065,7 @@ export class Connection {
     return Object.values(invokers).some((invoker) => !!invoker.sentMessage);
   }
 
-  _livedata_connected(msg) {
+  async _livedata_connected(msg) {
     const self = this;
 
     if (self._version !== 'pre1' && self._heartbeatInterval !== 0) {
@@ -1170,14 +1170,13 @@ export class Connection {
     // call the callbacks immediately.
     if (! self._waitingForQuiescence()) {
       if (self._resetStores) {
-        Object.values(self._stores).forEach((store) => {
-          store.beginUpdate(0, true).finally(async () => {
-            await store.endUpdate();
-          });
-        });
+        for (const store of Object.values(self._stores)) {
+          await store.beginUpdate(0, true);
+          await store.endUpdate();
+        }
         self._resetStores = false;
       }
-      self._runAfterUpdateCallbacks();
+      await self._runAfterUpdateCallbacks();
     }
   }
 
@@ -1336,19 +1335,19 @@ export class Connection {
       };
     }
 
-    self._runAfterUpdateCallbacks();
+    await self._runAfterUpdateCallbacks();
   }
 
   // Call any callbacks deferred with _runWhenAllServerDocsAreFlushed whose
   // relevant docs have been flushed, as well as dataVisible callbacks at
   // reconnect-quiescence time.
-  _runAfterUpdateCallbacks() {
+  async _runAfterUpdateCallbacks() {
     const self = this;
     const callbacks = self._afterUpdateCallbacks;
     self._afterUpdateCallbacks = [];
-    callbacks.forEach((c) => {
-      c();
-    });
+    for (const c of callbacks) {
+      await c();
+    }
   }
 
   _pushUpdate(updates, collection, msg) {
@@ -1760,7 +1759,7 @@ export class Connection {
 
     if (msg.msg === 'connected') {
       this._version = this._versionSuggestion;
-      this._livedata_connected(msg);
+      await this._livedata_connected(msg);
       this.options.onConnected();
     } else if (msg.msg === 'failed') {
       if (this._supportedDDPVersions.indexOf(msg.version) >= 0) {

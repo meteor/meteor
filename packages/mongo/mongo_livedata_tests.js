@@ -2112,7 +2112,7 @@ if (Meteor.isServer) {
         } catch (e) {
           err = e;
         }
-
+        console.log('abc', {err});
         test.isFalse(err);
       });
     });
