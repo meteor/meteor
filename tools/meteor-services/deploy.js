@@ -509,14 +509,14 @@ export async function bundleAndDeploy(options) {
     // they'll get an email prompt instead of a username prompt because
     // the command-line tool didn't have time to learn about their
     // username before the credential was expired.
-    pollForRegistrationCompletion({
+    await pollForRegistrationCompletion({
       noLogout: true
     });
     const promptIfAuthFails = (loggedInUsername() !== null);
 
     // Check auth up front, rather than after the (potentially lengthy)
     // bundling process.
-    const preflight = authedRpc({
+    const preflight = await authedRpc({
       site: site,
       preflight: true,
       promptIfAuthFails: promptIfAuthFails,
@@ -625,7 +625,7 @@ export async function bundleAndDeploy(options) {
   }
 
   if (options.recordPackageUsage) {
-    recordPackages({
+    await recordPackages({
       what: "sdk.deploy",
       projectContext: options.projectContext,
       site: site
@@ -645,10 +645,10 @@ export async function bundleAndDeploy(options) {
   };
 
   Console.info('Preparing to upload your app...');
-  const result = buildmessage.enterJob({
+  const result = await buildmessage.enterJob({
     title: "uploading"
-  }, Profile("upload bundle", function () {
-    return authedRpc({
+  }, Profile("upload bundle", async function () {
+    return await authedRpc({
       method: 'POST',
       operation: 'deploy',
       site: site,
@@ -701,13 +701,13 @@ export async function bundleAndDeploy(options) {
   return 0;
 };
 
-export function deleteApp(site) {
+export async function deleteApp(site) {
   site = canonicalizeSite(site);
   if (! site) {
     return 1;
   }
 
-  var result = authedRpc({
+  var result = await authedRpc({
     method: 'DELETE',
     operation: 'deploy',
     site: site,

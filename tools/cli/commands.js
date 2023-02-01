@@ -1545,17 +1545,17 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (...args) {
-  return Profile.run(
+  return await Profile.run(
     "meteor deploy",
-    () => Promise.await(deployCommand(...args))
+    async () => await deployCommand(...args)
   );
 });
 
-function deployCommand(options, { rawOptions }) {
+async function deployCommand(options, { rawOptions }) {
   const site = options.args[0];
 
   if (options.delete) {
-    return deploy.deleteApp(site);
+    return await deploy.deleteApp(site);
   }
 
   if (options.password) {
@@ -1572,7 +1572,8 @@ function deployCommand(options, { rawOptions }) {
     Console.error(
       "You must be logged in to deploy, just enter your email address.");
     Console.error();
-    if (! auth.registerOrLogIn()) {
+    const isRegistered = await auth.registerOrLogIn();
+    if (! isRegistered) {
       return 1;
     }
   }
@@ -1585,18 +1586,18 @@ function deployCommand(options, { rawOptions }) {
       "OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE.",
       "If your app contains binary code, it may break in unexpected " +
       "and terrible ways.");
-    buildArch = archinfo.host();
+    buildArch = await archinfo.host();
   }
 
   const projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([buildArch, archinfo.host()]),
+    serverArchitectures: _.uniq([buildArch, await archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-
-  main.captureAndExit("=> Errors while initializing project:", function () {
+  await projectContext.init()
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // TODO Fix nested Profile.run warning here, too.
-    projectContext.prepareProjectForBuild();
+    return projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
 
@@ -1623,7 +1624,7 @@ function deployCommand(options, { rawOptions }) {
   const isBuildOnly = !!options['build-only'];
   const waitForDeploy = !options['no-wait'];
 
-  const deployResult = deploy.bundleAndDeploy({
+  const deployResult = await deploy.bundleAndDeploy({
     projectContext,
     site,
     settingsFile: options.settings,
@@ -1642,12 +1643,12 @@ function deployCommand(options, { rawOptions }) {
   });
 
   if (deployResult === 0) {
-    auth.maybePrintRegistrationLink({
+    await auth.maybePrintRegistrationLink({
       leadingNewline: true,
       // If the user was already logged in at the beginning of the
       // deploy, then they've already been prompted to set a password
       // at least once before, so we use a slightly different message.
-      firstTime: ! loggedIn
+      firstTime: !loggedIn
     });
   }
 
