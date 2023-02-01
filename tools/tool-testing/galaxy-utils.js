@@ -200,7 +200,7 @@ exports.callGalaxyAPI = function (conn, ...args) {
 exports.getAppRecordByName = selftest.markStack(async function (appName) {
   var conn = await exports.loggedInGalaxyAPIConnection();
   var appRecord = {};
-  conn.connection.registerStore('app', {
+  await conn.connection.registerStoreServer('app', {
     update: function (msg) {
       if (msg.msg === 'added' && msg.fields &&
           msg.fields.hostname === appName) {
@@ -226,7 +226,7 @@ exports.getAppContainerStatuses = selftest.markStack(async function (appId, appN
 
   var containers = [];
   var statuses = "/app/containerStatuses";
-  conn.connection.registerStore(statuses, {
+  await conn.connection.registerStoreServer(statuses, {
     update: function (msg) {
       if (msg.msg === 'added' && msg.fields &&
           msg.fields.appId === appId) {

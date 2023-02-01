@@ -154,27 +154,45 @@ Mongo.Collection = function Collection(name, options) {
 };
 
 Object.assign(Mongo.Collection.prototype, {
-  async _maybeSetUpReplication(name, { _suppressSameNameError = false }) {
+  _maybeSetUpReplication(name) {
     const self = this;
-    if (!(self._connection && self._connection.registerStore)) {
+    if (
+      !(
+        self._connection &&
+        self._connection.registerStoreClient &&
+        self._connection.registerStoreServer
+      )
+    ) {
       return;
     }
 
-    // OK, we're going to be a slave, replicating some remote
-    // database, except possibly with some temporary divergence while
-    // we have unacknowledged RPC's.
-    const ok = await self._connection.registerStore(name, {
+
+    const wrappedStoreCommon = {
+      // Called around method stub invocations to capture the original versions
+      // of modified documents.
+      saveOriginals() {
+        self._collection.saveOriginals();
+      },
+      retrieveOriginals() {
+        return self._collection.retrieveOriginals();
+      },
+      // To be able to get back to the collection from the store.
+      _getCollection() {
+        return self;
+      },
+    };
+    const wrappedStoreClient = {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
       //
       // XXX This interface is pretty janky. reset probably ought to go back to
       // being its own function, and callers shouldn't have to calculate
       // batchSize. The optimization of not calling pause/remove should be
-      // delayed until later: the first call to updateAsync() should buffer its
+      // delayed until later: the first call to update() should buffer its
       // message, and then we can either directly apply it at endUpdate time if
       // it was the only update, or do pauseObservers/apply/apply at the next
-      // updateAsync() if there's another one.
-      async beginUpdate(batchSize, reset) {
+      // update() if there's another one.
+      beginUpdate(batchSize, reset) {
         // pause observers so users don't see flicker when updating several
         // objects at once (including the post-reconnect reset-and-reapply
         // stage), and so that a re-sorting of a query can take advantage of the
@@ -182,12 +200,12 @@ Object.assign(Mongo.Collection.prototype, {
         // time.
         if (batchSize > 1 || reset) self._collection.pauseObservers();
 
-        if (reset) await self._collection.removeAsync({});
+        if (reset) self._collection.remove({});
       },
 
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
-      async update(msg) {
+      update(msg) {
         var mongoId = MongoID.idParse(msg.id);
         var doc = self._collection._docs.get(mongoId);
 
@@ -208,15 +226,95 @@ Object.assign(Mongo.Collection.prototype, {
             return;
           } else if (msg.msg === 'changed' && !doc) {
             msg.msg = 'added';
-            _ref = msg.fields;
-            for (field in _ref) {
-              value = _ref[field];
+            const _ref = msg.fields;
+            for (let field in _ref) {
+              const value = _ref[field];
               if (value === void 0) {
                 delete msg.fields[field];
               }
             }
           }
         }
+        // Is this a "replace the whole doc" message coming from the quiescence
+        // of method writes to an object? (Note that 'undefined' is a valid
+        // value meaning "remove it".)
+        if (msg.msg === 'replace') {
+          var replace = msg.replace;
+          if (!replace) {
+            if (doc) self._collection.remove(mongoId);
+          } else if (!doc) {
+            self._collection.insert(replace);
+          } else {
+            // XXX check that replace has no $ ops
+            self._collection.update(mongoId, replace);
+          }
+          return;
+        } else if (msg.msg === 'added') {
+          if (doc) {
+            throw new Error(
+              'Expected not to find a document already present for an add'
+            );
+          }
+          self._collection.insert({ _id: mongoId, ...msg.fields });
+        } else if (msg.msg === 'removed') {
+          if (!doc)
+            throw new Error(
+              'Expected to find a document already present for removed'
+            );
+          self._collection.remove(mongoId);
+        } else if (msg.msg === 'changed') {
+          if (!doc) throw new Error('Expected to find a document to change');
+          const keys = Object.keys(msg.fields);
+          if (keys.length > 0) {
+            var modifier = {};
+            keys.forEach(key => {
+              const value = msg.fields[key];
+              if (EJSON.equals(doc[key], value)) {
+                return;
+              }
+              if (typeof value === 'undefined') {
+                if (!modifier.$unset) {
+                  modifier.$unset = {};
+                }
+                modifier.$unset[key] = 1;
+              } else {
+                if (!modifier.$set) {
+                  modifier.$set = {};
+                }
+                modifier.$set[key] = value;
+              }
+            });
+            if (Object.keys(modifier).length > 0) {
+              self._collection.update(mongoId, modifier);
+            }
+          }
+        } else {
+          throw new Error("I don't know how to deal with this message");
+        }
+      },
+
+      // Called at the end of a batch of updates.livedata_connection.js:1287
+      endUpdate() {
+        self._collection.resumeObserversClient();
+      },
+
+      // Used to preserve current versions of documents across a store reset.
+      getDoc(id) {
+        return self.findOne(id);
+      },
+
+      ...wrappedStoreCommon,
+    };
+    const wrappedStoreServer = {
+      async beginUpdate(batchSize, reset) {
+        if (batchSize > 1 || reset) self._collection.pauseObservers();
+
+        if (reset) await self._collection.removeAsync({});
+      },
+
+      async update(msg) {
+        var mongoId = MongoID.idParse(msg.id);
+        var doc = self._collection._docs.get(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
@@ -278,44 +376,47 @@ Object.assign(Mongo.Collection.prototype, {
 
       // Called at the end of a batch of updates.
       async endUpdate() {
-        await self._collection.resumeObservers();
-      },
-
-      // Called around method stub invocations to capture the original versions
-      // of modified documents.
-      saveOriginals() {
-        self._collection.saveOriginals();
-      },
-      retrieveOriginals() {
-        return self._collection.retrieveOriginals();
+        await self._collection.resumeObserversServer();
       },
 
       // Used to preserve current versions of documents across a store reset.
       async getDoc(id) {
         return self.findOneAsync(id);
       },
+      ...wrappedStoreCommon,
+    };
 
-      // To be able to get back to the collection from the store.
-      _getCollection() {
-        return self;
-      },
-    });
 
-    if (!ok) {
-      const message = `There is already a collection named "${name}"`;
-      if (_suppressSameNameError === true) {
-        // XXX In theory we do not have to throw when `ok` is falsy. The
-        // store is already defined for this collection name, but this
-        // will simply be another reference to it and everything should
-        // work. However, we have historically thrown an error here, so
-        // for now we will skip the error only when _suppressSameNameError
-        // is `true`, allowing people to opt in and give this some real
-        // world testing.
-        console.warn ? console.warn(message) : console.log(message);
-      } else {
-        throw new Error(message);
-      }
+    // OK, we're going to be a slave, replicating some remote
+    // database, except possibly with some temporary divergence while
+    // we have unacknowledged RPC's.
+    let registerStoreResult;
+    if (Meteor.isClient) {
+      registerStoreResult = self._connection.registerStoreClient(
+        name,
+        wrappedStoreClient
+      );
+    } else {
+      registerStoreResult = self._connection.registerStoreServer(
+        name,
+        wrappedStoreServer
+      );
     }
+
+    const message = `There is already a collection named "${name}"`;
+    const logWarn = () => {
+      console.warn ? console.warn(message) : console.log(message);
+    };
+
+    if (!registerStoreResult) {
+      return logWarn();
+    }
+
+    return registerStoreResult?.then?.(ok => {
+      if (!ok) {
+        logWarn();
+      }
+    });
   },
 
   ///
@@ -407,6 +508,28 @@ Object.assign(Mongo.Collection.prototype, {
    */
   findOneAsync(...args) {
     return this._collection.findOneAsync(
+      this._getFindSelector(args),
+      this._getFindOptions(args)
+    );
+  },
+  /**
+   * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+   * @locus Anywhere
+   * @method findOne
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to find
+   * @param {Object} [options]
+   * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
+   * @param {Number} options.skip Number of results to skip at the beginning
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
+   * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @param {String} options.readPreference (Server only) Specifies a custom MongoDB [`readPreference`](https://docs.mongodb.com/manual/core/read-preference) for fetching the document. Possible values are `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred` and `nearest`.
+   * @returns {Object}
+   */
+  findOne(...args) {
+    return this._collection.findOne(
       this._getFindSelector(args),
       this._getFindOptions(args)
     );

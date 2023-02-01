@@ -132,10 +132,14 @@ Tinytest.addAsync('livedata stub - buffering data', async function(test) {
 
   const testDocCount = async count => test.equal(await coll.find({}).count(), count);
 
-  const testIsLiveDataWritesPromiseUndefined = isUndefined =>
-    isUndefined
+  const testIsLiveDataWritesPromiseUndefined = isUndefined => {
+    if (Meteor.isClient) {
+      return;
+    }
+    return isUndefined
       ? test.isUndefined(conn._liveDataWritesPromise)
       : test.isNotUndefined(conn._liveDataWritesPromise);
+  };
 
   const addDoc = async () => {
     await stream.receive({
@@ -768,7 +772,7 @@ Tinytest.add('livedata stub - method call before connect', function(test) {
   });
 });
 
-Tinytest.addAsync('livedata stub - reconnect', async function(test, onComplete) {
+Tinytest.addAsync('livedata stub - reconnect111', async function(test, onComplete) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -1661,30 +1665,30 @@ Tinytest.addAsync('livedata connection - two wait methods', async function(test)
   conn.methods({ do_something: function(x) {} });
 
   const responses = [];
-  await conn.applyAsync('do_something', ['one!'], function() {
+  conn.apply('do_something', ['one!'], function() {
     responses.push('one');
   });
   let one_message = JSON.parse(stream.sent.shift());
   test.equal(one_message.params, ['one!']);
 
-  await conn.applyAsync('do_something', ['two!'], { wait: true }, function() {
+  conn.apply('do_something', ['two!'], { wait: true }, function() {
     responses.push('two');
   });
   // 'two!' isn't sent yet, because it's a wait method.
   test.equal(stream.sent.length, 0);
 
-  await conn.applyAsync('do_something', ['three!'], function() {
+  conn.apply('do_something', ['three!'], function() {
     responses.push('three');
   });
-  await conn.applyAsync('do_something', ['four!'], function() {
+  conn.apply('do_something', ['four!'], function() {
     responses.push('four');
   });
 
-  await conn.applyAsync('do_something', ['five!'], { wait: true }, function() {
+  conn.apply('do_something', ['five!'], { wait: true }, function() {
     responses.push('five');
   });
 
-  await conn.applyAsync('do_something', ['six!'], function() {
+  conn.apply('do_something', ['six!'], function() {
     responses.push('six');
   });
 

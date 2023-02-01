@@ -290,6 +290,21 @@ export default class Cursor {
       }
 
       const self = this;
+
+      if (Meteor.isClient) {
+        return function(/* args*/) {
+          if (self.collection.paused) {
+            return;
+          }
+
+          const args = arguments;
+
+          self.collection._observeQueue.queueTask(() => {
+            fn.apply(this, args);
+          });
+        };
+      }
+
       return function(/* args*/) {
         if (self.collection.paused) {
           return;
@@ -423,7 +438,6 @@ export default class Cursor {
       }
 
       const selectedDoc = this.collection._docs.get(this._selectorId);
-
       if (selectedDoc) {
         if (options.ordered) {
           results.push(selectedDoc);
@@ -431,7 +445,6 @@ export default class Cursor {
           results.set(this._selectorId, selectedDoc);
         }
       }
-
       return results;
     }
 
@@ -449,10 +462,8 @@ export default class Cursor {
         distances = new LocalCollection._IdMap();
       }
     }
-
     this.collection._docs.forEach((doc, id) => {
       const matchResult = this.matcher.documentMatches(doc);
-
       if (matchResult.result) {
         if (options.ordered) {
           results.push(doc);

@@ -901,7 +901,7 @@ exports.getAccountsConfiguration = async function (conn) {
   // We avoid the overhead of creating a 'ddp-and-mongo' isopacket (or
   // always loading mongo whenever we load ddp) by just using the low-level
   // DDP client API here.
-  conn.connection.registerStore('meteor_accounts_loginServiceConfiguration', {
+  await conn.connection.registerStoreServer('meteor_accounts_loginServiceConfiguration', {
     update: function (msg) {
       if (msg.msg === 'added' && msg.fields &&
           msg.fields.service === 'meteor-developer') {

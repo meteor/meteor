@@ -282,7 +282,7 @@ export class Connection {
   // 'name' is the name of the data on the wire that should go in the
   // store. 'wrappedStore' should be an object with methods beginUpdate, update,
   // endUpdate, saveOriginals, retrieveOriginals. see Collection for an example.
-  async registerStore(name, wrappedStore) {
+  createStoreMethods(name, wrappedStore) {
     const self = this;
 
     if (name in self._stores) return false;
@@ -307,13 +307,37 @@ export class Connection {
       };
     });
     self._stores[name] = store;
+    return store;
+  }
+
+  registerStoreClient(name, wrappedStore) {
+    const self = this;
+
+    const store = self.createStoreMethods(name, wrappedStore);
+
+    const queued = self._updatesForUnknownStores[name];
+    if (Array.isArray(queued)) {
+      store.beginUpdate(queued.length, false);
+      queued.forEach(msg => {
+        store.update(msg);
+      });
+      store.endUpdate();
+      delete self._updatesForUnknownStores[name];
+    }
+
+    return true;
+  }
+  async registerStoreServer(name, wrappedStore) {
+    const self = this;
+
+    const store = self.createStoreMethods(name, wrappedStore);
 
     const queued = self._updatesForUnknownStores[name];
     if (Array.isArray(queued)) {
       await store.beginUpdate(queued.length, false);
-      queued.forEach(msg => {
-        store.update(msg);
-      });
+      for (const msg of queued) {
+        await store.update(msg);
+      }
       await store.endUpdate();
       delete self._updatesForUnknownStores[name];
     }
@@ -610,7 +634,7 @@ export class Connection {
           isFromCallAsync: stubOptions.isFromCallAsync,
         })
       ) {
-        stubOptions._saveOriginalsPromise = this._saveOriginals();
+        this._saveOriginals();
       }
       try {
         stubOptions.stubReturnValue = DDP._CurrentMethodInvocation
@@ -646,7 +670,7 @@ export class Connection {
           isFromCallAsync: stubOptions.isFromCallAsync,
         })
       ) {
-        await this._saveOriginals();
+        this._saveOriginals();
       }
       try {
         /*
@@ -703,7 +727,6 @@ export class Connection {
       stubReturnValue,
       alreadyInSimulation,
       randomSeed,
-      _saveOriginalsPromise,
     } = stubCallValue;
 
     // If we're in a simulation, stop and return the result we have,
@@ -716,11 +739,7 @@ export class Connection {
       })
     ) {
       if (callback) {
-        if (_saveOriginalsPromise) {
-          _saveOriginalsPromise.then(() => callback(exception, stubReturnValue));
-        } else {
-          callback(exception, stubReturnValue);
-        }
+        callback(exception, stubReturnValue);
         return undefined;
       }
       if (exception) throw exception;
@@ -926,9 +945,9 @@ export class Connection {
   // Before calling a method stub, prepare all stores to track changes and allow
   // _retrieveAndStoreOriginals to get the original versions of changed
   // documents.
-  async _saveOriginals() {
+  _saveOriginals() {
     if (! this._waitingForQuiescence()) {
-      await this._flushBufferedWrites();
+      this._flushBufferedWritesClient();
     }
 
     Object.values(this._stores).forEach((store) => {
@@ -1280,19 +1299,20 @@ export class Connection {
     if (self._bufferedWritesFlushHandle) {
       clearTimeout(self._bufferedWritesFlushHandle);
     }
-    self._bufferedWritesFlushHandle = setTimeout(
-      () => {
-        // __flushBufferedWrites is a promise, so with this we can wait the promise to finish
-        // before doing something
-        self._liveDataWritesPromise = self
-          .__flushBufferedWrites()
-          .finally(() => (self._liveDataWritesPromise = undefined));
-      },
-      self._bufferedWritesInterval
-    );
+    self._bufferedWritesFlushHandle = setTimeout(() => {
+      // __flushBufferedWrites is a promise, so with this we can wait the promise to finish
+      // before doing something
+      self._liveDataWritesPromise = self.__flushBufferedWrites();
+
+      if (Meteor._isPromise(self._liveDataWritesPromise)) {
+        self._liveDataWritesPromise.finally(
+          () => (self._liveDataWritesPromise = undefined)
+        );
+      }
+    }, self._bufferedWritesInterval);
   }
 
-  async _flushBufferedWrites() {
+  _prepareBuffersToFlush() {
     const self = this;
     if (self._bufferedWritesFlushHandle) {
       clearTimeout(self._bufferedWritesFlushHandle);
@@ -1305,10 +1325,26 @@ export class Connection {
     //  will exit cleanly.
     const writes = self._bufferedWrites;
     self._bufferedWrites = Object.create(null);
-    await self._performWrites(writes);
+    return writes;
   }
 
-  async _performWrites(updates) {
+  async _flushBufferedWritesServer() {
+    const self = this;
+    const writes = self._prepareBuffersToFlush();
+    await self._performWritesServer(writes);
+  }
+  _flushBufferedWritesClient() {
+    const self = this;
+    const writes = self._prepareBuffersToFlush();
+    self._performWritesClient(writes);
+  }
+  _flushBufferedWrites() {
+    const self = this;
+    return Meteor.isClient
+      ? self._flushBufferedWritesClient()
+      : self._flushBufferedWritesServer();
+  }
+  async _performWritesServer(updates) {
     const self = this;
 
     if (self._resetStores || ! isEmpty(updates)) {
@@ -1349,6 +1385,52 @@ export class Connection {
       // End update transaction.
       for (const store of Object.values(self._stores)) {
         await store.endUpdate();
+      }
+    }
+
+    self._runAfterUpdateCallbacks();
+  }
+  _performWritesClient(updates) {
+    const self = this;
+
+    if (self._resetStores || ! isEmpty(updates)) {
+      // Begin a transactional update of each store.
+
+      for (const [storeName, store] of Object.entries(self._stores)) {
+        store.beginUpdate(
+          hasOwn.call(updates, storeName)
+            ? updates[storeName].length
+            : 0,
+          self._resetStores
+        );
+      }
+
+      self._resetStores = false;
+
+      for (const [storeName, updateMessages] of Object.entries(updates)) {
+        const store = self._stores[storeName];
+        if (store) {
+          for (const updateMessage of updateMessages) {
+            store.update(updateMessage);
+          }
+        } else {
+          // Nobody's listening for this data. Queue it up until
+          // someone wants it.
+          // XXX memory use will grow without bound if you forget to
+          // create a collection or just don't care about it... going
+          // to have to do something about that.
+          const updates = self._updatesForUnknownStores;
+
+          if (! hasOwn.call(updates, storeName)) {
+            updates[storeName] = [];
+          }
+
+          updates[storeName].push(...updateMessages);
+        }
+      }
+      // End update transaction.
+      for (const store of Object.values(self._stores)) {
+        store.endUpdate();
       }
     }
 
