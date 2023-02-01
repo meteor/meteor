@@ -213,7 +213,7 @@ export class Unibuild {
         packageName: isopack.name,
         sourceRoot: unibuildBasePath,
         // Rebuild binary npm packages if unibuild arch matches host arch.
-        rebuildBinaries: archinfo.matches(await archinfo.host(), arch)
+        rebuildBinaries: archinfo.matches(archinfo.host(), arch)
       });
 
     return new this(isopack, {

@@ -372,9 +372,7 @@ function watchLibraryWatch(absPath: string, callback: EntryCallback) {
 
 let suggestedRaisingWatchLimit = false;
 
-// This function is async so that archinfo.host() (which may call
-// utils.execFileSync) will run in a Fiber.
-async function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
+function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
   var constants = require('constants');
   var archinfo = require('../utils/archinfo');
   if (! suggestedRaisingWatchLimit &&
@@ -388,7 +386,7 @@ async function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
       // proposed PR, which had a slightly different interface).
       error.errno === constants.ENOSPC &&
       // The only suggestion we currently have is for Linux.
-      archinfo.matches(await archinfo.host(), 'os.linux')) {
+      archinfo.matches(archinfo.host(), 'os.linux')) {
 
     // Check suggestedRaisingWatchLimit again because archinfo.host() may
     // have yielded.

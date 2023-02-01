@@ -140,7 +140,7 @@ export class IsopackCache {
     return null;
   }
 
-  async uses(isopack, name, arch) {
+  uses(isopack, name, arch) {
     if (! isopack) {
       return false;
     }
@@ -150,13 +150,13 @@ export class IsopackCache {
       return true;
     }
 
-    const unibuild = await isopack.getUnibuildAtArch(arch);
+    const unibuild = isopack.getUnibuildAtArch(arch);
     if (! unibuild) {
       return false;
     }
 
     for (const use of unibuild.uses) {
-      const implies = await this.implies(
+      const implies = this.implies(
           this._isopacks[use.package],
           name,
           arch,
@@ -166,7 +166,7 @@ export class IsopackCache {
     }
   }
 
-  async implies(isopack, name, arch) {
+  implies(isopack, name, arch) {
     if (! isopack) {
       return false;
     }
@@ -176,13 +176,13 @@ export class IsopackCache {
       return true;
     }
 
-    const unibuild = await isopack.getUnibuildAtArch(arch);
+    const unibuild = isopack.getUnibuildAtArch(arch);
     if (! unibuild) {
       return false;
     }
 
     for (const imp of unibuild.implies) {
-      const implies = await this.implies(
+      const implies = this.implies(
           this._isopacks[imp.package],
           name,
           arch,

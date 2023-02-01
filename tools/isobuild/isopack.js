@@ -401,7 +401,7 @@ Object.assign(Isopack.prototype, {
   // Return the unibuild of the package to use for a given target architecture
   // (eg, 'os.linux.x86_64' or 'web'), or throw an exception if that
   // packages can't be loaded under these circumstances.
-  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", async function (arch) {
+  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", function (arch) {
     var self = this;
 
     let chosenArch = archinfo.mostSpecificMatch(
@@ -412,7 +412,7 @@ Object.assign(Isopack.prototype, {
       // are processing a local package with binary npm deps).  Search
       // again for the host version, which might find the Mac version.
       chosenArch =
-        archinfo.mostSpecificMatch(await archinfo.host(), _.pluck(self.unibuilds, 'arch'));
+        archinfo.mostSpecificMatch(archinfo.host(), _.pluck(self.unibuilds, 'arch'));
     }
     if (! chosenArch) {
       buildmessage.error(
@@ -453,7 +453,7 @@ Object.assign(Isopack.prototype, {
 
     for (const [name, pluginsByArch] of Object.entries(self.plugins)) {
       var arch = archinfo.mostSpecificMatch(
-          await archinfo.host(), Object.keys(pluginsByArch));
+          archinfo.host(), Object.keys(pluginsByArch));
       if (! arch) {
         buildmessage.error("package `" + name + "` is built for incompatible " +
             "architecture");
@@ -1444,7 +1444,7 @@ Object.assign(Isopack.prototype, {
     });
 
     // Set up builder to write to the correct directory
-    var toolPath = 'mt-' + await archinfo.host();
+    var toolPath = 'mt-' + archinfo.host();
     builder = await builder.enter(toolPath);
 
     const sourceRootDir = files.getCurrentToolsDir();
@@ -1524,7 +1524,7 @@ Object.assign(Isopack.prototype, {
 
     return [{
       name: 'meteor',
-      arch: await archinfo.host(),
+      arch: archinfo.host(),
       path: toolPath
     }];
   }),

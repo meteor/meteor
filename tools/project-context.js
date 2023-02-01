@@ -157,7 +157,7 @@ Object.assign(ProjectContext.prototype, {
     self._serverArchitectures = options.serverArchitectures || [];
     // We always need to download host versions of packages, at least for
     // plugins.
-    self._serverArchitectures.push(await archinfo.host());
+    self._serverArchitectures.push(archinfo.host());
     self._serverArchitectures = _.uniq(self._serverArchitectures);
 
     // test-packages overrides this to load local packages from your real app

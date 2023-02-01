@@ -98,7 +98,7 @@ export async function loadIsopackage(packageName, isopacketName = "combined") {
   // it yields the first time we call it, which is a problem for the
   // fiberHelpers.noYieldsAllowed block below. Calling it here ensures the
   // result is cached, so no yielding occurs later.
-  assert.strictEqual((await archinfo.host()).split(".", 1)[0], "os");
+  assert.strictEqual((archinfo.host()).split(".", 1)[0], "os");
 
   async function load() {
     if (_.has(loadedIsopackets, isopacketName)) {
