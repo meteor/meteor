@@ -103,6 +103,9 @@ export default class LocalCollection {
     return Promise.resolve(this.findOne(selector, options));
   }
 
+  async insertAsync(doc) {
+    return this.insert(doc);
+  }
 
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
@@ -182,7 +185,9 @@ export default class LocalCollection {
       query.resultsSnapshot = EJSON.clone(query.results);
     });
   }
-
+  async removeAsync(selector) {
+    return this.remove(selector);
+  }
   remove(selector, callback) {
     // Easy special case: if we're not calling observeChanges callbacks and
     // we're not saving originals and we got asked to remove everything, then
@@ -342,6 +347,9 @@ export default class LocalCollection {
     this._savedOriginals = new LocalCollection._IdMap;
   }
 
+  async updateAsync(selector, mod, options) {
+    return this.update(selector, mod, options);
+  }
   // XXX atomicity: if multi is true, and one modification fails, do
   // we rollback the whole operation, or what?
   update(selector, mod, options, callback) {
@@ -481,6 +489,9 @@ export default class LocalCollection {
     return result;
   }
 
+  async upsertAsync(selector, mod, options) {
+    return this.upsert(selector, mod, options);
+  }
   // A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
   // equivalent to LocalCollection.update(sel, mod, {upsert: true,
   // _returnObject: true}).
@@ -2031,18 +2042,3 @@ function findModTarget(doc, keyparts, options = {}) {
 
   // notreached
 }
-
-// Wrap sync methods with callback to async.
-['insert', 'update', 'remove', 'upsert'].forEach(methodName => {
-  const methodNameAsync = getAsyncMethodName(methodName);
-  LocalCollection.prototype[methodNameAsync] = function(...args) {
-    const self = this;
-    return new Promise((resolve, reject) => self[methodName](...args,(err, result) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(result);
-      }
-    }));
-  };
-});
