@@ -47,8 +47,7 @@ export default class MethodInvoker {
   // been written to the local cache.
   _maybeInvokeCallback() {
     console.log(this._methodResult, this._dataVisible);
-    //if (this._methodResult && this._dataVisible) {
-    if (this._methodResult) {
+    if (this._methodResult && this._dataVisible) {
       // Call the callback. (This won't throw: the callback was wrapped with
       // bindEnvironment.)
       this._callback(this._methodResult[0], this._methodResult[1]);

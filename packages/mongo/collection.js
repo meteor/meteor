@@ -289,7 +289,7 @@ Object.assign(Mongo.Collection.prototype, {
       },
 
       // Used to preserve current versions of documents across a store reset.
-      getDoc(id) {
+      async getDoc(id) {
         return self.findOneAsync(id);
       },
 

@@ -856,7 +856,7 @@ Tinytest.addAsync('livedata stub - reconnect', async function(test, onComplete) 
     id: '2345',
     fields: { e: 5 }
   });
-  test.equal(await await coll.findOneAsync('1234'), { _id: '1234', a: 1, b: 2, c: 3 });
+  test.equal(await coll.findOneAsync('1234'), { _id: '1234', a: 1, b: 2, c: 3 });
   test.isFalse(await coll.findOneAsync('2345'));
   o.expectCallbacks();
 

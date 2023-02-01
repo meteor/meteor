@@ -3388,7 +3388,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   c.update({_id: 1}, {a: 2});
   c.update({_id: 1}, {a: 3});
 
-  c.resumeObservers();
+  await c.resumeObservers();
   test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 1}]);
   test.length(operations, 0);
 
@@ -3396,7 +3396,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   c.pauseObservers();
   test.equal(c.remove({}), 1);
   test.length(operations, 0);
-  c.resumeObservers();
+  await c.resumeObservers();
   test.equal(operations.shift(), ['removed', 1, 0, {a: 3}]);
   test.length(operations, 0);
 

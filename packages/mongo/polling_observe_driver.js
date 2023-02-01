@@ -126,8 +126,8 @@ _.extend(PollingObserveDriver.prototype, {
                       self._pollsScheduledButNotStarted);
     // Run a poll synchronously (which will counteract the
     // ++_pollsScheduledButNotStarted from _suspendPolling).
-    self._taskQueue.runTask(function () {
-      self._pollMongo();
+    self._taskQueue.runTask(async function () {
+      await self._pollMongo();
     });
   },
 

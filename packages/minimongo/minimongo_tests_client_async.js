@@ -2957,8 +2957,8 @@ Tinytest.addAsync('async - minimongo - modify', async test => {
   await exception( {}, {$rename: {a: 'a'}});
   await exception( {}, {$rename: {'a.b': 'a.b'}});
   await modify( {a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
-  await await exception(  {a: [12]}, {$rename: {a: '$b'}});
-  await await exception(  {a: [12]}, {$rename: {a: '\0a'}});
+  await exception(  {a: [12]}, {$rename: {a: '$b'}});
+  await exception(  {a: [12]}, {$rename: {a: '\0a'}});
 
   // $setOnInsert
   await modify( {a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
@@ -3392,7 +3392,7 @@ Tinytest.addAsync('async - minimongo - pause', async test => {
   await c.updateAsync({_id: 1}, {a: 2});
   await c.updateAsync({_id: 1}, {a: 3});
 
-  c.resumeObservers();
+  await c.resumeObservers();
   test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 1}]);
   test.length(operations, 0);
 
@@ -3400,7 +3400,7 @@ Tinytest.addAsync('async - minimongo - pause', async test => {
   c.pauseObservers();
   test.equal(await c.removeAsync({}), 1);
   test.length(operations, 0);
-  c.resumeObservers();
+  await c.resumeObservers();
   test.equal(operations.shift(), ['removed', 1, 0, {a: 3}]);
   test.length(operations, 0);
 
