@@ -155,7 +155,6 @@ export default class LocalCollection {
       }
     });
 
-    // TODO -> Check here.
     this._observeQueue.drain();
     if (callback) {
       Meteor.defer(() => {

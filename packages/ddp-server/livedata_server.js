@@ -328,9 +328,7 @@ var Session = function (server, version, socket, options) {
   self.send({ msg: 'connected', session: self.id });
 
   // On initial connect, spin up all the universal publishers.
-  Meteor._runAsync(function() {
-    self.startUniversalSubs();
-  });
+  self.startUniversalSubs();
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
     // We no longer need the low level timeout because we have heartbeats.
@@ -372,8 +370,15 @@ Object.assign(Session.prototype, {
 
 
   sendAdded(collectionName, id, fields) {
-    if (this._canSend(collectionName))
-      this.send({msg: "added", collection: collectionName, id, fields});
+    if (this._canSend(collectionName)) {
+      if (!this._publishCursorPromise) {
+        this.send({ msg: 'added', collection: collectionName, id, fields });
+        return;
+      }
+      this._publishCursorPromise.finally(() =>
+        this.send({ msg: 'added', collection: collectionName, id, fields })
+      );
+    }
   },
 
   sendChanged(collectionName, id, fields) {
@@ -602,7 +607,7 @@ Object.assign(Session.prototype, {
         unblock(); // in case the handler didn't already do it
       }
 
-      Meteor._runAsync(runHandlers);
+      runHandlers();
     };
 
     processNext();
@@ -714,10 +719,13 @@ Object.assign(Session.prototype, {
       // Find the handler
       var handler = self.server.method_handlers[msg.method];
       if (!handler) {
-        self.send({
-          msg: 'result', id: msg.id,
-          error: new Meteor.Error(404, `Method '${msg.method}' not found`)});
-        fence.arm();
+        fence.arm().finally(() => {
+          self.send({
+            msg: 'result',
+            id: msg.id,
+            error: new Meteor.Error(404, `Method '${msg.method}' not found`),
+          });
+        });
         return;
       }
 
@@ -790,8 +798,9 @@ Object.assign(Session.prototype, {
       });
 
       function finish() {
-        fence.arm();
-        unblock();
+        return fence.arm().finally(() => {
+          unblock();
+        });
       }
 
       const payload = {
@@ -800,18 +809,20 @@ Object.assign(Session.prototype, {
       };
 
       promise.then(result => {
-        finish();
-        if (result !== undefined) {
-          payload.result = result;
-        }
-        self.send(payload);
+        finish().then(() => {
+          if (result !== undefined) {
+            payload.result = result;
+          }
+          self.send(payload);
+        });
       }, (exception) => {
-        finish();
-        payload.error = wrapInternalException(
-          exception,
-          `while invoking method '${msg.method}'`
-        );
-        self.send(payload);
+        finish().then(() => {
+          payload.error = wrapInternalException(
+            exception,
+            `while invoking method '${msg.method}'`
+          );
+          self.send(payload);
+        });
       });
     }
   },
@@ -1190,7 +1201,7 @@ Object.assign(Subscription.prototype, {
         // mark subscription as ready.
         self.ready();
       } else {
-        res._publishCursor(self).then(() => {
+        this._publishCursorPromise = res._publishCursor(self).then(() => {
           self.ready();
         }).catch((e) => self.error(e));
       }
@@ -1226,7 +1237,7 @@ Object.assign(Subscription.prototype, {
         }
         self.ready();
       } else {
-        Promise.all(res.map((c) => c._publishCursor(self))).then(() => {
+        this._publishCursorPromise = Promise.all(res.map((c) => c._publishCursor(self))).then(() => {
           self.ready();
         }).catch((e) => self.error(e));
       }
@@ -1367,6 +1378,7 @@ Object.assign(Subscription.prototype, {
       ids.add(id);
     }
 
+    this._session._publishCursorPromise = this._publishCursorPromise;
     this._session.added(this._subscriptionHandle, collectionName, id, fields);
   },
 
@@ -1707,9 +1719,7 @@ Object.assign(Server.prototype, {
         // self.sessions to change while we're running this loop.
         self.sessions.forEach(function (session) {
           if (!session._dontStartNewUniversalSubs) {
-            Meteor._runAsync(function() {
-              session._startSubscription(handler);
-            });
+            session._startSubscription(handler);
           }
         });
       }

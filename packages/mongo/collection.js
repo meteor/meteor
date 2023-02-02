@@ -621,7 +621,113 @@ Object.assign(Mongo.Collection.prototype, {
   // generating their result until the database has acknowledged
   // them. In the future maybe we should provide a flag to turn this
   // off.
-  async insertAsync(doc) {
+
+  _insert(doc, callback) {
+    // Make sure we were passed a document to insert
+    if (!doc) {
+      throw new Error('insert requires an argument');
+    }
+
+    // Make a shallow clone of the document, preserving its prototype.
+    doc = Object.create(
+      Object.getPrototypeOf(doc),
+      Object.getOwnPropertyDescriptors(doc)
+    );
+
+    if ('_id' in doc) {
+      if (
+        !doc._id ||
+        !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
+      ) {
+        throw new Error(
+          'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
+        );
+      }
+    } else {
+      let generateId = true;
+
+      // Don't generate the id if we're the client and the 'outermost' call
+      // This optimization saves us passing both the randomSeed and the id
+      // Passing both is redundant.
+      if (this._isRemoteCollection()) {
+        const enclosing = DDP._CurrentMethodInvocation.get();
+        if (!enclosing) {
+          generateId = false;
+        }
+      }
+
+      if (generateId) {
+        doc._id = this._makeNewID();
+      }
+    }
+
+
+    // On inserts, always return the id that we generated; on all other
+    // operations, just return the result from the collection.
+    var chooseReturnValueFromCollectionResult = function(result) {
+      if (Meteor._isPromise(result)) return result;
+
+      if (doc._id) {
+        return doc._id;
+      }
+
+      // XXX what is this for??
+      // It's some iteraction between the callback to _callMutatorMethod and
+      // the return value conversion
+      doc._id = result;
+
+      return result;
+    };
+
+    const wrappedCallback = wrapCallback(
+      callback,
+      chooseReturnValueFromCollectionResult
+    );
+
+    if (this._isRemoteCollection()) {
+      const result = this._callMutatorMethod('insert', [doc], wrappedCallback);
+      return chooseReturnValueFromCollectionResult(result);
+    }
+
+    // it's my collection.  descend into the collection object
+    // and propagate any exception.
+    try {
+      // If the user provided a callback and the collection implements this
+      // operation asynchronously, then queryRet will be undefined, and the
+      // result will be returned through the callback instead.
+      let result;
+      if (!!wrappedCallback) {
+        this._collection.insert(doc, wrappedCallback);
+      } else {
+        // If we don't have the callback, we assume the user is using the promise.
+        // We can't just pass this._collection.insert to the promisify because it would lose the context.
+        result = this._collection.insert(doc);
+      }
+
+      return chooseReturnValueFromCollectionResult(result);
+    } catch (e) {
+      if (callback) {
+        callback(e);
+        return null;
+      }
+      throw e;
+    }
+  },
+
+  /**
+   * @summary Insert a document in the collection.  Returns its unique _id.
+   * @locus Anywhere
+   * @method  insert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
+   */
+  insert(doc, callback) {
+    return this._insert(doc, callback);
+  },
+
+  async _insertAsync(doc) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -698,18 +804,17 @@ Object.assign(Mongo.Collection.prototype, {
     }
   },
 
-  // /**
-  //  * @summary Insert a document in the collection.  Returns its unique _id.
-  //  * @locus Anywhere
-  //  * @method  insert
-  //  * @memberof Mongo.Collection
-  //  * @instance
-  //  * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
-  //  * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
-  //  */
-  // insertAsync(doc, callback) {
-  //   return this._insertAsync(doc, callback);
-  // },
+  /**
+   * @summary Insert a document in the collection.  Returns a promise that will return the document's unique _id when solved.
+   * @locus Anywhere
+   * @method  insert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+   */
+  insertAsync(doc) {
+    return this._insertAsync(doc);
+  },
 
   /**
    * @summary Modify one or more documents in the collection. Returns the number of matched documents.
@@ -723,7 +828,6 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
    * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
    * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
-   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
   async updateAsync(selector, modifier, ...optionsAndCallback) {
 
@@ -773,7 +877,83 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Remove documents from the collection
+   * @summary Asynchronously modifies one or more documents in the collection. Returns the number of matched documents.
+   * @locus Anywhere
+   * @method update
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to modify
+   * @param {MongoModifier} modifier Specifies how to modify the documents
+   * @param {Object} [options]
+   * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+   * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
+   * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
+   */
+  update(selector, modifier, ...optionsAndCallback) {
+    const callback = popCallbackFromArgs(optionsAndCallback);
+
+    // We've already popped off the callback, so we are left with an array
+    // of one or zero items
+    const options = { ...(optionsAndCallback[0] || null) };
+    let insertedId;
+    if (options && options.upsert) {
+      // set `insertedId` if absent.  `insertedId` is a Meteor extension.
+      if (options.insertedId) {
+        if (
+          !(
+            typeof options.insertedId === 'string' ||
+            options.insertedId instanceof Mongo.ObjectID
+          )
+        )
+          throw new Error('insertedId must be string or ObjectID');
+        insertedId = options.insertedId;
+      } else if (!selector || !selector._id) {
+        insertedId = this._makeNewID();
+        options.generatedId = true;
+        options.insertedId = insertedId;
+      }
+    }
+
+    selector = Mongo.Collection._rewriteSelector(selector, {
+      fallbackId: insertedId,
+    });
+
+    const wrappedCallback = wrapCallback(callback);
+
+    if (this._isRemoteCollection()) {
+      const args = [selector, modifier, options];
+
+      return this._callMutatorMethod('update', args);
+    }
+
+    // it's my collection.  descend into the collection object
+    // and propagate any exception.
+    // If the user provided a callback and the collection implements this
+    // operation asynchronously, then queryRet will be undefined, and the
+    // result will be returned through the callback instead.
+    //console.log({callback, options, selector, modifier, coll: this._collection});
+    try {
+      // If the user provided a callback and the collection implements this
+      // operation asynchronously, then queryRet will be undefined, and the
+      // result will be returned through the callback instead.
+      return this._collection.update(
+        selector,
+        modifier,
+        options,
+        wrappedCallback
+      );
+    } catch (e) {
+      if (callback) {
+        callback(e);
+        return null;
+      }
+      throw e;
+    }
+  },
+
+  /**
+   * @summary Asynchronously removes documents from the collection.
    * @locus Anywhere
    * @method remove
    * @memberof Mongo.Collection
@@ -792,6 +972,27 @@ Object.assign(Mongo.Collection.prototype, {
     return this._collection.removeAsync(selector);
   },
 
+  /**
+   * @summary Remove documents from the collection
+   * @locus Anywhere
+   * @method remove
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to remove
+   */
+  remove(selector) {
+    selector = Mongo.Collection._rewriteSelector(selector);
+
+    if (this._isRemoteCollection()) {
+      return this._callMutatorMethod('remove', [selector]);
+    }
+
+    // it's my collection.  descend into the collection1 object
+    // and propagate any exception.
+    return this._collection.remove(selector);
+  },
+
+
   // Determine if this collection is simply a minimongo representation of a real
   // database on another server
   _isRemoteCollection() {
@@ -800,7 +1001,7 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
+   * @summary Asynchronously modifies one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
    * @locus Anywhere
    * @method upsert
    * @memberof Mongo.Collection
@@ -821,10 +1022,32 @@ Object.assign(Mongo.Collection.prototype, {
       });
   },
 
+  /**
+   * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
+   * @locus Anywhere
+   * @method upsert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to modify
+   * @param {MongoModifier} modifier Specifies how to modify the documents
+   * @param {Object} [options]
+   * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+   */
+  upsert(selector, modifier, options) {
+    return this.update(
+      selector,
+      modifier,
+      {
+        ...options,
+        _returnObject: true,
+        upsert: true,
+      });
+  },
+
   // We'll actually design an index API later. For now, we just pass through to
   // Mongo's, but make it synchronous.
   /**
-   * @summary Creates the specified index on the collection.
+   * @summary Asynchronously creates the specified index on the collection.
    * @locus server
    * @method ensureIndexAsync
    * @deprecated in 3.0
@@ -851,7 +1074,7 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Creates the specified index on the collection.
+   * @summary Asynchronously creates the specified index on the collection.
    * @locus server
    * @method createIndexAsync
    * @memberof Mongo.Collection

@@ -381,46 +381,44 @@ const subscribeBeforeRun = async (subName, testId, cb) => {
 // this is a big hack (and XXX pollutes the global test namespace)
 testAsyncMulti('livedata - compound methods', [
   async function(test) {
-    await Ledger.insertAsync({
-      name: 'alice',
-      balance: 100,
-      world: test.runId(),
-    });
-    await Ledger.insertAsync({ name: 'bob', balance: 50, world: test.runId() });
+    if (Meteor.isClient) {
+      Meteor.subscribe('ledger', test.runId(), () => {});
+    }
+
+    await Ledger.insertAsync(
+      { name: 'alice', balance: 100, world: test.runId() }
+    );
+    await Ledger.insertAsync(
+      { name: 'bob', balance: 50, world: test.runId() }
+    );
   },
   async function(test) {
-    await subscribeBeforeRun('ledger', test.runId(), async () => {
+    await Meteor.callAsync(
+      'ledger/transfer',
+      test.runId(),
+      'alice',
+      'bob',
+      10,
+    )
+    await checkBalances(test, 90, 60);
+  },
+  async function(test) {
+    try {
       await Meteor.callAsync(
         'ledger/transfer',
         test.runId(),
         'alice',
         'bob',
-        10
+        100,
+        true,
       );
-      await checkBalances(test, 90, 60);
-    });
-  },
-  async function(test) {
-    await subscribeBeforeRun('ledger', test.runId(), async () => {
-      try {
-        await Meteor.callAsync(
-          'ledger/transfer',
-          test.runId(),
-          'alice',
-          'bob',
-          100,
-          true
-        );
-      } catch (e) {}
-
-      if (Meteor.isClient) {
-        // client can fool itself by cheating, but only until the sync
-        // finishes
-        await checkBalances(test, -10, 160);
-      } else {
-        await checkBalances(test, 90, 60);
-      }
-    });
+    } catch (e) {
+    }
+    if (Meteor.isClient)
+      // client can fool itself by cheating, but only until the sync
+      // finishes
+      await checkBalances(test, -10, 160);
+    else await checkBalances(test, 90, 60);
   },
 ]);
 
