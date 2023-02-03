@@ -1098,12 +1098,10 @@ export class PackageSourceBatch {
       skipDebugOnly: true,
       skipProdOnly: true,
       skipTestOnly: true,
-    }, (depUnibuild, { weak, unordered }) => {
+    }, (depUnibuild) => {
       let packageName = depUnibuild.pkg.name;
 
-      if (!unordered) {
-        self.orderedDeps.add(packageName);
-      }
+      self.orderedDeps.add(packageName);
 
       _.each(depUnibuild.declaredExports, function (symbol) {
         // Slightly hacky implementation of test-only exports.
