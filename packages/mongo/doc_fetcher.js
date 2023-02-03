@@ -40,7 +40,6 @@ export class DocFetcher {
             collectionName, {_id: id}) || null;
         // Return doc to all relevant callbacks. Note that this array can
         // continue to grow during callback excecution.
-        console.log({doc});
         emitter.emit('data', doc);
       } catch (e) {
         emitter.emit('error', e);

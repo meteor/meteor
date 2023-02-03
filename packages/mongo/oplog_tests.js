@@ -3,7 +3,6 @@ var OplogCollection = new Mongo.Collection("oplog-" + Random.id());
 Tinytest.addAsync("mongo-livedata - oplog - cursorSupported", async function (test, onComplete) {
   var oplogEnabled =
     !!MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  console.log({OplogCollection});
   // var supported = async function (expected, selector, options) {
   //   var cursor = OplogCollection.find(selector, options);
   //   var handle = await cursor.observeChanges({

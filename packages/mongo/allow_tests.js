@@ -35,8 +35,8 @@ if (Meteor.isServer) {
         needToConfigure = true;
         collection._insecure = insecure;
         var m = {};
-        m["clear-collection-" + fullName] = function() {
-          collection.removeAsync({});
+        m["clear-collection-" + fullName] = async function() {
+          await collection.removeAsync({});
         };
         Meteor.methods(m);
       }
@@ -238,8 +238,8 @@ if (Meteor.isClient) {
       var collection = new Mongo.Collection(
         fullName, {idGeneration: idGeneration, transform: transform});
 
-      collection.callClearMethod = function () {
-        return Meteor.callAsync("clear-collection-" + fullName);
+      collection.callClearMethod = async function () {
+        await Meteor.callAsync("clear-collection-" + fullName);
       };
       collection.unnoncedName = name + idGeneration;
       return collection;
@@ -538,7 +538,6 @@ if (Meteor.isClient) {
             '/' + collection._name + '/removeAsync',
             {updated: true}).catch(async function (err) {
               test.equal(err.error, 403);
-              console.log({err});
               // unchanged
               test.equal(await collection.find({updated: true}).count(), 2);
             });
@@ -553,222 +552,214 @@ if (Meteor.isClient) {
 
         testAsyncMulti("collection - " + collection.unnoncedName, [
           // init
-          function (test, expect) {
-            collection.callClearMethod(expect(function () {
-              test.equal(collection.find().count(), 0);
+          async function (test, expect) {
+            await collection.callClearMethod().then(expect(async function () {
+              test.equal(await collection.find().countAsync(), 0);
             }));
           },
 
           // insertAsync with no allows passing. request is denied.
-          function (test, expect) {
-            collection.insertAsync(
-              {},
-              expect(function (err, res) {
+          async function (test, expect) {
+            await collection.insertAsync({}).catch(expect(async function (err) {
                 test.equal(err.error, 403);
-                test.equal(collection.find().count(), 0);
+                test.equal(await collection.find().countAsync(), 0);
               }));
           },
           // insertAsync with one allow and one deny. denied.
-          function (test, expect) {
-            collection.insertAsync(
-              {canInsert: true, cantInsert: true},
-              expect(function (err, res) {
+          async function (test, expect) {
+            await collection.insertAsync({canInsert: true, cantInsert: true})
+                .catch(expect(async function (err) {
                 test.equal(err.error, 403);
-                test.equal(collection.find().count(), 0);
+                test.equal(await collection.find().countAsync(), 0);
               }));
           },
           // insertAsync with one allow and other deny. denied.
-          function (test, expect) {
-            collection.insertAsync(
-              {canInsert: true, _id: Random.id()},
-              expect(function (err, res) {
-                test.equal(err.error, 403);
-                test.equal(collection.find().count(), 0);
+          async function (test, expect) {
+            await collection.insertAsync(
+              {canInsert: true, _id: Random.id()})
+                .catch(expect(async function (err) {
+                  test.equal(err.error, 403);
+                  test.equal(await collection.find().countAsync(), 0);
               }));
           },
           // insertAsync one allow passes. allowed.
-          function (test, expect) {
-            collection.insertAsync(
-              {canInsert: true},
-              expect(function (err, res) {
-                test.isFalse(err);
-                test.equal(collection.find().count(), 1);
+          async function (test, expect) {
+            await collection.insertAsync(
+              {canInsert: true})
+                .then(expect(async function () {
+                test.equal(await collection.find().countAsync(), 1);
               }));
           },
           // insertAsync other allow passes. allowed.
           // includes canUpdate for later.
-          function (test, expect) {
-            canUpdateId = collection.insertAsync(
-              {canInsert2: true, canUpdate: true},
-              expect(function (err, res) {
-                test.isFalse(err);
-                test.equal(collection.find().count(), 2);
+          async function (test, expect) {
+            await collection.insertAsync(
+              {canInsert2: true, canUpdate: true})
+                .then(expect(async function (res) {
+                  canUpdateId = res;
+                  console.log({canUpdateId, res});
+                  test.equal(await collection.find().countAsync(), 2);
               }));
           },
           // yet a third insertAsync executes. this one has canRemove and
           // cantRemove set for later.
-          function (test, expect) {
-            canRemoveId = collection.insertAsync(
-              {canInsert: true, canRemove: true, cantRemove: true},
-              expect(function (err, res) {
-                test.isFalse(err);
-                test.equal(collection.find().count(), 3);
+          async function (test, expect) {
+            await collection.insertAsync(
+              {canInsert: true, canRemove: true, cantRemove: true})
+                .then(expect(async function (res) {
+                  canRemoveId = res;
+                  test.equal(await collection.find().countAsync(), 3);
               }));
           },
 
           // can't updateAsync with a non-operator mutation
-          function (test, expect) {
-            collection.updateAsync(
-              canUpdateId, {newObject: 1},
-              expect(function (err, res) {
+          async function (test, expect) {
+            await collection.updateAsync(
+              canUpdateId, {newObject: 1})
+                .catch(expect(async function (err) {
                 test.equal(err.error, 403);
-                test.equal(collection.find().count(), 3);
+                test.equal(await collection.find().countAsync(), 3);
               }));
           },
 
           // updating dotted fields works as if we are changing their
           // top part
-          function (test, expect) {
-            collection.updateAsync(
-              canUpdateId, {$set: {"dotted.field": 1}},
-              expect(function (err, res) {
-                test.isFalse(err);
-                test.equal(res, 1);
-                test.equal(collection.findOneAsync(canUpdateId).dotted.field, 1);
-              }));
+          async function (test, expect) {
+            console.log({canUpdateId});
+            await collection.updateAsync(canUpdateId, {$set: {"dotted.field": 1}})
+                .then(expect(async function (res) {
+                  test.equal(res, 1);
+
+                  test.equal((await collection.findOneAsync(canUpdateId)).dotted.field, 1);
+                }));
           },
-          function (test, expect) {
-            collection.updateAsync(
-              canUpdateId, {$set: {"verySecret.field": 1}},
-              expect(function (err, res) {
+          async function (test, expect) {
+            await collection.updateAsync(
+              canUpdateId, {$set: {"verySecret.field": 1}})
+                .catch(expect(async function (err) {
                 test.equal(err.error, 403);
-                test.equal(collection.find({verySecret: {$exists: true}}).count(), 0);
+                test.equal(await collection.find({verySecret: {$exists: true}}).countAsync(), 0);
               }));
           },
 
           // updateAsync doesn't do anything if no docs match
-          function (test, expect) {
-            collection.updateAsync(
+          async function (test, expect) {
+            await collection.updateAsync(
               "doesn't exist",
-              {$set: {updated: true}},
-              expect(function (err, res) {
-                test.isFalse(err);
+              {$set: {updated: true}})
+                .then(expect(async function (res) {
                 test.equal(res, 0);
                 // nothing has changed
-                test.equal(collection.find().count(), 3);
-                test.equal(collection.find({updated: true}).count(), 0);
+                test.equal(await collection.find().countAsync(), 3);
+                test.equal(await collection.find({updated: true}).countAsync(), 0);
               }));
           },
           // updateAsync fails when access is denied trying to set `verySecret`
-          function (test, expect) {
-            collection.updateAsync(
-              canUpdateId, {$set: {verySecret: true}},
-              expect(function (err, res) {
+          async function (test, expect) {
+            await collection.updateAsync(
+              canUpdateId, {$set: {verySecret: true}})
+                .catch(expect(async function (err) {
                 test.equal(err.error, 403);
                 // nothing has changed
-                test.equal(collection.find().count(), 3);
-                test.equal(collection.find({updated: true}).count(), 0);
+                test.equal(await collection.find().countAsync(), 3);
+                test.equal(await collection.find({updated: true}).countAsync(), 0);
               }));
           },
           // updateAsync fails when trying to set two fields, one of which is
           // `verySecret`
-          function (test, expect) {
-            collection.updateAsync(
-              canUpdateId, {$set: {updated: true, verySecret: true}},
-              expect(function (err, res) {
+          async function (test, expect) {
+            await collection.updateAsync(
+              canUpdateId, {$set: {updated: true, verySecret: true}})
+                .catch(expect(async function (err) {
                 test.equal(err.error, 403);
                 // nothing has changed
-                test.equal(collection.find().count(), 3);
-                test.equal(collection.find({updated: true}).count(), 0);
+                test.equal(await collection.find().countAsync(), 3);
+                test.equal(await collection.find({updated: true}).countAsync(), 0);
               }));
           },
           // updateAsync fails when trying to modify docs that don't
           // have `canUpdate` set
-          function (test, expect) {
-            collection.updateAsync(
+          async function (test, expect) {
+            await collection.updateAsync(
               canRemoveId,
-              {$set: {updated: true}},
-              expect(function (err, res) {
+              {$set: {updated: true}})
+                .catch(expect(async function (err) {
                 test.equal(err.error, 403);
                 // nothing has changed
-                test.equal(collection.find().count(), 3);
-                test.equal(collection.find({updated: true}).count(), 0);
+                test.equal(await collection.find().countAsync(), 3);
+                test.equal(await collection.find({updated: true}).countAsync(), 0);
               }));
           },
           // updateAsync executes when it should
-          function (test, expect) {
-            collection.updateAsync(
+          async function (test, expect) {
+            await collection.updateAsync(
               canUpdateId,
-              {$set: {updated: true}},
-              expect(function (err, res) {
-                test.isFalse(err);
+              {$set: {updated: true}})
+                .then(expect(async function (res) {
                 test.equal(res, 1);
-                test.equal(collection.find({updated: true}).count(), 1);
+                test.equal(await collection.find({updated: true}).countAsync(), 1);
               }));
           },
 
           // removeAsync fails when trying to modify a doc with no `canRemove` set
-          function (test, expect) {
-            collection.removeAsync(canUpdateId,
-                              expect(function (err, res) {
+          async function (test, expect) {
+            await collection.removeAsync(canUpdateId)
+                .catch(expect(async function (err) {
               test.equal(err.error, 403);
               // nothing has changed
-              test.equal(collection.find().count(), 3);
+              test.equal(await collection.find().countAsync(), 3);
             }));
           },
           // removeAsync fails when trying to modify an doc with `cantRemove`
           // set
-          function (test, expect) {
-            collection.removeAsync(canRemoveId,
-                              expect(function (err, res) {
+          async function (test, expect) {
+            await collection.removeAsync(canRemoveId)
+                .catch(expect(async function (err) {
               test.equal(err.error, 403);
               // nothing has changed
-              test.equal(collection.find().count(), 3);
+              test.equal(await collection.find().countAsync(), 3);
             }));
           },
 
           // updateAsync the doc to removeAsync cantRemove.
-          function (test, expect) {
-            collection.updateAsync(
+          async function (test, expect) {
+            await collection.updateAsync(
               canRemoveId,
-              {$set: {cantRemove: false, canUpdate2: true}},
-              expect(function (err, res) {
-                test.isFalse(err);
+              {$set: {cantRemove: false, canUpdate2: true}})
+                .then(expect(async function (res) {
                 test.equal(res, 1);
-                test.equal(collection.find({cantRemove: true}).count(), 0);
+                test.equal(await collection.find({cantRemove: true}).countAsync(), 0);
               }));
           },
 
           // now remove can remove it.
-          function (test, expect) {
-            collection.removeAsync(canRemoveId,
-                              expect(function (err, res) {
-              test.isFalse(err);
+          async function (test, expect) {
+            await collection.removeAsync(canRemoveId)
+                .then(expect(async function (res) {
               test.equal(res, 1);
               // successfully removed
-              test.equal(collection.find().count(), 2);
+              test.equal(await collection.find().countAsync(), 2);
             }));
           },
 
           // try to remove a doc that doesn't exist. see we remove no docs.
-          function (test, expect) {
-            collection.removeAsync('some-random-id-that-never-matches',
-                              expect(function (err, res) {
-              test.isFalse(err);
+          async function (test, expect) {
+            await collection.removeAsync('some-random-id-that-never-matches')
+                .then(expect(async function (res) {
               test.equal(res, 0);
               // nothing removed
-              test.equal(collection.find().count(), 2);
+              test.equal(await collection.find().countAsync(), 2);
             }));
           },
 
           // methods can still bypass restrictions
-          function (test, expect) {
-            collection.callClearMethod(
-              expect(function (err, res) {
-                test.isFalse(err);
+          async function (test, expect) {
+            await collection.callClearMethod().then(
+              expect(async function (res) {
                 // successfully removed
-                test.equal(collection.find().count(), 0);
+                test.equal(await collection.find().countAsync(), 0);
             }));
+            test.equal(await collection.find().countAsync(), 0);
           }
         ]);
       });

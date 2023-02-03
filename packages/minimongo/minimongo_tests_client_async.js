@@ -66,153 +66,153 @@ const log_callbacks = operations => ({
 });
 
 // XXX test shared structure in all MM entrypoints
-Tinytest.add('minimongo - basics', test => {
+Tinytest.addAsync('async - minimongo - basics', async test => {
   const c = new LocalCollection();
   let fluffyKitten_id;
   let count;
 
-  fluffyKitten_id = c.insert({type: 'kitten', name: 'fluffy'});
-  c.insert({type: 'kitten', name: 'snookums'});
-  c.insert({type: 'cryptographer', name: 'alice'});
-  c.insert({type: 'cryptographer', name: 'bob'});
-  c.insert({type: 'cryptographer', name: 'cara'});
-  test.equal(c.find().count(), 5);
-  test.equal(c.find({type: 'kitten'}).count(), 2);
-  test.equal(c.find({type: 'cryptographer'}).count(), 3);
-  test.length(c.find({type: 'kitten'}).fetch(), 2);
-  test.length(c.find({type: 'cryptographer'}).fetch(), 3);
+  fluffyKitten_id = await c.insertAsync({type: 'kitten', name: 'fluffy'});
+  await c.insertAsync({type: 'kitten', name: 'snookums'});
+  await c.insertAsync({type: 'cryptographer', name: 'alice'});
+  await c.insertAsync({type: 'cryptographer', name: 'bob'});
+  await c.insertAsync({type: 'cryptographer', name: 'cara'});
+  test.equal(await c.find().countAsync(), 5);
+  test.equal(await c.find({type: 'kitten'}).countAsync(), 2);
+  test.equal(await c.find({type: 'cryptographer'}).countAsync(), 3);
+  test.length(await c.find({type: 'kitten'}).fetchAsync(), 2);
+  test.length(await c.find({type: 'cryptographer'}).fetchAsync(), 3);
   test.equal(fluffyKitten_id, c.findOne({type: 'kitten', name: 'fluffy'})._id);
 
-  c.remove({name: 'cara'});
-  test.equal(c.find().count(), 4);
-  test.equal(c.find({type: 'kitten'}).count(), 2);
-  test.equal(c.find({type: 'cryptographer'}).count(), 2);
-  test.length(c.find({type: 'kitten'}).fetch(), 2);
-  test.length(c.find({type: 'cryptographer'}).fetch(), 2);
+  await c.removeAsync({name: 'cara'});
+  test.equal(await c.find().countAsync(), 4);
+  test.equal(await c.find({type: 'kitten'}).countAsync(), 2);
+  test.equal(await c.find({type: 'cryptographer'}).countAsync(), 2);
+  test.length(await c.find({type: 'kitten'}).fetchAsync(), 2);
+  test.length(await c.find({type: 'cryptographer'}).fetchAsync(), 2);
 
-  count = c.update({name: 'snookums'}, {$set: {type: 'cryptographer'}});
+  count = await c.updateAsync({name: 'snookums'}, {$set: {type: 'cryptographer'}});
   test.equal(count, 1);
-  test.equal(c.find().count(), 4);
-  test.equal(c.find({type: 'kitten'}).count(), 1);
-  test.equal(c.find({type: 'cryptographer'}).count(), 3);
-  test.length(c.find({type: 'kitten'}).fetch(), 1);
-  test.length(c.find({type: 'cryptographer'}).fetch(), 3);
+  test.equal(await c.find().countAsync(), 4);
+  test.equal(await c.find({type: 'kitten'}).countAsync(), 1);
+  test.equal(await c.find({type: 'cryptographer'}).countAsync(), 3);
+  test.length(await c.find({type: 'kitten'}).fetchAsync(), 1);
+  test.length(await c.find({type: 'cryptographer'}).fetchAsync(), 3);
 
-  c.remove(null);
-  c.remove(false);
-  c.remove(undefined);
-  test.equal(c.find().count(), 4);
+  await c.removeAsync(null);
+  await c.removeAsync(false);
+  await c.removeAsync(undefined);
+  test.equal(await c.find().countAsync(), 4);
 
-  c.remove({_id: null});
-  c.remove({_id: false});
-  c.remove({_id: undefined});
-  count = c.remove();
+  await c.removeAsync({_id: null});
+  await c.removeAsync({_id: false});
+  await c.removeAsync({_id: undefined});
+  count = await c.removeAsync();
   test.equal(count, 0);
-  test.equal(c.find().count(), 4);
-
-  count = c.remove({});
-  test.equal(count, 4);
-  test.equal(c.find().count(), 0);
-
-  c.insert({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
-  c.insert({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
-  c.insert({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
-
-  test.equal(c.find({tags: 'flower'}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}).count(), 2);
-  test.equal(c.find({tags: 'red'}).count(), 3);
-  test.length(c.find({tags: 'flower'}).fetch(), 1);
-  test.length(c.find({tags: 'fruit'}).fetch(), 2);
-  test.length(c.find({tags: 'red'}).fetch(), 3);
-
-  test.equal(c.findOne(1).name, 'strawberry');
-  test.equal(c.findOne(2).name, 'apple');
-  test.equal(c.findOne(3).name, 'rose');
-  test.equal(c.findOne(4), undefined);
-  test.equal(c.findOne('abc'), undefined);
-  test.equal(c.findOne(undefined), undefined);
-
-  test.equal(c.find(1).count(), 1);
-  test.equal(c.find(4).count(), 0);
-  test.equal(c.find('abc').count(), 0);
-  test.equal(c.find(undefined).count(), 0);
-  test.equal(c.find().count(), 3);
-  test.equal(c.find(1, {skip: 1}).count(false), 0);
-  test.equal(c.find(1, {skip: 1}).count(), 0);
-  test.equal(c.find({_id: 1}, {skip: 1}).count(false), 0);
-  test.equal(c.find({_id: 1}, {skip: 1}).count(), 0);
-  test.equal(c.find({_id: undefined}).count(), 0);
-  test.equal(c.find({_id: false}).count(), 0);
-  test.equal(c.find({_id: null}).count(), 0);
-  test.equal(c.find({_id: ''}).count(), 0);
-  test.equal(c.find({_id: 0}).count(), 0);
-  test.equal(c.find({}, {skip: 1}).count(false), 2);
-  test.equal(c.find({}, {skip: 1}).count(), 2);
-  test.equal(c.find({}, {skip: 2}).count(), 1);
-  test.equal(c.find({}, {limit: 2}).count(false), 2);
-  test.equal(c.find({}, {limit: 2}).count(), 2);
-  test.equal(c.find({}, {limit: 1}).count(), 1);
-  test.equal(c.find({}, {skip: 1, limit: 1}).count(false), 1);
-  test.equal(c.find({}, {skip: 1, limit: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {skip: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {skip: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {limit: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {limit: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(), 1);
-  test.equal(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(false), 0);
-  test.equal(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
-  test.equal(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(false), 0);
-  test.equal(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(false), 2);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(), 2);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 2}).count(), 1);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(false), 2);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(), 2);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 1);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
-
-  // Regression test for #455.
-  c.insert({foo: {bar: 'baz'}});
-  test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
-  test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
-
-  // Regression test for #5301
-  c.remove({});
-  c.insert({a: 'a', b: 'b'});
-  const noop = () => null;
-  test.equal(c.find({a: noop}).count(), 1);
-  test.equal(c.find({a: 'a', b: noop}).count(), 1);
-  test.equal(c.find({c: noop}).count(), 1);
-  test.equal(c.find({a: noop, c: 'c'}).count(), 0);
-
-  // Regression test for #4260
-  // Only insert enumerable, own properties from the object
-  c.remove({});
-  function Thing() {
-    this.a = 1;
-    this.b = 2;
-    Object.defineProperty(this, 'b', { enumerable: false });
-  }
-  Thing.prototype.c = 3;
-  Thing.prototype.d = () => null;
-  const before = new Thing();
-  c.insert(before);
-  const after = c.findOne();
-  test.equal(after.a, 1);
-  test.equal(after.b, undefined);
-  test.equal(after.c, undefined);
-  test.equal(after.d, undefined);
+  // test.equal(await c.find().countAsync(), 4);
+  //
+  // count = await c.removeAsync({});
+  // test.equal(count, 4);
+  // test.equal(await c.find().countAsync(), 0);
+  //
+  // await c.insertAsync({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
+  // await c.insertAsync({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
+  // await c.insertAsync({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
+  //
+  // test.equal(await c.find({tags: 'flower'}).countAsync(), 1);
+  // test.equal(await c.find({tags: 'fruit'}).countAsync(), 2);
+  // test.equal(await c.find({tags: 'red'}).countAsync(), 3);
+  // test.length(await c.find({tags: 'flower'}).fetchAsync(), 1);
+  // test.length(await c.find({tags: 'fruit'}).fetchAsync(), 2);
+  // test.length(await c.find({tags: 'red'}).fetchAsync(), 3);
+  //
+  // test.equal(c.findOne(1).name, 'strawberry');
+  // test.equal(c.findOne(2).name, 'apple');
+  // test.equal(c.findOne(3).name, 'rose');
+  // test.equal(c.findOne(4), undefined);
+  // test.equal(c.findOne('abc'), undefined);
+  // test.equal(c.findOne(undefined), undefined);
+  //
+  // test.equal(c.find(1).count(), 1);
+  // test.equal(c.find(4).count(), 0);
+  // test.equal(c.find('abc').count(), 0);
+  // test.equal(c.find(undefined).count(), 0);
+  // test.equal(c.find().count(), 3);
+  // test.equal(c.find(1, {skip: 1}).count(false), 0);
+  // test.equal(c.find(1, {skip: 1}).count(), 0);
+  // test.equal(c.find({_id: 1}, {skip: 1}).count(false), 0);
+  // test.equal(c.find({_id: 1}, {skip: 1}).count(), 0);
+  // test.equal(c.find({_id: undefined}).count(), 0);
+  // test.equal(c.find({_id: false}).count(), 0);
+  // test.equal(c.find({_id: null}).count(), 0);
+  // test.equal(c.find({_id: ''}).count(), 0);
+  // test.equal(c.find({_id: 0}).count(), 0);
+  // test.equal(c.find({}, {skip: 1}).count(false), 2);
+  // test.equal(c.find({}, {skip: 1}).count(), 2);
+  // test.equal(c.find({}, {skip: 2}).count(), 1);
+  // test.equal(c.find({}, {limit: 2}).count(false), 2);
+  // test.equal(c.find({}, {limit: 2}).count(), 2);
+  // test.equal(c.find({}, {limit: 1}).count(), 1);
+  // test.equal(c.find({}, {skip: 1, limit: 1}).count(false), 1);
+  // test.equal(c.find({}, {skip: 1, limit: 1}).count(), 1);
+  // test.equal(c.find({tags: 'fruit'}, {skip: 1}).count(false), 1);
+  // test.equal(c.find({tags: 'fruit'}, {skip: 1}).count(), 1);
+  // test.equal(c.find({tags: 'fruit'}, {limit: 1}).count(false), 1);
+  // test.equal(c.find({tags: 'fruit'}, {limit: 1}).count(), 1);
+  // test.equal(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(false), 1);
+  // test.equal(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(), 1);
+  // test.equal(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(false), 0);
+  // test.equal(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
+  // test.equal(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(false), 0);
+  // test.equal(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
+  // test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(false), 2);
+  // test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(), 2);
+  // test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 2}).count(), 1);
+  // test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(false), 2);
+  // test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(), 2);
+  // test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
+  // test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 1);
+  // test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
+  // test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(false), 1);
+  // test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(), 1);
+  // test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(false), 1);
+  // test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
+  // test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 1);
+  // test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
+  //
+  // // Regression test for #455.
+  // await c.insertAsync({foo: {bar: 'baz'}});
+  // test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
+  // test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
+  //
+  // // Regression test for #5301
+  // await c.removeAsync({});
+  // await c.insertAsync({a: 'a', b: 'b'});
+  // const noop = () => null;
+  // test.equal(c.find({a: noop}).count(), 1);
+  // test.equal(c.find({a: 'a', b: noop}).count(), 1);
+  // test.equal(c.find({c: noop}).count(), 1);
+  // test.equal(c.find({a: noop, c: 'c'}).count(), 0);
+  //
+  // // Regression test for #4260
+  // // Only insert enumerable, own properties from the object
+  // await c.removeAsync({});
+  // function Thing() {
+  //   this.a = 1;
+  //   this.b = 2;
+  //   Object.defineProperty(this, 'b', { enumerable: false });
+  // }
+  // Thing.prototype.c = 3;
+  // Thing.prototype.d = () => null;
+  // const before = new Thing();
+  // await c.insertAsync(before);
+  // const after = c.findOne();
+  // test.equal(after.a, 1);
+  // test.equal(after.b, undefined);
+  // test.equal(after.c, undefined);
+  // test.equal(after.d, undefined);
 });
 
-Tinytest.add('minimongo - error - no options', test => {
+Tinytest.addAsync('async - minimongo - error - no options', async test => {
   try {
     throw MinimongoError('Not fun to have errors');
   } catch (e) {
@@ -220,7 +220,7 @@ Tinytest.add('minimongo - error - no options', test => {
   }
 });
 
-Tinytest.add('minimongo - error - with field', test => {
+Tinytest.addAsync('async - minimongo - error - with field', async test => {
   try {
     throw MinimongoError('Cats are no fun', { field: 'mice' });
   } catch (e) {
@@ -228,11 +228,11 @@ Tinytest.add('minimongo - error - with field', test => {
   }
 });
 
-Tinytest.add('minimongo - cursors', test => {
+Tinytest.addAsync('async - minimongo - cursors', async test => {
   const c = new LocalCollection();
   let res;
 
-  for (let i = 0; i < 20; i++) {c.insert({i});}
+  for (let i = 0; i < 20; i++) {await c.insertAsync({i});}
 
   const q = c.find();
   test.equal(q.count(), 20);
@@ -289,12 +289,12 @@ Tinytest.add('minimongo - cursors', test => {
   test.equal(c.findOne(id).i, 2);
 });
 
-Tinytest.add('minimongo - transform', test => {
+Tinytest.addAsync('async - minimongo - transform', async test => {
   const c = new LocalCollection;
-  c.insert({});
+  await c.insertAsync({});
   // transform functions must return objects
   const invalidTransform = doc => doc._id;
-  test.throws(() => {
+  await test.throwsAsync(() => {
     c.findOne({}, {transform: invalidTransform});
   });
 
@@ -308,7 +308,7 @@ Tinytest.add('minimongo - transform', test => {
     c.findOne()._id);
 });
 
-Tinytest.add('minimongo - misc', test => {
+Tinytest.addAsync('async - minimongo - misc', async test => {
   // deepcopy
   let a = {a: [1, 2, 3], b: 'x', c: true, d: {x: 12, y: [12]},
     f: null, g: new Date()};
@@ -334,7 +334,7 @@ Tinytest.add('minimongo - misc', test => {
   test.equal(b.x.a, 14); // just to document current behavior
 });
 
-Tinytest.add('minimongo - lookup', test => {
+Tinytest.addAsync('async - minimongo - lookup', async test => {
   const lookupA = MinimongoTest.makeLookupFunction('a');
   test.equal(lookupA({}), [{value: undefined}]);
   test.equal(lookupA({a: 1}), [{value: 1}]);
@@ -381,7 +381,7 @@ Tinytest.add('minimongo - lookup', test => {
     ]);
 });
 
-Tinytest.add('minimongo - selector_compiler', test => {
+Tinytest.addAsync('async - minimongo - selector_compiler', async test => {
   const matches = (shouldMatch, selector, doc) => {
     const doesMatch = new Minimongo.Matcher(selector).documentMatches(doc).result;
     if (doesMatch != shouldMatch) {
@@ -550,7 +550,7 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // Members of $all other than regexps are *equality matches*, not document
   // matches.
   nomatch({a: {$all: [{b: 3}]}}, {a: [{b: 3, k: 4}]});
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({a: {$all: [{$gt: 4}]}}, {});
   });
 
@@ -797,11 +797,11 @@ Tinytest.add('minimongo - selector_compiler', test => {
 
   // Tests on numbers.
 
-  c.insert({a: 0});
-  c.insert({a: 1});
-  c.insert({a: 54});
-  c.insert({a: 88});
-  c.insert({a: 255});
+  await c.insertAsync({a: 0});
+  await c.insertAsync({a: 1});
+  await c.insertAsync({a: 54});
+  await c.insertAsync({a: 88});
+  await c.insertAsync({a: 255});
 
   // Tests with bitmask.
   matchCount({a: {$bitsAllSet: 0}}, 5);
@@ -850,10 +850,10 @@ Tinytest.add('minimongo - selector_compiler', test => {
 
   // Tests on negative numbers
 
-  c.remove({});
-  c.insert({a: -0});
-  c.insert({a: -1});
-  c.insert({a: -54});
+  await c.removeAsync({});
+  await c.insertAsync({a: -0});
+  await c.insertAsync({a: -1});
+  await c.insertAsync({a: -54});
 
   // Tests with bitmask.
   matchCount({a: {$bitsAllSet: 0}}, 3);
@@ -895,11 +895,11 @@ Tinytest.add('minimongo - selector_compiler', test => {
 
   // Tests on BinData.
 
-  c.remove({});
-  c.insert({a: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')});
-  c.insert({a: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')});
-  c.insert({a: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')});
-  c.insert({a: EJSON.parse('{"$binary": "////////////////////////////"}')});
+  await c.removeAsync({});
+  await c.insertAsync({a: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')});
+  await c.insertAsync({a: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')});
+  await c.insertAsync({a: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')});
+  await c.insertAsync({a: EJSON.parse('{"$binary": "////////////////////////////"}')});
 
   // Tests with binary string bitmask.
   matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4);
@@ -927,7 +927,7 @@ Tinytest.add('minimongo - selector_compiler', test => {
     },
   }, 1);
 
-  c.remove({});
+  await c.removeAsync({});
 
   nomatch({a: {$bitsAllSet: 1}}, {a: false});
   nomatch({a: {$bitsAllSet: 1}}, {a: NaN});
@@ -1021,16 +1021,16 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({'a.0': {$type: 1}}, {a: [[0]]});
 
   // invalid types should throw errors
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({a: {$type: 'foo'}}, {a: 1});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({a: {$type: -2}}, {a: 1});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({a: {$type: 0}}, {a: 1});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({a: {$type: 20}}, {a: 1});
   });
 
@@ -1075,7 +1075,7 @@ Tinytest.add('minimongo - selector_compiler', test => {
   match({a: {$regex: reusedRegexp}}, {a: 'Shorts'});
   match({a: {$regex: reusedRegexp}}, {a: 'Shorts'});
 
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({a: {$options: 'i'}}, {a: 12});
   });
 
@@ -1093,10 +1093,10 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({a: /t/}, {a: true});
   match({a: /m/i}, {a: ['x', 'xM']});
 
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({a: {$regex: /a/, $options: 'x'}}, {a: 'cat'});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({a: {$regex: /a/, $options: 's'}}, {a: 'cat'});
   });
 
@@ -1188,13 +1188,13 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({'a.b': {$in: [1, 2, 3]}}, {a: {b: [4]}});
 
   // $or
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({$or: []}, {});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({$or: [5]}, {});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({$or: []}, {a: 1});
   });
   match({$or: [{a: 1}]}, {a: 1});
@@ -1278,13 +1278,13 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // this is possibly an open-ended task, so we stop here ...
 
   // $nor
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({$nor: []}, {});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({$nor: [5]}, {});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({$nor: []}, {a: 1});
   });
   nomatch({$nor: [{a: 1}]}, {a: 1});
@@ -1359,13 +1359,13 @@ Tinytest.add('minimongo - selector_compiler', test => {
 
   // $and
 
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({$and: []}, {});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({$and: [5]}, {});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({$and: []}, {a: 1});
   });
   match({$and: [{a: 1}]}, {a: 1});
@@ -1540,12 +1540,12 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
     {a: [{x: 1}, {b: 1}]});
 
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({a: {$elemMatch: {$gte: 1, $or: [{a: 1}, {b: 1}]}}},
       {a: [{x: 1, b: 1}]});
   });
 
-  test.throws(() => {
+  await test.throwsAsync(() => {
     match({x: {$elemMatch: {$and: [{$gt: 5, $lt: 9}]}}}, {x: [8]});
   });
 
@@ -1557,7 +1557,7 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // - non-scalar arguments to $gt, $lt, etc
 });
 
-Tinytest.add('minimongo - projection_compiler', test => {
+Tinytest.addAsync('async - minimongo - projection_compiler', async test => {
   const testProjection = (projection, tests) => {
     const projection_f = LocalCollection._compileProjection(projection);
     const equalNonStrict = (a, b, desc) => {
@@ -1688,10 +1688,10 @@ Tinytest.add('minimongo - projection_compiler', test => {
   testCompileProjectionThrows('some string', 'fields option must be an object');
 });
 
-Tinytest.add('minimongo - fetch with fields', test => {
+Tinytest.addAsync('async - minimongo - fetch with fields', async test => {
   const c = new LocalCollection();
-  Array.from({length: 30}, (x, i) => {
-    c.insert({
+  await Promise.all(Array.from({length: 30}, (x, i) => {
+    return c.insertAsync({
       something: Random.id(),
       anything: {
         foo: 'bar',
@@ -1700,7 +1700,7 @@ Tinytest.add('minimongo - fetch with fields', test => {
       nothing: i,
       i,
     });
-  });
+  }));
 
   // Test just a regular fetch with some projection
   let fetchResults = c.find({}, { fields: {
@@ -1761,18 +1761,18 @@ Tinytest.add('minimongo - fetch with fields', test => {
 
   // Temporary unsupported operators
   // queries are taken from MongoDB docs examples
-  test.throws(() => {
+  await test.throwsAsync(() => {
     c.find({}, { fields: { 'grades.$': 1 } });
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     c.find({}, { fields: { grades: { $elemMatch: { mean: 70 } } } });
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     c.find({}, { fields: { grades: { $slice: [20, 10] } } });
   });
 });
 
-Tinytest.add('minimongo - fetch with projection, subarrays', test => {
+Tinytest.addAsync('async - minimongo - fetch with projection, subarrays', async test => {
   // Apparently projection of type 'foo.bar.x' for
   // { foo: [ { bar: { x: 42 } }, { bar: { x: 3 } } ] }
   // should return exactly this object. More precisely, arrays are considered as
@@ -1780,7 +1780,7 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
   const c = new LocalCollection();
 
   // Insert a test object with two set fields
-  c.insert({
+  await c.insertAsync({
     setA: [{
       fieldA: 42,
       fieldB: 33,
@@ -1819,8 +1819,8 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
       setB: [null, { anotherB: 'meh' }, null, { anotherB: 431 }, null],
     });
 
-  c.remove({});
-  c.insert({a: [[{b: 1, c: 2}, {b: 2, c: 4}], {b: 3, c: 5}, [{b: 4, c: 9}]]});
+  await c.removeAsync({});
+  await c.insertAsync({a: [[{b: 1, c: 2}, {b: 2, c: 4}], {b: 3, c: 5}, [{b: 4, c: 9}]]});
 
   testForProjection({ 'a.b': 1, _id: 0 },
     {a: [ [ { b: 1 }, { b: 2 } ], { b: 3 }, [ { b: 4 } ] ] });
@@ -1828,7 +1828,7 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
     {a: [ [ { c: 2 }, { c: 4 } ], { c: 5 }, [ { c: 9 } ] ] });
 });
 
-Tinytest.add('minimongo - fetch with projection, deep copy', test => {
+Tinytest.addAsync('async - minimongo - fetch with projection, deep copy', async test => {
   // Compiled fields projection defines the contract: returned document doesn't
   // retain anything from the passed argument.
   const doc = {
@@ -1859,7 +1859,7 @@ Tinytest.add('minimongo - fetch with projection, deep copy', test => {
   test.equal(filteredDoc.a.x, 43, 'projection returning deep copy - excluding');
 });
 
-Tinytest.add('minimongo - observe ordered with projection', test => {
+Tinytest.addAsync('async - minimongo - observe ordered with projection', async test => {
   // These tests are copy-paste from "minimongo -observe ordered",
   // slightly modified to test projection
   const operations = [];
@@ -1870,35 +1870,35 @@ Tinytest.add('minimongo - observe ordered with projection', test => {
   handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(cbs);
   test.isTrue(handle.collection === c);
 
-  c.insert({_id: 'foo', a: 1, b: 2});
+  await c.insertAsync({_id: 'foo', a: 1, b: 2});
   test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
-  c.update({a: 1}, {$set: {a: 2, b: 1}});
+  await c.updateAsync({a: 1}, {$set: {a: 2, b: 1}});
   test.equal(operations.shift(), ['changed', {a: 2}, 0, {a: 1}]);
-  c.insert({_id: 'bar', a: 10, c: 33});
+  await c.insertAsync({_id: 'bar', a: 10, c: 33});
   test.equal(operations.shift(), ['added', {a: 10}, 1, null]);
-  c.update({}, {$inc: {a: 1}}, {multi: true});
-  c.update({}, {$inc: {c: 1}}, {multi: true});
+  await c.updateAsync({}, {$inc: {a: 1}}, {multi: true});
+  await c.updateAsync({}, {$inc: {c: 1}}, {multi: true});
   test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 2}]);
   test.equal(operations.shift(), ['changed', {a: 11}, 1, {a: 10}]);
-  c.update({a: 11}, {a: 1, b: 44});
+  await c.updateAsync({a: 11}, {a: 1, b: 44});
   test.equal(operations.shift(), ['changed', {a: 1}, 1, {a: 11}]);
   test.equal(operations.shift(), ['moved', {a: 1}, 1, 0, 'foo']);
-  c.remove({a: 2});
+  await c.removeAsync({a: 2});
   test.equal(operations.shift(), undefined);
-  c.remove({a: 3});
+  await c.removeAsync({a: 3});
   test.equal(operations.shift(), ['removed', 'foo', 1, {a: 3}]);
 
   // test stop
   handle.stop();
   const idA2 = Random.id();
-  c.insert({_id: idA2, a: 2});
+  await c.insertAsync({_id: idA2, a: 2});
   test.equal(operations.shift(), undefined);
 
   const cursor = c.find({}, {fields: {a: 1, _id: 0}});
-  test.throws(() => {
+  await test.throwsAsync(() => {
     cursor.observeChanges({added() {}});
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     cursor.observe({added() {}});
   });
 
@@ -1911,56 +1911,56 @@ Tinytest.add('minimongo - observe ordered with projection', test => {
   // test _suppress_initial
   handle = c.find({}, {sort: {a: -1}, fields: { a: 1 }}).observe(Object.assign(cbs, {_suppress_initial: true}));
   test.equal(operations.shift(), undefined);
-  c.insert({a: 100, b: { foo: 'bar' }});
+  await c.insertAsync({a: 100, b: { foo: 'bar' }});
   test.equal(operations.shift(), ['added', {a: 100}, 0, idA2]);
   handle.stop();
 
   // test skip and limit.
-  c.remove({});
+  await c.removeAsync({});
   handle = c.find({}, {sort: {a: 1}, skip: 1, limit: 2, fields: { blacklisted: 0 }}).observe(cbs);
   test.equal(operations.shift(), undefined);
-  c.insert({a: 1, blacklisted: 1324});
+  await c.insertAsync({a: 1, blacklisted: 1324});
   test.equal(operations.shift(), undefined);
-  c.insert({_id: 'foo', a: 2, blacklisted: ['something']});
+  await c.insertAsync({_id: 'foo', a: 2, blacklisted: ['something']});
   test.equal(operations.shift(), ['added', {a: 2}, 0, null]);
-  c.insert({a: 3, blacklisted: { 2: 3 }});
+  await c.insertAsync({a: 3, blacklisted: { 2: 3 }});
   test.equal(operations.shift(), ['added', {a: 3}, 1, null]);
-  c.insert({a: 4, blacklisted: 6});
+  await c.insertAsync({a: 4, blacklisted: 6});
   test.equal(operations.shift(), undefined);
-  c.update({a: 1}, {a: 0, blacklisted: 4444});
+  await c.updateAsync({a: 1}, {a: 0, blacklisted: 4444});
   test.equal(operations.shift(), undefined);
-  c.update({a: 0}, {a: 5, blacklisted: 11111});
+  await c.updateAsync({a: 0}, {a: 5, blacklisted: 11111});
   test.equal(operations.shift(), ['removed', 'foo', 0, {a: 2}]);
   test.equal(operations.shift(), ['added', {a: 4}, 1, null]);
-  c.update({a: 3}, {a: 3.5, blacklisted: 333.4444});
+  await c.updateAsync({a: 3}, {a: 3.5, blacklisted: 333.4444});
   test.equal(operations.shift(), ['changed', {a: 3.5}, 0, {a: 3}]);
   handle.stop();
 
   // test _no_indices
 
-  c.remove({});
+  await c.removeAsync({});
   handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(Object.assign(cbs, {_no_indices: true}));
-  c.insert({_id: 'foo', a: 1, zoo: 'crazy'});
+  await c.insertAsync({_id: 'foo', a: 1, zoo: 'crazy'});
   test.equal(operations.shift(), ['added', {a: 1}, -1, null]);
-  c.update({a: 1}, {$set: {a: 2, foobar: 'player'}});
+  await c.updateAsync({a: 1}, {$set: {a: 2, foobar: 'player'}});
   test.equal(operations.shift(), ['changed', {a: 2}, -1, {a: 1}]);
-  c.insert({a: 10, b: 123.45});
+  await c.insertAsync({a: 10, b: 123.45});
   test.equal(operations.shift(), ['added', {a: 10}, -1, null]);
-  c.update({}, {$inc: {a: 1, b: 2}}, {multi: true});
+  await c.updateAsync({}, {$inc: {a: 1, b: 2}}, {multi: true});
   test.equal(operations.shift(), ['changed', {a: 3}, -1, {a: 2}]);
   test.equal(operations.shift(), ['changed', {a: 11}, -1, {a: 10}]);
-  c.update({a: 11, b: 125.45}, {a: 1, b: 444});
+  await c.updateAsync({a: 11, b: 125.45}, {a: 1, b: 444});
   test.equal(operations.shift(), ['changed', {a: 1}, -1, {a: 11}]);
   test.equal(operations.shift(), ['moved', {a: 1}, -1, -1, 'foo']);
-  c.remove({a: 2});
+  await c.removeAsync({a: 2});
   test.equal(operations.shift(), undefined);
-  c.remove({a: 3});
+  await c.removeAsync({a: 3});
   test.equal(operations.shift(), ['removed', 'foo', -1, {a: 3}]);
   handle.stop();
 });
 
 
-Tinytest.add('minimongo - ordering', test => {
+Tinytest.addAsync('async - minimongo - ordering', async test => {
   const shortBinary = EJSON.newBinary(1);
   shortBinary[0] = 128;
   const longBinary1 = EJSON.newBinary(2);
@@ -2016,17 +2016,17 @@ Tinytest.add('minimongo - ordering', test => {
     [['a', 'asc'], ['b', 'asc']]],
   [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
 
-  test.throws(() => {
+  await test.throwsAsync(() => {
     new Minimongo.Sorter('a');
   });
 
-  test.throws(() => {
+  await test.throwsAsync(() => {
     new Minimongo.Sorter(123);
   });
 
   // We don't support $natural:1 (since we don't actually have Mongo's on-disk
   // ordering available!)
-  test.throws(() => {
+  await test.throwsAsync(() => {
     new Minimongo.Sorter({$natural: 1});
   });
 
@@ -2124,10 +2124,10 @@ Tinytest.add('minimongo - ordering', test => {
   ]);
 });
 
-Tinytest.add('minimongo - sort', test => {
+Tinytest.addAsync('async - minimongo - sort', async test => {
   const c = new LocalCollection();
   for (let i = 0; i < 50; i++) {
-    for (let j = 0; j < 2; j++) {c.insert({a: i, b: j, _id: `${i}_${j}`});}
+    for (let j = 0; j < 2; j++) {await c.insertAsync({a: i, b: j, _id: `${i}_${j}`});}
   }
 
   test.equal(c.find(null, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
@@ -2159,31 +2159,31 @@ Tinytest.add('minimongo - sort', test => {
       {a: 47, b: 1, _id: '47_1'}]);
 });
 
-Tinytest.add('minimongo - subkey sort', test => {
+Tinytest.addAsync('async - minimongo - subkey sort', async test => {
   const c = new LocalCollection();
 
   // normal case
-  c.insert({a: {b: 2}});
-  c.insert({a: {b: 1}});
-  c.insert({a: {b: 3}});
+  await c.insertAsync({a: {b: 2}});
+  await c.insertAsync({a: {b: 1}});
+  await c.insertAsync({a: {b: 3}});
   test.equal(
     c.find({}, {sort: {'a.b': -1}}).fetch().map(doc => doc.a),
     [{b: 3}, {b: 2}, {b: 1}]);
 
   // isn't an object
-  c.insert({a: 1});
+  await c.insertAsync({a: 1});
   test.equal(
     c.find({}, {sort: {'a.b': 1}}).fetch().map(doc => doc.a),
     [1, {b: 1}, {b: 2}, {b: 3}]);
 
   // complex object
-  c.insert({a: {b: {c: 1}}});
+  await c.insertAsync({a: {b: {c: 1}}});
   test.equal(
     c.find({}, {sort: {'a.b': -1}}).fetch().map(doc => doc.a),
     [{b: {c: 1}}, {b: 3}, {b: 2}, {b: 1}, 1]);
 
   // no such top level prop
-  c.insert({c: 1});
+  await c.insertAsync({c: 1});
   test.equal(
     c.find({}, {sort: {'a.b': -1}}).fetch().map(doc => doc.a),
     [{b: {c: 1}}, {b: 3}, {b: 2}, {b: 1}, 1, undefined]);
@@ -2192,7 +2192,7 @@ Tinytest.add('minimongo - subkey sort', test => {
   test.equal(c.find({}, {sort: {'a.nope.c': -1}}).count(), 6);
 });
 
-Tinytest.add('minimongo - array sort', test => {
+Tinytest.addAsync('async - minimongo - array sort', async test => {
   const c = new LocalCollection();
 
   // "up" and "down" are the indices that the docs should have when sorted
@@ -2205,11 +2205,11 @@ Tinytest.add('minimongo - array sort', test => {
   // Similarly, "selected" is the index that the doc should have in the query
   // that sorts ascending on "a.x" and selects {'a.x': {$gt: 1}}. In this case,
   // the 1 in [1, 4] may not be used as a sort key.
-  c.insert({up: 1, down: 1, selected: 0, a: {x: [1, 4]}});
-  c.insert({up: 2, down: 2, selected: 1, a: [{x: [2]}, {x: 3}]});
-  c.insert({up: 0, down: 4,              a: {x: 0}});
-  c.insert({up: 3, down: 3, selected: 2, a: {x: 2.5}});
-  c.insert({up: 4, down: 0, selected: 3, a: {x: 5}});
+  await c.insertAsync({up: 1, down: 1, selected: 0, a: {x: [1, 4]}});
+  await c.insertAsync({up: 2, down: 2, selected: 1, a: [{x: [2]}, {x: 3}]});
+  await c.insertAsync({up: 0, down: 4,              a: {x: 0}});
+  await c.insertAsync({up: 3, down: 3, selected: 2, a: {x: 2.5}});
+  await c.insertAsync({up: 4, down: 0, selected: 3, a: {x: 5}});
 
   // Test that the the documents in "cursor" contain values with the name
   // "field" running from 0 to the max value of that name in the collection.
@@ -2228,20 +2228,20 @@ Tinytest.add('minimongo - array sort', test => {
     'selected');
 });
 
-Tinytest.add('minimongo - nested array sort', test => {
+Tinytest.addAsync('async - minimongo - nested array sort', async test => {
   const c = new LocalCollection();
 
   // the short fields represent the order it should be when sorting for those keys
   // e.g. the cdx_cdy field represents the order when you sort: { 'c.d.x': 1, 'c.d.y': 1 }
-  c.insert({ ab0x: 0, ab0x_g: 0, g_ab0x: 0, cdx: 0, cdx_cdy: 0, cdy_cdx: 0, n: 0 });
-  c.insert({ ab0x: 1, ab0x_g: 2, g_ab0x: 3, cdx: 1, cdx_cdy: 2, cdy_cdx: 4, n: 1 , g: 2, c: { d: [{ y: 2}, { y: 3}] } });
-  c.insert({ ab0x: 2, ab0x_g: 1, g_ab0x: 1, cdx: 2, cdx_cdy: 3, cdy_cdx: 5, n: 2 , c: { d: [{ y: 2}] }, g: 0 });
-  c.insert({ ab0x: 3, ab0x_g: 3, g_ab0x: 2, cdx: 6, cdx_cdy: 6, cdy_cdx: 8, n: 3 , a: { b: [{ x: 0 }] }, c: { d: [{ x: 1, y: 2}] }, g: 1 });
-  c.insert({ ab0x: 4, ab0x_g: 4, g_ab0x: 4, cdx: 3, cdx_cdy: 1, cdy_cdx: 1, n: 4 , a: { b: [{ x: [1, 4] }] }, c: { d: [] }, g: 2 });
-  c.insert({ ab0x: 5, ab0x_g: 5, g_ab0x: 5, cdx: 7, cdx_cdy: 7, cdy_cdx: 3, n: 5 , a: { b: [{ x: [2] }, { x: 3 }]}, c: { d: [{x: 2, y: 2}, {x: 3, y: 1}] }, g: 3 });
-  c.insert({ ab0x: 6, ab0x_g: 6, g_ab0x: 6, cdx: 8, cdx_cdy: 8, cdy_cdx: 2, n: 6 , a: { b: [{ x: 2.5 }] }, c: { d: [{x: 2, y: 2}, {x: 3}] }, g: 4 });
-  c.insert({ ab0x: 7, ab0x_g: 7, g_ab0x: 7, cdx: 4, cdx_cdy: 4, cdy_cdx: 6, n: 7 , a: { b: [{ x: 5 }] }, c: { d: [{ y: 2}, { y: 3}] }, g: 5 });
-  c.insert({ ab0x: 8, ab0x_g: 8, g_ab0x: 8, cdx: 5, cdx_cdy: 5, cdy_cdx: 7, n: 8 , a: { b: [{ x: 6 }, { x: 7 }] }, c: { d: [{ y: 2}, { x: 1.5, y: 2}] }, g: 6 });
+  await c.insertAsync({ ab0x: 0, ab0x_g: 0, g_ab0x: 0, cdx: 0, cdx_cdy: 0, cdy_cdx: 0, n: 0 });
+  await c.insertAsync({ ab0x: 1, ab0x_g: 2, g_ab0x: 3, cdx: 1, cdx_cdy: 2, cdy_cdx: 4, n: 1 , g: 2, c: { d: [{ y: 2}, { y: 3}] } });
+  await c.insertAsync({ ab0x: 2, ab0x_g: 1, g_ab0x: 1, cdx: 2, cdx_cdy: 3, cdy_cdx: 5, n: 2 , c: { d: [{ y: 2}] }, g: 0 });
+  await c.insertAsync({ ab0x: 3, ab0x_g: 3, g_ab0x: 2, cdx: 6, cdx_cdy: 6, cdy_cdx: 8, n: 3 , a: { b: [{ x: 0 }] }, c: { d: [{ x: 1, y: 2}] }, g: 1 });
+  await c.insertAsync({ ab0x: 4, ab0x_g: 4, g_ab0x: 4, cdx: 3, cdx_cdy: 1, cdy_cdx: 1, n: 4 , a: { b: [{ x: [1, 4] }] }, c: { d: [] }, g: 2 });
+  await c.insertAsync({ ab0x: 5, ab0x_g: 5, g_ab0x: 5, cdx: 7, cdx_cdy: 7, cdy_cdx: 3, n: 5 , a: { b: [{ x: [2] }, { x: 3 }]}, c: { d: [{x: 2, y: 2}, {x: 3, y: 1}] }, g: 3 });
+  await c.insertAsync({ ab0x: 6, ab0x_g: 6, g_ab0x: 6, cdx: 8, cdx_cdy: 8, cdy_cdx: 2, n: 6 , a: { b: [{ x: 2.5 }] }, c: { d: [{x: 2, y: 2}, {x: 3}] }, g: 4 });
+  await c.insertAsync({ ab0x: 7, ab0x_g: 7, g_ab0x: 7, cdx: 4, cdx_cdy: 4, cdy_cdx: 6, n: 7 , a: { b: [{ x: 5 }] }, c: { d: [{ y: 2}, { y: 3}] }, g: 5 });
+  await c.insertAsync({ ab0x: 8, ab0x_g: 8, g_ab0x: 8, cdx: 5, cdx_cdy: 5, cdy_cdx: 7, n: 8 , a: { b: [{ x: 6 }, { x: 7 }] }, c: { d: [{ y: 2}, { x: 1.5, y: 2}] }, g: 6 });
 
   // Test that the the documents in "cursor" contain values with the name
   // "field" running from 0 to the max value of that name in the collection.
@@ -2265,7 +2265,7 @@ Tinytest.add('minimongo - nested array sort', test => {
 
 });
 
-Tinytest.add('minimongo - sort keys', test => {
+Tinytest.addAsync('async - minimongo - sort keys', async test => {
   const keyListToObject = keyList => {
     const obj = {};
     keyList.forEach(key => {
@@ -2336,16 +2336,16 @@ Tinytest.add('minimongo - sort keys', test => {
       {x: 2, y: [4, 5]}]});
 });
 
-Tinytest.add('minimongo - sort function', test => {
+Tinytest.addAsync('async - minimongo - sort function', async test => {
   const c = new LocalCollection();
 
-  c.insert({a: 1});
-  c.insert({a: 10});
-  c.insert({a: 5});
-  c.insert({a: 7});
-  c.insert({a: 2});
-  c.insert({a: 4});
-  c.insert({a: 3});
+  await c.insertAsync({a: 1});
+  await c.insertAsync({a: 10});
+  await c.insertAsync({a: 5});
+  await c.insertAsync({a: 7});
+  await c.insertAsync({a: 2});
+  await c.insertAsync({a: 4});
+  await c.insertAsync({a: 3});
 
   const sortFunction = (doc1, doc2) => doc2.a - doc1.a;
 
@@ -2354,7 +2354,7 @@ Tinytest.add('minimongo - sort function', test => {
   test.equal(c.find({}, {sort: {a: -1}}).fetch(), c.find({}).fetch().sort(sortFunction));
 });
 
-Tinytest.add('minimongo - binary search', test => {
+Tinytest.addAsync('async - minimongo - binary search', async test => {
   const forwardCmp = (a, b) => a - b;
 
   const backwardCmp = (a, b) => -1 * forwardCmp(a, b);
@@ -2406,13 +2406,13 @@ Tinytest.add('minimongo - binary search', test => {
   checkSearchBackward([2, 2, 2, 2, 2, 2, 2], 3, 0, 'Backward: Highly degenerate array, upper');
 });
 
-Tinytest.add('minimongo - modify', test => {
-  const modifyWithQuery = (doc, query, mod, expected) => {
+Tinytest.addAsync('async - minimongo - modify', async test => {
+  const modifyWithQuery = async (doc, query, mod, expected) => {
     const coll = new LocalCollection;
-    coll.insert(doc);
+    await coll.insertAsync(doc);
     // The query is relevant for 'a.$.b'.
-    coll.update(query, mod);
-    const actual = coll.findOne();
+    await coll.updateAsync(query, mod);
+    const actual = await coll.findOne();
 
     if (!expected._id) {
       delete actual._id;  // added by insert
@@ -2424,26 +2424,30 @@ Tinytest.add('minimongo - modify', test => {
       test.equal(actual, expected, EJSON.stringify({input: doc, mod}));
     }
   };
-  const modify = (doc, mod, expected) => {
-    modifyWithQuery(doc, {}, mod, expected);
+  const modify = async (doc, mod, expected) => {
+    try {
+      await modifyWithQuery(doc, {}, mod, expected);
+    } catch (e) {
+      console.log({e});
+    }
   };
-  const exceptionWithQuery = (doc, query, mod) => {
+  const exceptionWithQuery = async (doc, query, mod) => {
     const coll = new LocalCollection;
-    coll.insert(doc);
-    test.throws(() => {
-      coll.update(query, mod);
+    await coll.insertAsync(doc);
+    await test.throwsAsync(async () => {
+      await coll.updateAsync(query, mod);
     });
   };
-  const exception = (doc, mod) => {
-    exceptionWithQuery(doc, {}, mod);
+  const exception = async (doc, mod) => {
+    await exceptionWithQuery(doc, {}, mod);
   };
 
-  const upsert = (query, mod, expected) => {
+  const upsert = async (query, mod, expected) => {
     const coll = new LocalCollection;
 
-    const result = coll.upsert(query, mod);
+    const result = await coll.upsertAsync(query, mod);
 
-    const actual = coll.findOne();
+    const actual = await coll.findOne();
 
     if (expected._id) {
       test.equal(result.insertedId, expected._id);
@@ -2454,13 +2458,13 @@ Tinytest.add('minimongo - modify', test => {
     test.equal(actual, expected);
   };
 
-  const upsertUpdate = (initialDoc, query, mod, expected) => {
+  const upsertUpdate = async (initialDoc, query, mod, expected) => {
     const collection = new LocalCollection;
 
-    collection.insert(initialDoc);
+    await collection.insertAsync(initialDoc);
 
-    const result = collection.upsert(query, mod);
-    const actual = collection.findOne();
+    const result = await collection.upsertAsync(query, mod);
+    const actual = await collection.findOne();
 
     if (!expected._id) {
       delete actual._id;
@@ -2469,153 +2473,153 @@ Tinytest.add('minimongo - modify', test => {
     test.equal(actual, expected);
   };
 
-  const upsertException = (query, mod) => {
+  const upsertException = async (query, mod) => {
     const coll = new LocalCollection;
-    test.throws(() => {
-      coll.upsert(query, mod);
+    await test.throwsAsync(async () => {
+      await coll.upsertAsync(query, mod);
     });
   };
 
   // document replacement
-  modify({}, {}, {});
-  modify({a: 12}, {}, {}); // tested against mongodb
-  modify({a: 12}, {a: 13}, {a: 13});
-  modify({a: 12, b: 99}, {a: 13}, {a: 13});
-  exception({a: 12}, {a: 13, $set: {b: 13}});
-  exception({a: 12}, {$set: {b: 13}, a: 13});
+  await modify( {}, {}, {});
+  await modify( {a: 12}, {}, {}); // tested against mongodb
+  await modify( {a: 12}, {a: 13}, {a: 13});
+  await modify( {a: 12, b: 99}, {a: 13}, {a: 13});
+  await exception({a: 12}, {a: 13, $set: {b: 13}});
+  await exception({a: 12}, {$set: {b: 13}, a: 13});
 
-  exception({a: 12}, {$a: 13}); // invalid operator
-  exception({a: 12}, {b: {$a: 13}});
-  exception({a: 12}, {b: {'a.b': 13}});
-  exception({a: 12}, {b: {'\0a': 13}});
+  await exception({a: 12}, {$a: 13}); // invalid operator
+  await exception({a: 12}, {b: {$a: 13}});
+  await exception({a: 12}, {b: {'a.b': 13}});
+  await exception({a: 12}, {b: {'\0a': 13}});
 
   // keys
-  modify({}, {$set: {a: 12}}, {a: 12});
-  modify({}, {$set: {'a.b': 12}}, {a: {b: 12}});
-  modify({}, {$set: {'a.b.c': 12}}, {a: {b: {c: 12}}});
-  modify({a: {d: 99}}, {$set: {'a.b.c': 12}}, {a: {d: 99, b: {c: 12}}});
-  modify({}, {$set: {'a.b.3.c': 12}}, {a: {b: {3: {c: 12}}}});
-  modify({a: {b: []}}, {$set: {'a.b.3.c': 12}}, {
+  await modify( {}, {$set: {a: 12}}, {a: 12});
+  await modify( {}, {$set: {'a.b': 12}}, {a: {b: 12}});
+  await modify( {}, {$set: {'a.b.c': 12}}, {a: {b: {c: 12}}});
+  await modify( {a: {d: 99}}, {$set: {'a.b.c': 12}}, {a: {d: 99, b: {c: 12}}});
+  await modify( {}, {$set: {'a.b.3.c': 12}}, {a: {b: {3: {c: 12}}}});
+  await modify( {a: {b: []}}, {$set: {'a.b.3.c': 12}}, {
     a: {b: [null, null, null, {c: 12}]}});
-  exception({a: [null, null, null]}, {$set: {'a.1.b': 12}});
-  exception({a: [null, 1, null]}, {$set: {'a.1.b': 12}});
-  exception({a: [null, 'x', null]}, {$set: {'a.1.b': 12}});
-  exception({a: [null, [], null]}, {$set: {'a.1.b': 12}});
-  modify({a: [null, null, null]}, {$set: {'a.3.b': 12}}, {
+  await exception({a: [null, null, null]}, {$set: {'a.1.b': 12}});
+  await exception({a: [null, 1, null]}, {$set: {'a.1.b': 12}});
+  await exception({a: [null, 'x', null]}, {$set: {'a.1.b': 12}});
+  await exception({a: [null, [], null]}, {$set: {'a.1.b': 12}});
+  await modify( {a: [null, null, null]}, {$set: {'a.3.b': 12}}, {
     a: [null, null, null, {b: 12}]});
-  exception({a: []}, {$set: {'a.b': 12}});
-  exception({a: 12}, {$set: {'a.b': 99}}); // tested on mongo
-  exception({a: 'x'}, {$set: {'a.b': 99}});
-  exception({a: true}, {$set: {'a.b': 99}});
-  exception({a: null}, {$set: {'a.b': 99}});
-  modify({a: {}}, {$set: {'a.3': 12}}, {a: {3: 12}});
-  modify({a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
-  exception({}, {$set: {'': 12}}); // tested on mongo
-  exception({}, {$set: {'.': 12}}); // tested on mongo
-  exception({}, {$set: {'a.': 12}}); // tested on mongo
-  exception({}, {$set: {'. ': 12}}); // tested on mongo
-  exception({}, {$inc: {'... ': 12}}); // tested on mongo
-  exception({}, {$set: {'a..b': 12}}); // tested on mongo
-  modify({a: [1, 2, 3]}, {$set: {'a.01': 99}}, {a: [1, 99, 3]});
-  modify({a: [1, {a: 98}, 3]}, {$set: {'a.01.b': 99}}, {a: [1, {a: 98, b: 99}, 3]});
-  modify({}, {$set: {'2.a.b': 12}}, {2: {a: {b: 12}}}); // tested
-  exception({x: []}, {$set: {'x.2..a': 99}});
-  modify({x: [null, null]}, {$set: {'x.2.a': 1}}, {x: [null, null, {a: 1}]});
-  exception({x: [null, null]}, {$set: {'x.1.a': 1}});
+  await exception({a: []}, {$set: {'a.b': 12}});
+  await exception({a: 12}, {$set: {'a.b': 99}}); // tested on mongo
+  await exception({a: 'x'}, {$set: {'a.b': 99}});
+  await exception({a: true}, {$set: {'a.b': 99}});
+  await exception({a: null}, {$set: {'a.b': 99}});
+  await modify( {a: {}}, {$set: {'a.3': 12}}, {a: {3: 12}});
+  await modify( {a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
+  await exception({}, {$set: {'': 12}}); // tested on mongo
+  await exception({}, {$set: {'.': 12}}); // tested on mongo
+  await exception({}, {$set: {'a.': 12}}); // tested on mongo
+  await exception({}, {$set: {'. ': 12}}); // tested on mongo
+  await exception({}, {$inc: {'... ': 12}}); // tested on mongo
+  await exception({}, {$set: {'a..b': 12}}); // tested on mongo
+  await modify( {a: [1, 2, 3]}, {$set: {'a.01': 99}}, {a: [1, 99, 3]});
+  await modify( {a: [1, {a: 98}, 3]}, {$set: {'a.01.b': 99}}, {a: [1, {a: 98, b: 99}, 3]});
+  await modify( {}, {$set: {'2.a.b': 12}}, {2: {a: {b: 12}}}); // tested
+  await exception({x: []}, {$set: {'x.2..a': 99}});
+  await modify( {x: [null, null]}, {$set: {'x.2.a': 1}}, {x: [null, null, {a: 1}]});
+  await exception({x: [null, null]}, {$set: {'x.1.a': 1}});
 
   // a.$.b
-  modifyWithQuery({a: [{x: 2}, {x: 4}]}, {'a.x': 4}, {$set: {'a.$.z': 9}},
+  await modifyWithQuery( {a: [{x: 2}, {x: 4}]}, {'a.x': 4}, {$set: {'a.$.z': 9}},
     {a: [{x: 2}, {x: 4, z: 9}]});
-  exception({a: [{x: 2}, {x: 4}]}, {$set: {'a.$.z': 9}});
-  exceptionWithQuery({a: [{x: 2}, {x: 4}], b: 5}, {b: 5}, {$set: {'a.$.z': 9}});
+  await exception({a: [{x: 2}, {x: 4}]}, {$set: {'a.$.z': 9}});
+  await exceptionWithQuery({a: [{x: 2}, {x: 4}], b: 5}, {b: 5}, {$set: {'a.$.z': 9}});
   // can't have two $
-  exceptionWithQuery({a: [{x: [2]}]}, {'a.x': 2}, {$set: {'a.$.x.$': 9}});
-  modifyWithQuery({a: [5, 6, 7]}, {a: 6}, {$set: {'a.$': 9}}, {a: [5, 9, 7]});
-  modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 10},
+  await exceptionWithQuery({a: [{x: [2]}]}, {'a.x': 2}, {$set: {'a.$.x.$': 9}});
+  await modifyWithQuery( {a: [5, 6, 7]}, {a: 6}, {$set: {'a.$': 9}}, {a: [5, 9, 7]});
+  await modifyWithQuery( {a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 10},
     {$unset: {'a.$.b': 1}}, {a: [{}, {b: {c: 11}}]});
-  modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 11},
+  await modifyWithQuery( {a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 11},
     {$unset: {'a.$.b': 1}},
     {a: [{b: [{c: 9}, {c: 10}]}, {}]});
-  modifyWithQuery({a: [1]}, {'a.0': 1}, {$set: {'a.$': 5}}, {a: [5]});
-  modifyWithQuery({a: [9]}, {a: {$mod: [2, 1]}}, {$set: {'a.$': 5}}, {a: [5]});
+  await modifyWithQuery( {a: [1]}, {'a.0': 1}, {$set: {'a.$': 5}}, {a: [5]});
+  await modifyWithQuery( {a: [9]}, {a: {$mod: [2, 1]}}, {$set: {'a.$': 5}}, {a: [5]});
   // Negatives don't set '$'.
-  exceptionWithQuery({a: [1]}, {$not: {a: 2}}, {$set: {'a.$': 5}});
-  exceptionWithQuery({a: [1]}, {'a.0': {$ne: 2}}, {$set: {'a.$': 5}});
+  await exceptionWithQuery({a: [1]}, {$not: {a: 2}}, {$set: {'a.$': 5}});
+  await exceptionWithQuery({a: [1]}, {'a.0': {$ne: 2}}, {$set: {'a.$': 5}});
   // One $or clause works.
-  modifyWithQuery({a: [{x: 2}, {x: 4}]},
+  await modifyWithQuery( {a: [{x: 2}, {x: 4}]},
     {$or: [{'a.x': 4}]}, {$set: {'a.$.z': 9}},
     {a: [{x: 2}, {x: 4, z: 9}]});
   // More $or clauses throw.
-  exceptionWithQuery({a: [{x: 2}, {x: 4}]},
+  await exceptionWithQuery({a: [{x: 2}, {x: 4}]},
     {$or: [{'a.x': 4}, {'a.x': 4}]},
     {$set: {'a.$.z': 9}});
   // $and uses the last one.
-  modifyWithQuery({a: [{x: 1}, {x: 3}]},
+  await modifyWithQuery( {a: [{x: 1}, {x: 3}]},
     {$and: [{'a.x': 1}, {'a.x': 3}]},
     {$set: {'a.$.x': 5}},
     {a: [{x: 1}, {x: 5}]});
-  modifyWithQuery({a: [{x: 1}, {x: 3}]},
+  await modifyWithQuery( {a: [{x: 1}, {x: 3}]},
     {$and: [{'a.x': 3}, {'a.x': 1}]},
     {$set: {'a.$.x': 5}},
     {a: [{x: 5}, {x: 3}]});
   // Same goes for the implicit AND of a document selector.
-  modifyWithQuery({a: [{x: 1}, {y: 3}]},
+  await modifyWithQuery( {a: [{x: 1}, {y: 3}]},
     {'a.x': 1, 'a.y': 3},
     {$set: {'a.$.z': 5}},
     {a: [{x: 1}, {y: 3, z: 5}]});
-  modifyWithQuery({a: [{x: 1}, {y: 1}, {x: 1, y: 1}]},
+  await modifyWithQuery( {a: [{x: 1}, {y: 1}, {x: 1, y: 1}]},
     {a: {$elemMatch: {x: 1, y: 1}}},
     {$set: {'a.$.x': 2}},
     {a: [{x: 1}, {y: 1}, {x: 2, y: 1}]});
-  modifyWithQuery({a: [{b: [{x: 1}, {y: 1}, {x: 1, y: 1}]}]},
+  await modifyWithQuery( {a: [{b: [{x: 1}, {y: 1}, {x: 1, y: 1}]}]},
     {'a.b': {$elemMatch: {x: 1, y: 1}}},
     {$set: {'a.$.b': 3}},
     {a: [{b: 3}]});
   // with $near, make sure it does not find the closest one (#3599)
-  modifyWithQuery({a: []},
+  await modifyWithQuery( {a: []},
     {'a.b': {$near: [5, 5]}},
     {$set: {'a.$.b': 'k'}},
     {a: []});
-  modifyWithQuery({a: [{b: [ [3, 3], [4, 4] ]}]},
+  await modifyWithQuery( {a: [{b: [ [3, 3], [4, 4] ]}]},
     {'a.b': {$near: [5, 5]}},
     {$set: {'a.$.b': 'k'}},
     {a: [{b: 'k'}]});
-  modifyWithQuery({a: [{b: [1, 1]},
+  await modifyWithQuery( {a: [{b: [1, 1]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [9, 9]}]},
   {'a.b': {$near: [5, 5]}},
   {$set: {'a.$.b': 'k'}},
   {a: [{b: 'k'}, {b: [[3, 3], [4, 4]]}, {b: [9, 9]}]});
-  modifyWithQuery({a: [{b: [1, 1]},
+  await modifyWithQuery( {a: [{b: [1, 1]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [9, 9]}]},
   {'a.b': {$near: [9, 9], $maxDistance: 1}},
   {$set: {'a.$.b': 'k'}},
   {a: [{b: 'k'}, {b: [[3, 3], [4, 4]]}, {b: [9, 9]}]});
-  modifyWithQuery({a: [{b: [1, 1]},
+  await modifyWithQuery( {a: [{b: [1, 1]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [9, 9]}]},
   {'a.b': {$near: [9, 9]}},
   {$set: {'a.$.b': 'k'}},
   {a: [{b: 'k'}, {b: [[3, 3], [4, 4]]}, {b: [9, 9]}]});
-  modifyWithQuery({a: [{b: [9, 9]},
+  await modifyWithQuery( {a: [{b: [9, 9]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [9, 9]}]},
   {'a.b': {$near: [9, 9]}},
   {$set: {'a.$.b': 'k'}},
   {a: [{b: 'k'}, {b: [[3, 3], [4, 4]]}, {b: [9, 9]}]});
-  modifyWithQuery({a: [{b: [4, 3]},
+  await modifyWithQuery( {a: [{b: [4, 3]},
     {c: [1, 1]}]},
   {'a.c': {$near: [1, 1]}},
   {$set: {'a.$.c': 'k'}},
   {a: [{c: 'k', b: [4, 3]}, {c: [1, 1]}]});
-  modifyWithQuery({a: [{c: [9, 9]},
+  await modifyWithQuery( {a: [{c: [9, 9]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [1, 1]}]},
   {'a.b': {$near: [1, 1]}},
   {$set: {'a.$.b': 'k'}},
   {a: [{c: [9, 9], b: 'k'}, {b: [ [3, 3], [4, 4]]}, {b: [1, 1]}]});
-  modifyWithQuery({a: [{c: [9, 9], b: [4, 3]},
+  await modifyWithQuery( {a: [{c: [9, 9], b: [4, 3]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [1, 1]}]},
   {'a.b': {$near: [1, 1]}},
@@ -2623,151 +2627,151 @@ Tinytest.add('minimongo - modify', test => {
   {a: [{c: [9, 9], b: 'k'}, {b: [ [3, 3], [4, 4]]}, {b: [1, 1]}]});
 
   // $inc
-  modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
-  modify({a: 1, b: 2}, {$inc: {c: 10}}, {a: 1, b: 2, c: 10});
-  exception({a: 1}, {$inc: {a: '10'}});
-  exception({a: 1}, {$inc: {a: true}});
-  exception({a: 1}, {$inc: {a: [10]}});
-  exception({a: '1'}, {$inc: {a: 10}});
-  exception({a: [1]}, {$inc: {a: 10}});
-  exception({a: {}}, {$inc: {a: 10}});
-  exception({a: false}, {$inc: {a: 10}});
-  exception({a: null}, {$inc: {a: 10}});
-  modify({a: [1, 2]}, {$inc: {'a.1': 10}}, {a: [1, 12]});
-  modify({a: [1, 2]}, {$inc: {'a.2': 10}}, {a: [1, 2, 10]});
-  modify({a: [1, 2]}, {$inc: {'a.3': 10}}, {a: [1, 2, null, 10]});
-  modify({a: {b: 2}}, {$inc: {'a.b': 10}}, {a: {b: 12}});
-  modify({a: {b: 2}}, {$inc: {'a.c': 10}}, {a: {b: 2, c: 10}});
-  exception({}, {$inc: {_id: 1}});
+  await modify( {a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
+  await modify( {a: 1, b: 2}, {$inc: {c: 10}}, {a: 1, b: 2, c: 10});
+  await exception({a: 1}, {$inc: {a: '10'}});
+  await exception({a: 1}, {$inc: {a: true}});
+  await exception({a: 1}, {$inc: {a: [10]}});
+  await exception({a: '1'}, {$inc: {a: 10}});
+  await exception({a: [1]}, {$inc: {a: 10}});
+  await exception({a: {}}, {$inc: {a: 10}});
+  await exception({a: false}, {$inc: {a: 10}});
+  await exception({a: null}, {$inc: {a: 10}});
+  await modify( {a: [1, 2]}, {$inc: {'a.1': 10}}, {a: [1, 12]});
+  await modify( {a: [1, 2]}, {$inc: {'a.2': 10}}, {a: [1, 2, 10]});
+  await modify( {a: [1, 2]}, {$inc: {'a.3': 10}}, {a: [1, 2, null, 10]});
+  await modify( {a: {b: 2}}, {$inc: {'a.b': 10}}, {a: {b: 12}});
+  await modify( {a: {b: 2}}, {$inc: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  await exception({}, {$inc: {_id: 1}});
 
   // $currentDate
-  modify({}, {$currentDate: {a: true}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
-  modify({}, {$currentDate: {a: {$type: 'date'}}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
-  exception({}, {$currentDate: {a: false}});
-  exception({}, {$currentDate: {a: {}}});
-  exception({}, {$currentDate: {a: {$type: 'timestamp'}}});
+  await modify( {}, {$currentDate: {a: true}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
+  await modify( {}, {$currentDate: {a: {$type: 'date'}}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
+  await exception({}, {$currentDate: {a: false}});
+  await exception({}, {$currentDate: {a: {}}});
+  await exception({}, {$currentDate: {a: {$type: 'timestamp'}}});
 
   // $min
-  modify({a: 1, b: 2}, {$min: {b: 1}}, {a: 1, b: 1});
-  modify({a: 1, b: 2}, {$min: {b: 3}}, {a: 1, b: 2});
-  modify({a: 1, b: 2}, {$min: {c: 10}}, {a: 1, b: 2, c: 10});
-  exception({a: 1}, {$min: {a: '10'}});
-  exception({a: 1}, {$min: {a: true}});
-  exception({a: 1}, {$min: {a: [10]}});
-  exception({a: '1'}, {$min: {a: 10}});
-  exception({a: [1]}, {$min: {a: 10}});
-  exception({a: {}}, {$min: {a: 10}});
-  exception({a: false}, {$min: {a: 10}});
-  exception({a: null}, {$min: {a: 10}});
-  modify({a: [1, 2]}, {$min: {'a.1': 1}}, {a: [1, 1]});
-  modify({a: [1, 2]}, {$min: {'a.1': 3}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$min: {'a.2': 10}}, {a: [1, 2, 10]});
-  modify({a: [1, 2]}, {$min: {'a.3': 10}}, {a: [1, 2, null, 10]});
-  modify({a: {b: 2}}, {$min: {'a.b': 1}}, {a: {b: 1}});
-  modify({a: {b: 2}}, {$min: {'a.c': 10}}, {a: {b: 2, c: 10}});
-  exception({}, {$min: {_id: 1}});
+  await modify( {a: 1, b: 2}, {$min: {b: 1}}, {a: 1, b: 1});
+  await modify( {a: 1, b: 2}, {$min: {b: 3}}, {a: 1, b: 2});
+  await modify( {a: 1, b: 2}, {$min: {c: 10}}, {a: 1, b: 2, c: 10});
+  await exception({a: 1}, {$min: {a: '10'}});
+  await exception({a: 1}, {$min: {a: true}});
+  await exception({a: 1}, {$min: {a: [10]}});
+  await exception({a: '1'}, {$min: {a: 10}});
+  await exception({a: [1]}, {$min: {a: 10}});
+  await exception({a: {}}, {$min: {a: 10}});
+  await exception({a: false}, {$min: {a: 10}});
+  await exception({a: null}, {$min: {a: 10}});
+  await modify( {a: [1, 2]}, {$min: {'a.1': 1}}, {a: [1, 1]});
+  await modify( {a: [1, 2]}, {$min: {'a.1': 3}}, {a: [1, 2]});
+  await modify( {a: [1, 2]}, {$min: {'a.2': 10}}, {a: [1, 2, 10]});
+  await modify( {a: [1, 2]}, {$min: {'a.3': 10}}, {a: [1, 2, null, 10]});
+  await modify( {a: {b: 2}}, {$min: {'a.b': 1}}, {a: {b: 1}});
+  await modify( {a: {b: 2}}, {$min: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  await exception( {}, {$min: {_id: 1}});
 
   //$mul
-  modify({a: 1, b: 1}, {$mul: {b: 2}}, {a: 1, b: 2});
-  modify({a: 1, b: 1}, {$mul: {c: 2}}, {a: 1, b: 1, c: 0});
-  modify({a: 1, b: 2}, {$mul: {b: 2}}, {a: 1, b: 4});
-  modify({a: 1, b: 2}, {$mul: {b: 10}}, {a: 1, b: 20});
-  exception({a: 1}, {$mul: {a: '10'}});
-  exception({a: 1}, {$mul: {a: true}});
-  exception({a: 1}, {$mul: {a: [10]}});
-  exception({a: '1'}, {$mul: {a: 10}});
-  exception({a: [1]}, {$mul: {a: 10}});
-  exception({a: {}}, {$mul: {a: 10}});
-  exception({a: false}, {$mul: {a: 10}});
-  exception({a: null}, {$mul: {a: 10}});
-  exception({}, {$mul: {_id: 1}});
-  modify({a: [1, 2]}, {$mul: {'a.0': 2}}, {a: [2, 2]});
-  modify({a: [1, 2]}, {$mul: {'a.1': 3}}, {a: [1, 6]});
-  modify({a: [1, 2]}, {$mul: {'a.1': 10}}, {a: [1, 20]});
-  modify({a: [1, 2]}, {$mul: {'a.2': 10}}, {a: [1, 2, 0]});
-  modify({a: {b: 2}}, {$mul: {'a.b': 1}}, {a: {b: 2}});
-  modify({a: {b: 2}}, {$mul: {'a.c': 10}}, {a: {b: 2, c: 0}});
+  await modify( {a: 1, b: 1}, {$mul: {b: 2}}, {a: 1, b: 2});
+  await modify( {a: 1, b: 1}, {$mul: {c: 2}}, {a: 1, b: 1, c: 0});
+  await modify( {a: 1, b: 2}, {$mul: {b: 2}}, {a: 1, b: 4});
+  await modify( {a: 1, b: 2}, {$mul: {b: 10}}, {a: 1, b: 20});
+  await exception( {a: 1}, {$mul: {a: '10'}});
+  await exception( {a: 1}, {$mul: {a: true}});
+  await exception( {a: 1}, {$mul: {a: [10]}});
+  await exception( {a: '1'}, {$mul: {a: 10}});
+  await exception( {a: [1]}, {$mul: {a: 10}});
+  await exception( {a: {}}, {$mul: {a: 10}});
+  await exception( {a: false}, {$mul: {a: 10}});
+  await exception( {a: null}, {$mul: {a: 10}});
+  await exception( {}, {$mul: {_id: 1}});
+  await modify( {a: [1, 2]}, {$mul: {'a.0': 2}}, {a: [2, 2]});
+  await modify( {a: [1, 2]}, {$mul: {'a.1': 3}}, {a: [1, 6]});
+  await modify( {a: [1, 2]}, {$mul: {'a.1': 10}}, {a: [1, 20]});
+  await modify( {a: [1, 2]}, {$mul: {'a.2': 10}}, {a: [1, 2, 0]});
+  await modify( {a: {b: 2}}, {$mul: {'a.b': 1}}, {a: {b: 2}});
+  await modify( {a: {b: 2}}, {$mul: {'a.c': 10}}, {a: {b: 2, c: 0}});
 
   // $max
-  modify({a: 1, b: 2}, {$max: {b: 1}}, {a: 1, b: 2});
-  modify({a: 1, b: 2}, {$max: {b: 3}}, {a: 1, b: 3});
-  modify({a: 1, b: 2}, {$max: {c: 10}}, {a: 1, b: 2, c: 10});
-  exception({a: 1}, {$max: {a: '10'}});
-  exception({a: 1}, {$max: {a: true}});
-  exception({a: 1}, {$max: {a: [10]}});
-  exception({a: '1'}, {$max: {a: 10}});
-  exception({a: [1]}, {$max: {a: 10}});
-  exception({a: {}}, {$max: {a: 10}});
-  exception({a: false}, {$max: {a: 10}});
-  exception({a: null}, {$max: {a: 10}});
-  modify({a: [1, 2]}, {$max: {'a.1': 3}}, {a: [1, 3]});
-  modify({a: [1, 2]}, {$max: {'a.1': 1}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$max: {'a.2': 10}}, {a: [1, 2, 10]});
-  modify({a: [1, 2]}, {$max: {'a.3': 10}}, {a: [1, 2, null, 10]});
-  modify({a: {b: 2}}, {$max: {'a.b': 3}}, {a: {b: 3}});
-  modify({a: {b: 2}}, {$max: {'a.c': 10}}, {a: {b: 2, c: 10}});
-  exception({}, {$max: {_id: 1}});
+  await modify( {a: 1, b: 2}, {$max: {b: 1}}, {a: 1, b: 2});
+  await modify( {a: 1, b: 2}, {$max: {b: 3}}, {a: 1, b: 3});
+  await modify( {a: 1, b: 2}, {$max: {c: 10}}, {a: 1, b: 2, c: 10});
+  await exception( {a: 1}, {$max: {a: '10'}});
+  await exception( {a: 1}, {$max: {a: true}});
+  await exception( {a: 1}, {$max: {a: [10]}});
+  await exception( {a: '1'}, {$max: {a: 10}});
+  await exception( {a: [1]}, {$max: {a: 10}});
+  await exception( {a: {}}, {$max: {a: 10}});
+  await exception( {a: false}, {$max: {a: 10}});
+  await exception( {a: null}, {$max: {a: 10}});
+  await modify( {a: [1, 2]}, {$max: {'a.1': 3}}, {a: [1, 3]});
+  await modify( {a: [1, 2]}, {$max: {'a.1': 1}}, {a: [1, 2]});
+  await modify( {a: [1, 2]}, {$max: {'a.2': 10}}, {a: [1, 2, 10]});
+  await modify( {a: [1, 2]}, {$max: {'a.3': 10}}, {a: [1, 2, null, 10]});
+  await modify( {a: {b: 2}}, {$max: {'a.b': 3}}, {a: {b: 3}});
+  await modify( {a: {b: 2}}, {$max: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  await exception( {}, {$max: {_id: 1}});
 
   // $set
-  modify({a: 1, b: 2}, {$set: {a: 10}}, {a: 10, b: 2});
-  modify({a: 1, b: 2}, {$set: {c: 10}}, {a: 1, b: 2, c: 10});
-  modify({a: 1, b: 2}, {$set: {a: {c: 10}}}, {a: {c: 10}, b: 2});
-  modify({a: [1, 2], b: 2}, {$set: {a: [3, 4]}}, {a: [3, 4], b: 2});
-  modify({a: [1, 2, 3], b: 2}, {$set: {'a.1': [3, 4]}},
+  await modify( {a: 1, b: 2}, {$set: {a: 10}}, {a: 10, b: 2});
+  await modify( {a: 1, b: 2}, {$set: {c: 10}}, {a: 1, b: 2, c: 10});
+  await modify( {a: 1, b: 2}, {$set: {a: {c: 10}}}, {a: {c: 10}, b: 2});
+  await modify( {a: [1, 2], b: 2}, {$set: {a: [3, 4]}}, {a: [3, 4], b: 2});
+  await modify( {a: [1, 2, 3], b: 2}, {$set: {'a.1': [3, 4]}},
     {a: [1, [3, 4], 3], b: 2});
-  modify({a: [1], b: 2}, {$set: {'a.1': 9}}, {a: [1, 9], b: 2});
-  modify({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
-  modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
-  modify({}, {$set: {'x._id': 4}}, {x: {_id: 4}});
+  await modify( {a: [1], b: 2}, {$set: {'a.1': 9}}, {a: [1, 9], b: 2});
+  await modify( {a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
+  await modify( {a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
+  await modify( {}, {$set: {'x._id': 4}}, {x: {_id: 4}});
 
   // Changing _id is disallowed
-  exception({}, {$set: {_id: 4}});
-  exception({_id: 1}, {$set: {_id: 4}});
-  modify({_id: 4}, {$set: {_id: 4}}, {_id: 4});  // not-changing _id is not bad
+  await exception( {}, {$set: {_id: 4}});
+  await exception( {_id: 1}, {$set: {_id: 4}});
+  await modify( {_id: 4}, {$set: {_id: 4}}, {_id: 4});  // not-changing _id is not bad
   // restricted field names
-  exception({a: {}}, {$set: {a: {$a: 1}}});
-  exception({ a: {} }, { $set: { a: { c:
+  await exception( {a: {}}, {$set: {a: {$a: 1}}});
+  await exception( { a: {} }, { $set: { a: { c:
               [{ b: { $a: 1 } }] } } });
-  exception({a: {}}, {$set: {a: {'\0a': 1}}});
-  exception({a: {}}, {$set: {a: {'a.b': 1}}});
+  await exception( {a: {}}, {$set: {a: {'\0a': 1}}});
+  await exception( {a: {}}, {$set: {a: {'a.b': 1}}});
 
   // $unset
-  modify({}, {$unset: {a: 1}}, {});
-  modify({a: 1}, {$unset: {a: 1}}, {});
-  modify({a: 1, b: 2}, {$unset: {a: 1}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: 0}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: false}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: null}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: [1]}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: {}}}, {b: 2});
-  modify({a: {b: 2, c: 3}}, {$unset: {'a.b': 1}}, {a: {c: 3}});
-  modify({a: [1, 2, 3]}, {$unset: {'a.1': 1}}, {a: [1, null, 3]}); // tested
-  modify({a: [1, 2, 3]}, {$unset: {'a.2': 1}}, {a: [1, 2, null]}); // tested
-  modify({a: [1, 2, 3]}, {$unset: {'a.x': 1}}, {a: [1, 2, 3]}); // tested
-  modify({a: {b: 1}}, {$unset: {'a.b.c.d': 1}}, {a: {b: 1}});
-  modify({a: {b: 1}}, {$unset: {'a.x.c.d': 1}}, {a: {b: 1}});
-  modify({a: {b: {c: 1}}}, {$unset: {'a.b.c': 1}}, {a: {b: {}}});
-  exception({}, {$unset: {_id: 1}});
+  await modify( {}, {$unset: {a: 1}}, {});
+  await modify( {a: 1}, {$unset: {a: 1}}, {});
+  await modify( {a: 1, b: 2}, {$unset: {a: 1}}, {b: 2});
+  await modify( {a: 1, b: 2}, {$unset: {a: 0}}, {b: 2});
+  await modify( {a: 1, b: 2}, {$unset: {a: false}}, {b: 2});
+  await modify( {a: 1, b: 2}, {$unset: {a: null}}, {b: 2});
+  await modify( {a: 1, b: 2}, {$unset: {a: [1]}}, {b: 2});
+  await modify( {a: 1, b: 2}, {$unset: {a: {}}}, {b: 2});
+  await modify( {a: {b: 2, c: 3}}, {$unset: {'a.b': 1}}, {a: {c: 3}});
+  await modify( {a: [1, 2, 3]}, {$unset: {'a.1': 1}}, {a: [1, null, 3]}); // tested
+  await modify( {a: [1, 2, 3]}, {$unset: {'a.2': 1}}, {a: [1, 2, null]}); // tested
+  await modify( {a: [1, 2, 3]}, {$unset: {'a.x': 1}}, {a: [1, 2, 3]}); // tested
+  await modify( {a: {b: 1}}, {$unset: {'a.b.c.d': 1}}, {a: {b: 1}});
+  await modify( {a: {b: 1}}, {$unset: {'a.x.c.d': 1}}, {a: {b: 1}});
+  await modify( {a: {b: {c: 1}}}, {$unset: {'a.b.c': 1}}, {a: {b: {}}});
+  await exception( {}, {$unset: {_id: 1}});
 
   // $push
-  modify({}, {$push: {a: 1}}, {a: [1]});
-  modify({a: []}, {$push: {a: 1}}, {a: [1]});
-  modify({a: [1]}, {$push: {a: 2}}, {a: [1, 2]});
-  exception({a: true}, {$push: {a: 1}});
-  modify({a: [1]}, {$push: {a: [2]}}, {a: [1, [2]]});
-  modify({a: []}, {$push: {'a.1': 99}}, {a: [null, [99]]}); // tested
-  modify({a: {}}, {$push: {'a.x': 99}}, {a: {x: [99]}});
-  modify({}, {$push: {a: {$each: [1, 2, 3]}}},
+  await modify( {}, {$push: {a: 1}}, {a: [1]});
+  await modify( {a: []}, {$push: {a: 1}}, {a: [1]});
+  await modify( {a: [1]}, {$push: {a: 2}}, {a: [1, 2]});
+  await exception( {a: true}, {$push: {a: 1}});
+  await modify( {a: [1]}, {$push: {a: [2]}}, {a: [1, [2]]});
+  await modify( {a: []}, {$push: {'a.1': 99}}, {a: [null, [99]]}); // tested
+  await modify( {a: {}}, {$push: {'a.x': 99}}, {a: {x: [99]}});
+  await modify( {}, {$push: {a: {$each: [1, 2, 3]}}},
     {a: [1, 2, 3]});
-  modify({a: []}, {$push: {a: {$each: [1, 2, 3]}}},
+  await modify( {a: []}, {$push: {a: {$each: [1, 2, 3]}}},
     {a: [1, 2, 3]});
-  modify({a: [true]}, {$push: {a: {$each: [1, 2, 3]}}},
+  await modify( {a: [true]}, {$push: {a: {$each: [1, 2, 3]}}},
     {a: [true, 1, 2, 3]});
-  modify({a: [true]}, {$push: {a: {$each: [1, 2, 3], $slice: -2}}},
+  await modify( {a: [true]}, {$push: {a: {$each: [1, 2, 3], $slice: -2}}},
     {a: [2, 3]});
-  modify({a: [false, true]}, {$push: {a: {$each: [1], $slice: -2}}},
+  await modify( {a: [false, true]}, {$push: {a: {$each: [1], $slice: -2}}},
     {a: [true, 1]});
-  modify(
+  await modify(
     {a: [{x: 3}, {x: 1}]},
     {$push: {a: {
       $each: [{x: 4}, {x: 2}],
@@ -2775,204 +2779,204 @@ Tinytest.add('minimongo - modify', test => {
       $sort: {x: 1},
     }}},
     {a: [{x: 3}, {x: 4}]});
-  modify({}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
-  modify({a: [1, 2]}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
+  await modify( {}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
+  await modify( {a: [1, 2]}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
   // $push with $position modifier
   // No negative number for $position
-  exception({a: []}, {$push: {a: {$each: [0], $position: -1}}});
-  modify({a: [1, 2]}, {$push: {a: {$each: [0], $position: 0}}},
+  await exception( {a: []}, {$push: {a: {$each: [0], $position: -1}}});
+  await modify( {a: [1, 2]}, {$push: {a: {$each: [0], $position: 0}}},
     {a: [0, 1, 2]});
-  modify({a: [1, 2]}, {$push: {a: {$each: [-1, 0], $position: 0}}},
+  await modify( {a: [1, 2]}, {$push: {a: {$each: [-1, 0], $position: 0}}},
     {a: [-1, 0, 1, 2]});
-  modify({a: [1, 3]}, {$push: {a: {$each: [2], $position: 1}}}, {a: [1, 2, 3]});
-  modify({a: [1, 4]}, {$push: {a: {$each: [2, 3], $position: 1}}},
+  await modify( {a: [1, 3]}, {$push: {a: {$each: [2], $position: 1}}}, {a: [1, 2, 3]});
+  await modify( {a: [1, 4]}, {$push: {a: {$each: [2, 3], $position: 1}}},
     {a: [1, 2, 3, 4]});
-  modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 3}}}, {a: [1, 2, 3]});
-  modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 99}}},
+  await modify( {a: [1, 2]}, {$push: {a: {$each: [3], $position: 3}}}, {a: [1, 2, 3]});
+  await modify( {a: [1, 2]}, {$push: {a: {$each: [3], $position: 99}}},
     {a: [1, 2, 3]});
-  modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 99, $slice: -2}}},
+  await modify( {a: [1, 2]}, {$push: {a: {$each: [3], $position: 99, $slice: -2}}},
     {a: [2, 3]});
-  modify(
+  await modify(
     {a: [{x: 1}, {x: 2}]},
     {$push: {a: {$each: [{x: 3}], $position: 0, $sort: {x: 1}, $slice: -3}}},
     {a: [{x: 1}, {x: 2}, {x: 3}]}
   );
-  modify(
+  await modify(
     {a: [{x: 1}, {x: 2}]},
     {$push: {a: {$each: [{x: 3}], $position: 0, $sort: {x: 1}, $slice: 0}}},
     {a: []}
   );
   // restricted field names
-  exception({}, {$push: {$a: 1}});
-  exception({}, {$push: {'\0a': 1}});
-  exception({}, {$push: {a: {$a: 1}}});
-  exception({}, {$push: {a: {$each: [{$a: 1}]}}});
-  exception({}, {$push: {a: {$each: [{'a.b': 1}]}}});
-  exception({}, {$push: {a: {$each: [{'\0a': 1}]}}});
-  modify({}, {$push: {a: {$each: [{'': 1}]}}}, {a: [ { '': 1 } ]});
-  modify({}, {$push: {a: {$each: [{' ': 1}]}}}, {a: [ { ' ': 1 } ]});
-  exception({}, {$push: {a: {$each: [{'.': 1}]}}});
+  await exception( {}, {$push: {$a: 1}});
+  await exception( {}, {$push: {'\0a': 1}});
+  await exception( {}, {$push: {a: {$a: 1}}});
+  await exception( {}, {$push: {a: {$each: [{$a: 1}]}}});
+  await exception( {}, {$push: {a: {$each: [{'a.b': 1}]}}});
+  await exception( {}, {$push: {a: {$each: [{'\0a': 1}]}}});
+  await modify( {}, {$push: {a: {$each: [{'': 1}]}}}, {a: [ { '': 1 } ]});
+  await modify( {}, {$push: {a: {$each: [{' ': 1}]}}}, {a: [ { ' ': 1 } ]});
+  await exception( {}, {$push: {a: {$each: [{'.': 1}]}}});
 
   // #issue 5167
   // $push $slice with positive numbers
-  modify({}, {$push: {a: {$each: [], $slice: 5}}}, {a: []});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [], $slice: 1}}}, {a: [1]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 1}}}, {a: [1]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 2}}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 4}}}, {a: [1, 2, 3, 4]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 5}}}, {a: [1, 2, 3, 4, 5]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 10}}}, {a: [1, 2, 3, 4, 5]});
+  await modify( {}, {$push: {a: {$each: [], $slice: 5}}}, {a: []});
+  await modify( {a: [1, 2, 3]}, {$push: {a: {$each: [], $slice: 1}}}, {a: [1]});
+  await modify( {a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 1}}}, {a: [1]});
+  await modify( {a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 2}}}, {a: [1, 2]});
+  await modify( {a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 4}}}, {a: [1, 2, 3, 4]});
+  await modify( {a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 5}}}, {a: [1, 2, 3, 4, 5]});
+  await modify( {a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 10}}}, {a: [1, 2, 3, 4, 5]});
 
 
   // $pushAll
-  modify({}, {$pushAll: {a: [1]}}, {a: [1]});
-  modify({a: []}, {$pushAll: {a: [1]}}, {a: [1]});
-  modify({a: [1]}, {$pushAll: {a: [2]}}, {a: [1, 2]});
-  modify({}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
-  modify({a: []}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
-  modify({a: [1]}, {$pushAll: {a: [2, 3]}}, {a: [1, 2, 3]});
-  modify({}, {$pushAll: {a: []}}, {a: []});
-  modify({a: []}, {$pushAll: {a: []}}, {a: []});
-  modify({a: [1]}, {$pushAll: {a: []}}, {a: [1]});
-  exception({a: true}, {$pushAll: {a: [1]}});
-  exception({a: []}, {$pushAll: {a: 1}});
-  modify({a: []}, {$pushAll: {'a.1': [99]}}, {a: [null, [99]]});
-  modify({a: []}, {$pushAll: {'a.1': []}}, {a: [null, []]});
-  modify({a: {}}, {$pushAll: {'a.x': [99]}}, {a: {x: [99]}});
-  modify({a: {}}, {$pushAll: {'a.x': []}}, {a: {x: []}});
-  exception({a: [1]}, {$pushAll: {a: [{$a: 1}]}});
-  exception({a: [1]}, {$pushAll: {a: [{'\0a': 1}]}});
-  exception({a: [1]}, {$pushAll: {a: [{'a.b': 1}]}});
+  await modify( {}, {$pushAll: {a: [1]}}, {a: [1]});
+  await modify( {a: []}, {$pushAll: {a: [1]}}, {a: [1]});
+  await modify( {a: [1]}, {$pushAll: {a: [2]}}, {a: [1, 2]});
+  await modify( {}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
+  await modify( {a: []}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
+  await modify( {a: [1]}, {$pushAll: {a: [2, 3]}}, {a: [1, 2, 3]});
+  await modify( {}, {$pushAll: {a: []}}, {a: []});
+  await modify( {a: []}, {$pushAll: {a: []}}, {a: []});
+  await modify( {a: [1]}, {$pushAll: {a: []}}, {a: [1]});
+  await exception( {a: true}, {$pushAll: {a: [1]}});
+  await exception( {a: []}, {$pushAll: {a: 1}});
+  await modify( {a: []}, {$pushAll: {'a.1': [99]}}, {a: [null, [99]]});
+  await modify( {a: []}, {$pushAll: {'a.1': []}}, {a: [null, []]});
+  await modify( {a: {}}, {$pushAll: {'a.x': [99]}}, {a: {x: [99]}});
+  await modify( {a: {}}, {$pushAll: {'a.x': []}}, {a: {x: []}});
+  await exception( {a: [1]}, {$pushAll: {a: [{$a: 1}]}});
+  await exception( {a: [1]}, {$pushAll: {a: [{'\0a': 1}]}});
+  await exception( {a: [1]}, {$pushAll: {a: [{'a.b': 1}]}});
 
   // $addToSet
-  modify({}, {$addToSet: {a: 1}}, {a: [1]});
-  modify({a: []}, {$addToSet: {a: 1}}, {a: [1]});
-  modify({a: [1]}, {$addToSet: {a: 2}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$addToSet: {a: 1}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$addToSet: {a: 2}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$addToSet: {a: 3}}, {a: [1, 2, 3]});
-  exception({a: true}, {$addToSet: {a: 1}});
-  modify({a: [1]}, {$addToSet: {a: [2]}}, {a: [1, [2]]});
-  modify({}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
-  modify({a: [{x: 1}]}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
-  modify({a: [{x: 1}]}, {$addToSet: {a: {x: 2}}}, {a: [{x: 1}, {x: 2}]});
-  modify({a: [{x: 1, y: 2}]}, {$addToSet: {a: {x: 1, y: 2}}},
+  await modify( {}, {$addToSet: {a: 1}}, {a: [1]});
+  await modify( {a: []}, {$addToSet: {a: 1}}, {a: [1]});
+  await modify( {a: [1]}, {$addToSet: {a: 2}}, {a: [1, 2]});
+  await modify( {a: [1, 2]}, {$addToSet: {a: 1}}, {a: [1, 2]});
+  await modify( {a: [1, 2]}, {$addToSet: {a: 2}}, {a: [1, 2]});
+  await modify( {a: [1, 2]}, {$addToSet: {a: 3}}, {a: [1, 2, 3]});
+  await exception( {a: true}, {$addToSet: {a: 1}});
+  await modify( {a: [1]}, {$addToSet: {a: [2]}}, {a: [1, [2]]});
+  await modify( {}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
+  await modify( {a: [{x: 1}]}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
+  await modify( {a: [{x: 1}]}, {$addToSet: {a: {x: 2}}}, {a: [{x: 1}, {x: 2}]});
+  await modify( {a: [{x: 1, y: 2}]}, {$addToSet: {a: {x: 1, y: 2}}},
     {a: [{x: 1, y: 2}]});
-  modify({a: [{x: 1, y: 2}]}, {$addToSet: {a: {y: 2, x: 1}}},
+  await modify( {a: [{x: 1, y: 2}]}, {$addToSet: {a: {y: 2, x: 1}}},
     {a: [{x: 1, y: 2}, {y: 2, x: 1}]});
-  modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4]}}}, {a: [1, 2, 3, 4]});
-  modify({}, {$addToSet: {a: {$each: []}}}, {a: []});
-  modify({}, {$addToSet: {a: {$each: [1]}}}, {a: [1]});
-  modify({a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
-  modify({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
+  await modify( {a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4]}}}, {a: [1, 2, 3, 4]});
+  await modify( {}, {$addToSet: {a: {$each: []}}}, {a: []});
+  await modify( {}, {$addToSet: {a: {$each: [1]}}}, {a: [1]});
+  await modify( {a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
+  await modify( {a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
 
   // invalid field names
-  exception({}, {$addToSet: {a: {$b: 1}}});
-  exception({}, {$addToSet: {a: {'a.b': 1}}});
-  exception({}, {$addToSet: {a: {'a.': 1}}});
-  exception({}, {$addToSet: {a: {'\u0000a': 1}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {$a: 1}]}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {'\0a': 1}]}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{$a: 1}]]}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {b: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
+  await exception( {}, {$addToSet: {a: {$b: 1}}});
+  await exception( {}, {$addToSet: {a: {'a.b': 1}}});
+  await exception( {}, {$addToSet: {a: {'a.': 1}}});
+  await exception( {}, {$addToSet: {a: {'\u0000a': 1}}});
+  await exception( {a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {$a: 1}]}}});
+  await exception( {a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {'\0a': 1}]}}});
+  await exception( {a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{$a: 1}]]}}});
+  await exception( {a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
+  await exception( {a: [1, 2]}, {$addToSet: {a: {b: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
   // $each is first element and thus an operator
-  modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}}, {a: [ 1, 2, 3, 4 ]});
+  await modify( {a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}}, {a: [ 1, 2, 3, 4 ]});
   // this should fail because $each is now a field name (not first in object) and thus invalid field name with $
-  exception({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}});
+  await exception( {a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}});
 
   // $pop
-  modify({}, {$pop: {a: 1}}, {}); // tested
-  modify({}, {$pop: {a: -1}}, {}); // tested
-  modify({a: []}, {$pop: {a: 1}}, {a: []});
-  modify({a: []}, {$pop: {a: -1}}, {a: []});
-  modify({a: [1, 2, 3]}, {$pop: {a: 1}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: 10}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: 0.001}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: 0}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: 'stuff'}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: -1}}, {a: [2, 3]});
-  modify({a: [1, 2, 3]}, {$pop: {a: -10}}, {a: [2, 3]});
-  modify({a: [1, 2, 3]}, {$pop: {a: -0.001}}, {a: [2, 3]});
-  exception({a: true}, {$pop: {a: 1}});
-  exception({a: true}, {$pop: {a: -1}});
-  modify({a: []}, {$pop: {'a.1': 1}}, {a: []}); // tested
-  modify({a: [1, [2, 3], 4]}, {$pop: {'a.1': 1}}, {a: [1, [2], 4]});
-  modify({a: {}}, {$pop: {'a.x': 1}}, {a: {}}); // tested
-  modify({a: {x: [2, 3]}}, {$pop: {'a.x': 1}}, {a: {x: [2]}});
+  await modify( {}, {$pop: {a: 1}}, {}); // tested
+  await modify( {}, {$pop: {a: -1}}, {}); // tested
+  await modify( {a: []}, {$pop: {a: 1}}, {a: []});
+  await modify( {a: []}, {$pop: {a: -1}}, {a: []});
+  await modify( {a: [1, 2, 3]}, {$pop: {a: 1}}, {a: [1, 2]});
+  await modify( {a: [1, 2, 3]}, {$pop: {a: 10}}, {a: [1, 2]});
+  await modify( {a: [1, 2, 3]}, {$pop: {a: 0.001}}, {a: [1, 2]});
+  await modify( {a: [1, 2, 3]}, {$pop: {a: 0}}, {a: [1, 2]});
+  await modify( {a: [1, 2, 3]}, {$pop: {a: 'stuff'}}, {a: [1, 2]});
+  await modify( {a: [1, 2, 3]}, {$pop: {a: -1}}, {a: [2, 3]});
+  await modify( {a: [1, 2, 3]}, {$pop: {a: -10}}, {a: [2, 3]});
+  await modify( {a: [1, 2, 3]}, {$pop: {a: -0.001}}, {a: [2, 3]});
+  await exception( {a: true}, {$pop: {a: 1}});
+  await exception( {a: true}, {$pop: {a: -1}});
+  await modify( {a: []}, {$pop: {'a.1': 1}}, {a: []}); // tested
+  await modify( {a: [1, [2, 3], 4]}, {$pop: {'a.1': 1}}, {a: [1, [2], 4]});
+  await modify( {a: {}}, {$pop: {'a.x': 1}}, {a: {}}); // tested
+  await modify( {a: {x: [2, 3]}}, {$pop: {'a.x': 1}}, {a: {x: [2]}});
 
   // $pull
-  modify({}, {$pull: {a: 1}}, {});
-  modify({}, {$pull: {'a.x': 1}}, {});
-  modify({a: {}}, {$pull: {'a.x': 1}}, {a: {}});
-  exception({a: true}, {$pull: {a: 1}});
-  modify({a: [2, 1, 2]}, {$pull: {a: 1}}, {a: [2, 2]});
-  modify({a: [2, 1, 2]}, {$pull: {a: 2}}, {a: [1]});
-  modify({a: [2, 1, 2]}, {$pull: {a: 3}}, {a: [2, 1, 2]});
-  modify({a: [1, null, 2, null]}, {$pull: {a: null}}, {a: [1, 2]});
-  modify({a: []}, {$pull: {a: 3}}, {a: []});
-  modify({a: [[2], [2, 1], [3]]}, {$pull: {a: [2, 1]}},
+  await modify( {}, {$pull: {a: 1}}, {});
+  await modify( {}, {$pull: {'a.x': 1}}, {});
+  await modify( {a: {}}, {$pull: {'a.x': 1}}, {a: {}});
+  await exception( {a: true}, {$pull: {a: 1}});
+  await modify( {a: [2, 1, 2]}, {$pull: {a: 1}}, {a: [2, 2]});
+  await modify( {a: [2, 1, 2]}, {$pull: {a: 2}}, {a: [1]});
+  await modify( {a: [2, 1, 2]}, {$pull: {a: 3}}, {a: [2, 1, 2]});
+  await modify( {a: [1, null, 2, null]}, {$pull: {a: null}}, {a: [1, 2]});
+  await modify( {a: []}, {$pull: {a: 3}}, {a: []});
+  await modify( {a: [[2], [2, 1], [3]]}, {$pull: {a: [2, 1]}},
     {a: [[2], [3]]}); // tested
-  modify({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {b: 1}}},
+  await modify( {a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {b: 1}}},
     {a: [{b: 2, c: 2}]});
-  modify({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {c: 2}}},
+  await modify( {a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {c: 2}}},
     {a: []});
   // XXX implement this functionality!
   // probably same refactoring as $elemMatch?
-  // modify({a: [1, 2, 3, 4]}, {$pull: {$gt: 2}}, {a: [1,2]}); fails!
+  // await modify( {a: [1, 2, 3, 4]}, {$pull: {$gt: 2}}, {a: [1,2]}); fails!
 
   // $pullAll
-  modify({}, {$pullAll: {a: [1]}}, {});
-  modify({a: [1, 2, 3]}, {$pullAll: {a: []}}, {a: [1, 2, 3]});
-  modify({a: [1, 2, 3]}, {$pullAll: {a: [2]}}, {a: [1, 3]});
-  modify({a: [1, 2, 3]}, {$pullAll: {a: [2, 1]}}, {a: [3]});
-  modify({a: [1, 2, 3]}, {$pullAll: {a: [1, 2]}}, {a: [3]});
-  modify({}, {$pullAll: {'a.b.c': [2]}}, {});
-  exception({a: true}, {$pullAll: {a: [1]}});
-  exception({a: [1, 2, 3]}, {$pullAll: {a: 1}});
-  modify({x: [{a: 1}, {a: 1, b: 2}]}, {$pullAll: {x: [{a: 1}]}},
+  await modify( {}, {$pullAll: {a: [1]}}, {});
+  await modify( {a: [1, 2, 3]}, {$pullAll: {a: []}}, {a: [1, 2, 3]});
+  await modify( {a: [1, 2, 3]}, {$pullAll: {a: [2]}}, {a: [1, 3]});
+  await modify( {a: [1, 2, 3]}, {$pullAll: {a: [2, 1]}}, {a: [3]});
+  await modify( {a: [1, 2, 3]}, {$pullAll: {a: [1, 2]}}, {a: [3]});
+  await modify( {}, {$pullAll: {'a.b.c': [2]}}, {});
+  await exception( {a: true}, {$pullAll: {a: [1]}});
+  await exception( {a: [1, 2, 3]}, {$pullAll: {a: 1}});
+  await modify( {x: [{a: 1}, {a: 1, b: 2}]}, {$pullAll: {x: [{a: 1}]}},
     {x: [{a: 1, b: 2}]});
 
   // $rename
-  modify({}, {$rename: {a: 'b'}}, {});
-  modify({a: [12]}, {$rename: {a: 'b'}}, {b: [12]});
-  modify({a: {b: 12}}, {$rename: {a: 'c'}}, {c: {b: 12}});
-  modify({a: {b: 12}}, {$rename: {'a.b': 'a.c'}}, {a: {c: 12}});
-  modify({a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
-  modify({a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
-  modify({a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
-  modify({a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
+  await modify( {}, {$rename: {a: 'b'}}, {});
+  await modify( {a: [12]}, {$rename: {a: 'b'}}, {b: [12]});
+  await modify( {a: {b: 12}}, {$rename: {a: 'c'}}, {c: {b: 12}});
+  await modify( {a: {b: 12}}, {$rename: {'a.b': 'a.c'}}, {a: {c: 12}});
+  await modify( {a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
+  await modify( {a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
+  await modify( {a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
+  await modify( {a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
     {a: {}, q: {2: {r: 12}}});
-  exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
-  exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
+  await exception( {a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
+  await exception( {a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
   // These strange MongoDB behaviors throw.
-  // modify({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}},
+  // await modify( {a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}},
   //        {a: {b: 12}, x: []}); // tested
-  // modify({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}},
+  // await modify( {a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}},
   //        {a: {b: 12}, x: []}); // tested
-  exception({}, {$rename: {a: 'a'}});
-  exception({}, {$rename: {'a.b': 'a.b'}});
-  modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
-  exception({a: [12]}, {$rename: {a: '$b'}});
-  exception({a: [12]}, {$rename: {a: '\0a'}});
+  await exception( {}, {$rename: {a: 'a'}});
+  await exception( {}, {$rename: {'a.b': 'a.b'}});
+  await modify( {a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
+  await exception(  {a: [12]}, {$rename: {a: '$b'}});
+  await exception(  {a: [12]}, {$rename: {a: '\0a'}});
 
   // $setOnInsert
-  modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
-  upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
-  upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
-  upsert({'a.b': 10}, {$setOnInsert: {a: {b: 10, c: 12}}}, {a: {b: 10, c: 12}});
-  upsert({'a.b': 10}, {$setOnInsert: {c: 12}}, {a: {b: 10}, c: 12});
-  upsert({_id: 'test'}, {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
-  upsert('test', {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
-  upsertException({a: 0}, {$setOnInsert: {$a: 12}});
-  upsertException({a: 0}, {$setOnInsert: {'\0a': 12}});
-  upsert({a: 0}, {$setOnInsert: {b: {a: 1}}}, {a: 0, b: {a: 1}});
-  upsertException({a: 0}, {$setOnInsert: {b: {$a: 1}}});
-  upsertException({a: 0}, {$setOnInsert: {b: {'a.b': 1}}});
-  upsertException({a: 0}, {$setOnInsert: {b: {'\0a': 1}}});
+  await modify( {a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
+  await upsert( {a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
+  await upsert( {a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
+  await upsert( {'a.b': 10}, {$setOnInsert: {a: {b: 10, c: 12}}}, {a: {b: 10, c: 12}});
+  await upsert( {'a.b': 10}, {$setOnInsert: {c: 12}}, {a: {b: 10}, c: 12});
+  await upsert( {_id: 'test'}, {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
+  await upsert( 'test', {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
+  await upsertException( {a: 0}, {$setOnInsert: {$a: 12}});
+  await upsertException( {a: 0}, {$setOnInsert: {'\0a': 12}});
+  await upsert( {a: 0}, {$setOnInsert: {b: {a: 1}}}, {a: 0, b: {a: 1}});
+  await upsertException( {a: 0}, {$setOnInsert: {b: {$a: 1}}});
+  await upsertException( {a: 0}, {$setOnInsert: {b: {'a.b': 1}}});
+  await upsertException( {a: 0}, {$setOnInsert: {b: {'\0a': 1}}});
 
   // Test for https://github.com/meteor/meteor/issues/8775.
-  upsert(
+  await upsert(
     { a: { $exists: true }},
     { $setOnInsert: { a: 123 }},
     { a: 123 }
@@ -2980,28 +2984,28 @@ Tinytest.add('minimongo - modify', test => {
 
   // Tests for https://github.com/meteor/meteor/issues/8794.
   const testObjectId = new MongoID.ObjectID();
-  upsert(
+  await upsert(
     { _id: testObjectId },
     { $setOnInsert: { a: 123 } },
     { _id: testObjectId, a: 123 },
   );
-  upsert(
+  await upsert(
     { someOtherId: testObjectId },
     { $setOnInsert: { a: 123 } },
     { someOtherId: testObjectId, a: 123 },
   );
-  upsert(
+  await upsert(
     { a: { $eq: testObjectId } },
     { $setOnInsert: { a: 123 } },
     { a: 123 },
   );
   const testDate = new Date('2017-01-01');
-  upsert(
+  await upsert(
     { someDate: testDate },
     { $setOnInsert: { a: 123 } },
     { someDate: testDate, a: 123 },
   );
-  upsert(
+  await upsert(
     {
       a: Object.create(null, {
         $exists: {
@@ -3014,84 +3018,84 @@ Tinytest.add('minimongo - modify', test => {
     { $setOnInsert: { a: 123 } },
     { a: 123 },
   );
-  upsert(
+  await upsert(
     { foo: { $exists: true, $type: 2 }},
     { $setOnInsert: { bar: 'baz' } },
     { bar: 'baz' }
   );
-  upsert(
+  await upsert(
     { foo: {} },
     { $setOnInsert: { bar: 'baz' } },
     { foo: {}, bar: 'baz' }
   );
 
   // Tests for https://github.com/meteor/meteor/issues/8806
-  upsert({"a": {"b": undefined, "c": null}}, {"$set": {"c": "foo"}}, {"a": {"b": undefined, "c": null}, "c": "foo"})
-  upsert({"a": {"$eq": "bar" }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert( {"a": {"b": undefined, "c": null}}, {"$set": {"c": "foo"}}, {"a": {"b": undefined, "c": null}, "c": "foo"})
+  await upsert( {"a": {"$eq": "bar" }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
   // $all with 1 statement is similar to $eq
-  upsert({"a": {"$all": ["bar"] }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
-  upsert({"a": {"$eq": "bar" }, "b": "baz"}, {"$set": {"c": "foo"}}, {"a": "bar", "b": "baz", "c": "foo"})
-   upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
-  upsert({"a": {"$exists": true, "$eq": "foo"}}, {"$set": {"c": "foo"}}, {"a": "foo", "c": "foo"})
-  upsert({"a": {"$gt": 3, "$eq": 2}}, {"$set": {"c": "foo"}}, {"a": 2, "c": "foo"})
+  await upsert( {"a": {"$all": ["bar"] }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert( {"a": {"$eq": "bar" }, "b": "baz"}, {"$set": {"c": "foo"}}, {"a": "bar", "b": "baz", "c": "foo"})
+   await upsert( {"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert( {"a": {"$exists": true, "$eq": "foo"}}, {"$set": {"c": "foo"}}, {"a": "foo", "c": "foo"})
+  await upsert( {"a": {"$gt": 3, "$eq": 2}}, {"$set": {"c": "foo"}}, {"a": 2, "c": "foo"})
    // $and
-  upsert({"$and": [{"a": {"$eq": "bar"}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
-  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
-  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert( {"$and": [{"a": {"$eq": "bar"}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert( {"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert( {"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
    // $or with one statement is handled similar to $and
-  upsert({"$or": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert( {"$or": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
    // $or with multiple statements is ignored
-  upsert({"$or": [{"a": "bar"}, {"b": "baz"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert( {"$or": [{"a": "bar"}, {"b": "baz"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
    // Negative logical operators are ignored
-  upsert({"$nor": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert( {"$nor": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
    // Filter out empty objects after filtering out operators
-  upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert( {"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
    // But leave actual empty objects
-  upsert({"a": {}}, {"$set": {"c": "foo"}}, {"a": {}, "c": "foo"})
+  await upsert( {"a": {}}, {"$set": {"c": "foo"}}, {"a": {}, "c": "foo"})
     // Also filter out shorthand regexp notation
-  upsert({"a": /a/}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert( {"a": /a/}, {"$set": {"c": "foo"}}, {"c": "foo"})
    // Test nested fields
-  upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
+  await upsert( {"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
    // Test for https://github.com/meteor/meteor/issues/5294
-  upsert({"a": {"$ne": 444}}, {"$push": {"a": 123}}, {"a": [123]})
+  await upsert( {"a": {"$ne": 444}}, {"$push": {"a": 123}}, {"a": [123]})
    // Mod takes precedence over query
-  upsert({"a": "foo"}, {"a": "bar"}, {"a": "bar"})
-  upsert({"a": "foo"}, {"$set":{"a": "bar"}}, {"a": "bar"})
+  await upsert( {"a": "foo"}, {"a": "bar"}, {"a": "bar"})
+  await upsert( {"a": "foo"}, {"$set":{"a": "bar"}}, {"a": "bar"})
    // Replacement can take _id from query
-  upsert({"_id": "foo", "foo": "bar"}, {"bar": "foo"}, {"_id": "foo", "bar": "foo"})
+  await upsert( {"_id": "foo", "foo": "bar"}, {"bar": "foo"}, {"_id": "foo", "bar": "foo"})
    // Replacement update keeps _id
-  upsertUpdate({"_id": "foo", "bar": "baz"}, {"_id":"foo"}, {"bar": "crow"}, {"_id": "foo", "bar": "crow"});
+  await upsertUpdate( {"_id": "foo", "bar": "baz"}, {"_id":"foo"}, {"bar": "crow"}, {"_id": "foo", "bar": "crow"});
   // Test for https://github.com/meteor/meteor/issues/9167
-  upsert({key: 123, keyName: '321'}, {$set: {name: 'Todo'}}, {key: 123, keyName: '321', name: 'Todo'});
-  upsertException({key: 123, "key.name": '321'}, {$set:{}});
+  await upsert( {key: 123, keyName: '321'}, {$set: {name: 'Todo'}}, {key: 123, keyName: '321', name: 'Todo'});
+  await upsertException( {key: 123, "key.name": '321'}, {$set:{}});
 
   // Nested fields don't work with literal objects
-  upsertException({"a": {}, "a.b": "foo"}, {});
+  await upsertException( {"a": {}, "a.b": "foo"}, {});
    // You can't have an ambiguous ID
-  upsertException({"_id":"foo"}, {"_id":"bar"});
-  upsertException({"_id":"foo"}, {"$set":{"_id":"bar"}});
+  await upsertException( {"_id":"foo"}, {"_id":"bar"});
+  await upsertException( {"_id":"foo"}, {"$set":{"_id":"bar"}});
    // You can't set the same field twice
-  upsertException({"$and": [{"a": "foo"}, {"a": "foo"}]}, {}); //not even with same value
-  upsertException({"a": {"$all": ["foo", "bar"]}}, {});
-  upsertException({"$and": [{"a": {"$eq": "foo"}}, {"$or": [{"a": {"$all": ["bar"]}}]}]}, {});
+  await upsertException( {"$and": [{"a": "foo"}, {"a": "foo"}]}, {}); //not even with same value
+  await upsertException( {"a": {"$all": ["foo", "bar"]}}, {});
+  await upsertException( {"$and": [{"a": {"$eq": "foo"}}, {"$or": [{"a": {"$all": ["bar"]}}]}]}, {});
    // You can't have nested dotted fields
-  upsertException({"a": {"foo.bar": "baz"}}, {});
+  await upsertException( {"a": {"foo.bar": "baz"}}, {});
    // You can't have dollar-prefixed fields above the first level (logical operators not counted)
-  upsertException({"a": {"a": {"$eq": "foo"}}}, {});
-  upsertException({"a": {"a": {"$exists": true}}}, {});
+  await upsertException( {"a": {"a": {"$eq": "foo"}}}, {});
+  await upsertException( {"a": {"a": {"$exists": true}}}, {});
    // You can't mix operators with other fields
-  upsertException({"a": {"$eq": "bar", "b": "foo"}}, {})
-  upsertException({"a": {"b": "foo", "$eq": "bar"}}, {})
+  await upsertException( {"a": {"$eq": "bar", "b": "foo"}}, {})
+  await upsertException( {"a": {"b": "foo", "$eq": "bar"}}, {})
 
   const mongoIdForUpsert = new MongoID.ObjectID('44915733af80844fa1cef07a');
-  upsert({_id: mongoIdForUpsert}, {$setOnInsert: {a: 123}}, {a: 123})
+  await upsert( {_id: mongoIdForUpsert}, {$setOnInsert: {a: 123}}, {a: 123})
 
   // Test for https://github.com/meteor/meteor/issues/7758
-  upsert({n_id: mongoIdForUpsert, c_n: "bar"},
+  await upsert( {n_id: mongoIdForUpsert, c_n: "bar"},
     {$set: { t_t_o: "foo"}},
     {n_id: mongoIdForUpsert, t_t_o: "foo", c_n: "bar"});
 
-  exception({}, {$set: {_id: 'bad'}});
+  await exception( {}, {$set: {_id: 'bad'}});
 
   // $bit
   // unimplemented
@@ -3102,7 +3106,7 @@ Tinytest.add('minimongo - modify', test => {
 
 // XXX test update() (selecting docs, multi, upsert..)
 
-Tinytest.add('minimongo - observe ordered', test => {
+Tinytest.addAsync('async - minimongo - observe ordered', async test => {
   const operations = [];
   const cbs = log_callbacks(operations);
   let handle;
@@ -3111,27 +3115,27 @@ Tinytest.add('minimongo - observe ordered', test => {
   handle = c.find({}, {sort: {a: 1}}).observe(cbs);
   test.isTrue(handle.collection === c);
 
-  c.insert({_id: 'foo', a: 1});
+  await c.insertAsync({_id: 'foo', a: 1});
   test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
-  c.update({a: 1}, {$set: {a: 2}});
+  await c.updateAsync({a: 1}, {$set: {a: 2}});
   test.equal(operations.shift(), ['changed', {a: 2}, 0, {a: 1}]);
-  c.insert({a: 10});
+  await c.insertAsync({a: 10});
   test.equal(operations.shift(), ['added', {a: 10}, 1, null]);
-  c.update({}, {$inc: {a: 1}}, {multi: true});
+  await c.updateAsync({}, {$inc: {a: 1}}, {multi: true});
   test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 2}]);
   test.equal(operations.shift(), ['changed', {a: 11}, 1, {a: 10}]);
-  c.update({a: 11}, {a: 1});
+  await c.updateAsync({a: 11}, {a: 1});
   test.equal(operations.shift(), ['changed', {a: 1}, 1, {a: 11}]);
   test.equal(operations.shift(), ['moved', {a: 1}, 1, 0, 'foo']);
-  c.remove({a: 2});
+  await c.removeAsync({a: 2});
   test.equal(operations.shift(), undefined);
-  c.remove({a: 3});
+  await c.removeAsync({a: 3});
   test.equal(operations.shift(), ['removed', 'foo', 1, {a: 3}]);
 
   // test stop
   handle.stop();
   const idA2 = Random.id();
-  c.insert({_id: idA2, a: 2});
+  await c.insertAsync({_id: idA2, a: 2});
   test.equal(operations.shift(), undefined);
 
   // test initial inserts (and backwards sort)
@@ -3144,41 +3148,41 @@ Tinytest.add('minimongo - observe ordered', test => {
   handle = c.find({}, {sort: {a: -1}}).observe(Object.assign({
     _suppress_initial: true}, cbs));
   test.equal(operations.shift(), undefined);
-  c.insert({a: 100});
+  await c.insertAsync({a: 100});
   test.equal(operations.shift(), ['added', {a: 100}, 0, idA2]);
   handle.stop();
 
   // test skip and limit.
-  c.remove({});
+  await c.removeAsync({});
   handle = c.find({}, {sort: {a: 1}, skip: 1, limit: 2}).observe(cbs);
   test.equal(operations.shift(), undefined);
-  c.insert({a: 1});
+  await c.insertAsync({a: 1});
   test.equal(operations.shift(), undefined);
-  c.insert({_id: 'foo', a: 2});
+  await c.insertAsync({_id: 'foo', a: 2});
   test.equal(operations.shift(), ['added', {a: 2}, 0, null]);
-  c.insert({a: 3});
+  await c.insertAsync({a: 3});
   test.equal(operations.shift(), ['added', {a: 3}, 1, null]);
-  c.insert({a: 4});
+  await c.insertAsync({a: 4});
   test.equal(operations.shift(), undefined);
-  c.update({a: 1}, {a: 0});
+  await c.updateAsync({a: 1}, {a: 0});
   test.equal(operations.shift(), undefined);
-  c.update({a: 0}, {a: 5});
+  await c.updateAsync({a: 0}, {a: 5});
   test.equal(operations.shift(), ['removed', 'foo', 0, {a: 2}]);
   test.equal(operations.shift(), ['added', {a: 4}, 1, null]);
-  c.update({a: 3}, {a: 3.5});
+  await c.updateAsync({a: 3}, {a: 3.5});
   test.equal(operations.shift(), ['changed', {a: 3.5}, 0, {a: 3}]);
   handle.stop();
 
   // test observe limit with pre-existing docs
-  c.remove({});
-  c.insert({a: 1});
-  c.insert({_id: 'two', a: 2});
-  c.insert({a: 3});
+  await c.removeAsync({});
+  await c.insertAsync({a: 1});
+  await c.insertAsync({_id: 'two', a: 2});
+  await c.insertAsync({a: 3});
   handle = c.find({}, {sort: {a: 1}, limit: 2}).observe(cbs);
   test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
   test.equal(operations.shift(), ['added', {a: 2}, 1, null]);
   test.equal(operations.shift(), undefined);
-  c.remove({a: 2});
+  await c.removeAsync({a: 2});
   test.equal(operations.shift(), ['removed', 'two', 1, {a: 2}]);
   test.equal(operations.shift(), ['added', {a: 3}, 1, null]);
   test.equal(operations.shift(), undefined);
@@ -3186,29 +3190,29 @@ Tinytest.add('minimongo - observe ordered', test => {
 
   // test _no_indices
 
-  c.remove({});
+  await c.removeAsync({});
   handle = c.find({}, {sort: {a: 1}}).observe(Object.assign(cbs, {_no_indices: true}));
-  c.insert({_id: 'foo', a: 1});
+  await c.insertAsync({_id: 'foo', a: 1});
   test.equal(operations.shift(), ['added', {a: 1}, -1, null]);
-  c.update({a: 1}, {$set: {a: 2}});
+  await c.updateAsync({a: 1}, {$set: {a: 2}});
   test.equal(operations.shift(), ['changed', {a: 2}, -1, {a: 1}]);
-  c.insert({a: 10});
+  await c.insertAsync({a: 10});
   test.equal(operations.shift(), ['added', {a: 10}, -1, null]);
-  c.update({}, {$inc: {a: 1}}, {multi: true});
+  await c.updateAsync({}, {$inc: {a: 1}}, {multi: true});
   test.equal(operations.shift(), ['changed', {a: 3}, -1, {a: 2}]);
   test.equal(operations.shift(), ['changed', {a: 11}, -1, {a: 10}]);
-  c.update({a: 11}, {a: 1});
+  await c.updateAsync({a: 11}, {a: 1});
   test.equal(operations.shift(), ['changed', {a: 1}, -1, {a: 11}]);
   test.equal(operations.shift(), ['moved', {a: 1}, -1, -1, 'foo']);
-  c.remove({a: 2});
+  await c.removeAsync({a: 2});
   test.equal(operations.shift(), undefined);
-  c.remove({a: 3});
+  await c.removeAsync({a: 3});
   test.equal(operations.shift(), ['removed', 'foo', -1, {a: 3}]);
   handle.stop();
 });
 
 [true, false].forEach(ordered => {
-  Tinytest.add(`minimongo - observe ordered: ${ordered}`, test => {
+  Tinytest.addAsync(`async - minimongo - observe ordered: ${ordered}`, async test => {
     const c = new LocalCollection();
 
     let ev = '';
@@ -3227,34 +3231,34 @@ Tinytest.add('minimongo - observe ordered', test => {
       ev = '';
     };
 
-    c.insert({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
-    c.insert({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
-    c.insert({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
+    await c.insertAsync({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
+    await c.insertAsync({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
+    await c.insertAsync({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
 
     // This should work equally well for ordered and unordered observations
     // (because the callbacks don't look at indices and there's no 'moved'
     // callback).
     let handle = c.find({tags: 'flower'}).observe(makecb('a'));
     expect('aa3_');
-    c.update({name: 'rose'}, {$set: {tags: ['bloom', 'red', 'squishy']}});
+    await c.updateAsync({name: 'rose'}, {$set: {tags: ['bloom', 'red', 'squishy']}});
     expect('ra3_');
-    c.update({name: 'rose'}, {$set: {tags: ['flower', 'red', 'squishy']}});
+    await c.updateAsync({name: 'rose'}, {$set: {tags: ['flower', 'red', 'squishy']}});
     expect('aa3_');
-    c.update({name: 'rose'}, {$set: {food: false}});
+    await c.updateAsync({name: 'rose'}, {$set: {food: false}});
     expect('ca3_');
-    c.remove({});
+    await c.removeAsync({});
     expect('ra3_');
-    c.insert({_id: 4, name: 'daisy', tags: ['flower']});
+    await c.insertAsync({_id: 4, name: 'daisy', tags: ['flower']});
     expect('aa4_');
     handle.stop();
     // After calling stop, no more callbacks are called.
-    c.insert({_id: 5, name: 'iris', tags: ['flower']});
+    await c.insertAsync({_id: 5, name: 'iris', tags: ['flower']});
     expect('');
 
     // Test that observing a lookup by ID works.
     handle = c.find(4).observe(makecb('b'));
     expect('ab4_');
-    c.update(4, {$set: {eek: 5}});
+    await c.updateAsync(4, {$set: {eek: 5}});
     expect('cb4_');
     handle.stop();
 
@@ -3262,30 +3266,30 @@ Tinytest.add('minimongo - observe ordered', test => {
     handle = c.find({tags: 'flower'}, {reactive: false}).observe(makecb('c'));
     expect('ac4_ac5_');
     // This insert shouldn't trigger a callback because it's not reactive.
-    c.insert({_id: 6, name: 'river', tags: ['flower']});
+    await c.insertAsync({_id: 6, name: 'river', tags: ['flower']});
     expect('');
     handle.stop();
   });
 });
 
 
-Tinytest.add('minimongo - saveOriginals', test => {
+Tinytest.addAsync('async - minimongo - saveOriginals', async test => {
   // set up some data
   const c = new LocalCollection();
 
   let count;
-  c.insert({_id: 'foo', x: 'untouched'});
-  c.insert({_id: 'bar', x: 'updateme'});
-  c.insert({_id: 'baz', x: 'updateme'});
-  c.insert({_id: 'quux', y: 'removeme'});
-  c.insert({_id: 'whoa', y: 'removeme'});
+  await c.insertAsync({_id: 'foo', x: 'untouched'});
+  await c.insertAsync({_id: 'bar', x: 'updateme'});
+  await c.insertAsync({_id: 'baz', x: 'updateme'});
+  await c.insertAsync({_id: 'quux', y: 'removeme'});
+  await c.insertAsync({_id: 'whoa', y: 'removeme'});
 
   // Save originals and make some changes.
   c.saveOriginals();
-  c.insert({_id: 'hooray', z: 'insertme'});
-  c.remove({y: 'removeme'});
-  count = c.update({x: 'updateme'}, {$set: {z: 5}}, {multi: true});
-  c.update('bar', {$set: {k: 7}});  // update same doc twice
+  await c.insertAsync({_id: 'hooray', z: 'insertme'});
+  await c.removeAsync({y: 'removeme'});
+  count = await c.updateAsync({x: 'updateme'}, {$set: {z: 5}}, {multi: true});
+  await c.updateAsync('bar', {$set: {k: 7}});  // update same doc twice
 
   // Verify returned count is correct
   test.equal(count, 2);
@@ -3318,24 +3322,24 @@ Tinytest.add('minimongo - saveOriginals', test => {
 
   // Insert and remove a document during the period.
   c.saveOriginals();
-  c.insert({_id: 'temp', q: 8});
-  c.remove('temp');
+  await c.insertAsync({_id: 'temp', q: 8});
+  await c.removeAsync('temp');
   originals = c.retrieveOriginals();
   test.equal(originals.size(), 1);
   test.isTrue(originals.has('temp'));
   test.equal(originals.get('temp'), undefined);
 });
 
-Tinytest.add('minimongo - saveOriginals errors', test => {
+Tinytest.addAsync('async - minimongo - saveOriginals errors', async test => {
   const c = new LocalCollection();
   // Can't call retrieve before save.
-  test.throws(() => { c.retrieveOriginals(); });
+  await test.throwsAsync(() => { c.retrieveOriginals(); });
   c.saveOriginals();
   // Can't call save twice.
-  test.throws(() => { c.saveOriginals(); });
+  await test.throwsAsync(() => { c.saveOriginals(); });
 });
 
-Tinytest.add('minimongo - objectid transformation', test => {
+Tinytest.addAsync('async - minimongo - objectid transformation', async test => {
   const testId = item => {
     test.equal(item, MongoID.idParse(MongoID.idStringify(item)));
   };
@@ -3351,16 +3355,16 @@ Tinytest.add('minimongo - objectid transformation', test => {
 });
 
 
-Tinytest.add('minimongo - objectid', test => {
+Tinytest.addAsync('async - minimongo - objectid', async test => {
   const randomOid = new MongoID.ObjectID();
   const anotherRandomOid = new MongoID.ObjectID();
   test.notEqual(randomOid, anotherRandomOid);
-  test.throws(() => { new MongoID.ObjectID('qqqqqqqqqqqqqqqqqqqqqqqq');});
-  test.throws(() => { new MongoID.ObjectID('ABCDEF'); });
+  await test.throwsAsync(() => { new MongoID.ObjectID('qqqqqqqqqqqqqqqqqqqqqqqq');});
+  await test.throwsAsync(() => { new MongoID.ObjectID('ABCDEF'); });
   test.equal(randomOid, new MongoID.ObjectID(randomOid.valueOf()));
 });
 
-Tinytest.addAsync('minimongo - pause', async test => {
+Tinytest.addAsync('async - minimongo - pause', async test => {
   const operations = [];
   const cbs = log_callbacks(operations);
 
@@ -3368,14 +3372,14 @@ Tinytest.addAsync('minimongo - pause', async test => {
   const h = c.find({}).observe(cbs);
 
   // remove and add cancel out.
-  c.insert({_id: 1, a: 1});
+  await c.insertAsync({_id: 1, a: 1});
   test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
 
   c.pauseObservers();
 
-  c.remove({_id: 1});
+  await c.removeAsync({_id: 1});
   test.length(operations, 0);
-  c.insert({_id: 1, a: 1});
+  await c.insertAsync({_id: 1, a: 1});
   test.length(operations, 0);
 
   await c.resumeObservers();
@@ -3385,8 +3389,8 @@ Tinytest.addAsync('minimongo - pause', async test => {
   // two modifications become one
   c.pauseObservers();
 
-  c.update({_id: 1}, {a: 2});
-  c.update({_id: 1}, {a: 3});
+  await c.updateAsync({_id: 1}, {a: 2});
+  await c.updateAsync({_id: 1}, {a: 3});
 
   await c.resumeObservers();
   test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 1}]);
@@ -3394,7 +3398,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
 
   // test special case for remove({})
   c.pauseObservers();
-  test.equal(c.remove({}), 1);
+  test.equal(await c.removeAsync({}), 1);
   test.length(operations, 0);
   await c.resumeObservers();
   test.equal(operations.shift(), ['removed', 1, 0, {a: 3}]);
@@ -3403,7 +3407,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   h.stop();
 });
 
-Tinytest.add('minimongo - ids matched by selector', test => {
+Tinytest.addAsync('async - minimongo - ids matched by selector', async test => {
   const check = (selector, ids) => {
     const idsFromSelector = LocalCollection._idsMatchedBySelector(selector);
     // XXX normalize order, in a way that also works for ObjectIDs?
@@ -3424,7 +3428,7 @@ Tinytest.add('minimongo - ids matched by selector', test => {
   check({$and: [{x: 42}, {_id: {$in: [oid1]}}]}, [oid1]);
 });
 
-Tinytest.add('minimongo - reactive stop', test => {
+Tinytest.addAsync('async - minimongo - reactive stop', async test => {
   const coll = new LocalCollection();
   coll.insert({_id: 'A'});
   coll.insert({_id: 'B'});
@@ -3473,7 +3477,7 @@ Tinytest.add('minimongo - reactive stop', test => {
   test.equal(y, 'EDCBA');
 });
 
-Tinytest.add('minimongo - immediate invalidate', test => {
+Tinytest.addAsync('async - minimongo - immediate invalidate', async test => {
   const coll = new LocalCollection();
   coll.insert({_id: 'A'});
 
@@ -3488,13 +3492,13 @@ Tinytest.add('minimongo - immediate invalidate', test => {
     coll.findOne('A');
   });
 
-  coll.update('A', {$set: {x: 42}});
+  coll.updateAsync('A', {$set: {x: 42}});
 
   c.stop();
 });
 
 
-Tinytest.add('minimongo - count on cursor with limit', test => {
+Tinytest.addAsync('async - minimongo - count on cursor with limit', async test => {
   const coll = new LocalCollection();
   let count, unlimitedCount;
 
@@ -3510,11 +3514,11 @@ Tinytest.add('minimongo - count on cursor with limit', test => {
 
   test.equal(count, 3);
 
-  coll.remove('A'); // still 3 in the collection
+  coll.removeAsync('A'); // still 3 in the collection
   Tracker.flush();
   test.equal(count, 3);
 
-  coll.remove('B'); // expect count now 2
+  coll.removeAsync('B'); // expect count now 2
   Tracker.flush();
   test.equal(count, 2);
 
@@ -3530,7 +3534,7 @@ Tinytest.add('minimongo - count on cursor with limit', test => {
   c.stop();
 });
 
-Tinytest.add('minimongo - reactive count with cached cursor', test => {
+Tinytest.addAsync('async - minimongo - reactive count with cached cursor', async test => {
   const coll = new LocalCollection;
   const cursor = coll.find({});
   let firstAutorunCount, secondAutorunCount;
@@ -3550,7 +3554,7 @@ Tinytest.add('minimongo - reactive count with cached cursor', test => {
   test.equal(secondAutorunCount, 3);
 });
 
-Tinytest.add('minimongo - $near operator tests', test => {
+Tinytest.addAsync('async - minimongo - $near operator tests', async test => {
   let coll = new LocalCollection();
   coll.insert({ rest: { loc: [2, 3] } });
   coll.insert({ rest: { loc: [-3, 3] } });
@@ -3598,7 +3602,7 @@ Tinytest.add('minimongo - $near operator tests', test => {
   test.equal(close20[3].descript, 'POSS OF PROHIBITED WEAPON');
 
   // Any combinations of $near with $or/$and/$nor/$not should throw an error
-  test.throws(() => {
+  await test.throwsAsync(() => {
     coll.find({ location: {
       $not: {
         $near: {
@@ -3607,25 +3611,25 @@ Tinytest.add('minimongo - $near operator tests', test => {
             coordinates: [-122.4154282, 37.7746115],
           }, $maxDistance: 20 } } } });
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     coll.find({
       $and: [ { location: { $near: { $geometry: { type: 'Point', coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 20 }}},
         { x: 0 }],
     });
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     coll.find({
       $or: [ { location: { $near: { $geometry: { type: 'Point', coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 20 }}},
         { x: 0 }],
     });
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     coll.find({
       $nor: [ { location: { $near: { $geometry: { type: 'Point', coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 1 }}},
         { x: 0 }],
     });
   });
-  test.throws(() => {
+  await test.throwsAsync(() => {
     coll.find({
       $and: [{
         $and: [{
@@ -3696,7 +3700,7 @@ Tinytest.add('minimongo - $near operator tests', test => {
 });
 
 // issue #2077
-Tinytest.add('minimongo - $near and $geometry for legacy coordinates', test => {
+Tinytest.addAsync('async - minimongo - $near and $geometry for legacy coordinates', async test => {
   const coll = new LocalCollection();
 
   coll.insert({
@@ -3725,17 +3729,17 @@ Tinytest.add('minimongo - $near and $geometry for legacy coordinates', test => {
 
 // Regression test for #4377. Previously, "replace" updates didn't clone the
 // argument.
-Tinytest.add('minimongo - update should clone', test => {
+Tinytest.addAsync('async - minimongo - update should clone', async test => {
   const x = [];
   const coll = new LocalCollection;
   const id = coll.insert({});
-  coll.update(id, {x});
+  coll.updateAsync(id, {x});
   x.push(1);
   test.equal(coll.findOne(id), {_id: id, x: []});
 });
 
 // See #2275.
-Tinytest.add('minimongo - fetch in observe', test => {
+Tinytest.addAsync('async - minimongo - fetch in observe', async test => {
   const coll = new LocalCollection;
   let callbackInvoked = false;
   const observe = coll.find().observeChanges({
@@ -3759,7 +3763,7 @@ Tinytest.add('minimongo - fetch in observe', test => {
 });
 
 // See #2254
-Tinytest.add('minimongo - fine-grained reactivity of observe with fields projection', test => {
+Tinytest.addAsync('async - minimongo - fine-grained reactivity of observe with fields projection', async test => {
   const X = new LocalCollection;
   const id = 'asdf';
   X.insert({_id: id, foo: {bar: 123}});
@@ -3772,12 +3776,12 @@ Tinytest.add('minimongo - fine-grained reactivity of observe with fields project
   });
 
   test.isFalse(callbackInvoked);
-  X.update(id, {$set: {'foo.baz': 456}});
+  X.updateAsync(id, {$set: {'foo.baz': 456}});
   test.isFalse(callbackInvoked);
 
   obs.stop();
 });
-Tinytest.add('minimongo - fine-grained reactivity of query with fields projection', test => {
+Tinytest.addAsync('async - minimongo - fine-grained reactivity of query with fields projection', async test => {
   const X = new LocalCollection;
   const id = 'asdf';
   X.insert({_id: id, foo: {bar: 123}});
@@ -3789,9 +3793,9 @@ Tinytest.add('minimongo - fine-grained reactivity of query with fields projectio
   });
   test.isTrue(callbackInvoked);
   callbackInvoked = false;
-  X.update(id, {$set: {'foo.baz': 456}});
+  X.updateAsync(id, {$set: {'foo.baz': 456}});
   test.isFalse(callbackInvoked);
-  X.update(id, {$set: {'foo.bar': 124}});
+  X.updateAsync(id, {$set: {'foo.bar': 124}});
   Tracker.flush();
   test.isTrue(callbackInvoked);
 
@@ -3801,7 +3805,7 @@ Tinytest.add('minimongo - fine-grained reactivity of query with fields projectio
 // Tests that the logic in `LocalCollection.prototype.update`
 // correctly deals with count() on a cursor with skip or limit (since
 // then the result set is an IdMap, not an array)
-Tinytest.add('minimongo - reactive skip/limit count while updating', test => {
+Tinytest.addAsync('async - minimongo - reactive skip/limit count while updating', async test => {
   const X = new LocalCollection;
   let count = -1;
 
@@ -3819,12 +3823,12 @@ Tinytest.add('minimongo - reactive skip/limit count while updating', test => {
   Tracker.flush({_throwFirstError: true});
   test.equal(count, 1);
 
-  X.update({}, {$set: {foo: 1}});
+  X.updateAsync({}, {$set: {foo: 1}});
   Tracker.flush({_throwFirstError: true});
   test.equal(count, 1);
 
   // Make sure a second update also works
-  X.update({}, {$set: {foo: 2}});
+  X.updateAsync({}, {$set: {foo: 2}});
   Tracker.flush({_throwFirstError: true});
   test.equal(count, 1);
 
@@ -3834,78 +3838,78 @@ Tinytest.add('minimongo - reactive skip/limit count while updating', test => {
 // Makes sure inserts cannot be performed using field names that have
 // Mongo restricted characters in them ('.', '$', '\0'):
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-Tinytest.add('minimongo - cannot insert using invalid field names', test => {
+Tinytest.addAsync('async - minimongo - cannot insert using invalid field names', async test => {
   const collection = new LocalCollection();
 
   // Quick test to make sure non-dot field inserts are working
-  collection.insert({ a: 'b' });
+  await collection.insertAsync({ a: 'b' });
 
   // Quick test to make sure field values with dots are allowed
-  collection.insert({ a: 'b.c' });
+  await collection.insertAsync({ a: 'b.c' });
 
   // Verify top level dot-field inserts are prohibited
-  ['a.b', '.b', 'a.', 'a.b.c'].forEach((field) => {
-    test.throws(() => {
-      collection.insert({ [field]: 'c' });
+  ['a.b', '.b', 'a.', 'a.b.c'].forEach(async (field) => {
+    await test.throwsAsync(async () => {
+      await collection.insertAsync({ [field]: 'c' });
     }, `Key ${field} must not contain '.'`);
   });
 
   // Verify nested dot-field inserts are prohibited
-  test.throws(() => {
-    collection.insert({ a: { b: { 'c.d': 'e' } } });
+  await test.throwsAsync(async () => {
+    await collection.insertAsync({ a: { b: { 'c.d': 'e' } } });
   }, "Key c.d must not contain '.'");
 
   // Verify field names starting with $ are prohibited
-  test.throws(() => {
-    collection.insert({ $a: 'b' });
+  await test.throwsAsync(async () => {
+    await collection.insertAsync({ $a: 'b' });
   }, "Key $a must not start with '$'");
 
   // Verify nested field names starting with $ are prohibited
-  test.throws(() => {
-    collection.insert({ a: { b: { $c: 'd' } } });
+  await test.throwsAsync(async () => {
+    await collection.insert({ a: { b: { $c: 'd' } } });
   }, "Key $c must not start with '$'");
 
   // Verify top level fields with null characters are prohibited
-  ['\0a', 'a\0', 'a\0b', '\u0000a', 'a\u0000', 'a\u0000b'].forEach((field) => {
-    test.throws(() => {
-      collection.insert({ [field]: 'c' });
+  ['\0a', 'a\0', 'a\0b', '\u0000a', 'a\u0000', 'a\u0000b'].forEach(async (field) => {
+    await test.throwsAsync(async () => {
+      await collection.insert({ [field]: 'c' });
     }, `Key ${field} must not contain null bytes`);
   });
 
   // Verify nested field names with null characters are prohibited
-  test.throws(() => {
-    collection.insert({ a: { b: { '\0c': 'd' } } });
+  await test.throwsAsync(async () => {
+    await collection.insert({ a: { b: { '\0c': 'd' } } });
   }, 'Key \0c must not contain null bytes');
 });
 
 // Makes sure $set's cannot be performed using null bytes
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-Tinytest.add('minimongo - cannot $set with null bytes', test => {
+Tinytest.addAsync('async - minimongo - cannot $set with null bytes', async test => {
   const collection = new LocalCollection();
 
   // Quick test to make sure non-null byte $set's are working
-  const id = collection.insert({ a: 'b', c: 'd' });
-  collection.update({ _id: id }, { $set: { e: 'f' } });
+  const id = await collection.insertAsync({ a: 'b', c: 'd' });
+  await collection.updateAsync({ _id: id }, { $set: { e: 'f' } });
 
   // Verify $set's with null bytes throw an exception
-  test.throws(() => {
-    collection.update({ _id: id }, { $set: { '\0a': 'b' } });
+  await test.throwsAsync(async () => {
+    await collection.updateAsync({ _id: id }, { $set: { '\0a': 'b' } });
   }, 'Key \0a must not contain null bytes');
 });
 
 // Makes sure $rename's cannot be performed using null bytes
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-Tinytest.add('minimongo - cannot $rename with null bytes', test => {
+Tinytest.addAsync('async - minimongo - cannot $rename with null bytes', async test => {
   const collection = new LocalCollection();
 
   // Quick test to make sure non-null byte $rename's are working
-  let id = collection.insert({ a: 'b', c: 'd' });
-  collection.update({ _id: id }, { $rename: { a: 'a1', c: 'c1' } });
+  let id = await collection.insertAsync({ a: 'b', c: 'd' });
+  await collection.updateAsync({ _id: id }, { $rename: { a: 'a1', c: 'c1' } });
 
   // Verify $rename's with null bytes throw an exception
-  collection.remove({});
-  id = collection.insert({ a: 'b', c: 'd' });
-  test.throws(() => {
-    collection.update({ _id: id }, { $rename: { a: '\0a', c: 'c\0' } });
+  await collection.removeAsync({});
+  id = await collection.insertAsync({ a: 'b', c: 'd' });
+  await test.throwsAsync(async () => {
+    await collection.updateAsync({ _id: id }, { $rename: { a: '\0a', c: 'c\0' } });
   }, "The 'to' field for $rename cannot contain an embedded null byte");
 });

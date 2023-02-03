@@ -2,7 +2,7 @@ Tinytest.addAsync('mongo livedata - native upsert - id type MONGO with MODIFIERS
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'MONGO'});
 
-  coll.insertAsync({foo: 1});
+  await coll.insertAsync({foo: 1});
   var result = await coll.upsertAsync({foo: 1}, {$set: {foo:2}});
   var updated = await coll.findOneAsync({foo: 2});
 
@@ -36,7 +36,7 @@ Tinytest.addAsync('mongo livedata - native upsert - id type MONGO PLAIN OBJECT u
   var collName = Random.id();
   var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'MONGO'});
 
-  coll.insertAsync({foo: 1, baz: 42});
+  await coll.insertAsync({foo: 1, baz: 42});
   var result = await coll.upsertAsync({foo: 1}, {bar:2});
   var updated = await coll.findOneAsync({bar: 2});
 

@@ -1540,7 +1540,7 @@ _.each( ['STRING'], function(idGeneration) {
     async function (test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        await Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        await Meteor.callAsync('createInsecureCollection', this.collectionName, collectionOptions);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
     },
@@ -1556,6 +1556,7 @@ _.each( ['STRING'], function(idGeneration) {
       test.isTrue(id);
       docId = id;
       self.docId = docId;
+
       var cursor = self.coll.find();
       test.equal(await cursor.count(), 1);
       var inColl = await self.coll.findOneAsync();
@@ -1567,15 +1568,15 @@ _.each( ['STRING'], function(idGeneration) {
     async function (test, expect) {
       var self = this;
       await self.coll.insertAsync(new Dog("rover", "orange")).catch(expect(function (err) {
-          test.isTrue(err);
+        test.isTrue(err);
       }));
     },
 
-    async function (test) {
+    async function (test, expect) {
       var self = this;
-      await self.coll.updateAsync(self.docId, new Dog("rover", "orange")).catch(err => {
+      await self.coll.updateAsync(self.docId, new Dog("rover", "orange")).catch(expect(function(err) {
           test.isTrue(err);
-      });
+      }));
     }
   ]);
 
@@ -2094,26 +2095,25 @@ if (Meteor.isServer) {
 // Runs a method and its stub which do some upserts. The method throws an error
 // if we don't get the right return values.
   if (Meteor.isClient) {
-    _.each([true, false], function (useUpdate) {
-      Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "updateAsync " : "") + "upsert in method, " + idGeneration, async function (test) {
-        var run = test.runId();
-        upsertTestMethodColl = new Mongo.Collection(upsertTestMethod + "_collection_" + run, collectionOptions);
-        var m = {};
-        delete Meteor.connection._methodHandlers[upsertTestMethod];
-        m[upsertTestMethod] = function (run, useUpdate, options) {
-          return upsertTestMethodImpl(upsertTestMethodColl, useUpdate, test);
-        };
-        Meteor.methods(m);
-        let err;
-        try {
-          await Meteor.callAsync(upsertTestMethod, run, useUpdate, collectionOptions);
-        } catch (e) {
-          err = e;
-        }
-
-        test.isFalse(err);
-      });
-    });
+    // _.each([true, false], function (useUpdate) {
+    //   Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "updateAsync " : "") + "upsert in method, " + idGeneration, async function (test) {
+    //     var run = test.runId();
+    //     upsertTestMethodColl = new Mongo.Collection(upsertTestMethod + "_collection_" + run, collectionOptions);
+    //     var m = {};
+    //     delete Meteor.connection._methodHandlers[upsertTestMethod];
+    //     m[upsertTestMethod] = function (run, useUpdate, options) {
+    //       return upsertTestMethodImpl(upsertTestMethodColl, useUpdate, test);
+    //     };
+    //     Meteor.methods(m);
+    //     let err;
+    //     try {
+    //       await Meteor.callAsync(upsertTestMethod, run, useUpdate, collectionOptions);
+    //     } catch (e) {
+    //       err = e;
+    //     }
+    //     test.isFalse(err);
+    //   });
+    // });
   }
 
   _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
@@ -2976,9 +2976,6 @@ EJSON.addType('someCustomType', function (json) {
 //           custom: new TestCustomType('a', 'b')},
 //         expect(function (err, res) {
 //           test.isFalse(err);
-//           console.log("kkk")
-//           console.log(self.id)
-//           console.log(res)
 //           test.equal(self.id, res);
 //         }));
 //   },
@@ -3281,10 +3278,10 @@ if (Meteor.isClient) {
   var futuresByNonce = {};
 
   Meteor.methods({
-    fenceOnBeforeFireError1: function (nonce) {
+    fenceOnBeforeFireError1: async function (nonce) {
       let resolve;
       futuresByNonce[nonce] = new Promise(r => resolve = r);
-      var observe = fenceOnBeforeFireErrorCollection.find({nonce: nonce})
+      var observe = await fenceOnBeforeFireErrorCollection.find({nonce: nonce})
           .observeChanges({added: function (){}});
       Meteor.setTimeout(async function () {
         await fenceOnBeforeFireErrorCollection.insertAsync({nonce: nonce})

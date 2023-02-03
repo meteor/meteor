@@ -154,7 +154,7 @@ Mongo.Collection = function Collection(name, options) {
 };
 
 Object.assign(Mongo.Collection.prototype, {
-  _maybeSetUpReplication(name) {
+  async _maybeSetUpReplication(name) {
     const self = this;
     if (
       !(
@@ -192,7 +192,7 @@ Object.assign(Mongo.Collection.prototype, {
       // message, and then we can either directly apply it at endUpdate time if
       // it was the only update, or do pauseObservers/apply/apply at the next
       // update() if there's another one.
-      beginUpdate(batchSize, reset) {
+      async beginUpdate(batchSize, reset) {
         // pause observers so users don't see flicker when updating several
         // objects at once (including the post-reconnect reset-and-reapply
         // stage), and so that a re-sorting of a query can take advantage of the
@@ -200,7 +200,7 @@ Object.assign(Mongo.Collection.prototype, {
         // time.
         if (batchSize > 1 || reset) self._collection.pauseObservers();
 
-        if (reset) self._collection.remove({});
+        if (reset) await self._collection.remove({});
       },
 
       // Apply an update.

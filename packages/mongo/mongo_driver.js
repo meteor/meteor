@@ -19,6 +19,7 @@ import {
   ASYNC_CURSOR_METHODS,
   getAsyncMethodName
 } from "meteor/minimongo/constants";
+import { Meteor } from "meteor/meteor";
 
 MongoInternals = {};
 
@@ -262,7 +263,7 @@ MongoConnection.prototype.createCappedCollectionAsync = async function (
 // after the observer notifiers have added themselves to the write
 // fence), you should call 'committed()' on the object returned.
 MongoConnection.prototype._maybeBeginWrite = function () {
-  const { fence } = DDP._CurrentPublicationInvocation.get() || {};
+  const fence = DDPServer._getCurrentFence();
   if (fence) {
     return fence.beginWrite();
   } else {
