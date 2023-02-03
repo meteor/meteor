@@ -809,14 +809,14 @@ Object.assign(Session.prototype, {
       };
 
       promise.then(result => {
-        finish().then(() => {
+        finish().finally(() => {
           if (result !== undefined) {
             payload.result = result;
           }
           self.send(payload);
         });
       }, (exception) => {
-        finish().then(() => {
+        finish().finally(() => {
           payload.error = wrapInternalException(
             exception,
             `while invoking method '${msg.method}'`

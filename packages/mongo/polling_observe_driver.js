@@ -90,8 +90,8 @@ _.extend(PollingObserveDriver.prototype, {
     if (self._pollsScheduledButNotStarted > 0)
       return;
     ++self._pollsScheduledButNotStarted;
-    //TODO check this change
-    await self._taskQueue.runTask(async function () {
+    //TODO[fibers] check this change
+    await self._taskQueue.queueTask(async function () {
       await self._pollMongo();
     });
   },
