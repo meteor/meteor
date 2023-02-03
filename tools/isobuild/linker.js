@@ -941,12 +941,8 @@ var getHeader = function (options) {
 
   var isApp = options.name === null;
   var chunks = [];
-  let orderedDeps = [];
-
-  options.deps.forEach(dep => {
-    if (!dep.unordered) {
-      orderedDeps.push(JSON.stringify(dep.package))
-    }
+  let orderedDeps = options.orderedDeps.map(packageName => {
+    return JSON.stringify(packageName);
   });
 
   chunks.push(
@@ -1140,9 +1136,9 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // how to use them in a browser.
   includeSourceMapInstructions,
 
-  // List of packages this bundle directly uses, or is implied by the packages
-  // it uses
-  deps
+  // List of packages this bundle directly uses that need to load
+  // first. Includes weak dependencies.
+  orderedDeps
 }) {
   buildmessage.assertInJob();
 
@@ -1159,7 +1155,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // we can be sure the runtime will be available
   // The main situations it is not available is the core-runtime
   // package itself, or any build plugins with no dependencies
-  let hasRuntime = deps.some(entry => entry.unordered !== true);
+  let hasRuntime = orderedDeps.length > 0;
 
   _.each(inputFiles, file => module.addFile(file));
 
@@ -1194,7 +1190,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
         imports,
         packageVariables: [],
         hasRuntime,
-        deps
+        orderedDeps
       });
       let footer = getFooter({
         name: null,
@@ -1255,7 +1251,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
     imports,
     packageVariables: _.union(assignedVariables, declaredExports),
     hasRuntime,
-    deps
+    orderedDeps
   });
 
   var footer = getFooter({
