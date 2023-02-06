@@ -286,6 +286,63 @@ Meteor.publish("publication_compatibility", function () {
   this.stop();
 });
 
+const SimpleColl = new Mongo.Collection("simple");
+
+Meteor.publish('publication_with_thottle', function () {
+  return SimpleColl.find({}, {minResultFetchIntervalMs: 1500});
+})
+
+Meteor.methods({
+  addMockData(data) {
+    SimpleColl.insert(data);
+  },
+  removeMockData() {
+    SimpleColl.remove({});
+  },
+  fillMockData() {
+    SimpleColl.remove({});
+    SimpleColl.insert({a: 1});
+    SimpleColl.insert({a: 2});
+    SimpleColl.insert({a: 3});
+  }
+})
+
+Tinytest.addAsync('livedata server - publish with throttle',
+   function (test, onComplete) {
+     makeTestConnection(
+      test,
+      async function (clientConn, serverConn) {
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        Meteor.call('fillMockData');
+
+        const handle = clientConn.subscribe("publication_with_thottle");
+        handle.ready();
+        let data = SimpleColl.find().fetch();
+        test.equal(data.length, 3, 'initial data');
+        console.log(data, 'initial');
+        Meteor.call('addMockData', {a: 4});
+        data = SimpleColl.find().fetch();
+        console.log(data);
+
+        test.equal(data.length, 3);
+        await sleep(1010);
+
+        data = SimpleColl.find().fetch();
+        console.log(data);
+
+        test.equal(data.length, 4);
+        Meteor.call('removeMockData');
+        data = SimpleColl.find().fetch();
+        test.equal(data.length, 4);
+        await sleep(1010);
+
+        data = SimpleColl.find().fetch();
+        test.equal(data.length, 0);
+        Meteor.call('fillMockData');
+        onComplete()
+      }
+    );
+  })
 Tinytest.addAsync(
   "livedata server - publish object",
   function (test, onComplete) {
