@@ -288,7 +288,7 @@ Meteor.publish("publication_compatibility", function () {
 
 const SimpleColl = new Mongo.Collection("simple");
 
-Meteor.publish('publication_with_thottle', function () {
+Meteor.publish('publication_with_throttle', function () {
   return SimpleColl.find({}, {minResultFetchIntervalMs: 1500});
 })
 
