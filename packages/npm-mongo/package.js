@@ -3,7 +3,7 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: '4.13.0-beta2110.0',
+  version: '4.13.0-beta2110.1',
   documentation: null
 });
 
