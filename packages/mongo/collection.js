@@ -440,6 +440,12 @@ Object.assign(Mongo.Collection.prototype, {
 
 Object.assign(Mongo.Collection, {
   _publishCursor(cursor, sub, collection) {
+
+    // setting throttle:
+    // https://github.com/meteor/meteor-feature-requests/issues/367
+    if (cursor._cursorDescription.options.minResultFetchIntervalMs)
+      sub.setThrottle(cursor._cursorDescription.options.minResultFetchIntervalMs);
+
     var observeHandle = cursor.observeChanges(
       {
         added: function(id, fields) {
