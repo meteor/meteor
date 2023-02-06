@@ -18,12 +18,7 @@ export namespace Mongo {
 
   type Query<T> = MongoNpmModule.Filter<T>;
 
-  export type QueryWithModifiers = {
-    $maxScan?: any;
-    $natural?: any;
-  };
-
-  export type Selector<T> = Query<T> | QueryWithModifiers;
+  export type Selector<T> = Query<T>;
 
   type Modifier<T> = MongoNpmModule.UpdateFilter<T>;
 
