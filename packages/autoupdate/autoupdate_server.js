@@ -52,7 +52,7 @@ Autoupdate.autoupdateVersionRefreshable = null;
 Autoupdate.autoupdateVersionCordova = null;
 Autoupdate.appId = __meteor_runtime_config__.appId = process.env.APP_ID;
 
-var syncQueue = new Meteor._SynchronousQueue();
+var syncQueue = new Meteor._AsynchronousQueue();
 
 async function updateVersions(shouldReloadClientProgram) {
   // Step 1: load the current client program on the server

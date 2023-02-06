@@ -115,8 +115,8 @@ OplogObserveDriver = function (options) {
 
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
-      trigger, function (notification) {
-        Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
+      trigger, async function (notification) {
+        await finishIfNeedToPollQuery(function () {
           var op = notification.op;
           if (notification.dropCollection || notification.dropDatabase) {
             // Note: this call is not allowed to block on anything (especially
@@ -131,7 +131,7 @@ OplogObserveDriver = function (options) {
               return self._handleOplogEntrySteadyOrFetching(op);
             }
           }
-        }));
+        });
       }
     ));
   });
@@ -162,7 +162,7 @@ OplogObserveDriver = function (options) {
 
         for (const driver of Object.values(drivers)) {
           if (driver._stopped)
-            return;
+            continue;
 
           var write = await fence.beginWrite();
           if (driver._phase === PHASE.STEADY) {

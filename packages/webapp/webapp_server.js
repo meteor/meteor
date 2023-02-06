@@ -796,7 +796,7 @@ onMessage('webapp-reload-client', async ({ arch }) => {
 
 async function runWebAppServer() {
   var shuttingDown = false;
-  var syncQueue = new Meteor._SynchronousQueue();
+  var syncQueue = new Meteor._AsynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
     return decodeURIComponent(parseUrl(itemUrl).pathname);

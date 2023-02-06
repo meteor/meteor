@@ -455,7 +455,7 @@ export const TestManager = new (class TestManager {
   constructor() {
     this.tests = {};
     this.ordered_tests = [];
-    this.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
+    this.testQueue = Meteor.isServer && new Meteor._AsynchronousQueue();
     this.onlyTestsNames = [];
   }
 

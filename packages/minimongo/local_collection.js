@@ -131,7 +131,7 @@ export default class LocalCollection {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        break;
+        continue;
       }
 
       const matchResult = query.matcher.documentMatches(doc);
@@ -174,7 +174,7 @@ export default class LocalCollection {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        break;
+        continue;
       }
 
       const matchResult = query.matcher.documentMatches(doc);
@@ -623,11 +623,6 @@ export default class LocalCollection {
 
     let updateCount = 0;
 
-
-    // for (const qid of Object.keys(this.queries)) {
-    //   this._recomputeResults(this.queries[qid], qidToOriginalResults[qid]);
-    // }
-
     this._eachPossiblyMatchingDocSync(selector, (doc, id) => {
       const queryResult = matcher.documentMatches(doc);
 
@@ -637,7 +632,6 @@ export default class LocalCollection {
         recomputeQids = this._modifyAndNotifySync(
           doc,
           mod,
-          recomputeQids,
           queryResult.arrayIndices
         );
 
@@ -770,7 +764,7 @@ export default class LocalCollection {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        break;
+        continue;
       }
 
       const afterMatch = query.matcher.documentMatches(doc);
@@ -815,7 +809,7 @@ export default class LocalCollection {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        break;
+        continue;
       }
 
       const afterMatch = query.matcher.documentMatches(doc);

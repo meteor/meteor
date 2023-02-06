@@ -189,8 +189,6 @@ ObserveMultiplexer = class {
       return;
     // note: docs may be an _IdMap or an OrderedDict
     await this._cache.docs.forEachAsync(async (doc, id) => {
-      //TODO FIXME
-      if (!this._handles) console.log({this:this});
       if (!_.has(this._handles, handle._id))
         throw Error("handle got removed before sending initial adds!");
       const { _id, ...fields } = handle.nonMutatingCallbacks ? doc
@@ -215,8 +213,8 @@ ObserveHandle = class {
         // ordered observe where for some reason you don't get ordering data on
         // the adds.  I dunno, we wrote tests for it, there must have been a
         // reason.
-        this._addedBefore = function (id, fields, before) {
-          callbacks.added(id, fields);
+        this._addedBefore = async function (id, fields, before) {
+          await callbacks.added(id, fields);
         };
       }
     });

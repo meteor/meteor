@@ -1,8 +1,27 @@
 Meteor._noYieldsAllowed = function (f) {
-  return f();
+  const result = f();
+  if (Meteor._isPromise(result)) {
+    throw new Error("function is a promise when calling Meteor._noYieldsAllowed");
+  }
+  return result
 };
 
-Meteor._DoubleEndedQueue = Npm.require('denque');
+class FakeDoubleEndedQueue {
+  constructor() {
+    this.queue = [];
+  }
+  push(task) {
+    this.queue.push(task);
+  }
+  shift() {
+    return this.queue.shift();
+  }
+  isEmpty() {
+    return this.queue.length === 0;
+  }
+}
+
+Meteor._DoubleEndedQueue = Meteor.isServer ? Npm.require('denque') : FakeDoubleEndedQueue;
 
 // Meteor._SynchronousQueue is a queue which runs task functions serially.
 // Tasks are assumed to be synchronous: ie, it's assumed that they are
@@ -50,8 +69,15 @@ class AsynchronousQueue {
 
     let resolve;
     const promise = new Promise(r => resolve = r);
-    setImmediate(() => {
-      this._run().finally(() => resolve());
+    const runImmediateHandle = (fn) => {
+      if (Meteor.isServer) {
+        setImmediate(fn);
+        return;
+      }
+      setTimeout(fn, 0);
+    };
+    runImmediateHandle(() => {
+      this._run().finally(resolve);
     });
     return promise;
   }
@@ -136,7 +162,6 @@ class AsynchronousQueue {
 }
 
 Meteor._AsynchronousQueue = AsynchronousQueue;
-Meteor._SynchronousQueue = AsynchronousQueue;
 
 
 // Sleep. Mostly used for debugging (eg, inserting latency into server
