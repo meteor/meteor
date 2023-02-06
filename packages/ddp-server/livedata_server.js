@@ -1053,6 +1053,13 @@ var Subscription = function (
 
   self._params = params || [];
 
+  // The last time we sent a message to the client.
+  // used by throttleSubscription option
+  self._lastUpdate = 0;
+
+  // The minimum interval between messages to the client.
+  // used by throttleSubscription option
+  self.minInterval = null;
   // Only named subscriptions have IDs, but we need some sort of string
   // internally to keep track of all subscriptions inside
   // SessionDocumentViews. We use this subscriptionHandle for that.
@@ -1330,6 +1337,29 @@ Object.assign(Subscription.prototype, {
     return self._deactivated || self._session.inQueue === null;
   },
 
+  setThrottle: function (minInterval) {
+    const self = this;
+
+    if (minInterval === undefined) return
+
+    if (typeof minInterval !== 'number')
+      throw new Error(`minInterval must be a number or undefined, not ${typeof minInterval}`);
+
+    if (minInterval < 0)
+      throw new Error(`minInterval must be greater than 0, not ${minInterval}`);
+
+
+    self.minInterval = minInterval;
+  },
+
+  _runWithThrottling: function (func) {
+    const self = this;
+    const timeout = self._lastUpdate + self.minInterval;
+    if (typeof self.minInterval !== 'number') func();
+    else if (timeout < Date.now()) func();
+    else setTimeout(func, timeout - Date.now())
+  },
+
   /**
    * @summary Call inside the publish function.  Informs the subscriber that a document has been added to the record set.
    * @locus Server
@@ -1352,8 +1382,10 @@ Object.assign(Subscription.prototype, {
       }
       ids.add(id);
     }
-
-    this._session.added(this._subscriptionHandle, collectionName, id, fields);
+    this._runWithThrottling(
+       () => this._session.added(this._subscriptionHandle, collectionName, id, fields)
+    )
+    this._lastUpdate = Date.now();
   },
 
   /**
@@ -1369,7 +1401,10 @@ Object.assign(Subscription.prototype, {
     if (this._isDeactivated())
       return;
     id = this._idFilter.idStringify(id);
-    this._session.changed(this._subscriptionHandle, collectionName, id, fields);
+    this._runWithThrottling(
+       () => this._session.changed(this._subscriptionHandle, collectionName, id, fields)
+    )
+    this._lastUpdate = Date.now();
   },
 
   /**
@@ -1391,7 +1426,11 @@ Object.assign(Subscription.prototype, {
       this._documents.get(collectionName).delete(id);
     }
 
-    this._session.removed(this._subscriptionHandle, collectionName, id);
+    this._runWithThrottling(
+       () => this._session.removed(this._subscriptionHandle, collectionName, id)
+    )
+
+    this._lastUpdate = Date.now();
   },
 
   /**
