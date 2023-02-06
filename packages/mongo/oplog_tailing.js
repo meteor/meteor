@@ -78,7 +78,7 @@ OplogHandle = function (oplogUrl, dbName) {
   self._workerActive = false;
 
   const shouldAwait = self._startTailing();
-  //TODO Why wait?
+  //TODO[fibers] Why wait?
 };
 
 Object.assign(OplogHandle.prototype, {
