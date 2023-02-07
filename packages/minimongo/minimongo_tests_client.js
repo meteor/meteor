@@ -3208,7 +3208,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
 });
 
 [true, false].forEach(ordered => {
-  Tinytest.add(`minimongo - observe ordered: ${ordered}`, test => {
+  Tinytest.addAsync(`minimongo - observe ordered: ${ordered}`, async test => {
     const c = new LocalCollection();
 
     let ev = '';
@@ -3227,42 +3227,42 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
       ev = '';
     };
 
-    c.insert({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
-    c.insert({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
-    c.insert({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
+    await c.insertAsync({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
+    await c.insertAsync({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
+    await c.insertAsync({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
 
     // This should work equally well for ordered and unordered observations
     // (because the callbacks don't look at indices and there's no 'moved'
     // callback).
-    let handle = c.find({tags: 'flower'}).observe(makecb('a'));
+    let handle = await c.find({tags: 'flower'}).observe(makecb('a'));
     expect('aa3_');
-    c.update({name: 'rose'}, {$set: {tags: ['bloom', 'red', 'squishy']}});
+    await c.updateAsync({name: 'rose'}, {$set: {tags: ['bloom', 'red', 'squishy']}});
     expect('ra3_');
-    c.update({name: 'rose'}, {$set: {tags: ['flower', 'red', 'squishy']}});
+    await c.updateAsync({name: 'rose'}, {$set: {tags: ['flower', 'red', 'squishy']}});
     expect('aa3_');
-    c.update({name: 'rose'}, {$set: {food: false}});
+    await c.updateAsync({name: 'rose'}, {$set: {food: false}});
     expect('ca3_');
     c.remove({});
     expect('ra3_');
-    c.insert({_id: 4, name: 'daisy', tags: ['flower']});
+    await c.insertAsync({_id: 4, name: 'daisy', tags: ['flower']});
     expect('aa4_');
     handle.stop();
     // After calling stop, no more callbacks are called.
-    c.insert({_id: 5, name: 'iris', tags: ['flower']});
+    await c.insertAsync({_id: 5, name: 'iris', tags: ['flower']});
     expect('');
 
     // Test that observing a lookup by ID works.
-    handle = c.find(4).observe(makecb('b'));
+    handle = await c.find(4).observe(makecb('b'));
     expect('ab4_');
-    c.update(4, {$set: {eek: 5}});
+    await c.updateAsync(4, {$set: {eek: 5}});
     expect('cb4_');
     handle.stop();
 
     // Test observe with reactive: false.
-    handle = c.find({tags: 'flower'}, {reactive: false}).observe(makecb('c'));
+    handle = await c.find({tags: 'flower'}, {reactive: false}).observe(makecb('c'));
     expect('ac4_ac5_');
     // This insert shouldn't trigger a callback because it's not reactive.
-    c.insert({_id: 6, name: 'river', tags: ['flower']});
+    await c.insertAsync({_id: 6, name: 'river', tags: ['flower']});
     expect('');
     handle.stop();
   });
