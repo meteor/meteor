@@ -142,7 +142,7 @@ Accounts.changePassword = (oldPassword, newPassword, callback) => {
     return reportError(new Error("Must be logged in to change password."), callback);
   }
 
-  if (!newPassword instanceof String) {
+  if (!(typeof token === "string" || token instanceof String)) {
     return reportError(new Meteor.Error(400, "Password must be a string"), callback);
   }
 
@@ -209,11 +209,11 @@ Accounts.forgotPassword = (options, callback) => {
  * @importFromPackage accounts-base
  */
 Accounts.resetPassword = (token, newPassword, callback) => {
-  if (!token instanceof String) {
+  if (!(typeof token === "string" || token instanceof String)) {
     return reportError(new Meteor.Error(400, "Token must be a string"), callback);
   }
 
-  if (!newPassword instanceof String) {
+  if (!(typeof newPassword === "string" || token instanceof String)) {
     return reportError(new Meteor.Error(400, "Password must be a string"), callback);
   }
 
