@@ -941,16 +941,17 @@ var getHeader = function (options) {
 
   var isApp = options.name === null;
   var chunks = [];
-  let deps = [];
-  options.uses.forEach(uses => {
-    if (!uses.unordered) {
-      deps.push(JSON.stringify(uses.package))
+   let orderedDeps = [];
+
+  options.deps.forEach(dep => {
+    if (!dep.unordered) {
+      orderedDeps.push(JSON.stringify(dep.package))
     }
   });
 
   chunks.push(
       `Package["core-runtime"].queue("${options.name}", [`,
-      deps.join(', '),
+      orderedDeps.join(', '),
       '], function () {'
   );
 
@@ -1139,8 +1140,9 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // how to use them in a browser.
   includeSourceMapInstructions,
 
-  // List of packages this bundle uses
-  uses
+  // List of packages this bundle directly uses, or is implied by the packages
+  // it uses
+  deps
 }) {
   buildmessage.assertInJob();
 
@@ -1157,7 +1159,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // we can be sure the runtime will be available
   // The main situations it is not available is the core-runtime
   // package itself, or any build plugins with no dependencies
-  let hasRuntime = uses.some(entry => entry.unordered !== true);
+  let hasRuntime = deps.some(entry => entry.unordered !== true);
 
   _.each(inputFiles, file => module.addFile(file));
 
@@ -1192,7 +1194,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
         imports,
         packageVariables: [],
         hasRuntime,
-        uses
+        deps
       });
       let footer = getFooter({
         name: null,
@@ -1253,7 +1255,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
     imports,
     packageVariables: _.union(assignedVariables, declaredExports),
     hasRuntime,
-    uses
+    deps
   });
 
   var footer = getFooter({

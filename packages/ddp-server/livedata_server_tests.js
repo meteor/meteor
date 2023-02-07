@@ -315,13 +315,13 @@ Tinytest.addAsync(
 );
 
 Meteor.methods({
-  async testResolvedPromise(arg) {
-    const invocationRunningFromCallAsync1 = DDP._CurrentMethodInvocation._isCallAsyncMethodRunning();
+  testResolvedPromise(arg) {
+    const invocation1 = DDP._CurrentMethodInvocation.get();
     return Promise.resolve(arg).then(result => {
-      const invocationRunningFromCallAsync2 = DDP._CurrentMethodInvocation._isCallAsyncMethodRunning();
-      // What matters here is that both invocations are coming from the same call,
-      // so both of them can be considered a simulation.
-      if (invocationRunningFromCallAsync1 !== invocationRunningFromCallAsync2) {
+      const invocation2 = DDP._CurrentMethodInvocation.get();
+      // This equality holds because Promise callbacks are bound to the
+      // dynamic environment where .then was called.
+      if (invocation1 !== invocation2) {
         throw new Meteor.Error("invocation mismatch");
       }
       return result + " after waiting";

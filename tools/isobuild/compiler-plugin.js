@@ -1071,6 +1071,8 @@ export class PackageSourceBatch {
     // decision of whether or not an unrelated package in the target
     // depends on something).
     self.importedSymbolToPackageName = {}; // map from symbol to supplying package name
+
+    self.deps = [];
   }
 
   async init() {
@@ -1093,13 +1095,17 @@ export class PackageSourceBatch {
       skipDebugOnly: true,
       skipProdOnly: true,
       skipTestOnly: true,
-    }, depUnibuild => {
+    }, (depUnibuild, { weak, unordered }) => {
+      let packageName = depUnibuild.pkg.name;
+
       _.each(depUnibuild.declaredExports, function (symbol) {
         // Slightly hacky implementation of test-only exports.
         if (! symbol.testOnly || self.unibuild.pkg.isTest) {
-          self.importedSymbolToPackageName[symbol.name] = depUnibuild.pkg.name;
+          self.importedSymbolToPackageName[symbol.name] = packageName;
         }
       });
+
+      self.deps.push({ package: packageName, weak, unordered });
     });
 
     self.useMeteorInstall =
@@ -1694,7 +1700,7 @@ export class PackageSourceBatch {
       imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
       includeSourceMapInstructions: isWeb,
-      uses: self.unibuild.uses
+      deps: self.deps
     };
 
     const fileHashes = [];

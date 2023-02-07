@@ -22,8 +22,8 @@ ObserveMultiplexer = class {
 
     const self = this;
     this.callbackNames().forEach(callbackName => {
-      this[callbackName] = function(/* ... */) {
-        return self._applyCallback(callbackName, _.toArray(arguments));
+      this[callbackName] = async function(/* ... */) {
+        await self._applyCallback(callbackName, _.toArray(arguments));
       };
     });
   }
@@ -95,7 +95,7 @@ ObserveMultiplexer = class {
   // adds have been processed. Does not block.
   async ready() {
     const self = this;
-    await this._queue.runTask(function () {
+    this._queue.queueTask(function () {
       if (self._ready())
         throw Error("can't make ObserveMultiplex ready twice!");
 
@@ -146,7 +146,7 @@ ObserveMultiplexer = class {
   }
   async _applyCallback(callbackName, args) {
     const self = this;
-    await this._queue.runTask(async function () {
+    this._queue.queueTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;

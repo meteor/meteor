@@ -49,6 +49,14 @@ var SessionDocumentView = function () {
 
 DDPServer._SessionDocumentView = SessionDocumentView;
 
+DDPServer._getCurrentFence = function () {
+  let currentInvocation = this._CurrentWriteFence.get();
+  if (currentInvocation) {
+    return currentInvocation;
+  }
+  currentInvocation = DDP._CurrentPublicationInvocation.get();
+  return currentInvocation ? currentInvocation.fence : undefined;
+};
 
 _.extend(SessionDocumentView.prototype, {
 
@@ -685,7 +693,7 @@ Object.assign(Session.prototype, {
       self._stopSubscription(msg.id);
     },
 
-    method: function (msg, unblock) {
+    method: async function (msg, unblock) {
       var self = this;
 
       // Reject malformed messages.
@@ -712,20 +720,16 @@ Object.assign(Session.prototype, {
         // example, because the method waits for them) their
         // writes will be included in the fence.
         fence.retire();
-        self.send({
-          msg: 'updated', methods: [msg.id]});
+        self.send({msg: 'updated', methods: [msg.id]});
       });
 
       // Find the handler
       var handler = self.server.method_handlers[msg.method];
       if (!handler) {
-        fence.arm().finally(() => {
-          self.send({
-            msg: 'result',
-            id: msg.id,
-            error: new Meteor.Error(404, `Method '${msg.method}' not found`),
-          });
-        });
+        self.send({
+          msg: 'result', id: msg.id,
+          error: new Meteor.Error(404, `Method '${msg.method}' not found`)});
+        await fence.arm();
         return;
       }
 
@@ -797,32 +801,28 @@ Object.assign(Session.prototype, {
         );
       });
 
-      function finish() {
-        return fence.arm().finally(() => {
-          unblock();
-        });
+      async function finish() {
+        await fence.arm();
+        unblock();
       }
 
       const payload = {
         msg: "result",
         id: msg.id
       };
-
-      promise.then(result => {
-        finish().finally(() => {
-          if (result !== undefined) {
-            payload.result = result;
-          }
-          self.send(payload);
-        });
-      }, (exception) => {
-        finish().finally(() => {
-          payload.error = wrapInternalException(
-            exception,
-            `while invoking method '${msg.method}'`
-          );
-          self.send(payload);
-        });
+      promise.then(async result => {
+        await finish();
+        if (result !== undefined) {
+          payload.result = result;
+        }
+        self.send(payload);
+      }, async (exception) => {
+        await finish();
+        payload.error = wrapInternalException(
+          exception,
+          `while invoking method '${msg.method}'`
+        );
+        self.send(payload);
       });
     }
   },
@@ -1519,9 +1519,7 @@ Server = function (options = {}) {
             return;
           }
 
-          Meteor._runAsync(function() {
-            self._handleConnect(socket, msg);
-          })
+          self._handleConnect(socket, msg);
 
           return;
         }
