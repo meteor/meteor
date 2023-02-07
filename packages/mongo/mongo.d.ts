@@ -16,9 +16,7 @@ export type UnionOmit<T, K extends keyof any> = T extends T
 
 export namespace Mongo {
 
-  type Query<T> = MongoNpmModule.Filter<T>;
-
-  export type Selector<T> = Query<T>;
+  export type Selector<T> = MongoNpmModule.Filter<T>;
 
   type Modifier<T> = MongoNpmModule.UpdateFilter<T>;
 
