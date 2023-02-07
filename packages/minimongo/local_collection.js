@@ -20,7 +20,7 @@ export default class LocalCollection {
     // _id -> document (also containing id)
     this._docs = new LocalCollection._IdMap;
 
-    this._observeQueue = new Meteor._SynchronousQueue();
+    this._observeQueue = new Meteor._AsynchronousQueue();
 
     this.next_qid = 1; // live query id generator
 

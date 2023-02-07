@@ -826,16 +826,14 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._phase !== PHASE.QUERYING)
       throw Error("Phase unexpectedly " + self._phase);
 
-    await Meteor._noYieldsAllowed(async function () {
-      if (self._requeryWhenDoneThisQuery) {
-        self._requeryWhenDoneThisQuery = false;
-        self._pollQuery();
-      } else if (self._needToFetch.empty()) {
-        await self._beSteady();
-      } else {
-        self._fetchModifiedDocuments();
-      }
-    });
+    if (self._requeryWhenDoneThisQuery) {
+      self._requeryWhenDoneThisQuery = false;
+      self._pollQuery();
+    } else if (self._needToFetch.empty()) {
+      await self._beSteady();
+    } else {
+      self._fetchModifiedDocuments();
+    }
   },
 
   _cursorForQuery: function (optionsOverwrite) {

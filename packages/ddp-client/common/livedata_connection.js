@@ -256,8 +256,6 @@ export class Connection {
       }
     };
 
-    self.queue = new Meteor._AsynchronousQueue();
-
     if (Meteor.isServer) {
       self._stream.on(
         'message',
@@ -1835,10 +1833,7 @@ export class Connection {
     }
   }
 
-  onMessage(raw_msg) {
-    this.queue.queueTask(() => this._onMessage(raw_msg), raw_msg);
-  }
-  async _onMessage(raw_msg) {
+  async onMessage(raw_msg) {
     let msg;
     try {
       msg = DDPCommon.parseDDP(raw_msg);
