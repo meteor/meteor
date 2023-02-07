@@ -230,7 +230,7 @@ async function authedRpc(options) {
       suppressErrorMessage: true
     };
     if (await doInteractivePasswordLogin(loginOptions)) {
-      return authedRpc(options);
+      return await authedRpc(options);
     } else {
       return {
         statusCode: 403,
@@ -241,7 +241,7 @@ async function authedRpc(options) {
 
   if (infoResult.statusCode === 404) {
     // Doesn't exist, therefore not protected.
-    return preflight ? { } : deployRpc(rpcOptions);
+    return preflight ? { } : await deployRpc(rpcOptions);
   }
 
   if (infoResult.errorMessage) {
@@ -253,7 +253,7 @@ async function authedRpc(options) {
     // Not protected.
     //
     // XXX should prompt the user to claim the app (only if deploying?)
-    return preflight ? { } : deployRpc(rpcOptions);
+    return preflight ? { } : await deployRpc(rpcOptions);
   }
 
   if (info.protection === "account") {
@@ -281,7 +281,7 @@ async function authedRpc(options) {
         authorized: info.authorized
       };
     } else {
-      return deployRpc(rpcOptions);
+      return await deployRpc(rpcOptions);
     }
   }
 
@@ -409,7 +409,7 @@ async function pollForDeploy(pollingState, versionId, site, deployWithTokenProps
   } = pollingState;
 
   // Do a call to the version-status endpoint for the specified versionId
-  const versionStatusResult = deployRpc({
+  const versionStatusResult = await deployRpc({
     method: 'GET',
     operation: 'version-status',
     site,
