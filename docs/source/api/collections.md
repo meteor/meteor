@@ -637,6 +637,15 @@ the first call is waiting. If strict sequential execution is necessary, use
 When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
 
+{% apibox "Mongo.Cursor#countDocuments" %}
+
+
+Similar to `count`, but returns a `Promise`. For a faster version, see `estimatedDocumentCount`.
+
+{% apibox  "Mongo.Cursor#estimatedDocumentCount" %}
+
+Returns a `Promise` that resolves to the number of documents in the cursor's result set. The count is an estimate and not guaranteed to be exact.
+
 {% apibox "Mongo.Cursor#count" %}
 
 Unlike the other functions, `count` registers a dependency only on the
