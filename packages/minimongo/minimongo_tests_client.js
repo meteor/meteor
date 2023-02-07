@@ -2406,13 +2406,13 @@ Tinytest.add('minimongo - binary search', test => {
   checkSearchBackward([2, 2, 2, 2, 2, 2, 2], 3, 0, 'Backward: Highly degenerate array, upper');
 });
 
-Tinytest.add('minimongo - modify', test => {
-  const modifyWithQuery = (doc, query, mod, expected) => {
+Tinytest.addAsync('minimongo - modify', async test => {
+  const modifyWithQuery = async (doc, query, mod, expected) => {
     const coll = new LocalCollection;
-    coll.insert(doc);
+    await coll.insertAsync(doc);
     // The query is relevant for 'a.$.b'.
-    coll.update(query, mod);
-    const actual = coll.findOne();
+    await coll.updateAsync(query, mod);
+    const actual = await coll.findOneAsync();
 
     if (!expected._id) {
       delete actual._id;  // added by insert
@@ -2424,26 +2424,26 @@ Tinytest.add('minimongo - modify', test => {
       test.equal(actual, expected, EJSON.stringify({input: doc, mod}));
     }
   };
-  const modify = (doc, mod, expected) => {
-    modifyWithQuery(doc, {}, mod, expected);
+  const modify = async (doc, mod, expected) => {
+    await modifyWithQuery(doc, {}, mod, expected);
   };
-  const exceptionWithQuery = (doc, query, mod) => {
+  const exceptionWithQuery = async (doc, query, mod) => {
     const coll = new LocalCollection;
-    coll.insert(doc);
-    test.throws(() => {
-      coll.update(query, mod);
+    await coll.insertAsync(doc);
+    await test.throwsAsync(async () => {
+      await coll.updateAsync(query, mod);
     });
   };
-  const exception = (doc, mod) => {
-    exceptionWithQuery(doc, {}, mod);
+  const exception = async (doc, mod) => {
+    await exceptionWithQuery(doc, {}, mod);
   };
 
-  const upsert = (query, mod, expected) => {
+  const upsert = async (query, mod, expected) => {
     const coll = new LocalCollection;
 
-    const result = coll.upsert(query, mod);
+    const result = await coll.upsertAsync(query, mod);
 
-    const actual = coll.findOne();
+    const actual = await coll.findOneAsync();
 
     if (expected._id) {
       test.equal(result.insertedId, expected._id);
@@ -2454,13 +2454,13 @@ Tinytest.add('minimongo - modify', test => {
     test.equal(actual, expected);
   };
 
-  const upsertUpdate = (initialDoc, query, mod, expected) => {
+  const upsertUpdate = async (initialDoc, query, mod, expected) => {
     const collection = new LocalCollection;
 
-    collection.insert(initialDoc);
+    await collection.insertAsync(initialDoc);
 
-    const result = collection.upsert(query, mod);
-    const actual = collection.findOne();
+    const result = await collection.upsertAsync(query, mod);
+    const actual = await collection.findOneAsync();
 
     if (!expected._id) {
       delete actual._id;
@@ -2469,153 +2469,153 @@ Tinytest.add('minimongo - modify', test => {
     test.equal(actual, expected);
   };
 
-  const upsertException = (query, mod) => {
+  const upsertException = async (query, mod) => {
     const coll = new LocalCollection;
-    test.throws(() => {
-      coll.upsert(query, mod);
+    await test.throwsAsync(async () => {
+      await coll.upsertAsync(query, mod);
     });
   };
 
   // document replacement
-  modify({}, {}, {});
-  modify({a: 12}, {}, {}); // tested against mongodb
-  modify({a: 12}, {a: 13}, {a: 13});
-  modify({a: 12, b: 99}, {a: 13}, {a: 13});
-  exception({a: 12}, {a: 13, $set: {b: 13}});
-  exception({a: 12}, {$set: {b: 13}, a: 13});
+  await modify({}, {}, {});
+  await modify({a: 12}, {}, {}); // tested against mongodb
+  await modify({a: 12}, {a: 13}, {a: 13});
+  await modify({a: 12, b: 99}, {a: 13}, {a: 13});
+  await exception({a: 12}, {a: 13, $set: {b: 13}});
+  await exception({a: 12}, {$set: {b: 13}, a: 13});
 
-  exception({a: 12}, {$a: 13}); // invalid operator
-  exception({a: 12}, {b: {$a: 13}});
-  exception({a: 12}, {b: {'a.b': 13}});
-  exception({a: 12}, {b: {'\0a': 13}});
+  await exception({a: 12}, {$a: 13}); // invalid operator
+  await exception({a: 12}, {b: {$a: 13}});
+  await exception({a: 12}, {b: {'a.b': 13}});
+  await exception({a: 12}, {b: {'\0a': 13}});
 
   // keys
-  modify({}, {$set: {a: 12}}, {a: 12});
-  modify({}, {$set: {'a.b': 12}}, {a: {b: 12}});
-  modify({}, {$set: {'a.b.c': 12}}, {a: {b: {c: 12}}});
-  modify({a: {d: 99}}, {$set: {'a.b.c': 12}}, {a: {d: 99, b: {c: 12}}});
-  modify({}, {$set: {'a.b.3.c': 12}}, {a: {b: {3: {c: 12}}}});
-  modify({a: {b: []}}, {$set: {'a.b.3.c': 12}}, {
+  await modify({}, {$set: {a: 12}}, {a: 12});
+  await modify({}, {$set: {'a.b': 12}}, {a: {b: 12}});
+  await modify({}, {$set: {'a.b.c': 12}}, {a: {b: {c: 12}}});
+  await modify({a: {d: 99}}, {$set: {'a.b.c': 12}}, {a: {d: 99, b: {c: 12}}});
+  await modify({}, {$set: {'a.b.3.c': 12}}, {a: {b: {3: {c: 12}}}});
+  await modify({a: {b: []}}, {$set: {'a.b.3.c': 12}}, {
     a: {b: [null, null, null, {c: 12}]}});
-  exception({a: [null, null, null]}, {$set: {'a.1.b': 12}});
-  exception({a: [null, 1, null]}, {$set: {'a.1.b': 12}});
-  exception({a: [null, 'x', null]}, {$set: {'a.1.b': 12}});
-  exception({a: [null, [], null]}, {$set: {'a.1.b': 12}});
-  modify({a: [null, null, null]}, {$set: {'a.3.b': 12}}, {
+  await exception({a: [null, null, null]}, {$set: {'a.1.b': 12}});
+  await exception({a: [null, 1, null]}, {$set: {'a.1.b': 12}});
+  await exception({a: [null, 'x', null]}, {$set: {'a.1.b': 12}});
+  await exception({a: [null, [], null]}, {$set: {'a.1.b': 12}});
+  await modify({a: [null, null, null]}, {$set: {'a.3.b': 12}}, {
     a: [null, null, null, {b: 12}]});
-  exception({a: []}, {$set: {'a.b': 12}});
-  exception({a: 12}, {$set: {'a.b': 99}}); // tested on mongo
-  exception({a: 'x'}, {$set: {'a.b': 99}});
-  exception({a: true}, {$set: {'a.b': 99}});
-  exception({a: null}, {$set: {'a.b': 99}});
-  modify({a: {}}, {$set: {'a.3': 12}}, {a: {3: 12}});
-  modify({a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
-  exception({}, {$set: {'': 12}}); // tested on mongo
-  exception({}, {$set: {'.': 12}}); // tested on mongo
-  exception({}, {$set: {'a.': 12}}); // tested on mongo
-  exception({}, {$set: {'. ': 12}}); // tested on mongo
-  exception({}, {$inc: {'... ': 12}}); // tested on mongo
-  exception({}, {$set: {'a..b': 12}}); // tested on mongo
-  modify({a: [1, 2, 3]}, {$set: {'a.01': 99}}, {a: [1, 99, 3]});
-  modify({a: [1, {a: 98}, 3]}, {$set: {'a.01.b': 99}}, {a: [1, {a: 98, b: 99}, 3]});
-  modify({}, {$set: {'2.a.b': 12}}, {2: {a: {b: 12}}}); // tested
-  exception({x: []}, {$set: {'x.2..a': 99}});
-  modify({x: [null, null]}, {$set: {'x.2.a': 1}}, {x: [null, null, {a: 1}]});
-  exception({x: [null, null]}, {$set: {'x.1.a': 1}});
+  await exception({a: []}, {$set: {'a.b': 12}});
+  await exception({a: 12}, {$set: {'a.b': 99}}); // tested on mongo
+  await exception({a: 'x'}, {$set: {'a.b': 99}});
+  await exception({a: true}, {$set: {'a.b': 99}});
+  await exception({a: null}, {$set: {'a.b': 99}});
+  await modify({a: {}}, {$set: {'a.3': 12}}, {a: {3: 12}});
+  await modify({a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
+  await exception({}, {$set: {'': 12}}); // tested on mongo
+  await exception({}, {$set: {'.': 12}}); // tested on mongo
+  await exception({}, {$set: {'a.': 12}}); // tested on mongo
+  await exception({}, {$set: {'. ': 12}}); // tested on mongo
+  await exception({}, {$inc: {'... ': 12}}); // tested on mongo
+  await exception({}, {$set: {'a..b': 12}}); // tested on mongo
+  await modify({a: [1, 2, 3]}, {$set: {'a.01': 99}}, {a: [1, 99, 3]});
+  await modify({a: [1, {a: 98}, 3]}, {$set: {'a.01.b': 99}}, {a: [1, {a: 98, b: 99}, 3]});
+  await modify({}, {$set: {'2.a.b': 12}}, {2: {a: {b: 12}}}); // tested
+  await exception({x: []}, {$set: {'x.2..a': 99}});
+  await modify({x: [null, null]}, {$set: {'x.2.a': 1}}, {x: [null, null, {a: 1}]});
+  await exception({x: [null, null]}, {$set: {'x.1.a': 1}});
 
   // a.$.b
-  modifyWithQuery({a: [{x: 2}, {x: 4}]}, {'a.x': 4}, {$set: {'a.$.z': 9}},
+  await modifyWithQuery({a: [{x: 2}, {x: 4}]}, {'a.x': 4}, {$set: {'a.$.z': 9}},
     {a: [{x: 2}, {x: 4, z: 9}]});
-  exception({a: [{x: 2}, {x: 4}]}, {$set: {'a.$.z': 9}});
-  exceptionWithQuery({a: [{x: 2}, {x: 4}], b: 5}, {b: 5}, {$set: {'a.$.z': 9}});
+  await exception({a: [{x: 2}, {x: 4}]}, {$set: {'a.$.z': 9}});
+  await exceptionWithQuery({a: [{x: 2}, {x: 4}], b: 5}, {b: 5}, {$set: {'a.$.z': 9}});
   // can't have two $
-  exceptionWithQuery({a: [{x: [2]}]}, {'a.x': 2}, {$set: {'a.$.x.$': 9}});
-  modifyWithQuery({a: [5, 6, 7]}, {a: 6}, {$set: {'a.$': 9}}, {a: [5, 9, 7]});
-  modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 10},
+  await exceptionWithQuery({a: [{x: [2]}]}, {'a.x': 2}, {$set: {'a.$.x.$': 9}});
+  await modifyWithQuery({a: [5, 6, 7]}, {a: 6}, {$set: {'a.$': 9}}, {a: [5, 9, 7]});
+  await modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 10},
     {$unset: {'a.$.b': 1}}, {a: [{}, {b: {c: 11}}]});
-  modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 11},
+  await modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 11},
     {$unset: {'a.$.b': 1}},
     {a: [{b: [{c: 9}, {c: 10}]}, {}]});
-  modifyWithQuery({a: [1]}, {'a.0': 1}, {$set: {'a.$': 5}}, {a: [5]});
-  modifyWithQuery({a: [9]}, {a: {$mod: [2, 1]}}, {$set: {'a.$': 5}}, {a: [5]});
+  await modifyWithQuery({a: [1]}, {'a.0': 1}, {$set: {'a.$': 5}}, {a: [5]});
+  await modifyWithQuery({a: [9]}, {a: {$mod: [2, 1]}}, {$set: {'a.$': 5}}, {a: [5]});
   // Negatives don't set '$'.
-  exceptionWithQuery({a: [1]}, {$not: {a: 2}}, {$set: {'a.$': 5}});
-  exceptionWithQuery({a: [1]}, {'a.0': {$ne: 2}}, {$set: {'a.$': 5}});
+  await exceptionWithQuery({a: [1]}, {$not: {a: 2}}, {$set: {'a.$': 5}});
+  await exceptionWithQuery({a: [1]}, {'a.0': {$ne: 2}}, {$set: {'a.$': 5}});
   // One $or clause works.
-  modifyWithQuery({a: [{x: 2}, {x: 4}]},
+  await modifyWithQuery({a: [{x: 2}, {x: 4}]},
     {$or: [{'a.x': 4}]}, {$set: {'a.$.z': 9}},
     {a: [{x: 2}, {x: 4, z: 9}]});
   // More $or clauses throw.
-  exceptionWithQuery({a: [{x: 2}, {x: 4}]},
+  await exceptionWithQuery({a: [{x: 2}, {x: 4}]},
     {$or: [{'a.x': 4}, {'a.x': 4}]},
     {$set: {'a.$.z': 9}});
   // $and uses the last one.
-  modifyWithQuery({a: [{x: 1}, {x: 3}]},
+  await modifyWithQuery({a: [{x: 1}, {x: 3}]},
     {$and: [{'a.x': 1}, {'a.x': 3}]},
     {$set: {'a.$.x': 5}},
     {a: [{x: 1}, {x: 5}]});
-  modifyWithQuery({a: [{x: 1}, {x: 3}]},
+  await modifyWithQuery({a: [{x: 1}, {x: 3}]},
     {$and: [{'a.x': 3}, {'a.x': 1}]},
     {$set: {'a.$.x': 5}},
     {a: [{x: 5}, {x: 3}]});
   // Same goes for the implicit AND of a document selector.
-  modifyWithQuery({a: [{x: 1}, {y: 3}]},
+  await modifyWithQuery({a: [{x: 1}, {y: 3}]},
     {'a.x': 1, 'a.y': 3},
     {$set: {'a.$.z': 5}},
     {a: [{x: 1}, {y: 3, z: 5}]});
-  modifyWithQuery({a: [{x: 1}, {y: 1}, {x: 1, y: 1}]},
+  await modifyWithQuery({a: [{x: 1}, {y: 1}, {x: 1, y: 1}]},
     {a: {$elemMatch: {x: 1, y: 1}}},
     {$set: {'a.$.x': 2}},
     {a: [{x: 1}, {y: 1}, {x: 2, y: 1}]});
-  modifyWithQuery({a: [{b: [{x: 1}, {y: 1}, {x: 1, y: 1}]}]},
+  await modifyWithQuery({a: [{b: [{x: 1}, {y: 1}, {x: 1, y: 1}]}]},
     {'a.b': {$elemMatch: {x: 1, y: 1}}},
     {$set: {'a.$.b': 3}},
     {a: [{b: 3}]});
   // with $near, make sure it does not find the closest one (#3599)
-  modifyWithQuery({a: []},
+  await modifyWithQuery({a: []},
     {'a.b': {$near: [5, 5]}},
     {$set: {'a.$.b': 'k'}},
     {a: []});
-  modifyWithQuery({a: [{b: [ [3, 3], [4, 4] ]}]},
+  await modifyWithQuery({a: [{b: [ [3, 3], [4, 4] ]}]},
     {'a.b': {$near: [5, 5]}},
     {$set: {'a.$.b': 'k'}},
     {a: [{b: 'k'}]});
-  modifyWithQuery({a: [{b: [1, 1]},
+  await modifyWithQuery({a: [{b: [1, 1]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [9, 9]}]},
   {'a.b': {$near: [5, 5]}},
   {$set: {'a.$.b': 'k'}},
   {a: [{b: 'k'}, {b: [[3, 3], [4, 4]]}, {b: [9, 9]}]});
-  modifyWithQuery({a: [{b: [1, 1]},
+  await modifyWithQuery({a: [{b: [1, 1]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [9, 9]}]},
   {'a.b': {$near: [9, 9], $maxDistance: 1}},
   {$set: {'a.$.b': 'k'}},
   {a: [{b: 'k'}, {b: [[3, 3], [4, 4]]}, {b: [9, 9]}]});
-  modifyWithQuery({a: [{b: [1, 1]},
+  await modifyWithQuery({a: [{b: [1, 1]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [9, 9]}]},
   {'a.b': {$near: [9, 9]}},
   {$set: {'a.$.b': 'k'}},
   {a: [{b: 'k'}, {b: [[3, 3], [4, 4]]}, {b: [9, 9]}]});
-  modifyWithQuery({a: [{b: [9, 9]},
+  await modifyWithQuery({a: [{b: [9, 9]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [9, 9]}]},
   {'a.b': {$near: [9, 9]}},
   {$set: {'a.$.b': 'k'}},
   {a: [{b: 'k'}, {b: [[3, 3], [4, 4]]}, {b: [9, 9]}]});
-  modifyWithQuery({a: [{b: [4, 3]},
+  await modifyWithQuery({a: [{b: [4, 3]},
     {c: [1, 1]}]},
   {'a.c': {$near: [1, 1]}},
   {$set: {'a.$.c': 'k'}},
   {a: [{c: 'k', b: [4, 3]}, {c: [1, 1]}]});
-  modifyWithQuery({a: [{c: [9, 9]},
+  await modifyWithQuery({a: [{c: [9, 9]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [1, 1]}]},
   {'a.b': {$near: [1, 1]}},
   {$set: {'a.$.b': 'k'}},
   {a: [{c: [9, 9], b: 'k'}, {b: [ [3, 3], [4, 4]]}, {b: [1, 1]}]});
-  modifyWithQuery({a: [{c: [9, 9], b: [4, 3]},
+  await modifyWithQuery({a: [{c: [9, 9], b: [4, 3]},
     {b: [ [3, 3], [4, 4] ]},
     {b: [1, 1]}]},
   {'a.b': {$near: [1, 1]}},
@@ -2623,151 +2623,151 @@ Tinytest.add('minimongo - modify', test => {
   {a: [{c: [9, 9], b: 'k'}, {b: [ [3, 3], [4, 4]]}, {b: [1, 1]}]});
 
   // $inc
-  modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
-  modify({a: 1, b: 2}, {$inc: {c: 10}}, {a: 1, b: 2, c: 10});
-  exception({a: 1}, {$inc: {a: '10'}});
-  exception({a: 1}, {$inc: {a: true}});
-  exception({a: 1}, {$inc: {a: [10]}});
-  exception({a: '1'}, {$inc: {a: 10}});
-  exception({a: [1]}, {$inc: {a: 10}});
-  exception({a: {}}, {$inc: {a: 10}});
-  exception({a: false}, {$inc: {a: 10}});
-  exception({a: null}, {$inc: {a: 10}});
-  modify({a: [1, 2]}, {$inc: {'a.1': 10}}, {a: [1, 12]});
-  modify({a: [1, 2]}, {$inc: {'a.2': 10}}, {a: [1, 2, 10]});
-  modify({a: [1, 2]}, {$inc: {'a.3': 10}}, {a: [1, 2, null, 10]});
-  modify({a: {b: 2}}, {$inc: {'a.b': 10}}, {a: {b: 12}});
-  modify({a: {b: 2}}, {$inc: {'a.c': 10}}, {a: {b: 2, c: 10}});
-  exception({}, {$inc: {_id: 1}});
+  await modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
+  await modify({a: 1, b: 2}, {$inc: {c: 10}}, {a: 1, b: 2, c: 10});
+  await exception({a: 1}, {$inc: {a: '10'}});
+  await exception({a: 1}, {$inc: {a: true}});
+  await exception({a: 1}, {$inc: {a: [10]}});
+  await exception({a: '1'}, {$inc: {a: 10}});
+  await exception({a: [1]}, {$inc: {a: 10}});
+  await exception({a: {}}, {$inc: {a: 10}});
+  await exception({a: false}, {$inc: {a: 10}});
+  await exception({a: null}, {$inc: {a: 10}});
+  await modify({a: [1, 2]}, {$inc: {'a.1': 10}}, {a: [1, 12]});
+  await modify({a: [1, 2]}, {$inc: {'a.2': 10}}, {a: [1, 2, 10]});
+  await modify({a: [1, 2]}, {$inc: {'a.3': 10}}, {a: [1, 2, null, 10]});
+  await modify({a: {b: 2}}, {$inc: {'a.b': 10}}, {a: {b: 12}});
+  await modify({a: {b: 2}}, {$inc: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  await exception({}, {$inc: {_id: 1}});
 
   // $currentDate
-  modify({}, {$currentDate: {a: true}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
-  modify({}, {$currentDate: {a: {$type: 'date'}}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
-  exception({}, {$currentDate: {a: false}});
-  exception({}, {$currentDate: {a: {}}});
-  exception({}, {$currentDate: {a: {$type: 'timestamp'}}});
+  await modify({}, {$currentDate: {a: true}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
+  await modify({}, {$currentDate: {a: {$type: 'date'}}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
+  await exception({}, {$currentDate: {a: false}});
+  await exception({}, {$currentDate: {a: {}}});
+  await exception({}, {$currentDate: {a: {$type: 'timestamp'}}});
 
   // $min
-  modify({a: 1, b: 2}, {$min: {b: 1}}, {a: 1, b: 1});
-  modify({a: 1, b: 2}, {$min: {b: 3}}, {a: 1, b: 2});
-  modify({a: 1, b: 2}, {$min: {c: 10}}, {a: 1, b: 2, c: 10});
-  exception({a: 1}, {$min: {a: '10'}});
-  exception({a: 1}, {$min: {a: true}});
-  exception({a: 1}, {$min: {a: [10]}});
-  exception({a: '1'}, {$min: {a: 10}});
-  exception({a: [1]}, {$min: {a: 10}});
-  exception({a: {}}, {$min: {a: 10}});
-  exception({a: false}, {$min: {a: 10}});
-  exception({a: null}, {$min: {a: 10}});
-  modify({a: [1, 2]}, {$min: {'a.1': 1}}, {a: [1, 1]});
-  modify({a: [1, 2]}, {$min: {'a.1': 3}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$min: {'a.2': 10}}, {a: [1, 2, 10]});
-  modify({a: [1, 2]}, {$min: {'a.3': 10}}, {a: [1, 2, null, 10]});
-  modify({a: {b: 2}}, {$min: {'a.b': 1}}, {a: {b: 1}});
-  modify({a: {b: 2}}, {$min: {'a.c': 10}}, {a: {b: 2, c: 10}});
-  exception({}, {$min: {_id: 1}});
+  await modify({a: 1, b: 2}, {$min: {b: 1}}, {a: 1, b: 1});
+  await modify({a: 1, b: 2}, {$min: {b: 3}}, {a: 1, b: 2});
+  await modify({a: 1, b: 2}, {$min: {c: 10}}, {a: 1, b: 2, c: 10});
+  await exception({a: 1}, {$min: {a: '10'}});
+  await exception({a: 1}, {$min: {a: true}});
+  await exception({a: 1}, {$min: {a: [10]}});
+  await exception({a: '1'}, {$min: {a: 10}});
+  await exception({a: [1]}, {$min: {a: 10}});
+  await exception({a: {}}, {$min: {a: 10}});
+  await exception({a: false}, {$min: {a: 10}});
+  await exception({a: null}, {$min: {a: 10}});
+  await modify({a: [1, 2]}, {$min: {'a.1': 1}}, {a: [1, 1]});
+  await modify({a: [1, 2]}, {$min: {'a.1': 3}}, {a: [1, 2]});
+  await modify({a: [1, 2]}, {$min: {'a.2': 10}}, {a: [1, 2, 10]});
+  await modify({a: [1, 2]}, {$min: {'a.3': 10}}, {a: [1, 2, null, 10]});
+  await modify({a: {b: 2}}, {$min: {'a.b': 1}}, {a: {b: 1}});
+  await modify({a: {b: 2}}, {$min: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  await exception({}, {$min: {_id: 1}});
 
   //$mul
-  modify({a: 1, b: 1}, {$mul: {b: 2}}, {a: 1, b: 2});
-  modify({a: 1, b: 1}, {$mul: {c: 2}}, {a: 1, b: 1, c: 0});
-  modify({a: 1, b: 2}, {$mul: {b: 2}}, {a: 1, b: 4});
-  modify({a: 1, b: 2}, {$mul: {b: 10}}, {a: 1, b: 20});
-  exception({a: 1}, {$mul: {a: '10'}});
-  exception({a: 1}, {$mul: {a: true}});
-  exception({a: 1}, {$mul: {a: [10]}});
-  exception({a: '1'}, {$mul: {a: 10}});
-  exception({a: [1]}, {$mul: {a: 10}});
-  exception({a: {}}, {$mul: {a: 10}});
-  exception({a: false}, {$mul: {a: 10}});
-  exception({a: null}, {$mul: {a: 10}});
-  exception({}, {$mul: {_id: 1}});
-  modify({a: [1, 2]}, {$mul: {'a.0': 2}}, {a: [2, 2]});
-  modify({a: [1, 2]}, {$mul: {'a.1': 3}}, {a: [1, 6]});
-  modify({a: [1, 2]}, {$mul: {'a.1': 10}}, {a: [1, 20]});
-  modify({a: [1, 2]}, {$mul: {'a.2': 10}}, {a: [1, 2, 0]});
-  modify({a: {b: 2}}, {$mul: {'a.b': 1}}, {a: {b: 2}});
-  modify({a: {b: 2}}, {$mul: {'a.c': 10}}, {a: {b: 2, c: 0}});
+  await modify({a: 1, b: 1}, {$mul: {b: 2}}, {a: 1, b: 2});
+  await modify({a: 1, b: 1}, {$mul: {c: 2}}, {a: 1, b: 1, c: 0});
+  await modify({a: 1, b: 2}, {$mul: {b: 2}}, {a: 1, b: 4});
+  await modify({a: 1, b: 2}, {$mul: {b: 10}}, {a: 1, b: 20});
+  await exception({a: 1}, {$mul: {a: '10'}});
+  await exception({a: 1}, {$mul: {a: true}});
+  await exception({a: 1}, {$mul: {a: [10]}});
+  await exception({a: '1'}, {$mul: {a: 10}});
+  await exception({a: [1]}, {$mul: {a: 10}});
+  await exception({a: {}}, {$mul: {a: 10}});
+  await exception({a: false}, {$mul: {a: 10}});
+  await exception({a: null}, {$mul: {a: 10}});
+  await exception({}, {$mul: {_id: 1}});
+  await modify({a: [1, 2]}, {$mul: {'a.0': 2}}, {a: [2, 2]});
+  await modify({a: [1, 2]}, {$mul: {'a.1': 3}}, {a: [1, 6]});
+  await modify({a: [1, 2]}, {$mul: {'a.1': 10}}, {a: [1, 20]});
+  await modify({a: [1, 2]}, {$mul: {'a.2': 10}}, {a: [1, 2, 0]});
+  await modify({a: {b: 2}}, {$mul: {'a.b': 1}}, {a: {b: 2}});
+  await modify({a: {b: 2}}, {$mul: {'a.c': 10}}, {a: {b: 2, c: 0}});
 
   // $max
-  modify({a: 1, b: 2}, {$max: {b: 1}}, {a: 1, b: 2});
-  modify({a: 1, b: 2}, {$max: {b: 3}}, {a: 1, b: 3});
-  modify({a: 1, b: 2}, {$max: {c: 10}}, {a: 1, b: 2, c: 10});
-  exception({a: 1}, {$max: {a: '10'}});
-  exception({a: 1}, {$max: {a: true}});
-  exception({a: 1}, {$max: {a: [10]}});
-  exception({a: '1'}, {$max: {a: 10}});
-  exception({a: [1]}, {$max: {a: 10}});
-  exception({a: {}}, {$max: {a: 10}});
-  exception({a: false}, {$max: {a: 10}});
-  exception({a: null}, {$max: {a: 10}});
-  modify({a: [1, 2]}, {$max: {'a.1': 3}}, {a: [1, 3]});
-  modify({a: [1, 2]}, {$max: {'a.1': 1}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$max: {'a.2': 10}}, {a: [1, 2, 10]});
-  modify({a: [1, 2]}, {$max: {'a.3': 10}}, {a: [1, 2, null, 10]});
-  modify({a: {b: 2}}, {$max: {'a.b': 3}}, {a: {b: 3}});
-  modify({a: {b: 2}}, {$max: {'a.c': 10}}, {a: {b: 2, c: 10}});
-  exception({}, {$max: {_id: 1}});
+  await modify({a: 1, b: 2}, {$max: {b: 1}}, {a: 1, b: 2});
+  await modify({a: 1, b: 2}, {$max: {b: 3}}, {a: 1, b: 3});
+  await modify({a: 1, b: 2}, {$max: {c: 10}}, {a: 1, b: 2, c: 10});
+  await exception({a: 1}, {$max: {a: '10'}});
+  await exception({a: 1}, {$max: {a: true}});
+  await exception({a: 1}, {$max: {a: [10]}});
+  await exception({a: '1'}, {$max: {a: 10}});
+  await exception({a: [1]}, {$max: {a: 10}});
+  await exception({a: {}}, {$max: {a: 10}});
+  await exception({a: false}, {$max: {a: 10}});
+  await exception({a: null}, {$max: {a: 10}});
+  await modify({a: [1, 2]}, {$max: {'a.1': 3}}, {a: [1, 3]});
+  await modify({a: [1, 2]}, {$max: {'a.1': 1}}, {a: [1, 2]});
+  await modify({a: [1, 2]}, {$max: {'a.2': 10}}, {a: [1, 2, 10]});
+  await modify({a: [1, 2]}, {$max: {'a.3': 10}}, {a: [1, 2, null, 10]});
+  await modify({a: {b: 2}}, {$max: {'a.b': 3}}, {a: {b: 3}});
+  await modify({a: {b: 2}}, {$max: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  await exception({}, {$max: {_id: 1}});
 
   // $set
-  modify({a: 1, b: 2}, {$set: {a: 10}}, {a: 10, b: 2});
-  modify({a: 1, b: 2}, {$set: {c: 10}}, {a: 1, b: 2, c: 10});
-  modify({a: 1, b: 2}, {$set: {a: {c: 10}}}, {a: {c: 10}, b: 2});
-  modify({a: [1, 2], b: 2}, {$set: {a: [3, 4]}}, {a: [3, 4], b: 2});
-  modify({a: [1, 2, 3], b: 2}, {$set: {'a.1': [3, 4]}},
+  await modify({a: 1, b: 2}, {$set: {a: 10}}, {a: 10, b: 2});
+  await modify({a: 1, b: 2}, {$set: {c: 10}}, {a: 1, b: 2, c: 10});
+  await modify({a: 1, b: 2}, {$set: {a: {c: 10}}}, {a: {c: 10}, b: 2});
+  await modify({a: [1, 2], b: 2}, {$set: {a: [3, 4]}}, {a: [3, 4], b: 2});
+  await modify({a: [1, 2, 3], b: 2}, {$set: {'a.1': [3, 4]}},
     {a: [1, [3, 4], 3], b: 2});
-  modify({a: [1], b: 2}, {$set: {'a.1': 9}}, {a: [1, 9], b: 2});
-  modify({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
-  modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
-  modify({}, {$set: {'x._id': 4}}, {x: {_id: 4}});
+  await modify({a: [1], b: 2}, {$set: {'a.1': 9}}, {a: [1, 9], b: 2});
+  await modify({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
+  await modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
+  await modify({}, {$set: {'x._id': 4}}, {x: {_id: 4}});
 
   // Changing _id is disallowed
-  exception({}, {$set: {_id: 4}});
-  exception({_id: 1}, {$set: {_id: 4}});
-  modify({_id: 4}, {$set: {_id: 4}}, {_id: 4});  // not-changing _id is not bad
+  await exception({}, {$set: {_id: 4}});
+  await exception({_id: 1}, {$set: {_id: 4}});
+  await modify({_id: 4}, {$set: {_id: 4}}, {_id: 4});  // not-changing _id is not bad
   // restricted field names
-  exception({a: {}}, {$set: {a: {$a: 1}}});
-  exception({ a: {} }, { $set: { a: { c:
+  await exception({a: {}}, {$set: {a: {$a: 1}}});
+  await exception({ a: {} }, { $set: { a: { c:
               [{ b: { $a: 1 } }] } } });
-  exception({a: {}}, {$set: {a: {'\0a': 1}}});
-  exception({a: {}}, {$set: {a: {'a.b': 1}}});
+  await exception({a: {}}, {$set: {a: {'\0a': 1}}});
+  await exception({a: {}}, {$set: {a: {'a.b': 1}}});
 
   // $unset
-  modify({}, {$unset: {a: 1}}, {});
-  modify({a: 1}, {$unset: {a: 1}}, {});
-  modify({a: 1, b: 2}, {$unset: {a: 1}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: 0}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: false}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: null}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: [1]}}, {b: 2});
-  modify({a: 1, b: 2}, {$unset: {a: {}}}, {b: 2});
-  modify({a: {b: 2, c: 3}}, {$unset: {'a.b': 1}}, {a: {c: 3}});
-  modify({a: [1, 2, 3]}, {$unset: {'a.1': 1}}, {a: [1, null, 3]}); // tested
-  modify({a: [1, 2, 3]}, {$unset: {'a.2': 1}}, {a: [1, 2, null]}); // tested
-  modify({a: [1, 2, 3]}, {$unset: {'a.x': 1}}, {a: [1, 2, 3]}); // tested
-  modify({a: {b: 1}}, {$unset: {'a.b.c.d': 1}}, {a: {b: 1}});
-  modify({a: {b: 1}}, {$unset: {'a.x.c.d': 1}}, {a: {b: 1}});
-  modify({a: {b: {c: 1}}}, {$unset: {'a.b.c': 1}}, {a: {b: {}}});
-  exception({}, {$unset: {_id: 1}});
+  await modify({}, {$unset: {a: 1}}, {});
+  await modify({a: 1}, {$unset: {a: 1}}, {});
+  await modify({a: 1, b: 2}, {$unset: {a: 1}}, {b: 2});
+  await modify({a: 1, b: 2}, {$unset: {a: 0}}, {b: 2});
+  await modify({a: 1, b: 2}, {$unset: {a: false}}, {b: 2});
+  await modify({a: 1, b: 2}, {$unset: {a: null}}, {b: 2});
+  await modify({a: 1, b: 2}, {$unset: {a: [1]}}, {b: 2});
+  await modify({a: 1, b: 2}, {$unset: {a: {}}}, {b: 2});
+  await modify({a: {b: 2, c: 3}}, {$unset: {'a.b': 1}}, {a: {c: 3}});
+  await modify({a: [1, 2, 3]}, {$unset: {'a.1': 1}}, {a: [1, null, 3]}); // tested
+  await modify({a: [1, 2, 3]}, {$unset: {'a.2': 1}}, {a: [1, 2, null]}); // tested
+  await modify({a: [1, 2, 3]}, {$unset: {'a.x': 1}}, {a: [1, 2, 3]}); // tested
+  await modify({a: {b: 1}}, {$unset: {'a.b.c.d': 1}}, {a: {b: 1}});
+  await modify({a: {b: 1}}, {$unset: {'a.x.c.d': 1}}, {a: {b: 1}});
+  await modify({a: {b: {c: 1}}}, {$unset: {'a.b.c': 1}}, {a: {b: {}}});
+  await exception({}, {$unset: {_id: 1}});
 
   // $push
-  modify({}, {$push: {a: 1}}, {a: [1]});
-  modify({a: []}, {$push: {a: 1}}, {a: [1]});
-  modify({a: [1]}, {$push: {a: 2}}, {a: [1, 2]});
-  exception({a: true}, {$push: {a: 1}});
-  modify({a: [1]}, {$push: {a: [2]}}, {a: [1, [2]]});
-  modify({a: []}, {$push: {'a.1': 99}}, {a: [null, [99]]}); // tested
-  modify({a: {}}, {$push: {'a.x': 99}}, {a: {x: [99]}});
-  modify({}, {$push: {a: {$each: [1, 2, 3]}}},
+  await modify({}, {$push: {a: 1}}, {a: [1]});
+  await modify({a: []}, {$push: {a: 1}}, {a: [1]});
+  await modify({a: [1]}, {$push: {a: 2}}, {a: [1, 2]});
+  await exception({a: true}, {$push: {a: 1}});
+  await modify({a: [1]}, {$push: {a: [2]}}, {a: [1, [2]]});
+  await modify({a: []}, {$push: {'a.1': 99}}, {a: [null, [99]]}); // tested
+  await modify({a: {}}, {$push: {'a.x': 99}}, {a: {x: [99]}});
+  await modify({}, {$push: {a: {$each: [1, 2, 3]}}},
     {a: [1, 2, 3]});
-  modify({a: []}, {$push: {a: {$each: [1, 2, 3]}}},
+  await modify({a: []}, {$push: {a: {$each: [1, 2, 3]}}},
     {a: [1, 2, 3]});
-  modify({a: [true]}, {$push: {a: {$each: [1, 2, 3]}}},
+  await modify({a: [true]}, {$push: {a: {$each: [1, 2, 3]}}},
     {a: [true, 1, 2, 3]});
-  modify({a: [true]}, {$push: {a: {$each: [1, 2, 3], $slice: -2}}},
+  await modify({a: [true]}, {$push: {a: {$each: [1, 2, 3], $slice: -2}}},
     {a: [2, 3]});
-  modify({a: [false, true]}, {$push: {a: {$each: [1], $slice: -2}}},
+  await modify({a: [false, true]}, {$push: {a: {$each: [1], $slice: -2}}},
     {a: [true, 1]});
-  modify(
+  await modify(
     {a: [{x: 3}, {x: 1}]},
     {$push: {a: {
       $each: [{x: 4}, {x: 2}],
@@ -2775,204 +2775,204 @@ Tinytest.add('minimongo - modify', test => {
       $sort: {x: 1},
     }}},
     {a: [{x: 3}, {x: 4}]});
-  modify({}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
-  modify({a: [1, 2]}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
+  await modify({}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
+  await modify({a: [1, 2]}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
   // $push with $position modifier
   // No negative number for $position
-  exception({a: []}, {$push: {a: {$each: [0], $position: -1}}});
-  modify({a: [1, 2]}, {$push: {a: {$each: [0], $position: 0}}},
+  await exception({a: []}, {$push: {a: {$each: [0], $position: -1}}});
+  await modify({a: [1, 2]}, {$push: {a: {$each: [0], $position: 0}}},
     {a: [0, 1, 2]});
-  modify({a: [1, 2]}, {$push: {a: {$each: [-1, 0], $position: 0}}},
+  await modify({a: [1, 2]}, {$push: {a: {$each: [-1, 0], $position: 0}}},
     {a: [-1, 0, 1, 2]});
-  modify({a: [1, 3]}, {$push: {a: {$each: [2], $position: 1}}}, {a: [1, 2, 3]});
-  modify({a: [1, 4]}, {$push: {a: {$each: [2, 3], $position: 1}}},
+  await modify({a: [1, 3]}, {$push: {a: {$each: [2], $position: 1}}}, {a: [1, 2, 3]});
+  await modify({a: [1, 4]}, {$push: {a: {$each: [2, 3], $position: 1}}},
     {a: [1, 2, 3, 4]});
-  modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 3}}}, {a: [1, 2, 3]});
-  modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 99}}},
+  await modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 3}}}, {a: [1, 2, 3]});
+  await modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 99}}},
     {a: [1, 2, 3]});
-  modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 99, $slice: -2}}},
+  await modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 99, $slice: -2}}},
     {a: [2, 3]});
-  modify(
+  await modify(
     {a: [{x: 1}, {x: 2}]},
     {$push: {a: {$each: [{x: 3}], $position: 0, $sort: {x: 1}, $slice: -3}}},
     {a: [{x: 1}, {x: 2}, {x: 3}]}
   );
-  modify(
+  await modify(
     {a: [{x: 1}, {x: 2}]},
     {$push: {a: {$each: [{x: 3}], $position: 0, $sort: {x: 1}, $slice: 0}}},
     {a: []}
   );
   // restricted field names
-  exception({}, {$push: {$a: 1}});
-  exception({}, {$push: {'\0a': 1}});
-  exception({}, {$push: {a: {$a: 1}}});
-  exception({}, {$push: {a: {$each: [{$a: 1}]}}});
-  exception({}, {$push: {a: {$each: [{'a.b': 1}]}}});
-  exception({}, {$push: {a: {$each: [{'\0a': 1}]}}});
-  modify({}, {$push: {a: {$each: [{'': 1}]}}}, {a: [ { '': 1 } ]});
-  modify({}, {$push: {a: {$each: [{' ': 1}]}}}, {a: [ { ' ': 1 } ]});
-  exception({}, {$push: {a: {$each: [{'.': 1}]}}});
+  await exception({}, {$push: {$a: 1}});
+  await exception({}, {$push: {'\0a': 1}});
+  await exception({}, {$push: {a: {$a: 1}}});
+  await exception({}, {$push: {a: {$each: [{$a: 1}]}}});
+  await exception({}, {$push: {a: {$each: [{'a.b': 1}]}}});
+  await exception({}, {$push: {a: {$each: [{'\0a': 1}]}}});
+  await modify({}, {$push: {a: {$each: [{'': 1}]}}}, {a: [ { '': 1 } ]});
+  await modify({}, {$push: {a: {$each: [{' ': 1}]}}}, {a: [ { ' ': 1 } ]});
+  await exception({}, {$push: {a: {$each: [{'.': 1}]}}});
 
   // #issue 5167
   // $push $slice with positive numbers
-  modify({}, {$push: {a: {$each: [], $slice: 5}}}, {a: []});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [], $slice: 1}}}, {a: [1]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 1}}}, {a: [1]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 2}}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 4}}}, {a: [1, 2, 3, 4]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 5}}}, {a: [1, 2, 3, 4, 5]});
-  modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 10}}}, {a: [1, 2, 3, 4, 5]});
+  await modify({}, {$push: {a: {$each: [], $slice: 5}}}, {a: []});
+  await modify({a: [1, 2, 3]}, {$push: {a: {$each: [], $slice: 1}}}, {a: [1]});
+  await modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 1}}}, {a: [1]});
+  await modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 2}}}, {a: [1, 2]});
+  await modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 4}}}, {a: [1, 2, 3, 4]});
+  await modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 5}}}, {a: [1, 2, 3, 4, 5]});
+  await modify({a: [1, 2, 3]}, {$push: {a: {$each: [4, 5], $slice: 10}}}, {a: [1, 2, 3, 4, 5]});
 
 
   // $pushAll
-  modify({}, {$pushAll: {a: [1]}}, {a: [1]});
-  modify({a: []}, {$pushAll: {a: [1]}}, {a: [1]});
-  modify({a: [1]}, {$pushAll: {a: [2]}}, {a: [1, 2]});
-  modify({}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
-  modify({a: []}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
-  modify({a: [1]}, {$pushAll: {a: [2, 3]}}, {a: [1, 2, 3]});
-  modify({}, {$pushAll: {a: []}}, {a: []});
-  modify({a: []}, {$pushAll: {a: []}}, {a: []});
-  modify({a: [1]}, {$pushAll: {a: []}}, {a: [1]});
-  exception({a: true}, {$pushAll: {a: [1]}});
-  exception({a: []}, {$pushAll: {a: 1}});
-  modify({a: []}, {$pushAll: {'a.1': [99]}}, {a: [null, [99]]});
-  modify({a: []}, {$pushAll: {'a.1': []}}, {a: [null, []]});
-  modify({a: {}}, {$pushAll: {'a.x': [99]}}, {a: {x: [99]}});
-  modify({a: {}}, {$pushAll: {'a.x': []}}, {a: {x: []}});
-  exception({a: [1]}, {$pushAll: {a: [{$a: 1}]}});
-  exception({a: [1]}, {$pushAll: {a: [{'\0a': 1}]}});
-  exception({a: [1]}, {$pushAll: {a: [{'a.b': 1}]}});
+  await modify({}, {$pushAll: {a: [1]}}, {a: [1]});
+  await modify({a: []}, {$pushAll: {a: [1]}}, {a: [1]});
+  await modify({a: [1]}, {$pushAll: {a: [2]}}, {a: [1, 2]});
+  await modify({}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
+  await modify({a: []}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
+  await modify({a: [1]}, {$pushAll: {a: [2, 3]}}, {a: [1, 2, 3]});
+  await modify({}, {$pushAll: {a: []}}, {a: []});
+  await modify({a: []}, {$pushAll: {a: []}}, {a: []});
+  await modify({a: [1]}, {$pushAll: {a: []}}, {a: [1]});
+  await exception({a: true}, {$pushAll: {a: [1]}});
+  await exception({a: []}, {$pushAll: {a: 1}});
+  await modify({a: []}, {$pushAll: {'a.1': [99]}}, {a: [null, [99]]});
+  await modify({a: []}, {$pushAll: {'a.1': []}}, {a: [null, []]});
+  await modify({a: {}}, {$pushAll: {'a.x': [99]}}, {a: {x: [99]}});
+  await modify({a: {}}, {$pushAll: {'a.x': []}}, {a: {x: []}});
+  await exception({a: [1]}, {$pushAll: {a: [{$a: 1}]}});
+  await exception({a: [1]}, {$pushAll: {a: [{'\0a': 1}]}});
+  await exception({a: [1]}, {$pushAll: {a: [{'a.b': 1}]}});
 
   // $addToSet
-  modify({}, {$addToSet: {a: 1}}, {a: [1]});
-  modify({a: []}, {$addToSet: {a: 1}}, {a: [1]});
-  modify({a: [1]}, {$addToSet: {a: 2}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$addToSet: {a: 1}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$addToSet: {a: 2}}, {a: [1, 2]});
-  modify({a: [1, 2]}, {$addToSet: {a: 3}}, {a: [1, 2, 3]});
-  exception({a: true}, {$addToSet: {a: 1}});
-  modify({a: [1]}, {$addToSet: {a: [2]}}, {a: [1, [2]]});
-  modify({}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
-  modify({a: [{x: 1}]}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
-  modify({a: [{x: 1}]}, {$addToSet: {a: {x: 2}}}, {a: [{x: 1}, {x: 2}]});
-  modify({a: [{x: 1, y: 2}]}, {$addToSet: {a: {x: 1, y: 2}}},
+  await modify({}, {$addToSet: {a: 1}}, {a: [1]});
+  await modify({a: []}, {$addToSet: {a: 1}}, {a: [1]});
+  await modify({a: [1]}, {$addToSet: {a: 2}}, {a: [1, 2]});
+  await modify({a: [1, 2]}, {$addToSet: {a: 1}}, {a: [1, 2]});
+  await modify({a: [1, 2]}, {$addToSet: {a: 2}}, {a: [1, 2]});
+  await modify({a: [1, 2]}, {$addToSet: {a: 3}}, {a: [1, 2, 3]});
+  await exception({a: true}, {$addToSet: {a: 1}});
+  await modify({a: [1]}, {$addToSet: {a: [2]}}, {a: [1, [2]]});
+  await modify({}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
+  await modify({a: [{x: 1}]}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
+  await modify({a: [{x: 1}]}, {$addToSet: {a: {x: 2}}}, {a: [{x: 1}, {x: 2}]});
+  await modify({a: [{x: 1, y: 2}]}, {$addToSet: {a: {x: 1, y: 2}}},
     {a: [{x: 1, y: 2}]});
-  modify({a: [{x: 1, y: 2}]}, {$addToSet: {a: {y: 2, x: 1}}},
+  await modify({a: [{x: 1, y: 2}]}, {$addToSet: {a: {y: 2, x: 1}}},
     {a: [{x: 1, y: 2}, {y: 2, x: 1}]});
-  modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4]}}}, {a: [1, 2, 3, 4]});
-  modify({}, {$addToSet: {a: {$each: []}}}, {a: []});
-  modify({}, {$addToSet: {a: {$each: [1]}}}, {a: [1]});
-  modify({a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
-  modify({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
+  await modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4]}}}, {a: [1, 2, 3, 4]});
+  await modify({}, {$addToSet: {a: {$each: []}}}, {a: []});
+  await modify({}, {$addToSet: {a: {$each: [1]}}}, {a: [1]});
+  await modify({a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
+  await modify({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
 
   // invalid field names
-  exception({}, {$addToSet: {a: {$b: 1}}});
-  exception({}, {$addToSet: {a: {'a.b': 1}}});
-  exception({}, {$addToSet: {a: {'a.': 1}}});
-  exception({}, {$addToSet: {a: {'\u0000a': 1}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {$a: 1}]}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {'\0a': 1}]}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{$a: 1}]]}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {b: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
+  await exception({}, {$addToSet: {a: {$b: 1}}});
+  await exception({}, {$addToSet: {a: {'a.b': 1}}});
+  await exception({}, {$addToSet: {a: {'a.': 1}}});
+  await exception({}, {$addToSet: {a: {'\u0000a': 1}}});
+  await exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {$a: 1}]}}});
+  await exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {'\0a': 1}]}}});
+  await exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{$a: 1}]]}}});
+  await exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
+  await exception({a: [1, 2]}, {$addToSet: {a: {b: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
   // $each is first element and thus an operator
-  modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}}, {a: [ 1, 2, 3, 4 ]});
+  await modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}}, {a: [ 1, 2, 3, 4 ]});
   // this should fail because $each is now a field name (not first in object) and thus invalid field name with $
-  exception({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}});
+  await exception({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}});
 
   // $pop
-  modify({}, {$pop: {a: 1}}, {}); // tested
-  modify({}, {$pop: {a: -1}}, {}); // tested
-  modify({a: []}, {$pop: {a: 1}}, {a: []});
-  modify({a: []}, {$pop: {a: -1}}, {a: []});
-  modify({a: [1, 2, 3]}, {$pop: {a: 1}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: 10}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: 0.001}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: 0}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: 'stuff'}}, {a: [1, 2]});
-  modify({a: [1, 2, 3]}, {$pop: {a: -1}}, {a: [2, 3]});
-  modify({a: [1, 2, 3]}, {$pop: {a: -10}}, {a: [2, 3]});
-  modify({a: [1, 2, 3]}, {$pop: {a: -0.001}}, {a: [2, 3]});
-  exception({a: true}, {$pop: {a: 1}});
-  exception({a: true}, {$pop: {a: -1}});
-  modify({a: []}, {$pop: {'a.1': 1}}, {a: []}); // tested
-  modify({a: [1, [2, 3], 4]}, {$pop: {'a.1': 1}}, {a: [1, [2], 4]});
-  modify({a: {}}, {$pop: {'a.x': 1}}, {a: {}}); // tested
-  modify({a: {x: [2, 3]}}, {$pop: {'a.x': 1}}, {a: {x: [2]}});
+  await modify({}, {$pop: {a: 1}}, {}); // tested
+  await modify({}, {$pop: {a: -1}}, {}); // tested
+  await modify({a: []}, {$pop: {a: 1}}, {a: []});
+  await modify({a: []}, {$pop: {a: -1}}, {a: []});
+  await modify({a: [1, 2, 3]}, {$pop: {a: 1}}, {a: [1, 2]});
+  await modify({a: [1, 2, 3]}, {$pop: {a: 10}}, {a: [1, 2]});
+  await modify({a: [1, 2, 3]}, {$pop: {a: 0.001}}, {a: [1, 2]});
+  await modify({a: [1, 2, 3]}, {$pop: {a: 0}}, {a: [1, 2]});
+  await modify({a: [1, 2, 3]}, {$pop: {a: 'stuff'}}, {a: [1, 2]});
+  await modify({a: [1, 2, 3]}, {$pop: {a: -1}}, {a: [2, 3]});
+  await modify({a: [1, 2, 3]}, {$pop: {a: -10}}, {a: [2, 3]});
+  await modify({a: [1, 2, 3]}, {$pop: {a: -0.001}}, {a: [2, 3]});
+  await exception({a: true}, {$pop: {a: 1}});
+  await exception({a: true}, {$pop: {a: -1}});
+  await modify({a: []}, {$pop: {'a.1': 1}}, {a: []}); // tested
+  await modify({a: [1, [2, 3], 4]}, {$pop: {'a.1': 1}}, {a: [1, [2], 4]});
+  await modify({a: {}}, {$pop: {'a.x': 1}}, {a: {}}); // tested
+  await modify({a: {x: [2, 3]}}, {$pop: {'a.x': 1}}, {a: {x: [2]}});
 
   // $pull
-  modify({}, {$pull: {a: 1}}, {});
-  modify({}, {$pull: {'a.x': 1}}, {});
-  modify({a: {}}, {$pull: {'a.x': 1}}, {a: {}});
-  exception({a: true}, {$pull: {a: 1}});
-  modify({a: [2, 1, 2]}, {$pull: {a: 1}}, {a: [2, 2]});
-  modify({a: [2, 1, 2]}, {$pull: {a: 2}}, {a: [1]});
-  modify({a: [2, 1, 2]}, {$pull: {a: 3}}, {a: [2, 1, 2]});
-  modify({a: [1, null, 2, null]}, {$pull: {a: null}}, {a: [1, 2]});
-  modify({a: []}, {$pull: {a: 3}}, {a: []});
-  modify({a: [[2], [2, 1], [3]]}, {$pull: {a: [2, 1]}},
+  await modify({}, {$pull: {a: 1}}, {});
+  await modify({}, {$pull: {'a.x': 1}}, {});
+  await modify({a: {}}, {$pull: {'a.x': 1}}, {a: {}});
+  await exception({a: true}, {$pull: {a: 1}});
+  await modify({a: [2, 1, 2]}, {$pull: {a: 1}}, {a: [2, 2]});
+  await modify({a: [2, 1, 2]}, {$pull: {a: 2}}, {a: [1]});
+  await modify({a: [2, 1, 2]}, {$pull: {a: 3}}, {a: [2, 1, 2]});
+  await modify({a: [1, null, 2, null]}, {$pull: {a: null}}, {a: [1, 2]});
+  await modify({a: []}, {$pull: {a: 3}}, {a: []});
+  await modify({a: [[2], [2, 1], [3]]}, {$pull: {a: [2, 1]}},
     {a: [[2], [3]]}); // tested
-  modify({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {b: 1}}},
+  await modify({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {b: 1}}},
     {a: [{b: 2, c: 2}]});
-  modify({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {c: 2}}},
+  await modify({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {c: 2}}},
     {a: []});
   // XXX implement this functionality!
   // probably same refactoring as $elemMatch?
-  // modify({a: [1, 2, 3, 4]}, {$pull: {$gt: 2}}, {a: [1,2]}); fails!
+  // await modify({a: [1, 2, 3, 4]}, {$pull: {$gt: 2}}, {a: [1,2]}); fails!
 
   // $pullAll
-  modify({}, {$pullAll: {a: [1]}}, {});
-  modify({a: [1, 2, 3]}, {$pullAll: {a: []}}, {a: [1, 2, 3]});
-  modify({a: [1, 2, 3]}, {$pullAll: {a: [2]}}, {a: [1, 3]});
-  modify({a: [1, 2, 3]}, {$pullAll: {a: [2, 1]}}, {a: [3]});
-  modify({a: [1, 2, 3]}, {$pullAll: {a: [1, 2]}}, {a: [3]});
-  modify({}, {$pullAll: {'a.b.c': [2]}}, {});
-  exception({a: true}, {$pullAll: {a: [1]}});
-  exception({a: [1, 2, 3]}, {$pullAll: {a: 1}});
-  modify({x: [{a: 1}, {a: 1, b: 2}]}, {$pullAll: {x: [{a: 1}]}},
+  await modify({}, {$pullAll: {a: [1]}}, {});
+  await modify({a: [1, 2, 3]}, {$pullAll: {a: []}}, {a: [1, 2, 3]});
+  await modify({a: [1, 2, 3]}, {$pullAll: {a: [2]}}, {a: [1, 3]});
+  await modify({a: [1, 2, 3]}, {$pullAll: {a: [2, 1]}}, {a: [3]});
+  await modify({a: [1, 2, 3]}, {$pullAll: {a: [1, 2]}}, {a: [3]});
+  await modify({}, {$pullAll: {'a.b.c': [2]}}, {});
+  await exception({a: true}, {$pullAll: {a: [1]}});
+  await exception({a: [1, 2, 3]}, {$pullAll: {a: 1}});
+  await modify({x: [{a: 1}, {a: 1, b: 2}]}, {$pullAll: {x: [{a: 1}]}},
     {x: [{a: 1, b: 2}]});
 
   // $rename
-  modify({}, {$rename: {a: 'b'}}, {});
-  modify({a: [12]}, {$rename: {a: 'b'}}, {b: [12]});
-  modify({a: {b: 12}}, {$rename: {a: 'c'}}, {c: {b: 12}});
-  modify({a: {b: 12}}, {$rename: {'a.b': 'a.c'}}, {a: {c: 12}});
-  modify({a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
-  modify({a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
-  modify({a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
-  modify({a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
+  await modify({}, {$rename: {a: 'b'}}, {});
+  await modify({a: [12]}, {$rename: {a: 'b'}}, {b: [12]});
+  await modify({a: {b: 12}}, {$rename: {a: 'c'}}, {c: {b: 12}});
+  await modify({a: {b: 12}}, {$rename: {'a.b': 'a.c'}}, {a: {c: 12}});
+  await modify({a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
+  await modify({a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
+  await modify({a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
+  await modify({a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
     {a: {}, q: {2: {r: 12}}});
-  exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
-  exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
+  await exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
+  await exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
   // These strange MongoDB behaviors throw.
-  // modify({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}},
+  // await modify({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}},
   //        {a: {b: 12}, x: []}); // tested
-  // modify({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}},
+  // await modify({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}},
   //        {a: {b: 12}, x: []}); // tested
-  exception({}, {$rename: {a: 'a'}});
-  exception({}, {$rename: {'a.b': 'a.b'}});
-  modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
-  exception({a: [12]}, {$rename: {a: '$b'}});
-  exception({a: [12]}, {$rename: {a: '\0a'}});
+  await exception({}, {$rename: {a: 'a'}});
+  await exception({}, {$rename: {'a.b': 'a.b'}});
+  await modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
+  await exception({a: [12]}, {$rename: {a: '$b'}});
+  await exception({a: [12]}, {$rename: {a: '\0a'}});
 
   // $setOnInsert
-  modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
-  upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
-  upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
-  upsert({'a.b': 10}, {$setOnInsert: {a: {b: 10, c: 12}}}, {a: {b: 10, c: 12}});
-  upsert({'a.b': 10}, {$setOnInsert: {c: 12}}, {a: {b: 10}, c: 12});
-  upsert({_id: 'test'}, {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
-  upsert('test', {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
-  upsertException({a: 0}, {$setOnInsert: {$a: 12}});
-  upsertException({a: 0}, {$setOnInsert: {'\0a': 12}});
-  upsert({a: 0}, {$setOnInsert: {b: {a: 1}}}, {a: 0, b: {a: 1}});
-  upsertException({a: 0}, {$setOnInsert: {b: {$a: 1}}});
-  upsertException({a: 0}, {$setOnInsert: {b: {'a.b': 1}}});
-  upsertException({a: 0}, {$setOnInsert: {b: {'\0a': 1}}});
+  await modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
+  await upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
+  await upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
+  await upsert({'a.b': 10}, {$setOnInsert: {a: {b: 10, c: 12}}}, {a: {b: 10, c: 12}});
+  await upsert({'a.b': 10}, {$setOnInsert: {c: 12}}, {a: {b: 10}, c: 12});
+  await upsert({_id: 'test'}, {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
+  await upsert('test', {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
+  await upsertException({a: 0}, {$setOnInsert: {$a: 12}});
+  await upsertException({a: 0}, {$setOnInsert: {'\0a': 12}});
+  await upsert({a: 0}, {$setOnInsert: {b: {a: 1}}}, {a: 0, b: {a: 1}});
+  await upsertException({a: 0}, {$setOnInsert: {b: {$a: 1}}});
+  await upsertException({a: 0}, {$setOnInsert: {b: {'a.b': 1}}});
+  await upsertException({a: 0}, {$setOnInsert: {b: {'\0a': 1}}});
 
   // Test for https://github.com/meteor/meteor/issues/8775.
-  upsert(
+  await upsert(
     { a: { $exists: true }},
     { $setOnInsert: { a: 123 }},
     { a: 123 }
@@ -2980,28 +2980,28 @@ Tinytest.add('minimongo - modify', test => {
 
   // Tests for https://github.com/meteor/meteor/issues/8794.
   const testObjectId = new MongoID.ObjectID();
-  upsert(
+  await upsert(
     { _id: testObjectId },
     { $setOnInsert: { a: 123 } },
     { _id: testObjectId, a: 123 },
   );
-  upsert(
+  await upsert(
     { someOtherId: testObjectId },
     { $setOnInsert: { a: 123 } },
     { someOtherId: testObjectId, a: 123 },
   );
-  upsert(
+  await upsert(
     { a: { $eq: testObjectId } },
     { $setOnInsert: { a: 123 } },
     { a: 123 },
   );
   const testDate = new Date('2017-01-01');
-  upsert(
+  await upsert(
     { someDate: testDate },
     { $setOnInsert: { a: 123 } },
     { someDate: testDate, a: 123 },
   );
-  upsert(
+  await upsert(
     {
       a: Object.create(null, {
         $exists: {
@@ -3014,84 +3014,84 @@ Tinytest.add('minimongo - modify', test => {
     { $setOnInsert: { a: 123 } },
     { a: 123 },
   );
-  upsert(
+  await upsert(
     { foo: { $exists: true, $type: 2 }},
     { $setOnInsert: { bar: 'baz' } },
     { bar: 'baz' }
   );
-  upsert(
+  await upsert(
     { foo: {} },
     { $setOnInsert: { bar: 'baz' } },
     { foo: {}, bar: 'baz' }
   );
 
   // Tests for https://github.com/meteor/meteor/issues/8806
-  upsert({"a": {"b": undefined, "c": null}}, {"$set": {"c": "foo"}}, {"a": {"b": undefined, "c": null}, "c": "foo"})
-  upsert({"a": {"$eq": "bar" }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert({"a": {"b": undefined, "c": null}}, {"$set": {"c": "foo"}}, {"a": {"b": undefined, "c": null}, "c": "foo"})
+  await upsert({"a": {"$eq": "bar" }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
   // $all with 1 statement is similar to $eq
-  upsert({"a": {"$all": ["bar"] }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
-  upsert({"a": {"$eq": "bar" }, "b": "baz"}, {"$set": {"c": "foo"}}, {"a": "bar", "b": "baz", "c": "foo"})
-   upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
-  upsert({"a": {"$exists": true, "$eq": "foo"}}, {"$set": {"c": "foo"}}, {"a": "foo", "c": "foo"})
-  upsert({"a": {"$gt": 3, "$eq": 2}}, {"$set": {"c": "foo"}}, {"a": 2, "c": "foo"})
+  await upsert({"a": {"$all": ["bar"] }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert({"a": {"$eq": "bar" }, "b": "baz"}, {"$set": {"c": "foo"}}, {"a": "bar", "b": "baz", "c": "foo"})
+   await upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert({"a": {"$exists": true, "$eq": "foo"}}, {"$set": {"c": "foo"}}, {"a": "foo", "c": "foo"})
+  await upsert({"a": {"$gt": 3, "$eq": 2}}, {"$set": {"c": "foo"}}, {"a": 2, "c": "foo"})
    // $and
-  upsert({"$and": [{"a": {"$eq": "bar"}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
-  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
-  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert({"$and": [{"a": {"$eq": "bar"}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
    // $or with one statement is handled similar to $and
-  upsert({"$or": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  await upsert({"$or": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
    // $or with multiple statements is ignored
-  upsert({"$or": [{"a": "bar"}, {"b": "baz"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert({"$or": [{"a": "bar"}, {"b": "baz"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
    // Negative logical operators are ignored
-  upsert({"$nor": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert({"$nor": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
    // Filter out empty objects after filtering out operators
-  upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
    // But leave actual empty objects
-  upsert({"a": {}}, {"$set": {"c": "foo"}}, {"a": {}, "c": "foo"})
+  await upsert({"a": {}}, {"$set": {"c": "foo"}}, {"a": {}, "c": "foo"})
     // Also filter out shorthand regexp notation
-  upsert({"a": /a/}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  await upsert({"a": /a/}, {"$set": {"c": "foo"}}, {"c": "foo"})
    // Test nested fields
-  upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
+  await upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
    // Test for https://github.com/meteor/meteor/issues/5294
-  upsert({"a": {"$ne": 444}}, {"$push": {"a": 123}}, {"a": [123]})
+  await upsert({"a": {"$ne": 444}}, {"$push": {"a": 123}}, {"a": [123]})
    // Mod takes precedence over query
-  upsert({"a": "foo"}, {"a": "bar"}, {"a": "bar"})
-  upsert({"a": "foo"}, {"$set":{"a": "bar"}}, {"a": "bar"})
+  await upsert({"a": "foo"}, {"a": "bar"}, {"a": "bar"})
+  await upsert({"a": "foo"}, {"$set":{"a": "bar"}}, {"a": "bar"})
    // Replacement can take _id from query
-  upsert({"_id": "foo", "foo": "bar"}, {"bar": "foo"}, {"_id": "foo", "bar": "foo"})
+  await upsert({"_id": "foo", "foo": "bar"}, {"bar": "foo"}, {"_id": "foo", "bar": "foo"})
    // Replacement update keeps _id
-  upsertUpdate({"_id": "foo", "bar": "baz"}, {"_id":"foo"}, {"bar": "crow"}, {"_id": "foo", "bar": "crow"});
+  await upsertUpdate({"_id": "foo", "bar": "baz"}, {"_id":"foo"}, {"bar": "crow"}, {"_id": "foo", "bar": "crow"});
   // Test for https://github.com/meteor/meteor/issues/9167
-  upsert({key: 123, keyName: '321'}, {$set: {name: 'Todo'}}, {key: 123, keyName: '321', name: 'Todo'});
-  upsertException({key: 123, "key.name": '321'}, {$set:{}});
+  await upsert({key: 123, keyName: '321'}, {$set: {name: 'Todo'}}, {key: 123, keyName: '321', name: 'Todo'});
+  await upsertException({key: 123, "key.name": '321'}, {$set:{}});
 
   // Nested fields don't work with literal objects
-  upsertException({"a": {}, "a.b": "foo"}, {});
+  await upsertException({"a": {}, "a.b": "foo"}, {});
    // You can't have an ambiguous ID
-  upsertException({"_id":"foo"}, {"_id":"bar"});
-  upsertException({"_id":"foo"}, {"$set":{"_id":"bar"}});
+  await upsertException({"_id":"foo"}, {"_id":"bar"});
+  await upsertException({"_id":"foo"}, {"$set":{"_id":"bar"}});
    // You can't set the same field twice
-  upsertException({"$and": [{"a": "foo"}, {"a": "foo"}]}, {}); //not even with same value
-  upsertException({"a": {"$all": ["foo", "bar"]}}, {});
-  upsertException({"$and": [{"a": {"$eq": "foo"}}, {"$or": [{"a": {"$all": ["bar"]}}]}]}, {});
+  await upsertException({"$and": [{"a": "foo"}, {"a": "foo"}]}, {}); //not even with same value
+  await upsertException({"a": {"$all": ["foo", "bar"]}}, {});
+  await upsertException({"$and": [{"a": {"$eq": "foo"}}, {"$or": [{"a": {"$all": ["bar"]}}]}]}, {});
    // You can't have nested dotted fields
-  upsertException({"a": {"foo.bar": "baz"}}, {});
+  await upsertException({"a": {"foo.bar": "baz"}}, {});
    // You can't have dollar-prefixed fields above the first level (logical operators not counted)
-  upsertException({"a": {"a": {"$eq": "foo"}}}, {});
-  upsertException({"a": {"a": {"$exists": true}}}, {});
+  await upsertException({"a": {"a": {"$eq": "foo"}}}, {});
+  await upsertException({"a": {"a": {"$exists": true}}}, {});
    // You can't mix operators with other fields
-  upsertException({"a": {"$eq": "bar", "b": "foo"}}, {})
-  upsertException({"a": {"b": "foo", "$eq": "bar"}}, {})
+  await upsertException({"a": {"$eq": "bar", "b": "foo"}}, {})
+  await upsertException({"a": {"b": "foo", "$eq": "bar"}}, {})
 
   const mongoIdForUpsert = new MongoID.ObjectID('44915733af80844fa1cef07a');
-  upsert({_id: mongoIdForUpsert}, {$setOnInsert: {a: 123}}, {a: 123})
+  await upsert({_id: mongoIdForUpsert}, {$setOnInsert: {a: 123}}, {a: 123})
 
   // Test for https://github.com/meteor/meteor/issues/7758
-  upsert({n_id: mongoIdForUpsert, c_n: "bar"},
+  await upsert({n_id: mongoIdForUpsert, c_n: "bar"},
     {$set: { t_t_o: "foo"}},
     {n_id: mongoIdForUpsert, t_t_o: "foo", c_n: "bar"});
 
-  exception({}, {$set: {_id: 'bad'}});
+  await exception({}, {$set: {_id: 'bad'}});
 
   // $bit
   // unimplemented
