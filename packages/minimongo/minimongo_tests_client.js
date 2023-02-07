@@ -3360,43 +3360,43 @@ Tinytest.add('minimongo - objectid', test => {
   test.equal(randomOid, new MongoID.ObjectID(randomOid.valueOf()));
 });
 
-Tinytest.add('minimongo - pause', test => {
+Tinytest.addAsync('minimongo - pause', async test => {
   const operations = [];
   const cbs = log_callbacks(operations);
 
   const c = new LocalCollection();
-  const h = c.find({}).observe(cbs);
+  const h = await c.find({}).observe(cbs);
 
   // remove and add cancel out.
-  c.insert({_id: 1, a: 1});
+  await c.insertAsync({_id: 1, a: 1});
   test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
 
   c.pauseObservers();
 
-  c.remove({_id: 1});
+  await c.removeAsync({_id: 1});
   test.length(operations, 0);
-  c.insert({_id: 1, a: 1});
+  await c.insertAsync({_id: 1, a: 1});
   test.length(operations, 0);
 
-  c.resumeObservers();
+  c.resumeObserversClient();
   test.length(operations, 0);
 
 
   // two modifications become one
   c.pauseObservers();
 
-  c.update({_id: 1}, {a: 2});
-  c.update({_id: 1}, {a: 3});
+  await c.updateAsync({_id: 1}, {a: 2});
+  await c.updateAsync({_id: 1}, {a: 3});
 
-  c.resumeObservers();
+  c.resumeObserversClient();
   test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 1}]);
   test.length(operations, 0);
 
   // test special case for remove({})
   c.pauseObservers();
-  test.equal(c.remove({}), 1);
+  test.equal(await c.removeAsync({}), 1);
   test.length(operations, 0);
-  c.resumeObservers();
+  c.resumeObserversClient();
   test.equal(operations.shift(), ['removed', 1, 0, {a: 3}]);
   test.length(operations, 0);
 
