@@ -3550,15 +3550,15 @@ Tinytest.add('minimongo - reactive count with cached cursor', test => {
   test.equal(secondAutorunCount, 3);
 });
 
-Tinytest.add('minimongo - $near operator tests', test => {
+Tinytest.addAsync('minimongo - $near operator tests', async test => {
   let coll = new LocalCollection();
-  coll.insert({ rest: { loc: [2, 3] } });
-  coll.insert({ rest: { loc: [-3, 3] } });
-  coll.insert({ rest: { loc: [5, 5] } });
+  await coll.insertAsync({ rest: { loc: [2, 3] } });
+  await coll.insertAsync({ rest: { loc: [-3, 3] } });
+  await coll.insertAsync({ rest: { loc: [5, 5] } });
 
   test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
   test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
-  const points = coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 6 } }).fetch();
+  const points = await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 6 } }).fetchAsync();
   points.forEach((point, i, points) => {
     test.isTrue(!i || distance([0, 0], point.rest.loc) >= distance([0, 0], points[i - 1].rest.loc));
   });
@@ -3578,19 +3578,22 @@ Tinytest.add('minimongo - $near operator tests', test => {
     { category: 'OTHER OFFENSES', descript: 'POSSESSION OF BURGLARY TOOLS', address: '900 Block of MINNA ST', location: { type: 'Point', coordinates: [  -122.415386041221,  37.7747879734156 ] } },
   ];
 
-  data.forEach((x, i) => { coll.insert(Object.assign(x, { x: i })); });
+  let i = 0;
+  for (const x of data) {
+    await coll.insertAsync(Object.assign(x, { x: i++ }));
+  }
 
-  const close15 = coll.find({ location: { $near: {
+  const close15 = await coll.find({ location: { $near: {
     $geometry: { type: 'Point',
       coordinates: [-122.4154282, 37.7746115] },
-    $maxDistance: 15 } } }).fetch();
+    $maxDistance: 15 } } }).fetchAsync();
   test.length(close15, 1);
   test.equal(close15[0].descript, 'GRAND THEFT OF PROPERTY');
 
-  const close20 = coll.find({ location: { $near: {
+  const close20 = await coll.find({ location: { $near: {
     $geometry: { type: 'Point',
       coordinates: [-122.4154282, 37.7746115] },
-    $maxDistance: 20 } } }).fetch();
+    $maxDistance: 20 } } }).fetchAsync();
   test.length(close20, 4);
   test.equal(close20[0].descript, 'GRAND THEFT OF PROPERTY');
   test.equal(close20[1].descript, 'PETTY THEFT FROM LOCKED AUTO');
@@ -3645,7 +3648,7 @@ Tinytest.add('minimongo - $near operator tests', test => {
 
   // array tests
   coll = new LocalCollection();
-  coll.insert({
+  await coll.insertAsync({
     _id: 'x',
     k: 9,
     a: [
@@ -3653,34 +3656,44 @@ Tinytest.add('minimongo - $near operator tests', test => {
         [100, 100],
         [1,  1]]},
       {b: [150,  150]}]});
-  coll.insert({
+  await coll.insertAsync({
     _id: 'y',
     k: 9,
     a: {b: [5, 5]}});
-  const testNear = (near, md, expected) => {
+  const testNear = async (near, md, expected) => {
     test.equal(
-      coll.find({'a.b': {$near: near, $maxDistance: md}}).fetch().map(doc => doc._id),
+      (await coll.find({'a.b': {$near: near, $maxDistance: md}}).fetchAsync()).map(doc => doc._id),
       expected);
   };
-  testNear([149, 149], 4, ['x']);
-  testNear([149, 149], 1000, ['x', 'y']);
+  await testNear([149, 149], 4, ['x']);
+  await testNear([149, 149], 1000, ['x', 'y']);
   // It's important that we figure out that 'x' is closer than 'y' to [2,2] even
   // though the first within-1000 point in 'x' (ie, [100,100]) is farther than
   // 'y'.
-  testNear([2, 2], 1000, ['x', 'y']);
+  await testNear([2, 2], 1000, ['x', 'y']);
 
   // issue #3599
   // Ensure that distance is not used as a tie-breaker for sort.
   test.equal(
-    coll.find({'a.b': {$near: [1, 1]}}, {sort: {k: 1}}).fetch().map(doc => doc._id),
-    ['x', 'y']);
+    (
+      await coll
+        .find({ 'a.b': { $near: [1, 1] } }, { sort: { k: 1 } })
+        .fetchAsync()
+    ).map(doc => doc._id),
+    ['x', 'y']
+  );
   test.equal(
-    coll.find({'a.b': {$near: [5, 5]}}, {sort: {k: 1}}).fetch().map(doc => doc._id),
-    ['x', 'y']);
+    (
+      await coll
+        .find({ 'a.b': { $near: [5, 5] } }, { sort: { k: 1 } })
+        .fetchAsync()
+    ).map(doc => doc._id),
+    ['x', 'y']
+  );
 
   const operations = [];
   const cbs = log_callbacks(operations);
-  const handle = coll.find({'a.b': {$near: [7, 7]}}).observe(cbs);
+  const handle = await coll.find({'a.b': {$near: [7, 7]}}).observe(cbs);
 
   test.length(operations, 2);
   test.equal(operations.shift(), ['added', {k: 9, a: {b: [5, 5]}}, 0, null]);
@@ -3688,7 +3701,7 @@ Tinytest.add('minimongo - $near operator tests', test => {
     ['added', {k: 9, a: [{b: [[100, 100], [1, 1]]}, {b: [150, 150]}]},
       1, null]);
   // This needs to be inserted in the MIDDLE of the two existing ones.
-  coll.insert({a: {b: [3, 3]}});
+  await coll.insertAsync({a: {b: [3, 3]}});
   test.length(operations, 1);
   test.equal(operations.shift(), ['added', {a: {b: [3, 3]}}, 1, 'x']);
 
