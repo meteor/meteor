@@ -96,7 +96,11 @@ export default class LocalCollection {
     return this.find(selector, options).fetch()[0];
   }
   async findOneAsync(selector, options = {}) {
-    return Promise.resolve(this.findOne(selector, options));
+    if (arguments.length === 0) {
+      selector = {};
+    }
+    options.limit = 1;
+    return (await this.find(selector, options).fetchAsync())[0];
   }
   prepareInsert(doc) {
     assertHasValidFieldNames(doc);

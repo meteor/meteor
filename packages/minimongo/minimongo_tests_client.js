@@ -66,16 +66,16 @@ const log_callbacks = operations => ({
 });
 
 // XXX test shared structure in all MM entrypoints
-Tinytest.add('minimongo - basics', test => {
+Tinytest.addAsync('minimongo - basics', async test => {
   const c = new LocalCollection();
   let fluffyKitten_id;
   let count;
 
-  fluffyKitten_id = c.insertAsync({type: 'kitten', name: 'fluffy'});
-  c.insertAsync({type: 'kitten', name: 'snookums'});
-  c.insertAsync({type: 'cryptographer', name: 'alice'});
-  c.insertAsync({type: 'cryptographer', name: 'bob'});
-  c.insertAsync({type: 'cryptographer', name: 'cara'});
+  fluffyKitten_id = await c.insertAsync({type: 'kitten', name: 'fluffy'});
+  await c.insertAsync({type: 'kitten', name: 'snookums'});
+  await c.insertAsync({type: 'cryptographer', name: 'alice'});
+  await c.insertAsync({type: 'cryptographer', name: 'bob'});
+  await c.insertAsync({type: 'cryptographer', name: 'cara'});
   test.equal(c.find().count(), 5);
   test.equal(c.find({type: 'kitten'}).count(), 2);
   test.equal(c.find({type: 'cryptographer'}).count(), 3);
@@ -83,14 +83,14 @@ Tinytest.add('minimongo - basics', test => {
   test.length(c.find({type: 'cryptographer'}).fetch(), 3);
   test.equal(fluffyKitten_id, c.findOne({type: 'kitten', name: 'fluffy'})._id);
 
-  c.remove({name: 'cara'});
+  await c.removeAsync({name: 'cara'});
   test.equal(c.find().count(), 4);
   test.equal(c.find({type: 'kitten'}).count(), 2);
   test.equal(c.find({type: 'cryptographer'}).count(), 2);
   test.length(c.find({type: 'kitten'}).fetch(), 2);
   test.length(c.find({type: 'cryptographer'}).fetch(), 2);
 
-  count = c.updateAsync({name: 'snookums'}, {$set: {type: 'cryptographer'}});
+  count = await c.updateAsync({name: 'snookums'}, {$set: {type: 'cryptographer'}});
   test.equal(count, 1);
   test.equal(c.find().count(), 4);
   test.equal(c.find({type: 'kitten'}).count(), 1);
@@ -98,25 +98,25 @@ Tinytest.add('minimongo - basics', test => {
   test.length(c.find({type: 'kitten'}).fetch(), 1);
   test.length(c.find({type: 'cryptographer'}).fetch(), 3);
 
-  c.remove(null);
-  c.remove(false);
-  c.remove(undefined);
+  await c.removeAsync(null);
+  await c.removeAsync(false);
+  await c.removeAsync(undefined);
   test.equal(c.find().count(), 4);
 
-  c.remove({_id: null});
-  c.remove({_id: false});
-  c.remove({_id: undefined});
-  count = c.remove();
+  await c.removeAsync({_id: null});
+  await c.removeAsync({_id: false});
+  await c.removeAsync({_id: undefined});
+  count = await c.removeAsync();
   test.equal(count, 0);
   test.equal(c.find().count(), 4);
 
-  count = c.remove({});
+  count = await c.removeAsync({});
   test.equal(count, 4);
   test.equal(c.find().count(), 0);
 
-  c.insertAsync({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
-  c.insertAsync({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
-  c.insertAsync({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
+  await c.insertAsync({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
+  await c.insertAsync({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
+  await c.insertAsync({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
 
   test.equal(c.find({tags: 'flower'}).count(), 1);
   test.equal(c.find({tags: 'fruit'}).count(), 2);
@@ -125,12 +125,12 @@ Tinytest.add('minimongo - basics', test => {
   test.length(c.find({tags: 'fruit'}).fetch(), 2);
   test.length(c.find({tags: 'red'}).fetch(), 3);
 
-  test.equal(c.findOne(1).name, 'strawberry');
-  test.equal(c.findOne(2).name, 'apple');
-  test.equal(c.findOne(3).name, 'rose');
-  test.equal(c.findOne(4), undefined);
-  test.equal(c.findOne('abc'), undefined);
-  test.equal(c.findOne(undefined), undefined);
+  test.equal((await c.findOneAsync(1)).name, 'strawberry');
+  test.equal((await c.findOneAsync(2)).name, 'apple');
+  test.equal((await c.findOneAsync(3)).name, 'rose');
+  test.equal(await c.findOneAsync(4), undefined);
+  test.equal(await c.findOneAsync('abc'), undefined);
+  test.equal(await c.findOneAsync(undefined), undefined);
 
   test.equal(c.find(1).count(), 1);
   test.equal(c.find(4).count(), 0);
@@ -180,13 +180,13 @@ Tinytest.add('minimongo - basics', test => {
   test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
 
   // Regression test for #455.
-  c.insertAsync({foo: {bar: 'baz'}});
+  await c.insertAsync({foo: {bar: 'baz'}});
   test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
   test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
 
   // Regression test for #5301
-  c.remove({});
-  c.insertAsync({a: 'a', b: 'b'});
+  await c.removeAsync({});
+  await c.insertAsync({a: 'a', b: 'b'});
   const noop = () => null;
   test.equal(c.find({a: noop}).count(), 1);
   test.equal(c.find({a: 'a', b: noop}).count(), 1);
@@ -195,7 +195,7 @@ Tinytest.add('minimongo - basics', test => {
 
   // Regression test for #4260
   // Only insert enumerable, own properties from the object
-  c.remove({});
+  await c.removeAsync({});
   function Thing() {
     this.a = 1;
     this.b = 2;
@@ -204,8 +204,8 @@ Tinytest.add('minimongo - basics', test => {
   Thing.prototype.c = 3;
   Thing.prototype.d = () => null;
   const before = new Thing();
-  c.insertAsync(before);
-  const after = c.findOne();
+  await c.insertAsync(before);
+  const after = await c.findOneAsync();
   test.equal(after.a, 1);
   test.equal(after.b, undefined);
   test.equal(after.c, undefined);
