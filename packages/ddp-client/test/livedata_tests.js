@@ -1045,7 +1045,7 @@ if (Meteor.isServer) {
         const self = this;
         if (self.conn.status().connected) {
           const callResult = await self.conn.callAsync('s2s', 'foo');
-          test.equal(await callResult.result, 's2s foo');
+          test.equal(await callResult.stubValuePromise, 's2s foo');
         }
       },
     ]);

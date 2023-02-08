@@ -864,7 +864,7 @@ export class Connection {
     // block waiting for the result.
     if (future) {
       return {
-        result: future,
+        stubValuePromise: future,
       };
     }
     return options.returnStubValue ? stubReturnValue : undefined;
