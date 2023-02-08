@@ -146,7 +146,7 @@ ObserveMultiplexer = class {
   }
   async _applyCallback(callbackName, args) {
     const self = this;
-    this._queue.queueTask(async function () {
+    await this._queue.runTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;
