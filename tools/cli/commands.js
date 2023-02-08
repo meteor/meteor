@@ -1325,6 +1325,7 @@ main.registerCommand({
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintPackageWithSourceRoot: packageDir
     });
+    await projectContext.init()
 
     await main.captureAndExit("=> Errors while setting up package:",
       // Read metadata and initialize catalog.
@@ -1379,7 +1380,7 @@ main.registerCommand({
     Console.warn(bundle.warnings.formatMessages());
     return 1;
   }
-
+  console.log(green`=> Done linting.`);
   return 0;
 });
 
@@ -1586,12 +1587,12 @@ async function deployCommand(options, { rawOptions }) {
       "OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE.",
       "If your app contains binary code, it may break in unexpected " +
       "and terrible ways.");
-    buildArch = await archinfo.host();
+    buildArch =  archinfo.host();
   }
 
   const projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([buildArch, await archinfo.host()]),
+    serverArchitectures: _.uniq([buildArch,  archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   await projectContext.init()
