@@ -360,12 +360,20 @@ var Session = function (server, version, socket, options) {
 };
 
 Object.assign(Session.prototype, {
-
+  _checkPublishPromiseBeforeSend(f) {
+    if (!this._publishCursorPromise) {
+      f();
+      return;
+    }
+    this._publishCursorPromise.finally(() => f());
+  },
   sendReady: function (subscriptionIds) {
     var self = this;
-    if (self._isSending)
-      self.send({msg: "ready", subs: subscriptionIds});
-    else {
+    if (self._isSending) {
+      this._checkPublishPromiseBeforeSend(() => {
+        self.send({msg: "ready", subs: subscriptionIds});
+      });
+    } else {
       _.each(subscriptionIds, function (subscriptionId) {
         self._pendingReady.push(subscriptionId);
       });
@@ -379,13 +387,9 @@ Object.assign(Session.prototype, {
 
   sendAdded(collectionName, id, fields) {
     if (this._canSend(collectionName)) {
-      if (!this._publishCursorPromise) {
+      this._checkPublishPromiseBeforeSend(() => {
         this.send({ msg: 'added', collection: collectionName, id, fields });
-        return;
-      }
-      this._publishCursorPromise.finally(() =>
-        this.send({ msg: 'added', collection: collectionName, id, fields })
-      );
+      });
     }
   },
 
@@ -394,18 +398,23 @@ Object.assign(Session.prototype, {
       return;
 
     if (this._canSend(collectionName)) {
-      this.send({
-        msg: "changed",
-        collection: collectionName,
-        id,
-        fields
+      this._checkPublishPromiseBeforeSend(() => {
+        this.send({
+          msg: "changed",
+          collection: collectionName,
+          id,
+          fields
+        });
       });
     }
   },
 
   sendRemoved(collectionName, id) {
-    if (this._canSend(collectionName))
-      this.send({msg: "removed", collection: collectionName, id});
+    if (this._canSend(collectionName)) {
+      this._checkPublishPromiseBeforeSend(() => {
+        this.send({msg: "removed", collection: collectionName, id});
+      });
+    }
   },
 
   getSendCallbacks: function () {
@@ -1518,9 +1527,7 @@ Server = function (options = {}) {
             return;
           }
 
-          Meteor._runAsync(function() {
-            self._handleConnect(socket, msg);
-          })
+          self._handleConnect(socket, msg);
 
           return;
         }

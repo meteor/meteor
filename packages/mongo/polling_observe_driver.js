@@ -202,10 +202,10 @@ _.extend(PollingObserveDriver.prototype, {
     // round, mark all the writes which existed before this call as
     // commmitted. (If new writes have shown up in the meantime, there'll
     // already be another _pollMongo task scheduled.)
-    await self._multiplexer.onFlush(function () {
-      _.each(writesForCycle, function (w) {
-        w.committed();
-      });
+    await self._multiplexer.onFlush(async function () {
+      for (const w of writesForCycle) {
+        await w.committed();
+      }
     });
   },
 
@@ -218,8 +218,8 @@ _.extend(PollingObserveDriver.prototype, {
 
     _.each(self._stopCallbacks, stopCallbacksCaller);
     // Release any write fences that are waiting on us.
-    _.each(self._pendingWrites, function (w) {
-      w.committed();
+    _.each(self._pendingWrites, async function (w) {
+      await w.committed();
     });
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", -1);

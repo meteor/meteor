@@ -20,7 +20,9 @@ export default class LocalCollection {
     // _id -> document (also containing id)
     this._docs = new LocalCollection._IdMap;
 
-    this._observeQueue = new Meteor._SynchronousQueue();
+    this._observeQueue = Meteor.isClient
+      ? new Meteor._SynchronousQueue()
+      : new Meteor._AsynchronousQueue();
 
     this.next_qid = 1; // live query id generator
 
@@ -96,7 +98,11 @@ export default class LocalCollection {
     return this.find(selector, options).fetch()[0];
   }
   async findOneAsync(selector, options = {}) {
-    return Promise.resolve(this.findOne(selector, options));
+    if (arguments.length === 0) {
+      selector = {};
+    }
+    options.limit = 1;
+    return (await this.find(selector, options).fetchAsync())[0];
   }
   prepareInsert(doc) {
     assertHasValidFieldNames(doc);
@@ -131,7 +137,7 @@ export default class LocalCollection {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        break;
+        continue;
       }
 
       const matchResult = query.matcher.documentMatches(doc);
@@ -174,7 +180,7 @@ export default class LocalCollection {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        break;
+        continue;
       }
 
       const matchResult = query.matcher.documentMatches(doc);
@@ -623,11 +629,6 @@ export default class LocalCollection {
 
     let updateCount = 0;
 
-
-    // for (const qid of Object.keys(this.queries)) {
-    //   this._recomputeResults(this.queries[qid], qidToOriginalResults[qid]);
-    // }
-
     this._eachPossiblyMatchingDocSync(selector, (doc, id) => {
       const queryResult = matcher.documentMatches(doc);
 
@@ -637,7 +638,6 @@ export default class LocalCollection {
         recomputeQids = this._modifyAndNotifySync(
           doc,
           mod,
-          recomputeQids,
           queryResult.arrayIndices
         );
 
@@ -770,7 +770,7 @@ export default class LocalCollection {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        break;
+        continue;
       }
 
       const afterMatch = query.matcher.documentMatches(doc);
@@ -815,7 +815,7 @@ export default class LocalCollection {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        break;
+        continue;
       }
 
       const afterMatch = query.matcher.documentMatches(doc);
