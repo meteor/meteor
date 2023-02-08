@@ -601,10 +601,12 @@ export class Connection {
     return new Promise((resolve, reject) => {
       this.applyAsync(name, args, { isFromCallAsync: true })
         .then(result => {
-          DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false);
           resolve(result);
         })
-        .catch(reject);
+        .catch(reject)
+        .finally(() =>
+          DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
+        );
     });
   }
 
@@ -799,7 +801,7 @@ export class Connection {
       } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
-        // TODO fibers: before this was a future, now it's a promise.
+        // TODO[fibers]: before this was a future, now it's a promise.
         //  Do more tests around this.
 
         if (!options.isFromCallAsync) {
@@ -861,7 +863,9 @@ export class Connection {
     // If we're using the default callback on the server,
     // block waiting for the result.
     if (future) {
-      return future;
+      return {
+        result: future,
+      };
     }
     return options.returnStubValue ? stubReturnValue : undefined;
   }
