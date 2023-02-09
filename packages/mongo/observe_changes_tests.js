@@ -58,34 +58,46 @@ _.each ([{added: 'added', forceOrdered: true},
     });
 });
 
-Tinytest.addAsync("observeChanges - callback isolation", function (test, onComplete) {
+Tinytest.addAsync('observeChanges - callback isolation', async function(
+  test,
+  onComplete
+) {
   var c = makeCollection();
-  withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
-    var handles = [];
-    var cursor = c.find();
-    handles.push(cursor.observeChanges(logger));
-    // fields-tampering observer
-    handles.push(cursor.observeChanges({
-      added: function(id, fields) {
-        fields.apples = 'green';
-      },
-      changed: function(id, fields) {
-        fields.apples = 'green';
-      },
-    }));
+  await withCallbackLogger(
+    test,
+    ['added', 'changed', 'removed'],
+    Meteor.isServer,
+    async function(logger) {
+      var handles = [];
+      var cursor = c.find();
+      handles.push(await cursor.observeChanges(logger));
+      // fields-tampering observer
+      handles.push(
+        await cursor.observeChanges({
+          added: function(id, fields) {
+            fields.apples = 'green';
+          },
+          changed: function(id, fields) {
+            fields.apples = 'green';
+          },
+        })
+      );
 
-    var fooid = c.insert({apples: "ok"});
-    logger.expectResult("added", [fooid, {apples: "ok"}]);
+      var fooid = await c.insertAsync({ apples: 'ok' });
+      logger.expectResult('added', [fooid, { apples: 'ok' }]);
 
-    c.update(fooid, {apples: "not ok"});
-    logger.expectResult("changed", [fooid, {apples: "not ok"}]);
+      await c.updateAsync(fooid, { apples: 'not ok' });
 
-    test.equal(c.findOne(fooid).apples, "not ok");
+      logger.expectResult('changed', [fooid, { apples: 'not ok' }]);
 
-    _.each(handles, function(handle) { handle.stop(); });
-    onComplete();
-  });
+      test.equal((await c.findOneAsync(fooid)).apples, 'not ok');
 
+      for (const handle of handles) {
+        await handle.stop();
+      }
+      onComplete();
+    }
+  );
 });
 
 Tinytest.addAsync("observeChanges - single id - initial adds", function (test, onComplete) {

@@ -1545,9 +1545,7 @@ Server = function (options = {}) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
-        Meteor._runAsync(function() {
-          socket._meteorSession.close();
-        });
+        socket._meteorSession.close();
       }
     });
   });
