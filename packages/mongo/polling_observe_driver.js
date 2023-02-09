@@ -35,7 +35,7 @@ PollingObserveDriver = function (options) {
     self._cursorDescription.options.pollingThrottleMs || POLLING_THROTTLE_MS /* ms */);
 
   // XXX figure out if we still need a queue
-  self._taskQueue = new Meteor._SynchronousQueue();
+  self._taskQueue = new Meteor._AsynchronousQueue();
 
   var listenersHandle = listenAll(
     self._cursorDescription, function (notification) {
