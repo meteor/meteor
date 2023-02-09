@@ -21,6 +21,10 @@ export namespace Accounts {
     fields?: Mongo.FieldSpecifier | undefined;
   }): Meteor.User | null;
 
+  function userAsync(options?: {
+    fields?: Mongo.FieldSpecifier | undefined;
+  }): Promise<Meteor.User | null>;
+
   function userId(): string | null;
 
   function createUser(
@@ -32,6 +36,16 @@ export namespace Accounts {
     },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): string;
+
+  function createUserAsync(
+    options: {
+      username?: string | undefined;
+      email?: string | undefined;
+      password?: string | undefined;
+      profile?: Object | undefined;
+    },
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ): Promise<string>;
 
   function config(options: {
     sendVerificationEmail?: boolean | undefined;
@@ -175,6 +189,12 @@ export namespace Accounts {
     newPassword: string,
     options?: { logout?: Object | undefined }
   ): void;
+
+  function setPasswordAsync(
+    userId: string,
+    newPassword: string,
+    options?: { logout?: Object | undefined }
+  ): Promise<void>;
 
   function validateNewUser(func: Function): boolean;
 
