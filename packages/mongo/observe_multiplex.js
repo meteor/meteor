@@ -22,8 +22,8 @@ ObserveMultiplexer = class {
 
     const self = this;
     this.callbackNames().forEach(callbackName => {
-      this[callbackName] = async function(/* ... */) {
-        await self._applyCallback(callbackName, _.toArray(arguments));
+      this[callbackName] = function(/* ... */) {
+        self._applyCallback(callbackName, _.toArray(arguments));
       };
     });
   }
@@ -144,9 +144,9 @@ ObserveMultiplexer = class {
   _ready() {
     return !!this._isReady;
   }
-  async _applyCallback(callbackName, args) {
+  _applyCallback(callbackName, args) {
     const self = this;
-    await this._queue.runTask(async function () {
+    this._queue.queueTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;
@@ -165,17 +165,18 @@ ObserveMultiplexer = class {
       // can continue until these are done. (But we do have to be careful to not
       // use a handle that got removed, because removeHandle does not use the
       // queue; thus, we iterate over an array of keys that we control.)
-      const toAwait = Object.keys(self._handles).map(async (handleId) => {
+      for (const handleId of Object.keys(self._handles)) {
         var handle = self._handles && self._handles[handleId];
-        if (!handle)
-          return;
+        if (!handle) return;
         var callback = handle['_' + callbackName];
         // clone arguments so that callbacks can mutate their arguments
-        callback && await callback.apply(null,
-            handle.nonMutatingCallbacks ? args : EJSON.clone(args));
-      });
 
-      await Promise.all(toAwait);
+        callback &&
+          (await callback.apply(
+            null,
+            handle.nonMutatingCallbacks ? args : EJSON.clone(args)
+          ));
+      }
     });
   }
 

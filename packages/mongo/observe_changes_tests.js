@@ -84,11 +84,11 @@ Tinytest.addAsync('observeChanges - callback isolation', async function(
       );
 
       var fooid = await c.insertAsync({ apples: 'ok' });
-      logger.expectResult('added', [fooid, { apples: 'ok' }]);
+      await logger.expectResult('added', [fooid, { apples: 'ok' }]);
 
       await c.updateAsync(fooid, { apples: 'not ok' });
 
-      logger.expectResult('changed', [fooid, { apples: 'not ok' }]);
+      await logger.expectResult('changed', [fooid, { apples: 'not ok' }]);
 
       test.equal((await c.findOneAsync(fooid)).apples, 'not ok');
 
@@ -305,6 +305,12 @@ Tinytest.addAsync("observeChanges - unordered - enters and exits result set thro
 });
 
 
+const getPromiseAndResolver = () => {
+  let resolver;
+  const promise = new Promise(r => (resolver = r));
+  return [resolver, promise];
+};
+
 if (Meteor.isServer) {
   testAsyncMulti("observeChanges - tailable", [
     async function (test, expect) {
@@ -315,16 +321,19 @@ if (Meteor.isServer) {
       self.xs = [];
       self.expects = [];
       self.insert = async function(fields) {
-        await coll.insertAsync(
+        coll.insertAsync(
           _.extend({ ts: new MongoInternals.MongoTimestamp(0, 0) }, fields)
         );
       };
 
       // Tailable observe shouldn't show things that are in the initial
       // contents.
-      await self.insert({ x: 1 });
+      self.insert({ x: 1 });
       // Wait for one added call before going to the next test function.
-      self.expects.push(expect());
+
+      const [resolver, promise] = getPromiseAndResolver();
+
+      self.expects.push(resolver);
 
       var cursor = coll.find({ y: { $ne: 7 } }, { tailable: true });
       self.handle = await cursor.observeChanges({
@@ -343,26 +352,31 @@ if (Meteor.isServer) {
 
       // Nothing happens synchronously.
       test.equal(self.xs, []);
+      await promise;
     },
-    async function (test, expect) {
+    async function (test) {
       var self = this;
       // The cursors sees the first element.
       test.equal(self.xs, [1]);
       self.xs = [];
 
-      await self.insert({x: 2, y: 3});
-      await self.insert({x: 3, y: 7});  // filtered out by the query
-      await self.insert({x: 4});
+      const [resolver1, promise1] = getPromiseAndResolver();
+      const [resolver2, promise2] = getPromiseAndResolver();
+
+      self.insert({x: 2, y: 3});
+      self.insert({x: 3, y: 7});  // filtered out by the query
+      self.insert({x: 4});
       // Expect two added calls to happen.
-      self.expects = [expect(), expect()];
+      self.expects = [resolver1, resolver2];
+      await Promise.all([promise1, promise2]);
     },
-    async function (test, expect) {
+    function (test, expect) {
       var self = this;
       test.equal(self.xs, [2, 4]);
       self.xs = [];
       self.handle.stop();
 
-      await self.insert({x: 5});
+      self.insert({x: 5});
       // XXX This timeout isn't perfect but it's pretty hard to prove that an
       // event WON'T happen without something like a write fence.
       Meteor.setTimeout(expect(), 1000);
@@ -376,11 +390,11 @@ if (Meteor.isServer) {
 
 
 testAsyncMulti("observeChanges - bad query", [
-  function (test, expect) {
+  async function (test, expect) {
     var c = makeCollection();
-    var observeThrows = function () {
-      test.throws(function () {
-        c.find({__id: {$in: null}}).observeChanges({
+    var observeThrows = async function () {
+      await test.throwsAsync(async function () {
+        await c.find({__id: {$in: null}}).observeChanges({
           added: function () {
             test.fail("added shouldn't be called");
           }
@@ -389,49 +403,45 @@ testAsyncMulti("observeChanges - bad query", [
     };
 
     if (Meteor.isClient) {
-      observeThrows();
+      await observeThrows();
       return;
     }
 
-    // Test that if two copies of the same bad observeChanges run in parallel
-    // and are de-duped, both observeChanges calls will throw.
-    var Fiber = Npm.require('fibers');
-    var Future = Npm.require('fibers/future');
-    var f1 = new Future;
-    var f2 = new Future;
-    Fiber(function () {
-      // The observeChanges call in here will yield when we talk to mongod,
-      // which will allow the second Fiber to start and observe a duplicate
-      // query.
-      observeThrows();
-      f1['return']();
-    }).run();
-    Fiber(function () {
-      test.isFalse(f1.isResolved());  // first observe hasn't thrown yet
-      observeThrows();
-      f2['return']();
-    }).run();
-    f1.wait();
-    f2.wait();
+    const p1 = new Promise(r => {
+      observeThrows().finally(() => r());
+    });
+    const p2 = new Promise(r => {
+      observeThrows().finally(() => r());
+    });
+
+    await p1;
+    await p2;
   }
 ]);
 
 if (Meteor.isServer) {
   Tinytest.addAsync(
-    "observeChanges - EnvironmentVariable",
-    function (test, onComplete) {
+    'observeChanges - EnvironmentVariable',
+    async function(test) {
       var c = makeCollection();
-      var environmentVariable = new Meteor.EnvironmentVariable;
-      environmentVariable.withValue(true, function() {
-        var handle = c.find({}, { fields: { 'type.name': 1 }}).observeChanges({
-          added: function() {
-            test.isTrue(environmentVariable.get());
-            handle.stop();
-            onComplete();
-          }
-        });
+
+      let callOnFinish;
+      const promise = new Promise(r => callOnFinish = r);
+
+      var environmentVariable = new Meteor.EnvironmentVariable();
+      await environmentVariable.withValue(true, async function() {
+        var handle = await c
+          .find({}, { fields: { 'type.name': 1 } })
+          .observeChanges({
+            added: function() {
+              test.isTrue(environmentVariable.get());
+              handle.stop();
+              callOnFinish();
+            },
+          });
       });
-      c.insert({ type: { name: 'foobar' } });
+     await c.insertAsync({ type: { name: 'foobar' } });
+     return promise;
     }
   );
 }

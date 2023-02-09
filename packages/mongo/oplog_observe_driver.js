@@ -10,9 +10,9 @@ var PHASE = {
 // enclosing call to finishIfNeedToPollQuery.
 var SwitchedToQuery = function () {};
 var finishIfNeedToPollQuery = function (f) {
-  return async function () {
+  return function () {
     try {
-      await f.apply(this, arguments);
+      f.apply(this, arguments);
     } catch (e) {
       if (!(e instanceof SwitchedToQuery))
         throw e;
@@ -112,11 +112,12 @@ OplogObserveDriver = function (options) {
       return self._needToPollQuery();
     })
   ));
-
+  console.log('_handleOplogEntrySteadyOrFetching_handleOplogEntrySteadyOrFetching', self._cursorDescription);
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
-      trigger, async function (notification) {
-        await finishIfNeedToPollQuery(function () {
+      trigger, function (notification) {
+        finishIfNeedToPollQuery(function () {
+          console.log("POW finishIfNeedToPollQuery")
           var op = notification.op;
           if (notification.dropCollection || notification.dropDatabase) {
             // Note: this call is not allowed to block on anything (especially
@@ -131,11 +132,17 @@ OplogObserveDriver = function (options) {
               return self._handleOplogEntrySteadyOrFetching(op);
             }
           }
-        });
+        })();
       }
     ));
   });
+  console.log('self._stopHandles', self._stopHandles)
+  self._stopHandles.forEach(h => {
+    if (h.then) {
+      h.then(r => console.log('forEachTriggerforEachTrigger', r))
 
+    }
+  })
   // XXX ordering w.r.t. everything else?
   self._stopHandles.push(listenAll(
     self._cursorDescription, function () {
@@ -579,18 +586,21 @@ _.extend(OplogObserveDriver.prototype, {
     });
   },
   _handleOplogEntrySteadyOrFetching: function (op) {
+    console.log('_handleOplogEntrySteadyOrFetching_handleOplogEntrySteadyOrFetching', {});
     var self = this;
     Meteor._noYieldsAllowed(function () {
       var id = idForOp(op);
       // If we're already fetching this one, or about to, we can't optimize;
       // make sure that we fetch it again if necessary.
+
+      console.log('_handleDoc_handleDoc_handleDoc 1', {});
       if (self._phase === PHASE.FETCHING &&
           ((self._currentlyFetching && self._currentlyFetching.has(id)) ||
            self._needToFetch.has(id))) {
         self._needToFetch.set(id, op);
         return;
       }
-
+      console.log('_handleDoc_handleDoc_handleDoc 2', {});
       if (op.op === 'd') {
         if (self._published.has(id) ||
             (self._limit && self._unpublishedBuffer.has(id)))
@@ -660,6 +670,7 @@ _.extend(OplogObserveDriver.prototype, {
       } else {
         throw Error("XXX SURPRISING OPERATION: " + op);
       }
+      console.log('_handleDoc_handleDoc_handleDoc END', {});
     });
   },
 

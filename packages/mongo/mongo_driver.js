@@ -339,8 +339,8 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
   }
 
   var write = self._maybeBeginWrite();
-  var refresh = function () {
-    Meteor.refresh({collection: collection_name, id: document._id });
+  var refresh = async function () {
+    await Meteor.refresh({collection: collection_name, id: document._id });
   };
   return self.rawCollection(collection_name).insertOne(
     replaceTypes(document, replaceMeteorAtomWithMongo),
@@ -348,7 +348,7 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
       safe: true,
     }
   ).then(async ({insertedId}) => {
-    refresh();
+    await refresh();
     await write.committed();
     return insertedId;
   }).catch(async e => {
