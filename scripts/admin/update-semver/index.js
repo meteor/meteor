@@ -110,7 +110,10 @@ async function main() {
   const packages = args.map(arg => {
     const [name, release] = arg.split('.');
     return { name, release: release || 'patch' };
-  });
+  })
+    // we remove duplicates by name
+    .filter((value, index, self) => self.findIndex((v) => v.name === value.name) === index);
+
   for (const { name, release } of packages) {
     const filePath = `../../../packages/${ name }/package.js`;
     const [code, err] = await getFile(filePath);
@@ -142,6 +145,8 @@ async function main() {
         if (release.includes('beta') || release.includes('rc')) {
           const version =
             semver.inc(currentVersion, 'prerelease', release);
+
+          if (name === 'meteor-tool') return version;
           return version.replace(release, `${release}${releaseNumber}`);
         }
         return semver.inc(currentVersion, release);

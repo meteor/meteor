@@ -16,24 +16,7 @@ export type UnionOmit<T, K extends keyof any> = T extends T
 
 export namespace Mongo {
 
-  type Query<T> = MongoNpmModule.Filter<T>;
-
-  export type QueryWithModifiers<T> = {
-    $query: Query<T>;
-    $comment?: string | undefined;
-    $explain?: any;
-    $hint?: Hint;
-    $maxScan?: any;
-    $max?: any;
-    $maxTimeMS?: any;
-    $min?: any;
-    $orderby?: any;
-    $returnKey?: any;
-    $showDiskLoc?: any;
-    $natural?: any;
-  };
-
-  export type Selector<T> = Query<T> | QueryWithModifiers<T>;
+  export type Selector<T> = MongoNpmModule.Filter<T>;
 
   type Modifier<T> = MongoNpmModule.UpdateFilter<T>;
 
