@@ -14,7 +14,6 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@types/meteor": "^1.4.87",
     "@types/mocha": "^8.2.3",
     "@types/node": "^18.13.0",
     "@types/react": "^18.0.26",
