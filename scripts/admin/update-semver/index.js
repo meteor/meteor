@@ -128,8 +128,8 @@ async function main() {
       //   summary: 'some description.',
       //   version: '1.2.3' <--- this is the line we want, we assure that it has a version in the previous if
       //});
-      const [_, rawVersion] = line.split(':');
-      if (!rawVersion) continue;
+      const [_, version] = line.split(':');
+      if (!version) continue;
       const getVersionValue = (value) => {
         const removeQuotes =
           (v) => v
@@ -138,10 +138,18 @@ async function main() {
             .replace(/'/g, '')
             .replace(/"/g, '');
 
-        if (value.includes('-')) return removeQuotes(value.split('-')[0]);
-        return removeQuotes(value);
+        if (value.includes('-')) {
+          return {
+            currentVersion: removeQuotes(value.replace(releaseNumber, '')),
+            rawVersion: value
+          }
+        }
+        return {
+          currentVersion: removeQuotes(value),
+          rawVersion: value
+        }
       }
-      const currentVersion = getVersionValue(rawVersion)
+      const { currentVersion, rawVersion } = getVersionValue(version)
 
 
       /**
@@ -153,7 +161,6 @@ async function main() {
         if (release === 'beta' || release === 'rc') {
           const version =
             semver.inc(currentVersion, 'prerelease', release);
-          console.log(version, currentVersion);
           if (name === 'meteor-tool') return version;
           return version.replace(release, `${ release }${ releaseNumber }`);
         }
@@ -162,7 +169,7 @@ async function main() {
 
       const newVersion = incrementNewVersion(release);
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
-      const newCode = code.replace(currentVersion, `${ newVersion }`);
+      const newCode = code.replace(rawVersion, `'${ newVersion }'`);
       await fs.promises.writeFile(filePath, newCode);
     }
   }
