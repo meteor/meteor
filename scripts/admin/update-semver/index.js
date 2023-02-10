@@ -169,7 +169,7 @@ async function main() {
 
       const newVersion = incrementNewVersion(release);
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
-      const newCode = code.replace(rawVersion, `'${ newVersion }'`);
+      const newCode = code.replace(rawVersion, ` '${ newVersion }',`);
       await fs.promises.writeFile(filePath, newCode);
     }
   }
