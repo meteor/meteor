@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  '@types/underscore': '1.11.5',
+  '@types/underscore': '1.11.4',
 });
 Package.onUse(function (api) {
   // Like all packages, we have an implicit depedency on the 'meteor'
