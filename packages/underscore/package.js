@@ -1,3 +1,7 @@
+Npm.depends({
+  '@types/underscore': '1.11.4',
+});
+
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
   version: '1.0.11'

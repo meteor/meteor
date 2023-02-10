@@ -17,4 +17,5 @@ Package.onUse(function (api) {
     "NpmModuleMongodb",
     "NpmModuleMongodbVersion",
   ], "server");
+  api.addAssets('index.d.ts', 'server');
 });
