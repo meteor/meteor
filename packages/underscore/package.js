@@ -1,5 +1,5 @@
 Npm.depends({
-  '@types/underscore': '1.11.4',
+  '@types/underscore': '1.11.5-rc2110.0',
 });
 
 Package.describe({
