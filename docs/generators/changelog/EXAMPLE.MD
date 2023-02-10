@@ -4,7 +4,7 @@
 
 * MongoDB Server 6.x Support
 * Embedded Mongo now uses MongoDB 6.0.3
-* 
+* Some pr [GH someone] [PR #number] // this will become -> [StorytellerCZ](https://github.com/someone) [PR](https://github.com/meteor/meteor/pull/number)
 #### Breaking Changes
 
 N/A
@@ -23,7 +23,7 @@ TODO
 * `Command line`:
     - Corrected typo in XX XX
 
-* `npm mongo @4.13.0`:
+* `npm mongo @4.13.0`: // You can use @get-version to get the version of the package
     - Updated MongoDB driver to version 4.13.0
 
 #### Special thanks to
