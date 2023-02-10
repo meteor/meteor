@@ -10,25 +10,35 @@
 
 
 
-
 ## v2.11.0, 2023-02-XX
 
 ### Highlights
 
 * MongoDB Server 6.x Support
 * Embedded Mongo now uses MongoDB 6.0.3
-* Optimized makeLookupFunction by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12462)
-* In async wrappers, catch exceptions and reject by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12469)
-* Bump Typescript to v4.9.4  by [Firfi](https://github.com/Firfi) [PR](https://github.com/meteor/meteor/pull/12465)
-* Ensure the meteor.loginServiceConfiguration subscription always becomes ready by [Torgen](https://github.com/Torgen) [PR](https://github.com/meteor/meteor/pull/12480)
-* Deprecate appcache package by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12456)
-* Made standard-minifier-css debuggable by [softwarecreations](https://github.com/softwarecreations) [PR](https://github.com/meteor/meteor/pull/12478).
+* Optimized makeLookupFunction
+  by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12462)
+* In async wrappers, catch exceptions and reject
+  by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12469)
+* Bump Typescript to v4.9.4 by [Firfi](https://github.com/Firfi) [PR](https://github.com/meteor/meteor/pull/12465)
+* Ensure the meteor.loginServiceConfiguration subscription always becomes ready
+  by [Torgen](https://github.com/Torgen) [PR](https://github.com/meteor/meteor/pull/12480)
+* Deprecate appcache package
+  by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12456)
+* Made standard-minifier-css debuggable
+  by [softwarecreations](https://github.com/softwarecreations) [PR](https://github.com/meteor/meteor/pull/12478).
+* Upgrading MongoDB Driver to v4.14
+  by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12501)
+* Remove Blaze dependency and types that live in blaze.d.ts
+  by [perbergland](https://github.com/perbergland) [PR](https://github.com/meteor/meteor/pull/12428)
+
+* Switch typescript skeleton to zodern:types and test that it works by [ebroder](https://github.com/ebroder) [PR #12510](https://github.com/meteor/meteor/pull/12510)
 
 #### Breaking Changes
 
 N/A
 
-####  Internal API changes
+#### Internal API changes
 
 App cache is now deprecated.
 
@@ -40,25 +50,42 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 
 #### Meteor Version Release
 
+* `accounts-base@2.2.7`:
+    - Ensured the meteor.loginServiceConfiguration subscription always becomes ready, by adding a this.ready() call.
+
+* `appcache@1.2.8`
+    - Deprecated appcache
+      package. [applicationCache](https://developer.mozilla.org/en-US/docs/Web/API/Window/applicationCache), which this
+      package relies on, has been deprecated and is not available on the latest browsers.
+
+* `babel-compiler@7.10.3`:
+    - Updated typescript to version 4.9.4.
+
+* `ecmascript@0.16.6`:
+    - Updated typescript to version 4.9.4.
 
 * `Command line`:
     - Corrected typo in vue skeleton
-
-* `npm mongo @4.13.0`:
-    - Updated MongoDB driver to version 4.13.0
 
 * `Minimongo@1.9.2`:
     - Updated performance of makeLookupFunction
     - In async wrappers, catch exceptions and reject
 
-* `mongo@1.16.5`:
+* `mongo@1.16.6`:
     - In async wrappers, catch exceptions and reject
+    - Updated MongoDB types to match driver version 4.13.0 and MongoDB server version 6.0.3
 
-* `Tracker@1.3.1`:
-    - Added missing withComputation method in types
+* `npm-mongo@4.14.0`:
+    - Updated MongoDB driver to version 4.14.0
+
+* `oauth@2.2.0`:
+    - bumped cordova-plugin-inappbrowser to 5.0.0
 
 * `standard-minifier-css@1.9.0`:
     - standard-minifier-css is now debuggable
+
+* `Tracker@1.3.1`:
+    - Added missing withComputation method in types
 
 * `typescript@4.9.4`
     - Updated typescript to version 4.9.4.
@@ -67,7 +94,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
     - Updated typescript to version 4.9.4.
 
 * `appcache@1.2.8`
-    - Depracated appcache package. [applicationCache](https://developer.mozilla.org/en-US/docs/Web/API/Window/applicationCache), which this package relies on, has been deprecated and is not available on the latest browsers.
+    - Deprecated appcache
+      package. [applicationCache](https://developer.mozilla.org/en-US/docs/Web/API/Window/applicationCache), which this
+      package relies on, has been deprecated and is not available on the latest browsers.
 
 #### Special thanks to
 
@@ -76,8 +105,8 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 - [@Firfi](https://github.com/Firfi).
 - [@Torgen](https://github.com/Torgen).
 - [@StorytellerCZ](https://github.com/StorytellerCZ).
-- [@softwarecreations](https://github.com/softwarecreations)
-
+- [@softwarecreations](https://github.com/softwarecreations).
+- [@Grubba27](https://github.com/Grubba27).
 
 For making this great framework even better!
 
