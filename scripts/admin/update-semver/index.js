@@ -39,13 +39,14 @@ const runCommand = async (command) => {
 async function getPackages() {
   return await runCommand("./get-diff.sh");
 }
+
 async function getReleaseNumber() {
   // only works if you are in the release branch. it will return someting
   // like release-2.4 or release-2.4.2
   const gitBranch = await runCommand("./get-branch-name.sh");
   if (!gitBranch.includes('release')) throw new Error('You are not in a release branch');
 
-  const releaseNumber =  gitBranch
+  const releaseNumber = gitBranch
     .replace('release-', '')
     .replace('.', '')
     .replace('\n', '');
@@ -127,13 +128,20 @@ async function main() {
       //   summary: 'some description.',
       //   version: '1.2.3' <--- this is the line we want, we assure that it has a version in the previous if
       //});
-      const [_, versionValue] = line.split(':');
-      if (!versionValue) continue;
-      const currentVersion = versionValue
-        .trim()
-        .replace(',', '')
-        .replace(/'/g, '')
-        .replace(/"/g, '');
+      const [_, rawVersion] = line.split(':');
+      if (!rawVersion) continue;
+      const getVersionValue = (value) => {
+        const removeQuotes =
+          (v) => v
+            .trim()
+            .replace(',', '')
+            .replace(/'/g, '')
+            .replace(/"/g, '');
+
+        if (value.includes('-')) return removeQuotes(value.split('-')[0]);
+        return removeQuotes(value);
+      }
+      const currentVersion = getVersionValue(rawVersion)
 
 
       /**
@@ -142,12 +150,12 @@ async function main() {
        * @returns {string}
        */
       function incrementNewVersion(release) {
-        if (release.includes('beta') || release.includes('rc')) {
+        if (release === 'beta' || release === 'rc') {
           const version =
             semver.inc(currentVersion, 'prerelease', release);
-
+          console.log(version, currentVersion);
           if (name === 'meteor-tool') return version;
-          return version.replace(release, `${release}${releaseNumber}`);
+          return version.replace(release, `${ release }${ releaseNumber }`);
         }
         return semver.inc(currentVersion, release);
       }
@@ -159,7 +167,7 @@ async function main() {
     }
   }
   console.log('Done!');
-  if (!args[0].startsWith('@auto')) console.log('Do not forget to update meteor-tool');
+  if (!args.some(arg => arg.includes('meteor-tool'))) console.log('Do not forget to update meteor-tool');
 }
 
 main();
