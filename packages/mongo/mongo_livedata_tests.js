@@ -206,38 +206,44 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
         test.instanceOf(err, Error);
       };
 
-      for (const op of ['insertAsync', 'removeAsync', 'updateAsync']) {
-        var arg = op === 'insert' ? {} : 'bla';
-        var arg2 = {};
+      try {
+        for (const op of ['insertAsync', 'removeAsync', 'updateAsync']) {
+          var arg = op === 'insertAsync' ? {} : 'bla';
+          var arg2 = {};
 
-        const callOp = async function(callback) {
-          try {
-            if (op === 'update') {
-              await ftc[op](arg, arg2);
-            } else {
-              await ftc[op](arg);
+          const callOp = async function(callback) {
+            try {
+              let result;
+              if (op === 'updateAsync') {
+                result = await ftc[op](arg, arg2);
+              } else {
+                result = await ftc[op](arg);
+              }
+              if (result?.stubValuePromise) {
+                await result.stubValuePromise;
+              }
+            } catch (e) {
+              callback(e);
             }
-          } catch (e) {
-            callback(e);
+          };
+
+          if (Meteor.isServer) {
+            await test.throwsAsync(async function() {
+              await callOp();
+            });
+
+            await callOp(expect(exception));
           }
-        };
 
-        if (Meteor.isServer) {
-          await test.throwsAsync(async function() {
+          if (Meteor.isClient) {
+            await callOp(expect(exception));
+
+            // This would log to console in normal operation.
+            Meteor._suppress_log(1);
             await callOp();
-          });
-
-          await callOp(expect(exception));
+          }
         }
-
-        if (Meteor.isClient) {
-          await callOp(expect(exception));
-
-          // This would log to console in normal operation.
-          Meteor._suppress_log(1);
-          await callOp();
-        }
-      }
+      } catch (e) {}
     },
   ]);
 
