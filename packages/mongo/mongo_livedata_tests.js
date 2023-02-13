@@ -3304,51 +3304,54 @@ if (Meteor.isServer) {
 //    the future. (Well, the invocation happened earlier but the use of the
 //    Future sequences it so that the confirmation only gets read at this point.)
 if (Meteor.isClient) {
-  testAsyncMulti("mongo-livedata - fence onBeforeFire error", [
-    function (test, expect) {
+  testAsyncMulti('mongo-livedata - fence onBeforeFire error', [
+    async function(test, expect) {
       var self = this;
       self.nonce = Random.id();
-      Meteor.call('fenceOnBeforeFireError1', self.nonce, expect(function (err) {
-        test.isFalse(err);
-      }));
+      const r = await Meteor.callAsync(
+        'fenceOnBeforeFireError1',
+        self.nonce,
+      );
+      test.isTrue(await r.stubValuePromise);
     },
-    function (test, expect) {
+    async function(test, expect) {
       var self = this;
-      Meteor.call('fenceOnBeforeFireError2', self.nonce, expect(
-        function (err, success) {
-          test.isFalse(err);
-          test.isTrue(success);
-        }
-      ));
-    }
+      const r = await Meteor.callAsync(
+        'fenceOnBeforeFireError2',
+        self.nonce,
+      );
+      test.isTrue(await r.stubValuePromise);
+    },
   ]);
 } else {
-  var fenceOnBeforeFireErrorCollection = new Mongo.Collection("FOBFE");
-  var Future = Npm.require('fibers/future');
+  var fenceOnBeforeFireErrorCollection = new Mongo.Collection('FOBFE');
   var futuresByNonce = {};
   Meteor.methods({
-    fenceOnBeforeFireError1: function (nonce) {
-      futuresByNonce[nonce] = new Future;
-      var observe = fenceOnBeforeFireErrorCollection.find({nonce: nonce})
-        .observeChanges({added: function (){}});
-      Meteor.setTimeout(function () {
-        fenceOnBeforeFireErrorCollection.insert(
-          {nonce: nonce},
-          function (err, result) {
-            var success = !err && result;
-            futuresByNonce[nonce].return(success);
-            observe.stop();
-          }
-        );
+    fenceOnBeforeFireError1: async function(nonce) {
+      let resolver;
+      futuresByNonce[nonce] = new Promise(r => resolver = r);
+      var observe = await fenceOnBeforeFireErrorCollection
+        .find({ nonce: nonce })
+        .observeChanges({ added: function() {} });
+      Meteor.setTimeout(async function() {
+        try {
+          await fenceOnBeforeFireErrorCollection.insertAsync({ nonce });
+          resolver(true);
+        } catch (e) {
+          resolver(false);
+          console.error(e)
+          observe.stop();
+        }
       }, 10);
+      return futuresByNonce[nonce];
     },
-    fenceOnBeforeFireError2: function (nonce) {
+    fenceOnBeforeFireError2: function(nonce) {
       try {
-        return futuresByNonce[nonce].wait();
+        return futuresByNonce[nonce];
       } finally {
         delete futuresByNonce[nonce];
       }
-    }
+    },
   });
 }
 
