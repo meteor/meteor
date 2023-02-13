@@ -42,6 +42,7 @@ import {
   pathResolve,
   pathSep,
 } from "../static-assets/server/mini-files";
+import { readFileSync, readSync } from "./fsFixPath";
 
 const { hasOwnProperty } = Object.prototype;
 
@@ -360,15 +361,9 @@ export const rm_recursive = Profile("files.rm_recursive", async (path: string) =
 export function fileHash(filename: string) {
   const crypto = require('crypto');
   const hash = crypto.createHash('sha256');
-  hash.setEncoding('base64');
-  const rs = createReadStream(filename);
-  return new Promise(function (resolve) {
-    rs.on('end', function () {
-      rs.close();
-      resolve(hash.digest('base64'));
-    });
-    rs.pipe(hash, { end: false });
-  }).await();
+  const data = fs.readFileSync(filename);
+  hash.update(data);
+  return hash.digest('base64');
 }
 
 // This is the result of running fileHash on a blank file.
@@ -406,8 +401,9 @@ export function treeHash(root: string, optionsParams: {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
+      const fileHashed = fileHash(absPath);
       hash.update('file ' + JSON.stringify(relativePath) + ' ' +
-                  stat?.size + ' ' + fileHash(absPath) + '\n');
+                  stat?.size + ' ' +  fileHashed + '\n');
 
       // @ts-ignore
       if (stat.mode & 0o100) {
