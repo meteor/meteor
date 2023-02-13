@@ -82,7 +82,7 @@ if (process.platform !== "win32") {
 
 // This test is only for unixy platforms
 if (process.platform !== "win32") {
-  selftest.define("package with colons is unpacked as-is on unix", function () {
+  selftest.define("package with colons is unpacked as-is on unix", async function () {
     // We have a built package tarball in the git repo
     var tarballPath = files.pathJoin(files.convertToStandardPath(__dirname),
       "built-packages", "has-colons.tgz");
@@ -97,8 +97,8 @@ if (process.platform !== "win32") {
     var targetDirectory = tropohouse._extractAndConvert(tarball);
 
     // Now, compare all of the filepaths and file contents
-    var startingTreeHash = files.treeHash(extractPath);
-    var finalTreeHash = files.treeHash(targetDirectory);
+    var startingTreeHash =  files.treeHash(extractPath);
+    var finalTreeHash =  files.treeHash(targetDirectory);
 
     // Nothing should be different
     selftest.expectEqual(finalTreeHash, startingTreeHash);
@@ -108,7 +108,7 @@ if (process.platform !== "win32") {
 // Tests step 3: check if old packages are converted properly to have no weird
 // paths for Windows
 
-selftest.define("package with colons is converted on Windows", function () {
+selftest.define("package with colons is converted on Windows", async function () {
   // We have a built package tarball in the git repo
   var tarballPath = files.pathJoin(files.convertToStandardPath(__dirname),
     "built-packages", "has-colons.tgz");
@@ -117,7 +117,7 @@ selftest.define("package with colons is converted on Windows", function () {
   var tarball = files.readFile(tarballPath);
 
   // Force conversion of file paths with second argument
-  var targetDirectory = tropohouse._extractAndConvert(tarball, true);
+  var targetDirectory = await tropohouse._extractAndConvert(tarball, true);
 
   // Uncomment below to check results
   // console.log(files.getPathsInDir(targetDirectory, {
