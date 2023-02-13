@@ -4,28 +4,12 @@
 /// (such as testing whether an directory is a meteor app)
 ///
 
-import fs, { PathLike, Stats, Dirent } from "fs";
+import fs, { Dirent, PathLike, Stats } from "fs";
 import os from "os";
 import { execFile } from "child_process";
 import { EventEmitter } from "events";
 import { Slot } from "@wry/context";
 import { dep } from "optimism";
-
-const _ = require('underscore');
-
-const rimraf = require('rimraf');
-const sourcemap = require('source-map');
-const sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
-
-const utils = require('../utils/utils.js');
-const cleanup = require('../tool-env/cleanup.js');
-const buildmessage = require('../utils/buildmessage.js');
-const fiberHelpers = require('../utils/fiber-helpers.js');
-const colonConverter = require('../utils/colon-converter.js');
-
-const Profile = require('../tool-env/profile').Profile;
-
-export * from '../static-assets/server/mini-files';
 import {
   convertToOSPath,
   convertToPosixPath,
@@ -42,7 +26,22 @@ import {
   pathResolve,
   pathSep,
 } from "../static-assets/server/mini-files";
-import { readFileSync, readSync } from "./fsFixPath";
+
+const _ = require('underscore');
+
+const rimraf = require('rimraf');
+const sourcemap = require('source-map');
+const sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
+
+const utils = require('../utils/utils.js');
+const cleanup = require('../tool-env/cleanup.js');
+const buildmessage = require('../utils/buildmessage.js');
+const fiberHelpers = require('../utils/fiber-helpers.js');
+const colonConverter = require('../utils/colon-converter.js');
+
+const Profile = require('../tool-env/profile').Profile;
+
+export * from '../static-assets/server/mini-files';
 
 const { hasOwnProperty } = Object.prototype;
 
@@ -358,21 +357,26 @@ export const rm_recursive = Profile("files.rm_recursive", async (path: string) =
 });
 
 // Returns the base64 SHA256 of the given file.
-export function fileHash(filename: string) {
+export async function fileHash(filename: string) {
   const crypto = require('crypto');
   const hash = crypto.createHash('sha256');
-  const data = fs.readFileSync(filename);
-  hash.update(data);
-  return hash.digest('base64');
+  hash.setEncoding('base64');
+  const rs = createReadStream(filename);
+  return await new Promise(function (resolve) {
+    rs.on('end', function () {
+      rs.close();
+      resolve(hash.digest('base64'));
+    });
+    rs.pipe(hash, { end: false });
+  });
 }
-
 // This is the result of running fileHash on a blank file.
 export const blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 
 // Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
 // to modtime, uid/gid, or any permissions bits other than the current-user-exec
 // bit on normal files.
-export function treeHash(root: string, optionsParams: {
+export async function treeHash(root: string, optionsParams: {
   ignore?: (path: string) => boolean;
 }) {
   const options = {
@@ -380,9 +384,9 @@ export function treeHash(root: string, optionsParams: {
     ...optionsParams,
   };
 
-  const hash = require('crypto').createHash('sha256');
+  async function traverse(relativePath: string) {
+    const hash = require('crypto').createHash('sha256');
 
-  function traverse(relativePath: string) {
     if (options.ignore(relativePath)) {
       return;
     }
@@ -401,7 +405,7 @@ export function treeHash(root: string, optionsParams: {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
-      const fileHashed = fileHash(absPath);
+      const fileHashed = await fileHash(absPath);
       hash.update('file ' + JSON.stringify(relativePath) + ' ' +
                   stat?.size + ' ' +  fileHashed + '\n');
 
@@ -417,9 +421,11 @@ export function treeHash(root: string, optionsParams: {
                   JSON.stringify(readlink(absPath)) + '\n');
     }
     // ignore anything weirder
+
+    return hash
   }
 
-  traverse('');
+  const hash = await traverse('');
 
   return hash.digest('base64');
 }

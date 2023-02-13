@@ -313,8 +313,7 @@ var bundleSource = async function (isopack, includeSources, packageDir) {
   await files.createTarball(dirToTar, sourceTarball);
 
   var tarballHash = await files.fileHash(sourceTarball);
-  var treeHash = files.treeHash(dirToTar);
-
+  var treeHash = await files.treeHash(dirToTar);
   return {
     sourceTarball: sourceTarball,
     tarballHash: tarballHash,
@@ -377,7 +376,7 @@ export async function bundleBuild(isopack, isopackCache) {
   await files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = await files.fileHash(buildTarball);
-  var treeHash = files.treeHash(tarInputDir, {
+  var treeHash = await files.treeHash(tarInputDir, {
     // We don't include any package.json from an npm module in the tree hash,
     // because npm isn't super consistent about what it puts in there (eg, does
     // it include the "readme" field)? This ends up leading to spurious
@@ -748,7 +747,6 @@ exports.publishPackage = async function (options) {
   if (buildmessage.jobHasMessages()) {
     return;
   }
-
   // Create the package. Check that the metadata exists.
   if (options.new) {
     await buildmessage.enterJob("creating package " + name, async function () {
@@ -818,6 +816,7 @@ exports.publishPackage = async function (options) {
     await buildmessage.enterJob("uploading documentation", async function () {
       await uploadFile(uploadInfo.readmeUrl, readmePath);
     });
+
     if (buildmessage.jobHasMessages()) {
       return;
     }
@@ -825,6 +824,7 @@ exports.publishPackage = async function (options) {
     await buildmessage.enterJob("uploading source", async function () {
       await uploadFile(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
     });
+
     if (buildmessage.jobHasMessages()) {
       return;
     }
@@ -834,7 +834,7 @@ exports.publishPackage = async function (options) {
         isopack,
         projectContext.isopackCache,
       );
-
+      console.log(bundleResult, 'bundled result')
       if (buildmessage.jobHasMessages()) {
         return;
       }
@@ -845,6 +845,7 @@ exports.publishPackage = async function (options) {
       treeHash: sourceBundleResult.treeHash,
       readmeHash: readmeInfo.hash
     };
+    console.log(hashes);
     await buildmessage.enterJob("publishing package version", async function () {
       await callPackageServerBM(
         conn, 'publishPackageVersion', uploadInfo.uploadToken, hashes);
