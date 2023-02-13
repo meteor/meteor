@@ -83,7 +83,6 @@ OplogObserveDriver = function (options) {
   Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "mongo-livedata", "observe-drivers-oplog", 1);
 
-  self._registerPhaseChange(PHASE.QUERYING);
 
   self._matcher = options.matcher;
   // we are now using projection, not fields in the cursor description even if you pass {fields}
@@ -824,8 +823,10 @@ _.extend(OplogObserveDriver.prototype, {
 
     if (self._stopped)
       return;
-    if (self._phase !== PHASE.QUERYING)
-      throw Error("Phase unexpectedly " + self._phase);
+    // TODO[fibers] not sure about this change. For now it doesn't seems to affect other parts
+    self._registerPhaseChange(PHASE.QUERYING);
+    // if (self._phase !== PHASE.QUERYING)
+    //   throw Error("Phase unexpectedly " + self._phase);
 
     if (self._requeryWhenDoneThisQuery) {
       self._requeryWhenDoneThisQuery = false;

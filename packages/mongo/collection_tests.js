@@ -1,5 +1,5 @@
 
-var MongoDB = NpmModuleMongodb;
+var MongoDB = Meteor.isServer && NpmModuleMongodb;
 
 Tinytest.add(
   'collection - call Mongo.Collection without new',
