@@ -58,13 +58,13 @@ Meteor.methods({
   }
 });
 
-var runInFence = function (f) {
+const runInFence = async function (f) {
   if (Meteor.isClient) {
-    f();
+    await f();
   } else {
-    var fence = new DDPServer._WriteFence;
-    DDPServer._CurrentWriteFence.withValue(fence, f);
-    fence.armAndWait();
+    const fence = new DDPServer._WriteFence;
+    await DDPServer._CurrentWriteFence.withValue(fence, f);
+    await fence.armAndWait();
   }
 };
 
@@ -584,29 +584,35 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     await doStep();
   });
 
-  Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test, onComplete) {
+  Tinytest.addAsync('mongo-livedata - scribbling, ' + idGeneration, async function(
+    test,
+    onComplete
+  ) {
     var run = test.runId();
     var coll;
     if (Meteor.isClient) {
       coll = new Mongo.Collection(null, collectionOptions); // local, unmanaged
     } else {
-      coll = new Mongo.Collection("livedata_test_collection_"+run, collectionOptions);
+      coll = new Mongo.Collection(
+        'livedata_test_collection_' + run,
+        collectionOptions
+      );
     }
 
     var numAddeds = 0;
-    var handle = coll.find({run: run}).observe({
-      addedAt: function (o) {
+    var handle = await coll.find({ run: run }).observe({
+      addedAt: function(o) {
         // test that we can scribble on the object we get back from Mongo without
         // breaking anything.  The worst possible scribble is messing with _id.
         delete o._id;
         numAddeds++;
-      }
+      },
     });
-    _.each([123, 456, 789], function (abc) {
-      runInFence(function () {
-        coll.insert({run: run, abc: abc});
+    for (const abc of [123, 456, 789]) {
+      await runInFence(async function() {
+        await coll.insertAsync({ run: run, abc: abc });
       });
-    });
+    }
     handle.stop();
     // will be 6 (1+2+3) if we broke diffing!
     test.equal(numAddeds, 3);
@@ -615,77 +621,86 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
   });
 
   if (Meteor.isServer) {
-    Tinytest.addAsync("mongo-livedata - extended scribbling, " + idGeneration, function (test, onComplete) {
-      function error() {
-        throw new Meteor.Error('unsafe object mutation');
-      }
+    Tinytest.addAsync(
+      'mongo-livedata - extended scribbling, ' + idGeneration,
+      async function(test, onComplete) {
+        function error() {
+          throw new Meteor.Error('unsafe object mutation');
+        }
 
-      const denyModifications = {
-        get(target, key) {
-          const type = Object.prototype.toString.call(target[key]);
-          if (type === '[object Object]' || type === '[object Array]') {
-            return freeze(target[key]);
-          } else {
-            return target[key];
+        const denyModifications = {
+          get(target, key) {
+            const type = Object.prototype.toString.call(target[key]);
+            if (type === '[object Object]' || type === '[object Array]') {
+              return freeze(target[key]);
+            } else {
+              return target[key];
+            }
+          },
+          set: error,
+          deleteProperty: error,
+          defineProperty: error,
+        };
+
+        // Object.freeze only throws in silent mode
+        // So we make our own version that always throws.
+        function freeze(obj) {
+          return new Proxy(obj, denyModifications);
+        }
+
+        const origApplyCallback = ObserveMultiplexer.prototype._applyCallback;
+        ObserveMultiplexer.prototype._applyCallback = function(callback, args) {
+          // Make sure that if anything touches the original object, this will throw
+          return origApplyCallback.call(this, callback, freeze(args));
+        };
+
+        const run = test.runId();
+        const coll = new Mongo.Collection(
+          `livedata_test_scribble_collection_${run}`,
+          collectionOptions
+        );
+        const expectMutatable = o => {
+          try {
+            o.a[0].c = 3;
+          } catch (error) {
+            test.fail();
           }
-        },
-        set: error,
-        deleteProperty: error,
-        defineProperty: error,
-      };
+        };
+        const expectNotMutatable = o => {
+          try {
+            o.a[0].c = 3;
+            test.fail();
+          } catch (error) {}
+        };
+        const handle = await coll.find({ run }).observe({
+          addedAt: expectMutatable,
+          changedAt: function(id, o) {
+            expectMutatable(o);
+          },
+        });
 
-      // Object.freeze only throws in silent mode
-      // So we make our own version that always throws.
-      function freeze(obj) {
-        return new Proxy(obj, denyModifications);
+        const handle2 = await coll.find({ run }).observeChanges(
+          {
+            added: expectNotMutatable,
+            changed: function(id, o) {
+              expectNotMutatable(o);
+            },
+          },
+          { nonMutatingCallbacks: true }
+        );
+
+        await runInFence(async function() {
+          await coll.insertAsync({ run, a: [{ c: 1 }] });
+          await coll.updateAsync({ run }, { $set: { 'a.0.c': 2 } });
+        });
+
+        handle.stop();
+        handle2.stop();
+
+        ObserveMultiplexer.prototype._applyCallback = origApplyCallback;
+        onComplete();
       }
-
-      const origApplyCallback = ObserveMultiplexer.prototype._applyCallback;
-      ObserveMultiplexer.prototype._applyCallback = function(callback, args) {
-        // Make sure that if anything touches the original object, this will throw
-        return origApplyCallback.call(this, callback, freeze(args));
-      }
-
-      const run = test.runId();
-      const coll = new Mongo.Collection(`livedata_test_scribble_collection_${run}`, collectionOptions);
-      const expectMutatable = (o) => {
-        try {
-          o.a[0].c = 3;
-        } catch (error) {
-          test.fail();
-        }
-      }
-      const expectNotMutatable = (o) => {
-        try {
-          o.a[0].c = 3;
-          test.fail();
-        } catch (error) {}
-      }
-      const handle = coll.find({run}).observe({
-        addedAt: expectMutatable,
-        changedAt: function(id, o) {
-          expectMutatable(o);
-        }
-      });
-
-      const handle2 = coll.find({run}).observeChanges({
-        added: expectNotMutatable,
-        changed: function(id, o) {
-          expectNotMutatable(o);
-        }
-      }, { nonMutatingCallbacks: true });
-
-      runInFence(function () {
-        coll.insert({run, a: [ {c: 1} ]});
-        coll.update({run}, { $set: { 'a.0.c': 2 } });
-      });
-
-      handle.stop();
-      handle2.stop();
-
-      ObserveMultiplexer.prototype._applyCallback = origApplyCallback;
-      onComplete();
-    });
+    );
   }
 
   Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
