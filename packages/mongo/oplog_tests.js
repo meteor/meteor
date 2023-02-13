@@ -177,7 +177,8 @@ process.env.MONGO_OPLOG_URL &&
     },
   ]);
 
-// TODO[fibers] this test is commented in devel. Understand why.
+// TODO this is commented for now, but we need to find out the cause
+// PR: https://github.com/meteor/meteor/pull/12057
 // Meteor.isServer && Tinytest.addAsync(
 //   "mongo-livedata - oplog - _onFailover",
 //   async function (test) {
