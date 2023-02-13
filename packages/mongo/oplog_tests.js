@@ -1,56 +1,59 @@
 var OplogCollection = new Mongo.Collection("oplog-" + Random.id());
 
-Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
-  var oplogEnabled =
-    !!MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
+  test
+) {
+  var oplogEnabled = !!MongoInternals.defaultRemoteCollectionDriver().mongo
+    ._oplogHandle;
 
-  var supported = function (expected, selector, options) {
+  var supported = async function(expected, selector, options) {
     var cursor = OplogCollection.find(selector, options);
-    var handle = cursor.observeChanges({added: function () {}});
+    var handle = await cursor.observeChanges({ added: function() {} });
     // If there's no oplog at all, we shouldn't ever use it.
-    if (!oplogEnabled)
-      expected = false;
+    if (!oplogEnabled) expected = false;
     test.equal(!!handle._multiplexer._observeDriver._usesOplog, expected);
     handle.stop();
   };
 
-  supported(true, "asdf");
-  supported(true, 1234);
-  supported(true, new Mongo.ObjectID());
+  await supported(true, 'asdf');
+  await supported(true, 1234);
+  await supported(true, new Mongo.ObjectID());
 
-  supported(true, {_id: "asdf"});
-  supported(true, {_id: 1234});
-  supported(true, {_id: new Mongo.ObjectID()});
+  await supported(true, { _id: 'asdf' });
+  await supported(true, { _id: 1234 });
+  await supported(true, { _id: new Mongo.ObjectID() });
 
-  supported(true, {foo: "asdf",
+  await supported(true, {
+    foo: 'asdf',
     bar: 1234,
     baz: new Mongo.ObjectID(),
     eeney: true,
     miney: false,
-    moe: null});
+    moe: null,
+  });
 
-  supported(true, {});
+  await supported(true, {});
 
-  supported(true, {$and: [{foo: "asdf"}, {bar: "baz"}]});
-  supported(true, {foo: {x: 1}});
-  supported(true, {foo: {$gt: 1}});
-  supported(true, {foo: [1, 2, 3]});
+  await supported(true, { $and: [{ foo: 'asdf' }, { bar: 'baz' }] });
+  await supported(true, { foo: { x: 1 } });
+  await supported(true, { foo: { $gt: 1 } });
+  await supported(true, { foo: [1, 2, 3] });
 
   // No $where.
-  supported(false, {$where: "xxx"});
-  supported(false, {$and: [{foo: "adsf"}, {$where: "xxx"}]});
+  await supported(false, { $where: 'xxx' });
+  await supported(false, { $and: [{ foo: 'adsf' }, { $where: 'xxx' }] });
   // No geoqueries.
-  supported(false, {x: {$near: [1,1]}});
+  await supported(false, { x: { $near: [1, 1] } });
   // Nothing Minimongo doesn't understand.  (Minimongo happens to fail to
   // implement $elemMatch inside $all which MongoDB supports.)
-  supported(false, {x: {$all: [{$elemMatch: {y: 2}}]}});
+  await supported(false, { x: { $all: [{ $elemMatch: { y: 2 } }] } });
 
-  supported(true, {}, { sort: {x:1} });
-  supported(true, {}, { sort: {x:1}, limit: 5 });
-  supported(false, {}, { sort: {$natural:1}, limit: 5 });
-  supported(false, {}, { limit: 5 });
-  supported(false, {}, { skip: 2, limit: 5 });
-  supported(false, {}, { skip: 2 });
+  await supported(true, {}, { sort: { x: 1 } });
+  await supported(true, {}, { sort: { x: 1 }, limit: 5 });
+  await supported(false, {}, { sort: { $natural: 1 }, limit: 5 });
+  await supported(false, {}, { limit: 5 });
+  await supported(false, {}, { skip: 2, limit: 5 });
+  await supported(false, {}, { skip: 2 });
 });
 
 process.env.MONGO_OPLOG_URL && testAsyncMulti(
