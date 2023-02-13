@@ -111,7 +111,6 @@ _.extend(DDPServer._Crossbar.prototype, {
     // increased again).
     for (const id of callbackIds) {
       if (_.has(listenersForCollection, id)) {
-        console.log("listenersForCollection[id]asdas", listenersForCollection[id].callback.toString())
         await listenersForCollection[id].callback(notification);
       }
     }
