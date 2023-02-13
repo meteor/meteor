@@ -703,58 +703,68 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     );
   }
 
-  Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
-    var run = Random.id();
-    var coll;
-    if (Meteor.isClient) {
-      coll = new Mongo.Collection(null, collectionOptions); // local, unmanaged
-    } else {
-      coll = new Mongo.Collection("stopHandleInCallback-"+run, collectionOptions);
-    }
-
-    var output = [];
-
-    var handle = coll.find().observe({
-      added: function (doc) {
-        output.push({added: doc._id});
-      },
-      changed: function (newDoc) {
-        output.push('changed');
-        handle.stop();
+  Tinytest.addAsync(
+    'mongo-livedata - stop handle in callback, ' + idGeneration,
+    async function(test, onComplete) {
+      var run = Random.id();
+      var coll;
+      if (Meteor.isClient) {
+        coll = new Mongo.Collection(null, collectionOptions); // local, unmanaged
+      } else {
+        coll = new Mongo.Collection(
+          'stopHandleInCallback-' + run,
+          collectionOptions
+        );
       }
-    });
 
-    test.equal(output, []);
+      var output = [];
 
-    // Insert a document. Observe that the added callback is called.
-    var docId;
-    runInFence(function () {
-      docId = coll.insert({foo: 42});
-    });
-    test.length(output, 1);
-    test.equal(output.shift(), {added: docId});
+      var handle = await coll.find().observe({
+        added: function(doc) {
+          output.push({ added: doc._id });
+        },
+        changed: function(newDoc) {
+          output.push('changed');
+          handle.stop();
+        },
+      });
 
-    // Update it. Observe that the changed callback is called. This should also
-    // stop the observation.
-    runInFence(function() {
-      coll.update(docId, {$set: {bar: 10}});
-    });
-    test.length(output, 1);
-    test.equal(output.shift(), 'changed');
+      test.equal(output, []);
 
-    // Update again. This shouldn't call the callback because we stopped the
-    // observation.
-    runInFence(function() {
-      coll.update(docId, {$set: {baz: 40}});
-    });
-    test.length(output, 0);
+      // Insert a document. Observe that the added callback is called.
+      var docId;
+      await runInFence(async function() {
+        docId = await coll.insertAsync({ foo: 42 });
+      });
+      test.length(output, 1);
+      test.equal(output.shift(), { added: docId });
 
-    test.equal(coll.find().count(), 1);
-    test.equal(coll.findOne(docId),
-      {_id: docId, foo: 42, bar: 10, baz: 40});
+      // Update it. Observe that the changed callback is called. This should also
+      // stop the observation.
+      await runInFence(async function() {
+        await coll.updateAsync(docId, { $set: { bar: 10 } });
+      });
+      test.length(output, 1);
+      test.equal(output.shift(), 'changed');
 
-    onComplete();
-  });
+      // Update again. This shouldn't call the callback because we stopped the
+      // observation.
+      await runInFence(async function() {
+        await coll.updateAsync(docId, { $set: { baz: 40 } });
+      });
+      test.length(output, 0);
+
+      test.equal(await coll.find().countAsync(), 1);
+      test.equal(await coll.findOneAsync(docId), {
+        _id: docId,
+        foo: 42,
+        bar: 10,
+        baz: 40,
+      });
+
+      onComplete();
+    }
+  );
 
 // This behavior isn't great, but it beats deadlock.
   if (Meteor.isServer) {
