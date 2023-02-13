@@ -56,13 +56,13 @@ Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
   await supported(false, {}, { skip: 2 });
 });
 
-process.env.MONGO_OPLOG_URL && testAsyncMulti(
-  "mongo-livedata - oplog - entry skipping", [
-    function (test, expect) {
+process.env.MONGO_OPLOG_URL &&
+  testAsyncMulti('mongo-livedata - oplog - entry skipping', [
+    async function(test, expect) {
       var self = this;
       self.collectionName = Random.id();
       self.collection = new Mongo.Collection(self.collectionName);
-      self.collection.createIndex({species: 1});
+      await self.collection.createIndexAsync({ species: 1 });
 
       // Fill collection with lots of irrelevant objects (red cats) and some
       // relevant ones (blue dogs).
@@ -71,8 +71,9 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       // possible to make this test fail with TOO_FAR_BEHIND = 2000.
       // The documents waiting to be processed would hardly go beyond 1000
       // using mongo 3.2 with WiredTiger
-      MongoInternals.defaultRemoteCollectionDriver()
-        .mongo._oplogHandle._defineTooFarBehind(500);
+      MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle._defineTooFarBehind(
+        500
+      );
 
       self.IRRELEVANT_SIZE = 15000;
       self.RELEVANT_SIZE = 10;
@@ -80,92 +81,101 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       var i;
       for (i = 0; i < self.IRRELEVANT_SIZE; ++i) {
         docs.push({
-          name: "cat " + i,
+          name: 'cat ' + i,
           species: 'cat',
-          color: 'red'
+          color: 'red',
         });
       }
       for (i = 0; i < self.RELEVANT_SIZE; ++i) {
         docs.push({
-          name: "dog " + i,
+          name: 'dog ' + i,
           species: 'dog',
-          color: 'blue'
+          color: 'blue',
         });
       }
       // XXX implement bulk insert #1255
       var rawCollection = self.collection.rawCollection();
-      rawCollection.insertMany(docs, Meteor.bindEnvironment(expect(function (err) {
-        test.isFalse(err);
-      })));
+      rawCollection.insertMany(
+        docs,
+        Meteor.bindEnvironment(
+          expect(function(err) {
+            test.isFalse(err);
+          })
+        )
+      );
     },
 
-    function (test, expect) {
+    async function(test, expect) {
       var self = this;
 
-      test.equal(self.collection.find().count(),
-        self.IRRELEVANT_SIZE + self.RELEVANT_SIZE);
+      test.equal(
+        await self.collection.find().countAsync(),
+        self.IRRELEVANT_SIZE + self.RELEVANT_SIZE
+      );
 
       var blueDog5Id = null;
       var gotSpot = false;
 
       // Watch for blue dogs.
-      const gotSpotPromise = new Promise(resolve => {
-        self.subHandle = self.collection.find({
+      let resolver;
+      const gotSpotPromise = new Promise(resolve => resolver = resolve);
+
+      self.subHandle = await self.collection
+        .find({
           species: 'dog',
           color: 'blue',
-        }).observeChanges({
+        })
+        .observeChanges({
           added(id, fields) {
             if (fields.name === 'dog 5') {
               blueDog5Id = id;
             }
           },
           changed(id, fields) {
-            if (EJSON.equals(id, blueDog5Id) &&
-              fields.name === 'spot') {
+            if (EJSON.equals(id, blueDog5Id) && fields.name === 'spot') {
               gotSpot = true;
-              resolve();
+              resolver();
             }
           },
         });
-      });
 
       test.isTrue(self.subHandle._multiplexer._observeDriver._usesOplog);
       test.isTrue(blueDog5Id);
       test.isFalse(gotSpot);
 
       self.skipped = false;
-      self.skipHandle = MongoInternals.defaultRemoteCollectionDriver()
-        .mongo._oplogHandle.onSkippedEntries(function () {
+      self.skipHandle = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle.onSkippedEntries(
+        function() {
           self.skipped = true;
-        });
+        }
+      );
 
       // Dye all the cats blue. This adds lots of oplog mentries that look like
       // they might in theory be relevant (since they say "something you didn't
       // know about is now blue", and who knows, maybe it's a dog) which puts
       // the OplogObserveDriver into FETCHING mode, which performs poorly.
-      self.collection.update({species: 'cat'},
-        {$set: {color: 'blue'}},
-        {multi: true});
-      self.collection.update(blueDog5Id, {$set: {name: 'spot'}});
+      await self.collection.updateAsync(
+        { species: 'cat' },
+        { $set: { color: 'blue' } },
+        { multi: true }
+      );
+      await self.collection.updateAsync(blueDog5Id, { $set: { name: 'spot' } });
 
       // We ought to see the spot change soon!
       return gotSpotPromise;
     },
-
-    function (test, expect) {
+    async function(test, expect) {
       var self = this;
       test.isTrue(self.skipped);
 
       //This gets the TOO_FAR_BEHIND back to its initial value
-      MongoInternals.defaultRemoteCollectionDriver()
-        .mongo._oplogHandle._resetTooFarBehind();
+      MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle._resetTooFarBehind();
 
       self.skipHandle.stop();
       self.subHandle.stop();
-      self.collection.remove({});
-    }
-  ]
-);
+      await self.collection.removeAsync({});
+    },
+  ]);
 
 // TODO[fibers] this test is commented in devel. Understand why.
 // Meteor.isServer && Tinytest.addAsync(
