@@ -198,43 +198,47 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 
   var collectionOptions = { idGeneration: idGeneration};
 
-  testAsyncMulti("mongo-livedata - database error reporting. " + idGeneration, [
-    function (test, expect) {
+  testAsyncMulti('mongo-livedata - database error reporting. ' + idGeneration, [
+    async function(test, expect) {
       var ftc = Meteor._FailureTestCollection;
 
-      var exception = function (err, res) {
+      var exception = function(err) {
         test.instanceOf(err, Error);
       };
 
-      _.each(["insert", "remove", "update"], function (op) {
-        var arg = (op === "insert" ? {} : 'bla');
+      for (const op of ['insertAsync', 'removeAsync', 'updateAsync']) {
+        var arg = op === 'insert' ? {} : 'bla';
         var arg2 = {};
 
-        var callOp = function (callback) {
-          if (op === "update") {
-            ftc[op](arg, arg2, callback);
-          } else {
-            ftc[op](arg, callback);
+        const callOp = async function(callback) {
+          try {
+            if (op === 'update') {
+              await ftc[op](arg, arg2);
+            } else {
+              await ftc[op](arg);
+            }
+          } catch (e) {
+            callback(e);
           }
         };
 
         if (Meteor.isServer) {
-          test.throws(function () {
-            callOp();
+          await test.throwsAsync(async function() {
+            await callOp();
           });
 
-          callOp(expect(exception));
+          await callOp(expect(exception));
         }
 
         if (Meteor.isClient) {
-          callOp(expect(exception));
+          await callOp(expect(exception));
 
           // This would log to console in normal operation.
           Meteor._suppress_log(1);
-          callOp();
+          await callOp();
         }
-      });
-    }
+      }
+    },
   ]);
 
 
