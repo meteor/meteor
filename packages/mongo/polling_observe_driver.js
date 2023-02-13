@@ -117,7 +117,7 @@ _.extend(PollingObserveDriver.prototype, {
       throw new Error("_pollsScheduledButNotStarted is " +
                       self._pollsScheduledButNotStarted);
   },
-  _resumePolling: function() {
+  _resumePolling: async function() {
     var self = this;
     // We should be in the same state as in the end of _suspendPolling.
     if (self._pollsScheduledButNotStarted !== 1)
@@ -125,7 +125,7 @@ _.extend(PollingObserveDriver.prototype, {
                       self._pollsScheduledButNotStarted);
     // Run a poll synchronously (which will counteract the
     // ++_pollsScheduledButNotStarted from _suspendPolling).
-    self._taskQueue.runTask(async function () {
+    await self._taskQueue.runTask(async function () {
       await self._pollMongo();
     });
   },

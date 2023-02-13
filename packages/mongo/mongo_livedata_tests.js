@@ -447,42 +447,47 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     onComplete();
   });
 
-  Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, onComplete) {
-
+  Tinytest.addAsync('mongo-livedata - fuzz test, ' + idGeneration, async function(
+    test,
+    onComplete
+  ) {
     var run = Random.id();
     var coll;
     if (Meteor.isClient) {
       coll = new Mongo.Collection(null, collectionOptions); // local, unmanaged
     } else {
-      coll = new Mongo.Collection("livedata_test_collection_"+run, collectionOptions);
+      coll = new Mongo.Collection(
+        'livedata_test_collection_' + run,
+        collectionOptions
+      );
     }
 
     // fuzz test of observe(), especially the server-side diffing
     var actual = [];
     var correct = [];
-    var counters = {add: 0, change: 0, move: 0, remove: 0};
+    var counters = { add: 0, change: 0, move: 0, remove: 0 };
 
-    var obs = coll.find({run: run}, {sort: ["x"]}).observe({
-      addedAt: function (doc, before_index) {
+    var obs = await coll.find({ run: run }, { sort: ['x'] }).observe({
+      addedAt: function(doc, before_index) {
         counters.add++;
         actual.splice(before_index, 0, doc.x);
       },
-      changedAt: function (new_doc, old_doc, at_index) {
+      changedAt: function(new_doc, old_doc, at_index) {
         counters.change++;
         test.equal(actual[at_index], old_doc.x);
         actual[at_index] = new_doc.x;
       },
-      movedTo: function (doc, old_index, new_index) {
+      movedTo: function(doc, old_index, new_index) {
         counters.move++;
         test.equal(actual[old_index], doc.x);
         actual.splice(old_index, 1);
         actual.splice(new_index, 0, doc.x);
       },
-      removedAt: function (doc, at_index) {
+      removedAt: function(doc, at_index) {
         counters.remove++;
         test.equal(actual[at_index], doc.x);
         actual.splice(at_index, 1);
-      }
+      },
     });
 
     if (Meteor.isServer) {
@@ -495,24 +500,25 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     // Use non-deterministic randomness so we can have a shorter fuzz
     // test (fewer iterations).  For deterministic (fully seeded)
     // randomness, remove the call to Random.fraction().
-    var seededRandom = new SeededRandom("foobard" + Random.fraction());
+    var seededRandom = new SeededRandom('foobard' + Random.fraction());
     // Random integer in [0,n)
-    var rnd = function (n) {
-      return seededRandom.nextIntBetween(0, n-1);
+    var rnd = function(n) {
+      return seededRandom.nextIntBetween(0, n - 1);
     };
 
-    var finishObserve = function (f) {
+    const finishObserve = async function(f) {
       if (Meteor.isClient) {
-        f();
+        await f();
       } else {
-        var fence = new DDPServer._WriteFence;
-        DDPServer._CurrentWriteFence.withValue(fence, f);
-        fence.armAndWait();
+        var fence = new DDPServer._WriteFence();
+        await DDPServer._CurrentWriteFence.withValue(fence, f);
+        await fence.armAndWait();
       }
     };
 
-    var doStep = function () {
-      if (step++ === 5) { // run N random tests
+    const doStep = async function() {
+      if (step++ === 5) {
+        // run N random tests
         obs.stop();
         onComplete();
         return;
@@ -520,9 +526,8 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 
       var max_counters = _.clone(counters);
 
-      finishObserve(function () {
-        if (Meteor.isServer)
-          obs._multiplexer._observeDriver._suspendPolling();
+      await finishObserve(async function() {
+        if (Meteor.isServer) obs._multiplexer._observeDriver._suspendPolling();
 
         // Do a batch of 1-10 operations
         var batch_count = rnd(10) + 1;
@@ -534,7 +539,7 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
           if (op === 0 || step < 2 || !correct.length) {
             // Add
             x = rnd(1000000);
-            coll.insert({run: run, x: x});
+            await coll.insertAsync({ run: run, x: x });
             correct.push(x);
             max_counters.add++;
           } else if (op === 1 || op === 2) {
@@ -547,37 +552,36 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
               // Large change, likely to cause a move
               val = rnd(1000000);
             }
-            coll.update({run: run, x: x}, {$set: {x: val}});
+            await coll.updateAsync({ run: run, x: x }, { $set: { x: val } });
             correct[which] = val;
             max_counters.change++;
             max_counters.move++;
           } else {
-            coll.remove({run: run, x: correct[which]});
+            await coll.removeAsync({ run: run, x: correct[which] });
             correct.splice(which, 1);
             max_counters.remove++;
           }
         }
-        if (Meteor.isServer)
-          obs._multiplexer._observeDriver._resumePolling();
-
+        if (Meteor.isServer) await obs._multiplexer._observeDriver._resumePolling();
       });
 
       // Did we actually deliver messages that mutated the array in the
       // right way?
-      correct.sort(function (a,b) {return a-b;});
+      correct.sort(function(a, b) {
+        return a - b;
+      });
       test.equal(actual, correct);
 
       // Did we limit ourselves to one 'moved' message per change,
       // rather than O(results) moved messages?
-      _.each(max_counters, function (v, k) {
+      _.each(max_counters, function(v, k) {
         test.isTrue(max_counters[k] >= counters[k], k);
       });
 
-      Meteor.defer(doStep);
+      await doStep();
     };
 
-    doStep();
-
+    await doStep();
   });
 
   Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test, onComplete) {
