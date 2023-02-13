@@ -768,30 +768,36 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 
 // This behavior isn't great, but it beats deadlock.
   if (Meteor.isServer) {
-    Tinytest.addAsync("mongo-livedata - recursive observe throws, " + idGeneration, function (test, onComplete) {
-      var run = test.runId();
-      var coll = new Mongo.Collection("observeInCallback-"+run, collectionOptions);
+    Tinytest.addAsync(
+      'mongo-livedata - recursive observe throws, ' + idGeneration,
+      async function(test, onComplete) {
+        var run = test.runId();
+        var coll = new Mongo.Collection(
+          'observeInCallback-' + run,
+          collectionOptions
+        );
 
-      var callbackCalled = false;
-      var handle = coll.find({}).observe({
-        added: function (newDoc) {
-          callbackCalled = true;
-          test.throws(function () {
-            coll.find({}).observe();
-          });
-        }
-      });
-      test.isFalse(callbackCalled);
-      // Insert a document. Observe that the added callback is called.
-      runInFence(function () {
-        coll.insert({foo: 42});
-      });
-      test.isTrue(callbackCalled);
+        var callbackCalled = false;
+        var handle = await coll.find({}).observe({
+          added: async function(newDoc) {
+            callbackCalled = true;
+            await test.throwsAsync(async function() {
+              await coll.find({}).observe();
+            });
+          },
+        });
+        test.isFalse(callbackCalled);
+        // Insert a document. Observe that the added callback is called.
+        await runInFence(async function() {
+          await coll.insertAsync({ foo: 42 });
+        });
+        test.isTrue(callbackCalled);
 
-      handle.stop();
+        handle.stop();
 
-      onComplete();
-    });
+        onComplete();
+      }
+    );
 
     Tinytest.addAsync("mongo-livedata - cursor dedup, " + idGeneration, function (test, onComplete) {
       var run = test.runId();
