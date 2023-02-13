@@ -14,7 +14,7 @@ export class DocFetcher {
   //
   // You may assume that callback is never called synchronously (and in fact
   // OplogObserveDriver does so).
-  async fetch(collectionName, id, op) {
+  async fetch(collectionName, id, op, callback) {
     const self = this;
 
     check(collectionName, String);
@@ -22,33 +22,36 @@ export class DocFetcher {
 
     // If there's already an in-progress fetch for this cache key, yield until
     // it's done and return whatever it returns.
-    const inProgress = self._callbacksForOp.has(op);
-    const em = self._callbacksForOp.get(op);
-    const { promise: callback, emitter } = EmitterPromise.newPromiseResolver({
-      emitter: em
-    });
-    if (!inProgress) {
-      self._callbacksForOp.set(op, emitter);
+    if (self._callbacksForOp.has(op)) {
+      self._callbacksForOp.get(op).push(callback);
+      return;
     }
 
-    if (inProgress) {
-      return callback;
-    }
-    Meteor._runAsync(async function () {
-      try {
-        var doc = await self._mongoConnection.findOneAsync(
-            collectionName, {_id: id}) || null;
-        // Return doc to all relevant callbacks. Note that this array can
-        // continue to grow during callback excecution.
-        emitter.emit('data', doc);
-      } catch (e) {
-        emitter.emit('error', e);
-      } finally {
-        // XXX consider keeping the doc around for a period of time before
-        // removing from the cache
-        self._callbacksForOp.delete(op);
+    const callbacks = [callback];
+    self._callbacksForOp.set(op, callbacks);
+
+    try {
+      var doc =
+        (await self._mongoConnection.findOneAsync(collectionName, {
+          _id: id,
+        })) || null;
+      // Return doc to all relevant callbacks. Note that this array can
+      // continue to grow during callback excecution.
+      while (callbacks.length > 0) {
+        // Clone the document so that the various calls to fetch don't return
+        // objects that are intertwingled with each other. Clone before
+        // popping the future, so that if clone throws, the error gets passed
+        // to the next callback.
+        callbacks.pop()(null, EJSON.clone(doc));
       }
-    });
-    return callback;
+    } catch (e) {
+      while (callbacks.length > 0) {
+        callbacks.pop()(e);
+      }
+    } finally {
+      // XXX consider keeping the doc around for a period of time before
+      // removing from the cache
+      self._callbacksForOp.delete(op);
+    }
   }
 }
