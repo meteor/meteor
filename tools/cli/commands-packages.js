@@ -1169,8 +1169,8 @@ main.registerCommand({
   });
   await projectContext.init();
 
-  await main.captureAndExit("=> Errors while initializing project:", function () {
-    return projectContext.prepareProjectForBuild();
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
+    return await projectContext.prepareProjectForBuild();
   });
 
   // No need to display the PackageMapDelta here, since we're about to list all
@@ -1495,7 +1495,7 @@ var maybeUpdateRelease = async function (options) {
   // XXX better error checking on release.current.name
   // XXX add a method to release.current.
   var releaseTrack = release.current ?
-        release.current.getReleaseTrack() : catalog.DEFAULT_TRACK;
+        await release.current.getReleaseTrack() : catalog.DEFAULT_TRACK;
 
   // Unless --release was passed (in which case we ought to already have
   // springboarded to that release), go get the latest release and switch to
@@ -1689,7 +1689,7 @@ var maybeUpdateRelease = async function (options) {
     // We are not doing a patch update, or a specific release update, so we need
     // to try all recommended releases on our track, whose order key is greater
     // than the app's.
-    releaseVersion = getLaterReleaseVersions(
+    releaseVersion = await getLaterReleaseVersions(
       projectContext.releaseFile.releaseTrack,
       projectContext.releaseFile.releaseVersion)[0];
 
@@ -2061,7 +2061,7 @@ main.registerCommand({
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
-  updater.tryToDownloadUpdate({
+  await updater.tryToDownloadUpdate({
     showBanner: true,
     printErrors: true
   });
@@ -2148,10 +2148,10 @@ main.registerCommand({
 
   await projectContext.init();
 
-  await main.captureAndExit("=> Errors while initializing project:", function () {
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
     // We're just reading metadata here --- we're not going to resolve
     // constraints until after we've made our changes.
-    return projectContext.initializeCatalog();
+    return await projectContext.initializeCatalog();
   });
 
   let exitCode = 0;
@@ -2357,10 +2357,10 @@ main.registerCommand({
   });
   await projectContext.init();
 
-  await main.captureAndExit("=> Errors while initializing project:", function () {
+  await main.captureAndExit("=> Errors while initializing project:", async function () {
     // We're just reading metadata here --- we're not going to resolve
     // constraints until after we've made our changes.
-   return projectContext.readProjectMetadata();
+   return await projectContext.readProjectMetadata();
   });
 
   let exitCode = 0;
