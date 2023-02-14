@@ -912,20 +912,28 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
       }
     );
 
-    Tinytest.addAsync("mongo-livedata - async server-side insert, " + idGeneration, function (test, onComplete) {
-      // Tests that insert returns before the callback runs. Relies on the fact
-      // that mongo does not run the callback before spinning off the event loop.
-      var cname = Random.id();
-      var coll = new Mongo.Collection(cname);
-      var doc = { foo: "bar" };
-      var x = 0;
-      coll.insert(doc, function (err, result) {
-        test.equal(err, null);
-        test.equal(x, 1);
-        onComplete();
-      });
-      x++;
-    });
+    Tinytest.addAsync(
+      'mongo-livedata - async server-side insert, ' + idGeneration,
+      async function(test, onComplete) {
+        // Tests that insert returns before the callback runs. Relies on the fact
+        // that mongo does not run the callback before spinning off the event loop.
+        var cname = Random.id();
+        var coll = new Mongo.Collection(cname);
+        var doc = { foo: 'bar' };
+        var x = 0;
+
+        let resolver;
+        const promise = new Promise(r => resolver = r);
+
+        coll.insertAsync(doc).then(() => {
+          test.equal(x, 1)
+          resolver();
+        });
+        x++;
+
+        await promise;
+      }
+    );
 
     Tinytest.addAsync("mongo-livedata - async server-side update, " + idGeneration, function (test, onComplete) {
       // Tests that update returns before the callback runs.
