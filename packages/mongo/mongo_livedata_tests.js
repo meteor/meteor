@@ -1652,33 +1652,44 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 
 // See https://github.com/meteor/meteor/issues/594.
   testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
-    function (test, expect) {
+    function(test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        Meteor.call(
+          'createInsecureCollection',
+          this.collectionName,
+          collectionOptions
+        );
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, function (test, expect) {
-      var self = this;
-      var coll = self.coll = new Mongo.Collection(self.collectionName, collectionOptions);
-
-      coll.insert({foo: 'x', length: 0}, expect(function (err, id) {
-        test.isFalse(err);
-        test.isTrue(id);
-        self.docId = id;
-        test.equal(coll.findOne(self.docId),
-          {_id: self.docId, foo: 'x', length: 0});
-      }));
     },
-    function (test, expect) {
+    async function(test, expect) {
       var self = this;
-      var coll = self.coll;
-      coll.update(self.docId, {$set: {length: 5}}, expect(function (err) {
-        test.isFalse(err);
-        test.equal(coll.findOne(self.docId),
-          {_id: self.docId, foo: 'x', length: 5});
-      }));
-    }
+      var coll = (self.coll = new Mongo.Collection(
+        self.collectionName,
+        collectionOptions
+      ));
+
+      const id = await coll.insertAsync({ foo: 'x', length: 0 });
+
+      test.isTrue(id);
+      self.docId = id;
+      test.equal(await coll.findOneAsync(self.docId), {
+        _id: self.docId,
+        foo: 'x',
+        length: 0,
+      });
+    },
+    async function(test, expect) {
+      const self = this;
+      const coll = self.coll;
+      await coll.updateAsync(self.docId, { $set: { length: 5 } });
+      test.equal(await coll.findOneAsync(self.docId), {
+        _id: self.docId,
+        foo: 'x',
+        length: 5,
+      });
+    },
   ]);
 
   testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [

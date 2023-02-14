@@ -783,11 +783,6 @@ Object.assign(Mongo.Collection.prototype, {
       return result;
     };
 
-    // const wrappedCallback = wrapCallback(
-    //     callback,
-    //     chooseReturnValueFromCollectionResult
-    // );
-
     if (this._isRemoteCollection()) {
       const result = await this._callMutatorMethodAsync('insertAsync', [doc]);
 
