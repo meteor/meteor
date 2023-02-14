@@ -863,9 +863,11 @@ export class Connection {
     // If we're using the default callback on the server,
     // block waiting for the result.
     if (future) {
-      return {
-        stubValuePromise: future,
-      };
+      return options.returnStubValue
+        ? future
+        : {
+            stubValuePromise: future,
+          };
     }
     return options.returnStubValue ? stubReturnValue : undefined;
   }

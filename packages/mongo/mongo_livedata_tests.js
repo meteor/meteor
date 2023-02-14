@@ -1626,27 +1626,29 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
   ]);
 
 // Regression test for https://github.com/meteor/meteor/issues/8666.
-  testAsyncMulti('mongo-livedata - upsert with an undefined selector, ' + idGeneration, [
-    function (test, expect) {
-      this.collectionName = Random.id();
-      if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName);
-        Meteor.subscribe('c-' + this.collectionName, expect());
-      }
-    }, function (test, expect) {
-      var coll = new Mongo.Collection(this.collectionName, collectionOptions);
-      var testWidget = {
-        name: 'Widget name'
-      };
-      coll.upsert(testWidget._id, testWidget, expect(function (error, insertDetails) {
-        test.isFalse(error);
+  testAsyncMulti(
+    'mongo-livedata - upsert with an undefined selector, ' + idGeneration,
+    [
+      function(test, expect) {
+        this.collectionName = Random.id();
+        if (Meteor.isClient) {
+          Meteor.call('createInsecureCollection', this.collectionName);
+          Meteor.subscribe('c-' + this.collectionName, expect());
+        }
+      },
+      async function(test, expect) {
+        const coll = new Mongo.Collection(this.collectionName, collectionOptions);
+        const testWidget = {
+          name: 'Widget name',
+        };
+        const insertDetails = await coll.upsertAsync(testWidget._id, testWidget, { returnStubValue: true });
         test.equal(
-          coll.findOne(insertDetails.insertedId),
+          await coll.findOneAsync(insertDetails.insertedId),
           Object.assign({ _id: insertDetails.insertedId }, testWidget)
         );
-      }));
-    }
-  ]);
+      },
+    ]
+  );
 
 // See https://github.com/meteor/meteor/issues/594.
   testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
