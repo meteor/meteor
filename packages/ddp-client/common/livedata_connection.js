@@ -598,16 +598,16 @@ export class Connection {
     * */
     DDP._CurrentMethodInvocation._set();
     DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
-    return new Promise((resolve, reject) => {
+    const promise = new Promise((resolve, reject) => {
       this.applyAsync(name, args, { isFromCallAsync: true })
         .then(result => {
           resolve(result);
         })
         .catch(reject)
-        .finally(() =>
-          DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
-        );
     });
+    return promise.finally(() =>
+      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
+    );
   }
 
   /**
