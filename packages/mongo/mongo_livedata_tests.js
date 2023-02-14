@@ -960,21 +960,29 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
       }
     );
 
-    Tinytest.addAsync("mongo-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
-      // Tests that remove returns before the callback runs.
-      var cname = Random.id();
-      var coll = new Mongo.Collection(cname);
-      var doc = { foo: "bar" };
-      var x = 0;
-      var id = coll.insert(doc);
-      coll.remove(id, function (err, result) {
-        test.equal(err, null);
-        test.isFalse(coll.findOne(id));
-        test.equal(x, 1);
-        onComplete();
-      });
-      x++;
-    });
+    Tinytest.addAsync(
+      'mongo-livedata - async server-side remove, ' + idGeneration,
+      async function(test, onComplete) {
+        // Tests that remove returns before the callback runs.
+        var cname = Random.id();
+        var coll = new Mongo.Collection(cname);
+        var doc = { foo: 'bar' };
+        var x = 0;
+        var id = await coll.insertAsync(doc);
+
+        let resolver;
+        const promise = new Promise(r => resolver = r);
+
+        coll.removeAsync(id).then(async () => {
+          test.isFalse(await coll.findOneAsync(id));
+          test.equal(x, 1);
+          resolver();
+        });
+        x++;
+
+        return promise;
+      }
+    );
 
     // compares arrays a and b w/o looking at order
     var setsEqual = function (a, b) {
