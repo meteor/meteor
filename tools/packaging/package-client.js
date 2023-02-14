@@ -438,10 +438,14 @@ var publishBuiltPackage = async function (conn, isopack, bundleResult) {
   }
 
   await buildmessage.enterJob('publishing package build for ' + name, async function () {
-    await callPackageServerBM(conn, 'publishPackageBuild',
-      uploadInfo.uploadToken,
-      bundleResult.tarballHash,
-      bundleResult.treeHash);
+    try {
+      await callPackageServerBM(conn, 'publishPackageBuild',
+        uploadInfo.uploadToken,
+        bundleResult.tarballHash,
+        bundleResult.treeHash);
+    } catch (e) {
+      buildmessage.error(e.message);
+    }
   });
   if (buildmessage.jobHasMessages()) {
     return;
