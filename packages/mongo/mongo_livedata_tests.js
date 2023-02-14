@@ -935,21 +935,30 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
       }
     );
 
-    Tinytest.addAsync("mongo-livedata - async server-side update, " + idGeneration, function (test, onComplete) {
-      // Tests that update returns before the callback runs.
-      var cname = Random.id();
-      var coll = new Mongo.Collection(cname);
-      var doc = { foo: "bar" };
-      var x = 0;
-      var id = coll.insert(doc);
-      coll.update(id, { $set: { foo: "baz" } }, function (err, result) {
-        test.equal(err, null);
-        test.equal(result, 1);
-        test.equal(x, 1);
-        onComplete();
-      });
-      x++;
-    });
+    Tinytest.addAsync(
+      'mongo-livedata - async server-side update, ' + idGeneration,
+      async function(test, onComplete) {
+        // Tests that update returns before the callback runs.
+        var cname = Random.id();
+        var coll = new Mongo.Collection(cname);
+        var doc = { foo: 'bar' };
+        var x = 0;
+        var id = await coll.insertAsync(doc);
+
+        let resolver;
+        const promise = new Promise(r => resolver = r);
+
+        coll.updateAsync(id, { $set: { foo: 'baz' } }).then(result => {
+          test.equal(result, 1);
+          test.equal(x, 1);
+          resolver();
+        });
+
+        x++;
+
+        return promise;
+      }
+    );
 
     Tinytest.addAsync("mongo-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
       // Tests that remove returns before the callback runs.
