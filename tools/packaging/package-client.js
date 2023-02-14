@@ -178,6 +178,7 @@ var _updateServerPackageData = async function (dataStore, options) {
       compressCollections: compress
     });
 
+
     // Is the remote server telling us to ignore everything we've heard before?
     // OK, we can do that.
     if (remoteData.resetData) {
@@ -312,8 +313,9 @@ var bundleSource = async function (isopack, includeSources, packageDir) {
   var sourceTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
   await files.createTarball(dirToTar, sourceTarball);
 
-  var tarballHash = await files.fileHash(sourceTarball);
-  var treeHash = await files.treeHash(dirToTar);
+  var tarballHash = files.fileHash(sourceTarball);
+  var treeHash = files.treeHash(dirToTar);
+
   return {
     sourceTarball: sourceTarball,
     tarballHash: tarballHash,
@@ -364,7 +366,7 @@ export async function bundleBuild(isopack, isopackCache) {
   // disk in an IsopackCache, because we don't want to include
   // isopack-buildinfo.json. (We don't include it because we're not passing
   // includeIsopackBuildInfo to saveToPath here.)
-  isopack.saveToPath(tarInputDir, {
+  await isopack.saveToPath(tarInputDir, {
     // When publishing packages that don't use new registerCompiler plugins,
     // make sure that old Meteors can use it too
     includePreCompilerPluginIsopackVersions: true,
@@ -372,11 +374,10 @@ export async function bundleBuild(isopack, isopackCache) {
   });
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
-
   await files.createTarball(tarInputDir, buildTarball);
 
-  var tarballHash = await files.fileHash(buildTarball);
-  var treeHash = await files.treeHash(tarInputDir, {
+  var tarballHash =  files.fileHash(buildTarball);
+  var treeHash =  files.treeHash(tarInputDir, {
     // We don't include any package.json from an npm module in the tree hash,
     // because npm isn't super consistent about what it puts in there (eg, does
     // it include the "readme" field)? This ends up leading to spurious
@@ -619,7 +620,6 @@ exports.publishPackage = async function (options) {
           '. If you are creating a new package, use the --create flag.');
       return;
     }
-
     if (!await exports.amIAuthorized(name, conn, false)) {
       buildmessage.error(
         'You are not an authorized maintainer of ' + name + '.  Only ' +
@@ -663,7 +663,6 @@ exports.publishPackage = async function (options) {
   var readmePath = await saveReadmeToTmp(readmeInfo);
 
   var packageDeps = packageSource.getDependencyMetadata();
-
   // Check that the package does not have any unconstrained references.
   _.each(packageDeps, function(refs, label) {
     if (refs.constraint == null) {
@@ -699,6 +698,7 @@ exports.publishPackage = async function (options) {
   }
 
   var isopack = projectContext.isopackCache.getIsopack(name);
+
   if (! isopack) {
     throw Error("no isopack " + name);
   }
@@ -744,6 +744,7 @@ exports.publishPackage = async function (options) {
     sourceBundleResult = await bundleSource(
       isopack, sourceFiles, packageSource.sourceRoot);
   });
+
   if (buildmessage.jobHasMessages()) {
     return;
   }
@@ -830,11 +831,11 @@ exports.publishPackage = async function (options) {
     }
 
     if (! options.doNotPublishBuild) {
+
       var bundleResult = await createBuiltPackage(
         isopack,
         projectContext.isopackCache,
       );
-      console.log(bundleResult, 'bundled result')
       if (buildmessage.jobHasMessages()) {
         return;
       }
@@ -845,7 +846,6 @@ exports.publishPackage = async function (options) {
       treeHash: sourceBundleResult.treeHash,
       readmeHash: readmeInfo.hash
     };
-    console.log(hashes);
     await buildmessage.enterJob("publishing package version", async function () {
       await callPackageServerBM(
         conn, 'publishPackageVersion', uploadInfo.uploadToken, hashes);
