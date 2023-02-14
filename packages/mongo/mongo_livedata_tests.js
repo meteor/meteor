@@ -923,10 +923,10 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
         var x = 0;
 
         let resolver;
-        const promise = new Promise(r => resolver = r);
+        const promise = new Promise(r => (resolver = r));
 
         coll.insertAsync(doc).then(() => {
-          test.equal(x, 1)
+          test.equal(x, 1);
           resolver();
         });
         x++;
@@ -946,7 +946,7 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
         var id = await coll.insertAsync(doc);
 
         let resolver;
-        const promise = new Promise(r => resolver = r);
+        const promise = new Promise(r => (resolver = r));
 
         coll.updateAsync(id, { $set: { foo: 'baz' } }).then(result => {
           test.equal(result, 1);
@@ -971,7 +971,7 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
         var id = await coll.insertAsync(doc);
 
         let resolver;
-        const promise = new Promise(r => resolver = r);
+        const promise = new Promise(r => (resolver = r));
 
         coll.removeAsync(id).then(async () => {
           test.isFalse(await coll.findOneAsync(id));
@@ -985,7 +985,7 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     );
 
     // compares arrays a and b w/o looking at order
-    var setsEqual = function (a, b) {
+    var setsEqual = function(a, b) {
       a = _.map(a, EJSON.stringify);
       b = _.map(b, EJSON.stringify);
       return _.isEmpty(_.difference(a, b)) && _.isEmpty(_.difference(b, a));
@@ -1263,7 +1263,11 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
         testOplogBufferIds([docId10, docId11]);
         testSafeAppendToBufferFlag(false);
 
-        await upd({ bar: { $gt: 25 } }, { $inc: { bar: -7.5 } }, { multi: true });
+        await upd(
+          { bar: { $gt: 25 } },
+          { $inc: { bar: -7.5 } },
+          { multi: true }
+        );
         // State: [ 22:8 23:7 23.5:10 | 24:6 ] 33.5:11 43.5:12
         // 33.5 doesn't update in-place in buffer, because it the driver is not sure
         // it can do it: because the buffer does not have the safe append flag set,
@@ -1422,114 +1426,163 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
       }
     );
 
-    Tinytest.add("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, function (test) {
-      var run = test.runId();
-      var coll = new Mongo.Collection("observeLimit-"+run, collectionOptions);
+    Tinytest.addAsync(
+      'mongo-livedata - observe sorted, limited, big initial set ' +
+        idGeneration,
+      async function(test) {
+        var run = test.runId();
+        var coll = new Mongo.Collection(
+          'observeLimit-' + run,
+          collectionOptions
+        );
 
-      var observer = function () {
-        var state = {};
-        var output = [];
-        var callbacks = {
-          changed: function (newDoc) {
-            output.push({changed: newDoc._id});
-            state[newDoc._id] = newDoc;
-          },
-          added: function (newDoc) {
-            output.push({added: newDoc._id});
-            state[newDoc._id] = newDoc;
-          },
-          removed: function (oldDoc) {
-            output.push({removed: oldDoc._id});
-            delete state[oldDoc._id];
+        var observer = async function() {
+          var state = {};
+          var output = [];
+          var callbacks = {
+            changed: function(newDoc) {
+              output.push({ changed: newDoc._id });
+              state[newDoc._id] = newDoc;
+            },
+            added: function(newDoc) {
+              output.push({ added: newDoc._id });
+              state[newDoc._id] = newDoc;
+            },
+            removed: function(oldDoc) {
+              output.push({ removed: oldDoc._id });
+              delete state[oldDoc._id];
+            },
+          };
+          var handle = await coll
+            .find({}, { sort: { x: 1, y: 1 }, limit: 3 })
+            .observe(callbacks);
+
+          return { output: output, handle: handle, state: state };
+        };
+        const clearOutput = function(o) {
+          o.output.splice(0, o.output.length);
+        };
+        const ins = async function(doc) {
+          let id;
+          await runInFence(async function() {
+            id = await coll.insertAsync(doc);
+          });
+          return id;
+        };
+        const rem = async function(id) {
+          await runInFence(async function() {
+            await coll.removeAsync(id);
+          });
+        };
+        // tests '_id' subfields for all documents in oplog buffer
+        var testOplogBufferIds = function(ids) {
+          var bufferIds = [];
+          o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(
+            function(x, id) {
+              bufferIds.push(id);
+            }
+          );
+
+          test.isTrue(
+            setsEqual(ids, bufferIds),
+            'expected: ' + ids + '; got: ' + bufferIds
+          );
+        };
+        var testSafeAppendToBufferFlag = function(expected) {
+          if (expected) {
+            test.isTrue(
+              o.handle._multiplexer._observeDriver._safeAppendToBuffer
+            );
+          } else {
+            test.isFalse(
+              o.handle._multiplexer._observeDriver._safeAppendToBuffer
+            );
           }
         };
-        var handle = coll.find({}, {sort: {x: 1, y: 1}, limit: 3})
-          .observe(callbacks);
 
-        return {output: output, handle: handle, state: state};
-      };
-      var clearOutput = function (o) { o.output.splice(0, o.output.length); };
-      var ins = function (doc) {
-        var id; runInFence(function () { id = coll.insert(doc); });
-        return id;
-      };
-      var rem = function (id) {
-        runInFence(function () { coll.remove(id); });
-      };
-      // tests '_id' subfields for all documents in oplog buffer
-      var testOplogBufferIds = function (ids) {
-        var bufferIds = [];
-        o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(function (x, id) {
-          bufferIds.push(id);
-        });
-
-        test.isTrue(setsEqual(ids, bufferIds), "expected: " + ids + "; got: " + bufferIds);
-      };
-      var testSafeAppendToBufferFlag = function (expected) {
-        if (expected) {
-          test.isTrue(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
-        } else {
-          test.isFalse(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+        var ids = {};
+        let i = 0;
+        for (const x of [2, 4, 1, 3, 5, 5, 9, 1, 3, 2, 5]) {
+          ids[i] = await ins({ x, y: i });
+          i++;
         }
-      };
 
-      var ids = {};
-      _.each([2, 4, 1, 3, 5, 5, 9, 1, 3, 2, 5], function (x, i) {
-        ids[i] = ins({ x: x, y: i });
-      });
+        // Ensure that we are past all the 'i' entries before we run the query, so
+        // that we get the expected phase transitions.
+        await waitUntilOplogCaughtUp();
 
-      // Ensure that we are past all the 'i' entries before we run the query, so
-      // that we get the expected phase transitions.
-      waitUntilOplogCaughtUp();
+        var o = await observer();
+        var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
+        //  x: [1 1 2 | 2 3 3] 4 5 5 5  9
+        // id: [2 7 0 | 9 3 8] 1 4 5 10 6
 
-      var o = observer();
-      var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
-      //  x: [1 1 2 | 2 3 3] 4 5 5 5  9
-      // id: [2 7 0 | 9 3 8] 1 4 5 10 6
+        test.length(o.output, 3);
 
-      test.length(o.output, 3);
-      test.isTrue(setsEqual([{added: ids[2]}, {added: ids[7]}, {added: ids[0]}], o.output));
-      usesOplog && testOplogBufferIds([ids[9], ids[3], ids[8]]);
-      usesOplog && testSafeAppendToBufferFlag(false);
-      clearOutput(o);
+        test.isTrue(
+          setsEqual(
+            [{ added: ids[2] }, { added: ids[7] }, { added: ids[0] }],
+            o.output
+          )
+        );
+        usesOplog && testOplogBufferIds([ids[9], ids[3], ids[8]]);
+        usesOplog && testSafeAppendToBufferFlag(false);
+        clearOutput(o);
 
-      rem(ids[0]);
-      //  x: [1 1 2 | 3 3] 4 5 5 5  9
-      // id: [2 7 9 | 3 8] 1 4 5 10 6
-      test.length(o.output, 2);
-      test.isTrue(setsEqual([{removed: ids[0]}, {added: ids[9]}], o.output));
-      usesOplog && testOplogBufferIds([ids[3], ids[8]]);
-      usesOplog && testSafeAppendToBufferFlag(false);
-      clearOutput(o);
+        await rem(ids[0]);
+        //  x: [1 1 2 | 3 3] 4 5 5 5  9
+        // id: [2 7 9 | 3 8] 1 4 5 10 6
+        test.length(o.output, 2);
+        test.isTrue(
+          setsEqual([{ removed: ids[0] }, { added: ids[9] }], o.output)
+        );
+        usesOplog && testOplogBufferIds([ids[3], ids[8]]);
+        usesOplog && testSafeAppendToBufferFlag(false);
+        clearOutput(o);
 
-      rem(ids[7]);
-      //  x: [1 2 3 | 3] 4 5 5 5  9
-      // id: [2 9 3 | 8] 1 4 5 10 6
-      test.length(o.output, 2);
-      test.isTrue(setsEqual([{removed: ids[7]}, {added: ids[3]}], o.output));
-      usesOplog && testOplogBufferIds([ids[8]]);
-      usesOplog && testSafeAppendToBufferFlag(false);
-      clearOutput(o);
+        await rem(ids[7]);
+        //  x: [1 2 3 | 3] 4 5 5 5  9
+        // id: [2 9 3 | 8] 1 4 5 10 6
+        test.length(o.output, 2);
+        test.isTrue(
+          setsEqual([{ removed: ids[7] }, { added: ids[3] }], o.output)
+        );
+        usesOplog && testOplogBufferIds([ids[8]]);
+        usesOplog && testSafeAppendToBufferFlag(false);
+        clearOutput(o);
 
-      rem(ids[3]);
-      //  x: [1 2 3 | 4 5 5] 5  9
-      // id: [2 9 8 | 1 4 5] 10 6
-      test.length(o.output, 2);
-      test.isTrue(setsEqual([{removed: ids[3]}, {added: ids[8]}], o.output));
-      usesOplog && testOplogBufferIds([ids[1], ids[4], ids[5]]);
-      usesOplog && testSafeAppendToBufferFlag(false);
-      clearOutput(o);
+        await rem(ids[3]);
+        //  x: [1 2 3 | 4 5 5] 5  9
+        // id: [2 9 8 | 1 4 5] 10 6
+        test.length(o.output, 2);
+        test.isTrue(
+          setsEqual([{ removed: ids[3] }, { added: ids[8] }], o.output)
+        );
+        usesOplog && testOplogBufferIds([ids[1], ids[4], ids[5]]);
+        usesOplog && testSafeAppendToBufferFlag(false);
+        clearOutput(o);
 
-      rem({ x: {$lt: 4} });
-      //  x: [4 5 5 | 5  9]
-      // id: [1 4 5 | 10 6]
-      test.length(o.output, 6);
-      test.isTrue(setsEqual([{removed: ids[2]}, {removed: ids[9]}, {removed: ids[8]},
-        {added: ids[5]}, {added: ids[4]}, {added: ids[1]}], o.output));
-      usesOplog && testOplogBufferIds([ids[10], ids[6]]);
-      usesOplog && testSafeAppendToBufferFlag(true);
-      clearOutput(o);
-    });
+        await rem({ x: { $lt: 4 } });
+        //  x: [4 5 5 | 5  9]
+        // id: [1 4 5 | 10 6]
+        test.length(o.output, 6);
+        test.isTrue(
+          setsEqual(
+            [
+              { removed: ids[2] },
+              { removed: ids[9] },
+              { removed: ids[8] },
+              { added: ids[5] },
+              { added: ids[4] },
+              { added: ids[1] },
+            ],
+            o.output
+          )
+        );
+        usesOplog && testOplogBufferIds([ids[10], ids[6]]);
+        usesOplog && testSafeAppendToBufferFlag(true);
+        clearOutput(o);
+      }
+    );
   }
 
 
