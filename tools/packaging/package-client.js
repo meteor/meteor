@@ -124,8 +124,8 @@ var loadRemotePackageData = async function (conn, syncToken, options) {
 //    `config.getPackageServerUrl()`)
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
-exports.updateServerPackageData = function (dataStore, options) {
-  return buildmessage.enterJob('updating package catalog', async function () {
+exports.updateServerPackageData = async function (dataStore, options) {
+  return await buildmessage.enterJob('updating package catalog', async function () {
     return await _updateServerPackageData(dataStore, options);
   });
 };
@@ -149,7 +149,6 @@ var _updateServerPackageData = async function (dataStore, options) {
   useProgressbar && buildmessage.reportProgress(state);
 
   var conn = await openPackageServerConnection(options.packageServerUrl);
-
   // Provide some progress indication for connection
   // XXX though it is just a hack
   state.current = 1;
@@ -231,8 +230,8 @@ var _updateServerPackageData = async function (dataStore, options) {
   return ret;
 };
 
-_updateServerPackageData = Profile('package-client _updateServerPackageData',
-  async () => await _updateServerPackageData);
+_updateServerPackageData =
+  Profile('package-client _updateServerPackageData', _updateServerPackageData);
 
 // Returns a logged-in DDP connection to the package server, or null if
 // we cannot log in. If an error unrelated to login occurs
