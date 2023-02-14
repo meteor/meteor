@@ -863,7 +863,7 @@ main.registerCommand({
       // though this temporary directory does not have any cordova platforms
       forceIncludeCordovaUnibuild: true
     });
-    await projectContext.init()
+    await projectContext.init();
     // Read metadata and initialize catalog.
     await main.captureAndExit("=> Errors while building for release:", async function () {
       await projectContext.initializeCatalog();
@@ -891,8 +891,8 @@ main.registerCommand({
     relConf.packages = {};
     var toPublish = [];
 
-    await main.captureAndExit("=> Errors in release packages:", function () {
-      allPackages.forEach(async function (packageName) {
+    await main.captureAndExit("=> Errors in release packages:", async function () {
+      for (const packageName of allPackages) {
         await buildmessage.enterJob("checking consistency of " + packageName, async function () {
           var packageSource = projectContext.localCatalog.getPackageSource(
             packageName);
@@ -991,7 +991,7 @@ main.registerCommand({
             }
           }
         });
-      });
+      }
     });
 
     if (options['dry-run']) {
@@ -1056,9 +1056,9 @@ main.registerCommand({
       if (options['create-track']) {
         // XXX maybe this job title should be left on the screen too?  some sort
         // of enterJob/progress option that lets you do that?
-        await buildmessage.enterJob("creating a new release track", function () {
-          packageClient.callPackageServerBM(
-            conn, 'createReleaseTrack', { name: relConf.track } );
+        await buildmessage.enterJob("creating a new release track", async function () {
+          await packageClient.callPackageServerBM(
+            conn, 'createReleaseTrack', { name: relConf.track });
         });
         if (buildmessage.jobHasMessages()) {
           return;
