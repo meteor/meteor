@@ -1587,22 +1587,21 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 
 
   testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
-    function (test, expect) {
+    function(test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
         Meteor.call('createInsecureCollection', this.collectionName);
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, function (test, expect) {
-      var coll = new Mongo.Collection(this.collectionName, collectionOptions);
+    },
+    async function(test, expect) {
+      const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
-      coll.insert({}, expect(function (err, id) {
-        test.isFalse(err);
-        test.isTrue(id);
-        var cursor = coll.find();
-        test.equal(cursor.count(), 1);
-      }));
-    }
+      const id = await coll.insertAsync({});
+      test.isTrue(id);
+      const cursor = coll.find();
+      test.equal(await cursor.countAsync(), 1);
+    },
   ]);
 
 // Regression test for #2413.
