@@ -2881,7 +2881,7 @@ main.registerCommand({
   var url = options.args[1];
 
   // Now let's get down to business! Fetching the thing.
-  var record = catalog.official.getPackage(name);
+  var record = await catalog.official.getPackage(name);
   if (!record) {
     Console.error();
     Console.error('There is no package named ' + name);
