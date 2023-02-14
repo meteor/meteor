@@ -357,18 +357,12 @@ export const rm_recursive = Profile("files.rm_recursive", async (path: string) =
 });
 
 // Returns the base64 SHA256 of the given file.
-export async function fileHash(filename: string) {
+export function fileHash(filename: string) {
   const crypto = require('crypto');
   const hash = crypto.createHash('sha256');
-  hash.setEncoding('base64');
-  const rs = createReadStream(filename);
-  return await new Promise(function (resolve) {
-    rs.on('end', function () {
-      rs.close();
-      resolve(hash.digest('base64'));
-    });
-    rs.pipe(hash, { end: false });
-  });
+  const fileBuff = readFile(filename);
+  hash.update(fileBuff);
+  return hash.digest('base64');
 }
 // This is the result of running fileHash on a blank file.
 export const blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
@@ -376,7 +370,7 @@ export const blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 // Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
 // to modtime, uid/gid, or any permissions bits other than the current-user-exec
 // bit on normal files.
-export async function treeHash(root: string, optionsParams: {
+export function treeHash(root: string, optionsParams: {
   ignore?: (path: string) => boolean;
 }) {
   const options = {
@@ -384,7 +378,7 @@ export async function treeHash(root: string, optionsParams: {
     ...optionsParams,
   };
 
-  async function traverse(relativePath: string) {
+   function traverse(relativePath: string) {
     const hash = require('crypto').createHash('sha256');
 
     if (options.ignore(relativePath)) {
@@ -405,7 +399,7 @@ export async function treeHash(root: string, optionsParams: {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
-      const fileHashed = await fileHash(absPath);
+      const fileHashed = fileHash(absPath);
       hash.update('file ' + JSON.stringify(relativePath) + ' ' +
                   stat?.size + ' ' +  fileHashed + '\n');
 
@@ -425,7 +419,7 @@ export async function treeHash(root: string, optionsParams: {
     return hash
   }
 
-  const hash = await traverse('');
+  const hash = traverse('');
 
   return hash.digest('base64');
 }
