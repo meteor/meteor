@@ -42,7 +42,6 @@ Object.assign(ServiceConnection.prototype, {
   init: async function() {
     const self = this;
     const ddpClient = await loadIsopackage('ddp-client');
-
     const options = Object.assign({}, self.options, {
       // We found that this was likely to time out with the DDP default of 10s,
       // especially if the CPU is churning on bundling (eg, for the stats
