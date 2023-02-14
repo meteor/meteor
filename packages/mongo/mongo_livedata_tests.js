@@ -1329,81 +1329,98 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
       }
     );
 
-    Tinytest.addAsync("mongo-livedata - observe sorted, limited, sort fields " + idGeneration, function (test, onComplete) {
-      var run = test.runId();
-      var coll = new Mongo.Collection("observeLimit-"+run, collectionOptions);
+    Tinytest.addAsync(
+      'mongo-livedata - observe sorted, limited, sort fields ' + idGeneration,
+      async function(test, onComplete) {
+        var run = test.runId();
+        var coll = new Mongo.Collection(
+          'observeLimit-' + run,
+          collectionOptions
+        );
 
-      var observer = function () {
-        var state = {};
-        var output = [];
-        var callbacks = {
-          changed: function (newDoc) {
-            output.push({changed: newDoc._id});
-            state[newDoc._id] = newDoc;
-          },
-          added: function (newDoc) {
-            output.push({added: newDoc._id});
-            state[newDoc._id] = newDoc;
-          },
-          removed: function (oldDoc) {
-            output.push({removed: oldDoc._id});
-            delete state[oldDoc._id];
-          }
+        var observer = async function() {
+          var state = {};
+          var output = [];
+          var callbacks = {
+            changed: function(newDoc) {
+              output.push({ changed: newDoc._id });
+              state[newDoc._id] = newDoc;
+            },
+            added: function(newDoc) {
+              output.push({ added: newDoc._id });
+              state[newDoc._id] = newDoc;
+            },
+            removed: function(oldDoc) {
+              output.push({ removed: oldDoc._id });
+              delete state[oldDoc._id];
+            },
+          };
+          var handle = await coll
+            .find({}, { sort: { x: 1 }, limit: 2, fields: { y: 1 } })
+            .observe(callbacks);
+
+          return { output: output, handle: handle, state: state };
         };
-        var handle = coll.find({}, {sort: {x: 1},
-          limit: 2,
-          fields: {y: 1}}).observe(callbacks);
+        var clearOutput = function(o) {
+          o.output.splice(0, o.output.length);
+        };
+        const ins = async function(doc) {
+          let id;
+          await runInFence(async function() {
+            id = await coll.insertAsync(doc);
+          });
+          return id;
+        };
+        const rem = async function(id) {
+          await runInFence(async function() {
+            await coll.removeAsync(id);
+          });
+        };
 
-        return {output: output, handle: handle, state: state};
-      };
-      var clearOutput = function (o) { o.output.splice(0, o.output.length); };
-      var ins = function (doc) {
-        var id; runInFence(function () { id = coll.insert(doc); });
-        return id;
-      };
-      var rem = function (id) {
-        runInFence(function () { coll.remove(id); });
-      };
+        var o = await observer();
 
-      var o = observer();
+        var docId1 = await ins({ x: 1, y: 1222 });
+        var docId2 = await ins({ x: 5, y: 5222 });
 
-      var docId1 = ins({ x: 1, y: 1222 });
-      var docId2 = ins({ x: 5, y: 5222 });
+        test.length(o.output, 2);
+        test.equal(o.output, [{ added: docId1 }, { added: docId2 }]);
+        clearOutput(o);
 
-      test.length(o.output, 2);
-      test.equal(o.output, [{added: docId1}, {added: docId2}]);
-      clearOutput(o);
+        var docId3 = await ins({ x: 7, y: 7222 });
+        test.length(o.output, 0);
 
-      var docId3 = ins({ x: 7, y: 7222 });
-      test.length(o.output, 0);
+        var docId4 = await ins({ x: -1, y: -1222 });
 
-      var docId4 = ins({ x: -1, y: -1222 });
+        // Becomes [docId4 docId1 | docId2 docId3]
+        test.length(o.output, 2);
+        test.isTrue(
+          setsEqual(o.output, [{ added: docId4 }, { removed: docId2 }])
+        );
 
-      // Becomes [docId4 docId1 | docId2 docId3]
-      test.length(o.output, 2);
-      test.isTrue(setsEqual(o.output, [{added: docId4}, {removed: docId2}]));
+        test.equal(_.size(o.state), 2);
+        test.equal(o.state[docId4], { _id: docId4, y: -1222 });
+        test.equal(o.state[docId1], { _id: docId1, y: 1222 });
+        clearOutput(o);
 
-      test.equal(_.size(o.state), 2);
-      test.equal(o.state[docId4], {_id: docId4, y: -1222});
-      test.equal(o.state[docId1], {_id: docId1, y: 1222});
-      clearOutput(o);
+        await rem(docId2);
+        // Becomes [docId4 docId1 | docId3]
+        test.length(o.output, 0);
 
-      rem(docId2);
-      // Becomes [docId4 docId1 | docId3]
-      test.length(o.output, 0);
+        await rem(docId4);
+        // Becomes [docId1 docId3]
+        test.length(o.output, 2);
+        test.isTrue(
+          setsEqual(o.output, [{ added: docId3 }, { removed: docId4 }])
+        );
 
-      rem(docId4);
-      // Becomes [docId1 docId3]
-      test.length(o.output, 2);
-      test.isTrue(setsEqual(o.output, [{added: docId3}, {removed: docId4}]));
+        test.equal(_.size(o.state), 2);
+        test.equal(o.state[docId3], { _id: docId3, y: 7222 });
+        test.equal(o.state[docId1], { _id: docId1, y: 1222 });
+        clearOutput(o);
 
-      test.equal(_.size(o.state), 2);
-      test.equal(o.state[docId3], {_id: docId3, y: 7222});
-      test.equal(o.state[docId1], {_id: docId1, y: 1222});
-      clearOutput(o);
-
-      onComplete();
-    });
+        onComplete();
+      }
+    );
 
     Tinytest.add("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, function (test) {
       var run = test.runId();
