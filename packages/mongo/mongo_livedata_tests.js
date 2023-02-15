@@ -3272,36 +3272,49 @@ testAsyncMulti('mongo-livedata - update handles $push with $each correctly', [
 ]);
 
 if (Meteor.isServer) {
-  Tinytest.add("mongo-livedata - upsert handles $push with $each correctly", function (test) {
-    var collection = new Mongo.Collection(Random.id());
+  Tinytest.addAsync(
+    'mongo-livedata - upsert handles $push with $each correctly',
+    async function(test) {
+      var collection = new Mongo.Collection(Random.id());
 
-    var result = collection.upsert(
-      {name: 'jens'},
-      {$push: {
-          elements: {
-            $each: ['A', 'B', 'C'],
-            $slice: -4
-          }}});
+      var result = await collection.upsertAsync(
+        { name: 'jens' },
+        {
+          $push: {
+            elements: {
+              $each: ['A', 'B', 'C'],
+              $slice: -4,
+            },
+          },
+        }
+      );
 
-    test.equal(collection.findOne(result.insertedId),
-      {_id: result.insertedId,
+      test.equal(await collection.findOneAsync(result.insertedId), {
+        _id: result.insertedId,
         name: 'jens',
-        elements: ['A', 'B', 'C']});
+        elements: ['A', 'B', 'C'],
+      });
 
-    var id = collection.insert({name: "david", elements: ['X', 'Y']});
-    result = collection.upsert(
-      {name: 'david'},
-      {$push: {
-          elements: {
-            $each: ['A', 'B', 'C'],
-            $slice: -4
-          }}});
+      var id = await collection.insertAsync({ name: 'david', elements: ['X', 'Y'] });
+      result = await collection.upsertAsync(
+        { name: 'david' },
+        {
+          $push: {
+            elements: {
+              $each: ['A', 'B', 'C'],
+              $slice: -4,
+            },
+          },
+        }
+      );
 
-    test.equal(collection.findOne(id),
-      {_id: id,
+      test.equal(await collection.findOneAsync(id), {
+        _id: id,
         name: 'david',
-        elements: ['Y', 'A', 'B', 'C']});
-  });
+        elements: ['Y', 'A', 'B', 'C'],
+      });
+    }
+  );
 
   Tinytest.add("mongo-livedata - upsert handles dotted selectors corrrectly", function (test) {
     var collection = new Mongo.Collection(Random.id());
