@@ -1871,52 +1871,60 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     ]
   );
 
-  testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, [
-    function (test, expect) {
-      this.collectionName = Random.id();
-      if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
-      }
-    },
+  testAsyncMulti(
+    'mongo-livedata - document with a custom type, ' + idGeneration,
+    [
+      function(test, expect) {
+        this.collectionName = Random.id();
+        if (Meteor.isClient) {
+          Meteor.call(
+            'createInsecureCollection',
+            this.collectionName,
+            collectionOptions
+          );
+          Meteor.subscribe('c-' + this.collectionName, expect());
+        }
+      },
 
-    function (test, expect) {
-      var self = this;
-      self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
-      var docId;
-      // Dog is implemented at the top of the file, outside of the idGeneration
-      // loop (so that we only call EJSON.addType once).
-      var d = new Dog("reginald", null);
-      self.coll.insert({d: d}, expect(function (err, id) {
-        test.isFalse(err);
+      async function(test, expect) {
+        var self = this;
+        self.coll = new Mongo.Collection(
+          this.collectionName,
+          collectionOptions
+        );
+        // Dog is implemented at the top of the file, outside of the idGeneration
+        // loop (so that we only call EJSON.addType once).
+        const d = new Dog('reginald', null);
+        const id = await self.coll.insertAsync({ d: d });
         test.isTrue(id);
-        docId = id;
-        self.docId = docId;
-        var cursor = self.coll.find();
-        test.equal(cursor.count(), 1);
-        var inColl = self.coll.findOne();
+        self.docId = id;
+        const cursor = self.coll.find();
+        test.equal(await cursor.countAsync(), 1);
+        const inColl = await self.coll.findOneAsync();
         test.isTrue(inColl);
-        inColl && test.equal(inColl.d.speak(), "woof");
+        inColl && test.equal(inColl.d.speak(), 'woof');
         inColl && test.isNull(inColl.d.color);
-      }));
-    },
+      },
 
-    function (test, expect) {
-      var self = this;
-      self.coll.insert(new Dog("rover", "orange"), expect(function (err, id) {
-        test.isTrue(err);
-        test.isFalse(id);
-      }));
-    },
-
-    function (test, expect) {
-      var self = this;
-      self.coll.update(
-        self.docId, new Dog("rover", "orange"), expect(function (err) {
+      async function(test) {
+        const self = this;
+        try {
+          await self.coll.insertAsync(new Dog('rover', 'orange'));
+        } catch (err) {
           test.isTrue(err);
-        }));
-    }
-  ]);
+        }
+      },
+
+      async function(test) {
+        const self = this;
+        try {
+          await self.coll.updateAsync(self.docId, new Dog('rover', 'orange'));
+        } catch (err) {
+          test.isTrue(err);
+        }
+      },
+    ]
+  );
 
   if (Meteor.isServer) {
     Tinytest.addAsync("mongo-livedata - update return values, " + idGeneration, function (test, onComplete) {
