@@ -3230,8 +3230,8 @@ Tinytest.addAsync(
   }
 );
 
-testAsyncMulti("mongo-livedata - update handles $push with $each correctly", [
-  function (test, expect) {
+testAsyncMulti('mongo-livedata - update handles $push with $each correctly', [
+  async function(test, expect) {
     var self = this;
     var collectionName = Random.id();
     if (Meteor.isClient) {
@@ -3241,26 +3241,34 @@ testAsyncMulti("mongo-livedata - update handles $push with $each correctly", [
 
     self.collection = new Mongo.Collection(collectionName);
 
-    self.id = self.collection.insert(
-      {name: 'jens', elements: ['X', 'Y']}, expect(function (err, res) {
-        test.isFalse(err);
-        test.equal(self.id, res);
-      }));
+    self.id = await self.collection.insertAsync(
+      {
+        name: 'jens',
+        elements: ['X', 'Y'],
+      },
+      { returnStubPromise: true }
+    );
   },
-  function (test, expect) {
+  async function(test, expect) {
     var self = this;
-    self.collection.update(self.id, {
-      $push: {
-        elements: {
-          $each: ['A', 'B', 'C'],
-          $slice: -4
-        }}}, expect(function (err, res) {
-      test.isFalse(err);
-      test.equal(
-        self.collection.findOne(self.id),
-        {_id: self.id, name: 'jens', elements: ['Y', 'A', 'B', 'C']});
-    }));
-  }
+    await self.collection.updateAsync(
+      self.id,
+      {
+        $push: {
+          elements: {
+            $each: ['A', 'B', 'C'],
+            $slice: -4,
+          },
+        },
+      },
+      {returnStubPromise: true}
+    );
+    test.equal(await self.collection.findOneAsync(self.id), {
+      _id: self.id,
+      name: 'jens',
+      elements: ['Y', 'A', 'B', 'C'],
+    });
+  },
 ]);
 
 if (Meteor.isServer) {

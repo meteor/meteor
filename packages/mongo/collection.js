@@ -727,7 +727,7 @@ Object.assign(Mongo.Collection.prototype, {
     return this._insert(doc, callback);
   },
 
-  async _insertAsync(doc) {
+  async _insertAsync(doc, options = {}) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -784,7 +784,7 @@ Object.assign(Mongo.Collection.prototype, {
     };
 
     if (this._isRemoteCollection()) {
-      const result = await this._callMutatorMethodAsync('insertAsync', [doc]);
+      const result = await this._callMutatorMethodAsync('insertAsync', [doc], options);
 
       return chooseReturnValueFromCollectionResult(result);
     }
@@ -807,8 +807,8 @@ Object.assign(Mongo.Collection.prototype, {
    * @instance
    * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
    */
-  insertAsync(doc) {
-    return this._insertAsync(doc);
+  insertAsync(doc, options) {
+    return this._insertAsync(doc, options);
   },
 
   /**
@@ -855,7 +855,7 @@ Object.assign(Mongo.Collection.prototype, {
     if (this._isRemoteCollection()) {
       const args = [selector, modifier, options];
 
-      return this._callMutatorMethodAsync('updateAsync', args);
+      return this._callMutatorMethodAsync('updateAsync', args, options);
     }
 
     // it's my collection.  descend into the collection object
@@ -955,11 +955,11 @@ Object.assign(Mongo.Collection.prototype, {
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
    */
-  async removeAsync(selector) {
+  async removeAsync(selector, options = {}) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
     if (this._isRemoteCollection()) {
-      return this._callMutatorMethodAsync('removeAsync', [selector]);
+      return this._callMutatorMethodAsync('removeAsync', [selector], options);
     }
 
     // it's my collection.  descend into the collection1 object
