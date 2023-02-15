@@ -3214,14 +3214,16 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("mongo-livedata - local collection with null connection, w/o callback", function (test, onComplete) {
-  var cname = Random.id();
-  var coll1 = new Mongo.Collection(cname, { connection: null });
-  var doc = { foo: "bar" };
-  var docId = coll1.insert(doc);
-  test.equal(coll1.findOne(doc)._id, docId);
-  onComplete();
-});
+Tinytest.addAsync(
+  'mongo-livedata - local collection with null connection, w/o callback',
+  async function(test, onComplete) {
+    const cname = Random.id();
+    const coll1 = new Mongo.Collection(cname, { connection: null });
+    const doc = { foo: 'bar' };
+    const docId = await coll1.insertAsync(doc);
+    test.equal((await coll1.findOneAsync(doc))._id, docId);
+  }
+);
 
 testAsyncMulti("mongo-livedata - update handles $push with $each correctly", [
   function (test, expect) {
