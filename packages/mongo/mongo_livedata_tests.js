@@ -1952,21 +1952,24 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
       }
     );
 
-    Tinytest.addAsync("mongo-livedata - remove return values, " + idGeneration, function (test, onComplete) {
-      var run = test.runId();
-      var coll = new Mongo.Collection("livedata_update_result_"+run, collectionOptions);
+    Tinytest.addAsync(
+      'mongo-livedata - remove return values, ' + idGeneration,
+      async function(test, onComplete) {
+        const run = test.runId();
+        const coll = new Mongo.Collection(
+          'livedata_update_result_' + run,
+          collectionOptions
+        );
 
-      coll.insert({ foo: "bar" });
-      coll.insert({ foo: "baz" });
-      test.equal(coll.remove({}), 2);
-      coll.insert({ foo: "bar" });
-      coll.insert({ foo: "baz" });
-      coll.remove({}, function (err, result) {
-        test.isFalse(err);
+        await coll.insertAsync({ foo: 'bar' });
+        await coll.insertAsync({ foo: 'baz' });
+        test.equal(await coll.removeAsync({}), 2);
+        await coll.insertAsync({ foo: 'bar' });
+        await coll.insertAsync({ foo: 'baz' });
+        const result = await coll.removeAsync({});
         test.equal(result, 2);
-        onComplete();
-      });
-    });
+      }
+    );
 
 
     Tinytest.addAsync("mongo-livedata - id-based invalidation, " + idGeneration, function (test, onComplete) {
