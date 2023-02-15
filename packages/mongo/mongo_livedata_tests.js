@@ -1972,74 +1972,89 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     );
 
 
-    Tinytest.addAsync("mongo-livedata - id-based invalidation, " + idGeneration, function (test, onComplete) {
-      var run = test.runId();
-      var coll = new Mongo.Collection("livedata_invalidation_collection_"+run, collectionOptions);
+    Tinytest.addAsync(
+      'mongo-livedata - id-based invalidation, ' + idGeneration,
+      async function(test, onComplete) {
+        var run = test.runId();
+        var coll = new Mongo.Collection(
+          'livedata_invalidation_collection_' + run,
+          collectionOptions
+        );
 
-      coll.allow({
-        update: function () {return true;},
-        remove: function () {return true;}
-      });
-
-      var id1 = coll.insert({x: 42, is1: true});
-      var id2 = coll.insert({x: 50, is2: true});
-
-      var polls = {};
-      var handlesToStop = [];
-      var observe = function (name, query) {
-        var handle = coll.find(query).observeChanges({
-          // Make sure that we only poll on invalidation, not due to time, and
-          // keep track of when we do. Note: this option disables the use of
-          // oplogs (which admittedly is somewhat irrelevant to this feature).
-          _testOnlyPollCallback: function () {
-            polls[name] = (name in polls ? polls[name] + 1 : 1);
-          }
+        coll.allow({
+          updateAsync: function() {
+            return true;
+          },
+          removeAsync: function() {
+            return true;
+          },
         });
-        handlesToStop.push(handle);
-      };
 
-      observe("all", {});
-      observe("id1Direct", id1);
-      observe("id1InQuery", {_id: id1, z: null});
-      observe("id2Direct", id2);
-      observe("id2InQuery", {_id: id2, z: null});
-      observe("bothIds", {_id: {$in: [id1, id2]}});
+        const id1 = await coll.insertAsync({ x: 42, is1: true });
+        const id2 = await coll.insertAsync({ x: 50, is2: true });
 
-      var resetPollsAndRunInFence = function (f) {
-        polls = {};
-        runInFence(f);
-      };
+        let polls = {};
+        const handlesToStop = [];
+        const observe = async function(name, query) {
+          const handle = await coll.find(query).observeChanges({
+            // Make sure that we only poll on invalidation, not due to time, and
+            // keep track of when we do. Note: this option disables the use of
+            // oplogs (which admittedly is somewhat irrelevant to this feature).
+            _testOnlyPollCallback: function() {
+              polls[name] = name in polls ? polls[name] + 1 : 1;
+            },
+          });
+          handlesToStop.push(handle);
+        };
 
-      // Update id1 directly. This should poll all but the "id2" queries. "all"
-      // and "bothIds" increment by 2 because they are looking at both.
-      resetPollsAndRunInFence(function () {
-        coll.update(id1, {$inc: {x: 1}});
-      });
-      test.equal(
-        polls,
-        {all: 1, id1Direct: 1, id1InQuery: 1, bothIds: 1});
+        await observe('all', {});
+        await observe('id1Direct', id1);
+        await observe('id1InQuery', { _id: id1, z: null });
+        await observe('id2Direct', id2);
+        await observe('id2InQuery', { _id: id2, z: null });
+        await observe('bothIds', { _id: { $in: [id1, id2] } });
 
-      // Update id2 using a funny query. This should poll all but the "id1"
-      // queries.
-      resetPollsAndRunInFence(function () {
-        coll.update({_id: id2, q: null}, {$inc: {x: 1}});
-      });
-      test.equal(
-        polls,
-        {all: 1, id2Direct: 1, id2InQuery: 1, bothIds: 1});
+        const resetPollsAndRunInFence = async function(f) {
+          polls = {};
+          await runInFence(f);
+        };
 
-      // Update both using a $in query. Should poll each of them exactly once.
-      resetPollsAndRunInFence(function () {
-        coll.update({_id: {$in: [id1, id2]}, q: null}, {$inc: {x: 1}});
-      });
-      test.equal(
-        polls,
-        {all: 1, id1Direct: 1, id1InQuery: 1, id2Direct: 1, id2InQuery: 1,
-          bothIds: 1});
+        // Update id1 directly. This should poll all but the "id2" queries. "all"
+        // and "bothIds" increment by 2 because they are looking at both.
+        await resetPollsAndRunInFence(async function() {
+          await coll.updateAsync(id1, { $inc: { x: 1 } });
+        });
+        test.equal(polls, { all: 1, id1Direct: 1, id1InQuery: 1, bothIds: 1 });
 
-      _.each(handlesToStop, function (h) {h.stop();});
-      onComplete();
-    });
+        // Update id2 using a funny query. This should poll all but the "id1"
+        // queries.
+        await resetPollsAndRunInFence(async function() {
+          await coll.updateAsync({ _id: id2, q: null }, { $inc: { x: 1 } });
+        });
+        test.equal(polls, { all: 1, id2Direct: 1, id2InQuery: 1, bothIds: 1 });
+
+        // Update both using a $in query. Should poll each of them exactly once.
+        await resetPollsAndRunInFence(async function() {
+          await coll.updateAsync(
+            { _id: { $in: [id1, id2] }, q: null },
+            { $inc: { x: 1 } }
+          );
+        });
+        test.equal(polls, {
+          all: 1,
+          id1Direct: 1,
+          id1InQuery: 1,
+          id2Direct: 1,
+          id2InQuery: 1,
+          bothIds: 1,
+        });
+
+        for (const h of handlesToStop) {
+          await h.stop();
+        }
+        onComplete();
+      }
+    );
 
     Tinytest.add("mongo-livedata - upsert error parse, " + idGeneration, function (test) {
       var run = test.runId();
