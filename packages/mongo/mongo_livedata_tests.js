@@ -3477,20 +3477,23 @@ if (Meteor.isServer) {
 }
 
 // This is a VERY white-box test.
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", function (test) {
-  var collName = Random.id();
-  var coll = new Mongo.Collection(collName);
-  if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
-    var observeWithOplog = coll.find({x: 5})
-      .observeChanges({added: function () {}});
-    test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
-    observeWithOplog.stop();
-  }
-  var observeWithoutOplog = coll.find({x: 6}, {_disableOplog: true})
-    .observeChanges({added: function () {}});
-  test.isFalse(observeWithoutOplog._multiplexer._observeDriver._usesOplog);
-  observeWithoutOplog.stop();
-});
+Meteor.isServer &&
+  Tinytest.addAsync('mongo-livedata - oplog - _disableOplog', async function(test) {
+    var collName = Random.id();
+    var coll = new Mongo.Collection(collName);
+    if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
+      var observeWithOplog = await coll
+        .find({ x: 5 })
+        .observeChanges({ added: function() {} });
+      test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
+      await observeWithOplog.stop();
+    }
+    var observeWithoutOplog = await coll
+      .find({ x: 6 }, { _disableOplog: true })
+      .observeChanges({ added: function() {} });
+    test.isFalse(observeWithoutOplog._multiplexer._observeDriver._usesOplog);
+    await observeWithoutOplog.stop();
+  });
 
 Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector fields", function (test) {
   var collName = "includeSelector" + Random.id();
