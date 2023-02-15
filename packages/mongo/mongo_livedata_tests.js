@@ -135,25 +135,24 @@ var upsertTestMethodColl;
 //
 // Client-side exceptions in here will NOT cause the test to fail! Because it's
 // a stub, those exceptions will get caught and logged.
-var upsertTestMethodImpl = function (coll, useUpdate, test) {
-  coll.remove({});
-  var result1 = upsert(coll, useUpdate, { foo: "bar" }, { foo: "bar" });
+const upsertTestMethodImpl = async function(coll, useUpdate, test) {
+  await coll.removeAsync({});
+  const result1 = await upsert(coll, useUpdate, { foo: 'bar' }, { foo: 'bar' });
 
-  if (! test) {
+  if (!test) {
     test = {
-      equal: function (a, b) {
-        if (! EJSON.equals(a, b))
-          throw new Error("Not equal: " +
-            JSON.stringify(a) + ", " + JSON.stringify(b));
+      equal: function(a, b) {
+        if (!EJSON.equals(a, b))
+          throw new Error(
+            'Not equal: ' + JSON.stringify(a) + ', ' + JSON.stringify(b)
+          );
       },
-      isTrue: function (a) {
-        if (! a)
-          throw new Error("Not truthy: " + JSON.stringify(a));
+      isTrue: function(a) {
+        if (!a) throw new Error('Not truthy: ' + JSON.stringify(a));
       },
-      isFalse: function (a) {
-        if (a)
-          throw new Error("Not falsey: " + JSON.stringify(a));
-      }
+      isFalse: function(a) {
+        if (a) throw new Error('Not falsey: ' + JSON.stringify(a));
+      },
     };
   }
 
@@ -162,15 +161,17 @@ var upsertTestMethodImpl = function (coll, useUpdate, test) {
   test.isTrue(result1);
 
   test.equal(result1.numberAffected, 1);
-  if (! useUpdate)
-    test.isTrue(result1.insertedId);
-  var fooId = result1.insertedId;
-  var obj = coll.findOne({ foo: "bar" });
+  if (!useUpdate) test.isTrue(result1.insertedId);
+  const fooId = result1.insertedId;
+  const obj = await coll.findOneAsync({ foo: 'bar' });
   test.isTrue(obj);
-  if (! useUpdate)
-    test.equal(obj._id, result1.insertedId);
-  var result2 = upsert(coll, useUpdate, { _id: fooId },
-    { $set: { foo: "baz " } });
+  if (!useUpdate) test.equal(obj._id, result1.insertedId);
+  const result2 = await upsert(
+    coll,
+    useUpdate,
+    { _id: fooId },
+    { $set: { foo: 'baz ' } }
+  );
   test.isTrue(result2);
   test.equal(result2.numberAffected, 1);
   test.isFalse(result2.insertedId);
@@ -2646,21 +2647,32 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 // Runs a method and its stub which do some upserts. The method throws an error
 // if we don't get the right return values.
   if (Meteor.isClient) {
-    _.each([true, false], function (useUpdate) {
-      Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert in method, " + idGeneration, function (test, onComplete) {
-        var run = test.runId();
-        upsertTestMethodColl = new Mongo.Collection(upsertTestMethod + "_collection_" + run, collectionOptions);
-        var m = {};
-        delete Meteor.connection._methodHandlers[upsertTestMethod];
-        m[upsertTestMethod] = function (run, useUpdate, options) {
-          upsertTestMethodImpl(upsertTestMethodColl, useUpdate, test);
-        };
-        Meteor.methods(m);
-        Meteor.call(upsertTestMethod, run, useUpdate, collectionOptions, function (err, result) {
-          test.isFalse(err);
-          onComplete();
-        });
-      });
+    _.each([true, false], function(useUpdate) {
+      Tinytest.onlyAsync(
+        'mongo-livedata - ' +
+          (useUpdate ? 'update ' : '') +
+          'upsert in method, ' +
+          idGeneration,
+        async function(test, onComplete) {
+          var run = test.runId();
+          upsertTestMethodColl = new Mongo.Collection(
+            upsertTestMethod + '_collection_' + run,
+            collectionOptions
+          );
+          var m = {};
+          delete Meteor.connection._methodHandlers[upsertTestMethod];
+          m[upsertTestMethod] = async function(run, useUpdate, options) {
+            await upsertTestMethodImpl(upsertTestMethodColl, useUpdate, test);
+          };
+          Meteor.methods(m);
+          await Meteor.callAsync(
+            upsertTestMethod,
+            run,
+            useUpdate,
+            collectionOptions
+          );
+        }
+      );
     });
   }
 
