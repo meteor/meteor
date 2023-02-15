@@ -2015,9 +2015,9 @@ async function doTestCommand(options) {
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
     await projectContext.init();
 
-    await main.captureAndExit("=> Errors while setting up tests:", async function () {
+    await main.captureAndExit("=> Errors while setting up tests:", function () {
       // Read metadata and initialize catalog.
-      return await projectContext.initializeCatalog();
+      return projectContext.initializeCatalog();
     });
   } else {
     throw new Error("Unexpected: neither test-packages nor test");
@@ -2055,7 +2055,7 @@ async function doTestCommand(options) {
 
   options.cordovaRunner = cordovaRunner;
 
-  return await runTestAppForPackages(projectContext, Object.assign(
+  return runTestAppForPackages(projectContext, Object.assign(
     options,
     {
       mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
@@ -2123,7 +2123,6 @@ var getTestPackageNames = async function (projectContext, packageNames) {
 };
 
 var runTestAppForPackages = async function (projectContext, options) {
-  console.log('in tests');
   var buildOptions = {
     minifyMode: options.production ? 'production' : 'development'
   };
