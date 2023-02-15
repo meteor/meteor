@@ -2790,27 +2790,28 @@ Tinytest.add('mongo-livedata - rewrite selector', function(test) {
 });
 
 testAsyncMulti('mongo-livedata - specified _id', [
-  function (test, expect) {
+  function(test, expect) {
     this.collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', this.collectionName);
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
-  }, function (test, expect) {
-    var expectError = expect(function (err, result) {
+  },
+  async function(test, expect) {
+    const expectError = expect(async function(err, result) {
       test.isTrue(err);
-      var doc = coll.findOne();
-      test.equal(doc.name, "foo");
+
+      const doc = await coll.findOneAsync();
+      test.equal(doc.name, 'foo');
     });
-    var coll = new Mongo.Collection(this.collectionName);
-    coll.insert({_id: "foo", name: "foo"}, expect(function (err1, id) {
-      test.equal(id, "foo");
-      var doc = coll.findOne();
-      test.equal(doc._id, "foo");
-      Meteor._suppress_log(1);
-      coll.insert({_id: "foo", name: "bar"}, expectError);
-    }));
-  }
+    const coll = new Mongo.Collection(this.collectionName);
+    const id = await coll.insertAsync({ _id: 'foo', name: 'foo' });
+    test.equal(id, 'foo');
+    const doc = await coll.findOneAsync();
+    test.equal(doc._id, 'foo');
+    Meteor._suppress_log(1);
+    await coll.insertAsync({ _id: 'foo', name: 'bar' }).catch(expectError);
+  },
 ]);
 
 
