@@ -3154,20 +3154,20 @@ if (Meteor.isServer) {
       }
     },
 
-    function (test, expect) {
+    async function (test, expect) {
       var self = this;
       if (self.miniC) {
-        self.obs = self.miniC.find().observeChanges({
-          added: function (id, fields) {
+        self.obs = await self.miniC.find().observeChanges({
+          added: async function (id, fields) {
             self.events.push({evt: "a", id: id});
-            Meteor._sleepForMs(200);
+            await Meteor._sleepForMs(200);
             self.events.push({evt: "b", id: id});
             if (! self.two) {
-              self.two = self.C.insert({});
+              self.two = await self.C.insertAsync({});
             }
           }
         });
-        self.one = self.C.insert({});
+        self.one = await self.C.insertAsync({});
         pollUntil(expect, function () {
           return self.events.length === 4;
         }, 10000);
