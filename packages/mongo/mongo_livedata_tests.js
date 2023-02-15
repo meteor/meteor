@@ -2604,36 +2604,43 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
   });
 
   if (Meteor.isClient) {
-    Tinytest.addAsync("mongo-livedata - async update/remove return values over network " + idGeneration, function (test, onComplete) {
-      var coll;
-      var run = test.runId();
-      var collName = "livedata_upsert_collection_"+run;
-      Meteor.call("createInsecureCollection", collName, collectionOptions);
-      coll = new Mongo.Collection(collName, collectionOptions);
-      Meteor.subscribe("c-" + collName, function () {
-        coll.insert({ _id: "foo" });
-        coll.insert({ _id: "bar" });
-        coll.update({ _id: "foo" }, { $set: { foo: 1 } }, { multi: true }, function (err, result) {
-          test.isFalse(err);
-          test.equal(result, 1);
-          coll.update({ _id: "foo" }, { _id: "foo", foo: 2 }, function (err, result) {
-            test.isFalse(err);
-            test.equal(result, 1);
-            coll.update({ _id: "baz" }, { $set: { foo: 1 } }, function (err, result) {
-              test.isFalse(err);
-              test.equal(result, 0);
-              coll.remove({ _id: "foo" }, function (err, result) {
-                test.equal(result, 1);
-                coll.remove({ _id: "baz" }, function (err, result) {
-                  test.equal(result, 0);
-                  onComplete();
+    Tinytest.addAsync(
+      'mongo-livedata - async update/remove return values over network ' +
+        idGeneration,
+      function(test, onComplete) {
+        var coll;
+        var run = test.runId();
+        var collName = 'livedata_upsert_collection_' + run;
+        Meteor.call('createInsecureCollection', collName, collectionOptions);
+        coll = new Mongo.Collection(collName, collectionOptions);
+        Meteor.subscribe('c-' + collName, async function() {
+          await coll.insertAsync({ _id: 'foo' });
+          await coll.insertAsync({ _id: 'bar' });
+          await coll
+            .updateAsync({ _id: 'foo' }, { $set: { foo: 1 } }, { multi: true })
+            .then(function(result) {
+              test.equal(result, 1);
+              coll
+                .updateAsync({ _id: 'foo' }, { _id: 'foo', foo: 2 })
+                .then(function(result) {
+                  test.equal(result, 1);
+                  coll
+                    .updateAsync({ _id: 'baz' }, { $set: { foo: 1 } })
+                    .then(function(result) {
+                      test.equal(result, 0);
+                      coll.removeAsync({ _id: 'foo' }).then(function(result) {
+                        test.equal(result, 1);
+                        coll.removeAsync({ _id: 'baz' }).then(function(result) {
+                          test.equal(result, 0);
+                          onComplete();
+                        });
+                      });
+                    });
                 });
-              });
             });
-          });
         });
-      });
-    });
+      }
+    );
   }
 
 // Runs a method and its stub which do some upserts. The method throws an error
