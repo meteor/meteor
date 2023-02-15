@@ -1927,20 +1927,30 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
   );
 
   if (Meteor.isServer) {
-    Tinytest.addAsync("mongo-livedata - update return values, " + idGeneration, function (test, onComplete) {
-      var run = test.runId();
-      var coll = new Mongo.Collection("livedata_update_result_"+run, collectionOptions);
+    Tinytest.addAsync(
+      'mongo-livedata - update return values, ' + idGeneration,
+      async function(test, onComplete) {
+        var run = test.runId();
+        var coll = new Mongo.Collection(
+          'livedata_update_result_' + run,
+          collectionOptions
+        );
 
-      coll.insert({ foo: "bar" });
-      coll.insert({ foo: "baz" });
-      test.equal(coll.update({}, { $set: { foo: "qux" } }, { multi: true }),
-        2);
-      coll.update({}, { $set: { foo: "quux" } }, { multi: true }, function (err, result) {
-        test.isFalse(err);
+        await coll.insertAsync({ foo: 'bar' });
+        await coll.insertAsync({ foo: 'baz' });
+        test.equal(
+          await coll.updateAsync({}, { $set: { foo: 'qux' } }, { multi: true }),
+          2
+        );
+        const result = await coll.updateAsync(
+          {},
+          { $set: { foo: 'quux' } },
+          { multi: true }
+        );
         test.equal(result, 2);
         onComplete();
-      });
-    });
+      }
+    );
 
     Tinytest.addAsync("mongo-livedata - remove return values, " + idGeneration, function (test, onComplete) {
       var run = test.runId();
