@@ -404,7 +404,7 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    await self._runApp();
+    self._runApp();
 
     await self.startPromise;
     self.startPromise = null;
@@ -521,8 +521,8 @@ Object.assign(AppRunner.prototype, {
           // shown from the previous solution.
           preservePackageMap: true
         });
-        var messages = await buildmessage.capture(async function () {
-          return await self.projectContext.readProjectMetadata();
+        var messages = await buildmessage.capture(function () {
+          return self.projectContext.readProjectMetadata();
         });
         if (messages.hasMessages()) {
           return {
@@ -548,7 +548,7 @@ Object.assign(AppRunner.prototype, {
       }
 
       messages = await buildmessage.capture(async function () {
-        return await self.projectContext.prepareProjectForBuild();
+        await self.projectContext.prepareProjectForBuild();
       });
       if (messages.hasMessages()) {
         return {
@@ -573,7 +573,7 @@ Object.assign(AppRunner.prototype, {
         });
       }
 
-      var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async function() {
+      var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async () => {
         return await bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
@@ -941,7 +941,6 @@ Object.assign(AppRunner.prototype, {
     var self = this;
     var firstRun = true;
 
-    console.log('before while');
     while (true) {
       var runResult = await self._runOnce({
         onListen: function () {
@@ -1033,12 +1032,10 @@ Object.assign(AppRunner.prototype, {
 
       break;
     }
-    console.log('before close');
 
     // Allow the process to exit normally, since optimistic file watchers
     // may be keeping the event loop busy.
     closeAllWatchers();
-    console.log('before clean');
 
     // Giving up for good.
     self._cleanUpPromises();
