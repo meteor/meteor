@@ -3256,7 +3256,7 @@ async function bundle({
     var packageSource = new PackageSource();
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
 
-    var makeClientTarget = Profile(
+    var makeClientTarget = await Profile(
       "bundler.bundle..makeClientTarget", async function (app, webArch, options) {
       var client = new ClientTarget({
         bundlerCacheDir,
@@ -3280,7 +3280,7 @@ async function bundle({
       return client;
     });
 
-    var makeServerTarget = Profile(
+    var makeServerTarget = await Profile(
       "bundler.bundle..makeServerTarget", async function (app, clientArchs) {
       const server = new ServerTarget({
         bundlerCacheDir,
