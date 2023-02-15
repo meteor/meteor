@@ -1841,29 +1841,35 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     "bmVyYXRpb24gb2Yga25vd2xlZGdlLCBleGNlZWRzIHRoZSBzaG9y" +
     "dCB2ZWhlbWVuY2Ugb2YgYW55IGNhcm5hbCBwbGVhc3VyZS4=");
 
-  testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
-    function (test, expect) {
-      // XXX probably shouldn't use EJSON's private test symbols
-      this.collectionName = Random.id();
-      if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
-      }
-    }, function (test, expect) {
-      var coll = new Mongo.Collection(this.collectionName, collectionOptions);
-      var docId;
-      coll.insert({b: bin}, expect(function (err, id) {
-        test.isFalse(err);
+  testAsyncMulti(
+    'mongo-livedata - document with binary data, ' + idGeneration,
+    [
+      function(test, expect) {
+        // XXX probably shouldn't use EJSON's private test symbols
+        this.collectionName = Random.id();
+        if (Meteor.isClient) {
+          Meteor.call(
+            'createInsecureCollection',
+            this.collectionName,
+            collectionOptions
+          );
+          Meteor.subscribe('c-' + this.collectionName, expect());
+        }
+      },
+      async function(test, expect) {
+        var coll = new Mongo.Collection(this.collectionName, collectionOptions);
+        const id = await coll.insertAsync(
+          { b: bin },
+        );
         test.isTrue(id);
-        docId = id;
-        var cursor = coll.find();
-        test.equal(cursor.count(), 1);
-        var inColl = coll.findOne();
+        const cursor = coll.find();
+        test.equal(await cursor.countAsync(), 1);
+        const inColl = await coll.findOneAsync();
         test.isTrue(EJSON.isBinary(inColl.b));
         test.equal(inColl.b, bin);
-      }));
-    }
-  ]);
+      },
+    ]
+  );
 
   testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, [
     function (test, expect) {
