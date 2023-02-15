@@ -3203,16 +3203,21 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync(
-  'mongo-livedata - local collection with null connection, w/ callback',
-  async function(test) {
-    const cname = Random.id();
-    const coll1 = new Mongo.Collection(cname, { connection: null });
-    const doc = { foo: 'bar' };
-    const id = await coll1.insertAsync(doc);
-    test.equal((await coll1.findOneAsync(doc))._id, id);
-  }
-);
+if (Meteor.isClient) {
+  Tinytest.addAsync(
+    'mongo-livedata - local collection with null connection, w/ callback',
+    function(test, onComplete) {
+      const cname = Random.id();
+      const coll1 = new Mongo.Collection(cname, { connection: null });
+      const doc = { foo: 'bar' };
+      const docId = coll1.insert(doc, function(err, id) {
+        test.equal(docId, id);
+        test.equal(coll1.findOne(doc)._id, id);
+        onComplete();
+      });
+    }
+  );
+}
 
 Tinytest.addAsync(
   'mongo-livedata - local collection with null connection, w/o callback',
