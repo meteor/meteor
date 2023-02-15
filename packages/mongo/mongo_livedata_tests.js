@@ -3189,18 +3189,19 @@ if (Meteor.isServer) {
   ]);
 }
 
-Tinytest.addAsync("mongo-livedata - local collections with different connections", function (test, onComplete) {
-  var cname = Random.id();
-  var cname2 = Random.id();
-  var coll1 = new Mongo.Collection(cname);
-  var doc = { foo: "bar" };
-  var coll2 = new Mongo.Collection(cname2, { connection: null });
-  coll2.insert(doc, function (err, id) {
-    test.equal(coll1.find(doc).count(), 0);
-    test.equal(coll2.find(doc).count(), 1);
-    onComplete();
-  });
-});
+Tinytest.addAsync(
+  'mongo-livedata - local collections with different connections',
+  async function(test, onComplete) {
+    var cname = Random.id();
+    var cname2 = Random.id();
+    var coll1 = new Mongo.Collection(cname);
+    var doc = { foo: 'bar' };
+    var coll2 = new Mongo.Collection(cname2, { connection: null });
+    await coll2.insertAsync(doc);
+    test.equal(await coll1.find(doc).countAsync(), 0);
+    test.equal(await coll2.find(doc).countAsync(), 1);
+  }
+);
 
 Tinytest.addAsync("mongo-livedata - local collection with null connection, w/ callback", function (test, onComplete) {
   var cname = Random.id();
