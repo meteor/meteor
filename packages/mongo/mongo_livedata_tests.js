@@ -1796,33 +1796,41 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     ]
   );
 
-  testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGeneration, [
-    function (test, expect) {
-      var self = this;
-      var justId = function (doc) {
-        return _.omit(doc, '_id');
-      };
-      TRANSFORMS["justId"] = justId;
-      var collectionOptions = {
-        idGeneration: idGeneration,
-        transform: justId,
-        transformName: "justId"
-      };
-      this.collectionName = Random.id();
-      if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
-      }
-    }, function (test, expect) {
-      var self = this;
-      self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
-      self.coll.insert({}, expect(function (err, id) {
-        test.isFalse(err);
+  testAsyncMulti(
+    'mongo-livedata - transform sets _id if not present, ' + idGeneration,
+    [
+      function(test, expect) {
+        var justId = function(doc) {
+          return _.omit(doc, '_id');
+        };
+        TRANSFORMS['justId'] = justId;
+        var collectionOptions = {
+          idGeneration: idGeneration,
+          transform: justId,
+          transformName: 'justId',
+        };
+        this.collectionName = Random.id();
+        if (Meteor.isClient) {
+          Meteor.call(
+            'createInsecureCollection',
+            this.collectionName,
+            collectionOptions
+          );
+          Meteor.subscribe('c-' + this.collectionName, expect());
+        }
+      },
+      async function(test, expect) {
+        var self = this;
+        self.coll = new Mongo.Collection(
+          this.collectionName,
+          collectionOptions
+        );
+        const id = await self.coll.insertAsync({});
         test.isTrue(id);
-        test.equal(self.coll.findOne()._id, id);
-      }));
-    }
-  ]);
+        test.equal((await self.coll.findOneAsync())._id, id);
+      },
+    ]
+  );
 
   var bin = Base64.decode(
     "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyBy" +
