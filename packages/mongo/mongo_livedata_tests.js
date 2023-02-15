@@ -2676,81 +2676,94 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     });
   }
 
-  _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
-    _.each([true, false], function (useUpdate) {
-      Tinytest.add("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert by id" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test) {
-        var run = test.runId();
-        var options = collectionOptions;
-        if (minimongo)
-          options = _.extend({}, collectionOptions, { connection: null });
-        var coll = new Mongo.Collection("livedata_upsert_by_id_collection_"+run, options);
+  _.each(Meteor.isServer ? [true, false] : [true], function(minimongo) {
+    _.each([true, false], function(useUpdate) {
+      Tinytest.addAsync(
+        'mongo-livedata - ' +
+          (useUpdate ? 'update ' : '') +
+          'upsert by id' +
+          (minimongo ? ' minimongo' : '') +
+          ', ' +
+          idGeneration,
+        async function(test) {
+          var run = test.runId();
+          var options = collectionOptions;
+          if (minimongo)
+            options = _.extend({}, collectionOptions, { connection: null });
+          var coll = new Mongo.Collection(
+            'livedata_upsert_by_id_collection_' + run,
+            options
+          );
 
-        var ret;
-        ret = upsert(coll, useUpdate, {_id: 'foo'}, {$set: {x: 1}});
-        test.equal(ret.numberAffected, 1);
-        if (! useUpdate)
-          test.equal(ret.insertedId, 'foo');
-        compareResults(test, useUpdate, coll.find().fetch(),
-          [{_id: 'foo', x: 1}]);
+          var ret;
+          ret = await upsert(coll, useUpdate, { _id: 'foo' }, { $set: { x: 1 } });
+          test.equal(ret.numberAffected, 1);
+          if (!useUpdate) test.equal(ret.insertedId, 'foo');
+          compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+            { _id: 'foo', x: 1 },
+          ]);
 
-        ret = upsert(coll, useUpdate, {_id: 'foo'}, {$set: {x: 2}});
-        test.equal(ret.numberAffected, 1);
-        if (! useUpdate)
+          ret = await upsert(coll, useUpdate, { _id: 'foo' }, { $set: { x: 2 } });
+          test.equal(ret.numberAffected, 1);
+          if (!useUpdate) test.isFalse(ret.insertedId);
+          compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+            { _id: 'foo', x: 2 },
+          ]);
+
+          ret = await upsert(coll, useUpdate, { _id: 'bar' }, { $set: { x: 1 } });
+          test.equal(ret.numberAffected, 1);
+          if (!useUpdate) test.equal(ret.insertedId, 'bar');
+          compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+            { _id: 'foo', x: 2 },
+            { _id: 'bar', x: 1 },
+          ]);
+
+          await coll.removeAsync({});
+          ret = await upsert(coll, useUpdate, { _id: 'traq' }, { x: 1 });
+
+          test.equal(ret.numberAffected, 1);
+          var myId = ret.insertedId;
+          if (useUpdate) {
+            myId = (await coll.findOneAsync())._id;
+          }
+          // Starting with Mongo 2.6, upsert with entire document takes _id from the
+          // query, so the above upsert actually does an insert with _id traq
+          // instead of a random _id.  Whenever we are using our simulated upsert,
+          // we have this behavior (whether running against Mongo 2.4 or 2.6).
+          // https://jira.mongodb.org/browse/SERVER-5289
+          test.equal(myId, 'traq');
+          compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+            { x: 1, _id: 'traq' },
+          ]);
+
+          // this time, insert as _id 'traz'
+          ret = await upsert(coll, useUpdate, { _id: 'traz' }, { _id: 'traz', x: 2 });
+          test.equal(ret.numberAffected, 1);
+          if (!useUpdate) test.equal(ret.insertedId, 'traz');
+          compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+            { x: 1, _id: 'traq' },
+            { x: 2, _id: 'traz' },
+          ]);
+
+          // now update _id 'traz'
+          ret = await upsert(coll, useUpdate, { _id: 'traz' }, { x: 3 });
+          test.equal(ret.numberAffected, 1);
           test.isFalse(ret.insertedId);
-        compareResults(test, useUpdate, coll.find().fetch(),
-          [{_id: 'foo', x: 2}]);
+          compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+            { x: 1, _id: 'traq' },
+            { x: 3, _id: 'traz' },
+          ]);
 
-        ret = upsert(coll, useUpdate, {_id: 'bar'}, {$set: {x: 1}});
-        test.equal(ret.numberAffected, 1);
-        if (! useUpdate)
-          test.equal(ret.insertedId, 'bar');
-        compareResults(test, useUpdate, coll.find().fetch(),
-          [{_id: 'foo', x: 2},
-            {_id: 'bar', x: 1}]);
-
-        coll.remove({});
-        ret = upsert(coll, useUpdate, {_id: 'traq'}, {x: 1});
-
-        test.equal(ret.numberAffected, 1);
-        var myId = ret.insertedId;
-        if (useUpdate) {
-          myId = coll.findOne()._id;
+          // now update, passing _id (which is ok as long as it's the same)
+          ret = await upsert(coll, useUpdate, { _id: 'traz' }, { _id: 'traz', x: 4 });
+          test.equal(ret.numberAffected, 1);
+          test.isFalse(ret.insertedId);
+          compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+            { x: 1, _id: 'traq' },
+            { x: 4, _id: 'traz' },
+          ]);
         }
-        // Starting with Mongo 2.6, upsert with entire document takes _id from the
-        // query, so the above upsert actually does an insert with _id traq
-        // instead of a random _id.  Whenever we are using our simulated upsert,
-        // we have this behavior (whether running against Mongo 2.4 or 2.6).
-        // https://jira.mongodb.org/browse/SERVER-5289
-        test.equal(myId, 'traq');
-        compareResults(test, useUpdate, coll.find().fetch(),
-          [{x: 1, _id: 'traq'}]);
-
-        // this time, insert as _id 'traz'
-        ret = upsert(coll, useUpdate, {_id: 'traz'}, {_id: 'traz', x: 2});
-        test.equal(ret.numberAffected, 1);
-        if (! useUpdate)
-          test.equal(ret.insertedId, 'traz');
-        compareResults(test, useUpdate, coll.find().fetch(),
-          [{x: 1, _id: 'traq'},
-            {x: 2, _id: 'traz'}]);
-
-        // now update _id 'traz'
-        ret = upsert(coll, useUpdate, {_id: 'traz'}, {x: 3});
-        test.equal(ret.numberAffected, 1);
-        test.isFalse(ret.insertedId);
-        compareResults(test, useUpdate, coll.find().fetch(),
-          [{x: 1, _id: 'traq'},
-            {x: 3, _id: 'traz'}]);
-
-        // now update, passing _id (which is ok as long as it's the same)
-        ret = upsert(coll, useUpdate, {_id: 'traz'}, {_id: 'traz', x: 4});
-        test.equal(ret.numberAffected, 1);
-        test.isFalse(ret.insertedId);
-        compareResults(test, useUpdate, coll.find().fetch(),
-          [{x: 1, _id: 'traq'},
-            {x: 4, _id: 'traz'}]);
-
-      });
+      );
     });
   });
 
