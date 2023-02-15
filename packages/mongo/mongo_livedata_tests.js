@@ -89,7 +89,31 @@ const upsert = async function(coll, useUpdate, query, mod, options, callback) {
     options = {};
   }
 
+  const callWithCallBack = async (f, justResult) => {
+    if (!callback) {
+      return f();
+    }
+    let result, error;
+    try {
+      const numberAffected = await f();
+      result = justResult
+        ? numberAffected
+        : {
+            numberAffected,
+          };
+    } catch (e) {
+      error = e;
+    }
+    callback(error, result);
+  };
+
   if (useUpdate) {
+    if (callback) {
+      await callWithCallBack(() =>
+        coll.updateAsync(query, mod, _.extend({ upsert: true }, options))
+      );
+      return;
+    }
     return {
       numberAffected: await coll.updateAsync(
         query,
@@ -98,7 +122,7 @@ const upsert = async function(coll, useUpdate, query, mod, options, callback) {
       ),
     };
   }
-  return coll.upsertAsync(query, mod, options, callback);
+  return callWithCallBack(() => coll.upsertAsync(query, mod, options), true);
 };
 
 var upsertTestMethod = "livedata_upsert_test_method";
@@ -2329,179 +2353,252 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 // the Mongo.Collection and the MongoConnection.
 //
 // XXX Rewrite with testAsyncMulti, that would simplify things a lot!
-  _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
-    _.each(useNetwork ? [false] : [true, false], function (useDirectCollection) {
-      _.each([true, false], function (useUpdate) {
-        Tinytest.addAsync(asyncUpsertTestName(useNetwork, useDirectCollection, useUpdate, idGeneration), function (test, onComplete) {
-          var coll;
-          var run = test.runId();
-          var collName = "livedata_upsert_collection_"+run+
-            (useUpdate ? "_update_" : "") +
-            (useNetwork ? "_network_" : "") +
-            (useDirectCollection ? "_direct_" : "");
+  _.each(Meteor.isServer ? [false] : [true, false], function(useNetwork) {
+    _.each(useNetwork ? [false] : [true, false], function(useDirectCollection) {
+      _.each([true, false], function(useUpdate) {
+        Tinytest.addAsync(
+          asyncUpsertTestName(
+            useNetwork,
+            useDirectCollection,
+            useUpdate,
+            idGeneration
+          ),
+          async function(test, onComplete) {
+            let resolver;
+            const promise = new Promise(r => resolver = r);
 
-          var next0 = function () {
-            // Test starts here.
-            upsert(coll, useUpdate, {_id: 'foo'}, {_id: 'foo', foo: 'bar'}, next1);
-          };
+            var coll;
+            var run = test.runId();
+            var collName =
+              'livedata_upsert_collection_' +
+              run +
+              (useUpdate ? '_update_' : '') +
+              (useNetwork ? '_network_' : '') +
+              (useDirectCollection ? '_direct_' : '');
 
-          if (useNetwork) {
-            Meteor.call("createInsecureCollection", collName, collectionOptions);
-            coll = new Mongo.Collection(collName, collectionOptions);
-            Meteor.subscribe("c-" + collName, next0);
-          } else {
-            var opts = _.clone(collectionOptions);
-            if (Meteor.isClient)
-              opts.connection = null;
-            coll = new Mongo.Collection(collName, opts);
-            if (useDirectCollection)
-              coll = coll._collection;
-          }
+            const next0 = async function() {
+              // Test starts here.
+              await upsert(
+                coll,
+                useUpdate,
+                { _id: 'foo' },
+                { _id: 'foo', foo: 'bar' },
+                next1
+              );
+            };
 
-          var result1;
-          var next1 = function (err, result) {
-            result1 = result;
-            test.equal(result1.numberAffected, 1);
-            if (! useUpdate) {
-              test.isTrue(result1.insertedId);
-              test.equal(result1.insertedId, 'foo');
-            }
-            compareResults(test, useUpdate, coll.find().fetch(), [{foo: 'bar', _id: 'foo'}]);
-            upsert(coll, useUpdate, {_id: 'foo'}, {foo: 'baz'}, next2);
-          };
-
-          if (! useNetwork) {
-            next0();
-          }
-
-          var t1, t2, result2;
-          var next2 = function (err, result) {
-            result2 = result;
-            test.equal(result2.numberAffected, 1);
-            if (! useUpdate)
-              test.isFalse(result2.insertedId);
-            compareResults(test, useUpdate, coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
-            coll.remove({_id: 'foo'});
-            compareResults(test, useUpdate, coll.find().fetch(), []);
-
-            // Test values that require transformation to go into Mongo:
-
-            t1 = new Mongo.ObjectID();
-            t2 = new Mongo.ObjectID();
-            upsert(coll, useUpdate, {_id: t1}, {_id: t1, foo: 'bar'}, next3);
-          };
-
-          var result3;
-          var next3 = function (err, result) {
-            result3 = result;
-            test.equal(result3.numberAffected, 1);
-            if (! useUpdate) {
-              test.isTrue(result3.insertedId);
-              test.equal(t1, result3.insertedId);
-            }
-            compareResults(test, useUpdate, coll.find().fetch(), [{_id: t1, foo: 'bar'}]);
-
-            upsert(coll, useUpdate, {_id: t1}, {foo: t2}, next4);
-          };
-
-          var next4 = function (err, result4) {
-            test.equal(result2.numberAffected, 1);
-            if (! useUpdate)
-              test.isFalse(result2.insertedId);
-            compareResults(test, useUpdate, coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
-
-            coll.remove({_id: t1});
-
-            // Test modification by upsert
-            upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 1}}, next5);
-          };
-
-          var result5;
-          var next5 = function (err, result) {
-            result5 = result;
-            test.equal(result5.numberAffected, 1);
-            if (! useUpdate) {
-              test.isTrue(result5.insertedId);
-              test.equal(result5.insertedId, 'David');
-            }
-            var davidId = result5.insertedId;
-            compareResults(test, useUpdate, coll.find().fetch(), [{foo: 1, _id: davidId}]);
-
-            if (! Meteor.isClient && useDirectCollection) {
-              // test that bad modifier fails
-              // The stub throws an exception about the invalid modifier, which
-              // livedata logs (so we suppress it).
-              Meteor._suppress_log(1);
-              upsert(coll, useUpdate, {_id: 'David'}, {$blah: {foo: 2}}, function (err) {
-                if (! (Meteor.isClient && useDirectCollection))
-                  test.isTrue(err);
-                upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 2}}, next6);
-              });
+            if (useNetwork) {
+              Meteor.call(
+                'createInsecureCollection',
+                collName,
+                collectionOptions
+              );
+              coll = new Mongo.Collection(collName, collectionOptions);
+              Meteor.subscribe('c-' + collName, next0);
             } else {
-              // XXX skip this test for now for LocalCollection; the fact that
-              // we're in a nested sequence of callbacks means we're inside a
-              // Meteor.defer, which means the exception just gets
-              // logged. Something should be done about this at some point?  Maybe
-              // LocalCollection callbacks don't really have to be deferred.
-              upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 2}}, next6);
+              var opts = _.clone(collectionOptions);
+              if (Meteor.isClient) opts.connection = null;
+              coll = new Mongo.Collection(collName, opts);
+              if (useDirectCollection) coll = coll._collection;
             }
-          };
 
-          var result6;
-          var next6 = function (err, result) {
-            result6 = result;
-            test.equal(result6.numberAffected, 1);
-            if (! useUpdate)
-              test.isFalse(result6.insertedId);
-            compareResults(test, useUpdate, coll.find().fetch(), [{_id: 'David', foo: 2}]);
+            var t1, t2, result2;
+            var next2 = async function(err, result) {
+              result2 = result;
+              test.equal(result2.numberAffected, 1);
+              if (!useUpdate) test.isFalse(result2.insertedId);
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+                { foo: 'baz', _id: result1.insertedId },
+              ]);
+              await coll.removeAsync({ _id: 'foo' });
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), []);
 
-            var emilyId = coll.insert({_id: 'Emily', foo: 2});
-            compareResults(test, useUpdate, coll.find().fetch(), [{_id: 'David', foo: 2},
-              {_id: 'Emily', foo: 2}]);
+              // Test values that require transformation to go into Mongo:
 
-            // multi update by upsert.
-            // We can't actually update multiple documents since we have to do it by
-            // id, but at least make sure the multi flag doesn't mess anything up.
-            upsert(coll, useUpdate, {_id: 'Emily'},
-              {$set: {bar: 7},
-                $setOnInsert: {name: 'Fred', foo: 2}},
-              {multi: true}, next7);
-          };
+              t1 = new Mongo.ObjectID();
+              t2 = new Mongo.ObjectID();
+              await upsert(
+                coll,
+                useUpdate,
+                { _id: t1 },
+                { _id: t1, foo: 'bar' },
+                next3
+              );
+            };
 
-          var result7;
-          var next7 = function (err, result) {
-            result7 = result;
-            test.equal(result7.numberAffected, 1);
-            if (! useUpdate)
-              test.isFalse(result7.insertedId);
-            compareResults(test, useUpdate, coll.find().fetch(), [{_id: 'David', foo: 2},
-              {_id: 'Emily', foo: 2, bar: 7}]);
+            var result1;
+            var next1 = async function(err, result) {
+              result1 = result;
+              test.equal(result1.numberAffected, 1);
+              if (!useUpdate) {
+                test.isTrue(result1.insertedId);
+                test.equal(result1.insertedId, 'foo');
+              }
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+                { foo: 'bar', _id: 'foo' },
+              ]);
 
-            // insert by multi upsert
-            upsert(coll, useUpdate, {_id: 'Fred'},
-              {$set: {bar: 7},
-                $setOnInsert: {name: 'Fred', foo: 2}},
-              {multi: true}, next8);
+              await upsert(coll, useUpdate, { _id: 'foo' }, { foo: 'baz' }, next2);
 
-          };
-
-          var result8;
-          var next8 = function (err, result) {
-            result8 = result;
-
-            test.equal(result8.numberAffected, 1);
-            if (! useUpdate) {
-              test.isTrue(result8.insertedId);
-              test.equal(result8.insertedId, 'Fred');
+            };
+            if (!useNetwork) {
+              await next0();
             }
-            var fredId = result8.insertedId;
-            compareResults(test, useUpdate,  coll.find().fetch(),
-              [{_id: 'David', foo: 2},
-                {_id: 'Emily', foo: 2, bar: 7},
-                {name: 'Fred', foo: 2, bar: 7, _id: fredId}]);
-            onComplete();
-          };
-        });
+
+            var result3;
+            var next3 = async function(err, result) {
+              result3 = result;
+              test.equal(result3.numberAffected, 1);
+              if (!useUpdate) {
+                test.isTrue(result3.insertedId);
+                test.equal(t1, result3.insertedId);
+              }
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+                { _id: t1, foo: 'bar' },
+              ]);
+
+              await upsert(coll, useUpdate, { _id: t1 }, { foo: t2 }, next4);
+            };
+
+            const next4 = async function(err, result4) {
+              test.equal(result2.numberAffected, 1);
+              if (!useUpdate) test.isFalse(result2.insertedId);
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+                { foo: t2, _id: result3.insertedId },
+              ]);
+
+              await coll.removeAsync({ _id: t1 });
+
+              // Test modification by upsert
+              await upsert(
+                coll,
+                useUpdate,
+                { _id: 'David' },
+                { $set: { foo: 1 } },
+                next5
+              );
+            };
+
+            var result5;
+            var next5 = async function(err, result) {
+              result5 = result;
+              test.equal(result5.numberAffected, 1);
+              if (!useUpdate) {
+                test.isTrue(result5.insertedId);
+                test.equal(result5.insertedId, 'David');
+              }
+              var davidId = result5.insertedId;
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+                { foo: 1, _id: davidId },
+              ]);
+
+              if (!Meteor.isClient && useDirectCollection) {
+                // test that bad modifier fails
+                // The stub throws an exception about the invalid modifier, which
+                // livedata logs (so we suppress it).
+                Meteor._suppress_log(1);
+                await upsert(
+                  coll,
+                  useUpdate,
+                  { _id: 'David' },
+                  { $blah: { foo: 2 } },
+                  async function(err) {
+                    if (!(Meteor.isClient && useDirectCollection))
+                      test.isTrue(err);
+                    await upsert(
+                      coll,
+                      useUpdate,
+                      { _id: 'David' },
+                      { $set: { foo: 2 } },
+                      next6
+                    );
+                  }
+                );
+              } else {
+                // XXX skip this test for now for LocalCollection; the fact that
+                // we're in a nested sequence of callbacks means we're inside a
+                // Meteor.defer, which means the exception just gets
+                // logged. Something should be done about this at some point?  Maybe
+                // LocalCollection callbacks don't really have to be deferred.
+                await upsert(
+                  coll,
+                  useUpdate,
+                  { _id: 'David' },
+                  { $set: { foo: 2 } },
+                  next6
+                );
+              }
+            };
+
+            var result6;
+            var next6 = async function(err, result) {
+              result6 = result;
+              test.equal(result6.numberAffected, 1);
+              if (!useUpdate) test.isFalse(result6.insertedId);
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+                { _id: 'David', foo: 2 },
+              ]);
+
+              var emilyId = await coll.insertAsync({ _id: 'Emily', foo: 2 });
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+                { _id: 'David', foo: 2 },
+                { _id: 'Emily', foo: 2 },
+              ]);
+
+              // multi update by upsert.
+              // We can't actually update multiple documents since we have to do it by
+              // id, but at least make sure the multi flag doesn't mess anything up.
+              await upsert(
+                coll,
+                useUpdate,
+                { _id: 'Emily' },
+                { $set: { bar: 7 }, $setOnInsert: { name: 'Fred', foo: 2 } },
+                { multi: true },
+                next7
+              );
+            };
+
+            var result7;
+            var next7 = async function(err, result) {
+              result7 = result;
+              test.equal(result7.numberAffected, 1);
+              if (!useUpdate) test.isFalse(result7.insertedId);
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+                { _id: 'David', foo: 2 },
+                { _id: 'Emily', foo: 2, bar: 7 },
+              ]);
+
+              // insert by multi upsert
+              await upsert(
+                coll,
+                useUpdate,
+                { _id: 'Fred' },
+                { $set: { bar: 7 }, $setOnInsert: { name: 'Fred', foo: 2 } },
+                { multi: true },
+                next8
+              );
+            };
+
+            var result8;
+            var next8 = async function(err, result) {
+              result8 = result;
+
+              test.equal(result8.numberAffected, 1);
+              if (!useUpdate) {
+                test.isTrue(result8.insertedId);
+                test.equal(result8.insertedId, 'Fred');
+              }
+              var fredId = result8.insertedId;
+              compareResults(test, useUpdate, await coll.find().fetchAsync(), [
+                { _id: 'David', foo: 2 },
+                { _id: 'Emily', foo: 2, bar: 7 },
+                { name: 'Fred', foo: 2, bar: 7, _id: fredId },
+              ]);
+              resolver()
+            };
+            await promise;
+          }
+        );
       });
     });
   });
