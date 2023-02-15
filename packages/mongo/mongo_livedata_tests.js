@@ -2056,29 +2056,35 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
       }
     );
 
-    Tinytest.add("mongo-livedata - upsert error parse, " + idGeneration, function (test) {
-      var run = test.runId();
-      var coll = new Mongo.Collection("livedata_upsert_errorparse_collection_"+run, collectionOptions);
+    Tinytest.addAsync(
+      'mongo-livedata - upsert error parse, ' + idGeneration,
+      async function(test) {
+        const run = test.runId();
+        const coll = new Mongo.Collection(
+          'livedata_upsert_errorparse_collection_' + run,
+          collectionOptions
+        );
 
-      coll.insert({_id:'foobar', foo: 'bar'});
-      var err;
-      try {
-        coll.update({foo: 'bar'}, {_id: 'cowbar'});
-      } catch (e) {
-        err = e;
-      }
-      test.isTrue(err);
-      test.isTrue(MongoInternals.Connection._isCannotChangeIdError(err));
+        await coll.insertAsync({ _id: 'foobar', foo: 'bar' });
+        let err;
+        try {
+          await coll.updateAsync({ foo: 'bar' }, { _id: 'cowbar' });
+        } catch (e) {
+          err = e;
+        }
+        test.isTrue(err);
+        test.isTrue(MongoInternals.Connection._isCannotChangeIdError(err));
 
-      try {
-        coll.insert({_id: 'foobar'});
-      } catch (e) {
-        err = e;
+        try {
+          await coll.insertAsync({ _id: 'foobar' });
+        } catch (e) {
+          err = e;
+        }
+        test.isTrue(err);
+        // duplicate id error is not same as change id error
+        test.isFalse(MongoInternals.Connection._isCannotChangeIdError(err));
       }
-      test.isTrue(err);
-      // duplicate id error is not same as change id error
-      test.isFalse(MongoInternals.Connection._isCannotChangeIdError(err));
-    });
+    );
 
   } // end Meteor.isServer
 
