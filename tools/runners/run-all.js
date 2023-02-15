@@ -185,7 +185,7 @@ class Runner {
 
         if (tries > 0) {
           await self.mongoRunner.stop();
-          await setTimeout(() => startMongo(tries), 1000);
+          setTimeout(async () => await startMongo(tries), 1000);
         } else {
           await self.mongoRunner._fail();
         }
@@ -194,7 +194,6 @@ class Runner {
     }
 
     await startMongo();
-
     if (!self.noReleaseCheck && ! self.stopped) {
       await self.updater.start();
     }
@@ -208,13 +207,17 @@ class Runner {
     }
 
     if (! self.stopped) {
+      console.log('bro is in appRunner.start');
       await buildmessage.enterJob({ title: "starting your app" }, async function () {
+        console.log('just being sure');
         await self.appRunner.start();
+        console.log('broke?');
       });
       if (! self.quiet && ! self.stopped) {
         runLog.log("Started your app.",  { arrow: true });
       }
     }
+    console.log('bro is falskdj appRunner.start');
 
     if (! self.stopped && ! self.quiet) {
       runLog.log("");
@@ -234,14 +237,15 @@ class Runner {
     }
 
     if (self.selenium && ! self.stopped) {
-      await buildmessage.enterJob({ title: "starting Selenium" }, function () {
-        return self.selenium.start();
+      await buildmessage.enterJob({ title: "starting Selenium" }, async function () {
+        return await self.selenium.start();
       });
       if (! self.quiet && ! self.stopped) {
         runLog.log("Started Selenium.", { arrow: true });
       }
     }
 
+    console.log('ended start');
     // XXX It'd be nice to (cosmetically) handle failure better. Right
     // now we overwrite the "starting foo..." message with the
     // error. It'd be better to overwrite it with "failed to start
@@ -340,7 +344,7 @@ class Runner {
 exports.run = async function (options) {
   var runOptions = _.clone(options);
   var once = runOptions.once;
-
+  console.log('inside run all');
   var promise = new Promise(function (resolve) {
     runOptions.onFailure = async function () {
       // Ensure that runner stops now. You might think this is unnecessary
@@ -353,6 +357,7 @@ exports.run = async function (options) {
     };
 
     runOptions.onRunEnd = function (result) {
+      console.log(result.outcome);
       if (once ||
           result.outcome === "conflicting-versions" ||
           result.outcome === "wrong-release" ||
@@ -401,6 +406,7 @@ exports.run = async function (options) {
   }
 
   var runner = new Runner(runOptions);
+  console.log('before initng runner');
   await runner.init();
   await runner.start();
   var result = await promise;
