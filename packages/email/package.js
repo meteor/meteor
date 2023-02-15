@@ -6,6 +6,7 @@ Package.describe({
 Npm.depends({
   nodemailer: '6.6.3',
   'stream-buffers': '3.0.2',
+  '@types/nodemailer': '6.4.7',
 });
 
 Package.onUse(function(api) {
