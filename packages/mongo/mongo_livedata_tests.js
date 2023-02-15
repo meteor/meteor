@@ -1714,67 +1714,87 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
     },
   ]);
 
-  testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGeneration, [
-    function (test, expect) {
-      var self = this;
-      var seconds = function (doc) {
-        doc.seconds = function () {return doc.d.getSeconds();};
-        return doc;
-      };
-      TRANSFORMS["seconds"] = seconds;
-      self.collectionOptions = {
-        idGeneration: idGeneration,
-        transform: seconds,
-        transformName: "seconds"
-      };
-      this.collectionName = Random.id();
-      if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
-        Meteor.subscribe('c-' + this.collectionName, expect());
-      }
-    }, function (test, expect) {
-      var self = this;
-      self.coll = new Mongo.Collection(self.collectionName, self.collectionOptions);
-      var obs;
-      var expectAdd = expect(function (doc) {
-        test.equal(doc.seconds(), 50);
-      });
-      var expectRemove = expect(function (doc) {
-        test.equal(doc.seconds(), 50);
-        obs.stop();
-      });
-      self.coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
-        test.isFalse(err);
+  testAsyncMulti(
+    'mongo-livedata - document goes through a transform, ' + idGeneration,
+    [
+      function(test, expect) {
+        var self = this;
+        var seconds = function(doc) {
+          doc.seconds = function() {
+            return doc.d.getSeconds();
+          };
+          return doc;
+        };
+        TRANSFORMS['seconds'] = seconds;
+        self.collectionOptions = {
+          idGeneration: idGeneration,
+          transform: seconds,
+          transformName: 'seconds',
+        };
+        this.collectionName = Random.id();
+        if (Meteor.isClient) {
+          Meteor.call(
+            'createInsecureCollection',
+            this.collectionName,
+            collectionOptions
+          );
+          Meteor.subscribe('c-' + this.collectionName, expect());
+        }
+      },
+      async function(test, expect) {
+        const self = this;
+        self.coll = new Mongo.Collection(
+          self.collectionName,
+          self.collectionOptions
+        );
+        let obs;
+        const expectAdd = expect(function(doc) {
+          test.equal(doc.seconds(), 50);
+        });
+        var expectRemove = expect(function(doc) {
+          test.equal(doc.seconds(), 50);
+          obs.stop();
+        });
+        const id = await self.coll.insertAsync(
+          { d: new Date(1356152390004) },
+        );
         test.isTrue(id);
         var cursor = self.coll.find();
-        obs = cursor.observe({
+        obs = await cursor.observe({
           added: expectAdd,
-          removed: expectRemove
+          removed: expectRemove,
         });
-        test.equal(cursor.count(), 1);
-        test.equal(cursor.fetch()[0].seconds(), 50);
-        test.equal(self.coll.findOne().seconds(), 50);
-        test.equal(self.coll.findOne({}, {transform: null}).seconds, undefined);
-        test.equal(self.coll.findOne({}, {
-          transform: function (doc) {return {seconds: doc.d.getSeconds()};}
-        }).seconds, 50);
-        self.coll.remove(id);
-      }));
-    },
-    function (test, expect) {
-      var self = this;
-      self.coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
-        test.isFalse(err);
+        test.equal(await cursor.countAsync(), 1);
+        test.equal((await cursor.fetchAsync())[0].seconds(), 50);
+        test.equal((await self.coll.findOneAsync()).seconds(), 50);
+        test.equal(
+          (await self.coll.findOneAsync({}, { transform: null })).seconds,
+          undefined
+        );
+        test.equal(
+          (await self.coll.findOneAsync(
+            {},
+            {
+              transform: function(doc) {
+                return { seconds: doc.d.getSeconds() };
+              },
+            }
+          )).seconds,
+          50
+        );
+        await self.coll.removeAsync(id);
+      },
+      async function(test, expect) {
+        const self = this;
+        let id = await self.coll.insertAsync({ d: new Date(1356152390004) });
         test.isTrue(id);
         self.id1 = id;
-      }));
-      self.coll.insert({d: new Date(1356152391004)}, expect(function (err, id) {
-        test.isFalse(err);
-        test.isTrue(id);
+
+        id = await self.coll.insertAsync({ d: new Date(1356152391004) });
         self.id2 = id;
-      }));
-    }
-  ]);
+      },
+    ]
+  );
 
   testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGeneration, [
     function (test, expect) {
