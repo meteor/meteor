@@ -3086,7 +3086,7 @@ _.each(
 
 
 testAsyncMulti('mongo-livedata - empty string _id', [
-  function (test, expect) {
+  async function(test, expect) {
     var self = this;
     self.collectionName = Random.id();
     if (Meteor.isClient) {
@@ -3095,27 +3095,28 @@ testAsyncMulti('mongo-livedata - empty string _id', [
     }
     self.coll = new Mongo.Collection(self.collectionName);
     try {
-      self.coll.insert({_id: "", f: "foo"});
-      test.fail("Insert with an empty _id should fail");
+      await self.coll.insertAsync({ _id: '', f: 'foo' });
+      test.fail('Insert with an empty _id should fail');
     } catch (e) {
       // ok
     }
-    self.coll.insert({_id: "realid", f: "bar"}, expect(function (err, res) {
-      test.equal(res, "realid");
-    }));
+    const res = await self.coll.insertAsync(
+      { _id: 'realid', f: 'bar' },
+    );
+    test.equal(res, 'realid');
   },
-  function (test, expect) {
+  async function(test, expect) {
     var self = this;
-    var docs = self.coll.find().fetch();
-    test.equal(docs, [{_id: "realid", f: "bar"}]);
+    var docs = await self.coll.find().fetchAsync();
+    test.equal(docs, [{ _id: 'realid', f: 'bar' }]);
   },
-  function (test, expect) {
+  async function(test, expect) {
     var self = this;
     if (Meteor.isServer) {
-      self.coll._collection.insert({_id: "", f: "baz"});
-      test.equal(self.coll.find().fetch().length, 2);
+      await self.coll._collection.insertAsync({ _id: '', f: 'baz' });
+      test.equal((await self.coll.find().fetchAsync()).length, 2);
     }
-  }
+  },
 ]);
 
 
