@@ -1693,25 +1693,25 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
   ]);
 
   testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
-    function (test, expect) {
+    function(test, expect) {
       this.collectionName = Random.id();
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+        Meteor.call(
+          'createInsecureCollection',
+          this.collectionName,
+          collectionOptions
+        );
         Meteor.subscribe('c-' + this.collectionName, expect());
       }
-    }, function (test, expect) {
-
+    },
+    async function(test, expect) {
       var coll = new Mongo.Collection(this.collectionName, collectionOptions);
-      var docId;
-      coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
-        test.isFalse(err);
-        test.isTrue(id);
-        docId = id;
-        var cursor = coll.find();
-        test.equal(cursor.count(), 1);
-        test.equal(coll.findOne().d.getFullYear(), 2012);
-      }));
-    }
+      const id = await coll.insertAsync({ d: new Date(1356152390004) });
+      test.isTrue(id);
+      const cursor = coll.find();
+      test.equal(await cursor.countAsync(), 1);
+      test.equal((await coll.findOneAsync()).d.getFullYear(), 2012);
+    },
   ]);
 
   testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGeneration, [
