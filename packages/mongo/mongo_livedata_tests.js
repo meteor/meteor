@@ -83,28 +83,22 @@ var compareResults = function (test, skipIds, actual, expected) {
   test.equal(actual, expected);
 };
 
-var upsert = function (coll, useUpdate, query, mod, options, callback) {
-  if (! callback && typeof options === "function") {
+const upsert = async function(coll, useUpdate, query, mod, options, callback) {
+  if (!callback && typeof options === 'function') {
     callback = options;
     options = {};
   }
 
   if (useUpdate) {
-    if (callback)
-      return coll.update(query, mod,
-        _.extend({ upsert: true }, options),
-        function (err, result) {
-          callback(err, ! err && {
-            numberAffected: result
-          });
-        });
     return {
-      numberAffected: coll.update(query, mod,
-        _.extend({ upsert: true }, options))
+      numberAffected: await coll.updateAsync(
+        query,
+        mod,
+        _.extend({ upsert: true }, options)
+      ),
     };
-  } else {
-    return coll.upsert(query, mod, options, callback);
   }
+  return coll.upsertAsync(query, mod, options, callback);
 };
 
 var upsertTestMethod = "livedata_upsert_test_method";
@@ -2090,155 +2084,230 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 
 // This test is duplicated below (with some changes) for async upserts that go
 // over the network.
-  _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
-    _.each([true, false], function (useUpdate) {
-      _.each([true, false], function (useDirectCollection) {
-        Tinytest.add("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert" + (minimongo ? " minimongo" : "") + (useDirectCollection ? " direct collection " : "") + ", " + idGeneration, function (test) {
-          var run = test.runId();
-          var options = collectionOptions;
-          // We don't get ids back when we use update() to upsert, or when we are
-          // directly calling MongoConnection.upsert().
-          var skipIds = useUpdate || (! minimongo && useDirectCollection);
-          if (minimongo)
-            options = _.extend({}, collectionOptions, { connection: null });
-          var coll = new Mongo.Collection(
-            "livedata_upsert_collection_"+run+
-            (useUpdate ? "_update_" : "") +
-            (minimongo ? "_minimongo_" : "") +
-            (useDirectCollection ? "_direct_" : "") + "",
-            options
-          );
-          if (useDirectCollection)
-            coll = coll._collection;
+  _.each(Meteor.isServer ? [true, false] : [true], function(minimongo) {
+    _.each([true, false], function(useUpdate) {
+      _.each([true, false], function(useDirectCollection) {
+        Tinytest.addAsync(
+          'mongo-livedata - ' +
+            (useUpdate ? 'update ' : '') +
+            'upsert' +
+            (minimongo ? ' minimongo' : '') +
+            (useDirectCollection ? ' direct collection ' : '') +
+            ', ' +
+            idGeneration,
+          async function(test) {
+            const run = test.runId();
+            let options = collectionOptions;
+            // We don't get ids back when we use update() to upsert, or when we are
+            // directly calling MongoConnection.upsert().
+            var skipIds = useUpdate || (!minimongo && useDirectCollection);
+            if (minimongo)
+              options = _.extend({}, collectionOptions, { connection: null });
+            var coll = new Mongo.Collection(
+              'livedata_upsert_collection_' +
+                run +
+                (useUpdate ? '_update_' : '') +
+                (minimongo ? '_minimongo_' : '') +
+                (useDirectCollection ? '_direct_' : '') +
+                '',
+              options
+            );
+            if (useDirectCollection) coll = coll._collection;
 
-          var result1 = upsert(coll, useUpdate, {foo: 'bar'}, {foo: 'bar'});
-          test.equal(result1.numberAffected, 1);
-          if (! skipIds)
-            test.isTrue(result1.insertedId);
-          compareResults(test, skipIds, coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
+            const result1 = await upsert(
+              coll,
+              useUpdate,
+              { foo: 'bar' },
+              { foo: 'bar' }
+            );
+            test.equal(result1.numberAffected, 1);
+            if (!skipIds) test.isTrue(result1.insertedId);
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { foo: 'bar', _id: result1.insertedId },
+            ]);
 
-          var result2 = upsert(coll, useUpdate, {foo: 'bar'}, {foo: 'baz'});
-          test.equal(result2.numberAffected, 1);
-          if (! skipIds)
-            test.isFalse(result2.insertedId);
-          compareResults(test, skipIds, coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
+            const result2 = await upsert(
+              coll,
+              useUpdate,
+              { foo: 'bar' },
+              { foo: 'baz' }
+            );
+            test.equal(result2.numberAffected, 1);
+            if (!skipIds) test.isFalse(result2.insertedId);
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { foo: 'baz', _id: result1.insertedId },
+            ]);
 
-          coll.remove({});
+            await coll.removeAsync({});
 
-          // Test values that require transformation to go into Mongo:
+            // Test values that require transformation to go into Mongo:
 
-          var t1 = new Mongo.ObjectID();
-          var t2 = new Mongo.ObjectID();
-          var result3 = upsert(coll, useUpdate, {foo: t1}, {foo: t1});
-          test.equal(result3.numberAffected, 1);
-          if (! skipIds)
-            test.isTrue(result3.insertedId);
-          compareResults(test, skipIds, coll.find().fetch(), [{foo: t1, _id: result3.insertedId}]);
+            const t1 = new Mongo.ObjectID();
+            const t2 = new Mongo.ObjectID();
+            const result3 = await upsert(
+              coll,
+              useUpdate,
+              { foo: t1 },
+              { foo: t1 }
+            );
+            test.equal(result3.numberAffected, 1);
+            if (!skipIds) test.isTrue(result3.insertedId);
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { foo: t1, _id: result3.insertedId },
+            ]);
 
-          var result4 = upsert(coll, useUpdate, {foo: t1}, {foo: t2});
-          test.equal(result2.numberAffected, 1);
-          if (! skipIds)
-            test.isFalse(result2.insertedId);
-          compareResults(test, skipIds, coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
+            const result4 = await upsert(
+              coll,
+              useUpdate,
+              { foo: t1 },
+              { foo: t2 }
+            );
+            test.equal(result2.numberAffected, 1);
+            if (!skipIds) test.isFalse(result2.insertedId);
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { foo: t2, _id: result3.insertedId },
+            ]);
 
-          coll.remove({});
+            await coll.removeAsync({});
 
-          // Test modification by upsert
+            // Test modification by upsert
 
-          var result5 = upsert(coll, useUpdate, {name: 'David'}, {$set: {foo: 1}});
-          test.equal(result5.numberAffected, 1);
-          if (! skipIds)
-            test.isTrue(result5.insertedId);
-          var davidId = result5.insertedId;
-          compareResults(test, skipIds, coll.find().fetch(), [{name: 'David', foo: 1, _id: davidId}]);
+            var result5 = await upsert(
+              coll,
+              useUpdate,
+              { name: 'David' },
+              { $set: { foo: 1 } }
+            );
+            test.equal(result5.numberAffected, 1);
+            if (!skipIds) test.isTrue(result5.insertedId);
+            var davidId = result5.insertedId;
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { name: 'David', foo: 1, _id: davidId },
+            ]);
 
-          test.throws(function () {
-            // test that bad modifier fails fast
-            upsert(coll, useUpdate, {name: 'David'}, {$blah: {foo: 2}});
-          });
+            await test.throwsAsync(async function() {
+              // test that bad modifier fails fast
+              await upsert(
+                coll,
+                useUpdate,
+                { name: 'David' },
+                { $blah: { foo: 2 } }
+              );
+            });
 
+            const result6 = await upsert(
+              coll,
+              useUpdate,
+              { name: 'David' },
+              { $set: { foo: 2 } }
+            );
+            test.equal(result6.numberAffected, 1);
+            if (!skipIds) test.isFalse(result6.insertedId);
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { name: 'David', foo: 2, _id: result5.insertedId },
+            ]);
 
-          var result6 = upsert(coll, useUpdate, {name: 'David'}, {$set: {foo: 2}});
-          test.equal(result6.numberAffected, 1);
-          if (! skipIds)
-            test.isFalse(result6.insertedId);
-          compareResults(test, skipIds, coll.find().fetch(), [{name: 'David', foo: 2,
-            _id: result5.insertedId}]);
+            const emilyId = await coll.insertAsync({ name: 'Emily', foo: 2 });
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { name: 'David', foo: 2, _id: davidId },
+              { name: 'Emily', foo: 2, _id: emilyId },
+            ]);
 
-          var emilyId = coll.insert({name: 'Emily', foo: 2});
-          compareResults(test, skipIds, coll.find().fetch(), [{name: 'David', foo: 2, _id: davidId},
-            {name: 'Emily', foo: 2, _id: emilyId}]);
+            // multi update by upsert
+            const result7 = await upsert(
+              coll,
+              useUpdate,
+              { foo: 2 },
+              { $set: { bar: 7 }, $setOnInsert: { name: 'Fred', foo: 2 } },
+              { multi: true }
+            );
+            test.equal(result7.numberAffected, 2);
+            if (!skipIds) test.isFalse(result7.insertedId);
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { name: 'David', foo: 2, bar: 7, _id: davidId },
+              { name: 'Emily', foo: 2, bar: 7, _id: emilyId },
+            ]);
 
-          // multi update by upsert
-          var result7 = upsert(coll, useUpdate, {foo: 2},
-            {$set: {bar: 7},
-              $setOnInsert: {name: 'Fred', foo: 2}},
-            {multi: true});
-          test.equal(result7.numberAffected, 2);
-          if (! skipIds)
-            test.isFalse(result7.insertedId);
-          compareResults(test, skipIds, coll.find().fetch(), [{name: 'David', foo: 2, bar: 7, _id: davidId},
-            {name: 'Emily', foo: 2, bar: 7, _id: emilyId}]);
+            // insert by multi upsert
+            const result8 = await upsert(
+              coll,
+              useUpdate,
+              { foo: 3 },
+              { $set: { bar: 7 }, $setOnInsert: { name: 'Fred', foo: 2 } },
+              { multi: true }
+            );
+            test.equal(result8.numberAffected, 1);
+            if (!skipIds) test.isTrue(result8.insertedId);
+            var fredId = result8.insertedId;
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { name: 'David', foo: 2, bar: 7, _id: davidId },
+              { name: 'Emily', foo: 2, bar: 7, _id: emilyId },
+              { name: 'Fred', foo: 2, bar: 7, _id: fredId },
+            ]);
 
-          // insert by multi upsert
-          var result8 = upsert(coll, useUpdate, {foo: 3},
-            {$set: {bar: 7},
-              $setOnInsert: {name: 'Fred', foo: 2}},
-            {multi: true});
-          test.equal(result8.numberAffected, 1);
-          if (! skipIds)
-            test.isTrue(result8.insertedId);
-          var fredId = result8.insertedId;
-          compareResults(test, skipIds, coll.find().fetch(),
-            [{name: 'David', foo: 2, bar: 7, _id: davidId},
-              {name: 'Emily', foo: 2, bar: 7, _id: emilyId},
-              {name: 'Fred', foo: 2, bar: 7, _id: fredId}]);
+            // test `insertedId` option
+            const result9 = await upsert(
+              coll,
+              useUpdate,
+              { name: 'Steve' },
+              { name: 'Steve' },
+              { insertedId: 'steve' }
+            );
+            test.equal(result9.numberAffected, 1);
+            if (!skipIds) test.equal(result9.insertedId, 'steve');
+            compareResults(test, skipIds, await coll.find().fetchAsync(), [
+              { name: 'David', foo: 2, bar: 7, _id: davidId },
+              { name: 'Emily', foo: 2, bar: 7, _id: emilyId },
+              { name: 'Fred', foo: 2, bar: 7, _id: fredId },
+              { name: 'Steve', _id: 'steve' },
+            ]);
+            test.isTrue(await coll.findOneAsync('steve'));
+            test.isFalse(await coll.findOneAsync('fred'));
 
-          // test `insertedId` option
-          var result9 = upsert(coll, useUpdate, {name: 'Steve'},
-            {name: 'Steve'},
-            {insertedId: 'steve'});
-          test.equal(result9.numberAffected, 1);
-          if (! skipIds)
-            test.equal(result9.insertedId, 'steve');
-          compareResults(test, skipIds, coll.find().fetch(),
-            [{name: 'David', foo: 2, bar: 7, _id: davidId},
-              {name: 'Emily', foo: 2, bar: 7, _id: emilyId},
-              {name: 'Fred', foo: 2, bar: 7, _id: fredId},
-              {name: 'Steve', _id: 'steve'}]);
-          test.isTrue(coll.findOne('steve'));
-          test.isFalse(coll.findOne('fred'));
+            // Test $ operator in selectors.
 
-          // Test $ operator in selectors.
+            const result10 = await upsert(
+              coll,
+              useUpdate,
+              { $or: [{ name: 'David' }, { name: 'Emily' }] },
+              { $set: { foo: 3 } },
+              { multi: true }
+            );
+            test.equal(result10.numberAffected, 2);
+            if (!skipIds) test.isFalse(result10.insertedId);
+            compareResults(
+              test,
+              skipIds,
+              [
+                await coll.findOneAsync({ name: 'David' }),
+                await coll.findOneAsync({ name: 'Emily' }),
+              ],
+              [
+                { name: 'David', foo: 3, bar: 7, _id: davidId },
+                { name: 'Emily', foo: 3, bar: 7, _id: emilyId },
+              ]
+            );
 
-          var result10 = upsert(coll, useUpdate,
-            {$or: [{name: 'David'}, {name: 'Emily'}]},
-            {$set: {foo: 3}}, {multi: true});
-          test.equal(result10.numberAffected, 2);
-          if (! skipIds)
-            test.isFalse(result10.insertedId);
-          compareResults(test, skipIds,
-            [coll.findOne({name: 'David'}), coll.findOne({name: 'Emily'})],
-            [{name: 'David', foo: 3, bar: 7, _id: davidId},
-              {name: 'Emily', foo: 3, bar: 7, _id: emilyId}]
-          );
-
-          var result11 = upsert(
-            coll, useUpdate,
-            {
-              name: 'Charlie',
-              $or: [{ foo: 2}, { bar: 7 }]
-            },
-            { $set: { foo: 3 } }
-          );
-          test.equal(result11.numberAffected, 1);
-          if (! skipIds)
-            test.isTrue(result11.insertedId);
-          var charlieId = result11.insertedId;
-          compareResults(test, skipIds,
-            coll.find({ name: 'Charlie' }).fetch(),
-            [{name: 'Charlie', foo: 3, _id: charlieId}]);
-        });
+            const result11 = await upsert(
+              coll,
+              useUpdate,
+              {
+                name: 'Charlie',
+                $or: [{ foo: 2 }, { bar: 7 }],
+              },
+              { $set: { foo: 3 } }
+            );
+            test.equal(result11.numberAffected, 1);
+            if (!skipIds) test.isTrue(result11.insertedId);
+            const charlieId = result11.insertedId;
+            compareResults(
+              test,
+              skipIds,
+              await coll.find({ name: 'Charlie' }).fetchAsync(),
+              [{ name: 'Charlie', foo: 3, _id: charlieId }]
+            );
+          }
+        );
       });
     });
   });
