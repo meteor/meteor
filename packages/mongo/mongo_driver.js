@@ -403,24 +403,30 @@ MongoConnection.prototype.removeAsync = async function (collection_name, selecto
     });
 };
 
-MongoConnection.prototype.dropCollectionAsync = async function (collectionName) {
+MongoConnection.prototype.dropCollectionAsync = async function(collectionName) {
   var self = this;
 
   var write = self._maybeBeginWrite();
-  var refresh = function () {
+  var refresh = function() {
     return Meteor.refresh({
       collection: collectionName,
       id: null,
-      dropCollection: true
+      dropCollection: true,
     });
   };
-  return self.rawCollection(collectionName).drop()
-      .then(result => {
-        refresh();
-        return result;
-      }).finally(() => {
-        write.committed();
-      });
+
+  return self
+    .rawCollection(collectionName)
+    .drop()
+    .then(async result => {
+      await refresh();
+      await write.committed();
+      return result;
+    })
+    .catch(async e => {
+      await write.committed();
+      throw e;
+    });
 };
 
 // For testing only.  Slightly better than `c.rawDatabase().dropDatabase()`

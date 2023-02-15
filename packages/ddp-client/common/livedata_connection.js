@@ -567,6 +567,11 @@ export class Connection {
         "Meteor.callAsync() does not accept a callback. You should 'await' the result, or use .then()."
       );
     }
+
+    const options = args[0]?.hasOwnProperty('returnStubValue')
+      ? args.shift()
+      : {};
+
     /*
     * This is necessary because when you call a Promise.then, you're actually calling a bound function by Meteor.
     *
@@ -599,11 +604,11 @@ export class Connection {
     DDP._CurrentMethodInvocation._set();
     DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
     const promise = new Promise((resolve, reject) => {
-      this.applyAsync(name, args, { isFromCallAsync: true })
+      this.applyAsync(name, args, { isFromCallAsync: true, ...options })
         .then(result => {
           resolve(result);
         })
-        .catch(reject)
+        .catch(reject);
     });
     return promise.finally(() =>
       DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
@@ -790,7 +795,10 @@ export class Connection {
     // If the caller didn't give a callback, decide what to do.
     let future;
     if (!callback) {
-      if (Meteor.isClient && !options.isFromCallAsync) {
+      if (
+        Meteor.isClient &&
+        (!options.isFromCallAsync || options.returnStubValue)
+      ) {
         // On the client, we don't have fibers, so we can't block. The
         // only thing we can do is to return undefined and discard the
         // result of the RPC. If an error occurred then print the error
@@ -817,7 +825,7 @@ export class Connection {
               return;
             }
             resolve(...args);
-          }
+          };
         });
       }
     }

@@ -25,9 +25,12 @@ if (Meteor.isServer) {
         return c.find();
       });
     },
-    dropInsecureCollection: function(name) {
+    dropInsecureCollection: async function(name) {
       var c = COLLECTIONS[name];
-      c._dropCollection();
+      try {
+        await c.dropCollectionAsync();
+      } catch (e) {
+      }
     }
   });
 }
@@ -37,25 +40,29 @@ if (Meteor.isServer) {
 var INSERTED_IDS = {};
 
 Meteor.methods({
-  insertObjects: function (collectionName, doc, count) {
+  insertObjects: async function(collectionName, doc, count) {
     var c = COLLECTIONS[collectionName];
     var ids = [];
     for (var i = 0; i < count; i++) {
-      var id = c.insert(doc);
-      INSERTED_IDS[collectionName] = (INSERTED_IDS[collectionName] || []).concat([id]);
+      const id = await c.insertAsync(doc);
+      INSERTED_IDS[collectionName] = (
+        INSERTED_IDS[collectionName] || []
+      ).concat([id]);
       ids.push(id);
     }
     return ids;
   },
-  upsertObject: function (collectionName, selector, modifier) {
+  upsertObject: async function(collectionName, selector, modifier) {
     var c = COLLECTIONS[collectionName];
-    return c.upsert(selector, modifier);
+    return c.upsertAsync(selector, modifier);
   },
-  doMeteorCall: function (name /*, arguments */) {
+  doMeteorCall: async function(name /*, arguments */) {
     var args = Array.prototype.slice.call(arguments);
 
-    return Meteor.call.apply(null, args);
-  }
+    const methodName = args.shift();
+
+    return Meteor.applyAsync.call(null, methodName, args);
+  },
 });
 
 const runInFence = async function (f) {
@@ -2816,197 +2823,265 @@ testAsyncMulti('mongo-livedata - specified _id', [
 
 
 // Consistent id generation tests
-function collectionInsert (test, expect, coll, index) {
-  var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
-    test.equal(id, clientSideId);
-    var o = coll.findOne(id);
-    test.isTrue(_.isObject(o));
-    test.equal(o.name, 'foo');
-  }));
+async function collectionInsert (test, expect, coll, index) {
+  const id = await coll.insertAsync({name: "foo"});
+  const o = await coll.findOneAsync(id);
+  test.isTrue(_.isObject(o));
+  test.equal(o.name, 'foo');
 }
 
-function collectionUpsert (test, expect, coll, index) {
-  var upsertId = '123456' + index;
+async function collectionUpsert(test, expect, coll, index) {
+  const upsertId = '123456' + index;
 
-  coll.upsert(upsertId, {$set: {name: "foo"}}, expect(function (err1, result) {
-    test.equal(result.insertedId, upsertId);
-    test.equal(result.numberAffected, 1);
+  const result = await coll.upsertAsync(upsertId, { $set: { name: 'foo' } });
+  test.equal(result.insertedId, upsertId);
+  test.equal(result.numberAffected, 1);
 
-    var o = coll.findOne(upsertId);
-    test.isTrue(_.isObject(o));
-    test.equal(o.name, 'foo');
-  }));
+  const o = await coll.findOneAsync(upsertId);
+  test.isTrue(_.isObject(o));
+  test.equal(o.name, 'foo');
 }
 
-function collectionUpsertExisting (test, expect, coll, index) {
-  var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
-    test.equal(id, clientSideId);
+async function collectionUpsertExisting(test, expect, coll, index) {
+  const id = await coll.insertAsync({ name: 'foo' });
 
-    var o = coll.findOne(id);
-    test.isTrue(_.isObject(o));
-    // We're not testing sequencing/visibility rules here, so skip this check
-    // test.equal(o.name, 'foo');
-  }));
+  const o = await coll.findOneAsync(id);
+  test.isTrue(_.isObject(o));
 
-  coll.upsert(clientSideId, {$set: {name: "bar"}}, expect(function (err1, result) {
-    test.equal(result.insertedId, clientSideId);
-    test.equal(result.numberAffected, 1);
+  const result = await coll.upsertAsync(id, { $set: { name: 'bar' } });
+  test.equal(result.insertedId, id);
+  test.equal(result.numberAffected, 1);
 
-    var o = coll.findOne(clientSideId);
-    test.isTrue(_.isObject(o));
-    test.equal(o.name, 'bar');
-  }));
+  const ob = await coll.findOneAsync(id);
+  test.isTrue(_.isObject(ob));
+  test.equal(ob.name, 'bar');
 }
 
-function functionCallsInsert (test, expect, coll, index) {
-  Meteor.call("insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
-    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
-    var stubId = INSERTED_IDS[coll._name][index];
+async function functionCallsInsert(test, expect, coll, index) {
+  const ids = await Meteor.callAsync(
+    'insertObjects',
+    { returnStubValue: Meteor.isClient },
+    coll._name,
+    { name: 'foo' },
+    1,
+  );
 
-    test.equal(ids.length, 1);
-    test.equal(ids[0], stubId);
+  test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+  var stubId = INSERTED_IDS[coll._name][index];
 
-    var o = coll.findOne(stubId);
-    test.isTrue(_.isObject(o));
-    test.equal(o.name, 'foo');
-  }));
+  test.equal(ids.length, 1);
+  test.equal(ids[0], stubId);
+
+  const o = await coll.findOneAsync(stubId);
+  test.isTrue(_.isObject(o));
+  test.equal(o.name, 'foo');
 }
 
-function functionCallsUpsert (test, expect, coll, index) {
-  var upsertId = '123456' + index;
-  Meteor.call("upsertObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
-    test.equal(result.insertedId, upsertId);
-    test.equal(result.numberAffected, 1);
+async function functionCallsUpsert(test, expect, coll, index) {
+  const upsertId = '123456' + index;
+  const result = await Meteor.callAsync(
+    'upsertObject',
+    { returnStubValue: Meteor.isClient },
+    coll._name,
+    upsertId,
+    {
+      $set: { name: 'foo' },
+    }
+  );
+  test.equal(result.insertedId, upsertId);
+  test.equal(result.numberAffected, 1);
 
-    var o = coll.findOne(upsertId);
-    test.isTrue(_.isObject(o));
-    test.equal(o.name, 'foo');
-  }));
+  const o = await coll.findOneAsync(upsertId);
+  test.isTrue(_.isObject(o));
+  test.equal(o.name, 'foo');
 }
 
-function functionCallsUpsertExisting (test, expect, coll, index) {
-  var id = coll.insert({name: "foo"});
+async function functionCallsUpsertExisting(test, expect, coll, index) {
+  const id = await coll.insertAsync({ name: 'foo' });
 
-  var o = coll.findOne(id);
+  const o = await coll.findOneAsync(id);
   test.notEqual(null, o);
   test.equal(o.name, 'foo');
 
-  Meteor.call("upsertObject", coll._name, id, {$set:{name: "bar"}}, expect(function (err1, result) {
-    test.equal(result.numberAffected, 1);
-    test.equal(result.insertedId, undefined);
-
-    var o = coll.findOne(id);
-    test.isTrue(_.isObject(o));
-    test.equal(o.name, 'bar');
-  }));
-}
-
-function functionCalls3Inserts (test, expect, coll, index) {
-  Meteor.call("insertObjects", coll._name, {name: "foo"}, 3, expect(function (err1, ids) {
-    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
-    test.equal(ids.length, 3);
-
-    for (var i = 0; i < 3; i++) {
-      var stubId = INSERTED_IDS[coll._name][(3 * index) + i];
-      test.equal(ids[i], stubId);
-
-      var o = coll.findOne(stubId);
-      test.isTrue(_.isObject(o));
-      test.equal(o.name, 'foo');
+  const result = await Meteor.callAsync(
+    'upsertObject',
+    { returnStubValue: Meteor.isClient },
+    coll._name,
+    id,
+    {
+      $set: { name: 'bar' },
     }
-  }));
+  );
+  test.equal(result.numberAffected, 1);
+  test.equal(result.insertedId, undefined);
+
+  const ob = await coll.findOneAsync(id);
+  test.isTrue(_.isObject(ob));
+  test.equal(ob.name, 'bar');
 }
 
-function functionChainInsert (test, expect, coll, index) {
-  Meteor.call("doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
-    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
-    var stubId = INSERTED_IDS[coll._name][index];
+async function functionCalls3Inserts(test, expect, coll, index) {
+  const ids = await Meteor.callAsync(
+    'insertObjects',
+    { returnStubValue: Meteor.isClient },
+    coll._name,
+    { name: 'foo' },
+    3
+  );
+  test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+  test.equal(ids.length, 3);
 
-    test.equal(ids.length, 1);
-    test.equal(ids[0], stubId);
+  for (var i = 0; i < 3; i++) {
+    var stubId = INSERTED_IDS[coll._name][3 * index + i];
+    test.equal(ids[i], stubId);
 
-    var o = coll.findOne(stubId);
+    var o = await coll.findOneAsync(stubId);
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'foo');
-  }));
+  }
 }
 
-function functionChain2Insert (test, expect, coll, index) {
-  Meteor.call("doMeteorCall", "doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
-    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
-    var stubId = INSERTED_IDS[coll._name][index];
+async function functionChainInsert(test, expect, coll, index) {
+  const ids = await Meteor.callAsync(
+    'doMeteorCall',
+    { returnStubValue: Meteor.isClient },
+    'insertObjects',
+    coll._name,
+    { name: 'foo' },
+    1,
+  );
+  test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+  var stubId = INSERTED_IDS[coll._name][index];
 
-    test.equal(ids.length, 1);
-    test.equal(ids[0], stubId);
+  test.equal(ids.length, 1);
+  test.equal(ids[0], stubId);
 
-    var o = coll.findOne(stubId);
-    test.isTrue(_.isObject(o));
-    test.equal(o.name, 'foo');
-  }));
+  var o = await coll.findOneAsync(stubId);
+  test.isTrue(_.isObject(o));
+  test.equal(o.name, 'foo');
 }
 
-function functionChain2Upsert (test, expect, coll, index) {
-  var upsertId = '123456' + index;
-  Meteor.call("doMeteorCall", "doMeteorCall", "upsertObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
-    test.equal(result.insertedId, upsertId);
-    test.equal(result.numberAffected, 1);
+async function functionChain2Insert(test, expect, coll, index) {
+  const ids = await Meteor.callAsync(
+    'doMeteorCall',
+    { returnStubValue: Meteor.isClient },
+    'doMeteorCall',
+    'insertObjects',
+    coll._name,
+    { name: 'foo' },
+    1
+  );
+  test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+  var stubId = INSERTED_IDS[coll._name][index];
 
-    var o = coll.findOne(upsertId);
-    test.isTrue(_.isObject(o));
-    test.equal(o.name, 'foo');
-  }));
+  test.equal(ids.length, 1);
+  test.equal(ids[0], stubId);
+
+  const o = await coll.findOneAsync(stubId);
+  test.isTrue(_.isObject(o));
+  test.equal(o.name, 'foo');
 }
 
-_.each( {collectionInsert: collectionInsert,
-  collectionUpsert: collectionUpsert,
-  functionCallsInsert: functionCallsInsert,
-  functionCallsUpsert: functionCallsUpsert,
-  functionCallsUpsertExisting: functionCallsUpsertExisting,
-  functionCalls3Insert: functionCalls3Inserts,
-  functionChainInsert: functionChainInsert,
-  functionChain2Insert: functionChain2Insert,
-  functionChain2Upsert: functionChain2Upsert}, function (fn, name) {
-  _.each( [1, 3], function (repetitions) {
-    _.each( [1, 3], function (collectionCount) {
-      _.each( ['STRING', 'MONGO'], function (idGeneration) {
+async function functionChain2Upsert(test, expect, coll, index) {
+  const upsertId = '123456' + index;
+  const result = await Meteor.callAsync(
+    'doMeteorCall',
+    { returnStubValue: Meteor.isClient },
+    'doMeteorCall',
+    'upsertObject',
+    coll._name,
+    upsertId,
+    { $set: { name: 'foo' } }
+  );
+  test.equal(result.insertedId, upsertId);
+  test.equal(result.numberAffected, 1);
 
-        testAsyncMulti('mongo-livedata - consistent _id generation ' + name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
-          var collectionOptions = { idGeneration: idGeneration };
+  const o = await coll.findOneAsync(upsertId);
+  test.isTrue(_.isObject(o));
+  test.equal(o.name, 'foo');
+}
 
-          var cleanups = this.cleanups = [];
-          this.collections = _.times(collectionCount, function () {
-            var collectionName = "consistentid_" + Random.id();
-            if (Meteor.isClient) {
-              Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-              Meteor.subscribe('c-' + collectionName, expect());
-              cleanups.push(function (expect) { Meteor.call('dropInsecureCollection', collectionName, expect(function () {})); });
-            }
+_.each(
+  {
+    collectionInsert: collectionInsert,
+    collectionUpsert: collectionUpsert,
+    functionCallsInsert: functionCallsInsert,
+    functionCallsUpsert: functionCallsUpsert,
+    functionCallsUpsertExisting: functionCallsUpsertExisting,
+    functionCalls3Insert: functionCalls3Inserts,
+    functionChainInsert: functionChainInsert,
+    functionChain2Insert: functionChain2Insert,
+    functionChain2Upsert: functionChain2Upsert,
+  },
+  function(fn, name) {
+    _.each([1, 3], function(repetitions) {
+      _.each([1, 3], function(collectionCount) {
+        _.each(['STRING', 'MONGO'], function(idGeneration) {
+          testAsyncMulti(
+            'mongo-livedata - consistent _id generation ' +
+              name +
+              ', ' +
+              repetitions +
+              ' repetitions on ' +
+              collectionCount +
+              ' collections, idGeneration=' +
+              idGeneration + 'XAXAXAXAXA',
+            [
+              function(test, expect) {
+                var collectionOptions = { idGeneration: idGeneration };
 
-            var collection = new Mongo.Collection(collectionName, collectionOptions);
-            if (Meteor.isServer) {
-              cleanups.push(function () { collection._dropCollection(); });
-            }
-            COLLECTIONS[collectionName] = collection;
-            return collection;
-          });
-        }, function (test, expect) {
-          // now run the actual test
-          for (var i = 0; i < repetitions; i++) {
-            for (var j = 0; j < collectionCount; j++) {
-              fn(test, expect, this.collections[j], i);
-            }
-          }
-        }, function (test, expect) {
-          // Run any registered cleanup functions (e.g. to drop collections)
-          _.each(this.cleanups, function(cleanup) {
-            cleanup(expect);
-          });
-        }]);
+                var cleanups = (this.cleanups = []);
+                this.collections = _.times(collectionCount, function() {
+                  var collectionName = 'consistentid_' + Random.id();
+                  if (Meteor.isClient) {
+                    Meteor.call(
+                      'createInsecureCollection',
+                      collectionName,
+                      collectionOptions
+                    );
+                    Meteor.subscribe('c-' + collectionName, expect());
+                    cleanups.push(async function(expect) {
+                      await Meteor.callAsync(
+                        'dropInsecureCollection',
+                        collectionName
+                      );
+                    });
+                  }
 
+                  var collection = new Mongo.Collection(
+                    collectionName,
+                    collectionOptions
+                  );
+                  if (Meteor.isServer) {
+                    cleanups.push(async function() {
+                      await collection.dropCollectionAsync();
+                    });
+                  }
+                  COLLECTIONS[collectionName] = collection;
+                  return collection;
+                });
+              },
+              async function(test, expect) {
+                // now run the actual test
+                for (var i = 0; i < repetitions; i++) {
+                  for (var j = 0; j < collectionCount; j++) {
+                    await fn(test, expect, this.collections[j], i);
+                  }
+                }
+              },
+              async function(test, expect) {
+                // Run any registered cleanup functions (e.g. to drop collections)
+                for (const cleanup of this.cleanups) {
+                  await cleanup();
+                }
+              },
+            ]
+          );
+        });
       });
     });
-  });
-});
+  }
+);
 
 
 

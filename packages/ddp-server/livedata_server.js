@@ -1770,7 +1770,10 @@ Object.assign(Server.prototype, {
 
   // A version of the call method that always returns a Promise.
   callAsync: function (name, ...args) {
-    return this.applyAsync(name, args);
+    const options = args[0]?.hasOwnProperty('returnStubValue')
+      ? args.shift()
+      : {};
+    return this.applyAsync(name, args, options);
   },
 
   apply: function (name, args, options, callback) {
@@ -1796,7 +1799,7 @@ Object.assign(Server.prototype, {
         exception => callback(exception)
       );
     } else {
-      return promise.await();
+      return promise;
     }
   },
 
