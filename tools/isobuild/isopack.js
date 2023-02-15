@@ -1009,6 +1009,9 @@ Object.assign(Isopack.prototype, {
   //   of this flag is allow us to optimize cases that never need to write the
   //   older format, such as the per-app isopack cache.)
   // - isopackCache: isopack cache in which this isopack is registered
+  /**
+   * @return {Promise<void>}
+   */
   saveToPath: Profile("Isopack#saveToPath", async function (outputDir, {
     includePreCompilerPluginIsopackVersions,
     includeIsopackBuildInfo,
