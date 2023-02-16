@@ -3841,33 +3841,34 @@ Meteor.isServer &&
     // See https://github.com/meteor/meteor/issues/2070
   });
 
-testAsyncMulti("mongo-livedata - undefined find options", [
-  function (test, expect) {
+testAsyncMulti('mongo-livedata - undefined find options', [
+  function(test, expect) {
     var self = this;
     self.collName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call("createInsecureCollection", self.collName);
-      Meteor.subscribe("c-" + self.collName, expect());
+      Meteor.call('createInsecureCollection', self.collName);
+      Meteor.subscribe('c-' + self.collName, expect());
     }
   },
-  function (test, expect) {
+  async function(test, expect) {
     var self = this;
     self.coll = new Mongo.Collection(self.collName);
-    self.doc = { foo: 1, bar: 2, _id: "foobar" };
-    self.coll.insert(self.doc, expect(function (err, id) {
-      test.isFalse(err);
-    }));
+    self.doc = { foo: 1, bar: 2, _id: 'foobar' };
+    await self.coll.insertAsync(self.doc);
   },
-  function (test, expect) {
+  async function(test, expect) {
     var self = this;
-    var result = self.coll.findOne({ foo: 1 }, {
-      fields: undefined,
-      sort: undefined,
-      limit: undefined,
-      skip: undefined
-    });
+    var result = await self.coll.findOneAsync(
+      { foo: 1 },
+      {
+        fields: undefined,
+        sort: undefined,
+        limit: undefined,
+        skip: undefined,
+      }
+    );
     test.equal(result, self.doc);
-  }
+  },
 ]);
 
 // Regression test for #2274.
