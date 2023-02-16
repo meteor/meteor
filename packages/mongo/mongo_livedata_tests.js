@@ -4205,41 +4205,41 @@ if (Meteor.isServer) {
 }
 
 if (Meteor.isServer) {
-  Tinytest.addAsync("mongo-livedata - transaction", function (test) {
+  Tinytest.addAsync('mongo-livedata - transaction', async function(test) {
     const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
 
     const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
     const rawCollection = Collection.rawCollection();
 
-    Collection.insert({ _id: "a" });
-    Collection.insert({ _id: "b" });
+    await Collection.insertAsync({ _id: 'a' });
+    await Collection.insertAsync({ _id: 'b' });
 
     let changeCount = 0;
 
-    return new Promise(resolve => {
-      function finalize() {
-        observeHandle.stop();
+    return new Promise(async resolve => {
+      async function finalize() {
+        await observeHandle.stop();
         Meteor.clearTimeout(timeout);
         resolve();
       }
 
-      const observeHandle = Collection.find().observeChanges({
-        changed(id, fields) {
+      const observeHandle = await Collection.find().observeChanges({
+        async changed(id, fields) {
           let expectedValue;
 
-          if (id === "a") {
-            expectedValue = "updated1";
-          } else if (id === "b") {
-            expectedValue = "updated2";
+          if (id === 'a') {
+            expectedValue = 'updated1';
+          } else if (id === 'b') {
+            expectedValue = 'updated2';
           }
 
           test.equal(fields.field, expectedValue);
           changeCount += 1;
 
           if (changeCount === 2) {
-            finalize();
+            await finalize();
           }
-        }
+        },
       });
 
       const timeout = Meteor.setTimeout(() => {
@@ -4248,19 +4248,23 @@ if (Meteor.isServer) {
       }, 2000);
 
       const session = client.startSession();
-      session.withTransaction(session => {
-        let promise = Promise.resolve();
-        ["a", "b"].forEach((id, index) => {
-          promise = promise.then(() => rawCollection.updateMany(
-            { _id: id },
-            { $set: { field: `updated${index + 1}` } },
-            { session }
-          ));
+      session
+        .withTransaction(session => {
+          let promise = Promise.resolve();
+          ['a', 'b'].forEach((id, index) => {
+            promise = promise.then(() =>
+              rawCollection.updateMany(
+                { _id: id },
+                { $set: { field: `updated${index + 1}` } },
+                { session }
+              )
+            );
+          });
+          return promise;
+        })
+        .finally(() => {
+          session.endSession();
         });
-        return promise;
-      }).finally(() => {
-        session.endSession();
-      });
     });
   });
 }
