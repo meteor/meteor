@@ -3954,18 +3954,20 @@ Meteor.isServer &&
     },
   ]);
 
-Meteor.isServer && Tinytest.add(
-  "mongo-livedata - connection failure throws",
-  function (test) {
+Meteor.isServer &&
+  Tinytest.addAsync('mongo-livedata - connection failure throws', async function(
+    test
+  ) {
     // Exception happens in 30s
-    test.throws(function () {
-      const connection = new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
+    await test.throwsAsync(async function() {
+      const connection = new MongoInternals.Connection(
+        'mongodb://this-does-not-exist.test/asdf'
+      );
 
       // Same as `MongoInternals.defaultRemoteCollectionDriver`.
-      Promise.await(connection.client.connect());
+      await connection.client.connect();
     });
-  }
-);
+  });
 
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
