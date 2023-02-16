@@ -4041,18 +4041,12 @@ if (Meteor.isClient) {
     async function(test, expect) {
       var self = this;
       self.nonce = Random.id();
-      const r = await Meteor.callAsync(
-        'fenceOnBeforeFireError1',
-        self.nonce,
-      );
+      const r = await Meteor.callAsync('fenceOnBeforeFireError1', self.nonce);
       test.isTrue(await r.stubValuePromise);
     },
     async function(test, expect) {
       var self = this;
-      const r = await Meteor.callAsync(
-        'fenceOnBeforeFireError2',
-        self.nonce,
-      );
+      const r = await Meteor.callAsync('fenceOnBeforeFireError2', self.nonce);
       test.isTrue(await r.stubValuePromise);
     },
   ]);
@@ -4062,7 +4056,7 @@ if (Meteor.isClient) {
   Meteor.methods({
     fenceOnBeforeFireError1: async function(nonce) {
       let resolver;
-      futuresByNonce[nonce] = new Promise(r => resolver = r);
+      futuresByNonce[nonce] = new Promise(r => (resolver = r));
       var observe = await fenceOnBeforeFireErrorCollection
         .find({ nonce: nonce })
         .observeChanges({ added: function() {} });
@@ -4072,7 +4066,7 @@ if (Meteor.isClient) {
           resolver(true);
         } catch (e) {
           resolver(false);
-          console.error(e)
+          console.error(e);
           observe.stop();
         }
       }, 10);
