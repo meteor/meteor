@@ -3932,26 +3932,27 @@ Meteor.isServer &&
     },
   ]);
 
-Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidden", [
-  function (test, expect) {
-    var c = new Mongo.Collection(Random.id());
+Meteor.isServer &&
+  testAsyncMulti('mongo-livedata - update with replace forbidden', [
+    async function(test, expect) {
+      var c = new Mongo.Collection(Random.id());
 
-    var id = c.insert({ foo: "bar" });
+      var id = await c.insertAsync({ foo: 'bar' });
 
-    c.update(id, { foo2: "bar2" });
-    test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
+      await c.updateAsync(id, { foo2: 'bar2' });
+      test.equal(await c.findOneAsync(id), { _id: id, foo2: 'bar2' });
 
-    test.throws(function () {
-      c.update(id, { foo3: "bar3" }, { _forbidReplace: true });
-    }, "Replacements are forbidden");
-    test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
+      await test.throwsAsync(async function() {
+        await c.updateAsync(id, { foo3: 'bar3' }, { _forbidReplace: true });
+      }, 'Replacements are forbidden');
+      test.equal(await c.findOneAsync(id), { _id: id, foo2: 'bar2' });
 
-    test.throws(function () {
-      c.update(id, { foo3: "bar3", $set: { blah: 1 } });
-    }, "cannot have both modifier and non-modifier fields");
-    test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
-  }
-]);
+      await test.throwsAsync(async function() {
+        await c.updateAsync(id, { foo3: 'bar3', $set: { blah: 1 } });
+      }, 'cannot have both modifier and non-modifier fields');
+      test.equal(await c.findOneAsync(id), { _id: id, foo2: 'bar2' });
+    },
+  ]);
 
 Meteor.isServer && Tinytest.add(
   "mongo-livedata - connection failure throws",
