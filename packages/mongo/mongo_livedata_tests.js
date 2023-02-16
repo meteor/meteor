@@ -4083,87 +4083,125 @@ if (Meteor.isClient) {
 }
 
 if (Meteor.isServer) {
-  Tinytest.add('mongo update/upsert - returns nMatched as numberAffected', function (test, onComplete) {
-    var collName = Random.id();
-    var coll = new Mongo.Collection('update_nmatched'+collName);
+  Tinytest.addAsync(
+    'mongo update/upsert - returns nMatched as numberAffected',
+    async function(test, onComplete) {
+      var collName = Random.id();
+      var coll = new Mongo.Collection('update_nmatched' + collName);
 
-    coll.insert({animal: 'cat', legs: 4});
-    coll.insert({animal: 'dog', legs: 4});
-    coll.insert({animal: 'echidna', legs: 4});
-    coll.insert({animal: 'platypus', legs: 4});
-    coll.insert({animal: 'starfish', legs: 5});
+      await coll.insertAsync({ animal: 'cat', legs: 4 });
+      await coll.insertAsync({ animal: 'dog', legs: 4 });
+      await coll.insertAsync({ animal: 'echidna', legs: 4 });
+      await coll.insertAsync({ animal: 'platypus', legs: 4 });
+      await coll.insertAsync({ animal: 'starfish', legs: 5 });
 
-    var affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}});
-    test.equal(affected, 1);
+      var affected = await coll.updateAsync(
+        { legs: 4 },
+        { $set: { category: 'quadruped' } }
+      );
+      test.equal(affected, 1);
 
-    //Changes only 3 but matched 4 documents
-    affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true});
-    test.equal(affected, 4);
-
-    //Again, changes nothing but returns nModified
-    affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true});
-    test.equal(affected, 4);
-
-    //upsert:true changes nothing, 4 modified
-    affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true, upsert:true});
-    test.equal(affected, 4);
-
-    //upsert method works as upsert:true
-    var result = coll.upsert({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true});
-    test.equal(result.numberAffected, 4);
-  });
-
-  Tinytest.addAsync('mongo livedata - update/upsert callback returns nMatched as numberAffected', function (test, onComplete) {
-    var collName = Random.id();
-    var coll = new Mongo.Collection('update_nmatched'+collName);
-
-    coll.insert({animal: 'cat', legs: 4});
-    coll.insert({animal: 'dog', legs: 4});
-    coll.insert({animal: 'echidna', legs: 4});
-    coll.insert({animal: 'platypus', legs: 4});
-    coll.insert({animal: 'starfish', legs: 5});
-
-    var test1 = function () {
-      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, function (err, result) {
-        test.equal(result, 1);
-        test2();
-      });
-    };
-
-    var test2 = function () {
       //Changes only 3 but matched 4 documents
-      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
-        test.equal(result, 4);
-        test3();
-      });
-    };
+      affected = await coll.updateAsync(
+        { legs: 4 },
+        { $set: { category: 'quadruped' } },
+        { multi: true }
+      );
+      test.equal(affected, 4);
 
-    var test3 = function () {
       //Again, changes nothing but returns nModified
-      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
-        test.equal(result, 4);
-        test4();
-      });
-    };
+      affected = await coll.updateAsync(
+        { legs: 4 },
+        { $set: { category: 'quadruped' } },
+        { multi: true }
+      );
+      test.equal(affected, 4);
 
-    var test4 = function () {
       //upsert:true changes nothing, 4 modified
-      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true, upsert:true}, function (err, result) {
-        test.equal(result, 4);
-        test5();
-      });
-    };
+      affected = await coll.updateAsync(
+        { legs: 4 },
+        { $set: { category: 'quadruped' } },
+        { multi: true, upsert: true }
+      );
+      test.equal(affected, 4);
 
-    var test5 = function () {
       //upsert method works as upsert:true
-      coll.upsert({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
-        test.equal(result.numberAffected, 4);
-        onComplete();
-      });
-    };
+      var result = await coll.upsertAsync(
+        { legs: 4 },
+        { $set: { category: 'quadruped' } },
+        { multi: true }
+      );
+      test.equal(result.numberAffected, 4);
+    }
+  );
 
-    test1();
-  });
+  Tinytest.addAsync(
+    'mongo livedata - update/upsert callback returns nMatched as numberAffected',
+    async function(test, onComplete) {
+      var collName = Random.id();
+      var coll = new Mongo.Collection('update_nmatched' + collName);
+
+      await coll.insertAsync({ animal: 'cat', legs: 4 });
+      await coll.insertAsync({ animal: 'dog', legs: 4 });
+      await coll.insertAsync({ animal: 'echidna', legs: 4 });
+      await coll.insertAsync({ animal: 'platypus', legs: 4 });
+      await coll.insertAsync({ animal: 'starfish', legs: 5 });
+
+      var test1 = async function() {
+        const result = await coll.updateAsync(
+          { legs: 4 },
+          { $set: { category: 'quadruped' } }
+        );
+        test.equal(result, 1);
+        return test2();
+      };
+
+      var test2 = async function() {
+        //Changes only 3 but matched 4 documents
+        const result = await coll.updateAsync(
+          { legs: 4 },
+          { $set: { category: 'quadruped' } },
+          { multi: true }
+        );
+        test.equal(result, 4);
+        return test3();
+      };
+
+      var test3 = async function() {
+        //Again, changes nothing but returns nModified
+        const result = await coll.updateAsync(
+          { legs: 4 },
+          { $set: { category: 'quadruped' } },
+          { multi: true }
+        );
+        test.equal(result, 4);
+        return test4();
+      };
+
+      var test4 = async function() {
+        //upsert:true changes nothing, 4 modified
+        const result = await coll.updateAsync(
+          { legs: 4 },
+          { $set: { category: 'quadruped' } },
+          { multi: true, upsert: true }
+        );
+        test.equal(result, 4);
+        return test5();
+      };
+
+      var test5 = async function() {
+        //upsert method works as upsert:true
+        const result = await coll.upsertAsync(
+          { legs: 4 },
+          { $set: { category: 'quadruped' } },
+          { multi: true }
+        );
+        test.equal(result.numberAffected, 4);
+      };
+
+      await test1();
+    }
+  );
 }
 
 if (Meteor.isServer) {
