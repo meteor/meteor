@@ -46,7 +46,7 @@ DDPServer._WriteFence = class {
     if (this === DDPServer._getCurrentFence())
       throw Error("Can't arm the current fence");
     this.armed = true;
-    return Meteor._isFibersEnabled ? Promise.await(this._maybeFire()) : this._maybeFire();
+    return this._maybeFire();
   }
 
   // Register a function to be called once before firing the fence.
@@ -67,17 +67,17 @@ DDPServer._WriteFence = class {
     this.completion_callbacks.push(func);
   }
 
-  _armAndWait() {
+  async _armAndWait() {
     let resolver;
     const returnValue = new Promise(r => resolver = r);
     this.onAllCommitted(resolver);
-    this.arm();
+    await this.arm();
 
     return returnValue;
   }
   // Convenience function. Arms the fence, then blocks until it fires.
-  armAndWait() {
-    return Meteor._isFibersEnabled ? Promise.await(this._armAndWait()) : this._armAndWait();
+  async armAndWait() {
+    return this._armAndWait();
   }
 
   async _maybeFire() {

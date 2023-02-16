@@ -3246,7 +3246,7 @@ testAsyncMulti('mongo-livedata - update handles $push with $each correctly', [
         name: 'jens',
         elements: ['X', 'Y'],
       },
-      { returnStubPromise: true }
+      { returnServerResultPromise: true }
     );
   },
   async function(test, expect) {
@@ -3261,7 +3261,7 @@ testAsyncMulti('mongo-livedata - update handles $push with $each correctly', [
           },
         },
       },
-      {returnStubPromise: true}
+      {returnServerResultPromise: true}
     );
     test.equal(await self.collection.findOneAsync(self.id), {
       _id: self.id,
@@ -3701,99 +3701,116 @@ EJSON.addType('someCustomType', function (json) {
   return new TestCustomType(json.head, json.tail);
 });
 
-testAsyncMulti("mongo-livedata - oplog - update EJSON", [
-  function (test, expect) {
+testAsyncMulti('mongo-livedata - oplog - update EJSON', [
+  async function(test, expect) {
     var self = this;
-    var collectionName = "ejson" + Random.id();
+    var collectionName = 'ejson' + Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName);
       Meteor.subscribe('c-' + collectionName, expect());
     }
 
     self.collection = new Mongo.Collection(collectionName);
-    self.date = new Date;
-    self.objId = new Mongo.ObjectID;
+    self.date = new Date();
+    self.objId = new Mongo.ObjectID();
 
-    self.id = self.collection.insert(
-      {d: self.date, oi: self.objId,
-        custom: new TestCustomType('a', 'b')},
-      expect(function (err, res) {
-        test.isFalse(err);
-        test.equal(self.id, res);
-      }));
+    self.id = await self.collection.insertAsync(
+      {
+        d: self.date,
+        oi: self.objId,
+        custom: new TestCustomType('a', 'b'),
+      },
+      { returnServerResultPromise: true }
+    );
   },
-  function (test, expect) {
+  async function(test, expect) {
     var self = this;
     self.changes = [];
-    self.handle = self.collection.find({}).observeChanges({
-      added: function (id, fields) {
+    self.handle = await self.collection.find({}).observeChanges({
+      added: function(id, fields) {
         self.changes.push(['a', id, fields]);
       },
-      changed: function (id, fields) {
+      changed: function(id, fields) {
         self.changes.push(['c', id, fields]);
       },
-      removed: function (id) {
+      removed: function(id) {
         self.changes.push(['r', id]);
-      }
+      },
     });
     test.length(self.changes, 1);
-    test.equal(self.changes.shift(),
-      ['a', self.id,
-        {d: self.date, oi: self.objId,
-          custom: new TestCustomType('a', 'b')}]);
+    test.equal(self.changes.shift(), [
+      'a',
+      self.id,
+      { d: self.date, oi: self.objId, custom: new TestCustomType('a', 'b') },
+    ]);
 
     // First, replace the entire custom object.
     // (runInFence is useful for the server, using expect() is useful for the
     // client)
-    runInFence(function () {
-      self.collection.update(
-        self.id, {$set: {custom: new TestCustomType('a', 'c')}},
-        expect(function (err) {
-          test.isFalse(err);
-        }));
+    await runInFence(async function() {
+      await self.collection.updateAsync(
+        self.id,
+        {
+          $set: { custom: new TestCustomType('a', 'c') },
+        },
+        { returnServerResultPromise: true }
+      );
     });
   },
-  function (test, expect) {
+  async function(test, expect) {
     var self = this;
     test.length(self.changes, 1);
-    test.equal(self.changes.shift(),
-      ['c', self.id, {custom: new TestCustomType('a', 'c')}]);
+    test.equal(self.changes.shift(), [
+      'c',
+      self.id,
+      { custom: new TestCustomType('a', 'c') },
+    ]);
 
     // Now, sneakily replace just a piece of it. Meteor won't do this, but
     // perhaps you are accessing Mongo directly.
-    runInFence(function () {
-      self.collection.update(
-        self.id, {$set: {'custom.EJSON$value.EJSONtail': 'd'}},
-        expect(function (err) {
-          test.isFalse(err);
-        }));
+    await runInFence(async function() {
+      await self.collection.updateAsync(
+        self.id,
+        {
+          $set: { 'custom.EJSON$value.EJSONtail': 'd' },
+        },
+        { returnServerResultPromise: true }
+      );
     });
   },
-  function (test, expect) {
+  async function(test, expect) {
     var self = this;
     test.length(self.changes, 1);
-    test.equal(self.changes.shift(),
-      ['c', self.id, {custom: new TestCustomType('a', 'd')}]);
+    test.equal(self.changes.shift(), [
+      'c',
+      self.id,
+      { custom: new TestCustomType('a', 'd') },
+    ]);
 
     // Update a date and an ObjectID too.
     self.date2 = new Date(self.date.valueOf() + 1000);
-    self.objId2 = new Mongo.ObjectID;
-    runInFence(function () {
-      self.collection.update(
-        self.id, {$set: {d: self.date2, oi: self.objId2}},
-        expect(function (err) {
-          test.isFalse(err);
-        }));
+    self.objId2 = new Mongo.ObjectID();
+    await runInFence(async function() {
+      await self.collection.updateAsync(
+        self.id,
+        {
+          $set: { d: self.date2, oi: self.objId2 },
+        },
+        { returnServerResultPromise: true }
+      );
     });
   },
-  function (test, expect) {
+  function(test, expect) {
     var self = this;
     test.length(self.changes, 1);
-    test.equal(self.changes.shift(),
-      ['c', self.id, {d: self.date2, oi: self.objId2}]);
+    test.equal(self.changes.shift(), [
+      'c',
+      self.id,
+      { d: self.date2, oi: self.objId2 },
+    ]);
 
     self.handle.stop();
-  }
+  },
 ]);
 
 

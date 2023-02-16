@@ -805,7 +805,7 @@ export class Connection {
     if (!callback) {
       if (
         Meteor.isClient &&
-        !options.returnStubPromise &&
+        !options.returnServerResultPromise &&
         (!options.isFromCallAsync || options.returnStubValue)
       ) {
         // On the client, we don't have fibers, so we can't block. The
