@@ -3872,52 +3872,65 @@ testAsyncMulti('mongo-livedata - undefined find options', [
 ]);
 
 // Regression test for #2274.
-Meteor.isServer && testAsyncMulti("mongo-livedata - observe limit bug", [
-  function (test, expect) {
-    var self = this;
-    self.coll = new Mongo.Collection(Random.id());
-    var state = {};
-    var callbacks = {
-      changed: function (newDoc) {
-        state[newDoc._id] = newDoc;
-      },
-      added: function (newDoc) {
-        state[newDoc._id] = newDoc;
-      },
-      removed: function (oldDoc) {
-        delete state[oldDoc._id];
-      }
-    };
-    self.observe = self.coll.find(
-      {}, {limit: 1, sort: {sortField: -1}}).observe(callbacks);
+Meteor.isServer &&
+  testAsyncMulti('mongo-livedata - observe limit bug', [
+    async function(test, expect) {
+      var self = this;
+      self.coll = new Mongo.Collection(Random.id());
+      var state = {};
+      var callbacks = {
+        changed: function(newDoc) {
+          state[newDoc._id] = newDoc;
+        },
+        added: function(newDoc) {
+          state[newDoc._id] = newDoc;
+        },
+        removed: function(oldDoc) {
+          delete state[oldDoc._id];
+        },
+      };
+      self.observe = await self.coll
+        .find({}, { limit: 1, sort: { sortField: -1 } })
+        .observe(callbacks);
 
-    // Insert some documents.
-    runInFence(function () {
-      self.id0 = self.coll.insert({sortField: 0, toDelete: true});
-      self.id1 = self.coll.insert({sortField: 1, toDelete: true});
-      self.id2 = self.coll.insert({sortField: 2, toDelete: true});
-    });
-    test.equal(_.keys(state), [self.id2]);
+      // Insert some documents.
+      await runInFence(async function() {
+        self.id0 = await self.coll.insertAsync({
+          sortField: 0,
+          toDelete: true,
+        });
+        self.id1 = await self.coll.insertAsync({
+          sortField: 1,
+          toDelete: true,
+        });
+        self.id2 = await self.coll.insertAsync({
+          sortField: 2,
+          toDelete: true,
+        });
+      });
+      test.equal(_.keys(state), [self.id2]);
 
-    // Mutate the one in the unpublished buffer and the one below the
-    // buffer. Before the fix for #2274, this left the observe state machine in
-    // a broken state where the buffer was empty but it wasn't try to re-fill
-    // it.
-    runInFence(function () {
-      self.coll.update({_id: {$ne: self.id2}},
-        {$set: {toDelete: false}},
-        {multi: 1});
-    });
-    test.equal(_.keys(state), [self.id2]);
+      // Mutate the one in the unpublished buffer and the one below the
+      // buffer. Before the fix for #2274, this left the observe state machine in
+      // a broken state where the buffer was empty but it wasn't try to re-fill
+      // it.
+      await runInFence(async function() {
+        await self.coll.updateAsync(
+          { _id: { $ne: self.id2 } },
+          { $set: { toDelete: false } },
+          { multi: 1 }
+        );
+      });
+      test.equal(_.keys(state), [self.id2]);
 
-    // Now remove the one published document. This should slide up id1 from the
-    // buffer, but this didn't work before the #2274 fix.
-    runInFence(function () {
-      self.coll.remove({toDelete: true});
-    });
-    test.equal(_.keys(state), [self.id1]);
-  }
-]);
+      // Now remove the one published document. This should slide up id1 from the
+      // buffer, but this didn't work before the #2274 fix.
+      await runInFence(async function() {
+        await self.coll.removeAsync({ toDelete: true });
+      });
+      test.equal(_.keys(state), [self.id1]);
+    },
+  ]);
 
 Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidden", [
   function (test, expect) {
