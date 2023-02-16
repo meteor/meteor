@@ -520,21 +520,30 @@ if (Meteor.isClient) {
       ]);
     })();
 
-    testAsyncMulti("collection - insecure, " + idGeneration, [
-      function (test, expect) {
-        insecureCollection.callClearMethod(expect(function () {
-          test.equal(insecureCollection.find().count(), 0);
-        }));
+    testAsyncMulti('collection - insecure, ' + idGeneration, [
+      async function(test, expect) {
+        await insecureCollection.callClearMethod();
+        test.equal(await insecureCollection.find().countAsync(), 0);
       },
-      function (test, expect) {
-        var id = insecureCollection.insert({foo: 'bar'}, expect(function(err, res) {
-          test.equal(res, id);
-          test.equal(insecureCollection.find(id).count(), 1);
-          test.equal(insecureCollection.findOne(id).foo, 'bar');
-        }));
-        test.equal(insecureCollection.find(id).count(), 1);
-        test.equal(insecureCollection.findOne(id).foo, 'bar');
-      }
+      async function(test, expect) {
+        let idThen;
+        var id = await insecureCollection
+          .insertAsync(
+            { foo: 'bar' },
+            {
+              returnServerResultPromise: true,
+            }
+          )
+          .then(async function(res) {
+            idThen = res;
+            test.equal(await insecureCollection.find(res).countAsync(), 1);
+            test.equal((await insecureCollection.findOneAsync(res)).foo, 'bar');
+            return res;
+          });
+        test.equal(idThen, id);
+        test.equal(await insecureCollection.find(id).countAsync(), 1);
+        test.equal((await insecureCollection.findOneAsync(id)).foo, 'bar');
+      },
     ]);
 
     testAsyncMulti("collection - locked down, " + idGeneration, [
