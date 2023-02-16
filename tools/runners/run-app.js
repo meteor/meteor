@@ -941,7 +941,6 @@ Object.assign(AppRunner.prototype, {
     var self = this;
     var firstRun = true;
 
-    console.log('before while');
     while (true) {
       var runResult = await self._runOnce({
         onListen: function () {
@@ -1033,12 +1032,10 @@ Object.assign(AppRunner.prototype, {
 
       break;
     }
-    console.log('before close');
 
     // Allow the process to exit normally, since optimistic file watchers
     // may be keeping the event loop busy.
     closeAllWatchers();
-    console.log('before clean');
 
     // Giving up for good.
     self._cleanUpPromises();
