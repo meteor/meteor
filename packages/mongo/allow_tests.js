@@ -35,8 +35,8 @@ if (Meteor.isServer) {
         needToConfigure = true;
         collection._insecure = insecure;
         var m = {};
-        m["clear-collection-" + fullName] = function() {
-          collection.remove({});
+        m["clear-collection-" + fullName] = async function() {
+          await collection.removeAsync({});
         };
         Meteor.methods(m);
       }
@@ -77,13 +77,13 @@ if (Meteor.isServer) {
 
     if (needToConfigure) {
       restrictedCollectionWithTransform.allow({
-        insert: function (userId, doc) {
+        insertAsync: function (userId, doc) {
           return doc.foo === "foo";
         },
-        update: function (userId, doc) {
+        updateAsync: function (userId, doc) {
           return doc.foo === "foo";
         },
-        remove: function (userId, doc) {
+        removeAsync: function (userId, doc) {
           return doc.bar === "bar";
         }
       });
@@ -91,10 +91,10 @@ if (Meteor.isServer) {
         // transform: null means that doc here is the top level, not the 'a'
         // element.
         transform: null,
-        insert: function (userId, doc) {
+        insertAsync: function (userId, doc) {
           return !!doc.topLevelField;
         },
-        update: function (userId, doc) {
+        updateAsync: function (userId, doc) {
           return !!doc.topLevelField;
         }
       });
@@ -238,8 +238,8 @@ if (Meteor.isClient) {
       var collection = new Mongo.Collection(
         fullName, {idGeneration: idGeneration, transform: transform});
 
-      collection.callClearMethod = function (callback) {
-        Meteor.call("clear-collection-" + fullName, callback);
+      collection.callClearMethod = async function () {
+        await Meteor.callAsync("clear-collection-" + fullName);
       };
       collection.unnoncedName = name + idGeneration;
       return collection;
@@ -395,69 +395,128 @@ if (Meteor.isClient) {
       },
     ]);
 
-    (function(){
-      testAsyncMulti("collection - restricted factories " + idGeneration, [
-        function (test, expect) {
-          restrictedCollectionWithTransform.callClearMethod(expect(function () {
-            test.equal(restrictedCollectionWithTransform.find().count(), 0);
-          }));
+    (function() {
+      testAsyncMulti('collection - restricted factories ' + idGeneration, [
+        async function(test, expect) {
+          await restrictedCollectionWithTransform.callClearMethod();
+          test.equal(
+            await restrictedCollectionWithTransform.find().countAsync(),
+            0
+          );
         },
-        function (test, expect) {
+        async function(test, expect) {
           var self = this;
-          restrictedCollectionWithTransform.insert({
-            a: {foo: "foo", bar: "bar", baz: "baz"}
-          }, expect(function (e, res) {
-            test.isFalse(e);
-            test.isTrue(res);
-            self.item1 = res;
-          }));
-          restrictedCollectionWithTransform.insert({
-            a: {foo: "foo", bar: "quux", baz: "quux"},
-            b: "potato"
-          }, expect(function (e, res) {
-            test.isFalse(e);
-            test.isTrue(res);
-            self.item2 = res;
-          }));
-          restrictedCollectionWithTransform.insert({
-            a: {foo: "adsfadf", bar: "quux", baz: "quux"},
-            b: "potato"
-          }, expect(function (e, res) {
-            test.isTrue(e);
-          }));
-          restrictedCollectionWithTransform.insert({
-            a: {foo: "bar"},
-            topLevelField: true
-          }, expect(function (e, res) {
-            test.isFalse(e);
-            test.isTrue(res);
-            self.item3 = res;
-          }));
+          await restrictedCollectionWithTransform
+            .insertAsync(
+              {
+                a: { foo: 'foo', bar: 'bar', baz: 'baz' },
+              },
+              {
+                returnServerResultPromise: true,
+              }
+            )
+            .then(
+              expect(function(res) {
+                test.isTrue(res);
+                self.item1 = res;
+              })
+            );
+          await restrictedCollectionWithTransform
+            .insertAsync(
+              {
+                a: { foo: 'foo', bar: 'quux', baz: 'quux' },
+                b: 'potato',
+              },
+              {
+                returnServerResultPromise: true,
+              }
+            )
+            .then(
+              expect(function(res) {
+                test.isTrue(res);
+                self.item2 = res;
+              })
+            );
+          await restrictedCollectionWithTransform
+            .insertAsync(
+              {
+                a: { foo: 'adsfadf', bar: 'quux', baz: 'quux' },
+                b: 'potato',
+              },
+              {
+                returnServerResultPromise: true,
+              }
+            )
+            .catch(
+              expect(function(e, res) {
+                test.isTrue(e);
+              })
+            );
+          await restrictedCollectionWithTransform
+            .insertAsync(
+              {
+                a: { foo: 'bar' },
+                topLevelField: true,
+              },
+              {
+                returnServerResultPromise: true,
+              }
+            )
+            .then(
+              expect(function(res) {
+                test.isTrue(res);
+                self.item3 = res;
+              })
+            );
         },
-        function (test, expect) {
+        async function(test, expect) {
           var self = this;
           // This should work, because there is an update allow for things with
           // topLevelField.
-          restrictedCollectionWithTransform.update(
-            self.item3, { $set: { xxx: true } }, expect(function (e, res) {
-              test.isFalse(e);
-              test.equal(1, res);
-            }));
+          await restrictedCollectionWithTransform
+            .updateAsync(
+              self.item3,
+              { $set: { xxx: true } },
+              {
+                returnServerResultPromise: true,
+              }
+            )
+            .then(
+              expect(function(res) {
+                test.equal(1, res);
+              })
+            );
         },
-        function (test, expect) {
+        async function(test, expect) {
           var self = this;
           test.equal(
-            restrictedCollectionWithTransform.findOne(self.item1),
-            {_id: self.item1, foo: "foo", bar: "bar", baz: "baz"});
-          restrictedCollectionWithTransform.remove(
-            self.item1, expect(function (e, res) {
-              test.isFalse(e);
-            }));
-          restrictedCollectionWithTransform.remove(
-            self.item2, expect(function (e, res) {
-              test.isTrue(e);
-            }));
-        }
+            await restrictedCollectionWithTransform.findOneAsync(self.item1),
+            {
+              _id: self.item1,
+              foo: 'foo',
+              bar: 'bar',
+              baz: 'baz',
+            }
+          );
+          await restrictedCollectionWithTransform
+            .removeAsync(self.item1, {
+              returnServerResultPromise: true,
+            })
+            .then(
+              expect(function(res) {
+                test.isTrue(res);
+              })
+            );
+          await restrictedCollectionWithTransform
+            .removeAsync(self.item2, {
+              returnServerResultPromise: true,
+            })
+            .catch(
+              expect(function(e) {
+                test.isTrue(e);
+              })
+            );
+        },
       ]);
     })();
 
