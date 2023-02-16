@@ -224,11 +224,11 @@ testAsyncMulti('livedata - basic method invocation', [
     // No callback
 
     if (Meteor.isServer) {
-      test.throws(function() {
-        Meteor.call('exception', 'both');
+      await test.throwsAsync(async function() {
+        await Meteor.call('exception', 'both', {show: true});
       });
-      test.throws(function() {
-        Meteor.call('exception', 'server');
+      await test.throwsAsync(async function() {
+        await Meteor.call('exception', 'server', {show: true});
       });
       // No exception, because no code will run on the client
       test.equal(await Meteor.callAsync('exception', 'client'), undefined);
@@ -298,7 +298,7 @@ testAsyncMulti('livedata - basic method invocation', [
       test.equal(await Meteor.callAsync('exception', 'client'), undefined);
     }
   },
-
+],[
   async function(test, expect) {
     if (Meteor.isServer) {
       let threw = false;
@@ -1136,48 +1136,77 @@ testAsyncMulti('livedata - result by value', [
   },
 ]);
 
-if (Meteor.isServer) {
-  const coll = new Mongo.Collection('test');
-  Meteor.methods({
-    async insertData(data) {
-      const id = await coll.insertAsync(data);
-      return [id, `inserted with: ${id}`];
-    },
-    async updateData(id, data) {
-      const beforeUpdateData = await Meteor.callAsync('getData', id);
-      const r = await coll.updateAsync(id, { $set: data }, {returnStubValue: true});
-      const afterUpdateData = await Meteor.callAsync('getData', id);
-      return [
-        r,
-        {
-          before: `before update: a:${beforeUpdateData.a}`,
-          after: `after update: a:${afterUpdateData.a}, gotData:${afterUpdateData.gotData}`,
-        },
-      ];
-    },
-    async getData(id) {
-      const data = await coll.findOneAsync(id);
-      await coll.updateAsync(id, { $set: { gotData: true } });
-      return data;
-    },
-  });
-}
-if (Meteor.isClient) {
-  Tinytest.addAsync('livedata - methods with nested stubs', test => {
-    return Meteor.callAsync('insertData', { a: 1 })
-      .then(async data => {
-        const [id, message] = await data.stubValuePromise;
-        test.equal(message, `inserted with: ${id}`);
-        return Meteor.callAsync('updateData', id, { a: 2 });
-      })
-      .then(async data => {
-        const [count, message] = await data.stubValuePromise;
-        test.equal(count, 1);
-        test.equal(message.before, 'before update: a:1');
-        test.equal(message.after, 'after update: a:2, gotData:true');
-      });
-  });
-}
+testAsyncMulti('livedata - methods with nested stubs', [
+  function() {
+    const self = this;
+    self.collectionName = 'livedata-tests';
+    self.coll = new Mongo.Collection(self.collectionName);
+    if (Meteor.isServer) {
+      Meteor.publish('c' + self.collectionName, () => self.coll.find());
+    }
+
+    Meteor.methods({
+      async insertData(data) {
+        const id = await self.coll.insertAsync(data);
+        return [id, `inserted with: ${id}`];
+      },
+      async updateData(id, data) {
+        const beforeUpdateData = await Meteor.callAsync('getData', id);
+        const r = await self.coll.updateAsync(
+          id,
+          { $set: data },
+          { returnStubValue: true }
+        );
+        const afterUpdateData = await Meteor.callAsync('getData', id);
+        return [
+          r,
+          {
+            before: `before update: a:${beforeUpdateData.a}`,
+            after: `after update: a:${afterUpdateData.a}, gotData:${afterUpdateData.gotData}`,
+          },
+        ];
+      },
+      async getData(id) {
+        const data = await self.coll.findOneAsync(id);
+
+        await self.coll.updateAsync(id, { $set: { gotData: true } });
+        return data;
+      },
+    });
+  },
+  function(test, expected) {
+    if (Meteor.isClient) {
+      const subs = Meteor.subscribe('c' + this.collectionName, () => {});
+      let resolver;
+      const promise = new Promise(r => (resolver = r));
+
+      const id = setInterval(() => {
+        if (subs.ready()) {
+          clearInterval(id);
+          resolver();
+        }
+      }, 10);
+
+      return promise;
+    }
+  },
+  async function(test) {
+    if (Meteor.isClient) {
+      return Meteor.callAsync('insertData', { a: 1 })
+        .then(async data => {
+          const [id, message] = await data.stubValuePromise;
+          test.equal(message, `inserted with: ${id}`);
+          return Meteor.callAsync('updateData', id, { a: 2 });
+        })
+        .then(async data => {
+          const [count, message] = await data.stubValuePromise;
+          test.equal(count, 1);
+          test.equal(message.before, 'before update: a:1');
+          test.equal(message.after, 'after update: a:2, gotData:true');
+        });
+    }
+  },
+]);
 
 // XXX some things to test in greater detail:
 // staying in simulation mode

@@ -572,6 +572,12 @@ export class Connection {
       ? args.shift()
       : {};
 
+    const invocation = DDP._CurrentCallAsyncInvocation.get();
+
+    if (invocation?.hasCallAsyncParent) {
+      return this.applyAsync(name, args, { ...options, isFromCallAsync: true });
+    }
+
     /*
     * This is necessary because when you call a Promise.then, you're actually calling a bound function by Meteor.
     *
@@ -604,11 +610,13 @@ export class Connection {
     DDP._CurrentMethodInvocation._set();
     DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
     const promise = new Promise((resolve, reject) => {
+      DDP._CurrentCallAsyncInvocation._set({ name, hasCallAsyncParent: true });
       this.applyAsync(name, args, { isFromCallAsync: true, ...options })
-        .then(result => {
-          resolve(result);
-        })
-        .catch(reject);
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
+          DDP._CurrentCallAsyncInvocation._set();
+        });
     });
     return promise.finally(() =>
       DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
