@@ -731,19 +731,18 @@ export class Connection {
         "delivering result of invoking '" + name + "'"
       );
     }
-
-    // Keep our args safe from mutation (eg if we don't send the message for a
-    // while because of a wait method).
-    args = EJSON.clone(args);
-
     const {
       hasStub,
       exception,
       stubReturnValue,
       alreadyInSimulation,
       randomSeed,
+      stubArgs,
     } = stubCallValue;
 
+    // Keep our args safe from mutation (eg if we don't send the message for a
+    // while because of a wait method).
+    args = EJSON.clone(stubArgs);
     // If we're in a simulation, stop and return the result we have,
     // rather than going on to do an RPC. If there was no stub,
     // we'll end up returning undefined.
@@ -812,7 +811,7 @@ export class Connection {
         // only thing we can do is to return undefined and discard the
         // result of the RPC. If an error occurred then print the error
         // to the console.
-        callback = err => {
+        callback = (err) => {
           err && Meteor._debug("Error invoking Method '" + name + "'", err);
         };
       } else {
@@ -881,7 +880,7 @@ export class Connection {
     // block waiting for the result.
     if (future) {
       return options.returnStubValue
-        ? future
+        ? future.then(() => stubReturnValue)
         : {
             stubValuePromise: future,
           };
@@ -910,7 +909,10 @@ export class Connection {
     const randomSeed = { value: null};
 
     const defaultReturn = {
-      alreadyInSimulation, randomSeed, isFromCallAsync
+      alreadyInSimulation,
+      randomSeed,
+      isFromCallAsync,
+      stubArgs: args,
     };
     if (!stub) {
       return { ...defaultReturn, hasStub: false };
@@ -956,10 +958,10 @@ export class Connection {
           // don't allow stubs to yield.
           return Meteor._noYieldsAllowed(() => {
             // re-clone, so that the stub can't affect our caller's values
-            return stub.apply(invocation, EJSON.clone(args));
+            return stub.apply(invocation, args);
           });
         } else {
-          return stub.apply(invocation, EJSON.clone(args));
+          return stub.apply(invocation, args);
         }
     };
     return { ...defaultReturn, hasStub: true, stubInvocation, invocation };

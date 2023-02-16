@@ -175,13 +175,13 @@ if (Meteor.isServer) {
       // verify that we only fetch the fields specified - we should
       // be fetching just field1, field2, and field3.
       restrictedCollectionForFetchTest.allow({
-        insert: function() { return true; },
-        update: function(userId, doc) {
+        insertAsync: function() { return true; },
+        updateAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
             999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
         },
-        remove: function(userId, doc) {
+        removeAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
             999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
@@ -198,13 +198,13 @@ if (Meteor.isServer) {
       // verify that not passing fetch to one of the calls to allow
       // causes all fields to be fetched
       restrictedCollectionForFetchAllTest.allow({
-        insert: function() { return true; },
-        update: function(userId, doc) {
+        insertAsync: function() { return true; },
+        updateAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
             999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
         },
-        remove: function(userId, doc) {
+        removeAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
             999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
@@ -212,7 +212,7 @@ if (Meteor.isServer) {
         fetch: ['field1']
       });
       restrictedCollectionForFetchAllTest.allow({
-        update: function() { return true; }
+        updateAsync: function() { return true; }
       });
     }
 
@@ -316,34 +316,83 @@ if (Meteor.isClient) {
 
 
     // test that we only fetch the fields specified
-    testAsyncMulti("collection - fetch, " + idGeneration, [
-      function (test, expect) {
-        var fetchId = restrictedCollectionForFetchTest.insert(
-          {field1: 1, field2: 1, field3: 1, field4: 1});
-        var fetchAllId = restrictedCollectionForFetchAllTest.insert(
-          {field1: 1, field2: 1, field3: 1, field4: 1});
-        restrictedCollectionForFetchTest.update(
-          fetchId, {$set: {updated: true}}, expect(function (err, res) {
-            test.equal(err.reason,
-              "Test: Fields in doc: _id,field1,field2,field3");
-          }));
-        restrictedCollectionForFetchTest.remove(
-          fetchId, expect(function (err, res) {
-            test.equal(err.reason,
-              "Test: Fields in doc: _id,field1,field2,field3");
-          }));
+    testAsyncMulti('collection - fetch, ' + idGeneration, [
+      async function(test, expect) {
+        var fetchId = await restrictedCollectionForFetchTest.insertAsync({
+          field1: 1,
+          field2: 1,
+          field3: 1,
+          field4: 1,
+        },{
+          returnServerResultPromise: true,
+        });
+        var fetchAllId = await restrictedCollectionForFetchAllTest.insertAsync({
+          field1: 1,
+          field2: 1,
+          field3: 1,
+          field4: 1,
+        },{
+          returnServerResultPromise: true,
+        });
+       await restrictedCollectionForFetchTest
+         .updateAsync(
+           fetchId,
+           { $set: { updated: true } },
+           {
+             returnServerResultPromise: true,
+           }
+         )
+         .catch(
+           expect(function(err) {
+             test.equal(
+               err.reason,
+               'Test: Fields in doc: _id,field1,field2,field3'
+             );
+           })
+         );
 
-        restrictedCollectionForFetchAllTest.update(
-          fetchAllId, {$set: {updated: true}}, expect(function (err, res) {
-            test.equal(err.reason,
-              "Test: Fields in doc: _id,field1,field2,field3,field4");
-          }));
-        restrictedCollectionForFetchAllTest.remove(
-          fetchAllId, expect(function (err, res) {
-            test.equal(err.reason,
-              "Test: Fields in doc: _id,field1,field2,field3,field4");
-          }));
-      }
+        await restrictedCollectionForFetchTest
+          .removeAsync(fetchId, {
+            returnServerResultPromise: true,
+          })
+          .catch(
+            expect(function(err) {
+              test.equal(
+                err.reason,
+                'Test: Fields in doc: _id,field1,field2,field3'
+              );
+            })
+          );
+
+        await restrictedCollectionForFetchAllTest
+          .updateAsync(
+            fetchAllId,
+            { $set: { updated: true } },
+            {
+              returnServerResultPromise: true,
+            }
+          )
+          .catch(
+            expect(function(err) {
+              test.equal(
+                err.reason,
+                'Test: Fields in doc: _id,field1,field2,field3,field4'
+              );
+            })
+          );
+        await restrictedCollectionForFetchAllTest
+          .removeAsync(fetchAllId, {
+            returnServerResultPromise: true,
+          })
+          .catch(
+            expect(function(err) {
+              test.equal(
+                err.reason,
+                'Test: Fields in doc: _id,field1,field2,field3,field4'
+              );
+            })
+          );
+      },
     ]);
 
     (function(){
