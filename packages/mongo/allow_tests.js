@@ -296,13 +296,22 @@ if (Meteor.isClient) {
 
     // test that if deny is called once then the collection is
     // restricted, and that other mutations aren't allowed
-    testAsyncMulti("collection - partial deny, " + idGeneration, [
-      function (test, expect) {
-        restrictedCollectionForPartialDenyTest.update(
-          'foo', {$set: {updated: true}}, expect(function (err, res) {
-            test.equal(err.error, 403);
-          }));
-      }
+    testAsyncMulti('collection - partial deny, ' + idGeneration, [
+      async function(test, expect) {
+        try {
+          await restrictedCollectionForPartialDenyTest.updateAsync(
+            'foo',
+            {
+              $set: { updated: true },
+            },
+            {
+              returnServerResultPromise: true,
+            }
+          );
+        } catch (err) {
+          test.equal(err.error, 403);
+        }
+      },
     ]);
 
 
