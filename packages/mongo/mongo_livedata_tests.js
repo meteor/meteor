@@ -3989,28 +3989,31 @@ Meteor.isServer &&
   });
 
 if (Meteor.isServer) {
-  Tinytest.add("mongo-livedata - update/remove don't accept an array as a selector #4804", function (test) {
-    var collection = new Mongo.Collection(Random.id());
+  Tinytest.addAsync(
+    "mongo-livedata - update/remove don't accept an array as a selector #4804",
+    async function(test) {
+      var collection = new Mongo.Collection(Random.id());
 
-    _.times(10, function () {
-      collection.insert({ data: "Hello" });
-    });
+      for (let i = 0; i < 10; i ++) {
+        await collection.insertAsync({ data: 'Hello' });
+      }
 
-    test.equal(collection.find().count(), 10);
+      test.equal(await collection.find().countAsync(), 10);
 
-    // Test several array-related selectors
-    _.each([[], [1, 2, 3], [{}]], function (selector) {
-      test.throws(function () {
-        collection.remove(selector);
-      });
+      // Test several array-related selectors
+      for (const selector of [[], [1, 2, 3], [{}]]) {
+        await test.throwsAsync(async function() {
+          await collection.removeAsync(selector);
+        });
 
-      test.throws(function () {
-        collection.update(selector, {$set: 5});
-      });
-    });
+        await test.throwsAsync(async function() {
+          await collection.updateAsync(selector, { $set: 5 });
+        });
+      }
 
-    test.equal(collection.find().count(), 10);
-  });
+      test.equal(await collection.find().countAsync(), 10);
+    }
+  );
 }
 
 // This is a regression test for https://github.com/meteor/meteor/issues/4839.
