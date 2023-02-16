@@ -3589,88 +3589,90 @@ Meteor.isServer &&
   });
 
 
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", function (test) {
-  // This test uses a random database, so it can be dropped without affecting
-  // anything else.
-  var mongodbUri = Npm.require('mongodb-uri');
-  var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
-  parsedUri.database = 'dropDB' + Random.id();
-  var driver = new MongoInternals.RemoteCollectionDriver(
-    mongodbUri.format(parsedUri), {
-      oplogUrl: process.env.MONGO_OPLOG_URL
+Meteor.isServer &&
+  Tinytest.addAsync('mongo-livedata - oplog - drop collection/db', async function(test) {
+    // This test uses a random database, so it can be dropped without affecting
+    // anything else.
+    var mongodbUri = Npm.require('mongodb-uri');
+    var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
+    parsedUri.database = 'dropDB' + Random.id();
+    var driver = new MongoInternals.RemoteCollectionDriver(
+      mongodbUri.format(parsedUri),
+      {
+        oplogUrl: process.env.MONGO_OPLOG_URL,
+      }
+    );
+
+    var collName = 'dropCollection' + Random.id();
+    var coll = new Mongo.Collection(collName, { _driver: driver });
+
+    var doc1Id = await coll.insertAsync({ a: 'foo', c: 1 });
+    var doc2Id = await coll.insertAsync({ b: 'bar' });
+    var doc3Id = await coll.insertAsync({ a: 'foo', c: 2 });
+    var tmp;
+
+    var output = [];
+    var handle = await coll.find({ a: 'foo' }).observeChanges({
+      added: function(id, fields) {
+        output.push(['added', id, fields]);
+      },
+      changed: function(id) {
+        output.push(['changed']);
+      },
+      removed: function(id) {
+        output.push(['removed', id]);
+      },
+    });
+    test.length(output, 2);
+    // make order consistent
+    if (output.length === 2 && output[0][1] === doc3Id) {
+      tmp = output[0];
+      output[0] = output[1];
+      output[1] = tmp;
     }
-  );
+    test.equal(output.shift(), ['added', doc1Id, { a: 'foo', c: 1 }]);
+    test.equal(output.shift(), ['added', doc3Id, { a: 'foo', c: 2 }]);
 
-  var collName = "dropCollection" + Random.id();
-  var coll = new Mongo.Collection(collName, { _driver: driver });
+    // Wait until we've processed the insert oplog entry, so that we are in a
+    // steady state (and we don't see the dropped docs because we are FETCHING).
+    await waitUntilOplogCaughtUp();
 
-  var doc1Id = coll.insert({a: 'foo', c: 1});
-  var doc2Id = coll.insert({b: 'bar'});
-  var doc3Id = coll.insert({a: 'foo', c: 2});
-  var tmp;
+    // Drop the collection. Should remove all docs.
+    await runInFence(async function() {
+      await coll.dropCollectionAsync();
+    });
 
-  var output = [];
-  var handle = coll.find({a: 'foo'}).observeChanges({
-    added: function (id, fields) {
-      output.push(['added', id, fields]);
-    },
-    changed: function (id) {
-      output.push(['changed']);
-    },
-    removed: function (id) {
-      output.push(['removed', id]);
+    test.length(output, 2);
+    // make order consistent
+    if (output.length === 2 && output[0][1] === doc3Id) {
+      tmp = output[0];
+      output[0] = output[1];
+      output[1] = tmp;
     }
+    test.equal(output.shift(), ['removed', doc1Id]);
+    test.equal(output.shift(), ['removed', doc3Id]);
+
+    // Put something back in.
+    var doc4Id;
+    await runInFence(async function() {
+      doc4Id = await coll.insertAsync({ a: 'foo', c: 3 });
+    });
+
+    test.length(output, 1);
+    test.equal(output.shift(), ['added', doc4Id, { a: 'foo', c: 3 }]);
+
+    // XXX: this was intermittently failing for unknown reasons.
+    // Now drop the database. Should remove all docs again.
+    // runInFence(function () {
+    //   driver.mongo.dropDatabase();
+    // });
+    //
+    // test.length(output, 1);
+    // test.equal(output.shift(), ['removed', doc4Id]);
+
+    await handle.stop();
+    driver.mongo.close();
   });
-  test.length(output, 2);
-  // make order consistent
-  if (output.length === 2 && output[0][1] === doc3Id) {
-    tmp = output[0];
-    output[0] = output[1];
-    output[1] = tmp;
-  }
-  test.equal(output.shift(), ['added', doc1Id, {a: 'foo', c: 1}]);
-  test.equal(output.shift(), ['added', doc3Id, {a: 'foo', c: 2}]);
-
-  // Wait until we've processed the insert oplog entry, so that we are in a
-  // steady state (and we don't see the dropped docs because we are FETCHING).
-  waitUntilOplogCaughtUp();
-
-  // Drop the collection. Should remove all docs.
-  runInFence(function () {
-    coll._dropCollection();
-  });
-
-  test.length(output, 2);
-  // make order consistent
-  if (output.length === 2 && output[0][1] === doc3Id) {
-    tmp = output[0];
-    output[0] = output[1];
-    output[1] = tmp;
-  }
-  test.equal(output.shift(), ['removed', doc1Id]);
-  test.equal(output.shift(), ['removed', doc3Id]);
-
-  // Put something back in.
-  var doc4Id;
-  runInFence(function () {
-    doc4Id = coll.insert({a: 'foo', c: 3});
-  });
-
-  test.length(output, 1);
-  test.equal(output.shift(), ['added', doc4Id, {a: 'foo', c: 3}]);
-
-  // XXX: this was intermittently failing for unknown reasons.
-  // Now drop the database. Should remove all docs again.
-  // runInFence(function () {
-  //   driver.mongo.dropDatabase();
-  // });
-  //
-  // test.length(output, 1);
-  // test.equal(output.shift(), ['removed', doc4Id]);
-
-  handle.stop();
-  driver.mongo.close();
-});
 
 var TestCustomType = function (head, tail) {
   // use different field names on the object than in JSON, to ensure we are
