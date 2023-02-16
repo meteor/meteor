@@ -553,7 +553,12 @@ if (Meteor.isClient) {
       },
       async function(test, expect) {
         await lockedDownCollection
-          .insertAsync({ foo: 'bar' })
+          .insertAsync(
+            { foo: 'bar' },
+            {
+              returnServerResultPromise: true,
+            }
+          )
           .catch(async function(err, res) {
             test.equal(err.error, 403);
             test.equal(await lockedDownCollection.find().countAsync(), 0);
