@@ -546,18 +546,19 @@ if (Meteor.isClient) {
       },
     ]);
 
-    testAsyncMulti("collection - locked down, " + idGeneration, [
-      function (test, expect) {
-        lockedDownCollection.callClearMethod(expect(function() {
-          test.equal(lockedDownCollection.find().count(), 0);
-        }));
+    testAsyncMulti('collection - locked down, ' + idGeneration, [
+      async function(test, expect) {
+        await lockedDownCollection.callClearMethod();
+        test.equal(await lockedDownCollection.find().countAsync(), 0);
       },
-      function (test, expect) {
-        lockedDownCollection.insert({foo: 'bar'}, expect(function (err, res) {
-          test.equal(err.error, 403);
-          test.equal(lockedDownCollection.find().count(), 0);
-        }));
-      }
+      async function(test, expect) {
+        await lockedDownCollection
+          .insertAsync({ foo: 'bar' })
+          .catch(async function(err, res) {
+            test.equal(err.error, 403);
+            test.equal(await lockedDownCollection.find().countAsync(), 0);
+          });
+      },
     ]);
 
     (function () {
