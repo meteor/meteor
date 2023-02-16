@@ -3543,44 +3543,50 @@ Meteor.isServer &&
     }
   );
 
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (test) {
-  var collName = "oplogTransform" + Random.id();
-  var coll = new Mongo.Collection(collName);
+Meteor.isServer &&
+  Tinytest.addAsync('mongo-livedata - oplog - transform', async function(test) {
+    var collName = 'oplogTransform' + Random.id();
+    var coll = new Mongo.Collection(collName);
 
-  var docId = coll.insert({a: 25, x: {x: 5, y: 9}});
-  test.isTrue(docId);
+    var docId = await coll.insertAsync({ a: 25, x: { x: 5, y: 9 } });
+    test.isTrue(docId);
 
-  // Wait until we've processed the insert oplog entry. (If the insert shows up
-  // during the observeChanges, the bug in question is not consistently
-  // reproduced.) We don't have to do this for polling observe (eg
-  // --disable-oplog).
-  waitUntilOplogCaughtUp();
+    // Wait until we've processed the insert oplog entry. (If the insert shows up
+    // during the observeChanges, the bug in question is not consistently
+    // reproduced.) We don't have to do this for polling observe (eg
+    // --disable-oplog).
+    await waitUntilOplogCaughtUp();
 
-  var cursor = coll.find({}, {transform: function (doc) {
-      return doc.x;
-    }});
+    var cursor = coll.find(
+      {},
+      {
+        transform: function(doc) {
+          return doc.x;
+        },
+      }
+    );
 
-  var changesOutput = [];
-  var changesHandle = cursor.observeChanges({
-    added: function (id, fields) {
-      changesOutput.push(['added', fields]);
-    }
+    var changesOutput = [];
+    var changesHandle = await cursor.observeChanges({
+      added: function(id, fields) {
+        changesOutput.push(['added', fields]);
+      },
+    });
+    // We should get untransformed fields via observeChanges.
+    test.length(changesOutput, 1);
+    test.equal(changesOutput.shift(), ['added', { a: 25, x: { x: 5, y: 9 } }]);
+    await changesHandle.stop();
+
+    var transformedOutput = [];
+    var transformedHandle = await cursor.observe({
+      added: function(doc) {
+        transformedOutput.push(['added', doc]);
+      },
+    });
+    test.length(transformedOutput, 1);
+    test.equal(transformedOutput.shift(), ['added', { x: 5, y: 9 }]);
+    await transformedHandle.stop();
   });
-  // We should get untransformed fields via observeChanges.
-  test.length(changesOutput, 1);
-  test.equal(changesOutput.shift(), ['added', {a: 25, x: {x: 5, y: 9}}]);
-  changesHandle.stop();
-
-  var transformedOutput = [];
-  var transformedHandle = cursor.observe({
-    added: function (doc) {
-      transformedOutput.push(['added', doc]);
-    }
-  });
-  test.length(transformedOutput, 1);
-  test.equal(transformedOutput.shift(), ['added', {x: 5, y: 9}]);
-  transformedHandle.stop();
-});
 
 
 Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", function (test) {
