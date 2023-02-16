@@ -2123,7 +2123,6 @@ var getTestPackageNames = async function (projectContext, packageNames) {
 };
 
 var runTestAppForPackages = async function (projectContext, options) {
-  console.log('in tests');
   var buildOptions = {
     minifyMode: options.production ? 'production' : 'development'
   };
