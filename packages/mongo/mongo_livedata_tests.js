@@ -3969,21 +3969,24 @@ Meteor.isServer &&
     });
   });
 
-Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
-  // Make sure the version number looks like a version number.
-  test.matches(MongoInternals.NpmModules.mongodb.version, /^4\.(\d+)\.(\d+)/);
-  test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'object');
-  test.equal(typeof(MongoInternals.NpmModules.mongodb.module.ObjectID),
-    'function');
+Meteor.isServer &&
+  Tinytest.add('mongo-livedata - npm modules', function(test) {
+    // Make sure the version number looks like a version number.
+    test.matches(MongoInternals.NpmModules.mongodb.version, /^4\.(\d+)\.(\d+)/);
+    test.equal(typeof MongoInternals.NpmModules.mongodb.module, 'object');
+    test.equal(
+      typeof MongoInternals.NpmModules.mongodb.module.ObjectID,
+      'function'
+    );
 
-  var c = new Mongo.Collection(Random.id());
-  var rawCollection = c.rawCollection();
-  test.isTrue(rawCollection);
-  test.isTrue(rawCollection.findOneAndUpdate);
-  var rawDb = c.rawDatabase();
-  test.isTrue(rawDb);
-  test.isTrue(rawDb.admin);
-});
+    var c = new Mongo.Collection(Random.id());
+    var rawCollection = c.rawCollection();
+    test.isTrue(rawCollection);
+    test.isTrue(rawCollection.findOneAndUpdate);
+    var rawDb = c.rawDatabase();
+    test.isTrue(rawDb);
+    test.isTrue(rawDb.admin);
+  });
 
 if (Meteor.isServer) {
   Tinytest.add("mongo-livedata - update/remove don't accept an array as a selector #4804", function (test) {
