@@ -701,6 +701,8 @@ export class Connection {
         );
         try {
           stubOptions.stubReturnValue = await stubInvocation();
+        } catch (e) {
+          stubOptions.exception = e;
         } finally {
           DDP._CurrentMethodInvocation._set(currentContext);
         }
@@ -737,12 +739,11 @@ export class Connection {
       stubReturnValue,
       alreadyInSimulation,
       randomSeed,
-      stubArgs,
     } = stubCallValue;
 
     // Keep our args safe from mutation (eg if we don't send the message for a
     // while because of a wait method).
-    args = EJSON.clone(stubArgs);
+    args = EJSON.clone(args);
     // If we're in a simulation, stop and return the result we have,
     // rather than going on to do an RPC. If there was no stub,
     // we'll end up returning undefined.
@@ -912,7 +913,6 @@ export class Connection {
       alreadyInSimulation,
       randomSeed,
       isFromCallAsync,
-      stubArgs: args,
     };
     if (!stub) {
       return { ...defaultReturn, hasStub: false };
@@ -958,10 +958,10 @@ export class Connection {
           // don't allow stubs to yield.
           return Meteor._noYieldsAllowed(() => {
             // re-clone, so that the stub can't affect our caller's values
-            return stub.apply(invocation, args);
+            return stub.apply(invocation, EJSON.clone(args));
           });
         } else {
-          return stub.apply(invocation, args);
+          return stub.apply(invocation, EJSON.clone(args));
         }
     };
     return { ...defaultReturn, hasStub: true, stubInvocation, invocation };

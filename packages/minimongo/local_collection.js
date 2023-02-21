@@ -128,9 +128,7 @@ export default class LocalCollection {
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
   insert(doc, callback) {
-    const docId = doc._id;
     doc = EJSON.clone(doc);
-    doc._id = docId;
     const id = this.prepareInsert(doc);
     const queriesToRecompute = [];
 
@@ -173,9 +171,7 @@ export default class LocalCollection {
     return id;
   }
   async insertAsync(doc, callback) {
-    const docId = doc._id;
     doc = EJSON.clone(doc);
-    doc._id = docId;
     const id = this.prepareInsert(doc);
     const queriesToRecompute = [];
 

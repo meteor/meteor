@@ -36,7 +36,7 @@ if (Meteor.isServer) {
         collection._insecure = insecure;
         var m = {};
         m["clear-collection-" + fullName] = async function() {
-          await collection.removeAsync({});
+          await collection.removeAsync({}, { returnServerResultPromise: true });
         };
         Meteor.methods(m);
       }
@@ -111,41 +111,41 @@ if (Meteor.isServer) {
 
       // two calls to allow to verify that either validator is sufficient.
       var allows = [{
-        insert: function(userId, doc) {
+        insertAsync: function(userId, doc) {
           return doc.canInsert;
         },
-        update: function(userId, doc) {
+        updateAsync: function(userId, doc) {
           return doc.canUpdate;
         },
-        remove: function (userId, doc) {
+        removeAsync: function (userId, doc) {
           return doc.canRemove;
         }
       }, {
-        insert: function(userId, doc) {
+        insertAsync: function(userId, doc) {
           return doc.canInsert2;
         },
-        update: function(userId, doc, fields, modifier) {
+        updateAsync: function(userId, doc, fields, modifier) {
           return -1 !== _.indexOf(fields, 'canUpdate2');
         },
-        remove: function(userId, doc) {
+        removeAsync: function(userId, doc) {
           return doc.canRemove2;
         }
       }];
 
       // two calls to deny to verify that either one blocks the change.
       var denies = [{
-        insert: function(userId, doc) {
+        insertAsync: function(userId, doc) {
           return doc.cantInsert;
         },
-        remove: function (userId, doc) {
+        removeAsync: function (userId, doc) {
           return doc.cantRemove;
         }
       }, {
-        insert: function(userId, doc) {
+        insertAsync: function(userId, doc) {
           // Don't allow explicit ID to be set by the client.
           return _.has(doc, '_id');
         },
-        update: function(userId, doc, fields, modifier) {
+        updateAsync: function(userId, doc, fields, modifier) {
           return -1 !== _.indexOf(fields, 'verySecret');
         }
       }];
@@ -571,56 +571,70 @@ if (Meteor.isClient) {
       var id1, id2;
       testAsyncMulti("collection - update options, " + idGeneration, [
         // init
-        function (test, expect) {
-          collection.callClearMethod(expect(function () {
-            test.equal(collection.find().count(), 0);
-          }));
+        async function (test, expect) {
+          await collection.callClearMethod().then(async function() {
+            test.equal(await collection.find().countAsync(), 0);
+          });
         },
         // put a few objects
-        function (test, expect) {
+        async function (test, expect) {
           var doc = {canInsert: true, canUpdate: true};
-          id1 = collection.insert(doc);
-          id2 = collection.insert(doc);
-          collection.insert(doc);
-          collection.insert(doc, expect(function (err, res) {
-            test.isFalse(err);
-            test.equal(collection.find().count(), 4);
-          }));
+          id1 = await collection.insertAsync(doc);
+          id2 = await collection.insertAsync(doc);
+          await collection.insertAsync(doc);
+          await collection.insertAsync(doc,               { returnServerResultPromise: true }
+          ).then(async function (res) {
+            console.log('fetch after', id1, await collection.find().fetchAsync());
+            test.equal(await collection.find().countAsync(), 4);
+          });
+
         },
         // update by id
-        function (test, expect) {
-          collection.update(
-            id1,
-            {$set: {updated: true}},
-            expect(function (err, res) {
-              test.isFalse(err);
+        async function (test, expect) {
+          await collection
+            .updateAsync(id1, { $set: { updated: true } },{ returnServerResultPromise: true })
+            .then(async function(res) {
               test.equal(res, 1);
-              test.equal(collection.find({updated: true}).count(), 1);
-            }));
-        },
+              console.log('fetch FIST UPD SECO after', id1, res,  await collection.find().fetchAsync());
+              test.equal(
+                await collection.find({ updated: true }).countAsync(),
+                1
+              );
+            });
+        },],[
         // update by id in an object
-        function (test, expect) {
-          collection.update(
-            {_id: id2},
-            {$set: {updated: true}},
-            expect(function (err, res) {
-              test.isFalse(err);
+        async function (test, expect) {
+          await collection
+            .updateAsync({ _id: id2 }, { $set: { updated: true } })
+            .then(async function(res) {
               test.equal(res, 1);
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
+              test.equal(
+                await collection.find({ updated: true }).countAsync(),
+                2
+              );
+            });
+          console.log('fetch FIRST UPDATE after', await collection.find().fetchAsync());
         },
         // update with replacement operator not allowed, and has nice error.
-        function (test, expect) {
-          collection.update(
-            {_id: id2},
-            {_id: id2, updated: true},
-            expect(function (err, res) {
+        async function (test, expect) {
+          await collection
+            .updateAsync(
+              { _id: id2 },
+              { _id: id2, updated: true },
+              { returnServerResultPromise: true }
+
+            )
+            .catch(async function(err) {
+              console.log('ALLLLOO');
               test.equal(err.error, 403);
               test.matches(err.reason, /In a restricted/);
               // unchanged
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
-        },
+              test.equal(
+                await collection.find({ updated: true }).countAsync(),
+                2
+              );
+            });
+        },],[
         // upsert not allowed, and has nice error.
         function (test, expect) {
           collection.update(
