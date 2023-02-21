@@ -1,11 +1,11 @@
 Package.describe({
   name: "babel-compiler",
   summary: "Parser/transpiler for ECMAScript 2015+ syntax",
-  version: '7.9.0'
+  version: '7.10.2'
 });
 
 Npm.depends({
-  '@meteorjs/babel': '7.16.0-beta.1',
+  '@meteorjs/babel': '7.18.0-beta.5',
   'json5': '2.1.1'
 });
 

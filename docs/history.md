@@ -1,4 +1,291 @@
-## 2.8.1, 2022-11-14
+## v2.10.0, 2023-01-13
+
+### Highlights
+
+* Update skeletons to use React 18 [PR](https://github.com/meteor/meteor/pull/12419) by [StorytellerCZ](https://github.com/StorytellerCZ).
+* Use MongoDB types instead of the homebuilt [PR](https://github.com/meteor/meteor/pull/12415) by [perbergland](https://github.com/perbergland).
+* Fixing wrong type definitions in MongoDB package [PR](https://github.com/meteor/meteor/pull/12409) by [ebroder](https://github.com/ebroder).
+* Typescript to version v4.7.4 [PR](https://github.com/meteor/meteor/pull/12393) by [StorytellerCZ](https://github.com/StorytellerCZ).
+* Update test-in-browser dependencies [PR](https://github.com/meteor/meteor/pull/12384) by [harryadel](https://github.com/harryadel).
+* Update boilerplate-generator-tests [PR](https://github.com/meteor/meteor/pull/12429) by [harryadel](https://github.com/harryadel).
+* Replace double-ended-queue with denque [PR](https://github.com/meteor/meteor/pull/12430) by [harryadel](https://github.com/harryadel).
+* Allow multiple runtime config and updated runtime hooks [PR](https://github.com/meteor/meteor/pull/12426) by [ebroder](https://github.com/ebroder).
+* Added async forEach and clear for method Hooks [PR](https://github.com/meteor/meteor/pull/12427) by [Grubba27](https://github.com/Grubba27).
+* Implemented async Tracker with explicit values [PR](https://github.com/meteor/meteor/pull/12294) by [radekmie](https://github.com/radekmie).
+* Improved eslint config [PR](https://github.com/meteor/meteor/pull/12309) by [afrokick](https://github.com/afrokick).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+N/A
+
+#### Meteor Version Release
+
+* `babel-compiler@7.10.2`:
+  - Updated @meteorjs/babel to version 7.18.0.
+  - Updated to typescript to version v4.7.4.
+
+* `boilerplate-generator-tests@1.5.1`:
+  - Updated parse5 and turned streamToString into a local function.
+
+* `callback-hook@1.5.0`
+  - Added forEachAsync.
+
+* `ecmascript@0.16.5`
+  - Updated typescript to version 4.7.4.
+
+* `Command line`:
+  - Updated React skeletons to use React 18
+
+* `Meteor@1.11.0`:
+  - Replaced double-ended-queue with [denque](https://github.com/invertase/denque)
+
+* `mongo@1.16.4`:
+  - Fixed wrong type definitions.
+  - switch to using MongoDB types instead of the homebuilt.
+  - Fixed wrong type definitions in MongoDB package related to dropIndexAsync
+
+* `react-fast-refresh@0.2.5`:
+  - Updated react-refresh dependency.
+
+* `test-in-browser@1.3.3`:
+  - Updated dependencies and removed unused libs.
+
+* `Tracker@1.3.0`:
+  - Implemented async Tracker with explicit values
+
+* `typescript@4.7.4`
+  - Updated typescript to version 4.7.4.
+
+* `webapp@1.13.3`
+  - The forEach method on Hook will stop iterating unless the iterator function returns a truthy value.
+    Previously, this meant that only the first registered runtime config hook would be called.
+
+* `@meteorjs/babel@7.18.0-beta.5`
+  - Updated typescript to version 4.7.4.
+
+#### Special thanks to
+  - [@StorytellerCZ](https://github.com/StorytellerCZ).
+  - [@perbergland](https://github.com/perbergland).
+  - [@ebroder](https://github.com/ebroder).
+  - [@harryadel](https://github.com/harryadel).
+  - [@radekmie](https://github.com/radekmie).
+  - [@Grubba27](https://github.com/Grubba27).
+  - [@afrokick](https://github.com/afrokick).
+
+For making this great framework even better!
+
+
+
+## v2.9.1, 2022-12-27
+
+### Highlights
+
+* Reverted missing types [PR](https://github.com/meteor/meteor/pull/12366) by [Grubba27](https://github.com/Grubba27).
+* Fix fetch() type declaration [PR](https://github.com/meteor/meteor/pull/12352) by [zarvox](https://github.com/zarvox).
+* update svelte skeleton [PR](https://github.com/meteor/meteor/pull/12350) by [tosinek](https://github.com/tosinek).
+* Bump to node 14.21.2.0 [PR](https://github.com/meteor/meteor/pull/12370) by [Grubba27](https://github.com/Grubba27).
+* resetPassword and verifyEmail to no longer sign in the user automatically [PR](https://github.com/meteor/meteor/pull/12385) by [denihs](https://github.com/denihs).
+* Added missing vue2 declaration for skeletons [PR](https://github.com/meteor/meteor/pull/12396) by [Grubba27](https://github.com/Grubba27) & [mlanning](https://github.com/mlanning).
+
+#### Breaking Changes
+
+* `accounts-password@2.3.3`
+  - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
+
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+N/A
+
+#### Meteor Version Release
+
+* `fetch@0.1.3`:
+  - Updated fetch type definition.
+  
+* `meteor@1.10.4`:
+  - Added back meteor type definitions that were removed by mistake in earlier version.
+
+* `accounts-password@2.3.3`
+  - The methods `resetPassword` and `verifyEmail` no longer logs the user if they have 2FA enabled. Now, the functions work as before, but instead of automatically logging in the user at the end, an error with the code `2fa-enabled` will be thrown.
+
+* `Command line`:
+  - Updated Svelte skeleton to now be able to support typescript out of the box and added ``#each`` in links in the skeleton.
+  - Updated node to 14.21.2 changes can be seen [here](https://github.com/nodejs/node/releases/tag/v14.21.2).
+  - Solved [issue](https://github.com/meteor/meteor/issues/12395) that could not allow vue2 apps being created in command line.
+  
+#### Special thanks to
+- [@zarvox](https://github.com/zarvox).
+- [@tosinek](https://github.com/tosinek).
+- [@Grubba27](https://github.com/Grubba27).
+- [@denihs](https://github.com/denihs).
+- [@mlanning](https://github.com/mlanning).
+
+For making this great framework even better!
+
+
+## v2.9, 2022-12-12
+
+### Highlights
+
+* TypeScript update to v4.6.4 [PR](https://github.com/meteor/meteor/pull/12204) by [@StorytellerCZ](https://github.com/StorytellerCZ).
+* Create Email.sendAsync method without using Fibers [PR](https://github.com/meteor/meteor/pull/12101)
+  by [edimarlnx](https://github.com/edimarlnx).
+* Create async method CssTools.minifyCssAsync [PR](https://github.com/meteor/meteor/pull/12105)
+  by  [edimarlnx](https://github.com/edimarlnx).
+* Change Accounts and Oauth to use Async methods [PR](https://github.com/meteor/meteor/pull/12156)
+  by [edimarlnx](https://github.com/edimarlnx).
+* TinyTest package without Future [PR](https://github.com/meteor/meteor/pull/12222)
+  by [matheusccastroo](https://github.com/matheusccastroo).
+* Feat: user accounts base async [PR](https://github.com/meteor/meteor/pull/12274)
+  by [Grubba27](https://github.com/Grubba27).
+* Move somed methods from OAuth of out of accounts-base [PR](https://github.com/meteor/meteor/pull/12202)
+  by [StorytellerCZ](https://github.com/StorytellerCZ).
+* Feat: not using insecure & autopublish [PR](https://github.com/meteor/meteor/pull/12220)
+  by [Grubba27](https://github.com/Grubba27).
+* Don't apply babel async-await plugin when not running on Fibers [PR](https://github.com/meteor/meteor/pull/12221).
+  by [matheusccastroo](https://github.com/matheusccastroo).
+* Implemented Fibers-less MongoDB count methods [PR](https://github.com/meteor/meteor/pull/12295)
+  by [radekmie](https://github.com/radekmie).
+* Feat: Generate scaffold in cli [PR](https://github.com/meteor/meteor/pull/12298)
+  by [Grubba27](https://github.com/Grubba27).
+* Update types [PR](https://github.com/meteor/meteor/pull/12306) by [piotrpospiech](https://github.com/piotrpospiech).
+* Remove underscore from package-version-parser [PR](https://github.com/meteor/meteor/pull/12248)
+  by [harryadel](https://github.com/harryadel).
+* Update MongoDB driver version [PR](https://github.com/meteor/meteor/pull/12333) by [Grubba27](https://github.com/Grubba27).
+* New Vue3 Skeleton [PR](https://github.com/meteor/meteor/pull/12302)
+  by [henriquealbert](https://github.com/henriquealbert).
+
+#### Breaking Changes
+* `Accounts.createUserVerifyingEmail` is now async
+
+####  Internal API changes
+* Internal methods from `OAuth` that are now async:
+  - _attemptLogin
+  - _loginMethod
+  - _runLoginHandlers
+  - OAuth.registerService now accepts async functions
+
+OAuth related code has been moved from `accounts-base` to `accounts-oauth`, removing the dependency on `service-configuration`
+more can be seen in this [discussion](https://github.com/meteor/meteor/discussions/12171) and in the [PR](https://github.com/meteor/meteor/pull/12202). 
+This means that if you don’t use third-party login on your project, you don’t need to add the package service-configuration anymore.
+
+#### Migration Steps
+
+You can follow in [here](https://guide.meteor.com/2.9-migration.html).
+
+#### Meteor Version Release
+
+* `eslint-plugin-meteor@7.4.0`:
+  - updated Typescript deps and meteor babel.
+* `eslint-plugin-meteor@7.4.0`:
+  - updated Typescript deps and meteor babel.
+* `accounts-base@2.2.6`
+  - Moved some functions to accounts-oauth.
+* `accounts-oauth@1.4.2`
+  - Received functions from accounts-base.
+* `accounts-password@2.3.2`
+  - Asyncfied functions such as `changePassword`, `forgotPassword`, `resetPassword`, `verifyEmail`, `setPasswordAsync`.
+* `babel-compiler@7.10.1`
+  - Updated babel to 7.17.1.
+* `email@2.2.3`
+  - Create Email.sendAsync method without using Fibers.
+* `facebook-oauth@1.11.2`
+  - Updated facebook-oauth to use async functions.
+* `github-oauth@1.4.1`
+  - Updated github-oauth to use async functions.
+* `google-oauth@1.4.3`
+  - Updated google-oauth to use async functions.
+* `meetup-oauth@1.1.2`
+  - Updated meetup-oauth to use async functions.
+* `meteor-developer-oauth@1.3.2`
+  - Updated meteor-developer-oauth to use async functions.
+* `meteor@1.10.3`
+  - Added Async Local Storage helpers.
+* `minifier-css@1.6.2`
+  - Asyncfied `minifyCss` function.
+* `minimongo@1.9.1`
+  - Implemented Fibers-less MongoDB count methods.
+* `mongo@1.16.2`
+  - Implemented Fibers-less MongoDB count methods.
+* `npm-mongo@4.12.1`
+  - Updated npm-mongo to 4.12.
+* `oauth@2.1.3`
+  - Asyncfied methods.
+* `oauth1@1.5.1`
+  - Asyncfied methods.
+* `oauth2@1.3.2`
+  - Asyncfied methods.
+* `package-version-parser@3.2.1`
+  - Removed underscore.
+* `promise@0.12.2`
+  - Added DISABLE_FIBERS flag.
+* `standard-minifier-css@1.8.3`
+  - Asyncfied minify method.
+* `test-helpers@1.3.1`
+  - added runAndThrowIfNeeded function.
+* `test-in-browser@1.3.2`
+  - Adjusted e[type] to e.type
+* `tinytest@1.2.2`
+  - TinyTest package without Future.
+* `twitter-oauth@1.3.2`
+  - Asyncfied methods.
+* `typescript@4.6.4`
+  - updated typescript to 4.6.4.
+* `weibo-oauth@1.3.2`
+  - Asyncfied methods.
+
+#### Special thanks to
+- [@henriquealbert](https://github.com/henriquealbert);
+- [@edimarlnx](https://github.com/edimarlnx);
+- [@matheusccastroo](https://github.com/matheusccastroo);
+- [@Grubba27](https://github.com/Grubba27);
+- [@StorytellerCZ](https://github.com/StorytellerCZ);
+- [@radekmie](https://github.com/radekmie);
+- [@piotrpospiech](https://github.com/piotrpospiech);
+- [@harryadel](https://github.com/harryadel);
+
+For making this great framework even better!
+
+
+## v2.8.2, 2022-11-29
+
+#### Highlights
+* `mongo@1.16.2`:
+  - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
+* `meteorjs/babel@7.16.1-beta.0`
+  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327).
+  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0.
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `mongo@1.16.2`:
+  - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
+
+#### Special thanks to
+- [@henriquealbert](https://github.com/henriquealbert);
+- [@znewsham](https://github.com/znewsham);
+
+For making this great framework even better!
+
+
+
+## v2.8.1, 2022-11-14
 
 #### Highlights
 
@@ -104,7 +391,7 @@ _In case you want types in your app using the core packages types/zodern:types (
 * `test-in-browser@1.3.1`
   - removed underscore.
 * `tracker@1.2.1`
-  - added types for package.
+- added types for package.
 * `twitter-oauth@1.3.1`
   - removed underscore.
 * `underscore@1.0.11`
@@ -113,7 +400,6 @@ _In case you want types in your app using the core packages types/zodern:types (
   - added types for package.
 * `webapp-hashing@1.1.1`
   - added types for package.
-
 ## v2.8, 2022-10-19
 
 #### Highlights
@@ -156,7 +442,16 @@ Read our [Migration Guide](https://guide.meteor.com/2.8-migration.html) for this
   - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
 * `npm-mongo@4.9.0`:
   - Updated MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12163).
-
+* `@meteorjs/babel@7.17.0`
+  - Upgrade TypeScript to `4.6.4`
+* `babel-compiler@7.10.0`
+  - Upgrade TypeScript to `4.6.4`
+* `ecmascript@0.16.3`
+  - Upgrade TypeScript to `4.6.4`
+* `typescript@4.6.4`
+  - Upgrade TypeScript to `4.6.4`
+* `eslint-plugin-meteor@7.4.0`
+  - Upgrade TypeScript to `4.6.4`
 
 #### Independent Releases
 * `accounts-passwordless@2.1.3`:

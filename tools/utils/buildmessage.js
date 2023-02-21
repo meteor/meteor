@@ -75,7 +75,7 @@ Object.assign(Job.prototype, {
         }
         line += ": ";
       } else {
-        // not sure how to display messages without a filenanme.. try this?
+        // not sure how to display messages without a file name.. try this?
         line += "error: ";
       }
       // XXX line wrapping would be nice..

@@ -1,7 +1,7 @@
 ////
 //// Setup
 ////
-
+import { diff_match_patch } from './diff_match_patch_uncompressed'
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // dependency for the count of tests running/passed/failed, etc. drives
@@ -451,7 +451,7 @@ Template.test.helpers({
 
   eventsArray: function() {
     var events = this.events.filter(function(e) {
-      return e[type] != "finish";
+      return e.type != "finish";
     });
 
     var partitionBy = function(seq, func) {
