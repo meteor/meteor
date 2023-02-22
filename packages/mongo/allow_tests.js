@@ -578,34 +578,41 @@ if (Meteor.isClient) {
         },
         // put a few objects
         async function (test, expect) {
-          var doc = {canInsert: true, canUpdate: true};
+          var doc = { canInsert: true, canUpdate: true };
           id1 = await collection.insertAsync(doc);
           id2 = await collection.insertAsync(doc);
           await collection.insertAsync(doc);
-          await collection.insertAsync(doc,               { returnServerResultPromise: true }
-          ).then(async function (res) {
-            console.log('fetch after', id1, await collection.find().fetchAsync());
-            test.equal(await collection.find().countAsync(), 4);
-          });
+          await collection
+            .insertAsync(doc, { returnServerResultPromise: true })
+            .then(async function(res) {
+              test.equal(await collection.find().countAsync(), 4);
+            });
 
         },
         // update by id
         async function (test, expect) {
           await collection
-            .updateAsync(id1, { $set: { updated: true } },{ returnServerResultPromise: true })
+            .updateAsync(
+              id1,
+              { $set: { updated: true } },
+              { returnServerResultPromise: true }
+            )
             .then(async function(res) {
               test.equal(res, 1);
-              console.log('fetch FIST UPD SECO after', id1, res,  await collection.find().fetchAsync());
               test.equal(
                 await collection.find({ updated: true }).countAsync(),
                 1
               );
             });
-        },],[
+        },
         // update by id in an object
         async function (test, expect) {
           await collection
-            .updateAsync({ _id: id2 }, { $set: { updated: true } })
+            .updateAsync(
+              { _id: id2 },
+              { $set: { updated: true } },
+              { returnServerResultPromise: true }
+            )
             .then(async function(res) {
               test.equal(res, 1);
               test.equal(
@@ -613,7 +620,6 @@ if (Meteor.isClient) {
                 2
               );
             });
-          console.log('fetch FIRST UPDATE after', await collection.find().fetchAsync());
         },
         // update with replacement operator not allowed, and has nice error.
         async function (test, expect) {
@@ -625,7 +631,6 @@ if (Meteor.isClient) {
 
             )
             .catch(async function(err) {
-              console.log('ALLLLOO');
               test.equal(err.error, 403);
               test.matches(err.reason, /In a restricted/);
               // unchanged

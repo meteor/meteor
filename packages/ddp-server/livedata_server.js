@@ -54,7 +54,7 @@ DDPServer._getCurrentFence = function () {
   if (currentInvocation) {
     return currentInvocation;
   }
-  currentInvocation = DDP._CurrentPublicationInvocation.get();
+  currentInvocation = DDP._CurrentMethodInvocation.get();
   return currentInvocation ? currentInvocation.fence : undefined;
 };
 
