@@ -359,7 +359,7 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
 
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
-MongoConnection.prototype._refresh = function (collectionName, selector) {
+MongoConnection.prototype._refresh = async function (collectionName, selector) {
   var refreshKey = {collection: collectionName};
   // If we know which documents we're removing, don't poll queries that are
   // specific to other documents. (Note that multiple notifications here should
@@ -367,11 +367,11 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   // poll.)
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
   if (specificIds) {
-    _.each(specificIds, function (id) {
-      Meteor.refresh(_.extend({id: id}, refreshKey));
-    });
+    for (const id of specificIds) {
+      await Meteor.refresh(_.extend({id: id}, refreshKey));
+    }
   } else {
-    Meteor.refresh(refreshKey);
+    await Meteor.refresh(refreshKey);
   }
 };
 
@@ -385,8 +385,8 @@ MongoConnection.prototype.removeAsync = async function (collection_name, selecto
   }
 
   var write = self._maybeBeginWrite();
-  var refresh = function () {
-    self._refresh(collection_name, selector);
+  var refresh = async function () {
+    await self._refresh(collection_name, selector);
   };
 
   return self.rawCollection(collection_name)
@@ -394,7 +394,7 @@ MongoConnection.prototype.removeAsync = async function (collection_name, selecto
       safe: true,
     })
     .then(async ({ deletedCount }) => {
-      refresh();
+      await refresh();
       await write.committed();
       return transformResult({ result : {modifiedCount : deletedCount} }).numberAffected;
     }).catch(async (err) => {
@@ -431,19 +431,20 @@ MongoConnection.prototype.dropCollectionAsync = async function(collectionName) {
 
 // For testing only.  Slightly better than `c.rawDatabase().dropDatabase()`
 // because it lets the test's fence wait for it to be complete.
-MongoConnection.prototype.dropDatabaseAsync = async function (cb) {
+MongoConnection.prototype.dropDatabaseAsync = async function () {
   var self = this;
 
   var write = self._maybeBeginWrite();
-  var refresh = function () {
-    Meteor.refresh({ dropDatabase: true });
+  var refresh = async function () {
+    await Meteor.refresh({ dropDatabase: true });
   };
-  const fn = Meteor.bindEnvironment(writeCallback(write, refresh, cb));
 
   try {
     await self.db._dropDatabase();
+    await refresh();
+    await write.committed();
   } catch (e) {
-    write.committed();
+    await write.committed();
     throw e;
   }
 };
@@ -479,10 +480,10 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
   if (!options) options = {};
 
   var write = self._maybeBeginWrite();
-  var refresh = function () {
-    self._refresh(collection_name, selector);
+  var refresh = async function () {
+    await self._refresh(collection_name, selector);
   };
-  // callback = writeCallback(write, refresh, callback);
+
   var collection = self.rawCollection(collection_name);
   var mongoOpts = {safe: true};
   // Add support for filtered positional operator
@@ -537,8 +538,8 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     // - The user did not specify any id preference and the id is a Mongo ObjectId,
     //     then we can just let Mongo generate the id
     return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options)
-        .then(result => {
-          refresh();
+        .then(async result => {
+          await refresh();
           if (result && ! options._returnObject) {
             return result.numberAffected;
           } else {
@@ -575,11 +576,11 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
                 meteorResult.insertedId = new Mongo.ObjectID(meteorResult.insertedId.toHexString());
               }
             }
-            refresh();
+            await refresh();
             await write.committed();
             return meteorResult;
           } else {
-            refresh();
+            await refresh();
             await write.committed();
             return meteorResult.numberAffected;
           }
@@ -708,13 +709,6 @@ var simulateUpsertWithInsertedId = async function (collection, selector, mod, op
   return doUpdate();
 };
 
-// _.each(["insertAsync", "updateAsync", "removeAsync", "dropCollectionAsync", "dropDatabaseAsync"], function (method) {
-//   MongoConnection.prototype[method] = function (/* arguments */) {
-//     var self = this;
-//     return self[`_${method}`](...arguments);
-//     //return Meteor.promisify(self[`_${method}`]).apply(self, arguments);
-//   };
-// });
 
 // XXX MongoConnection.upsertAsync() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement

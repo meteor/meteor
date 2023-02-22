@@ -1202,21 +1202,11 @@ Object.assign(Subscription.prototype, {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
-      if (Meteor._isFibersEnabled) {
-        try {
-          res._publishCursor(self);
-        } catch (e) {
-          self.error(e);
-          return;
-        }
+      this._publishCursorPromise = res._publishCursor(self).then(() => {
         // _publishCursor only returns after the initial added callbacks have run.
         // mark subscription as ready.
         self.ready();
-      } else {
-        this._publishCursorPromise = res._publishCursor(self).then(() => {
-          self.ready();
-        }).catch((e) => self.error(e));
-      }
+      }).catch((e) => self.error(e));
     } else if (_.isArray(res)) {
       // Check all the elements are cursors
       if (! _.all(res, isCursor)) {
@@ -1238,21 +1228,13 @@ Object.assign(Subscription.prototype, {
         collectionNames[collectionName] = true;
       };
 
-      if (Meteor._isFibersEnabled) {
-        try {
-          _.each(res, function (cur) {
-            cur._publishCursor(self);
-          });
-        } catch (e) {
-          self.error(e);
-          return;
-        }
-        self.ready();
-      } else {
-        this._publishCursorPromise = Promise.all(res.map((c) => c._publishCursor(self))).then(() => {
+      this._publishCursorPromise = Promise.all(
+        res.map(c => c._publishCursor(self))
+      )
+        .then(() => {
           self.ready();
-        }).catch((e) => self.error(e));
-      }
+        })
+        .catch((e) => self.error(e));
     } else if (res) {
       // Truthy values other than cursors or arrays are probably a
       // user mistake (possible returning a Mongo document via, say,

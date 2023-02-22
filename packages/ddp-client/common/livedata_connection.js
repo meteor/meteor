@@ -818,13 +818,6 @@ export class Connection {
       } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
-        // TODO[fibers]: before this was a future, now it's a promise.
-        //  Do more tests around this.
-
-        if (!options.isFromCallAsync) {
-          throw new Error("Can't create a future for Meteor.call()");
-        }
-
         future = new Promise((resolve, reject) => {
           callback = (...allArgs) => {
             let args = Array.from(allArgs);

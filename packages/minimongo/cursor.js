@@ -334,17 +334,17 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      query.results.forEach(doc => {
+      for (const doc of query.results) {
         const fields = EJSON.clone(doc);
 
         delete fields._id;
 
         if (ordered) {
-          query.addedBefore(doc._id, this._projectionFn(fields), null);
+          await query.addedBefore(doc._id, this._projectionFn(fields), null);
         }
 
-        query.added(doc._id, this._projectionFn(fields));
-      });
+        await query.added(doc._id, this._projectionFn(fields));
+      }
     }
 
     const handle = Object.assign(new LocalCollection.ObserveHandle, {
