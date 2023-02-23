@@ -1168,7 +1168,7 @@ export default class ImportScanner {
   }
 
   private async getDataString(file: File) {
-    const fileData = file.data;
+    const fileData = await file.data;
     if (typeof fileData === "string") {
       return fileData;
     }
