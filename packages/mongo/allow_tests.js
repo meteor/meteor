@@ -1031,12 +1031,17 @@ if (Meteor.isClient) {
       }
     );
     testAsyncMulti(
-      "collection - allow/deny transform must return object, " + idGeneration,
-      [function (test, expect) {
-        restrictedCollectionForInvalidTransformTest.insert({}, expect(function (err, res) {
-          test.isTrue(err);
-        }));
-      }]);
+      'collection - allow/deny transform must return object, ' + idGeneration,
+      [
+        async function(test, expect) {
+          await restrictedCollectionForInvalidTransformTest
+            .insertAsync({}, { returnServerResultPromise: true })
+            .catch(function(err) {
+              test.isTrue(err);
+            });
+        },
+      ]
+    );
     testAsyncMulti(
       "collection - restricted collection allows client-side id, " + idGeneration,
       [function (test, expect) {
