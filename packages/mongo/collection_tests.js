@@ -389,7 +389,7 @@ Tinytest.addAsync('collection - finding with a query with a binary field should 
 );
 
 
-Tinytest.onlyAsync(
+Tinytest.addAsync(
   'collection - count should release the session',
   async function(test) {
     if (Meteor.isServer) {
