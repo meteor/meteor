@@ -566,18 +566,18 @@ if (Meteor.isClient) {
       },
     ]);
 
-    (function () {
+    (function() {
       var collection = restrictedCollectionForUpdateOptionsTest;
       var id1, id2;
-      testAsyncMulti("collection - update options, " + idGeneration, [
+      testAsyncMulti('collection - update options, ' + idGeneration, [
         // init
-        async function (test, expect) {
+        async function(test, expect) {
           await collection.callClearMethod().then(async function() {
             test.equal(await collection.find().countAsync(), 0);
           });
         },
         // put a few objects
-        async function (test, expect) {
+        async function(test, expect) {
           var doc = { canInsert: true, canUpdate: true };
           id1 = await collection.insertAsync(doc);
           id2 = await collection.insertAsync(doc);
@@ -587,10 +587,9 @@ if (Meteor.isClient) {
             .then(async function(res) {
               test.equal(await collection.find().countAsync(), 4);
             });
-
         },
         // update by id
-        async function (test, expect) {
+        async function(test, expect) {
           await collection
             .updateAsync(
               id1,
@@ -606,7 +605,7 @@ if (Meteor.isClient) {
             });
         },
         // update by id in an object
-        async function (test, expect) {
+        async function(test, expect) {
           await collection
             .updateAsync(
               { _id: id2 },
@@ -622,13 +621,12 @@ if (Meteor.isClient) {
             });
         },
         // update with replacement operator not allowed, and has nice error.
-        async function (test, expect) {
+        async function(test, expect) {
           await collection
             .updateAsync(
               { _id: id2 },
               { _id: id2, updated: true },
               { returnServerResultPromise: true }
-
             )
             .catch(async function(err) {
               test.equal(err.error, 403);
@@ -639,76 +637,99 @@ if (Meteor.isClient) {
                 2
               );
             });
-        },],[
+        },
         // upsert not allowed, and has nice error.
-        function (test, expect) {
-          collection.update(
-            {_id: id2},
-            {$set: { upserted: true }},
-            { upsert: true },
-            expect(function (err, res) {
+        async function(test, expect) {
+          await collection
+            .updateAsync(
+              { _id: id2 },
+              { $set: { upserted: true } },
+              { upsert: true, returnServerResultPromise: true }
+            )
+            .catch(async function(err) {
               test.equal(err.error, 403);
               test.matches(err.reason, /in a restricted/);
-              test.equal(collection.find({ upserted: true }).count(), 0);
-            }));
+              test.equal(
+                await collection.find({ upserted: true }).countAsync(),
+                0
+              );
+            });
         },
         // update with rename operator not allowed, and has nice error.
-        function (test, expect) {
-          collection.update(
-            {_id: id2},
-            {$rename: {updated: 'asdf'}},
-            expect(function (err, res) {
+        async function(test, expect) {
+          await collection
+            .updateAsync(
+              { _id: id2 },
+              { $rename: { updated: 'asdf' } },
+              { returnServerResultPromise: true }
+            )
+            .catch(async function(err) {
               test.equal(err.error, 403);
               test.matches(err.reason, /not allowed/);
               // unchanged
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
+              test.equal(
+                await collection.find({ updated: true }).countAsync(),
+                2
+              );
+            });
         },
         // update method with a non-ID selector is not allowed
-        function (test, expect) {
+        async function(test, expect) {
           // We shouldn't even send the method...
-          test.throws(function () {
-            collection.update(
-              {updated: {$exists: false}},
-              {$set: {updated: true}});
+          await test.throwsAsync(async function() {
+            await collection.updateAsync(
+              { updated: { $exists: false } },
+              { $set: { updated: true } }
+            );
           });
           // ... but if we did, the server would reject it too.
-          Meteor.call(
-            '/' + collection._name + '/update',
-            {updated: {$exists: false}},
-            {$set: {updated: true}},
-            expect(function (err, res) {
-              test.equal(err.error, 403);
-              // unchanged
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
+          await Meteor.callAsync(
+            '/' + collection._name + '/updateAsync',
+            { returnStubValue: true },
+            { updated: { $exists: false } },
+            { $set: { updated: true } }
+          ).catch(async function(err, res) {
+            test.equal(err.error, 403);
+            // unchanged
+            test.equal(
+              await collection.find({ updated: true }).countAsync(),
+              2
+            );
+          });
         },
         // make sure it doesn't think that {_id: 'foo', something: else} is ok.
-        function (test, expect) {
-          test.throws(function () {
-            collection.update(
-              {_id: id1, updated: {$exists: false}},
-              {$set: {updated: true}});
+        async function(test, expect) {
+          await test.throwsAsync(async function() {
+            await collection.updateAsync(
+              { _id: id1, updated: { $exists: false } },
+              { $set: { updated: true } }
+            );
           });
         },
         // remove method with a non-ID selector is not allowed
-        function (test, expect) {
+        async function(test, expect) {
           // We shouldn't even send the method...
-          test.throws(function () {
-            collection.remove({updated: true});
+          await test.throwsAsync(async function() {
+            await collection.removeAsync({ updated: true });
           });
           // ... but if we did, the server would reject it too.
-          Meteor.call(
-            '/' + collection._name + '/remove',
-            {updated: true},
-            expect(function (err, res) {
-              test.equal(err.error, 403);
-              // unchanged
-              test.equal(collection.find({updated: true}).count(), 2);
-            }));
-        }
+          await Meteor.callAsync(
+            '/' + collection._name + '/removeAsync',
+            { returnStubValue: true },
+            {
+              updated: true,
+            }
+          ).catch(async function(err) {
+            test.equal(err.error, 403);
+            // unchanged
+            test.equal(
+              await collection.find({ updated: true }).countAsync(),
+              2
+            );
+          });
+        },
       ]);
-    }) ();
+    })();
 
     _.each(
       [restrictedCollectionDefaultInsecure, restrictedCollectionDefaultSecure],

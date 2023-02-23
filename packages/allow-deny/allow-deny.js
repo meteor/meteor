@@ -330,7 +330,7 @@ CollectionPrototype._validatedUpdateAsync = async function(
 
   // We don't support upserts because they don't fit nicely into allow/deny
   // rules.
-  if (options.upsertAsync)
+  if (options.upsert)
     throw new Meteor.Error(403, "Access denied. Upserts not " +
                            "allowed in a restricted collection.");
 

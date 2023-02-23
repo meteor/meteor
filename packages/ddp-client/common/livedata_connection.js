@@ -568,9 +568,16 @@ export class Connection {
       );
     }
 
-    const options = args[0]?.hasOwnProperty('returnStubValue')
-      ? args.shift()
-      : {};
+    const applyOptions = ['returnStubValue', 'returnServerResultPromise'];
+    const defaultOptions = {
+      returnServerResultPromise: true,
+    };
+    const options = {
+      ...defaultOptions,
+      ...(applyOptions.some(o => args[0]?.hasOwnProperty(o))
+        ? args.shift()
+        : {}),
+    };
 
     const invocation = DDP._CurrentCallAsyncInvocation.get();
 
