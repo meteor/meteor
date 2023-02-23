@@ -106,7 +106,8 @@ if (Meteor.isServer) {
       restrictedCollectionForClientIdTest.allow({
         // This test just requires the collection to trigger the restricted
         // case.
-        insert: function () { return true; }
+        insert: function () { return true; },
+        insertAsync: function () { return true; }
       });
 
       // two calls to allow to verify that either validator is sufficient.
@@ -1043,17 +1044,26 @@ if (Meteor.isClient) {
       ]
     );
     testAsyncMulti(
-      "collection - restricted collection allows client-side id, " + idGeneration,
-      [function (test, expect) {
-        var self = this;
-        self.id = Random.id();
-        restrictedCollectionForClientIdTest.insert({_id: self.id}, expect(function (err, res) {
-          test.isFalse(err);
-          test.equal(res, self.id);
-          test.equal(restrictedCollectionForClientIdTest.findOne(self.id),
-            {_id: self.id});
-        }));
-      }]);
+      'collection - restricted collection allows client-side id, ' +
+        idGeneration,
+      [
+        async function(test, expect) {
+          var self = this;
+          self.id = Random.id();
+          await restrictedCollectionForClientIdTest
+            .insertAsync({ _id: self.id }, { returnServerResultPromise: true })
+            .then(async function(res) {
+              test.equal(res, self.id);
+              test.equal(
+                await restrictedCollectionForClientIdTest.findOneAsync(self.id),
+                {
+                  _id: self.id,
+                }
+              );
+            });
+        },
+      ]
+    );
   });  // end idGeneration loop
 }  // end if isClient
 
