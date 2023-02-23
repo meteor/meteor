@@ -976,7 +976,7 @@ export default class ImportScanner {
   private async findImportedModuleIdentifiers(
     file: File,
   ): Promise<Record<string, ImportInfo>> {
-    const fileHash = await file.hash;
+    const fileHash = file.hash;
     if (IMPORT_SCANNER_CACHE.has(fileHash)) {
       return IMPORT_SCANNER_CACHE.get(fileHash);
     }
@@ -1168,7 +1168,7 @@ export default class ImportScanner {
   }
 
   private async getDataString(file: File) {
-    const fileData = await file.data;
+    const fileData = file.data;
     if (typeof fileData === "string") {
       return fileData;
     }
