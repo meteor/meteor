@@ -1494,5 +1494,7 @@ WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
 // TODO[fibers]: change this when we have TLA
-await runWebAppServer();
-
+async function main() {
+  await runWebAppServer();
+}
+main();
