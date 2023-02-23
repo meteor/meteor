@@ -1,5 +1,6 @@
 import { NpmModuleMongodb } from 'meteor/npm-mongo';
 import { Meteor } from 'meteor/meteor';
+import { DDP } from 'meteor/ddp';
 
 // Based on https://github.com/microsoft/TypeScript/issues/28791#issuecomment-443520161
 export type UnionOmit<T, K extends keyof any> = T extends T
