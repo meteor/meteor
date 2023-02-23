@@ -759,6 +759,18 @@ MongoConnection.prototype.createIndexAsync = async function (collectionName, ind
   await collection.createIndex(index, options);
 };
 
+MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.countDocuments(...args);
+};
+
+MongoConnection.prototype.estimatedDocumentCount = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.estimatedDocumentCount(...args);
+};
+
 MongoConnection.prototype.ensureIndexAsync = MongoConnection.prototype.createIndexAsync;
 
 MongoConnection.prototype.dropIndexAsync = async function (collectionName, index) {
@@ -838,7 +850,21 @@ function setupSynchronousCursor(cursor, method) {
   return cursor._synchronousCursor;
 }
 
+
+Cursor.prototype.countAsync = async function () {
+  const collection = this._mongo.rawCollection(this._cursorDescription.collectionName);
+  return await collection.countDocuments(
+    replaceTypes(this._cursorDescription.selector, replaceMeteorAtomWithMongo),
+    replaceTypes(this._cursorDescription.options, replaceMeteorAtomWithMongo),
+  );
+};
+
 [...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
+  // count is handled specially since we don't want to create a cursor.
+  // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
+  if (methodName === 'count') {
+    return
+  }
   Cursor.prototype[methodName] = function (...args) {
     const cursor = setupSynchronousCursor(this, methodName);
     return cursor[methodName](...args);

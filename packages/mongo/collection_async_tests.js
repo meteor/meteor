@@ -26,7 +26,7 @@ Tinytest.add('async collection - check for methods presence', function (test) {
     for (let index = 0; index < 10; ++index) {
       test.instanceOf(collection[method](), Promise);
       test.equal(await collection[method](), index);
-      collection.insert({});
+      await collection.insertAsync({});
     }
   });
 });
