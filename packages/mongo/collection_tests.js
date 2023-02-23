@@ -192,8 +192,8 @@ Tinytest.add('collection - calling find with a valid readPreference',
   }
 );
 
-Tinytest.add('collection - calling find with an invalid readPreference',
-  function(test) {
+Tinytest.addAsync('collection - calling find with an invalid readPreference',
+  async function(test) {
     if (Meteor.isServer) {
       const invalidReadPreference = 'INVALID';
       const collection = new Mongo.Collection('readPreferenceTest2' + test.id);
@@ -202,9 +202,9 @@ Tinytest.add('collection - calling find with an invalid readPreference',
         { readPreference: invalidReadPreference }
       );
 
-      test.throws(function() {
+      await test.throwsAsync(async function() {
         // Trigger the creation of _synchronousCursor
-        cursor.count();
+        await cursor.countAsync();
       }, `Invalid read preference mode "${invalidReadPreference}"`);
     }
   }

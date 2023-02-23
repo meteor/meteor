@@ -433,7 +433,6 @@ Object.assign(Mongo.Collection.prototype, {
    * @returns {Promise<number>}
    */
   countDocuments(...args) {
-    console.log(this._collection)
     return this._collection.countDocuments(...args);
   },
 
