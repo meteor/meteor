@@ -334,7 +334,7 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      for (const doc of query.results) {
+      await query.results.forEachAsync(async doc => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;
@@ -344,7 +344,7 @@ export default class Cursor {
         }
 
         await query.added(doc._id, this._projectionFn(fields));
-      }
+      });
     }
 
     const handle = Object.assign(new LocalCollection.ObserveHandle, {
