@@ -15,6 +15,13 @@ repo by using this query:
     is:pr base:<release-branch-name> is:merged 
 ```
 
+or in GH Cli:
+```bash
+  gh pr list --state merged --base <release-branch-name>
+```
+
+note that it may not be as useful as the first one, since it will not show the
+Authors and other related information.
 ## Why?
 
 Computers with lower memory/ IDEs with high memory usage can have problems with
