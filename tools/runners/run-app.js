@@ -404,8 +404,9 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    await self._runApp();
-
+    console.log("here ?");
+    await self._runApp() // BREAKES here
+    console.log("before startPromise ?");
     await self.startPromise;
     self.startPromise = null;
   },
@@ -428,6 +429,7 @@ Object.assign(AppRunner.prototype, {
   _cleanUpPromises: function () {
     if (this._promiseResolvers) {
       _.each(this._promiseResolvers, function (resolve) {
+        console.log(typeof resolve);
         resolve && resolve();
       });
       this._promiseResolvers = null;
@@ -478,6 +480,7 @@ Object.assign(AppRunner.prototype, {
   // Run the program once, wait for it to exit, and then return. The
   // return value is same as onRunEnd.
   _runOnce: async function (options) {
+    console.log("run once?");
     var self = this;
     options = options || {};
     var firstRun = options.firstRun;
@@ -500,7 +503,6 @@ Object.assign(AppRunner.prototype, {
         // it even if we refreshed previously, since that might have been a
         // little while ago.
         catalog.triedToRefreshRecently = false;
-
         // If this isn't the first time we've run, we need to reset the project
         // context since everything we have cached may have changed.
         // XXX We can try to be a little less conservative here:
@@ -572,6 +574,7 @@ Object.assign(AppRunner.prototype, {
           projectContext: self.projectContext
         });
       }
+      console.log("bundleResult once?");
 
       var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async function() {
         return await bundler.bundle({
@@ -618,7 +621,7 @@ Object.assign(AppRunner.prototype, {
       watchSet.merge(br.clientWatchSet);
       return watchSet;
     };
-
+    console.log("will bundle app?");
     var bundleResult;
     var bundleResultOrRunResult = await bundleApp();
     if (bundleResultOrRunResult.runResult) {
@@ -626,6 +629,7 @@ Object.assign(AppRunner.prototype, {
     }
     bundleResult = bundleResultOrRunResult.bundleResult;
 
+    console.log("bundled app?");
     firstRun = false;
 
     // Read the settings file, if any
@@ -708,7 +712,7 @@ Object.assign(AppRunner.prototype, {
     await self.runPromise;
 
     var runPromise = self.runPromise = self._makePromise("run");
-    var listenPromise = self._makePromise("listen");
+    var listenPromise =  self._makePromise("listen");
 
     // Run the program
     options.beforeRun && options.beforeRun();
@@ -722,6 +726,7 @@ Object.assign(AppRunner.prototype, {
       oplogUrl: self.oplogUrl,
       mobileServerUrl: self.mobileServerUrl,
       onExit: function (code, signal) {
+        console.log("resolved?");
         self._resolvePromise("run", {
           outcome: 'terminated',
           code: code,
@@ -735,9 +740,13 @@ Object.assign(AppRunner.prototype, {
         if (self.hmrServer) {
           self.hmrServer.setAppState("okay");
         }
+        console.log("here before listen");
         options.onListen && options.onListen();
+        console.log("here afther listen listen");
         self._resolvePromise("start");
         self._resolvePromise("listen");
+        console.log("Resolved");
+
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings,
@@ -753,7 +762,10 @@ Object.assign(AppRunner.prototype, {
       }
     }
 
+    console.log("stated proccess?");
     await appProcess.start();
+    console.log("running? proccess?");
+
     function maybePrintLintWarnings(bundleResult) {
       if (! (self.projectContext.lintAppAndLocalPackages &&
              bundleResult.warnings)) {
@@ -782,9 +794,11 @@ Object.assign(AppRunner.prototype, {
     // hashes and lists of matching files in each directory.
     var serverWatcher;
     var clientWatcher;
+    console.log("shell ?");
 
     appProcess.proc.onMessage("shell-server", message => {
       if (message && message.command === "reload") {
+        console.log("run gbsdhtglasfkd");
         self._resolvePromise("run", { outcome: "changed" });
       } else {
         return Promise.reject("Unsupported shell command: " + message);
@@ -795,6 +809,7 @@ Object.assign(AppRunner.prototype, {
       serverWatcher = new watch.Watcher({
         watchSet: serverWatchSet,
         onChange: function () {
+          console.log("watcher changed");
           self._resolvePromise("run", {
             outcome: 'changed'
           });
@@ -843,6 +858,7 @@ Object.assign(AppRunner.prototype, {
     }
 
     async function runPostStartupCallbacks(bundleResult) {
+      console.log("started running");
       const callbacks = bundleResult.postStartupCallbacks;
       if (! callbacks) return;
 
@@ -874,17 +890,24 @@ Object.assign(AppRunner.prototype, {
     }
 
     Console.enableProgressDisplay(false);
+    console.log("before race");
 
-    await Promise.race([
-      listenPromise,
-      runPromise]);
-    const postStartupResult = await runPostStartupCallbacks(bundleResult);
+    const promList = [runPromise, listenPromise];
+    const promOfResult =
+      Promise.race(promList)
+        .then(() => runPostStartupCallbacks(bundleResult))
+        .catch(err => console.log(err))
+
+    const postStartupResult = await promOfResult;
+    console.log("afhter promOfResult", {postStartupResult});
 
     if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
+    console.log("before runPromise");
     var ret = await runPromise;
+    console.log("afhter runPromise");
 
     try {
       while (ret.outcome === 'changed-refreshable') {
@@ -895,6 +918,8 @@ Object.assign(AppRunner.prototype, {
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
         bundleResultOrRunResult = await bundleApp();
+        console.log("afhter bundleApp");
+
         if (bundleResultOrRunResult.runResult) {
           return bundleResultOrRunResult.runResult;
         }
@@ -1002,7 +1027,7 @@ Object.assign(AppRunner.prototype, {
       }
 
       if (self.watchForChanges) {
-        self.watchPromise = self._makePromise("watch");
+        self.watchPromise =  self._makePromise("watch");
 
         if (!runResult.watchSet) {
           throw Error("watching for changes with no watchSet?");

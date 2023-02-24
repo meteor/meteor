@@ -1495,6 +1495,11 @@ WebAppInternals.additionalStaticJs = additionalStaticJs;
 
 // TODO[fibers]: change this when we have TLA
 async function main() {
-  await runWebAppServer();
+  await runWebAppServer()
 }
-main();
+main()
+  .catch(e => {
+    console.log("error", e);
+    console.error(e.stack);
+  });
+

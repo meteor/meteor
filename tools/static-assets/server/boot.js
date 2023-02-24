@@ -503,5 +503,9 @@ var runMain = Profile("Run main()", async function () {
       await runMain();
     });
   });
-})().catch(e => console.log('error on boot.js', e));
+})().catch(e => {
+  console.log('error on boot.js',  e )
+  console.log(e.stack);
+  process.exit(1)
+});
 
