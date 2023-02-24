@@ -13,7 +13,7 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
 import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
-
+import { once , EventEmitter}  from "events"
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
   if (s.search("\"") !== -1 || s.search("'") !== -1) {
@@ -77,6 +77,8 @@ var AppProcess = function (options) {
 Object.assign(AppProcess.prototype, {
   // Call to start the process.
   start: async function () {
+    console.log("started process");
+    debugger
     var self = this;
 
     if (self.proc) {
@@ -232,6 +234,7 @@ Object.assign(AppProcess.prototype, {
   // Spawn the server process and return the handle from child_process.spawn.
   _spawn: async function () {
     var self = this;
+    console.log('server?');
 
     // Path conversions
     var entryPoint = files.convertToOSPath(
@@ -411,26 +414,36 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = null;
   },
 
+  /**
+   * @param name
+   * @return {Promise<[any]>}
+   * @private
+   */
   _makePromise: function (name) {
     var self = this;
-    return new Promise(function (resolve) {
-      self._promiseResolvers[name] = resolve;
-    });
+    const ee = new EventEmitter();
+    self._promiseResolvers[name] = ee;
+
+    return once(ee, name);
+    // var self = this;
+    // return new Promise(function (resolve) {
+    //   self._promiseResolvers[name] = resolve;
+    // });
   },
 
   _resolvePromise: function (name, value) {
-    var resolve = this._promiseResolvers[name];
-    if (resolve) {
+    const ee = this._promiseResolvers[name];
+    if (ee) {
+      ee.emit(name, value);
       this._promiseResolvers[name] = null;
-      resolve(value);
     }
   },
 
   _cleanUpPromises: function () {
     if (this._promiseResolvers) {
-      _.each(this._promiseResolvers, function (resolve) {
-        console.log(typeof resolve);
-        resolve && resolve();
+      _.each(this._promiseResolvers, (resolve) => {
+        console.log("clean up", resolve);
+        resolve && this._promiseResolvers[resolve]?.emit(resolve, false);
       });
       this._promiseResolvers = null;
     }
@@ -454,10 +467,10 @@ Object.assign(AppRunner.prototype, {
 
     // The existence of this promise makes the fiber break out of its loop.
     self.exitPromise = self._makePromise("exit");
-
+    console.log("exited?");
     self._resolvePromise("run", { outcome: 'stopped' });
     self._resolvePromise("watch");
-
+    console.log(self._beforeStartPromise);
     if (self._beforeStartPromise) {
       // If we stopped before mongod started (eg, due to mongod startup
       // failure), unblock the runner fiber from waiting for mongod to start.
@@ -707,15 +720,18 @@ Object.assign(AppRunner.prototype, {
       return { outcome: 'stopped' };
     }
 
+    console.log('waiting in run promise');
     // We should have reset self.runPromise to null by now, but await it
     // just in case it's still defined.
     await self.runPromise;
-
-    var runPromise = self.runPromise = self._makePromise("run");
-    var listenPromise =  self._makePromise("listen");
+    self.runPromise = self._makePromise("run");
+    var runPromise = self.runPromise
+    var listenPromise = self._makePromise("listen");
+    console.log('Mde more promises');
 
     // Run the program
     options.beforeRun && options.beforeRun();
+    console.log("will run app?");
     var appProcess = new AppProcess({
       projectContext: self.projectContext,
       bundlePath: bundlePath,
@@ -754,14 +770,15 @@ Object.assign(AppRunner.prototype, {
       autoRestart: self.autoRestart,
       hmrSecret: self.hmrSecret
     });
+    console.log("Done? processing?");
 
     if (options.firstRun && self._beforeStartPromise) {
-      var stopped = await self._beforeStartPromise;
-      if (stopped) {
-        return true;
-      }
+      console.log("Here?");
+        var [stopped] = await self._beforeStartPromise;
+        if (stopped) {
+          throw stopped
+        }
     }
-
     console.log("stated proccess?");
     await appProcess.start();
     console.log("running? proccess?");
@@ -820,7 +837,7 @@ Object.assign(AppRunner.prototype, {
     }
 
     var setupClientWatcher = function () {
-      clientWatcher && clientWatcher.stop();
+      clientWatcher &&  clientWatcher.stop();
       clientWatcher = new watch.Watcher({
         watchSet: bundleResult.clientWatchSet,
         onChange: function () {
@@ -893,12 +910,10 @@ Object.assign(AppRunner.prototype, {
     console.log("before race");
 
     const promList = [runPromise, listenPromise];
-    const promOfResult =
-      Promise.race(promList)
-        .then(() => runPostStartupCallbacks(bundleResult))
-        .catch(err => console.log(err))
+    await Promise.race(promList)
 
-    const postStartupResult = await promOfResult;
+    const postStartupResult =
+      await runPostStartupCallbacks(bundleResult)
     console.log("afhter promOfResult", {postStartupResult});
 
     if (postStartupResult) return postStartupResult;
@@ -906,7 +921,7 @@ Object.assign(AppRunner.prototype, {
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
     console.log("before runPromise");
-    var ret = await runPromise;
+    var [ret] = await runPromise;
     console.log("afhter runPromise");
 
     try {
@@ -940,7 +955,7 @@ Object.assign(AppRunner.prototype, {
         if (postStartupResult) return postStartupResult;
 
         // Wait until another file changes.
-        ret = await oldPromise;
+        [ret] = await oldPromise;
       }
     } finally {
       self.runPromise = null;
@@ -953,10 +968,10 @@ Object.assign(AppRunner.prototype, {
       if (self.hmrServer) {
         self.hmrServer.setAppState("okay");
       }
-      appProcess.stop();
+      await appProcess.stop();
 
-      serverWatcher && serverWatcher.stop();
-      clientWatcher && clientWatcher.stop();
+      serverWatcher &&  serverWatcher.stop();
+      clientWatcher &&  clientWatcher.stop();
     }
 
     return ret;

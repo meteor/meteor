@@ -175,7 +175,7 @@ class Runner {
     async function startMongo(tries = 3) {
       try {
         await self._startMongoAsync();
-        await unblockAppRunner();
+        await unblockAppRunner;
       } catch (error) {
         --tries;
         const left = tries + (tries === 1 ? " try" : " tries");
