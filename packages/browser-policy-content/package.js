@@ -4,6 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use("ecmascript");
   api.use("modules");
   api.use(["underscore", "browser-policy-common", "webapp"], "server");
   api.imply(["browser-policy-common"], "server");
