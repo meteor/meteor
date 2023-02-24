@@ -77,7 +77,7 @@ Tinytest.add('check - check', test => {
           }
         }));
       }
-      
+
       if ( type !== null ) {
 
         // Optional doesn't allow null, but does match on null type

@@ -11,6 +11,10 @@ Package.registerBuildPlugin({
   sources: ['plugin.js'],
 });
 
+Npm.depends({
+  '@babel/runtime': '7.20.7'
+});
+
 Package.onUse(function(api) {
   api.use('isobuild:compiler-plugin@1.0.0');
   api.use('babel-compiler');

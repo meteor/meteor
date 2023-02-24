@@ -1486,6 +1486,7 @@ WebAppInternals.setBundledJsCssPrefix = async function(prefix) {
 // served under `/<sha1 of contents>`.
 var additionalStaticJs = {};
 WebAppInternals.addStaticJs = function(contents) {
+  console.log("CONTENTS", contents)
   additionalStaticJs['/' + sha1(contents) + '.js'] = contents;
 };
 

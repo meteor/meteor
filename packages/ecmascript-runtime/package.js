@@ -10,7 +10,9 @@ Package.onUse(function(api) {
   api.imply("ecmascript-runtime-client");
   api.imply("ecmascript-runtime-server", "server");
 });
-
+Npm.depends({
+  '@babel/runtime': '7.20.7'
+});
 Package.onTest(function(api) {
   api.use("tinytest");
   api.use("check");

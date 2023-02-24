@@ -1117,11 +1117,11 @@ Accounts.createUser =
 ///
 // TODO[FIBERS]: Need TLA
 const init = async () => {
-  await Meteor.users.createIndex('services.email.verificationTokens.token',
+  await Meteor.users.createIndexAsync('services.email.verificationTokens.token',
     { unique: true, sparse: true });
-  await Meteor.users.createIndex('services.password.reset.token',
+  await Meteor.users.createIndexAsync('services.password.reset.token',
     { unique: true, sparse: true });
-  await Meteor.users.createIndex('services.password.enroll.token',
+  await Meteor.users.createIndexAsync('services.password.enroll.token',
     { unique: true, sparse: true });
 }
 // TODO[FIBERS]: Need TLA

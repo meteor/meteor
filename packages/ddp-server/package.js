@@ -31,7 +31,8 @@ Package.onUse(function (api) {
   api.use('autopublish', 'server', {weak: true});
 
   // If the facts package is loaded, publish some statistics.
-  api.use('facts-base', 'server', {weak: true});
+  // SOLVES Meteor.publish is not a function in facts-base
+  api.use('facts-base', 'server', {unordered: true});
 
   api.use('callback-hook', 'server');
   api.export('DDPServer', 'server');

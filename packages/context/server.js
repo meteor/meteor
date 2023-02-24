@@ -1,2 +1,2 @@
-const { wrapYieldingFiberMethods } = require("@wry/context");
-wrapYieldingFiberMethods(require("fibers"));
+// const { wrapYieldingFiberMethods } = require("@wry/context");
+// wrapYieldingFiberMethods(require("fibers"));

@@ -1798,21 +1798,21 @@ const setupUsersCollection = async users => {
   });
 
   /// DEFAULT INDEXES ON USERS
-  await users.createIndex('username', { unique: true, sparse: true });
-  await users.createIndex('emails.address', { unique: true, sparse: true });
-  await users.createIndex('services.resume.loginTokens.hashedToken',
+  await users.createIndexAsync('username', { unique: true, sparse: true });
+  await users.createIndexAsync('emails.address', { unique: true, sparse: true });
+  await users.createIndexAsync('services.resume.loginTokens.hashedToken',
     { unique: true, sparse: true });
-  await users.createIndex('services.resume.loginTokens.token',
+  await users.createIndexAsync('services.resume.loginTokens.token',
     { unique: true, sparse: true });
   // For taking care of logoutOtherClients calls that crashed before the
   // tokens were deleted.
-  await users.createIndex('services.resume.haveLoginTokensToDelete',
+  await users.createIndexAsync('services.resume.haveLoginTokensToDelete',
     { sparse: true });
   // For expiring login tokens
-  await users.createIndex("services.resume.loginTokens.when", { sparse: true });
+  await users.createIndexAsync("services.resume.loginTokens.when", { sparse: true });
   // For expiring password tokens
-  await users.createIndex('services.password.reset.when', { sparse: true });
-  await users.createIndex('services.password.enroll.when', { sparse: true });
+  await users.createIndexAsync('services.password.reset.when', { sparse: true });
+  await users.createIndexAsync('services.password.enroll.when', { sparse: true });
 };
 
 
