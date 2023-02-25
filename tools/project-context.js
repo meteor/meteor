@@ -157,7 +157,7 @@ Object.assign(ProjectContext.prototype, {
     self._serverArchitectures = options.serverArchitectures || [];
     // We always need to download host versions of packages, at least for
     // plugins.
-    self._serverArchitectures.push(await archinfo.host());
+    self._serverArchitectures.push(archinfo.host());
     self._serverArchitectures = _.uniq(self._serverArchitectures);
 
     // test-packages overrides this to load local packages from your real app
@@ -601,7 +601,6 @@ Object.assign(ProjectContext.prototype, {
   _resolveConstraints: Profile('_resolveConstraints', async function () {
     var self = this;
     buildmessage.assertInJob();
-
     var depsAndConstraints = await self._getRootDepsAndConstraints();
     // If this is in the runner and we have reset this ProjectContext for a
     // rebuild, use the versions we calculated last time in this process (which
@@ -826,9 +825,8 @@ Object.assign(ProjectContext.prototype, {
   _initializeCatalog: Profile('_initializeCatalog', async function () {
     var self = this;
     buildmessage.assertInJob();
-
-    await catalog.runAndRetryWithRefreshIfHelpful(function () {
-      return buildmessage.enterJob(
+    await catalog.runAndRetryWithRefreshIfHelpful(async function () {
+      return await buildmessage.enterJob(
         "scanning local packages",
         async function () {
           self.localCatalog = new catalogLocal.LocalCatalog();
