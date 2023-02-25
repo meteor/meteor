@@ -4,7 +4,7 @@ import { Accounts } from "meteor/accounts-base";
 // Utility for grabbing user
 const getUserById =
   async (id, options) =>
-    await Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
+    await Meteor.users.findOneAsync(id, Accounts._addDefaultFieldSelector(options));
 
 // User records have a 'services.password.bcrypt' field on them to hold
 // their hashed passwords.
@@ -88,7 +88,7 @@ const checkPasswordAsync = async (user, password) => {
     // The password checks out, but the user's bcrypt hash needs to be updated.
 
     Meteor.defer(async () => {
-      Meteor.users.update({ _id: user._id }, {
+      await Meteor.users.updateAsync({ _id: user._id }, {
         $set: {
           'services.password.bcrypt':
             await bcryptHash(formattedPassword, Accounts._bcryptRounds())
@@ -253,7 +253,7 @@ Accounts.setUsername =
     await Accounts._checkForCaseInsensitiveDuplicates('username',
       'Username', newUsername, user._id);
 
-    await Meteor.users.update({ _id: user._id }, { $set: { username: newUsername } });
+    await Meteor.users.updateAsync({ _id: user._id }, { $set: { username: newUsername } });
 
     // Perform another check after update, in case a matching user has been
     // inserted in the meantime
@@ -262,7 +262,7 @@ Accounts.setUsername =
         'Username', newUsername, user._id);
     } catch (ex) {
       // Undo update if the check fails
-      await Meteor.users.update({ _id: user._id }, { $set: { username: oldUsername } });
+      await Meteor.users.updateAsync({ _id: user._id }, { $set: { username: oldUsername } });
       throw ex;
     }
   };
@@ -304,7 +304,7 @@ Meteor.methods(
   // be tricky, so we'll settle for just replacing all tokens other than
   // the one for the current connection.
   const currentToken = Accounts._getLoginToken(this.connection.id);
-  await Meteor.users.update(
+  await Meteor.users.updateAsync(
     { _id: this.userId },
     {
       $set: { 'services.password.bcrypt': hashed },
@@ -353,7 +353,7 @@ Accounts.setPasswordAsync =
     update.$unset['services.resume.loginTokens'] = 1;
   }
 
-  await Meteor.users.update({_id: user._id}, update);
+  await Meteor.users.updateAsync({_id: user._id}, update);
 };
 
 /**
@@ -450,7 +450,7 @@ Accounts.generateResetToken =
   // store the token record in 'services.password.enroll' db field
   // else store the token record in in 'services.password.reset' db field
   if(reason === 'enrollAccount') {
-    await Meteor.users.update({_id: user._id}, {
+    await Meteor.users.updateAsync({_id: user._id}, {
       $set : {
         'services.password.enroll': tokenRecord
       }
@@ -458,7 +458,7 @@ Accounts.generateResetToken =
     // before passing to template, update user object with new token
      Meteor._ensure(user, 'services', 'password').enroll = tokenRecord;
   } else {
-    await Meteor.users.update({_id: user._id}, {
+    await Meteor.users.updateAsync({_id: user._id}, {
       $set : {
         'services.password.reset': tokenRecord
       }
@@ -517,7 +517,7 @@ Accounts.generateVerificationToken =
     Object.assign(tokenRecord, extraTokenData);
   }
 
-  Meteor.users.update({_id: user._id}, {$push: {
+  await Meteor.users.updateAsync({_id: user._id}, {$push: {
     'services.email.verificationTokens': tokenRecord
   }});
 
@@ -612,7 +612,7 @@ Meteor.methods(
           async () => {
             check(token, String);
             check(newPassword, passwordValidator);
-            let user = await Meteor.users.findOne(
+            let user = await Meteor.users.findOneAsync(
               { "services.password.reset.token": token },
               {
                 fields: {
@@ -627,7 +627,7 @@ Meteor.methods(
             // this method is was not called from enroll account workflow
             // else this method is called from enroll account workflow
             if (!user) {
-              user = await Meteor.users.findOne(
+              user = await Meteor.users.findOneAsync(
                 { "services.password.enroll.token": token },
                 {
                   fields: {
@@ -680,7 +680,7 @@ Meteor.methods(
               let affectedRecords = {};
               // if reason is enroll then check services.password.enroll.token field for affected records
               if (isEnroll) {
-                affectedRecords = await Meteor.users.update(
+                affectedRecords = await Meteor.users.updateAsync(
                   {
                     _id: user._id,
                     'emails.address': email,
@@ -694,7 +694,7 @@ Meteor.methods(
                     $unset: { 'services.password.enroll': 1 }
                   });
               } else {
-                affectedRecords = await Meteor.users.update(
+                affectedRecords = await Meteor.users.updateAsync(
                   {
                     _id: user._id,
                     'emails.address': email,
@@ -824,7 +824,7 @@ Meteor.methods(
           // array. See
           // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
           // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
-          await Meteor.users.update(
+          await Meteor.users.updateAsync(
             {
               _id: user._id,
               'emails.address': tokenRecord.address
@@ -893,7 +893,7 @@ Accounts.addEmail =
         let updated = false;
         for (const email of emails) {
           if (caseInsensitiveRegExp.test(email.address)) {
-            await Meteor.users.update({
+            await Meteor.users.updateAsync({
               _id: _id,
               'emails.address': email.address
             }, {
@@ -925,7 +925,7 @@ Accounts.addEmail =
   await Accounts._checkForCaseInsensitiveDuplicates('emails.address',
     'Email', newEmail, user._id);
 
-  await Meteor.users.update({
+  await Meteor.users.updateAsync({
     _id: user._id
   }, {
     $addToSet: {
@@ -943,7 +943,7 @@ Accounts.addEmail =
       'Email', newEmail, user._id);
   } catch (ex) {
     // Undo update if the check fails
-    await Meteor.users.update({_id: user._id},
+    await Meteor.users.updateAsync({_id: user._id},
       {$pull: {emails: {address: newEmail}}});
     throw ex;
   }
@@ -966,7 +966,7 @@ Accounts.removeEmail =
     if (!user)
       throw new Meteor.Error(403, "User not found");
 
-    await Meteor.users.update({ _id: user._id },
+    await Meteor.users.updateAsync({ _id: user._id },
       { $pull: { emails: { address: email } } });
   }
 

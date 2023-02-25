@@ -132,7 +132,7 @@ export class AccountsCommon {
   user(options) {
     const userId = this.userId();
     return userId
-      ? this.users.findOne(userId, this._addDefaultFieldSelector(options))
+      ? this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
       : null;
   }
 

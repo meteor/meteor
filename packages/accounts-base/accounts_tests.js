@@ -5,7 +5,7 @@ import { Random } from 'meteor/random';
 
 Meteor.methods({
   getCurrentLoginToken: async function () {
-    return await Accounts._getLoginToken(this.connection.id);
+    return Accounts._getLoginToken(this.connection.id);
   }
 });
 
@@ -92,7 +92,7 @@ Tinytest.addAsync('accounts - insertUserDoc username', async test => {
     { profile: { name: 'Foo Bar' } },
     userIn
   );
-  const userOut = await Meteor.users.findOne(userId);
+  const userOut = await Meteor.users.findOneAsync(userId);
   test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
   test.equal(userOut.username, userIn.username);
@@ -104,7 +104,7 @@ Tinytest.addAsync('accounts - insertUserDoc username', async test => {
   );
 
   // cleanup
-  await Meteor.users.remove(userId);
+  await Meteor.users.removeAsync(userId);
 });
 
 Tinytest.addAsync('accounts - insertUserDoc email', async test => {
@@ -121,7 +121,7 @@ Tinytest.addAsync('accounts - insertUserDoc email', async test => {
     { profile: { name: 'Foo Bar' } },
     userIn
   );
-  const userOut = await Meteor.users.findOne(userId);
+  const userOut = await Meteor.users.findOneAsync(userId);
 
   test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
@@ -152,12 +152,12 @@ Tinytest.addAsync('accounts - insertUserDoc email', async test => {
   const userId3 = await Accounts.insertUserDoc(
     {}, { emails: [{ address: email3 }] }
   );
-  const user3 = await Meteor.users.findOne(userId3);
+  const user3 = await Meteor.users.findOneAsync(userId3);
   test.equal(typeof user3.createdAt, 'object');
 
   // cleanup
-  await Meteor.users.remove(userId);
-  await Meteor.users.remove(userId3);
+  await Meteor.users.removeAsync(userId);
+  await Meteor.users.removeAsync(userId3);
 });
 
 // More token expiration tests are in accounts-password
@@ -169,7 +169,7 @@ Tinytest.addAsync('accounts - expire numeric token', async (test, onComplete) =>
     }
   }, userIn);
   const date = new Date(new Date() - 5000);
-  await Meteor.users.update(userId, {
+  await Meteor.users.updateAsync(userId, {
     $set: {
       "services.resume.loginTokens": [{
         hashedToken: Random.id(),
@@ -197,7 +197,7 @@ Tinytest.addAsync('accounts - expire numeric token', async (test, onComplete) =>
 // Login tokens used to be stored unhashed in the database.  We want
 // to make sure users can still login after upgrading.
 const insertUnhashedLoginToken = async (userId, stampedToken) => {
-  await Meteor.users.update(
+  await Meteor.users.updateAsync(
     userId,
     { $push: { 'services.resume.loginTokens': stampedToken } }
   );
@@ -220,7 +220,7 @@ Tinytest.addAsync('accounts - login token', async (test) => {
   const userId2 =
     await Accounts.insertUserDoc({}, { username: Random.id() });
   await insertUnhashedLoginToken(userId2, Accounts._generateStampedLoginToken());
-  const user2 = await Meteor.users.findOne(userId2);
+  const user2 = await Meteor.users.findOneAsync(userId2);
   const stolenToken1 = user2.services.resume.loginTokens[0].token;
   test.isTrue(stolenToken1);
   connection = DDP.connect(Meteor.absoluteUrl());
@@ -231,13 +231,13 @@ Tinytest.addAsync('accounts - login token', async (test) => {
   const userId3 =
     await Accounts.insertUserDoc({}, { username: Random.id() });
   await Accounts._insertLoginToken(userId3, Accounts._generateStampedLoginToken());
-  const user3 = await Meteor.users.findOne(userId3);
+  const user3 = await Meteor.users.findOneAsync(userId3);
   const stolenToken2 = user3.services.resume.loginTokens[0].hashedToken;
   test.isTrue(stolenToken2);
   connection = DDP.connect(Meteor.absoluteUrl());
   // evil plan foiled
   await test.throwsAsync(
-    async () => await connection.callAsync('login', { resume: stolenToken2 }),
+    async () => await connection.callAsync('login', { returnStubValue: true }, { resume: stolenToken2 }),
     /You\'ve been logged out by the server/
   );
   connection.disconnect();
@@ -250,11 +250,11 @@ Tinytest.addAsync('accounts - login token', async (test) => {
   const stampedToken2 = Accounts._generateStampedLoginToken();
   await insertUnhashedLoginToken(userId4, stampedToken2);
   connection = DDP.connect(Meteor.absoluteUrl());
-  await connection.callAsync('login', { resume: stampedToken2.token });
+  await connection.callAsync('login', { returnStubValue: true }, { resume: stampedToken2.token });
   connection.disconnect();
 
   // The token is no longer available to be stolen.
-  const user4 = await Meteor.users.findOne(userId4);
+  const user4 = await Meteor.users.findOneAsync(userId4);
   const stolenToken3 = user4.services.resume.loginTokens[0].token;
   test.isFalse(stolenToken3);
 
@@ -293,16 +293,17 @@ Tinytest.addAsync('accounts - get new token', async test => {
     const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedToken = Accounts._generateStampedLoginToken();
     await Accounts._insertLoginToken(userId, stampedToken);
+
     const conn = DDP.connect(Meteor.absoluteUrl());
-    await conn.callAsync('login', { resume: stampedToken.token });
-    test.equal(await conn.callAsync('getCurrentLoginToken'),
+    await conn.callAsync('login', { returnStubValue: true }, { resume: stampedToken.token });
+    test.equal(await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true }),
       Accounts._hashLoginToken(stampedToken.token));
 
-    const newTokenResult = await conn.callAsync('getNewToken');
+    const newTokenResult = await conn.callAsync('getNewToken', { returnServerPromise: true });
     test.equal(newTokenResult.tokenExpires,
       Accounts._tokenExpiration(stampedToken.when));
-    const token = await conn.callAsync('getCurrentLoginToken');
-    test.equal(await conn.callAsync('getCurrentLoginToken'),
+    const token = await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true });
+    test.equal(await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true }),
       Accounts._hashLoginToken(newTokenResult.token));
     conn.disconnect();
 
@@ -327,7 +328,7 @@ Tinytest.addAsync('accounts - remove other tokens', async (test) => {
       await Accounts._insertLoginToken(userId, stampedTokens[i]);
       const conn = DDP.connect(Meteor.absoluteUrl());
       await conn.callAsync('login', { resume: stampedTokens[i].token });
-      test.equal(await conn.callAsync('getCurrentLoginToken'),
+      test.equal(await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true }),
         Accounts._hashLoginToken(stampedTokens[i].token));
       conns.push(conn);
     }
@@ -337,7 +338,7 @@ Tinytest.addAsync('accounts - remove other tokens', async (test) => {
     simplePoll(async () => {
         let tokens = [];
         for (const conn of conns) {
-          tokens.push(await conn.callAsync('getCurrentLoginToken'));
+          tokens.push(await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true }));
         }
         return !tokens[1] &&
           tokens[0] === Accounts._hashLoginToken(stampedTokens[0].token);
@@ -379,18 +380,18 @@ Tinytest.addAsync(
     // On a new connection, Meteor.userId() should be null until logged in.
     let validateAttemptExpectedUserId = null;
     const onLoginExpectedUserId = userId;
-    await conn.callAsync('login', { resume: stampedToken.token });
+    await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token });
 
     // Now that the user is logged in on the connection, Meteor.userId() should
     // return that user.
     validateAttemptExpectedUserId = userId;
-    await conn.callAsync('login', { resume: stampedToken.token });
+    await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token });
 
     // Trigger onLoginFailure callbacks
     const onLoginFailureExpectedUserId = userId;
     await test.throwsAsync(
       async () =>
-        await conn.callAsync('login', { resume: "bogus" }), '403');
+        await conn.callAsync('login', { returnServerPromise: true }, { resume: "bogus" }), '403');
 
     // Trigger onLogout callbacks
     const onLogoutExpectedUserId = userId;
@@ -435,23 +436,23 @@ Tinytest.addAsync(
 
     // test a new connection
     let allowLogin = true;
-    await conn.callAsync('login', { resume: stampedToken.token });
+    await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token });
 
     // Now that the user is logged in on the connection, Meteor.userId() should
     // return that user.
-    await conn.callAsync('login', { resume: stampedToken.token });
+    await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token });
 
     // Trigger onLoginFailure callbacks, this will not include the user object
     allowLogin = 'bogus';
     await test.throwsAsync(
       async () =>
-        await conn.callAsync('login', { resume: "bogus" }), '403');
+        await conn.callAsync('login', { returnServerPromise: true }, { resume: "bogus" }), '403');
 
     // test a forced login fail which WILL include the user object
     allowLogin = false;
     await test.throwsAsync(
       async () =>
-        await conn.callAsync('login', { resume: stampedToken.token }), '403');
+        await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token }), '403');
 
     // Trigger onLogout callbacks
     const onLogoutExpectedUserId = userId;
@@ -596,7 +597,7 @@ Tinytest.addAsync(
     const ignoreFieldName = "bigArray";
 
     const c =
-      await Meteor.users.update(u1.userId, { $set: { [ignoreFieldName]: [1] } });
+      await Meteor.users.updateAsync(u1.userId, { $set: { [ignoreFieldName]: [1] } });
 
     let users =
       await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
@@ -640,8 +641,8 @@ Tinytest.addAsync(
     test.equal(users[0].profile.foo, 2);
 
     // Cleanup
-    await Meteor.users.remove(u1);
-    await Meteor.users.remove(u2.userId);
+    await Meteor.users.removeAsync(u1);
+    await Meteor.users.removeAsync(u2.userId);
     Accounts._onExternalLoginHook = null;
     Accounts._options = accountsOptions;
   }
@@ -664,7 +665,7 @@ Tinytest.addAsync(
     const ignoreFieldName = "bigArray";
 
     const c =
-      await Meteor.users.update(u.userId, { $set: { [ignoreFieldName]: [1] } });
+      await Meteor.users.updateAsync(u.userId, { $set: { [ignoreFieldName]: [1] } });
 
     let users =
       await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
@@ -692,7 +693,7 @@ Tinytest.addAsync(
         ));
 
     // Cleanup
-    await Meteor.users.remove(u.userId);
+    await Meteor.users.removeAsync(u.userId);
     Accounts._beforeExternalLoginHook = null;
   }
 );
@@ -703,7 +704,7 @@ Tinytest.addAsync(
     // create test user, without a google service
     const testEmail = "test@testdomain.com"
     // being sure that the user is not already in the database
-    await Meteor.users.remove({ "emails.address": testEmail });
+    await Meteor.users.removeAsync({ "emails.address": testEmail });
     const uid0 = await Accounts.createUser({ email: testEmail })
 
     // Verify that user is found from email and service merged
@@ -723,9 +724,9 @@ Tinytest.addAsync(
 
     // Cleanup
     if (u1.userId !== uid0) {
-      await Meteor.users.remove(uid0)
+      await Meteor.users.removeAsync(uid0)
     }
-    await Meteor.users.remove(u1.userId);
+    await Meteor.users.removeAsync(u1.userId);
     Accounts.selectCustomUserOnExternalLogin = null;
   }
 );
@@ -779,7 +780,7 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook',
   test.equal(users2[0].services.facebook.monkey, 42);
 
   // cleanup
-  await Meteor.users.remove(u1.id);
+  await Meteor.users.removeAsync(u1.id);
 });
 
 Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Meteor Developer', async test => {
@@ -810,7 +811,7 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Meteor Dev
   test.equal(users1[0].profile.username, undefined);
 
   // cleanup
-  await Meteor.users.remove(u1);
+  await Meteor.users.removeAsync(u1);
 });
 
 Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Weibo', async test => {
@@ -826,20 +827,20 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Weibo', as
   const u2 =
     await Accounts.updateOrCreateUserFromExternalService(
       'weibo', { id: weiboId2 }, { profile: { bar: 2 } });
-  test.equal(await Meteor.users.find({ "services.weibo.id": { $in: [weiboId1, weiboId2] } }).count(), 2);
+  test.equal(await Meteor.users.find({ "services.weibo.id": { $in: [weiboId1, weiboId2] } }).countAsync(), 2);
 
   const user1 =
-    await Meteor.users.findOne({ "services.weibo.id": weiboId1 });
+    await Meteor.users.findOneAsync({ "services.weibo.id": weiboId1 });
   const user2 =
-    await Meteor.users.findOne({ "services.weibo.id": weiboId2 });
+    await Meteor.users.findOneAsync({ "services.weibo.id": weiboId2 });
   test.equal(user1.profile.foo, 1);
   test.equal(user1.emails, undefined);
   test.equal(user2.profile.bar, 2);
   test.equal(user2.emails, undefined);
 
   // cleanup
-  Meteor.users.remove(u1.id);
-  Meteor.users.remove(u2.id);
+  Meteor.users.removeAsync(u1.id);
+  Meteor.users.removeAsync(u2.id);
 });
 
 Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', async test => {
@@ -868,6 +869,6 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   test.length(users2, 1);
 
   // cleanup
-  await Meteor.users.remove(u1.id);
+  await Meteor.users.removeAsync(u1.id);
 });
 

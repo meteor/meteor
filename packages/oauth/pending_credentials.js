@@ -58,7 +58,7 @@ OAuth._storePendingCredential =
     // We do an upsert here instead of an insert in case the user happens
     // to somehow send the same `state` parameter twice during an OAuth
     // login; we don't want a duplicate key error.
-    await OAuth._pendingCredentials.upsert({
+    await OAuth._pendingCredentials.upsertAsync({
       key,
     }, {
       key,
@@ -78,12 +78,12 @@ OAuth._retrievePendingCredential =
   async (key, credentialSecret = null) => {
     check(key, String);
 
-    const pendingCredential = await OAuth._pendingCredentials.findOne({
+    const pendingCredential = await OAuth._pendingCredentials.findOneAsync({
       key,
       credentialSecret,
     });
     if (pendingCredential) {
-      await OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
+      await OAuth._pendingCredentials.removeAsync({ _id: pendingCredential._id });
       if (pendingCredential.credential.error)
         return recreateError(pendingCredential.credential.error);
       else

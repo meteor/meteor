@@ -334,7 +334,7 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      await query.results.forEachAsync(async doc => {
+      const handler = async doc => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;
@@ -344,7 +344,17 @@ export default class Cursor {
         }
 
         await query.added(doc._id, this._projectionFn(fields));
-      });
+      };
+      // it means it's just an array
+      if (query.results.length) {
+        for (const doc of query.results) {
+          await handler(doc);
+        }
+      }
+      // it means it's an id map
+      if (query.results?.size?.()) {
+        await query.results.forEachAsync(handler);
+      }
     }
 
     const handle = Object.assign(new LocalCollection.ObserveHandle, {

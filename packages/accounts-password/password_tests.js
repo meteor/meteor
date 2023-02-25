@@ -798,7 +798,7 @@ if (Meteor.isClient) (() => {
     },
     async function (test) {
       // Can update own profile using ID.
-      await Meteor.users.update(
+      await Meteor.users.updateAsync(
         this.userId, { $set: { 'profile.updated': 42 } },
        );
       test.equal(42, Meteor.user().profile.updated);
@@ -1149,7 +1149,7 @@ if (Meteor.isServer) (() => {
       .createUser({ username: username, testOnCreateUserHook: true });
 
     test.isTrue(userId);
-    const user = await Meteor.users.findOne(userId);
+    const user = await Meteor.users.findOneAsync(userId);
     test.equal(user.profile.touchedByOnCreateUser, true);
   });
 
@@ -1162,49 +1162,49 @@ if (Meteor.isServer) (() => {
 
       const userId = await Accounts.createUser({ username: username, email: email });
 
-      let user = await Meteor.users.findOne(userId);
+      let user = await Meteor.users.findOneAsync(userId);
       // no services yet.
       test.equal(user.services.password, undefined);
 
       // set a new password.
       await Accounts.setPasswordAsync(userId, 'new password');
-      user = await Meteor.users.findOne(userId);
+      user = await Meteor.users.findOneAsync(userId);
       const oldSaltedHash = user.services.password.bcrypt;
       test.isTrue(oldSaltedHash);
       // Send a reset password email (setting a reset token) and insert a login
       // token.
       await Accounts.sendResetPasswordEmail(userId, email);
       await Accounts._insertLoginToken(userId, Accounts._generateStampedLoginToken());
-      const user2 = await Meteor.users.findOne(userId)
+      const user2 = await Meteor.users.findOneAsync(userId)
       test.isTrue(user2.services.password.reset);
       test.isTrue(user2.services.resume.loginTokens);
 
       // reset with the same password, see we get a different salted hash
       await Accounts.setPasswordAsync(userId, 'new password', { logout: false });
-      user = await Meteor.users.findOne(userId);
+      user = await Meteor.users.findOneAsync(userId);
       const newSaltedHash = user.services.password.bcrypt;
       test.isTrue(newSaltedHash);
       test.notEqual(oldSaltedHash, newSaltedHash);
       // No more reset token.
-      const user3 = await Meteor.users.findOne(userId)
+      const user3 = await Meteor.users.findOneAsync(userId)
       test.isFalse(user3.services.password.reset);
       // But loginTokens are still here since we did logout: false.
       test.isTrue(user3.services.resume.loginTokens);
 
       // reset again, see that the login tokens are gone.
       await Accounts.setPasswordAsync(userId, 'new password');
-      user = await Meteor.users.findOne(userId);
+      user = await Meteor.users.findOneAsync(userId);
       const newerSaltedHash = user.services.password.bcrypt;
       test.isTrue(newerSaltedHash);
       test.notEqual(oldSaltedHash, newerSaltedHash);
       test.notEqual(newSaltedHash, newerSaltedHash);
       // No more tokens.
-      const user4 = await Meteor.users.findOne(userId)
+      const user4 = await Meteor.users.findOneAsync(userId)
       test.isFalse(user4.services.password.reset);
       test.isFalse(user4.services.resume.loginTokens);
 
       // cleanup
-      await Meteor.users.remove(userId);
+      await Meteor.users.removeAsync(userId);
     });
 
 
@@ -1216,7 +1216,7 @@ if (Meteor.isServer) (() => {
       async () =>
         await Meteor.user()
     );
-    await Meteor.users.remove({});
+    await Meteor.users.removeAsync({});
   });
 
   // XXX would be nice to test
@@ -1242,7 +1242,7 @@ if (Meteor.isServer) (() => {
           test.fail('observe should be gone');
       })
 
-      const result = await clientConn.callAsync('login', {
+      const result = await clientConn.callAsync('login', { returnServerPromise: true }, {
         user: { username: username },
         password: hashPassword('password')
       });
@@ -1279,7 +1279,7 @@ if (Meteor.isServer) (() => {
         email: email,
         password: hashPassword("old-password")
       });
-      const user = await Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOneAsync(userId);
 
       await Accounts.sendResetPasswordEmail(userId, email);
       const [resetPasswordEmailOptions] =
@@ -1292,7 +1292,7 @@ if (Meteor.isServer) (() => {
       const resetPasswordToken = match[1];
 
       const newEmail = `${ Random.id() }-new@example.com`;
-      await Meteor.users.update(userId, { $set: { "emails.0.address": newEmail } });
+      await Meteor.users.updateAsync(userId, { $set: { "emails.0.address": newEmail } });
 
       await test.throwsAsync(
         async () =>
@@ -1323,7 +1323,7 @@ if (Meteor.isServer) (() => {
         password: hashPassword("old-password")
       });
 
-      const user = await Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOneAsync(userId);
 
       await Accounts.sendResetPasswordEmail(userId, email);
       const [resetPasswordEmailOptions] =
@@ -1357,7 +1357,7 @@ if (Meteor.isServer) (() => {
         password: hashPassword("old-password")
       });
 
-      const user = await Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOneAsync(userId);
 
       await Accounts.sendResetPasswordEmail(userId, email);
 
@@ -1369,7 +1369,7 @@ if (Meteor.isServer) (() => {
       test.isTrue(match);
       const resetPasswordToken = match[1];
 
-      await Meteor.users.update(userId, { $set: { "services.password.reset.when": new Date(Date.now() + -5 * 24 * 3600 * 1000) } });
+      await Meteor.users.updateAsync(userId, { $set: { "services.password.reset.when": new Date(Date.now() + -5 * 24 * 3600 * 1000) } });
 
       try {
         await Meteor.callAsync("resetPassword", resetPasswordToken, hashPassword("new-password"))
@@ -1435,11 +1435,11 @@ if (Meteor.isServer) (() => {
           }
         );
       await Accounts.sendResetPasswordEmail(userId, email);
-      const user1 = await Meteor.users.findOne(userId);
+      const user1 = await Meteor.users.findOneAsync(userId);
       test.isTrue(!!user1.services.password.reset);
 
       await Accounts._expirePasswordResetTokens(new Date(), userId);
-      const user2 = await Meteor.users.findOne(userId);
+      const user2 = await Meteor.users.findOneAsync(userId);
       test.isUndefined(user2.services.password.reset);
     });
 
@@ -1455,16 +1455,16 @@ if (Meteor.isServer) (() => {
           }
         );
       await Accounts.sendResetPasswordEmail(userId, email);
-      await Meteor.users.update(
+      await Meteor.users.updateAsync(
         { _id: userId },
         { $unset: { "services.password.reset.reason": 1 } }
       );
-      const user1 = await Meteor.users.findOne(userId);
+      const user1 = await Meteor.users.findOneAsync(userId);
       test.isTrue(!!user1.services.password.reset);
       test.isUndefined(user1.services.password.reset.reason);
 
       await Accounts._expirePasswordResetTokens(new Date(), userId);
-      const user2 = await Meteor.users.findOne(userId);
+      const user2 = await Meteor.users.findOneAsync(userId);
       test.isUndefined(user2.services.password.reset);
     });
 
@@ -1479,7 +1479,7 @@ if (Meteor.isServer) (() => {
         email: email
       });
 
-      const user = await Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOneAsync(userId);
       await Accounts.sendEnrollmentEmail(userId, email);
       const [enrollPasswordEmailOptions] =
         await Meteor.callAsync("getInterceptedEmails", email);
@@ -1519,7 +1519,7 @@ if (Meteor.isServer) (() => {
         email: email
       });
 
-      const user = await Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOneAsync(userId);
 
       await Accounts.sendEnrollmentEmail(userId, email);
 
@@ -1531,7 +1531,7 @@ if (Meteor.isServer) (() => {
       test.isTrue(match);
       const enrollPasswordToken = match[1];
 
-      await Meteor.users.update(userId, { $set: { "services.password.enroll.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) } });
+      await Meteor.users.updateAsync(userId, { $set: { "services.password.enroll.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) } });
 
       await test.throwsAsync(
         async () => await Meteor.callAsync("resetPassword", enrollPasswordToken, hashPassword("new-password")),
@@ -1546,10 +1546,10 @@ if (Meteor.isServer) (() => {
         await Accounts.createUser({ email: email, password: hashPassword('password') });
 
       await Accounts.sendEnrollmentEmail(userId, email);
-      const user1 = await Meteor.users.findOne(userId);
+      const user1 = await Meteor.users.findOneAsync(userId);
       test.isTrue(!!user1.services.password.enroll);
       await Accounts._expirePasswordEnrollTokens(new Date(), userId);
-      const user2 = await Meteor.users.findOne(userId);
+      const user2 = await Meteor.users.findOneAsync(userId);
       test.isUndefined(user2.services.password.enroll);
     });
 
@@ -1564,12 +1564,12 @@ if (Meteor.isServer) (() => {
         });
 
       await Accounts.sendEnrollmentEmail(userId, email);
-      const user1 = await Meteor.users.findOne(userId);
+      const user1 = await Meteor.users.findOneAsync(userId);
       const enrollToken = user1.services.password.enroll;
       test.isTrue(enrollToken);
 
       await Accounts._expirePasswordResetTokens(new Date(), userId);
-      const user2 = await Meteor.users.findOne(userId)
+      const user2 = await Meteor.users.findOneAsync(userId)
       test.equal(enrollToken, user2.services.password.enroll);
     }
   )
@@ -1582,12 +1582,12 @@ if (Meteor.isServer) (() => {
         await Accounts.createUser({ email: email, password: hashPassword('password') });
 
       await Accounts.sendResetPasswordEmail(userId, email);
-      const user1 = await Meteor.users.findOne(userId);
+      const user1 = await Meteor.users.findOneAsync(userId);
       const resetToken = user1.services.password.reset;
       test.isTrue(resetToken);
 
       await Accounts._expirePasswordEnrollTokens(new Date(), userId);
-      const user2 = await Meteor.users.findOne(userId);
+      const user2 = await Meteor.users.findOneAsync(userId);
       test.equal(resetToken, user2.services.password.reset);
     }
   )
@@ -1857,14 +1857,14 @@ if (Meteor.isServer) (() => {
         // used for new bcrypt password hashes.
         username = Random.id();
         const userId2 = await Accounts.createUser({ username, password: this.password });
-        const user2 = await Meteor.users.findOne(userId2);
+        const user2 = await Meteor.users.findOneAsync(userId2);
         rounds = getUserHashRounds(user2);
         test.equal(rounds, this.customRounds);
 
         // Cleanup
         Accounts._options.bcryptRounds = defaultRounds;
-        await Meteor.users.remove(this.userId1);
-        await Meteor.users.remove(userId2);
+        await Meteor.users.removeAsync(this.userId1);
+        await Meteor.users.removeAsync(userId2);
         resolve();
       }, 5000);
 
