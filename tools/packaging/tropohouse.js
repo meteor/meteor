@@ -40,7 +40,7 @@ exports.default = new exports.Tropohouse(defaultWarehouseDir());
  * Extract a package tarball, and on Windows convert file paths and metadata
  * @param  {String} packageTarball path to tarball
  * @param {Boolean} forceConvert Convert paths even on unix, for testing
- * @return {String}                Temporary directory with contents of package
+ * @return {Promise<String>}                Temporary directory with contents of package
  */
 exports._extractAndConvert = async function (packageTarball, forceConvert) {
   var targetDirectory = files.mkdtemp();
@@ -552,7 +552,7 @@ Object.assign(exports.Tropohouse.prototype, {
     var self = this;
     buildmessage.assertInCapture();
     options = options || {};
-    var serverArchs = options.serverArchitectures || [await archinfo.host()];
+    var serverArchs = options.serverArchitectures || [archinfo.host()];
 
     var downloader;
     var downloaders = [];

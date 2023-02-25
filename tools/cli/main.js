@@ -495,7 +495,7 @@ var springboard = async function (rel, options) {
   });
 
   if (!toolRecord) {
-    throw Error("missing tool for " + await archinfo.host() + " in " +
+    throw Error("missing tool for " + archinfo.host() + " in " +
                 toolsPkg + "@" + toolsVersion);
   }
 
@@ -1557,7 +1557,8 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
     } else if (e instanceof main.ExitWithCode) {
       process.exit(e.code);
     } else {
-      throw e;
+      console.error(e);
+      process.exit(1);
     }
   }
 

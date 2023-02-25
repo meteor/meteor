@@ -210,7 +210,7 @@ selftest.define('galaxy self-signed cert', ['galaxy'], async function () {
   // Create a signed certificate for the app.
   //  createSelfSignedCertificateForApp: function (appId, options) {
   var appRecord = galaxyUtils.getAppRecordByName(appName);
-  var conn = galaxyUtils.loggedInGalaxyAPIConnection();
+  var conn = await galaxyUtils.loggedInGalaxyAPIConnection();
   var certIds = [];
   for (let range = 0; range <= 14; range++) {
     certIds.push(await galaxyUtils.callGalaxyAPI(
