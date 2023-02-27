@@ -118,7 +118,9 @@ Mongo.Collection = function Collection(name, options) {
   this._name = name;
   this._driver = options._driver;
 
-  this._maybeSetUpReplication(name, options);
+  // TODO[fibers]: _maybeSetUpReplication is now async. Let's watch how not waiting for this function to finish
+    // will affect everything
+  this._settingUpReplicationPromise = this._maybeSetUpReplication(name, options);
 
   // XXX don't define these until allow or deny is actually used for this
   // collection. Could be hard if the security rules are only defined on the
@@ -152,27 +154,45 @@ Mongo.Collection = function Collection(name, options) {
 };
 
 Object.assign(Mongo.Collection.prototype, {
-  _maybeSetUpReplication(name, { _suppressSameNameError = false }) {
+  async _maybeSetUpReplication(name) {
     const self = this;
-    if (!(self._connection && self._connection.registerStore)) {
+    if (
+      !(
+        self._connection &&
+        self._connection.registerStoreClient &&
+        self._connection.registerStoreServer
+      )
+    ) {
       return;
     }
 
-    // OK, we're going to be a slave, replicating some remote
-    // database, except possibly with some temporary divergence while
-    // we have unacknowledged RPC's.
-    const ok = self._connection.registerStore(name, {
+
+    const wrappedStoreCommon = {
+      // Called around method stub invocations to capture the original versions
+      // of modified documents.
+      saveOriginals() {
+        self._collection.saveOriginals();
+      },
+      retrieveOriginals() {
+        return self._collection.retrieveOriginals();
+      },
+      // To be able to get back to the collection from the store.
+      _getCollection() {
+        return self;
+      },
+    };
+    const wrappedStoreClient = {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
       //
       // XXX This interface is pretty janky. reset probably ought to go back to
       // being its own function, and callers shouldn't have to calculate
       // batchSize. The optimization of not calling pause/remove should be
-      // delayed until later: the first call to updateAsync() should buffer its
+      // delayed until later: the first call to update() should buffer its
       // message, and then we can either directly apply it at endUpdate time if
       // it was the only update, or do pauseObservers/apply/apply at the next
-      // updateAsync() if there's another one.
-      beginUpdate(batchSize, reset) {
+      // update() if there's another one.
+      async beginUpdate(batchSize, reset) {
         // pause observers so users don't see flicker when updating several
         // objects at once (including the post-reconnect reset-and-reapply
         // stage), and so that a re-sorting of a query can take advantage of the
@@ -180,12 +200,12 @@ Object.assign(Mongo.Collection.prototype, {
         // time.
         if (batchSize > 1 || reset) self._collection.pauseObservers();
 
-        if (reset) self._collection.removeAsync({});
+        if (reset) await self._collection.remove({});
       },
 
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
-      async update(msg) {
+      update(msg) {
         var mongoId = MongoID.idParse(msg.id);
         var doc = self._collection._docs.get(mongoId);
 
@@ -206,15 +226,95 @@ Object.assign(Mongo.Collection.prototype, {
             return;
           } else if (msg.msg === 'changed' && !doc) {
             msg.msg = 'added';
-            _ref = msg.fields;
-            for (field in _ref) {
-              value = _ref[field];
+            const _ref = msg.fields;
+            for (let field in _ref) {
+              const value = _ref[field];
               if (value === void 0) {
                 delete msg.fields[field];
               }
             }
           }
         }
+        // Is this a "replace the whole doc" message coming from the quiescence
+        // of method writes to an object? (Note that 'undefined' is a valid
+        // value meaning "remove it".)
+        if (msg.msg === 'replace') {
+          var replace = msg.replace;
+          if (!replace) {
+            if (doc) self._collection.remove(mongoId);
+          } else if (!doc) {
+            self._collection.insert(replace);
+          } else {
+            // XXX check that replace has no $ ops
+            self._collection.update(mongoId, replace);
+          }
+          return;
+        } else if (msg.msg === 'added') {
+          if (doc) {
+            throw new Error(
+              'Expected not to find a document already present for an add'
+            );
+          }
+          self._collection.insert({ _id: mongoId, ...msg.fields });
+        } else if (msg.msg === 'removed') {
+          if (!doc)
+            throw new Error(
+              'Expected to find a document already present for removed'
+            );
+          self._collection.remove(mongoId);
+        } else if (msg.msg === 'changed') {
+          if (!doc) throw new Error('Expected to find a document to change');
+          const keys = Object.keys(msg.fields);
+          if (keys.length > 0) {
+            var modifier = {};
+            keys.forEach(key => {
+              const value = msg.fields[key];
+              if (EJSON.equals(doc[key], value)) {
+                return;
+              }
+              if (typeof value === 'undefined') {
+                if (!modifier.$unset) {
+                  modifier.$unset = {};
+                }
+                modifier.$unset[key] = 1;
+              } else {
+                if (!modifier.$set) {
+                  modifier.$set = {};
+                }
+                modifier.$set[key] = value;
+              }
+            });
+            if (Object.keys(modifier).length > 0) {
+              self._collection.update(mongoId, modifier);
+            }
+          }
+        } else {
+          throw new Error("I don't know how to deal with this message");
+        }
+      },
+
+      // Called at the end of a batch of updates.livedata_connection.js:1287
+      endUpdate() {
+        self._collection.resumeObserversClient();
+      },
+
+      // Used to preserve current versions of documents across a store reset.
+      getDoc(id) {
+        return self.findOne(id);
+      },
+
+      ...wrappedStoreCommon,
+    };
+    const wrappedStoreServer = {
+      async beginUpdate(batchSize, reset) {
+        if (batchSize > 1 || reset) self._collection.pauseObservers();
+
+        if (reset) await self._collection.removeAsync({});
+      },
+
+      async update(msg) {
+        var mongoId = MongoID.idParse(msg.id);
+        var doc = self._collection._docs.get(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
@@ -275,50 +375,80 @@ Object.assign(Mongo.Collection.prototype, {
       },
 
       // Called at the end of a batch of updates.
-      endUpdate() {
-        self._collection.resumeObservers();
-      },
-
-      // Called around method stub invocations to capture the original versions
-      // of modified documents.
-      saveOriginals() {
-        self._collection.saveOriginals();
-      },
-      retrieveOriginals() {
-        return self._collection.retrieveOriginals();
+      async endUpdate() {
+        await self._collection.resumeObserversServer();
       },
 
       // Used to preserve current versions of documents across a store reset.
-      getDoc(id) {
+      async getDoc(id) {
         return self.findOneAsync(id);
       },
+      ...wrappedStoreCommon,
+    };
 
-      // To be able to get back to the collection from the store.
-      _getCollection() {
-        return self;
-      },
-    });
 
-    if (!ok) {
-      const message = `There is already a collection named "${name}"`;
-      if (_suppressSameNameError === true) {
-        // XXX In theory we do not have to throw when `ok` is falsy. The
-        // store is already defined for this collection name, but this
-        // will simply be another reference to it and everything should
-        // work. However, we have historically thrown an error here, so
-        // for now we will skip the error only when _suppressSameNameError
-        // is `true`, allowing people to opt in and give this some real
-        // world testing.
-        console.warn ? console.warn(message) : console.log(message);
-      } else {
-        throw new Error(message);
-      }
+    // OK, we're going to be a slave, replicating some remote
+    // database, except possibly with some temporary divergence while
+    // we have unacknowledged RPC's.
+    let registerStoreResult;
+    if (Meteor.isClient) {
+      registerStoreResult = self._connection.registerStoreClient(
+        name,
+        wrappedStoreClient
+      );
+    } else {
+      registerStoreResult = self._connection.registerStoreServer(
+        name,
+        wrappedStoreServer
+      );
     }
+
+    const message = `There is already a collection named "${name}"`;
+    const logWarn = () => {
+      console.warn ? console.warn(message) : console.log(message);
+    };
+
+    if (!registerStoreResult) {
+      return logWarn();
+    }
+
+    return registerStoreResult?.then?.(ok => {
+      if (!ok) {
+        logWarn();
+      }
+    });
   },
 
   ///
   /// Main collection API
   ///
+  /**
+   * @summary Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
+   * @locus Anywhere
+   * @method countDocuments
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to count
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
+   * @returns {Promise<number>}
+   */
+  countDocuments(...args) {
+    return this._collection.countDocuments(...args);
+  },
+
+  /**
+   * @summary Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
+   * @locus Anywhere
+   * @method estimatedDocumentCount
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to count
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/EstimatedDocumentCountOptions.html). Please note that not all of them are available on the client.
+   * @returns {Promise<number>}
+   */
+  estimatedDocumentCount(...args) {
+    return this._collection.estimatedDocumentCount(...args);
+  },
 
   _getFindSelector(args) {
     if (args.length == 0) return {};
@@ -405,6 +535,28 @@ Object.assign(Mongo.Collection.prototype, {
    */
   findOneAsync(...args) {
     return this._collection.findOneAsync(
+      this._getFindSelector(args),
+      this._getFindOptions(args)
+    );
+  },
+  /**
+   * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+   * @locus Anywhere
+   * @method findOne
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to find
+   * @param {Object} [options]
+   * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
+   * @param {Number} options.skip Number of results to skip at the beginning
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
+   * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @param {String} options.readPreference (Server only) Specifies a custom MongoDB [`readPreference`](https://docs.mongodb.com/manual/core/read-preference) for fetching the document. Possible values are `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred` and `nearest`.
+   * @returns {Object}
+   */
+  findOne(...args) {
+    return this._collection.findOne(
       this._getFindSelector(args),
       this._getFindOptions(args)
     );
@@ -496,7 +648,113 @@ Object.assign(Mongo.Collection.prototype, {
   // generating their result until the database has acknowledged
   // them. In the future maybe we should provide a flag to turn this
   // off.
-  async insertAsync(doc) {
+
+  _insert(doc, callback) {
+    // Make sure we were passed a document to insert
+    if (!doc) {
+      throw new Error('insert requires an argument');
+    }
+
+    // Make a shallow clone of the document, preserving its prototype.
+    doc = Object.create(
+      Object.getPrototypeOf(doc),
+      Object.getOwnPropertyDescriptors(doc)
+    );
+
+    if ('_id' in doc) {
+      if (
+        !doc._id ||
+        !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
+      ) {
+        throw new Error(
+          'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
+        );
+      }
+    } else {
+      let generateId = true;
+
+      // Don't generate the id if we're the client and the 'outermost' call
+      // This optimization saves us passing both the randomSeed and the id
+      // Passing both is redundant.
+      if (this._isRemoteCollection()) {
+        const enclosing = DDP._CurrentMethodInvocation.get();
+        if (!enclosing) {
+          generateId = false;
+        }
+      }
+
+      if (generateId) {
+        doc._id = this._makeNewID();
+      }
+    }
+
+
+    // On inserts, always return the id that we generated; on all other
+    // operations, just return the result from the collection.
+    var chooseReturnValueFromCollectionResult = function(result) {
+      if (Meteor._isPromise(result)) return result;
+
+      if (doc._id) {
+        return doc._id;
+      }
+
+      // XXX what is this for??
+      // It's some iteraction between the callback to _callMutatorMethod and
+      // the return value conversion
+      doc._id = result;
+
+      return result;
+    };
+
+    const wrappedCallback = wrapCallback(
+      callback,
+      chooseReturnValueFromCollectionResult
+    );
+
+    if (this._isRemoteCollection()) {
+      const result = this._callMutatorMethod('insert', [doc], wrappedCallback);
+      return chooseReturnValueFromCollectionResult(result);
+    }
+
+    // it's my collection.  descend into the collection object
+    // and propagate any exception.
+    try {
+      // If the user provided a callback and the collection implements this
+      // operation asynchronously, then queryRet will be undefined, and the
+      // result will be returned through the callback instead.
+      let result;
+      if (!!wrappedCallback) {
+        this._collection.insert(doc, wrappedCallback);
+      } else {
+        // If we don't have the callback, we assume the user is using the promise.
+        // We can't just pass this._collection.insert to the promisify because it would lose the context.
+        result = this._collection.insert(doc);
+      }
+
+      return chooseReturnValueFromCollectionResult(result);
+    } catch (e) {
+      if (callback) {
+        callback(e);
+        return null;
+      }
+      throw e;
+    }
+  },
+
+  /**
+   * @summary Insert a document in the collection.  Returns its unique _id.
+   * @locus Anywhere
+   * @method  insert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
+   */
+  insert(doc, callback) {
+    return this._insert(doc, callback);
+  },
+
+  async _insertAsync(doc, options = {}) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -552,13 +810,8 @@ Object.assign(Mongo.Collection.prototype, {
       return result;
     };
 
-    // const wrappedCallback = wrapCallback(
-    //     callback,
-    //     chooseReturnValueFromCollectionResult
-    // );
-
     if (this._isRemoteCollection()) {
-      const result = await this._callMutatorMethodAsync('insertAsync', [doc]);
+      const result = await this._callMutatorMethodAsync('insertAsync', [doc], options);
 
       return chooseReturnValueFromCollectionResult(result);
     }
@@ -573,18 +826,17 @@ Object.assign(Mongo.Collection.prototype, {
     }
   },
 
-  // /**
-  //  * @summary Insert a document in the collection.  Returns its unique _id.
-  //  * @locus Anywhere
-  //  * @method  insert
-  //  * @memberof Mongo.Collection
-  //  * @instance
-  //  * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
-  //  * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
-  //  */
-  // insertAsync(doc, callback) {
-  //   return this._insertAsync(doc, callback);
-  // },
+  /**
+   * @summary Insert a document in the collection.  Returns a promise that will return the document's unique _id when solved.
+   * @locus Anywhere
+   * @method  insert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+   */
+  insertAsync(doc, options) {
+    return this._insertAsync(doc, options);
+  },
 
   /**
    * @summary Modify one or more documents in the collection. Returns the number of matched documents.
@@ -598,7 +850,6 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
    * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
    * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
-   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
   async updateAsync(selector, modifier, ...optionsAndCallback) {
 
@@ -631,7 +882,7 @@ Object.assign(Mongo.Collection.prototype, {
     if (this._isRemoteCollection()) {
       const args = [selector, modifier, options];
 
-      return this._callMutatorMethodAsync('updateAsync', args);
+      return this._callMutatorMethodAsync('updateAsync', args, options);
     }
 
     // it's my collection.  descend into the collection object
@@ -648,6 +899,102 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   /**
+   * @summary Asynchronously modifies one or more documents in the collection. Returns the number of matched documents.
+   * @locus Anywhere
+   * @method update
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to modify
+   * @param {MongoModifier} modifier Specifies how to modify the documents
+   * @param {Object} [options]
+   * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+   * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
+   * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
+   */
+  update(selector, modifier, ...optionsAndCallback) {
+    const callback = popCallbackFromArgs(optionsAndCallback);
+
+    // We've already popped off the callback, so we are left with an array
+    // of one or zero items
+    const options = { ...(optionsAndCallback[0] || null) };
+    let insertedId;
+    if (options && options.upsert) {
+      // set `insertedId` if absent.  `insertedId` is a Meteor extension.
+      if (options.insertedId) {
+        if (
+          !(
+            typeof options.insertedId === 'string' ||
+            options.insertedId instanceof Mongo.ObjectID
+          )
+        )
+          throw new Error('insertedId must be string or ObjectID');
+        insertedId = options.insertedId;
+      } else if (!selector || !selector._id) {
+        insertedId = this._makeNewID();
+        options.generatedId = true;
+        options.insertedId = insertedId;
+      }
+    }
+
+    selector = Mongo.Collection._rewriteSelector(selector, {
+      fallbackId: insertedId,
+    });
+
+    const wrappedCallback = wrapCallback(callback);
+
+    if (this._isRemoteCollection()) {
+      const args = [selector, modifier, options];
+
+      return this._callMutatorMethod('update', args);
+    }
+
+    // it's my collection.  descend into the collection object
+    // and propagate any exception.
+    // If the user provided a callback and the collection implements this
+    // operation asynchronously, then queryRet will be undefined, and the
+    // result will be returned through the callback instead.
+    //console.log({callback, options, selector, modifier, coll: this._collection});
+    try {
+      // If the user provided a callback and the collection implements this
+      // operation asynchronously, then queryRet will be undefined, and the
+      // result will be returned through the callback instead.
+      return this._collection.update(
+        selector,
+        modifier,
+        options,
+        wrappedCallback
+      );
+    } catch (e) {
+      if (callback) {
+        callback(e);
+        return null;
+      }
+      throw e;
+    }
+  },
+
+  /**
+   * @summary Asynchronously removes documents from the collection.
+   * @locus Anywhere
+   * @method remove
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to remove
+   */
+  async removeAsync(selector, options = {}) {
+    selector = Mongo.Collection._rewriteSelector(selector);
+
+    if (this._isRemoteCollection()) {
+      return this._callMutatorMethodAsync('removeAsync', [selector], options);
+    }
+
+    // it's my collection.  descend into the collection1 object
+    // and propagate any exception.
+    return this._collection.removeAsync(selector);
+  },
+
+  /**
    * @summary Remove documents from the collection
    * @locus Anywhere
    * @method remove
@@ -655,17 +1002,18 @@ Object.assign(Mongo.Collection.prototype, {
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
    */
-  async removeAsync(selector) {
+  remove(selector) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
     if (this._isRemoteCollection()) {
-      return this._callMutatorMethodAsync('removeAsync', [selector]);
+      return this._callMutatorMethod('remove', [selector]);
     }
 
     // it's my collection.  descend into the collection1 object
     // and propagate any exception.
-    return this._collection.removeAsync(selector);
+    return this._collection.remove(selector);
   },
+
 
   // Determine if this collection is simply a minimongo representation of a real
   // database on another server
@@ -675,7 +1023,7 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
+   * @summary Asynchronously modifies one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
    * @locus Anywhere
    * @method upsert
    * @memberof Mongo.Collection
@@ -696,10 +1044,32 @@ Object.assign(Mongo.Collection.prototype, {
       });
   },
 
+  /**
+   * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
+   * @locus Anywhere
+   * @method upsert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to modify
+   * @param {MongoModifier} modifier Specifies how to modify the documents
+   * @param {Object} [options]
+   * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+   */
+  upsert(selector, modifier, options) {
+    return this.update(
+      selector,
+      modifier,
+      {
+        ...options,
+        _returnObject: true,
+        upsert: true,
+      });
+  },
+
   // We'll actually design an index API later. For now, we just pass through to
   // Mongo's, but make it synchronous.
   /**
-   * @summary Creates the specified index on the collection.
+   * @summary Asynchronously creates the specified index on the collection.
    * @locus server
    * @method ensureIndexAsync
    * @deprecated in 3.0
@@ -726,7 +1096,7 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Creates the specified index on the collection.
+   * @summary Asynchronously creates the specified index on the collection.
    * @locus server
    * @method createIndexAsync
    * @memberof Mongo.Collection

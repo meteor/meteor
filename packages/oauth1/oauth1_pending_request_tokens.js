@@ -31,11 +31,11 @@ await OAuth._pendingRequestTokens.createIndexAsync('createdAt');
 
 
 // Periodically clear old entries that never got completed
-const _cleanStaleResults = () => {
+const _cleanStaleResults = async () => {
   // Remove request tokens older than 5 minute
   const timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 5);
-  OAuth._pendingRequestTokens.remove({ createdAt: { $lt: timeCutoff } });
+  await OAuth._pendingRequestTokens.removeAsync({ createdAt: { $lt: timeCutoff } });
 };
 const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 

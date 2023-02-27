@@ -10,9 +10,9 @@ var PHASE = {
 // enclosing call to finishIfNeedToPollQuery.
 var SwitchedToQuery = function () {};
 var finishIfNeedToPollQuery = function (f) {
-  return async function () {
+  return function () {
     try {
-      await f.apply(this, arguments);
+      f.apply(this, arguments);
     } catch (e) {
       if (!(e instanceof SwitchedToQuery))
         throw e;
@@ -116,7 +116,7 @@ OplogObserveDriver = function (options) {
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
-        Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
+        finishIfNeedToPollQuery(function () {
           var op = notification.op;
           if (notification.dropCollection || notification.dropDatabase) {
             // Note: this call is not allowed to block on anything (especially
@@ -131,7 +131,7 @@ OplogObserveDriver = function (options) {
               return self._handleOplogEntrySteadyOrFetching(op);
             }
           }
-        }));
+        })();
       }
     ));
   });
@@ -140,7 +140,7 @@ OplogObserveDriver = function (options) {
   self._stopHandles.push(listenAll(
     self._cursorDescription, function () {
       // If we're not in a pre-fire write fence, we don't have to do anything.
-      var fence = DDPServer._CurrentWriteFence.get();
+      var fence = DDPServer._getCurrentFence();
       if (!fence || fence.fired)
         return;
 
@@ -162,7 +162,7 @@ OplogObserveDriver = function (options) {
 
         for (const driver of Object.values(drivers)) {
           if (driver._stopped)
-            return;
+            continue;
 
           var write = await fence.beginWrite();
           if (driver._phase === PHASE.STEADY) {
@@ -507,43 +507,50 @@ _.extend(OplogObserveDriver.prototype, {
         // during this loop (in fact, it is never mutated).
         await self._currentlyFetching.forEachAsync(async function (op, id) {
           waiting++;
-          await self._mongoHandle._docFetcher.fetch(self._cursorDescription.collectionName, id, op)
-              .then(finishIfNeedToPollQuery(function (doc) {
-                  try {
-                    if (!self._stopped && self._phase === PHASE.FETCHING
-                               && self._fetchGeneration === thisGeneration) {
-                      // We re-check the generation in case we've had an explicit
-                      // _pollQuery call (eg, in another fiber) which should
-                      // effectively cancel this round of fetches.  (_pollQuery
-                      // increments the generation.)
+          await self._mongoHandle._docFetcher.fetch(
+            self._cursorDescription.collectionName,
+            id,
+            op,
+            finishIfNeedToPollQuery(function(err, doc) {
+              if (err) {
+                Meteor._debug('Got exception while fetching documents', err);
+                // If we get an error from the fetcher (eg, trouble
+                // connecting to Mongo), let's just abandon the fetch phase
+                // altogether and fall back to polling. It's not like we're
+                // getting live updates anyway.
+                if (self._phase !== PHASE.QUERYING) {
+                  self._needToPollQuery();
+                }
+                waiting--;
+                // Because fetch() never calls its callback synchronously,
+                // this is safe (ie, we won't call fut.return() before the
+                // forEach is done).
+                if (waiting === 0) promiseResolver();
+                return;
+              }
 
-                      self._handleDoc(id, doc);
-                    }
-                  } finally {
-                    waiting--;
-                    // Because fetch() never calls its callback synchronously,
-                    // this is safe (ie, we won't call fut.return() before the
-                    // forEach is done).
-                    if (waiting === 0)
-                      promiseResolver();
-                  }
-                })).catch(err => {
-                  Meteor._debug("Got exception while fetching documents",
-                      err);
-                  // If we get an error from the fetcher (eg, trouble
-                  // connecting to Mongo), let's just abandon the fetch phase
-                  // altogether and fall back to polling. It's not like we're
-                  // getting live updates anyway.
-                  if (self._phase !== PHASE.QUERYING) {
-                    self._needToPollQuery();
-                  }
-                  waiting--;
-                  // Because fetch() never calls its callback synchronously,
-                  // this is safe (ie, we won't call fut.return() before the
-                  // forEach is done).
-                  if (waiting === 0)
-                    promiseResolver();
-              });
+              try {
+                if (
+                  !self._stopped &&
+                  self._phase === PHASE.FETCHING &&
+                  self._fetchGeneration === thisGeneration
+                ) {
+                  // We re-check the generation in case we've had an explicit
+                  // _pollQuery call (eg, in another fiber) which should
+                  // effectively cancel this round of fetches.  (_pollQuery
+                  // increments the generation.)
+
+                  self._handleDoc(id, doc);
+                }
+              } finally {
+                waiting--;
+                // Because fetch() never calls its callback synchronously,
+                // this is safe (ie, we won't call fut.return() before the
+                // forEach is done).
+                if (waiting === 0) promiseResolver();
+              }
+            })
+          );
         });
         await awaitablePromise;
         // Exit now if we've had a _pollQuery call (here or in another fiber).
@@ -568,7 +575,7 @@ _.extend(OplogObserveDriver.prototype, {
           await w.committed();
         }
       } catch (e) {
-        console.log({writes}, e);
+        console.error("_beSteady error", {writes}, e);
       }
     });
   },
@@ -584,6 +591,7 @@ _.extend(OplogObserveDriver.prototype, {
       var id = idForOp(op);
       // If we're already fetching this one, or about to, we can't optimize;
       // make sure that we fetch it again if necessary.
+
       if (self._phase === PHASE.FETCHING &&
           ((self._currentlyFetching && self._currentlyFetching.has(id)) ||
            self._needToFetch.has(id))) {
@@ -823,19 +831,18 @@ _.extend(OplogObserveDriver.prototype, {
 
     if (self._stopped)
       return;
+
     if (self._phase !== PHASE.QUERYING)
       throw Error("Phase unexpectedly " + self._phase);
 
-    await Meteor._noYieldsAllowed(async function () {
-      if (self._requeryWhenDoneThisQuery) {
-        self._requeryWhenDoneThisQuery = false;
-        self._pollQuery();
-      } else if (self._needToFetch.empty()) {
-        await self._beSteady();
-      } else {
-        self._fetchModifiedDocuments();
-      }
-    });
+    if (self._requeryWhenDoneThisQuery) {
+      self._requeryWhenDoneThisQuery = false;
+      self._pollQuery();
+    } else if (self._needToFetch.empty()) {
+      await self._beSteady();
+    } else {
+      self._fetchModifiedDocuments();
+    }
   },
 
   _cursorForQuery: function (optionsOverwrite) {

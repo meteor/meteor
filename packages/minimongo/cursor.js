@@ -227,7 +227,7 @@ export default class Cursor {
    * @param {Object} callbacks Functions to call to deliver the result set as it
    *                           changes
    */
-  observeChanges(options) {
+  async observeChanges(options) {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with
@@ -290,16 +290,37 @@ export default class Cursor {
       }
 
       const self = this;
+
+      if (Meteor.isClient) {
+        return function(/* args*/) {
+          if (self.collection.paused) {
+            return;
+          }
+
+          const args = arguments;
+
+          self.collection._observeQueue.queueTask(() => {
+            fn.apply(this, args);
+          });
+        };
+      }
+
       return function(/* args*/) {
         if (self.collection.paused) {
           return;
         }
 
+        let resolve;
+        const promise = new Promise(r => resolve = r);
+
         const args = arguments;
 
         self.collection._observeQueue.queueTask(() => {
           fn.apply(this, args);
+          resolve();
         });
+
+        return promise;
       };
     };
 
@@ -313,17 +334,27 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      query.results.forEach(doc => {
+      const handler = async doc => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;
 
         if (ordered) {
-          query.addedBefore(doc._id, this._projectionFn(fields), null);
+          await query.addedBefore(doc._id, this._projectionFn(fields), null);
         }
 
-        query.added(doc._id, this._projectionFn(fields));
-      });
+        await query.added(doc._id, this._projectionFn(fields));
+      };
+      // it means it's just an array
+      if (query.results.length) {
+        for (const doc of query.results) {
+          await handler(doc);
+        }
+      }
+      // it means it's an id map
+      if (query.results?.size?.()) {
+        await query.results.forEachAsync(handler);
+      }
     }
 
     const handle = Object.assign(new LocalCollection.ObserveHandle, {
@@ -348,7 +379,7 @@ export default class Cursor {
 
     // run the observe callbacks resulting from the initial contents
     // before we leave the observe.
-    this.collection._observeQueue.drain();
+    await this.collection._observeQueue.drain();
 
     return handle;
   }
@@ -417,7 +448,6 @@ export default class Cursor {
       }
 
       const selectedDoc = this.collection._docs.get(this._selectorId);
-
       if (selectedDoc) {
         if (options.ordered) {
           results.push(selectedDoc);
@@ -425,7 +455,6 @@ export default class Cursor {
           results.set(this._selectorId, selectedDoc);
         }
       }
-
       return results;
     }
 
@@ -443,10 +472,8 @@ export default class Cursor {
         distances = new LocalCollection._IdMap();
       }
     }
-
     this.collection._docs.forEach((doc, id) => {
       const matchResult = this.matcher.documentMatches(doc);
-
       if (matchResult.result) {
         if (options.ordered) {
           results.push(doc);

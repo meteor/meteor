@@ -3441,7 +3441,7 @@ async function bundle({
       if (hasCachedBundle) {
         // If we already have a cached bundle, just recreate the new targets.
         // XXX This might make the contents of "star.json" out of date.
-        for (const target of targets) {
+        for (const target of Object.values(targets)) {
           await writeClientTarget(target);
         }
       } else {

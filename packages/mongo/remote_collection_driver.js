@@ -4,17 +4,29 @@ MongoInternals.RemoteCollectionDriver = function (
   self.mongo = new MongoConnection(mongo_url, options);
 };
 
+const REMOTE_COLLECTION_METHODS = [
+  'createCappedCollectionAsync',
+  'dropIndexAsync',
+  'ensureIndexAsync',
+  'createIndexAsync',
+  'countDocuments',
+  'dropCollectionAsync',
+  'estimatedDocumentCount',
+  'find',
+  'findOneAsync',
+  'insertAsync',
+  'rawCollection',
+  'removeAsync',
+  'updateAsync',
+  'upsertAsync',
+];
+
 Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
-    ['find', 'findOneAsync', 'insertAsync', 'updateAsync', 'upsertAsync',
-      'removeAsync', 'ensureIndexAsync', 'createIndexAsync', 'dropIndexAsync', 'createCappedCollectionAsync',
-      'dropCollectionAsync', 'rawCollection'].forEach(
+    REMOTE_COLLECTION_METHODS.forEach(
       function (m) {
-        if (!self.mongo[m]) {
-          console.log('ERRROR:', m);
-        }
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
       });
     return ret;

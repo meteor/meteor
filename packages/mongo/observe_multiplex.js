@@ -95,7 +95,7 @@ ObserveMultiplexer = class {
   // adds have been processed. Does not block.
   async ready() {
     const self = this;
-    await this._queue.runTask(function () {
+    this._queue.queueTask(function () {
       if (self._ready())
         throw Error("can't make ObserveMultiplex ready twice!");
 
@@ -129,7 +129,7 @@ ObserveMultiplexer = class {
   // all handles. "ready" must have already been called on this multiplexer.
   async onFlush(cb) {
     var self = this;
-    await this._queue.runTask(async function () {
+    await this._queue.queueTask(async function () {
       if (!self._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();
@@ -144,9 +144,9 @@ ObserveMultiplexer = class {
   _ready() {
     return !!this._isReady;
   }
-  async _applyCallback(callbackName, args) {
+  _applyCallback(callbackName, args) {
     const self = this;
-    await this._queue.runTask(async function () {
+    this._queue.queueTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;
@@ -165,17 +165,18 @@ ObserveMultiplexer = class {
       // can continue until these are done. (But we do have to be careful to not
       // use a handle that got removed, because removeHandle does not use the
       // queue; thus, we iterate over an array of keys that we control.)
-      const toAwait = Object.keys(self._handles).map(async (handleId) => {
+      for (const handleId of Object.keys(self._handles)) {
         var handle = self._handles && self._handles[handleId];
-        if (!handle)
-          return;
+        if (!handle) return;
         var callback = handle['_' + callbackName];
         // clone arguments so that callbacks can mutate their arguments
-        callback && await callback.apply(null,
-            handle.nonMutatingCallbacks ? args : EJSON.clone(args));
-      });
 
-      await Promise.all(toAwait);
+        callback &&
+          (await callback.apply(
+            null,
+            handle.nonMutatingCallbacks ? args : EJSON.clone(args)
+          ));
+      }
     });
   }
 
@@ -189,8 +190,6 @@ ObserveMultiplexer = class {
       return;
     // note: docs may be an _IdMap or an OrderedDict
     await this._cache.docs.forEachAsync(async (doc, id) => {
-      //TODO FIXME
-      if (!this._handles) console.log({this:this});
       if (!_.has(this._handles, handle._id))
         throw Error("handle got removed before sending initial adds!");
       const { _id, ...fields } = handle.nonMutatingCallbacks ? doc
@@ -215,8 +214,8 @@ ObserveHandle = class {
         // ordered observe where for some reason you don't get ordering data on
         // the adds.  I dunno, we wrote tests for it, there must have been a
         // reason.
-        this._addedBefore = function (id, fields, before) {
-          callbacks.added(id, fields);
+        this._addedBefore = async function (id, fields, before) {
+          await callbacks.added(id, fields);
         };
       }
     });

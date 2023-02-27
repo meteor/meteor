@@ -941,7 +941,7 @@ var getHeader = function (options) {
 
   var isApp = options.name === null;
   var chunks = [];
-  let orderedDeps = [];
+   let orderedDeps = [];
 
   options.deps.forEach(dep => {
     if (!dep.unordered) {

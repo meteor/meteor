@@ -34,11 +34,7 @@ Package.onUse(function (api) {
   api.addFiles('timers.js', ['client', 'server']);
   api.addFiles('errors.js', ['client', 'server']);
   api.addFiles('asl-helpers.js', 'server');
-  if (process.env.DISABLE_FIBERS) {
-    api.addFiles('async_helpers.js', 'server');
-  } else {
-    api.addFiles('fiber_helpers.js', 'server');
-  }
+  api.addFiles('async_helpers.js', ['client', 'server']);
   api.addFiles('fiber_stubs_client.js', 'client');
   api.addFiles('asl-helpers-client.js', 'client');
   api.addFiles('startup_client.js', ['client']);

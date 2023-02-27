@@ -34,19 +34,19 @@ DDPServer._WriteFence = class {
       await this._maybeFire();
     };
 
-    const self = this;
     return {
-      committed: Meteor._isFibersEnabled ? () => Promise.await(_committedFn.apply(self)) : _committedFn,
+      committed: _committedFn,
     };
   }
 
   // Arm the fence. Once the fence is armed, and there are no more
   // uncommitted writes, it will activate.
   arm() {
-    if (this === DDPServer._CurrentWriteFence.get())
+
+    if (this === DDPServer._getCurrentFence())
       throw Error("Can't arm the current fence");
     this.armed = true;
-    return Meteor._isFibersEnabled ? Promise.await(this._maybeFire()) : this._maybeFire();
+    return this._maybeFire();
   }
 
   // Register a function to be called once before firing the fence.
@@ -67,17 +67,17 @@ DDPServer._WriteFence = class {
     this.completion_callbacks.push(func);
   }
 
-  _armAndWait() {
+  async _armAndWait() {
     let resolver;
     const returnValue = new Promise(r => resolver = r);
     this.onAllCommitted(resolver);
-    this.arm();
+    await this.arm();
 
     return returnValue;
   }
   // Convenience function. Arms the fence, then blocks until it fires.
-  armAndWait() {
-    return Meteor._isFibersEnabled ? Promise.await(this._armAndWait()) : this._armAndWait();
+  async armAndWait() {
+    return this._armAndWait();
   }
 
   async _maybeFire() {
@@ -101,8 +101,10 @@ DDPServer._WriteFence = class {
 
       if (!this.outstanding_writes) {
         this.fired = true;
-        while (this.completion_callbacks.length > 0) {
-          const cb = this.completion_callbacks.shift();
+        const callbacks = this.completion_callbacks || [];
+        this.completion_callbacks = [];
+        while (callbacks.length > 0) {
+          const cb = callbacks.shift();
           await invokeCallback(cb);
         }
       }
