@@ -186,7 +186,21 @@ function getDefaultsForNode8(features) {
       require("@babel/plugin-syntax-object-rest-spread"),
       require("@babel/plugin-proposal-object-rest-spread")
     );
+    // TODO [fibers]: instead of removing the code below, consider this comment:
+      // https://github.com/meteor/meteor/pull/12471/files#r1089610144
+    const isFiberDisabled = process.env.DISABLE_FIBERS === '1';
+    const ignoreAsyncPlugin = process.env.IGNORE_ASYNC_PLUGIN === '1';
 
+    if (!ignoreAsyncPlugin) {
+      combined.plugins.push([
+        require('./plugins/async-await.js'),
+        {
+          // Do not transform `await x` to `Promise.await(x)`, since Node
+          // 8 has native support for await expressions.
+          useNativeAsyncAwait: isFiberDisabled,
+        },
+      ]);
+    }
     // Enable async generator functions proposal.
     combined.plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
   }

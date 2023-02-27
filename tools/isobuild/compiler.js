@@ -675,7 +675,7 @@ api.addAssets('${relPath}', 'client').`);
   var arch = inputSourceArch.arch;
   if (arch === "os" && ! isPortable) {
     // Contains non-portable compiled npm modules, so set arch correctly
-    arch = await archinfo.host();
+    arch = archinfo.host();
   }
 
   let nodeModulesDirsOrUndefined = nodeModulesDirectories;
@@ -733,7 +733,7 @@ async function runLinters({inputSourceArch, isopackCache, sources,
   // exists instead of failing because a dependency does not have an 'os'
   // unibuild.
   const whichArch = inputSourceArch.arch === 'os'
-          ? await archinfo.host() : inputSourceArch.arch;
+          ? archinfo.host() : inputSourceArch.arch;
 
   // For linters, figure out what are the global imports from other packages
   // that we use directly, or are implied.
@@ -897,7 +897,7 @@ export async function getActivePluginPackages(isopk, {
   // and because plugins always have to run on the host architecture.
   await compiler.eachUsedUnibuild({
     dependencies: uses,
-    arch: await archinfo.host(),
+    arch: archinfo.host(),
     isopackCache: isopackCache,
     skipUnordered: true
     // implicitly skip weak deps by not specifying acceptableWeakPackages option
@@ -971,7 +971,7 @@ compiler.eachUsedUnibuild = async function (
       continue;
     }
 
-    var unibuild = await usedPackage.getUnibuildAtArch(arch);
+    var unibuild = usedPackage.getUnibuildAtArch(arch);
     if (!unibuild) {
       // The package exists but there's no unibuild for us. A buildmessage has
       // already been issued. Recover by skipping.

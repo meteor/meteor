@@ -19,7 +19,7 @@ selftest.define("create and extract tarball with long paths", async function () 
   // Make the tarball
   var tarballOutputDir = files.mkdtemp("tarball");
   var tarballOutputFile = files.pathJoin(tarballOutputDir, "out.tar.gz");
-  files.createTarball(tarballInputDir, tarballOutputFile);
+  await files.createTarball(tarballInputDir, tarballOutputFile);
 
   // Extract the tarball and verify that the single file we created is
   // present with the expected contents.

@@ -951,7 +951,7 @@ class Target {
         if (p.testOnly && this.buildMode !== 'test') {
           continue;
         }
-        const unibuild = await p.getUnibuildAtArch(this.arch);
+        const unibuild = p.getUnibuildAtArch(this.arch);
         unibuild && rootUnibuilds.push(unibuild);
       }
 
@@ -2594,7 +2594,7 @@ class JsImage {
     ret.arch = json.arch;
 
     // Rebuild binary npm packages if host arch matches image arch.
-    const rebuildBinaries = archinfo.matches(await archinfo.host(), ret.arch);
+    const rebuildBinaries = archinfo.matches(archinfo.host(), ret.arch);
 
     for (const item of json.load) {
       rejectBadPath(item.path);
@@ -3209,7 +3209,7 @@ async function bundle({
 }) {
   buildOptions = buildOptions || {};
 
-  var serverArch = buildOptions.serverArch || await archinfo.host();
+  var serverArch = buildOptions.serverArch || archinfo.host();
   var webArchs;
   if (buildOptions.webArchs) {
     // Don't attempt to build web.cordova when platforms have been removed
@@ -3596,7 +3596,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", async function (options) 
     // cross-bundling, not cross-package-building, and this function is only
     // used to build plugins (during package build) and for isopack.load
     // (which always wants to build for the current host).
-    arch: await archinfo.host()
+    arch: archinfo.host()
   });
 
   await target.make({ packages: [isopack] });

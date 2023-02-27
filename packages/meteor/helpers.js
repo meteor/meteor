@@ -138,17 +138,12 @@ Meteor.wrapAsync = function (fn, context) {
     }
 
     if (! callback) {
-      if (Meteor.isClient) {
-        callback = logErr;
-      } else {
-        callback = () => console.error("Tried to use wrapAsync.");
-      }
+      callback = logErr;
       ++i; // Insert the callback just after arg.
     }
 
     newArgs[i] = Meteor.bindEnvironment(callback);
-    var result = fn.apply(self, newArgs);
-    return fut ? fut.wait() : result;
+    return fn.apply(self, newArgs);
   };
 };
 

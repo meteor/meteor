@@ -1110,7 +1110,7 @@ export class PackageSourceBatch {
 
     self.useMeteorInstall =
         _.isString(self.sourceRoot) &&
-        await self.processor.isopackCache.uses(
+        self.processor.isopackCache.uses(
             self.unibuild.pkg,
             "modules",
             self.unibuild.arch

@@ -187,8 +187,8 @@ main.registerCommand({
   requiresRelease: false,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, async function () {
-  Console.rawInfo(await archinfo.host() + "\n");
+}, function () {
+  Console.rawInfo(archinfo.host() + "\n");
 });
 
 // Prints the current release in use. Note that if there is not
@@ -1041,11 +1041,11 @@ var buildCommand = async function (options) {
     showInvalidArchMsg(options.architecture);
     return 1;
   }
-  var bundleArch = options.architecture || await archinfo.host();
+  var bundleArch = options.architecture || archinfo.host();
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([bundleArch, await archinfo.host()]),
+    serverArchitectures: _.uniq([bundleArch, archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   await projectContext.init();
@@ -1325,6 +1325,7 @@ main.registerCommand({
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintPackageWithSourceRoot: packageDir
     });
+    await projectContext.init()
 
     await main.captureAndExit("=> Errors while setting up package:",
       // Read metadata and initialize catalog.
@@ -1346,7 +1347,7 @@ main.registerCommand({
   if (! projectContext && appDir) {
     projectContext = new projectContextModule.ProjectContext({
       projectDir: appDir,
-      serverArchitectures: [await archinfo.host()],
+      serverArchitectures: [archinfo.host()],
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintAppAndLocalPackages: true
     });
@@ -1379,7 +1380,7 @@ main.registerCommand({
     Console.warn(bundle.warnings.formatMessages());
     return 1;
   }
-
+  console.log(green`=> Done linting.`);
   return 0;
 });
 
@@ -1545,17 +1546,17 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (...args) {
-  return Profile.run(
+  return await Profile.run(
     "meteor deploy",
-    () => Promise.await(deployCommand(...args))
+    async () => await deployCommand(...args)
   );
 });
 
-function deployCommand(options, { rawOptions }) {
+async function deployCommand(options, { rawOptions }) {
   const site = options.args[0];
 
   if (options.delete) {
-    return deploy.deleteApp(site);
+    return await deploy.deleteApp(site);
   }
 
   if (options.password) {
@@ -1572,7 +1573,8 @@ function deployCommand(options, { rawOptions }) {
     Console.error(
       "You must be logged in to deploy, just enter your email address.");
     Console.error();
-    if (! auth.registerOrLogIn()) {
+    const isRegistered = await auth.registerOrLogIn();
+    if (! isRegistered) {
       return 1;
     }
   }
@@ -1585,18 +1587,18 @@ function deployCommand(options, { rawOptions }) {
       "OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE.",
       "If your app contains binary code, it may break in unexpected " +
       "and terrible ways.");
-    buildArch = archinfo.host();
+    buildArch =  archinfo.host();
   }
 
   const projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([buildArch, archinfo.host()]),
+    serverArchitectures: _.uniq([buildArch,  archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-
-  main.captureAndExit("=> Errors while initializing project:", function () {
+  await projectContext.init()
+  await main.captureAndExit("=> Errors while initializing project:", function () {
     // TODO Fix nested Profile.run warning here, too.
-    projectContext.prepareProjectForBuild();
+    return projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
 
@@ -1623,7 +1625,7 @@ function deployCommand(options, { rawOptions }) {
   const isBuildOnly = !!options['build-only'];
   const waitForDeploy = !options['no-wait'];
 
-  const deployResult = deploy.bundleAndDeploy({
+  const deployResult = await deploy.bundleAndDeploy({
     projectContext,
     site,
     settingsFile: options.settings,
@@ -1642,12 +1644,12 @@ function deployCommand(options, { rawOptions }) {
   });
 
   if (deployResult === 0) {
-    auth.maybePrintRegistrationLink({
+    await auth.maybePrintRegistrationLink({
       leadingNewline: true,
       // If the user was already logged in at the beginning of the
       // deploy, then they've already been prompted to set a password
       // at least once before, so we use a slightly different message.
-      firstTime: ! loggedIn
+      firstTime: !loggedIn
     });
   }
 
@@ -1848,7 +1850,7 @@ async function doTestCommand(options) {
 
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
-  const archInfoHost = await archinfo.host();
+  const archInfoHost = archinfo.host();
   var serverArchitectures = [archInfoHost];
   if (options.deploy && DEPLOY_ARCH !== archInfoHost) {
     serverArchitectures.push(DEPLOY_ARCH);
@@ -2251,23 +2253,23 @@ main.registerCommand({
 // organizations
 ///////////////////////////////////////////////////////////////////////////////
 
-var loggedInAccountsConnectionOrPrompt = function (action) {
+var loggedInAccountsConnectionOrPrompt = async function (action) {
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     Console.error("You must be logged in to " + action + ".");
-    auth.doUsernamePasswordLogin({ retry: true });
+    await auth.doUsernamePasswordLogin({ retry: true });
     Console.info();
   }
 
   token = auth.getSessionToken(config.getAccountsDomain());
-  var conn = auth.loggedInAccountsConnection(token);
+  var conn = await auth.loggedInAccountsConnection(token);
   if (conn === null) {
     // Server rejected our token.
     Console.error("You must be logged in to " + action + ".");
-    auth.doUsernamePasswordLogin({ retry: true });
+    await auth.doUsernamePasswordLogin({ retry: true });
     Console.info();
     token = auth.getSessionToken(config.getAccountsDomain());
-    conn = auth.loggedInAccountsConnection(token);
+    conn = await auth.loggedInAccountsConnection(token);
   }
 
   return conn;
@@ -2280,18 +2282,18 @@ main.registerCommand({
   maxArgs: 0,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
 
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     Console.error("You must be logged in to list your organizations.");
-    auth.doUsernamePasswordLogin({ retry: true });
+    await auth.doUsernamePasswordLogin({ retry: true });
     Console.info();
   }
 
   var url = config.getAccountsApiUrl() + "/organizations";
   try {
-    var result = httpHelpers.request({
+    var result = await httpHelpers.request({
       url: url,
       method: "GET",
       useSessionHeader: true,
@@ -2340,7 +2342,7 @@ main.registerCommand({
     return options.add || options.remove;
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
 
   if (options.add && options.remove) {
     Console.error(
@@ -2350,13 +2352,13 @@ main.registerCommand({
 
   var username = options.add || options.remove;
 
-  var conn = loggedInAccountsConnectionOrPrompt(
+  var conn = await loggedInAccountsConnectionOrPrompt(
     username ? "edit organizations" : "show an organization's members");
 
   if (username ) {
     // Adding or removing members
     try {
-      conn.call(
+      await conn.callAsync(
         options.add ? "addOrganizationMember": "removeOrganizationMember",
         options.args[0], username);
     } catch (err) {
@@ -2372,7 +2374,7 @@ main.registerCommand({
   } else {
     // Showing the members of an org
     try {
-      var result = conn.call("showOrganization", options.args[0]);
+      var result = await conn.callAsync("showOrganization", options.args[0]);
     } catch (err) {
       Console.error("Error showing organization: " + err.reason);
       return 1;

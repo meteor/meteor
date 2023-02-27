@@ -689,7 +689,7 @@ class Console extends ConsoleBase {
   // The caller should be OK with yielding --- it has to be in a Fiber and it can't be
   // anything that depends for correctness on not yielding.  You can also call nudge(false)
   // if you just want to update the spinner and not yield, but you should avoid this.
-  // TODO -> Check here
+  // TODO [fibers] -> Check here - consider this comment https://github.com/meteor/meteor/pull/12471/files#r1089560766
   async nudge(canYield) {
     if (this._statusPoller) {
       this._statusPoller.statusPoll();
