@@ -2,7 +2,7 @@ import { Meteor } from 'meteor/meteor';
 
 // Listen to calls to `login` with an oauth option set. This is where
 // users actually get logged in to meteor via oauth.
-Accounts.registerLoginHandler(options => {
+Accounts.registerLoginHandler(async options => {
   if (!options.oauth)
     return undefined; // don't handle
 
@@ -54,7 +54,7 @@ Accounts.registerLoginHandler(options => {
                  `No registered oauth service found for: ${result.serviceName}`) };
 
     }
-    return Accounts.updateOrCreateUserFromExternalService(result.serviceName, result.serviceData, result.options);
+    return await Accounts.updateOrCreateUserFromExternalService(result.serviceName, result.serviceData, result.options);
   }
 });
 

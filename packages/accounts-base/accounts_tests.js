@@ -77,16 +77,16 @@ Accounts.validateNewUser(user => {
   return true;
 });
 
-Tinytest.add('accounts - validateNewUser gets passed user with _id', test => {
-  const newUserId = Accounts.updateOrCreateUserFromExternalService('foobook', {id: Random.id()}).userId;
+Tinytest.addAsync('accounts - validateNewUser gets passed user with _id', async test => {
+  const newUserId = await Accounts.updateOrCreateUserFromExternalService('foobook', {id: Random.id()}).userId;
   test.isTrue(newUserId in idsInValidateNewUser);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', test => {
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook', async test => {
   const facebookId = Random.id();
 
   // create an account with facebook
-  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+  const uid1 = await Accounts.updateOrCreateUserFromExternalService(
     'facebook', {id: facebookId, monkey: 42}, {profile: {foo: 1}}).id;
   const users1 = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
   test.length(users1, 1);
@@ -95,7 +95,7 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', test
 
   // create again with the same id, see that we get the same user.
   // it should update services.facebook but not profile.
-  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+  const uid2 = await Accounts.updateOrCreateUserFromExternalService(
     'facebook', {id: facebookId, llama: 50},
     {profile: {foo: 1000, bar: 2}}).id;
   test.equal(uid1, uid2);
@@ -112,9 +112,9 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', test
   Meteor.users.remove(uid1);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Meteor Developer', test => {
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Meteor Developer', async test => {
   const developerId = Random.id();
-  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+  const uid1 = await Accounts.updateOrCreateUserFromExternalService(
     'meteor-developer',
     { id: developerId, username: 'meteor-developer' },
     { profile: { name: 'meteor-developer' } }
@@ -123,7 +123,7 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Meteor Develope
   test.length(users1, 1);
   test.equal(users1[0].profile.name, 'meteor-developer');
 
-  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+  const uid2 = await Accounts.updateOrCreateUserFromExternalService(
     'meteor-developer',
     { id: developerId, username: 'meteor-developer' },
     { profile: { name: 'meteor-developer', username: 'developer' } }
@@ -138,14 +138,14 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Meteor Develope
   Meteor.users.remove(uid1);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', test => {
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Weibo', async test => {
   const weiboId1 = Random.id();
   const weiboId2 = Random.id();
 
   // users that have different service ids get different users
-  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+  const uid1 = await Accounts.updateOrCreateUserFromExternalService(
     'weibo', {id: weiboId1}, {profile: {foo: 1}}).id;
-  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+  const uid2 = await Accounts.updateOrCreateUserFromExternalService(
     'weibo', {id: weiboId2}, {profile: {bar: 2}}).id;
   test.equal(Meteor.users.find({"services.weibo.id": {$in: [weiboId1, weiboId2]}}).count(), 2);
   test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).profile.foo, 1);
@@ -158,12 +158,12 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', test =>
   Meteor.users.remove(uid2);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', test => {
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter',async test => {
   const twitterIdOld = parseInt(Random.hexString(4), 16);
   const twitterIdNew = ''+twitterIdOld;
 
   // create an account with twitter using the old ID format of integer
-  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+  const uid1 = await Accounts.updateOrCreateUserFromExternalService(
     'twitter', {id: twitterIdOld, monkey: 42}, {profile: {foo: 1}}).id;
   const users1 = Meteor.users.find({"services.twitter.id": twitterIdOld}).fetch();
   test.length(users1, 1);
@@ -173,7 +173,7 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', test 
   // Update the account with the new ID format of string
   // test that the existing user is found, and that the ID
   // gets updated to a string value
-  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+  const uid2 = await Accounts.updateOrCreateUserFromExternalService(
     'twitter', {id: twitterIdNew, monkey: 42}, {profile: {foo: 1}}).id;
   test.equal(uid1, uid2);
   const users2 = Meteor.users.find({"services.twitter.id": twitterIdNew}).fetch();
@@ -660,13 +660,13 @@ Tinytest.addAsync(
     Accounts.userId = origAccountsUserId;
   }
 );
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - verify onExternalLogin hook can update oauth user profiles',
-  test => {
+  async test => {
     // Verify user profile data is saved properly when not using the
     // onExternalLogin hook.
     let facebookId = Random.id();
-    const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    const uid1 = await Accounts.updateOrCreateUserFromExternalService(
       'facebook',
       { id: facebookId },
       { profile: { foo: 1 } },
@@ -690,7 +690,7 @@ Tinytest.add(
       test.isUndefined(users[ignoreFieldName], 'ignoreField - after limit fields');
       return options;
     });
-    Accounts.updateOrCreateUserFromExternalService(
+    await Accounts.updateOrCreateUserFromExternalService(
       'facebook',
       { id: facebookId },
       { profile: { foo: 1 } },
@@ -704,7 +704,7 @@ Tinytest.add(
     // Verify user profile data can be modified using the onExternalLogin
     // hook, for new users.
     facebookId = Random.id();
-    const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    const uid2 = await Accounts.updateOrCreateUserFromExternalService(
       'facebook',
       { id: facebookId },
       { profile: { foo: 3 } },
@@ -721,13 +721,13 @@ Tinytest.add(
   }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
     'accounts - verify beforeExternalLogin hook can stop user login',
-    test => {
+    async test => {
         // Verify user data is saved properly when not using the
         // beforeExternalLogin hook.
         let facebookId = Random.id();
-        const uid1 = Accounts.updateOrCreateUserFromExternalService(
+        const uid1 = await Accounts.updateOrCreateUserFromExternalService(
             'facebook',
             { id: facebookId },
             { profile: { foo: 1 } },
@@ -750,7 +750,7 @@ Tinytest.add(
             return false
         });
 
-        test.throws(() => Accounts.updateOrCreateUserFromExternalService(
+        test.throwsAsync(async () => await Accounts.updateOrCreateUserFromExternalService(
             'facebook',
             { id: facebookId },
             { profile: { foo: 1 } },
@@ -762,9 +762,9 @@ Tinytest.add(
     }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - verify setAdditionalFindUserOnExternalLogin hook can provide user',
-  test => {
+  async test => {
       // create test user, without a google service
       const testEmail = "test@testdomain.com"
       const uid0 = Accounts.createUser({email: testEmail})
@@ -777,7 +777,7 @@ Tinytest.add(
       })
 
       let googleId = Random.id();
-      const uid1 = Accounts.updateOrCreateUserFromExternalService(
+      const uid1 = await Accounts.updateOrCreateUserFromExternalService(
           'google',
           { id: googleId, email: testEmail },
           { profile: { foo: 1 } },

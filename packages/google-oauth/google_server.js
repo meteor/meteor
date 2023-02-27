@@ -108,7 +108,7 @@ Accounts.registerLoginHandler(async (request) => {
     );
   }
   console.log({ result });
-  return Accounts.updateOrCreateUserFromExternalService(
+  return await Accounts.updateOrCreateUserFromExternalService(
     'google',
     {
       id: request.userId,
