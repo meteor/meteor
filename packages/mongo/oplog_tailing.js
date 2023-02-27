@@ -82,13 +82,13 @@ OplogHandle = function (oplogUrl, dbName) {
 };
 
 Object.assign(OplogHandle.prototype, {
-  stop: function () {
+  stop: async function () {
     var self = this;
     if (self._stopped)
       return;
     self._stopped = true;
     if (self._tailHandle)
-      self._tailHandle.stop();
+      await self._tailHandle.stop();
     // XXX should close connections too
   },
   _onOplogEntry: async function(trigger, callback) {
@@ -107,8 +107,8 @@ Object.assign(OplogHandle.prototype, {
     });
     var listenHandle = self._crossbar.listen(trigger, callback);
     return {
-      stop: function () {
-        listenHandle.stop();
+      stop: async function () {
+        await listenHandle.stop();
       }
     };
   },
@@ -139,7 +139,7 @@ Object.assign(OplogHandle.prototype, {
       // tailing selector (ie, we need to specify the DB name) or else we might
       // find a TS that won't show up in the actual tail stream.
       try {
-        lastEntry = await self._oplogLastEntryConnection.findOne(
+        lastEntry = await self._oplogLastEntryConnection.findOneAsync(
             OPLOG_COLLECTION, self._baseOplogSelector,
             {fields: {ts: 1}, sort: {$natural: -1}});
         break;
@@ -230,7 +230,7 @@ Object.assign(OplogHandle.prototype, {
     }
 
     // Find the last oplog entry.
-    var lastOplogEntry = await self._oplogLastEntryConnection.findOne(
+    var lastOplogEntry = await self._oplogLastEntryConnection.findOneAsync(
         OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
 
     var oplogSelector = Object.assign({}, self._baseOplogSelector);

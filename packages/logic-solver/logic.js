@@ -38,11 +38,11 @@ Logic._assertIfEnabled = function (value, tester, description) {
 // Disabling runtime assertions speeds up clause generation.  Assertions
 // are disabled when the local variable `assert` is null instead of
 // `Logic._assert`.
-Logic.disablingAssertions = function (f) {
+Logic.disablingAssertions = async function (f) {
   var oldAssert = assert;
   try {
     assert = null;
-    return f();
+    return await f();
   } finally {
     assert = oldAssert;
   }

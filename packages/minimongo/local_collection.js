@@ -9,6 +9,11 @@ import {
   projectionDetails,
 } from './common.js';
 
+import {
+  ASYNC_COLLECTION_METHODS,
+  getAsyncMethodName
+} from "./constants";
+
 // XXX type checking on selectors (graceful error if malformed)
 
 // LocalCollection: a set of documents that supports queries and modifiers.
@@ -94,6 +99,11 @@ export default class LocalCollection {
     return this.find(selector, options).fetch()[0];
   }
 
+  async findOneAsync(selector, options = {}) {
+    return Promise.resolve(this.findOne(selector, options));
+  }
+
+
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
   insert(doc, callback) {
@@ -152,9 +162,7 @@ export default class LocalCollection {
       // Defer because the caller likely doesn't expect the callback to be run
       // immediately.
       if (callback) {
-        Meteor.defer(() => {
-          callback(null, id);
-        });
+        (async () => callback(null, id))();
       }
     });
 
@@ -199,9 +207,7 @@ export default class LocalCollection {
       });
 
       if (callback) {
-        Meteor.defer(() => {
-          callback(null, result);
-        });
+        (async () => callback(null, result))();
       }
 
       return result;
@@ -266,9 +272,7 @@ export default class LocalCollection {
     const result = remove.length;
 
     if (callback) {
-      Meteor.defer(() => {
-        callback(null, result);
-      });
+      (async () => callback(null, result))();
     }
 
     return result;
@@ -475,9 +479,7 @@ export default class LocalCollection {
     }
 
     if (callback) {
-      Meteor.defer(() => {
-        callback(null, result);
-      });
+      (async () => callback(null, result))();
     }
 
     return result;
@@ -2183,3 +2185,18 @@ function findModTarget(doc, keyparts, options = {}) {
 
   // notreached
 }
+
+// Wrap sync methods with callback to async.
+['insert', 'update', 'remove', 'upsert'].forEach(methodName => {
+  const methodNameAsync = getAsyncMethodName(methodName);
+  LocalCollection.prototype[methodNameAsync] = function(...args) {
+    const self = this;
+    return new Promise((resolve, reject) => self[methodName](...args,(err, result) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(result);
+      }
+    }));
+  };
+});

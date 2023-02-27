@@ -54,10 +54,10 @@ Autoupdate.appId = __meteor_runtime_config__.appId = process.env.APP_ID;
 
 var syncQueue = new Meteor._SynchronousQueue();
 
-function updateVersions(shouldReloadClientProgram) {
+async function updateVersions(shouldReloadClientProgram) {
   // Step 1: load the current client program on the server
   if (shouldReloadClientProgram) {
-    WebAppInternals.reloadClientPrograms();
+    await WebAppInternals.reloadClientPrograms();
   }
 
   const {
@@ -86,7 +86,7 @@ function updateVersions(shouldReloadClientProgram) {
   // Step 3: form the new client boilerplate which contains the updated
   // assets and __meteor_runtime_config__.
   if (shouldReloadClientProgram) {
-    WebAppInternals.generateBoilerplate();
+    await WebAppInternals.generateBoilerplate();
   }
 
   // Step 4: update the ClientVersions collection.
@@ -129,8 +129,8 @@ Meteor.publish(
   {is_auto: true}
 );
 
-Meteor.startup(function () {
-  updateVersions(false);
+Meteor.startup(async function () {
+  await updateVersions(false);
 
   // Force any connected clients that are still looking for these older
   // document IDs to reload.
@@ -145,8 +145,8 @@ Meteor.startup(function () {
 });
 
 function enqueueVersionsRefresh() {
-  syncQueue.queueTask(function () {
-    updateVersions(true);
+  syncQueue.queueTask(async function () {
+    await updateVersions(true);
   });
 }
 

@@ -9,6 +9,8 @@ function withoutInvocation(f) {
 
     var invocation = CurrentInvocation.get();
     if (invocation && invocation.isSimulation) {
+      // TODO FIXME
+      console.warn({invocation, CurrentInvocation});
       throw new Error("Can't set timers inside simulations");
     }
 

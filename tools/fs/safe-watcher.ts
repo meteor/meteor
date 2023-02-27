@@ -372,9 +372,7 @@ function watchLibraryWatch(absPath: string, callback: EntryCallback) {
 
 let suggestedRaisingWatchLimit = false;
 
-// This function is async so that archinfo.host() (which may call
-// utils.execFileSync) will run in a Fiber.
-async function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
+function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
   var constants = require('constants');
   var archinfo = require('../utils/archinfo');
   if (! suggestedRaisingWatchLimit &&

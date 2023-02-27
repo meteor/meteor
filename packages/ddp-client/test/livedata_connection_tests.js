@@ -128,7 +128,7 @@ Tinytest.addAsync('livedata stub - buffering data', async function(test) {
   const coll_name = Random.id();
   const coll = new Mongo.Collection(coll_name, conn);
 
-  const testDocCount = count => test.equal(coll.find({}).count(), count);
+  const testDocCount = async count => test.equal(await coll.find({}).count(), count);
 
   const addDoc = async () => {
     await stream.receive({
@@ -142,17 +142,17 @@ Tinytest.addAsync('livedata stub - buffering data', async function(test) {
   // Starting at 0 ticks.  At this point we haven't advanced the fake clock at all.
 
   await addDoc(); // 1st Doc
-  testDocCount(0); // No doc been recognized yet because it's buffered, waiting for more.
+  await testDocCount(0); // No doc been recognized yet because it's buffered, waiting for more.
   tick(6); // 6 total ticks
-  testDocCount(0); // Ensure that the doc still hasn't shown up, despite the clock moving forward.
+  await testDocCount(0); // Ensure that the doc still hasn't shown up, despite the clock moving forward.
   tick(4); // 10 total ticks, 1st buffer interval
-  testDocCount(1); // No other docs have arrived, so we 'see' the 1st doc.
+  await testDocCount(1); // No other docs have arrived, so we 'see' the 1st doc.
 
   await addDoc(); // 2nd doc
   tick(1); // 11 total ticks (1 since last flush)
-  testDocCount(1); // Again, second doc hasn't arrived because we're waiting for more...
+  await testDocCount(1); // Again, second doc hasn't arrived because we're waiting for more...
   tick(9); // 20 total ticks (10 ticks since last flush & the 2nd 10-tick interval)
-  testDocCount(2); // Now we're here and got the second document.
+  await testDocCount(2); // Now we're here and got the second document.
 
   // Add several docs, frequently enough that we buffer multiple times before the next flush.
   await addDoc(); // 3 docs
@@ -167,9 +167,9 @@ Tinytest.addAsync('livedata stub - buffering data', async function(test) {
   tick(9); // 53 ticks (33 since last flush)
   await addDoc(); // 8 docs
   tick(9); // 62 ticks! (42 ticks since last flush, over max-age - next interval triggers flush)
-  testDocCount(2); // Still at 2 from before! (Just making sure)
+  await testDocCount(2); // Still at 2 from before! (Just making sure)
   tick(1); // Ok, 63 ticks (10 since last doc, so this should cause the flush of all the docs)
-  testDocCount(8); // See all the docs.
+  await testDocCount(8); // See all the docs.
 
   // Put things back how they were.
   clock.uninstall();
@@ -478,7 +478,7 @@ if (Meteor.isClient) {
     // setup method
     conn.methods({
       do_something: function(x) {
-        coll.insert({ value: x });
+        coll.insertAsync({ value: x });
       }
     });
 
@@ -661,7 +661,7 @@ if (Meteor.isClient) {
         conn.call('do_something_else');
       },
       do_something_else: function() {
-        coll.insert({ a: 1 });
+        coll.insertAsync({ a: 1 });
       }
     });
 
@@ -1011,7 +1011,7 @@ if (Meteor.isClient) {
       conn.methods({
         writeSomething: function() {
           // stub write
-          coll.insert({ foo: 'bar' });
+          coll.insertAsync({ foo: 'bar' });
         }
       });
 
@@ -1348,10 +1348,10 @@ if (Meteor.isClient) {
     conn.methods({
       insertSomething: function() {
         // stub write
-        coll.insert({ foo: 'bar' });
+        coll.insertAsync({ foo: 'bar' });
       },
       updateIt: function(id) {
-        coll.update(id, { $set: { baz: 42 } });
+        coll.updateAsync(id, { $set: { baz: 42 } });
       }
     });
 
@@ -1470,7 +1470,7 @@ if (Meteor.isClient) {
       conn.methods({
         insertSomething: function() {
           // stub write
-          coll.insert({ foo: 'bar' });
+          coll.insertAsync({ foo: 'bar' });
         }
       });
 
@@ -2270,7 +2270,7 @@ if (Meteor.isClient) {
     test.length(stream.sent, 0);
 
     // Insert a document. The stub updates "conn" directly.
-    coll.insert({ _id: 'foo', bar: 42 }, _.identity);
+    coll.insertAsync({ _id: 'foo', bar: 42 }, _.identity);
     test.equal(coll.find().count(), 1);
     test.equal(await coll.findOneAsync(), { _id: 'foo', bar: 42 });
     // It also sends the method message.
@@ -2278,7 +2278,7 @@ if (Meteor.isClient) {
     test.isUndefined(methodMessage.randomSeed);
     test.equal(methodMessage, {
       msg: 'method',
-      method: '/' + collName + '/insert',
+      method: '/' + collName + '/insertAsync',
       params: [{ _id: 'foo', bar: 42 }],
       id: methodMessage.id
     });
@@ -2404,7 +2404,7 @@ if (Meteor.isClient) {
       update_value: async function() {
         const value = (await coll.findOneAsync('aaa')).subscription;
         // Method should have access to the latest value of the collection.
-        coll.update('aaa', { $set: { method: value + 110 } });
+        coll.updateAsync('aaa', { $set: { method: value + 110 } });
       }
     });
 

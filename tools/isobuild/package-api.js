@@ -514,7 +514,7 @@ export class PackageAPI {
    * track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the
    * default release track `METEOR`. Can be an array of specifications.
    */
-  versionsFrom(releases) {
+  async versionsFrom(releases) {
     var self = this;
 
     // Packages in isopackets really ought to be in the core release, by
@@ -548,7 +548,7 @@ export class PackageAPI {
                            { useMyCaller: true });
         return;
       }
-      var releaseRecord = catalog.official.getReleaseVersion(
+      var releaseRecord = await catalog.official.getReleaseVersion(
         relInf[0], relInf[1]);
       if (!releaseRecord) {
         buildmessage.error("Unknown release "+ release,

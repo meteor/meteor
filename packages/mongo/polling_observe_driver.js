@@ -52,7 +52,7 @@ PollingObserveDriver = function (options) {
         self._ensurePollIsScheduled();
     }
   );
-  self._stopCallbacks.push(function () { listenersHandle.stop(); });
+  self._stopCallbacks.push(async function () { await listenersHandle.stop(); });
 
   // every once and a while, poll even if we don't think we're dirty, for
   // eventual consistency with database writes from outside the Meteor
@@ -85,13 +85,14 @@ _.extend(PollingObserveDriver.prototype, {
         "mongo-livedata", "observe-drivers-polling", 1);
   },
   // This is always called through _.throttle (except once at startup).
-  _unthrottledEnsurePollIsScheduled: function () {
+  _unthrottledEnsurePollIsScheduled: async function () {
     var self = this;
     if (self._pollsScheduledButNotStarted > 0)
       return;
     ++self._pollsScheduledButNotStarted;
-    self._taskQueue.queueTask(function () {
-      self._pollMongo();
+    //TODO check this change
+    await self._taskQueue.runTask(async function () {
+      await self._pollMongo();
     });
   },
 
@@ -130,7 +131,7 @@ _.extend(PollingObserveDriver.prototype, {
     });
   },
 
-    async _pollMongo() {
+  async _pollMongo() {
     var self = this;
     --self._pollsScheduledButNotStarted;
 
@@ -162,11 +163,10 @@ _.extend(PollingObserveDriver.prototype, {
         // successfully. Probably it's a bad selector or something, so we should
         // NOT retry. Instead, we should halt the observe (which ends up calling
         // `stop` on us).
-        self._multiplexer.queryError(
+        await self._multiplexer.queryError(
             new Error(
                 "Exception while polling query " +
                 JSON.stringify(self._cursorDescription) + ": " + e.message));
-        return;
       }
 
       // getRawObjects can throw if we're having trouble talking to the

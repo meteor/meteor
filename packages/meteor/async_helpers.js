@@ -1,11 +1,8 @@
-var Fiber = Npm.require('fibers');
-var Future = Npm.require('fibers/future');
-
 Meteor._noYieldsAllowed = function (f) {
   return f();
 };
 
-Meteor._DoubleEndedQueue = Npm.require('double-ended-queue');
+Meteor._DoubleEndedQueue = Npm.require('denque');
 
 // Meteor._SynchronousQueue is a queue which runs task functions serially.
 // Tasks are assumed to be synchronous: ie, it's assumed that they are

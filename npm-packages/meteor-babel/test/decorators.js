@@ -92,10 +92,6 @@ describe("@decorators", function () {
       return plugin.key !== "regenerator-transform";
     }));
 
-    assert.ok(legacyResult.options.plugins.some(function (plugin) {
-      return plugin.key === "transform-meteor-async-await";
-    }));
-
     assert.strictEqual(legacyResult.code.trim(), [
       "var _class;",
       "",

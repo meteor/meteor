@@ -2,7 +2,6 @@ require('../../tool-env/install-babel.js');
 
 var _ = require('underscore');
 var assert = require('assert');
-var Future = require('fibers/future');
 var files = require('../../fs/files');
 var bundler = require('../../isobuild/bundler.js');
 var isopackets = require('../../tool-env/isopackets.js');

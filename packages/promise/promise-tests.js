@@ -6,8 +6,8 @@ Tinytest.addAsync("meteor-promise - sanity", function (test, done) {
       throw expectedError;
     })
     .catch(function (error) {
-      test.equal(error, expectedError);
-    })
+    test.equal(error, expectedError);
+  })
     .then(done, function (error) {
       test.exception(error);
     });

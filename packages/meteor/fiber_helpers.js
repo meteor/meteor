@@ -1,20 +1,5 @@
-var Fiber = Npm.require('fibers');
-var Future = Npm.require('fibers/future');
-
 Meteor._noYieldsAllowed = function (f) {
-  if (!Meteor._isFibersEnabled) {
-    return f();
-  }
-
-  var savedYield = Fiber.yield;
-  Fiber.yield = function () {
-    throw new Error("Can't call yield in a noYieldsAllowed block!");
-  };
-  try {
-    return f();
-  } finally {
-    Fiber.yield = savedYield;
-  }
+  return f();
 };
 
 Meteor._DoubleEndedQueue = Npm.require('denque');
@@ -136,50 +121,9 @@ class AsynchronousQueue {
 
 Meteor._AsynchronousQueue = AsynchronousQueue;
 
-Meteor._SynchronousQueue = class extends AsynchronousQueue {
-  constructor() {
-    super();
-    // During the execution of a task, this is set to the fiber used to execute
-    // that task. We use this to throw an error rather than deadlocking if the
-    // user calls runTask from within a task on the same fiber.
-    this._currentTaskFiber = undefined;
-  }
-
-  runWithFibers(fn, args) {
-    if (!Meteor._isFibersEnabled) {
-      return fn.apply(this, args);
-    }
-
-    return Promise.await(fn.apply(this, args));
-  }
-
-  runTask(task) {
-    this.runWithFibers(super.runTask, [task]);
-  }
-
-  flush() {
-    this.runWithFibers(super.flush);
-  }
-
-  safeToRunTask() {
-    return Fiber.current && this._currentTaskFiber !== Fiber.current;
-  }
-
-  drain() {
-    this.runWithFibers(super.drain);
-  }
-
-  _run() {
-    this.runWithFibers(super._run);
-  }
-};
+Meteor._SynchronousQueue = AsynchronousQueue;
 
 // Sleep. Mostly used for debugging (eg, inserting latency into server
 // methods).
 //
-const _sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-Meteor._sleepForMs = function (ms) {
-  if (!Meteor._isFibersEnabled) return _sleep(ms);
-
-  Promise.await(_sleep(ms));
-};
+Meteor._sleepForMs = (ms) => new Promise(resolve => setTimeout(resolve, ms));

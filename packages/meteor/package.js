@@ -16,6 +16,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
+  api.use('core-runtime');
 
   api.export('Meteor');
 
@@ -28,7 +29,6 @@ Package.onUse(function (api) {
   api.export("meteorEnv");
 
   api.addFiles('cordova_environment.js', 'web.cordova');
-  api.addFiles('define-package.js', ['client', 'server']);
   api.addFiles('helpers.js', ['client', 'server']);
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);
@@ -61,6 +61,9 @@ Package.onUse(function (api) {
   // On Windows, it sometimes does, so we fix it for all apps and packages
   api.addFiles('flush-buffers-on-exit-in-windows.js', 'server');
 
+  api.addFiles('emitter-promise.js', 'server');
+  api.export('EmitterPromise', 'server');
+
   api.addAssets('meteor.d.ts', 'server');
 });
 
@@ -85,4 +88,6 @@ Package.onTest(function (api) {
 
   api.addFiles('bare_test_setup.js', 'client', {bare: true});
   api.addFiles('bare_tests.js', 'client');
+  //api.addFiles('asl_helpers_test.js', 'server');
+  api.addFiles('emitter-promise-tests.js', 'server');
 });

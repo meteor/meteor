@@ -121,10 +121,10 @@ CachingCompilerBase = class CachingCompilerBase {
 
   // Called by the compiler plugins system after all linking and lazy
   // compilation has finished.
-  afterLink() {
-    this._afterLinkCallbacks.splice(0).forEach(callback => {
-      callback();
-    });
+  async afterLink() {
+    for (const callback of this._afterLinkCallbacks.splice(0)) {
+      await callback();
+    }
   }
 
   // Borrowed from another MIT-licensed project that benjamn wrote:
