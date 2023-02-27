@@ -330,7 +330,7 @@ CollectionPrototype._validatedUpdateAsync = async function(
 
   // We don't support upserts because they don't fit nicely into allow/deny
   // rules.
-  if (options.upsertAsync)
+  if (options.upsert)
     throw new Meteor.Error(403, "Access denied. Upserts not " +
                            "allowed in a restricted collection.");
 
@@ -596,7 +596,7 @@ CollectionPrototype._validatedRemove = function(userId, selector) {
   return self._collection.remove.call(self._collection, selector);
 };
 
-CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethod(name, args) {
+CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethodAsync(name, args, options = {}) {
 
   // For two out of three mutator methods, the first argument is a selector
   const firstArgIsSelector = name === "updateAsync" || name === "removeAsync";
@@ -608,7 +608,10 @@ CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethod(
   }
 
   const mutatorMethodName = this._prefix + name;
-  return await this._connection.applyAsync(mutatorMethodName, args, { returnStubValue: true , throwStubExceptions: true });
+  return this._connection.applyAsync(mutatorMethodName, args, {
+    returnStubValue: true,
+    ...options,
+  });
 }
 
 CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args, callback) {

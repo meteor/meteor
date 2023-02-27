@@ -567,6 +567,24 @@ export class Connection {
         "Meteor.callAsync() does not accept a callback. You should 'await' the result, or use .then()."
       );
     }
+
+    const applyOptions = ['returnStubValue', 'returnServerResultPromise'];
+    const defaultOptions = {
+      returnServerResultPromise: true,
+    };
+    const options = {
+      ...defaultOptions,
+      ...(applyOptions.some(o => args[0]?.hasOwnProperty(o))
+        ? args.shift()
+        : {}),
+    };
+
+    const invocation = DDP._CurrentCallAsyncInvocation.get();
+
+    if (invocation?.hasCallAsyncParent) {
+      return this.applyAsync(name, args, { ...options, isFromCallAsync: true });
+    }
+
     /*
     * This is necessary because when you call a Promise.then, you're actually calling a bound function by Meteor.
     *
@@ -598,16 +616,18 @@ export class Connection {
     * */
     DDP._CurrentMethodInvocation._set();
     DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
-    return new Promise((resolve, reject) => {
-      this.applyAsync(name, args, { isFromCallAsync: true })
-        .then(result => {
-          resolve(result);
-        })
+    const promise = new Promise((resolve, reject) => {
+      DDP._CurrentCallAsyncInvocation._set({ name, hasCallAsyncParent: true });
+      this.applyAsync(name, args, { isFromCallAsync: true, ...options })
+        .then(resolve)
         .catch(reject)
-        .finally(() =>
-          DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
-        );
+        .finally(() => {
+          DDP._CurrentCallAsyncInvocation._set();
+        });
     });
+    return promise.finally(() =>
+      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
+    );
   }
 
   /**
@@ -688,6 +708,8 @@ export class Connection {
         );
         try {
           stubOptions.stubReturnValue = await stubInvocation();
+        } catch (e) {
+          stubOptions.exception = e;
         } finally {
           DDP._CurrentMethodInvocation._set(currentContext);
         }
@@ -718,11 +740,6 @@ export class Connection {
         "delivering result of invoking '" + name + "'"
       );
     }
-
-    // Keep our args safe from mutation (eg if we don't send the message for a
-    // while because of a wait method).
-    args = EJSON.clone(args);
-
     const {
       hasStub,
       exception,
@@ -731,6 +748,9 @@ export class Connection {
       randomSeed,
     } = stubCallValue;
 
+    // Keep our args safe from mutation (eg if we don't send the message for a
+    // while because of a wait method).
+    args = EJSON.clone(args);
     // If we're in a simulation, stop and return the result we have,
     // rather than going on to do an RPC. If there was no stub,
     // we'll end up returning undefined.
@@ -790,24 +810,21 @@ export class Connection {
     // If the caller didn't give a callback, decide what to do.
     let future;
     if (!callback) {
-      if (Meteor.isClient && !options.isFromCallAsync) {
+      if (
+        Meteor.isClient &&
+        !options.returnServerResultPromise &&
+        (!options.isFromCallAsync || options.returnStubValue)
+      ) {
         // On the client, we don't have fibers, so we can't block. The
         // only thing we can do is to return undefined and discard the
         // result of the RPC. If an error occurred then print the error
         // to the console.
-        callback = err => {
+        callback = (err) => {
           err && Meteor._debug("Error invoking Method '" + name + "'", err);
         };
       } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
-        // TODO[fibers]: before this was a future, now it's a promise.
-        //  Do more tests around this.
-
-        if (!options.isFromCallAsync) {
-          throw new Error("Can't create a future for Meteor.call()");
-        }
-
         future = new Promise((resolve, reject) => {
           callback = (...allArgs) => {
             let args = Array.from(allArgs);
@@ -817,7 +834,7 @@ export class Connection {
               return;
             }
             resolve(...args);
-          }
+          };
         });
       }
     }
@@ -863,9 +880,11 @@ export class Connection {
     // If we're using the default callback on the server,
     // block waiting for the result.
     if (future) {
-      return {
-        stubValuePromise: future,
-      };
+      return options.returnStubValue
+        ? future.then(() => stubReturnValue)
+        : {
+            stubValuePromise: future,
+          };
     }
     return options.returnStubValue ? stubReturnValue : undefined;
   }
@@ -891,7 +910,9 @@ export class Connection {
     const randomSeed = { value: null};
 
     const defaultReturn = {
-      alreadyInSimulation, randomSeed, isFromCallAsync
+      alreadyInSimulation,
+      randomSeed,
+      isFromCallAsync,
     };
     if (!stub) {
       return { ...defaultReturn, hasStub: false };

@@ -154,7 +154,7 @@ Mongo.Collection = function Collection(name, options) {
 };
 
 Object.assign(Mongo.Collection.prototype, {
-  _maybeSetUpReplication(name) {
+  async _maybeSetUpReplication(name) {
     const self = this;
     if (
       !(
@@ -192,7 +192,7 @@ Object.assign(Mongo.Collection.prototype, {
       // message, and then we can either directly apply it at endUpdate time if
       // it was the only update, or do pauseObservers/apply/apply at the next
       // update() if there's another one.
-      beginUpdate(batchSize, reset) {
+      async beginUpdate(batchSize, reset) {
         // pause observers so users don't see flicker when updating several
         // objects at once (including the post-reconnect reset-and-reapply
         // stage), and so that a re-sorting of a query can take advantage of the
@@ -200,7 +200,7 @@ Object.assign(Mongo.Collection.prototype, {
         // time.
         if (batchSize > 1 || reset) self._collection.pauseObservers();
 
-        if (reset) self._collection.remove({});
+        if (reset) await self._collection.remove({});
       },
 
       // Apply an update.
@@ -422,6 +422,33 @@ Object.assign(Mongo.Collection.prototype, {
   ///
   /// Main collection API
   ///
+  /**
+   * @summary Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
+   * @locus Anywhere
+   * @method countDocuments
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to count
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
+   * @returns {Promise<number>}
+   */
+  countDocuments(...args) {
+    return this._collection.countDocuments(...args);
+  },
+
+  /**
+   * @summary Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
+   * @locus Anywhere
+   * @method estimatedDocumentCount
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to count
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/EstimatedDocumentCountOptions.html). Please note that not all of them are available on the client.
+   * @returns {Promise<number>}
+   */
+  estimatedDocumentCount(...args) {
+    return this._collection.estimatedDocumentCount(...args);
+  },
 
   _getFindSelector(args) {
     if (args.length == 0) return {};
@@ -727,7 +754,7 @@ Object.assign(Mongo.Collection.prototype, {
     return this._insert(doc, callback);
   },
 
-  async _insertAsync(doc) {
+  async _insertAsync(doc, options = {}) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -783,13 +810,8 @@ Object.assign(Mongo.Collection.prototype, {
       return result;
     };
 
-    // const wrappedCallback = wrapCallback(
-    //     callback,
-    //     chooseReturnValueFromCollectionResult
-    // );
-
     if (this._isRemoteCollection()) {
-      const result = await this._callMutatorMethodAsync('insertAsync', [doc]);
+      const result = await this._callMutatorMethodAsync('insertAsync', [doc], options);
 
       return chooseReturnValueFromCollectionResult(result);
     }
@@ -812,8 +834,8 @@ Object.assign(Mongo.Collection.prototype, {
    * @instance
    * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
    */
-  insertAsync(doc) {
-    return this._insertAsync(doc);
+  insertAsync(doc, options) {
+    return this._insertAsync(doc, options);
   },
 
   /**
@@ -860,7 +882,7 @@ Object.assign(Mongo.Collection.prototype, {
     if (this._isRemoteCollection()) {
       const args = [selector, modifier, options];
 
-      return this._callMutatorMethodAsync('updateAsync', args);
+      return this._callMutatorMethodAsync('updateAsync', args, options);
     }
 
     // it's my collection.  descend into the collection object
@@ -960,11 +982,11 @@ Object.assign(Mongo.Collection.prototype, {
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
    */
-  async removeAsync(selector) {
+  async removeAsync(selector, options = {}) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
     if (this._isRemoteCollection()) {
-      return this._callMutatorMethodAsync('removeAsync', [selector]);
+      return this._callMutatorMethodAsync('removeAsync', [selector], options);
     }
 
     // it's my collection.  descend into the collection1 object

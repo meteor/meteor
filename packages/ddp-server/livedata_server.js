@@ -54,7 +54,7 @@ DDPServer._getCurrentFence = function () {
   if (currentInvocation) {
     return currentInvocation;
   }
-  currentInvocation = DDP._CurrentPublicationInvocation.get();
+  currentInvocation = DDP._CurrentMethodInvocation.get();
   return currentInvocation ? currentInvocation.fence : undefined;
 };
 
@@ -370,9 +370,7 @@ Object.assign(Session.prototype, {
   sendReady: function (subscriptionIds) {
     var self = this;
     if (self._isSending) {
-      this._checkPublishPromiseBeforeSend(() => {
-        self.send({msg: "ready", subs: subscriptionIds});
-      });
+      self.send({msg: "ready", subs: subscriptionIds});
     } else {
       _.each(subscriptionIds, function (subscriptionId) {
         self._pendingReady.push(subscriptionId);
@@ -387,9 +385,7 @@ Object.assign(Session.prototype, {
 
   sendAdded(collectionName, id, fields) {
     if (this._canSend(collectionName)) {
-      this._checkPublishPromiseBeforeSend(() => {
-        this.send({ msg: 'added', collection: collectionName, id, fields });
-      });
+      this.send({ msg: 'added', collection: collectionName, id, fields });
     }
   },
 
@@ -398,22 +394,18 @@ Object.assign(Session.prototype, {
       return;
 
     if (this._canSend(collectionName)) {
-      this._checkPublishPromiseBeforeSend(() => {
-        this.send({
-          msg: "changed",
-          collection: collectionName,
-          id,
-          fields
-        });
+      this.send({
+        msg: "changed",
+        collection: collectionName,
+        id,
+        fields
       });
     }
   },
 
   sendRemoved(collectionName, id) {
     if (this._canSend(collectionName)) {
-      this._checkPublishPromiseBeforeSend(() => {
-        this.send({msg: "removed", collection: collectionName, id});
-      });
+      this.send({msg: "removed", collection: collectionName, id});
     }
   },
 
@@ -527,12 +519,14 @@ Object.assign(Session.prototype, {
   // Send a message (doing nothing if no socket is connected right now).
   // It should be a JSON object (it will be stringified).
   send: function (msg) {
-    var self = this;
-    if (self.socket) {
-      if (Meteor._printSentDDP)
-        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
-      self.socket.send(DDPCommon.stringifyDDP(msg));
-    }
+    const self = this;
+    this._checkPublishPromiseBeforeSend(() => {
+      if (self.socket) {
+        if (Meteor._printSentDDP)
+          Meteor._debug('Sent DDP', DDPCommon.stringifyDDP(msg));
+        self.socket.send(DDPCommon.stringifyDDP(msg));
+      }
+    });
   },
 
   // Send a connection error.
@@ -617,11 +611,21 @@ Object.assign(Session.prototype, {
           return true;
         });
 
-        if (_.has(self.protocol_handlers, msg.msg))
-          self.protocol_handlers[msg.msg].call(self, msg, unblock);
-        else
+        if (_.has(self.protocol_handlers, msg.msg)) {
+          const result = self.protocol_handlers[msg.msg].call(
+            self,
+            msg,
+            unblock
+          );
+          if (Meteor._isPromise(result)) {
+            result.finally(() => unblock());
+          } else {
+            unblock();
+          }
+        } else {
           self.sendError('Bad request', msg);
-        unblock(); // in case the handler didn't already do it
+          unblock(); // in case the handler didn't already do it
+        }
       }
 
       runHandlers();
@@ -783,7 +787,7 @@ Object.assign(Session.prototype, {
         }
 
         const getCurrentMethodInvocationResult = () =>
-          DDP._CurrentPublicationInvocation.withValue(
+          DDP._CurrentMethodInvocation.withValue(
             invocation,
             () =>
               maybeAuditArgumentChecks(
@@ -797,7 +801,6 @@ Object.assign(Session.prototype, {
               keyName: 'getCurrentMethodInvocationResult',
             }
           );
-
         resolve(
           DDPServer._CurrentWriteFence.withValue(
             fence,
@@ -819,7 +822,7 @@ Object.assign(Session.prototype, {
         msg: "result",
         id: msg.id
       };
-      promise.then(async result => {
+      return promise.then(async result => {
         await finish();
         if (result !== undefined) {
           payload.result = result;
@@ -1199,21 +1202,11 @@ Object.assign(Subscription.prototype, {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
-      if (Meteor._isFibersEnabled) {
-        try {
-          res._publishCursor(self);
-        } catch (e) {
-          self.error(e);
-          return;
-        }
+      this._publishCursorPromise = res._publishCursor(self).then(() => {
         // _publishCursor only returns after the initial added callbacks have run.
         // mark subscription as ready.
         self.ready();
-      } else {
-        this._publishCursorPromise = res._publishCursor(self).then(() => {
-          self.ready();
-        }).catch((e) => self.error(e));
-      }
+      }).catch((e) => self.error(e));
     } else if (_.isArray(res)) {
       // Check all the elements are cursors
       if (! _.all(res, isCursor)) {
@@ -1235,21 +1228,13 @@ Object.assign(Subscription.prototype, {
         collectionNames[collectionName] = true;
       };
 
-      if (Meteor._isFibersEnabled) {
-        try {
-          _.each(res, function (cur) {
-            cur._publishCursor(self);
-          });
-        } catch (e) {
-          self.error(e);
-          return;
-        }
-        self.ready();
-      } else {
-        this._publishCursorPromise = Promise.all(res.map((c) => c._publishCursor(self))).then(() => {
+      this._publishCursorPromise = Promise.all(
+        res.map(c => c._publishCursor(self))
+      )
+        .then(() => {
           self.ready();
-        }).catch((e) => self.error(e));
-      }
+        })
+        .catch((e) => self.error(e));
     } else if (res) {
       // Truthy values other than cursors or arrays are probably a
       // user mistake (possible returning a Mongo document via, say,
@@ -1546,9 +1531,7 @@ Server = function (options = {}) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
-        Meteor._runAsync(function() {
-          socket._meteorSession.close();
-        });
+        socket._meteorSession.close();
       }
     });
   });
@@ -1773,7 +1756,10 @@ Object.assign(Server.prototype, {
 
   // A version of the call method that always returns a Promise.
   callAsync: function (name, ...args) {
-    return this.applyAsync(name, args);
+    const options = args[0]?.hasOwnProperty('returnStubValue')
+      ? args.shift()
+      : {};
+    return this.applyAsync(name, args, options);
   },
 
   apply: function (name, args, options, callback) {
@@ -1799,7 +1785,7 @@ Object.assign(Server.prototype, {
         exception => callback(exception)
       );
     } else {
-      return promise.await();
+      return promise;
     }
   },
 

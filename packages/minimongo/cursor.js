@@ -227,7 +227,7 @@ export default class Cursor {
    * @param {Object} callbacks Functions to call to deliver the result set as it
    *                           changes
    */
-  observeChanges(options) {
+  async observeChanges(options) {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with
@@ -334,16 +334,16 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      query.results.forEach(doc => {
+      await query.results.forEachAsync(async doc => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;
 
         if (ordered) {
-          query.addedBefore(doc._id, this._projectionFn(fields), null);
+          await query.addedBefore(doc._id, this._projectionFn(fields), null);
         }
 
-        query.added(doc._id, this._projectionFn(fields));
+        await query.added(doc._id, this._projectionFn(fields));
       });
     }
 
@@ -369,7 +369,7 @@ export default class Cursor {
 
     // run the observe callbacks resulting from the initial contents
     // before we leave the observe.
-    this.collection._observeQueue.drain();
+    await this.collection._observeQueue.drain();
 
     return handle;
   }

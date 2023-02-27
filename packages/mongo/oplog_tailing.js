@@ -269,22 +269,22 @@ Object.assign(OplogHandle.prototype, {
     if (self._workerActive) return;
     self._workerActive = true;
 
-    Meteor.defer(function () {
+    Meteor.defer(async function () {
       // May be called recursively in case of transactions.
-      function handleDoc(doc) {
+      async function handleDoc(doc) {
         if (doc.ns === "admin.$cmd") {
           if (doc.o.applyOps) {
             // This was a successful transaction, so we need to apply the
             // operations that were involved.
             let nextTimestamp = doc.ts;
-            doc.o.applyOps.forEach(op => {
+            for (const op of doc.o.applyOps) {
               // See https://github.com/meteor/meteor/issues/10420.
               if (!op.ts) {
                 op.ts = nextTimestamp;
                 nextTimestamp = nextTimestamp.add(Long.ONE);
               }
-              handleDoc(op);
-            });
+              await handleDoc(op);
+            }
             return;
           }
           throw new Error("Unknown command " + EJSON.stringify(doc));
@@ -320,7 +320,7 @@ Object.assign(OplogHandle.prototype, {
           trigger.id = idForOp(doc);
         }
 
-        self._crossbar.fire(trigger);
+        await self._crossbar.fire(trigger);
       }
 
       try {
@@ -346,7 +346,7 @@ Object.assign(OplogHandle.prototype, {
           const doc = self._entryQueue.shift();
 
           // Fire trigger(s) for this doc.
-          handleDoc(doc);
+          await handleDoc(doc);
 
           // Now that we've processed this operation, process pending
           // sequencers.

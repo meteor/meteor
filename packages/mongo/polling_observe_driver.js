@@ -35,7 +35,7 @@ PollingObserveDriver = function (options) {
     self._cursorDescription.options.pollingThrottleMs || POLLING_THROTTLE_MS /* ms */);
 
   // XXX figure out if we still need a queue
-  self._taskQueue = new Meteor._SynchronousQueue();
+  self._taskQueue = new Meteor._AsynchronousQueue();
 
   var listenersHandle = listenAll(
     self._cursorDescription, function (notification) {
@@ -90,8 +90,7 @@ _.extend(PollingObserveDriver.prototype, {
     if (self._pollsScheduledButNotStarted > 0)
       return;
     ++self._pollsScheduledButNotStarted;
-    //TODO[fibers] check this change
-    await self._taskQueue.queueTask(async function () {
+    await self._taskQueue.runTask(async function () {
       await self._pollMongo();
     });
   },
@@ -118,7 +117,7 @@ _.extend(PollingObserveDriver.prototype, {
       throw new Error("_pollsScheduledButNotStarted is " +
                       self._pollsScheduledButNotStarted);
   },
-  _resumePolling: function() {
+  _resumePolling: async function() {
     var self = this;
     // We should be in the same state as in the end of _suspendPolling.
     if (self._pollsScheduledButNotStarted !== 1)
@@ -126,7 +125,7 @@ _.extend(PollingObserveDriver.prototype, {
                       self._pollsScheduledButNotStarted);
     // Run a poll synchronously (which will counteract the
     // ++_pollsScheduledButNotStarted from _suspendPolling).
-    self._taskQueue.runTask(async function () {
+    await self._taskQueue.runTask(async function () {
       await self._pollMongo();
     });
   },

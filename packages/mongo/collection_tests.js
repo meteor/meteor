@@ -45,20 +45,20 @@ Tinytest.add('collection - call new Mongo.Collection with defineMutationMethods=
 
     var methodCollectionName = 'hasmethods' + test.id;
     var hasmethods = new Mongo.Collection(methodCollectionName);
-    test.equal(typeof hasmethods._connection[handlerPropName]['/' + methodCollectionName + '/insertAsync'], 'function');
+    test.equal(typeof hasmethods._connection[handlerPropName]['/' + methodCollectionName + '/insert'], 'function');
 
     var noMethodCollectionName = 'nomethods' + test.id;
     var nomethods = new Mongo.Collection(noMethodCollectionName, {defineMutationMethods: false});
-    test.equal(nomethods._connection[handlerPropName]['/' + noMethodCollectionName + '/insertAsync'], undefined);
+    test.equal(nomethods._connection[handlerPropName]['/' + noMethodCollectionName + '/insert'], undefined);
   }
 );
 
-Tinytest.addAsync('collection - call find with sort function',
-  async function (test) {
-    var initialize = async function (collection) {
-        await collection.insertAsync({a: 2});
-        await collection.insertAsync({a: 3});
-        await collection.insertAsync({a: 1});
+Tinytest.add('collection - call find with sort function',
+  function (test) {
+    var initialize = function (collection) {
+      collection.insert({a: 2});
+      collection.insert({a: 3});
+      collection.insert({a: 1});
     };
 
     var sorter = function (a, b) {
@@ -73,23 +73,23 @@ Tinytest.addAsync('collection - call find with sort function',
     var localCollection = new Mongo.Collection(null);
     var namedCollection = new Mongo.Collection(collectionName, {connection: null});
 
-    await initialize(localCollection);
-    test.equal(await getSorted(localCollection), [1, 2, 3]);
+    initialize(localCollection);
+    test.equal(getSorted(localCollection), [1, 2, 3]);
 
-    await initialize(namedCollection);
-    test.equal(await getSorted(namedCollection), [1, 2, 3]);
+    initialize(namedCollection);
+    test.equal(getSorted(namedCollection), [1, 2, 3]);
   }
 );
 
-Tinytest.addAsync('collection - call native find with sort function',
-  async function (test) {
+Tinytest.add('collection - call native find with sort function',
+  function (test) {
     var collectionName = 'sortNative' + test.id;
     var nativeCollection = new Mongo.Collection(collectionName);
 
     if (Meteor.isServer) {
-        await test.throwsAsync(
+      test.throws(
         function () {
-          return nativeCollection
+          nativeCollection
             .find({}, {
               sort: function () {},
             })
@@ -109,11 +109,14 @@ Tinytest.addAsync('collection - calling native find with maxTimeMs should timeou
     var collection = new Mongo.Collection(collectionName);
     await collection.insertAsync({a: 1});
 
-    function doTest() {
-      return collection.find({$where: "sleep(100) || true"}, {maxTimeMs: 50}).count();
+
+    async function doTest() {
+      return collection.find({$where: "sleep(100) || true"}, {maxTimeMs: 50}).countAsync();
     }
     if (Meteor.isServer) {
-      await test.throwsAsync(doTest);
+      await test.throwsAsync(async () => {
+        await doTest()
+      });
     }
   }
 );
@@ -144,20 +147,21 @@ Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs
     var collection = new Mongo.Collection(collectionName);
     await collection.insertAsync({a: 1});
 
-    if (Meteor.isServer) {
-        await collection.rawCollection().createIndex({ a: 1 });
-        const count = await collection.find({}, {
-            hint: {a: 1},
-            maxTimeMs: 1000
-        }).count();
-        test.equal(count , 1);
-        done();
-    }
+    return Promise.resolve(
+      Meteor.isServer &&
+      collection.rawCollection().createIndex({ a: 1 })
+    ).then(async () => {
+      test.equal(await collection.find({}, {
+        hint: {a: 1},
+        maxTimeMs: 1000
+      }).countAsync(), 1);
+      done();
+    }).catch(error => test.fail(error.message));
   }
 );
 
-Tinytest.addAsync('collection - calling find with a valid readPreference',
-  async function(test) {
+Tinytest.add('collection - calling find with a valid readPreference',
+  function(test) {
     if (Meteor.isServer) {
       const defaultReadPreference = 'primary';
       const customReadPreference = 'secondaryPreferred';
@@ -169,8 +173,8 @@ Tinytest.addAsync('collection - calling find with a valid readPreference',
       );
 
       // Trigger the creation of _synchronousCursor
-      await defaultCursor.count();
-      await customCursor.count();
+      defaultCursor.fetch();
+      customCursor.fetch();
 
       // defaultCursor._synchronousCursor._dbCursor.operation is not an option anymore
       // as the cursor options are now private
@@ -200,7 +204,7 @@ Tinytest.addAsync('collection - calling find with an invalid readPreference',
 
       await test.throwsAsync(async function() {
         // Trigger the creation of _synchronousCursor
-        return await cursor.count();
+        await cursor.countAsync();
       }, `Invalid read preference mode "${invalidReadPreference}"`);
     }
   }
@@ -211,7 +215,7 @@ Tinytest.addAsync('collection - inserting a document with a binary should return
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary1');
       const _id = Random.id();
-        await collection.insertAsync({
+      await collection.insertAsync({
         _id,
         binary: new MongoDB.Binary(Buffer.from('hello world'), 6)
       });
@@ -282,7 +286,7 @@ Tinytest.addAsync('collection - updating a document with a binary (sub type 0) s
         _id
       });
 
-        await collection.updateAsync({ _id }, { $set: { binary: new MongoDB.Binary(Buffer.from('hello world'), 0) } });
+      await collection.updateAsync({ _id }, { $set: { binary: new MongoDB.Binary(Buffer.from('hello world'), 0) } });
 
       const doc = await collection.findOneAsync({ _id });
       test.ok(
@@ -301,7 +305,7 @@ Tinytest.addAsync('collection - inserting a document with a uint8array should re
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary3');
       const _id = Random.id();
-        await collection.insertAsync({
+      await collection.insertAsync({
         _id,
         binary: new Uint8Array(Buffer.from('hello world'))
       });
@@ -323,11 +327,11 @@ Tinytest.addAsync('collection - updating a document with a uint8array should ret
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary4');
       const _id = Random.id();
-        await collection.insertAsync({
+      await collection.insertAsync({
         _id
       });
 
-        await collection.updateAsync(
+      await collection.updateAsync(
         { _id },
         { $set: { binary: new Uint8Array(Buffer.from('hello world')) } }
       )
@@ -349,7 +353,7 @@ Tinytest.addAsync('collection - finding with a query with a uint8array field sho
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary5');
       const _id = Random.id();
-        await collection.insertAsync({
+      await collection.insertAsync({
         _id,
         binary: new Uint8Array(Buffer.from('hello world'))
       });
@@ -359,7 +363,7 @@ Tinytest.addAsync('collection - finding with a query with a uint8array field sho
         doc._id,
         _id
       );
-        await collection.removeAsync({});
+      await collection.removeAsync({});
     }
   }
 );
@@ -380,6 +384,42 @@ Tinytest.addAsync('collection - finding with a query with a binary field should 
         _id
       );
       await collection.removeAsync({});
+    }
+  }
+);
+
+
+Tinytest.addAsync(
+  'collection - count should release the session',
+  async function(test) {
+    if (Meteor.isServer) {
+      const client = MongoInternals.defaultRemoteCollectionDriver().mongo
+        .client;
+      var collectionName = 'count' + test.id;
+      var collection = new Mongo.Collection(collectionName);
+      await collection.insertAsync({ _id: '1' });
+      await collection.insertAsync({ _id: '2' });
+      await collection.insertAsync({ _id: '3' });
+      const preCount = client.s.activeSessions.size;
+
+      test.equal(await collection.find().countAsync(), 3);
+      // options and selector still work
+      test.equal(
+        await collection.find({ _id: { $ne: '1' } }, { skip: 1 }).countAsync(),
+        1
+      );
+
+      // cursor reuse
+      const cursor1 = collection.find({ _id: { $ne: '1' } }, { skip: 1 });
+      test.equal(await cursor1.countAsync(), 1);
+      test.equal((await cursor1.fetchAsync()).length, 1);
+
+      const cursor2 = collection.find({ _id: { $ne: '1' } }, { skip: 1 });
+      test.equal((await cursor2.fetchAsync()).length, 1);
+      test.equal(await cursor2.countAsync(), 1);
+
+      const postCount = client.s.activeSessions.size;
+      test.equal(preCount, postCount);
     }
   }
 );
