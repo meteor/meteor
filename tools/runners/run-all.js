@@ -170,18 +170,22 @@ class Runner {
       runLog.log("Started proxy.",  { arrow: true });
     }
 
+    /**
+     *
+     * @type {(function(): *)}
+     */
     var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
 
     async function startMongo(tries = 3) {
       try {
         await self._startMongoAsync();
-        await unblockAppRunner;
+        unblockAppRunner();
       } catch (error) {
         --tries;
         const left = tries + (tries === 1 ? " try" : " tries");
         Console.error(
             `Error starting Mongo (${left} left): ${error.message}`
-        );
+          );
 
         if (tries > 0) {
           await self.mongoRunner.stop();
@@ -195,11 +199,11 @@ class Runner {
 
     await startMongo();
     if (!self.noReleaseCheck && ! self.stopped) {
-      await self.updater.start();
+      self.updater.start();
     }
 
     if (!self.stopped && self.hmrServer) {
-      await self.hmrServer.start();
+      self.hmrServer.start();
 
       if (!self.quiet && !self.stopped) {
         runLog.log("Started HMR server.", { arrow: true });
@@ -209,7 +213,7 @@ class Runner {
     if (! self.stopped) {
       console.log("before start");
       await buildmessage.enterJob({ title: "starting your app" }, async function () {
-        return await self.appRunner.start();
+        await self.appRunner.start();
       });
       if (! self.quiet && ! self.stopped) {
         runLog.log("Started your app.",  { arrow: true });

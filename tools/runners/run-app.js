@@ -78,7 +78,6 @@ Object.assign(AppProcess.prototype, {
   // Call to start the process.
   start: async function () {
     console.log("started process");
-    debugger
     var self = this;
 
     if (self.proc) {
@@ -89,6 +88,7 @@ Object.assign(AppProcess.prototype, {
     self.proc = await self._spawn();
 
     eachline(self.proc.stdout, async function (line) {
+      console.log("Raw line: " + line + "\n")
       if (line.match(/^LISTENING\s*$/)) {
         // This is the child process telling us that it's ready to receive
         // connections.  (It does this because we told it to with
@@ -487,7 +487,7 @@ Object.assign(AppRunner.prototype, {
       throw new Error("makeBeforeStartPromise called twice?");
     }
     this._beforeStartPromise = this._makePromise("beforeStart");
-    return this._promiseResolvers["beforeStart"];
+    return () => this._resolvePromise("beforeStart");
   },
 
   // Run the program once, wait for it to exit, and then return. The
@@ -725,7 +725,7 @@ Object.assign(AppRunner.prototype, {
     // just in case it's still defined.
     await self.runPromise;
     self.runPromise = self._makePromise("run");
-    var runPromise = self.runPromise
+    var runPromise = self.runPromise;
     var listenPromise = self._makePromise("listen");
     console.log('Mde more promises');
 
@@ -773,15 +773,13 @@ Object.assign(AppRunner.prototype, {
     console.log("Done? processing?");
 
     if (options.firstRun && self._beforeStartPromise) {
-      console.log("Here?");
         var [stopped] = await self._beforeStartPromise;
         if (stopped) {
-          throw stopped
+          return stopped
         }
     }
-    console.log("stated proccess?");
     await appProcess.start();
-    console.log("running? proccess?");
+    console.log("started app");
 
     function maybePrintLintWarnings(bundleResult) {
       if (! (self.projectContext.lintAppAndLocalPackages &&
@@ -811,7 +809,6 @@ Object.assign(AppRunner.prototype, {
     // hashes and lists of matching files in each directory.
     var serverWatcher;
     var clientWatcher;
-    console.log("shell ?");
 
     appProcess.proc.onMessage("shell-server", message => {
       if (message && message.command === "reload") {
@@ -909,6 +906,10 @@ Object.assign(AppRunner.prototype, {
     Console.enableProgressDisplay(false);
     console.log("before race");
 
+    console.log("will call listen?");
+    await listenPromise
+    console.log("Called listen");
+    console.log("before race");
     const promList = [runPromise, listenPromise];
     await Promise.race(promList)
 

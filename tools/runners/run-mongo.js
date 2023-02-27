@@ -581,6 +581,7 @@ var launchMongo = async function(options) {
       // Invoke the outer onExit callback.
       await onExit(code, signal, stderrOutput, detectedErrors);
     });
+    console.log(typeof procExitHandler, "Run mongo");
     proc.on('exit', procExitHandler);
 
     var listening = false;
@@ -924,6 +925,7 @@ Object.assign(MRp, {
       // shouldn't annoy the user by telling it that we couldn't start up.
       self.suppressExitMessage = true;
     }
+    console.log("before launch");
     self.handle = await launchMongo({
       projectLocalDir: self.projectLocalDir,
       port: self.port,
