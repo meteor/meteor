@@ -772,7 +772,7 @@ Tinytest.add('livedata stub - method call before connect', function(test) {
   });
 });
 
-Tinytest.addAsync('livedata stub - reconnect111', async function(test, onComplete) {
+Tinytest.addAsync('livedata stub - reconnect', async function(test, onComplete) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
