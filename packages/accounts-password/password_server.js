@@ -946,7 +946,7 @@ const createUser = async options => {
     user.services.password = { bcrypt: hashed };
   }
 
-  return Accounts._createUserCheckingDuplicates({ user, email, username, options });
+  return await Accounts._createUserCheckingDuplicates({ user, email, username, options });
 };
 
 // method for create user. Requests come from the client.
