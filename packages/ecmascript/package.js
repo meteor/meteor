@@ -5,6 +5,11 @@ Package.describe({
   documentation: 'README.md',
 });
 
+Npm.depends({
+  '@babel/runtime': '7.20.7'
+});
+
+
 Package.registerBuildPlugin({
   name: 'compile-ecmascript',
   use: ['babel-compiler', 'react-fast-refresh'],

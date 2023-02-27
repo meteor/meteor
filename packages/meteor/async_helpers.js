@@ -108,7 +108,7 @@ class AsynchronousQueue {
 
     // Soon, run the next task, if there is any.
     this._runningOrRunScheduled = false;
-    await this._scheduleRun();
+    this._scheduleRun();
 
     if (taskHandle.resolver) {
       if (exception) {

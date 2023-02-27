@@ -2097,7 +2097,7 @@ var getTestPackageNames = async function (projectContext, packageNames) {
             // It's only an error to *ask* to test a package with no tests, not
             // to come across a package with no tests when you say "test all
             // packages".
-            buildmessage.error("Package has no tests");
+            console.error("Package has no tests");
           }
         } else {
           // Otherwise, it's a directory; find it by source root.

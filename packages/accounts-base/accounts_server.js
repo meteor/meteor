@@ -266,7 +266,7 @@ export class AccountsServer extends AccountsCommon {
     // don't fetch the user object unless there are some callbacks registered
     let user;
     await this._onLogoutHook.forEachAsync(async callback => {
-      if (!user && userId) user = await this.users.findOne(userId, { fields: this._options.defaultFieldSelector });
+      if (!user && userId) user = await this.users.findOneAsync(userId, { fields: this._options.defaultFieldSelector });
       callback({ user, connection });
       return true;
     });
@@ -302,7 +302,7 @@ export class AccountsServer extends AccountsCommon {
 
     if (query.id) {
       // default field selector is added within getUserById()
-      user = await Meteor.users.findOne(query.id, this._addDefaultFieldSelector(options));
+      user = await Meteor.users.findOneAsync(query.id, this._addDefaultFieldSelector(options));
     } else {
       options = this._addDefaultFieldSelector(options);
       let fieldName;
@@ -318,7 +318,7 @@ export class AccountsServer extends AccountsCommon {
       }
       let selector = {};
       selector[fieldName] = fieldValue;
-      user = await Meteor.users.findOne(selector, options);
+      user = await Meteor.users.findOneAsync(selector, options);
       // If user is not found, try a case insensitive lookup
       if (!user) {
         selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
@@ -537,7 +537,7 @@ export class AccountsServer extends AccountsCommon {
     };
 
     if (result.userId) {
-      attempt.user = this.users.findOne(result.userId, {fields: this._options.defaultFieldSelector});
+      attempt.user = this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
     }
 
     this._validateLogin(methodInvocation.connection, attempt);
@@ -620,7 +620,7 @@ export class AccountsServer extends AccountsCommon {
   // in the process of becoming associated with hashed tokens and then
   // they'll get closed.
   async destroyToken(userId, loginToken) {
-    await this.users.update(userId, {
+    await this.users.updateAsync(userId, {
       $pull: {
         "services.resume.loginTokens": {
           $or: [
@@ -676,7 +676,7 @@ export class AccountsServer extends AccountsCommon {
     //   If successful, returns { token: <new token>, id: <user id>,
     //   tokenExpires: <expiration date> }.
     methods.getNewToken = async function () {
-      const user = await accounts.users.findOne(this.userId, {
+      const user = await accounts.users.findOneAsync(this.userId, {
         fields: { "services.resume.loginTokens": 1 }
       });
       if (! this.userId || ! user) {
@@ -707,7 +707,7 @@ export class AccountsServer extends AccountsCommon {
         throw new Meteor.Error("You are not logged in.");
       }
       const currentToken = accounts._getLoginToken(this.connection.id);
-      await accounts.users.update(this.userId, {
+      await accounts.users.updateAsync(this.userId, {
         $pull: {
           "services.resume.loginTokens": { hashedToken: { $ne: currentToken } }
         }
@@ -731,7 +731,7 @@ export class AccountsServer extends AccountsCommon {
 
       if (Package['service-configuration']) {
         const { ServiceConfiguration } = Package['service-configuration'];
-        if (ServiceConfiguration.configurations.findOne({service: options.service}))
+        if (ServiceConfiguration.configurations.findOneAsync({service: options.service}))
           throw new Meteor.Error(403, `Service ${options.service} already configured`);
 
         if (Package["oauth-encryption"]) {
@@ -903,7 +903,7 @@ export class AccountsServer extends AccountsCommon {
   async _insertHashedLoginToken(userId, hashedToken, query) {
     query = query ? { ...query } : {};
     query._id = userId;
-    await this.users.update(query, {
+    await this.users.updateAsync(query, {
       $addToSet: {
         "services.resume.loginTokens": hashedToken
       }
@@ -926,7 +926,7 @@ export class AccountsServer extends AccountsCommon {
    * @returns {Promise<void>}
    */
   _clearAllLoginTokens(userId) {
-    this.users.update(userId, {
+    this.users.updateAsync(userId, {
       $set: {
         'services.resume.loginTokens': []
       }
@@ -1128,7 +1128,7 @@ export class AccountsServer extends AccountsCommon {
 
     // Backwards compatible with older versions of meteor that stored login token
     // timestamps as numbers.
-    await this.users.update({ ...userFilter,
+    await this.users.updateAsync({ ...userFilter,
       $or: [
         { "services.resume.loginTokens.when": { $lt: oldestValidDate } },
         { "services.resume.loginTokens.when": { $lt: +oldestValidDate } }
@@ -1210,7 +1210,7 @@ export class AccountsServer extends AccountsCommon {
 
     let userId;
     try {
-      userId = await this.users.insert(fullUser);
+      userId = await this.users.insertAsync(fullUser);
     } catch (e) {
       // XXX string parsing sucks, maybe
       // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
@@ -1242,7 +1242,7 @@ export class AccountsServer extends AccountsCommon {
 
   async _deleteSavedTokensForUser(userId, tokensToDelete) {
     if (tokensToDelete) {
-      await this.users.update(userId, {
+      await this.users.updateAsync(userId, {
         $unset: {
           "services.resume.haveLoginTokensToDelete": 1,
           "services.resume.loginTokensToDelete": 1
@@ -1333,7 +1333,7 @@ export class AccountsServer extends AccountsCommon {
     } else {
       selector[serviceIdKey] = serviceData.id;
     }
-    let user = await this.users.findOne(selector, {fields: this._options.defaultFieldSelector});
+    let user = await this.users.findOneAsync(selector, {fields: this._options.defaultFieldSelector});
     // Check to see if the developer has a custom way to find the user outside
     // of the general selectors above.
     if (!user && this._additionalFindUserOnExternalLogin) {
@@ -1367,7 +1367,7 @@ export class AccountsServer extends AccountsCommon {
       // XXX Maybe we should re-use the selector above and notice if the update
       //     touches nothing?
       setAttrs = { ...setAttrs, ...opts };
-      await this.users.update(user._id, {
+      await this.users.updateAsync(user._id, {
         $set: setAttrs
       });
 
@@ -1501,7 +1501,7 @@ export class AccountsServer extends AccountsCommon {
       await this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
     } catch (ex) {
       // Remove inserted user if the check fails
-      await Meteor.users.remove(userId);
+      await Meteor.users.removeAsync(userId);
       throw ex;
     }
     return userId;
@@ -1575,7 +1575,7 @@ const defaultResumeLoginHandler = async (accounts, options) => {
   // First look for just the new-style hashed login token, to avoid
   // sending the unhashed token to the database in a query if we don't
   // need to.
-  let user = await accounts.users.findOne(
+  let user = await accounts.users.findOneAsync(
     {"services.resume.loginTokens.hashedToken": hashedToken},
     {fields: {"services.resume.loginTokens.$": 1}});
 
@@ -1585,7 +1585,7 @@ const defaultResumeLoginHandler = async (accounts, options) => {
     // the old-style token OR the new-style token, because another
     // client connection logging in simultaneously might have already
     // converted the token.
-    user =  await accounts.users.findOne({
+    user =  await accounts.users.findOneAsync({
         $or: [
           {"services.resume.loginTokens.hashedToken": hashedToken},
           {"services.resume.loginTokens.token": options.resume}
@@ -1630,7 +1630,7 @@ const defaultResumeLoginHandler = async (accounts, options) => {
     // after we read it).  Using $addToSet avoids getting an index
     // error if another client logging in simultaneously has already
     // inserted the new hashed token.
-    await accounts.users.update(
+    await accounts.users.updateAsync(
       {
         _id: user._id,
         "services.resume.loginTokens.token": options.resume
@@ -1646,7 +1646,7 @@ const defaultResumeLoginHandler = async (accounts, options) => {
     // Remove the old token *after* adding the new, since otherwise
     // another client trying to login between our removing the old and
     // adding the new wouldn't find a token to login with.
-    await accounts.users.update(user._id, {
+    await accounts.users.updateAsync(user._id, {
       $pull: {
         "services.resume.loginTokens": { "token": options.resume }
       }
@@ -1692,13 +1692,13 @@ const expirePasswordToken =
     }
     const expireFilter = { $and: [tokenFilter, resetRangeOr] };
     if (isEnroll) {
-      await accounts.users.update({ ...userFilter, ...expireFilter }, {
+      await accounts.users.updateAsync({ ...userFilter, ...expireFilter }, {
         $unset: {
           "services.password.enroll": ""
         }
       }, { multi: true });
     } else {
-      await accounts.users.update({ ...userFilter, ...expireFilter }, {
+      await accounts.users.updateAsync({ ...userFilter, ...expireFilter }, {
         $unset: {
           "services.password.reset": ""
         }
@@ -1798,21 +1798,21 @@ const setupUsersCollection = async users => {
   });
 
   /// DEFAULT INDEXES ON USERS
-  await users.createIndex('username', { unique: true, sparse: true });
-  await users.createIndex('emails.address', { unique: true, sparse: true });
-  await users.createIndex('services.resume.loginTokens.hashedToken',
+  await users.createIndexAsync('username', { unique: true, sparse: true });
+  await users.createIndexAsync('emails.address', { unique: true, sparse: true });
+  await users.createIndexAsync('services.resume.loginTokens.hashedToken',
     { unique: true, sparse: true });
-  await users.createIndex('services.resume.loginTokens.token',
+  await users.createIndexAsync('services.resume.loginTokens.token',
     { unique: true, sparse: true });
   // For taking care of logoutOtherClients calls that crashed before the
   // tokens were deleted.
-  await users.createIndex('services.resume.haveLoginTokensToDelete',
+  await users.createIndexAsync('services.resume.haveLoginTokensToDelete',
     { sparse: true });
   // For expiring login tokens
-  await users.createIndex("services.resume.loginTokens.when", { sparse: true });
+  await users.createIndexAsync("services.resume.loginTokens.when", { sparse: true });
   // For expiring password tokens
-  await users.createIndex('services.password.reset.when', { sparse: true });
-  await users.createIndex('services.password.enroll.when', { sparse: true });
+  await users.createIndexAsync('services.password.reset.when', { sparse: true });
+  await users.createIndexAsync('services.password.enroll.when', { sparse: true });
 };
 
 

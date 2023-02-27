@@ -1,5 +1,5 @@
 Tinytest.addAsync("asl-sync - synchronous queue", async function (test) {
-  var q = new Meteor._SynchronousQueue();
+  var q = new Meteor._AsynchronousQueue();
   var output = [];
   var pusher = function (n) {
     return function () {

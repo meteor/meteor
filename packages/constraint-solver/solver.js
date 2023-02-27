@@ -758,8 +758,8 @@ CS.Solver.prototype._getAnswer = async function (options) {
   // which we didn't do earlier because we needed to establish an
   // initial solution before asking the solver if it's possible to
   // not use these packages.
-  await Profile.time("forbid packages with no matching versions", function () {
-    _.each(analysis.packagesWithNoAllowedVersions, async function (constrs, p) {
+  await Profile.time("forbid packages with no matching versions", async function () {
+    for (const [p, constrs] of Object.entries(analysis.packagesWithNoAllowedVersions)) {
       var newSolution = await logic.solveAssuming(Logic.not(p));
       if (newSolution) {
         self.setSolution(newSolution);
@@ -773,7 +773,7 @@ CS.Solver.prototype._getAnswer = async function (options) {
         error += '\n' + self.listConstraintsOnPackage(p);
         self.errors.push(error);
       }
-    });
+    }
     self.throwAnyErrors();
   });
 

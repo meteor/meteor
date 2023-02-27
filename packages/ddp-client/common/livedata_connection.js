@@ -568,7 +568,7 @@ export class Connection {
       );
     }
 
-    const applyOptions = ['returnStubValue', 'returnServerResultPromise'];
+    const applyOptions = ['returnStubValue', 'returnServerResultPromise', 'returnServerPromise'];
     const defaultOptions = {
       returnServerResultPromise: true,
     };
@@ -880,6 +880,9 @@ export class Connection {
     // If we're using the default callback on the server,
     // block waiting for the result.
     if (future) {
+      if (options.returnServerPromise) {
+        return future;
+      }
       return options.returnStubValue
         ? future.then(() => stubReturnValue)
         : {
