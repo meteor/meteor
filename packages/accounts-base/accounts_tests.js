@@ -184,13 +184,13 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', test 
 });
 
 
-Tinytest.add('accounts - insertUserDoc username', test => {
+Tinytest.addAsync('accounts - insertUserDoc username', async test => {
   const userIn = {
     username: Random.id()
   };
 
   // user does not already exist. create a user object with fields set.
-  const userId = Accounts.insertUserDoc(
+  const userId = await Accounts.insertUserDoc(
     {profile: {name: 'Foo Bar'}},
     userIn
   );
@@ -201,8 +201,8 @@ Tinytest.add('accounts - insertUserDoc username', test => {
   test.equal(userOut.username, userIn.username);
 
   // run the hook again. now the user exists, so it throws an error.
-  test.throws(
-    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
+  test.throwsAsync(
+    async () => await Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
     'Username already exists.'
   );
 
@@ -210,7 +210,7 @@ Tinytest.add('accounts - insertUserDoc username', test => {
   Meteor.users.remove(userId);
 });
 
-Tinytest.add('accounts - insertUserDoc email', test => {
+Tinytest.addAsync('accounts - insertUserDoc email', async test => {
   const email1 = Random.id();
   const email2 = Random.id();
   const email3 = Random.id();
@@ -220,7 +220,7 @@ Tinytest.add('accounts - insertUserDoc email', test => {
   };
 
   // user does not already exist. create a user object with fields set.
-  const userId = Accounts.insertUserDoc(
+  const userId = await Accounts.insertUserDoc(
     {profile: {name: 'Foo Bar'}},
     userIn
   );
@@ -232,25 +232,25 @@ Tinytest.add('accounts - insertUserDoc email', test => {
 
   // run the hook again with the exact same emails.
   // run the hook again. now the user exists, so it throws an error.
-  test.throws(
-    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
+  test.throwsAsync(
+    async () => await Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
     'Email already exists.'
   );
 
   // now with only one of them.
-  test.throws(() =>
-    Accounts.insertUserDoc({}, {emails: [{address: email1}]}),
+  test.throwsAsync(async () =>
+    await Accounts.insertUserDoc({}, {emails: [{address: email1}]}),
     'Email already exists.'
   );
 
-  test.throws(() =>
-    Accounts.insertUserDoc({}, {emails: [{address: email2}]}),
+  test.throwsAsync(async () =>
+    await Accounts.insertUserDoc({}, {emails: [{address: email2}]}),
     'Email already exists.'
   );
 
 
   // a third email works.
-  const userId3 = Accounts.insertUserDoc(
+  const userId3 = await Accounts.insertUserDoc(
       {}, {emails: [{address: email3}]}
   );
   const user3 = Meteor.users.findOne(userId3);
@@ -262,9 +262,9 @@ Tinytest.add('accounts - insertUserDoc email', test => {
 });
 
 // More token expiration tests are in accounts-password
-Tinytest.addAsync('accounts - expire numeric token', (test, onComplete) => {
+Tinytest.addAsync('accounts - expire numeric token', async (test, onComplete) => {
   const userIn = { username: Random.id() };
-  const userId = Accounts.insertUserDoc({ profile: {
+  const userId = await Accounts.insertUserDoc({ profile: {
     name: 'Foo Bar'
   } }, userIn);
   const date = new Date(new Date() - 5000);
@@ -302,10 +302,10 @@ const insertUnhashedLoginToken = (userId, stampedToken) => {
   );
 };
 
-Tinytest.addAsync('accounts - login token', (test, onComplete) => {
+Tinytest.addAsync('accounts - login token', async (test, onComplete) => {
   // Test that we can login when the database contains a leftover
   // old style unhashed login token.
-  const userId1 = Accounts.insertUserDoc({}, {username: Random.id()});
+  const userId1 = await Accounts.insertUserDoc({}, {username: Random.id()});
   const stampedToken1 = Accounts._generateStampedLoginToken();
   insertUnhashedLoginToken(userId1, stampedToken1);
   let connection = DDP.connect(Meteor.absoluteUrl());
@@ -315,7 +315,7 @@ Tinytest.addAsync('accounts - login token', (test, onComplete) => {
   // Steal the unhashed token from the database and use it to login.
   // This is a sanity check so that when we *can't* login with a
   // stolen *hashed* token, we know it's not a problem with the test.
-  const userId2 = Accounts.insertUserDoc({}, {username: Random.id()});
+  const userId2 = await Accounts.insertUserDoc({}, {username: Random.id()});
   insertUnhashedLoginToken(userId2, Accounts._generateStampedLoginToken());
   const stolenToken1 = Meteor.users.findOne(userId2).services.resume.loginTokens[0].token;
   test.isTrue(stolenToken1);
@@ -324,7 +324,7 @@ Tinytest.addAsync('accounts - login token', (test, onComplete) => {
   connection.disconnect();
 
   // Now do the same thing, this time with a stolen hashed token.
-  const userId3 = Accounts.insertUserDoc({}, {username: Random.id()});
+  const userId3 = await Accounts.insertUserDoc({}, {username: Random.id()});
   Accounts._insertLoginToken(userId3, Accounts._generateStampedLoginToken());
   const stolenToken2 = Meteor.users.findOne(userId3).services.resume.loginTokens[0].hashedToken;
   test.isTrue(stolenToken2);
@@ -339,7 +339,7 @@ Tinytest.addAsync('accounts - login token', (test, onComplete) => {
   // Old style unhashed tokens are replaced by hashed tokens when
   // encountered.  This means that after someone logins once, the
   // old unhashed token is no longer available to be stolen.
-  const userId4 = Accounts.insertUserDoc({}, {username: Random.id()});
+  const userId4 = await Accounts.insertUserDoc({}, {username: Random.id()});
   const stampedToken2 = Accounts._generateStampedLoginToken();
   insertUnhashedLoginToken(userId4, stampedToken2);
   connection = DDP.connect(Meteor.absoluteUrl());
@@ -380,10 +380,10 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.add('accounts - get new token', test => {
+Tinytest.addAsync('accounts - get new token', async test => {
     // Test that the `getNewToken` method returns us a valid token, with
     // the same expiration as our original token.
-    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedToken = Accounts._generateStampedLoginToken();
     Accounts._insertLoginToken(userId, stampedToken);
     const conn = DDP.connect(Meteor.absoluteUrl());
@@ -406,11 +406,11 @@ Tinytest.add('accounts - get new token', test => {
   }
 );
 
-Tinytest.addAsync('accounts - remove other tokens', (test, onComplete) => {
+Tinytest.addAsync('accounts - remove other tokens', async (test, onComplete) => {
     // Test that the `removeOtherTokens` method removes all tokens other
     // than the caller's token, thereby logging out and closing other
     // connections.
-    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedTokens = [];
     const conns = [];
 
@@ -441,10 +441,10 @@ Tinytest.addAsync('accounts - remove other tokens', (test, onComplete) => {
   }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - hook callbacks can access Meteor.userId()',
-  test => {
-    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
+  async test => {
+    const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedToken = Accounts._generateStampedLoginToken();
     Accounts._insertLoginToken(userId, stampedToken);
 
@@ -491,11 +491,11 @@ Tinytest.add(
   }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - hook callbacks obey options.defaultFieldSelector',
-  test => {
+  async test => {
     const ignoreFieldName = "bigArray";
-    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
+    const userId = await Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
     const stampedToken = Accounts._generateStampedLoginToken();
     Accounts._insertLoginToken(userId, stampedToken);
     const options = Accounts._options;
@@ -548,12 +548,12 @@ Tinytest.add(
   }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - Meteor.user() obeys options.defaultFieldSelector',
-  test => {
+  async test => {
     const ignoreFieldName = "bigArray";
     const customField = "customField";
-    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
+    const userId = await Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
     const stampedToken = Accounts._generateStampedLoginToken();
     Accounts._insertLoginToken(userId, stampedToken);
     const options = Accounts._options;

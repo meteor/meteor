@@ -1148,7 +1148,7 @@ export class AccountsServer extends AccountsCommon {
   };
 
   // Called by accounts-password
-  insertUserDoc(options, user) {
+  async insertUserDoc(options, user) {
     // - clone user document, to protect from modification
     // - add createdAt timestamp
     // - prepare an _id, so that you can modify other collections (eg
@@ -1175,7 +1175,7 @@ export class AccountsServer extends AccountsCommon {
 
     let fullUser;
     if (this._onCreateUserHook) {
-      fullUser = this._onCreateUserHook(options, user);
+      fullUser = await this._onCreateUserHook(options, user);
 
       // This is *not* part of the API. We need this because we can't isolate
       // the global server environment between tests, meaning we can't test
@@ -1273,7 +1273,7 @@ export class AccountsServer extends AccountsCommon {
   // @returns {Object} Object with token and id keys, like the result
   //        of the "login" method.
   //
-  updateOrCreateUserFromExternalService(
+  async updateOrCreateUserFromExternalService(
     serviceName,
     serviceData,
     options
@@ -1358,7 +1358,7 @@ export class AccountsServer extends AccountsCommon {
       user.services[serviceName] = serviceData;
       return {
         type: serviceName,
-        userId: this.insertUserDoc(opts, user)
+        userId: await this.insertUserDoc(opts, user)
       };
     }
   };
@@ -1458,7 +1458,7 @@ export class AccountsServer extends AccountsCommon {
     }
   };
 
-  _createUserCheckingDuplicates({ user, email, username, options }) {
+  async _createUserCheckingDuplicates({ user, email, username, options }) {
     const newUser = {
       ...user,
       ...(username ? { username } : {}),
@@ -1469,7 +1469,7 @@ export class AccountsServer extends AccountsCommon {
     this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
     this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
 
-    const userId = this.insertUserDoc(options, newUser);
+    const userId = await this.insertUserDoc(options, newUser);
     // Perform another check after insert, in case a matching user has been
     // inserted in the meantime
     try {
