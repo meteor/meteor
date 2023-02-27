@@ -201,7 +201,7 @@ Tinytest.addAsync('accounts - insertUserDoc username', async test => {
   test.equal(userOut.username, userIn.username);
 
   // run the hook again. now the user exists, so it throws an error.
-  test.throwsAsync(
+  await test.throwsAsync(
     async () => await Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
     'Username already exists.'
   );
@@ -232,18 +232,18 @@ Tinytest.addAsync('accounts - insertUserDoc email', async test => {
 
   // run the hook again with the exact same emails.
   // run the hook again. now the user exists, so it throws an error.
-  test.throwsAsync(
+  await test.throwsAsync(
     async () => await Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
     'Email already exists.'
   );
 
   // now with only one of them.
-  test.throwsAsync(async () =>
+  await test.throwsAsync(async () =>
     await Accounts.insertUserDoc({}, {emails: [{address: email1}]}),
     'Email already exists.'
   );
 
-  test.throwsAsync(async () =>
+  await test.throwsAsync(async () =>
     await Accounts.insertUserDoc({}, {emails: [{address: email2}]}),
     'Email already exists.'
   );
@@ -750,7 +750,7 @@ Tinytest.addAsync(
             return false
         });
 
-        test.throwsAsync(async () => await Accounts.updateOrCreateUserFromExternalService(
+        await test.throwsAsync(async () => await Accounts.updateOrCreateUserFromExternalService(
             'facebook',
             { id: facebookId },
             { profile: { foo: 1 } },
