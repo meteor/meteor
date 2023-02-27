@@ -35,8 +35,8 @@ if (Meteor.isServer) {
         needToConfigure = true;
         collection._insecure = insecure;
         var m = {};
-        m["clear-collection-" + fullName] = function() {
-          collection.removeAsync({});
+        m["clear-collection-" + fullName] = async function() {
+          await collection.removeAsync({});
         };
         Meteor.methods(m);
       }
@@ -238,8 +238,8 @@ if (Meteor.isClient) {
       var collection = new Mongo.Collection(
         fullName, {idGeneration: idGeneration, transform: transform});
 
-      collection.callClearMethod = function () {
-        return Meteor.callAsync("clear-collection-" + fullName);
+      collection.callClearMethod = async function () {
+        await Meteor.callAsync("clear-collection-" + fullName);
       };
       collection.unnoncedName = name + idGeneration;
       return collection;
@@ -538,7 +538,6 @@ if (Meteor.isClient) {
             '/' + collection._name + '/removeAsync',
             {updated: true}).catch(async function (err) {
               test.equal(err.error, 403);
-              console.log({err});
               // unchanged
               test.equal(await collection.find({updated: true}).count(), 2);
             });

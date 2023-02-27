@@ -115,8 +115,8 @@ OplogObserveDriver = function (options) {
 
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
-      trigger, function (notification) {
-        Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
+      trigger, async function (notification) {
+        await finishIfNeedToPollQuery(function () {
           var op = notification.op;
           if (notification.dropCollection || notification.dropDatabase) {
             // Note: this call is not allowed to block on anything (especially
@@ -131,7 +131,7 @@ OplogObserveDriver = function (options) {
               return self._handleOplogEntrySteadyOrFetching(op);
             }
           }
-        }));
+        });
       }
     ));
   });
@@ -140,7 +140,7 @@ OplogObserveDriver = function (options) {
   self._stopHandles.push(listenAll(
     self._cursorDescription, function () {
       // If we're not in a pre-fire write fence, we don't have to do anything.
-      var fence = DDPServer._CurrentWriteFence.get();
+      var fence = DDPServer._getCurrentFence();
       if (!fence || fence.fired)
         return;
 
@@ -162,7 +162,7 @@ OplogObserveDriver = function (options) {
 
         for (const driver of Object.values(drivers)) {
           if (driver._stopped)
-            return;
+            continue;
 
           var write = await fence.beginWrite();
           if (driver._phase === PHASE.STEADY) {
@@ -568,7 +568,7 @@ _.extend(OplogObserveDriver.prototype, {
           await w.committed();
         }
       } catch (e) {
-        console.log({writes}, e);
+        console.error("_beSteady error", {writes}, e);
       }
     });
   },
@@ -826,16 +826,14 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._phase !== PHASE.QUERYING)
       throw Error("Phase unexpectedly " + self._phase);
 
-    await Meteor._noYieldsAllowed(async function () {
-      if (self._requeryWhenDoneThisQuery) {
-        self._requeryWhenDoneThisQuery = false;
-        self._pollQuery();
-      } else if (self._needToFetch.empty()) {
-        await self._beSteady();
-      } else {
-        self._fetchModifiedDocuments();
-      }
-    });
+    if (self._requeryWhenDoneThisQuery) {
+      self._requeryWhenDoneThisQuery = false;
+      self._pollQuery();
+    } else if (self._needToFetch.empty()) {
+      await self._beSteady();
+    } else {
+      self._fetchModifiedDocuments();
+    }
   },
 
   _cursorForQuery: function (optionsOverwrite) {

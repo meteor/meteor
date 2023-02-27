@@ -127,8 +127,9 @@ Tinytest.addAsync(
     makeTestConnection(
       test,
       function (clientConn, serverConn) {
-        clientConn.callAsync('livedata_server_test_inner').then(res => {
-          test.equal(res, serverConn.id);
+        clientConn.callAsync('livedata_server_test_inner').then(async res => {
+          const r = await res.stubValuePromise;
+          test.equal(r, serverConn.id);
           clientConn.disconnect();
           onComplete();
         });
@@ -144,9 +145,10 @@ Tinytest.addAsync(
   function (test, onComplete) {
     makeTestConnection(
       test,
-      function (clientConn, serverConn) {
-        clientConn.callAsync('livedata_server_test_outer').then(res => {
-          test.equal(res, serverConn.id);
+      function(clientConn, serverConn) {
+        clientConn.callAsync('livedata_server_test_outer').then(async res => {
+          const r = await res.stubValuePromise;
+          test.equal(r, serverConn.id);
           clientConn.disconnect();
           onComplete();
         });
@@ -351,7 +353,7 @@ Tinytest.addAsync(
   (test, onComplete) => makeTestConnection(test, async (clientConn, serverConn) => {
     const testResolvedPromiseResult = await clientConn.callAsync("testResolvedPromise", "clientConn.call");
     test.equal(
-      testResolvedPromiseResult,
+      await testResolvedPromiseResult.stubValuePromise,
       "clientConn.call after waiting"
     );
 

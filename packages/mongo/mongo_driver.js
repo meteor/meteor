@@ -262,7 +262,7 @@ MongoConnection.prototype.createCappedCollectionAsync = async function (
 // after the observer notifiers have added themselves to the write
 // fence), you should call 'committed()' on the object returned.
 MongoConnection.prototype._maybeBeginWrite = function () {
-  var fence = DDPServer._CurrentWriteFence.get();
+  const fence = DDPServer._getCurrentFence();
   if (fence) {
     return fence.beginWrite();
   } else {

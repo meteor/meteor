@@ -49,6 +49,14 @@ var SessionDocumentView = function () {
 
 DDPServer._SessionDocumentView = SessionDocumentView;
 
+DDPServer._getCurrentFence = function () {
+  let currentInvocation = this._CurrentWriteFence.get();
+  if (currentInvocation) {
+    return currentInvocation;
+  }
+  currentInvocation = DDP._CurrentPublicationInvocation.get();
+  return currentInvocation ? currentInvocation.fence : undefined;
+};
 
 _.extend(SessionDocumentView.prototype, {
 
@@ -328,9 +336,7 @@ var Session = function (server, version, socket, options) {
   self.send({ msg: 'connected', session: self.id });
 
   // On initial connect, spin up all the universal publishers.
-  Meteor._runAsync(function() {
-    self.startUniversalSubs();
-  });
+  self.startUniversalSubs();
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
     // We no longer need the low level timeout because we have heartbeats.
@@ -354,12 +360,20 @@ var Session = function (server, version, socket, options) {
 };
 
 Object.assign(Session.prototype, {
-
+  _checkPublishPromiseBeforeSend(f) {
+    if (!this._publishCursorPromise) {
+      f();
+      return;
+    }
+    this._publishCursorPromise.finally(() => f());
+  },
   sendReady: function (subscriptionIds) {
     var self = this;
-    if (self._isSending)
-      self.send({msg: "ready", subs: subscriptionIds});
-    else {
+    if (self._isSending) {
+      this._checkPublishPromiseBeforeSend(() => {
+        self.send({msg: "ready", subs: subscriptionIds});
+      });
+    } else {
       _.each(subscriptionIds, function (subscriptionId) {
         self._pendingReady.push(subscriptionId);
       });
@@ -372,8 +386,11 @@ Object.assign(Session.prototype, {
 
 
   sendAdded(collectionName, id, fields) {
-    if (this._canSend(collectionName))
-      this.send({msg: "added", collection: collectionName, id, fields});
+    if (this._canSend(collectionName)) {
+      this._checkPublishPromiseBeforeSend(() => {
+        this.send({ msg: 'added', collection: collectionName, id, fields });
+      });
+    }
   },
 
   sendChanged(collectionName, id, fields) {
@@ -381,18 +398,23 @@ Object.assign(Session.prototype, {
       return;
 
     if (this._canSend(collectionName)) {
-      this.send({
-        msg: "changed",
-        collection: collectionName,
-        id,
-        fields
+      this._checkPublishPromiseBeforeSend(() => {
+        this.send({
+          msg: "changed",
+          collection: collectionName,
+          id,
+          fields
+        });
       });
     }
   },
 
   sendRemoved(collectionName, id) {
-    if (this._canSend(collectionName))
-      this.send({msg: "removed", collection: collectionName, id});
+    if (this._canSend(collectionName)) {
+      this._checkPublishPromiseBeforeSend(() => {
+        this.send({msg: "removed", collection: collectionName, id});
+      });
+    }
   },
 
   getSendCallbacks: function () {
@@ -555,9 +577,7 @@ Object.assign(Session.prototype, {
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
     if (self.heartbeat) {
-      Meteor._runAsync(function() {
-        self.heartbeat.messageReceived();
-      });
+      self.heartbeat.messageReceived();
     };
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
@@ -604,7 +624,7 @@ Object.assign(Session.prototype, {
         unblock(); // in case the handler didn't already do it
       }
 
-      Meteor._runAsync(runHandlers);
+      runHandlers();
     };
 
     processNext();
@@ -682,7 +702,7 @@ Object.assign(Session.prototype, {
       self._stopSubscription(msg.id);
     },
 
-    method: function (msg, unblock) {
+    method: async function (msg, unblock) {
       var self = this;
 
       // Reject malformed messages.
@@ -709,8 +729,7 @@ Object.assign(Session.prototype, {
         // example, because the method waits for them) their
         // writes will be included in the fence.
         fence.retire();
-        self.send({
-          msg: 'updated', methods: [msg.id]});
+        self.send({msg: 'updated', methods: [msg.id]});
       });
 
       // Find the handler
@@ -719,7 +738,7 @@ Object.assign(Session.prototype, {
         self.send({
           msg: 'result', id: msg.id,
           error: new Meteor.Error(404, `Method '${msg.method}' not found`)});
-        fence.arm();
+        await fence.arm();
         return;
       }
 
@@ -733,7 +752,8 @@ Object.assign(Session.prototype, {
         setUserId: setUserId,
         unblock: unblock,
         connection: self.connectionHandle,
-        randomSeed: randomSeed
+        randomSeed: randomSeed,
+        fence,
       });
 
       const promise = new Promise((resolve, reject) => {
@@ -790,8 +810,8 @@ Object.assign(Session.prototype, {
         );
       });
 
-      function finish() {
-        fence.arm();
+      async function finish() {
+        await fence.arm();
         unblock();
       }
 
@@ -799,15 +819,14 @@ Object.assign(Session.prototype, {
         msg: "result",
         id: msg.id
       };
-
-      promise.then(result => {
-        finish();
+      promise.then(async result => {
+        await finish();
         if (result !== undefined) {
           payload.result = result;
         }
         self.send(payload);
-      }, (exception) => {
-        finish();
+      }, async (exception) => {
+        await finish();
         payload.error = wrapInternalException(
           exception,
           `while invoking method '${msg.method}'`
@@ -1191,7 +1210,7 @@ Object.assign(Subscription.prototype, {
         // mark subscription as ready.
         self.ready();
       } else {
-        res._publishCursor(self).then(() => {
+        this._publishCursorPromise = res._publishCursor(self).then(() => {
           self.ready();
         }).catch((e) => self.error(e));
       }
@@ -1227,7 +1246,7 @@ Object.assign(Subscription.prototype, {
         }
         self.ready();
       } else {
-        Promise.all(res.map((c) => c._publishCursor(self))).then(() => {
+        this._publishCursorPromise = Promise.all(res.map((c) => c._publishCursor(self))).then(() => {
           self.ready();
         }).catch((e) => self.error(e));
       }
@@ -1368,6 +1387,7 @@ Object.assign(Subscription.prototype, {
       ids.add(id);
     }
 
+    this._session._publishCursorPromise = this._publishCursorPromise;
     this._session.added(this._subscriptionHandle, collectionName, id, fields);
   },
 
@@ -1508,9 +1528,7 @@ Server = function (options = {}) {
             return;
           }
 
-          Meteor._runAsync(function() {
-            self._handleConnect(socket, msg);
-          })
+          self._handleConnect(socket, msg);
 
           return;
         }
@@ -1708,9 +1726,7 @@ Object.assign(Server.prototype, {
         // self.sessions to change while we're running this loop.
         self.sessions.forEach(function (session) {
           if (!session._dontStartNewUniversalSubs) {
-            Meteor._runAsync(function() {
-              session._startSubscription(handler);
-            });
+            session._startSubscription(handler);
           }
         });
       }
@@ -1791,6 +1807,7 @@ Object.assign(Server.prototype, {
   applyAsync: function (name, args, options) {
     // Run the handler
     var handler = this.method_handlers[name];
+
     if (! handler) {
       return Promise.reject(
         new Meteor.Error(404, `Method '${name}' not found`)
@@ -1831,15 +1848,25 @@ Object.assign(Server.prototype, {
       randomSeed
     });
 
-    return new Promise(resolve => resolve(
-      DDP._CurrentMethodInvocation.withValue(
-        invocation,
-        () => maybeAuditArgumentChecks(
-          handler, invocation, EJSON.clone(args),
-          "internal call to '" + name + "'"
-        )
-      )
-    )).then(EJSON.clone);
+    return new Promise((resolve, reject) => {
+      let result;
+      try {
+        result = DDP._CurrentMethodInvocation.withValue(invocation, () =>
+          maybeAuditArgumentChecks(
+            handler,
+            invocation,
+            EJSON.clone(args),
+            "internal call to '" + name + "'"
+          )
+        );
+      } catch (e) {
+        return reject(e);
+      }
+      if (!Meteor._isPromise(result)) {
+        return resolve(result);
+      }
+      result.then(r => resolve(r)).catch(reject);
+    }).then(EJSON.clone);
   },
 
   _urlForSession: function (sessionId) {

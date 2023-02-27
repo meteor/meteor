@@ -407,6 +407,11 @@
         "acorn-dynamic-import": {
           "version": "4.0.0"
         },
+        "acorn-dynamic-import": {
+          "version": "4.0.0",
+          "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
+          "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
+        },
         "ansi-colors": {
           "version": "3.2.3"
         },

@@ -42,7 +42,7 @@ PollingObserveDriver = function (options) {
       // When someone does a transaction that might affect us, schedule a poll
       // of the database. If that transaction happens inside of a write fence,
       // block the fence until we've polled and notified observers.
-      var fence = DDPServer._CurrentWriteFence.get();
+      var fence = DDPServer._getCurrentFence();
       if (fence)
         self._pendingWrites.push(fence.beginWrite());
       // Ensure a poll is scheduled... but if we already know that one is,
@@ -90,8 +90,8 @@ _.extend(PollingObserveDriver.prototype, {
     if (self._pollsScheduledButNotStarted > 0)
       return;
     ++self._pollsScheduledButNotStarted;
-    //TODO check this change
-    await self._taskQueue.runTask(async function () {
+    //TODO[fibers] check this change
+    await self._taskQueue.queueTask(async function () {
       await self._pollMongo();
     });
   },
@@ -126,8 +126,8 @@ _.extend(PollingObserveDriver.prototype, {
                       self._pollsScheduledButNotStarted);
     // Run a poll synchronously (which will counteract the
     // ++_pollsScheduledButNotStarted from _suspendPolling).
-    self._taskQueue.runTask(function () {
-      self._pollMongo();
+    self._taskQueue.runTask(async function () {
+      await self._pollMongo();
     });
   },
 
@@ -202,10 +202,10 @@ _.extend(PollingObserveDriver.prototype, {
     // round, mark all the writes which existed before this call as
     // commmitted. (If new writes have shown up in the meantime, there'll
     // already be another _pollMongo task scheduled.)
-    self._multiplexer.onFlush(function () {
-      _.each(writesForCycle, function (w) {
-        w.committed();
-      });
+    await self._multiplexer.onFlush(async function () {
+      for (const w of writesForCycle) {
+        await w.committed();
+      }
     });
   },
 
@@ -218,8 +218,8 @@ _.extend(PollingObserveDriver.prototype, {
 
     _.each(self._stopCallbacks, stopCallbacksCaller);
     // Release any write fences that are waiting on us.
-    _.each(self._pendingWrites, function (w) {
-      w.committed();
+    _.each(self._pendingWrites, async function (w) {
+      await w.committed();
     });
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", -1);

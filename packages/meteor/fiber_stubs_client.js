@@ -19,28 +19,11 @@ Meteor._SynchronousQueue = function () {
 
 var SQp = Meteor._SynchronousQueue.prototype;
 
-SQp._createWrappedTask = function(name, task) {
-  let resolve;
-  const promise = new Promise(r => resolve = r);
-  return {
-    promise,
-    wrappedTask: () => {
-      const result = task();
-      if (result && result.then) {
-        result.then(resolve);
-      } else {
-        resolve(result);
-      }
-    }
-  };
-};
-
 SQp.runTask = function (task) {
   var self = this;
   if (!self.safeToRunTask())
     throw new Error("Could not synchronously run a task from a running task");
-  const { promise, wrappedTask } = this._createWrappedTask(task.name, task);
-  self._tasks.push(wrappedTask);
+  self._tasks.push(task);
   var tasks = self._tasks;
   self._tasks = [];
   self._running = true;
@@ -70,13 +53,11 @@ SQp.runTask = function (task) {
   } finally {
     self._running = false;
   }
-  return promise;
 };
 
 SQp.queueTask = function (task) {
   var self = this;
-  const { promise, wrappedTask } = this._createWrappedTask(task.name, task);
-  self._tasks.push(wrappedTask);
+  self._tasks.push(task);
   // Intentionally not using Meteor.setTimeout, because it doesn't like runing
   // in stubs for now.
   if (!self._runTimeout) {
@@ -84,7 +65,6 @@ SQp.queueTask = function (task) {
       return self.flush.apply(self, arguments);
     }, 0);
   }
-  return promise;
 };
 
 SQp.flush = function () {
@@ -92,7 +72,7 @@ SQp.flush = function () {
   self.runTask(function () {});
 };
 
-SQp.drain = async function () {
+SQp.drain = function () {
   var self = this;
   if (!self.safeToRunTask()) {
     return;

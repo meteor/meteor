@@ -22,8 +22,8 @@ ObserveMultiplexer = class {
 
     const self = this;
     this.callbackNames().forEach(callbackName => {
-      this[callbackName] = function(/* ... */) {
-        self._applyCallback(callbackName, _.toArray(arguments));
+      this[callbackName] = async function(/* ... */) {
+        await self._applyCallback(callbackName, _.toArray(arguments));
       };
     });
   }
@@ -95,7 +95,7 @@ ObserveMultiplexer = class {
   // adds have been processed. Does not block.
   async ready() {
     const self = this;
-    await this._queue.runTask(function () {
+    this._queue.queueTask(function () {
       if (self._ready())
         throw Error("can't make ObserveMultiplex ready twice!");
 
@@ -146,7 +146,7 @@ ObserveMultiplexer = class {
   }
   async _applyCallback(callbackName, args) {
     const self = this;
-    await this._queue.runTask(async function () {
+    this._queue.queueTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;
@@ -189,8 +189,6 @@ ObserveMultiplexer = class {
       return;
     // note: docs may be an _IdMap or an OrderedDict
     await this._cache.docs.forEachAsync(async (doc, id) => {
-      //TODO FIXME
-      if (!this._handles) console.log({this:this});
       if (!_.has(this._handles, handle._id))
         throw Error("handle got removed before sending initial adds!");
       const { _id, ...fields } = handle.nonMutatingCallbacks ? doc
@@ -215,8 +213,8 @@ ObserveHandle = class {
         // ordered observe where for some reason you don't get ordering data on
         // the adds.  I dunno, we wrote tests for it, there must have been a
         // reason.
-        this._addedBefore = function (id, fields, before) {
-          callbacks.added(id, fields);
+        this._addedBefore = async function (id, fields, before) {
+          await callbacks.added(id, fields);
         };
       }
     });

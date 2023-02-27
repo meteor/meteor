@@ -263,12 +263,10 @@ export class TestCaseResults {
     const predicate = this._guessPredicate(expected);
 
     try {
-      console.log('XXXXXXXXXXXXX', message);
       await f();
     } catch (exception) {
       actual = exception;
     }
-    console.log('XXXXXXXXXXXXX', message);
     this._assertActual(actual, predicate, message);
   }
 
@@ -457,7 +455,7 @@ export const TestManager = new (class TestManager {
   constructor() {
     this.tests = {};
     this.ordered_tests = [];
-    this.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
+    this.testQueue = Meteor.isServer && new Meteor._AsynchronousQueue();
     this.onlyTestsNames = [];
   }
 
