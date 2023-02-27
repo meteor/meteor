@@ -561,6 +561,7 @@ var launchMongo = async function(options) {
 
     function stop() {
       if (proc) {
+        console.log(typeof proc);
         proc.removeListener('exit', procExitHandler);
         proc.kill('SIGINT');
         proc = null;
@@ -581,7 +582,6 @@ var launchMongo = async function(options) {
       // Invoke the outer onExit callback.
       await onExit(code, signal, stderrOutput, detectedErrors);
     });
-    console.log(typeof procExitHandler, "Run mongo");
     proc.on('exit', procExitHandler);
 
     var listening = false;
@@ -596,6 +596,8 @@ var launchMongo = async function(options) {
           listening &&
           (noOplog || replSetReadyToBeInitiated || replSetReady)
         ) {
+          console.log(typeof proc.stdout);
+
           proc.stdout.removeListener('data', stdoutOnData);
           resolve();
           resolve = null;

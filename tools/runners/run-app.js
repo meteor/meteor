@@ -84,11 +84,11 @@ Object.assign(AppProcess.prototype, {
       throw new Error("already started?");
     }
 
+    debugger;
     // Start the app!
     self.proc = await self._spawn();
 
     eachline(self.proc.stdout, async function (line) {
-      console.log("Raw line: " + line + "\n")
       if (line.match(/^LISTENING\s*$/)) {
         // This is the child process telling us that it's ready to receive
         // connections.  (It does this because we told it to with
@@ -100,6 +100,7 @@ Object.assign(AppProcess.prototype, {
     });
 
     eachline(self.proc.stderr, async function (line) {
+      debugger;
       await runLog.logAppOutput(line, true);
     });
 
@@ -727,11 +728,10 @@ Object.assign(AppRunner.prototype, {
     self.runPromise = self._makePromise("run");
     var runPromise = self.runPromise;
     var listenPromise = self._makePromise("listen");
-    console.log('Mde more promises');
+    debugger;
 
     // Run the program
     options.beforeRun && options.beforeRun();
-    console.log("will run app?");
     var appProcess = new AppProcess({
       projectContext: self.projectContext,
       bundlePath: bundlePath,
@@ -752,6 +752,8 @@ Object.assign(AppRunner.prototype, {
       },
       inspect: self.inspect,
       onListen: function () {
+        debugger;
+        console.log("started listening");
         self.proxy.setMode("proxy");
         if (self.hmrServer) {
           self.hmrServer.setAppState("okay");
@@ -762,7 +764,6 @@ Object.assign(AppRunner.prototype, {
         self._resolvePromise("start");
         self._resolvePromise("listen");
         console.log("Resolved");
-
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings,
@@ -770,7 +771,6 @@ Object.assign(AppRunner.prototype, {
       autoRestart: self.autoRestart,
       hmrSecret: self.hmrSecret
     });
-    console.log("Done? processing?");
 
     if (options.firstRun && self._beforeStartPromise) {
         var [stopped] = await self._beforeStartPromise;
@@ -779,7 +779,6 @@ Object.assign(AppRunner.prototype, {
         }
     }
     await appProcess.start();
-    console.log("started app");
 
     function maybePrintLintWarnings(bundleResult) {
       if (! (self.projectContext.lintAppAndLocalPackages &&
@@ -872,7 +871,6 @@ Object.assign(AppRunner.prototype, {
     }
 
     async function runPostStartupCallbacks(bundleResult) {
-      console.log("started running");
       const callbacks = bundleResult.postStartupCallbacks;
       if (! callbacks) return;
 
@@ -904,11 +902,7 @@ Object.assign(AppRunner.prototype, {
     }
 
     Console.enableProgressDisplay(false);
-    console.log("before race");
 
-    console.log("will call listen?");
-    await listenPromise
-    console.log("Called listen");
     console.log("before race");
     const promList = [runPromise, listenPromise];
     await Promise.race(promList)

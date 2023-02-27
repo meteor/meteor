@@ -223,7 +223,6 @@ var specialArgPaths = {
 var loadServerBundles = Profile("Load server bundles", async function () {
   var infos = [];
   var nonLocalNodeModulesPaths = new Set();
-
   for (const fileInfo of serverJson.load) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
 
@@ -498,9 +497,15 @@ var runMain = Profile("Run main()", async function () {
 
   await Profile.run('Server startup', function() {
     return global.asyncLocalStorage.run({}, async () => {
+      console.log('loaded bundle?');
+      debugger;
       await loadServerBundles();
+      console.log('done bundle');
       await callStartupHooks();
+      console.log('Hooks done');
       await runMain();
+      console.log('done');
+
     });
   });
 })().catch(e => {

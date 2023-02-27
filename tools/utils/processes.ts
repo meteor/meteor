@@ -48,7 +48,7 @@ type ExecFileOptions = {
   * status and signal.
   * @param command The command to run
   * @param args List of string arguments
-  * @param options 
+  * @param options
   * @returns The stdout from the command
   */
 export function execFileSync(
@@ -67,7 +67,7 @@ export function execFileSync(
   * the error will contain fields pid, stderr, stdout, status and signal.
   * @param command The command to run
   * @param args List of string arguments
-  * @param options 
+  * @param options
   */
 export function execFileAsync(
   command: string,
@@ -96,7 +96,7 @@ export function execFileAsync(
   const exitEvent = options.waitForClose ? 'close' : 'exit';
 
   return new Promise((resolve, reject) => {
-    let child: ReturnType<typeof child_process.exec>; 
+    let child: ReturnType<typeof child_process.exec>;
     const spawnArgs: ReadonlyArray<string> = Array.isArray(args) ? args : [];
     const { cwd, env, stdio } = options;
 
@@ -132,6 +132,7 @@ export function execFileAsync(
 
     const errorCallback = (error: NodeJS.ErrnoException) => {
       // Make sure we only receive one type of callback
+      console.log(child);
       child.removeListener(exitEvent, exitCallback);
 
       // Trim captured output to get rid of excess whitespace
@@ -156,6 +157,7 @@ export function execFileAsync(
 
     const exitCallback = (code: number, signal: string) => {
       // Make sure we only receive one type of callback
+      console.log(child);
       child.removeListener('error', errorCallback);
 
       // Trim captured output to get rid of excess whitespace
