@@ -497,15 +497,9 @@ var runMain = Profile("Run main()", async function () {
 
   await Profile.run('Server startup', function() {
     return global.asyncLocalStorage.run({}, async () => {
-      console.log('loaded bundle?');
-      debugger;
       await loadServerBundles();
-      console.log('done bundle');
       await callStartupHooks();
-      console.log('Hooks done');
       await runMain();
-      console.log('done');
-
     });
   });
 })().catch(e => {

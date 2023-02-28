@@ -467,14 +467,13 @@
       "integrity": "sha512-MCNzAp77qzKca9+W/+I0+sEpaUnZoeasnghNeVc41VZCEKaCH73Vq3BZZ/SzWIgrqE4H4ceI+p+b6C0mHf9T4g=="
     },
     "@meteorjs/babel": {
-      "version": "7.18.0-beta.5",
-      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.18.0-beta.5.tgz",
-      "integrity": "sha512-OWtjVxsaOgMc1PAzRXEicYc7ZDwTFQDAJ3C8UfwIPGhSojVj3OiLz8vZMZGeAiEac8IxZffiskirsc7NwresyQ=="
+      "version": "7.19.0-beta.1",
+      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.19.0-beta.1.tgz",
+      "integrity": "sha512-4dy7oSXEo6Eb2PHfPkMX0VVnkQJ9Kb6Qv6/ssiXOqQRtTRpBAgeWeMzUd42u/8VzxG6l8NoNqIhPSOHZjC2usg=="
     },
     "@meteorjs/reify": {
-      "version": "0.23.0",
-      "resolved": "https://registry.npmjs.org/@meteorjs/reify/-/reify-0.23.0.tgz",
-      "integrity": "sha512-sHQCbZHoM+PxT+pWvkJDsaOpJP+tMQ31Mr2t1T0YcXl18eScb0bQNafe8TugNCc4pngByppfscVX4ppr84MzDw==",
+      "version": "https://github.com/meteor/reify/tarball/5078da9d0827cc17741504762f3a7f71c3b01448",
+      "integrity": "sha512-LEdx+3A7wV8XeTFWrfkOu0PtX+Vjgl28b4mW8bsM3lZPWIqx0PXTfpbXfDy61MgmmYXR7/cWjVJ8xqgSunF3Mg==",
       "dependencies": {
         "semver": {
           "version": "5.7.1",
@@ -489,14 +488,9 @@
       "integrity": "sha512-WulqXMDUTYAXCjZnk6JtIHPigp55cVtDgDrO2gHRwhyJto21+1zbVCtOYB2L1F9w4qCQ0rOGWBnBe0FNTiEJIQ=="
     },
     "acorn": {
-      "version": "6.4.2",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-6.4.2.tgz",
-      "integrity": "sha512-XtGIhXwF8YM8bJhGxG5kXgjkEuNGLTkoYqVE+KMR+aspr4KGYmKYg7yUe3KghyQ9yheNwLnjmzh/7+gfDBmHCQ=="
-    },
-    "acorn-dynamic-import": {
-      "version": "4.0.0",
-      "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
-      "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
+      "version": "8.8.2",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.8.2.tgz",
+      "integrity": "sha512-xjIYgE8HBrkpd/sJqOGNspf8uHG+NOHGOw6a/Urj8taM2EXfdNAH2oFcPeIFfsv3+kz/mJrS5VuMqbNLjCa2vw=="
     },
     "ansi-styles": {
       "version": "3.2.1",
@@ -686,9 +680,9 @@
       "integrity": "sha512-tUkiguQGW7S3IhB7N+c2MV/HZPSCPAAiYBZXLsBhFB/PCy6ZKKsZrmBayHV9fdGV/ARIfJ14NkxKzRDjvp7L6w=="
     },
     "caniuse-lite": {
-      "version": "1.0.30001457",
-      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001457.tgz",
-      "integrity": "sha512-SDIV6bgE1aVbK6XyxdURbUE89zY7+k1BBBaOwYwkNCglXlel/E7mELiHC64HQ+W0xSKlqWhV9Wh7iHxUjMs4fA=="
+      "version": "1.0.30001458",
+      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001458.tgz",
+      "integrity": "sha512-lQ1VlUUq5q9ro9X+5gOEyH7i3vm+AYVT1WDCVB69XOZ17KZRhnZ9J0Sqz7wTHQaLBJccNCHq8/Ww5LlOIZbB0w=="
     },
     "chalk": {
       "version": "2.4.2",
@@ -711,9 +705,9 @@
       "integrity": "sha512-ASFBup0Mz1uyiIjANan1jzLQami9z1PoYSZCiiYW2FczPbenXc45FZdBZLzOT+r6+iciuEModtmCti+hjaAk0A=="
     },
     "core-js-compat": {
-      "version": "3.28.0",
-      "resolved": "https://registry.npmjs.org/core-js-compat/-/core-js-compat-3.28.0.tgz",
-      "integrity": "sha512-myzPgE7QodMg4nnd3K1TDoES/nADRStM8Gpz0D6nhkwbmwEnE0ZGJgoWsvQ722FR8D7xS0n0LV556RcEicjTyg=="
+      "version": "3.29.0",
+      "resolved": "https://registry.npmjs.org/core-js-compat/-/core-js-compat-3.29.0.tgz",
+      "integrity": "sha512-ScMn3uZNAFhK2DGoEfErguoiAHhV2Ju+oJo/jK08p7B3f3UhocUrCCkTvnZaiS+edl5nlIoiBXKcwMc6elv4KQ=="
     },
     "debug": {
       "version": "4.3.4",
@@ -721,9 +715,9 @@
       "integrity": "sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ=="
     },
     "electron-to-chromium": {
-      "version": "1.4.310",
-      "resolved": "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.310.tgz",
-      "integrity": "sha512-/xlATgfwkm5uDDwLw5nt/MNEf7c1oazLURMZLy39vOioGYyYzLWIDT8fZMJak6qTiAJ7udFTy7JG7ziyjNutiA=="
+      "version": "1.4.312",
+      "resolved": "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.312.tgz",
+      "integrity": "sha512-e7g+PzxzkbiCD1aNhdj+Tx3TLlfrQF/Lf+LAaUdoLvB1kCxf9wJimqXdWEqnoiYjFtxIR1hGBmoHsBIcCBNOMA=="
     },
     "escalade": {
       "version": "3.1.1",
