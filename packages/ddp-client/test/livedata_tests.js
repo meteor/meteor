@@ -224,11 +224,11 @@ testAsyncMulti('livedata - basic method invocation', [
     // No callback
 
     if (Meteor.isServer) {
-      test.throws(function() {
-        Meteor.call('exception', 'both');
+      await test.throwsAsync(async function() {
+        await Meteor.call('exception', 'both', {show: true});
       });
-      test.throws(function() {
-        Meteor.call('exception', 'server');
+      await test.throwsAsync(async function() {
+        await Meteor.call('exception', 'server', {show: true});
       });
       // No exception, because no code will run on the client
       test.equal(await Meteor.callAsync('exception', 'client'), undefined);
@@ -298,7 +298,7 @@ testAsyncMulti('livedata - basic method invocation', [
       test.equal(await Meteor.callAsync('exception', 'client'), undefined);
     }
   },
-
+],[
   async function(test, expect) {
     if (Meteor.isServer) {
       let threw = false;
@@ -314,7 +314,6 @@ testAsyncMulti('livedata - basic method invocation', [
       try {
         await Meteor.callAsync('exception', 'both', {
           intended: true,
-          throwThroughFuture: true,
         });
       } catch (e) {
         threw = true;
@@ -349,7 +348,6 @@ testAsyncMulti('livedata - basic method invocation', [
           'server',
           {
             intended: true,
-            throwThroughFuture: true,
           },
           expect(failure(test, 999, 'Client-visible test exception'))
         ),
@@ -383,46 +381,44 @@ const subscribeBeforeRun = async (subName, testId, cb) => {
 // this is a big hack (and XXX pollutes the global test namespace)
 testAsyncMulti('livedata - compound methods', [
   async function(test) {
-    await Ledger.insertAsync({
-      name: 'alice',
-      balance: 100,
-      world: test.runId(),
-    });
-    await Ledger.insertAsync({ name: 'bob', balance: 50, world: test.runId() });
+    if (Meteor.isClient) {
+      Meteor.subscribe('ledger', test.runId(), () => {});
+    }
+
+    await Ledger.insertAsync(
+      { name: 'alice', balance: 100, world: test.runId() }
+    );
+    await Ledger.insertAsync(
+      { name: 'bob', balance: 50, world: test.runId() }
+    );
   },
   async function(test) {
-    await subscribeBeforeRun('ledger', test.runId(), async () => {
+    await Meteor.callAsync(
+      'ledger/transfer',
+      test.runId(),
+      'alice',
+      'bob',
+      10,
+    )
+    await checkBalances(test, 90, 60);
+  },
+  async function(test) {
+    try {
       await Meteor.callAsync(
         'ledger/transfer',
         test.runId(),
         'alice',
         'bob',
-        10
+        100,
+        true,
       );
-      await checkBalances(test, 90, 60);
-    });
-  },
-  async function(test) {
-    await subscribeBeforeRun('ledger', test.runId(), async () => {
-      try {
-        await Meteor.callAsync(
-          'ledger/transfer',
-          test.runId(),
-          'alice',
-          'bob',
-          100,
-          true
-        );
-      } catch (e) {}
-
-      if (Meteor.isClient) {
-        // client can fool itself by cheating, but only until the sync
-        // finishes
-        await checkBalances(test, -10, 160);
-      } else {
-        await checkBalances(test, 90, 60);
-      }
-    });
+    } catch (e) {
+    }
+    if (Meteor.isClient)
+      // client can fool itself by cheating, but only until the sync
+      // finishes
+      await checkBalances(test, -10, 160);
+    else await checkBalances(test, 90, 60);
   },
 ]);
 
@@ -1048,7 +1044,8 @@ if (Meteor.isServer) {
       async function(test, expect) {
         const self = this;
         if (self.conn.status().connected) {
-          test.equal(await self.conn.callAsync('s2s', 'foo'), 's2s foo');
+          const callResult = await self.conn.callAsync('s2s', 'foo');
+          test.equal(await callResult.stubValuePromise, 's2s foo');
         }
       },
     ]);
@@ -1136,6 +1133,78 @@ testAsyncMulti('livedata - result by value', [
         test.equal(self.firstResult.length + 1, secondResult.length);
       })
     );
+  },
+]);
+
+testAsyncMulti('livedata - methods with nested stubs', [
+  function() {
+    const self = this;
+    self.collectionName = 'livedata-tests';
+    self.coll = new Mongo.Collection(self.collectionName);
+    if (Meteor.isServer) {
+      Meteor.publish('c' + self.collectionName, () => self.coll.find());
+    }
+
+    Meteor.methods({
+      async insertData(data) {
+        const id = await self.coll.insertAsync(data);
+        return [id, `inserted with: ${id}`];
+      },
+      async updateData(id, data) {
+        const beforeUpdateData = await Meteor.callAsync('getData', id);
+        const r = await self.coll.updateAsync(
+          id,
+          { $set: data },
+          { returnStubValue: true }
+        );
+        const afterUpdateData = await Meteor.callAsync('getData', id);
+        return [
+          r,
+          {
+            before: `before update: a:${beforeUpdateData.a}`,
+            after: `after update: a:${afterUpdateData.a}, gotData:${afterUpdateData.gotData}`,
+          },
+        ];
+      },
+      async getData(id) {
+        const data = await self.coll.findOneAsync(id);
+
+        await self.coll.updateAsync(id, { $set: { gotData: true } });
+        return data;
+      },
+    });
+  },
+  function(test, expected) {
+    if (Meteor.isClient) {
+      const subs = Meteor.subscribe('c' + this.collectionName, () => {});
+      let resolver;
+      const promise = new Promise(r => (resolver = r));
+
+      const id = setInterval(() => {
+        if (subs.ready()) {
+          clearInterval(id);
+          resolver();
+        }
+      }, 10);
+
+      return promise;
+    }
+  },
+  async function(test) {
+    if (Meteor.isClient) {
+      return Meteor.callAsync('insertData', { a: 1 })
+        .then(async data => {
+          const [id, message] = await data.stubValuePromise;
+          test.equal(message, `inserted with: ${id}`);
+          return Meteor.callAsync('updateData', id, { a: 2 });
+        })
+        .then(async data => {
+          const [count, message] = await data.stubValuePromise;
+          test.equal(count, 1);
+          test.equal(message.before, 'before update: a:1');
+          test.equal(message.after, 'after update: a:2, gotData:true');
+        });
+    }
   },
 ]);
 

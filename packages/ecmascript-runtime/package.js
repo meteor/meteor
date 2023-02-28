@@ -6,6 +6,10 @@ Package.describe({
   documentation: "README.md"
 });
 
+Npm.depends({
+  '@babel/runtime': '7.20.7'
+});
+
 Package.onUse(function(api) {
   api.imply("ecmascript-runtime-client");
   api.imply("ecmascript-runtime-server", "server");

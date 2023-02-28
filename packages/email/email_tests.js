@@ -12,7 +12,9 @@ const sleep = (ms) => {
 
 // Create dynamic async tests
 TEST_CASES.forEach(({ title, options, testCalls }) => {
-  Tinytest.addAsync(`${title}`, function (test, onComplete) {
+  Tinytest.addAsync(`${title}`, async function (test, onComplete) {
+    let resolver;
+    const promise = new Promise(r => resolver = r);
     smokeEmailTest((stream) => {
       const allPromises = Object.entries(options).map(([key, option]) => {
         const testCall = testCalls[key];
@@ -20,8 +22,9 @@ TEST_CASES.forEach(({ title, options, testCalls }) => {
           testCall(test, stream);
         });
       });
-      Promise.all(allPromises).then(() => onComplete());
+      Promise.all(allPromises).then(() => resolver());
     });
+    await promise;
   });
 });
 

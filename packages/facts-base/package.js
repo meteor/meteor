@@ -11,7 +11,7 @@ Package.onUse(function (api) {
 
   // Unordered dependency on livedata, since livedata has a (weak) dependency on
   // us.
-  api.use('ddp', 'server', {unordered: true});
+  api.use('ddp', 'server', {unordered: false});
 
   api.mainModule('facts_base_server.js', 'server');
   api.mainModule('facts_base_common.js', 'client');

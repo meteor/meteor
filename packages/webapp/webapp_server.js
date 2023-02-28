@@ -796,7 +796,7 @@ onMessage('webapp-reload-client', async ({ arch }) => {
 
 async function runWebAppServer() {
   var shuttingDown = false;
-  var syncQueue = new Meteor._SynchronousQueue();
+  var syncQueue = new Meteor._AsynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
     return decodeURIComponent(parseUrl(itemUrl).pathname);
@@ -1493,6 +1493,5 @@ WebAppInternals.addStaticJs = function(contents) {
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
-// TODO[fibers]: change this when we have TLA
 await runWebAppServer();
 
