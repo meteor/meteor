@@ -84,7 +84,6 @@ Object.assign(AppProcess.prototype, {
       throw new Error("already started?");
     }
 
-    debugger;
     // Start the app!
     self.proc = await self._spawn();
 
@@ -100,7 +99,6 @@ Object.assign(AppProcess.prototype, {
     });
 
     eachline(self.proc.stderr, async function (line) {
-      debugger;
       await runLog.logAppOutput(line, true);
     });
 
@@ -758,15 +756,11 @@ Object.assign(AppRunner.prototype, {
       },
       inspect: self.inspect,
       onListen: function () {
-        debugger;
-        console.log("started listening");
         self.proxy.setMode("proxy");
         if (self.hmrServer) {
           self.hmrServer.setAppState("okay");
         }
-        console.log("here before listen");
         options.onListen && options.onListen();
-        console.log("here afther listen listen");
         self._resolvePromise("start");
         self._resolvePromise("listen");
         console.log("Resolved");
