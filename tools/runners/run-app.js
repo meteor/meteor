@@ -13,7 +13,7 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
 import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
-import { once , EventEmitter}  from "events"
+import { once , EventEmitter, on }  from "events"
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
   if (s.search("\"") !== -1 || s.search("'") !== -1) {
@@ -415,6 +415,19 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = null;
   },
 
+  _findCachedEE: function (name) {
+    if (!this._promiseResolvers[name]) {
+      this._promiseResolvers[name] = new EventEmitter();
+    }
+    return this._promiseResolvers[name];
+  },
+
+  _makeIterable : function (name) {
+    var self = this;
+    const ee = self._findCachedEE(name);
+    return on(ee, name);
+  },
+
   /**
    * @param name
    * @return {Promise<[any]>}
@@ -422,14 +435,8 @@ Object.assign(AppRunner.prototype, {
    */
   _makePromise: function (name) {
     var self = this;
-    const ee = new EventEmitter();
-    self._promiseResolvers[name] = ee;
-
+    const ee = self._findCachedEE(name);
     return once(ee, name);
-    // var self = this;
-    // return new Promise(function (resolve) {
-    //   self._promiseResolvers[name] = resolve;
-    // });
   },
 
   _resolvePromise: function (name, value) {
@@ -728,7 +735,6 @@ Object.assign(AppRunner.prototype, {
     self.runPromise = self._makePromise("run");
     var runPromise = self.runPromise;
     var listenPromise = self._makePromise("listen");
-    debugger;
 
     // Run the program
     options.beforeRun && options.beforeRun();
