@@ -1072,10 +1072,7 @@ export class PackageSourceBatch {
     // depends on something).
     self.importedSymbolToPackageName = {}; // map from symbol to supplying package name
 
-
-    // List of packages (including weak) that need to load before
-    // this unibuild
-    self.orderedDeps = new Set();
+    self.deps = [];
   }
 
   async init() {
@@ -1098,10 +1095,8 @@ export class PackageSourceBatch {
       skipDebugOnly: true,
       skipProdOnly: true,
       skipTestOnly: true,
-    }, (depUnibuild) => {
+    }, (depUnibuild, { weak, unordered }) => {
       let packageName = depUnibuild.pkg.name;
-
-      self.orderedDeps.add(packageName);
 
       _.each(depUnibuild.declaredExports, function (symbol) {
         // Slightly hacky implementation of test-only exports.
@@ -1109,15 +1104,8 @@ export class PackageSourceBatch {
           self.importedSymbolToPackageName[symbol.name] = packageName;
         }
       });
-    });
 
-    // At this point we can't easily know all weak dependencies
-    // that are actually used to pass them to eachUsedUnibuild.
-    // So instead we loop over the packages again to add them.
-    self.unibuild.uses.forEach(uses => {
-      if (uses.weak) {
-        self.orderedDeps.add(uses.package);
-      }
+      self.deps.push({ package: packageName, weak, unordered });
     });
 
     self.useMeteorInstall =
@@ -1712,7 +1700,7 @@ export class PackageSourceBatch {
       imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
       includeSourceMapInstructions: isWeb,
-      orderedDeps: Array.from(self.orderedDeps)
+      deps: self.deps
     };
 
     const fileHashes = [];
