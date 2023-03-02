@@ -591,6 +591,13 @@ var oldSpringboard = async function (toolsVersion) {
 // sure that you're using the version of the Meteor tools that match
 // your project.
 makeGlobalAsyncLocalStorage().run({}, async function () {
+  // TODO: remove this once we have a better way handle the local cache.
+  // Run rm -rf .meteor/local && meteor COMMAND_NAME
+  // to make sure that we don't use any files in .meteor/local
+  console.log(`=> Clearing local cache...`);
+  files.rm_recursive(files.pathJoin('.meteor', 'local'));
+  console.log(`=> Done clearing local cache.`);
+
   // If running inside the Emacs shell, set stdin to be blocking,
   // reversing node's normal setting of O_NONBLOCK on the evaluation
   // of process.stdin (because Node unblocks stdio when forking). This
