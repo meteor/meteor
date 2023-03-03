@@ -132,7 +132,6 @@ export function execFileAsync(
 
     const errorCallback = (error: NodeJS.ErrnoException) => {
       // Make sure we only receive one type of callback
-      console.log(child);
       child.removeListener(exitEvent, exitCallback);
 
       // Trim captured output to get rid of excess whitespace
@@ -157,7 +156,6 @@ export function execFileAsync(
 
     const exitCallback = (code: number, signal: string) => {
       // Make sure we only receive one type of callback
-      console.log(child);
       child.removeListener('error', errorCallback);
 
       // Trim captured output to get rid of excess whitespace
