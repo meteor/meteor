@@ -1493,6 +1493,4 @@ WebAppInternals.addStaticJs = function(contents) {
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
-await runWebAppServer()
-
-
+await runWebAppServer();
