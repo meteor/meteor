@@ -1494,3 +1494,4 @@ WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
 await runWebAppServer();
+
