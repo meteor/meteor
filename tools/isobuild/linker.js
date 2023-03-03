@@ -1189,6 +1189,15 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
       (bundleArch.startsWith('os.') || enableClientTLA);
 
     if (wrapForTLA) {
+      // Ensure there is always at least one file
+      // so the globals can be defined
+      if (prelinkedFiles.length === 0) {
+        prelinkedFiles.unshift({
+          source: '',
+          servePath: "/global-imports.js"
+        });
+      }
+
       let header = getHeader({
         name: null,
         imports,
