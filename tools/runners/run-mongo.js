@@ -561,7 +561,6 @@ var launchMongo = async function(options) {
 
     function stop() {
       if (proc) {
-        console.log(typeof proc);
         proc.removeListener('exit', procExitHandler);
         proc.kill('SIGINT');
         proc = null;
@@ -596,7 +595,6 @@ var launchMongo = async function(options) {
           listening &&
           (noOplog || replSetReadyToBeInitiated || replSetReady)
         ) {
-          console.log(typeof proc.stdout);
 
           proc.stdout.removeListener('data', stdoutOnData);
           resolve();
@@ -927,7 +925,6 @@ Object.assign(MRp, {
       // shouldn't annoy the user by telling it that we couldn't start up.
       self.suppressExitMessage = true;
     }
-    console.log("before launch");
     self.handle = await launchMongo({
       projectLocalDir: self.projectLocalDir,
       port: self.port,
