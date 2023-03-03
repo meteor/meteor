@@ -339,7 +339,6 @@ Object.assign(Mongo.Collection.prototype, {
    * @method estimatedDocumentCount
    * @memberof Mongo.Collection
    * @instance
-   * @param {MongoSelector} [selector] A query describing the documents to count
    * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/EstimatedDocumentCountOptions.html). Please note that not all of them are available on the client.
    * @returns {Promise<number>}
    */
