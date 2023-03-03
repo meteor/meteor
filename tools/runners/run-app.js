@@ -77,7 +77,6 @@ var AppProcess = function (options) {
 Object.assign(AppProcess.prototype, {
   // Call to start the process.
   start: async function () {
-    console.log("started process");
     var self = this;
 
     if (self.proc) {
@@ -233,7 +232,6 @@ Object.assign(AppProcess.prototype, {
   // Spawn the server process and return the handle from child_process.spawn.
   _spawn: async function () {
     var self = this;
-    console.log('server?');
 
     // Path conversions
     var entryPoint = files.convertToOSPath(
@@ -406,9 +404,7 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    console.log("here ?");
-    await self._runApp() // BREAKES here
-    console.log("before startPromise ?");
+    self._runApp()
     await self.startPromise;
     self.startPromise = null;
   },
@@ -448,7 +444,6 @@ Object.assign(AppRunner.prototype, {
   _cleanUpPromises: function () {
     if (this._promiseResolvers) {
       _.each(this._promiseResolvers, (resolve) => {
-        console.log("clean up", resolve);
         resolve && this._promiseResolvers[resolve]?.emit(resolve, false);
       });
       this._promiseResolvers = null;
@@ -473,10 +468,8 @@ Object.assign(AppRunner.prototype, {
 
     // The existence of this promise makes the fiber break out of its loop.
     self.exitPromise = self._makePromise("exit");
-    console.log("exited?");
     self._resolvePromise("run", { outcome: 'stopped' });
     self._resolvePromise("watch");
-    console.log(self._beforeStartPromise);
     if (self._beforeStartPromise) {
       // If we stopped before mongod started (eg, due to mongod startup
       // failure), unblock the runner fiber from waiting for mongod to start.
@@ -499,7 +492,6 @@ Object.assign(AppRunner.prototype, {
   // Run the program once, wait for it to exit, and then return. The
   // return value is same as onRunEnd.
   _runOnce: async function (options) {
-    console.log("run once?");
     var self = this;
     options = options || {};
     var firstRun = options.firstRun;
@@ -593,7 +585,6 @@ Object.assign(AppRunner.prototype, {
           projectContext: self.projectContext
         });
       }
-      console.log("bundleResult once?");
 
       var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async function() {
         return await bundler.bundle({
@@ -640,7 +631,6 @@ Object.assign(AppRunner.prototype, {
       watchSet.merge(br.clientWatchSet);
       return watchSet;
     };
-    console.log("will bundle app?");
     var bundleResult;
     var bundleResultOrRunResult = await bundleApp();
     if (bundleResultOrRunResult.runResult) {
@@ -648,7 +638,6 @@ Object.assign(AppRunner.prototype, {
     }
     bundleResult = bundleResultOrRunResult.bundleResult;
 
-    console.log("bundled app?");
     firstRun = false;
 
     // Read the settings file, if any
@@ -726,7 +715,6 @@ Object.assign(AppRunner.prototype, {
       return { outcome: 'stopped' };
     }
 
-    console.log('waiting in run promise');
     // We should have reset self.runPromise to null by now, but await it
     // just in case it's still defined.
     await self.runPromise;
@@ -746,7 +734,6 @@ Object.assign(AppRunner.prototype, {
       oplogUrl: self.oplogUrl,
       mobileServerUrl: self.mobileServerUrl,
       onExit: function (code, signal) {
-        console.log("resolved?");
         self._resolvePromise("run", {
           outcome: 'terminated',
           code: code,
@@ -763,7 +750,6 @@ Object.assign(AppRunner.prototype, {
         options.onListen && options.onListen();
         self._resolvePromise("start");
         self._resolvePromise("listen");
-        console.log("Resolved");
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings,
@@ -811,7 +797,6 @@ Object.assign(AppRunner.prototype, {
 
     appProcess.proc.onMessage("shell-server", message => {
       if (message && message.command === "reload") {
-        console.log("run gbsdhtglasfkd");
         self._resolvePromise("run", { outcome: "changed" });
       } else {
         return Promise.reject("Unsupported shell command: " + message);
@@ -822,7 +807,6 @@ Object.assign(AppRunner.prototype, {
       serverWatcher = new watch.Watcher({
         watchSet: serverWatchSet,
         onChange: function () {
-          console.log("watcher changed");
           self._resolvePromise("run", {
             outcome: 'changed'
           });
@@ -903,22 +887,17 @@ Object.assign(AppRunner.prototype, {
 
     Console.enableProgressDisplay(false);
 
-    console.log("before race");
     const promList = [runPromise, listenPromise];
     await Promise.race(promList)
 
     const postStartupResult =
       await runPostStartupCallbacks(bundleResult)
-    console.log("afhter promOfResult", {postStartupResult});
 
     if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
-    console.log("before runPromise");
     var [ret] = await runPromise;
-    console.log("afhter runPromise");
-
     try {
       while (ret.outcome === 'changed-refreshable') {
         if (! canRefreshClient) {
@@ -928,7 +907,6 @@ Object.assign(AppRunner.prototype, {
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
         bundleResultOrRunResult = await bundleApp();
-        console.log("afhter bundleApp");
 
         if (bundleResultOrRunResult.runResult) {
           return bundleResultOrRunResult.runResult;
