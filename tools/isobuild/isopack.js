@@ -472,8 +472,19 @@ Object.assign(Isopack.prototype, {
         // case right.)
       }, async function () {
         // Make a new Plugin API object for this plugin.
-        var Plugin = self._makePluginApi(name);
-        await plugin.load({ Plugin: Plugin, Profile: Profile });
+        const Plugin = self._makePluginApi(name);
+        const __meteor_bootstrap__ = {
+          fibersDisabled: true,
+          // Set to null to tell Meteor.startup to call hooks immediately
+          // XXX: should we fully support startup hooks in build plugins?
+          startupHooks: null
+        };
+
+        await plugin.load({
+          Plugin,
+          Profile,
+          __meteor_bootstrap__
+        });
       });
     }
 

@@ -303,7 +303,10 @@ var loadIsopacketFromDisk = async function (isopacketName) {
   // An incredibly minimalist version of the environment from
   // tools/server/boot.js.  Kind of a hack.
   var env = {
-    __meteor_bootstrap__: { startupHooks: [] },
+    __meteor_bootstrap__: {
+      startupHooks: [],
+      fibersDisabled: true
+    },
     __meteor_runtime_config__: { meteorRelease: "ISOPACKET" }
   };
   env.Profile = Profile;
