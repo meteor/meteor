@@ -211,7 +211,6 @@ class Runner {
     }
 
     if (! self.stopped) {
-      console.log("before start");
       await buildmessage.enterJob({ title: "starting your app" }, async function () {
          await self.appRunner.start();
       });
@@ -219,7 +218,6 @@ class Runner {
         runLog.log("Started your app.",  { arrow: true });
       }
     }
-    console.log("Died :<(");
 
     if (! self.stopped && ! self.quiet) {
       runLog.log("");
