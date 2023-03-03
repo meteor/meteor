@@ -37,6 +37,8 @@
 * Add type definitions for async methods from Meteor 2.9 by [ebroder](https://github.com/ebroder) [PR #12507](https://github.com/meteor/meteor/pull/12507)
 * TypeScript skeleton fixes by [ebroder](https://github.com/ebroder) [PR #12506](https://github.com/meteor/meteor/pull/12506)
 * Fix TypeScript type dependencies for mongo, webapp, and underscore by [ebroder](https://github.com/ebroder) [PR #12505](https://github.com/meteor/meteor/pull/12505)
+* Improve specificity of types previously declared as "Object" by [ebroder](https://github.com/ebroder) [PR #12520](https://github.com/meteor/meteor/pull/12520)
+* Bump to Node 14.21.3 by [StorytellerCZ](https://github.com/StorytellerCZ) [PR #12517](https://github.com/meteor/meteor/pull/12517)
 
 #### Breaking Changes
 
@@ -60,6 +62,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 * `accounts-base@2.2.7`:
     - Updated types to match async methods added in newer versions.
     - Ensured the meteor.loginServiceConfiguration subscription always becomes ready, by adding a this.ready() call.
+    - Specified that previously were declared as "Object" types. More context can be seen in [PR #12520](https://github.com/meteor/meteor/pull/12520).
 
 * `accounts-password@2.3.4`:
     - Updated `Accounts.changePassword` and `Accounts.resetPassword` to be correctly verify if the new password is
@@ -77,8 +80,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 * `ecmascript@0.16.6`:
     - Updated typescript to version 4.9.4.
 
-* `email@2.2.3`:
+* `email@2.2.4`:
     - Updated types to match async methods added in newer versions.
+    - Specified that previously were declared as "Object" types. More context can be seen in [PR #12520](https://github.com/meteor/meteor/pull/12520).
 
 * `logging@1.3.2`:
     - removed .npm/package contents and added .gitignore
@@ -88,6 +92,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 
 * `meteor@1.11.1`:
     - updated types to removed unused Blaze types
+    - Specified that previously were declared as "Object" types. More context can be seen in [PR #12520](https://github.com/meteor/meteor/pull/12520).
 
 * `minimongo@1.9.2`:
     - Updated performance of makeLookupFunction
@@ -96,6 +101,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 * `mongo@1.16.5`:
     - In async wrappers, catch exceptions and reject
     - Updated MongoDB types to match driver version 4.13.0 and MongoDB server version 6.0.3
+    - Specified that previously were declared as "Object" types. More context can be seen in [PR #12520](https://github.com/meteor/meteor/pull/12520).
+    - Now uses MongoDB v6.0.3
+    - Now uses Node v14.21.3
 
 * `npm-mongo@4.14.0`:
     - Updated MongoDB driver to version 4.14.0
@@ -104,7 +112,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
     - bumped cordova-plugin-inappbrowser to 5.0.0
 
 * `react-fast-refresh@0.2.6`:
-  - removed .npm/package contents and added .gitignore
+    - removed .npm/package contents and added .gitignore
 
 * `standard-minifier-css@1.9.0`:
     - standard-minifier-css is now debuggable
@@ -119,8 +127,8 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
     - Added dependency in types to underscore
 
 * `webapp@1.13.4`:
-  - Added dependency in types to webapp(to connect)
-  - removed .npm/package contents and added .gitignore
+    - Added dependency in types to webapp(to connect)
+    - removed .npm/package contents and added .gitignore
 
 * `@meteorjs/babel@7.18.0-beta.6`
     - Updated typescript to version 4.9.4.
