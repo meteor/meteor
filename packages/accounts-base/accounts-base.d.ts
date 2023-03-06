@@ -1,5 +1,6 @@
 import { Mongo } from 'meteor/mongo';
 import { Meteor } from 'meteor/meteor';
+import { Configuration } from 'meteor/service-configuration';
 
 export interface URLS {
   resetPassword: (token: string) => string;
@@ -56,6 +57,8 @@ export namespace Accounts {
   ): {
     stop: () => void;
   };
+
+  var loginServiceConfiguration: Mongo.Collection<Configuration>
 
   function loginServicesConfigured(): boolean;
 
