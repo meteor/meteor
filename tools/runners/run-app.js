@@ -13,7 +13,7 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
 import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
-
+import { once , EventEmitter, on }  from "events"
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
   if (s.search("\"") !== -1 || s.search("'") !== -1) {
@@ -404,31 +404,47 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    self._runApp();
-
+    self._runApp()
     await self.startPromise;
     self.startPromise = null;
   },
 
+  _findCachedEE: function (name) {
+    if (!this._promiseResolvers[name]) {
+      this._promiseResolvers[name] = new EventEmitter();
+    }
+    return this._promiseResolvers[name];
+  },
+
+  _makeIterable : function (name) {
+    var self = this;
+    const ee = self._findCachedEE(name);
+    return on(ee, name);
+  },
+
+  /**
+   * @param name
+   * @return {Promise<[any]>}
+   * @private
+   */
   _makePromise: function (name) {
     var self = this;
-    return new Promise(function (resolve) {
-      self._promiseResolvers[name] = resolve;
-    });
+    const ee = self._findCachedEE(name);
+    return once(ee, name);
   },
 
   _resolvePromise: function (name, value) {
-    var resolve = this._promiseResolvers[name];
-    if (resolve) {
+    const ee = this._promiseResolvers[name];
+    if (ee) {
+      ee.emit(name, value);
       this._promiseResolvers[name] = null;
-      resolve(value);
     }
   },
 
   _cleanUpPromises: function () {
     if (this._promiseResolvers) {
-      _.each(this._promiseResolvers, function (resolve) {
-        resolve && resolve();
+      _.each(this._promiseResolvers, (resolve) => {
+        resolve && this._promiseResolvers[resolve]?.emit(resolve, false);
       });
       this._promiseResolvers = null;
     }
@@ -452,10 +468,8 @@ Object.assign(AppRunner.prototype, {
 
     // The existence of this promise makes the fiber break out of its loop.
     self.exitPromise = self._makePromise("exit");
-
     self._resolvePromise("run", { outcome: 'stopped' });
     self._resolvePromise("watch");
-
     if (self._beforeStartPromise) {
       // If we stopped before mongod started (eg, due to mongod startup
       // failure), unblock the runner fiber from waiting for mongod to start.
@@ -472,7 +486,7 @@ Object.assign(AppRunner.prototype, {
       throw new Error("makeBeforeStartPromise called twice?");
     }
     this._beforeStartPromise = this._makePromise("beforeStart");
-    return this._promiseResolvers["beforeStart"];
+    return () => this._resolvePromise("beforeStart");
   },
 
   // Run the program once, wait for it to exit, and then return. The
@@ -500,7 +514,6 @@ Object.assign(AppRunner.prototype, {
         // it even if we refreshed previously, since that might have been a
         // little while ago.
         catalog.triedToRefreshRecently = false;
-
         // If this isn't the first time we've run, we need to reset the project
         // context since everything we have cached may have changed.
         // XXX We can try to be a little less conservative here:
@@ -521,8 +534,8 @@ Object.assign(AppRunner.prototype, {
           // shown from the previous solution.
           preservePackageMap: true
         });
-        var messages = await buildmessage.capture(function () {
-          return self.projectContext.readProjectMetadata();
+        var messages = await buildmessage.capture(async function () {
+          return await self.projectContext.readProjectMetadata();
         });
         if (messages.hasMessages()) {
           return {
@@ -548,7 +561,7 @@ Object.assign(AppRunner.prototype, {
       }
 
       messages = await buildmessage.capture(async function () {
-        await self.projectContext.prepareProjectForBuild();
+        return await self.projectContext.prepareProjectForBuild();
       });
       if (messages.hasMessages()) {
         return {
@@ -573,7 +586,7 @@ Object.assign(AppRunner.prototype, {
         });
       }
 
-      var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async () => {
+      var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async function() {
         return await bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
@@ -618,7 +631,6 @@ Object.assign(AppRunner.prototype, {
       watchSet.merge(br.clientWatchSet);
       return watchSet;
     };
-
     var bundleResult;
     var bundleResultOrRunResult = await bundleApp();
     if (bundleResultOrRunResult.runResult) {
@@ -706,8 +718,8 @@ Object.assign(AppRunner.prototype, {
     // We should have reset self.runPromise to null by now, but await it
     // just in case it's still defined.
     await self.runPromise;
-
-    var runPromise = self.runPromise = self._makePromise("run");
+    self.runPromise = self._makePromise("run");
+    var runPromise = self.runPromise;
     var listenPromise = self._makePromise("listen");
 
     // Run the program
@@ -747,13 +759,13 @@ Object.assign(AppRunner.prototype, {
     });
 
     if (options.firstRun && self._beforeStartPromise) {
-      var stopped = await self._beforeStartPromise;
-      if (stopped) {
-        return true;
-      }
+        var [stopped] = await self._beforeStartPromise;
+        if (stopped) {
+          return stopped
+        }
     }
-
     await appProcess.start();
+
     function maybePrintLintWarnings(bundleResult) {
       if (! (self.projectContext.lintAppAndLocalPackages &&
              bundleResult.warnings)) {
@@ -805,7 +817,7 @@ Object.assign(AppRunner.prototype, {
     }
 
     var setupClientWatcher = function () {
-      clientWatcher && clientWatcher.stop();
+      clientWatcher &&  clientWatcher.stop();
       clientWatcher = new watch.Watcher({
         watchSet: bundleResult.clientWatchSet,
         onChange: function () {
@@ -875,17 +887,17 @@ Object.assign(AppRunner.prototype, {
 
     Console.enableProgressDisplay(false);
 
-    await Promise.race([
-      listenPromise,
-      runPromise]);
-    const postStartupResult = await runPostStartupCallbacks(bundleResult);
+    const promList = [runPromise, listenPromise];
+    await Promise.race(promList)
+
+    const postStartupResult =
+      await runPostStartupCallbacks(bundleResult)
 
     if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
-    var ret = await runPromise;
-
+    var [ret] = await runPromise;
     try {
       while (ret.outcome === 'changed-refreshable') {
         if (! canRefreshClient) {
@@ -895,6 +907,7 @@ Object.assign(AppRunner.prototype, {
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
         bundleResultOrRunResult = await bundleApp();
+
         if (bundleResultOrRunResult.runResult) {
           return bundleResultOrRunResult.runResult;
         }
@@ -915,7 +928,7 @@ Object.assign(AppRunner.prototype, {
         if (postStartupResult) return postStartupResult;
 
         // Wait until another file changes.
-        ret = await oldPromise;
+        [ret] = await oldPromise;
       }
     } finally {
       self.runPromise = null;
@@ -928,10 +941,10 @@ Object.assign(AppRunner.prototype, {
       if (self.hmrServer) {
         self.hmrServer.setAppState("okay");
       }
-      appProcess.stop();
+      await appProcess.stop();
 
-      serverWatcher && serverWatcher.stop();
-      clientWatcher && clientWatcher.stop();
+      serverWatcher &&  serverWatcher.stop();
+      clientWatcher &&  clientWatcher.stop();
     }
 
     return ret;
@@ -1002,7 +1015,7 @@ Object.assign(AppRunner.prototype, {
       }
 
       if (self.watchForChanges) {
-        self.watchPromise = self._makePromise("watch");
+        self.watchPromise =  self._makePromise("watch");
 
         if (!runResult.watchSet) {
           throw Error("watching for changes with no watchSet?");
