@@ -162,9 +162,6 @@ function resolve(id) {
     resolveInLocalBuild(id) ||
     resolveInNodeModules(id) ||
     resolveInDevBundle(id) ||
-    // TODO[fibers]: this is a workaround, fix it
-    (id === '/node_modules/@babel/runtime/helpers/objectSpread2.js' && '/home/denyhs/Documents/work/meteor/meteor/packages/logging/.npm/package/node_modules/@babel/runtime/helpers/objectSpread2.js')||
-    (id === '/node_modules/@babel/runtime/helpers/objectWithoutProperties.js' && '/home/denyhs/Documents/work/meteor/meteor/packages/logging/.npm/package/node_modules/@babel/runtime/helpers/objectWithoutProperties.js')||
     null;
 
   return resolve(id);
