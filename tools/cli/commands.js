@@ -987,10 +987,10 @@ var buildCommands = {
 main.registerCommand({
   name: "build",
   ...buildCommands,
-}, function (options) {
-  return Profile.run(
+}, async function (options) {
+  return await Profile.run(
     "meteor build",
-    () => buildCommand(options)
+    async () =>  await buildCommand(options)
   );
 });
 
@@ -1002,7 +1002,7 @@ main.registerCommand({
   name: "bundle",
   hidden: true,
   ...buildCommands,
-}, function (options) {
+}, async function (options) {
   Console.error(
     "This command has been deprecated in favor of " +
     Console.command("'meteor build'") + ", which allows you to " +
@@ -1011,9 +1011,9 @@ main.registerCommand({
     "for more information.");
   Console.error();
 
-  return Profile.run(
+  return await Profile.run(
     "meteor bundle",
-    () => buildCommand({
+    async () => await buildCommand({
       ...options,
       _bundleOnly: true,
     })
@@ -2015,9 +2015,9 @@ async function doTestCommand(options) {
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
     await projectContext.init();
 
-    await main.captureAndExit("=> Errors while setting up tests:", function () {
+    await main.captureAndExit("=> Errors while setting up tests:", async function () {
       // Read metadata and initialize catalog.
-      return projectContext.initializeCatalog();
+      return await projectContext.initializeCatalog();
     });
   } else {
     throw new Error("Unexpected: neither test-packages nor test");
@@ -2055,7 +2055,7 @@ async function doTestCommand(options) {
 
   options.cordovaRunner = cordovaRunner;
 
-  return runTestAppForPackages(projectContext, Object.assign(
+  return await runTestAppForPackages(projectContext, Object.assign(
     options,
     {
       mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),

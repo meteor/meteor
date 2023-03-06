@@ -208,7 +208,7 @@ async function authedRpc(options) {
     waitForDeploy: options.waitForDeploy,
   });
   delete rpcOptions.printDeployURL;
-
+  
   if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
     Console.error("Authentication failed or login token expired.");
 
@@ -593,7 +593,7 @@ export async function bundleAndDeploy(options) {
   var messages = await buildmessage.capture({
     title: "preparing to deploy",
     rootPath: process.cwd()
-  }, function () {
+  }, async function () {
     if (options.settingsFile) {
       settings = getSettings(options.settingsFile);
     }
@@ -606,7 +606,7 @@ export async function bundleAndDeploy(options) {
     } else {
       const bundler = require('../isobuild/bundler.js');
 
-      const bundleResult = bundler.bundle({
+      const bundleResult = await bundler.bundle({
         projectContext: options.projectContext,
         outputPath: bundlePath,
         buildOptions: options.buildOptions,
