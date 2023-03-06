@@ -305,7 +305,7 @@ var loadIsopacketFromDisk = async function (isopacketName) {
   var env = {
     __meteor_bootstrap__: {
       startupHooks: [],
-      fibersDisabled: true
+      isFibersDisabled: true
     },
     __meteor_runtime_config__: { meteorRelease: "ISOPACKET" }
   };

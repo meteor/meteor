@@ -34,7 +34,7 @@ __meteor_bootstrap__ = {
   startupHooks: [],
   serverDir: serverDir,
   configJson: configJson,
-  fibersDisabled: true
+  isFibersDisabled: true
 };
 
 __meteor_runtime_config__ = {

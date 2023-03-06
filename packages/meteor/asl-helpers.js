@@ -2,8 +2,8 @@ const getAslStore = () => (Meteor.isServer && global?.asyncLocalStorage?.getStor
 const getValueFromAslStore = key => getAslStore()[key];
 const updateAslStore = (key, value) => getAslStore()[key] = value;
 
-Meteor.fibersDisabled = !!__meteor_bootstrap__.fibersDisabled;
-Meteor._isFibersEnabled = !Meteor.fibersDisabled;
+Meteor.isFibersDisabled = !!__meteor_bootstrap__.isFibersDisabled;
+Meteor._isFibersEnabled = !Meteor.isFibersDisabled;
 
 Meteor._getAslStore = getAslStore;
 Meteor._getValueFromAslStore = getValueFromAslStore;

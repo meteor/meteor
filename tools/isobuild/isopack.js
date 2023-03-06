@@ -474,7 +474,7 @@ Object.assign(Isopack.prototype, {
         // Make a new Plugin API object for this plugin.
         const Plugin = self._makePluginApi(name);
         const __meteor_bootstrap__ = {
-          fibersDisabled: true,
+          isFibersDisabled: true,
           // Set to null to tell Meteor.startup to call hooks immediately
           // XXX: should we fully support startup hooks in build plugins?
           startupHooks: null
