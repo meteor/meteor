@@ -205,7 +205,7 @@ export namespace Mongo {
      * Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
      * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
      */
-    estimatedDocumentCount(options: MongoNpmModule.EstimatedDocumentCountOptions): Promise<number>;
+    estimatedDocumentCount(options?: MongoNpmModule.EstimatedDocumentCountOptions): Promise<number>;
     /**
      * Insert a document in the collection.  Returns its unique _id.
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
