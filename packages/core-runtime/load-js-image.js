@@ -96,6 +96,24 @@ function runEagerModules(config, callback) {
           mainExports = exports;
         }
         evaluateNextModule();
+      })
+      // This also handles errors in modules and packages loaded sync
+      // afterwards since they are run within the .then.
+      .catch(function (error) {
+        if (
+          typeof process === 'object' &&
+          typeof process.nextTick === 'function'
+        ) {
+          // Is node.js
+          process.nextTick(function () {
+            throw error;
+          });
+        } else {
+          // TODO: is there a faster way to throw the error?
+          setTimeout(function () {
+            throw error;
+          }, 0);
+        }
       });
     } else {
       if (path === config.mainModulePath) {
@@ -109,7 +127,7 @@ function runEagerModules(config, callback) {
 }
 
 function checkAsyncModule (exports) {
-  // Uses descriptor to avoid running any getters
+  // Uses property descriptor to avoid running any getters
   var isPromise = exports && hasOwn.call(exports, 'then') &&
     typeof Object.getOwnPropertyDescriptor(exports, 'then').value === 'function';
 
@@ -117,8 +135,7 @@ function checkAsyncModule (exports) {
     return false;
   }
 
-  return hasOwn.call(exports, '__reifyAsyncModule') &&
-     Object.getOwnPropertyDescriptor(exports, '__reifyAsyncModule');
+  return hasOwn.call(exports, '__reifyAsyncModule');
 }
 
 // For this to be accurate, all linked files must be queued before calling this
