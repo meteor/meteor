@@ -56,6 +56,9 @@
 * `boilerplate-generator`:
   - `toHTML` is no longer available (it was already deprecated). Use `toHTMLStream` instead.
 
+*  `ddp`:
+ - Added method `Meteor.isAsyncCall` that can be used to check if the current method call is async or not. 
+
 * `oauth`:
   - `_endOfPopupResponseTemplate` and `_endOfRedirectResponseTemplate` are no longer a property but now a function that returns a promise of the same value as before
   - the following server methods are now async:
