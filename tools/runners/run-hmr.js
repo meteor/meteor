@@ -184,7 +184,7 @@ export class HMRServer {
     }
   }
 
-  compare({ name, arch, hmrAvailable, files, cacheKey }, getFileOutput) {
+  async compare({ name, arch, hmrAvailable, files, cacheKey }, getFileOutput) {
     if (this.firstBuild = null) {
       this.firstBuild = Date.now();
     }
@@ -248,9 +248,11 @@ export class HMRServer {
       onlyReplaceableChanges &&
       removedFilePaths.length === 0;
 
-    function saveFileDetails(file) {
+    async function saveFileDetails(file) {
+
+      const content = await getFileOutput(file);
       return {
-        content: getFileOutput(file).toStringWithSourceMap({}),
+        content: content.toStringWithSourceMap({}),
         path: file.absModuleId,
         meteorInstallOptions: file.meteorInstallOptions
       };
@@ -260,8 +262,8 @@ export class HMRServer {
       fileHashes,
       unreloadableHashes: unreloadable,
       reloadable,
-      addedFiles: reloadable ? addedFiles.map(saveFileDetails) : [],
-      changedFiles: reloadable ? changedFiles.map(saveFileDetails) : [],
+      addedFiles: reloadable ? await Promise.all(addedFiles.map(saveFileDetails)) : [],
+      changedFiles: reloadable ? await Promise.all(changedFiles.map(saveFileDetails)) : [],
       linkedAt: Date.now(),
       id: this._createId(),
       name

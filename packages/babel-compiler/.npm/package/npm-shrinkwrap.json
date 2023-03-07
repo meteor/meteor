@@ -3,6 +3,8 @@
   "dependencies": {
     "@meteorjs/babel": {
       "version": "7.19.0-beta.1",
+      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.19.0-beta.1.tgz",
+      "integrity": "sha512-4dy7oSXEo6Eb2PHfPkMX0VVnkQJ9Kb6Qv6/ssiXOqQRtTRpBAgeWeMzUd42u/8VzxG6l8NoNqIhPSOHZjC2usg==",
       "dependencies": {
         "@ampproject/remapping": {
           "version": "2.1.1",
