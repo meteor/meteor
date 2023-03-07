@@ -258,12 +258,26 @@ export class HMRServer {
       };
     }
 
+    // TODO: try to improve the performance of this
+    const iterWithFn = async (iter, fn) => {
+      let arr = [];
+      for (let i = 0; i < iter.length; i++) {
+        try {
+          const d = await fn(iter[i]);
+          arr.push(d);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      return arr;
+    }
+
     const result = {
       fileHashes,
       unreloadableHashes: unreloadable,
       reloadable,
-      addedFiles: reloadable ? await Promise.all(addedFiles.map(saveFileDetails)) : [],
-      changedFiles: reloadable ? await Promise.all(changedFiles.map(saveFileDetails)) : [],
+      addedFiles: reloadable ? await iterWithFn(addedFiles, saveFileDetails) : [],
+      changedFiles: reloadable ? await iterWithFn(changedFiles, saveFileDetails) : [],
       linkedAt: Date.now(),
       id: this._createId(),
       name
