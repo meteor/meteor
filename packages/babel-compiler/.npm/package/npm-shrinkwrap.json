@@ -3,6 +3,8 @@
   "dependencies": {
     "@meteorjs/babel": {
       "version": "7.19.0-beta.1",
+      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.19.0-beta.1.tgz",
+      "integrity": "sha512-4dy7oSXEo6Eb2PHfPkMX0VVnkQJ9Kb6Qv6/ssiXOqQRtTRpBAgeWeMzUd42u/8VzxG6l8NoNqIhPSOHZjC2usg==",
       "dependencies": {
         "@ampproject/remapping": {
           "version": "2.1.1",
@@ -1187,11 +1189,6 @@
           "version": "2.0.3",
           "resolved": "https://registry.npmjs.org/esutils/-/esutils-2.0.3.tgz",
           "integrity": "sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g=="
-        },
-        "fibers": {
-          "version": "5.0.0",
-          "resolved": "https://registry.npmjs.org/fibers/-/fibers-5.0.0.tgz",
-          "integrity": "sha512-UpGv/YAZp7mhKHxDvC1tColrroGRX90sSvh8RMZV9leo+e5+EkRVgCEZPlmXeo3BUNQTZxUaVdLskq1Q2FyCPg=="
         },
         "find-up": {
           "version": "3.0.0",
