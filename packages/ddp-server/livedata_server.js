@@ -1727,6 +1727,17 @@ Object.assign(Server.prototype, {
   },
 
   /**
+   * @summary Tells if the method call came from a call or a callAsync.
+   * @locus Anywhere
+   * @memberOf Meteor
+   * @importFromPackage meteor
+   * @returns boolean
+   */
+  isAsyncCall: function(){
+    return DDP._CurrentMethodInvocation._isCallAsyncMethodRunning()
+  },
+
+  /**
    * @summary Defines functions that can be invoked over the network by clients.
    * @locus Anywhere
    * @param {Object} methods Dictionary whose keys are method names and values are functions.
@@ -1759,7 +1770,20 @@ Object.assign(Server.prototype, {
     const options = args[0]?.hasOwnProperty('returnStubValue')
       ? args.shift()
       : {};
-    return this.applyAsync(name, args, options);
+    DDP._CurrentMethodInvocation._set();
+    DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
+    const promise = new Promise((resolve, reject) => {
+      DDP._CurrentCallAsyncInvocation._set({ name, hasCallAsyncParent: true });
+      this.applyAsync(name, args, { isFromCallAsync: true, ...options })
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
+          DDP._CurrentCallAsyncInvocation._set();
+        });
+    });
+    return promise.finally(() =>
+      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
+    );
   },
 
   apply: function (name, args, options, callback) {
@@ -1771,7 +1795,6 @@ Object.assign(Server.prototype, {
     } else {
       options = options || {};
     }
-
     const promise = this.applyAsync(name, args, options);
 
     // Return the result in whichever way the caller asked for it. Note that we
@@ -1799,7 +1822,6 @@ Object.assign(Server.prototype, {
         new Meteor.Error(404, `Method '${name}' not found`)
       );
     }
-
     // If this is a method call from within another method or publish function,
     // get the user state from the outer method or publish function, otherwise
     // don't allow setUserId to be called
