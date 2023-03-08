@@ -207,7 +207,7 @@ body {
     color: #ea5555;
 }
 
-pre {
+.exception pre {
     color: var(--primary-white);
     color: #F9FAFB;
 }
