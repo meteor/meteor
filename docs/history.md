@@ -10,7 +10,7 @@
 
 
 
-## v2.11.0, 2023-02-XX
+## v2.11.0, 2023-03-02
 
 ### Highlights
 
@@ -88,7 +88,8 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
     - removed .npm/package contents and added .gitignore
 
 * `Command line`:
-    - Corrected typo in vue skeleton
+    - Corrected typo in vue skeleton.
+    - Command `meteor mongo` was removed due compatibility with MongoDB v6.x of `mongosh`
 
 * `meteor@1.11.1`:
     - updated types to removed unused Blaze types
