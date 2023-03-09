@@ -42,15 +42,15 @@
 
 #### Breaking Changes
 
-N/A
+`meteor mongo` command was removed due compatibility with MongoDB v6.x of `mongosh
+for more information about MongoDB migration
+read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for this version.
 
 #### Internal API changes
 
 App cache is now deprecated.
 
 #### Migration Steps
-
-_ If you are using a version of MongoDB older than 6.0, you will need to upgrade your MongoDB server to 6.0 or later._
 
 Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for this version.
 
