@@ -40,7 +40,7 @@ sidebar_categories:
     - index
     - code-style
     - structure
-    - 2.9-migration
+    - 2.11-migration
   Data:
     - collections
     - data-loading
