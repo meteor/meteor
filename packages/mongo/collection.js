@@ -919,6 +919,10 @@ function popCallbackFromArgs(args) {
 ASYNC_COLLECTION_METHODS.forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
-    return Promise.resolve(this[methodName](...args));
+    try {
+      return Promise.resolve(this[methodName](...args));
+    } catch (error) {
+      return Promise.reject(error);
+    }
   };
 });

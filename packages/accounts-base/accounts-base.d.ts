@@ -21,6 +21,10 @@ export namespace Accounts {
     fields?: Mongo.FieldSpecifier | undefined;
   }): Meteor.User | null;
 
+  function userAsync(options?: {
+    fields?: Mongo.FieldSpecifier | undefined;
+  }): Promise<Meteor.User | null>;
+
   function userId(): string | null;
 
   function createUser(
@@ -28,10 +32,20 @@ export namespace Accounts {
       username?: string | undefined;
       email?: string | undefined;
       password?: string | undefined;
-      profile?: Object | undefined;
+      profile?: Meteor.UserProfile | undefined;
     },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): string;
+
+  function createUserAsync(
+    options: {
+      username?: string | undefined;
+      email?: string | undefined;
+      password?: string | undefined;
+      profile?: Meteor.UserProfile | undefined;
+    },
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ): Promise<string>;
 
   function config(options: {
     sendVerificationEmail?: boolean | undefined;
@@ -103,12 +117,16 @@ export namespace Accounts {
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
+  type PasswordSignupField = 'USERNAME_AND_EMAIL' | 'USERNAME_AND_OPTIONAL_EMAIL' | 'USERNAME_ONLY' | 'EMAIL_ONLY';
+  type PasswordlessSignupField = 'USERNAME_AND_EMAIL' | 'EMAIL_ONLY';
+
   var ui: {
     config(options: {
-      requestPermissions?: Object | undefined;
-      requestOfflineToken?: Object | undefined;
-      forceApprovalPrompt?: Object | undefined;
-      passwordSignupFields?: string | undefined;
+      requestPermissions?: Record<string, string[]> | undefined;
+      requestOfflineToken?: Record<'google', boolean> | undefined;
+      forceApprovalPrompt?: Record<'google', boolean> | undefined;
+      passwordSignupFields?: PasswordSignupField | PasswordSignupField[] | undefined;
+      passwordlessSignupFields?: PasswordlessSignupField | PasswordlessSignupField[] | undefined;
     }): void;
   };
 }
@@ -173,8 +191,14 @@ export namespace Accounts {
   function setPassword(
     userId: string,
     newPassword: string,
-    options?: { logout?: Object | undefined }
+    options?: { logout?: boolean | undefined }
   ): void;
+
+  function setPasswordAsync(
+    userId: string,
+    newPassword: string,
+    options?: { logout?: boolean | undefined }
+  ): Promise<void>;
 
   function validateNewUser(func: Function): boolean;
 
@@ -264,6 +288,13 @@ export namespace Accounts {
    * */
   function callLoginMethod(options: LoginMethodOptions): void;
 
+  type LoginMethodResult = { error: Error } | {
+    userId: string;
+    error?: Error;
+    stampedLoginToken?: StampedLoginToken;
+    options?: Record<string, any>;
+  };
+
   /**
    *
    * The main entry point for auth packages to hook in to login.
@@ -280,8 +311,11 @@ export namespace Accounts {
    * - a login method result object
    **/
   function registerLoginHandler(
+    handler: (options: any) => undefined | LoginMethodResult
+  ): void;
+  function registerLoginHandler(
     name: string,
-    handler: (options: any) => undefined | Object
+    handler: (options: any) => undefined | LoginMethodResult
   ): void;
 
   type Password =
