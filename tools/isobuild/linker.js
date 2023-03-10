@@ -60,6 +60,7 @@ var Module = function (options) {
   // options
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
+  self.addEagerRequires = !!options.addEagerRequires;
 };
 
 Object.assign(Module.prototype, {
@@ -208,6 +209,10 @@ Object.assign(Module.prototype, {
           result.eagerModulePaths.push(file.absModuleId);
           if (file.mainModule) {
             result.mainModulePath = file.absModuleId;
+          }
+
+          if (self.addEagerRequires) {
+            chunks.push(`\nrequire(${JSON.stringify(file.absModuleId)});`);
           }
         }
       }
@@ -1151,6 +1156,10 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
     bundleArch,
     useGlobalNamespace: isApp,
     combinedServePath,
+    // To support `/client/compatibility`, we can't use the runtime for the
+    // app on the client when TLA is disabled since it wraps all of
+    // the app code in a function. Instead, we have the module add eager requires.
+    addEagerRequires: !bundleArch.startsWith('os.') && isApp && !enableClientTLA 
   });
 
   // Check if the core-runtime package will already be loaded
