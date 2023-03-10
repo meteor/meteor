@@ -188,16 +188,15 @@ function getDefaultsForNode8(features) {
     );
     // TODO [fibers]: instead of removing the code below, consider this comment:
       // https://github.com/meteor/meteor/pull/12471/files#r1089610144
-    const isFiberDisabled = process.env.DISABLE_FIBERS === '1';
     const ignoreAsyncPlugin = process.env.IGNORE_ASYNC_PLUGIN === '1';
 
-    if (!ignoreAsyncPlugin) {
+    if (!features.useNativeAsyncAwait && !ignoreAsyncPlugin) {
       combined.plugins.push([
         require('./plugins/async-await.js'),
         {
-          // Do not transform `await x` to `Promise.await(x)`, since Node
-          // 8 has native support for await expressions.
-          useNativeAsyncAwait: isFiberDisabled,
+          // Even though Node 8 supports native async/await, it is not
+          // compatible with fibers.
+          useNativeAsyncAwait: false,
         },
       ]);
     }

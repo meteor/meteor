@@ -11,7 +11,8 @@ function babelRegister() {
   const cacheDir = path.join(meteorPath, ".babel-cache");
   const babelOptions = meteorBabel.getDefaultOptions({
     nodeMajorVersion: parseInt(process.versions.node),
-    typescript: true
+    typescript: true,
+    useNativeAsyncAwait: true
   });
 
   // Make sure that source maps are included in the generated code for
