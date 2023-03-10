@@ -28,7 +28,7 @@ You need to install the Meteor command line tool to create, run, and manage your
 
 Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://docs.meteor.com/changelog.html) for the release notes.
 
-> Run `node -v` to ensure you are using Node.js => 14.
+> Run `node -v` to ensure you are using Node.js 14.
 
 For Windows, Linux and OS X, you can run the following command:
 
