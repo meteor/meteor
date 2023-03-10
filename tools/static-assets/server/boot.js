@@ -224,7 +224,6 @@ var specialArgPaths = {
 var loadServerBundles = Profile("Load server bundles", async function () {
   var infos = [];
   var nonLocalNodeModulesPaths = new Set();
-
   for (const fileInfo of serverJson.load) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
 
@@ -504,4 +503,10 @@ var runMain = Profile("Run main()", async function () {
       await runMain();
     });
   });
-})().catch(e => console.log('error on boot.js', e));
+})().catch(e => {
+  console.log('error on boot.js',  e )
+  console.log(e.stack);
+  process.exit(1)
+});
+
+

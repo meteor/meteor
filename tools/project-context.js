@@ -1002,8 +1002,8 @@ Object.assign(ProjectContext.prototype, {
           ? null : self._forceRebuildPackages);
     }
 
-    await buildmessage.enterJob('building local packages', function () {
-      return self.isopackCache.buildLocalPackages();
+    await buildmessage.enterJob('building local packages', async function () {
+      return await self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
   }),

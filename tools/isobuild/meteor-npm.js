@@ -420,7 +420,7 @@ async function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
     if (item === "node_modules") {
       // We'll link or copy node_modules in a follow-up step.
       needToHandleNodeModules = true;
-      return;
+      continue;
     }
 
     await files.cp_r(
@@ -442,7 +442,7 @@ async function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
     if (depPath === ".bin") {
       // Avoid copying node_modules/.bin because commands like
       // .bin/node-gyp and .bin/node-pre-gyp tend to cause problems.
-      return;
+      continue;
     }
 
     const absDepFromPath = files.pathJoin(nodeModulesFromPath, depPath);
@@ -450,7 +450,7 @@ async function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
     if (! files.stat(absDepFromPath).isDirectory()) {
       // Only copy package directories, even though there might be other
       // kinds of files in node_modules.
-      return;
+      continue;
     }
 
     const absDepToPath = files.pathJoin(nodeModulesToPath, depPath);

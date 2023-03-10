@@ -511,6 +511,17 @@ export class Connection {
     return handle;
   }
 
+  /**
+   * @summary Tells if the method call came from a call or a callAsync.
+   * @alias Meteor.isAsyncCall
+   * @locus Anywhere
+   * @memberOf Meteor
+   * @importFromPackage meteor
+   * @returns boolean
+   */
+  isAsyncCall(){
+    return DDP._CurrentMethodInvocation._isCallAsyncMethodRunning()
+  }
   methods(methods) {
     Object.entries(methods).forEach(([name, func]) => {
       if (typeof func !== 'function') {
@@ -722,7 +733,6 @@ export class Connection {
 
   _apply(name, stubCallValue, args, options, callback) {
     const self = this;
-
     // We were passed 3 arguments. They may be either (name, args, options)
     // or (name, args, callback)
     if (!callback && typeof options === 'function') {

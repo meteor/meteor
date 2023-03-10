@@ -595,6 +595,7 @@ var launchMongo = async function(options) {
           listening &&
           (noOplog || replSetReadyToBeInitiated || replSetReady)
         ) {
+
           proc.stdout.removeListener('data', stdoutOnData);
           resolve();
           resolve = null;

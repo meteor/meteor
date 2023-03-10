@@ -14,6 +14,7 @@ Meteor.refresh = async function (notification) {
 _.each(
   [
     'publish',
+    'isAsyncCall',
     'methods',
     'call',
     'callAsync',

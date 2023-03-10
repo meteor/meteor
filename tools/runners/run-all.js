@@ -170,22 +170,26 @@ class Runner {
       runLog.log("Started proxy.",  { arrow: true });
     }
 
+    /**
+     *
+     * @type {(function(): *)}
+     */
     var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
 
     async function startMongo(tries = 3) {
       try {
         await self._startMongoAsync();
-        await unblockAppRunner();
+        unblockAppRunner();
       } catch (error) {
         --tries;
         const left = tries + (tries === 1 ? " try" : " tries");
         Console.error(
             `Error starting Mongo (${left} left): ${error.message}`
-        );
+          );
 
         if (tries > 0) {
           await self.mongoRunner.stop();
-          await setTimeout(() => startMongo(tries), 1000);
+          setTimeout(async () => await startMongo(tries), 1000);
         } else {
           await self.mongoRunner._fail();
         }
@@ -194,13 +198,12 @@ class Runner {
     }
 
     await startMongo();
-
     if (!self.noReleaseCheck && ! self.stopped) {
-      await self.updater.start();
+      self.updater.start();
     }
 
     if (!self.stopped && self.hmrServer) {
-      await self.hmrServer.start();
+      self.hmrServer.start();
 
       if (!self.quiet && !self.stopped) {
         runLog.log("Started HMR server.", { arrow: true });
@@ -209,7 +212,7 @@ class Runner {
 
     if (! self.stopped) {
       await buildmessage.enterJob({ title: "starting your app" }, async function () {
-        await self.appRunner.start();
+         await self.appRunner.start();
       });
       if (! self.quiet && ! self.stopped) {
         runLog.log("Started your app.",  { arrow: true });
@@ -234,8 +237,8 @@ class Runner {
     }
 
     if (self.selenium && ! self.stopped) {
-      await buildmessage.enterJob({ title: "starting Selenium" }, function () {
-        return self.selenium.start();
+      await buildmessage.enterJob({ title: "starting Selenium" }, async function () {
+        return await self.selenium.start();
       });
       if (! self.quiet && ! self.stopped) {
         runLog.log("Started Selenium.", { arrow: true });
@@ -340,7 +343,6 @@ class Runner {
 exports.run = async function (options) {
   var runOptions = _.clone(options);
   var once = runOptions.once;
-
   var promise = new Promise(function (resolve) {
     runOptions.onFailure = async function () {
       // Ensure that runner stops now. You might think this is unnecessary
