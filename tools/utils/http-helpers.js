@@ -363,7 +363,7 @@ Object.assign(exports, {
     }
 
     if (promise) {
-      return promise.finally(async () => progress && await progress.reportProgressDone());
+      return promise.finally(() => progress && progress.reportProgressDone());
     } else {
       return req;
     }

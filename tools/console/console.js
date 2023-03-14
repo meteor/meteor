@@ -683,20 +683,19 @@ class Console extends ConsoleBase {
   // consuming lots of CPU without yielding is especially bad.
   // Other IO/network tasks will stall, and you can't even kill the process!
   //
-  // Within any code that may burn CPU for too long, call `Console.nudge()`.
-  // If it's been a while since your last yield, your Fiber will sleep momentarily.
+  // Within any code that may burn CPU for too long, call `Console.yield()`.
   // It will also update the spinner if there is one and it's been a while.
-  // The caller should be OK with yielding --- it has to be in a Fiber and it can't be
-  // anything that depends for correctness on not yielding.  You can also call nudge(false)
+  // The caller should be OK with yielding --- it can't be
+  // anything that depends for correctness on not yielding.  You can also call Console.nudge()
   // if you just want to update the spinner and not yield, but you should avoid this.
-  // TODO [fibers] -> Check here - consider this comment https://github.com/meteor/meteor/pull/12471/files#r1089560766
-  async nudge(canYield) {
+  nudge() {
     if (this._statusPoller) {
       this._statusPoller.statusPoll();
     }
-    if (canYield === undefined || canYield === true) {
-      await this._throttledYield.yield();
-    }
+  }
+  async yield() {
+    this.nudge();
+    await this._throttledYield.yield();
   }
 
   // Initializes and returns a new ConsoleOptions object. Takes in the following

@@ -801,7 +801,10 @@ Object.assign(Isopack.prototype, {
       },
 
       nudge: function () {
-        return Console.nudge(true);
+        Console.nudge();
+      },
+      yield: function () {
+        return Console.yield();
       },
 
       convertToOSPath: files.convertToOSPath,

@@ -424,8 +424,8 @@ CS.Solver.prototype.minimize = async function (step, options) {
     self.setSolution(await logic.minimizeWeightedSum(
       self.solution, optimized.costTerms, optimized.costWeights, {
         progress: async function (status, cost) {
-          if (self.options.nudge) {
-            await self.options.nudge();
+          if (self.options.yield) {
+            await self.options.yield();
           }
           if (DEBUG) {
             if (status === 'improving') {
