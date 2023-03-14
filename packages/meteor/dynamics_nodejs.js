@@ -1,4 +1,4 @@
-// Implementation of dynamic scoping, for use on the server - with Fibers or AsyncLocalStorage
+// Implementation of dynamic scoping, for use on the server with AsyncLocalStorage
 let nextSlot = 0;
 let callAsyncMethodRunning = false;
 
