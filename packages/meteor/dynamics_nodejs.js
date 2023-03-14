@@ -5,9 +5,6 @@ let callAsyncMethodRunning = false;
 const CURRENT_VALUE_KEY_NAME = 'currentValue';
 const SLOT_CALL_KEY = 'slotCall';
 
-// NO-OP
-Meteor._nodeCodeMustBeInFiber = function() {};
-
 class EnvironmentVariableAsync {
   constructor() {
     this.slot = nextSlot++;
