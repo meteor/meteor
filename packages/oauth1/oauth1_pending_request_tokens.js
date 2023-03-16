@@ -53,7 +53,7 @@ OAuth._storeRequestToken = async (key, requestToken, requestTokenSecret) => {
   // We do an upsert here instead of an insert in case the user happens
   // to somehow send the same `state` parameter twice during an OAuth
   // login; we don't want a duplicate key error.
-  await OAuth._pendingRequestTokens.upsertAsync({
+  await OAuth._pendingRequestTokens.upsert({
     key,
   }, {
     key,
@@ -72,9 +72,9 @@ OAuth._storeRequestToken = async (key, requestToken, requestTokenSecret) => {
 OAuth._retrieveRequestToken = async key => {
   check(key, String);
 
-  const pendingRequestToken =  await OAuth._pendingRequestTokens.findOneAsync({ key: key });
+  const pendingRequestToken =  await OAuth._pendingRequestTokens.findOne({ key: key });
   if (pendingRequestToken) {
-    await OAuth._pendingRequestTokens.removeAsync({ _id: pendingRequestToken._id });
+    await OAuth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
     return {
       requestToken: OAuth.openSecret(pendingRequestToken.requestToken),
       requestTokenSecret: OAuth.openSecret(

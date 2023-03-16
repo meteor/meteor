@@ -26,7 +26,7 @@ OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitel
 
 // connect middleware
 OAuth._requestHandlers['1'] = async (service, query, res) => {
-  const config = await ServiceConfiguration.configurations.findOneAsync({service: service.serviceName});
+  const config = await ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (! config) {
     throw new ServiceConfiguration.ConfigError(service.serviceName);
   }

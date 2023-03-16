@@ -221,11 +221,11 @@ var specialArgPaths = {
   }
 };
 
-const loadServerBundles = Profile("Load server bundles", async function () {
-  const infos = [];
-  const nonLocalNodeModulesPaths = new Set();
+var loadServerBundles = Profile("Load server bundles", async function () {
+  var infos = [];
+  var nonLocalNodeModulesPaths = new Set();
   for (const fileInfo of serverJson.load) {
-    const code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
+    var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
 
     function addNodeModulesPath(path) {
       nonLocalNodeModulesPaths.add(
@@ -255,7 +255,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       }
     }
 
-    const Npm = {
+    var Npm = {
       /**
        * @summary Require a package that was specified using
        * `Npm.depends()`.
@@ -267,7 +267,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
         return "Npm.require(" + JSON.stringify(name) + ")";
       }, function (name, error) {
         if (fileInfo.node_modules || nonLocalNodeModulesPaths.size > 0) {
-          let fullPath;
+          var fullPath;
 
           // Replace all backslashes with forward slashes, just in case
           // someone passes a Windows-y module identifier.
@@ -282,7 +282,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
             }
           } else {
             for (const nodeModuleBase of nonLocalNodeModulesPaths) {
-              const packageBase = files.convertToOSPath(files.pathResolve(
+              var packageBase = files.convertToOSPath(files.pathResolve(
                   nodeModuleBase,
                   name.split("/", 1)[0]
               ));
@@ -301,7 +301,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
           }
         }
 
-        const resolved = require.resolve(name);
+        var resolved = require.resolve(name);
         if (resolved === name && ! path.isAbsolute(resolved)) {
           // If require.resolve(id) === id and id is not an absolute
           // identifier, it must be a built-in module like fs or http.
@@ -314,7 +314,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       })
     };
 
-    const getAsset = function (assetPath, encoding, callback) {
+    var getAsset = function (assetPath, encoding, callback) {
       let promiseResolver, promise;
       if (! callback) {
         promise = new Promise(r => promiseResolver = r);
@@ -324,7 +324,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       // itself can't call Assets.get*. (We could change this function so that
       // it doesn't call bindEnvironment if you don't pass a callback if we need
       // to.)
-      const _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
+      var _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
         if (result && ! encoding)
             // Sadly, this copies in Node 0.10.
           result = new Uint8Array(result);
@@ -344,14 +344,14 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       if (! fileInfo.assets || ! hasOwn.call(fileInfo.assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
-        const filePath = path.join(serverDir, fileInfo.assets[assetPath]);
+        var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
         fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
       }
       if (promise)
         return promise;
     };
 
-    const Assets = {
+    var Assets = {
       getText: function (assetPath, callback) {
         return getAsset(assetPath, "utf8", callback);
       },
@@ -382,20 +382,20 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       }
     };
 
-    const wrapParts = ["(function(Npm,Assets"];
+    var wrapParts = ["(function(Npm,Assets"];
 
-    const specialArgs =
+    var specialArgs =
         hasOwn.call(specialArgPaths, fileInfo.path) &&
         specialArgPaths[fileInfo.path](fileInfo);
 
-    const specialKeys = Object.keys(specialArgs || {});
+    var specialKeys = Object.keys(specialArgs || {});
     specialKeys.forEach(function (key) {
       wrapParts.push("," + key);
     });
 
     // \n is necessary in case final line is a //-comment
     wrapParts.push("){", code, "\n})");
-    const wrapped = wrapParts.join("");
+    var wrapped = wrapParts.join("");
 
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
@@ -403,18 +403,18 @@ const loadServerBundles = Profile("Load server bundles", async function () {
 
     // fileInfo.path is a standard path, convert it to OS path to join with
     // __dirname
-    const fileInfoOSPath = files.convertToOSPath(fileInfo.path);
-    const absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
+    var fileInfoOSPath = files.convertToOSPath(fileInfo.path);
+    var absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
 
-    const scriptPath =
+    var scriptPath =
         parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
-    const func = await require('vm').runInThisContext(wrapped, {
+    var func = await require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
       displayErrors: true
     });
 
-    const args = [Npm, Assets];
+    var args = [Npm, Assets];
 
     specialKeys.forEach(function (key) {
       args.push(specialArgs[key]);
