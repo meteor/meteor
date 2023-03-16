@@ -223,13 +223,14 @@ var specialArgPaths = {
 
 const loadServerBundles = Profile("Load server bundles", async function () {
   const infos = [];
-  const nonLocalNodeModulesPaths = new Set();
+
   for (const fileInfo of serverJson.load) {
     const code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
+    const nonLocalNodeModulesPaths = [];
 
     function addNodeModulesPath(path) {
-      nonLocalNodeModulesPaths.add(
-          files.pathResolve(serverDir, path)
+      nonLocalNodeModulesPaths.push(
+        files.pathResolve(serverDir, path)
       );
     }
 
@@ -266,7 +267,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       require: Profile(function getBucketName(name) {
         return "Npm.require(" + JSON.stringify(name) + ")";
       }, function (name, error) {
-        if (fileInfo.node_modules || nonLocalNodeModulesPaths.size > 0) {
+        if (fileInfo.node_modules || nonLocalNodeModulesPaths.length > 0) {
           let fullPath;
 
           // Replace all backslashes with forward slashes, just in case
@@ -281,19 +282,18 @@ const loadServerBundles = Profile("Load server bundles", async function () {
               );
             }
           } else {
-            for (const nodeModuleBase of nonLocalNodeModulesPaths) {
+            nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
               const packageBase = files.convertToOSPath(files.pathResolve(
-                  nodeModuleBase,
-                  name.split("/", 1)[0]
+                nodeModuleBase,
+                name.split("/", 1)[0]
               ));
 
               if (statOrNull(packageBase)) {
-                fullPath = files.convertToOSPath(
-                    files.pathResolve(nodeModuleBase, name)
+                return fullPath = files.convertToOSPath(
+                  files.pathResolve(nodeModuleBase, name)
                 );
-                break;
               }
-            }
+            });
           }
 
           if (fullPath) {
