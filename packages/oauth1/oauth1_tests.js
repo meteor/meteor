@@ -23,7 +23,7 @@ const testPendingCredential = async (test, method) => {
     this.accessTokenSecret = twitterfooAccessTokenSecret;
   };
 
-  await ServiceConfiguration.configurations.insert({service: serviceName});
+  await ServiceConfiguration.configurations.insertAsync({service: serviceName});
 
   try {
     // register a fake login service
