@@ -136,7 +136,7 @@ export default class Sandbox {
       }
 
       if (clientOptions.puppeteer) {
-        PuppeteerClient.pushClients(this.clients, appConfig);
+        await PuppeteerClient.pushClients(this.clients, appConfig);
       }
 
       if (clientOptions.browserstack && BrowserStackClient.prerequisitesMet()) {
