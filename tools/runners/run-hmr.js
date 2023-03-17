@@ -184,7 +184,7 @@ export class HMRServer {
     }
   }
 
-  compare({ name, arch, hmrAvailable, files, cacheKey }, getFileOutput) {
+  async compare({ name, arch, hmrAvailable, files, cacheKey }, getFileOutput) {
     if (this.firstBuild = null) {
       this.firstBuild = Date.now();
     }
@@ -248,20 +248,36 @@ export class HMRServer {
       onlyReplaceableChanges &&
       removedFilePaths.length === 0;
 
-    function saveFileDetails(file) {
+    async function saveFileDetails(file) {
+
+      const content = await getFileOutput(file);
       return {
-        content: getFileOutput(file).toStringWithSourceMap({}),
+        content: content.toStringWithSourceMap({}),
         path: file.absModuleId,
         meteorInstallOptions: file.meteorInstallOptions
       };
+    }
+
+    // TODO: try to improve the performance of this
+    const iterWithFn = async (iter, fn) => {
+      let arr = [];
+      for (let i = 0; i < iter.length; i++) {
+        try {
+          const d = await fn(iter[i]);
+          arr.push(d);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      return arr;
     }
 
     const result = {
       fileHashes,
       unreloadableHashes: unreloadable,
       reloadable,
-      addedFiles: reloadable ? addedFiles.map(saveFileDetails) : [],
-      changedFiles: reloadable ? changedFiles.map(saveFileDetails) : [],
+      addedFiles: reloadable ? await iterWithFn(addedFiles, saveFileDetails) : [],
+      changedFiles: reloadable ? await iterWithFn(changedFiles, saveFileDetails) : [],
       linkedAt: Date.now(),
       id: this._createId(),
       name

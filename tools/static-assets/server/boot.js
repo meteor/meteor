@@ -33,7 +33,8 @@ var starJson = JSON.parse(fs.readFileSync(path.join(buildDir, "star.json")));
 __meteor_bootstrap__ = {
   startupHooks: [],
   serverDir: serverDir,
-  configJson: configJson
+  configJson: configJson,
+  isFibersDisabled: true
 };
 
 __meteor_runtime_config__ = {
@@ -507,4 +508,5 @@ var runMain = Profile("Run main()", async function () {
   console.log(e.stack);
   process.exit(1)
 });
+
 
