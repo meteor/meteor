@@ -274,27 +274,18 @@ const loadServerBundles = Profile("Load server bundles", async function () {
           // someone passes a Windows-y module identifier.
           name = name.split("\\").join("/");
 
-          if (fileInfo.node_modules) {
-            const packageBase = files.convertToOSPath(files.pathResolve(fileInfo.node_modules, name.split("/", 1)[0]));
+          nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
+            const packageBase = files.convertToOSPath(files.pathResolve(
+              nodeModuleBase,
+              name.split("/", 1)[0]
+            ));
+
             if (statOrNull(packageBase)) {
-              fullPath = files.convertToOSPath(
-                  files.pathResolve(fileInfo.node_modules, name)
+              return fullPath = files.convertToOSPath(
+                files.pathResolve(nodeModuleBase, name)
               );
             }
-          } else {
-            nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
-              const packageBase = files.convertToOSPath(files.pathResolve(
-                nodeModuleBase,
-                name.split("/", 1)[0]
-              ));
-
-              if (statOrNull(packageBase)) {
-                return fullPath = files.convertToOSPath(
-                  files.pathResolve(nodeModuleBase, name)
-                );
-              }
-            });
-          }
+          });
 
           if (fullPath) {
             return require(fullPath);
