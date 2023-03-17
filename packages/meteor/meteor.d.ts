@@ -487,7 +487,7 @@ export namespace Meteor {
   /** True if running in development environment. */
   var isDevelopment: boolean;
   var isModern: boolean;
-  var gitCommitHash: string;
+  var gitCommitHash: string | undefined;
   var isTest: boolean;
   var isAppTest: boolean;
   var isPackageTest: boolean;
