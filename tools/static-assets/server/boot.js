@@ -267,7 +267,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       require: Profile(function getBucketName(name) {
         return "Npm.require(" + JSON.stringify(name) + ")";
       }, function (name, error) {
-        if (fileInfo.node_modules || nonLocalNodeModulesPaths.length > 0) {
+        if (nonLocalNodeModulesPaths.length > 0) {
           let fullPath;
 
           // Replace all backslashes with forward slashes, just in case
