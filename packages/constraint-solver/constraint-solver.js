@@ -13,6 +13,7 @@ CS.PackagesResolver = function (catalog, options) {
 
   self._options = {
     nudge: options && options.nudge,
+    yield: options && options.yield,
     Profile: options && options.Profile,
     // For resultCache, pass in an empty object `{}`, and PackagesResolver
     // will put data on it.  Pass in the same object again to allow reusing
@@ -110,6 +111,7 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
 
   var resolveOptions = {
     nudge: self._options.nudge,
+    yield: self._options.yield,
     Profile: self._options.Profile
   };
 
@@ -170,6 +172,7 @@ CS.PackagesResolver._resolveWithInput = async function (input, options) {
   var solver = await (options.Profile || CS.DummyProfile).time("new CS.Solver", async function () {
     const _solver = new CS.Solver(input, {
       nudge: options.nudge,
+      yield: options.yield,
       Profile: options.Profile
     });
     await _solver.init();

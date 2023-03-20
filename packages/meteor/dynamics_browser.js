@@ -82,7 +82,3 @@ Meteor.bindEnvironment = function (func, onException, _this) {
     return ret;
   };
 };
-
-Meteor._nodeCodeMustBeInFiber = function () {
-  // no-op on browser
-};

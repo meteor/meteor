@@ -45,8 +45,7 @@ export class Progress {
     return "Progress [state=" + JSON.stringify(this.state) + "]";
   }
 
-  // TODO [fibers] - check if this can be really be async. Consider this comment https://github.com/meteor/meteor/pull/12471/files#r1089318098
-  async reportProgressDone() {
+  reportProgressDone() {
     const state = {
       ...this.selfState,
       done: true,
@@ -59,7 +58,7 @@ export class Progress {
       state.current = state.end;
     }
 
-    await this.reportProgress(state);
+    this.reportProgress(state);
   }
 
   // Tries to determine which is the 'current' job in the tree
@@ -139,15 +138,15 @@ export class Progress {
   }
 
   // Receives a state report indicating progress of self
-  async reportProgress(state: ProgressState) {
+  reportProgress(state: ProgressState) {
     this.selfState = state;
 
     this.updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
     const { Console } = require("./console.js");
-    // TODO [fibers] review this call. Consider this comment https://github.com/meteor/meteor/pull/12471/files#r1089316971
-    await Console.nudge(false);
+
+    Console.nudge();
 
     this.notifyState();
   }
