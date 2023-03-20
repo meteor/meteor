@@ -239,7 +239,7 @@ const oauthServiceName = req => {
 const ensureConfigured =
   async serviceName => {
     const config =
-      await ServiceConfiguration.configurations.findOne({ service: serviceName })
+      await ServiceConfiguration.configurations.findOneAsync({ service: serviceName });
     if (!config) {
       throw new ServiceConfiguration.ConfigError();
     }
