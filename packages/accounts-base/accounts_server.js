@@ -765,11 +765,12 @@ export class AccountsServer extends AccountsCommon {
     const { users, _autopublishFields, _defaultPublishFields } = this;
 
     // Publish all login service configuration fields other than secret.
-    this._server.publish("meteor.loginServiceConfiguration", () => {
+    this._server.publish("meteor.loginServiceConfiguration", function() {
       if (Package['service-configuration']) {
         const { ServiceConfiguration } = Package['service-configuration'];
         return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
       }
+      this.ready();
     }, {is_auto: true}); // not technically autopublish, but stops the warning.
 
     // Use Meteor.startup to give other packages a chance to call

@@ -1239,3 +1239,14 @@ function popCallbackFromArgs(args) {
     return args.pop();
   }
 }
+
+ASYNC_COLLECTION_METHODS.forEach(methodName => {
+  const methodNameAsync = getAsyncMethodName(methodName);
+  Mongo.Collection.prototype[methodNameAsync] = function(...args) {
+    try {
+      return Promise.resolve(this[methodName](...args));
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
+});

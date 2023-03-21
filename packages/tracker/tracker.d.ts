@@ -48,7 +48,7 @@ export namespace Tracker {
    * The current computation, or `null` if there isn't one.  The current computation is the `Tracker.Computation` object created by the innermost active call to
    * `Tracker.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed.
    */
-  var currentComputation: Computation;
+  var currentComputation: Computation | null;
 
   var Dependency: DependencyStatic;
   /**
@@ -108,6 +108,16 @@ export namespace Tracker {
       onError?: Function | undefined;
     }
   ): Computation;
+
+  /**
+   * Helper function to make the tracker work with promises.
+   * @param computation Computation that tracked
+   * @param func async function that needs to be called and be reactive
+   */
+  function withComputation<T>(
+    computation: Computation | null,
+    func: () => Promise<T>
+  ): Promise<T>;
 
   /**
    * Process all reactive updates immediately and ensure that all invalidated computations are rerun.
