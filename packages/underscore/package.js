@@ -1,8 +1,12 @@
+
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.0.11'
+  version: '1.0.12',
 });
 
+Npm.depends({
+  '@types/underscore': '1.11.4',
+});
 Package.onUse(function (api) {
   api.export('_');
 

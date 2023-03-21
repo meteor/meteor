@@ -877,7 +877,11 @@ Cursor.prototype.countAsync = async function () {
 
   const methodNameAsync = getAsyncMethodName(methodName);
   Cursor.prototype[methodNameAsync] = function (...args) {
-    return Promise.resolve(this[methodName](...args));
+    try {
+      return Promise.resolve(this[methodName](...args));
+    } catch (error) {
+      return Promise.reject(error);
+    }
   };
 });
 
