@@ -29,3 +29,6 @@ mongo-test-output
 
 # core packages shouldn't have .versions files
 packages/*/.versions
+
+# packages shouldn't have .npm on Git
+packages/**/.npm
