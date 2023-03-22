@@ -859,7 +859,8 @@ workflows:
   Build and Test:
     jobs:
       - Docs
-      - Get Ready
+      - Get Ready:
+          <<: *matrix_for_fibers
       - Isolated Tests:
           <<: *matrix_for_fibers
           requires:
