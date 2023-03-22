@@ -32,6 +32,9 @@
     "prettier": "^2.8.6",
     "typescript": "^4.9.5"
   },
+  "jshintConfig": {
+    "esversion": 11
+  },
   "eslintConfig": {
     "extends": "vazco",
     "rules": {
