@@ -32,16 +32,17 @@ function cleanUpBuild(s) {
 
 selftest.define("cordova builds with server options", ["cordova"], async function () {
   const s = new Sandbox();
+  await s.init();
   let run;
 
-  s.createApp("myapp", "standard-app");
+  await s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
   run = s.run("add-platform", "android");
   await run.match("added");
   await run.expectExit(0);
 
-  if (await isOSX) {
+  if (await isOSX()) {
     run = s.run("add-platform", "ios");
     await run.match("added");
     await run.expectExit(0);
