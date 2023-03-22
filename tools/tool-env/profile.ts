@@ -282,7 +282,7 @@ export function Profile<
 export namespace Profile {
   export let enabled = !! process.env.METEOR_PROFILE;
 
-  async function _runAsync(bucket, f) {
+  async function _runAsync<TResult>(bucket: string, f: () => TResult) {
     runningName = bucket;
     print(`(#${reportNum}) Profiling: ${runningName}`);
     start();
@@ -294,7 +294,7 @@ export namespace Profile {
     }
   }
 
-  function _runSync(bucket, f) {
+  function _runSync<TResult>(bucket: string, f: () => TResult) {
     runningName = bucket;
     print(`(#${reportNum}) Profiling: ${runningName}`);
     start();
