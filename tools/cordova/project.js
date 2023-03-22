@@ -114,11 +114,12 @@ export class CordovaProject {
 
     this.buildJsonPath = files.convertToOSPath(
       files.pathJoin(this.projectRoot, 'build.json'));
-
-    this.createIfNeeded();
   }
-
-  createIfNeeded() {
+  init() {
+    const self = this;
+    return self.createIfNeeded();
+  }
+  async createIfNeeded() {
     buildmessage.assertInJob();
 
     // Check if we have an existing Cordova project directory with outdated
@@ -205,7 +206,7 @@ outdated platforms`);
 
       // Don't set cwd to project root in runCommands because it doesn't
       // exist yet
-      this.runCommands('creating Cordova project', async () => {
+      await this.runCommands('creating Cordova project', async () => {
         // No need to pass in appName and appId because these are set from
         // the generated config.xml
         await create(files.convertToOSPath(this.projectRoot),
@@ -872,7 +873,7 @@ convenience, but you should adjust your dependencies.`);
     return [nodeBinDir, iosSimBinPath];
   }
 
-  runCommands(title, promiseOrAsyncFunction, env = this.defaultEnvWithPathsAdded(),
+  async runCommands(title, promiseOrAsyncFunction, env = this.defaultEnvWithPathsAdded(),
     cwd = this.projectRoot) {
     // Capitalize title for debug output
     Console.debug(title[0].toUpperCase() + title.slice(1));
@@ -891,9 +892,8 @@ convenience, but you should adjust your dependencies.`);
     }
 
     try {
-      const promise = (typeof promiseOrAsyncFunction === 'function') ?
+      return (typeof promiseOrAsyncFunction === 'function') ?
         promiseOrAsyncFunction() : promiseOrAsyncFunction;
-      return Promise.await(promise);
     } catch (error) {
       Console.arrowError('Errors executing Cordova commands:');
       Console.error();

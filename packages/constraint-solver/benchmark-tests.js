@@ -270,7 +270,8 @@ runBenchmarks && Tinytest.addAsync("constraint solver - benchmark on gems - rail
     "warden": "1.2.3"
   };
 
-  var solution = await r.resolve(args.dependencies, args.constraints, { previousSolution: previousSolution }).answer;
+  const resolved = await r.resolve(args.dependencies, args.constraints, { previousSolution: previousSolution });
+  var solution = resolved.answer;
 
   // check that root deps are the same
   _.each(args.dependencies, function (dep) {

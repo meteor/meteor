@@ -10,30 +10,31 @@ import {
 } from '../cordova/index.js';
 import {PlatformList} from "../project-context";
 
-function createProjectContext(appDir) {
+async function createProjectContext(appDir) {
   import { ProjectContext } from '../project-context.js';
 
   const projectContext = new ProjectContext({
     projectDir: appDir
   });
-  main.captureAndExit('=> Errors while initializing project:', () => {
+  await projectContext.init();
+  await main.captureAndExit('=> Errors while initializing project:', async () => {
     // We're just reading metadata here; we don't need to resolve constraints.
-    projectContext.readProjectMetadata();
+    await projectContext.readProjectMetadata();
   });
   return projectContext;
 }
 
-function doAddPlatform(options) {
+async function doAddPlatform(options) {
   import { CordovaProject } from '../cordova/project.js';
 
   Console.setVerbose(!!options.verbose);
 
-  const projectContext = createProjectContext(options.appDir);
+  const projectContext = await createProjectContext(options.appDir);
 
   const platformsToAdd = options.args;
   let installedPlatforms = projectContext.platformList.getPlatforms();
 
-  main.captureAndExit('', 'adding platforms', () => {
+  await main.captureAndExit('', 'adding platforms', async () => {
     for (var platform of platformsToAdd) {
       if (installedPlatforms.includes(platform)) {
         buildmessage.error(`${platform}: platform is already added`);
@@ -47,6 +48,8 @@ function doAddPlatform(options) {
     }
 
     const cordovaProject = new CordovaProject(projectContext);
+    await cordovaProject.init();
+
     if (buildmessage.jobHasMessages()) return;
 
     installedPlatforms = installedPlatforms.concat(platformsToAdd);
@@ -110,20 +113,23 @@ version of Meteor`);
 }
 
 // Add one or more Cordova platforms
-main.registerCommand({
-  name: 'add-platform',
-  options: {
-    verbose: { type: Boolean, short: "v" }
+main.registerCommand(
+  {
+    name: 'add-platform',
+    options: {
+      verbose: { type: Boolean, short: 'v' },
+    },
+    minArgs: 1,
+    maxArgs: Infinity,
+    requiresApp: true,
+    catalogRefresh: new catalog.Refresh.Never(),
+    notOnWindows: false,
   },
-  minArgs: 1,
-  maxArgs: Infinity,
-  requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never(),
-  notOnWindows: false
-}, function (options) {
-  ensureDevBundleDependencies();
-    doAddPlatform(options);
-});
+  async function(options) {
+    await ensureDevBundleDependencies();
+    await doAddPlatform(options);
+  }
+);
 
 // Remove one or more Cordova platforms
 main.registerCommand({
