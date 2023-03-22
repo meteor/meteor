@@ -50,7 +50,14 @@
       ],
       "no-use-before-define": "warn",
       "import/no-unresolved": "warn",
-      "require-await": "error"
+      "require-await": "error",
+      "space-before-function-paren": ["error",
+        {
+          "anonymous": "never",
+          "named": "never",
+          "asyncArrow": "always"
+        }
+      ]
     }
   }
 }
