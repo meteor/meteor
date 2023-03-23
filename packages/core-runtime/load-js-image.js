@@ -49,7 +49,7 @@ function load(name, runImage) {
       Package._define(name, exports);
     }
 
-    var pendingCallbacks = pending[name];
+    var pendingCallbacks = pending[name] || [];
     delete pending[name];
     pendingCallbacks.forEach(function (callback) {
       callback();

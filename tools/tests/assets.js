@@ -21,7 +21,7 @@ selftest.define("assets - unicode asset names are allowed", async () => {
 
   await s.createApp('myapp', 'unicode-asset-app');
   s.cd('myapp');
-  const run = startRun(s);
+  const run = await startRun(s);
   await run.match('1 - getText: Hello world!');
   await run.match('2 - getText: Hello world!');
   await run.match('3 - getText: Hello world!');

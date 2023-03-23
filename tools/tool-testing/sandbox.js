@@ -212,14 +212,14 @@ export default class Sandbox {
     // Prepare the app (ie, build or download packages). We give this a nice
     // long timeout, which allows the next command to not need a bloated
     // timeout. (meteor create does this anyway.)
-    this.cd(to, () => {
+    await this.cd(to, async () => {
       const run = this.run("--prepare-app");
       // XXX Can we cache the output of running this once somewhere, so that
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
       // paths.
       run.waitSecs(120);
-      run.expectExit(0);
+      await run.expectExit(0);
     });
   }
 
