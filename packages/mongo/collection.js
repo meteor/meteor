@@ -1240,6 +1240,11 @@ function popCallbackFromArgs(args) {
   }
 }
 
+
+// XXX: IN Meteor 3.x this code was not working....
+// It throws an error when trying to call a method on the collection.
+// the error normally is:
+// TypeError: this[methodName] is not a function
 // ASYNC_COLLECTION_METHODS.forEach(methodName => {
 //   const methodNameAsync = getAsyncMethodName(methodName);
 //   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
