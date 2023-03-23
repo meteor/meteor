@@ -227,7 +227,7 @@ export default class Cursor {
    * @param {Object} callbacks Functions to call to deliver the result set as it
    *                           changes
    */
-  async observeChanges(options) {
+  observeChanges(options) {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with
@@ -333,29 +333,37 @@ export default class Cursor {
       query.movedBefore = wrapCallback(options.movedBefore);
     }
 
-    if (!options._suppress_initial && !this.collection.paused) {
-      const handler = async doc => {
-        const fields = EJSON.clone(doc);
+    const isReadyPromise = (async () => {
+      if (!options._suppress_initial && !this.collection.paused) {
+        const handler = async (doc) => {
+          const fields = EJSON.clone(doc);
 
-        delete fields._id;
+          delete fields._id;
 
-        if (ordered) {
-          await query.addedBefore(doc._id, this._projectionFn(fields), null);
+          if (ordered) {
+            await query.addedBefore(doc._id, this._projectionFn(fields), null);
+          }
+
+          await query.added(doc._id, this._projectionFn(fields));
+        };
+        // it means it's just an array
+        if (query.results.length) {
+          for (const doc of query.results) {
+            await handler(doc);
+          }
         }
-
-        await query.added(doc._id, this._projectionFn(fields));
-      };
-      // it means it's just an array
-      if (query.results.length) {
-        for (const doc of query.results) {
-          await handler(doc);
+        // it means it's an id map
+        if (query.results?.size?.()) {
+          await query.results.forEachAsync(handler);
         }
       }
-      // it means it's an id map
-      if (query.results?.size?.()) {
-        await query.results.forEachAsync(handler);
-      }
-    }
+
+      // run the observe callbacks resulting from the initial contents
+      // before we leave the observe.
+      await this.collection._observeQueue.drain();
+
+      handle.isReady = true; 
+    })();
 
     const handle = Object.assign(new LocalCollection.ObserveHandle, {
       collection: this.collection,
@@ -363,7 +371,9 @@ export default class Cursor {
         if (this.reactive) {
           delete this.collection.queries[qid];
         }
-      }
+      },
+      isReady: false,
+      isReadyPromise,
     });
 
     if (this.reactive && Tracker.active) {
@@ -376,10 +386,6 @@ export default class Cursor {
         handle.stop();
       });
     }
-
-    // run the observe callbacks resulting from the initial contents
-    // before we leave the observe.
-    await this.collection._observeQueue.drain();
 
     return handle;
   }

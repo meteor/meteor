@@ -60,7 +60,10 @@
           "named": "never",
           "asyncArrow": "always"
         }
-      ]
+      ],
+      "complexity": "off",
+      "func-names": "off",
+      "no-undef": "warn"
     }
   }
 }
