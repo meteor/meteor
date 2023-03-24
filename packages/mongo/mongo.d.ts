@@ -389,12 +389,29 @@ export namespace Mongo {
      * Watch a query. Receive callbacks as the result set changes.
      * @param callbacks Functions to call to deliver the result set as it changes
      */
-    observe(callbacks: ObserveCallbacks<U>): Meteor.LiveQueryHandle;
+    observe(callbacks: ObserveCallbacks<U>): Promise<Meteor.LiveQueryHandle>;
     /**
      * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
      * @param callbacks Functions to call to deliver the result set as it changes
      */
     observeChanges(
+      callbacks: ObserveChangesCallbacks<T>,
+      options?: { nonMutatingCallbacks?: boolean | undefined }
+    ): Promise<Meteor.LiveQueryHandle>;
+
+    /**
+     * @locus Client only
+     * Watch a query. Receive callbacks as the result set changes.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     */
+    observeLocal(callbacks: ObserveCallbacks<U>): Meteor.LiveQueryHandle;
+
+    /**
+     * @locus Client only
+     * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     */
+    observeChangesLocal(
       callbacks: ObserveChangesCallbacks<T>,
       options?: { nonMutatingCallbacks?: boolean | undefined }
     ): Meteor.LiveQueryHandle;
