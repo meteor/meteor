@@ -1,5 +1,5 @@
-import LocalCollection from './local_collection.js';
-import { hasOwn } from './common.js';
+import LocalCollection from "./local_collection.js";
+import { hasOwn } from "./common.js";
 import { ASYNC_CURSOR_METHODS, getAsyncMethodName } from "./constants";
 
 // Cursor: a specification for a particular subset of documents, w/ a defined
@@ -13,9 +13,7 @@ export default class Cursor {
 
     if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
       // stash for fast _id and { _id }
-      this._selectorId = hasOwn.call(selector, '_id')
-        ? selector._id
-        : selector;
+      this._selectorId = hasOwn.call(selector, "_id") ? selector._id : selector;
     } else {
       this._selectorId = undefined;
 
@@ -33,7 +31,7 @@ export default class Cursor {
     this._transform = LocalCollection.wrapTransform(options.transform);
 
     // by default, queries register w/ Tracker when it is available.
-    if (typeof Tracker !== 'undefined') {
+    if (typeof Tracker !== "undefined") {
       this.reactive = options.reactive === undefined ? true : options.reactive;
     }
   }
@@ -53,7 +51,7 @@ export default class Cursor {
   count() {
     if (this.reactive) {
       // allow the observe to be unordered
-      this._depend({added: true, removed: true}, true);
+      this._depend({ added: true, removed: true }, true);
     }
 
     return this._getRawObjects({
@@ -72,7 +70,7 @@ export default class Cursor {
   fetch() {
     const result = [];
 
-    this.forEach(doc => {
+    this.forEach((doc) => {
       result.push(doc);
     });
 
@@ -85,11 +83,12 @@ export default class Cursor {
         addedBefore: true,
         removed: true,
         changed: true,
-        movedBefore: true});
+        movedBefore: true,
+      });
     }
 
     let index = 0;
-    const objects = this._getRawObjects({ordered: true});
+    const objects = this._getRawObjects({ ordered: true });
 
     return {
       next: () => {
@@ -97,14 +96,13 @@ export default class Cursor {
           // This doubles as a clone operation.
           let element = this._projectionFn(objects[index++]);
 
-          if (this._transform)
-            element = this._transform(element);
+          if (this._transform) element = this._transform(element);
 
-          return {value: element};
+          return { value: element };
         }
 
-        return {done: true};
-      }
+        return { done: true };
+      },
     };
   }
 
@@ -113,7 +111,7 @@ export default class Cursor {
     return {
       async next() {
         return Promise.resolve(syncResult.next());
-      }
+      },
     };
   }
 
@@ -142,10 +140,11 @@ export default class Cursor {
         addedBefore: true,
         removed: true,
         changed: true,
-        movedBefore: true});
+        movedBefore: true,
+      });
     }
 
-    this._getRawObjects({ordered: true}).forEach((element, i) => {
+    this._getRawObjects({ ordered: true }).forEach((element, i) => {
       // This doubles as a clone operation.
       element = this._projectionFn(element);
 
@@ -237,19 +236,16 @@ export default class Cursor {
     if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {
       throw new Error(
         "Must use an ordered observe with skip or limit (i.e. 'addedBefore' " +
-        "for observeChanges or 'addedAt' for observe, instead of 'added')."
+          "for observeChanges or 'addedAt' for observe, instead of 'added')."
       );
     }
 
     if (this.fields && (this.fields._id === 0 || this.fields._id === false)) {
-      throw Error('You may not observe a cursor with {fields: {_id: 0}}');
+      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
-    const distances = (
-      this.matcher.hasGeoQuery() &&
-      ordered &&
-      new LocalCollection._IdMap
-    );
+    const distances =
+      this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap();
 
     const query = {
       cursor: this,
@@ -259,7 +255,7 @@ export default class Cursor {
       ordered,
       projectionFn: this._projectionFn,
       resultsSnapshot: null,
-      sorter: ordered && this.sorter
+      sorter: ordered && this.sorter,
     };
 
     let qid;
@@ -271,10 +267,13 @@ export default class Cursor {
       this.collection.queries[qid] = query;
     }
 
-    query.results = this._getRawObjects({ordered, distances: query.distances});
+    query.results = this._getRawObjects({
+      ordered,
+      distances: query.distances,
+    });
 
     if (this.collection.paused) {
-      query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap;
+      query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap();
     }
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
@@ -284,7 +283,7 @@ export default class Cursor {
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    const wrapCallback = fn => {
+    const wrapCallback = (fn) => {
       if (!fn) {
         return () => {};
       }
@@ -292,7 +291,7 @@ export default class Cursor {
       const self = this;
 
       if (Meteor.isClient) {
-        return function(/* args*/) {
+        return function (/* args*/) {
           if (self.collection.paused) {
             return;
           }
@@ -305,13 +304,13 @@ export default class Cursor {
         };
       }
 
-      return function(/* args*/) {
+      return function (/* args*/) {
         if (self.collection.paused) {
           return;
         }
 
         let resolve;
-        const promise = new Promise(r => resolve = r);
+        const promise = new Promise((r) => (resolve = r));
 
         const args = arguments;
 
@@ -334,7 +333,7 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      const handler = async doc => {
+      const handler = async (doc) => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;
@@ -357,13 +356,13 @@ export default class Cursor {
       }
     }
 
-    const handle = Object.assign(new LocalCollection.ObserveHandle, {
+    const handle = Object.assign(new LocalCollection.ObserveHandle(), {
       collection: this.collection,
       stop: () => {
         if (this.reactive) {
           delete this.collection.queries[qid];
         }
-      }
+      },
     });
 
     if (this.reactive && Tracker.active) {
@@ -384,13 +383,35 @@ export default class Cursor {
     return handle;
   }
 
+  /**
+   * @summary Watch a query.  Receive callbacks as the result set changes.
+   * @locus Anywhere
+   * @memberOf Mongo.Cursor
+   * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
+   * @returns
+   */
   observeLocal(options) {
-    if (Meteor.isServer) throw new Error('observeLocal not supported on server');
+    if (Meteor.isServer)
+      throw new Error("observeLocal not supported on server");
     return LocalCollection._observeFromObserveChangesLocal(this, options);
   }
 
+  /**
+   * @summary Watch a query. Receive callbacks as the result set changes. Only
+   *          the differences between the old and new documents are passed to
+   *          the callbacks.
+   * @locus Anywhere
+   * @memberOf Mongo.Cursor
+   * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
+   * @returns {Object} Handle that provides `stop()` method
+   */
   observeChangesLocal(options) {
-    if (Meteor.isServer) throw new Error('observeChangesLocal not supported on server');
+    if (Meteor.isServer)
+      throw new Error("observeChangesLocal not supported on server");
 
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
@@ -401,19 +422,16 @@ export default class Cursor {
     if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {
       throw new Error(
         "Must use an ordered observe with skip or limit (i.e. 'addedBefore' " +
-        "for observeChanges or 'addedAt' for observe, instead of 'added')."
+          "for observeChanges or 'addedAt' for observe, instead of 'added')."
       );
     }
 
     if (this.fields && (this.fields._id === 0 || this.fields._id === false)) {
-      throw Error('You may not observe a cursor with {fields: {_id: 0}}');
+      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
-    const distances = (
-      this.matcher.hasGeoQuery() &&
-      ordered &&
-      new LocalCollection._IdMap
-    );
+    const distances =
+      this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap();
 
     const query = {
       cursor: this,
@@ -423,7 +441,7 @@ export default class Cursor {
       ordered,
       projectionFn: this._projectionFn,
       resultsSnapshot: null,
-      sorter: ordered && this.sorter
+      sorter: ordered && this.sorter,
     };
 
     let qid;
@@ -435,10 +453,13 @@ export default class Cursor {
       this.collection.queries[qid] = query;
     }
 
-    query.results = this._getRawObjects({ordered, distances: query.distances});
+    query.results = this._getRawObjects({
+      ordered,
+      distances: query.distances,
+    });
 
     if (this.collection.paused) {
-      query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap;
+      query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap();
     }
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
@@ -448,26 +469,24 @@ export default class Cursor {
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    const wrapCallback = fn => {
+    const wrapCallback = (fn) => {
       if (!fn) {
         return () => {};
       }
 
       const self = this;
 
-      
-        return function (/* args*/) {
-          if (self.collection.paused) {
-            return;
-          }
+      return function (/* args*/) {
+        if (self.collection.paused) {
+          return;
+        }
 
-          const args = arguments;
+        const args = arguments;
 
-          self.collection._observeQueue.queueTask(() => {
-            fn.apply(this, args);
-          });
-        };
-
+        self.collection._observeQueue.queueTask(() => {
+          fn.apply(this, args);
+        });
+      };
     };
 
     query.added = wrapCallback(options.added);
@@ -503,13 +522,13 @@ export default class Cursor {
       }
     }
 
-    const handle = Object.assign(new LocalCollection.ObserveHandle, {
+    const handle = Object.assign(new LocalCollection.ObserveHandle(), {
       collection: this.collection,
       stop: () => {
         if (this.reactive) {
           delete this.collection.queries[qid];
         }
-      }
+      },
     });
 
     if (this.reactive && Tracker.active) {
@@ -530,24 +549,24 @@ export default class Cursor {
     return handle;
   }
 
-
   // XXX Maybe we need a version of observe that just calls a callback if
   // anything changed.
   _depend(changers, _allow_unordered) {
     if (Tracker.active) {
-      const dependency = new Tracker.Dependency;
+      const dependency = new Tracker.Dependency();
       const notify = dependency.changed.bind(dependency);
 
       dependency.depend();
 
-      const options = {_allow_unordered, _suppress_initial: true};
+      const options = { _allow_unordered, _suppress_initial: true };
 
-      ['added', 'addedBefore', 'changed', 'movedBefore', 'removed']
-        .forEach(fn => {
+      ["added", "addedBefore", "changed", "movedBefore", "removed"].forEach(
+        (fn) => {
           if (changers[fn]) {
             options[fn] = notify;
           }
-        });
+        }
+      );
 
       // observeChanges will stop() when this computation is invalidated
       this.observeChanges(options);
@@ -584,7 +603,7 @@ export default class Cursor {
 
     // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
     // compatible
-    const results = options.ordered ? [] : new LocalCollection._IdMap;
+    const results = options.ordered ? [] : new LocalCollection._IdMap();
 
     // fast path for single ID value
     if (this._selectorId !== undefined) {
@@ -641,10 +660,7 @@ export default class Cursor {
       // Fast path for limited unsorted queries.
       // XXX 'length' check here seems wrong for ordered
       return (
-        !this.limit ||
-        this.skip ||
-        this.sorter ||
-        results.length !== this.limit
+        !this.limit || this.skip || this.sorter || results.length !== this.limit
       );
     });
 
@@ -653,7 +669,7 @@ export default class Cursor {
     }
 
     if (this.sorter) {
-      results.sort(this.sorter.getComparator({distances}));
+      results.sort(this.sorter.getComparator({ distances }));
     }
 
     // Return the full set of results if there is no skip or limit or if we're
@@ -672,13 +688,13 @@ export default class Cursor {
     // XXX minimongo should not depend on mongo-livedata!
     if (!Package.mongo) {
       throw new Error(
-        'Can\'t publish from Minimongo without the `mongo` package.'
+        "Can't publish from Minimongo without the `mongo` package."
       );
     }
 
     if (!this.collection.name) {
       throw new Error(
-        'Can\'t publish a cursor from a collection without a name.'
+        "Can't publish a cursor from a collection without a name."
       );
     }
 
@@ -691,9 +707,9 @@ export default class Cursor {
 }
 
 // Implements async version of cursor methods to keep collections isomorphic
-ASYNC_CURSOR_METHODS.forEach(method => {
+ASYNC_CURSOR_METHODS.forEach((method) => {
   const asyncName = getAsyncMethodName(method);
-  Cursor.prototype[asyncName] = function(...args) {
+  Cursor.prototype[asyncName] = function (...args) {
     try {
       return Promise.resolve(this[method].apply(this, args));
     } catch (error) {
