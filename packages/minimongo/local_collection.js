@@ -1655,6 +1655,151 @@ LocalCollection._observeFromObserveChanges = async (cursor, observeCallbacks) =>
   return handle;
 };
 
+
+LocalCollection._observeFromObserveChangesLocal = (cursor, observeCallbacks) => {
+  const transform = cursor.getTransform() || (doc => doc);
+  let suppressed = !!observeCallbacks._suppress_initial;
+
+  let observeChangesCallbacks;
+  if (LocalCollection._observeCallbacksAreOrdered(observeCallbacks)) {
+    // The "_no_indices" option sets all index arguments to -1 and skips the
+    // linear scans required to generate them.  This lets observers that don't
+    // need absolute indices benefit from the other features of this API --
+    // relative order, transforms, and applyChanges -- without the speed hit.
+    const indices = !observeCallbacks._no_indices;
+
+    observeChangesCallbacks = {
+      addedBefore(id, fields, before) {
+        const check = suppressed || !(observeCallbacks.addedAt || observeCallbacks.added)
+        if (check) {
+          return;
+        }
+
+        const doc = transform(Object.assign(fields, {_id: id}));
+
+        if (observeCallbacks.addedAt) {
+          observeCallbacks.addedAt(
+              doc,
+              indices
+                  ? before
+                      ? this.docs.indexOf(before)
+                      : this.docs.size()
+                  : -1,
+              before
+          );
+        } else {
+          observeCallbacks.added(doc);
+        }
+      },
+      changed(id, fields) {
+
+        if (!(observeCallbacks.changedAt || observeCallbacks.changed)) {
+          return;
+        }
+
+        let doc = EJSON.clone(this.docs.get(id));
+        if (!doc) {
+          throw new Error(`Unknown id for changed: ${id}`);
+        }
+
+        const oldDoc = transform(EJSON.clone(doc));
+
+        DiffSequence.applyChanges(doc, fields);
+
+        if (observeCallbacks.changedAt) {
+          observeCallbacks.changedAt(
+              transform(doc),
+              oldDoc,
+              indices ? this.docs.indexOf(id) : -1
+          );
+        } else {
+          observeCallbacks.changed(transform(doc), oldDoc);
+        }
+      },
+      movedBefore(id, before) {
+        if (!observeCallbacks.movedTo) {
+          return;
+        }
+
+        const from = indices ? this.docs.indexOf(id) : -1;
+        let to = indices
+            ? before
+                ? this.docs.indexOf(before)
+                : this.docs.size()
+            : -1;
+
+        // When not moving backwards, adjust for the fact that removing the
+        // document slides everything back one slot.
+        if (to > from) {
+          --to;
+        }
+
+        observeCallbacks.movedTo(
+            transform(EJSON.clone(this.docs.get(id))),
+            from,
+            to,
+            before || null
+        );
+      },
+      removed(id) {
+        if (!(observeCallbacks.removedAt || observeCallbacks.removed)) {
+          return;
+        }
+
+        // technically maybe there should be an EJSON.clone here, but it's about
+        // to be removed from this.docs!
+        const doc = transform(this.docs.get(id));
+
+        if (observeCallbacks.removedAt) {
+          observeCallbacks.removedAt(doc, indices ? this.docs.indexOf(id) : -1);
+        } else {
+          observeCallbacks.removed(doc);
+        }
+      },
+    };
+  } else {
+    observeChangesCallbacks = {
+      added(id, fields) {
+        if (!suppressed && observeCallbacks.added) {
+          observeCallbacks.added(transform(Object.assign(fields, {_id: id})));
+        }
+      },
+      changed(id, fields) {
+        if (observeCallbacks.changed) {
+          const oldDoc = this.docs.get(id);
+          const doc = EJSON.clone(oldDoc);
+
+          DiffSequence.applyChanges(doc, fields);
+
+          observeCallbacks.changed(
+              transform(doc),
+              transform(EJSON.clone(oldDoc))
+          );
+        }
+      },
+      removed(id) {
+        if (observeCallbacks.removed) {
+          observeCallbacks.removed(transform(this.docs.get(id)));
+        }
+      },
+    };
+  }
+
+  const changeObserver = new LocalCollection._CachingChangeObserver({
+    callbacks: observeChangesCallbacks
+  });
+
+  // CachingChangeObserver clones all received input on its callbacks
+  // So we can mark it as safe to reduce the ejson clones.
+  // This is tested by the `mongo-livedata - (extended) scribbling` tests
+  changeObserver.applyChange._fromObserve = true;
+  const handle = cursor.observeChangesLocal(changeObserver.applyChange,
+      { nonMutatingCallbacks: true });
+
+  suppressed = false;
+
+  return handle;
+};
 LocalCollection._observeCallbacksAreOrdered = callbacks => {
   if (callbacks.added && callbacks.addedAt) {
     throw new Error('Please specify only one of added() and addedAt()');
