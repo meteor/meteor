@@ -384,6 +384,153 @@ export default class Cursor {
     return handle;
   }
 
+  observeLocal(options) {
+    if (Meteor.isServer) throw new Error('observeLocal not supported on server');
+    return LocalCollection._observeFromObserveChangesLocal(this, options);
+  }
+
+  observeChangesLocal(options) {
+    if (Meteor.isServer) throw new Error('observeChangesLocal not supported on server');
+
+    const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
+
+    // there are several places that assume you aren't combining skip/limit with
+    // unordered observe.  eg, update's EJSON.clone, and the "there are several"
+    // comment in _modifyAndNotify
+    // XXX allow skip/limit with unordered observe
+    if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {
+      throw new Error(
+        "Must use an ordered observe with skip or limit (i.e. 'addedBefore' " +
+        "for observeChanges or 'addedAt' for observe, instead of 'added')."
+      );
+    }
+
+    if (this.fields && (this.fields._id === 0 || this.fields._id === false)) {
+      throw Error('You may not observe a cursor with {fields: {_id: 0}}');
+    }
+
+    const distances = (
+      this.matcher.hasGeoQuery() &&
+      ordered &&
+      new LocalCollection._IdMap
+    );
+
+    const query = {
+      cursor: this,
+      dirty: false,
+      distances,
+      matcher: this.matcher, // not fast pathed
+      ordered,
+      projectionFn: this._projectionFn,
+      resultsSnapshot: null,
+      sorter: ordered && this.sorter
+    };
+
+    let qid;
+
+    // Non-reactive queries call added[Before] and then never call anything
+    // else.
+    if (this.reactive) {
+      qid = this.collection.next_qid++;
+      this.collection.queries[qid] = query;
+    }
+
+    query.results = this._getRawObjects({ordered, distances: query.distances});
+
+    if (this.collection.paused) {
+      query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap;
+    }
+
+    // wrap callbacks we were passed. callbacks only fire when not paused and
+    // are never undefined
+    // Filters out blacklisted fields according to cursor's projection.
+    // XXX wrong place for this?
+
+    // furthermore, callbacks enqueue until the operation we're working on is
+    // done.
+    const wrapCallback = fn => {
+      if (!fn) {
+        return () => {};
+      }
+
+      const self = this;
+
+      
+        return function (/* args*/) {
+          if (self.collection.paused) {
+            return;
+          }
+
+          const args = arguments;
+
+          self.collection._observeQueue.queueTask(() => {
+            fn.apply(this, args);
+          });
+        };
+
+    };
+
+    query.added = wrapCallback(options.added);
+    query.changed = wrapCallback(options.changed);
+    query.removed = wrapCallback(options.removed);
+
+    if (ordered) {
+      query.addedBefore = wrapCallback(options.addedBefore);
+      query.movedBefore = wrapCallback(options.movedBefore);
+    }
+
+    if (!options._suppress_initial && !this.collection.paused) {
+      const handler = (doc) => {
+        const fields = EJSON.clone(doc);
+
+        delete fields._id;
+
+        if (ordered) {
+          query.addedBefore(doc._id, this._projectionFn(fields), null);
+        }
+
+        query.added(doc._id, this._projectionFn(fields));
+      };
+      // it means it's just an array
+      if (query.results.length) {
+        for (const doc of query.results) {
+          handler(doc);
+        }
+      }
+      // it means it's an id map
+      if (query.results?.size?.()) {
+        query.results.forEachAsync(handler);
+      }
+    }
+
+    const handle = Object.assign(new LocalCollection.ObserveHandle, {
+      collection: this.collection,
+      stop: () => {
+        if (this.reactive) {
+          delete this.collection.queries[qid];
+        }
+      }
+    });
+
+    if (this.reactive && Tracker.active) {
+      // XXX in many cases, the same observe will be recreated when
+      // the current autorun is rerun.  we could save work by
+      // letting it linger across rerun and potentially get
+      // repurposed if the same observe is performed, using logic
+      // similar to that of Meteor.subscribe.
+      Tracker.onInvalidate(() => {
+        handle.stop();
+      });
+    }
+
+    // run the observe callbacks resulting from the initial contents
+    // before we leave the observe.
+    this.collection._observeQueue.drain();
+
+    return handle;
+  }
+
+
   // XXX Maybe we need a version of observe that just calls a callback if
   // anything changed.
   _depend(changers, _allow_unordered) {
