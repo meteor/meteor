@@ -1747,7 +1747,7 @@ if (Meteor.isServer) (() => {
 
   Tinytest.addAsync(
     'passwords - allow custom bcrypt rounds',
-    (test, done) => {
+    async (test, done) => {
       const getUserHashRounds = user =>
         Number(user.services.password.bcrypt.substring(4, 6));
 
@@ -1768,7 +1768,7 @@ if (Meteor.isServer) (() => {
       const defaultRounds = Accounts._bcryptRounds();
       const customRounds = 11;
       Accounts._options.bcryptRounds = customRounds;
-      Accounts._checkPassword(user1, password);
+      await Accounts._checkPasswordAsync(user1, password);
       Meteor.setTimeout(() => {
         user1 = Meteor.users.findOne(userId1);
         rounds = getUserHashRounds(user1);

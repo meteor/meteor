@@ -5,17 +5,9 @@ meteorInstall = makeInstaller({
 
   // The difference between legacy.js and modern.js is that this module
   // prefers "main" over "module" (see issue #10658).
-  mainFields: ["browser", "main", "module"],
+  mainFields: ['browser', 'main', 'module'],
 
-  fallback: function(id, parentId, error) {
-    if (id && id.startsWith('meteor/')) {
-      var packageName = id.split('/', 2)[1];
-      throw new Error(
-        'Cannot find package "' + packageName + '". ' +
-          'Try "meteor add ' + packageName + '".'
-      );
-    }
-
-    throw error;
+  fallback: function (id, parentId, error) {
+    verifyErrors(id, parentId, error);
   }
 });

@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@babel/runtime": {
-      "version": "7.15.3",
-      "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.15.3.tgz",
-      "integrity": "sha512-OvwMLqNXkCXSz1kSm58sEsNuhqOx/fKpnUnKnFB5v8uDda5bLNEHNgKPvhDN6IU0LDcnHQ90LlJ0Q6jnyBSIBA=="
+      "version": "7.18.9",
+      "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.18.9.tgz",
+      "integrity": "sha512-lkqXDcvlFT5rvEjiu6+QYO+1GXrEHRo2LOtS7E4GtX5ESIZOgepqsZBVIj6Pv+a6zqsya9VCgiK1KAK4BvJDAw=="
     },
     "braces": {
       "version": "3.0.2",
@@ -27,9 +27,9 @@
       "integrity": "sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA=="
     },
     "micromatch": {
-      "version": "4.0.4",
-      "resolved": "https://registry.npmjs.org/micromatch/-/micromatch-4.0.4.tgz",
-      "integrity": "sha512-pRmzw/XUcwXGpD9aI9q/0XOwLNygjETJ8y0ao0wdqprrzDa4YnxLcz7fQRZr8voh8V10kGhABbNcHVk5wHgWwg=="
+      "version": "4.0.5",
+      "resolved": "https://registry.npmjs.org/micromatch/-/micromatch-4.0.5.tgz",
+      "integrity": "sha512-DMy+ERcEW2q8Z2Po+WNXuw3c5YaUSFjAO5GsJqfEl7UjvtIuFKO6ZrKvcItdy98dwFI2N1tg3zNIdKaQT+aNdA=="
     },
     "picomatch": {
       "version": "2.3.1",
@@ -42,9 +42,9 @@
       "integrity": "sha512-p3VT+cOEgxFsRRA9X4lkI1E+k2/CtnKtU4gcxyaCUreilL/vqI6CdZ3wxVUx3UOUg+gnUOQQcRI7BmSI656MYA=="
     },
     "source-map": {
-      "version": "0.7.3",
-      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.7.3.tgz",
-      "integrity": "sha512-CkCj6giN3S+n9qrYiBTX5gystlENnRW5jZeNLHpe6aue+SrHcG5VYwujhW9s4dY31mEGsxBDrHR6oI69fTXsaQ=="
+      "version": "0.7.4",
+      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.7.4.tgz",
+      "integrity": "sha512-l3BikUxvPOcn5E74dZiq5BGsTb5yEwhaTSzccU6t4sDOH8NWJCstKO5QT2CvtFoK6F0saL7p9xHAqHOlCPJygA=="
     },
     "to-regex-range": {
       "version": "5.0.1",

@@ -149,7 +149,6 @@
 // wait until later.
 
 var assert = require('assert');
-var util = require('util');
 var Fiber = require('fibers');
 var _ = require('underscore');
 
@@ -160,7 +159,6 @@ var compilerPluginModule = require('./compiler-plugin.js');
 import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
 import { addToTree, File as LinkerFile } from "./linker.js";
-
 var files = require('../fs/files');
 var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
@@ -476,7 +474,7 @@ class NodeModulesDirectory {
 
       if (start >= parts.length) {
         // If "node_modules" is the final part, then there's nothing
-        // futher to examine, yet.
+        // further to examine, yet.
         return true;
       }
 
@@ -835,7 +833,7 @@ class Target {
 
   // Top-level entry point for building a target. Generally to build a
   // target, you create with 'new', call make() to specify its sources
-  // and build options and actually do the work of buliding the
+  // and build options and actually do the work of building the
   // target, and finally you retrieve the build product with a
   // target-type-dependent function such as write() or toJsImage().
   //
@@ -1042,7 +1040,7 @@ class Target {
             buildmessage.error(
               "circular dependency between packages " +
                 unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
-            // recover by not enforcing one of the depedencies
+            // recover by not enforcing one of the dependencies
             return;
           }
           onStack[usedUnibuild.id] = true;
@@ -2857,7 +2855,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
 // return the provided buffer without modification.
 function removeSourceMappingURLs(data) {
   if (Buffer.isBuffer(data)) {
-    // Unfortuantely there is no way to search a Buffer using a RegExp, so
+    // Unfortunately there is no way to search a Buffer using a RegExp, so
     // there's a chance of false positives here, which could lead to
     // unnecessarily stringifying and re-Buffer.from-ing the data, though
     // that should not cause any logical problems.
@@ -3090,7 +3088,7 @@ Find out more about Meteor at meteor.com.
     builder.complete();
 
     // Now, go and "fix up" the outputPath properties of the sub-builders.
-    // Since the sub-builders originally were targetted at a temporary
+    // Since the sub-builders originally were targeted at a temporary
     // buildPath of the main builder, their outputPath properties need to
     // be adjusted so we can later pass them as previousBuilder's
     Object.keys(builders).forEach(name => {
@@ -3394,7 +3392,7 @@ function bundle({
           // Tell the webapp package to pause responding to requests from
           // clients that use this arch, because we're about to write a
           // new version of this bundle to disk. If the message fails
-          // becuase the child process exited, proceed with writing the
+          // because the child process exited, proceed with writing the
           // target anyway.
           await pauseClient(arch).catch(ignoreHarmlessErrors);
 
