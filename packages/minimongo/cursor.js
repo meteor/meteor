@@ -393,8 +393,6 @@ export default class Cursor {
    * @returns
    */
   observeLocal(options) {
-    if (Meteor.isServer)
-      throw new Error("observeLocal not supported on server");
     return LocalCollection._observeFromObserveChangesLocal(this, options);
   }
 
@@ -410,9 +408,6 @@ export default class Cursor {
    * @returns {Object} Handle that provides `stop()` method
    */
   observeChangesLocal(options) {
-    if (Meteor.isServer)
-      throw new Error("observeChangesLocal not supported on server");
-
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with
