@@ -1650,7 +1650,12 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
   const handle = cursor.observeChanges(changeObserver.applyChange,
       { nonMutatingCallbacks: true });
 
-  suppressed = false;
+  // If needed, re-enable callbacks as soon as the initial batch is ready.
+  if (suppressed) {
+    handle.isReadyPromise.then(() => {
+      suppressed = false;
+    });
+  }
 
   return handle;
 };
