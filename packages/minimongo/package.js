@@ -49,5 +49,4 @@ Package.onTest(api => {
   api.addFiles('minimongo_tests.js');
   api.addFiles('minimongo_tests_client.js', 'client');
   api.addFiles('minimongo_tests_server.js', 'server');
-  api.addFiles('minimongo_tests_client_async.js', 'client');
 });
