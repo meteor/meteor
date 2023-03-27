@@ -363,12 +363,11 @@ export default class Cursor {
     // before we leave the observe.
     const isReadyPromise = this.collection._observeQueue.drain();
 
-    if (
-      Meteor.isClient ||
-      this.collection.constructor.name === 'LocalCollection' // Unamed collections
-    ) {
-      handle.isReady = true;
-    } else isReadyPromise.then(() => (handle.isReady = true));
+    const isLocalCollection =
+      Meteor.isClient || this.collection.constructor.name === 'LocalCollection'; // Unamed collections
+
+    if (isLocalCollection) handle.isReady = true;
+    else isReadyPromise.then(() => (handle.isReady = true));
 
     handle.isReadyPromise = Meteor.isClient
       ? Promise.resolve()
