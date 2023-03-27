@@ -3207,63 +3207,86 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   handle.stop();
 });
 
-[true, false].forEach(ordered => {
-  Tinytest.addAsync(`minimongo - observe ordered: ${ordered}`, async test => {
+[true, false].forEach((ordered) => {
+  Tinytest.addAsync(`minimongo - observe ordered: ${ordered}`, async (test) => {
     const c = new LocalCollection();
 
-    let ev = '';
-    const makecb = tag => {
+    let ev = "";
+    const makecb = (tag) => {
       const ret = {};
-      ['added', 'changed', 'removed'].forEach(fn => {
+      ["added", "changed", "removed"].forEach((fn) => {
         const fnName = ordered ? `${fn}At` : fn;
-        ret[fnName] = doc => {
+        ret[fnName] = (doc) => {
           ev = `${ev + fn.substr(0, 1) + tag + doc._id}_`;
         };
       });
       return ret;
     };
-    const expect = x => {
+    const expect = (x) => {
       test.equal(ev, x);
-      ev = '';
+      ev = "";
     };
 
-    await c.insertAsync({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
-    await c.insertAsync({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
-    await c.insertAsync({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
+    await c.insertAsync({
+      _id: 1,
+      name: "strawberry",
+      tags: ["fruit", "red", "squishy"],
+    });
+    await c.insertAsync({
+      _id: 2,
+      name: "apple",
+      tags: ["fruit", "red", "hard"],
+    });
+    await c.insertAsync({
+      _id: 3,
+      name: "rose",
+      tags: ["flower", "red", "squishy"],
+    });
 
     // This should work equally well for ordered and unordered observations
     // (because the callbacks don't look at indices and there's no 'moved'
     // callback).
-    let handle = await c.find({tags: 'flower'}).observe(makecb('a'));
-    expect('aa3_');
-    await c.updateAsync({name: 'rose'}, {$set: {tags: ['bloom', 'red', 'squishy']}});
-    expect('ra3_');
-    await c.updateAsync({name: 'rose'}, {$set: {tags: ['flower', 'red', 'squishy']}});
-    expect('aa3_');
-    await c.updateAsync({name: 'rose'}, {$set: {food: false}});
-    expect('ca3_');
+    let handle = await c.find({ tags: "flower" }).observe(makecb("a"));
+    expect("aa3_");
+    await c.updateAsync(
+      { name: "rose" },
+      { $set: { tags: ["bloom", "red", "squishy"] } }
+    );
+    expect("ra3_");
+    await c.updateAsync(
+      { name: "rose" },
+      { $set: { tags: ["flower", "red", "squishy"] } }
+    );
+    expect("aa3_");
+    await c.updateAsync({ name: "rose" }, { $set: { food: false } });
+    expect("ca3_");
     c.remove({});
-    expect('ra3_');
-    await c.insertAsync({_id: 4, name: 'daisy', tags: ['flower']});
-    expect('aa4_');
+    expect("ra3_");
+    await c.insertAsync({ _id: 4, name: "daisy", tags: ["flower"] });
+    expect("aa4_");
     handle.stop();
     // After calling stop, no more callbacks are called.
-    await c.insertAsync({_id: 5, name: 'iris', tags: ['flower']});
-    expect('');
+    await c.insertAsync({ _id: 5, name: "iris", tags: ["flower"] });
+    expect("");
 
     // Test that observing a lookup by ID works.
-    handle = await c.find(4).observe(makecb('b'));
-    expect('ab4_');
-    await c.updateAsync(4, {$set: {eek: 5}});
-    expect('cb4_');
+    handle = await c.find(4).observe(makecb("b"));
+    expect("ab4_");
+    await c.updateAsync(4, { $set: { eek: 5 } });
+    expect("cb4_");
     handle.stop();
 
     // Test observe with reactive: false.
-    handle = await c.find({tags: 'flower'}, {reactive: false}).observe(makecb('c'));
-    expect('ac4_ac5_');
+    handle = await c
+      .find({ tags: "flower" }, { reactive: false })
+      .observe(makecb("c"));
+    // TODO: think about this one below.
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    await sleep(10);
+    expect("ac4_ac5_");
     // This insert shouldn't trigger a callback because it's not reactive.
-    await c.insertAsync({_id: 6, name: 'river', tags: ['flower']});
-    expect('');
+    await c.insertAsync({ _id: 6, name: "river", tags: ["flower"] });
+    expect("");
     handle.stop();
   });
 });
