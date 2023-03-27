@@ -3394,7 +3394,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   const cbs = log_callbacks(operations);
 
   const c = new LocalCollection();
-  const h = await c.find({}).observe(cbs);
+  const h = c.find({}).observe(cbs);
 
   // remove and add cancel out.
   await c.insertAsync({_id: 1, a: 1});
@@ -3407,7 +3407,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   await c.insertAsync({_id: 1, a: 1});
   test.length(operations, 0);
 
-  await c.resumeObserversClient();
+  c.resumeObserversClient();
   test.length(operations, 0);
 
 
@@ -3417,7 +3417,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   await c.updateAsync({_id: 1}, {a: 2});
   await c.updateAsync({_id: 1}, {a: 3});
 
-  await c.resumeObserversClient();
+  c.resumeObserversClient();
   test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 1}]);
   test.length(operations, 0);
 
@@ -3425,7 +3425,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   c.pauseObservers();
   test.equal(await c.removeAsync({}), 1);
   test.length(operations, 0);
-  await c.resumeObserversClient();
+  c.resumeObserversClient();
   test.equal(operations.shift(), ['removed', 1, 0, {a: 3}]);
   test.length(operations, 0);
 
