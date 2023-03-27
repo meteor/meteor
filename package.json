@@ -63,7 +63,8 @@
       ],
       "complexity": "off",
       "func-names": "off",
-      "no-undef": "warn"
+      "no-undef": "warn",
+      "curly": "off"
     }
   }
 }
