@@ -3585,8 +3585,8 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
   await coll.insertAsync({ rest: { loc: [-3, 3] } });
   await coll.insertAsync({ rest: { loc: [5, 5] } });
 
-  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
-  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
+  test.equal(await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
+  test.equal(await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
   const points = await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 6 } }).fetchAsync();
   points.forEach((point, i, points) => {
     test.isTrue(!i || distance([0, 0], point.rest.loc) >= distance([0, 0], points[i - 1].rest.loc));
@@ -3722,7 +3722,7 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
 
   const operations = [];
   const cbs = log_callbacks(operations);
-  const handle = await coll.find({'a.b': {$near: [7, 7]}}).observe(cbs);
+  const handle = coll.find({'a.b': {$near: [7, 7]}}).observe(cbs);
 
   test.length(operations, 2);
   test.equal(operations.shift(), ['added', {k: 9, a: {b: [5, 5]}}, 0, null]);
