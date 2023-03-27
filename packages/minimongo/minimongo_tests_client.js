@@ -3781,10 +3781,10 @@ Tinytest.add('minimongo - fetch in observe', test => {
   const coll = new LocalCollection;
   let callbackInvoked = false;
   const observe = coll.find().observeChanges({
-    async added(id, fields) {
+    added(id, fields) {
       callbackInvoked = true;
       test.equal(fields, { foo: 1 });
-      const doc = await coll.findOne({ foo: 1 });
+      const doc = coll.findOne({ foo: 1 });
       test.isTrue(doc);
       test.equal(doc.foo, 1);
     },
@@ -3799,6 +3799,22 @@ Tinytest.add('minimongo - fetch in observe', test => {
   observe.stop();
   computation.stop();
 });
+
+Tinytest.add("minimongo - supress_initial option", (test) => {
+  const coll = new LocalCollection();
+  let runs = 0;
+
+  Tracker.autorun(() => {
+    coll.find({}).observe(
+      { _suppress_initial: true },
+      { }
+    );
+    runs += 1;
+  });
+  coll.insert({});
+  test.equal(runs, 2);
+});
+
 
 // See #2254
 Tinytest.add('minimongo - fine-grained reactivity of observe with fields projection', test => {
