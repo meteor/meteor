@@ -1867,7 +1867,7 @@ Tinytest.addAsync('minimongo - observe ordered with projection', async test => {
   let handle;
 
   const c = new LocalCollection();
-  handle = await c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(cbs);
+  handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(cbs);
   test.isTrue(handle.collection === c);
 
   await c.insertAsync({_id: 'foo', a: 1, b: 2});
@@ -1896,20 +1896,20 @@ Tinytest.addAsync('minimongo - observe ordered with projection', async test => {
 
   const cursor = c.find({}, {fields: {a: 1, _id: 0}});
   await test.throwsAsync(async () => {
-    await cursor.observeChanges({added() {}});
+    await cursor.observeChanges({ added() {} });
   });
-  await test.throwsAsync(async () => {
-    await cursor.observe({added() {}});
+  test.throws(() => {
+    cursor.observe({ added() {} });
   });
 
   // test initial inserts (and backwards sort)
-  handle = await c.find({}, {sort: {a: -1}, fields: { a: 1 } }).observe(cbs);
+  handle = c.find({}, {sort: {a: -1}, fields: { a: 1 } }).observe(cbs);
   test.equal(operations.shift(), ['added', {a: 2}, 0, null]);
   test.equal(operations.shift(), ['added', {a: 1}, 1, null]);
   handle.stop();
 
   // test _suppress_initial
-  handle = await c.find({}, {sort: {a: -1}, fields: { a: 1 }}).observe(Object.assign(cbs, {_suppress_initial: true}));
+  handle = c.find({}, {sort: {a: -1}, fields: { a: 1 }}).observe(Object.assign(cbs, {_suppress_initial: true}));
   test.equal(operations.shift(), undefined);
   await c.insertAsync({a: 100, b: { foo: 'bar' }});
   test.equal(operations.shift(), ['added', {a: 100}, 0, idA2]);
@@ -1917,7 +1917,7 @@ Tinytest.addAsync('minimongo - observe ordered with projection', async test => {
 
   // test skip and limit.
   await c.removeAsync({});
-  handle = await c.find({}, {sort: {a: 1}, skip: 1, limit: 2, fields: { blacklisted: 0 }}).observe(cbs);
+  handle = c.find({}, {sort: {a: 1}, skip: 1, limit: 2, fields: { blacklisted: 0 }}).observe(cbs);
   test.equal(operations.shift(), undefined);
   await c.insertAsync({a: 1, blacklisted: 1324});
   test.equal(operations.shift(), undefined);
@@ -1939,7 +1939,7 @@ Tinytest.addAsync('minimongo - observe ordered with projection', async test => {
   // test _no_indices
 
   await c.removeAsync({});
-  handle = await c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(Object.assign(cbs, {_no_indices: true}));
+  handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(Object.assign(cbs, {_no_indices: true}));
   await c.insertAsync({_id: 'foo', a: 1, zoo: 'crazy'});
   test.equal(operations.shift(), ['added', {a: 1}, -1, null]);
   await c.updateAsync({a: 1}, {$set: {a: 2, foobar: 'player'}});
@@ -3108,7 +3108,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   let handle;
 
   const c = new LocalCollection();
-  handle = await c.find({}, {sort: {a: 1}}).observe(cbs);
+  handle = c.find({}, {sort: {a: 1}}).observe(cbs);
   test.isTrue(handle.collection === c);
 
   await c.insertAsync({_id: 'foo', a: 1});
@@ -3135,14 +3135,20 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   test.equal(operations.shift(), undefined);
 
   // test initial inserts (and backwards sort)
-  handle = await c.find({}, {sort: {a: -1}}).observe(cbs);
+  handle = c.find({}, {sort: {a: -1}}).observe(cbs);
   test.equal(operations.shift(), ['added', {a: 2}, 0, null]);
   test.equal(operations.shift(), ['added', {a: 1}, 1, null]);
   handle.stop();
 
   // test _suppress_initial
-  handle = await c.find({}, {sort: {a: -1}}).observe(Object.assign({
-    _suppress_initial: true}, cbs));
+  handle = c.find({}, { sort: { a: -1 } }).observe(
+    Object.assign(
+      {
+        _suppress_initial: true,
+      },
+      cbs
+    )
+  );
   test.equal(operations.shift(), undefined);
   await c.insertAsync({a: 100});
   test.equal(operations.shift(), ['added', {a: 100}, 0, idA2]);
@@ -3150,7 +3156,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
 
   // test skip and limit.
   await c.removeAsync({});
-  handle = await c.find({}, {sort: {a: 1}, skip: 1, limit: 2}).observe(cbs);
+  handle = c.find({}, { sort: { a: 1 }, skip: 1, limit: 2 }).observe(cbs);
   test.equal(operations.shift(), undefined);
   await c.insertAsync({a: 1});
   test.equal(operations.shift(), undefined);
@@ -3174,7 +3180,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   await c.insertAsync({a: 1});
   await c.insertAsync({_id: 'two', a: 2});
   await c.insertAsync({a: 3});
-  handle = await c.find({}, {sort: {a: 1}, limit: 2}).observe(cbs);
+  handle = c.find({}, { sort: { a: 1 }, limit: 2 }).observe(cbs);
   test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
   test.equal(operations.shift(), ['added', {a: 2}, 1, null]);
   test.equal(operations.shift(), undefined);
@@ -3187,7 +3193,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   // test _no_indices
 
   await c.removeAsync({});
-  handle = await c.find({}, {sort: {a: 1}}).observe(Object.assign(cbs, {_no_indices: true}));
+  handle = c.find({}, {sort: {a: 1}}).observe(Object.assign(cbs, {_no_indices: true}));
   await c.insertAsync({_id: 'foo', a: 1});
   test.equal(operations.shift(), ['added', {a: 1}, -1, null]);
   await c.updateAsync({a: 1}, {$set: {a: 2}});
@@ -3207,63 +3213,86 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   handle.stop();
 });
 
-[true, false].forEach(ordered => {
-  Tinytest.addAsync(`minimongo - observe ordered: ${ordered}`, async test => {
+[true, false].forEach((ordered) => {
+  Tinytest.addAsync(`minimongo - observe ordered: ${ordered}`, async (test) => {
     const c = new LocalCollection();
 
-    let ev = '';
-    const makecb = tag => {
+    let ev = "";
+    const makecb = (tag) => {
       const ret = {};
-      ['added', 'changed', 'removed'].forEach(fn => {
+      ["added", "changed", "removed"].forEach((fn) => {
         const fnName = ordered ? `${fn}At` : fn;
-        ret[fnName] = doc => {
+        ret[fnName] = (doc) => {
           ev = `${ev + fn.substr(0, 1) + tag + doc._id}_`;
         };
       });
       return ret;
     };
-    const expect = x => {
+    const expect = (x) => {
       test.equal(ev, x);
-      ev = '';
+      ev = "";
     };
 
-    await c.insertAsync({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
-    await c.insertAsync({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
-    await c.insertAsync({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
+    await c.insertAsync({
+      _id: 1,
+      name: "strawberry",
+      tags: ["fruit", "red", "squishy"],
+    });
+    await c.insertAsync({
+      _id: 2,
+      name: "apple",
+      tags: ["fruit", "red", "hard"],
+    });
+    await c.insertAsync({
+      _id: 3,
+      name: "rose",
+      tags: ["flower", "red", "squishy"],
+    });
 
     // This should work equally well for ordered and unordered observations
     // (because the callbacks don't look at indices and there's no 'moved'
     // callback).
-    let handle = await c.find({tags: 'flower'}).observe(makecb('a'));
-    expect('aa3_');
-    await c.updateAsync({name: 'rose'}, {$set: {tags: ['bloom', 'red', 'squishy']}});
-    expect('ra3_');
-    await c.updateAsync({name: 'rose'}, {$set: {tags: ['flower', 'red', 'squishy']}});
-    expect('aa3_');
-    await c.updateAsync({name: 'rose'}, {$set: {food: false}});
-    expect('ca3_');
+    let handle = c.find({ tags: "flower" }).observe(makecb("a"));
+    expect("aa3_");
+    await c.updateAsync(
+      { name: "rose" },
+      { $set: { tags: ["bloom", "red", "squishy"] } }
+    );
+    expect("ra3_");
+    await c.updateAsync(
+      { name: "rose" },
+      { $set: { tags: ["flower", "red", "squishy"] } }
+    );
+    expect("aa3_");
+    await c.updateAsync({ name: "rose" }, { $set: { food: false } });
+    expect("ca3_");
     c.remove({});
-    expect('ra3_');
-    await c.insertAsync({_id: 4, name: 'daisy', tags: ['flower']});
-    expect('aa4_');
+    expect("ra3_");
+    await c.insertAsync({ _id: 4, name: "daisy", tags: ["flower"] });
+    expect("aa4_");
     handle.stop();
     // After calling stop, no more callbacks are called.
-    await c.insertAsync({_id: 5, name: 'iris', tags: ['flower']});
-    expect('');
+    await c.insertAsync({ _id: 5, name: "iris", tags: ["flower"] });
+    expect("");
 
     // Test that observing a lookup by ID works.
-    handle = await c.find(4).observe(makecb('b'));
-    expect('ab4_');
-    await c.updateAsync(4, {$set: {eek: 5}});
-    expect('cb4_');
+    handle = c.find(4).observe(makecb("b"));
+    expect("ab4_");
+    await c.updateAsync(4, { $set: { eek: 5 } });
+    expect("cb4_");
     handle.stop();
 
     // Test observe with reactive: false.
-    handle = await c.find({tags: 'flower'}, {reactive: false}).observe(makecb('c'));
-    expect('ac4_ac5_');
+    handle = c
+      .find({ tags: "flower" }, { reactive: false })
+      .observe(makecb("c"));
+    // TODO: think about this one below.
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    await sleep(10);
+    expect("ac4_ac5_");
     // This insert shouldn't trigger a callback because it's not reactive.
-    await c.insertAsync({_id: 6, name: 'river', tags: ['flower']});
-    expect('');
+    await c.insertAsync({ _id: 6, name: "river", tags: ["flower"] });
+    expect("");
     handle.stop();
   });
 });
@@ -3365,7 +3394,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   const cbs = log_callbacks(operations);
 
   const c = new LocalCollection();
-  const h = await c.find({}).observe(cbs);
+  const h = c.find({}).observe(cbs);
 
   // remove and add cancel out.
   await c.insertAsync({_id: 1, a: 1});
@@ -3378,7 +3407,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   await c.insertAsync({_id: 1, a: 1});
   test.length(operations, 0);
 
-  await c.resumeObserversClient();
+  c.resumeObserversClient();
   test.length(operations, 0);
 
 
@@ -3388,7 +3417,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   await c.updateAsync({_id: 1}, {a: 2});
   await c.updateAsync({_id: 1}, {a: 3});
 
-  await c.resumeObserversClient();
+  c.resumeObserversClient();
   test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 1}]);
   test.length(operations, 0);
 
@@ -3396,7 +3425,7 @@ Tinytest.addAsync('minimongo - pause', async test => {
   c.pauseObservers();
   test.equal(await c.removeAsync({}), 1);
   test.length(operations, 0);
-  await c.resumeObserversClient();
+  c.resumeObserversClient();
   test.equal(operations.shift(), ['removed', 1, 0, {a: 3}]);
   test.length(operations, 0);
 
@@ -3566,8 +3595,8 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
   await coll.insertAsync({ rest: { loc: [-3, 3] } });
   await coll.insertAsync({ rest: { loc: [5, 5] } });
 
-  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
-  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
+  test.equal(await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
+  test.equal(await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
   const points = await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 6 } }).fetchAsync();
   points.forEach((point, i, points) => {
     test.isTrue(!i || distance([0, 0], point.rest.loc) >= distance([0, 0], points[i - 1].rest.loc));
@@ -3703,7 +3732,7 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
 
   const operations = [];
   const cbs = log_callbacks(operations);
-  const handle = await coll.find({'a.b': {$near: [7, 7]}}).observe(cbs);
+  const handle = coll.find({'a.b': {$near: [7, 7]}}).observe(cbs);
 
   test.length(operations, 2);
   test.equal(operations.shift(), ['added', {k: 9, a: {b: [5, 5]}}, 0, null]);

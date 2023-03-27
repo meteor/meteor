@@ -1510,7 +1510,7 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
   });
 };
 
-LocalCollection._observeFromObserveChanges = async (cursor, observeCallbacks) => {
+LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
   const transform = cursor.getTransform() || (doc => doc);
   let suppressed = !!observeCallbacks._suppress_initial;
 
@@ -1647,10 +1647,15 @@ LocalCollection._observeFromObserveChanges = async (cursor, observeCallbacks) =>
   // So we can mark it as safe to reduce the ejson clones.
   // This is tested by the `mongo-livedata - (extended) scribbling` tests
   changeObserver.applyChange._fromObserve = true;
-  const handle = await cursor.observeChanges(changeObserver.applyChange,
+  const handle = cursor.observeChanges(changeObserver.applyChange,
       { nonMutatingCallbacks: true });
 
-  suppressed = false;
+  // If needed, re-enable callbacks as soon as the initial batch is ready.
+  if (suppressed) {
+    handle.isReadyPromise.then(() => {
+      suppressed = false;
+    });
+  }
 
   return handle;
 };
