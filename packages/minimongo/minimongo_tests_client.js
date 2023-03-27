@@ -3252,7 +3252,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
     // This should work equally well for ordered and unordered observations
     // (because the callbacks don't look at indices and there's no 'moved'
     // callback).
-    let handle = await c.find({ tags: "flower" }).observe(makecb("a"));
+    let handle = c.find({ tags: "flower" }).observe(makecb("a"));
     expect("aa3_");
     await c.updateAsync(
       { name: "rose" },
@@ -3276,14 +3276,14 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
     expect("");
 
     // Test that observing a lookup by ID works.
-    handle = await c.find(4).observe(makecb("b"));
+    handle = c.find(4).observe(makecb("b"));
     expect("ab4_");
     await c.updateAsync(4, { $set: { eek: 5 } });
     expect("cb4_");
     handle.stop();
 
     // Test observe with reactive: false.
-    handle = await c
+    handle = c
       .find({ tags: "flower" }, { reactive: false })
       .observe(makecb("c"));
     // TODO: think about this one below.
