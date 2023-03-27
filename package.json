@@ -42,7 +42,7 @@
       "no-console": "off",
       "camelcase": "warn",
       "consistent-return": "off",
-      "quotes": ["error", "single", { "allowTemplateLiterals": true }],
+      "quotes": ["warn", "single", { "allowTemplateLiterals": true }],
       "no-shadow": [
         "error",
         {
