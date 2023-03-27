@@ -1,9 +1,6 @@
 language: node_js
 os: linux
 dist: xenial
-before_install:
-  - sudo apt-get update
-  - sudo apt-get install -y libnss3
 node_js:
   - "14.17.6"
 cache:
