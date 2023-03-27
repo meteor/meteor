@@ -3193,7 +3193,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   // test _no_indices
 
   await c.removeAsync({});
-  handle = await c.find({}, {sort: {a: 1}}).observe(Object.assign(cbs, {_no_indices: true}));
+  handle = c.find({}, {sort: {a: 1}}).observe(Object.assign(cbs, {_no_indices: true}));
   await c.insertAsync({_id: 'foo', a: 1});
   test.equal(operations.shift(), ['added', {a: 1}, -1, null]);
   await c.updateAsync({a: 1}, {$set: {a: 2}});
