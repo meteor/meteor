@@ -3781,10 +3781,10 @@ Tinytest.add('minimongo - fetch in observe', test => {
   const coll = new LocalCollection;
   let callbackInvoked = false;
   const observe = coll.find().observeChanges({
-    added(id, fields) {
+    async added(id, fields) {
       callbackInvoked = true;
-      test.equal(fields, {foo: 1});
-      const doc = coll.findOne({foo: 1});
+      test.equal(fields, { foo: 1 });
+      const doc = await coll.findOne({ foo: 1 });
       test.isTrue(doc);
       test.equal(doc.foo, 1);
     },
