@@ -3800,18 +3800,18 @@ Tinytest.add('minimongo - fetch in observe', test => {
   computation.stop();
 });
 
-Tinytest.add("minimongo - supress_initial option", (test) => {
+Tinytest.add("minimongo - simple reactivity", (test) => {
   const coll = new LocalCollection();
   let runs = 0;
 
   Tracker.autorun(() => {
-    coll.find({}).observe(
-      { _suppress_initial: true },
-      { }
-    );
     runs += 1;
+    coll.find().fetch()
   });
-  coll.insert({});
+
+  coll.insert({ _id: "test" });
+  Tracker.flush();
+  // runs should now be 2
   test.equal(runs, 2);
 });
 
