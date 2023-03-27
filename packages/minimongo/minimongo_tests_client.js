@@ -3108,7 +3108,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   let handle;
 
   const c = new LocalCollection();
-  handle = await c.find({}, {sort: {a: 1}}).observe(cbs);
+  handle = c.find({}, {sort: {a: 1}}).observe(cbs);
   test.isTrue(handle.collection === c);
 
   await c.insertAsync({_id: 'foo', a: 1});
@@ -3135,14 +3135,20 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   test.equal(operations.shift(), undefined);
 
   // test initial inserts (and backwards sort)
-  handle = await c.find({}, {sort: {a: -1}}).observe(cbs);
+  handle = c.find({}, {sort: {a: -1}}).observe(cbs);
   test.equal(operations.shift(), ['added', {a: 2}, 0, null]);
   test.equal(operations.shift(), ['added', {a: 1}, 1, null]);
   handle.stop();
 
   // test _suppress_initial
-  handle = await c.find({}, {sort: {a: -1}}).observe(Object.assign({
-    _suppress_initial: true}, cbs));
+  handle = c.find({}, { sort: { a: -1 } }).observe(
+    Object.assign(
+      {
+        _suppress_initial: true,
+      },
+      cbs
+    )
+  );
   test.equal(operations.shift(), undefined);
   await c.insertAsync({a: 100});
   test.equal(operations.shift(), ['added', {a: 100}, 0, idA2]);
@@ -3150,7 +3156,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
 
   // test skip and limit.
   await c.removeAsync({});
-  handle = await c.find({}, {sort: {a: 1}, skip: 1, limit: 2}).observe(cbs);
+  handle = c.find({}, { sort: { a: 1 }, skip: 1, limit: 2 }).observe(cbs);
   test.equal(operations.shift(), undefined);
   await c.insertAsync({a: 1});
   test.equal(operations.shift(), undefined);
@@ -3174,7 +3180,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   await c.insertAsync({a: 1});
   await c.insertAsync({_id: 'two', a: 2});
   await c.insertAsync({a: 3});
-  handle = await c.find({}, {sort: {a: 1}, limit: 2}).observe(cbs);
+  handle = c.find({}, { sort: { a: 1 }, limit: 2 }).observe(cbs);
   test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
   test.equal(operations.shift(), ['added', {a: 2}, 1, null]);
   test.equal(operations.shift(), undefined);
