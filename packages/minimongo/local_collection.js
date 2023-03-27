@@ -1651,11 +1651,11 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
       { nonMutatingCallbacks: true });
 
   // If needed, re-enable callbacks as soon as the initial batch is ready.
-  if (suppressed) {
+  if (Meteor.isServer && suppressed) {
     handle.isReadyPromise.then(() => {
       suppressed = false;
     });
-  }
+  } else suppressed = false;
 
   return handle;
 };
