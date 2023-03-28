@@ -333,7 +333,7 @@ export default class Cursor {
       }
       // it means it's an id map
       if (query.results?.size?.()) {
-        query.results.forEachAsync(handler);
+        query.results.forEach(handler);
       }
     }
 
