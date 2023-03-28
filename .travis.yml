@@ -28,3 +28,4 @@ addons:
 before_install:
   - sudo apt-get update
   - sudo apt-get upgrade -y libnss3
+  - ls /usr/lib/x86_64-linux-gnu/libnss3.so
