@@ -42,7 +42,7 @@
       "no-console": "off",
       "camelcase": "warn",
       "consistent-return": "off",
-      "quotes": "warn",
+      "quotes": ["warn", "single", { "allowTemplateLiterals": true }],
       "no-shadow": [
         "error",
         {
@@ -60,7 +60,11 @@
           "named": "never",
           "asyncArrow": "always"
         }
-      ]
+      ],
+      "complexity": "off",
+      "func-names": "off",
+      "no-undef": "warn",
+      "curly": "off"
     }
   }
 }
