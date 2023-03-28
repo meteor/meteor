@@ -23,3 +23,8 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - g++-4.8
+      - libnss3
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get upgrade -y libnss3
