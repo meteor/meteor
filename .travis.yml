@@ -26,6 +26,7 @@ addons:
       - libnss3
 
 before_install:
+  - sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu xenial main universe"
   - sudo apt-get update
-  - sudo apt-get upgrade -y libnss3
+  - sudo apt-get install -y libnss3=2:3.28.4-0ubuntu0.16.04.14
   - ls /usr/lib/x86_64-linux-gnu/libnss3.so
