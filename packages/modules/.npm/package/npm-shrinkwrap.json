@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@meteorjs/reify": {
-      "version": "git+https://github.com/meteor/reify.git#78134aa90d8a17ddf6848c0964080f1e0afd1e08"
+      "version": "git+https://github.com/meteor/reify.git#0867be73ca61e87ae9d60edef62baf26b38719ef"
     },
     "@types/estree": {
       "version": "1.0.0",
