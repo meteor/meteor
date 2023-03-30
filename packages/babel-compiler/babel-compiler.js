@@ -94,7 +94,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       features.modernBrowsers = true;
     }
 
-    features.topLevelAwait = arch.startsWith('os.') || enableClientTLA
+    features.topLevelAwait = inputFile.supportsTopLevelAwait &&
+       (arch.startsWith('os.') || enableClientTLA);
 
     features.useNativeAsyncAwait = Meteor.isFibersDisabled;
 

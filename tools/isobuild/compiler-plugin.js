@@ -239,6 +239,13 @@ class InputFile extends buildPluginModule.InputFile {
     // accept a lazy finalizer function as a second argument, so that
     // compilation can be avoided until/unless absolutely necessary.
     this.supportsLazyCompilation = true;
+
+    // Communicate to compiler plugins that this version of Meteor
+    // is able to support top level await
+    // TODO: maybe this should also check if the file and package meet the
+    // minimum requirements to use top level await (file isn't bare, and 
+    // package uses core-runtime and modules)
+    this.supportsTopLevelAwait = true;
   }
 
   getContentsAsBuffer() {
