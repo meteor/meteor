@@ -83,9 +83,7 @@ function runEagerModules(config, callback) {
 
     var path = config.eagerModulePaths[index];
     var exports = config.require(path);
-    // TODO[fibers]: retest the function checkAsyncModule. It looks like it's returning the wrong values
-      //  returning false when exports is a promise
-    if (exports && exports.then) {
+    if (checkAsyncModule(exports)) {
       if (path === config.mainModulePath) {
         mainModuleAsync = true;
       }
@@ -127,15 +125,14 @@ function runEagerModules(config, callback) {
 }
 
 function checkAsyncModule (exports) {
-  // Uses property descriptor to avoid running any getters
-  var isPromise = exports && hasOwn.call(exports, 'then') &&
-    typeof Object.getOwnPropertyDescriptor(exports, 'then').value === 'function';
+  var potentiallyAsync = exports && typeof exports === 'object' &&
+    hasOwn.call(exports, '__reifyAsyncModule');
 
-  if (!isPromise) {
-    return false;
+  if (!potentiallyAsync) {
+    return;
   }
 
-  return hasOwn.call(exports, '__reifyAsyncModule');
+  return typeof exports.then === 'function';
 }
 
 // For this to be accurate, all linked files must be queued before calling this
