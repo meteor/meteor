@@ -569,7 +569,7 @@ api.addAssets('${relPath}', 'client').`);
     } else {
       watchSet.addFile(absPath, hash);
     }
-    await Console.nudge(true);
+    await Console.yield();
 
     if (classification.type === "meteor-ignore") {
       // Return after watching .meteorignore files but before adding them

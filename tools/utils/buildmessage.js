@@ -210,10 +210,10 @@ var reportProgress = function (state) {
   }
 };
 
-var reportProgressDone = async function () {
+var reportProgressDone = function () {
   var progress = currentProgress.get();
   if (progress) {
-    await progress.reportProgressDone();
+    progress.reportProgressDone();
   }
 };
 
@@ -283,7 +283,7 @@ async function capture(options, f) {
   } catch (e) {
     console.error(e);
   } finally {
-    await progress.reportProgressDone();
+    progress.reportProgressDone();
 
     resetFns.forEach(fn => fn());
 
@@ -356,7 +356,7 @@ async function enterJob(options, f) {
     try {
       return await f();
     } finally {
-      await progress.reportProgressDone();
+      progress.reportProgressDone();
 
       while (resetFns.length) {
         await resetFns.pop()();
@@ -388,7 +388,7 @@ async function enterJob(options, f) {
   try {
     return await f();
   } finally {
-    await progress.reportProgressDone();
+    progress.reportProgressDone();
 
     while (resetFns.length) {
       await resetFns.pop()();

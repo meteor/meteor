@@ -227,7 +227,7 @@ export default class Cursor {
    * @param {Object} callbacks Functions to call to deliver the result set as it
    *                           changes
    */
-  async observeChanges(options) {
+  observeChanges(options) {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with
@@ -237,19 +237,16 @@ export default class Cursor {
     if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {
       throw new Error(
         "Must use an ordered observe with skip or limit (i.e. 'addedBefore' " +
-        "for observeChanges or 'addedAt' for observe, instead of 'added')."
+          "for observeChanges or 'addedAt' for observe, instead of 'added')."
       );
     }
 
     if (this.fields && (this.fields._id === 0 || this.fields._id === false)) {
-      throw Error('You may not observe a cursor with {fields: {_id: 0}}');
+      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
-    const distances = (
-      this.matcher.hasGeoQuery() &&
-      ordered &&
-      new LocalCollection._IdMap
-    );
+    const distances =
+      this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap();
 
     const query = {
       cursor: this,
@@ -259,7 +256,7 @@ export default class Cursor {
       ordered,
       projectionFn: this._projectionFn,
       resultsSnapshot: null,
-      sorter: ordered && this.sorter
+      sorter: ordered && this.sorter,
     };
 
     let qid;
@@ -271,10 +268,13 @@ export default class Cursor {
       this.collection.queries[qid] = query;
     }
 
-    query.results = this._getRawObjects({ordered, distances: query.distances});
+    query.results = this._getRawObjects({
+      ordered,
+      distances: query.distances,
+    });
 
     if (this.collection.paused) {
-      query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap;
+      query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap();
     }
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
@@ -284,43 +284,23 @@ export default class Cursor {
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    const wrapCallback = fn => {
+    const wrapCallback = (fn) => {
       if (!fn) {
         return () => {};
       }
 
       const self = this;
 
-      if (Meteor.isClient) {
-        return function(/* args*/) {
-          if (self.collection.paused) {
-            return;
-          }
-
-          const args = arguments;
-
-          self.collection._observeQueue.queueTask(() => {
-            fn.apply(this, args);
-          });
-        };
-      }
-
-      return function(/* args*/) {
+      return function (/* args*/) {
         if (self.collection.paused) {
           return;
         }
-
-        let resolve;
-        const promise = new Promise(r => resolve = r);
 
         const args = arguments;
 
         self.collection._observeQueue.queueTask(() => {
           fn.apply(this, args);
-          resolve();
         });
-
-        return promise;
       };
     };
 
@@ -334,36 +314,38 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      const handler = async doc => {
+      const handler = (doc) => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;
 
         if (ordered) {
-          await query.addedBefore(doc._id, this._projectionFn(fields), null);
+          query.addedBefore(doc._id, this._projectionFn(fields), null);
         }
 
-        await query.added(doc._id, this._projectionFn(fields));
+        query.added(doc._id, this._projectionFn(fields));
       };
       // it means it's just an array
       if (query.results.length) {
         for (const doc of query.results) {
-          await handler(doc);
+          handler(doc);
         }
       }
       // it means it's an id map
       if (query.results?.size?.()) {
-        await query.results.forEachAsync(handler);
+        query.results.forEach(handler);
       }
     }
 
-    const handle = Object.assign(new LocalCollection.ObserveHandle, {
+    const handle = Object.assign(new LocalCollection.ObserveHandle(), {
       collection: this.collection,
       stop: () => {
         if (this.reactive) {
           delete this.collection.queries[qid];
         }
-      }
+      },
+      isReady: false,
+      isReadyPromise: null,
     });
 
     if (this.reactive && Tracker.active) {
@@ -379,7 +361,15 @@ export default class Cursor {
 
     // run the observe callbacks resulting from the initial contents
     // before we leave the observe.
-    await this.collection._observeQueue.drain();
+    const drainResult = this.collection._observeQueue.drain();
+
+    if (drainResult instanceof Promise) {
+      handle.isReadyPromise = drainResult;
+      drainResult.then(() => (handle.isReady = true));
+    } else {
+      handle.isReady = true;
+      handle.isReadyPromise = Promise.resolve();
+    }
 
     return handle;
   }
@@ -547,6 +537,10 @@ export default class Cursor {
 ASYNC_CURSOR_METHODS.forEach(method => {
   const asyncName = getAsyncMethodName(method);
   Cursor.prototype[asyncName] = function(...args) {
-    return Promise.resolve(this[method].apply(this, args));
+    try {
+      return Promise.resolve(this[method].apply(this, args));
+    } catch (error) {
+      return Promise.reject(error);
+    }
   };
 });

@@ -1,12 +1,9 @@
-// Implementation of dynamic scoping, for use on the server - with Fibers or AsyncLocalStorage
+// Implementation of dynamic scoping, for use on the server with AsyncLocalStorage
 let nextSlot = 0;
 let callAsyncMethodRunning = false;
 
 const CURRENT_VALUE_KEY_NAME = 'currentValue';
 const SLOT_CALL_KEY = 'slotCall';
-
-// NO-OP
-Meteor._nodeCodeMustBeInFiber = function() {};
 
 class EnvironmentVariableAsync {
   constructor() {

@@ -6,7 +6,7 @@ const testPendingCredential = async function (test, method) {
   const credentialToken = Random.id();
   const serviceName = Random.id();
 
-  await ServiceConfiguration.configurations.insert({service: serviceName});
+  await ServiceConfiguration.configurations.insertAsync({service: serviceName});
 
   try {
     // register a fake login service

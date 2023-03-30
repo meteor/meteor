@@ -683,20 +683,19 @@ class Console extends ConsoleBase {
   // consuming lots of CPU without yielding is especially bad.
   // Other IO/network tasks will stall, and you can't even kill the process!
   //
-  // Within any code that may burn CPU for too long, call `Console.nudge()`.
-  // If it's been a while since your last yield, your Fiber will sleep momentarily.
+  // Within any code that may burn CPU for too long, call `Console.yield()`.
   // It will also update the spinner if there is one and it's been a while.
-  // The caller should be OK with yielding --- it has to be in a Fiber and it can't be
-  // anything that depends for correctness on not yielding.  You can also call nudge(false)
+  // The caller should be OK with yielding --- it can't be
+  // anything that depends for correctness on not yielding.  You can also call Console.nudge()
   // if you just want to update the spinner and not yield, but you should avoid this.
-  // TODO [fibers] -> Check here - consider this comment https://github.com/meteor/meteor/pull/12471/files#r1089560766
-  async nudge(canYield) {
+  nudge() {
     if (this._statusPoller) {
       this._statusPoller.statusPoll();
     }
-    if (canYield === undefined || canYield === true) {
-      await this._throttledYield.yield();
-    }
+  }
+  async yield() {
+    this.nudge();
+    await this._throttledYield.yield();
   }
 
   // Initializes and returns a new ConsoleOptions object. Takes in the following
@@ -1321,11 +1320,21 @@ class Console extends ConsoleBase {
   }
 }
 
-const yellow  = (text) => `\x1b[33m${ text }\x1b[0m`;
-const red = (text) => `\x1b[31m${ text }\x1b[0m`;
-const purple = (text) => `\x1b[35m${ text }\x1b[0m`;
-const green = (text) => `\x1b[32m${ text }\x1b[0m`;
-const blue = (text) => `\x1b[34m${ text }\x1b[0m`;
+const yellow  =
+  (text, ...values) =>
+     `\x1b[33m${ String.raw({ raw: text }, ...values) }\x1b[0m`
+const red =
+  (text, ...values) =>
+    `\x1b[31m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const purple =
+  (text, ...values) =>
+    `\x1b[35m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const green =
+  (text, ...values) =>
+    `\x1b[32m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const blue =
+  (text, ...values) =>
+    `\x1b[34m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
 
 const colors = {
   yellow,

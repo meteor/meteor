@@ -947,8 +947,8 @@ Object.assign(ProjectContext.prototype, {
     const { ConstraintSolver } = await loadIsopackage('constraint-solver');
 
     return new ConstraintSolver.PackagesResolver(this.projectCatalog, {
-      nudge() {
-        return Console.nudge(true);
+      yield() {
+        return Console.yield();
       },
       Profile: Profile,
       resultCache: this._resolverResultCache
