@@ -450,7 +450,6 @@ var launchMongo = async function(options) {
 
       reject(new StoppedDuringLaunch());
     };
-    resolve();
   });
 
   var yieldingMethod = async function(object, methodName, ...args) {
@@ -784,7 +783,9 @@ var launchMongo = async function(options) {
           return;
         }
         const newDbPath = files.pathJoin(options.projectLocalDir, 'dbs', '' + i);
-        await launchOneMongoAndWaitForReadyForInitiate(newDbPath, options.port + i);
+        // TODO [fibers]: it looks like we shouldn't wait for this function to finish.
+            // if all tests are passing, we're probably fine...
+        launchOneMongoAndWaitForReadyForInitiate(newDbPath, options.port + i);
         i--;
       }
 
@@ -794,7 +795,9 @@ var launchMongo = async function(options) {
     } else {
       const newDbPath = files.pathJoin(options.projectLocalDir, 'db');
       var portFile = !noOplog && files.pathJoin(newDbPath, 'METEOR-PORT');
-      await launchOneMongoAndWaitForReadyForInitiate(newDbPath, options.port, portFile);
+      // TODO [fibers]: it looks like we shouldn't wait for this function to finish.
+      // if all tests are passing, we're probably fine...
+      launchOneMongoAndWaitForReadyForInitiate(newDbPath, options.port, portFile);
       if (!stopped && !noOplog) {
         await initiateReplSetAndWaitForReady();
         if (!stopped) {
