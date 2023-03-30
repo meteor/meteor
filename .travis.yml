@@ -29,4 +29,3 @@ before_install:
   - sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu bionic main universe"
   - sudo apt-get update
   - sudo apt-get install -y libnss3
-  - ls /usr/lib/x86_64-linux-gnu/libnss3.so
