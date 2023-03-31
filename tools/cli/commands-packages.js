@@ -1196,8 +1196,8 @@ main.registerCommand({
     const showDetails = !!options['details'];
     // Load package details of all used packages (inc. dependencies)
     const packageDetails = new Map;
-    await projectContext.packageMap.eachPackage(function (name, info) {
-      packageDetails.set(name, projectContext.projectCatalog.getVersion(name, info.version));
+    await projectContext.packageMap.eachPackage(async function (name, info) {
+      packageDetails.set(name, await projectContext.projectCatalog.getVersion(name, info.version));
     });
 
     // Build a set of top level package names
@@ -1287,7 +1287,8 @@ main.registerCommand({
 
       if (shouldExpand) {
         dontExpand.add(packageName);
-        for (const [index, dep] of shouldExpand.entries()) {
+        let index = 0;
+        for (const dep of deps) {
           const references = depsObj[dep].references || [];
           const weakRef = references.length > 0 && references.every(r => r.weak);
           const last = ((index + 1) === deps.length);
@@ -1324,6 +1325,7 @@ main.registerCommand({
               parent[packageName].dependencies = suffixes.missing;
             }
           }
+          index++;
         }
       }
     };
