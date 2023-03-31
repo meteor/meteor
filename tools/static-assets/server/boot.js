@@ -400,7 +400,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
     const scriptPath =
         parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
-    const func = await require('vm').runInThisContext(wrapped, {
+    const func = require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
       displayErrors: true
     });
@@ -418,14 +418,14 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       });
     } else {
       // Allows us to use code-coverage if the debugger is not enabled
-      await Profile(fileInfo.path, func).apply(global, args);
+      Profile(fileInfo.path, func).apply(global, args);
     }
   }
 
   await maybeWaitForDebuggerToAttach();
 
   for (const info of infos) {
-    await info.fn.apply(global, info.args);
+    info.fn.apply(global, info.args);
   }
   if (global.Package['core-runtime']) {
     return global.Package['core-runtime'].waitUntilAllLoaded();
@@ -499,5 +499,3 @@ var runMain = Profile("Run main()", async function () {
   console.log(e.stack);
   process.exit(1)
 });
-
-
