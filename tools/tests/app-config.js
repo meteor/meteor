@@ -150,7 +150,7 @@ selftest.define("testModule", async function () {
   await s.init();
 
   await s.createApp("app-config-mainModule", "app-config");
-  s.cd("app-config-mainModule");
+  await s.cd("app-config-mainModule");
 
   // For meteortesting:mocha to work we must set test broswer driver
   // See https://github.com/meteortesting/meteor-mocha
@@ -160,7 +160,8 @@ selftest.define("testModule", async function () {
     "test",
     // Not running with the --full-app option here, in order to exercise
     // the normal `meteor test` behavior.
-    "--driver-package", "meteortesting:mocha"
+    /// TODO: Fibers => turn this back to meteortesthing:mocha when 3.0.0 is released
+    "--driver-package", "grubba:mocha" /// meteortesting:mocha"
   );
 
   run.waitSecs(60);
