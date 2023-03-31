@@ -1192,19 +1192,19 @@ selftest.define("tilde version constraints", [], async function () {
   // which is a larger (preexisting) problem we should investigate.
   /*
   setDepConstraint("=0.4.0");
-  run.match("error: No version of tilde-constraints satisfies all constraints");
+  await run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setDepConstraint("~0.3.0");
-  run.match("error: No version of tilde-constraints satisfies all constraints");
+  await run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setDepConstraint("0.4.3");
-  run.match("error: No version of tilde-constraints satisfies all constraints");
+  await run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setDepConstraint("~0.4.3");
-  run.match("error: No version of tilde-constraints satisfies all constraints");
+  await run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
   */
 

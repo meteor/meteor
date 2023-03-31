@@ -272,7 +272,7 @@ export default class Sandbox {
     if (callback) {
       const ret = callback();
       if (ret && typeof ret.then === "function") {
-        return ret.then(() => this.cwd = previous);
+        return ret.then(() => (this.cwd = previous));
       } else {
         this.cwd = previous;
       }
