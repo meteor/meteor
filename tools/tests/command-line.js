@@ -417,14 +417,14 @@ selftest.define("command-like options", async function () {
     await run.matchErr("Unreleased");
     await run.expectExit(1);
   } else {
-    run.read(release.current.getDisplayName() + "\n");
+    await run.read(release.current.getDisplayName() + "\n");
     run.waitSecs(5);
     await run.expectEnd();
     await run.expectExit(0);
   }
 
   run = s.run("--arch");
-  run.read(archinfo.host() + "\n");
+  await run.read(archinfo.host() + "\n");
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
