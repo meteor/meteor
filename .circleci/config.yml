@@ -100,7 +100,7 @@ can_disable_fibers: &can_disable_fibers
   parameters:
     fibers:
       type: boolean
-      default: true
+      default: false # now is always off
 
 set_fibers_env: &set_fibers_env
   name: "Disable Fibers"
