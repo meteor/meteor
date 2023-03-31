@@ -700,6 +700,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 11:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
