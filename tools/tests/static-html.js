@@ -55,7 +55,7 @@ selftest.define("static-html - throws error", async () => {
   await s.createApp('myapp', 'compiler-plugin-static-html-error');
   s.cd('myapp');
 
-  const run = startRun(s);
+  const run = await startRun(s);
   await run.match("Attributes on <head> not supported");
   run.waitSecs(30);
 
