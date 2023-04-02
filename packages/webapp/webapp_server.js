@@ -430,10 +430,11 @@ function getBoilerplateAsync(request, arch) {
       encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
       updated: runtimeConfig.isUpdatedByArch[arch],
     });
-    if (!meteorRuntimeConfig) return;
+    if (!meteorRuntimeConfig) return true;
     boilerplate.baseData = Object.assign({}, boilerplate.baseData, {
       meteorRuntimeConfig,
     });
+    return true;
   });
   runtimeConfig.isUpdatedByArch[arch] = false;
   const { dynamicHead, dynamicBody } = request;
@@ -511,6 +512,7 @@ WebAppInternals.generateBoilerplateInstance = function(
   };
   runtimeConfig.updateHooks.forEach(cb => {
     cb({ arch, manifest, runtimeConfig: rtimeConfig });
+    return true;
   });
 
   const meteorRuntimeConfig = JSON.stringify(

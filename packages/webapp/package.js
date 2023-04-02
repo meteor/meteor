@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Serves a Meteor app over HTTP',
-  version: '1.13.2',
+  version: '1.13.4',
 });
 
 Npm.depends({
@@ -15,7 +15,8 @@ Npm.depends({
   qs: '6.10.1',
   useragent: '2.3.0',
   '@vlasky/whomst': '0.1.7',
-  'lodash.has': '4.5.2'
+  'lodash.has': '4.5.2',
+  '@types/connect': '3.4.35'
 });
 
 Npm.strip({

@@ -14,7 +14,7 @@ if (!command) {
 }
 
 if (command === 'install') {
-  require('./install.js');
+  require('./install');
 } else if (command === 'uninstall') {
   const { uninstall } = require('./uninstall');
   uninstall();
