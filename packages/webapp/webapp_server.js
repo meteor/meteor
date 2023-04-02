@@ -283,7 +283,7 @@ WebApp._timeoutAdjustmentRequestCallback = function(req, res) {
   res.on('finish', function() {
     res.setTimeout(SHORT_SOCKET_TIMEOUT);
   });
-  finishListeners.forEach(function(l) {
+  Object.keys(finishListeners).forEach(function(l) {
     res.on('finish', l);
   });
 };
