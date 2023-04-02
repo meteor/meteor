@@ -28,7 +28,7 @@ Meteor is an **ultra-simple** environment for building **modern** web applicatio
 
 ### 📚 **Create your applications using modern JavaScript**
 
-Benefit from the latest technology updates to fastly prototype and develop your applications.
+Benefit from the latest technology updates to rapidly prototype and develop your applications.
 
 <hr>
 
@@ -46,7 +46,7 @@ Use the same code whether you’re developing for web, iOS, Android, or desktop 
 
 # 🔥 Getting Started
 
-What about to try a getting started tutorial in your favorite technology?
+How about trying a getting started tutorial in your favorite technology?
 
 | [<img align="left" width="25" src="https://www.quantumversity.com/wp-content/uploads/2020/11/Adding-Authentication-to-React-with-Auth0-Login-and-Profile.png"> React](https://react-tutorial.meteor.com/) |
 | - |
