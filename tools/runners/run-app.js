@@ -784,7 +784,6 @@ Object.assign(AppRunner.prototype, {
     maybePrintLintWarnings(bundleResult);
 
     if (cordovaRunner && !cordovaRunner.started) {
-      //TODO -> Cordova
       await cordovaRunner.startRunTargets();
     }
 

@@ -340,10 +340,13 @@ ${displayNameForPlatform(platform)}`, async () => {
       device: isDevice,
     };
 
-    this.runCommands(`running Cordova app for platform \
-${displayNameForPlatform(platform)} with options ${options}`, async () => {
-      await cordova_lib.run(commandOptions);
-    });
+    await this.runCommands(
+      `running Cordova app for platform \
+${displayNameForPlatform(platform)} with options ${options}`,
+      async () => {
+        await cordova_lib.run(commandOptions);
+      }
+    );
 
   }
 

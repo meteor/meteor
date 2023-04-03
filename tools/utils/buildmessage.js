@@ -280,8 +280,6 @@ async function capture(options, f) {
 
   try {
     await f();
-  } catch (e) {
-    console.error(e);
   } finally {
     progress.reportProgressDone();
 

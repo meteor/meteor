@@ -72,16 +72,16 @@ async function doAddPlatform(options) {
   });
 }
 
-function doRemovePlatform(options) {
+async function doRemovePlatform(options) {
   import { CordovaProject } from '../cordova/project.js';
   import { PlatformList } from '../project-context.js';
 
-  const projectContext = createProjectContext(options.appDir);
+  const projectContext = await createProjectContext(options.appDir);
 
   const platformsToRemove = options.args;
   let installedPlatforms = projectContext.platformList.getPlatforms();
 
-  main.captureAndExit('', 'removing platforms', () => {
+  await main.captureAndExit('', 'removing platforms', () => {
     for (platform of platformsToRemove) {
       // Explain why we can't remove server or browser platforms
       if (PlatformList.DEFAULT_PLATFORMS.includes(platform)) {
@@ -138,9 +138,9 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  ensureDevBundleDependencies();
-  doRemovePlatform(options);
+}, async function (options) {
+  await ensureDevBundleDependencies();
+  await doRemovePlatform(options);
 });
 
 main.registerCommand({

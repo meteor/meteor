@@ -89,13 +89,16 @@ export class CordovaRunner {
     this.pluginVersions = pluginVersions;
   }
 
-  startRunTargets() {
+  async startRunTargets() {
     this.started = false;
 
-    for (let runTarget of this.runTargets) {
-      const messages = buildmessage.capture({ title: `starting ${runTarget.title}` }, () => {
-        Promise.await(runTarget.start(this.cordovaProject));
-      });
+    for (const runTarget of this.runTargets) {
+      const messages = await buildmessage.capture(
+        { title: `starting ${runTarget.title}` },
+        async () => {
+          await runTarget.start(this.cordovaProject);
+        }
+      );
       if (messages.hasMessages()) {
         Console.printMessages(messages);
       } else {

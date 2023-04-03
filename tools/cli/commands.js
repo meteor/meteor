@@ -423,7 +423,7 @@ async function doRunCommand(options) {
     async function prepareCordovaProject() {
       import { CordovaProject } from '../cordova/project.js';
 
-      await main.captureAndExit('', 'preparing Cordova project', () => {
+      await main.captureAndExit('', 'preparing Cordova project', async () => {
         // TODO -> Have to change CordovaProject constructor here.
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
@@ -431,10 +431,11 @@ async function doRunCommand(options) {
           cordovaServerPort: parsedCordovaServerPort,
           buildMode
         });
+        await cordovaProject.init();
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
-        cordovaRunner.checkPlatformsForRunTargets();
+        await cordovaRunner.checkPlatformsForRunTargets();
       });
     }
 
