@@ -709,6 +709,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -911,6 +912,7 @@ workflows:
           requires:
             - Get Ready
       - Test Group 11:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Clean Up:
