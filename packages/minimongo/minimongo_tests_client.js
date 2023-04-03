@@ -3790,11 +3790,11 @@ Tinytest.add('minimongo - update should clone', test => {
 Tinytest.addAsync("minimongo - fetch in observe", (test, done) => {
   const coll = new LocalCollection();
   let callbackInvoked = false;
-  coll.find().observeChanges({
-    async added(id, fields) {
+  const observe = coll.find().observeChanges({
+    added(id, fields) {
       callbackInvoked = true;
-      test.equal(fields, { foo: 1 }, "equals fields");
-      const doc = await coll.findOneAsync({ foo: 1 });
+      test.equal(fields, { foo: 1 });
+      const doc = coll.findOne({ foo: 1 });
       test.isTrue(doc);
       test.equal(doc.foo, 1);
     },
@@ -3811,6 +3811,22 @@ Tinytest.addAsync("minimongo - fetch in observe", (test, done) => {
     }
   });
 });
+
+Tinytest.add("minimongo - simple reactivity", (test) => {
+  const coll = new LocalCollection();
+  let runs = 0;
+
+  Tracker.autorun(() => {
+    runs += 1;
+    coll.find().fetch()
+  });
+
+  coll.insert({ _id: "test" });
+  Tracker.flush();
+  // runs should now be 2
+  test.equal(runs, 2);
+});
+
 
 // See #2254
 Tinytest.addAsync(

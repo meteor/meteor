@@ -1651,11 +1651,8 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
       { nonMutatingCallbacks: true });
 
   // If needed, re-enable callbacks as soon as the initial batch is ready.
-  if (suppressed) {
-    handle.isReadyPromise.then(() => {
-      suppressed = false;
-    });
-  }
+  if (handle.isReady) suppressed = false;
+  else handle.isReadyPromise.then(() => (suppressed = false));
 
   return handle;
 };

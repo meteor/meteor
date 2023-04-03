@@ -41,7 +41,7 @@
     "@babel/template": "^7.16.7",
     "@babel/traverse": "^7.17.0",
     "@babel/types": "^7.17.0",
-    "@meteorjs/reify": "https://github.com/meteor/reify/tarball/ee36898798645097948258eb9106dd0af60cec64",
+    "@meteorjs/reify": "https://github.com/meteor/reify/tarball/0867be73ca61e87ae9d60edef62baf26b38719ef",
     "babel-preset-meteor": "^7.10.0",
     "babel-preset-minify": "^0.5.1",
     "convert-source-map": "^1.6.0",
