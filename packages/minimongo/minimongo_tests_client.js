@@ -1895,12 +1895,12 @@ Tinytest.addAsync('minimongo - observe ordered with projection', async test => {
   test.equal(operations.shift(), undefined);
 
   const cursor = c.find({}, {fields: {a: 1, _id: 0}});
-  await test.throwsAsync(async () => {
-    await cursor.observeChanges({ added() {} });
-  });
-  test.throws(() => {
-    cursor.observe({ added() {} });
-  });
+   test.throws(() => {
+     cursor.observeChanges({ added() {} });
+   });
+   test.throws(() => {
+     cursor.observe({ added() {} });
+   });
 
   // test initial inserts (and backwards sort)
   handle = c.find({}, {sort: {a: -1}, fields: { a: 1 } }).observe(cbs);
