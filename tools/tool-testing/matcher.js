@@ -71,6 +71,8 @@ export default class Matcher {
   }) {
     if (this.matchPromise) {
       // wait a bit to let the matcher catch up
+      // [FIBERS]
+      // TODO: check this later
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       await sleep(100);
 
