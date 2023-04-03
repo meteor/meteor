@@ -100,7 +100,7 @@ can_disable_fibers: &can_disable_fibers
   parameters:
     fibers:
       type: boolean
-      default: true
+      default: false # now is always off
 
 set_fibers_env: &set_fibers_env
   name: "Disable Fibers"
@@ -700,6 +700,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 11:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -708,6 +709,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -910,6 +912,7 @@ workflows:
           requires:
             - Get Ready
       - Test Group 11:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Clean Up:

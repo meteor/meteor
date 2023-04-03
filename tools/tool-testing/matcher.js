@@ -16,10 +16,10 @@ export default class Matcher {
     });
   }
 
-  write(data) {
+  async write(data) {
     this.buf += data;
     this.fullBuffer += data;
-    this._tryMatch();
+    await this._tryMatch();
   }
 
   getFullBuffer() {
@@ -64,18 +64,29 @@ export default class Matcher {
   }
 
   // Like match, but returns a Promise without calling .await().
-  matchAsync(pattern, {
+  async matchAsync(pattern, {
     timeout = null,
     strict = false,
     matchFullBuffer = false,
   }) {
     if (this.matchPromise) {
-      return Promise.reject(new Error("already have a match pending?"));
+      // wait a bit to let the matcher catch up
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      await sleep(100);
+
+      this._tryMatch(); // could clear this.matchPromise
+
+      // If we still have a matchPromise, then we have a problem.
+      // you should check who is calling.
+      if (this.matchPromise) {
+        return Promise.reject(new Error("already have a match pending?"))
+      }
     }
     this.matchPattern = pattern;
     this.matchStrict = strict;
     this.matchFullBuffer = matchFullBuffer;
-    const mp = this.matchPromise = makeFulfillablePromise();
+    this.matchPromise = makeFulfillablePromise();
+    const mp = this.matchPromise;
     this._tryMatch(); // could clear this.matchPromise
 
     let timer = null;
@@ -92,13 +103,16 @@ export default class Matcher {
       return mp;
     }
 
-    return mp.then((result) => {
-      clearTimeout(timer);
-      return result;
-    }, (error) => {
-      clearTimeout(timer);
-      throw error;
-    });
+    return mp.then(
+      (result) => {
+        clearTimeout(timer);
+        return result;
+      },
+      (error) => {
+        clearTimeout(timer);
+        throw error;
+      }
+    );
   }
 
   matchBeforeEnd(pattern, timeout) {
@@ -114,12 +128,12 @@ export default class Matcher {
   }
 
   end() {
-    return this.endAsync().await();
+    return this.endAsync();
   }
 
   endAsync() {
     this.resolveEndPromise();
-    return this._beforeEnd(() => {
+    return this._beforeEnd(async () => {
       this.ended = true;
       this._tryMatch();
       return this.matchPromise;
@@ -133,7 +147,7 @@ export default class Matcher {
     }
   }
 
-  _tryMatch() {
+  async _tryMatch() {
     const mp = this.matchPromise;
     if (! mp) {
       return;

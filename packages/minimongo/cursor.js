@@ -333,7 +333,7 @@ export default class Cursor {
       }
       // it means it's an id map
       if (query.results?.size?.()) {
-        query.results.forEachAsync(handler);
+        query.results.forEach(handler);
       }
     }
 
@@ -361,14 +361,15 @@ export default class Cursor {
 
     // run the observe callbacks resulting from the initial contents
     // before we leave the observe.
-    const isReadyPromise = this.collection._observeQueue.drain();
+    const drainResult = this.collection._observeQueue.drain();
 
-    if (Meteor.isClient) handle.isReady = true;
-    else isReadyPromise.then(() => (handle.isReady = true));
-
-    handle.isReadyPromise = Meteor.isClient
-      ? Promise.resolve()
-      : isReadyPromise;
+    if (drainResult instanceof Promise) {
+      handle.isReadyPromise = drainResult;
+      drainResult.then(() => (handle.isReady = true));
+    } else {
+      handle.isReady = true;
+      handle.isReadyPromise = Promise.resolve();
+    }
 
     return handle;
   }
