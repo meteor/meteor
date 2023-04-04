@@ -194,7 +194,7 @@ selftest.define("checkout", ['checkout'], async function () {
   await s.cd('myapp', async function () {
     s.write(".meteor/release", "something");
     run = s.run("list");
-    run.readErr("=> Running Meteor from a checkout");
+    await run.readErr("=> Running Meteor from a checkout");
     await run.matchErr("project version");
     await run.matchErr("(Meteor something)\n");
     run.waitSecs(10);

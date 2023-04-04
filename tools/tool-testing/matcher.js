@@ -70,26 +70,13 @@ export default class Matcher {
     matchFullBuffer = false,
   }) {
     if (this.matchPromise) {
-      // wait a bit to let the matcher catch up
-      // [FIBERS]
-      // TODO: check this later
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      await sleep(100);
-
-      this._tryMatch(); // could clear this.matchPromise
-
-      // If we still have a matchPromise, then we have a problem.
-      // you should check who is calling.
-      if (this.matchPromise) {
-        return Promise.reject(new Error("already have a match pending?"))
-      }
+      return Promise.reject(new Error("already have a match pending?"));
     }
     this.matchPattern = pattern;
     this.matchStrict = strict;
     this.matchFullBuffer = matchFullBuffer;
-    this.matchPromise = makeFulfillablePromise();
-    const mp = this.matchPromise;
-    this._tryMatch(); // could clear this.matchPromise
+    const mp = this.matchPromise = makeFulfillablePromise();
+    await this._tryMatch(); // could clear this.matchPromise
 
     let timer = null;
     if (timeout) {
