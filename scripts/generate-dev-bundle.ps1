@@ -253,8 +253,8 @@ Function Add-Mongo {
 
   Write-Host "Putting MongoDB mongod.exe in mongodb\bin" -ForegroundColor Magenta
   cp "$DIR\mongodb\$mongo_zip_name\bin\mongod.exe" $DIR\mongodb\bin
-  Write-Host "Putting MongoDB mongo.exe in mongodb\bin" -ForegroundColor Magenta
-  cp "$DIR\mongodb\$mongo_zip_name\bin\mongo.exe" $DIR\mongodb\bin
+  Write-Host "Putting MongoDB mongos.exe in mongodb\bin" -ForegroundColor Magenta
+  cp "$DIR\mongodb\$mongo_zip_name\bin\mongos.exe" $DIR\mongodb\bin
 
   Write-Host "Removing the old Mongo zip..." -ForegroundColor Magenta
   rm -Recurse -Force $mongo_zip

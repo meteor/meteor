@@ -3,12 +3,12 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: '4.12.1',
+  version: '4.14.0',
   documentation: null
 });
 
 Npm.depends({
-  mongodb: "4.12.1"
+  mongodb: "4.14.0"
 });
 
 Package.onUse(function (api) {
@@ -17,4 +17,5 @@ Package.onUse(function (api) {
     "NpmModuleMongodb",
     "NpmModuleMongodbVersion",
   ], "server");
+  api.addAssets('index.d.ts', 'server');
 });
