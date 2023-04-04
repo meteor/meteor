@@ -2219,7 +2219,7 @@ main.registerCommand({
 
         // It's OK to make errors based on looking at the catalog, because this
         // is a OnceAtStart command.
-        var packageRecord = projectContext.projectCatalog.getPackage(
+        var packageRecord = await projectContext.projectCatalog.getPackage(
             constraint.package);
         if (! packageRecord) {
           buildmessage.error("no such package");
