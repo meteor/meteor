@@ -172,6 +172,17 @@ export namespace Mongo {
       options?: O
     ): Promise<DispatchTransform<O['transform'], T, U> | undefined>;
     /**
+     * Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
+     * @param selector The query for filtering the set of documents to count
+     * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
+     */
+    countDocuments(selector?: Selector<T> | ObjectID | string, options?: MongoNpmModule.CountDocumentsOptions): Promise<number>;
+    /**
+     * Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
+     * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
+     */
+    estimatedDocumentCount(options?: MongoNpmModule.EstimatedDocumentCountOptions): Promise<number>;
+    /**
      * Insert a document in the collection.  Returns its unique _id.
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
