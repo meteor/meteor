@@ -1,11 +1,15 @@
 import { normalizeProjection } from "./mongo_utils";
 
-export const warnUsingOldApi = 
-  (methodName) => 
-   process.env.WARN_WHEN_USING_OLD_API &&
-  console.trace(
-    `Calling method ${methodName} from old API on server.
-     This method will be removed, from the server, in version 3`);
+export function warnUsingOldApi (methodName){
+   if (process.env.WARN_WHEN_USING_OLD_API) {
+    console.warn(`
+    
+    Calling method ${methodName} from old API on server.
+    This method will be removed, from the server, in version 3.
+    Trace is below:`)
+    console.trace()
+  };
+}
 
 /**
  * Provide a synchronous Collection API using fibers, backed by
