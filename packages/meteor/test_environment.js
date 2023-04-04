@@ -14,12 +14,14 @@ var testDriverPackageName = TEST_METADATA.driverPackage;
 // but we will have a test driver package
 /** 
  *@memberof Meteor
- * @summary Boolean variable.  True if running in test environment.
+ * @summary Boolean variable. True when running unit tests (false if running
+ * tests in full app mode).
  * @locus Anywhere
  * @static
  * @type {Boolean}
  */
 Meteor.isTest = !!TEST_METADATA.isTest;
+
 /** 
  *@memberof Meteor
  * @summary Boolean variable.  True if running tests against your application i.e `meteor test --full-app`.
@@ -28,6 +30,7 @@ Meteor.isTest = !!TEST_METADATA.isTest;
  * @type {Boolean}
  */
 Meteor.isAppTest = !!TEST_METADATA.isAppTest;
+
 /** 
  *@memberof Meteor
  * @summary Boolean variable.  True if running tests against a Meteor package.
