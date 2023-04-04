@@ -365,7 +365,11 @@ export class CordovaBuilder {
     files.writeFile(configXmlPath, formattedXmlConfig, 'utf8');
   }
 
-  _copyImageToBuildFolderAndAppendToXmlNode(suppliedPath, newFilename, xmlElement, tag, attributes = {}) {
+  _copyImageToBuildFolderAndAppendToXmlNode(suppliedPath, newFilename, xmlElement, tag, attributes = {}, isIos = false) {
+    // will only change for the tag splash for preference in android.
+    const isAndroid = !isIos;
+    if (tag === 'splash' && isAndroid) tag = 'preference' 
+
     const src = files.pathJoin('resources', newFilename);
 
     files.copyFile(
@@ -435,12 +439,16 @@ export class CordovaBuilder {
           this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPathDarkMode,
               appendDarkMode(value),
               xmlElement,
-              'splash');
+              'splash',
+              {},
+              isIos);
         }
         this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath,
             value,
             xmlElement,
-            'splash');
+            'splash',
+            {},
+            isIos);
         return;
       }
 
@@ -449,14 +457,16 @@ export class CordovaBuilder {
         this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPathDarkMode,
             appendDarkMode(filename, { withChar: '_' }),
             xmlElement, 'splash',
-            { density: appendDarkMode(value, { separator: '-', withChar: '-' })}
+            { density: appendDarkMode(value, { separator: '-', withChar: '-' })},
+            isIos
         );
       }
       this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath,
           filename,
           xmlElement,
           'splash',
-          { density: value });
+          { density: value },
+          isIos);
     })
   }
 
