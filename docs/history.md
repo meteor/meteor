@@ -10,6 +10,43 @@
 
 
 
+## v2.12.0, 2023-04-XX
+
+### Highlights
+
+* Document main function in webapp by [harryadel](https://github.com/harryadel) [PR #12579](https://github.com/meteor/meteor/pull/12579)
+* Add undocument properties to docs by [harryadel](https://github.com/harryadel) [PR #12563](https://github.com/meteor/meteor/pull/12563)
+* Bump NPM versions for css minifiers by [wreiske](https://github.com/wreiske) [PR #12562](https://github.com/meteor/meteor/pull/12562)
+* Updated Email and Mongo package types by [ebroder](https://github.com/ebroder) [PR #12554](https://github.com/meteor/meteor/pull/12554)
+* Updated security.md by [jamauro](https://github.com/jamauro) [PR #12461](https://github.com/meteor/meteor/pull/12461)
+* Added addHtmlAttributeHook type on WebApp [DblK](https://github.com/DblK) [PR #12545](https://github.com/meteor/meteor/pull/12545)
+* Added loginServiceConfiguration type on Accounts [DblK](https://github.com/DblK) [PR #12539](https://github.com/meteor/meteor/pull/12539)
+* Add TS types for Mongo Collection countDocuments and estimatedDocumentCount by [ArthurHoaro](https://github.com/ArthurHoaro) [PR #12533](https://github.com/meteor/meteor/pull/12533)
+* Allow setting a custom ddp-rate-limit message per rule by [wreiske](https://github.com/wreiske) [PR #12082](https://github.com/meteor/meteor/pull/12082)
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+TODO
+
+#### Meteor Version Release
+
+
+#### Special thanks to
+- [@harryadel](https://github.com/harryadel).
+- [@wreiske](https://github.com/wreiske).
+- [@ebroder](https://github.com/ebroder).
+- [@jamauro](https://github.com/jamauro).
+- [@DblK](https://github.com/DblK).
+- [@ArthurHoaro](https://github.com/ArthurHoaro).
+
 ## v2.11.0, 2023-03-02
 
 ### Highlights
