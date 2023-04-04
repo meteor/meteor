@@ -103,9 +103,11 @@ export namespace Mongo {
       maxDocuments?: number
     ): Promise<void>;
     createIndex(
+      indexSpec: NpmModuleMongodb.IndexSpecification,
       options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     createIndexAsync(
+      indexSpec: NpmModuleMongodb.IndexSpecification,
       options?: NpmModuleMongodb.CreateIndexesOptions
     ): Promise<void>;
     deny<Fn extends Transform<T> = undefined>(options: {
@@ -294,6 +296,7 @@ export namespace Mongo {
     _createCappedCollection(byteSize?: number, maxDocuments?: number): void;
     /** @deprecated */
     _ensureIndex(
+      indexSpec: NpmModuleMongodb.IndexSpecification,
       options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     _dropCollection(): Promise<void>;
