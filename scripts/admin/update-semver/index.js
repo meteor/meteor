@@ -39,13 +39,14 @@ const runCommand = async (command) => {
 async function getPackages() {
   return await runCommand("./get-diff.sh");
 }
+
 async function getReleaseNumber() {
   // only works if you are in the release branch. it will return someting
   // like release-2.4 or release-2.4.2
   const gitBranch = await runCommand("./get-branch-name.sh");
   if (!gitBranch.includes('release')) throw new Error('You are not in a release branch');
 
-  const releaseNumber =  gitBranch
+  const releaseNumber = gitBranch
     .replace('release-', '')
     .replace('.', '')
     .replace('\n', '');
@@ -110,7 +111,10 @@ async function main() {
   const packages = args.map(arg => {
     const [name, release] = arg.split('.');
     return { name, release: release || 'patch' };
-  });
+  })
+    // we remove duplicates by name
+    .filter((value, index, self) => self.findIndex((v) => v.name === value.name) === index);
+
   for (const { name, release } of packages) {
     const filePath = `../../../packages/${ name }/package.js`;
     const [code, err] = await getFile(filePath);
@@ -124,13 +128,28 @@ async function main() {
       //   summary: 'some description.',
       //   version: '1.2.3' <--- this is the line we want, we assure that it has a version in the previous if
       //});
-      const [_, versionValue] = line.split(':');
-      if (!versionValue) continue;
-      const currentVersion = versionValue
-        .trim()
-        .replace(',', '')
-        .replace(/'/g, '')
-        .replace(/"/g, '');
+      const [_, version] = line.split(':');
+      if (!version) continue;
+      const getVersionValue = (value) => {
+        const removeQuotes =
+          (v) => v
+            .trim()
+            .replace(',', '')
+            .replace(/'/g, '')
+            .replace(/"/g, '');
+
+        if (value.includes('-')) {
+          return {
+            currentVersion: removeQuotes(value.replace(releaseNumber, '')),
+            rawVersion: value
+          }
+        }
+        return {
+          currentVersion: removeQuotes(value),
+          rawVersion: value
+        }
+      }
+      const { currentVersion, rawVersion } = getVersionValue(version)
 
 
       /**
@@ -139,22 +158,23 @@ async function main() {
        * @returns {string}
        */
       function incrementNewVersion(release) {
-        if (release.includes('beta') || release.includes('rc')) {
+        if (release === 'beta' || release === 'rc') {
           const version =
             semver.inc(currentVersion, 'prerelease', release);
-          return version.replace(release, `${release}${releaseNumber}`);
+          if (name === 'meteor-tool') return version;
+          return version.replace(release, `${ release }${ releaseNumber }`);
         }
         return semver.inc(currentVersion, release);
       }
 
       const newVersion = incrementNewVersion(release);
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
-      const newCode = code.replace(currentVersion, `${ newVersion }`);
+      const newCode = code.replace(rawVersion, ` '${ newVersion }',`);
       await fs.promises.writeFile(filePath, newCode);
     }
   }
   console.log('Done!');
-  if (!args[0].startsWith('@auto')) console.log('Do not forget to update meteor-tool');
+  if (!args.some(arg => arg.includes('meteor-tool'))) console.log('Do not forget to update meteor-tool');
 }
 
 main();
