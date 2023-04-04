@@ -1,13 +1,6 @@
-import * as MongoNpmModule from 'mongodb';
-import {
-  Collection as MongoCollection,
-  CreateIndexesOptions,
-  Db as MongoDb,
-  Hint,
-  IndexSpecification,
-  MongoClient,
-} from 'mongodb';
+import { NpmModuleMongodb } from 'meteor/npm-mongo';
 import { Meteor } from 'meteor/meteor';
+import { DDP } from 'meteor/ddp';
 
 // Based on https://github.com/microsoft/TypeScript/issues/28791#issuecomment-443520161
 export type UnionOmit<T, K extends keyof any> = T extends T
@@ -16,30 +9,13 @@ export type UnionOmit<T, K extends keyof any> = T extends T
 
 export namespace Mongo {
 
-  type Query<T> = MongoNpmModule.Filter<T>;
+  export type Selector<T> = NpmModuleMongodb.Filter<T>;
 
-  export type QueryWithModifiers<T> = {
-    $query: Query<T>;
-    $comment?: string | undefined;
-    $explain?: any;
-    $hint?: Hint;
-    $maxScan?: any;
-    $max?: any;
-    $maxTimeMS?: any;
-    $min?: any;
-    $orderby?: any;
-    $returnKey?: any;
-    $showDiskLoc?: any;
-    $natural?: any;
-  };
-
-  export type Selector<T> = Query<T> | QueryWithModifiers<T>;
-
-  type Modifier<T> = MongoNpmModule.UpdateFilter<T>;
+  type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
 
   export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: any };
 
-  type SortSpecifier = MongoNpmModule.Sort;
+  type SortSpecifier = NpmModuleMongodb.Sort;
 
   export interface FieldSpecifier {
     [id: string]: Number;
@@ -57,7 +33,7 @@ export namespace Mongo {
     /** Dictionary of fields to return or exclude. */
     fields?: FieldSpecifier | undefined;
     /** (Server only) Overrides MongoDB's default index selection and query optimization process. Specify an index to force its use, either by its name or index specification. */
-    hint?: Hint | undefined;
+    hint?: NpmModuleMongodb.Hint | undefined;
     /** (Client only) Default `true`; pass `false` to disable reactivity */
     reactive?: boolean | undefined;
     /**  Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation. */
@@ -78,14 +54,14 @@ export namespace Mongo {
      * Constructor for a Collection
      * @param name The name of the collection. If null, creates an unmanaged (unsynchronized) local collection.
      */
-    new <T extends MongoNpmModule.Document, U = T>(
+    new <T extends NpmModuleMongodb.Document, U = T>(
       name: string | null,
       options?: {
         /**
          * The server connection that will manage this collection. Uses the default connection if not specified. Pass the return value of calling `DDP.connect` to specify a different
          * server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection.
          */
-        connection?: Object | null | undefined;
+        connection?: DDP.DDPStatic | null | undefined;
         /** The method of generating the `_id` fields of new documents in this collection.  Possible values:
          * - **`'STRING'`**: random strings
          * - **`'MONGO'`**:  random [`Mongo.ObjectID`](#mongo_object_id) values
@@ -103,7 +79,7 @@ export namespace Mongo {
       }
     ): Collection<T, U>;
   }
-  interface Collection<T extends MongoNpmModule.Document, U = T> {
+  interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T> = undefined>(options: {
       insert?:
         | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
@@ -127,12 +103,10 @@ export namespace Mongo {
       maxDocuments?: number
     ): Promise<void>;
     createIndex(
-      indexSpec: IndexSpecification,
-      options?: CreateIndexesOptions
+      options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     createIndexAsync(
-      indexSpec: IndexSpecification,
-      options?: CreateIndexesOptions
+      options?: NpmModuleMongodb.CreateIndexesOptions
     ): Promise<void>;
     deny<Fn extends Transform<T> = undefined>(options: {
       insert?:
@@ -211,12 +185,12 @@ export namespace Mongo {
      * Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
      */
-    rawCollection(): MongoCollection<T>;
+    rawCollection(): NpmModuleMongodb.Collection<T>;
     /**
      * Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/3.0/api/Db.html) object corresponding to this collection's database connection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
      */
-    rawDatabase(): MongoDb;
+    rawDatabase(): NpmModuleMongodb.Db;
     /**
      * Remove documents from the collection
      * @param selector Specifies which documents to remove
@@ -320,8 +294,7 @@ export namespace Mongo {
     _createCappedCollection(byteSize?: number, maxDocuments?: number): void;
     /** @deprecated */
     _ensureIndex(
-      indexSpec: IndexSpecification,
-      options?: CreateIndexesOptions
+      options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     _dropCollection(): Promise<void>;
     _dropIndex(indexName: string): void;
@@ -465,8 +438,8 @@ export namespace Mongo {
 
 export declare module MongoInternals {
   interface MongoConnection {
-    db: MongoDb;
-    client: MongoClient;
+    db: NpmModuleMongodb.Db;
+    client: NpmModuleMongodb.MongoClient;
   }
 
   function defaultRemoteCollectionDriver(): {
@@ -476,7 +449,7 @@ export declare module MongoInternals {
   var NpmModules: {
     mongodb: {
       version: string;
-      module: typeof MongoNpmModule;
+      module: typeof NpmModuleMongodb;
     };
   };
 }
