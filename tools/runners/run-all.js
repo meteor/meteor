@@ -404,7 +404,8 @@ exports.run = async function (options) {
 
   var runner = new Runner(runOptions);
   await runner.init();
-  await runner.start();
+  // don't wait this on to finish
+  runner.start();
   var result = await promise;
   await runner.stop();
 
