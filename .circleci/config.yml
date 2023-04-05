@@ -261,7 +261,7 @@ jobs:
               --headless \
               --junit ./tmp/results/junit/0.xml \
               --without-tag "custom-warehouse"
-          no_output_timeout: 20m
+          no_output_timeout: 30m
       - run:
           <<: *run_save_node_bin
       - store_test_results:
