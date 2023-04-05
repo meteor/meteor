@@ -54,19 +54,19 @@ async function doAddPlatform(options) {
 
     installedPlatforms = installedPlatforms.concat(platformsToAdd);
     const cordovaPlatforms = filterPlatforms(installedPlatforms);
-    cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
+    await cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
 
     if (buildmessage.jobHasMessages()) {
       return;
     }
 
     // Only write the new platform list when we have successfully synchronized.
-    projectContext.platformList.write(installedPlatforms);
+    await projectContext.platformList.write(installedPlatforms);
 
     for (var platform of platformsToAdd) {
       Console.info(`${platform}: added platform`);
       if (cordovaPlatforms.includes(platform)) {
-        cordovaProject.checkPlatformRequirements(platform);
+        await cordovaProject.checkPlatformRequirements(platform);
       }
     }
   });
@@ -81,7 +81,7 @@ async function doRemovePlatform(options) {
   const platformsToRemove = options.args;
   let installedPlatforms = projectContext.platformList.getPlatforms();
 
-  await main.captureAndExit('', 'removing platforms', () => {
+  await main.captureAndExit('', 'removing platforms', async () => {
     for (platform of platformsToRemove) {
       // Explain why we can't remove server or browser platforms
       if (PlatformList.DEFAULT_PLATFORMS.includes(platform)) {
@@ -107,7 +107,7 @@ version of Meteor`);
       const cordovaProject = new CordovaProject(projectContext);
       if (buildmessage.jobHasMessages()) return;
       const cordovaPlatforms = filterPlatforms(installedPlatforms);
-      cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
+      await cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
     }
   });
 }
@@ -206,9 +206,9 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never(),
-}, function (options) {
+}, async function (options) {
   Console.setVerbose(!!options.verbose);
 
-  ensureDevBundleDependencies();
+  await ensureDevBundleDependencies();
   Console.info("Cordova dependencies are installed.");
 });
