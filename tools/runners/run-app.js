@@ -404,7 +404,7 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    self._runApp();
+    self._runApp().catch((e) => console.error("Error thrown on _runApp", e));
     await self.startPromise;
     self.startPromise = null;
   },

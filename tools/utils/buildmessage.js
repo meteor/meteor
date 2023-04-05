@@ -280,6 +280,8 @@ async function capture(options, f) {
 
   try {
     await f();
+  } catch (e) {
+    // don't remove this catch, otherwise any errors thrown will propagate. We don't want that.
   } finally {
     progress.reportProgressDone();
 
