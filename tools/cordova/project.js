@@ -10,7 +10,7 @@ import { Console } from '../console/console.js';
 import { Profile } from '../tool-env/profile';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
-import { execFileSync } from '../utils/processes';
+import { execFileAsync } from '../utils/processes';
 
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
@@ -188,7 +188,7 @@ outdated platforms`);
           buildMode: this.options.buildMode }
       );
 
-      builder.processControlFile();
+      await builder.processControlFile();
 
       if (buildmessage.jobHasMessages()) {
         return;
@@ -265,14 +265,14 @@ outdated platforms`);
         buildMode: this.options.buildMode }
     );
 
-    builder.processControlFile();
+    await builder.processControlFile();
 
     if (buildmessage.jobHasMessages()) {
       return;
     }
 
     builder.writeConfigXmlAndCopyResources();
-    builder.copyWWW(bundlePath);
+    await builder.copyWWW(bundlePath);
 
     await this.ensurePluginsAreSynchronized(pluginVersions,
         builder.pluginsConfiguration);
@@ -433,14 +433,14 @@ to build apps for ${displayNameForPlatform(platform)}.`);
     return cordova_util.listPlatforms(files.convertToOSPath(this.projectRoot));
   }
 
-  installedVersionForPlatform(platform) {
+  async installedVersionForPlatform(platform) {
     const command = files.convertToOSPath(files.pathJoin(
       this.projectRoot, 'platforms', platform, 'cordova', 'version'));
     // Make sure the command exists before trying to execute it
     if (files.exists(command)) {
       return this.runCommands(
         `getting installed version for platform ${platform} in Cordova project`,
-        execFileSync(command, {
+        execFileAsync(command, {
           env: this.defaultEnvWithPathsAdded(),
           cwd: this.projectRoot}), null, null);
     } else {
@@ -803,7 +803,7 @@ perform cordova plugins reinstall`);
     const installedPluginsNames = Object.keys(installed);
     const missingPlugins = {};
 
-    for (const plugin of requiredPlugins) {
+    for (const plugin of Object.keys(requiredPlugins)) {
       if (!installedPluginsNames.includes(plugin)) {
         Console.debug(`Plugin ${plugin} was not installed.`);
         if (retryInstall) {

@@ -1221,6 +1221,7 @@ ${Console.command("meteor build ../output")}`,
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
           cordovaServerPort: parsedCordovaServerPort });
+        await cordovaProject.init();
         if (buildmessage.jobHasMessages()) return;
 
         const pluginVersions = pluginVersionsFromStarManifest(

@@ -105,6 +105,7 @@ version of Meteor`);
 
     if (process.platform !== 'win32') {
       const cordovaProject = new CordovaProject(projectContext);
+      await cordovaProject.init();
       if (buildmessage.jobHasMessages()) return;
       const cordovaPlatforms = filterPlatforms(installedPlatforms);
       await cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
