@@ -1,15 +1,5 @@
 import { normalizeProjection } from "./mongo_utils";
-
-export function warnUsingOldApi (methodName){
-   if (process.env.WARN_WHEN_USING_OLD_API) {
-    console.warn(`
-    
-    Calling method ${methodName} from old API on server.
-    This method will be removed, from the server, in version 3.
-    Trace is below:`)
-    console.trace()
-  };
-}
+import { warnUsingOldApi } from "./collection";
 
 /**
  * Provide a synchronous Collection API using fibers, backed by
@@ -29,6 +19,7 @@ var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
 import {
   ASYNC_CURSOR_METHODS,
+  ASYNC_COLLECTION_METHODS,
   getAsyncMethodName
 } from "meteor/minimongo/constants";
 
@@ -255,10 +246,6 @@ MongoConnection.prototype._createCappedCollection = function (
     collectionName, byteSize, maxDocuments) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("createCappedCollection");
-
   if (! self.db)
     throw Error("_createCappedCollection called before Connection created?");
 
@@ -342,9 +329,6 @@ MongoConnection.prototype._insert = function (collection_name, document,
   var self = this;
 
   
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("insert");
 
   var sendError = function (e) {
     if (callback)
@@ -410,9 +394,7 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
 MongoConnection.prototype._remove = function (collection_name, selector,
                                               callback) {
   var self = this;
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("remove");
+
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e._expectedByTest = true;
@@ -449,9 +431,6 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 MongoConnection.prototype._dropCollection = function (collectionName, cb) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("dropCollection");
 
   var write = self._maybeBeginWrite();
   var refresh = function () {
@@ -491,9 +470,7 @@ MongoConnection.prototype._dropDatabase = function (cb) {
 MongoConnection.prototype._update = function (collection_name, selector, mod,
                                               options, callback) {
   var self = this;
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("update");
+
   if (! callback && options instanceof Function) {
     callback = options;
     options = null;
@@ -808,9 +785,6 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                                              options, callback) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("upsert");
 
   if (typeof options === "function" && ! callback) {
     callback = options;
@@ -840,9 +814,6 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
   if (arguments.length === 1)
     selector = {};
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("findOne");
 
   options = options || {};
   options.limit = 1;
@@ -854,10 +825,6 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
 MongoConnection.prototype.createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
-  
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("createIndex");
 
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
@@ -884,9 +851,6 @@ MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("dropIndex");
 
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
@@ -983,6 +947,8 @@ Cursor.prototype.count = function () {
   if (methodName !== 'count') {
     Cursor.prototype[methodName] = function (...args) {
       const cursor = setupSynchronousCursor(this, methodName);
+      if (!cursor[methodName].isCallingMethodAsync) warnUsingOldApi(methodName);
+      cursor[methodName].isCallingMethodAsync = false;
       return cursor[methodName](...args);
     };
   }
@@ -995,6 +961,7 @@ Cursor.prototype.count = function () {
   const methodNameAsync = getAsyncMethodName(methodName);
   Cursor.prototype[methodNameAsync] = function (...args) {
     try {
+      this[methodName].isCallingMethodAsync = true;
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);
