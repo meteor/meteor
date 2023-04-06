@@ -408,6 +408,7 @@ Object.assign(AppRunner.prototype, {
       await self._runApp();
     } catch (e) {
       self._resolvePromise("start", e);
+      throw e;
     } finally {
       await self.startPromise;
       self.startPromise = null;

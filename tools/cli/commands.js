@@ -424,7 +424,6 @@ async function doRunCommand(options) {
       import { CordovaProject } from '../cordova/project.js';
 
       await main.captureAndExit('', 'preparing Cordova project', async () => {
-        // TODO -> Have to change CordovaProject constructor here.
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
