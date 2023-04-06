@@ -1,5 +1,4 @@
 var Fiber = Npm.require('fibers');
-var warnUsingOldApi = require("./mongo_driver").warnUsingOldApi;
 
 export class DocFetcher {
   constructor(mongoConnection) {
@@ -24,9 +23,6 @@ export class DocFetcher {
     check(collectionName, String);
     check(op, Object);
 
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi("fetch");
 
     // If there's already an in-progress fetch for this cache key, yield until
     // it's done and return whatever it returns.
