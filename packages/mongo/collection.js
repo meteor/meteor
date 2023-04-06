@@ -6,7 +6,16 @@ import {
 } from "meteor/minimongo/constants";
 
 import { normalizeProjection } from "./mongo_utils";
-
+export function warnUsingOldApi (methodName){
+  if (process.env.WARN_WHEN_USING_OLD_API) {
+   console.warn(`
+   
+   Calling method ${methodName} from old API on server.
+   This method will be removed, from the server, in version 3.
+   Trace is below:`)
+   console.trace()
+ };
+}
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
@@ -915,13 +924,22 @@ function popCallbackFromArgs(args) {
   }
 }
 
+
 ASYNC_COLLECTION_METHODS.forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
     try {
+      this[methodName].isCalledFromAsync = true;
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);
     }
   };
+
+  // This throws an infinite loop error
+  // not sure why
+  // Mongo.Collection.prototype[methodName] = function (...params) {
+  //   return this[methodName](...params);
+  // }
+  
 });
