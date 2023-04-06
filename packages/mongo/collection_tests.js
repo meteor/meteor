@@ -414,3 +414,16 @@ Tinytest.add('collection - count should release the session',
     test.equal(preCount, postCount);
   }
 );
+
+
+
+Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(test){ 
+  var collectionName = 'add' + test.id;
+  var collection = new Mongo.Collection(collectionName);
+  var id = await collection.insertAsync({a: 1});
+  test.equal((await collection.findOneAsync(id)).a, 1);
+  id = await collection.insertAsync({a: 2});
+  test.equal((await collection.findOneAsync(id)).a, 2);
+  await collection.removeAsync({});
+  
+})
