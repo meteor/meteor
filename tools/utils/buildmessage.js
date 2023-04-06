@@ -279,9 +279,17 @@ async function capture(options, f) {
   }
 
   try {
-    await f();
-  } catch (e) {
-    // don't remove this catch, otherwise any errors thrown will propagate. We don't want that.
+    // you can think that this is as simple as:
+    // await f();
+    // but we need to make sure that we are not leaking a thrown error
+    // the next call to capture.
+    await new Promise(async (resolve) => {
+      try {
+        await f();
+      } finally {
+        resolve();
+      }
+    });
   } finally {
     progress.reportProgressDone();
 

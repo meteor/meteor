@@ -404,9 +404,14 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    self._runApp().catch((e) => console.error("Error thrown on _runApp", e));
-    await self.startPromise;
-    self.startPromise = null;
+    try {
+      await self._runApp();
+    } catch (e) {
+      self._resolvePromise("start", e);
+    } finally {
+      await self.startPromise;
+      self.startPromise = null;
+    }
   },
 
   _findCachedEE: function (name) {
