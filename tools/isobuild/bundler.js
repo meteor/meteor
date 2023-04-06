@@ -491,7 +491,7 @@ class NodeModulesDirectory {
           // guard against broken symlinks (#11241)
           const realpath = files.realpathOrNull(path);
           if (!realpath) {
-            throw new Error(`Broken symbolic link encountered at ${path}`);
+            return Promise.reject(new Error(`Broken symbolic link encountered at ${path}`));
           }
           return isWithinProdPackage(realpath);
         }
