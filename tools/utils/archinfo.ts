@@ -135,7 +135,7 @@ export const VALID_ARCHITECTURES: Record<string, boolean> = {
 };
 
 // Returns the fully qualified arch of this host -- something like
-// "os.linux.x86_32" or "os.osx.x86_64". 
+// "os.linux.x86_32" or "os.osx.x86_64".
 // Throws an error if it's not a supported architecture.
 //
 // If you change this, also change scripts/admin/launch-meteor

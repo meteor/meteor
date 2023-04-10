@@ -223,15 +223,15 @@ selftest.define("argument parsing", async function () {
 
   // bad use of =
   run = s.run("dummy", "--=");
-  run.readErr("Option names cannot begin with '='.\n");
+  await run.readErr("Option names cannot begin with '='.\n");
   await run.expectExit(1);
 
   run = s.run("dummy", "--=asdf");
-  run.readErr("Option names cannot begin with '='.\n");
+  await run.readErr("Option names cannot begin with '='.\n");
   await run.expectExit(1);
 
   run = s.run("dummy", "-=");
-  run.readErr("Option names cannot begin with '='.\n");
+  await run.readErr("Option names cannot begin with '='.\n");
   await run.expectExit(1);
 
   run = s.run("dummy", "-ex", "--changed=foo");
