@@ -25,6 +25,7 @@ Package.onUse(function (api) {
   api.export('Roles')
 
   api.addFiles('roles/roles_common.js', both)
+  api.addFiles('roles/roles_common_async.js', both)
   api.addFiles('roles/roles_server.js', 'server')
   api.addFiles([
     'roles/client/debug.js',
