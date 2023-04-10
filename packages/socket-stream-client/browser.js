@@ -158,7 +158,7 @@ export class ClientStream extends StreamClientCommon {
     this._cleanup(); // cleanup the old socket, if there was one.
 
     var options = {
-      protocols_whitelist: this._sockjsProtocolsWhitelist(),
+      transports: this._sockjsProtocolsWhitelist(),
       ...this.options._sockjsOptions
     };
 
