@@ -6,6 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
+  "sockjs-client": "1.6.1",
   "faye-websocket": "0.11.4",
   "permessage-deflate": "0.1.7"
 });
@@ -15,7 +16,6 @@ Package.onUse(function(api) {
   api.use("modern-browsers");
   api.use("retry"); // TODO Try to remove this.
 
-  api.addFiles("sockjs-0.3.4.js", "legacy");
   api.mainModule("browser.js", "client", { lazy: true });
 
   api.addFiles("server.js", "server");
