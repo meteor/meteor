@@ -163,7 +163,7 @@ makeGlobalAsyncLocalStorage().run(
     }
 
     try {
-      release.setCurrent(release.load(null));
+      release.setCurrent(await release.load(null));
       await isopackets.ensureIsopacketsLoadable();
       await runTest();
     } catch (err) {

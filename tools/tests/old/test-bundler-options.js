@@ -188,7 +188,7 @@ makeGlobalAsyncLocalStorage().run(
       throw Error("This old test doesn't support non-checkout");
     }
 
-    release.setCurrent(release.load(null));
+    release.setCurrent(await release.load(null));
     await isopackets.ensureIsopacketsLoadable();
 
     try {
