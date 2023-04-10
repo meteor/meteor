@@ -1508,7 +1508,7 @@ var maybeUpdateRelease = async function (options) {
   // double-springboard.  (We might miss an super recently published release,
   // but that's probably OK.)
   if (! release.forced) {
-    var latestRelease = release.latestKnown(releaseTrack);
+    var latestRelease = await release.latestKnown(releaseTrack);
 
     // Are we on some track without ANY recommended releases at all,
     // and the user ran 'meteor update' without specifying a release? We
@@ -1522,7 +1522,7 @@ var maybeUpdateRelease = async function (options) {
 
     if (release.current && ! release.current.isRecommended() &&
         options.appDir && ! options.patch) {
-      var releaseVersion = release.current.getReleaseVersion();
+      var releaseVersion = await release.current.getReleaseVersion();
       var newerRecommendedReleases = getLaterReleaseVersions(
         releaseTrack, releaseVersion);
       if (!newerRecommendedReleases.length) {
@@ -1565,7 +1565,7 @@ var maybeUpdateRelease = async function (options) {
     throw new Error("don't have a proper release?");
   }
 
-  updateMeteorToolSymlink(true);
+  await updateMeteorToolSymlink(true);
 
   // If we're not in an app, then we're basically done. The only thing left to
   // do is print out some messages explaining what happened (and advising the
@@ -1598,7 +1598,7 @@ var maybeUpdateRelease = async function (options) {
       // We get here if the user ran 'meteor update' and we didn't
       // find a new version.
       Console.info(
-        "The latest version of Meteor, " + release.current.getReleaseVersion() +
+        "The latest version of Meteor, " + await release.current.getReleaseVersion() +
         ", is already installed on this computer. Run " +
         Console.command("'meteor update'") + " inside of a particular " +
         "project directory to update that project to " +
@@ -1686,14 +1686,17 @@ var maybeUpdateRelease = async function (options) {
   } else if (release.explicit) {
     // You have explicitly specified a release, and we have springboarded to
     // it. So, we will use that release to update you to itself, if we can.
-    releaseVersion = release.current.getReleaseVersion();
+    releaseVersion = await release.current.getReleaseVersion();
   } else {
     // We are not doing a patch update, or a specific release update, so we need
     // to try all recommended releases on our track, whose order key is greater
     // than the app's.
-    releaseVersion = await getLaterReleaseVersions(
-      projectContext.releaseFile.releaseTrack,
-      projectContext.releaseFile.releaseVersion)[0];
+    releaseVersion = (
+      await getLaterReleaseVersions(
+        projectContext.releaseFile.releaseTrack,
+        projectContext.releaseFile.releaseVersion
+      )
+    )[0];
 
     if (! releaseVersion) {
       // We could not find any releases newer than the one that we are on, on

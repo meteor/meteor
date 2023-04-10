@@ -437,7 +437,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
   for (const info of infos) {
     info.fn.apply(global, info.args);
   }
-  if (global.Package['core-runtime']) {
+  if (global.Package && global.Package['core-runtime']) {
     return global.Package['core-runtime'].waitUntilAllLoaded();
   }
 

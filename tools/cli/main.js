@@ -429,7 +429,7 @@ var springboard = async function (rel, options) {
 
   const toolsPkg = rel.getToolsPackage();
   const toolsVersion = rel.getToolsVersion();
-  const serverArchitectures = catalog.official.filterArchesWithBuilds(
+  const serverArchitectures = await catalog.official.filterArchesWithBuilds(
     toolsPkg,
     toolsVersion,
     archinfo.acceptableMeteorToolArches(),
@@ -1542,7 +1542,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
       // Load the metadata for the latest release (or at least, the latest
       // release we know about locally). We should only do this if we know there
       // is some latest release on this track.
-      var latestRelease = await release.load(release.latestKnown(e.track));
+      var latestRelease = await release.load(await release.latestKnown(e.track));
       await springboard(latestRelease, { releaseOverride: latestRelease.name });
       // (does not return)
     } else if (e instanceof main.SpringboardToSpecificRelease) {
