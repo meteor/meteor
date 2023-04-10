@@ -482,7 +482,7 @@ selftest.define("compiler plugins - addAssets", async () => {
   await s.createApp('myapp', 'compiler-plugin-asset-and-source');
   s.cd('myapp');
 
-  const run = startRun(s);
+  const run = await startRun(s);
 
   // Test server-side asset.
   await run.match("Printing out my own source code!");
