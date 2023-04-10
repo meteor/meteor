@@ -40,7 +40,7 @@ export class AccountsCommon {
 
     // There is an allow call in accounts_server.js that restricts writes to
     // this collection.
-    this.users = new Mongo.Collection('users', {
+    this.users = new Mongo.Collection(process.env.MONGO_USERS_COLLECTION || 'users', {
       _preventAutopublish: true,
       connection: this.connection,
     });
