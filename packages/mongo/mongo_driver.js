@@ -834,19 +834,35 @@ MongoConnection.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-MongoConnection.prototype.findOne = function (collection_name, selector,
-                                              options) {
+MongoConnection.prototype.findOneAsync = async function (collection_name, selector,
+                                               options) {
   var self = this;
   if (arguments.length === 1)
     selector = {};
 
+  options = options || {};
+  options.limit = 1;
+  return (await self.find(collection_name, selector, options).fetchAsync())[0];
+};
+
+MongoConnection.prototype.findOne = function (collection_name, selector,
+                                              options) {
+  var self = this;
   // [FIBERS]
   // TODO: Remove this when 3.0 is released.
   warnUsingOldApi("findOne");
 
-  options = options || {};
-  options.limit = 1;
-  return self.find(collection_name, selector, options).fetch()[0];
+  return Future.fromPromise(self.findOneAsync(collection_name, selector, options)).wait();
+};
+
+MongoConnection.prototype.createIndexAsync = function (collectionName, index,
+                                                  options) {
+  var self = this;
+
+  // We expect this function to be called at startup, not from within a method,
+  // so we don't interact with the write fence.
+  var collection = self.rawCollection(collectionName);
+  return collection.createIndex(index, options);
 };
 
 // We'll actually design an index API later. For now, we just pass through to
@@ -854,17 +870,11 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
 MongoConnection.prototype.createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
-  
   // [FIBERS]
   // TODO: Remove this when 3.0 is released.
   warnUsingOldApi("createIndex");
 
-  // We expect this function to be called at startup, not from within a method,
-  // so we don't interact with the write fence.
-  var collection = self.rawCollection(collectionName);
-  var future = new Future;
-  var indexName = collection.createIndex(index, options, future.resolver());
-  future.wait();
+  return Future.fromPromise(self.createIndexAsync(collectionName, index, options));
 };
 
 MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
