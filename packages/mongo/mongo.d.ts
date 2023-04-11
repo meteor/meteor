@@ -103,7 +103,7 @@ export namespace Mongo {
       maxDocuments?: number
     ): Promise<void>;
     /**
-     * @deprecated This method will be removed in Meteor 3.0. Please use createdIndexAsync
+     * @deprecated This method will be removed in Meteor 3.0. Please use createIndexAsync
      */
     createIndex(
       options?: NpmModuleMongodb.CreateIndexesOptions
