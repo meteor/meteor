@@ -1,7 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-// TODO: Fix after Meteor 3.0 release, we cannot create an app yet.
 selftest.define("help", async function () {
   var s = new Sandbox;
   await s.init();
