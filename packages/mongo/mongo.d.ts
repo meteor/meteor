@@ -103,7 +103,7 @@ export namespace Mongo {
       maxDocuments?: number
     ): Promise<void>;
     /**
-     * @deprecated use createdIndexAsync
+     * @deprecated This method will be removed in Meteor 3.0. Please use createdIndexAsync
      */
     createIndex(
       options?: NpmModuleMongodb.CreateIndexesOptions
@@ -147,13 +147,13 @@ export namespace Mongo {
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
      * @param selector A query describing the documents to find
-     * @deprecated use findOneAsync
+     * @deprecated This method will be removed in Meteor 3.0. Please use findOneAsync
      */
     findOne(selector?: Selector<T> | ObjectID | string): U | undefined;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
      * @param selector A query describing the documents to find
-     * @deprecated use findOneAsync
+     * @deprecated This method will be removed in Meteor 3.0. Please use findOneAsync
      */
     findOne<O extends Omit<Options<T>, 'limit'>>(
       selector?: Selector<T> | ObjectID | string,
@@ -178,7 +178,7 @@ export namespace Mongo {
      * Insert a document in the collection.  Returns its unique _id.
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
-     * @deprecated use insertAsync
+     * @deprecated This method will be removed in Meteor 3.0. Please use insertAsync
      */
     insert(doc: OptionalId<T>, callback?: Function): string;
     /**
@@ -201,7 +201,7 @@ export namespace Mongo {
      * Remove documents from the collection
      * @param selector Specifies which documents to remove
      * @param callback If present, called with an error object as its argument.
-     * @deprecated use removeAsync
+     * @deprecated This method will be removed in Meteor 3.0. Please use removeAsync
      */
     remove(
       selector: Selector<T> | ObjectID | string,
@@ -221,7 +221,7 @@ export namespace Mongo {
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
      * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
-     * @deprecated use updateAsync
+     * @deprecated This method will be removed in Meteor 3.0. Please use updateAsync
      */
     update(
       selector: Selector<T> | ObjectID | string,
@@ -267,7 +267,7 @@ export namespace Mongo {
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
      * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
-     * @deprecated use upsertAsync
+     * @deprecated This method will be removed in Meteor 3.0. Please use upsertAsync
      */
     upsert(
       selector: Selector<T> | ObjectID | string,
@@ -341,7 +341,7 @@ export namespace Mongo {
     /**
      * Returns the number of documents that match a query.
      * @param applySkipLimit If set to `false`, the value returned will reflect the total number of matching documents, ignoring any value supplied for limit. (Default: true)
-     * @deprecated use countAsync
+     * @deprecated This method will be removed in Meteor 3.0, please use countAsync
      */
     count(applySkipLimit?: boolean): number;
     /**
