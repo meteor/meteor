@@ -75,7 +75,7 @@ EVp.withValue = function (value, func) {
   var saved = currentValues[this.slot];
   try {
     currentValues[this.slot] = value;
-    return func();
+    return Meteor.wrapFn(func)();
   } finally {
     currentValues[this.slot] = saved;
   }
