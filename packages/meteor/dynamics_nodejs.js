@@ -3,6 +3,7 @@
 var Fiber = Npm.require('fibers');
 
 var nextSlot = 0;
+var callAsyncMethodRunning = false;
 
 Meteor._nodeCodeMustBeInFiber = function () {
   if (!Fiber.current) {
@@ -105,6 +106,15 @@ EVp._setNewContextAndGetCurrent = function (value) {
   this._set(value);
   return saved;
 };
+
+EVp._isCallAsyncMethodRunning = function () {
+	return callAsyncMethodRunning;
+};
+
+EVp._setCallAsyncMethodRunning = function (value) {
+	callAsyncMethodRunning = value;
+};
+
 
 // Meteor application code is always supposed to be run inside a
 // fiber. bindEnvironment ensures that the function it wraps is run from
