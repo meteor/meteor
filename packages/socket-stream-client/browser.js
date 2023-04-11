@@ -8,7 +8,7 @@ import { StreamClientCommon } from "./common.js";
 // Statically importing SockJS here will prevent native WebSocket usage
 // below (in favor of SockJS), but will ensure maximum compatibility for
 // clients stuck in unusual networking environments.
-import SockJS from "sockjs-client";
+import SockJS from "./sockjs-1.6.1.js";
 
 export class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app

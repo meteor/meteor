@@ -6,7 +6,6 @@ Package.describe({
 });
 
 Npm.depends({
-  "sockjs-client": "1.6.1",
   "faye-websocket": "0.11.4",
   "permessage-deflate": "0.1.7"
 });
