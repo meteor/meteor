@@ -1,13 +1,15 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
+// TODO: Fix after Meteor 3.0 release, we cannot create an app yet.
 selftest.define("help", async function () {
   var s = new Sandbox;
   await s.init();
 
   // Top-level help
   var checkTopLevelHelp = async function (run) {
-    run.read("Usage: meteor");
+    await run.read("Usage: meteor");
+
     await run.match("Commands:");
     await run.match(/create\s*Create a new project/);
     await run.match(/\s*admin\s/);
@@ -19,9 +21,10 @@ selftest.define("help", async function () {
   await checkTopLevelHelp(s.run("help"));
   await checkTopLevelHelp(s.run("--help"));
 
+
   // Command help
   var checkCommandHelp = async function (run) {
-    run.read("Usage: meteor create");
+    await run.read("Usage: meteor create");
     await run.match("create a new Meteor app");
     await run.match("Options:");
     await run.match(/--list\s*Show list/);
@@ -34,7 +37,7 @@ selftest.define("help", async function () {
 
   // List of subcommands
   var checkSubcommandList = async function (run) {
-    run.read("Usage: meteor admin <command>");
+    await run.read("Usage: meteor admin <command>");
     await run.match("Commands:");
     await run.match(/recommend-release\s*Recommend a previously published/);
     await run.expectExit(0);
