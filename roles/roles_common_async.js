@@ -529,7 +529,7 @@ Object.assign(Roles, {
    * @private
    * @static
    */
-  _addUserToRole: async function (userId, roleName, options) {
+  _addUserToRoleAsync: async function (userId, roleName, options) {
     Roles._checkRoleName(roleName);
     Roles._checkScopeName(options.scope);
 
