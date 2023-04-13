@@ -151,7 +151,7 @@ selftest.define("login on deploy", ['net'], async function () {
   run.write("testtest\n");
   run.waitSecs(commandTimeoutSecs);
   await run.match("Talking to Galaxy servers");
-
+  run.waitSecs(commandTimeoutSecs * 10);
   // "test" user can't actually deploy, so it will still fail.
   await run.expectExit(1);
 });
