@@ -477,7 +477,6 @@ var doInteractivePasswordLogin = async function (options) {
 
   var loginFailed = function () {
     if (! options.suppressErrorMessage) {
-      console.trace()
       Console.error("Login failed.");
     }
   };
@@ -509,7 +508,6 @@ var doInteractivePasswordLogin = async function (options) {
           clientInfo: await utils.getAgentInfo(),
         }
       );
-      console.log('doInteractivePasswordLogindoInteractivePasswordLogin', result);
     } catch (err) {
     }
     if (result && result.token) {
