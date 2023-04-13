@@ -66,7 +66,7 @@ selftest.define("login", ['net'], async function () {
   // XXX test login by email
 
   run = s.run("whoami");
-  run.read("test\n");
+  await run.read("test\n");
   await run.expectExit(0);
 
   run = s.run("logout");

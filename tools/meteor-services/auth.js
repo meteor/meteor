@@ -477,6 +477,7 @@ var doInteractivePasswordLogin = async function (options) {
 
   var loginFailed = function () {
     if (! options.suppressErrorMessage) {
+      console.trace()
       Console.error("Login failed.");
     }
   };
@@ -499,11 +500,16 @@ var doInteractivePasswordLogin = async function (options) {
     }
 
     try {
-      var result = await conn.callAsync('login', {
-        session: auth.getSessionId(config.getAccountsDomain()),
-        meteorAccountsLoginInfo: loginData,
-        clientInfo: await utils.getAgentInfo()
-      });
+      var result = await conn.callAsync(
+        "login",
+        { returnServerPromise: true },
+        {
+          session: auth.getSessionId(config.getAccountsDomain()),
+          meteorAccountsLoginInfo: loginData,
+          clientInfo: await utils.getAgentInfo(),
+        }
+      );
+      console.log('doInteractivePasswordLogindoInteractivePasswordLogin', result);
     } catch (err) {
     }
     if (result && result.token) {
