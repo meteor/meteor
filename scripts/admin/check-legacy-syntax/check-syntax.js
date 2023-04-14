@@ -33,6 +33,9 @@ const packages = {
   'browser-policy-framing': {},
   // 'constraint-solver': {},
   'crosswalk': {},
+  'context': {
+    serverFiles: ['context.js']
+  },
   'ddp': {},
   'disable-oplog': {},
   'dynamic-import': {
@@ -125,8 +128,10 @@ Object.keys(packages).forEach(packageName => {
     } catch (error) {
       console.log('');
       console.error(`Failed to parse ${file}: `, error.message);
-      let line = content.split('\n')[error.loc.line];
+      let line = content.split('\n')[error.loc.line - 1];
       console.log(line);
+      console.log('');
+
       process.exitCode = 1;
     }
   }

@@ -10,7 +10,7 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
-  api.use("ecmascript");
+  api.use("modules");
   api.addFiles("server.js", "server");
   api.mainModule("context.js");
 });
