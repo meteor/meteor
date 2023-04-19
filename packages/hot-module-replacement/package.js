@@ -16,7 +16,6 @@ Package.onUse(function(api) {
   // Provides polyfills needed by Meteor.absoluteUrl in legacy browsers
   api.use('ecmascript-runtime-client', { weak: true });
 
-  api.use('dev-error-overlay', { weak: true });
   api.imply('modules-runtime-hot@0.13.0');
   api.addFiles(['./hot-api.js', './client.js'], 'client');
   api.addFiles('./server.js', 'server');
