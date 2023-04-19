@@ -521,6 +521,7 @@ ASYNC_CURSOR_METHODS.forEach(method => {
   const asyncName = getAsyncMethodName(method);
   Cursor.prototype[asyncName] = function(...args) {
     try {
+      this[method].isCalledFromAsync = true;
       return Promise.resolve(this[method].apply(this, args));
     } catch (error) {
       return Promise.reject(error);
