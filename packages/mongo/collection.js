@@ -6,11 +6,19 @@ import {
 } from "meteor/minimongo/constants";
 
 import { normalizeProjection } from "./mongo_utils";
-export function warnUsingOldApi (methodName){
-  if (process.env.WARN_WHEN_USING_OLD_API) {
+export function warnUsingOldApi (
+    methodName,
+    collectionName,
+    isCalledFromAsync
+   ){
+  if (
+    process.env.WARN_WHEN_USING_OLD_API && // also ensures it is on the server
+    !isCalledFromAsync // must be true otherwise we should log
+  ) {
+   if (collectionName === undefined || collectionName.includes('oplog')) return
    console.warn(`
    
-   Calling method ${methodName} from old API on server.
+   Calling method ${collectionName}.${methodName} from old API on server.
    This method will be removed, from the server, in version 3.
    Trace is below:`)
    console.trace()
@@ -439,6 +447,15 @@ Object.assign(Mongo.Collection.prototype, {
    * @returns {Object}
    */
   findOne(...args) {
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "findOne",
+      this._name,
+      this.findOne.isCalledFromAsync
+    );
+    this.findOne.isCalledFromAsync = false;
+
     return this._collection.findOne(
       this._getFindSelector(args),
       this._getFindOptions(args)
@@ -546,6 +563,15 @@ Object.assign(Mongo.Collection.prototype, {
     if (!doc) {
       throw new Error('insert requires an argument');
     }
+
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "insert",
+      this._name,
+      this.insert.isCalledFromAsync
+    );
+    this.insert.isCalledFromAsync = false;
 
     // Make a shallow clone of the document, preserving its prototype.
     doc = Object.create(
@@ -661,6 +687,15 @@ Object.assign(Mongo.Collection.prototype, {
       }
     }
 
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "update",
+      this._name,
+      this.update.isCalledFromAsync
+    );
+    this.update.isCalledFromAsync = false;
+
     selector = Mongo.Collection._rewriteSelector(selector, {
       fallbackId: insertedId,
     });
@@ -712,6 +747,14 @@ Object.assign(Mongo.Collection.prototype, {
       return this._callMutatorMethod('remove', [selector], wrappedCallback);
     }
 
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "remove",
+      this._name,
+      this.remove.isCalledFromAsync
+    );
+    this.remove.isCalledFromAsync = false;
     // it's my collection.  descend into the collection object
     // and propagate any exception.
     try {
@@ -752,6 +795,15 @@ Object.assign(Mongo.Collection.prototype, {
       callback = options;
       options = {};
     }
+
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "upsert",
+      this._name,
+      this.upsert.isCalledFromAsync
+    );
+    this.upsert.isCalledFromAsync = false; // will not trigger warning in `update`
 
     return this.update(
       selector,
@@ -796,6 +848,14 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "createIndex",
+      self._name,
+      self.createIndex.isCalledFromAsync
+    );
+    self.createIndex.isCalledFromAsync = false;
     try {
       self._collection.createIndex(index, options);
     } catch (e) {
@@ -831,6 +891,15 @@ Object.assign(Mongo.Collection.prototype, {
       throw new Error(
         'Can only call _createCappedCollection on server collections'
       );
+    
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "_createCappedCollection",
+      self._name,
+      self._createCappedCollection.isCalledFromAsync
+    );
+    self._createCappedCollection.isCalledFromAsync = false;
     self._collection._createCappedCollection(byteSize, maxDocuments);
   },
 
@@ -929,6 +998,7 @@ ASYNC_COLLECTION_METHODS.forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
     try {
+    // TODO: Fibers remove this when we remove fibers.
       this[methodName].isCalledFromAsync = true;
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
@@ -936,10 +1006,4 @@ ASYNC_COLLECTION_METHODS.forEach(methodName => {
     }
   };
 
-  // This throws an infinite loop error
-  // not sure why
-  // Mongo.Collection.prototype[methodName] = function (...params) {
-  //   return this[methodName](...params);
-  // }
-  
 });
