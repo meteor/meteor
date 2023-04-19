@@ -93,7 +93,6 @@ Tracker.autorun(async function example1(computation) {
 ```
 > If you want to get computation in other way you can use `Tracker.currentComputation`
 
-## Tracker.withComputation
 
 {% apibox "Tracker.withComputation" %}
 
