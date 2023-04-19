@@ -112,6 +112,8 @@ Tracker.autorun(async function example1(computation) {
     await Tracker.withComputation(computation, () => Meteor.users.find({}).fetch()); // maintains the computation
 });
 ```
+The `react-meteor-data` package uses `Tracker.withComputation` to make the `useTracker` accept async callbacks.
+More can be seen [here](https://github.com/meteor/react-packages/tree/master/packages/react-meteor-data#maintaining-the-reactive-context)
 
 ### Using async callbacks in versions of Meteor prior to 2.10
 `Tracker.autorun` can accept an `async` callback function.  
