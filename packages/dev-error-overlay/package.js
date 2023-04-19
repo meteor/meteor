@@ -7,7 +7,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use([
-    'modules'
+    'ecmascript'
   ]);
   api.export('DevErrorOverlay', 'client');
   api.addFiles('client.js', 'modern');
