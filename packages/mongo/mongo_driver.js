@@ -509,7 +509,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   // TODO: Remove this when 3.0 is released.
   warnUsingOldApi(
     "update",
-    collectionName,
+    collection_name,
     self._update.isCalledFromAsync
   );
   self._update.isCalledFromAsync = false; 
