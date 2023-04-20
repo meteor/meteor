@@ -948,7 +948,6 @@ Cursor.prototype.count = function () {
   if (methodName !== 'count') {
     Cursor.prototype[methodName] = function (...args) {
       const cursor = setupSynchronousCursor(this, methodName);
-      cursor[methodName].isCalledFromAsync = true;
       return cursor[methodName](...args);
     };
   }
