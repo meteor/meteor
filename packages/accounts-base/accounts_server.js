@@ -26,8 +26,8 @@ export class AccountsServer extends AccountsCommon {
   // Note that this constructor is less likely to be instantiated multiple
   // times than the `AccountsClient` constructor, because a single server
   // can provide only one set of methods.
-  constructor(server) {
-    super();
+  constructor(server, options) {
+    super(options || {});
 
     this._server = server || Meteor.server;
     // Set up the server's methods, as if by calling Meteor.methods.
