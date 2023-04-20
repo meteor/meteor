@@ -62,6 +62,7 @@ build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
     - image: meteor/circleci:android-30-node-14
+  resource_class: large
   environment:
     # This multiplier scales the waitSecs for selftests.
     TIMEOUT_SCALE_FACTOR: 8
@@ -746,6 +747,7 @@ jobs:
     docker:
       # This Node version should match that in the meteor/docs CircleCI config.
       - image: meteor/circleci:android-28-node-12
+    resource_class: large
     environment:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs
     steps:
