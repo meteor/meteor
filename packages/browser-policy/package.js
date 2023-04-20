@@ -12,5 +12,5 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use(["tinytest", "browser-policy", "ejson"], "server");
-  api.addFiles("browser-policy-test.js", "server");
+  api.addFiles("browser-policy-tests.js", "server");
 });

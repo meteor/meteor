@@ -1,4 +1,10 @@
-const getAslStore = () => (Meteor.isServer && global?.asyncLocalStorage?.getStore()) || {};
+const getAslStore = () => {
+    if (Meteor.isServer && global.asyncLocalStorage) {
+        return global.asyncLocalStorage.getStore();
+    }
+
+    return {};
+};
 const getValueFromAslStore = key => getAslStore()[key];
 const updateAslStore = (key, value) => getAslStore()[key] = value;
 

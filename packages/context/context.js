@@ -1,15 +1,9 @@
-const {
-  Slot,
-  bind,
-  noContext,
-  setTimeout,
-  asyncFromGen,
-} = require("@wry/context");
+const context = require("@wry/context");
 
 Object.assign(exports, {
-  Slot,
-  bind,
-  noContext,
-  setTimeout,
-  asyncFromGen,
+  Slot: context.Slot,
+  bind: context.bind,
+  noContext: context.noContext,
+  setTimeout: context.setTimeout,
+  asyncFromGen: context.asyncFromGen,
 });
