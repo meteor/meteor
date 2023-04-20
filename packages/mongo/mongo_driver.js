@@ -1,16 +1,5 @@
 import { normalizeProjection } from "./mongo_utils";
 
-export function warnUsingOldApi (methodName){
-   if (process.env.WARN_WHEN_USING_OLD_API) {
-    console.warn(`
-    
-    Calling method ${methodName} from old API on server.
-    This method will be removed, from the server, in version 3.
-    Trace is below:`)
-    console.trace()
-  };
-}
-
 /**
  * Provide a synchronous Collection API using fibers, backed by
  * MongoDB.  This is only for use on the server, and mostly identical
@@ -255,12 +244,9 @@ MongoConnection.prototype._createCappedCollection = function (
     collectionName, byteSize, maxDocuments) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("createCappedCollection");
-
   if (! self.db)
     throw Error("_createCappedCollection called before Connection created?");
+
 
   var future = new Future();
   self.db.createCollection(
@@ -341,11 +327,6 @@ MongoConnection.prototype._insert = function (collection_name, document,
                                               callback) {
   var self = this;
 
-  
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("insert");
-
   var sendError = function (e) {
     if (callback)
       return callback(e);
@@ -410,9 +391,7 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
 MongoConnection.prototype._remove = function (collection_name, selector,
                                               callback) {
   var self = this;
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("remove");
+
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e._expectedByTest = true;
@@ -449,15 +428,14 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 MongoConnection.prototype._dropCollection = function (collectionName, cb) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("dropCollection");
 
   var write = self._maybeBeginWrite();
   var refresh = function () {
     Meteor.refresh({collection: collectionName, id: null,
                     dropCollection: true});
   };
+
+
   cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
 
   try {
@@ -491,9 +469,9 @@ MongoConnection.prototype._dropDatabase = function (cb) {
 MongoConnection.prototype._update = function (collection_name, selector, mod,
                                               options, callback) {
   var self = this;
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("update");
+
+
+
   if (! callback && options instanceof Function) {
     callback = options;
     options = null;
@@ -808,10 +786,8 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                                              options, callback) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("upsert");
 
+  
   if (typeof options === "function" && ! callback) {
     callback = options;
     options = {};
@@ -848,9 +824,6 @@ MongoConnection.prototype.findOneAsync = async function (collection_name, select
 MongoConnection.prototype.findOne = function (collection_name, selector,
                                               options) {
   var self = this;
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("findOne");
 
   return Future.fromPromise(self.findOneAsync(collection_name, selector, options)).wait();
 };
@@ -870,9 +843,7 @@ MongoConnection.prototype.createIndexAsync = function (collectionName, index,
 MongoConnection.prototype.createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("createIndex");
+  
 
   return Future.fromPromise(self.createIndexAsync(collectionName, index, options));
 };
@@ -894,10 +865,7 @@ MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("dropIndex");
-
+  
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
@@ -976,9 +944,6 @@ function setupSynchronousCursor(cursor, method) {
 
 
 Cursor.prototype.count = function () {
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi("count");
 
   const collection = this._mongo.rawCollection(this._cursorDescription.collectionName);
   return Promise.await(collection.countDocuments(
@@ -1005,6 +970,7 @@ Cursor.prototype.count = function () {
   const methodNameAsync = getAsyncMethodName(methodName);
   Cursor.prototype[methodNameAsync] = function (...args) {
     try {
+      this[methodName].isCalledFromAsync = true;
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);
