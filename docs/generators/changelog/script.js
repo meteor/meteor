@@ -45,9 +45,12 @@ const main = async () => {
     const filesStream = files
       .map(file => {
         console.log(`reading file: ${ file }`);
-        return fs.readFile(`./generators/changelog/versions/${ file }`, 'utf8');
+        return {
+          fileName: file, 
+          buf : fs.readFile(`./generators/changelog/versions/${ file }`, 'utf8')
+        };
       })
-      .map(async (buf, index) => {
+      .map(async ({buf, fileName}, index) => {
         // first file we don't do anything
         // Big file and does not follow the new standard
         if (index === 0) return buf;
@@ -63,7 +66,7 @@ const main = async () => {
         // package-name@get-version -> package-name@1.3.3
 
         const file =  content
-          .replace(/\[PR #(\d+)\]/g, (_, number) => `[PR #${ number }](https://github.com/meteor/meteor/pull/${ number })`)
+          .replace(/\[PR #(\d+)\]/g, (_, number) => `[PR](https://github.com/meteor/meteor/pull/${ number })`)
           .replace(/\[GH ([^\]]+)\]/g, (_, name) => {
             contribuitors.add(name);
             return `[${ name }](https://github.com/${ name })`
@@ -83,7 +86,14 @@ const main = async () => {
           .map(name => `- [@${ name }](https://github.com/${ name }).`)
           .join('\n');
 
-        return `${ file }\n\n#### Special thanks to\n\n${ contribuitorsList }\n\n`;
+        const doneFile = `${ file }\n\n#### Special thanks to\n\n${ contribuitorsList }\n\n`;
+
+        //SIDE EFFECTS
+        // so that this is not ran every time, we will update the last file.
+        // this is for the expensive part of the script
+        if (index === files.length - 2) await fs.writeFile(`./generators/changelog/versions/${fileName}`, doneFile);
+
+        return doneFile;
       })
       .reverse();
     console.log('Giving some touches to the files');
