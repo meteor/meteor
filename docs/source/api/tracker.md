@@ -86,21 +86,52 @@ a `Tracker.withComputation` call.
 
 ```javascript
 Tracker.autorun(async function example1(computation) {
-  let asyncData = 
-    await Tracker.withComputation(computation, () => asyncDataFunction());
-  let users = Meteor.users.find({}).fetch();
+  let asyncData = await asyncDataFunction();
+  let users =
+    await Tracker.withComputation(computation, () => Meteor.users.find({}).fetch());
 });
 ```
 > If you want to get computation in other way you can use `Tracker.currentComputation`
 
-#### Using async callbacks in versions of Meteor prior to 2.10
+
+{% apibox "Tracker.withComputation" %}
+
+In general, the rules to use `Tracker.withComputation` like this:
+1. `async` function *before the first* `await` if just like a sync one.
+2. `async` function *after the first* `await` looses the `Tracker.currentComputation`
+but it can be restored using `Tracker.withComputation`, *but only within the callback*.
+
+If you have for example:
+
+```javascript
+Tracker.autorun(async function (computation) {
+  let asyncData = await someAsyncCall();
+  let links = await LinksCollection.find({}).fetch(); // it will not trigger reruns.
+});
+```
+You can make this example reactive by wrapping the `Meteor.users.find` call in a `Tracker.withComputation` call:
+
+```javascript
+
+Tracker.autorun(async function (computation) {
+  let asyncData = await someAsyncCall();
+  let links =
+    await Tracker.withComputation(computation, () => Meteor.users.find({}).fetch()); // will trigger reruns.
+});
+
+
+```
+The `react-meteor-data` package uses `Tracker.withComputation` to make the `useTracker` accept async callbacks.
+More can be seen [here](https://github.com/meteor/react-packages/tree/master/packages/react-meteor-data#maintaining-the-reactive-context)
+
+### Using async callbacks in versions of Meteor prior to 2.10
 `Tracker.autorun` can accept an `async` callback function.  
 However, the async call back function will only be dependent on reactive functions called prior to any called functions that return a promise.
 
 Example 1 - autorun `example1()` **is not** dependent on reactive changes to the `Meteor.users` collection.  Because it is dependent on nothing reactive it will run only once:
 ```javascript
   Tracker.autorun(async function example1() {
-    let asyncData = await  asyncDataFunction();
+    let asyncData = await asyncDataFunction();
     let users = Meteor.users.find({}).fetch();
   });
 ```
@@ -111,7 +142,7 @@ Example 2 -  autorun `example2()` **is** dependent on reactive changes to the Me
 ```javascript
   Tracker.autorun(async function example2()  {
     let users = Meteor.users.find({}).fetch();
-    let asyncData = await  asyncDataFunction();
+    let asyncData = await asyncDataFunction();
   });
 ```
 {% apibox "Tracker.flush" %}
