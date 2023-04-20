@@ -104,12 +104,22 @@ but it can be restored using `Tracker.withComputation`, *but only within the cal
 If you have for example:
 
 ```javascript
-Tracker.autorun(async function example1(computation) {
-  let asyncData = await asyncDataFunction();
-  let users = await Meteor.users.find({}).fetch(); // looses the computation
-  let users2 = 
-    await Tracker.withComputation(computation, () => Meteor.users.find({}).fetch()); // maintains the computation
+Tracker.autorun(async function (computation) {
+  let asyncData = await someAsyncCall();
+  let links = await LinksCollection.find({}).fetch(); // it will not trigger reruns.
 });
+```
+You can make this example reactive by wrapping the `Meteor.users.find` call in a `Tracker.withComputation` call:
+
+```javascript
+
+Tracker.autorun(async function (computation) {
+  let asyncData = await someAsyncCall();
+  let links =
+    await Tracker.withComputation(computation, () => Meteor.users.find({}).fetch()); // will trigger reruns.
+});
+
+
 ```
 The `react-meteor-data` package uses `Tracker.withComputation` to make the `useTracker` accept async callbacks.
 More can be seen [here](https://github.com/meteor/react-packages/tree/master/packages/react-meteor-data#maintaining-the-reactive-context)
