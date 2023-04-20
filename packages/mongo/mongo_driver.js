@@ -1,5 +1,4 @@
 import { normalizeProjection } from "./mongo_utils";
-import { warnUsingOldApi } from "./collection";
 
 /**
  * Provide a synchronous Collection API using fibers, backed by
@@ -249,14 +248,6 @@ MongoConnection.prototype._createCappedCollection = function (
   if (! self.db)
     throw Error("_createCappedCollection called before Connection created?");
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi(
-    "createCappedCollection",
-    collectionName,
-    self._createCappedCollection.isCalledFromAsync
-  );
-  self._createCappedCollection.isCalledFromAsync = false; 
 
   var future = new Future();
   self.db.createCollection(
@@ -337,14 +328,6 @@ MongoConnection.prototype._insert = function (collection_name, document,
                                               callback) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi(
-    "insert",
-    collection_name,
-    self._insert.isCalledFromAsync
-  );
-  self._insert.isCalledFromAsync = false; 
   var sendError = function (e) {
     if (callback)
       return callback(e);
@@ -410,15 +393,6 @@ MongoConnection.prototype._remove = function (collection_name, selector,
                                               callback) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi(
-    "remove",
-    collection_name,
-    self._remove.isCalledFromAsync
-  );
-  self._remove.isCalledFromAsync = false; 
-
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e._expectedByTest = true;
@@ -461,14 +435,7 @@ MongoConnection.prototype._dropCollection = function (collectionName, cb) {
     Meteor.refresh({collection: collectionName, id: null,
                     dropCollection: true});
   };
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi(
-    "dropCollection",
-    collectionName,
-    self._dropCollection.isCalledFromAsync
-  );
-  self._dropCollection.isCalledFromAsync = false; 
+
 
   cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
 
@@ -505,14 +472,6 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   var self = this;
 
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi(
-    "update",
-    collection_name,
-    self._update.isCalledFromAsync
-  );
-  self._update.isCalledFromAsync = false; 
 
   if (! callback && options instanceof Function) {
     callback = options;
@@ -828,14 +787,7 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                                              options, callback) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi(
-    "upsert",
-    collectionName,
-    self.upsert.isCalledFromAsync
-  );
-  self.upsert.isCalledFromAsync = false; 
+
   
   if (typeof options === "function" && ! callback) {
     callback = options;
@@ -865,14 +817,7 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
   if (arguments.length === 1)
     selector = {};
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi(
-    "findOne",
-    collection_name,
-    self.findOne.isCalledFromAsync
-  );
-  self.findOne.isCalledFromAsync = false; 
+
 
   options = options || {};
   options.limit = 1;
@@ -885,14 +830,6 @@ MongoConnection.prototype.createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi(
-    "createIndex",
-    collectionName,
-    self.createIndex.isCalledFromAsync
-  );
-  self.createIndex.isCalledFromAsync = false; 
 
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
@@ -919,14 +856,6 @@ MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 
-  // [FIBERS]
-  // TODO: Remove this when 3.0 is released.
-  warnUsingOldApi(
-    "dropIndex",
-    collectionName,
-    self._dropIndex.isCalledFromAsync
-  );
-  self._dropIndex.isCalledFromAsync = false; 
   
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
