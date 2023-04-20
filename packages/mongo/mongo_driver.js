@@ -810,17 +810,32 @@ MongoConnection.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-MongoConnection.prototype.findOne = function (collection_name, selector,
-                                              options) {
+MongoConnection.prototype.findOneAsync = async function (collection_name, selector,
+                                               options) {
   var self = this;
   if (arguments.length === 1)
     selector = {};
 
-
-
   options = options || {};
   options.limit = 1;
-  return self.find(collection_name, selector, options).fetch()[0];
+  return (await self.find(collection_name, selector, options).fetchAsync())[0];
+};
+
+MongoConnection.prototype.findOne = function (collection_name, selector,
+                                              options) {
+  var self = this;
+
+  return Future.fromPromise(self.findOneAsync(collection_name, selector, options)).wait();
+};
+
+MongoConnection.prototype.createIndexAsync = function (collectionName, index,
+                                                  options) {
+  var self = this;
+
+  // We expect this function to be called at startup, not from within a method,
+  // so we don't interact with the write fence.
+  var collection = self.rawCollection(collectionName);
+  return collection.createIndex(index, options);
 };
 
 // We'll actually design an index API later. For now, we just pass through to
@@ -828,14 +843,9 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
 MongoConnection.prototype.createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
+  
 
-
-  // We expect this function to be called at startup, not from within a method,
-  // so we don't interact with the write fence.
-  var collection = self.rawCollection(collectionName);
-  var future = new Future;
-  var indexName = collection.createIndex(index, options, future.resolver());
-  future.wait();
+  return Future.fromPromise(self.createIndexAsync(collectionName, index, options));
 };
 
 MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
@@ -1175,6 +1185,7 @@ _.extend(SynchronousCursor.prototype, {
 
   forEach: function (callback, thisArg) {
     var self = this;
+    const wrappedFn = Meteor.wrapFn(callback);
 
     // Get back to the beginning.
     self._rewind();
@@ -1186,16 +1197,17 @@ _.extend(SynchronousCursor.prototype, {
     while (true) {
       var doc = self._nextObject();
       if (!doc) return;
-      callback.call(thisArg, doc, index++, self._selfForIteration);
+      wrappedFn.call(thisArg, doc, index++, self._selfForIteration);
     }
   },
 
   // XXX Allow overlapping callback executions if callback yields.
   map: function (callback, thisArg) {
     var self = this;
+    const wrappedFn = Meteor.wrapFn(callback);
     var res = [];
     self.forEach(function (doc, index) {
-      res.push(callback.call(thisArg, doc, index, self._selfForIteration));
+      res.push(wrappedFn.call(thisArg, doc, index, self._selfForIteration));
     });
     return res;
   },
