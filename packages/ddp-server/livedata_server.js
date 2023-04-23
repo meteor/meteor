@@ -1764,16 +1764,16 @@ Object.assign(Server.prototype, {
 
   _removeSession: function (session, callback = () => {}) {
     var self = this;
-    const f = () => {
+    const sessionRemoveFunction = () => {
       self.sessions.delete(session.id);
       callback();
     };
     if (session._expectingDisconnect) {
-      return f();
+      return sessionRemoveFunction();
     }
     session.messageQueue = [];
-    session._pendingRemoveFunction = f;
-    session._removeTimeoutHandle = Meteor.setTimeout(f, self.options.disconnectGracePeriod);
+    session._pendingRemoveFunction = sessionRemoveFunction;
+    session._removeTimeoutHandle = Meteor.setTimeout(sessionRemoveFunction, self.options.disconnectGracePeriod);
   },
 
   /**
