@@ -106,20 +106,19 @@ If you have for example:
 ```javascript
 Tracker.autorun(async function (computation) {
   let asyncData = await someAsyncCall();
-  let links = await LinksCollection.find({}).fetch(); // it will not trigger reruns.
+  let links = await LinksCollection.find({}).fetch(); 
+  // code above will not trigger reruns.
 });
 ```
 You can make this example reactive by wrapping the `Meteor.users.find` call in a `Tracker.withComputation` call:
 
 ```javascript
-
 Tracker.autorun(async function (computation) {
   let asyncData = await someAsyncCall();
-  let links =
-    await Tracker.withComputation(computation, () => Meteor.users.find({}).fetch()); // will trigger reruns.
+  let users =
+    await Tracker.withComputation(computation, () => Meteor.users.find({}).fetch());
+  // code above will trigger reruns.
 });
-
-
 ```
 The `react-meteor-data` package uses `Tracker.withComputation` to make the `useTracker` accept async callbacks.
 More can be seen [here](https://github.com/meteor/react-packages/tree/master/packages/react-meteor-data#maintaining-the-reactive-context)
