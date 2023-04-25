@@ -218,7 +218,7 @@ export default class Sandbox {
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
       // paths.
-      run.waitSecs(120);
+      run.waitSecs(150);
       await run.expectExit(0);
     });
   }

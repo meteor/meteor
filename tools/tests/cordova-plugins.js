@@ -88,7 +88,7 @@ var checkUserPlugins = async function(sand, plugins) {
   var i = 0;
 
   for (const plugin of plugins) {
-    var split = plugins.split('@');
+    var split = plugin.split('@');
     if (split.length > 1) {
       await selftest.expectEqual(depend[split[0]], split[1]);
     } else {
