@@ -16,9 +16,9 @@ if (process.env.RUN_ONCE_OUTCOME === "mongo") {
   var test = new Mongo.Collection('test');
   var triesLeft = 10;
 
-  function tryInsert() {
+  async function tryInsert() {
     try {
-      test.insert({ value: 86 });
+      await test.insertAsync({ value: 86 });
     } catch (e) {
       if (--triesLeft <= 0) {
         throw e;
@@ -29,7 +29,7 @@ if (process.env.RUN_ONCE_OUTCOME === "mongo") {
       return;
     }
 
-    process.exit(test.findOne().value);
+    process.exit((await test.findOneAsync()).value);
   }
 
   Meteor.startup(tryInsert);
