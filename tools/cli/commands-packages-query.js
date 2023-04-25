@@ -835,16 +835,24 @@ Object.assign(PackageQuery.prototype, {
     // Sometimes, there is a server package and a local package with the same
     // version. In this case, we prefer the local package. Explain our choice to
     // the user.
-    if (data.local &&
-        catalog.official.getVersion(data.name, data.version)) {
-      Console.info();
-      Console.info(
-        "This package version is built locally from source.",
-        "The same version of this package also exists on the package server.",
-        "To view its metadata, run",
-        Console.command("'meteor show " + data.name + "@" + data.version + "'"),
-        "from outside the project.");
-    }
+    // This is a side effect, it is not needed to be awaited.
+    (async function () {
+      if (
+        data.local &&
+        (await catalog.official.getVersion(data.name, data.version))
+      ) {
+        Console.info();
+        Console.info(
+          "This package version is built locally from source.",
+          "The same version of this package also exists on the package server.",
+          "To view its metadata, run",
+          Console.command(
+            "'meteor show " + data.name + "@" + data.version + "'"
+          ),
+          "from outside the project."
+        );
+      }
+    })();
   },
   // Returns a user-friendly object from this PackageQuery to the caller.  Takes
   // in a data object with the same keys as _displayVersion.
