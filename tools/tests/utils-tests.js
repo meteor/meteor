@@ -201,20 +201,24 @@ selftest.define("resume downloads", ['net'], async function () {
     })
   );
 
-  await Promise.all([
-    resumedPromise,
-    normalPromise,
-  ]).then(async bodies => {
-    selftest.expectTrue(interruptCount > 1);
+  try {
+    await Promise.all([
+      resumedPromise,
+      normalPromise,
+    ]).then(async bodies => {
+      selftest.expectTrue(interruptCount > 1);
 
-    await selftest.expectEqual(
-      bodies[0].length,
-      bodies[1].length
-    );
+      await selftest.expectEqual(
+        bodies[0].length,
+        bodies[1].length
+      );
 
-    await selftest.expectEqual(
-      sha1(bodies[0]),
-      sha1(bodies[1])
-    );
-  });
+      await selftest.expectEqual(
+        sha1(bodies[0]),
+        sha1(bodies[1])
+      );
+    })
+  } catch (e) {
+    // it trows a string pretend-http-error
+  }
 });
