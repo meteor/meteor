@@ -4,7 +4,7 @@
 
 * MongoDB Server 6.x Support
 * Embedded Mongo now uses MongoDB 6.0.3
-* Some pr [GH someone] [PR #number] // this will become -> [StorytellerCZ](https://github.com/someone) [PR](https://github.com/meteor/meteor/pull/number)
+* Some pr [GH someone] [PR #number] // this will become -> [someone](https://github.com/someone) [PR](https://github.com/meteor/meteor/pull/number)
 #### Breaking Changes
 
 N/A
