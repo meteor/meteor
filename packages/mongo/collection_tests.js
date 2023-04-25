@@ -414,3 +414,31 @@ Tinytest.add('collection - count should release the session',
     test.equal(preCount, postCount);
   }
 );
+
+Tinytest.addAsync('collection - should not block on cursor mismatch (#12516)',
+  async function(test) {
+    if (!Meteor.isServer) {
+      return;
+    }
+
+    // Setup
+    const collection = new Mongo.Collection('test' + test.id);
+    Array.from({ length: 5 }).forEach((_, i) => {
+      collection.insert({ name: "Test-" + i });
+    });
+
+    // Test
+    const cursor = collection.find({ name: undefined });
+
+    let subscription;
+    const promise = new Promise((resolve) => {
+      setTimeout(() => {
+        test.ok(!!subscription);
+        resolve();
+      }, 500);
+    });
+    subscription = cursor.observe({});
+    subscription.stop();
+    await promise;
+  }
+);
