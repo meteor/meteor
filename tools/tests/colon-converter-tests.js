@@ -94,7 +94,7 @@ if (process.platform !== "win32") {
 
     // Next, unpack it using our tropohouse code
     var tarball = files.readFile(tarballPath);
-    var targetDirectory = tropohouse._extractAndConvert(tarball);
+    var targetDirectory = await tropohouse._extractAndConvert(tarball);
 
     // Now, compare all of the filepaths and file contents
     var startingTreeHash =  files.treeHash(extractPath);
