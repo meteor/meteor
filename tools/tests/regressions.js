@@ -19,7 +19,8 @@ selftest.define('regressions - web.browser.legacy', async function() {
       '--once',
       '--full-app',
       '--driver-package',
-      'meteortesting:mocha',
+      /// TODO: [Fibers] => turn this back to meteortesthing:mocha when 3.0.0 is released
+      "grubba:mocha", /// meteortesting:mocha"
       '--exclude-archs',
       'web.browser'
     );
