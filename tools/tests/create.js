@@ -37,14 +37,15 @@ selftest.define("create main", async function () {
   await run.match("proxy.");
   // Do not print out the changes to the versions file!
   run.waitSecs(5);
-  run.read("=> Started MongoDB", false);
+  await run.read("=> Started MongoDB", false);
+  run.waitSecs(30);
   await run.match("your app");
   await run.match("running at");
   await run.match("localhost");
   await run.stop();
 
   run = s.run("create", "--list");
-  run.read('Available');
+  await run.read('Available');
   await run.match('leaderboard');
   await run.expectExit(0);
 });

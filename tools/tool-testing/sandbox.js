@@ -583,6 +583,7 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "modern-browsers",
   "ecmascript",
   "typescript",
+  "facts-base",
 ];
 
 async function newSelfTestCatalog() {
