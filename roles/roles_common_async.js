@@ -41,6 +41,19 @@ if (typeof Roles === "undefined") {
 
 var getGroupsForUserDeprecationWarning = false;
 
+/**
+ * Helper, resolves async some
+ * @param {*} arr
+ * @param {*} predicate
+ * @returns
+ */
+const asyncSome = async (arr, predicate) => {
+  for (let e of arr) {
+    if (await predicate(e)) return true;
+  }
+  return false;
+};
+
 Object.assign(Roles, {
   /**
    * Used as a global group (now scope) name. Not used anymore.
@@ -792,23 +805,16 @@ Object.assign(Roles, {
       selector.scope = { $in: [options.scope, null] };
     }
 
-    // Convert to Promises first, then check via some
-    const rolesPromises = roles.map(
-      (roleName) =>
-        new Promise(async (res, rej) => {
-          selector["inheritedRoles._id"] = roleName;
+    const res = await asyncSome(roles, async (roleName) => {
+      selector["inheritedRoles._id"] = roleName;
+      const out =
+        (await Meteor.roleAssignment
+          .find(selector, { limit: 1 })
+          .countAsync()) > 0;
+      return out;
+    });
 
-          res(
-            (await Meteor.roleAssignment
-              .find(selector, { limit: 1 })
-              .countAsync()) > 0
-          );
-        })
-    );
-
-    const result = await Promise.all(rolesPromises);
-
-    return result.some((r) => r);
+    return res;
   },
 
   /**
