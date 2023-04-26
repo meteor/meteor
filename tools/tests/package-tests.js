@@ -550,25 +550,25 @@ var testShowPackage = selftest.markStack(async function (
     : fullPackageName;
   await run.match("Package: " + packageName + "\n");
   if (options.homepage) {
-    run.read("Homepage: " + options.homepage + "\n");
+    await run.read("Homepage: " + options.homepage + "\n");
   }
   if (options.maintainers) {
-    run.read("Maintainers: " + options.maintainers + "\n");
+    await run.read("Maintainers: " + options.maintainers + "\n");
   }
   if (options.git) {
-    run.read("Git: " + options.git + "\n");
+    await run.read("Git: " + options.git + "\n");
   }
   if (options.exports) {
-    run.read("Exports: " + options.exports + "\n");
+    await run.read("Exports: " + options.exports + "\n");
   }
   if (options.implies) {
-    run.read("Implies: " + options.implies + "\n");
+    await run.read("Implies: " + options.implies + "\n");
   }
-  run.read("\n");
+  await run.read("\n");
   if (_.has(options, "description")) {
-    run.read(options.description + "\n");
+    await run.read(options.description + "\n");
   } else if (_.has(options, "summary")) {
-    run.read(options.summary + "\n");
+    await run.read(options.summary + "\n");
   }
   if (options.versions) {
     if (options.all) {
@@ -589,10 +589,10 @@ var testShowPackage = selftest.markStack(async function (
         }
       }
     }
-    run.read("\n");
+    await run.read("\n");
   }
   if (options.addendum) {
-    run.read(options.addendum);
+    await run.read(options.addendum);
   }
   await run.expectExit(0);
 });
@@ -622,26 +622,26 @@ var testShowPackageVersion = selftest.markStack(async function (s, options) {
     await run.match("Directory: " + options.directory + "\n");
   }
   if (options.exports) {
-    run.read("Exports: " + options.exports + "\n");
+    await run.read("Exports: " + options.exports + "\n");
   }
   if (options.implies) {
-    run.read("Implies: " + options.implies + "\n");
+    await run.read("Implies: " + options.implies + "\n");
   }
   if (options.git) {
     await run.match("Git: " + options.git + "\n");
   }
   if (_.has(options, "description")) {
-    run.read("\n");
-    run.read(options.description + "\n");
+    await run.read("\n");
+    await run.read(options.description + "\n");
   } else if (_.has(options, "summary")) {
-    run.read("\n");
-    run.read(options.summary + "\n");
+    await run.read("\n");
+    await run.read(options.summary + "\n");
   }
   if (options.dependencies) {
-    run.read("\n");
-    run.read("Depends on:\n");
+    await run.read("\n");
+    await run.read("Depends on:\n");
     // Use 'read' to ensure that these are the only dependencies listed.
-    _.each(options.dependencies, function (dep) {
+    _.each(options.dependencies, async function (dep) {
       var depStr = dep.name;
       if (dep.constraint) {
         depStr += "@" + dep.constraint;
@@ -649,7 +649,7 @@ var testShowPackageVersion = selftest.markStack(async function (s, options) {
       if (dep.weak) {
         depStr += " (weak dependency)";
       }
-      run.read("  " + depStr + "\n");
+      await run.read("  " + depStr + "\n");
     });
   }
   if (options.publishedBy) {
@@ -663,7 +663,7 @@ var testShowPackageVersion = selftest.markStack(async function (s, options) {
     );
   }
   if (options.addendum) {
-    run.read("\n" + options.addendum + "\n");
+    await run.read("\n" + options.addendum + "\n");
   }
   // Make sure that we exit without printing anything else.
   await run.expectEnd(0);

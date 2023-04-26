@@ -161,9 +161,7 @@ selftest.define(
     await run.expectExit(0);
     s.cd("myapp");
     run = s.run("--version");
-    console.log("broke here3?");
-
-    run.read("Meteor v2\n");
+    await run.read("Meteor v2\n");
     await run.expectExit(0);
 
     // Check the contents of the versions file.
@@ -178,7 +176,7 @@ selftest.define(
     // Run with --release, do not change versions file.
     run = s.run("list", "--release", "v1");
     await run.expectExit(0);
-    versions = s.read(".meteor/versions");
+    versions = await s.read(".meteor/versions");
     if (versions) {
       selftest.fail("Versions file written with --release.");
     }
@@ -188,7 +186,7 @@ selftest.define(
     await run.expectExit(0);
 
     // version file should exist.
-    versions = s.read(".meteor/versions");
+    versions = await s.read(".meteor/versions");
     if (!versions) {
       selftest.fail("Versions file NOT written after update");
     }

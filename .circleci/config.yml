@@ -748,6 +748,8 @@ jobs:
   # next updated, which generally occurs during major Meteor version releases
   # (for example, 1.4 to 1.5, 1.5 to 1.6).
   Docs:
+    <<: *can_disable_fibers
+    <<: *build_machine_environment
     docker:
       # This Node version should match that in the meteor/docs CircleCI config.
       - image: meteor/circleci:android-28-node-12
