@@ -4,6 +4,8 @@
   "description": "update semver in meteor js",
   "main": "index.js",
   "scripts": {
+    "bump-experimental-rc" : "node index.js @auto.rc",
+    "bump-experimental-beta" : "node index.js @auto.beta",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "grubba27",
