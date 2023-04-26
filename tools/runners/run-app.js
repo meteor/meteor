@@ -446,8 +446,10 @@ Object.assign(AppRunner.prototype, {
 
   _cleanUpPromises: function () {
     if (this._promiseResolvers) {
-      _.each(this._promiseResolvers, (resolve) => {
-        resolve && this._promiseResolvers[resolve]?.emit(resolve, false);
+      _.each(this._promiseResolvers, (ee,name) => {
+        if (ee) {
+          ee.emit(name, null);
+        }
       });
       this._promiseResolvers = null;
     }
@@ -764,7 +766,7 @@ Object.assign(AppRunner.prototype, {
     if (options.firstRun && self._beforeStartPromise) {
         var [stopped] = await self._beforeStartPromise;
         if (stopped) {
-          return stopped
+          return true;
         }
     }
     await appProcess.start();
