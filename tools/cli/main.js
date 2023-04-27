@@ -1037,7 +1037,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         // ATTEMPT 2: legacy release, on disk. (And it's a "real" release, not a
         // "red pill" release which has the same name as a modern release!)
         if (warehouse.realReleaseExistsInWarehouse(releaseName)) {
-          var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
+          var manifest = await warehouse.ensureReleaseExistsAndReturnManifest(
             releaseName);
           await oldSpringboard(manifest.tools);  // doesn't return
         }
@@ -1062,7 +1062,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         // ATTEMPT 4: legacy release, loading from warehouse server.
         manifest = null;
         try {
-          manifest = warehouse.ensureReleaseExistsAndReturnManifest(
+          manifest = await warehouse.ensureReleaseExistsAndReturnManifest(
             releaseName);
         } catch (e) {
           // Note: this is WAREHOUSE's NoSuchReleaseError, not RELEASE's
