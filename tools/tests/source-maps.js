@@ -35,7 +35,7 @@ selftest.define("source maps from an app", ['checkout', 'custom-warehouse'], asy
 
   // If run not in an app dir, runs the latest version ...
   var run = s.run("--version");
-  run.read('Meteor v1\n');
+  await run.read('Meteor v1\n');
   await run.expectEnd();
   await run.expectExit(0);
 
