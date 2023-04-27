@@ -23,8 +23,10 @@
     "underscore": "1.13.1"
   },
   "scripts": {
+    "strip-tla": "node ./jsdoc/strip-tla.js",
     "generate-history": "node ./generators/changelog/script.js",
-    "build": "npm run generate-history && jsdoc/jsdoc.sh && chexo meteor-hexo-config -- generate",
+    "codegen": "npm run strip-tla && npm run generate-history",
+    "build": "npm run codegen && jsdoc/jsdoc.sh && chexo meteor-hexo-config -- generate",
     "clean": "hexo clean; rm data/data.js data/names.json",
     "test": "npm run clean; npm run build",
     "predeploy": "npm run build",
