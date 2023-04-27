@@ -2,14 +2,28 @@
 let nextSlot = 0;
 let callAsyncMethodRunning = false;
 
-const CURRENT_VALUE_KEY_NAME = 'currentValue';
-const SLOT_CALL_KEY = 'slotCall';
+const CURRENT_VALUE_KEY_NAME = "currentValue";
+const SLOT_CALL_KEY = "slotCall";
 
+/**
+ * @memberOf Meteor
+ * @summary Constructor for EnvironmentVariable
+ * @locus Anywhere
+ * @class
+ */
 class EnvironmentVariableAsync {
   constructor() {
     this.slot = nextSlot++;
   }
 
+  /**
+   * @memberOf Meteor.EnvironmentVariable
+   * @summary Getter for the current value of the variable, or `undefined` if
+   * called from outside a `withValue` callback.
+   * @method get
+   * @locus Anywhere
+   * @returns {any} The current value of the variable, or `undefined` if no
+   */
   get() {
     if (this.slot !== Meteor._getValueFromAslStore(SLOT_CALL_KEY)) {
       return;
@@ -21,7 +35,16 @@ class EnvironmentVariableAsync {
     return this.get();
   }
 
-  async withValue(value, func, options = {}) {
+  /**
+   * @summary takes a value and a function, calls the function with the value set for the duration of the call
+   * @memberof Meteor.EnvironmentVariable
+   * @method withValue
+   * @param {any} value The value to set for the duration of the function call
+   * @param {Function} func The function to call with the new value of the
+   * @param {Object} [options] Optional additional options
+   * @returns {Promise<any>} The return value of the function
+   */
+  withValue(value, func, options = {}) {
     return Meteor._runAsync(
       async () => {
         let ret;
@@ -44,12 +67,12 @@ class EnvironmentVariableAsync {
 
   _set(context) {
     const _meteor_dynamics =
-      Meteor._getValueFromAslStore('_meteor_dynamics') || [];
+      Meteor._getValueFromAslStore("_meteor_dynamics") || [];
     _meteor_dynamics[this.slot] = context;
   }
 
   _setNewContextAndGetCurrent(value) {
-    let _meteor_dynamics = Meteor._getValueFromAslStore('_meteor_dynamics');
+    let _meteor_dynamics = Meteor._getValueFromAslStore("_meteor_dynamics");
     if (!_meteor_dynamics) {
       _meteor_dynamics = [];
     }
@@ -114,21 +137,21 @@ Meteor.bindEnvironment = (func, onException, _this) => {
   const dynamics = Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
   const currentSlot = Meteor._getValueFromAslStore(SLOT_CALL_KEY);
 
-  if (!onException || typeof onException === 'string') {
-    var description = onException || 'callback of async function';
-    onException = function(error) {
-      Meteor._debug('Exception in ' + description + ':', error);
+  if (!onException || typeof onException === "string") {
+    var description = onException || "callback of async function";
+    onException = function (error) {
+      Meteor._debug("Exception in " + description + ":", error);
     };
-  } else if (typeof onException !== 'function') {
+  } else if (typeof onException !== "function") {
     throw new Error(
-      'onException argument must be a function, string or undefined for Meteor.bindEnvironment().'
+      "onException argument must be a function, string or undefined for Meteor.bindEnvironment()."
     );
   }
 
-  return function(/* arguments */) {
+  return function (/* arguments */) {
     var args = Array.prototype.slice.call(arguments);
 
-    var runWithEnvironment = function() {
+    var runWithEnvironment = function () {
       return Meteor._runAsync(
         async () => {
           let ret;
