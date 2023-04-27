@@ -759,6 +759,10 @@ MongoConnection.prototype.createIndexAsync = async function (collectionName, ind
   await collection.createIndex(index, options);
 };
 
+// just to be consistent with the other methods
+MongoConnection.prototype.createIndex =
+  MongoConnection.prototype.createIndexAsync;
+
 MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
   args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
   const collection = this.rawCollection(collectionName);

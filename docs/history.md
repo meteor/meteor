@@ -16,7 +16,8 @@
 
 #### Breaking Changes
 
-* `webapp`:
+- `webapp`:
+
   - These methods are now async:
     - `WebAppInternals.reloadClientPrograms()`
     - `WebAppInternals.pauseClient()`
@@ -27,10 +28,12 @@
     - `WebAppInternals.setBundledJsCssUrlRewriteHook()`
     - `WebAppInternals.setBundledJsCssPrefix()`
 
-* `email`:
+- `email`:
+
   - `Email.send` is no longer available. Use `Email.sendAsync` instead.
 
-* `accounts-2fa`:
+- `accounts-2fa`:
+
   - Some methods are now async. See below:
   - `Accounts._is2faEnabledForUser`
   - `(Meteor Method) - generate2faActivationQrCode`
@@ -38,12 +41,13 @@
   - `(Meteor Method) - disableUser2fa`
   - `(Meteor Method) - has2faEnabled`
 
-* `accounts-base`:
-  **TODO**
+- `accounts-base`:
+
   - `methods.removeOtherTokens` is now async
   - `Accounts.destroyToken` is now async
 
-* `accounts-password`:
+- `accounts-password`:
+
   - Some server methods are now async:
   - `Accounts.sendResetPasswordEmail`
   - `Accounts.sendEnrollmentEmail`
@@ -62,16 +66,20 @@
   - `Accounts.findUserByEmail`
   - `Accounts.findUserByUsername`
 
-* `accounts-passwordless`:
+- `accounts-passwordless`:
+
   - `Accounts.sendLoginTokenEmail` is now async
 
-* `boilerplate-generator`:
+- `boilerplate-generator`:
+
   - `toHTML` is no longer available (it was already deprecated). Use `toHTMLStream` instead.
 
-*  `ddp`:
-- Added method `Meteor.isAsyncCall` that can be used to check if the current method call is async or not.
+- `ddp`:
 
-* `oauth`:
+  - Added method `Meteor.isAsyncCall` that can be used to check if the current method call is async or not.
+
+- `oauth`:
+
   - `_endOfPopupResponseTemplate` and `_endOfRedirectResponseTemplate` are no longer a property but now a function that returns a promise of the same value as before
   - the following server methods are now async:
   - `OAuth._renderOauthResults`
@@ -82,59 +90,84 @@
   - `ensureConfigured`
   - `_cleanStaleResults`
 
-* `oauth1`:
+- `oauth1`:
+
   - the following server methods are now async:
   - `OAuth._storeRequestToken`
   - `OAuth._retrieveRequestToken`
 
-* `oauth2`:
+- `oauth2`:
+
   - `OAuth._requestHandlers['2']` is now async.
 
-* `minifier-css`:
+- `minifier-css`:
+
   - `minifyCss` is now async.
 
-* `webapp`:
+- `webapp`:
   - `WebAppInternals.getBoilerplate` is now async.
   - Changed engine from connect to express and changed api naming to match express. See below:
   - `WebApp.connectHandlers.use(middleware)` is now `WebApp.expressHandlers.use(middleware)`
   - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawExpressHandlers.use(middleware)`
   - `WebApp.connectApp` is now `WebApp.expressApp`
 
-####  Internal API changes
+* `minimongo@1.9.2`:
+    TODO: add this aswell to the minimongo docs
+    - `cursor.observe` now returns `isReady` and `isReadyPromise` wich indicates
+    if the cursor is ready and if the callbacks are have been called.
+    If you only use it in the `Client` or as a `LocalCollection` things have not
+    changed.
 
 
-#### Migration Steps
+#### New Public API
 
-You can follow in [here](https://guide.meteor.com/3.0-migration.html).
+- `accounts-base`: (2.9+)
+  - `Meteor.userAsync()`
 
-#### Meteor Version Release
+- `callback-hook`:forEachAsync
+  - `forEachAsync`
 
-#### Special thanks to
+- `ddp-server`: (2.8+)
+  - `Meteor.callAsync()`
 
-For making this great framework even better!ifier-css`:
-  - `minifyCss` is now async.
+- `minifier-css`: (2.9+)
+  - `CssTools.minifyCssAsync()`
 
-* `webapp`:
-  - `WebAppInternals.getBoilerplate` is now async.
-  - Changed engine from connect to express and changed api naming to match express. See below:
-  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.expressHandlers.use(middleware)`
-  - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawExpressHandlers.use(middleware)`
-  - `WebApp.connectApp` is now `WebApp.expressApp`
+- `mongo`:
 
-####  Internal API changes
+  - `Mongo.Collection`: (2.8+)
+    - `createCappedCollectionAsync`
+    - `createIndexAsync`
+    - `dropCollectionAsync`
+    - `dropIndexAsync`
+    - `findOneAsync`
+    - `insertAsync`
+    - `removeAsync`
+    - `updateAsync`
+    - `upsertAsync` 
+  - `Collection.Cursor`: (2.8+)
+    - `countAsync` 
+    - `fetchAsync`
+    - `forEachAsync` 
+    - `mapAsync`
+    - `[Symbol.asyncIterator]` so this code should work:
+      ```js
+      for await (const document of collection.find(query, options)) /* ... */
+      ```
 
+#### Internal API changes
 
-#### Migration Steps
+`accounts-base`:
 
-You can follow in [here](https://guide.meteor.com/3.0-migration.html).
+- `_attemptLogin`
+- `_loginMethod`
+- `_runLoginHandlers`
 
-#### Meteor Version Release
+#### New Internal API
 
-#### Special thanks to
+`accounts-password`:
 
-For making this great framework even better!
-
-
+- `Accounts._checkPasswordAsync`
 ## v2.11.0, 2023-03-02
 
 ### Highlights

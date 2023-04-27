@@ -61,6 +61,11 @@ exports.EnvironmentVariable = function (defaultValue) {
 };
 
 Object.assign(exports.EnvironmentVariable.prototype, {
+  /**
+   * @memberof Meteor.EnvironmentVariable
+   * @method get
+   * @returns {any} The current value of the variable, or its default value if
+   */
   get() {
     const self = this;
     const currentValue = getValueFromAslStore("_meteor_dynamics");
@@ -90,6 +95,13 @@ Object.assign(exports.EnvironmentVariable.prototype, {
     };
   },
 
+  /**
+   * @memberof Meteor.EnvironmentVariable
+   * @method withValue
+   * @param {any} value The value to set for the duration of the function call
+   * @param {Function} func The function to call with the new value of the
+   * @returns {any} The return value of the function
+   */
   async withValue(value, func) {
     const reset = this.set(value);
     try {
