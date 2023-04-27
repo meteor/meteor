@@ -741,12 +741,8 @@ jobs:
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  # Test the JSDoc declarations which live within this codebase against the
-  # Meteor Docs (https://github.com/meteor/docs) repository, where they'll
-  # eventually be consumed.  This test aims to provide an early warning of
-  # potentially breaking changes, so they aren't discovered when the docs are
-  # next updated, which generally occurs during major Meteor version releases
-  # (for example, 1.4 to 1.5, 1.5 to 1.6).
+  # Test the JSDoc declarations which live within this codebase.
+  # Now the docs live in this repo, we can test them here, every PR is tested.
   Docs:
     docker:
       # This Node version should match that in the meteor/docs CircleCI config.
@@ -757,27 +753,14 @@ jobs:
     <<: *build_machine_environment
     steps:
       - run:
-          name: Cloning "meteor/docs" Repository's "update-to-meteor-1.9" branch
+          name: Cloning "meteor" Repository's current branch
           command: |
-            git clone --branch update-to-meteor-1.9 https://github.com/meteor/docs.git ${CHECKOUT_METEOR_DOCS}
-      # The "docs" repository normally brings in the Meteor code as a Git
-      # submodule checked out into the "code" directory.  As the goal of this
-      # test is to run it against the _current_ repository's code, we'll move
-      # the "code" directory out of the way and move the checkout (of meteor)
-      # into that directory, rather than the default $CIRCLE_WORKING_DIRECTORY.
-      - checkout
-      - run:
-          name: Move Meteor checkout into docs repository's "code" directory
-          command: |
-            rmdir "${CHECKOUT_METEOR_DOCS}/code"
-            # $CIRCLE_WORKING_DIRECTORY uses a tilde, so expand it to $HOME.
-            mv "${CIRCLE_WORKING_DIRECTORY/#\~/$HOME}" \
-              "${CHECKOUT_METEOR_DOCS}/code"
+            git clone --branch $CIRCLE_BRANCH https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
       # Run almost the same steps the meteor/docs repository runs, minus deploy.
       - run:
           name: Generating Meteor documentation for JSDoc testing
           command: |
-            cd ${CHECKOUT_METEOR_DOCS}
+            cd ${CHECKOUT_METEOR_DOCS}/docs
             npm install
             npm test
 
