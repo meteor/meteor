@@ -32,3 +32,6 @@ packages/*/.versions
 
 # packages shouldn't have .npm on Git
 packages/**/.npm
+
+# doc files should not be committed
+packages/**/*.docs.js
