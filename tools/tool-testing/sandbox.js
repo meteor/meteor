@@ -127,7 +127,7 @@ export default class Sandbox {
       const clientOptions = this.options.clients || {};
 
       const appConfig = {
-        host: 'localhost',
+        host: "localhost",
         port: clientOptions.port || 3000,
       };
 
@@ -139,7 +139,10 @@ export default class Sandbox {
         await PuppeteerClient.pushClients(this.clients, appConfig);
       }
 
-      if (clientOptions.browserstack && BrowserStackClient.prerequisitesMet()) {
+      if (
+        clientOptions.browserstack &&
+        (await BrowserStackClient.prerequisitesMet())
+      ) {
         BrowserStackClient.pushClients(this.clients, appConfig);
       }
     }

@@ -21,7 +21,7 @@ import Matcher from './matcher.js';
 import OutputLog from './output-log.js';
 import { randomPort, timeoutScaleFactor, sleepMs } from '../utils/utils.js';
 import TestFailure from './test-failure.js';
-import { execFileSync } from '../utils/processes';
+import { execFileAsync } from '../utils/processes';
 
 let runningTest = null;
 
@@ -324,7 +324,7 @@ export default class Run {
       if (this.client) {
         this.client.stop();
       }
-      this._killProcess();
+      await this._killProcess();
       await this.expectExit();
     }
   }
@@ -340,7 +340,7 @@ export default class Run {
   }
 
   // Kills the running process and it's child processes
-  _killProcess() {
+  async _killProcess() {
     if (!this.proc) {
       throw new Error("Unexpected: `this.proc` undefined when calling _killProcess");
     }
@@ -348,7 +348,7 @@ export default class Run {
     if (process.platform === "win32") {
       // looks like in Windows `this.proc.kill()` doesn't kill child
       // processes.
-      execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
+      await execFileAsync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
     } else {
       this.proc.kill();
     }
