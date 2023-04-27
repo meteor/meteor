@@ -40,11 +40,9 @@ selftest.define(
     // Apps are created with the latest release ...
     run = s.run("create", "myapp", "--blaze");
     run.waitSecs(5);
-    console.log("broke here2?");
+
     await run.expectExit(0);
     await s.cd("myapp", async function () {
-      console.log("broke here2?");
-
       run = s.run("--version");
       await run.read("Meteor v2\n");
       await run.expectExit(0);
@@ -59,7 +57,8 @@ selftest.define(
         "--release",
         DEFAULT_RELEASE_TRACK + "@v1"
       )
-      .expectExit(0);
+    run.waitSecs(5);
+    await run.expectExit(0);
     await s.cd("myapp2", async function () {
       run = s.run("--version");
       await run.read("Meteor v1\n");
