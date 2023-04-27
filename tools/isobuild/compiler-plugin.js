@@ -729,10 +729,10 @@ class ResourceSlot {
       // file is lazy, add it as a lazy JS module instead of adding it
       // unconditionally as a CSS resource, so that it can be imported
       // when needed.
-      const jsResource = this.addJavaScript(options, () => {
+      const jsResource = this.addJavaScript(options, async () => {
         const result = {};
 
-        let css = this.packageSourceBatch.processor
+        let css = await this.packageSourceBatch.processor
           .minifyCssResource(cssResource);
 
         if (! css && typeof css !== "string") {
