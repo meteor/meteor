@@ -1,14 +1,12 @@
 {
-  "plugins": ["plugins/markdown"],
-  "markdown": {
-    "parser": "gfm"
-  },
   "source": {
     "exclude": [
       "packages/ddp/sockjs-0.3.4.js",
       "packages/test-in-browser/diff_match_patch_uncompressed.js",
       "packages/jquery/jquery.js",
       "packages/underscore/underscore.js",
+      "packages/accounts-password/password_server.js",
+      "packages/webapp/webapp_server.js",
       "packages/json/json2.js",
       "packages/minimongo/minimongo_tests.js",
       "tools/node_modules",
@@ -17,6 +15,14 @@
       "guide",
       "**/node_modules",
       "npm-packages"
+    ],
+    "include": [
+      "packages/accounts-password/password_server.docs.js",
+      "packages/webapp/webapp_server.docs.js"
     ]
+  },
+  "plugins": [ "plugins/markdown"],
+  "markdown": {
+    "parser": "gfm"
   }
 }
