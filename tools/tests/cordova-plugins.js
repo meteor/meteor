@@ -1,18 +1,18 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files');
-import { execFileSync } from '../utils/processes';
+import { execFileAsync } from '../utils/processes';
 var _ = require('underscore');
 
 // Given a sandbox, that has the app as its currend cwd, read the versions file
 // and read the plugins list.
 //
 // sand: a sandbox, that has the main app directory as its cwd.
-var getCordovaPluginsList = function(sand) {
+var getCordovaPluginsList = async function(sand) {
   var env = files.currentEnvWithPathsAdded(files.getCurrentNodeBinDir());
   env.METEOR_WAREHOUSE_DIR = sand.warehouse;
 
-  var lines = execFileSync('cordova', ['plugins'],
+  var lines = await execFileAsync('cordova', ['plugins'],
     {
       cwd: files.pathJoin(sand.cwd, '.meteor', 'local', 'cordova-build'),
       env: env
@@ -32,7 +32,7 @@ var getCordovaPluginsList = function(sand) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // plugins: an array of plugins in order.
 var checkCordovaPlugins = selftest.markStack(async function(sand, plugins) {
-  var cordovaPlugins = getCordovaPluginsList(sand);
+  var cordovaPlugins = await getCordovaPluginsList(sand);
 
   plugins = _.clone(plugins).sort();
 
@@ -88,7 +88,7 @@ var checkUserPlugins = async function(sand, plugins) {
   var i = 0;
 
   for (const plugin of plugins) {
-    var split = plugins.split('@');
+    var split = plugin.split('@');
     if (split.length > 1) {
       await selftest.expectEqual(depend[split[0]], split[1]);
     } else {

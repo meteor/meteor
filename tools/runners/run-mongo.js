@@ -440,8 +440,8 @@ var launchMongo = async function(options) {
         return;
       }
       stopped = true;
-      _.each(subHandles, function(handle) {
-        handle.stop();
+      _.each(subHandles, function(h) {
+        h.stop();
       });
 
       if (options.onStopped) {
@@ -782,8 +782,10 @@ var launchMongo = async function(options) {
         if (stopped) {
           return;
         }
-        var dbPath = files.pathJoin(options.projectLocalDir, 'dbs', '' + i);
-        await launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
+        const newDbPath = files.pathJoin(options.projectLocalDir, 'dbs', '' + i);
+        // TODO [fibers]: it looks like we shouldn't wait for this function to finish.
+            // if all tests are passing, we're probably fine...
+        await launchOneMongoAndWaitForReadyForInitiate(newDbPath, options.port + i);
         i--;
       }
 
@@ -791,9 +793,11 @@ var launchMongo = async function(options) {
         await initiateReplSetAndWaitForReady();
       }
     } else {
-      var dbPath = files.pathJoin(options.projectLocalDir, 'db');
-      var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
-      await launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
+      const newDbPath = files.pathJoin(options.projectLocalDir, 'db');
+      var portFile = !noOplog && files.pathJoin(newDbPath, 'METEOR-PORT');
+      // TODO [fibers]: it looks like we shouldn't wait for this function to finish.
+      // if all tests are passing, we're probably fine...
+      await launchOneMongoAndWaitForReadyForInitiate(newDbPath, options.port, portFile);
       if (!stopped && !noOplog) {
         await initiateReplSetAndWaitForReady();
         if (!stopped) {

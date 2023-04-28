@@ -306,10 +306,12 @@ const loadServerBundles = Profile("Load server bundles", async function () {
     };
 
     const getAsset = function (assetPath, encoding, callback) {
-      let promiseResolver, promise;
+      let promiseResolver, promiseReject, promise;
       if (! callback) {
-        promise = new Promise(r => promiseResolver = r);
-        callback = promiseResolver;
+        promise = new Promise((r, reject) => {
+          promiseResolver = r;
+          promiseReject = reject;
+        });
       }
       // This assumes that we've already loaded the meteor package, so meteor
       // itself can't call Assets.get*. (We could change this function so that
@@ -319,7 +321,15 @@ const loadServerBundles = Profile("Load server bundles", async function () {
         if (result && ! encoding)
             // Sadly, this copies in Node 0.10.
           result = new Uint8Array(result);
-        callback(err, result);
+        if (promiseResolver) {
+          if (err) {
+            promiseReject(err);
+            return;
+          }
+          promiseResolver(result);
+        } else {
+          callback(err, result);
+        }
       }, function (e) {
         console.log("Exception in callback of getAsset", e.stack);
       });
@@ -427,7 +437,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
   for (const info of infos) {
     info.fn.apply(global, info.args);
   }
-  if (global.Package['core-runtime']) {
+  if (global.Package && global.Package['core-runtime']) {
     return global.Package['core-runtime'].waitUntilAllLoaded();
   }
 

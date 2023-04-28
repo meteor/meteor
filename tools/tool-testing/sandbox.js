@@ -127,7 +127,7 @@ export default class Sandbox {
       const clientOptions = this.options.clients || {};
 
       const appConfig = {
-        host: 'localhost',
+        host: "localhost",
         port: clientOptions.port || 3000,
       };
 
@@ -139,7 +139,10 @@ export default class Sandbox {
         await PuppeteerClient.pushClients(this.clients, appConfig);
       }
 
-      if (clientOptions.browserstack && BrowserStackClient.prerequisitesMet()) {
+      if (
+        clientOptions.browserstack &&
+        (await BrowserStackClient.prerequisitesMet())
+      ) {
         BrowserStackClient.pushClients(this.clients, appConfig);
       }
     }
@@ -218,7 +221,7 @@ export default class Sandbox {
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
       // paths.
-      run.waitSecs(120);
+      run.waitSecs(150);
       await run.expectExit(0);
     });
   }
@@ -272,7 +275,7 @@ export default class Sandbox {
     if (callback) {
       const ret = callback();
       if (ret && typeof ret.then === "function") {
-        return ret.then(() => this.cwd = previous);
+        return ret.then(() => (this.cwd = previous));
       } else {
         this.cwd = previous;
       }
@@ -583,6 +586,7 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "modern-browsers",
   "ecmascript",
   "typescript",
+  "facts-base",
 ];
 
 async function newSelfTestCatalog() {

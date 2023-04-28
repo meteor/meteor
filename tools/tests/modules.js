@@ -34,7 +34,10 @@ selftest.define('modules - test app', async function() {
       '--once',
       '--full-app',
       '--driver-package',
-      'meteortesting:mocha'
+      // Not running with the --full-app option here, in order to exercise
+      // the normal `meteor test` behavior.
+      /// TODO: [Fibers] => turn this back to meteortesthing:mocha when 3.0.0 is released
+      "grubba:mocha" /// meteortesting:mocha"
     );
 
     run.waitSecs(60);

@@ -1127,6 +1127,22 @@ Object.assign(Mongo.Collection.prototype, {
     }
   },
 
+  /**
+   * @summary Asynchronously creates the specified index on the collection.
+   * @locus server
+   * @method createIndex
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} index A document that contains the field and value pairs where the field is the index key and the value describes the type of index for that field. For an ascending index on a field, specify a value of `1`; for descending index, specify a value of `-1`. Use `text` for text indexes.
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#options)
+   * @param {String} options.name Name of the index
+   * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
+   * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
+   */
+  createIndex(index, options){
+    return this.createIndexAsync(index, options);
+  },
+
   async dropIndexAsync(index) {
     var self = this;
     if (!self._collection.dropIndexAsync)

@@ -32,16 +32,17 @@ function cleanUpBuild(s) {
 
 selftest.define("cordova builds with server options", ["cordova"], async function () {
   const s = new Sandbox();
+  await s.init();
   let run;
 
-  s.createApp("myapp", "standard-app");
+  await s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
   run = s.run("add-platform", "android");
   await run.match("added");
   await run.expectExit(0);
 
-  if (await isOSX) {
+  if (await isOSX()) {
     run = s.run("add-platform", "ios");
     await run.match("added");
     await run.expectExit(0);
@@ -61,24 +62,24 @@ selftest.define("cordova builds with server options", ["cordova"], async functio
   run = s.run("build", relBuildDir, "--server", "https://example.com:5000");
   run.waitSecs(300);
   await run.expectExit(0);
-  checkMobileServer(s, "https://example.com:5000/");
+  await checkMobileServer(s, "https://example.com:5000/");
   await cleanUpBuild(s);
 
   run = s.run("build", relBuildDir, "--server", "example.com:5000");
   run.waitSecs(90);
   await run.expectExit(0);
-  checkMobileServer(s, "http://example.com:5000/");
+  await checkMobileServer(s, "http://example.com:5000/");
   await cleanUpBuild(s);
 
   run = s.run("build", relBuildDir, "--server", "example.com");
   run.waitSecs(90);
   await run.expectExit(0);
-  checkMobileServer(s, "http://example.com/");
+  await checkMobileServer(s, "http://example.com/");
   await cleanUpBuild(s);
 
   run = s.run("build", relBuildDir, "--server", "https://example.com");
   run.waitSecs(90);
   await run.expectExit(0);
-  checkMobileServer(s, "https://example.com/");
+  await checkMobileServer(s, "https://example.com/");
   await cleanUpBuild(s);
 });

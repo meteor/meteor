@@ -3,4 +3,6 @@
 // chance of hitting an old server for the HTML and the new server for the JS or
 // CSS.  This prevents you from displaying the page in that case, and instead
 // reloads it, presumably all on the new version now.
-WebAppInternals.addStaticJs(Assets.getText("safetybelt.js"));
+await (async () => {
+  WebAppInternals.addStaticJs(await Assets.getText("safetybelt.js"));
+})();

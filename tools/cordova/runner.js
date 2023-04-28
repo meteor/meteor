@@ -21,14 +21,14 @@ export class CordovaRunner {
   }
 
   async checkPlatformsForRunTargets() {
-    this.cordovaProject.ensurePlatformsAreSynchronized();
+    await this.cordovaProject.ensurePlatformsAreSynchronized();
 
     let satisfied = true;
     const messages = await buildmessage.capture(
-      { title: `checking platform requirements` }, () => {
+      { title: `checking platform requirements` }, async () => {
       for (const platform of this.platformsForRunTargets) {
         satisfied =
-          this.cordovaProject.checkPlatformRequirements(platform) &&
+          await this.cordovaProject.checkPlatformRequirements(platform) &&
           satisfied;
       }
     });
@@ -89,13 +89,16 @@ export class CordovaRunner {
     this.pluginVersions = pluginVersions;
   }
 
-  startRunTargets() {
+  async startRunTargets() {
     this.started = false;
 
-    for (let runTarget of this.runTargets) {
-      const messages = buildmessage.capture({ title: `starting ${runTarget.title}` }, () => {
-        Promise.await(runTarget.start(this.cordovaProject));
-      });
+    for (const runTarget of this.runTargets) {
+      const messages = await buildmessage.capture(
+        { title: `starting ${runTarget.title}` },
+        async () => {
+          await runTarget.start(this.cordovaProject);
+        }
+      );
       if (messages.hasMessages()) {
         Console.printMessages(messages);
       } else {

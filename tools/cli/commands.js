@@ -423,7 +423,7 @@ async function doRunCommand(options) {
     async function prepareCordovaProject() {
       import { CordovaProject } from '../cordova/project.js';
 
-      await main.captureAndExit('', 'preparing Cordova project', () => {
+      await main.captureAndExit('', 'preparing Cordova project', async () => {
         // TODO -> Have to change CordovaProject constructor here.
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
@@ -431,10 +431,11 @@ async function doRunCommand(options) {
           cordovaServerPort: parsedCordovaServerPort,
           buildMode
         });
+        await cordovaProject.init();
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
-        cordovaRunner.checkPlatformsForRunTargets();
+        await cordovaRunner.checkPlatformsForRunTargets();
       });
     }
 
@@ -1213,19 +1214,20 @@ ${Console.command("meteor build ../output")}`,
 
       await ensureDevBundleDependencies();
 
-      await buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
+      await buildmessage.enterJob({ title: "preparing Cordova project" }, async() => {
         import { CordovaProject } from '../cordova/project.js';
 
         cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
           cordovaServerPort: parsedCordovaServerPort });
+        await cordovaProject.init();
         if (buildmessage.jobHasMessages()) return;
 
         const pluginVersions = pluginVersionsFromStarManifest(
           bundleResult.starManifest);
 
-        cordovaProject.prepareFromAppBundle(bundlePath, pluginVersions);
+        await cordovaProject.prepareFromAppBundle(bundlePath, pluginVersions);
       });
 
       for (platform of cordovaPlatforms) {
@@ -1244,9 +1246,9 @@ ${displayNameForPlatform(platform)}` }, async () => {
             // is utilized in the Cordova builder to write boilerplate HTML and
             // various config.xml settings (e.g. access policies)
             if (platform === 'ios') {
-              cordovaProject.prepareForPlatform(platform, buildOptions);
+              await cordovaProject.prepareForPlatform(platform, buildOptions);
             } else if (platform === 'android') {
-              cordovaProject.buildForPlatform(platform, {...buildOptions, argv: ["--packageType", options.packageType || "bundle"]});
+              await cordovaProject.buildForPlatform(platform, {...buildOptions, argv: ["--packageType", options.packageType || "bundle"]});
             }
 
             // Once prepared, copy the bundle to the final location.

@@ -208,7 +208,7 @@ async function authedRpc(options) {
     waitForDeploy: options.waitForDeploy,
   });
   delete rpcOptions.printDeployURL;
-  
+
   if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
     Console.error("Authentication failed or login token expired.");
 
@@ -932,7 +932,7 @@ const galaxyDiscoveryCache = new Map;
 
 // getDeployURL returns the a Promise for the base deploy URL for the given app.
 // "app" may be falsey for certain RPCs (eg meteor list-sites).
-function getDeployURL(site) {
+async function getDeployURL(site) {
   // Always trust explicitly configuration via env.
   if (process.env.DEPLOY_HOSTNAME) {
     return Promise.resolve(addScheme(process.env.DEPLOY_HOSTNAME.trim()));
@@ -953,8 +953,8 @@ function getDeployURL(site) {
   }
 
   // Otherwise, try https first, then http, then just use the default.
-  const p = discoverGalaxy(site, "https")
-          .catch(() => discoverGalaxy(site, "http"))
+  const p = await discoverGalaxy(site, "https")
+          .catch(async () => await discoverGalaxy(site, "http"))
           .catch(() => defaultURL);
   galaxyDiscoveryCache.set(site, p);
   return p;
@@ -967,7 +967,7 @@ async function discoverGalaxy(site, scheme) {
           scheme + "://" + site + "/.well-known/meteor/deploy-url";
   // If httpHelpers.request throws, the returned Promise will reject, which is
   // fine.
-  const { response, body } = request({
+  const { response, body } = await request({
     url: discoveryURL,
     json: true,
     strictSSL: true,

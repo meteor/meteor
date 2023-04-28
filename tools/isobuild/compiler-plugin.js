@@ -243,7 +243,7 @@ class InputFile extends buildPluginModule.InputFile {
     // Communicate to compiler plugins that this version of Meteor
     // is able to support top level await
     // TODO: maybe this should also check if the file and package meet the
-    // minimum requirements to use top level await (file isn't bare, and 
+    // minimum requirements to use top level await (file isn't bare, and
     // package uses core-runtime and modules)
     this.supportsTopLevelAwait = true;
   }
@@ -729,10 +729,10 @@ class ResourceSlot {
       // file is lazy, add it as a lazy JS module instead of adding it
       // unconditionally as a CSS resource, so that it can be imported
       // when needed.
-      const jsResource = this.addJavaScript(options, () => {
+      const jsResource = this.addJavaScript(options, async () => {
         const result = {};
 
-        let css = this.packageSourceBatch.processor
+        let css = await this.packageSourceBatch.processor
           .minifyCssResource(cssResource);
 
         if (! css && typeof css !== "string") {
@@ -785,7 +785,7 @@ class ResourceSlot {
 
       // TODO[FIBERS]: Look into this. We probably don't want addStylesheet
       // to be async, and I'm also not sure the old behavior here is what we wanted
-      // 
+      //
       // if (! cssResource.lazy &&s
       //     ! Buffer.isBuffer(cssResource.data)) {
       //   // If there was an error processing this file, cssResource.data

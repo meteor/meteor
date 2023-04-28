@@ -176,28 +176,25 @@ class Runner {
      */
     var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
 
-    async function startMongo(tries = 3) {
-      try {
-        await self._startMongoAsync();
-        unblockAppRunner();
-      } catch (error) {
-        --tries;
-        const left = tries + (tries === 1 ? " try" : " tries");
-        Console.error(
-            `Error starting Mongo (${left} left): ${error.message}`
-          );
-
-        if (tries > 0) {
-          await self.mongoRunner.stop();
-          setTimeout(async () => await startMongo(tries), 1000);
-        } else {
-          await self.mongoRunner._fail();
-        }
-
-      }
+    function startMongo(tries = 3) {
+      self
+        ._startMongoAsync()
+        .then(() => unblockAppRunner())
+        .catch(async (error) => {
+          --tries;
+          const left = tries + (tries === 1 ? " try" : " tries");
+          Console.log(`Error starting Mongo (${left} left): ${error.message}`);
+          if (tries > 0) {
+            await self.mongoRunner.stop();
+            setTimeout(() => startMongo(tries), 1000);
+          } else {
+            await self.mongoRunner._fail();
+          }
+        });
     }
 
-    await startMongo();
+    startMongo();
+
     if (!self.noReleaseCheck && ! self.stopped) {
       self.updater.start();
     }
@@ -404,7 +401,8 @@ exports.run = async function (options) {
 
   var runner = new Runner(runOptions);
   await runner.init();
-  await runner.start();
+  // don't wait this on to finish
+  runner.start();
   var result = await promise;
   await runner.stop();
 

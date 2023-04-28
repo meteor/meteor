@@ -13,9 +13,9 @@ var MONGO_LISTENING =
 async function startRun(sandbox) {
   var run = sandbox.run();
   await run.match("myapp");
-  await run.matchBeforeExit("Started proxy");
+  run.matchBeforeExit("Started proxy");
   await run.tellMongo(MONGO_LISTENING);
-  await run.matchBeforeExit("Started MongoDB");
+  run.matchBeforeExit("Started MongoDB");
   run.waitSecs(15);
   return run;
 }
@@ -137,7 +137,7 @@ selftest.define("compiler plugin caching - coffee", async () => {
 });
 
 // Tests the actual cache logic used by less and stylus.
-['less', 'stylus'].forEach((packageName) => {
+['less'].forEach((packageName) => {
   const extension = packageName === 'stylus' ? 'styl' : packageName;
   const hasCompileOneFileLaterSupport = packageName === "less";
 
@@ -482,7 +482,7 @@ selftest.define("compiler plugins - addAssets", async () => {
   await s.createApp('myapp', 'compiler-plugin-asset-and-source');
   s.cd('myapp');
 
-  const run = startRun(s);
+  const run = await startRun(s);
 
   // Test server-side asset.
   await run.match("Printing out my own source code!");

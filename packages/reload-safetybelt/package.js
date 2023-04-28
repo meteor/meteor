@@ -4,12 +4,14 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use("ecmascript");
   api.use("webapp", "server");
   api.addFiles("reload-safety-belt.js", "server");
   api.addAssets("safetybelt.js", "server");
 });
 
 Package.onTest(function (api) {
+  api.use("ecmascript");
   api.addAssets("safetybelt.js", "server");
   api.use(["reload-safetybelt", "tinytest", "http", "webapp", "underscore"]);
   api.addFiles("reload-safety-belt-tests.js", "server");

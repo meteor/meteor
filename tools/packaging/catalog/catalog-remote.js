@@ -398,7 +398,7 @@ Object.assign(Db.prototype, {
     var prepared = self._prepared;
     self._prepared = {};
 
-    for (const statement of prepared) {
+    for (const statement of Object.values(prepared)) {
       var err = await new Promise(function (resolve) {
         // We resolve the promise with an error instead of rejecting it,
         // because we don't want to throw.
@@ -643,10 +643,15 @@ Object.assign(RemoteCatalog.prototype, {
     return solution;  // might be null!
   },
 
-  filterArchesWithBuilds: function (name, version, arches) {
-    return arches.filter(arch => {
-      return !! this.getBuildsForArches(name, version, [arch]);
-    });
+  filterArchesWithBuilds: async function (name, version, arches) {
+    const buildArches = [];
+
+    for (const arch of arches) {
+      if (await this.getBuildsForArches(name, version, [arch])) {
+        buildArches.push(arch);
+      }
+    }
+    return buildArches;
   },
 
   // Returns general (non-version-specific) information about a
@@ -963,9 +968,9 @@ Object.assign(RemoteCatalog.prototype, {
     await self.tableMetadata.upsert(txn, [value]);
   },
 
-  shouldShowBanner: function (releaseName, bannerDate) {
+  shouldShowBanner: async function (releaseName, bannerDate) {
     var self = this;
-    var row = self.db.runInTransaction(function (txn) {
+    var row = await self.db.runInTransaction(function (txn) {
       return self.tableBannersShown.find(txn, releaseName);
     });
     // We've never printed a banner for this release.
@@ -980,10 +985,10 @@ Object.assign(RemoteCatalog.prototype, {
     }
   },
 
-  setBannerShownDate: function (releaseName, bannerShownDate) {
+  setBannerShownDate: async function (releaseName, bannerShownDate) {
     var self = this;
-    self.db.runInTransaction(function (txn) {
-      self.tableBannersShown.upsert(txn, [{
+    return self.db.runInTransaction(function (txn) {
+      return self.tableBannersShown.upsert(txn, [{
         _id: releaseName,
         // XXX For now, there's no way to tell this file to make a non-string
         // column in a sqlite table, but this should probably change to a

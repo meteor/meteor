@@ -107,7 +107,7 @@ selftest.define("versioning hot code push", async function (options) {
 
   s.set("AUTOUPDATE_VERSION", "1.0");
   await s.createApp("myapp", "hot-code-push-test");
-  s.cd("myapp");
+  await s.cd("myapp");
 
   await s.testWithAllClients(async function (run) {
     await run.match("myapp");

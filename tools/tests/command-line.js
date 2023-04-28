@@ -71,7 +71,7 @@ selftest.define("argument parsing", async function () {
 
   // successful command invocation, correct parsing of arguments
   run = s.run("dummy", "--ething", "x");
-  run.read('"x" "3000" none []\n');
+  await run.read('"x" "3000" none []\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
@@ -81,38 +81,38 @@ selftest.define("argument parsing", async function () {
   // https://github.com/joyent/node/issues/7138
   if (process.platform !== "win32") {
     run = s.run("dummy", "--ething", "");
-    run.read('"" "3000" none []\n');
+    await run.read('"" "3000" none []\n');
     run.waitSecs(5);
     await run.expectEnd();
     await run.expectExit(0);
 
     run = s.run("dummy", "--ething", "x", "", "");
-    run.read('"x" "3000" none ["",""]\n');
+    await run.read('"x" "3000" none ["",""]\n');
     run.waitSecs(5);
     await run.expectEnd();
     await run.expectExit(0);
   }
 
   run = s.run("dummy", "--ething=");
-  run.read('"" "3000" none []\n');
+  await run.read('"" "3000" none []\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "-e=");
-  run.read('"" "3000" none []\n');
+  await run.read('"" "3000" none []\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "-");
-  run.read('"x" "3000" none ["-"]\n');
+  await run.read('"x" "3000" none ["-"]\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "-e", "x");
-  run.read('"x" "3000" none []\n');
+  await run.read('"x" "3000" none []\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
@@ -120,50 +120,50 @@ selftest.define("argument parsing", async function () {
   // See comment above about empty arguments
   if (process.platform !== "win32") {
     run = s.run("dummy", "-e", "");
-    run.read('"" "3000" none []\n');
+    await run.read('"" "3000" none []\n');
     run.waitSecs(5);
     await run.expectEnd();
     await run.expectExit(0);
   }
 
   run = s.run("dummy", "-exxx");
-  run.read('"xxx" "3000" none []\n');
+  await run.read('"xxx" "3000" none []\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "-");
-  run.read('"-" "3000" none []\n');
+  await run.read('"-" "3000" none []\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "--port", "1234", "--changed");
-  run.read('"x" 1234 true []\n');
+  await run.read('"x" 1234 true []\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "--port", "0", "true");
-  run.read('"x" 0 none ["true"]\n');
+  await run.read('"x" 0 none ["true"]\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "--port", "01234", "12", "0013");
-  run.read('"x" 1234 none ["12","0013"]\n');
+  await run.read('"x" 1234 none ["12","0013"]\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "--port", "1234", "--changed");
-  run.read('"--port" "3000" true ["1234"]\n');
+  await run.read('"--port" "3000" true ["1234"]\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething=x=y=z", "-Up=3000");
-  run.read('"x=y=z" 3000 none []\nurl\n');
+  await run.read('"x=y=z" 3000 none []\nurl\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
@@ -223,15 +223,15 @@ selftest.define("argument parsing", async function () {
 
   // bad use of =
   run = s.run("dummy", "--=");
-  run.readErr("Option names cannot begin with '='.\n");
+  await run.readErr("Option names cannot begin with '='.\n");
   await run.expectExit(1);
 
   run = s.run("dummy", "--=asdf");
-  run.readErr("Option names cannot begin with '='.\n");
+  await run.readErr("Option names cannot begin with '='.\n");
   await run.expectExit(1);
 
   run = s.run("dummy", "-=");
-  run.readErr("Option names cannot begin with '='.\n");
+  await run.readErr("Option names cannot begin with '='.\n");
   await run.expectExit(1);
 
   run = s.run("dummy", "-ex", "--changed=foo");
@@ -275,50 +275,50 @@ selftest.define("argument parsing", async function () {
 
   // '--' to end parsing
   run = s.run("dummy", "--ething", "x", "--", "-p", "4000");
-  run.read('"x" "3000" none ["-p","4000"]\n');
+  await run.read('"x" "3000" none ["-p","4000"]\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "--", "--changed", "--changed");
-  run.read('"x" "3000" none ["--changed","--changed"]\n');
+  await run.read('"x" "3000" none ["--changed","--changed"]\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "--");
-  run.read('"x" "3000" none []\n');
+  await run.read('"x" "3000" none []\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   // compact short options
   run = s.run("dummy", "--ething", "x", "-p4000", "--changed");
-  run.read('"x" 4000 true []\n');
+  await run.read('"x" 4000 true []\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "-UD", "--changed");
-  run.read('"x" "3000" true []\nurl\n\delete\n');
+  await run.read('"x" "3000" true []\nurl\n\delete\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "-UDp4000", "--changed");
-  run.read('"x" 4000 true []\nurl\ndelete\n');
+  await run.read('"x" 4000 true []\nurl\ndelete\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "-UDp4000", "--changed");
-  run.read('"x" 4000 true []\nurl\ndelete\n');
+  await run.read('"x" 4000 true []\nurl\ndelete\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
 
   run = s.run("dummy", "--ething", "x", "-UDp4000");
-  run.read('"x" 4000 none []\nurl\ndelete\n');
+  await run.read('"x" 4000 none []\nurl\ndelete\n');
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);
@@ -417,14 +417,14 @@ selftest.define("command-like options", async function () {
     await run.matchErr("Unreleased");
     await run.expectExit(1);
   } else {
-    run.read(release.current.getDisplayName() + "\n");
+    await run.read(release.current.getDisplayName() + "\n");
     run.waitSecs(5);
     await run.expectEnd();
     await run.expectExit(0);
   }
 
   run = s.run("--arch");
-  run.read(archinfo.host() + "\n");
+  await run.read(archinfo.host() + "\n");
   run.waitSecs(5);
   await run.expectEnd();
   await run.expectExit(0);

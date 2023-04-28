@@ -237,7 +237,7 @@ export class CordovaBuilder {
     this.pluginsConfiguration = {};
   }
 
-  processControlFile() {
+  async processControlFile() {
     const controlFilePath =
       files.pathJoin(this.projectContext.projectDir, 'mobile-config.js');
 
@@ -245,7 +245,7 @@ export class CordovaBuilder {
     if (files.exists(controlFilePath)) {
       Console.debug('Processing mobile-config.js');
 
-      buildmessage.enterJob({ title: `processing mobile-config.js` }, () => {
+      await buildmessage.enterJob({ title: `processing mobile-config.js` }, () => {
         const code = files.readFile(controlFilePath, 'utf8');
 
         try {
@@ -485,11 +485,11 @@ export class CordovaBuilder {
     });
   }
 
-  copyWWW(bundlePath) {
+  async copyWWW(bundlePath) {
     const wwwPath = files.pathJoin(this.projectRoot, 'www');
 
     // Remove existing www
-    files.rm_recursive(wwwPath);
+    await files.rm_recursive(wwwPath);
 
     // Create www and www/application directories
     const applicationPath = files.pathJoin(wwwPath, 'application');
@@ -497,7 +497,7 @@ export class CordovaBuilder {
 
     // Copy Cordova arch program from bundle to www/application
     const programPath = files.pathJoin(bundlePath, 'programs', CORDOVA_ARCH);
-    files.cp_r(programPath, applicationPath);
+    await files.cp_r(programPath, applicationPath);
 
     // Load program.json
     const programJsonPath = files.convertToOSPath(
@@ -511,20 +511,20 @@ export class CordovaBuilder {
     const publicSettings = settings['public'];
 
     // Calculate client hash and append to program
-    this.appendVersion(program, publicSettings);
+    await this.appendVersion(program, publicSettings);
 
     // Write program.json
     files.writeFile(programJsonPath, JSON.stringify(program), 'utf8');
 
-    const bootstrapPage = this.generateBootstrapPage(
+    const bootstrapPage = await this.generateBootstrapPage(
       applicationPath, program, publicSettings
-    ).await();
+    );
 
     files.writeFile(files.pathJoin(applicationPath, 'index.html'),
       bootstrapPage, 'utf8');
   }
 
-  appendVersion(program, publicSettings) {
+  async appendVersion(program, publicSettings) {
     // Note: these version calculations must be kept in agreement with
     // generateClientProgram in packages/webapp/webapp_server.js, or hot
     // code push will reload the app unnecessarily.
@@ -532,7 +532,7 @@ export class CordovaBuilder {
     let configDummy = {};
     configDummy.PUBLIC_SETTINGS = publicSettings || {};
 
-    const { WebAppHashing } = loadIsopackage('webapp-hashing');
+    const { WebAppHashing } = await loadIsopackage('webapp-hashing');
     const { AUTOUPDATE_VERSION } = process.env;
 
     program.version = AUTOUPDATE_VERSION ||
@@ -558,7 +558,7 @@ export class CordovaBuilder {
       );
   }
 
-  generateBootstrapPage(applicationPath, program, publicSettings) {
+  async generateBootstrapPage(applicationPath, program, publicSettings) {
     const meteorRelease =
       release.current.isCheckout() ? "none" : release.current.name;
     const hmrVersion =
@@ -599,7 +599,7 @@ export class CordovaBuilder {
       runtimeConfig.PUBLIC_SETTINGS = publicSettings;
     }
 
-    const { Boilerplate } = loadIsopackage('boilerplate-generator');
+    const { Boilerplate } = await loadIsopackage('boilerplate-generator');
 
     const boilerplate = new Boilerplate(CORDOVA_ARCH, manifest, {
       urlMapper: _.identity,

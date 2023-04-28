@@ -1241,7 +1241,7 @@ export default class ImportScanner {
     return info;
   }
 
-  private async readModule(absPath: string): RawFile | null {
+  private async readModule(absPath: string): Promise<RawFile | null> {
     const dotExt = pathExtname(absPath).toLowerCase();
 
     if (dotExt === ".node") {

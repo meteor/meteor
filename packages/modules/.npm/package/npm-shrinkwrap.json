@@ -2,12 +2,12 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@meteorjs/reify": {
-      "version": "git+https://github.com/meteor/reify.git#0867be73ca61e87ae9d60edef62baf26b38719ef"
+      "version": "git+https://github.com/meteor/reify.git#cf61c57c6c4fefcbf164bf63d3c12fda1924b3d2"
     },
     "@types/estree": {
-      "version": "1.0.0",
-      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.0.tgz",
-      "integrity": "sha512-WulqXMDUTYAXCjZnk6JtIHPigp55cVtDgDrO2gHRwhyJto21+1zbVCtOYB2L1F9w4qCQ0rOGWBnBe0FNTiEJIQ=="
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.1.tgz",
+      "integrity": "sha512-LG4opVs2ANWZ1TJoKc937iMmNstM/d0ae1vNbnBvBhqCSezgVUOzcLCqbI5elV8Vy6WKwKjaqR+zO9VKirBBCA=="
     },
     "acorn": {
       "version": "8.8.2",

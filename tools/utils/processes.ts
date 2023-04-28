@@ -42,6 +42,7 @@ type ExecFileOptions = {
 }
 
  /**
+  * @deprecated
   * @summary Executes a command synchronously, returning either the captured
   * stdout output or throwing an error containing the stderr output as part of
   * the message. In addition, the error will contain fields pid, stderr, stdout,
@@ -56,8 +57,7 @@ export function execFileSync(
   args?: ReadonlyArray<string> | ExecFileOptions,
   options?: ExecFileOptions
 ) {
-  const meteorPromise: any = Promise; // TypeScript doesn't recognize "Promise.await"
-  return meteorPromise.await(execFileAsync(command, args, options));
+  return execFileAsync(command, args, options);
 }
 
  /**

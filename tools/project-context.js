@@ -393,7 +393,7 @@ Object.assign(ProjectContext.prototype, {
         // This error gets thrown if you request to go to a stage that's earlier
         // than where you started. Note that the error will be mildly confusing
         // because the key of STAGE does not match the value.
-        if (self.completedStage === STAGE.SAVE_CHANGED_METADATA)
+        if (self._completedStage === STAGE.SAVE_CHANGED_METADATA)
           throw Error("can't find requested stage " + targetStage);
 
         // The actual value of STAGE.FOO is the name of the method that takes

@@ -2,7 +2,7 @@ language: node_js
 os: linux
 dist: xenial
 node_js:
-  - "14.17.6"
+  - "14.21.2"
 cache:
   directories:
     - ".meteor"
@@ -14,14 +14,18 @@ env:
     - CXX=g++-4.8
     - phantom=false
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
-  jobs:
-    # We don't want to run the tests without fibers anymore.
-    # - DISABLE_FIBERS=1
-    # Use a different flag, since node would use false as a string.
-    - FIBERS_ENABLED=1
+    # Disable fibers for all jobs
+    - DISABLE_FIBERS=1
+    - IGNORE_ASYNC_PLUGIN=1
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
     packages:
       - g++-4.8
+      - libnss3
+
+before_install:
+  - sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu bionic main universe"
+  - sudo apt-get update
+  - sudo apt-get install -y libnss3

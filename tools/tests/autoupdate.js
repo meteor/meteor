@@ -87,7 +87,7 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], async function (
     await run.stop();
 
     run = s.run("--version");
-    run.read("Meteor v1\n");
+    await run.read("Meteor v1\n");
     await run.expectEnd();
     await run.expectExit(0);
 
@@ -150,7 +150,7 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], async function (
     await run.expectExit(0);
 
     run = s.run("--version");
-    run.read("Meteor v3\n");
+    await run.read("Meteor v3\n");
     await run.expectEnd();
     await run.expectExit(0);
 
@@ -160,12 +160,12 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], async function (
 
     // Update the app back to an older version.
     run = s.run("update", "--release", "v2");
-    run.read("myapp: updated to Meteor v2.\n");
+    await run.read("myapp: updated to Meteor v2.\n");
     await run.expectEnd();
     await run.expectExit(0);
 
     run = s.run("--version");
-    run.read("Meteor v2\n");
+    await run.read("Meteor v2\n");
     await run.expectEnd();
     await run.expectExit(0);
 
@@ -176,7 +176,7 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], async function (
 
     // Update explicitly to v3.
     run = s.run("update", "--release", "v3");
-    run.read("myapp: updated to Meteor v3.\n");
+    await run.read("myapp: updated to Meteor v3.\n");
     // We *don't* print "All your package dependencies are already up to date"
     // here, because we don't try to additionally update packages when you
     // request a specific release.
@@ -186,7 +186,7 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], async function (
 
   // The latest version has been updated globally too.
   run = s.run("--version");
-  run.read("Meteor v3\n");
+  await run.read("Meteor v3\n");
   await run.expectEnd();
   await run.expectExit(0);
 

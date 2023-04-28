@@ -499,11 +499,15 @@ var doInteractivePasswordLogin = async function (options) {
     }
 
     try {
-      var result = await conn.callAsync('login', {
-        session: auth.getSessionId(config.getAccountsDomain()),
-        meteorAccountsLoginInfo: loginData,
-        clientInfo: await utils.getAgentInfo()
-      });
+      var result = await conn.callAsync(
+        "login",
+        { returnServerPromise: true },
+        {
+          session: auth.getSessionId(config.getAccountsDomain()),
+          meteorAccountsLoginInfo: loginData,
+          clientInfo: await utils.getAgentInfo(),
+        }
+      );
     } catch (err) {
     }
     if (result && result.token) {

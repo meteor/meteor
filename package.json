@@ -54,7 +54,8 @@
       "no-use-before-define": "warn",
       "import/no-unresolved": "warn",
       "require-await": "error",
-      "space-before-function-paren": ["error",
+      "space-before-function-paren": [
+        "error",
         {
           "anonymous": "never",
           "named": "never",

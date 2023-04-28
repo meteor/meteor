@@ -404,7 +404,7 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    self._runApp()
+    self._runApp().catch((e) => self._resolvePromise("start", e));
     await self.startPromise;
     self.startPromise = null;
   },
@@ -439,12 +439,17 @@ Object.assign(AppRunner.prototype, {
       ee.emit(name, value);
       this._promiseResolvers[name] = null;
     }
+    if (value instanceof Error) {
+      throw value;
+    }
   },
 
   _cleanUpPromises: function () {
     if (this._promiseResolvers) {
-      _.each(this._promiseResolvers, (resolve) => {
-        resolve && this._promiseResolvers[resolve]?.emit(resolve, false);
+      _.each(this._promiseResolvers, (ee,name) => {
+        if (ee) {
+          ee.emit(name, null);
+        }
       });
       this._promiseResolvers = null;
     }
@@ -761,7 +766,7 @@ Object.assign(AppRunner.prototype, {
     if (options.firstRun && self._beforeStartPromise) {
         var [stopped] = await self._beforeStartPromise;
         if (stopped) {
-          return stopped
+          return true;
         }
     }
     await appProcess.start();
@@ -784,7 +789,6 @@ Object.assign(AppRunner.prototype, {
     maybePrintLintWarnings(bundleResult);
 
     if (cordovaRunner && !cordovaRunner.started) {
-      //TODO -> Cordova
       await cordovaRunner.startRunTargets();
     }
 

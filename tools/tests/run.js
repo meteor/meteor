@@ -211,11 +211,7 @@ selftest.define("run errors", async function () {
   await run.match("Can't start Mongo server");
   await run.match("MongoDB exited because its port was closed");
   await run.match("running in the same project.\n");
-  // TODO pr 12125: the problem is that the buff continues with the value:
-  //  2| Browserslist: caniuse-lite is outdated. Please run:
-  //  2|   npx browserslist@latest --update-db
-  //  2|   Why you should do it regularly: https://github.com/browserslist/browserslist#browsers-data-updating
-  // run.expectEnd();
+  await run.expectEnd();
   run.forbid("Started MongoDB");
   await run.expectExit(254);
 
@@ -366,18 +362,14 @@ selftest.define("run with mongo crash", ["checkout"], async function () {
   }
 
   await run.tellMongo({exit: 23});
-  run.read('Unexpected mongo exit code 23. Restarting.\n');
+  await run.read('Unexpected mongo exit code 23. Restarting.\n');
   await run.tellMongo({exit: 46});
-  run.read('Unexpected mongo exit code 46. Restarting.\n');
+  await run.read('Unexpected mongo exit code 46. Restarting.\n');
   await run.tellMongo({exit: 47});
-  run.read('Unexpected mongo exit code 47. Restarting.\n');
-  run.read("Can't start Mongo server.\n");
-  run.read("MongoDB exited due to excess clock skew\n");
-  // TODO pr 12125: the problem is that the buff continues with the value:
-  //  2| Browserslist: caniuse-lite is outdated. Please run:
-  //  2|   npx browserslist@latest --update-db
-  //  2|   Why you should do it regularly: https://github.com/browserslist/browserslist#browsers-data-updating
-  // run.expectEnd();
+  await run.read('Unexpected mongo exit code 47. Restarting.\n');
+  await run.read("Can't start Mongo server.\n");
+  await run.read("MongoDB exited due to excess clock skew\n");
+  await run.expectEnd();
   await run.expectExit(254);
 
   // Now create a build failure. Make sure that killing mongod three times
@@ -391,16 +383,12 @@ selftest.define("run with mongo crash", ["checkout"], async function () {
   await run.tellMongo({exit: 23});
   await run.match('Unexpected mongo exit code 23. Restarting.\n');
   await run.tellMongo({exit: 46});
-  run.read('Unexpected mongo exit code 46. Restarting.\n');
+  await run.read('Unexpected mongo exit code 46. Restarting.\n');
   await run.tellMongo({exit: 47});
-  run.read('Unexpected mongo exit code 47. Restarting.\n');
-  run.read("Can't start Mongo server.\n");
-  run.read("MongoDB exited due to excess clock skew\n");
-  // TODO pr 12125: the problem is that the buff continues with the value:
-  //  2| Browserslist: caniuse-lite is outdated. Please run:
-  //  2|   npx browserslist@latest --update-db
-  //  2|   Why you should do it regularly: https://github.com/browserslist/browserslist#browsers-data-updating
-  // run.expectEnd();
+  await run.read('Unexpected mongo exit code 47. Restarting.\n');
+  await run.read("Can't start Mongo server.\n");
+  await run.read("MongoDB exited due to excess clock skew\n");
+  await run.expectEnd();
   await run.expectExit(254);
 });
 
