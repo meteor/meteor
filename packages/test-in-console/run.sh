@@ -10,10 +10,6 @@ export METEOR_HOME=`pwd`
 
 export phantom=$phantom
 
-# force fibers to be disabled
-export DISABLE_FIBERS=1
-export IGNORE_ASYNC_PLUGIN=1
-
 # only install dependencies if required
 if [ "$phantom" = true ]
 then
