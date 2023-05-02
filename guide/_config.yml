@@ -5,6 +5,7 @@ edit_branch: 'devel'
 edit_path: 'guide'
 content_root: 'content'
 versions:
+  - '2.12'
   - '2.11'
   - '2.10'
   - '2.9'
@@ -40,7 +41,7 @@ sidebar_categories:
     - index
     - code-style
     - structure
-    - 2.9-migration
+    - 2.11-migration
   Data:
     - collections
     - data-loading
