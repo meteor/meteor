@@ -186,11 +186,8 @@ function getDefaultsForNode8(features) {
       require("@babel/plugin-syntax-object-rest-spread"),
       require("@babel/plugin-proposal-object-rest-spread")
     );
-    // TODO [fibers]: instead of removing the code below, consider this comment:
-      // https://github.com/meteor/meteor/pull/12471/files#r1089610144
-    const ignoreAsyncPlugin = process.env.IGNORE_ASYNC_PLUGIN === '1';
 
-    if (!features.useNativeAsyncAwait && !ignoreAsyncPlugin) {
+    if (features.useNativeAsyncAwait === false) {
       combined.plugins.push([
         require('./plugins/async-await.js'),
         {
