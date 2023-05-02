@@ -14,9 +14,6 @@ env:
     - CXX=g++-4.8
     - phantom=false
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
-    # Disable fibers for all jobs
-    - DISABLE_FIBERS=1
-    - IGNORE_ASYNC_PLUGIN=1
 addons:
   apt:
     sources:
