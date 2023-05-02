@@ -10,6 +10,157 @@
 
 
 
+## v2.12.0, 2023-04-28
+
+### Highlights
+
+* Document main function in webapp by [harryadel](https://github.com/harryadel) [PR](https://github.com/meteor/meteor/pull/12579)
+* Add undocument properties to docs by [harryadel](https://github.com/harryadel) [PR](https://github.com/meteor/meteor/pull/12563)
+* Bump NPM versions for css minifiers by [wreiske](https://github.com/wreiske) [PR](https://github.com/meteor/meteor/pull/12562)
+* Updated Email and Mongo package types by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12554)
+* Updated security.md by [jamauro](https://github.com/jamauro) [PR](https://github.com/meteor/meteor/pull/12461)
+* Added addHtmlAttributeHook type on WebApp by [DblK](https://github.com/DblK) [PR](https://github.com/meteor/meteor/pull/12545)
+* Added loginServiceConfiguration type on Accounts by [DblK](https://github.com/DblK) [PR](https://github.com/meteor/meteor/pull/12539)
+* Add TS types for Mongo Collection countDocuments and estimatedDocumentCount by [ArthurHoaro](https://github.com/ArthurHoaro) [PR](https://github.com/meteor/meteor/pull/12533)
+* Allow setting a custom ddp-rate-limit message per rule by [wreiske](https://github.com/wreiske) [PR](https://github.com/meteor/meteor/pull/12082)
+* Updated MongoDB driver to 4.15 by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12583)
+* Adding warn with env variable when using old apis vy [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12585)
+* Fix syntax for legacy client by [zodern](https://github.com/zodern) [PR](https://github.com/meteor/meteor/pull/12596)
+* Updating MongoDB driver to 4.16 by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12599)
+* Update sockjs-client by [harryadel](https://github.com/harryadel) [PR](https://github.com/meteor/meteor/pull/12590)
+* [Accounts] set custom collection by [dmromanov](https://github.com/dmromanov) [PR](https://github.com/meteor/meteor/pull/12591)
+* Wrappers to help in the async migration by [matheusccastroo](https://github.com/matheusccastroo) [PR](https://github.com/meteor/meteor/pull/12593)
+* Mongo query hangs all clients subscribed to a query/collection by [KoenLav](https://github.com/KoenLav) [PR](https://github.com/meteor/meteor/pull/12587)
+* Blaze to 2.6.2 by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/blaze/pull/411)
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Now if you want to check where do you call old-style api methods 
+you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
+
+
+#### Meteor Version Release
+
+* `accounts-base@2.2.8`:
+    - Added `loginServiceConfiguration` type.
+    - Added the `collection` option property, in order to be able to set the collection for Accounts,
+    more can be seen in the [discussion](https://github.com/meteor/meteor/discussions/12544#discussioncomment-5240763) 
+    and in the [related issue](https://github.com/meteor/meteor-feature-requests/issues/20).
+    - `onCreateUserHook` now accept promises and wait if necessary.
+
+* `babel-compiler@7.10.4`:
+    - Added `es5` compatible syntax.
+
+* `browser-policy-content@1.1.2`:
+    - Added `es5` compatible syntax.
+
+* `browser-policy-framing@1.1.2`:
+    - Added `es5` compatible syntax.
+    
+* `browser-policy@1.1.2`:
+    - Updated test name.
+
+* `callback-hook@1.5.1`:
+    - Added async hooks possibility to make async migrations easier.
+
+* `context@0.5.1`:
+    - Added `es5` compatible syntax.
+
+* `ddp-rate-limiter@1.2.0`:
+    - Allow setting a custom ddp-rate-limit message per rule.
+
+* `ddp-server@2.6.1`:
+    - Updated sockjs version.
+
+* `dev-error-overlay@0.1.2`:
+    - Added `es5` compatible syntax by adding the `ecmascript` package.
+
+* `dynamic-import@0.7.3`:
+    - Added `es5` compatible syntax.
+
+* `ecmascript@0.16.7`:
+    - Updated tests location.
+
+* `ecmascript-runtime@0.8.1`:
+    - Updated npm dependencies.
+
+* `email@2.2.5`:
+    - Updated type `CustomEmailOptions` to be a type instead of an interface.
+
+* `hot-module-replacement@0.5.3`:
+    - Added `es5` compatible syntax.
+
+
+* `meteor@1.11.2`:
+    - Added documentation for `isTest`, `isAppTest` and `isPackageTest` methods.
+    - Added possibility to add async hooks to make async migrations easier. [PR](https://github.com/meteor/meteor/pull/12593)
+
+* `minifier-css@1.6.4`:
+    - Bump NPM versions for css minifiers.
+
+* `minimongo@1.9.3`:
+    - Updated to be able to track old api usage.
+
+* `modules-runtime-hot@0.14.2`:
+    - Added `es5` compatible syntax.
+
+* `mongo@1.16.6`:
+    - Added `countDocuments` and `estimatedDocumentCount` types.
+    - Added warning for when old style apis are being used, to use this feature, 
+    use the variable`WARN_WHEN_USING_OLD_API=true` before starting the Meteor process.
+    - Oplog driver updated to not throw error when MongoDB server and Meteor client mismatch. [issue](https://github.com/meteor/meteor/issues/12516)
+
+* `non-core`:
+    - Blaze to version 2.6.2.
+
+* `npm-mongo@4.16.0`:
+    - Updated MongoDB driver to 4.15.
+    - Updated MongoDB driver to 4.16.
+
+* `rate-limit@1.1.1`:
+    - Added `ruleId` property that will be used for setting messages.
+
+* `react-fast-refresh@0.2.7`:
+    - Added `es5` compatible syntax.
+
+* `socket-stream-client@0.5.0`:
+    - Updated sockjs version.
+
+* `standard-minifier-css@1.9.2`:
+    - Bump NPM versions for css minifiers.
+
+* `tracker@1.3.2`:
+    - Updated types and updated JSDocs for `Tracker.withComputation`.
+
+* `underscore@1.0.13`:
+    - Updated npm dependencies.
+
+* `webapp@1.13.5`:
+    - Added `addHtmlAttributeHook` type.
+
+
+
+#### Special thanks to
+
+- [@harryadel](https://github.com/harryadel).
+- [@wreiske](https://github.com/wreiske).
+- [@ebroder](https://github.com/ebroder).
+- [@jamauro](https://github.com/jamauro).
+- [@DblK](https://github.com/DblK).
+- [@ArthurHoaro](https://github.com/ArthurHoaro).
+- [@Grubba27](https://github.com/Grubba27).
+- [@zodern](https://github.com/zodern).
+- [@dmromanov](https://github.com/dmromanov).
+- [@matheusccastroo](https://github.com/matheusccastroo).
+
 ## v2.11.0, 2023-03-02
 
 ### Highlights
@@ -32,13 +183,13 @@
 * Remove Blaze dependency and types that live in blaze.d.ts
   by [perbergland](https://github.com/perbergland) [PR](https://github.com/meteor/meteor/pull/12428)
 
-* Switch typescript skeleton to zodern:types and test that it works by [ebroder](https://github.com/ebroder) [PR #12510](https://github.com/meteor/meteor/pull/12510)
-* Remove packages/*/.npm from gitignore and add missing .npm folders by [ebroder](https://github.com/ebroder) [PR #12508](https://github.com/meteor/meteor/pull/12508)
-* Add type definitions for async methods from Meteor 2.9 by [ebroder](https://github.com/ebroder) [PR #12507](https://github.com/meteor/meteor/pull/12507)
-* TypeScript skeleton fixes by [ebroder](https://github.com/ebroder) [PR #12506](https://github.com/meteor/meteor/pull/12506)
-* Fix TypeScript type dependencies for mongo, webapp, and underscore by [ebroder](https://github.com/ebroder) [PR #12505](https://github.com/meteor/meteor/pull/12505)
-* Improve specificity of types previously declared as "Object" by [ebroder](https://github.com/ebroder) [PR #12520](https://github.com/meteor/meteor/pull/12520)
-* Bump to Node 14.21.3 by [StorytellerCZ](https://github.com/StorytellerCZ) [PR #12517](https://github.com/meteor/meteor/pull/12517)
+* Switch typescript skeleton to zodern:types and test that it works by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12510)
+* Remove packages/*/.npm from gitignore and add missing .npm folders by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12508)
+* Add type definitions for async methods from Meteor 2.9 by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12507)
+* TypeScript skeleton fixes by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12506)
+* Fix TypeScript type dependencies for mongo, webapp, and underscore by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12505)
+* Improve specificity of types previously declared as "Object" by [ebroder](https://github.com/ebroder) [PR](https://github.com/meteor/meteor/pull/12520)
+* Bump to Node 14.21.3 by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12517)
 
 #### Breaking Changes
 
@@ -62,7 +213,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 * `accounts-base@2.2.7`:
     - Updated types to match async methods added in newer versions.
     - Ensured the meteor.loginServiceConfiguration subscription always becomes ready, by adding a this.ready() call.
-    - Specified that previously were declared as "Object" types. More context can be seen in [PR #12520](https://github.com/meteor/meteor/pull/12520).
+    - Specified that previously were declared as "Object" types. More context can be seen in [PR](https://github.com/meteor/meteor/pull/12520).
 
 * `accounts-password@2.3.4`:
     - Updated `Accounts.changePassword` and `Accounts.resetPassword` to be correctly verify if the new password is
@@ -82,7 +233,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 
 * `email@2.2.4`:
     - Updated types to match async methods added in newer versions.
-    - Specified that previously were declared as "Object" types. More context can be seen in [PR #12520](https://github.com/meteor/meteor/pull/12520).
+    - Specified that previously were declared as "Object" types. More context can be seen in [PR](https://github.com/meteor/meteor/pull/12520).
 
 * `logging@1.3.2`:
     - removed .npm/package contents and added .gitignore
@@ -93,7 +244,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 
 * `meteor@1.11.1`:
     - updated types to removed unused Blaze types
-    - Specified that previously were declared as "Object" types. More context can be seen in [PR #12520](https://github.com/meteor/meteor/pull/12520).
+    - Specified that previously were declared as "Object" types. More context can be seen in [PR](https://github.com/meteor/meteor/pull/12520).
 
 * `minimongo@1.9.2`:
     - Updated performance of makeLookupFunction
@@ -102,7 +253,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.11-migration.html) for thi
 * `mongo@1.16.5`:
     - In async wrappers, catch exceptions and reject
     - Updated MongoDB types to match driver version 4.13.0 and MongoDB server version 6.0.3
-    - Specified that previously were declared as "Object" types. More context can be seen in [PR #12520](https://github.com/meteor/meteor/pull/12520).
+    - Specified that previously were declared as "Object" types. More context can be seen in [PR](https://github.com/meteor/meteor/pull/12520).
     - Now uses MongoDB v6.0.3
     - Now uses Node v14.21.3
 
