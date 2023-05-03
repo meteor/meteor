@@ -1,6 +1,6 @@
-const isEmpty = Npm.require('lodash.isempty');
-const has = Npm.require('lodash.has');
-const union = Npm.require('lodash.union');
+var isEmpty = Npm.require('lodash.isempty');
+var has = Npm.require('lodash.has');
+var union = Npm.require('lodash.union');
 
 // By adding this package, you get the following default policy:
 // No eval or other string-to-code, and content can only be loaded from the
