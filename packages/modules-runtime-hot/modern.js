@@ -1,4 +1,4 @@
-var verifyErrors = Package['modules-runtime'].verifyErrors;
+let verifyErrors = Package['modules-runtime'].verifyErrors;
 
 meteorInstall = makeInstaller({
   // On the client, make package resolution prefer the "browser" field of
@@ -11,7 +11,7 @@ meteorInstall = makeInstaller({
   }
 });
 
-var Module = Package['modules-runtime'].meteorInstall.Module;
+let Module = Package['modules-runtime'].meteorInstall.Module;
 meteorInstall.Module.prototype.link = Module.prototype.link;
 
 // This package should be running after modules-runtime but before modules.

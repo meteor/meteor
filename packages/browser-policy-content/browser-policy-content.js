@@ -50,7 +50,7 @@ var keywords = {
 // If false, we set the X-Content-Type-Options header to 'nosniff'.
 var contentSniffingAllowed = false;
 
-var BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
+const BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
 BrowserPolicy.content = {};
 
 var parseCsp = function (csp) {
@@ -260,12 +260,12 @@ var resources = [
   { methodResource: "Frame", directive: "frame-src" },
   { methodResource: "FrameAncestors", directive: "frame-ancestors" }
 ];
-_.each(resources, function (resource) {
-  var directive = resource.directive;
-  var methodResource = resource.methodResource;
+_.each(resources,  function (resource) {
+  var directive = resource.directive; 
+  var methodResource = resource.methodResource; 
   var allowMethodName = "allow" + methodResource + "Origin";
   var disallowMethodName = "disallow" + methodResource;
-  var allowDataMethodName = "allow" + methodResource + "DataUrl";
+  var allowDataMethodName = "allow" + methodResource + "DataUrl"; 
   var allowBlobMethodName = "allow" + methodResource + "BlobUrl";
   var allowSelfMethodName = "allow" + methodResource + "SameOrigin";
 

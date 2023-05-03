@@ -79,7 +79,7 @@ Tinytest.addAsync('minifier-css - simple CSS minification', async (test) => {
     'a {\n\
     font:12px \'Helvetica\',"Arial",\'Nautica\';\n\
     background:url("/some/nice/picture.png");\n}',
-    'a{background:url(/some/nice/picture.png);font:12px Helvetica,Arial,Nautica}',
+    'a{font:12px Helvetica,Arial,Nautica;background:url(/some/nice/picture.png)}',
     'removing quotes in font and url (if possible)',
   );
   await checkMinified(

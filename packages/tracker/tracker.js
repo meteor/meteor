@@ -594,11 +594,6 @@ Tracker.nonreactive = function (f) {
   return Tracker.withComputation(null, f);
 };
 
-/**
- * @summary Helper function to make the tracker work with promises.
- * @param computation Computation that tracked
- * @param func async function that needs to be called and be reactive
- */
 Tracker.withComputation = function (computation, f) {
   var previousComputation = Tracker.currentComputation;
 

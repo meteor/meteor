@@ -1,4 +1,4 @@
-var meteorInstall = Package['modules-runtime'].meteorInstall;
+const meteorInstall = Package['modules-runtime'].meteorInstall;
 
 /**
  * @summary The Hot API used to configure HMR
@@ -17,8 +17,8 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
       };
     }
 
-    var hotState = this._hotState;
-    var module = this;
+    let hotState = this._hotState;
+    let module = this;
 
     return {
       /**

@@ -1,6 +1,6 @@
-var runtime = require('react-refresh/runtime');
+const runtime = require('react-refresh/runtime');
 
-var timeout = null;
+let timeout = null;
 function scheduleRefresh() {
   if (!timeout) {
     timeout = setTimeout(function () {
@@ -88,14 +88,14 @@ window.$RefreshSig$ = function () {
   return function (type) { return type; };
 };
 
-var moduleInitialState = new WeakMap();
+const moduleInitialState = new WeakMap();
 
 module.hot.onRequire({
   after: function (module) {
     // TODO: handle modules with errors
 
-    var beforeStates = moduleInitialState.get(module);
-    var beforeState = beforeStates && beforeStates.pop();
+    const beforeStates = moduleInitialState.get(module);
+    const beforeState = beforeStates && beforeStates.pop();
     if (!beforeState) {
       return;
     }
@@ -117,7 +117,7 @@ module.exports = function setupModule (module) {
     return;
   }
 
-  var beforeStates = moduleInitialState.get(module);
+  let beforeStates = moduleInitialState.get(module);
 
   if (beforeStates === undefined) {
     beforeStates = [];
@@ -129,7 +129,7 @@ module.exports = function setupModule (module) {
 
   window.RefreshRuntime = runtime;
   window.$RefreshReg$ = function (type, _id) {
-    var fullId = module.id + ' ' + _id;
+    const fullId = module.id + ' ' + _id;
     RefreshRuntime.register(type, fullId);
   }
   window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;

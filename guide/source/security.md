@@ -365,7 +365,7 @@ Meteor.users.methods.updateMMR = new ValidatedMethod({
 });
 ```
 
-Note that while the Method is defined on the client, the actual secret logic is only accessible from the server and the code will **not** be included in the client bundle. Keep in mind that code inside `if (Meteor.isServer)` and `if (!this.isSimulation)` blocks is still sent to the client, it is just not executed. So don't put any secret code in there.
+Note that while the Method is defined on the client, the actual secret logic is only accessible from the server. Keep in mind that code inside `if (Meteor.isServer)` blocks is still sent to the client, it is just not executed. So don't put any secret code in there.
 
 Secret API keys should never be stored in your source code at all, the next section will talk about how to handle them.
 

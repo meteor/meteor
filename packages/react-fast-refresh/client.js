@@ -1,6 +1,6 @@
-var enabled = __meteor_runtime_config__ &&
+let enabled = __meteor_runtime_config__ &&
   __meteor_runtime_config__.reactFastRefreshEnabled;
-var hmrEnabled = !!module.hot;
+let hmrEnabled = !!module.hot;
 var setupModule;
 
 function init(module) {
@@ -16,7 +16,7 @@ if (
   hmrEnabled &&
   enabled
 ) {
-  var inBefore = false;
+  let inBefore = false;
   module.hot.onRequire({
     before: function (module) {
       if (inBefore) {

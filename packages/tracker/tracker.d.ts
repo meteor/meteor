@@ -110,7 +110,7 @@ export namespace Tracker {
   ): Computation;
 
   /**
-   * @summary Helper function to make the tracker work with promises.
+   * Helper function to make the tracker work with promises.
    * @param computation Computation that tracked
    * @param func async function that needs to be called and be reactive
    */

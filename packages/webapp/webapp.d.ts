@@ -39,7 +39,6 @@ export declare module WebApp {
   function addRuntimeConfigHook(callback: RuntimeConfigHookCallback): void;
   function decodeRuntimeConfig(rtimeConfigString: string): unknown;
   function encodeRuntimeConfig(rtimeConfig: unknown): string;
-  function addHtmlAttributeHook(hook: Function): void;
 }
 
 export declare module WebAppInternals {

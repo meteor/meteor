@@ -1,5 +1,5 @@
 import { SendMailOptions } from 'nodemailer';
-
+ 
 export namespace Email {
   /**
    * ExtraMailOptions is intentionally left empty here, but can be overridden in
@@ -11,7 +11,7 @@ export namespace Email {
   interface ExtraMailOptions {}
   type EmailOptions = { mailComposer: MailComposer } | (ExtraMailOptions & SendMailOptions)
 
-  type CustomEmailOptions = EmailOptions & {
+  interface CustomEmailOptions extends EmailOptions {
     packageSettings?: unknown;
   }
 

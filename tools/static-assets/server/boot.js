@@ -312,7 +312,6 @@ const loadServerBundles = Profile("Load server bundles", async function () {
           promiseResolver = r;
           promiseReject = reject;
         });
-
       }
       // This assumes that we've already loaded the meteor package, so meteor
       // itself can't call Assets.get*. (We could change this function so that
@@ -355,22 +354,10 @@ const loadServerBundles = Profile("Load server bundles", async function () {
 
     const Assets = {
       getText: function (assetPath, callback) {
-        const result = getAsset(assetPath, "utf8", callback);
-        if (!callback) {
-          return Future.fromPromise(result).wait();
-        }
-      },
-      getTextAsync: function (assetPath) {
-        return getAsset(assetPath, "utf8");
+        return getAsset(assetPath, "utf8", callback);
       },
       getBinary: function (assetPath, callback) {
-        const result = getAsset(assetPath, undefined, callback);
-        if (!callback) {
-          return Future.fromPromise(result).wait();
-        }
-      },
-      getBinaryAsync: function (assetPath) {
-        return getAsset(assetPath, undefined);
+        return getAsset(assetPath, undefined, callback);
       },
       /**
        * @summary Get the absolute path to the static server asset. Note that assets are read-only.

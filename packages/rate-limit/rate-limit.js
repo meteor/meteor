@@ -164,7 +164,6 @@ class RateLimiter {
         }
         reply.allowed = false;
         reply.numInvocationsLeft = 0;
-        reply.ruleId = rule.id;
         rule._executeCallback(reply, input);
       } else {
         // If this is an allowed attempt and we haven't failed on any of the
@@ -175,7 +174,6 @@ class RateLimiter {
           reply.numInvocationsLeft = rule.options.numRequestsAllowed -
             numInvocations;
         }
-        reply.ruleId = rule.id;
         rule._executeCallback(reply, input);
       }
     });

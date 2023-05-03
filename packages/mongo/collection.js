@@ -6,24 +6,7 @@ import {
 } from "meteor/minimongo/constants";
 
 import { normalizeProjection } from "./mongo_utils";
-export function warnUsingOldApi (
-    methodName,
-    collectionName,
-    isCalledFromAsync
-   ){
-  if (
-    process.env.WARN_WHEN_USING_OLD_API && // also ensures it is on the server
-    !isCalledFromAsync // must be true otherwise we should log
-  ) {
-   if (collectionName === undefined || collectionName.includes('oplog')) return
-   console.warn(`
-   
-   Calling method ${collectionName}.${methodName} from old API on server.
-   This method will be removed, from the server, in version 3.
-   Trace is below:`)
-   console.trace()
- };
-}
+
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
@@ -459,6 +442,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @method estimatedDocumentCount
    * @memberof Mongo.Collection
    * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to count
    * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/EstimatedDocumentCountOptions.html). Please note that not all of them are available on the client.
    * @returns {Promise<number>}
    */
@@ -572,8 +556,6 @@ Object.assign(Mongo.Collection.prototype, {
    * @returns {Object}
    */
   findOne(...args) {
-
-
     return this._collection.findOne(
       this._getFindSelector(args),
       this._getFindOptions(args)
@@ -672,7 +654,6 @@ Object.assign(Mongo.Collection.prototype, {
     if (!doc) {
       throw new Error('insert requires an argument');
     }
-
 
     // Make a shallow clone of the document, preserving its prototype.
     doc = Object.create(
@@ -1008,7 +989,7 @@ Object.assign(Mongo.Collection.prototype, {
       return this._callMutatorMethodAsync('removeAsync', [selector], options);
     }
 
-    // it's my collection.  descend into the collection object
+    // it's my collection.  descend into the collection1 object
     // and propagate any exception.
     return this._collection.removeAsync(selector);
   },
@@ -1274,7 +1255,6 @@ function popCallbackFromArgs(args) {
     return args.pop();
   }
 }
-
 
 
 // XXX: IN Meteor 3.x this code was not working....

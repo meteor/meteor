@@ -1,11 +1,11 @@
 Package.describe({
   summary: 'CSS minifier',
-  version: '1.6.4',
+  version: '1.6.2'
 });
 
 Npm.depends({
-  postcss: '8.4.21',
-  cssnano: '5.1.15'
+  postcss: '8.4.16',
+  cssnano: '4.1.11'
 });
 
 Package.onUse(function (api) {

@@ -9,7 +9,7 @@
 var defaultXFrameOptions = "SAMEORIGIN";
 var xFrameOptions = defaultXFrameOptions;
 
-var BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
+const BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
 BrowserPolicy.framing = {};
 
 Object.assign(BrowserPolicy.framing, {

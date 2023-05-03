@@ -16,7 +16,6 @@ const VALID_CONFIG_KEYS = [
   'defaultFieldSelector',
   'loginTokenExpirationHours',
   'tokenSequenceLength',
-  'collection',
 ];
 
 /**
@@ -27,8 +26,6 @@ const VALID_CONFIG_KEYS = [
  * @param options {Object} an object with fields:
  * - connection {Object} Optional DDP connection to reuse.
  * - ddpUrl {String} Optional URL for creating a new DDP connection.
- * - collection {String|Mongo.Collection} The name of the Mongo.Collection
- *     or the Mongo.Collection object to hold the users.
  */
 export class AccountsCommon {
   constructor(options) {
@@ -43,7 +40,10 @@ export class AccountsCommon {
 
     // There is an allow call in accounts_server.js that restricts writes to
     // this collection.
-    this.users = this._initializeCollection(options || {});
+    this.users = new Mongo.Collection('users', {
+      _preventAutopublish: true,
+      connection: this.connection,
+    });
 
     // Callback exceptions are printed with Meteor._debug and ignored.
     this._onLoginHook = new Hook({
@@ -79,29 +79,6 @@ export class AccountsCommon {
     // should come up with a more generic way to do this (eg, with some sort of
     // symbolic error code rather than a number).
     this.LoginCancelledError.numericError = 0x8acdc2f;
-  }
-
-  _initializeCollection(options) {
-    if (options.collection && typeof options.collection !== 'string' && !(options.collection instanceof Mongo.Collection)) {
-      throw new Meteor.Error('Collection parameter can be only of type string or "Mongo.Collection"');
-    }
-
-    let collectionName = 'users';
-    if (typeof options.collection === 'string') {
-      collectionName = options.collection;
-    }
-
-    let collection;
-    if (options.collection instanceof Mongo.Collection) {
-      collection = options.collection;
-    } else {
-      collection = new Mongo.Collection(collectionName, {
-        _preventAutopublish: true,
-        connection: this.connection,
-      });
-    }
-
-    return collection;
   }
 
   /**
@@ -195,8 +172,6 @@ export class AccountsCommon {
   // - loginExpirationInDays {Number}
   //     Number of days since login until a user is logged out (login token
   //     expires).
-  // - collection {String|Mongo.Collection}
-  //     A collection name or a Mongo.Collection object to hold the users.
   // - passwordResetTokenExpirationInDays {Number}
   //     Number of days since password reset token creation until the
   //     token cannt be used any longer (password reset token expires).
@@ -223,7 +198,6 @@ export class AccountsCommon {
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`. Beware when using this. If, for instance, you do not include `email` when excluding the fields, you can have problems with functions like `forgotPassword` that will break because they won't have the required data available. It's recommend that you always keep the fields `_id`, `username`, and `email`.
-   * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
    */
@@ -277,17 +251,11 @@ export class AccountsCommon {
     VALID_CONFIG_KEYS.forEach(key => {
       if (key in options) {
         if (key in this._options) {
-          if (key !== 'collection') {
-            throw new Meteor.Error(`Can't set \`${key}\` more than once`);
-          }
+          throw new Meteor.Error(`Can't set \`${key}\` more than once`);
         }
         this._options[key] = options[key];
       }
     });
-
-    if (options.collection && options.collection !== this.users._name && options.collection !== this.users) {
-      this.users = this._initializeCollection(options);
-    }
   }
 
   /**
