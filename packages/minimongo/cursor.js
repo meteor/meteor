@@ -521,7 +521,9 @@ ASYNC_CURSOR_METHODS.forEach(method => {
   const asyncName = getAsyncMethodName(method);
   Cursor.prototype[asyncName] = function(...args) {
     try {
+      // TODO: [fibers]: remove this when we remove fibers.
       this[method].isCalledFromAsync = true;
+      // TODO: [fibers]: revert this change to "return Promise.resolve(this[method].apply(this, args));" in version 3.0
       return Promise.asyncApply(async () => this[method].apply(this, args));
     } catch (error) {
       return Promise.reject(error);
