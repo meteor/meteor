@@ -57,16 +57,16 @@ AVAILABLE_SKELETONS.forEach(template => {
 
     // Can we create an app? Yes!
     let run = s.run("create", "--" + template, template);
-    run.waitSecs(60);
+    run.waitSecs(40);
     await run.match("Created a new Meteor app in '" + template + "'.");
     await run.match("To run your new app");
 
     s.cd(template);
     run = s.run();
-    run.waitSecs(60);
+    run.waitSecs(40);
     await run.match(template);
     await run.match("proxy")
-    run.waitSecs(60);
+    run.waitSecs(40);
     await run.match("your app");
     run.waitSecs(5);
     await run.match("running at");

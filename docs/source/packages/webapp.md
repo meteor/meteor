@@ -160,3 +160,4 @@ WebApp.addUpdatedNotifyHook(({arch, manifest, runtimeConfig}) => {
 
 {% apibox "WebApp.addUpdatedNotifyHook" %}
 {% apibox "addUpdatedNotifyHookCallback(options)" %}
+{% apibox "main" %}

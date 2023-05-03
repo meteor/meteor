@@ -50,7 +50,7 @@ EVp._set = function (context) {
 };
 
 EVp._setNewContextAndGetCurrent = function (value) {
-  const saved = currentValues[this.slot];
+  var saved = currentValues[this.slot];
   this._set(value);
   return saved;
 };

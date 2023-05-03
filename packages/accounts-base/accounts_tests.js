@@ -1,3 +1,4 @@
+import { Mongo } from 'meteor/mongo';
 import { URL } from 'meteor/url';
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
@@ -732,6 +733,56 @@ Tinytest.addAsync(
 );
 
 if (Meteor.isServer) {
+  Tinytest.addAsync('accounts - config - collection - mongo.collection', async test => {
+    const origCollection = Accounts.users;
+    // create same user in two different collections - should pass
+    const email = "test-collection@testdomain.com"
+
+    const collection0 = new Mongo.Collection('test1');
+
+    await Accounts.config({
+      collection: collection0,
+    })
+    const uid0 = await Accounts.createUser({email})
+    Meteor.users.remove(uid0);
+
+    const collection1 = new Mongo.Collection('test2');
+    await Accounts.config({
+      collection: collection1,
+    })
+    const uid1 = await Accounts.createUser({email})
+    await Meteor.users.remove(uid1);
+
+    test.notEqual(uid0, uid1);
+
+    await Accounts.config({
+      collection: origCollection,
+    });
+  });
+  Tinytest.addAsync('accounts - config - collection - name', async test => {
+    const origCollection = Accounts.users;
+    // create same user in two different collections - should pass
+    const email = "test-collection@testdomain.com"
+
+    await Accounts.config({
+      collection: 'collection0',
+    })
+    const uid0 = await Accounts.createUser({email})
+    await Meteor.users.remove(uid0);
+
+    Accounts.config({
+      collection: 'collection1',
+    })
+    const uid1 = await Accounts.createUser({email})
+    await Meteor.users.remove(uid1);
+
+    test.notEqual(uid0, uid1);
+
+    await Accounts.config({
+      collection: origCollection,
+    });
+  });
+
   Tinytest.addAsync(
     'accounts - make sure that extra params to accounts urls are added',
     async test => {
