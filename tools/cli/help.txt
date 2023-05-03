@@ -478,14 +478,18 @@ commands can be accessed by pressing the up arrow.
 Connect to the local Mongo database
 Usage: meteor mongo [--url]
 
-Opens a Mongo shell to view or manipulate collections.
+Opens a Mongo shell(mongosh) to view or manipulate collections.
 
 Instead of opening a shell, specifying --url (-U) will return a URL
 suitable for an external program to connect to the database. For remote
 databases on deployed applications, the URL is valid for one hour.
 
+Note that you must have mongosh installed to use this option.
+
 Options:
   --url, -U return a Mongo database URL
+  --verbose, -v to show the errors that have occurred while connecting to the
+								database
 
 Currently, this feature can only be used when developing locally.
 The opened Mongo shell connects to the current project's local

@@ -19,8 +19,10 @@ export class DocFetcher {
   fetch(collectionName, id, op, callback) {
     const self = this;
 
+    
     check(collectionName, String);
     check(op, Object);
+
 
     // If there's already an in-progress fetch for this cache key, yield until
     // it's done and return whatever it returns.

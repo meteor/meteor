@@ -50,3 +50,19 @@ module.exports = {
 ### Tailwind CSS
 
 Tailwind CSS is fully supported. Since HMR applies updates to js files earlier than the css is updated, there can be a delay when using a Tailwind CSS class the first time before the styles are applied.
+
+
+### Debbuging
+
+_Since Meteor.js 2.11.0 in this [PR](https://github.com/meteor/meteor/pull/12478) we have a debbug mode for the minifier_
+
+#### How standard-minifier-css becomes verbose
+
+- Either of the common debugging commandline arguments
+  - `--verbose`
+  - `--debug`
+- Environment variable
+  - `DEBUG_CSS`
+
+Side notes:
+`DEBUG_CSS=false` or `DEBUG_CSS=0` will prevent it from being verbose regardless of `--verbose` or `--debug` commandline arguments, because `DEBUG_CSS` is specific.
