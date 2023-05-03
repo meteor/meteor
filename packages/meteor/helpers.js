@@ -154,23 +154,15 @@ Meteor.wrapAsync = function (fn, context) {
   };
 };
 
+/**
+ * @description Wrap a function that takes a callback function as its final parameter.
+ * deprecated since v3.0, used to make migration to v3.0 easier
+ * @deprecated
+ * @param {Function} fn Function to wrap
+ * @returns {Function} A wrapped function
+ */
 Meteor.wrapFn = function (fn) {
-  if (!fn || typeof fn !== 'function') {
-    throw new Meteor.Error("Expected to receive function to wrap");
-  }
-
-  if (Meteor.isClient) {
-    return fn;
-  }
-
-  return function() {
-    var ret = fn.apply(this, arguments);
-    if (ret && typeof ret.then === 'function') {
-      return Promise.await(ret);
-    }
-
-    return ret;
-  }
+  return fn;
 };
 
 // Sets child's prototype to a new object whose prototype is parent's
