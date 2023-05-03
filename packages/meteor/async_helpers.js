@@ -1,5 +1,5 @@
 Meteor._noYieldsAllowed = function (f) {
-  const result = f();
+  var result = f();
   if (Meteor._isPromise(result)) {
     throw new Error("function is a promise when calling Meteor._noYieldsAllowed");
   }
