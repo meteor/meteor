@@ -49,10 +49,7 @@ export class Hook {
       this.bindEnvironment = false;
     }
 
-    this.wrapAsync = true;
-    if (options.wrapAsync === false) {
-      this.wrapAsync = false;
-    }
+    this.wrapAsync = options.wrapAsync !== false;
 
     if (options.exceptionHandler) {
       this.exceptionHandler = options.exceptionHandler;
