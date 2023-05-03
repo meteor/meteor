@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.10.4'
+  version: '1.11.2',
 });
 
 Package.registerBuildPlugin({
@@ -11,7 +11,7 @@ Package.registerBuildPlugin({
 });
 
 Npm.depends({
-  "double-ended-queue": "2.1.0-0"
+  "denque": "2.1.0"
 });
 
 Package.onUse(function (api) {

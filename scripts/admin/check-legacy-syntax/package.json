@@ -1,0 +1,10 @@
+{
+  "name": "check-legacy-syntax",
+  "version": "1.0.0",
+  "description": "Check for syntax errors in packages",
+  "main": "check-syntax.js",
+  "private": true,
+  "dependencies": {
+    "acorn": "^8.8.2"
+  }
+}

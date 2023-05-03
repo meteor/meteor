@@ -108,11 +108,20 @@ Function Add-Python {
   "$pythonExe"
 }
 
+# Nodejs 14 official download source has been discontinued, we are switching to our custom source https://static.meteor.com
 Function Add-NodeAndNpm {
   if ("${NODE_VERSION}" -match "-rc\.\d+$") {
     $nodeUrlBase = 'https://nodejs.org/download/rc'
   } else {
     $nodeUrlBase = 'https://nodejs.org/dist'
+  }
+}
+
+Function Add-Node14AndNpm {
+  if ("${NODE_VERSION}" -match "-rc\.\d+$") {
+    $nodeUrlBase = 'https://nodejs.org/download/rc'
+  } else {
+    $nodeUrlBase = 'https://static.meteor.com/dev-bundle-node-os'
   }
 
   $nodeArchitecture = 'win-x64'
@@ -253,8 +262,8 @@ Function Add-Mongo {
 
   Write-Host "Putting MongoDB mongod.exe in mongodb\bin" -ForegroundColor Magenta
   cp "$DIR\mongodb\$mongo_zip_name\bin\mongod.exe" $DIR\mongodb\bin
-  Write-Host "Putting MongoDB mongo.exe in mongodb\bin" -ForegroundColor Magenta
-  cp "$DIR\mongodb\$mongo_zip_name\bin\mongo.exe" $DIR\mongodb\bin
+  Write-Host "Putting MongoDB mongos.exe in mongodb\bin" -ForegroundColor Magenta
+  cp "$DIR\mongodb\$mongo_zip_name\bin\mongos.exe" $DIR\mongodb\bin
 
   Write-Host "Removing the old Mongo zip..." -ForegroundColor Magenta
   rm -Recurse -Force $mongo_zip
@@ -341,7 +350,7 @@ $env:npm_config_cache = "$dirNpmCache"
 $env:PATH = "$env:PATH;$dirBin"
 
 # Install Node.js and npm and get their paths to use from here on.
-$toolCmds = Add-NodeAndNpm
+$toolCmds = Add-Node14AndNpm
 
 "Location of node.exe:"
 & Get-Command node | Select-Object -ExpandProperty Definition
