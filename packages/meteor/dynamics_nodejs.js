@@ -2,6 +2,18 @@
 let nextSlot = 0;
 let callAsyncMethodRunning = false;
 
+var Fiber = Npm.require('fibers');
+
+var nextSlot = 0;
+var callAsyncMethodRunning = false;
+
+Meteor._nodeCodeMustBeInFiber = function () {
+  if (!Fiber.current) {
+    throw new Error("Meteor code must always run within a Fiber. " +
+                    "Try wrapping callbacks that you pass to non-Meteor " +
+                    "libraries with Meteor.bindEnvironment.");
+  }
+};
 const CURRENT_VALUE_KEY_NAME = "currentValue";
 const SLOT_CALL_KEY = "slotCall";
 
