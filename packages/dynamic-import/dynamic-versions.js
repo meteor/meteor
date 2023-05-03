@@ -3,7 +3,7 @@
 // modules, for use in client.js and cache.js.
 var versions = __DYNAMIC_VERSIONS__;
 
-const METEOR_PREFIX = '/node_modules/meteor/';
+var METEOR_PREFIX = '/node_modules/meteor/';
 
 exports.get = function (id) {
   var tree = versions;
