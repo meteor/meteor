@@ -216,6 +216,14 @@ collections will be empty.
 Equivalent to [`find`](#find)`(selector, options).`[`fetch`](#fetch)`()[0]` with
 `options.limit = 1`.
 
+{% apibox "Mongo.Collection#countDocuments" %}
+
+Similar to `count`, but returns a `Promise`. For a faster version, see `estimatedDocumentCount`.
+
+{% apibox  "Mongo.Collection#estimatedDocumentCount" %}
+
+Returns a `Promise` that resolves to the number of documents in the cursor's result set. The count is an estimate and not guaranteed to be exact.
+
 {% apibox "Mongo.Collection#insert" %}
 
 Add a document to the collection. A document is just an object, and
