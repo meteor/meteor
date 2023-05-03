@@ -99,6 +99,29 @@ class EnvironmentVariableAsync {
  */
 Meteor.EnvironmentVariable = EnvironmentVariableAsync;
 
+EVp._set = function (context) {
+  Meteor._nodeCodeMustBeInFiber();
+  Fiber.current._meteor_dynamics[this.slot] = context;
+};
+
+EVp._setNewContextAndGetCurrent = function (value) {
+  Meteor._nodeCodeMustBeInFiber();
+  if (!Fiber.current._meteor_dynamics) {
+    Fiber.current._meteor_dynamics = [];
+  }
+  const saved = Fiber.current._meteor_dynamics[this.slot];
+  this._set(value);
+  return saved;
+};
+
+EVp._isCallAsyncMethodRunning = function () {
+	return callAsyncMethodRunning;
+};
+
+EVp._setCallAsyncMethodRunning = function (value) {
+	callAsyncMethodRunning = value;
+};
+
 
 // Meteor application code is always supposed to be run inside a
 // fiber. bindEnvironment ensures that the function it wraps is run from
