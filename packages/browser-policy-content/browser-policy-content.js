@@ -76,7 +76,9 @@ var parseCsp = function (csp) {
                     "browser-policy must specify a default-src.");
 
   // Copy default-src sources to other directives.
-  Object.entries(cspSrcs).forEach(function ([directive, sources]) {
+  Object.entries(cspSrcs).forEach(function (entry) {
+    var directive = entry[0];
+    var sources = entry[1];
     cspSrcs[directive] = union(sources || [], cspSrcs["default-src"] || []);
   });
 };
@@ -93,7 +95,7 @@ var prepareForCspDirective = function (directive) {
   cspSrcs = cspSrcs || {};
   cachedCsp = null;
   if (!has(cspSrcs, directive))
-    cspSrcs[directive] = [...cspSrcs["default-src"]];
+    cspSrcs[directive] = new Array(cspSrcs["default-src"]);
 };
 
 // Add `src` to the list of allowed sources for `directive`, with the
@@ -166,11 +168,13 @@ Object.assign(BrowserPolicy.content, {
     if (cachedCsp)
       return cachedCsp;
 
-    var header = Object.entries(cspSrcs).map(function ([directive, srcs]) {
+    var header = Object.entries(cspSrcs).map(function (entry) {
+      var directive = entry[0];
+      var srcs = entry[1];
       srcs = srcs || [];
       if (isEmpty(srcs))
         srcs = [keywords.none];
-      var directiveCsp = [...new Set(srcs)].join(" ");
+      var directiveCsp = srcs.filter(function(value, index, array) {return array.indexOf(value) === index}).join(" ");
       return directive + " " + directiveCsp + ";";
     });
 
