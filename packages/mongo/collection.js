@@ -1000,7 +1000,7 @@ ASYNC_COLLECTION_METHODS.forEach(methodName => {
     try {
     // TODO: Fibers remove this when we remove fibers.
       this[methodName].isCalledFromAsync = true;
-      return Promise.resolve(this[methodName](...args));
+      return Promise.asyncApply(async () => this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);
     }
