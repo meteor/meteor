@@ -46,7 +46,7 @@ class EnvironmentVariableAsync {
    */
   withValue(value, func, options = {}) {
     return Meteor._runAsync(
-      async () => {
+      async function()  {
         let ret;
         try {
           Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
