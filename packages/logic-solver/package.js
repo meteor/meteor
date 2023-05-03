@@ -6,6 +6,7 @@ Package.describe({
 Package.onUse(function (api) {
   api.export('Logic');
   api.use('underscore');
+  api.use('ecmascript');
   api.addFiles(['minisat.js',
                  'minisat_wrapper.js',
                  'types.js',
