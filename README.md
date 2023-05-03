@@ -10,7 +10,7 @@
 
 [![TravisCI Status](https://travis-ci.org/meteor/meteor.svg?branch=devel)](https://travis-ci.org/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
-[![built with Meteor](https://img.shields.io/badge/Meteor-2.7.4-green?logo=meteor&logoColor=white)](https://meteor.com)
+[![built with Meteor](https://img.shields.io/badge/Meteor-2.11-green?logo=meteor&logoColor=white)](https://meteor.com)
   
 </div>
 
