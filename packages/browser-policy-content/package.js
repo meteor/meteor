@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Configure content security policies",
-  version: "1.1.1"
+  version: "1.1.2"
 });
 
 Npm.depends({

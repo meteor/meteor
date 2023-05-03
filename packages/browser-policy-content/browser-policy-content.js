@@ -54,7 +54,7 @@ var keywords = {
 // If false, we set the X-Content-Type-Options header to 'nosniff'.
 var contentSniffingAllowed = false;
 
-const BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
+var BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
 BrowserPolicy.content = {};
 
 var parseCsp = function (csp) {
