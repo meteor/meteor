@@ -10,41 +10,15 @@ var Console = require('../console/console.js').Console;
 
 // Given a Mongo URL, open an interactive Mongo shell on this terminal
 // on that database.
-var runMongoShell = function(url) {
-  var mongoPath = files.pathJoin(
-    files.getDevBundle(),
-    'mongodb',
-    'bin',
-    'mongo'
-  );
+var runMongoShell = function (url, err) {
   // XXX mongo URLs are not real URLs (notably, the comma-separation for
   // multiple hosts). We've had a little better luck using the mongodb-uri npm
   // package.
   var mongoUrl = require('url').parse(url);
-  var auth = mongoUrl.auth && mongoUrl.auth.split(':');
-  var ssl = require('querystring').parse(mongoUrl.query).ssl === 'true';
-
-  var args = [];
-  if (ssl) {
-    args.push('--ssl');
-  }
-  if (auth) {
-    args.push('-u', auth[0]);
-  }
-  if (auth) {
-    args.push('-p', auth[1]);
-  }
-  args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
-
-  // run with rosetta on mac m1
-  if (process.platform === 'darwin' && process.arch === 'arm64') {
-    args = ['-x86_64', mongoPath, ...args];
-    mongoPath = 'arch';
-  }
-
-  child_process.spawn(files.convertToOSPath(mongoPath), args, {
+  const ls = child_process.spawn('mongosh', [mongoUrl.href], {
     stdio: 'inherit',
   });
+  ls.on('error', err);
 };
 
 // Start mongod with a dummy replSet and wait for it to listen.

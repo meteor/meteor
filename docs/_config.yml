@@ -1,6 +1,9 @@
 title: Meteor API Docs
 subtitle: API Docs
 versions:
+  - '2.12'
+  - '2.11'
+  - '2.10'
   - '2.9'
   - '2.8'
   - '2.7'
