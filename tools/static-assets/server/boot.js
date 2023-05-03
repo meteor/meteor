@@ -355,19 +355,13 @@ const loadServerBundles = Profile("Load server bundles", async function () {
 
     const Assets = {
       getText: function (assetPath, callback) {
-        const result = getAsset(assetPath, "utf8", callback);
-        if (!callback) {
-          return Future.fromPromise(result).wait();
-        }
+        return getAsset(assetPath, "utf8", callback);
       },
       getTextAsync: function (assetPath) {
         return getAsset(assetPath, "utf8");
       },
       getBinary: function (assetPath, callback) {
-        const result = getAsset(assetPath, undefined, callback);
-        if (!callback) {
-          return Future.fromPromise(result).wait();
-        }
+        return getAsset(assetPath, undefined, callback);
       },
       getBinaryAsync: function (assetPath) {
         return getAsset(assetPath, undefined);
