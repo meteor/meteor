@@ -35,6 +35,10 @@
   "jshintConfig": {
     "esversion": 11
   },
+  "prettier": {
+    "semi": true,
+    "singleQuote": false
+  },
   "eslintConfig": {
     "extends": "vazco",
     "rules": {
@@ -55,7 +59,7 @@
       "import/no-unresolved": "warn",
       "require-await": "warn",
       "space-before-function-paren": [
-        "error",
+        "warn",
         {
           "anonymous": "never",
           "named": "never",
