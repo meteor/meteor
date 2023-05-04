@@ -99,6 +99,15 @@ class EnvironmentVariableAsync {
  */
 Meteor.EnvironmentVariable = EnvironmentVariableAsync;
 
+EVp._isCallAsyncMethodRunning = function () {
+	return callAsyncMethodRunning;
+};
+
+EVp._setCallAsyncMethodRunning = function (value) {
+	callAsyncMethodRunning = value;
+};
+
+
 // Meteor application code is always supposed to be run inside a
 // fiber. bindEnvironment ensures that the function it wraps is run from
 // inside a fiber and ensures it sees the values of Meteor environment

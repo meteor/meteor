@@ -305,8 +305,8 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       })
     };
 
-    const getAsset = function (assetPath, encoding, callback) {
-      let promiseResolver, promiseReject, promise;
+    var getAsset = function (assetPath, encoding, callback) {
+      var promiseResolver, promiseReject, promise;
       if (! callback) {
         promise = new Promise((r, reject) => {
           promiseResolver = r;
@@ -348,16 +348,29 @@ const loadServerBundles = Profile("Load server bundles", async function () {
         const filePath = path.join(serverDir, fileInfo.assets[assetPath]);
         fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
       }
+
       if (promise)
         return promise;
     };
 
     const Assets = {
       getText: function (assetPath, callback) {
-        return getAsset(assetPath, "utf8", callback);
+        const result = getAsset(assetPath, "utf8", callback);
+        if (!callback) {
+          return Future.fromPromise(result).wait();
+        }
+      },
+      getTextAsync: function (assetPath) {
+        return getAsset(assetPath, "utf8");
       },
       getBinary: function (assetPath, callback) {
-        return getAsset(assetPath, undefined, callback);
+        const result = getAsset(assetPath, undefined, callback);
+        if (!callback) {
+          return Future.fromPromise(result).wait();
+        }
+      },
+      getBinaryAsync: function (assetPath) {
+        return getAsset(assetPath, undefined);
       },
       /**
        * @summary Get the absolute path to the static server asset. Note that assets are read-only.

@@ -423,3 +423,46 @@ Tinytest.addAsync(
     }
   }
 );
+
+
+Tinytest.addAsync('collection - should not block on cursor mismatch (#12516)',
+  async function(test) {
+    if (!Meteor.isServer) {
+      return;
+    }
+
+    // Setup
+    const collection = new Mongo.Collection('test' + test.id);
+    Array.from({ length: 5 }).forEach((_, i) => {
+      collection.insert({ name: "Test-" + i });
+    });
+
+    // Test
+    const cursor = collection.find({ name: undefined });
+
+    let subscription;
+    const promise = new Promise((resolve) => {
+      setTimeout(() => {
+        test.ok(!!subscription);
+        resolve();
+      }, 500);
+    });
+    subscription = cursor.observe({});
+    subscription.stop();
+    await promise;
+  }
+);
+
+
+
+Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(test){ 
+  var collectionName = 'add' + test.id;
+  var collection = new Mongo.Collection(collectionName);
+  var id = await collection.insert({a: 1});
+  test.equal((await collection.findOneAsync(id)).a, 1);
+  id = await collection.insertAsync({a: 2});
+  test.equal((await collection.findOneAsync(id)).a, 2);
+  await collection.removeAsync({});
+  
+})
+
