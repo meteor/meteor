@@ -305,7 +305,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       })
     };
 
-    var getAsset = function (assetPath, encoding, callback) {
+    function getAsset (assetPath, encoding, callback) {
       var promiseResolver, promiseReject, promise;
       if (! callback) {
         promise = new Promise((r, reject) => {
