@@ -8,7 +8,7 @@ function withoutInvocation(f) {
       DDP._CurrentInvocation;
 
     var invocation = CurrentInvocation.get();
-    if (invocation?.isSimulation) {
+    if (invocation && invocation.isSimulation) {
       throw new Error("Can't set timers inside simulations");
     }
 
