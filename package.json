@@ -53,7 +53,7 @@
       ],
       "no-use-before-define": "warn",
       "import/no-unresolved": "warn",
-      "require-await": "error",
+      "require-await": "warn",
       "space-before-function-paren": [
         "error",
         {
@@ -65,7 +65,8 @@
       "complexity": "off",
       "func-names": "off",
       "no-undef": "warn",
-      "curly": "off"
+      "curly": "off",
+      "sort-imports": "off"
     }
   }
 }
