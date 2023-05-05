@@ -1,6 +1,6 @@
 ---
 title: Top Level Await
-description: Documentation of how to top level await in Meteor
+description: Documentation of how to use top level await in Meteor
 ---
 
 ## What is it?
