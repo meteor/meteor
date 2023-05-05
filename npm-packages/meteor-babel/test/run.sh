@@ -9,10 +9,6 @@ TEST_DIR=$(pwd)
 BABEL_CACHE_DIR=${TEST_DIR}/.cache
 export BABEL_CACHE_DIR
 
-# force fibers to be disabled
-export DISABLE_FIBERS=1
-export IGNORE_ASYNC_PLUGIN=1
-
 runTests() {
     mocha \
         --reporter spec \

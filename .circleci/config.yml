@@ -97,41 +97,14 @@ build_machine_environment: &build_machine_environment
     NUM_GROUPS: 12
     RUNNING_AVG_LENGTH: 6
 
-can_disable_fibers: &can_disable_fibers
-  parameters:
-    fibers:
-      type: boolean
-      default: false # now is always off
-
-set_fibers_env: &set_fibers_env
-  name: "Disable Fibers"
-  command: |
-    if [ "<< parameters.fibers >>" == "false" ]; then
-      echo "Disabling Fibers"
-      echo 'export DISABLE_FIBERS=1' >> "$BASH_ENV"
-      echo 'export IGNORE_ASYNC_PLUGIN=1' >> "$BASH_ENV"
-      source "$BASH_ENV"
-    fi
-    
-
-# Run tests with Fibers and then without.
-matrix_for_fibers: &matrix_for_fibers
-  matrix:
-    parameters:
-      # If we want to run with Fibers and without, just append false here.
-      fibers: [false]
-
-
 jobs:
   Get Ready:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - run: *set_fibers_env
       - checkout
       - run:
           # https://discuss.circleci.com/t/git-submodule-url-isnt-playing-nice-with-the-cache/549/3
@@ -195,7 +168,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Isolated Tests:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -204,7 +176,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -239,7 +210,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 0:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -248,7 +218,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -281,7 +250,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 1:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -290,7 +258,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -323,7 +290,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 2:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -332,7 +298,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -365,7 +330,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 3:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -374,7 +338,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -407,7 +370,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 4:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -416,7 +378,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -449,7 +410,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 5:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -458,7 +418,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -491,7 +450,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 6:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -500,7 +458,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -533,7 +490,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 7:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -542,7 +498,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -575,7 +530,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 8:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -584,7 +538,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -617,7 +570,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 9:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -626,7 +578,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -659,7 +610,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 10:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -668,7 +618,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -701,7 +650,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 11:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -710,7 +658,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -751,7 +698,6 @@ jobs:
     resource_class: large
     environment:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -767,7 +713,6 @@ jobs:
             npm test
 
   Clean Up:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - attach_workspace:
@@ -848,62 +793,47 @@ workflows:
   Build and Test:
     jobs:
       - Docs
-      - Get Ready:
-          <<: *matrix_for_fibers
+      - Get Ready
       - Isolated Tests:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 0:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 1:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 2:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 3:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 4:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 5:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 6:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 7:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 8:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 9:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 10:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 11:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Clean Up:
-          <<: *matrix_for_fibers
           requires:
             - Isolated Tests
             - Test Group 0

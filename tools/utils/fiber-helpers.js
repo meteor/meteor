@@ -10,7 +10,7 @@ const makeGlobalAsyncLocalStorage = () => {
   return global.asyncLocalStorage;
 };
 
-const getAslStore = () => asyncLocalStorage.getStore();
+const getAslStore = () => global.asyncLocalStorage.getStore();
 const getValueFromAslStore = key => getAslStore()[key];
 const updateAslStore = (key, value) => getAslStore()[key] = value;
 
