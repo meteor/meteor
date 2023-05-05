@@ -70,6 +70,10 @@ const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // allowed to return a Promise instead of having to await async
   // compilation using fibers and/or futures.
   'isobuild:async-plugins': ['1.6.1'],
+
+  // This package requires functionality introduced in meteor-tools@3.0
+  // to enable using top level await
+  'isobuild:top-level-await': ['3.0.0'],
 }
 
 // LocalCatalog represents packages located in the application's
