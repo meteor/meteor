@@ -18,6 +18,10 @@ const latestEcmascriptVersion = "2022";
 // There is the fully ignoredFiles option, which allows files to use any
 // syntax, but this should be avoided. Add a comment to the file explaining
 // why it needs to use newer syntax.
+
+// Note that if a package is able to use TLA (has a dependency on ecmascript),
+// it can be removed from the list of packages this script runs on.
+// This script is only needed for packages that can't use TLA/ecmascript.
 const packages = {
   meteor: {
     serverFiles: [
@@ -42,11 +46,11 @@ const packages = {
   "babel-runtime": {},
   "browser-policy": {},
   "browser-policy-common": {},
-  "browser-policy-content": {
-    // TODO: Fibers
-    // This is a server only file but it uses TLA.
-    ignoredFiles: ["browser-policy-content.js"],
-  },
+  // "browser-policy-content": {
+  //   // TODO: Fibers
+  //   // This is a server only file but it uses TLA.
+  //   ignoredFiles: ["browser-policy-content.js"],
+  // },
   "browser-policy-framing": {},
   // 'constraint-solver': {},
   crosswalk: {},
@@ -101,10 +105,10 @@ const packages = {
   promise: {},
   "react-fast-refresh": {},
   "reactive-var": {},
-  "reload-safetybelt": {
-    // is a server only file that uses TLA.
-    ignoredFiles: ["reload-safety-belt.js"],
-  },
+  // "reload-safetybelt": {
+  //   // is a server only file that uses TLA.
+  //   ignoredFiles: ["reload-safety-belt.js"],
+  // },
   sha: {},
   "standard-minifiers": {},
   // 'test-in-console': {},
@@ -160,17 +164,6 @@ Object.keys(packages).forEach((packageName) => {
       let line = content.split("\n")[error.loc.line - 1];
       console.log(line);
       console.log("");
-
-      if (
-        error.message.includes("Unexpected token") &&
-        line.includes("await")
-      ) {
-        console.log(
-          "Failed to parse, but it's probably because you're using TLA."
-        );
-        console.log("Will continue");
-        continue;
-      }
 
       process.exitCode = 1;
     }
