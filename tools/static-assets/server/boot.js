@@ -305,8 +305,8 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       })
     };
 
-    const getAsset = function (assetPath, encoding, callback) {
-      let promiseResolver, promiseReject, promise;
+    function getAsset (assetPath, encoding, callback) {
+      var promiseResolver, promiseReject, promise;
       if (! callback) {
         promise = new Promise((r, reject) => {
           promiseResolver = r;
@@ -348,6 +348,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
         const filePath = path.join(serverDir, fileInfo.assets[assetPath]);
         fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
       }
+
       if (promise)
         return promise;
     };

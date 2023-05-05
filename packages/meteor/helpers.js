@@ -77,11 +77,15 @@ Meteor._delete = function (obj /*, arguments */) {
  * @param errorFirst - If the callback follows the errorFirst style
  * @returns {function(...[*]): Promise<unknown>}
  */
-Meteor.promisify = function (fn, context, errorFirst = true) {
-  return function (...fnArgs) {
-    return new Promise((resolve, reject) => {
-      const callback = Meteor.bindEnvironment((error, result) => {
-        let _error = error, _result = result;
+Meteor.promisify = function (fn, context, errorFirst) {
+  if (errorFirst === undefined) {
+    errorFirst = true;
+  }
+
+  return function () {
+    return new Promise(function (resolve, reject) {
+      var callback = Meteor.bindEnvironment(function (error, result) {
+        var _error = error, _result = result;
         if (!errorFirst) {
           _error = result;
           _result = error;
@@ -94,7 +98,10 @@ Meteor.promisify = function (fn, context, errorFirst = true) {
         resolve(_result);
       });
 
-      const filteredArgs = [...fnArgs, callback].filter(i => i !== undefined);
+      var filteredArgs = Array.prototype.slice.call(arguments)
+        .filter(function (i) { return i !== undefined; });
+      filteredArgs.push(callback);
+
       return fn.apply(context || this, filteredArgs);
     });
   };
@@ -145,6 +152,10 @@ Meteor.wrapAsync = function (fn, context) {
     newArgs[i] = Meteor.bindEnvironment(callback);
     return fn.apply(self, newArgs);
   };
+};
+
+Meteor.wrapFn = function (fn) {
+  return fn;
 };
 
 // Sets child's prototype to a new object whose prototype is parent's

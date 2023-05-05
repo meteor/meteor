@@ -35,6 +35,10 @@
   "jshintConfig": {
     "esversion": 11
   },
+  "prettier": {
+    "semi": true,
+    "singleQuote": false
+  },
   "eslintConfig": {
     "extends": "vazco",
     "rules": {
@@ -53,9 +57,9 @@
       ],
       "no-use-before-define": "warn",
       "import/no-unresolved": "warn",
-      "require-await": "error",
+      "require-await": "warn",
       "space-before-function-paren": [
-        "error",
+        "warn",
         {
           "anonymous": "never",
           "named": "never",
@@ -65,7 +69,8 @@
       "complexity": "off",
       "func-names": "off",
       "no-undef": "warn",
-      "curly": "off"
+      "curly": "off",
+      "sort-imports": "off"
     }
   }
 }
