@@ -73,7 +73,6 @@ export class CordovaRunner {
     buildmessage.assertInCapture();
 
     await buildmessage.enterJob({ title: "preparing Cordova project" }, async () => {
-      // TODO -> Cordova Setup
       await this.cordovaProject.prepareFromAppBundle(bundlePath,
         pluginVersions, options);
 

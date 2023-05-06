@@ -245,11 +245,11 @@ export class CordovaBuilder {
     if (files.exists(controlFilePath)) {
       Console.debug('Processing mobile-config.js');
 
-      await buildmessage.enterJob({ title: `processing mobile-config.js` }, () => {
+      await buildmessage.enterJob({ title: `processing mobile-config.js` }, async () => {
         const code = files.readFile(controlFilePath, 'utf8');
 
         try {
-          files.runJavaScript(code, {
+          await files.runJavaScript(code, {
             filename: 'mobile-config.js',
             symbols: { App: createAppConfiguration(this) }
           });
@@ -260,7 +260,7 @@ export class CordovaBuilder {
     }
   }
 
-  writeConfigXmlAndCopyResources(shouldCopyResources = true) {
+  async writeConfigXmlAndCopyResources(shouldCopyResources = true) {
     let config = XmlBuilder.create({ version: '1.0' }).ele('widget');
 
     // Set the root attributes
@@ -341,7 +341,7 @@ export class CordovaBuilder {
     }
     if (shouldCopyResources) {
       // Prepare the resources folder
-      files.rm_recursive(this.resourcesPath);
+      await files.rm_recursive(this.resourcesPath);
       files.mkdir_p(this.resourcesPath);
 
       Console.debug('Copying resources for mobile apps');
@@ -614,14 +614,14 @@ export class CordovaBuilder {
     return boilerplate.toHTMLAsync();
   }
 
-  copyBuildOverride() {
+  async copyBuildOverride() {
     const buildOverridePath =
       files.pathJoin(this.projectContext.projectDir, 'cordova-build-override');
 
     if (files.exists(buildOverridePath) &&
       files.stat(buildOverridePath).isDirectory()) {
       Console.debug('Copying over the cordova-build-override directory');
-      files.cp_r(buildOverridePath, this.projectRoot);
+      await files.cp_r(buildOverridePath, this.projectRoot);
     }
   }
 }

@@ -158,7 +158,7 @@ export class CordovaProject {
 outdated platforms`);
         // Remove Cordova project directory to start afresh
         // and avoid a broken project
-        files.rm_recursive(this.projectRoot);
+        await files.rm_recursive(this.projectRoot);
       }
     }
 
@@ -195,7 +195,7 @@ outdated platforms`);
       }
 
       // Don't copy resources (they will be copied as part of the prepare)
-      builder.writeConfigXmlAndCopyResources(false);
+      await builder.writeConfigXmlAndCopyResources(false);
 
       // Create the Cordova project root directory
       files.mkdir_p(files.pathDirname(this.projectRoot));
@@ -271,7 +271,7 @@ outdated platforms`);
       return;
     }
 
-    builder.writeConfigXmlAndCopyResources();
+    await builder.writeConfigXmlAndCopyResources();
     await builder.copyWWW(bundlePath);
 
     await this.ensurePluginsAreSynchronized(pluginVersions,
@@ -291,7 +291,7 @@ outdated platforms`);
         'LD_RUNPATH_SEARCH_PATHS = @executable_path/Frameworks;');
     }
 
-    builder.copyBuildOverride();
+    await builder.copyBuildOverride();
   }
 
   async prepareForPlatform(platform, options) {
@@ -348,11 +348,7 @@ ${displayNameForPlatform(platform)}`, async () => {
     await this.runCommands(
       `running Cordova app for platform \
 ${displayNameForPlatform(platform)} with options ${options}`,
-      async () => {
-        await cordova_lib.run(commandOptions);
-      }
-    );
-
+      () => cordova_lib.run(commandOptions));
   }
 
   // Platforms

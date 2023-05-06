@@ -148,8 +148,8 @@ main.registerCommand({
   name: 'list-platforms',
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  const projectContext = createProjectContext(options.appDir);
+}, async function (options) {
+  const projectContext = await createProjectContext(options.appDir);
 
   const installedPlatforms = projectContext.platformList.getPlatforms();
 
