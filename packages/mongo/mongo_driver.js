@@ -69,6 +69,10 @@ var unmakeMongoLegal = function (name) { return name.substr(5); };
 
 var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Binary) {
+    // for backwards compatibility
+    if (document.sub_type !== 0) {
+      return document;
+    }
     var buffer = document.value(true);
     return new Uint8Array(buffer);
   }
@@ -97,6 +101,9 @@ var replaceMeteorAtomWithMongo = function (document) {
     // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
     // serialize it correctly).
     return new MongoDB.Binary(Buffer.from(document));
+  }
+  if (document instanceof MongoDB.Binary) {
+     return document;
   }
   if (document instanceof Mongo.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
@@ -239,6 +246,7 @@ MongoConnection.prototype._createCappedCollection = function (
 
   if (! self.db)
     throw Error("_createCappedCollection called before Connection created?");
+
 
   var future = new Future();
   self.db.createCollection(
@@ -420,11 +428,14 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 MongoConnection.prototype._dropCollection = function (collectionName, cb) {
   var self = this;
 
+
   var write = self._maybeBeginWrite();
   var refresh = function () {
     Meteor.refresh({collection: collectionName, id: null,
                     dropCollection: true});
   };
+
+
   cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
 
   try {
@@ -458,6 +469,8 @@ MongoConnection.prototype._dropDatabase = function (cb) {
 MongoConnection.prototype._update = function (collection_name, selector, mod,
                                               options, callback) {
   var self = this;
+
+
 
   if (! callback && options instanceof Function) {
     callback = options;
@@ -772,6 +785,9 @@ _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], functio
 MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                                              options, callback) {
   var self = this;
+
+
+  
   if (typeof options === "function" && ! callback) {
     callback = options;
     options = {};
@@ -794,15 +810,32 @@ MongoConnection.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-MongoConnection.prototype.findOne = function (collection_name, selector,
-                                              options) {
+MongoConnection.prototype.findOneAsync = async function (collection_name, selector,
+                                               options) {
   var self = this;
   if (arguments.length === 1)
     selector = {};
 
   options = options || {};
   options.limit = 1;
-  return self.find(collection_name, selector, options).fetch()[0];
+  return (await self.find(collection_name, selector, options).fetchAsync())[0];
+};
+
+MongoConnection.prototype.findOne = function (collection_name, selector,
+                                              options) {
+  var self = this;
+
+  return Future.fromPromise(self.findOneAsync(collection_name, selector, options)).wait();
+};
+
+MongoConnection.prototype.createIndexAsync = function (collectionName, index,
+                                                  options) {
+  var self = this;
+
+  // We expect this function to be called at startup, not from within a method,
+  // so we don't interact with the write fence.
+  var collection = self.rawCollection(collectionName);
+  return collection.createIndex(index, options);
 };
 
 // We'll actually design an index API later. For now, we just pass through to
@@ -810,13 +843,21 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
 MongoConnection.prototype.createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
+  
 
-  // We expect this function to be called at startup, not from within a method,
-  // so we don't interact with the write fence.
-  var collection = self.rawCollection(collectionName);
-  var future = new Future;
-  var indexName = collection.createIndex(index, options, future.resolver());
-  future.wait();
+  return Future.fromPromise(self.createIndexAsync(collectionName, index, options));
+};
+
+MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.countDocuments(...args);
+};
+
+MongoConnection.prototype.estimatedDocumentCount = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.estimatedDocumentCount(...args);
 };
 
 MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
@@ -824,6 +865,7 @@ MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 
+  
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
@@ -900,11 +942,25 @@ function setupSynchronousCursor(cursor, method) {
   return cursor._synchronousCursor;
 }
 
+
+Cursor.prototype.count = function () {
+
+  const collection = this._mongo.rawCollection(this._cursorDescription.collectionName);
+  return Promise.await(collection.countDocuments(
+    replaceTypes(this._cursorDescription.selector, replaceMeteorAtomWithMongo),
+    replaceTypes(this._cursorDescription.options, replaceMeteorAtomWithMongo),
+  ));
+};
+
 [...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
-  Cursor.prototype[methodName] = function (...args) {
-    const cursor = setupSynchronousCursor(this, methodName);
-    return cursor[methodName](...args);
-  };
+  // count is handled specially since we don't want to create a cursor.
+  // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
+  if (methodName !== 'count') {
+    Cursor.prototype[methodName] = function (...args) {
+      const cursor = setupSynchronousCursor(this, methodName);
+      return cursor[methodName](...args);
+    };
+  }
 
   // These methods are handled separately.
   if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) {
@@ -913,7 +969,12 @@ function setupSynchronousCursor(cursor, method) {
 
   const methodNameAsync = getAsyncMethodName(methodName);
   Cursor.prototype[methodNameAsync] = function (...args) {
-    return Promise.resolve(this[methodName](...args));
+    try {
+      this[methodName].isCalledFromAsync = true;
+      return Promise.resolve(this[methodName](...args));
+    } catch (error) {
+      return Promise.reject(error);
+    }
   };
 });
 
@@ -1124,6 +1185,7 @@ _.extend(SynchronousCursor.prototype, {
 
   forEach: function (callback, thisArg) {
     var self = this;
+    const wrappedFn = Meteor.wrapFn(callback);
 
     // Get back to the beginning.
     self._rewind();
@@ -1135,16 +1197,17 @@ _.extend(SynchronousCursor.prototype, {
     while (true) {
       var doc = self._nextObject();
       if (!doc) return;
-      callback.call(thisArg, doc, index++, self._selfForIteration);
+      wrappedFn.call(thisArg, doc, index++, self._selfForIteration);
     }
   },
 
   // XXX Allow overlapping callback executions if callback yields.
   map: function (callback, thisArg) {
     var self = this;
+    const wrappedFn = Meteor.wrapFn(callback);
     var res = [];
     self.forEach(function (doc, index) {
-      res.push(callback.call(thisArg, doc, index, self._selfForIteration));
+      res.push(wrappedFn.call(thisArg, doc, index, self._selfForIteration));
     });
     return res;
   },

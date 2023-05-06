@@ -1,6 +1,16 @@
 {
   "lockfileVersion": 1,
   "dependencies": {
+    "@types/node": {
+      "version": "18.13.0",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-18.13.0.tgz",
+      "integrity": "sha512-gC3TazRzGoOnoKAhUx+Q0t8S9Tzs74z7m0ipwGpSqQrleP14hKxP4/JUeEQcD3W1/aIpnWl8pHowI7WokuZpXg=="
+    },
+    "@types/nodemailer": {
+      "version": "6.4.7",
+      "resolved": "https://registry.npmjs.org/@types/nodemailer/-/nodemailer-6.4.7.tgz",
+      "integrity": "sha512-f5qCBGAn/f0qtRcd4SEn88c8Fp3Swct1731X4ryPKqS61/A3LmmzN8zaEz7hneJvpjFbUUgY7lru/B/7ODTazg=="
+    },
     "nodemailer": {
       "version": "6.6.3",
       "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-6.6.3.tgz",

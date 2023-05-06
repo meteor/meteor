@@ -1,6 +1,10 @@
 title: Meteor API Docs
 subtitle: API Docs
 versions:
+  - '2.12'
+  - '2.11'
+  - '2.10'
+  - '2.9'
   - '2.8'
   - '2.7'
   - '2.6'
@@ -86,6 +90,7 @@ sidebar_categories:
   Command Line:
     - commandline
     - environment-variables
+    - using-core-types
   Troubleshooting:
     - expired-certificate
     - windows

@@ -5,6 +5,10 @@ async function insertLink({ title, url }) {
   await LinksCollection.insertAsync({ title, url, createdAt: new Date() });
 }
 
+Meteor.publish('links.all', function publishLinksAll() {
+  return LinksCollection.find();
+})
+
 Meteor.startup(async () => {
   // If the Links collection is empty, add some data.
   if (await LinksCollection.find().countAsync() === 0) {
