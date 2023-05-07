@@ -5,6 +5,6 @@
   "options": {
     "outdir": "./docs",
     "exclude": ".meteor,.build,tests",
-    "paths": ["roles/"]
+    "paths": ["roles/", "roles/client/"]
   }
 }
