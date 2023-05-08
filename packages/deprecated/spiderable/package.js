@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Makes the application crawlable to web spiders",
-  version: "1.0.14",
+  version: "1.1.0-alpha300.0",
   deprecated: true,
   documentation: 'README.md'
 });
