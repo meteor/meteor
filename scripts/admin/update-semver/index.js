@@ -167,7 +167,8 @@ async function main() {
         return semver.inc(currentVersion, release);
       }
 
-      const newVersion = incrementNewVersion(release);
+      const n = incrementNewVersion(release);
+      const newVersion = n?.replace(n, `${n}-alpha300.0`)
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
       const newCode = code.replace(rawVersion, ` '${ newVersion }',`);
       await fs.promises.writeFile(filePath, newCode);
