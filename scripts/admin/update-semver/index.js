@@ -168,7 +168,7 @@ async function main() {
       }
 
       const n = incrementNewVersion(release);
-      const newVersion = n?.replace(n, `${n}-alpha300.0`)
+      const newVersion = n?.replace(n, `${n}-alpha300.1`)
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
       const newCode = code.replace(rawVersion, ` '${ newVersion }',`);
       await fs.promises.writeFile(filePath, newCode);

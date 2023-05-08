@@ -872,6 +872,9 @@ main.registerCommand({
     // Ensure that all packages and their tests are built. (We need to build
     // tests so that we can include their sources in source tarballs.)
     var allPackagesWithTests = projectContext.localCatalog.getAllPackageNames();
+    /**
+     * @type {Array<string>}
+     */
     var allPackages = projectContext.localCatalog.getAllNonTestPackageNames({
       includeNonCore: false,
     });
@@ -892,7 +895,15 @@ main.registerCommand({
     var toPublish = [];
 
     await main.captureAndExit("=> Errors in release packages:", async function () {
-      for (const packageName of allPackages) {
+      const publishList = [];
+      for (const name of allPackages) {
+        if (name === "meteor-tool") { // to be sure that is the last so things do not break
+          continue;
+        }
+        publishList.push(name)
+      }
+      publishList.push("meteor-tool");
+      for (const packageName of publishList) {
         await buildmessage.enterJob("checking consistency of " + packageName, async function () {
           var packageSource = projectContext.localCatalog.getPackageSource(
             packageName);
