@@ -2610,7 +2610,7 @@ main.registerCommand({
   var releaseTrack = trackAndVersion[0];
   var releaseVersion = trackAndVersion[1];
 
-  var releaseRecord = catalog.official.getReleaseVersion(
+  var releaseRecord = await catalog.official.getReleaseVersion(
     releaseTrack, releaseVersion);
   if (!releaseRecord) {
     // XXX this could also mean package unknown.
@@ -2676,8 +2676,8 @@ main.registerCommand({
       _.each(releaseRecord.packages, async function (pkgVersion, pkgName) {
         await buildmessage.enterJob({
           title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
-        }, function () {
-          if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
+        }, async function () {
+          if (!(await catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch]))) {
             buildmessage.error("missing build of " + pkgName + "@" + pkgVersion +
                                " for " + osArch);
           }
@@ -2951,7 +2951,7 @@ main.registerCommand({
     versions = [nSplit[1]];
     name = nSplit[0];
   } else {
-    versions = catalog.official.getSortedVersions(name);
+    versions = await catalog.official.getSortedVersions(name);
   }
 
   try {
