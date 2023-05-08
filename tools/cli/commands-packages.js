@@ -2717,7 +2717,7 @@ main.registerCommand({
   var packageMap =
         packageMapModule.PackageMap.fromReleaseVersion(releaseRecord);
 
-  for (const osArch in osArches) {
+  for (const osArch of osArches) {
     var tmpdir = files.mkdtemp();
     Console.info("Building tarball for " + osArch);
 
