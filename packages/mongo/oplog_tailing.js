@@ -224,10 +224,15 @@ Object.assign(OplogHandle.prototype, {
     // tailing won't ever find anything!
     // More on the isMasterDoc
     // https://docs.mongodb.com/manual/reference/command/isMaster/
-    const isMasterDoc = await Meteor.promisify((cb) => {
-       self._oplogLastEntryConnection.db.admin().command({ismaster: 1}, cb);
-    })();
-
+    const isMasterDoc = await new Promise(function (resolve, reject) {
+      self._oplogLastEntryConnection.db
+        .admin()
+        .command({ ismaster: 1 }, function (err, result) {
+          if (err) reject(err);
+          else resolve(result);
+        });
+    });
+    
     if (!(isMasterDoc && isMasterDoc.setName)) {
       throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
           "a Mongo replica set");
