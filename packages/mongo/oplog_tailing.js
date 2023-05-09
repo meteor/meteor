@@ -225,7 +225,7 @@ Object.assign(OplogHandle.prototype, {
     // More on the isMasterDoc
     // https://docs.mongodb.com/manual/reference/command/isMaster/
     const isMasterDoc = await Meteor.promisify((cb) => {
-       self._oplogLastEntryConnection.db.admin().command({hello: 1}, cb);
+       self._oplogLastEntryConnection.db.admin().command({ismaster: 1}, cb);
     })();
 
     if (!(isMasterDoc && isMasterDoc.setName)) {

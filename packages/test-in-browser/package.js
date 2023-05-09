@@ -20,8 +20,8 @@ Package.onUse(function (api) {
   api.use([
     'webapp',
     'blaze@2.5.0',
-    'templating@1.3.2',
-    'spacebars@1.0.15',
+    'templating',
+    'spacebars',
     'jquery@3.0.0',
     'ddp',
     'tracker',
