@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '2.1.0-alpha300.1',
+  version: '2.1.0-alpha300.2',
   deprecated: 'Please use the fetch package'
 });
 
