@@ -1198,7 +1198,7 @@ Object.assign(Isopack.prototype, {
       }
       // Next, what about other tools we may be merging from other isopacks?
       // XXX check for overlap
-      for (const toolMeta of self.toolsOnDisk) {
+      for (let toolMeta of self.toolsOnDisk) {
         toolMeta = _.clone(toolMeta);
         var rootDir = toolMeta.rootDir;
         delete toolMeta.rootDir;

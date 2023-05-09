@@ -2736,7 +2736,6 @@ main.registerCommand({
     await main.captureAndExit(
       "=> Errors downloading packages for " + osArch + ":",
       async function () {
-    console.log("got here")
         await tmpTropo.downloadPackagesMissingFromMap(packageMap, {
           serverArchitectures: [osArch],
         });

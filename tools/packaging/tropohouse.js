@@ -498,7 +498,6 @@ Object.assign(exports.Tropohouse.prototype, {
           await buildmessage.enterJob({
             title: "extracting " + packageName + "@" + version + "..."
           }, async function ()  {
-            console.log("extracting")
             const buildTempDir = await exports._extractAndConvert(packageTarball);
             buildInputDirs.push(buildTempDir);
             buildTempDirs.push(buildTempDir);
@@ -512,7 +511,6 @@ Object.assign(exports.Tropohouse.prototype, {
         await buildmessage.enterJob({
           title: "loading " + packageName + "@" + version + "..."
         },  async function ()  {
-          console.log("loading")
           // We need to turn our builds into a single isopack.
           var isopack = new Isopack();
           for (let i = 0; i < buildInputDirs.length; i++) {
@@ -549,7 +547,7 @@ Object.assign(exports.Tropohouse.prototype, {
   // already have.
   //
   // Reports errors via buildmessage.
-  downloadPackagesMissingFromMap: async function (packageMap, options) {  
+  downloadPackagesMissingFromMap: async function (packageMap, options) {
     var self = this;
     buildmessage.assertInCapture();
     options = options || {};
