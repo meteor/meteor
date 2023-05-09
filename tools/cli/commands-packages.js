@@ -2672,8 +2672,8 @@ main.registerCommand({
   // Before downloading anything, check that the catalog contains everything we
   // need for the OSes that the tool is built for.
   await main.captureAndExit("=> Errors finding builds:", async function () {
-    _.each(osArches, function (osArch) {
-      _.each(releaseRecord.packages, async function (pkgVersion, pkgName) {
+    for (const osArch of osArches) {
+      for (const [pkgName, pkgVersion] of Object.entries(releaseRecord.packages)) {
         await buildmessage.enterJob({
           title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
         }, async function () {
@@ -2682,8 +2682,8 @@ main.registerCommand({
                                " for " + osArch);
           }
         });
-      });
-    });
+      }
+    }
   });
 
   files.mkdir_p(outputDirectory);
@@ -2736,8 +2736,9 @@ main.registerCommand({
     await main.captureAndExit(
       "=> Errors downloading packages for " + osArch + ":",
       async function () {
+    console.log("got here")
         await tmpTropo.downloadPackagesMissingFromMap(packageMap, {
-          serverArchitectures: [osArch]
+          serverArchitectures: [osArch],
         });
       }
     );
@@ -2755,7 +2756,7 @@ main.registerCommand({
     var toolIsopackPath =
           tmpTropo.packagePath(toolPackage, toolVersion);
     var toolIsopack = new isopack.Isopack;
-    toolIsopack.initFromPath(toolPackage, toolIsopackPath);
+    await toolIsopack.initFromPath(toolPackage, toolIsopackPath);
     var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord) {
       throw Error("missing tool for " + osArch);

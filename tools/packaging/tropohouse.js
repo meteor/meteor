@@ -466,7 +466,7 @@ Object.assign(exports.Tropohouse.prototype, {
         for (const { build: { url }} of buildsToDownload) {
           const packageTarball = await buildmessage.enterJob({
             title: "downloading " + packageName + "@" + version + "..."
-          }, async () => {
+          }, async function() {
             try {
               // Override the download domain name and protocol if METEOR_WAREHOUSE_URLBASE
               // provided.
@@ -491,14 +491,14 @@ Object.assign(exports.Tropohouse.prototype, {
               buildmessage.error(e.error.message);
             }
           });
-
           if (buildmessage.jobHasMessages()) {
             return;
           }
 
           await buildmessage.enterJob({
             title: "extracting " + packageName + "@" + version + "..."
-          }, async () => {
+          }, async function ()  {
+            console.log("extracting")
             const buildTempDir = await exports._extractAndConvert(packageTarball);
             buildInputDirs.push(buildTempDir);
             buildTempDirs.push(buildTempDir);
@@ -511,7 +511,8 @@ Object.assign(exports.Tropohouse.prototype, {
 
         await buildmessage.enterJob({
           title: "loading " + packageName + "@" + version + "..."
-        }, async () => {
+        },  async function ()  {
+          console.log("loading")
           // We need to turn our builds into a single isopack.
           var isopack = new Isopack();
           for (let i = 0; i < buildInputDirs.length; i++) {
@@ -548,7 +549,7 @@ Object.assign(exports.Tropohouse.prototype, {
   // already have.
   //
   // Reports errors via buildmessage.
-  downloadPackagesMissingFromMap: async function (packageMap, options) {
+  downloadPackagesMissingFromMap: async function (packageMap, options) {  
     var self = this;
     buildmessage.assertInCapture();
     options = options || {};
@@ -606,8 +607,8 @@ Object.assign(exports.Tropohouse.prototype, {
     // finished downloading.
     await buildmessage.enterJob({
       title: 'downloading ' + downloaders.length + ' packages',
-    }, function () {
-      return Promise.all(downloaders.map(d => d.download()));
+    }, async function () {
+      return await Promise.all(downloaders.map(d => d.download()));
     });
   },
 
