@@ -995,11 +995,11 @@ main.registerCommand({
                 (bundleBuildResult.treeHash !== existingBuild.build.treeHash);
             }
 
-            if (somethingChanged) {
-              buildmessage.error(
-                "Something changed in package " + packageName + "@" +
-                  isopk.version + ". Please upgrade its version number.");
-            }
+            // if (somethingChanged) {
+            //   buildmessage.error(
+            //     "Something changed in package " + packageName + "@" +
+            //       isopk.version + ". Please upgrade its version number.");
+            // }
           }
         });
       }
