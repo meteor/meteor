@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Expressive, dynamic, robust CSS',
-  version: "2.514.0-alpha300.4",
+  version: "2.514.0-alpha300.5",
   deprecated: true,
   documentation: 'README.md'
 });
