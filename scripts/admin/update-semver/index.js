@@ -78,13 +78,15 @@ async function main() {
    * @type {string[]}
    */
   let args = process.argv.slice(2);
+  // if gets bigger turn into a function
+  const dir = args[1].includes("blaze")
+    ? "packages/non-core/blaze/packages"
+    : "packages";
   const releaseNumber = await getReleaseNumber();
   if (args[0].startsWith('@all')) {
     const [_, type] = args[0].split('.');
     
-    // if gets bigger turn into a function
-    const dir =
-      args[1] === "blaze" ? "packages/non-core/blaze/packages" : "packages";
+ 
 
     const allPackages = await getDirectories(`../../../${ dir }`);
     args = allPackages.map((packageName) => `${ packageName }.${ type }`);
@@ -121,7 +123,7 @@ async function main() {
     .filter((value, index, self) => self.findIndex((v) => v.name === value.name) === index);
 
   for (const { name, release } of packages) {
-    const filePath = `../../../packages/${ name }/package.js`;
+    const filePath = `../../../${ dir }/${ name }/package.js`;
     const [code, err] = await getFile(filePath);
     // if there is an error reading the file, we will skip it.
     if (err) continue;
