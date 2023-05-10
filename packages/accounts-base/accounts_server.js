@@ -1193,7 +1193,8 @@ export class AccountsServer extends AccountsCommon {
 
     let fullUser;
     if (this._onCreateUserHook) {
-      fullUser = this._onCreateUserHook(options, user);
+      // Allows _onCreateUserHook to be a promise returning func
+      fullUser = await this._onCreateUserHook(options, user);
 
       // This is *not* part of the API. We need this because we can't isolate
       // the global server environment between tests, meaning we can't test
