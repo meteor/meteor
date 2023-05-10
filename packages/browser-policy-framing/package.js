@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Restrict which websites can frame your app",
-  version: '1.1.2'
+  version: '2.0.0-alpha300.3',
 });
 
 Package.onUse(function (api) {

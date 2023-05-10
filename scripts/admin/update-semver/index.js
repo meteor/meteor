@@ -81,7 +81,12 @@ async function main() {
   const releaseNumber = await getReleaseNumber();
   if (args[0].startsWith('@all')) {
     const [_, type] = args[0].split('.');
-    const allPackages = await getDirectories('../../../packages');
+    
+    // if gets bigger turn into a function
+    const dir =
+      args[1] === "blaze" ? "packages/non-core/blaze/packages" : "packages";
+
+    const allPackages = await getDirectories(`../../../${ dir }`);
     args = allPackages.map((packageName) => `${ packageName }.${ type }`);
   }
 
@@ -130,6 +135,10 @@ async function main() {
       //});
       const [_, version] = line.split(':');
       if (!version) continue;
+
+      // for updating all packages
+      if (version.includes("-alpha300")) continue;
+       
       const getVersionValue = (value) => {
         const removeQuotes =
           (v) => v
@@ -168,7 +177,7 @@ async function main() {
       }
 
       const n = incrementNewVersion(release);
-      const newVersion = n?.replace(n, `${n}-alpha300.2`)
+      const newVersion = n?.replace(n, `${n}-alpha300.3`)
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
       const newCode = code.replace(rawVersion, ` '${ newVersion }',`);
       await fs.promises.writeFile(filePath, newCode);

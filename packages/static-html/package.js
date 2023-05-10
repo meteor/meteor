@@ -1,7 +1,7 @@
 Package.describe({
   name: 'static-html',
   summary: "Define static page content in .html files",
-  version: '1.3.2',
+  version: '2.0.0-alpha300.3',
   git: 'https://github.com/meteor/meteor.git'
 });
 
