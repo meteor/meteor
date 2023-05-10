@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '2.0.0-alpha300.3',
+  version: '2.0.0-alpha300.4',
 });
 
 Package.registerBuildPlugin({

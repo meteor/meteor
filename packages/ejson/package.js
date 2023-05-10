@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Extended and Extensible JSON library',
-  version: '2.0.0-alpha300.3',
+  version: '2.0.0-alpha300.4',
 });
 
 Package.onUse(function onUse(api) {
