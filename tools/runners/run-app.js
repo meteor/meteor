@@ -970,7 +970,7 @@ Object.assign(AppRunner.prototype, {
       });
       firstRun = false;
 
-      var wantExit = self.onRunEnd ? !self.onRunEnd(runResult) : false;
+      var wantExit = self.onRunEnd ? !(await self.onRunEnd(runResult)) : false;
       if (wantExit || self.exitPromise || runResult.outcome === "stopped") {
         break;
       }

@@ -16,7 +16,6 @@ async function createProjectContext(appDir) {
   const projectContext = new ProjectContext({
     projectDir: appDir
   });
-  await projectContext.init();
   await main.captureAndExit('=> Errors while initializing project:', async () => {
     // We're just reading metadata here; we don't need to resolve constraints.
     await projectContext.readProjectMetadata();

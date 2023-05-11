@@ -124,6 +124,7 @@ function ProjectContext(options) {
     throw Error("missing projectDir!");
 
   self.originalOptions = options;
+  self.reset();
 }
 exports.ProjectContext = ProjectContext;
 
@@ -139,11 +140,7 @@ var STAGE = {
 };
 
 Object.assign(ProjectContext.prototype, {
-  init: function () {
-    const self = this;
-    return self.reset();
-  },
-  reset: async function (moreOptions, resetOptions) {
+  reset: function (moreOptions, resetOptions) {
     var self = this;
     // Allow overriding some options until the next call to reset;
     var options = Object.assign({}, self.originalOptions, moreOptions);
