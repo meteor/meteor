@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Blaze configuration templates for the Meteor developer accounts OAuth.',
-  version: '2.0.0-alpha300.5',
+  version: '2.0.0-alpha300.6',
 });
 
 Package.onUse(api => {
