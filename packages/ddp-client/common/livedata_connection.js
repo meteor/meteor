@@ -561,6 +561,21 @@ export class Connection {
     }
     return this.apply(name, args, callback);
   }
+  async callWithServerResult(name /* .. [arguments] .. */) {
+    return this._callAsync(
+      name,
+      { returnServerPromise: true },
+      ...slice.call(arguments, 1),
+    );
+  }
+  async callWithStubResult(name /* .. [arguments] .. */) {
+    return this._callAsync(
+      name,
+      { returnStubValue: true },
+      ...slice.call(arguments, 1),
+    );
+  }
+
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
@@ -571,7 +586,15 @@ export class Connection {
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
    * @returns {Promise}
    */
-  async callAsync(name /* .. [arguments] .. */) {
+  // TODO [fibers]: this will go back to callAsync
+  async ccallAsync(name /* .. [arguments] .. */) {
+    return this._callAsync(
+      name,
+      { returnStubValue: false },
+      ...slice.call(arguments, 1),
+    );
+  }
+  async _callAsync(name /* .. [arguments] .. */) {
     const args = slice.call(arguments, 1);
     if (args.length && typeof args[args.length - 1] === 'function') {
       throw new Error(
@@ -895,9 +918,7 @@ export class Connection {
       }
       return options.returnStubValue
         ? future.then(() => stubReturnValue)
-        : {
-            stubValuePromise: future,
-          };
+        : null;
     }
     return options.returnStubValue ? stubReturnValue : undefined;
   }
