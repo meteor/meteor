@@ -1061,10 +1061,10 @@ Object.assign(MRp, {
     }
   },
 
-  _fail: function() {
+  _fail: async function() {
     var self = this;
     self.stop();
-    self.onFailure && self.onFailure();
+    self.onFailure && await self.onFailure();
     self._allowStartupToReturn();
   },
 
