@@ -378,9 +378,3 @@ Meteor.methods({
     resultByValueArrays[testId].push(value);
   }
 });
-/// Helper for "livedata - isAsync call"
-Meteor.methods({
-  isCallAsync: function () {
-    return Meteor.isAsyncCall()
-  }
-})

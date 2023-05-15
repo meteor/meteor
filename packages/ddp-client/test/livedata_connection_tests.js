@@ -526,7 +526,7 @@ if (Meteor.isClient) {
 
     // we use the applyAsync() instead of callAsync() because we want to control when to "pause"
     // or "continue" the method execution by using the methods stream.receive()
-    await conn.applyAsync('do_something', ['friday!'], {},function(err, res) {
+    await conn.applyAsync('do_something', ['friday!'], { ignoreReturn: true }, function(err, res) {
       test.isUndefined(err);
       test.equal(res, '1234');
       callback1Fired = true;
@@ -683,7 +683,7 @@ if (Meteor.isClient) {
     // setup methods
     conn.methods({
       do_something: async function() {
-        await conn.applyAsync('do_something_else', []);
+        await conn.callAsync('do_something_else');
       },
       do_something_else: async function() {
         await coll.insertAsync({ a: 1 });
@@ -694,7 +694,7 @@ if (Meteor.isClient) {
 
     // we use the applyAsync() instead of callAsync() because we want to control when to "pause"
     // or "continue" the method execution by using the methods stream.receive()
-    await conn.applyAsync('do_something', []);
+    await conn.applyAsync('do_something', [], { ignoreReturn: true });
 
     // see we only send message for outer methods
     const message = testGotMessage(test, stream, {
@@ -1384,7 +1384,7 @@ if (Meteor.isClient) {
     test.equal(coll.find().count(), 0);
 
     // Call the insert method.
-    await conn.applyAsync('insertSomething', []);
+    await conn.applyAsync('insertSomething', [], { ignoreReturn: true });
     // Stub write is visible.
     test.equal(coll.find({ foo: 'bar' }).count(), 1);
     const stubWrittenId = (await coll.findOneAsync({ foo: 'bar' }))._id;
@@ -1400,7 +1400,7 @@ if (Meteor.isClient) {
     test.equal(stream.sent.length, 0);
 
     // Call update method.
-    await conn.applyAsync('updateIt', [stubWrittenId]);
+    await conn.applyAsync('updateIt', [stubWrittenId], { ignoreReturn: true });
     // This stub write is visible too.
     test.equal(coll.find().count(), 1);
     test.equal(await coll.findOneAsync(stubWrittenId), {
@@ -1507,7 +1507,7 @@ if (Meteor.isClient) {
       // Call a wait method
       conn.apply('no-op', [], { wait: true }, _.identity);
       // Call a method with a stub that writes.
-      await conn.applyAsync('insertSomething', []);
+      await conn.applyAsync('insertSomething', [], { ignoreReturn: true });
 
       // Stub write is visible.
       test.equal(coll.find({ foo: 'bar' }).count(), 1);
@@ -2376,7 +2376,7 @@ if (Meteor.isClient) {
       // Now in reconnect, can still see the document.
       test.isTrue((await coll.findOneAsync('aaa')).value === 111);
 
-      await conn.applyAsync('update_value', []);
+      await conn.applyAsync('update_value', [], { ignoreReturn: true });
 
       // Observe the stub-written value.
       test.isTrue((await coll.findOneAsync('aaa')).value === 222);
@@ -2471,7 +2471,7 @@ if (Meteor.isClient) {
     test.equal((await coll.findOneAsync('aaa')).subscription, 111);
 
     // Call updates the stub.
-    await conn.applyAsync('update_value', []);
+    await conn.applyAsync('update_value', [], { ignoreReturn: true });
 
     // Observe the stub-written value.
     test.equal((await coll.findOneAsync('aaa')).method, 222);
