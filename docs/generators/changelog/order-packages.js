@@ -48,7 +48,7 @@ async function main() {
 
   let objectMap = {};
   let currentWorkingPackage = "";
-  for (const [index, line] of matches.entries()) {
+  for (const line of matches) {
     if (line.startsWith("-")) {
       const packageName = line
         .replace("-", "")
