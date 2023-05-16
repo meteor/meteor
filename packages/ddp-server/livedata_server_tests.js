@@ -128,8 +128,7 @@ Tinytest.addAsync(
       test,
       function (clientConn, serverConn) {
         clientConn.callAsync('livedata_server_test_inner').then(async res => {
-          const r = await res.stubValuePromise;
-          test.equal(r, serverConn.id);
+          test.equal(res, serverConn.id);
           clientConn.disconnect();
           onComplete();
         });
@@ -147,8 +146,7 @@ Tinytest.addAsync(
       test,
       function(clientConn, serverConn) {
         clientConn.callAsync('livedata_server_test_outer').then(async res => {
-          const r = await res.stubValuePromise;
-          test.equal(r, serverConn.id);
+          test.equal(res, serverConn.id);
           clientConn.disconnect();
           onComplete();
         });
@@ -351,11 +349,11 @@ Meteor.methods({
 Tinytest.addAsync(
   "livedata server - waiting for Promise",
   (test, onComplete) => makeTestConnection(test, async (clientConn, serverConn) => {
-    const testResolvedPromiseResult = await clientConn.callAsync("testResolvedPromise", "clientConn.call");
-    test.equal(
-      await testResolvedPromiseResult.stubValuePromise,
-      "clientConn.call after waiting"
+    const result = await clientConn.callAsync(
+      "testResolvedPromise",
+      "clientConn.call"
     );
+    test.equal(result, "clientConn.call after waiting");
 
     const clientCallPromise = new Promise(
       (resolve, reject) => clientConn.call(
