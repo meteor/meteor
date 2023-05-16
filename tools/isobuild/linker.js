@@ -142,7 +142,7 @@ Object.assign(Module.prototype, {
         }
 
         const node = await file.getPrelinkedOutput({ preserveLineNumbers: true });
-        const results = await Profile.time(
+        const results = Profile.time(
             "toStringWithSourceMap (app)", () => {
               return node.toStringWithSourceMap({
                 file: file.servePath
@@ -244,7 +244,7 @@ Object.assign(Module.prototype, {
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
-    await Profile.time(
+    Profile.time(
       'getPrelinkedFiles toStringWithSourceMap',
       function () {
         if (fileCount > 0) {
