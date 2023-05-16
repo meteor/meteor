@@ -30,9 +30,10 @@ CS.Solver = function (input, options) {
   self.analysis = {};
 };
 
-CS.Solver.prototype.init = async function() {
+// could be moved to the class declaration.
+CS.Solver.prototype.init = function() {
   const self = this;
-  await self.Profile.time("Solver#analyze", function () {
+  self.Profile.time("Solver#analyze", function () {
     return self.analyze();
   });
 
@@ -63,7 +64,7 @@ CS.Solver.prototype.getVersions = function (pkg) {
 // analysis once that particular analysis is done (e.g. `self.getVersions`
 // which relies on `self.analysis.allowedVersions`.
 // TODO -> Check await Profile.time
-CS.Solver.prototype.analyze = async function () {
+CS.Solver.prototype.analyze = function () {
   var self = this;
   var analysis = self.analysis;
   var input = self.input;
@@ -93,7 +94,7 @@ CS.Solver.prototype.analyze = async function () {
   // problem that some package has no legal versions), but we can
   // track such packages in packagesWithNoAllowedVersions so that we
   // throw a good error later.
-  await Profile.time("analyze allowed versions", function () {
+  Profile.time("analyze allowed versions", function () {
     _.each(_.groupBy(input.constraints, 'package'), function (cs, p) {
       var versions = cache.getPackageVersions(p);
       if (! versions.length) {
@@ -121,7 +122,7 @@ CS.Solver.prototype.analyze = async function () {
   // Collect "previous solution" versions of root dependencies.
   analysis.previousRootDepVersions = [];
 
-  await Profile.time("analyze root dependencies", function () {
+  Profile.time("analyze root dependencies", function () {
     _.each(input.dependencies, function (p) {
       if (! input.isKnownPackage(p)) {
         analysis.unknownRootDeps.push(p);
@@ -198,7 +199,7 @@ CS.Solver.prototype.analyze = async function () {
     });
   };
 
-  await Profile.time("analyze reachability", function () {
+  Profile.time("analyze reachability", function () {
     _.each(input.dependencies, markReachable);
   });
 
@@ -210,7 +211,7 @@ CS.Solver.prototype.analyze = async function () {
   // constraint about `foo`.  package name -> true.
   analysis.topLevelEqualityConstrainedPackages = {};
 
-  await Profile.time("analyze constraints", function () {
+  Profile.time("analyze constraints", function () {
     // Find package names with @x.y.z! overrides. We consider only
     // top-level constraints here, which includes (1) .meteor/packages,
     // (2) local package versions, and (3) Meteor release constraints.
@@ -297,7 +298,7 @@ CS.Solver.prototype.analyze = async function () {
 
   ////////// ANALYZE PRE-RELEASES
 
-  await Profile.time("analyze pre-releases", function () {
+  Profile.time("analyze pre-releases", function () {
     var unanticipatedPrereleases = [];
     _.each(_.keys(analysis.reachablePackages), function (p) {
       var anticipatedPrereleases = input.anticipatedPrereleases[p];
@@ -549,7 +550,7 @@ var addCostsToSteps = function (pkg, versions, costs, steps) {
 // Wraps `VersionPricer#priceVersions`, which is tasked with calculating
 // the cost of every version of every package.  This function iterates
 // over `packages` and puts the result into `Step` objects.
-CS.Solver.prototype.getVersionCostSteps = async function (stepBaseName, packages,
+CS.Solver.prototype.getVersionCostSteps = function (stepBaseName, packages,
                                                     pricerMode) {
   var self = this;
   var major = new CS.Solver.Step(stepBaseName + '_major');
@@ -557,7 +558,7 @@ CS.Solver.prototype.getVersionCostSteps = async function (stepBaseName, packages
   var patch = new CS.Solver.Step(stepBaseName + '_patch');
   var rest = new CS.Solver.Step(stepBaseName + '_rest');
 
-  await self.Profile.time(
+  self.Profile.time(
     "calculate " + stepBaseName + " version costs",
     function () {
       _.each(packages, function (p) {
@@ -577,7 +578,7 @@ CS.Solver.prototype.getVersionCostSteps = async function (stepBaseName, packages
 // The cost function is "distance" from the previous versions passed in
 // as `packageAndVersion`.  (Actually it's a complicated function of the
 // previous and new version.)
-CS.Solver.prototype.getVersionDistanceSteps = async function (stepBaseName,
+CS.Solver.prototype.getVersionDistanceSteps = function (stepBaseName,
                                                         packageAndVersions,
                                                         takePatches) {
   var self = this;
@@ -588,7 +589,7 @@ CS.Solver.prototype.getVersionDistanceSteps = async function (stepBaseName,
   var patch = new CS.Solver.Step(stepBaseName + '_patch');
   var rest = new CS.Solver.Step(stepBaseName + '_rest');
 
-  await self.Profile.time(
+  self.Profile.time(
     "calculate " + stepBaseName + " distance costs",
     function () {
       _.each(packageAndVersions, function (pvArg) {
@@ -668,21 +669,21 @@ CS.Solver.prototype._getAnswer = async function (options) {
   var allAnswers = (options && options.allAnswers); // for tests
   var Profile = self.Profile;
 
-  var logic = await Profile.time("new Logic.Solver (MiniSat start-up)", function () {
+  var logic = Profile.time("new Logic.Solver (MiniSat start-up)", function () {
     return new Logic.Solver();
   });
 
   self.logic = logic;
 
   // require root dependencies
-  await Profile.time("require root dependencies", function () {
+  Profile.time("require root dependencies", function () {
     _.each(input.dependencies, function (p) {
       logic.require(p);
     });
   });
 
   // generate package version variables for known, reachable packages
-  await Profile.time("generate package variables", function () {
+  Profile.time("generate package variables", function () {
     _.each(_.keys(analysis.reachablePackages), function (p) {
       if (! _.has(analysis.packagesWithNoAllowedVersions, p)) {
         var versionVars = _.map(self.getVersions(p),
@@ -699,7 +700,7 @@ CS.Solver.prototype._getAnswer = async function (options) {
   });
 
   // generate strong dependency requirements
-  await Profile.time("generate dependency requirements", function () {
+  Profile.time("generate dependency requirements", function () {
     _.each(_.keys(analysis.reachablePackages), function (p) {
       _.each(self.getVersions(p), function (v) {
         _.each(cache.getDependencyMap(p, v), function (dep) {
@@ -715,7 +716,7 @@ CS.Solver.prototype._getAnswer = async function (options) {
 
   // generate constraints -- but technically don't enforce them, because
   // we haven't forced the conflictVars to be false
-  await Profile.time("generate constraints", function () {
+  Profile.time("generate constraints", function () {
     _.each(analysis.constraints, function (c) {
       // We logically require that EITHER a constraint is marked as a
       // conflict OR it comes from a package version that is not selected
@@ -745,7 +746,7 @@ CS.Solver.prototype._getAnswer = async function (options) {
   //   using the solution if it exists
   // * Calling `minimize()`, which always maintains satisfiability
 
-  await Profile.time("pre-solve", function () {
+  Profile.time("pre-solve", function () {
     self.setSolution(logic.solve());
   });
   // There is always a solution at this point, namely,
@@ -758,19 +759,23 @@ CS.Solver.prototype._getAnswer = async function (options) {
   // which we didn't do earlier because we needed to establish an
   // initial solution before asking the solver if it's possible to
   // not use these packages.
-  await Profile.time("forbid packages with no matching versions", async function () {
-    for (const [p, constrs] of Object.entries(analysis.packagesWithNoAllowedVersions)) {
-      var newSolution = await logic.solveAssuming(Logic.not(p));
+  Profile.time("forbid packages with no matching versions", function () {
+    for (const [p, constrs] of Object.entries(
+      analysis.packagesWithNoAllowedVersions
+    )) {
+      var newSolution = logic.solveAssuming(Logic.not(p));
       if (newSolution) {
         self.setSolution(newSolution);
         logic.forbid(p);
       } else {
         var error =
-          'No version of ' + p + ' satisfies all constraints: ' +
-            _.map(constrs, function (constr) {
-              return '@' + constr.constraintString;
-            }).join(', ');
-        error += '\n' + self.listConstraintsOnPackage(p);
+          "No version of " +
+          p +
+          " satisfies all constraints: " +
+          _.map(constrs, function (constr) {
+            return "@" + constr.constraintString;
+          }).join(", ");
+        error += "\n" + self.listConstraintsOnPackage(p);
         self.errors.push(error);
       }
     }
@@ -809,7 +814,7 @@ CS.Solver.prototype._getAnswer = async function (options) {
 
   // make sure packages that are being updated can still count as
   // a previous_root for the purposes of previous_root_incompat
-  await Profile.time("add terms to previous_root_incompat", function () {
+  Profile.time("add terms to previous_root_incompat", function () {
     _.each(toUpdate, function (p) {
       if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
         var parts = self.pricer.partitionVersions(
@@ -880,7 +885,7 @@ CS.Solver.prototype._getAnswer = async function (options) {
   // about the versions of the unimportant packages that it's a very weak
   // signal.  In other words, the user might be better off with some tie-breaker
   // that looks only at the important packages anyway.
-  await Profile.time("lock down important versions", function () {
+  Profile.time("lock down important versions", function () {
     _.each(self.currentVersionMap(), function (v, pkg) {
       if (input.isRootDependency(pkg) ||
           input.isInPreviousSolution(pkg) ||
@@ -908,7 +913,7 @@ CS.Solver.prototype._getAnswer = async function (options) {
 
   // throw errors about unknown packages
   if (self.stepsByName['unknown_packages'].optimum > 0) {
-    await Profile.time("generate error for unknown packages", function () {
+    Profile.time("generate error for unknown packages", function () {
       var unknownPackages = _.keys(analysis.unknownPackages);
       var unknownPackagesNeeded = _.filter(unknownPackages, function (p) {
         return self.solution.evaluate(p);
@@ -948,7 +953,7 @@ CS.Solver.prototype._getAnswer = async function (options) {
     var incompatRootChanges = _.keys(self.getStepContributions(
       self.stepsByName['previous_root_incompat']));
 
-    await Profile.time("generate errors for incompatible root change", function () {
+    Profile.time("generate errors for incompatible root change", function () {
       var numActualErrors = 0;
       _.each(incompatRootChanges, function (pvStr) {
         var pv = CS.PackageAndVersion.fromString(pvStr);
@@ -977,13 +982,13 @@ CS.Solver.prototype._getAnswer = async function (options) {
   var result = {
     neededToUseUnanticipatedPrereleases: (
       self.stepsByName['unanticipated_prereleases'].optimum > 0),
-    answer: await Profile.time("generate version map", function () {
+    answer: Profile.time("generate version map", function () {
       return self.currentVersionMap();
     })
   };
 
   if (allAnswers) {
-    await Profile.time("generate all answers", function () {
+    Profile.time("generate all answers", function () {
       var allAnswersList = [result.answer];
       var nextAnswer = function () {
         var formula = self.solution.getFormula();
@@ -1055,13 +1060,13 @@ CS.Solver.prototype.listConstraintsOnPackage = function (pkg) {
   return result;
 };
 
-CS.Solver.prototype.throwConflicts = async function () {
+CS.Solver.prototype.throwConflicts = function () {
   var self = this;
 
   var solution = self.solution;
   var constraints = self.analysis.constraints;
 
-  await self.Profile.time("generate error about conflicts", function () {
+  self.Profile.time("generate error about conflicts", function () {
     _.each(constraints, function (c) {
       // c is a CS.Solver.Constraint
       if (solution.evaluate(c.conflictVar)) {
