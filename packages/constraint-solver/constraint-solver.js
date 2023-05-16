@@ -49,14 +49,20 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
   options = options || {};
   var Profile = (self._options.Profile || CS.DummyProfile);
 
-  var input = await Profile.time("new CS.Input", function () {
-    return new CS.Input(dependencies, constraints, self.catalogCache,
-                         _.pick(options,
-                                'upgrade',
-                                'anticipatedPrereleases',
-                                'previousSolution',
-                                'allowIncompatibleUpdate',
-                                'upgradeIndirectDepPatchVersions'));
+  var input = Profile.time("new CS.Input", function () {
+    return new CS.Input(
+      dependencies,
+      constraints,
+      self.catalogCache,
+      _.pick(
+        options,
+        "upgrade",
+        "anticipatedPrereleases",
+        "previousSolution",
+        "allowIncompatibleUpdate",
+        "upgradeIndirectDepPatchVersions"
+      )
+    );
   });
 
   // The constraint solver avoids re-solving everything from scratch on
@@ -99,11 +105,12 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
 
   if (options.previousSolution && options.missingPreviousVersionIsError) {
     // see comment where missingPreviousVersionIsError is passed in
-    await Profile.time("check for previous versions in catalog", function () {
+    Profile.time("check for previous versions in catalog", function () {
       _.each(options.previousSolution, function (version, pkg) {
-        if (! input.catalogCache.hasPackageVersion(pkg, version)) {
+        if (!input.catalogCache.hasPackageVersion(pkg, version)) {
           CS.throwConstraintSolverError(
-            "Package version not in catalog: " + pkg + " " + version);
+            "Package version not in catalog: " + pkg + " " + version
+          );
         }
       });
     });
