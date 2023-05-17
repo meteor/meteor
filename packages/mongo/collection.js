@@ -803,8 +803,9 @@ Object.assign(Mongo.Collection.prototype, {
       this._name,
       this.upsert.isCalledFromAsync
     );
-    this.upsert.isCalledFromAsync = false; // will not trigger warning in `update`
-
+    this.upsert.isCalledFromAsync = false; 
+    // caught here https://github.com/meteor/meteor/issues/12626 
+    this.update.isCalledFromAsync = true; // to not trigger on the next call
     return this.update(
       selector,
       modifier,
