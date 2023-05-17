@@ -35,7 +35,7 @@ if (Meteor.isServer) {
         value => delete Accounts._skipCaseInsensitiveChecksForTest[value],
 
       async countUsersOnServer(query) {
-        return await Meteor.users.find(query).count();
+        return await Meteor.users.find(query).countAsync();
       }
     }
   );
@@ -766,32 +766,45 @@ if (Meteor.isClient) (() => {
     // test the default Meteor.users allow rule. This test properly belongs in
     // accounts-base/accounts_tests.js, but this is where the tests that
     // actually log in are.
-    function (test, expect) {
+    async function (test, expect) {
       this.userId = Meteor.userId();
       test.notEqual(this.userId, null);
       test.notEqual(this.userId, this.otherUserId);
       // Can't update fields other than profile.
-      Meteor.users.update(
-        this.userId, { $set: { disallowed: true, 'profile.updated': 42 } },
-        expect(err => {
-          test.isTrue(err);
-          test.equal(err.error, 403);
-          test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user(), 'disallowed'));
-          test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
-        }));
+      await Meteor.users
+        .updateAsync(this.userId, {
+          $set: { disallowed: true, "profile.updated": 42 },
+        })
+        .catch(
+          expect((err) => {
+            test.isTrue(err);
+            test.equal(err.error, 403);
+            test.isFalse(
+              Object.prototype.hasOwnProperty.call(Meteor.user(), "disallowed")
+            );
+            test.isFalse(
+              Object.prototype.hasOwnProperty.call(
+                Meteor.user().profile,
+                "updated"
+              )
+            );
+          })
+        );
     },
-    function (test, expect) {
+    async function (test, expect) {
       // Can't update another user.
-      Meteor.users.update(
-        this.otherUserId, { $set: { 'profile.updated': 42 } },
-        expect(err => {
-          test.isTrue(err);
-          test.equal(err.error, 403);
-        }));
+      await Meteor.users
+        .updateAsync(this.otherUserId, { $set: { "profile.updated": 42 } })
+        .catch(
+          expect((err) => {
+            test.isTrue(err);
+            test.equal(err.error, 403);
+          })
+        );
     },
-    function (test, expect) {
+    async function (test, expect) {
       // Can't update using a non-ID selector. (This one is thrown client-side.)
-      test.throws(() => Meteor.users.update(
+      await test.throwsAsync(async () => await Meteor.users.updateAsync(
         { username: this.username }, { $set: { 'profile.updated': 42 } }
       ));
       test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
@@ -802,7 +815,7 @@ if (Meteor.isClient) (() => {
         this.userId, { $set: { 'profile.updated': 42 } },
        );
       test.equal(42, Meteor.user().profile.updated);
-    },
+    },],[
     logoutStep
   ]);
 
@@ -1242,7 +1255,7 @@ if (Meteor.isServer) (() => {
           test.fail('observe should be gone');
       })
 
-      const result = await clientConn.callAsync('login', { returnServerPromise: true }, {
+      const result = await clientConn.callAsync('login', {
         user: { username: username },
         password: hashPassword('password')
       });
