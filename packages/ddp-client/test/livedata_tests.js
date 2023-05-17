@@ -396,7 +396,7 @@ testAsyncMulti('livedata - compound methods', [
     await Meteor.applyAsync(
       "ledger/transfer",
       [test.runId(), "alice", "bob", 10],
-      { returnStubValue: true }
+      { ignoreReturn: true }
     );
     await checkBalances(test, 90, 60);
   },
@@ -405,7 +405,7 @@ testAsyncMulti('livedata - compound methods', [
       await Meteor.applyAsync(
         "ledger/transfer",
         [test.runId(), "alice", "bob", 100, true],
-        { returnStubValue: true }
+        { ignoreReturn: true }
       );
     } catch (e) {}
     if (Meteor.isClient)
