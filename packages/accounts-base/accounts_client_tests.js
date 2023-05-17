@@ -47,13 +47,13 @@ const createUserAndLogout = (test, done, nextTests) => {
 };
 
 const removeTestUser = done => {
-  Meteor.call('removeAccountsTestUser', username, () => {
+  Meteor.callAsync('removeAccountsTestUser', username).then(() => {
     done();
   });
 };
 
 const forceEnableUser2fa = done => {
-  Meteor.call('forceEnableUser2fa', { username }, secret2fa, (err, token) => {
+  Meteor.callAsync('forceEnableUser2fa', { username }, secret2fa).then((token) => {
     done(token);
   });
 };
@@ -167,7 +167,7 @@ Tinytest.addAsync(
   'accounts - Meteor.user() obeys explicit and default field selectors',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
-      Meteor.loginWithPassword(username, password, () => {
+      Meteor.loginWithPassword(username, password, async () => {
         // by default, all fields should be returned
         test.equal(Meteor.user().profile[excludeField], excludeValue);
 

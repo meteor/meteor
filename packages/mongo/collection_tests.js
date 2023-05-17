@@ -433,9 +433,9 @@ Tinytest.addAsync('collection - should not block on cursor mismatch (#12516)',
 
     // Setup
     const collection = new Mongo.Collection('test' + test.id);
-    Array.from({ length: 5 }).forEach((_, i) => {
-      collection.insert({ name: "Test-" + i });
-    });
+    for (let i = 0; i < 5; i++) {
+      await collection.insertAsync({ name: "Test-" + i });
+    }
 
     // Test
     const cursor = collection.find({ name: undefined });
@@ -447,7 +447,7 @@ Tinytest.addAsync('collection - should not block on cursor mismatch (#12516)',
         resolve();
       }, 500);
     });
-    subscription = cursor.observe({});
+    subscription = await cursor.observe({});
     subscription.stop();
     await promise;
   }
@@ -455,14 +455,14 @@ Tinytest.addAsync('collection - should not block on cursor mismatch (#12516)',
 
 
 
-Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(test){ 
+Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(test){
   var collectionName = 'add' + test.id;
   var collection = new Mongo.Collection(collectionName);
-  var id = await collection.insert({a: 1});
+  var id = await collection.insertAsync({a: 1});
   test.equal((await collection.findOneAsync(id)).a, 1);
   id = await collection.insertAsync({a: 2});
   test.equal((await collection.findOneAsync(id)).a, 2);
   await collection.removeAsync({});
-  
+
 })
 

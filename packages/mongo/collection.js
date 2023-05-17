@@ -572,15 +572,6 @@ Object.assign(Mongo.Collection.prototype, {
    * @returns {Object}
    */
   findOne(...args) {
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "findOne",
-      this._name,
-      this.findOne.isCalledFromAsync
-    );
-    this.findOne.isCalledFromAsync = false;
-
     return this._collection.findOne(
       this._getFindSelector(args),
       this._getFindOptions(args)
@@ -1002,7 +993,7 @@ Object.assign(Mongo.Collection.prototype, {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
-      return this._collection.update(
+      return this._collection.updateAsync(
         selector,
         modifier,
         options,

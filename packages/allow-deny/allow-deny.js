@@ -608,10 +608,7 @@ CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethodA
   }
 
   const mutatorMethodName = this._prefix + name;
-  return this._connection.applyAsync(mutatorMethodName, args, {
-    returnStubValue: true,
-    ...options,
-  });
+  return this._connection.applyAsync(mutatorMethodName, args, options);
 }
 
 CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args, callback) {

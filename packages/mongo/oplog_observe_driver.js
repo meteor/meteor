@@ -914,7 +914,7 @@ _.extend(OplogObserveDriver.prototype, {
           'many documents match your query. Cursor description: ',
           self._cursorDescription);
       }
-      
+
       self._published.forEach(function (doc, id) {
         if (!newResults.has(id))
           throw Error("_published has a doc that newResults doesn't; " + id);

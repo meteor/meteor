@@ -186,11 +186,11 @@ const upsertTestMethodImpl = async function(coll, useUpdate, test) {
 
 if (Meteor.isServer) {
   var m = {};
-  m[upsertTestMethod] = function (run, useUpdate, options) {
+  m[upsertTestMethod] = async function (run, useUpdate, options) {
     check(run, String);
     check(useUpdate, Boolean);
     upsertTestMethodColl = new Mongo.Collection(upsertTestMethod + "_collection_" + run, options);
-    upsertTestMethodImpl(upsertTestMethodColl, useUpdate);
+    await upsertTestMethodImpl(upsertTestMethodColl, useUpdate);
   };
   Meteor.methods(m);
 }
@@ -239,14 +239,10 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 
           const callOp = async function(callback) {
             try {
-              let result;
               if (op === 'updateAsync') {
-                result = await ftc[op](arg, arg2);
+                await ftc[op](arg, arg2);
               } else {
-                result = await ftc[op](arg);
-              }
-              if (result?.stubValuePromise) {
-                await result.stubValuePromise;
+                await ftc[op](arg);
               }
             } catch (e) {
               callback(e);
@@ -2655,7 +2651,7 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 // if we don't get the right return values.
   if (Meteor.isClient) {
     _.each([true, false], function(useUpdate) {
-      Tinytest.onlyAsync(
+      Tinytest.addAsync(
         'mongo-livedata - ' +
           (useUpdate ? 'update ' : '') +
           'upsert in method, ' +
@@ -2672,11 +2668,10 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
             await upsertTestMethodImpl(upsertTestMethodColl, useUpdate, test);
           };
           Meteor.methods(m);
-          await Meteor.callAsync(
+          await Meteor.applyAsync(
             upsertTestMethod,
-            run,
-            useUpdate,
-            collectionOptions
+            [run, useUpdate, collectionOptions],
+            { ignoreReturn: true }
           );
         }
       );
@@ -3025,7 +3020,7 @@ _.each(
               ' repetitions on ' +
               collectionCount +
               ' collections, idGeneration=' +
-              idGeneration + 'XAXAXAXAXA',
+              idGeneration,
             [
               function(test, expect) {
                 var collectionOptions = { idGeneration: idGeneration };

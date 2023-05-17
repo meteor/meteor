@@ -561,7 +561,6 @@ export class Connection {
     }
     return this.apply(name, args, callback);
   }
-
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
@@ -572,12 +571,11 @@ export class Connection {
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
    * @returns {Promise}
    */
-  // TODO [fibers]: this will go back to callAsync
   async callAsync(name /* .. [arguments] .. */) {
     const args = slice.call(arguments, 1);
     if (args.length && typeof args[args.length - 1] === "function") {
       throw new Error(
-        "This function does not accept a callback. You should 'await' the result, or use .then()."
+        "Meteor.callAsync() does not accept a callback. You should 'await' the result, or use .then()."
       );
     }
     return this.applyAsync(name, args);
@@ -597,7 +595,7 @@ export class Connection {
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    */
-  async applyAsync(name, args, options,  callback) {
+  async applyAsync(name, args, options, callback) {
     const opts = {
       ...(options || {}),
       returnServerResultPromise: true,

@@ -111,8 +111,8 @@
 
 * `minimongo@1.9.2`:
   TODO: add this aswell to the minimongo docs
-  - `cursor.observe` now returns `isReady` and `isReadyPromise` wich indicates
-    if the cursor is ready and if the callbacks are have been called.
+  - `cursor.observe` now returns `isReady` and `isReadyPromise` witch indicates
+    if the cursor is ready and if the callbacks have been called.
     If you only use it in the `Client` or as a `LocalCollection` things have not
     changed.
 

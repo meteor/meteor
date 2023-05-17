@@ -147,15 +147,19 @@ export class AccountsCommon {
   }
 
   /**
-   * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+   * @summary Get the current user record, or `null` if no user is logged in. A reactive data source. In the server this fuction returns a promise.
    * @locus Anywhere
    * @param {Object} [options]
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    */
   user(options) {
-    const userId = this.userId();
+    const self = this;
+    const userId = self.userId();
+    const findOne = (...args) => Meteor.isClient
+      ? self.users.findOne(...args)
+      : self.users.findOneAsync(...args);
     return userId
-      ? this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
+      ? findOne(userId, this._addDefaultFieldSelector(options))
       : null;
   }
 
