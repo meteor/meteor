@@ -8,9 +8,9 @@
 
 <div align="center">
 
-[![TravisCI Status](https://travis-ci.org/meteor/meteor.svg?branch=devel)](https://travis-ci.org/meteor/meteor)
-[![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
-[![built with Meteor](https://img.shields.io/badge/Meteor-2.7.4-green?logo=meteor&logoColor=white)](https://meteor.com)
+[![Travis CI Status](https://api.travis-ci.com/meteor/meteor.svg?branch=devel)](https://app.travis-ci.com/github/meteor/meteor)
+[![CircleCI Status](https://circleci.com/gh/meteor/meteor.svg?style=svg)](https://app.circleci.com/pipelines/github/meteor/meteor?branch=devel)
+[![built with Meteor](https://img.shields.io/badge/Meteor-2.12-green?logo=meteor&logoColor=white)](https://meteor.com)
   
 </div>
 
@@ -28,7 +28,7 @@ Meteor is an **ultra-simple** environment for building **modern** web applicatio
 
 ### 📚 **Create your applications using modern JavaScript**
 
-Benefit from the latest technology updates to fastly prototype and develop your applications.
+Benefit from the latest technology updates to rapidly prototype and develop your applications.
 
 <hr>
 
@@ -46,7 +46,7 @@ Use the same code whether you’re developing for web, iOS, Android, or desktop 
 
 # 🔥 Getting Started
 
-What about to try a getting started tutorial in your favorite technology?
+How about trying a getting started tutorial in your favorite technology?
 
 | [<img align="left" width="25" src="https://www.quantumversity.com/wp-content/uploads/2020/11/Adding-Authentication-to-React-with-Auth0-Login-and-Profile.png"> React](https://react-tutorial.meteor.com/) |
 | - |
