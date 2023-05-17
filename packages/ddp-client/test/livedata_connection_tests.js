@@ -2297,8 +2297,9 @@ if (Meteor.isClient) {
     test.length(stream.sent, 0);
 
     // Insert a document. The stub updates "conn" directly.
-    await coll.insertAsync({ _id: 'foo', bar: 42 }, _.identity);
-    test.equal(coll.find().count(), 1);
+    coll.insertAsync({ _id: 'foo', bar: 42 });
+
+    test.equal(await coll.find().countAsync(), 1);
     test.equal(await coll.findOneAsync(), { _id: 'foo', bar: 42 });
     // It also sends the method message.
     let methodMessage = JSON.parse(stream.sent.shift());
@@ -2315,13 +2316,13 @@ if (Meteor.isClient) {
     // _documentsWrittenByStub state!
     await stream.receive({ msg: 'connected', session: SESSION_ID });
     test.length(stream.sent, 0);
-    test.equal(coll.find().count(), 1);
+    test.equal(await coll.find().countAsync(), 1);
 
     // Now receive the "updated" message for the method. This should revert the
     // insert.
     await stream.receive({ msg: 'updated', methods: [methodMessage.id] });
     test.length(stream.sent, 0);
-    test.equal(coll.find().count(), 0);
+    test.equal(await coll.find().countAsync(), 0);
   });
 }
 
