@@ -444,7 +444,7 @@ main.registerCommand({
   // We have initialized everything, so perform the publish operation.
   var binary = isopack.platformSpecific();
   await main.captureAndExit(
-    "=> Errors while publishing:",
+    "=> Errors while publishing:" + packageSource.name,
     "publishing the package",
     async function () {
       await packageClient.publishPackage({

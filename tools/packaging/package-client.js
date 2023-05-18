@@ -826,6 +826,7 @@ exports.publishPackage = async function (options) {
     }
 
     await buildmessage.enterJob("uploading source", async function () {
+      console.log(uploadInfo);
       await uploadFile(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
     });
 
