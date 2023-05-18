@@ -2655,7 +2655,7 @@ _.each( ['STRING', 'MONGO'], function(idGeneration) {
 // if we don't get the right return values.
   if (Meteor.isClient) {
     _.each([true, false], function(useUpdate) {
-      Tinytest.onlyAsync(
+      Tinytest.addAsync(
         'mongo-livedata - ' +
           (useUpdate ? 'update ' : '') +
           'upsert in method, ' +
