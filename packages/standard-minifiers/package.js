@@ -1,6 +1,6 @@
 Package.describe({
   name: 'standard-minifiers',
-  version: '2.0.0-alpha300.6',
+  version: '2.0.0-alpha300.7',
   summary: 'Standard minifiers used with Meteor apps by default.',
   documentation: 'README.md'
 });

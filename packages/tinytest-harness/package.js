@@ -1,6 +1,6 @@
 Package.describe({
   name: 'tinytest-harness',
-  version: '1.0.0-alpha300.6',
+  version: '1.0.0-alpha300.7',
   summary: 'In development, lets your app define Tinytests, run them and see results',
   documentation: null
 });
