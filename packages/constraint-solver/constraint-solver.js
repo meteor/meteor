@@ -96,8 +96,7 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
       });
     });
   }
-
-  await Profile.time(
+  await Profile.time( 
     "Input#loadOnlyPreviousSolution",
     function () {
       return input.loadOnlyPreviousSolution(self.catalogLoader);
@@ -176,14 +175,12 @@ CS.PackagesResolver._resolveWithInput = async function (input, options) {
     console.log(JSON.stringify(input.toJSONable(), null, 2));
   }
 
-  var solver = await (options.Profile || CS.DummyProfile).time("new CS.Solver", async function () {
+  var solver = (options.Profile || CS.DummyProfile).time("new CS.Solver", function () {
     const _solver = new CS.Solver(input, {
       nudge: options.nudge,
       yield: options.yield,
       Profile: options.Profile
     });
-    await _solver.init();
-
     return _solver;
   });
 
