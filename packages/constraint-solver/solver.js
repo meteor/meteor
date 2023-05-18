@@ -28,16 +28,16 @@ CS.Solver = function (input, options) {
   self.stepsByName = {};
 
   self.analysis = {};
-};
 
-// could be moved to the class declaration.
-CS.Solver.prototype.init = function() {
-  const self = this;
   self.Profile.time("Solver#analyze", function () {
-    return self.analyze();
+    self.analyze();
   });
 
   self.logic = null; // Logic.Solver, initialized later
+};
+
+CS.Solver.prototype.init = function() {
+  throw new Error("Init is no longer being needed, just instanciate the class");
 };
 
 CS.Solver.prototype.throwAnyErrors = function () {
@@ -63,7 +63,6 @@ CS.Solver.prototype.getVersions = function (pkg) {
 // input.  May also throw errors, and may call methods that rely on
 // analysis once that particular analysis is done (e.g. `self.getVersions`
 // which relies on `self.analysis.allowedVersions`.
-// TODO -> Check await Profile.time
 CS.Solver.prototype.analyze = function () {
   var self = this;
   var analysis = self.analysis;
@@ -801,8 +800,10 @@ CS.Solver.prototype._getAnswer = async function (options) {
   await self.minimize('unanticipated_prereleases',
                 analysis.unanticipatedPrereleases);
 
-  var previousRootSteps = await self.getVersionDistanceSteps(
-    'previous_root', analysis.previousRootDepVersions);
+  var previousRootSteps = self.getVersionDistanceSteps(
+    "previous_root",
+    analysis.previousRootDepVersions
+  );
   // the "previous_root_incompat" step
   var previousRootIncompat = previousRootSteps[0];
   // the "previous_root_major", "previous_root_minor", etc. steps
@@ -834,8 +835,9 @@ CS.Solver.prototype._getAnswer = async function (options) {
     await self.minimize(previousRootIncompat);
   }
 
-  await self.minimize(await self.getVersionCostSteps(
-    'update', toUpdate, CS.VersionPricer.MODE_UPDATE));
+  await self.minimize(
+    self.getVersionCostSteps("update", toUpdate, CS.VersionPricer.MODE_UPDATE)
+  );
 
   if (input.allowIncompatibleUpdate) {
     // If you pass `--allow-incompatible-update`, we will still try to minimize
@@ -854,16 +856,25 @@ CS.Solver.prototype._getAnswer = async function (options) {
       ! input.isRootDependency(p);
   });
 
-  await self.minimize(await self.getVersionDistanceSteps(
-    'previous_indirect', otherPrevious,
-    input.upgradeIndirectDepPatchVersions));
+  await self.minimize(
+    self.getVersionDistanceSteps(
+      "previous_indirect",
+      otherPrevious,
+      input.upgradeIndirectDepPatchVersions
+    )
+  );
 
   var newRootDeps = _.filter(input.dependencies, function (p) {
     return ! input.isInPreviousSolution(p);
   });
 
-  await self.minimize(await self.getVersionCostSteps(
-    'new_root', newRootDeps, CS.VersionPricer.MODE_UPDATE));
+  await self.minimize(
+    self.getVersionCostSteps(
+      "new_root",
+      newRootDeps,
+      CS.VersionPricer.MODE_UPDATE
+    )
+  );
 
   // Lock down versions of all root, previous, and updating packages that
   // are currently selected.  The reason to do this is to save the solver
@@ -905,9 +916,13 @@ CS.Solver.prototype._getAnswer = async function (options) {
     }
   });
 
-  await self.minimize(await self.getVersionCostSteps(
-    'new_indirect', otherPackages,
-    CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES));
+  await self.minimize(
+    self.getVersionCostSteps(
+      "new_indirect",
+      otherPackages,
+      CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES
+    )
+  );
 
   await self.minimize('total_packages', _.keys(analysis.reachablePackages));
 
@@ -941,7 +956,7 @@ CS.Solver.prototype._getAnswer = async function (options) {
 
   // throw errors about conflicts
   if (self.stepsByName['conflicts'].optimum > 0) {
-    await self.throwConflicts();
+    self.throwConflicts();
   }
 
   if ((! input.allowIncompatibleUpdate) &&
