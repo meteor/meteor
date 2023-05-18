@@ -26,8 +26,8 @@ export class AccountsServer extends AccountsCommon {
   // Note that this constructor is less likely to be instantiated multiple
   // times than the `AccountsClient` constructor, because a single server
   // can provide only one set of methods.
-  constructor(server) {
-    super();
+  constructor(server, options) {
+    super(options || {});
 
     this._server = server || Meteor.server;
     // Set up the server's methods, as if by calling Meteor.methods.
@@ -190,7 +190,7 @@ export class AccountsServer extends AccountsCommon {
       throw new Error("Can only call onCreateUser once");
     }
 
-    this._onCreateUserHook = func;
+    this._onCreateUserHook = Meteor.wrapFn(func);
   }
 
   /**
@@ -564,7 +564,7 @@ export class AccountsServer extends AccountsCommon {
 
     this._loginHandlers.push({
       name: name,
-      handler: handler
+      handler: Meteor.wrapFn(handler)
     });
   };
 
