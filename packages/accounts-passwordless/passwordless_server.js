@@ -231,11 +231,11 @@ Accounts.sendLoginTokenEmail = ({ userId, sequence, email, extra = {} }) => {
 };
 
 const setupUsersCollection = () => {
-  Meteor.users.createIndex('services.passwordless.tokens.token', {
+  Meteor.users.createIndexAsync('services.passwordless.tokens.token', {
     unique: true,
     sparse: true,
   });
-  Meteor.users.createIndex('services.passwordless.token', {
+  Meteor.users.createIndexAsync('services.passwordless.token', {
     unique: true,
     sparse: true,
   });

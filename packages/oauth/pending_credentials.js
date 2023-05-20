@@ -16,9 +16,9 @@ OAuth._pendingCredentials = new Mongo.Collection(
     _preventAutopublish: true
   });
 
-OAuth._pendingCredentials.createIndex('key', { unique: true });
-OAuth._pendingCredentials.createIndex('credentialSecret');
-OAuth._pendingCredentials.createIndex('createdAt');
+OAuth._pendingCredentials.createIndexAsync('key', { unique: true });
+OAuth._pendingCredentials.createIndexAsync('credentialSecret');
+OAuth._pendingCredentials.createIndexAsync('createdAt');
 
 
 
@@ -27,7 +27,7 @@ const _cleanStaleResults = () => {
   // Remove credentials older than 1 minute
   const timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
-  OAuth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
+  OAuth._pendingCredentials.removeAsync({ createdAt: { $lt: timeCutoff } });
 };
 const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
@@ -53,7 +53,7 @@ OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
   // We do an upsert here instead of an insert in case the user happens
   // to somehow send the same `state` parameter twice during an OAuth
   // login; we don't want a duplicate key error.
-  OAuth._pendingCredentials.upsert({
+  OAuth._pendingCredentials.upsertAsync({
     key,
   }, {
     key,
@@ -72,13 +72,13 @@ OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
 OAuth._retrievePendingCredential = (key, credentialSecret = null) => {
   check(key, String);
 
-  const pendingCredential = OAuth._pendingCredentials.findOne({
+  const pendingCredential = OAuth._pendingCredentials.findOneAsync({
     key,
     credentialSecret,
   });
 
   if (pendingCredential) {
-    OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
+    OAuth._pendingCredentials.removeAsync({ _id: pendingCredential._id });
     if (pendingCredential.credential.error)
       return recreateError(pendingCredential.credential.error);
     else
