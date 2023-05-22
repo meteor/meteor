@@ -571,6 +571,7 @@ Object.assign(Roles, {
     });
 
     let insertedId;
+    let res;
     if (existingAssignment) {
       await Meteor.roleAssignment.updateAsync(existingAssignment._id, {
         $set: {
@@ -579,6 +580,8 @@ Object.assign(Roles, {
           scope: options.scope,
         },
       });
+
+      res = await Meteor.roleAssignment.findOneAsync(existingAssignment._id);
     } else {
       insertedId = await Meteor.roleAssignment.insertAsync({
         user: { _id: userId },
@@ -586,7 +589,7 @@ Object.assign(Roles, {
         scope: options.scope,
       });
     }
-    const res = await Meteor.roleAssignment.upsertAsync(
+    /*const res = await Meteor.roleAssignment.upsertAsync(
       {
         "user._id": userId,
         "role._id": roleName,
@@ -599,7 +602,7 @@ Object.assign(Roles, {
           scope: options.scope,
         },
       }
-    );
+    );*/
 
     if (insertedId) {
       await Meteor.roleAssignment.updateAsync(
@@ -613,6 +616,8 @@ Object.assign(Roles, {
           },
         }
       );
+
+      res = await Meteor.roleAssignment.findOneAsync({ _id: insertedId });
     }
 
     return res;
