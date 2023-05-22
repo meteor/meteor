@@ -95,10 +95,9 @@ Meteor.startup(function() {
   Migrations._collection = new Mongo.Collection(options.collectionName);
 
   log = createLogger('Migrations');
-  const partial = (func, ...boundArgs) => (...remainingArgs) => func(...boundArgs, ...remainingArgs)
 
   ['info', 'warn', 'error', 'debug'].forEach(function(level) {
-    log[level] = partial(log, level);
+    log[level] = (message) => log(level, message)
   });
 
   if (process.env.MIGRATE) Migrations.migrateTo(process.env.MIGRATE);
