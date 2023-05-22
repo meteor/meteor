@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
 import { check, Match } from 'meteor/check';
 import { Log } from 'meteor/logging';
 
@@ -72,7 +73,7 @@ function createLogger(prefix) {
     check(level, Match.OneOf('info', 'error', 'warn', 'debug'));
     check(message, String);
 
-    const logger = Migrations.options && Migrations.options.logger;
+    const logger = Migrations.options?.logger;
 
     if (logger && _.isFunction(logger)) {
       logger({
