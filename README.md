@@ -188,6 +188,30 @@ $ ./packages/percolatestudio-migrations/migrate.sh latest --settings ./setting.j
   Migrations.unlock();
   ```
 
+### Threading and Callbacks
+The following is example code to wait for asynchronous code to complete prior to going on to next migration.
+
+```js
+Migrations.add({
+  version: 1,
+  up: Meteor.wrapAsync(async (_, next) => {
+    await doSomethingAsynchonously();
+    next();
+  }),
+  down: Meteor.wrapAsync(async (_, next) => {
+    await doDownAsynchronously();
+    next();
+  }),
+});
+```
+
+* Note: You may want to to call migration after startup in case your host (such as Heroku) limits the amount of time given for startup
+``` javascript
+Meteor.startup(function() {
+  setTimetout("Migrations.migrateTo('latest')", 0);
+});
+```
+
 ## Contributing
 
 1. Write some code.
