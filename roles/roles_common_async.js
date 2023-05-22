@@ -84,17 +84,29 @@ Object.assign(Roles, {
       options
     );
 
-    var result = await Meteor.roles.upsertAsync(
-      { _id: roleName },
-      { $setOnInsert: { children: [] } }
-    );
+    let insertedId = null;
 
-    if (!result.insertedId) {
+    const existingRole = await Meteor.roles.findOneAsync({ _id: roleName });
+
+    if (existingRole) {
+      await Meteor.roles.updateAsync(
+        { _id: roleName },
+        { $setOnInsert: { children: [] } }
+      );
+      return null;
+    } else {
+      insertedId = await Meteor.roles.insertAsync({
+        _id: roleName,
+        children: [],
+      });
+    }
+
+    if (!insertedId) {
       if (options.unlessExists) return null;
       throw new Error("Role '" + roleName + "' already exists.");
     }
 
-    return result.insertedId;
+    return insertedId;
   },
 
   /**
