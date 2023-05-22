@@ -74,7 +74,7 @@ function createLogger(prefix) {
 
     const logger = Migrations.options && Migrations.options.logger;
 
-    if (logger && _.isFunction(logger)) {
+    if (logger && typeof logger === 'function') {
       logger({
         level: level,
         message: message,
@@ -95,9 +95,10 @@ Meteor.startup(function() {
   Migrations._collection = new Mongo.Collection(options.collectionName);
 
   log = createLogger('Migrations');
+  const partial = (func, ...boundArgs) => (...remainingArgs) => func(...boundArgs, ...remainingArgs)
 
   ['info', 'warn', 'error', 'debug'].forEach(function(level) {
-    log[level] = _.partial(log, level);
+    log[level] = partial(log, level);
   });
 
   if (process.env.MIGRATE) Migrations.migrateTo(process.env.MIGRATE);
@@ -123,7 +124,7 @@ Migrations.add = function(migration) {
   Object.freeze(migration);
 
   this._list.push(migration);
-  this._list = _.sortBy(this._list, function(m) {
+  this._list = this._list.sort(function(m) {
     return m.version;
   });
 };
