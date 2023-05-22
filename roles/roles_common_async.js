@@ -564,6 +564,28 @@ Object.assign(Roles, {
     }
 
     // This might create duplicates, because we don't have a unique index, but that's all right. In case there are two, withdrawing the role will effectively kill them both.
+    const existingAssignment = await Meteor.roleAssignment.findOneAsync({
+      "user._id": userId,
+      "role._id": roleName,
+      scope: options.scope,
+    });
+
+    let insertedId;
+    if (existingAssignment) {
+      await Meteor.roleAssignment.updateAsync(existingAssignment._id, {
+        $set: {
+          user: { _id: userId },
+          role: { _id: roleName },
+          scope: options.scope,
+        },
+      });
+    } else {
+      insertedId = await Meteor.roleAssignment.insertAsync({
+        user: { _id: userId },
+        role: { _id: roleName },
+        scope: options.scope,
+      });
+    }
     const res = await Meteor.roleAssignment.upsertAsync(
       {
         "user._id": userId,
@@ -579,9 +601,9 @@ Object.assign(Roles, {
       }
     );
 
-    if (res.insertedId) {
+    if (insertedId) {
       await Meteor.roleAssignment.updateAsync(
-        { _id: res.insertedId },
+        { _id: insertedId },
         {
           $set: {
             inheritedRoles: [
