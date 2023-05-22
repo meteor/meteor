@@ -123,9 +123,7 @@ Migrations.add = function(migration) {
   Object.freeze(migration);
 
   this._list.push(migration);
-  this._list = this._list.sort(function(a, b) {
-    return (a, b) => (a.version > b.version) ? 1 : ((b.version > a.version) ? -1 : 0);
-  });
+  this._list.sort((a, b) => (a.version > b.version) ? 1 : ((b.version > a.version) ? -1 : 0));
 };
 
 // Attempts to run the migrations using command in the form of:

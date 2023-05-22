@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('METEOR@1.9');
+  api.versionsFrom('METEOR@1.9.3');
   api.use('ecmascript');
   api.use(['check', 'mongo', 'logging'], 'server');
   api.mainModule('migrations_server.js', 'server');
