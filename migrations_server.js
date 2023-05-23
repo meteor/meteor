@@ -75,7 +75,7 @@ function createLogger(prefix) {
 
     const logger = Migrations.options?.logger;
 
-    if (logger && _.isFunction(logger)) {
+    if (logger && typeof logger === 'function') {
       logger({
         level: level,
         message: message,
@@ -98,7 +98,7 @@ Meteor.startup(function() {
   log = createLogger('Migrations');
 
   ['info', 'warn', 'error', 'debug'].forEach(function(level) {
-    log[level] = _.partial(log, level);
+    log[level] = (message) => log(level, message)
   });
 
   if (process.env.MIGRATE) Migrations.migrateTo(process.env.MIGRATE);
@@ -124,9 +124,7 @@ Migrations.add = function(migration) {
   Object.freeze(migration);
 
   this._list.push(migration);
-  this._list = _.sortBy(this._list, function(m) {
-    return m.version;
-  });
+  this._list.sort((a, b) => (a.version > b.version) ? 1 : ((b.version > a.version) ? -1 : 0));
 };
 
 // Attempts to run the migrations using command in the form of:
