@@ -5,7 +5,7 @@ import { Meteor } from 'meteor/meteor';
 // otherwise lead to an inconsistent database state (when there are multiple
 // configurations for a single service, which configuration is correct?)
 try {
-  ServiceConfiguration.configurations.createIndexAsync(
+  await ServiceConfiguration.configurations.createIndexAsync(
     { service: 1 },
     { unique: true }
   );
@@ -31,15 +31,16 @@ try {
   throw err;
 }
 
-Meteor.startup(() => {
+Meteor.startup(async () => {
   const settings = Meteor.settings?.packages?.['service-configuration'];
   if (!settings) return;
-  Object.keys(settings).forEach(key => {
-    ServiceConfiguration.configurations.upsert(
+  const serviceKeys = Object.keys(settings);
+  for (const key of serviceKeys) {
+    await ServiceConfiguration.configurations.upsertAsync(
       { service: key },
       {
         $set: settings[key],
       }
     );
-  });
+  }
 });

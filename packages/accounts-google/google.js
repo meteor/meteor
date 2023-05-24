@@ -1,4 +1,4 @@
-Accounts.oauth.registerService('google');
+await Accounts.oauth.registerService('google');
 
 if (Meteor.isClient) {
   const loginWithGoogle = (options, callback) => {

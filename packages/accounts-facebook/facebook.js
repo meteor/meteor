@@ -1,4 +1,4 @@
-Accounts.oauth.registerService('facebook');
+await Accounts.oauth.registerService('facebook');
 
 if (Meteor.isClient) {
   const loginWithFacebook = (options, callback) => {

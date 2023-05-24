@@ -103,7 +103,7 @@ const checkPassword = (user, password) => {
 };
 
 Accounts._checkPassword = checkPassword;
-Accounts._checkPasswordAsync =  checkPasswordAsync;
+Accounts._checkPasswordAsync = checkPasswordAsync;
 
 ///
 /// LOGIN
@@ -1054,9 +1054,9 @@ Accounts.createUser = (options, callback) => {
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
-Meteor.users.createIndexAsync('services.email.verificationTokens.token',
+await Meteor.users.createIndexAsync('services.email.verificationTokens.token',
                           { unique: true, sparse: true });
-Meteor.users.createIndexAsync('services.password.reset.token',
+await Meteor.users.createIndexAsync('services.password.reset.token',
                           { unique: true, sparse: true });
-Meteor.users.createIndexAsync('services.password.enroll.token',
+await Meteor.users.createIndexAsync('services.password.enroll.token',
                           { unique: true, sparse: true });

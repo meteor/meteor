@@ -1,4 +1,4 @@
-Accounts.oauth.registerService('weibo');
+await Accounts.oauth.registerService('weibo');
 
 if (Meteor.isClient) {
   const loginWithWeibo = (options, callback) => {

@@ -1,4 +1,4 @@
-Accounts.oauth.registerService('github');
+await Accounts.oauth.registerService('github');
 
 if (Meteor.isClient) {
   const loginWithGithub = (options, callback) => {

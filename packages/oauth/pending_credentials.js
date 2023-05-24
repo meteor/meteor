@@ -16,18 +16,18 @@ OAuth._pendingCredentials = new Mongo.Collection(
     _preventAutopublish: true
   });
 
-OAuth._pendingCredentials.createIndexAsync('key', { unique: true });
-OAuth._pendingCredentials.createIndexAsync('credentialSecret');
-OAuth._pendingCredentials.createIndexAsync('createdAt');
+await OAuth._pendingCredentials.createIndexAsync('key', { unique: true });
+await OAuth._pendingCredentials.createIndexAsync('credentialSecret');
+await OAuth._pendingCredentials.createIndexAsync('createdAt');
 
 
 
 // Periodically clear old entries that were never retrieved
-const _cleanStaleResults = () => {
+const _cleanStaleResults = async () => {
   // Remove credentials older than 1 minute
   const timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
-  OAuth._pendingCredentials.removeAsync({ createdAt: { $lt: timeCutoff } });
+  await OAuth._pendingCredentials.removeAsync({ createdAt: { $lt: timeCutoff } });
 };
 const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 

@@ -26,7 +26,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 
 // Helper for registering OAuth based accounts packages.
 // On the server, adds an index to the user collection.
-Accounts.oauth.registerService = name => {
+Accounts.oauth.registerService = async (name) => {
   if (hasOwn.call(services, name))
     throw new Error(`Duplicate service: ${name}`);
   services[name] = true;
@@ -36,7 +36,7 @@ Accounts.oauth.registerService = name => {
     // so this should be a unique index. You might want to add indexes for other
     // fields returned by your service (eg services.github.login) but you can do
     // that in your app.
-    Meteor.users.createIndexAsync(`services.${name}.id`, {unique: true, sparse: true});
+    await Meteor.users.createIndexAsync(`services.${name}.id`, {unique: true, sparse: true});
   }
 };
 

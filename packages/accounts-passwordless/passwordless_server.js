@@ -230,12 +230,12 @@ Accounts.sendLoginTokenEmail = ({ userId, sequence, email, extra = {} }) => {
   return { email, user, token: sequence, url, options };
 };
 
-const setupUsersCollection = () => {
-  Meteor.users.createIndexAsync('services.passwordless.tokens.token', {
+const setupUsersCollection = async () => {
+  await Meteor.users.createIndexAsync('services.passwordless.tokens.token', {
     unique: true,
     sparse: true,
   });
-  Meteor.users.createIndexAsync('services.passwordless.token', {
+  await Meteor.users.createIndexAsync('services.passwordless.token', {
     unique: true,
     sparse: true,
   });
