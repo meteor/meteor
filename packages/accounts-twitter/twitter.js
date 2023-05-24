@@ -1,4 +1,4 @@
-await Accounts.oauth.registerService('twitter');
+Accounts.oauth.registerService('twitter');
 
 if (Meteor.isClient) {
   const loginWithTwitter = (options, callback) => {

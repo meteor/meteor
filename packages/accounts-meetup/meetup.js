@@ -1,4 +1,4 @@
-await Accounts.oauth.registerService('meetup');
+Accounts.oauth.registerService('meetup');
 
 if (Meteor.isClient) {
   const loginWithMeetup = (options, callback) => {

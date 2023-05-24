@@ -1,4 +1,4 @@
-await Accounts.oauth.registerService("meteor-developer");
+Accounts.oauth.registerService("meteor-developer");
 
 if (Meteor.isClient) {
   const loginWithMeteorDeveloperAccount = (options, callback) => {
