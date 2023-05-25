@@ -30,8 +30,13 @@ export namespace Mongo {
     skip?: number | undefined;
     /** Maximum number of results to return */
     limit?: number | undefined;
-    /** Dictionary of fields to return or exclude. */
+    /**
+     * Dictionary of fields to return or exclude.
+     * @deprecated use projection instead
+     */
     fields?: FieldSpecifier | undefined;
+    /** Dictionary of fields to return or exclude. */
+    projection?: FieldSpecifier | undefined;
     /** (Server only) Overrides MongoDB's default index selection and query optimization process. Specify an index to force its use, either by its name or index specification. */
     hint?: NpmModuleMongodb.Hint | undefined;
     /** (Client only) Default `true`; pass `false` to disable reactivity */
