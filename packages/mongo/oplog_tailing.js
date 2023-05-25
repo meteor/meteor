@@ -308,6 +308,9 @@ Object.assign(OplogHandle.prototype, {
             trigger.collection = doc.o.drop;
             trigger.dropCollection = true;
             trigger.id = null;
+          } else if ("create" in doc.o && "idIndex" in doc.o) {
+            // A collection got implicitly created within a transaction. There's
+            // no need to do anything about it.
           } else {
             throw Error("Unknown command " + EJSON.stringify(doc));
           }
