@@ -26,7 +26,7 @@ async function runNextUrl(browser) {
       console.log(`
       The number of tests from Test number may be different because 
       of the way the test is written. causing the test to fail or
-       to run more than once. in the console. Test number total: ${ testNumber }`);
+      to run more than once. in the console. Test number total: ${ testNumber }`);
       console.log(`Tests complete with ${ failCount } failures`);
       console.log(`Tests complete with ${ await getPassCount(page) } passes`);
       if (failCount >= 0) {
