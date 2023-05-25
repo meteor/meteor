@@ -69,6 +69,11 @@ client, no arguments are passed.
   The `connection` object the request came in on. See
   [`Meteor.onConnection`](#meteor_onconnection) for details.
 {% enddtdd %}
+
+{% dtdd name:"collection" type:"Object" %}
+  The `collection` The name of the Mongo.Collection
+  or the Mongo.Collection object to hold the users.
+{% enddtdd %}
 </dl>
 
 {% apibox "AccountsClient" %}
@@ -210,6 +215,11 @@ are called with a single argument, the attempt info object:
 {% dtdd name:"connection" type:"Object" %}
   The `connection` object the request came in on. See
   [`Meteor.onConnection`](#meteor_onconnection) for details.
+{% enddtdd %}
+
+{% dtdd name:"collection" type:"Object" %}
+  The `collection` The name of the Mongo.Collection
+  or the Mongo.Collection object to hold the users.
 {% enddtdd %}
 
 {% dtdd name:"methodName" type:"String" %}
