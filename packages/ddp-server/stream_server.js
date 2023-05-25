@@ -1,27 +1,4 @@
-// By default, we use the permessage-deflate extension with default
-// configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
-// JSON. If it represents a falsey value, then we do not use permessage-deflate
-// at all; otherwise, the JSON value is used as an argument to deflate's
-// configure method; see
-// https://github.com/faye/permessage-deflate-node/blob/master/README.md
-//
-// (We do this in an _.once instead of at startup, because we don't want to
-// crash the tool during isopacket load if your JSON doesn't parse. This is only
-// a problem because the tool has to load the DDP server code just in order to
-// be a DDP client; see https://github.com/meteor/meteor/issues/3452 .)
-var websocketExtensions = _.once(function () {
-  var extensions = [];
-
-  var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION
-        ? JSON.parse(process.env.SERVER_WEBSOCKET_COMPRESSION) : {};
-  if (websocketCompressionConfig) {
-    extensions.push(Npm.require('permessage-deflate').configure(
-      websocketCompressionConfig
-    ));
-  }
-
-  return extensions;
-});
+const Primus = require('primus');
 
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
@@ -35,14 +12,18 @@ StreamServer = function () {
   self.prefix = pathPrefix + '/sockjs';
   RoutePolicy.declare(self.prefix + '/', 'network');
 
-  // set up sockjs
-  var sockjs = Npm.require('sockjs');
-  var serverOptions = {
-    prefix: self.prefix,
-    log: function() {},
+  var primusOptions = {
+    transformer: 'sockjs',
+    pathname: self.prefix,
     // this is the default, but we code it explicitly because we depend
     // on it in stream_client:HEARTBEAT_TIMEOUT
-    heartbeat_delay: 45000,
+    // If you were to pass heartbeat_delay directly to SockJS, instead of Primus pingInterval
+    // you would need to modify the transport object in the primusOptions.
+    // However, doing so would make the code more specific to SockJS and less flexible
+    // if you decide to switch to a different transport library in the future.
+    pingInterval: 45000,
+    transport: {
+    log: function() {},
     // The default disconnect_delay is 5 seconds, but if the server ends up CPU
     // bound for that much time, SockJS might not notice that the user has
     // reconnected because the timer (of disconnect_delay ms) can fire before
@@ -53,22 +34,20 @@ StreamServer = function () {
     // Set the USE_JSESSIONID environment variable to enable setting the
     // JSESSIONID cookie. This is useful for setting up proxies with
     // session affinity.
-    jsessionid: !!process.env.USE_JSESSIONID
+    jsessionid: !!process.env.USE_JSESSIONID,
+    // If you know your server environment (eg, proxies) will prevent websockets
+    // from ever working, set $DISABLE_WEBSOCKETS and SockJS clients (ie,
+    // browsers) will not waste time attempting to use them.
+    // (Your server will still have a /websocket endpoint.)
+    websocket: !!process.env.DISABLE_WEBSOCKETS
+    },
+    compression: !!process.env.SERVER_WEBSOCKET_COMPRESSION
   };
 
-  // If you know your server environment (eg, proxies) will prevent websockets
-  // from ever working, set $DISABLE_WEBSOCKETS and SockJS clients (ie,
-  // browsers) will not waste time attempting to use them.
-  // (Your server will still have a /websocket endpoint.)
-  if (process.env.DISABLE_WEBSOCKETS) {
-    serverOptions.websocket = false;
-  } else {
-    serverOptions.faye_server_options = {
-      extensions: websocketExtensions()
-    };
+  self.server = new Primus(WebApp.httpServer, primusOptions);
+  
   }
 
-  self.server = sockjs.createServer(serverOptions);
 
   // Install the sockjs handlers, but we want to keep around our own particular
   // request handler that adjusts idle timeouts while we have an outstanding
@@ -79,9 +58,6 @@ StreamServer = function () {
   self.server.installHandlers(WebApp.httpServer);
   WebApp.httpServer.addListener(
     'request', WebApp._timeoutAdjustmentRequestCallback);
-
-  // Support the /websocket endpoint
-  self._redirectWebsocketEndpoint();
 
   self.server.on('connection', function (socket) {
     // sockjs sometimes passes us null instead of a socket object
@@ -138,53 +114,8 @@ Object.assign(StreamServer.prototype, {
   register: function (callback) {
     var self = this;
     self.registration_callbacks.push(callback);
-    _.each(self.all_sockets(), function (socket) {
+    self.server.forEach(function (socket) {
       callback(socket);
-    });
-  },
-
-  // get a list of all sockets
-  all_sockets: function () {
-    var self = this;
-    return _.values(self.open_sockets);
-  },
-
-  // Redirect /websocket to /sockjs/websocket in order to not expose
-  // sockjs to clients that want to use raw websockets
-  _redirectWebsocketEndpoint: function() {
-    var self = this;
-    // Unfortunately we can't use a connect middleware here since
-    // sockjs installs itself prior to all existing listeners
-    // (meaning prior to any connect middlewares) so we need to take
-    // an approach similar to overshadowListeners in
-    // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
-    ['request', 'upgrade'].forEach((event) => {
-      var httpServer = WebApp.httpServer;
-      var oldHttpServerListeners = httpServer.listeners(event).slice(0);
-      httpServer.removeAllListeners(event);
-
-      // request and upgrade have different arguments passed but
-      // we only care about the first one which is always request
-      var newListener = function(request /*, moreArguments */) {
-        // Store arguments for use within the closure below
-        var args = arguments;
-
-        // TODO replace with url package
-        var url = Npm.require('url');
-
-        // Rewrite /websocket and /websocket/ urls to /sockjs/websocket while
-        // preserving query string.
-        var parsedUrl = url.parse(request.url);
-        if (parsedUrl.pathname === pathPrefix + '/websocket' ||
-            parsedUrl.pathname === pathPrefix + '/websocket/') {
-          parsedUrl.pathname = self.prefix + '/websocket';
-          request.url = url.format(parsedUrl);
-        }
-        _.each(oldHttpServerListeners, function(oldListener) {
-          oldListener.apply(httpServer, args);
-        });
-      };
-      httpServer.addListener(event, newListener);
     });
   }
 });
