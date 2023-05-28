@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "istanbul": "^0.4.5",
-    "standard": "^14.3.4",
+    "standard": "^17.0.0",
     "yuidocjs": "^0.10.2"
   }
 }

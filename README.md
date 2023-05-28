@@ -430,7 +430,7 @@ To check for roles when using scopes:
 
 Online API docs found here: https://meteor-community-packages.github.io/meteor-roles/
 
-API docs generated using [YUIDoc](http://yui.github.com/yuidoc/)
+API docs generated using [YUIDoc](https://yui.github.io/yuidoc/)
 
 To re-generate documentation:
   1. install YUIDoc
