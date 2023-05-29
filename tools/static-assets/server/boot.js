@@ -315,14 +315,10 @@ var loadServerBundles = Profile("Load server bundles", function () {
     };
 
     var getAsset = function (assetPath, encoding, callback) {
-      var promiseResolver, promise;
+      var fut;
       if (! callback) {
-        promise = new Promise((resolve, reject) => {
-          promiseResolver = function (error, result) {
-            error ? reject(error) : resolve(result);
-          }
-        });
-        callback = promiseResolver;
+        fut = new Future();
+        callback = fut.resolver();
       }
       // This assumes that we've already loaded the meteor package, so meteor
       // itself can't call Assets.get*. (We could change this function so that
@@ -351,29 +347,16 @@ var loadServerBundles = Profile("Load server bundles", function () {
         var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
         fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
       }
-
-      if (promise)
-        return promise;
+      if (fut)
+        return fut.wait();
     };
 
     var Assets = {
       getText: function (assetPath, callback) {
-        const result = getAsset(assetPath, "utf8", callback);
-        if (!callback) {
-          return Future.fromPromise(result).wait();
-        }
-      },
-      getTextAsync: function (assetPath) {
-        return getAsset(assetPath, "utf8");
+        return getAsset(assetPath, "utf8", callback);
       },
       getBinary: function (assetPath, callback) {
-        const result = getAsset(assetPath, undefined, callback);
-        if (!callback) {
-          return Future.fromPromise(result).wait();
-        }
-      },
-      getBinaryAsync: function (assetPath) {
-        return getAsset(assetPath, undefined);
+        return getAsset(assetPath, undefined, callback);
       },
       /**
        * @summary Get the absolute path to the static server asset. Note that assets are read-only.

@@ -190,7 +190,7 @@ export class AccountsServer extends AccountsCommon {
       throw new Error("Can only call onCreateUser once");
     }
 
-    this._onCreateUserHook = Meteor.wrapFn(func);
+    this._onCreateUserHook = func;
   }
 
   /**
@@ -564,7 +564,7 @@ export class AccountsServer extends AccountsCommon {
 
     this._loginHandlers.push({
       name: name,
-      handler: Meteor.wrapFn(handler)
+      handler: handler
     });
   };
 
