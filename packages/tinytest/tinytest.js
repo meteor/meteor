@@ -431,7 +431,7 @@ export class TestCase {
 
       const result = this.func(results, resolve);
       if (result && typeof result.then === "function") {
-        result.then(resolve, reject);
+        return result.then(resolve, reject);
       }
 
     }).then(
@@ -530,7 +530,7 @@ export class TestRun {
   _runTest(test, onComplete, stop_at_offset) {
     var startTime = (+new Date);
 
-    test.run(event => {
+    return test.run(event => {
       /* onEvent */
       // Ignore result callbacks if the test has already been reported
       // as timed out.
@@ -609,7 +609,7 @@ export class TestRun {
       });
     } else {
       // client
-      this._runTest(test, () => {
+      return this._runTest(test, () => {
         onComplete && onComplete();
       }, stop_at_offset);
     }

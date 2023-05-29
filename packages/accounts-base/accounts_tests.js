@@ -733,7 +733,7 @@ Tinytest.addAsync(
 );
 
 if (Meteor.isServer) {
-  Tinytest.addAsync('accounts - config - collection - mongo.collection', test => {
+  Tinytest.addAsync('accounts - config - collection - mongo.collection', async test => {
     const origCollection = Accounts.users;
     // create same user in two different collections - should pass
     const email = "test-collection@testdomain.com"
@@ -743,23 +743,23 @@ if (Meteor.isServer) {
     Accounts.config({
       collection: collection0,
     })
-    const uid0 = Accounts.createUser({email})
-    Meteor.users.remove(uid0);
+    const uid0 = await Accounts.createUser({email})
+    await Meteor.users.removeAsync(uid0);
 
     const collection1 = new Mongo.Collection('test2');
     Accounts.config({
       collection: collection1,
     })
-    const uid1 = Accounts.createUser({email})
-    Meteor.users.remove(uid1);
+    const uid1 = await Accounts.createUser({email})
 
+    await Meteor.users.removeAsync(uid1);
     test.notEqual(uid0, uid1);
 
     Accounts.config({
       collection: origCollection,
     });
   });
-  Tinytest.add('accounts - config - collection - name', test => {
+  Tinytest.addAsync('accounts - config - collection - name', async test => {
     const origCollection = Accounts.users;
     // create same user in two different collections - should pass
     const email = "test-collection@testdomain.com"
@@ -767,14 +767,14 @@ if (Meteor.isServer) {
     Accounts.config({
       collection: 'collection0',
     })
-    const uid0 = Accounts.createUser({email})
-    Meteor.users.remove(uid0);
+    const uid0 = await Accounts.createUser({email})
+    await Meteor.users.removeAsync(uid0);
 
     Accounts.config({
       collection: 'collection1',
     })
-    const uid1 = Accounts.createUser({email})
-    Meteor.users.remove(uid1);
+    const uid1 = await Accounts.createUser({email})
+    await Meteor.users.removeAsync(uid1);
 
     test.notEqual(uid0, uid1);
 
