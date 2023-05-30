@@ -29,7 +29,7 @@ async function runNextUrl(browser) {
       to run more than once. in the console. Test number total: ${ testNumber }`);
       console.log(`Tests complete with ${ failCount } failures`);
       console.log(`Tests complete with ${ await getPassCount(page) } passes`);
-      if (failCount >= 0) {
+      if (failCount > 0) {
         const failed = await getFailed(page);
         failed.map((f) => console.log(`${ f.name } failed: ${ f.info }`));
         await page.close();
@@ -89,11 +89,7 @@ async function getFailCount(page) {
       return TEST_STATUS.FAILURES;
     }
 
-    if (typeof FAILURES === 'undefined') {
-      return 1;
-    }
-
-    return 0;
+    return typeof FAILURES !== 'undefined' && FAILURES;
   });
 }
 
