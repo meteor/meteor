@@ -1,7 +1,7 @@
 // Global flag for phantomjs (or other browser) to eval to see if we're done.
 DONE = false;
 // Failure count for phantomjs exit code
-FAILURES = null;
+FAILURES = 0;
 // Where are the failures
 WHERE_FAILED = [];
 // Passed count for phantomjs exit code
@@ -9,7 +9,7 @@ PASSED = null;
 
 TEST_STATUS = {
   DONE: false,
-  FAILURES: null,
+  FAILURES: 0,
   PASSED: null,
   WHERE_FAILED: []
 };
@@ -149,6 +149,7 @@ runTests = function () {
           else
             log("Test failed with exception");
           failed++;
+          whereFailed.push({ name: name, info: JSON.stringify(event) });
           break;
         case "finish":
           switch (resultSet[name].status) {
