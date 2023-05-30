@@ -146,7 +146,7 @@ Object.assign(OplogHandle.prototype, {
       try {
         lastEntry = self._oplogLastEntryConnection.findOne(
           OPLOG_COLLECTION, self._baseOplogSelector,
-          {fields: {ts: 1}, sort: {$natural: -1}});
+          {projection: {ts: 1}, sort: {$natural: -1}});
         break;
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
@@ -229,7 +229,7 @@ Object.assign(OplogHandle.prototype, {
 
     // Find the last oplog entry.
     var lastOplogEntry = self._oplogLastEntryConnection.findOne(
-      OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
+      OPLOG_COLLECTION, {}, {sort: {$natural: -1}, projection: {ts: 1}});
 
     var oplogSelector = _.clone(self._baseOplogSelector);
     if (lastOplogEntry) {
@@ -308,6 +308,9 @@ Object.assign(OplogHandle.prototype, {
             trigger.collection = doc.o.drop;
             trigger.dropCollection = true;
             trigger.id = null;
+          } else if ("create" in doc.o && "idIndex" in doc.o) {
+            // A collection got implicitly created within a transaction. There's
+            // no need to do anything about it.
           } else {
             throw Error("Unknown command " + EJSON.stringify(doc));
           }
