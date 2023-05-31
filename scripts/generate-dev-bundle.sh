@@ -56,7 +56,7 @@ downloadReleaseCandidateNode() {
 }
 
 # Try each strategy in the following order:
-extractNodeFromTarGz || downloadNodeFromS3 || \
+extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode || \
   downloadOfficialNode14 || downloadReleaseCandidateNode
 
 # On macOS, download MongoDB from mongodb.com. On Linux, download a custom build
@@ -168,14 +168,6 @@ delete () {
     fi
     rm -rf "$1"
 }
-
-# Since we install a patched version of pacote in $DIR/lib/node_modules,
-# we need to remove npm's bundled version to make it use the new one.
-if [ -d "pacote" ]
-then
-    delete npm/node_modules/pacote
-    mv pacote npm/node_modules/
-fi
 
 delete sqlite3/deps
 delete sqlite3/node_modules/node-pre-gyp

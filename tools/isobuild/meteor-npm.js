@@ -13,7 +13,6 @@ var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile').Profile;
 import { parse } from "semver";
-import { version as npmVersion } from 'npm';
 import {
   get as getRebuildArgs
 } from "../static-assets/server/npm-rebuild-args.js";
@@ -33,7 +32,7 @@ import {
 var meteorNpm = exports;
 
 // Expose the version of npm in use from the dev bundle.
-meteorNpm.npmVersion = npmVersion;
+meteorNpm.npmVersion = "8.19.4";
 
 // if a user exits meteor while we're trying to create a .npm
 // directory, we will have temporary directories that we clean up
