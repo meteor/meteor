@@ -18,8 +18,8 @@ const findUserWithOptions = ({ selector }) => {
   return Meteor.users.findOne(
     { 
       ...rest,
-      ...(id && {_id: id}), 
-      ...(email && {'emails.address': email}) 
+      ...(id && { _id: id }), 
+      ...(email && { 'emails.address': email }) 
     },
     {
       fields: {
