@@ -12,9 +12,19 @@ const findUserWithOptions = ({ selector }) => {
   if (!selector) {
     Accounts._handleError('A selector is necessary');
   }
-  const { email, ...rest } = selector;
+  const { email, id, ...rest } = selector;
+
+  let modifiedSelector = { ...rest };
+  if (id) {
+    modifiedSelector._id = id;
+  } 
+
+   if (email) {
+    modifiedSelector['emails.address'] = email;
+  }
+
   return Meteor.users.findOne(
-    { ...rest, ...(email ? { 'emails.address': selector.email } : {}) },
+    modifiedSelector,
     {
       fields: {
         services: 1,
