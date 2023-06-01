@@ -14,7 +14,7 @@ const findUserWithOptions = ({ selector }) => {
   }
   const { email, id, ...rest } = selector;
 
-  let modifiedSelector = { ...rest };
+  const modifiedSelector = { ...rest };
   if (id) {
     modifiedSelector._id = id;
   } 
