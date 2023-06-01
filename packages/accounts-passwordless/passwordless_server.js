@@ -12,19 +12,15 @@ const findUserWithOptions = ({ selector }) => {
   if (!selector) {
     Accounts._handleError('A selector is necessary');
   }
+
   const { email, id, ...rest } = selector;
 
-  const modifiedSelector = { ...rest };
-  if (id) {
-    modifiedSelector._id = id;
-  } 
-
-   if (email) {
-    modifiedSelector['emails.address'] = email;
-  }
-
   return Meteor.users.findOne(
-    modifiedSelector,
+    { 
+      ...rest,
+      ...(id && {_id: id}), 
+      ...(email && {'emails.address': email}) 
+    },
     {
       fields: {
         services: 1,
@@ -33,6 +29,7 @@ const findUserWithOptions = ({ selector }) => {
     }
   );
 };
+
 // Handler to login with an ott.
 Accounts.registerLoginHandler('passwordless', options => {
   if (!options.token) return undefined; // don't handle
