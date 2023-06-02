@@ -999,7 +999,7 @@ function getInstalledDependenciesTree(dir) {
   }
 
   return {
-    lockfileVersion: 1,
+    lockfileVersion: 2,
     dependencies: ls(files.pathJoin(dir, "node_modules"))
   };
 }
@@ -1008,7 +1008,7 @@ function getShrinkwrappedDependenciesTree(dir) {
   const shrinkwrap = JSON.parse(files.readFile(
     files.pathJoin(dir, 'npm-shrinkwrap.json')
   ));
-  shrinkwrap.lockfileVersion = 1;
+  shrinkwrap.lockfileVersion = 2
   return shrinkwrap;
 };
 
