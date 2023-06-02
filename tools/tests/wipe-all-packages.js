@@ -35,9 +35,9 @@ selftest.define("wipe all packages", ['slow', 'custom-warehouse'], async functio
       containsPlugins: false
     };
   };
-  var meteorToolBuild = async function (v) {
+  var meteorToolBuild = function (v) {
     return {
-      buildArchitectures: await archinfo.host(),
+      buildArchitectures: archinfo.host(),
       versionId: 'VID' + v.replace(/\./g, ''),
       _id: utils.randomToken()
     };
@@ -50,7 +50,7 @@ selftest.define("wipe all packages", ['slow', 'custom-warehouse'], async functio
     collections: {
       packages: [],
       versions: [meteorToolVersion('33.0.1'), meteorToolVersion('33.0.2'), meteorToolVersion('33.0.3')],
-      builds: [await meteorToolBuild('33.0.1'), await meteorToolBuild('33.0.2'), await meteorToolBuild('33.0.3')],
+      builds: [meteorToolBuild('33.0.1'), meteorToolBuild('33.0.2'), meteorToolBuild('33.0.3')],
       releaseTracks: [],
       releaseVersions: []
     }

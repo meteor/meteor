@@ -27,7 +27,6 @@ var makeProjectContext = async function (appName) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });
-  await projectContext.init();
   await doOrThrow(async function () {
     await projectContext.prepareProjectForBuild();
   });
