@@ -20,4 +20,4 @@ hot-module-replacement@1.0.0-alpha300.9  # Update client in development without 
 autopublish@2.0.0-alpha300.9           # Publish all data to the clients (for prototyping)
 insecure@2.0.0-alpha300.9               # Allow all DB writes from clients (for prototyping)
 static-html@2.0.0-alpha300.9            # Define static page content in .html files
-react-meteor-data       # React higher-order component for reactively tracking Meteor data
+react-meteor-data@3.0.0-alpha300.6       # React higher-order component for reactively tracking Meteor data
