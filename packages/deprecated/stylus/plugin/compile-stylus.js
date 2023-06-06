@@ -1,4 +1,3 @@
-const util = require('util');
 const stylus = Npm.require('stylus');
 const nib = Npm.require('nib');
 const autoprefixer = Npm.require('autoprefixer-stylus');
@@ -154,8 +153,6 @@ class StylusCompiler extends MultiFileCachingCompiler {
 
     const fileOptions = inputFile.getFileOptions();
 
-    // const f = new Future;
-
     let style = stylus(inputFile.getContentsAsString()).use(nib())
 
     if (fileOptions.autoprefixer) {
@@ -171,7 +168,7 @@ class StylusCompiler extends MultiFileCachingCompiler {
       style.render((err, data) => {
         if (err) return reject(err);
         resolve(data);
-      })
+      });
     });
 
     let css;

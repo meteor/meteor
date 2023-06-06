@@ -161,7 +161,6 @@ function _call (method, url, options, callback) {
     .catch(err => callback(err));
 }
 
-// we are keeping wrapAsync here as this package is deprecated
 HTTP.call = function(...args) {
   const cb = args.pop();
   if (typeof cb === 'function') {
