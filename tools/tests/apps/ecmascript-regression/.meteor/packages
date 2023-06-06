@@ -21,3 +21,4 @@ autopublish@2.0.0-alpha300.9           # Publish all data to the clients (for pr
 insecure@2.0.0-alpha300.9               # Allow all DB writes from clients (for prototyping)
 static-html@2.0.0-alpha300.9            # Define static page content in .html files
 react-meteor-data@3.0.0-alpha300.6       # React higher-order component for reactively tracking Meteor data
+grubba:mocha@3.0.1-alpha300.9
