@@ -19,6 +19,10 @@ Package.onUse(function (api) {
   api.export('HTTPInternals', 'server');
 });
 
+Npm.depends({
+  "express-basic-auth": "1.2.1"
+});
+
 Package.onTest(function (api) {
   api.use('ecmascript');
   api.use('webapp', 'server');
