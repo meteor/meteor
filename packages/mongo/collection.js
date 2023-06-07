@@ -877,6 +877,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
    */
   async updateAsync(selector, modifier, ...optionsAndCallback) {
+    const callback = popCallbackFromArgs(optionsAndCallback);
 
     // We've already popped off the callback, so we are left with an array
     // of one or zero items
@@ -904,10 +905,12 @@ Object.assign(Mongo.Collection.prototype, {
       fallbackId: insertedId,
     });
 
+    const wrappedCallback = wrapCallback(callback);
+
     if (this._isRemoteCollection()) {
       const args = [selector, modifier, options];
 
-      return this._callMutatorMethodAsync('updateAsync', args, options);
+      return this._callMutatorMethodAsync('updateAsync', args, wrappedCallback);
     }
 
     // it's my collection.  descend into the collection object
@@ -919,7 +922,8 @@ Object.assign(Mongo.Collection.prototype, {
     return this._collection.updateAsync(
       selector,
       modifier,
-      options
+      options,
+      wrappedCallback,
     );
   },
 
@@ -980,7 +984,7 @@ Object.assign(Mongo.Collection.prototype, {
     if (this._isRemoteCollection()) {
       const args = [selector, modifier, options];
 
-      return this._callMutatorMethod('update', args);
+      return this._callMutatorMethod('update', args, wrappedCallback);
     }
 
     // it's my collection.  descend into the collection object

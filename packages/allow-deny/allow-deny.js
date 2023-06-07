@@ -596,8 +596,13 @@ CollectionPrototype._validatedRemove = function(userId, selector) {
   return self._collection.remove.call(self._collection, selector);
 };
 
-CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethodAsync(name, args, options = {}) {
-
+CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethodAsync(name, args, callback) {
+  if (Meteor.isClient && !callback && !alreadyInSimulation()) {
+    callback = function (err) {
+      if (err)
+        Meteor._debug(name + " failed", err);
+    };
+  }
   // For two out of three mutator methods, the first argument is a selector
   const firstArgIsSelector = name === "updateAsync" || name === "removeAsync";
   if (firstArgIsSelector && !alreadyInSimulation()) {
@@ -608,11 +613,9 @@ CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethodA
   }
 
   const mutatorMethodName = this._prefix + name;
-  return this._connection.applyAsync(mutatorMethodName, args, {
+  return this._connection.apply(mutatorMethodName, args, {
     returnStubValue: true,
-    returnServerResultPromise: true,
-    ...options,
-  });
+  }, callback);
 }
 
 CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args, callback) {

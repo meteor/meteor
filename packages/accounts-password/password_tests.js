@@ -291,11 +291,14 @@ if (Meteor.isClient) (() => {
           expect));
     },
     // Make sure the new user has not been inserted
-    async function (test) {
-      const result = await Meteor.callAsync('countUsersOnServer', { returnServerPromise: true }, {
-        username: this.newUsername,
-      });
-      test.equal(result, 0);
+    async function (test, expect) {
+      Meteor.callAsync(
+        "countUsersOnServer",
+        { username: this.newUsername },
+        expect(function (error, result) {
+          test.equal(result, 0);
+        })
+      );
     }
   ]);
 
@@ -399,11 +402,16 @@ if (Meteor.isClient) (() => {
           expect));
     },
     // Make sure the new user has not been inserted
-    async function (test) {
-      const result = await Meteor.callAsync('countUsersOnServer', { returnServerPromise: true }, {
-        'emails.address': this.newEmail,
-      });
-      test.equal(result, 0);
+    async function (test, expect) {
+      Meteor.callAsync(
+        "countUsersOnServer",
+        {
+          "emails.address": this.newEmail,
+        },
+        expect(function (error, result) {
+          test.equal(result, 0);
+        })
+      );
     }
   ]);
 
@@ -427,10 +435,12 @@ if (Meteor.isClient) (() => {
           test.isFalse(error);
         }));
     },
-    async function (test) {
-      const token = await Meteor.callAsync("getResetToken", { returnServerPromise: true });
-      test.isTrue(token);
-      this.token = token;
+    async function (test, expect) {
+      Meteor.callAsync("getResetToken", expect((err, token) => {
+        test.isFalse(err);
+        test.isTrue(token);
+        this.token = token;
+      }));
     },
     // change password with bad old password. we stay logged in.
     function (test, expect) {
@@ -452,7 +462,7 @@ if (Meteor.isClient) (() => {
         loggedInAs(this.username, test, expect));
     },
     async function (test) {
-      const token = await Meteor.callAsync("getResetToken", { returnServerPromise: true });
+      const token = await Meteor.callAsync("getResetToken");
       test.isFalse(token);
     },
     logoutStep,
@@ -771,11 +781,10 @@ if (Meteor.isClient) (() => {
       test.notEqual(this.userId, null);
       test.notEqual(this.userId, this.otherUserId);
       // Can't update fields other than profile.
-      await Meteor.users
-        .updateAsync(this.userId, {
-          $set: { disallowed: true, "profile.updated": 42 },
-        })
-        .catch((err) => {
+      Meteor.users.updateAsync(
+        this.userId,
+        { $set: { disallowed: true, "profile.updated": 42 } },
+        expect((err) => {
           test.isTrue(err);
           test.equal(err.error, 403);
           test.isFalse(
@@ -787,18 +796,19 @@ if (Meteor.isClient) (() => {
               "updated"
             )
           );
-        });
+        })
+      );
     },
     async function (test, expect) {
       // Can't update another user.
-      await Meteor.users
-        .updateAsync(this.otherUserId, { $set: { "profile.updated": 42 } })
-        .catch(
-          expect((err) => {
-            test.isTrue(err);
-            test.equal(err.error, 403);
-          })
-        );
+      Meteor.users.updateAsync(
+        this.otherUserId,
+        { $set: { "profile.updated": 42 } },
+        expect((err) => {
+          test.isTrue(err);
+          test.equal(err.error, 403);
+        })
+      );
     },
     async function (test, expect) {
       // Can't update using a non-ID selector. (This one is thrown client-side.)
@@ -1253,7 +1263,7 @@ if (Meteor.isServer) (() => {
           test.fail('observe should be gone');
       })
 
-      const result = await clientConn.callAsync('login', { returnServerPromise: true }, {
+      const result = await clientConn.callAsync('login', {
         user: { username: username },
         password: hashPassword('password')
       });

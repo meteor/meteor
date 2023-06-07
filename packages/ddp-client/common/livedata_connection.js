@@ -572,73 +572,16 @@ export class Connection {
    * @returns {Promise}
    */
   async callAsync(name /* .. [arguments] .. */) {
+
+    // if it's a function, the last argument is the result callback,
+    // not a parameter to the remote method.
     const args = slice.call(arguments, 1);
+    let callback;
     if (args.length && typeof args[args.length - 1] === 'function') {
-      throw new Error(
-        "Meteor.callAsync() does not accept a callback. You should 'await' the result, or use .then()."
-      );
+      callback = args.pop();
     }
+    return this.apply(name, args, {isFromCallAsync: true, returnStubValue: true}, callback);
 
-    const applyOptions = ['returnStubValue', 'returnServerResultPromise', 'returnServerPromise'];
-    const defaultOptions = {
-      returnServerResultPromise: true,
-    };
-    const options = {
-      ...defaultOptions,
-      ...(applyOptions.some(o => args[0]?.hasOwnProperty(o))
-        ? args.shift()
-        : {}),
-    };
-
-    const invocation = DDP._CurrentCallAsyncInvocation.get();
-
-    if (invocation?.hasCallAsyncParent) {
-      return this.applyAsync(name, args, { ...options, isFromCallAsync: true });
-    }
-
-    /*
-    * This is necessary because when you call a Promise.then, you're actually calling a bound function by Meteor.
-    *
-    * This is done by this code https://github.com/meteor/meteor/blob/17673c66878d3f7b1d564a4215eb0633fa679017/npm-packages/meteor-promise/promise_client.js#L1-L16. (All the logic below can be removed in the future, when we stop overwriting the
-    * Promise.)
-    *
-    * When you call a ".then()", like "Meteor.callAsync().then()", the global context (inside currentValues)
-    * will be from the call of Meteor.callAsync(), and not the context after the promise is done.
-    *
-    * This means that without this code if you call a stub inside the ".then()", this stub will act as a simulation
-    * and won't reach the server.
-    *
-    * Inside the function _getIsSimulation(), if isFromCallAsync is false, we continue to consider just the
-    * alreadyInSimulation, otherwise, isFromCallAsync is true, we also check the value of callAsyncMethodRunning (by
-    * calling DDP._CurrentMethodInvocation._isCallAsyncMethodRunning()).
-    *
-    * With this, if a stub is running inside a ".then()", it'll know it's not a simulation, because callAsyncMethodRunning
-    * will be false.
-    *
-    * DDP._CurrentMethodInvocation._set() is important because without it, if you have a code like:
-    *
-    * Meteor.callAsync("m1").then(() => {
-    *   Meteor.callAsync("m2")
-    * })
-    *
-    * The call the method m2 will act as a simulation and won't reach the server. That's why we reset the context here
-    * before calling everything else.
-    *
-    * */
-    DDP._CurrentMethodInvocation._set();
-    DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
-    const promise = new Promise((resolve, reject) => {
-      DDP._CurrentCallAsyncInvocation._set({ name, hasCallAsyncParent: true });
-      this.applyAsync(name, args, { isFromCallAsync: true, ...options })
-        .then(resolve)
-        .catch(reject)
-        .finally(() => {
-          DDP._CurrentCallAsyncInvocation._set();
-        });
-    });
-    return promise.finally(() =>
-      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
-    );
   }
 
   /**
@@ -820,11 +763,7 @@ export class Connection {
     // If the caller didn't give a callback, decide what to do.
     let future;
     if (!callback) {
-      if (
-        Meteor.isClient &&
-        !options.returnServerResultPromise &&
-        (!options.isFromCallAsync || options.returnStubValue)
-      ) {
+      if (Meteor.isClient) {
         // On the client, we don't have fibers, so we can't block. The
         // only thing we can do is to return undefined and discard the
         // result of the RPC. If an error occurred then print the error
@@ -890,16 +829,9 @@ export class Connection {
     // If we're using the default callback on the server,
     // block waiting for the result.
     if (future) {
-      if (options.returnServerPromise) {
-        return future;
-      }
-      return options.returnStubValue
-        ? future.then(() => stubReturnValue)
-        : {
-            stubValuePromise: future,
-          };
+      return future;
     }
-    return options.returnStubValue ? stubReturnValue : undefined;
+    return options.returnStubValue || options.isFromCallAsync ? stubReturnValue : undefined;
   }
 
 

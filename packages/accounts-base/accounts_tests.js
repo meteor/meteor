@@ -238,7 +238,7 @@ Tinytest.addAsync('accounts - login token', async (test) => {
   connection = DDP.connect(Meteor.absoluteUrl());
   // evil plan foiled
   await test.throwsAsync(
-    async () => await connection.callAsync('login', { returnStubValue: true }, { resume: stolenToken2 }),
+    async () => await connection.callAsync('login', { resume: stolenToken2 }),
     /You\'ve been logged out by the server/
   );
   connection.disconnect();
@@ -251,7 +251,7 @@ Tinytest.addAsync('accounts - login token', async (test) => {
   const stampedToken2 = Accounts._generateStampedLoginToken();
   await insertUnhashedLoginToken(userId4, stampedToken2);
   connection = DDP.connect(Meteor.absoluteUrl());
-  await connection.callAsync('login', { returnStubValue: true }, { resume: stampedToken2.token });
+  await connection.callAsync('login', { resume: stampedToken2.token });
   connection.disconnect();
 
   // The token is no longer available to be stolen.
@@ -296,15 +296,15 @@ Tinytest.addAsync('accounts - get new token', async test => {
     await Accounts._insertLoginToken(userId, stampedToken);
 
     const conn = DDP.connect(Meteor.absoluteUrl());
-    await conn.callAsync('login', { returnStubValue: true }, { resume: stampedToken.token });
-    test.equal(await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true }),
+    await conn.callAsync('login', { resume: stampedToken.token });
+    test.equal(await conn.callAsync('getCurrentLoginToken'),
       Accounts._hashLoginToken(stampedToken.token));
 
-    const newTokenResult = await conn.callAsync('getNewToken', { returnServerPromise: true });
+    const newTokenResult = await conn.callAsync('getNewToken');
     test.equal(newTokenResult.tokenExpires,
       Accounts._tokenExpiration(stampedToken.when));
-    const token = await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true });
-    test.equal(await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true }),
+    const token = await conn.callAsync('getCurrentLoginToken');
+    test.equal(await conn.callAsync('getCurrentLoginToken'),
       Accounts._hashLoginToken(newTokenResult.token));
     conn.disconnect();
 
@@ -329,7 +329,7 @@ Tinytest.addAsync('accounts - remove other tokens', async (test) => {
       await Accounts._insertLoginToken(userId, stampedTokens[i]);
       const conn = DDP.connect(Meteor.absoluteUrl());
       await conn.callAsync('login', { resume: stampedTokens[i].token });
-      test.equal(await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true }),
+      test.equal(await conn.callAsync('getCurrentLoginToken'),
         Accounts._hashLoginToken(stampedTokens[i].token));
       conns.push(conn);
     }
@@ -339,7 +339,7 @@ Tinytest.addAsync('accounts - remove other tokens', async (test) => {
     simplePoll(async () => {
         let tokens = [];
         for (const conn of conns) {
-          tokens.push(await conn.callAsync('getCurrentLoginToken', { returnServerPromise: true }));
+          tokens.push(await conn.callAsync('getCurrentLoginToken'));
         }
         return !tokens[1] &&
           tokens[0] === Accounts._hashLoginToken(stampedTokens[0].token);
@@ -381,18 +381,18 @@ Tinytest.addAsync(
     // On a new connection, Meteor.userId() should be null until logged in.
     let validateAttemptExpectedUserId = null;
     const onLoginExpectedUserId = userId;
-    await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token });
+    await conn.callAsync('login', { resume: stampedToken.token });
 
     // Now that the user is logged in on the connection, Meteor.userId() should
     // return that user.
     validateAttemptExpectedUserId = userId;
-    await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token });
+    await conn.callAsync('login', { resume: stampedToken.token });
 
     // Trigger onLoginFailure callbacks
     const onLoginFailureExpectedUserId = userId;
     await test.throwsAsync(
       async () =>
-        await conn.callAsync('login', { returnServerPromise: true }, { resume: "bogus" }), '403');
+        await conn.callAsync('login', { resume: "bogus" }), '403');
 
     // Trigger onLogout callbacks
     const onLogoutExpectedUserId = userId;
@@ -437,23 +437,23 @@ Tinytest.addAsync(
 
     // test a new connection
     let allowLogin = true;
-    await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token });
+    await conn.callAsync('login', { resume: stampedToken.token });
 
     // Now that the user is logged in on the connection, Meteor.userId() should
     // return that user.
-    await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token });
+    await conn.callAsync('login', { resume: stampedToken.token });
 
     // Trigger onLoginFailure callbacks, this will not include the user object
     allowLogin = 'bogus';
     await test.throwsAsync(
       async () =>
-        await conn.callAsync('login', { returnServerPromise: true }, { resume: "bogus" }), '403');
+        await conn.callAsync('login', { resume: "bogus" }), '403');
 
     // test a forced login fail which WILL include the user object
     allowLogin = false;
     await test.throwsAsync(
       async () =>
-        await conn.callAsync('login', { returnServerPromise: true }, { resume: stampedToken.token }), '403');
+        await conn.callAsync('login', { resume: stampedToken.token }), '403');
 
     // Trigger onLogout callbacks
     const onLogoutExpectedUserId = userId;
