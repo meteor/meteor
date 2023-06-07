@@ -237,16 +237,19 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
           var arg = op === 'insertAsync' ? {} : 'bla';
           var arg2 = {};
 
-          const callOp = async function(callback) {
+          const callOp = async function (callback) {
             try {
-              let result;
-              if (op === 'updateAsync') {
-                result = await ftc[op](arg, arg2);
+              if (op === "updateAsync") {
+                await ftc[op](arg, arg2, callback);
               } else {
-                result = await ftc[op](arg);
+                await ftc[op](arg, callback);
               }
             } catch (e) {
-              callback(e);
+              if (callback) {
+                callback(e);
+                return;
+              }
+              throw e;
             }
           };
 

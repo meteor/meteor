@@ -1029,16 +1029,29 @@ Object.assign(Mongo.Collection.prototype, {
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
    */
-  async removeAsync(selector, options = {}) {
+  async removeAsync(selector, callback) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
+    const wrappedCallback = wrapCallback(callback);
+
     if (this._isRemoteCollection()) {
-      return this._callMutatorMethodAsync('removeAsync', [selector], options);
+      return this._callMutatorMethodAsync('removeAsync', [selector], wrappedCallback);
     }
 
     // it's my collection.  descend into the collection1 object
     // and propagate any exception.
-    return this._collection.removeAsync(selector);
+    try {
+      // If the user provided a callback and the collection implements this
+      // operation asynchronously, then queryRet will be undefined, and the
+      // result will be returned through the callback instead.
+      return this._collection.removeAsync(selector, wrappedCallback);
+    } catch (e) {
+      if (callback) {
+        callback(e);
+        return null;
+      }
+      throw e;
+    }
   },
 
   /**
@@ -1048,12 +1061,15 @@ Object.assign(Mongo.Collection.prototype, {
    * @memberof Mongo.Collection
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
+   * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
    */
-  remove(selector) {
+  remove(selector, callback) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
+    const wrappedCallback = wrapCallback(callback);
+
     if (this._isRemoteCollection()) {
-      return this._callMutatorMethod('remove', [selector]);
+      return this._callMutatorMethod('remove', [selector], wrappedCallback);
     }
 
     // [FIBERS]
@@ -1064,11 +1080,21 @@ Object.assign(Mongo.Collection.prototype, {
       this.remove.isCalledFromAsync
     );
     this.remove.isCalledFromAsync = false;
-    // it's my collection.  descend into the collection1 object
+    // it's my collection.  descend into the collection object
     // and propagate any exception.
-    return this._collection.remove(selector);
+    try {
+      // If the user provided a callback and the collection implements this
+      // operation asynchronously, then queryRet will be undefined, and the
+      // result will be returned through the callback instead.
+      return this._collection.remove(selector, wrappedCallback);
+    } catch (e) {
+      if (callback) {
+        callback(e);
+        return null;
+      }
+      throw e;
+    }
   },
-
 
   // Determine if this collection is simply a minimongo representation of a real
   // database on another server
