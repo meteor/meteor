@@ -779,7 +779,7 @@ Object.assign(Mongo.Collection.prototype, {
     return this._insert(doc, callback);
   },
 
-  async _insertAsync(doc, options = {}) {
+  async _insertAsync(doc, callback) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -835,8 +835,13 @@ Object.assign(Mongo.Collection.prototype, {
       return result;
     };
 
+    const wrappedCallback = wrapCallback(
+      callback,
+      chooseReturnValueFromCollectionResult
+    );
+
     if (this._isRemoteCollection()) {
-      const result = await this._callMutatorMethodAsync('insertAsync', [doc], options);
+      const result = await this._callMutatorMethodAsync('insertAsync', [doc], wrappedCallback);
 
       return chooseReturnValueFromCollectionResult(result);
     }
@@ -847,6 +852,10 @@ Object.assign(Mongo.Collection.prototype, {
       const result = await this._collection.insertAsync(doc);
       return chooseReturnValueFromCollectionResult(result);
     } catch (e) {
+      if (callback) {
+        callback(e);
+        return null;
+      }
       throw e;
     }
   },
