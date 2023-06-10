@@ -1462,7 +1462,7 @@ Server = function (options = {}) {
     maxMessageQueueLength: 100,
     // how long we should maintain a session for after a non-graceful disconnect before killing it
     // sessions that reconnect within this time will be resumed with minimal performance impact.
-    disconnectGracePeriod: 5000,
+    disconnectGracePeriod: 15000,
     ...options,
   };
 
