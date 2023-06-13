@@ -613,7 +613,7 @@ CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethodA
   }
 
   const mutatorMethodName = this._prefix + name;
-  return this._connection.apply(mutatorMethodName, args, {
+  return this._connection.applyAsync(mutatorMethodName, args, {
     returnStubValue: true,
   }, callback);
 }
