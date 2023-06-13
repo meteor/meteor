@@ -451,7 +451,37 @@ MongoConnection.prototype.dropDatabaseAsync = async function () {
   }
 };
 
-MongoConnection.prototype.updateAsync = async function (collection_name, selector, mod, options) {
+function wrapCallback(promise, callback) {
+  if (!callback) {
+    return promise;
+  }
+  promise.then((result) => callback(undefined, result), callback);
+}
+
+
+MongoConnection.prototype.updateAsync = async function (
+  collection_name,
+  selector,
+  mod,
+  options,
+  callback,
+) {
+  if (!callback && typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  return wrapCallback(
+    this._updateAsync(
+      collection_name,
+      selector,
+      mod,
+      options
+    ),
+    callback
+  );
+};
+
+MongoConnection.prototype._updateAsync = async function (collection_name, selector, mod, options) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
@@ -716,14 +746,25 @@ var simulateUpsertWithInsertedId = async function (collection, selector, mod, op
 // XXX MongoConnection.upsertAsync() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
 // doc).
-MongoConnection.prototype.upsertAsync = async function (collectionName, selector, mod, options) {
+MongoConnection.prototype.upsertAsync = async function (
+  collectionName,
+  selector,
+  mod,
+  options,
+  callback
+) {
   var self = this;
 
-  return self.updateAsync(collectionName, selector, mod,
-                     _.extend({}, options, {
-                       upsert: true,
-                       _returnObject: true
-                     }));
+  return self.updateAsync(
+    collectionName,
+    selector,
+    mod,
+    _.extend({}, options, {
+      upsert: true,
+      _returnObject: true,
+    }),
+    callback
+  );
 };
 
 MongoConnection.prototype.find = function (collectionName, selector, options) {

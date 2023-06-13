@@ -1114,7 +1114,11 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Object} [options]
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
    */
-  async upsertAsync(selector, modifier, options) {
+  async upsertAsync(selector, modifier, options, callback) {
+    if (!callback && typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
     return this.updateAsync(
       selector,
       modifier,
@@ -1122,7 +1126,7 @@ Object.assign(Mongo.Collection.prototype, {
         ...options,
         _returnObject: true,
         upsert: true,
-      });
+      }, callback);
   },
 
   /**
@@ -1136,7 +1140,21 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Object} [options]
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
    */
-  upsert(selector, modifier, options) {
+  upsert(selector, modifier, options, callback) {
+    if (!callback && typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "upsert",
+      this._name,
+      this.upsert.isCalledFromAsync
+    );
+    this.upsert.isCalledFromAsync = false; // will not trigger warning in `update`
+
     return this.update(
       selector,
       modifier,
@@ -1144,7 +1162,9 @@ Object.assign(Mongo.Collection.prototype, {
         ...options,
         _returnObject: true,
         upsert: true,
-      });
+      },
+      callback
+    );
   },
 
   // We'll actually design an index API later. For now, we just pass through to

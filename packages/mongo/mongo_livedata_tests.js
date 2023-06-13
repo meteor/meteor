@@ -90,36 +90,27 @@ var compareResults = function (test, skipIds, actual, expected) {
   test.equal(actual, expected);
 };
 
-const upsert = async function(coll, useUpdate, query, mod, options, callback) {
-  if (!callback && typeof options === 'function') {
+const upsert = async function (coll, useUpdate, query, mod, options, callback) {
+  if (!callback && typeof options === "function") {
     callback = options;
     options = {};
   }
 
-  const callWithCallBack = async (f, justResult) => {
-    if (!callback) {
-      return f();
-    }
-    let result, error;
-    try {
-      const numberAffected = await f();
-      result = justResult
-        ? numberAffected
-        : {
-            numberAffected,
-          };
-    } catch (e) {
-      error = e;
-    }
-    callback(error, result);
-  };
-
   if (useUpdate) {
     if (callback) {
-      await callWithCallBack(() =>
-        coll.updateAsync(query, mod, _.extend({ upsert: true }, options))
+      return coll.updateAsync(
+        query,
+        mod,
+        _.extend({ upsert: true }, options),
+        function (err, result) {
+          callback(
+            err,
+            !err && {
+              numberAffected: result,
+            }
+          );
+        }
       );
-      return;
     }
     return {
       numberAffected: await coll.updateAsync(
@@ -129,7 +120,7 @@ const upsert = async function(coll, useUpdate, query, mod, options, callback) {
       ),
     };
   }
-  return callWithCallBack(() => coll.upsertAsync(query, mod, options), true);
+  return coll.upsertAsync(query, mod, options, callback);
 };
 
 var upsertTestMethod = "livedata_upsert_test_method";
