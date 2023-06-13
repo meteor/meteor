@@ -3295,17 +3295,13 @@ async function bundle({
         buildMode: buildOptions.buildMode
       });
 
-      try {
-        await client.make({
-          packages: [app],
-          minifyMode: minifyMode,
-          minifiers: options.minifiers || [],
-          addCacheBusters: true,
-          onJsOutputFiles,
-        });
-      } catch (e) {
-        // it's fine to fail here, but we don't want to propagate the error
-      }
+      await client.make({
+        packages: [app],
+        minifyMode: minifyMode,
+        minifiers: options.minifiers || [],
+        addCacheBusters: true,
+        onJsOutputFiles,
+      });
 
       return client;
     });

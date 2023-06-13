@@ -405,7 +405,15 @@ Object.assign(AppRunner.prototype, {
 
     self.isRunning = true;
     global.asyncLocalStorage.run({}, () =>
-        self._runApp().catch((e) => self._resolvePromise("start", e))
+        self._runApp()
+          .catch((e) => {
+            // There was an unexpected error when building the app
+            // This is not recoverable, so we turn it into an unhandled exception
+            // and crash.
+            setTimeout(() => {
+              throw e;
+            });
+          })
     );
     await self.startPromise;
     self.startPromise = null;
@@ -434,9 +442,6 @@ Object.assign(AppRunner.prototype, {
     if (ee) {
       ee.emit(name, value);
       this._promiseResolvers[name] = null;
-    }
-    if (value instanceof Error) {
-      throw value;
     }
   },
 
