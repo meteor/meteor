@@ -66,6 +66,8 @@ HTTP.call = function(method, url, options, callback) {
       throw new Error('Option auth should be of the form "username:password"');
     username = options.auth.substring(0, colonLoc);
     password = options.auth.substring(colonLoc+1);
+
+    headers["Authorization"] = "Basic " + btoa(username + ":" + password);
   }
 
   if (params_for_body) {
@@ -110,7 +112,7 @@ HTTP.call = function(method, url, options, callback) {
     else
       throw new Error("Can't create XMLHttpRequest"); // ???
 
-    xhr.open(method, url, true, username, password);
+    xhr.open(method, url, true);
 
     for (var k in headers)
       xhr.setRequestHeader(k, headers[k]);
