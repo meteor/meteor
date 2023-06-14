@@ -17,7 +17,11 @@ then
     ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
 else
     # Installs into dev_bundle/lib/node_modules/puppeteer.
+    # puppeteer 20 is not compatible with node 14
+    ./meteor npm clean-install
     ./meteor npm install -g puppeteer@19
+    ls /home/travis/.cache/puppeteer
+    ls /home/travis/.cache/puppeteer/chrome
 fi
 
 export PATH=$METEOR_HOME:$PATH
