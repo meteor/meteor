@@ -12,7 +12,6 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.versionsFrom("1.8.1");
   api.use('babel-compiler');
   api.use('ecmascript');
 

@@ -6,7 +6,6 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.versionsFrom(['1.9', '2.3']);
   api.use('webapp', 'server');
   api.use(['ddp', 'tracker'], 'client');
   api.use(['callback-hook'], 'client');
