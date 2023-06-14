@@ -104,7 +104,7 @@ Object.assign(AppProcess.prototype, {
     // Watch for exit and for stdio to be fully closed (so that we don't miss
     // log lines).
     self.proc.on('close', async function (code, signal) {
-      self._maybeCallOnExit(code, signal);
+      await self._maybeCallOnExit(code, signal);
     });
 
     self.proc.on('error', async function (err) {
@@ -113,7 +113,7 @@ Object.assign(AppProcess.prototype, {
       // node docs say that it might make both an 'error' and a
       // 'close' callback, so we use a guard to make sure we only call
       // onExit once.
-      self._maybeCallOnExit();
+      await self._maybeCallOnExit();
     });
 
     // This happens sometimes when we write a keepalive after the app
@@ -123,13 +123,13 @@ Object.assign(AppProcess.prototype, {
     self.proc.stdin.on('error', function () {});
   },
 
-  _maybeCallOnExit: function (code, signal) {
+  _maybeCallOnExit: async function (code, signal) {
     var self = this;
     if (self.madeExitCallback) {
       return;
     }
     self.madeExitCallback = true;
-    self.onExit && self.onExit(code, signal);
+    self.onExit && await self.onExit(code, signal);
   },
 
   // Idempotent. Once stop() returns it is guaranteed that you will
@@ -404,7 +404,9 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    self._runApp().catch((e) => self._resolvePromise("start", e));
+    global.asyncLocalStorage.run({}, () =>
+        self._runApp().catch((e) => self._resolvePromise("start", e))
+    );
     await self.startPromise;
     self.startPromise = null;
   },
@@ -414,12 +416,6 @@ Object.assign(AppRunner.prototype, {
       this._promiseResolvers[name] = new EventEmitter();
     }
     return this._promiseResolvers[name];
-  },
-
-  _makeIterable : function (name) {
-    var self = this;
-    const ee = self._findCachedEE(name);
-    return on(ee, name);
   },
 
   /**
@@ -527,7 +523,7 @@ Object.assign(AppRunner.prototype, {
         //   to how the WatchSets are laid out.  Might be possible to avoid
         //   re-building the local catalog at all if packages didn't change
         //   at all, though.)
-        await self.projectContext.reset({}, {
+        self.projectContext.reset({}, {
           // Don't forget all Isopack objects; just make sure to check that they
           // are up to date.
           softRefreshIsopacks: true,
@@ -539,9 +535,7 @@ Object.assign(AppRunner.prototype, {
           // shown from the previous solution.
           preservePackageMap: true
         });
-        var messages = await buildmessage.capture(async function () {
-          return await self.projectContext.readProjectMetadata();
-        });
+        var messages = await buildmessage.capture(() => self.projectContext.readProjectMetadata());
         if (messages.hasMessages()) {
           return {
             runResult: {
@@ -565,9 +559,7 @@ Object.assign(AppRunner.prototype, {
         };
       }
 
-      messages = await buildmessage.capture(async function () {
-        return await self.projectContext.prepareProjectForBuild();
-      });
+      messages = await buildmessage.capture(() => self.projectContext.prepareProjectForBuild());
       if (messages.hasMessages()) {
         return {
           runResult: {
@@ -591,8 +583,8 @@ Object.assign(AppRunner.prototype, {
         });
       }
 
-      var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async function() {
-        return await bundler.bundle({
+      var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async () =>
+        bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
           includeNodeModules: "symlink",
@@ -607,8 +599,7 @@ Object.assign(AppRunner.prototype, {
           // None of the targets are used during full rebuilds
           // so we can safely build in place on Windows
           forceInPlaceBuild: !cachedServerWatchSet
-        });
-      });
+        }));
 
       // Keep the server watch set from the initial bundle, because subsequent
       // bundles will not contain a server target.
@@ -685,7 +676,6 @@ Object.assign(AppRunner.prototype, {
       if (!cordovaRunner.started) {
         const { settingsFile, mobileServerUrl } = self;
         const messages = await buildmessage.capture(async () => {
-          // TODO -> Check cordova
           await cordovaRunner.prepareProject(bundlePath, pluginVersions,
             { settingsFile, mobileServerUrl });
         });
@@ -728,7 +718,7 @@ Object.assign(AppRunner.prototype, {
     var listenPromise = self._makePromise("listen");
 
     // Run the program
-    options.beforeRun && options.beforeRun();
+    options.beforeRun && await options.beforeRun();
     var appProcess = new AppProcess({
       projectContext: self.projectContext,
       bundlePath: bundlePath,
@@ -970,7 +960,7 @@ Object.assign(AppRunner.prototype, {
       });
       firstRun = false;
 
-      var wantExit = self.onRunEnd ? !self.onRunEnd(runResult) : false;
+      var wantExit = self.onRunEnd ? !(await self.onRunEnd(runResult)) : false;
       if (wantExit || self.exitPromise || runResult.outcome === "stopped") {
         break;
       }

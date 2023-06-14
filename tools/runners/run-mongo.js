@@ -543,7 +543,7 @@ var launchMongo = async function(options) {
     require('../tool-env/cleanup.js').onExit(stop);
     subHandles.push({ stop });
 
-    var procExitHandler = await fiberHelpers.bindEnvironment(async function(code, signal) {
+    var procExitHandler = fiberHelpers.bindEnvironment(async function(code, signal) {
       // Defang subHandle.stop().
       proc = null;
 
@@ -973,7 +973,7 @@ Object.assign(MRp, {
 
     if (self.errorCount < 3) {
       // Wait a second, then restart.
-      self.restartTimer = await setTimeout(
+      self.restartTimer = setTimeout(
         fiberHelpers.bindEnvironment(async function() {
           self.restartTimer = null;
           await self._startOrRestart();
@@ -1061,10 +1061,10 @@ Object.assign(MRp, {
     }
   },
 
-  _fail: function() {
+  _fail: async function() {
     var self = this;
     self.stop();
-    self.onFailure && self.onFailure();
+    self.onFailure && await self.onFailure();
     self._allowStartupToReturn();
   },
 

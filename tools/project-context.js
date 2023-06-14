@@ -77,6 +77,10 @@ const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // allowed to return a Promise instead of having to await async
   // compilation using fibers and/or futures.
   'isobuild:async-plugins': ['1.6.1'],
+
+  // This package requires functionality introduced in meteor-tools@3.0
+  // to enable using top level await
+  'isobuild:top-level-await': ['3.0.0'],
 }
 
 import {
@@ -120,6 +124,7 @@ function ProjectContext(options) {
     throw Error("missing projectDir!");
 
   self.originalOptions = options;
+  self.reset();
 }
 exports.ProjectContext = ProjectContext;
 
@@ -135,11 +140,7 @@ var STAGE = {
 };
 
 Object.assign(ProjectContext.prototype, {
-  init: function () {
-    const self = this;
-    return self.reset();
-  },
-  reset: async function (moreOptions, resetOptions) {
+  reset: function (moreOptions, resetOptions) {
     var self = this;
     // Allow overriding some options until the next call to reset;
     var options = Object.assign({}, self.originalOptions, moreOptions);

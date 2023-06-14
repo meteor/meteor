@@ -41,8 +41,8 @@ export function ensureDevBundleDependencies() {
       title: 'Installing Cordova in Meteor tool',
     },
     async () => {
-      await require("../cli/dev-bundle-helpers.js")
-        .ensureDependencies(CORDOVA_DEV_BUNDLE_VERSIONS);
+      await (require("../cli/dev-bundle-helpers.js")
+        .ensureDependencies(CORDOVA_DEV_BUNDLE_VERSIONS));
 
       const cordovaNodeModulesDir = pathJoin(
         getDevBundle(),

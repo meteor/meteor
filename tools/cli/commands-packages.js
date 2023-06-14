@@ -104,7 +104,6 @@ main.registerCommand({
     neverWritePackageMap: true,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init();
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.initializeCatalog();
   });
@@ -150,7 +149,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.prepareProjectForBuild();
@@ -303,7 +301,6 @@ main.registerCommand({
       lintPackageWithSourceRoot: options['no-lint'] ? null : options.packageDir,
     });
   }
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     // Just get up to initializing the catalog. We're going to mutate the
@@ -444,7 +441,7 @@ main.registerCommand({
   // We have initialized everything, so perform the publish operation.
   var binary = isopack.platformSpecific();
   await main.captureAndExit(
-    "=> Errors while publishing:",
+    "=> Errors while publishing:" + packageSource.name,
     "publishing the package",
     async function () {
       await packageClient.publishPackage({
@@ -644,7 +641,6 @@ main.registerCommand({
     forceIncludeCordovaUnibuild: true,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init()
   // Just get up to initializing the catalog. We're going to mutate the
   // constraints file a bit before we prepare the build.
   await main.captureAndExit("=> Errors while initializing project:", async function () {
@@ -863,7 +859,6 @@ main.registerCommand({
       // though this temporary directory does not have any cordova platforms
       forceIncludeCordovaUnibuild: true
     });
-    await projectContext.init();
     // Read metadata and initialize catalog.
     await main.captureAndExit("=> Errors while building for release:", async function () {
       await projectContext.initializeCatalog();
@@ -1178,7 +1173,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     return await projectContext.prepareProjectForBuild();
@@ -1627,7 +1621,6 @@ var maybeUpdateRelease = async function (options) {
     alwaysWritePackageMap: true,
     allowIncompatibleUpdate: true // disregard `.meteor/versions` if necessary
   });
-  await projectContext.init()
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.readProjectMetadata();
   });
@@ -1837,7 +1830,6 @@ main.registerCommand({
     alwaysWritePackageMap: true,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-  await projectContext.init()
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.readProjectMetadata();
   });
@@ -2053,7 +2045,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init()
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.prepareProjectForBuild();
   });
@@ -2122,7 +2113,6 @@ main.registerCommand({
     // though this temporary directory does not have any cordova platforms
     forceIncludeCordovaUnibuild: true
   });
-  await projectContext.init()
   // Read metadata and initialize catalog.
   await main.captureAndExit("=> Errors while building for release:", async function () {
     await projectContext.initializeCatalog();
@@ -2161,8 +2151,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     // We're just reading metadata here --- we're not going to resolve
@@ -2371,7 +2359,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     // We're just reading metadata here --- we're not going to resolve

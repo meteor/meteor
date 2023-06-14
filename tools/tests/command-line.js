@@ -378,18 +378,19 @@ selftest.define("argument parsing", async function () {
     await run.stop();
   });
 
-  await s.createApp("app-with-extra-packages", "extra-packages-option", {
-    dontPrepareApp: true
-  });
-  await s.cd("app-with-extra-packages", async function () {
-    run = s.run("test",
-      "--extra-packages", "tmeasday:acceptance-test-driver, extra-package-1, extra-package-2@=0.0.2",
-      "--driver-package", "tmeasday:acceptance-test-driver");
-    run.waitSecs(60);
-    await run.match("extra-package-1: foobar");
-    await run.match("extra-package-2: barfoo");
-    await run.stop();
-  });
+  // FIXME: Fibers - Need to make a new release of tmeasday:acceptance-test-driver
+  // await s.createApp("app-with-extra-packages", "extra-packages-option", {
+  //   dontPrepareApp: true
+  // });
+  // await s.cd("app-with-extra-packages", async function () {
+  //   run = s.run("test",
+  //     "--extra-packages", "tmeasday:acceptance-test-driver, extra-package-1, extra-package-2@=0.0.2",
+  //     "--driver-package", "tmeasday:acceptance-test-driver");
+  //   run.waitSecs(60);
+  //   await run.match("extra-package-1: foobar");
+  //   await run.match("extra-package-2: barfoo");
+  //   await run.stop();
+  // });
 
   await s.createApp("app-with-extra-packages", "extra-packages-option", {
     dontPrepareApp: true
