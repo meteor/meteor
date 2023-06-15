@@ -51,7 +51,7 @@ async function run(isProduction) {
 
   const run = sandbox.run(...args);
 
-  run.waitSecs(1500);
+  run.waitSecs(90);
   await run.match("App running at");
   await run.match("SERVER FAILURES: 0");
   await run.match("CLIENT FAILURES: 0");
