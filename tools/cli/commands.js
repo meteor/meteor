@@ -362,7 +362,6 @@ async function doRunCommand(options) {
     lintAppAndLocalPackages: !options['no-lint'],
     includePackages: includePackages,
   });
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we'll wait to do the full build
@@ -500,7 +499,6 @@ main.registerCommand({
     var projectContext = new projectContextModule.ProjectContext({
       projectDir: options.appDir
     });
-    await projectContext.init();
 
     // Convert to OS path here because shell/server.js doesn't know how to
     // convert paths, since it exists in the app and in the tool.
@@ -847,8 +845,6 @@ main.registerCommand({
     allowIncompatibleUpdate: true
   });
 
-  await projectContext.init();
-
   await main.captureAndExit("=> Errors while creating your project", async function () {
     await projectContext.readProjectMetadata();
     if (buildmessage.jobHasMessages()) {
@@ -1049,7 +1045,6 @@ var buildCommand = async function (options) {
     serverArchitectures: _.uniq([bundleArch, archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", function () {
     // TODO Fix the nested Profile.run warning here, without interfering
@@ -1327,7 +1322,6 @@ main.registerCommand({
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintPackageWithSourceRoot: packageDir
     });
-    await projectContext.init()
 
     await main.captureAndExit("=> Errors while setting up package:",
       // Read metadata and initialize catalog.
@@ -1353,7 +1347,6 @@ main.registerCommand({
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintAppAndLocalPackages: true
     });
-    await projectContext.init()
   }
 
 
@@ -1623,7 +1616,6 @@ async function deployCommand(options, { rawOptions }) {
     serverArchitectures: _.uniq([buildArch,  archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init()
   await main.captureAndExit("=> Errors while initializing project:", function () {
     // TODO Fix nested Profile.run warning here, too.
     return projectContext.prepareProjectForBuild();
@@ -1948,7 +1940,6 @@ async function doTestCommand(options) {
     //     repeated test-packages calls with some sort of shared or semi-shared
     //     isopack cache that's specific to test-packages?  See #3012.
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
-    await projectContext.init();
 
     await main.captureAndExit("=> Errors while initializing project:", function () {
       // We're just reading metadata here --- we'll wait to do the full build
@@ -2041,7 +2032,6 @@ async function doTestCommand(options) {
     await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
 
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
-    await projectContext.init();
 
     await main.captureAndExit("=> Errors while setting up tests:", async function () {
       // Read metadata and initialize catalog.
@@ -2826,7 +2816,7 @@ main.registerCommand({
     throw new main.ExitWithCode(2);
   }
 
-  files.cp_r(assetsPath(), files.pathResolve(scaffoldPath), {
+  await files.cp_r(assetsPath(), files.pathResolve(scaffoldPath), {
     transformFilename: function (f) {
       if (options.replaceFn) return userTransformFilenameFn(f);
       return transformName(f);

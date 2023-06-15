@@ -32,7 +32,7 @@ export class iOSRunTarget extends CordovaRunTarget {
       await cordovaProject.run(this.platform, this.isDevice, undefined);
 
       // Bring iOS Simulator to front (it is called Simulator in Xcode 7)
-      execFileAsync('osascript', ['-e',
+      await execFileAsync('osascript', ['-e',
 `tell application "System Events"
   set possibleSimulatorNames to {"iOS Simulator", "Simulator"}
   repeat with possibleSimulatorName in possibleSimulatorNames
@@ -102,7 +102,7 @@ export class AndroidRunTarget extends CordovaRunTarget {
     let target = this.isDevice ? "-d" : "-e";
 
     // Clear logs
-    execFileAsync('adb', [target, 'logcat', '-c']);
+    await execFileAsync('adb', [target, 'logcat', '-c']);
 
     await cordovaProject.run(this.platform, this.isDevice);
 
