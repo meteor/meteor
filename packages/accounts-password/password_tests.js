@@ -35,7 +35,7 @@ if (Meteor.isServer) {
         value => delete Accounts._skipCaseInsensitiveChecksForTest[value],
 
       async countUsersOnServer(query) {
-        return await Meteor.users.find(query).count();
+        return await Meteor.users.find(query).countAsync();
       }
     }
   );
@@ -292,7 +292,7 @@ if (Meteor.isClient) (() => {
     },
     // Make sure the new user has not been inserted
     async function (test) {
-      const result = await Meteor.callAsync('countUsersOnServer', {
+      const result = await Meteor.callAsync('countUsersOnServer', { returnServerPromise: true }, {
         username: this.newUsername,
       });
       test.equal(result, 0);
@@ -400,7 +400,7 @@ if (Meteor.isClient) (() => {
     },
     // Make sure the new user has not been inserted
     async function (test) {
-      const result = await Meteor.callAsync('countUsersOnServer', {
+      const result = await Meteor.callAsync('countUsersOnServer', { returnServerPromise: true }, {
         'emails.address': this.newEmail,
       });
       test.equal(result, 0);
@@ -428,7 +428,7 @@ if (Meteor.isClient) (() => {
         }));
     },
     async function (test) {
-      const token = await Meteor.callAsync("getResetToken");
+      const token = await Meteor.callAsync("getResetToken", { returnServerPromise: true });
       test.isTrue(token);
       this.token = token;
     },
@@ -452,7 +452,7 @@ if (Meteor.isClient) (() => {
         loggedInAs(this.username, test, expect));
     },
     async function (test) {
-      const token = await Meteor.callAsync("getResetToken");
+      const token = await Meteor.callAsync("getResetToken", { returnServerPromise: true });
       test.isFalse(token);
     },
     logoutStep,
@@ -766,32 +766,43 @@ if (Meteor.isClient) (() => {
     // test the default Meteor.users allow rule. This test properly belongs in
     // accounts-base/accounts_tests.js, but this is where the tests that
     // actually log in are.
-    function (test, expect) {
+    async function (test, expect) {
       this.userId = Meteor.userId();
       test.notEqual(this.userId, null);
       test.notEqual(this.userId, this.otherUserId);
       // Can't update fields other than profile.
-      Meteor.users.update(
-        this.userId, { $set: { disallowed: true, 'profile.updated': 42 } },
-        expect(err => {
+      await Meteor.users
+        .updateAsync(this.userId, {
+          $set: { disallowed: true, "profile.updated": 42 },
+        })
+        .catch((err) => {
           test.isTrue(err);
           test.equal(err.error, 403);
-          test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user(), 'disallowed'));
-          test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
-        }));
+          test.isFalse(
+            Object.prototype.hasOwnProperty.call(Meteor.user(), "disallowed")
+          );
+          test.isFalse(
+            Object.prototype.hasOwnProperty.call(
+              Meteor.user().profile,
+              "updated"
+            )
+          );
+        });
     },
-    function (test, expect) {
+    async function (test, expect) {
       // Can't update another user.
-      Meteor.users.update(
-        this.otherUserId, { $set: { 'profile.updated': 42 } },
-        expect(err => {
-          test.isTrue(err);
-          test.equal(err.error, 403);
-        }));
+      await Meteor.users
+        .updateAsync(this.otherUserId, { $set: { "profile.updated": 42 } })
+        .catch(
+          expect((err) => {
+            test.isTrue(err);
+            test.equal(err.error, 403);
+          })
+        );
     },
-    function (test, expect) {
+    async function (test, expect) {
       // Can't update using a non-ID selector. (This one is thrown client-side.)
-      test.throws(() => Meteor.users.update(
+      await test.throwsAsync(async () => await Meteor.users.updateAsync(
         { username: this.username }, { $set: { 'profile.updated': 42 } }
       ));
       test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
