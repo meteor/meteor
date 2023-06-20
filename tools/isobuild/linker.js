@@ -506,7 +506,6 @@ Object.assign(File.prototype, {
 
   getPrelinkedOutputFast: Profile('linker File#getPrelinkedOutputFast', function (options) {
     let header = this.bare ? '' : this._getClosureHeader() + '\n\n';
-    let footer = this.bare ? '' : this._getClosureFooter();
     let code = this.source;
     let map = this.sourceMap || null
 
@@ -517,7 +516,6 @@ Object.assign(File.prototype, {
       bannerLines.push('This file is in bare mode and is not in its own closure.');
     }
 
-    // TODO: add divider line to footer
     header += banner(bannerLines) + '\n';
 
     if (code) {
@@ -532,6 +530,11 @@ Object.assign(File.prototype, {
       }
     } else {
       code = '';
+    }
+    
+    let footer = dividerLine(MIN_BANNER_WIDTH) + '\n';
+    if (!this.bare) {
+      footer += this._getClosureFooter();
     }
 
     return { header, code, map, footer };
@@ -1102,6 +1105,7 @@ function getFooter ({
   return chunks.join('');
 }
 
+// TODO: simplify wrapWithHeaderAndFooter
 function wrapWithHeaderAndFooter(files, header, footer) {
   // Bias the source map by the length of the header without
   // (fully) parsing and re-serializing it. (We used to do this
