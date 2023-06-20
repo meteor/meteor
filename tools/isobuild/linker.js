@@ -123,64 +123,6 @@ Object.assign(Module.prototype, {
     const haveMeteorInstallOptions =
       self.files.some(file => file.meteorInstallOptions);
 
-    // If we don't want to create a separate scope for this module,
-    // then our job is much simpler. And we can get away with
-    // preserving the line numbers.
-    if (self.useGlobalNamespace &&
-        ! haveMeteorInstallOptions) {
-      // Ignore lazy files unless we have a module system.
-      const eagerFiles = _.filter(self.files, file => ! file.lazy);
-
-      const ret = [];
-      for (const file of eagerFiles) {
-        const cacheKey = JSON.stringify([
-          file._inputHash,
-          file.bare,
-          file.servePath,
-        ]);
-
-        if (APP_PRELINK_CACHE.has(cacheKey)) {
-          ret.push(APP_PRELINK_CACHE.get(cacheKey));
-        }
-
-        const node = await file.getPrelinkedOutput({ preserveLineNumbers: true });
-        const results = await Profile.time(
-            "toStringWithSourceMap (app)", () => {
-              return node.toStringWithSourceMap({
-                file: file.servePath
-              }); // results has 'code' and 'map' attributes
-            }
-        );
-
-        let sourceMap = results.map.toJSON();
-        if (! sourceMap.mappings) {
-          sourceMap = null;
-        }
-
-        const prelinked = {
-          source: results.code,
-          sourcePath: file.sourcePath,
-          servePath: file.servePath,
-          sourceMap: sourceMap,
-          hash: file._inputHash,
-        };
-
-        APP_PRELINK_CACHE.set(cacheKey, prelinked);
-        ret.push(prelinked);
-      }
-
-      // TODO[fibers]: This is a temporary hack to make sure that we don't return the same
-        // file twice. I'm not sure why, but self.files sometimes contains the same file twice.
-        // these tool tests fail without this hack:
-        // - assets - unicode asset names are allowed
-        // - javascript hot code push
-        // and probably others
-      const uniqueHashes = [...new Set(ret.map((f) => f.hash))];
-      return uniqueHashes.map((h) => ret.find((f) => f.hash === h));
-    }
-
-    // Otherwise..
-
     // Find the maximum line length.
     var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]);
 
@@ -1220,64 +1162,19 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
     throw new Error(`Runtime is not available, but it uses features needing the runtime: ${name}`);
   }
 
-  // If we're in the app, then we just add the import code as its own file in
-  // the front.
-  if (isApp) {
-    let wrapForTLA = hasRuntime &&
-      (bundleArch.startsWith('os.') || enableClientTLA);
-
-    if (wrapForTLA) {
-      // Ensure there is always at least one file
-      // so the globals can be defined
-      if (prelinkedFiles.length === 0) {
-        prelinkedFiles.unshift({
-          source: '',
-          servePath: "/global-imports.js"
-        });
-      }
-
-      let header = getHeader({
-        name: null,
-        imports,
-        packageVariables: [],
-        hasRuntime,
-        deps
-      });
-      let footer = getFooter({
-        name: null,
-        exported: {},
-        eagerModulePaths,
-        hasRuntime
-      });
-
-      return wrapWithHeaderAndFooter(prelinkedFiles, header, footer);
-    }
-
-    if (! _.isEmpty(imports)) {
-      prelinkedFiles.unshift({
-        source: getImportCode(
-          imports,
-          "/* Imports for global scope */\n\n",
-          true, // Omit the var keyword.
-        ),
-        servePath: "/global-imports.js"
-      });
-    }
-
-    return prelinkedFiles;
-  }
-
   // Do static analysis to compute module-scoped variables. Error recovery from
   // the static analysis mutates the sources, so this has to be done before
   // concatenation.
   let assignedVariables;
-  const failed = await buildmessage.enterJob('computing assigned variables', async () => {
-    assignedVariables = await module.computeAssignedVariables();
-    return buildmessage.jobHasMessages();
-  });
-  if (failed) {
-    // recover by pretending there are no files
-    return [];
+  if (!isApp) {
+    const failed = await buildmessage.enterJob('computing assigned variables', async () => {
+      assignedVariables = await module.computeAssignedVariables();
+      return buildmessage.jobHasMessages();
+    });
+    if (failed) {
+      // recover by pretending there are no files
+      return [];
+    }
   }
 
   // If none of the prelinkedFiles contain any code, then the only
@@ -1285,7 +1182,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // we filter the set of imported symbols according to declaredExports.
   // When there are no declaredExports, this effectively slims the package
   // bundle down to just Package[name] = {}.
-  if (prelinkedFiles.every(file => ! file.source)) {
+  if (!isApp && prelinkedFiles.every(file => ! file.source)) {
     const newImports = {};
     declaredExports.forEach(name => {
       if (_.has(imports, name)) {
