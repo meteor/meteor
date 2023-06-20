@@ -96,7 +96,7 @@ Object.assign(Module.prototype, {
 
   // Figure out which vars need to be specifically put in the module
   // scope.
-  computeAssignedVariables: Profile("linker Module#computeAssignedVariables", async function () {
+  async computeAssignedVariables () {
     var self = this;
 
     // The assigned variables in the app aren't actually used for anything:
@@ -116,7 +116,7 @@ Object.assign(Module.prototype, {
     assignedVariables = _.uniq(assignedVariables);
 
     return assignedVariables;
-  }),
+  },
 
   // Builds a tree of nested objects where the properties are names of
   // files or directories, and the values are either nested objects
@@ -312,6 +312,11 @@ Object.assign(Module.prototype, {
   _hasDynamicModules() {
     return this.files.some(file => file.isDynamic());
   }
+});
+
+['computeAssignedVariables', '_buildModuleTrees', '_chunkifyModuleTrees'].forEach(method => {
+  Module.prototype[method] =
+    Profile(`linker Module#${method}`, Module.prototype[method]);
 });
 
 // Insert the given value into the tree by splitting the path and
@@ -521,7 +526,7 @@ Object.assign(File.prototype, {
     return this.lazy && this.imported === "dynamic";
   },
 
-  _getClosureHeader() {
+  _getClosureHeader: Profile('linker File#_getClosureHeader', function () {
     if (this.meteorInstallOptions) {
       const headerParts = ["function module("];
 
@@ -543,7 +548,7 @@ Object.assign(File.prototype, {
     }
 
     return "(function(){";
-  },
+  }),
 
   _getClosureFooter() {
     return this.meteorInstallOptions
@@ -736,7 +741,7 @@ function getOutputWithSourceMapCached(file, servePath) {
   return result;
 }
 
-function prelinkWithoutModules(files, isApp) {
+const prelinkWithoutModules = Profile('linker prelinkWithoutModules', (files, isApp) => {
   let mainBundle = new CombinedFile();
   let usedFiles = [];
 
@@ -765,9 +770,9 @@ function prelinkWithoutModules(files, isApp) {
     mainBundle: output,
     usedFiles
   };
-}
+});
 
-function prelinkWithModules(files, name, bundleArch, isApp) {
+const prelinkWithModules = Profile('linker prelinkWithModules', (files, name, bundleArch, isApp) => {
   let mainBundle = new CombinedFile();
   let dynamicFiles = [];
   let eagerModulePaths = [];
@@ -814,7 +819,7 @@ function prelinkWithModules(files, name, bundleArch, isApp) {
     mainModulePath,
     usedFiles: Array.from(module.usedFiles)
   };
-}
+});
 
 class CombinedFile {
   constructor() {
