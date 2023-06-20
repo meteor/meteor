@@ -45,77 +45,17 @@ const USE_OLD_LINKER = process.env.METEOR_LINKER !== 'new';
 // Module
 ///////////////////////////////////////////////////////////////////////////////
 
-// options include name, imports, exports, useGlobalNamespace,
-// combinedServePath, all of which have the same meaning as they do when passed
+// TODO: this comment is out of date - we no longer have import()
+// useGlobalNamespace has the same meaning as when passed
 // to import().
-var Module = function (files, options) {
-  var self = this;
-
-  // module name or null
-  self.name = options.name || null;
-
-  // The architecture for which this bundle is being linked.
-  self.bundleArch = options.bundleArch;
-
+var Module = function (files, useGlobalNamespace) {
   // files in the module. array of File
-  self.files = files;
+  this.files = files;
 
-  // options
-  self.useGlobalNamespace = options.useGlobalNamespace;
-  self.combinedServePath = options.combinedServePath;
-  self.addEagerRequires = !!options.addEagerRequires;
+  this.useGlobalNamespace = useGlobalNamespace;
 };
 
 Object.assign(Module.prototype, {
-  // source: the source code
-  // servePath: the path where it would prefer to be served if possible
-  addFile: function (inputFile) {
-    var self = this;
-    self.files.push(new File(inputFile, self.bundleArch));
-  },
-
-
-  maxLineLength: function (ignoreOver) {
-    var self = this;
-
-    var maxInFile = [];
-    _.each(self.files, function (file) {
-      var m = 0;
-      _.each(file.source.split('\n'), function (line) {
-        if (line.length <= ignoreOver && line.length > m) {
-          m = line.length;
-        }
-      });
-      maxInFile.push(m);
-    });
-
-    return _.max(maxInFile);
-  },
-
-  // Figure out which vars need to be specifically put in the module
-  // scope.
-  async computeAssignedVariables () {
-    var self = this;
-
-    // The assigned variables in the app aren't actually used for anything:
-    // we're using the global namespace, so there's no header where we declare
-    // all of the assigned variables as vars.  So there's no use wasting time
-    // running static analysis on app code.
-    if (self.useGlobalNamespace) {
-      return [];
-    }
-
-    // Find all global references in any files
-    var assignedVariables = [];
-    for (const file of self.files) {
-      assignedVariables = assignedVariables.concat(
-          await file.computeAssignedVariables());
-    }
-    assignedVariables = _.uniq(assignedVariables);
-
-    return assignedVariables;
-  },
-
   // Builds a tree of nested objects where the properties are names of
   // files or directories, and the values are either nested objects
   // (representing directories) or File objects (representing modules).
@@ -307,10 +247,6 @@ Object.assign(Module.prototype, {
       "  }",
       "}"
     ].join("\n");
-  },
-
-  _hasDynamicModules() {
-    return this.files.some(file => file.isDynamic());
   }
 });
 
@@ -768,7 +704,7 @@ const prelinkWithoutModules = Profile('linker prelinkWithoutModules', (files, is
   };
 });
 
-const prelinkWithModules = Profile('linker prelinkWithModules', (files, name, bundleArch, isApp) => {
+const prelinkWithModules = Profile('linker prelinkWithModules', (files, name, isApp) => {
   let mainBundle = new CombinedFile();
   let dynamicFiles = [];
   let eagerModulePaths = [];
@@ -778,12 +714,7 @@ const prelinkWithModules = Profile('linker prelinkWithModules', (files, name, bu
     debugger;
   }
  
-  let module = new Module(files, {
-    name,
-    // TODO: is bundle arch used?
-    bundleArch,
-    useGlobalNamespace: isApp
-  });
+  let module = new Module(files, isApp);
   // TODO: do we need to calculate a hash?
   // TODO: remove sourceWidth option
   // TODO: do not use internal methods on module
@@ -1294,7 +1225,7 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
       dynamicFiles,
       mainModulePath,
       eagerModulePaths
-    } = prelinkWithModules(filesToLink, name, bundleArch, isApp));
+    } = prelinkWithModules(filesToLink, name, isApp));
   } else {
     ({ mainBundle } = prelinkWithoutModules(filesToLink, isApp));
   }
