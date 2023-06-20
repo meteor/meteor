@@ -122,7 +122,7 @@ Object.assign(Module.prototype, {
   // files or directories, and the values are either nested objects
   // (representing directories) or File objects (representing modules).
   // Bare files and lazy files that are never imported are ignored.
-  async _buildModuleTrees(results, sourceWidth) {
+  _buildModuleTrees(dynamicFiles, sourceWidth) {
     // Map from meteorInstallOptions objects to trees of File objects for
     // all non-dynamic modules.
     const trees = new Map();
@@ -159,13 +159,13 @@ Object.assign(Module.prototype, {
 
       if (file.isDynamic()) {
         const servePath = files.pathJoin("dynamic", file.absModuleId);
-        const { code: source, map } =
-            await getOutputWithSourceMapCached(file, servePath, { sourceWidth })
+        const { source, sourceMap } =
+            getOutputWithSourceMapCached(file, servePath);
 
-        results.push({
+        dynamicFiles.push({
           source,
           servePath,
-          sourceMap: map && map.toJSON(),
+          sourceMap,
           dynamic: true,
         });
 
@@ -205,7 +205,7 @@ Object.assign(Module.prototype, {
   // Take the tree generated in getPrelinkedFiles and populate the chunks
   // array with strings and SourceNode objects that can be combined into a
   // single SourceNode object. Return the count of modules in the tree.
-  async _chunkifyModuleTrees(trees, combinedFile, sourceWidth) {
+  _chunkifyModuleTrees(trees, combinedFile, sourceWidth) {
     const self = this;
 
     // assert.ok(_.isArray(chunks));
@@ -213,7 +213,7 @@ Object.assign(Module.prototype, {
 
     let moduleCount = 0;
 
-    async function walk(t) {
+    function walk(t) {
       if (Array.isArray(t)) {
         ++moduleCount;
         combinedFile.addGeneratedCode(JSON.stringify(t, null, 2));
@@ -237,7 +237,7 @@ Object.assign(Module.prototype, {
       } else if (t instanceof File) {
         ++moduleCount;
 
-        const { header, code, map, footer } = await t.getPrelinkedOutputFast();
+        const { header, code, map, footer } = t.getPrelinkedOutputFast();
         combinedFile.addGeneratedCode(header);
         combinedFile.addCodeWithMap(t.sourcePath, code, map);
         combinedFile.addGeneratedCode(footer);
@@ -246,7 +246,7 @@ Object.assign(Module.prototype, {
         const keys = Object.keys(t);
         for (const [i, key] of keys.entries()) {
           combinedFile.addGeneratedCode(JSON.stringify(key) + ":");
-          await walk(t[key]);
+          walk(t[key]);
           if (i < keys.length - 1) {
             combinedFile.addGeneratedCode(",");
           }
@@ -266,7 +266,7 @@ Object.assign(Module.prototype, {
     // call to meteorInstall.
     for (const [options, tree] of trees) {
       combinedFile.addGeneratedCode("meteorInstall(");
-      await walk(tree);
+      walk(tree);
       combinedFile.addGeneratedCode("," + self._stringifyInstallOptions(options) + ");\n");
     }
 
@@ -706,28 +706,30 @@ const getPrelinkedOutputCached = require("optimism").wrap(
   }
 );
 
-async function getOutputWithSourceMapCached(file, servePath, options) {
+function getOutputWithSourceMapCached(file, servePath) {
   const key = JSON.stringify({
     hash: file._inputHash,
     arch: file.bundleArch,
     bare: file.bare,
     servePath: file.servePath,
     dynamic: file.isDynamic(),
-    options,
   });
 
+  // TODO: look into removing this cache
   if (DYNAMIC_PRELINKED_OUTPUT_CACHE.has(key)) {
     return DYNAMIC_PRELINKED_OUTPUT_CACHE.get(key);
   }
 
-  const linkedOutput = await file.getPrelinkedOutput({
-    ...options,
-    disableCache: true
-  });
+  let combinedFile = new CombinedFile();
 
-  const result = linkedOutput.toStringWithSourceMap({
-    file: servePath,
-  });
+  const { header, code, map, footer } = file.getPrelinkedOutputFast();
+
+  combinedFile.addGeneratedCode(header);
+  // TODO: should this use servePath or sourcePath?
+  combinedFile.addCodeWithMap(file.servePath, code, map);
+  combinedFile.addGeneratedCode(footer);
+
+  const result = combinedFile.toStringWithMap();
 
   DYNAMIC_PRELINKED_OUTPUT_CACHE.set(key, result);
 
@@ -768,8 +770,7 @@ function prelinkWithoutModules(files, isApp) {
   };
 }
 
-// TODO: this shouldn't need to be async
-async function prelinkWithModules(files, name, bundleArch, isApp) {
+function prelinkWithModules(files, name, bundleArch, isApp) {
   let mainBundle = new CombinedFile();
   let dynamicFiles = [];
   let eagerModulePaths = [];
@@ -788,8 +789,8 @@ async function prelinkWithModules(files, name, bundleArch, isApp) {
   // TODO: do we need to calculate a hash?
   // TODO: remove sourceWidth option
   // TODO: do not use internal methods on module
-  const trees = await module._buildModuleTrees(dynamicFiles, 80);
-  const fileCount = await module._chunkifyModuleTrees(trees, mainBundle, 80);
+  const trees = module._buildModuleTrees(dynamicFiles, 80);
+  const fileCount = module._chunkifyModuleTrees(trees, mainBundle, 80);
 
   for (const file of files) {
     if (file.bare) {
@@ -1114,10 +1115,6 @@ function wrapWithHeaderAndFooter(files, header, footer) {
       return file;
     }
 
-    if (file.source.includes('FROM SERVERRR')) {
-      console.log("FOUNDDDDDDDD", file.servePath, file.sourcePath);
-    }
-
     if (file.sourceMap) {
       var sourceMap = file.sourceMap;
       sourceMap.mappings = headerContent + sourceMap.mappings;
@@ -1221,7 +1218,7 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
       usedFiles,
       mainModulePath,
       eagerModulePaths
-    } = await prelinkWithModules(filesToLink, name, bundleArch, isApp));
+    } = prelinkWithModules(filesToLink, name, bundleArch, isApp));
   } else {
     ({ mainBundle, usedFiles } = prelinkWithoutModules(filesToLink, isApp));
   }
@@ -1269,6 +1266,8 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
   // When there are no declaredExports, this effectively slims the package
   // bundle down to just Package[name] = {}.
   // TODO: should this also check the dynamic imports?
+  //       - probably not since there has to be code in the main bundle for
+  //         dynamic imports to work
   if (!isApp && !mainBundle.source) {
     const newImports = {};
     declaredExports.forEach(name => {
