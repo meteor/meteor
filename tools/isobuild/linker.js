@@ -60,8 +60,6 @@ var Module = function (files, options) {
   // files in the module. array of File
   self.files = files;
 
-  self.usedFiles = new Set();
-
   // options
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
@@ -137,7 +135,6 @@ Object.assign(Module.prototype, {
     for (const file of this.files) {
       if (file.bare) {
         // Bare files will be added after the module tree
-        this.usedFiles.add(file);
         continue;
       }
 
@@ -145,10 +142,13 @@ Object.assign(Module.prototype, {
         // If the file is not eagerly evaluated, and no other files
         // import or require it, then it need not be included in the
         // bundle.
+  
+        // We can easily allow unused files by filtering them out
+        // but we will also want to make sure to exclude them when
+        // computing assigned variables
+        assert(false, 'unexpected unused file in linker');
         continue;
       }
-
-      this.usedFiles.add(file);
 
       const tree = getTree(file);
 
@@ -743,16 +743,15 @@ function getOutputWithSourceMapCached(file, servePath) {
 
 const prelinkWithoutModules = Profile('linker prelinkWithoutModules', (files, isApp) => {
   let mainBundle = new CombinedFile();
-  let usedFiles = [];
 
-  for (let file of files) {
-    if (file.lazy) {
-      // TODO: there should be no lazy files here
-      // lazy files can only be used if there is a module system
-      continue;
-    }
+  files.forEach((file, index) => {
+    // Lazy files can only be used if there is a module system.
+    // We can easily allow lazy files by filtering them out,
+    // but we will also want to make sure to exclude them when
+    // computing assigned variables
+    assert(!file.lazy, 'unexpected unused file in linker');
 
-    if (usedFiles.length > 0) {
+    if (index > 0) {
       mainBundle.addEmptyLines(6);
     }
 
@@ -760,15 +759,12 @@ const prelinkWithoutModules = Profile('linker prelinkWithoutModules', (files, is
     mainBundle.addGeneratedCode(header);
     mainBundle.addCodeWithMap(file.sourcePath, code, map);
     mainBundle.addGeneratedCode(footer);
-
-    usedFiles.push(file);
-  }
+  });
 
   let output = mainBundle.toStringWithMap();
 
   return {
     mainBundle: output,
-    usedFiles
   };
 });
 
@@ -816,8 +812,7 @@ const prelinkWithModules = Profile('linker prelinkWithModules', (files, name, bu
     mainBundle: output,
     dynamicFiles,
     eagerModulePaths,
-    mainModulePath,
-    usedFiles: Array.from(module.usedFiles)
+    mainModulePath
   };
 });
 
@@ -1290,7 +1285,6 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
 
   let mainBundle;
   let dynamicFiles = [];
-  let usedFiles = [];
   let mainModulePath;
   let eagerModulePaths;
 
@@ -1298,12 +1292,11 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
     ({
       mainBundle,
       dynamicFiles,
-      usedFiles,
       mainModulePath,
       eagerModulePaths
     } = prelinkWithModules(filesToLink, name, bundleArch, isApp));
   } else {
-    ({ mainBundle, usedFiles } = prelinkWithoutModules(filesToLink, isApp));
+    ({ mainBundle } = prelinkWithoutModules(filesToLink, isApp));
   }
 
   // Check if the core-runtime package will already be loaded
@@ -1329,7 +1322,7 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
   if (!isApp) {
     const failed = await buildmessage.enterJob('computing assigned variables', async () => {
       await Profile.time('linker-computeAssignedVariables', async () => {
-        for (const file of usedFiles) {
+        for (const file of filesToLink) {
           let globals = await file.computeAssignedVariables();
           globals.forEach(name => packageVariables.add(name));
         }
