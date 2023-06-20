@@ -759,10 +759,7 @@ function prelinkWithoutModules(files, isApp) {
     usedFiles.push(file);
   }
 
-  // TODO: if there are no files, we can skip generating a sourcemap?
-  let output = Profile.time('prelinkWithoutModules toStringWithMap', () =>
-    mainBundle.toStringWithMap());
-  mainBundle.destroy();
+  let output = mainBundle.toStringWithMap();
 
   return {
     mainBundle: output,
@@ -808,10 +805,7 @@ function prelinkWithModules(files, name, bundleArch, isApp) {
     }
   }
 
-  // TODO: if there are no files, we can skip generating a sourcemap?
-  let output = Profile.time('prelinkWithoutModules toStringWithMap', () =>
-    mainBundle.toStringWithMap());
-  mainBundle.destroy();
+  let output =  mainBundle.toStringWithMap();
 
   return {
     mainBundle: output,
@@ -824,53 +818,137 @@ function prelinkWithModules(files, name, bundleArch, isApp) {
 
 class CombinedFile {
   constructor() {
-    this.sourceMap = new SourceMap();
-    this.source = '';
-    this.lineOffset = 0;
+    this._chunks = [];
+    this._lineOffset = 0;
+    this._addedFiles = 0;
   }
 
   addEmptyLines(lineCount) {
-    this.source += '\n'.repeat(lineCount);
-    this.lineOffset += lineCount;
+    this._chunks.push('\n'.repeat(lineCount));
+    this._lineOffset += lineCount;
   }
 
   addGeneratedCode(code) {
     let lineCount = (code.match(/\n/g) || []).length;
-    this.source += code;
-    this.lineOffset += lineCount;
+    this._chunks.push(code);
+    this._lineOffset += lineCount;
   }
 
   // TODO: add footer and header options
   addCodeWithMap(sourceName, code, map) {
-    this.source += code;
-
-    if (map) {
-      this.sourceMap.addVLQMap(map, this.lineOffset);
-    } else {
-      this.sourceMap.addEmptyMap(sourceName, code, this.lineOffset);
-    }
-
+    this._addedFiles += 1;
     let lineCount = (code.match(/\n/g) || []).length;
+
+    this._chunks.push({
+      code,
+      map,
+      sourceName,
+      lineOffset: this._lineOffset,
+      lines: lineCount
+    });
+
     this.lineOffset += lineCount;
   }
 
-  toStringWithMap() {
-    let map = this.sourceMap.toVLQ();
-    return {
-      source: this.source,
-      sourceMap: {
-        ...map,
-        // TODO: it should already have a version. This seems like a bug
-        version: 3
+  _buildWithMap() {
+    let source = '';
+    let sourceMap = new SourceMap();
+
+    this._chunks.forEach(chunk => {
+      if (typeof chunk === 'string') {
+        source += chunk;
+      } else if (typeof chunk === 'object') {
+        source += chunk.code;
+
+        if (chunk.map) {
+          sourceMap.addVLQMap(chunk.map, chunk.lineOffset)
+        } else {
+          sourceMap.addEmptyMap(chunk.sourceName, chunk.code, chunk.lineOffset);
+        }
+      } else {
+        throw new Error(`unrecognized chunk type, ${typeof chunk}`);
       }
+    });
+
+    let map = sourceMap.toVLQ();
+    map.version = 3;
+    sourceMap.delete();
+
+    return { source, map };
+  }
+
+  // Optimization for when there are 1 or 0 files.
+  // We can avoid parsing the source map if there is one, and instead
+  // modify it to account for the offset from the header. 
+  _buildWithBiasedMap() {
+    let file;
+    let header = '';
+    let footer = '';
+    
+    this._chunks.forEach(chunk => {
+      if (typeof chunk === 'string') {
+        if (file) {
+          footer += chunk;
+        } else {
+          header += chunk;
+        }
+      } else if (typeof chunk === 'object') {
+        if (file) {
+          throw new Error('_buildWithBiasedMap does not support multiple files');
+        }
+        file = chunk;
+      } else {
+        throw new Error(`unrecognized chunk type, ${typeof chunk}`);
+      }
+    });
+
+    if (!file) {
+      return { source: header + footer, map: null };
+    }
+
+    let map = file.map;
+
+    if (!map) {
+      let sourceMap = new SourceMap();
+      sourceMap.addEmptyMap(file.sourceName, file.code, file.lineOffset);
+      map = sourceMap.toVLQ();
+      map.version = 3;
+      sourceMap.delete();
+    } else {
+      // Bias the input sourcemap to account for the lines added by the header
+      // This is much faster than parsing and re-encoding the sourcemap
+      let headerMappings = ';'.repeat(file.lineOffset);
+      map.mappings = headerMappings + map.mappings;
+    }
+
+    return {
+      // TODO: standardize on source or code for naming
+      source: header + file.code + footer,
+      map
     };
   }
 
-  destroy() {
-    // TODO: This is only needed for the wasm version, and we should be using the node version
-    this.sourceMap.delete();
+  toStringWithMap() {
+    let source;
+    let map;
+
+    if (this._addedFiles < 2) {
+      ({ source, map } = this._buildWithBiasedMap());
+    } else {
+      ({source, map} = this._buildWithMap())
+    }
+
+    return {
+      source,
+      sourceMap: map
+    };
   }
 }
+
+['toStringWithMap', '_buildWithMap', '_buildWithBiasedMap'].forEach(method => {
+  CombinedFile.prototype[method] =
+    Profile(`CombinedFile#${method}`, CombinedFile.prototype[method]);
+});
 
 // Given a list of lines (not newline-terminated), returns a string placing them
 // in a pretty banner of width bannerWidth. All lines must have length at most
