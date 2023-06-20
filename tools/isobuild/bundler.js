@@ -1218,7 +1218,19 @@ class Target {
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).
       const unibuildAssets = {};
-      for (const resource of resources) {
+      const getResource = async (r) => {
+        if (typeof r === "function") {
+          return r();
+        }
+        return r;
+      };
+
+      for (const r of resources) {
+        const resource = await getResource(r);
+        if (!resource) {
+          continue;
+        }
+
         if (resource.type !== 'asset') {
           continue;
         }
@@ -1261,7 +1273,11 @@ class Target {
       }
 
       // Now look for the other kinds of resources.
-      for (const resource of resources) {
+      for (const r of resources) {
+        const resource = await getResource(r);
+        if (!resource) {
+          continue;
+        }
         if (resource.type === 'asset') {
           // already handled
           continue;
