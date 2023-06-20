@@ -48,7 +48,7 @@ const USE_OLD_LINKER = process.env.METEOR_LINKER !== 'new';
 // options include name, imports, exports, useGlobalNamespace,
 // combinedServePath, all of which have the same meaning as they do when passed
 // to import().
-var Module = function (options) {
+var Module = function (files, options) {
   var self = this;
 
   // module name or null
@@ -58,7 +58,9 @@ var Module = function (options) {
   self.bundleArch = options.bundleArch;
 
   // files in the module. array of File
-  self.files = [];
+  self.files = files;
+
+  self.usedFiles = new Set();
 
   // options
   self.useGlobalNamespace = options.useGlobalNamespace;
@@ -116,103 +118,6 @@ Object.assign(Module.prototype, {
     return assignedVariables;
   }),
 
-  // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
-  // 'sourcePath'
-  getPrelinkedFiles: Profile("linker Module#getPrelinkedFiles", async function () {
-    var self = this;
-
-    const haveMeteorInstallOptions =
-      self.files.some(file => file.meteorInstallOptions);
-
-    // Find the maximum line length.
-    var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]);
-
-    const result = {
-      // This object will be populated with .source, .servePath,
-      // .sourceMap, and (optionally) .exportsName properties before being
-      // returned from this method in a singleton array.
-      servePath: self.combinedServePath,
-      hash: watch.sha1(
-        JSON.stringify(self.files.map(file => file._inputHash))
-      ),
-    };
-
-    const results = [result];
-    // An array of strings and SourceNode objects.
-    let chunks = [];
-    let fileCount = 0;
-
-    // Emit each file
-    if (haveMeteorInstallOptions) {
-      const trees = await self._buildModuleTrees(results, sourceWidth);
-      fileCount = await self._chunkifyModuleTrees(trees, chunks, sourceWidth);
-
-      // During the full link, code will be added to pass these to the
-      // core runtime so it can handle evaluating the modules
-      result.eagerModulePaths = [];
-      result.mainModulePath = null;
-
-      for (const file of this.files) {
-        if (file.bare) {
-          chunks.push('\n', await file.getPrelinkedOutput({
-            sourceWidth
-          }));
-        } else if (!file.lazy) {
-          result.eagerModulePaths.push(file.absModuleId);
-          if (file.mainModule) {
-            result.mainModulePath = file.absModuleId;
-          }
-
-          if (self.addEagerRequires) {
-            chunks.push(`\nrequire(${JSON.stringify(file.absModuleId)});`);
-          }
-        }
-      }
-    } else {
-      for (const file of self.files) {
-        if (file.lazy) {
-          // Ignore lazy files unless we have a module system.
-          continue;
-        }
-
-        if (!_.isEmpty(chunks)) {
-          chunks.push("\n\n\n\n\n\n");
-        }
-
-        chunks.push(await file.getPrelinkedOutput({
-          sourceWidth: sourceWidth,
-        }));
-
-        ++fileCount;
-      }
-    }
-
-    var node = new sourcemap.SourceNode(null, null, null, chunks);
-
-    await Profile.time(
-      'getPrelinkedFiles toStringWithSourceMap',
-      function () {
-        if (fileCount > 0) {
-          var swsm = node.toStringWithSourceMap({
-            file: self.combinedServePath
-          });
-          result.source = swsm.code;
-          result.sourceMap = swsm.map.toJSON();
-          if (! result.sourceMap.mappings) {
-            result.sourceMap = null;
-          }
-        } else {
-          // If there were no files in this bundle, we do not need to
-          // generate a source map.
-          result.source = node.toString();
-          result.sourceMap = null;
-        }
-      }
-    );
-
-    return results;
-  }),
-
   // Builds a tree of nested objects where the properties are names of
   // files or directories, and the values are either nested objects
   // (representing directories) or File objects (representing modules).
@@ -232,6 +137,7 @@ Object.assign(Module.prototype, {
     for (const file of this.files) {
       if (file.bare) {
         // Bare files will be added after the module tree
+        this.usedFiles.add(file);
         continue;
       }
 
@@ -241,6 +147,8 @@ Object.assign(Module.prototype, {
         // bundle.
         continue;
       }
+
+      this.usedFiles.add(file);
 
       const tree = getTree(file);
 
@@ -297,10 +205,10 @@ Object.assign(Module.prototype, {
   // Take the tree generated in getPrelinkedFiles and populate the chunks
   // array with strings and SourceNode objects that can be combined into a
   // single SourceNode object. Return the count of modules in the tree.
-  async _chunkifyModuleTrees(trees, chunks, sourceWidth) {
+  async _chunkifyModuleTrees(trees, combinedFile, sourceWidth) {
     const self = this;
 
-    assert.ok(_.isArray(chunks));
+    // assert.ok(_.isArray(chunks));
     assert.ok(_.isNumber(sourceWidth));
 
     let moduleCount = 0;
@@ -308,7 +216,7 @@ Object.assign(Module.prototype, {
     async function walk(t) {
       if (Array.isArray(t)) {
         ++moduleCount;
-        chunks.push(JSON.stringify(t, null, 2));
+        combinedFile.addGeneratedCode(JSON.stringify(t, null, 2));
       } else if (typeof t === "string") {
         // This case can happen if a package.json file has an
         // object-valued "browser" field that aliases this module to a
@@ -319,53 +227,55 @@ Object.assign(Module.prototype, {
         // ambiguity, since identifiers in package.json "browser" fields
         // are meant to be resolved relative to the package.json file.
         ++moduleCount;
-        chunks.push(JSON.stringify(t));
+        combinedFile.addGeneratedCode(JSON.stringify(t));
       } else if (t === false) {
         // This case can happen if a package.json file has an
         // object-valued "browser" field that maps this module to `false`,
         // indicating it should be replaced by an empty stub.
         ++moduleCount;
-        chunks.push("function(){}");
+        combinedFile.addGeneratedCode("function(){}");
       } else if (t instanceof File) {
         ++moduleCount;
 
-        chunks.push(await t.getPrelinkedOutput({
-          sourceWidth,
-        }));
+        const { header, code, map, footer } = await t.getPrelinkedOutputFast();
+        combinedFile.addGeneratedCode(header);
+        combinedFile.addCodeWithMap(t.sourcePath, code, map);
+        combinedFile.addGeneratedCode(footer);
       } else if (_.isObject(t)) {
-        chunks.push("{");
+        combinedFile.addGeneratedCode("{");
         const keys = Object.keys(t);
         for (const [i, key] of keys.entries()) {
-          chunks.push(JSON.stringify(key), ":");
+          combinedFile.addGeneratedCode(JSON.stringify(key) + ":");
           await walk(t[key]);
           if (i < keys.length - 1) {
-            chunks.push(",");
+            combinedFile.addGeneratedCode(",");
           }
         }
-        chunks.push("}");
+        combinedFile.addGeneratedCode("}");
       }
     }
 
-    const chunksLengthBeforeWalk = chunks.length;
+    // const chunksLengthBeforeWalk = chunks.length;
 
     if (trees.size > 0) {
-      chunks.push("var require = ");
+      combinedFile.addGeneratedCode("var require = ");
     }
 
     // Emit one meteorInstall call per distinct meteorInstallOptions
     // object, since the options apply to all modules installed by a given
     // call to meteorInstall.
     for (const [options, tree] of trees) {
-      chunks.push("meteorInstall(");
+      combinedFile.addGeneratedCode("meteorInstall(");
       await walk(tree);
-      chunks.push(",", self._stringifyInstallOptions(options), ");\n");
+      combinedFile.addGeneratedCode("," + self._stringifyInstallOptions(options) + ");\n");
     }
 
-    if (moduleCount === 0) {
-      // If no files were actually added to the chunks array, roll back
-      // to before the `var require = meteorInstall(` chunk.
-      chunks.length = chunksLengthBeforeWalk;
-    }
+    // TODO: fix this
+    // if (moduleCount === 0) {
+    //   // If no files were actually added to the chunks array, roll back
+    //   // to before the `var require = meteorInstall(` chunk.
+    //   chunks.length = chunksLengthBeforeWalk;
+    // }
 
     return moduleCount;
   },
@@ -674,7 +584,7 @@ Object.assign(File.prototype, {
 
       // It's important for the code to end with a newline, so that a
       // trailing // comment can't snarf code appended after it.
-      if (code.endsWith('\n')) {
+      if (!code.endsWith('\n')) {
         code += '\n';
       }
     } else {
@@ -830,6 +740,7 @@ function prelinkWithoutModules(files, isApp) {
 
   for (let file of files) {
     if (file.lazy) {
+      // TODO: there should be no lazy files here
       // lazy files can only be used if there is a module system
       continue;
     }
@@ -857,6 +768,59 @@ function prelinkWithoutModules(files, isApp) {
   };
 }
 
+// TODO: this shouldn't need to be async
+async function prelinkWithModules(files, name, bundleArch, isApp) {
+  let mainBundle = new CombinedFile();
+  let dynamicFiles = [];
+  let eagerModulePaths = [];
+  let mainModulePath = null;
+
+  if (name === null && bundleArch.startsWith('os.')) {
+    debugger;
+  }
+ 
+  let module = new Module(files, {
+    name,
+    // TODO: is bundle arch used?
+    bundleArch,
+    useGlobalNamespace: isApp
+  });
+  // TODO: do we need to calculate a hash?
+  // TODO: remove sourceWidth option
+  // TODO: do not use internal methods on module
+  const trees = await module._buildModuleTrees(dynamicFiles, 80);
+  const fileCount = await module._chunkifyModuleTrees(trees, mainBundle, 80);
+
+  for (const file of files) {
+    if (file.bare) {
+      mainBundle.addEmptyLines(1);
+
+      const { header, code, map, footer } = file.getPrelinkedOutputFast();
+      mainBundle.addGeneratedCode(header);
+      mainBundle.addCodeWithMap(file.sourcePath, code, map);
+      mainBundle.addGeneratedCode(footer);
+    } else if (!file.lazy) {
+      eagerModulePaths.push(file.absModuleId);
+      if (file.mainModule) {
+        mainModulePath = file.absModuleId;
+      }
+    }
+  }
+
+  // TODO: if there are no files, we can skip generating a sourcemap?
+  let output = Profile.time('prelinkWithoutModules toStringWithMap', () =>
+    mainBundle.toStringWithMap());
+  mainBundle.destroy();
+
+  return {
+    mainBundle: output,
+    dynamicFiles,
+    eagerModulePaths,
+    mainModulePath,
+    usedFiles: Array.from(module.usedFiles)
+  };
+}
+
 class CombinedFile {
   constructor() {
     this.sourceMap = new SourceMap();
@@ -875,6 +839,7 @@ class CombinedFile {
     this.lineOffset += lineCount;
   }
 
+  // TODO: add footer and header options
   addCodeWithMap(sourceName, code, map) {
     this.source += code;
 
@@ -977,6 +942,8 @@ var bannerPadding = function (bannerWidth) {
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
 export var prelink = Profile("linker.prelink", async function (options) {
+  return oldLinker.prelink(options);
+
   var module = new Module({
     name: options.name,
     combinedServePath: options.combinedServePath,
@@ -1219,9 +1186,7 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
   // it uses
   deps
 }) {
-  const hasModules = inputFiles.some(file => file.meteorInstallOptions);
-
-  if (hasModules || USE_OLD_LINKER ) {
+  if (USE_OLD_LINKER ) {
     return oldLinker.fullLink(
       inputFiles,
       {
@@ -1234,35 +1199,32 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
         includeSourceMapInstructions,
         deps
       }
-    );
-  }
+      );
+    }
 
   buildmessage.assertInJob();
+  
+  const hasModules = inputFiles.some(file => file.meteorInstallOptions);
 
   let filesToLink = inputFiles.map(file => new File(file, bundleArch));
 
+  let mainBundle;
   let dynamicFiles = [];
   let usedFiles = [];
   let mainModulePath;
   let eagerModulePaths;
-  let mainBundle;
 
   if (hasModules) {
-    throw new Error('TODO');
+    ({
+      mainBundle,
+      dynamicFiles,
+      usedFiles,
+      mainModulePath,
+      eagerModulePaths
+    } = await prelinkWithModules(filesToLink, name, bundleArch, isApp));
   } else {
     ({ mainBundle, usedFiles } = prelinkWithoutModules(filesToLink, isApp));
   }
-
-  // var module = new Module({
-  //   name,
-  //   bundleArch,
-  //   useGlobalNamespace: isApp,
-  //   combinedServePath,
-  //   // To support `/client/compatibility`, we can't use the runtime for the
-  //   // app on the client when TLA is disabled since it wraps all of
-  //   // the app code in a function. Instead, we have the module add eager requires.
-  //   addEagerRequires: !bundleArch.startsWith('os.') && isApp && !enableClientTLA
-  // });
 
   // Check if the core-runtime package will already be loaded
   // It is a dependency of the meteor package, and all packages depend
@@ -1271,19 +1233,6 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
   // The main situations it is not available is the core-runtime
   // package itself, or any build plugins with no dependencies
   let hasRuntime = deps.some(entry => entry.unordered !== true);
-
-  // _.each(inputFiles, file => module.addFile(file));
-
-  // var prelinkedFiles = await module.getPrelinkedFiles();
-
-  // let eagerModulePaths;
-  // let mainModulePath;
-  // _.each(prelinkedFiles, file => {
-  //   if (file.eagerModulePaths && file.eagerModulePaths.length > 0) {
-  //     eagerModulePaths = file.eagerModulePaths;
-  //     mainModulePath = file.mainModulePath;
-  //   }
-  // });
 
   if (!hasRuntime && (
     Object.keys(declaredExports).length > 0 ||
@@ -1359,5 +1308,5 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
     servePath: combinedServePath,
     // TODO: is source path ever used?
     // sourcePath: 
-  }], header, footer);
+  }], header, footer).concat(dynamicFiles);
 });
