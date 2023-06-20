@@ -12,6 +12,7 @@ import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
 import * as oldLinker from './old-linker';
+import SourceMap from '@parcel/source-map';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
@@ -649,6 +650,38 @@ Object.assign(File.prototype, {
   // Returns a SourceNode.
   getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
     return getPrelinkedOutputCached(this, options);
+  }),
+
+  getPrelinkedOutputFast: Profile('linker File#getPrelinkedOutputFast', function (options) {
+    let header = this.bare ? '' : this._getClosureHeader() + '\n\n';
+    let footer = this.bare ? '' : this._getClosureFooter();
+    let code = this.source;
+    let map = this.sourceMap || null
+
+    let pathNoSlash = convertColons(this.servePath.replace(/^\//, ""));
+    let bannerLines = [pathNoSlash];
+
+    if (this.bare) {
+      bannerLines.push('This file is in bare mode and is not in its own closure.');
+    }
+
+    header += banner(bannerLines) + '\n';
+
+    if (code) {
+      if (this.bare) {
+        // TODO: handle app bare files
+      }
+
+      // It's important for the code to end with a newline, so that a
+      // trailing // comment can't snarf code appended after it.
+      if (code.endsWith('\n')) {
+        code += '\n';
+      }
+    } else {
+      code = '';
+    }
+
+    return { header, code, map, footer };
   })
 });
 
@@ -789,6 +822,88 @@ async function getOutputWithSourceMapCached(file, servePath, options) {
   DYNAMIC_PRELINKED_OUTPUT_CACHE.set(key, result);
 
   return result;
+}
+
+function prelinkWithoutModules(files, isApp) {
+  let mainBundle = new CombinedFile();
+  let usedFiles = [];
+
+  for (let file of files) {
+    if (file.lazy) {
+      // lazy files can only be used if there is a module system
+      continue;
+    }
+
+    if (usedFiles.length > 0) {
+      mainBundle.addEmptyLines(6);
+    }
+
+    const { header, code, map, footer } = file.getPrelinkedOutputFast();
+    mainBundle.addGeneratedCode(header);
+    mainBundle.addCodeWithMap(file.sourcePath, code, map);
+    mainBundle.addGeneratedCode(footer);
+
+    usedFiles.push(file);
+  }
+
+  // TODO: if there are no files, we can skip generating a sourcemap?
+  let output = Profile.time('prelinkWithoutModules toStringWithMap', () =>
+    mainBundle.toStringWithMap());
+  mainBundle.destroy();
+
+  return {
+    mainBundle: output,
+    usedFiles
+  };
+}
+
+class CombinedFile {
+  constructor() {
+    this.sourceMap = new SourceMap();
+    this.source = '';
+    this.lineOffset = 0;
+  }
+
+  addEmptyLines(lineCount) {
+    this.source += '\n'.repeat(lineCount);
+    this.lineOffset += lineCount;
+  }
+
+  addGeneratedCode(code) {
+    let lineCount = (code.match(/\n/g) || []).length;
+    this.source += code;
+    this.lineOffset += lineCount;
+  }
+
+  addCodeWithMap(sourceName, code, map) {
+    this.source += code;
+
+    if (map) {
+      this.sourceMap.addVLQMap(map, this.lineOffset);
+    } else {
+      this.sourceMap.addEmptyMap(sourceName, code, this.lineOffset);
+    }
+
+    let lineCount = (code.match(/\n/g) || []).length;
+    this.lineOffset += lineCount;
+  }
+
+  toStringWithMap() {
+    let map = this.sourceMap.toVLQ();
+    return {
+      source: this.source,
+      sourceMap: {
+        ...map,
+        // TODO: it should already have a version. This seems like a bug
+        version: 3
+      }
+    };
+  }
+
+  destroy() {
+    // TODO: This is only needed for the wasm version, and we should be using the node version
+    this.sourceMap.delete();
+  }
 }
 
 // Given a list of lines (not newline-terminated), returns a string placing them
@@ -1074,7 +1189,7 @@ function wrapWithHeaderAndFooter(files, header, footer) {
 //
 // Output is an array of output files: objects with keys source, servePath,
 // sourceMap.
-export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
+export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
   // True if we're linking the application (as opposed to a
   // package). Among other consequences, this makes the top level
   // namespace be the same as the global namespace, so that symbols are
@@ -1104,7 +1219,9 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // it uses
   deps
 }) {
-  if (USE_OLD_LINKER ) {
+  const hasModules = inputFiles.some(file => file.meteorInstallOptions);
+
+  if (hasModules || USE_OLD_LINKER ) {
     return oldLinker.fullLink(
       inputFiles,
       {
@@ -1122,16 +1239,30 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
 
   buildmessage.assertInJob();
 
-  var module = new Module({
-    name,
-    bundleArch,
-    useGlobalNamespace: isApp,
-    combinedServePath,
-    // To support `/client/compatibility`, we can't use the runtime for the
-    // app on the client when TLA is disabled since it wraps all of
-    // the app code in a function. Instead, we have the module add eager requires.
-    addEagerRequires: !bundleArch.startsWith('os.') && isApp && !enableClientTLA
-  });
+  let filesToLink = inputFiles.map(file => new File(file, bundleArch));
+
+  let dynamicFiles = [];
+  let usedFiles = [];
+  let mainModulePath;
+  let eagerModulePaths;
+  let mainBundle;
+
+  if (hasModules) {
+    throw new Error('TODO');
+  } else {
+    ({ mainBundle, usedFiles } = prelinkWithoutModules(filesToLink, isApp));
+  }
+
+  // var module = new Module({
+  //   name,
+  //   bundleArch,
+  //   useGlobalNamespace: isApp,
+  //   combinedServePath,
+  //   // To support `/client/compatibility`, we can't use the runtime for the
+  //   // app on the client when TLA is disabled since it wraps all of
+  //   // the app code in a function. Instead, we have the module add eager requires.
+  //   addEagerRequires: !bundleArch.startsWith('os.') && isApp && !enableClientTLA
+  // });
 
   // Check if the core-runtime package will already be loaded
   // It is a dependency of the meteor package, and all packages depend
@@ -1141,18 +1272,18 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // package itself, or any build plugins with no dependencies
   let hasRuntime = deps.some(entry => entry.unordered !== true);
 
-  _.each(inputFiles, file => module.addFile(file));
+  // _.each(inputFiles, file => module.addFile(file));
 
-  var prelinkedFiles = await module.getPrelinkedFiles();
+  // var prelinkedFiles = await module.getPrelinkedFiles();
 
-  let eagerModulePaths;
-  let mainModulePath;
-  _.each(prelinkedFiles, file => {
-    if (file.eagerModulePaths && file.eagerModulePaths.length > 0) {
-      eagerModulePaths = file.eagerModulePaths;
-      mainModulePath = file.mainModulePath;
-    }
-  });
+  // let eagerModulePaths;
+  // let mainModulePath;
+  // _.each(prelinkedFiles, file => {
+  //   if (file.eagerModulePaths && file.eagerModulePaths.length > 0) {
+  //     eagerModulePaths = file.eagerModulePaths;
+  //     mainModulePath = file.mainModulePath;
+  //   }
+  // });
 
   if (!hasRuntime && (
     Object.keys(declaredExports).length > 0 ||
@@ -1165,10 +1296,16 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // Do static analysis to compute module-scoped variables. Error recovery from
   // the static analysis mutates the sources, so this has to be done before
   // concatenation.
-  let assignedVariables;
+  let packageVariables = new Set(declaredExports);
   if (!isApp) {
     const failed = await buildmessage.enterJob('computing assigned variables', async () => {
-      assignedVariables = await module.computeAssignedVariables();
+      await Profile.time('linker-computeAssignedVariables', async () => {
+        for (const file of usedFiles) {
+          let globals = await file.computeAssignedVariables();
+          globals.forEach(name => packageVariables.add(name));
+        }
+      });
+
       return buildmessage.jobHasMessages();
     });
     if (failed) {
@@ -1182,7 +1319,8 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // we filter the set of imported symbols according to declaredExports.
   // When there are no declaredExports, this effectively slims the package
   // bundle down to just Package[name] = {}.
-  if (!isApp && prelinkedFiles.every(file => ! file.source)) {
+  // TODO: should this also check the dynamic imports?
+  if (!isApp && !mainBundle.source) {
     const newImports = {};
     declaredExports.forEach(name => {
       if (_.has(imports, name)) {
@@ -1197,7 +1335,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   var header = getHeader({
     name,
     imports,
-    packageVariables: _.union(assignedVariables, declaredExports),
+    packageVariables: Array.from(packageVariables),
     hasRuntime,
     deps
   });
@@ -1215,5 +1353,11 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
     header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
   }
 
-  return wrapWithHeaderAndFooter(prelinkedFiles, header, footer);
+  return wrapWithHeaderAndFooter([{
+    source: mainBundle.source,
+    sourceMap: mainBundle.sourceMap,
+    servePath: combinedServePath,
+    // TODO: is source path ever used?
+    // sourcePath: 
+  }], header, footer);
 });
