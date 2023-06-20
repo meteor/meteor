@@ -276,9 +276,7 @@ if (!this.isSimulation) {
 The main thing enabled by the `ValidationError` convention is integration between Methods and the forms that call them. In general, your app is likely to have a one-to-one mapping of forms in the UI to Methods. First, let's define a Method for our business logic:
 
 ```js
-// Define a regular expression for email validation.
-// SimpleSchema do not support built-in validations.
-// Follow the doc for more details: https://github.com/longshotlabs/simpl-schema#regex
+// Define a regular expression for email and amount validation.
 const emailRegEx = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
 const amountRegEx = /^\d*\.(\d\d)?$/;
 
@@ -305,6 +303,8 @@ export const insert = new ValidatedMethod({
   }
 });
 ```
+
+We encourage you to create custom regEx expressions for security reasons, for fields like `email` and `amout`. For Meteor related functionality, like `IDs`, you can use the `SimpleSchema.RegEx.Id` expression. Check out the [Simple Schema docs](https://github.com/longshotlabs/simpl-schema#regex) for more information.
 
 Let's define an HTML form:
 
