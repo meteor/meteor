@@ -1,4 +1,4 @@
-import {debug} from "util";
+import { debug } from "util";
 
 var _ = require('underscore');
 var sourcemap = require('source-map');
@@ -11,11 +11,10 @@ import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
-import * as oldLinker from './old-linker';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
-const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024*1024*20;
+const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024 * 1024 * 20;
 
 // Cache individual files prelinked
 const APP_PRELINK_CACHE = new LRU({
@@ -38,7 +37,6 @@ var packageDot = function (name) {
 };
 
 const enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
-const USE_OLD_LINKER = process.env.METEOR_LINKER !== 'new';
 
 ///////////////////////////////////////////////////////////////////////////////
 // Module
@@ -108,7 +106,7 @@ Object.assign(Module.prototype, {
     var assignedVariables = [];
     for (const file of self.files) {
       assignedVariables = assignedVariables.concat(
-          await file.computeAssignedVariables());
+        await file.computeAssignedVariables());
     }
     assignedVariables = _.uniq(assignedVariables);
 
@@ -127,9 +125,9 @@ Object.assign(Module.prototype, {
     // then our job is much simpler. And we can get away with
     // preserving the line numbers.
     if (self.useGlobalNamespace &&
-        ! haveMeteorInstallOptions) {
+      !haveMeteorInstallOptions) {
       // Ignore lazy files unless we have a module system.
-      const eagerFiles = _.filter(self.files, file => ! file.lazy);
+      const eagerFiles = _.filter(self.files, file => !file.lazy);
 
       const ret = [];
       for (const file of eagerFiles) {
@@ -145,15 +143,15 @@ Object.assign(Module.prototype, {
 
         const node = await file.getPrelinkedOutput({ preserveLineNumbers: true });
         const results = await Profile.time(
-            "toStringWithSourceMap (app)", () => {
-              return node.toStringWithSourceMap({
-                file: file.servePath
-              }); // results has 'code' and 'map' attributes
-            }
+          "toStringWithSourceMap (app)", () => {
+            return node.toStringWithSourceMap({
+              file: file.servePath
+            }); // results has 'code' and 'map' attributes
+          }
         );
 
         let sourceMap = results.map.toJSON();
-        if (! sourceMap.mappings) {
+        if (!sourceMap.mappings) {
           sourceMap = null;
         }
 
@@ -170,11 +168,11 @@ Object.assign(Module.prototype, {
       }
 
       // TODO[fibers]: This is a temporary hack to make sure that we don't return the same
-        // file twice. I'm not sure why, but self.files sometimes contains the same file twice.
-        // these tool tests fail without this hack:
-        // - assets - unicode asset names are allowed
-        // - javascript hot code push
-        // and probably others
+      // file twice. I'm not sure why, but self.files sometimes contains the same file twice.
+      // these tool tests fail without this hack:
+      // - assets - unicode asset names are allowed
+      // - javascript hot code push
+      // and probably others
       const uniqueHashes = [...new Set(ret.map((f) => f.hash))];
       return uniqueHashes.map((h) => ret.find((f) => f.hash === h));
     }
@@ -255,7 +253,7 @@ Object.assign(Module.prototype, {
           });
           result.source = swsm.code;
           result.sourceMap = swsm.map.toJSON();
-          if (! result.sourceMap.mappings) {
+          if (!result.sourceMap.mappings) {
             result.sourceMap = null;
           }
         } else {
@@ -280,7 +278,7 @@ Object.assign(Module.prototype, {
     const trees = new Map();
 
     function getTree({ meteorInstallOptions }) {
-      if (! trees.has(meteorInstallOptions)) {
+      if (!trees.has(meteorInstallOptions)) {
         trees.set(meteorInstallOptions, {});
       }
       return trees.get(meteorInstallOptions);
@@ -292,7 +290,7 @@ Object.assign(Module.prototype, {
         continue;
       }
 
-      if (file.lazy && ! file.imported) {
+      if (file.lazy && !file.imported) {
         // If the file is not eagerly evaluated, and no other files
         // import or require it, then it need not be included in the
         // bundle.
@@ -309,7 +307,7 @@ Object.assign(Module.prototype, {
       if (file.isDynamic()) {
         const servePath = files.pathJoin("dynamic", file.absModuleId);
         const { code: source, map } =
-            await getOutputWithSourceMapCached(file, servePath, { sourceWidth })
+          await getOutputWithSourceMapCached(file, servePath, { sourceWidth })
 
         results.push({
           source,
@@ -321,13 +319,13 @@ Object.assign(Module.prototype, {
         const stubArray = file.deps.slice(0);
 
         if (file.absModuleId.endsWith("/package.json") &&
-            file.jsonData) {
+          file.jsonData) {
           const stub = {};
 
           function tryMain(name) {
             const value = file.jsonData[name];
             if (_.isString(value) ||
-                _.isObject(value)) {
+              _.isObject(value)) {
               stub[name] = value;
             }
           }
@@ -434,7 +432,7 @@ Object.assign(Module.prototype, {
       return optionsString;
     }
 
-    if (! this.files.some(file => file.isDynamic())) {
+    if (!this.files.some(file => file.isDynamic())) {
       // If the package contains no files that can be imported
       // dynamically, then we don't need to provide an options.eval
       // function for evaluating dynamic modules.
@@ -494,7 +492,7 @@ var buildSymbolTree = function (symbolMap) {
 
     var walk = ret;
     _.each(parts, function (part) {
-      if (! (part in walk)) {
+      if (!(part in walk)) {
         walk[part] = {};
       }
       walk = walk[part];
@@ -599,9 +597,9 @@ export function File(inputFile, arch) {
 function getNonDynamicDeps(inputFileDeps) {
   const nonDynamicDeps = Object.create(null);
 
-  if (! _.isEmpty(inputFileDeps)) {
+  if (!_.isEmpty(inputFileDeps)) {
     _.each(inputFileDeps, (info, id) => {
-      if (! info.dynamic) {
+      if (!info.dynamic) {
         nonDynamicDeps[id] = info;
       }
     });
@@ -644,7 +642,7 @@ Object.assign(File.prototype, {
       if (self.sourceMap) {
         var parsed = await new sourcemap.SourceMapConsumer(self.sourceMap);
         var original = parsed.originalPositionFor(
-          {line: e.lineNumber, column: e.column - 1});
+          { line: e.lineNumber, column: e.column - 1 });
         if (original.source) {
           errorOptions.file = original.source;
           errorOptions.line = original.line;
@@ -734,7 +732,7 @@ const getPrelinkedOutputCached = require("optimism").wrap(
     var chunks = [];
     var pathNoSlash = convertColons(file.servePath.replace(/^\//, ""));
 
-    if (! file.bare) {
+    if (!file.bare) {
       var closureHeader = file._getClosureHeader();
       chunks.push(
         closureHeader,
@@ -742,7 +740,7 @@ const getPrelinkedOutputCached = require("optimism").wrap(
       );
     }
 
-    if (! preserveLineNumbers) {
+    if (!preserveLineNumbers) {
       // Banner
       var bannerLines = [pathNoSlash];
 
@@ -784,7 +782,7 @@ const getPrelinkedOutputCached = require("optimism").wrap(
 
     // Footer
     if (file.bare) {
-      if (! preserveLineNumbers) {
+      if (!preserveLineNumbers) {
         chunks.push(dividerLine(bannerWidth), "\n");
       }
     } else {
@@ -802,23 +800,23 @@ const getPrelinkedOutputCached = require("optimism").wrap(
 
     return new sourcemap.SourceNode(null, null, null, chunks);
   }, {
-    // Store at most 4096 Files worth of prelinked output in this cache.
-    max: Math.pow(2, 12),
+  // Store at most 4096 Files worth of prelinked output in this cache.
+  max: Math.pow(2, 12),
 
-    makeCacheKey(file, options) {
-      if (options.disableCache) {
-        return;
-      }
-
-      return JSON.stringify({
-        hash: file._inputHash,
-        arch: file.bundleArch,
-        bare: file.bare,
-        servePath: file.servePath,
-        options,
-      });
+  makeCacheKey(file, options) {
+    if (options.disableCache) {
+      return;
     }
+
+    return JSON.stringify({
+      hash: file._inputHash,
+      arch: file.bundleArch,
+      bare: file.bare,
+      servePath: file.servePath,
+      options,
+    });
   }
+}
 );
 
 async function getOutputWithSourceMapCached(file, servePath, options) {
@@ -955,7 +953,7 @@ var getHeader = function (options) {
 
   var isApp = options.name === null;
   var chunks = [];
-   let orderedDeps = [];
+  let orderedDeps = [];
 
   options.deps.forEach(dep => {
     if (!dep.unordered) {
@@ -964,9 +962,9 @@ var getHeader = function (options) {
   });
 
   chunks.push(
-      `Package["core-runtime"].queue("${options.name}", [`,
-      orderedDeps.join(', '),
-      '], function () {'
+    `Package["core-runtime"].queue("${options.name}", [`,
+    orderedDeps.join(', '),
+    '], function () {'
   );
 
   if (isApp) {
@@ -981,7 +979,7 @@ var getHeader = function (options) {
 
   const packageVariables = _.filter(
     options.packageVariables,
-    name => ! _.has(options.imports, name),
+    name => !_.has(options.imports, name),
   );
 
   if (!_.isEmpty(packageVariables)) {
@@ -1013,7 +1011,7 @@ function getImportCode(imports, header, omitVar) {
   // Generate output
   var buf = header;
   _.each(tree, function (node, key) {
-    buf += (omitVar ? "" : "var " ) +
+    buf += (omitVar ? "" : "var ") +
       key + " = " + writeSymbolTree(node) + ";\n";
   });
   buf += "\n";
@@ -1021,7 +1019,7 @@ function getImportCode(imports, header, omitVar) {
   return buf;
 }
 
-function getFooter ({
+function getFooter({
   name,
   exported,
   mainModulePath,
@@ -1036,7 +1034,7 @@ function getFooter ({
   let chunks = [];
   let returnObj = Object.create(null);
 
-  if (! _.isEmpty(exported)) {
+  if (!_.isEmpty(exported)) {
     const scratch = {};
     _.each(exported, symbol => scratch[symbol] = symbol);
     const symbolTree = writeSymbolTree(buildSymbolTree(scratch), 4);
@@ -1058,7 +1056,7 @@ function getFooter ({
   chunks.push('return {\n');
 
   let entries = Object.entries(returnObj);
-  entries.forEach(([ key, value ], index) => {
+  entries.forEach(([key, value], index) => {
     chunks.push(`  ${key}: ${value}`);
     if (index !== entries.length - 1) {
       chunks.push(',\n');
@@ -1162,22 +1160,6 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // it uses
   deps
 }) {
-  if (USE_OLD_LINKER ) {
-    return oldLinker.fullLink(
-      inputFiles,
-      {
-        isApp,
-        bundleArch,
-        combinedServePath,
-        name,
-        declaredExports,
-        imports,
-        includeSourceMapInstructions,
-        deps
-      }
-    );
-  }
-
   buildmessage.assertInJob();
 
   var module = new Module({
@@ -1253,7 +1235,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
       return wrapWithHeaderAndFooter(prelinkedFiles, header, footer);
     }
 
-    if (! _.isEmpty(imports)) {
+    if (!_.isEmpty(imports)) {
       prelinkedFiles.unshift({
         source: getImportCode(
           imports,
@@ -1285,7 +1267,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // we filter the set of imported symbols according to declaredExports.
   // When there are no declaredExports, this effectively slims the package
   // bundle down to just Package[name] = {}.
-  if (prelinkedFiles.every(file => ! file.source)) {
+  if (prelinkedFiles.every(file => !file.source)) {
     const newImports = {};
     declaredExports.forEach(name => {
       if (_.has(imports, name)) {
