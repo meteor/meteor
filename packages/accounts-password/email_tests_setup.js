@@ -55,7 +55,7 @@ Meteor.methods(
         check(email, String);
         const userId = await Accounts.createUser({ email });
         await Accounts.sendEnrollmentEmail(userId);
-        return await Meteor.users.findOne(userId);
+        return await Meteor.users.findOneAsync(userId);
       }
   }
 );
