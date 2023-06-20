@@ -41,6 +41,8 @@ var packageDot = function (name) {
 const enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
 const USE_OLD_LINKER = process.env.METEOR_LINKER !== 'new';
 
+const MIN_BANNER_WIDTH = 80;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Module
 ///////////////////////////////////////////////////////////////////////////////
@@ -60,7 +62,7 @@ Object.assign(Module.prototype, {
   // files or directories, and the values are either nested objects
   // (representing directories) or File objects (representing modules).
   // Bare files and lazy files that are never imported are ignored.
-  _buildModuleTrees(dynamicFiles, sourceWidth) {
+  _buildModuleTrees(dynamicFiles) {
     // Map from meteorInstallOptions objects to trees of File objects for
     // all non-dynamic modules.
     const trees = new Map();
@@ -145,11 +147,10 @@ Object.assign(Module.prototype, {
   // Take the tree generated in getPrelinkedFiles and populate the chunks
   // array with strings and SourceNode objects that can be combined into a
   // single SourceNode object. Return the count of modules in the tree.
-  _chunkifyModuleTrees(trees, combinedFile, sourceWidth) {
+  _chunkifyModuleTrees(trees, combinedFile) {
     const self = this;
 
-    // assert.ok(_.isArray(chunks));
-    assert.ok(_.isNumber(sourceWidth));
+    assert.ok(combinedFile instanceof CombinedFile);
 
     let moduleCount = 0;
 
@@ -516,6 +517,7 @@ Object.assign(File.prototype, {
       bannerLines.push('This file is in bare mode and is not in its own closure.');
     }
 
+    // TODO: add divider line to footer
     header += banner(bannerLines) + '\n';
 
     if (code) {
@@ -709,17 +711,12 @@ const prelinkWithModules = Profile('linker prelinkWithModules', (files, name, is
   let dynamicFiles = [];
   let eagerModulePaths = [];
   let mainModulePath = null;
-
-  if (name === null && bundleArch.startsWith('os.')) {
-    debugger;
-  }
  
   let module = new Module(files, isApp);
   // TODO: do we need to calculate a hash?
-  // TODO: remove sourceWidth option
   // TODO: do not use internal methods on module
-  const trees = module._buildModuleTrees(dynamicFiles, 80);
-  const fileCount = module._chunkifyModuleTrees(trees, mainBundle, 80);
+  const trees = module._buildModuleTrees(dynamicFiles);
+  const fileCount = module._chunkifyModuleTrees(trees, mainBundle);
 
   for (const file of files) {
     if (file.bare) {
@@ -888,6 +885,7 @@ class CombinedFile {
 var banner = function (lines, bannerWidth) {
   if (!bannerWidth) {
     bannerWidth = 6 + _.max(lines, function (x) { return x.length; }).length;
+    bannerWidth = Math.max(bannerWidth, MIN_BANNER_WIDTH);
   }
 
   var divider = dividerLine(bannerWidth);
