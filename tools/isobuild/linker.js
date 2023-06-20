@@ -178,7 +178,7 @@ Object.assign(Module.prototype, {
       } else if (t instanceof File) {
         ++moduleCount;
 
-        const { header, code, map, footer } = t.getPrelinkedOutputFast();
+        const { header, code, map, footer } = t.getPrelinkedOutput();
         combinedFile.addGeneratedCode(header);
         combinedFile.addCodeWithMap(t.sourcePath, code, map);
         combinedFile.addGeneratedCode(footer);
@@ -493,18 +493,7 @@ Object.assign(File.prototype, {
       : "}).call(this);\n";
   },
 
-  // Options:
-  // - preserveLineNumbers: if true, decorate minimally so that line
-  //   numbers don't change between input and output. In this case,
-  //   sourceWidth is ignored.
-  // - sourceWidth: width in columns to use for the source code
-  //
-  // Returns a SourceNode.
-  getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
-    return getPrelinkedOutputCached(this, options);
-  }),
-
-  getPrelinkedOutputFast: Profile('linker File#getPrelinkedOutputFast', function (options) {
+  getPrelinkedOutput: Profile('linker File#getPrelinkedOutput', function (options) {
     let header = this.bare ? '' : this._getClosureHeader() + '\n\n';
     let code = this.source;
     let map = this.sourceMap || null
@@ -541,117 +530,6 @@ Object.assign(File.prototype, {
   })
 });
 
-const getPrelinkedOutputCached = require("optimism").wrap(
-  async function (file, options) {
-    var width = options.sourceWidth || 70;
-    var bannerWidth = width + 3;
-    var preserveLineNumbers = options.preserveLineNumbers;
-
-    if (file.sourceMap) {
-      // Honoring options.preserveLineNumbers is likely impossible if we
-      // have a source map, since file.source has probably already been
-      // transformed in a way that does not preserve line numbers. That's
-      // ok, though, because we have a source map, and we also annotate
-      // line numbers using comments (see above), just in case source maps
-      // are not supported.
-      preserveLineNumbers = false;
-    }
-
-    const result = {
-      code: file.source,
-      map: file.sourceMap || null,
-    };
-
-    var chunks = [];
-    var pathNoSlash = convertColons(file.servePath.replace(/^\//, ""));
-
-    if (! file.bare) {
-      var closureHeader = file._getClosureHeader();
-      chunks.push(
-        closureHeader,
-        preserveLineNumbers ? "" : "\n\n"
-      );
-    }
-
-    if (! preserveLineNumbers) {
-      // Banner
-      var bannerLines = [pathNoSlash];
-
-      if (file.bare) {
-        bannerLines.push(
-          "This file is in bare mode and is not in its own closure.");
-      }
-
-      chunks.push(banner(bannerLines, bannerWidth));
-
-      var blankLine = new Array(width + 1).join(' ') + " //\n";
-      chunks.push(blankLine);
-    }
-
-    if (result.code) {
-      // If we have a source map for result.code, push a SourceNode onto
-      // the chunks array that encapsulates that source map. If we don't
-      // have a source map, just push result.code.
-
-      let chunk = result.code;
-
-      if (result.map) {
-        const sourcemapConsumer = await new sourcemap.SourceMapConsumer(result.map);
-        chunk = sourcemap.SourceNode.fromStringWithSourceMap(
-          result.code,
-          sourcemapConsumer,
-        );
-        sourcemapConsumer.destroy();
-      }
-
-      chunks.push(chunk);
-
-      // It's important for the code to end with a newline, so that a
-      // trailing // comment can't snarf code appended after it.
-      if (result.code[result.code - 1] !== "\n") {
-        chunks.push("\n");
-      }
-    }
-
-    // Footer
-    if (file.bare) {
-      if (! preserveLineNumbers) {
-        chunks.push(dividerLine(bannerWidth), "\n");
-      }
-    } else {
-      const closureFooter = file._getClosureFooter();
-      if (preserveLineNumbers) {
-        chunks.push(closureFooter);
-      } else {
-        chunks.push(
-          dividerLine(bannerWidth),
-          "\n",
-          closureFooter
-        );
-      }
-    }
-
-    return new sourcemap.SourceNode(null, null, null, chunks);
-  }, {
-    // Store at most 4096 Files worth of prelinked output in this cache.
-    max: Math.pow(2, 12),
-
-    makeCacheKey(file, options) {
-      if (options.disableCache) {
-        return;
-      }
-
-      return JSON.stringify({
-        hash: file._inputHash,
-        arch: file.bundleArch,
-        bare: file.bare,
-        servePath: file.servePath,
-        options,
-      });
-    }
-  }
-);
-
 function getOutputWithSourceMapCached(file, servePath) {
   const key = JSON.stringify({
     hash: file._inputHash,
@@ -668,7 +546,7 @@ function getOutputWithSourceMapCached(file, servePath) {
 
   let combinedFile = new CombinedFile();
 
-  const { header, code, map, footer } = file.getPrelinkedOutputFast();
+  const { header, code, map, footer } = file.getPrelinkedOutput();
 
   combinedFile.addGeneratedCode(header);
   // TODO: should this use servePath or sourcePath?
@@ -696,7 +574,7 @@ const prelinkWithoutModules = Profile('linker prelinkWithoutModules', (files, is
       mainBundle.addEmptyLines(6);
     }
 
-    const { header, code, map, footer } = file.getPrelinkedOutputFast();
+    const { header, code, map, footer } = file.getPrelinkedOutput();
     mainBundle.addGeneratedCode(header);
     mainBundle.addCodeWithMap(file.sourcePath, code, map);
     mainBundle.addGeneratedCode(footer);
@@ -725,7 +603,7 @@ const prelinkWithModules = Profile('linker prelinkWithModules', (files, name, is
     if (file.bare) {
       mainBundle.addEmptyLines(1);
 
-      const { header, code, map, footer } = file.getPrelinkedOutputFast();
+      const { header, code, map, footer } = file.getPrelinkedOutput();
       mainBundle.addGeneratedCode(header);
       mainBundle.addCodeWithMap(file.sourcePath, code, map);
       mainBundle.addGeneratedCode(footer);
