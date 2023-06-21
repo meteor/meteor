@@ -111,7 +111,7 @@ Object.assign(Module.prototype, {
           dynamic: true,
         });
 
-        const stubArray = file.deps.slice(0);
+        const stubArray = file.getNonDynamicDeps();
 
         if (file.absModuleId.endsWith("/package.json") &&
             file.jsonData) {
@@ -334,6 +334,7 @@ export function File(inputFile, arch) {
   var self = this;
 
   // source code for this file (a string)
+  // TODO: is there a reason inputFile stores the data as a buffer?
   self.source = inputFile.data.toString('utf8');
 
   // hash of source (precalculated for *.js files, calculated here for files
@@ -356,10 +357,7 @@ export function File(inputFile, arch) {
     self.aliasId = inputFile.alias.absModuleId;
   }
 
-  // Module identifiers imported or required by this module, if any.
-  // Excludes dynamically imported dependencies, and may exclude
-  // dependencies already included in the non-dynamic initial bundle.
-  self.deps = getNonDynamicDeps(inputFile.deps);
+  self._allDeps = inputFile.deps;
 
   // True if the input file should not be evaluated eagerly.
   self.lazy = inputFile.lazy; // could be `true`, `false` or `undefined` <sigh>
@@ -391,21 +389,24 @@ export function File(inputFile, arch) {
   self.meteorInstallOptions = inputFile.meteorInstallOptions;
 };
 
-function getNonDynamicDeps(inputFileDeps) {
-  const nonDynamicDeps = Object.create(null);
-
-  if (! _.isEmpty(inputFileDeps)) {
-    _.each(inputFileDeps, (info, id) => {
-      if (! info.dynamic) {
-        nonDynamicDeps[id] = info;
-      }
-    });
-  }
-
-  return Object.keys(nonDynamicDeps);
-}
-
 Object.assign(File.prototype, {
+  // Module identifiers imported or required by this module, if any.
+  // Excludes dynamically imported dependencies, and may exclude
+  // dependencies already included in the non-dynamic initial bundle.
+  getNonDynamicDeps() {
+    const nonDynamicDeps = Object.create(null);
+
+    if (!_.isEmpty(this._allDeps)) {
+      _.each(this._allDeps, (info, id) => {
+        if (!info.dynamic) {
+          nonDynamicDeps[id] = info;
+        }
+      });
+    }
+
+    return Object.keys(nonDynamicDeps);
+  },
+
   // Return the globals in this file as an array of symbol names.  For
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
   // neither are declared in a scope enclosing the point where they're
@@ -564,6 +565,7 @@ const prelinkWithoutModules = Profile('linker prelinkWithoutModules', (files, is
   let mainBundle = new CombinedFile();
 
   files.forEach((file, index) => {
+    // TODO: there are lazy files, for example from mobile-experience
     // Lazy files can only be used if there is a module system.
     // We can easily allow lazy files by filtering them out,
     // but we will also want to make sure to exclude them when
