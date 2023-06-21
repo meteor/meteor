@@ -765,14 +765,14 @@ class CombinedFile {
 // in a pretty banner of width bannerWidth. All lines must have length at most
 // (bannerWidth - 6); if bannerWidth is not provided, the smallest width that
 // fits is used.
-var banner = function (lines, bannerWidth) {
+var banner = Profile('banner', function (lines, bannerWidth) {
   if (!bannerWidth) {
     bannerWidth = 6 + _.max(lines, function (x) { return x.length; }).length;
     bannerWidth = Math.max(bannerWidth, MIN_BANNER_WIDTH);
   }
 
   var divider = dividerLine(bannerWidth);
-  var spacer = "// " + new Array(bannerWidth - 6 + 1).join(' ') + " //\n";
+  var spacer = "// " + bannerPadding(bannerWidth - 6) + " //\n";
   var padding = bannerPadding(bannerWidth);
 
   var buf = divider + spacer;
@@ -781,12 +781,12 @@ var banner = function (lines, bannerWidth) {
   });
   buf += spacer + divider;
   return buf;
-};
+});
 var dividerLine = function (bannerWidth) {
-  return new Array(bannerWidth + 1).join('/') + "\n";
+  return '/'.repeat(bannerWidth) + '\n';
 };
 var bannerPadding = function (bannerWidth) {
-  return new Array(bannerWidth + 1).join(' ');
+  return ' '.repeat(bannerWidth);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
