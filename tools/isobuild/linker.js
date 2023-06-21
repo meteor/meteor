@@ -658,7 +658,7 @@ class CombinedFile {
       lines: lineCount
     });
 
-    this.lineOffset += lineCount;
+    this._lineOffset += lineCount;
   }
 
   _buildWithMap() {
