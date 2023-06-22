@@ -10,6 +10,50 @@
 
 
 
+## v2.13.0, 2023-05-XX
+
+### Highlights
+
+* Handled implicit collection creation oplog message by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12643).
+* Fix upsert logs when using WARN_WHEN_USING_OLD_API flag by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12640).
+* Updating mongo types by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12639).
+* Fix solid skeleton by [fredmaiaarantes](https://github.com/fredmaiaarantes) [PR](https://github.com/meteor/meteor/pull/12637).
+* Setting The Viewport meta tag on skeletons [fredmaiaarantes](https://github.com/fredmaiaarantes) [PR](https://github.com/meteor/meteor/pull/12636).
+* Update mongo.d.ts with projection [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12635).
+* Update guide code for GraphQL [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12619).
+* Twitter Whitelist issue resolved [Atharshoyeb](https://github.com/Atharshoyeb) [PR](https://github.com/meteor/meteor/pull/12369).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+TODO
+
+#### Meteor Version Release
+
+
+* `Command line`:
+    - Updated metatags for skeletons.
+    - Updated solidjs skeleton to be more idiomatic. 
+
+* `mongo@1.16.7`: 
+    TODO
+
+
+#### Special thanks to
+
+- [@radekmie](https://github.com/radekmie).
+- [@Grubba27](https://github.com/Grubba27).
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes).
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
+- [@Atharshoyeb](https://github.com/Atharshoyeb).
+
 ## v2.12.0, 2023-04-28
 
 ### Highlights
