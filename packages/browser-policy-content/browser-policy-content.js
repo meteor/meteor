@@ -65,7 +65,7 @@ var parseCsp = function (csp) {
       policy = policy.substring(0, policy.length - 1);
     var srcs = policy.split(" ");
     var directive = srcs[0];
-    if (srcs.includes(keywords.none))
+    if (srcs.indexOf(keywords.none) !== -1)
       cspSrcs[directive] = null;
     else
       cspSrcs[directive] = srcs.slice(1);
@@ -95,7 +95,7 @@ var prepareForCspDirective = function (directive) {
   cspSrcs = cspSrcs || {};
   cachedCsp = null;
   if (!has(cspSrcs, directive))
-    cspSrcs[directive] = new Array(cspSrcs["default-src"]);
+    cspSrcs[directive] = [...cspSrcs["default-src"]];
 };
 
 // Add `src` to the list of allowed sources for `directive`, with the
@@ -168,15 +168,15 @@ Object.assign(BrowserPolicy.content, {
     if (cachedCsp)
       return cachedCsp;
 
-    var header = Object.entries(cspSrcs).map(function (entry) {
-      var directive = entry[0];
-      var srcs = entry[1];
-      srcs = srcs || [];
-      if (isEmpty(srcs))
-        srcs = [keywords.none];
-      var directiveCsp = srcs.filter(function(value, index, array) {return array.indexOf(value) === index}).join(" ");
-      return directive + " " + directiveCsp + ";";
-    });
+      var header = Object.entries(cspSrcs).map(function (entry) {
+        var directive = entry[0];
+        var srcs = entry[1];
+        srcs = srcs || [];
+        if (isEmpty(srcs))
+          srcs = [keywords.none];
+        var directiveCsp = srcs.filter(function(value, index, array) {return array.indexOf(value) === index}).join(" ");
+        return directive + " " + directiveCsp + ";";
+      });
 
     header = header.join(" ");
     cachedCsp = header;
@@ -197,7 +197,7 @@ Object.assign(BrowserPolicy.content, {
 
   _keywordAllowed: function (directive, keyword) {
     return (cspSrcs[directive] &&
-            cspSrcs[directive].indexOf(keyword) !== -1);
+      cspSrcs[directive].indexOf(keyword) !== -1)
   },
 
   // Helpers for creating content security policies
