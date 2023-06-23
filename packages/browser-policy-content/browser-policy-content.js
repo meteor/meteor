@@ -95,7 +95,7 @@ var prepareForCspDirective = function (directive) {
   cspSrcs = cspSrcs || {};
   cachedCsp = null;
   if (!has(cspSrcs, directive))
-    cspSrcs[directive] = [].push(cspSrcs["default-src"]);
+    cspSrcs[directive] = [].concat(cspSrcs["default-src"]);
 };
 
 // Add `src` to the list of allowed sources for `directive`, with the
