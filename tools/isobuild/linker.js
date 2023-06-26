@@ -464,29 +464,32 @@ Object.assign(File.prototype, {
     return this.lazy && this.imported === "dynamic";
   },
 
-  _getClosureHeader: Profile('linker File#_getClosureHeader', function () {
+  _getClosureHeader () {
     if (this.meteorInstallOptions) {
-      const headerParts = ["function module("];
+      let params = '';
 
-      if (this.source.match(/\b__dirname\b/)) {
-        headerParts.push("require,exports,module,__filename,__dirname");
-      } else if (this.source.match(/\b__filename\b/)) {
-        headerParts.push("require,exports,module,__filename");
+      // __dirname and __filename are less common, so we check for both at
+      // once to quickly eliminate them.
+      if (this.source.match(/\b(__dirname|__filename)\b/)) {
+        if (this.source.match(/\b__dirname\b/)) {
+          params = "require,exports,module,__filename,__dirname";
+        } else {
+          // __dirname wasn't found, so there must be __filename
+          params = "require,exports,module,__filename";
+        }
       } else if (this.source.match(/\bmodule\b/)) {
-        headerParts.push("require,exports,module");
+        params = "require,exports,module";
       } else if (this.source.match(/\bexports\b/)) {
-        headerParts.push("require,exports");
+        params = "require,exports";
       } else if (this.source.match(/\brequire\b/)) {
-        headerParts.push("require");
+        params = "require";
       }
 
-      headerParts.push("){");
-
-      return headerParts.join("");
+      return `function module(${params}){`;
     }
 
     return "(function(){";
-  }),
+  },
 
   _getClosureFooter() {
     return this.meteorInstallOptions
