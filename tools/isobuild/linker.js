@@ -627,6 +627,8 @@ const prelinkWithModules = Profile('linker prelinkWithModules', (files, name, is
   };
 });
 
+const newLineRegex = /\n/g;
+
 class CombinedFile {
   constructor() {
     this._chunks = [];
@@ -640,7 +642,7 @@ class CombinedFile {
   }
 
   addGeneratedCode(code) {
-    let lineCount = (code.match(/\n/g) || []).length;
+    let lineCount = this._countLines(code);
     this._chunks.push(code);
     this._lineOffset += lineCount;
   }
@@ -648,7 +650,7 @@ class CombinedFile {
   // TODO: add footer and header options
   addCodeWithMap(sourceName, code, map) {
     this._addedFiles += 1;
-    let lineCount = (code.match(/\n/g) || []).length;
+    let lineCount = this._countLines(code);
 
     this._chunks.push({
       code,
@@ -659,6 +661,12 @@ class CombinedFile {
     });
 
     this._lineOffset += lineCount;
+  }
+
+  _countLines(text) {
+    let matches = text.match(newLineRegex);
+
+    return matches ? matches.length : 0;
   }
 
   _buildWithMap() {
