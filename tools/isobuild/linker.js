@@ -777,8 +777,8 @@ class CombinedFile {
 function banner (lines) {
   let contentWidth = MIN_BANNER_WIDTH - 6;
   lines.forEach(line => {
-    if (line.length > maxLine) {
-      maxLine = line.length;
+    if (line.length > contentWidth) {
+      contentWidth = line.length;
     }
   });
   let bannerWidth = contentWidth + 6;
