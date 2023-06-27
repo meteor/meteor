@@ -8,29 +8,15 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+
+
 ## v3.0, TBD
 
 ### Highlights
 
 #### Breaking Changes
 
-- `webapp`:
-
-  - These methods are now async:
-    - `WebAppInternals.reloadClientPrograms()`
-    - `WebAppInternals.pauseClient()`
-    - `WebAppInternals.generateClientProgram()`
-    - `WebAppInternals.generateBoilerplate()`
-    - `WebAppInternals.setInlineScriptsAllowed()`
-    - `WebAppInternals.enableSubresourceIntegrity()`
-    - `WebAppInternals.setBundledJsCssUrlRewriteHook()`
-    - `WebAppInternals.setBundledJsCssPrefix()`
-
-- `email`:
-
-  - `Email.send` is no longer available. Use `Email.sendAsync` instead.
-
-- `accounts-2fa`:
+- `accounts-2fa@3.0.0`:
 
   - Some methods are now async. See below:
   - `Accounts._is2faEnabledForUser`
@@ -39,12 +25,16 @@
   - `(Meteor Method) - disableUser2fa`
   - `(Meteor Method) - has2faEnabled`
 
-- `accounts-base`:
+- `accounts-base@3.0.0`:
 
   - `methods.removeOtherTokens` is now async
   - `Accounts.destroyToken` is now async
+  - `Accounts.insertUserDoc` is now async
+  - `Accounts.updateOrCreateUserFromExternalService` is now async
+  - `Accounts.expirePasswordToken` is now async
+  - `Accounts.setupUsersCollection` is now async
 
-- `accounts-password`:
+- `accounts-password@3.0.0`:
 
   - Some server methods are now async:
   - `Accounts.sendResetPasswordEmail`
@@ -64,17 +54,177 @@
   - `Accounts.findUserByEmail`
   - `Accounts.findUserByUsername`
 
-- `accounts-passwordless`:
+- `accounts-passwordless@3.0.0`:
 
-  - `Accounts.sendLoginTokenEmail` is now async
+  - `Accounts.sendLoginTokenEmail` is now async.
 
-- `boilerplate-generator`:
+- `allow-deny@2.0.0`:
+
+  - Updated to accept async functions.
+
+- `appcache@2.0.0`:
+
+  - Updated internal api to use `expressHandlers`
+
+- `autoupdate@2.0.0`:
+
+  - Updated api to be async, with asyncronous queueing.
+
+- `babel-compiler@8.0.0`:
+
+  - Removed `Promise.await` default transform.
+  - Added top-level-await to packages.
+
+- `boilerplate-generator@2.0.0`:
 
   - `toHTML` is no longer available (it was already deprecated). Use `toHTMLStream` instead.
+  - Updated to use `expressHandlers`
 
-- `ddp`:
+- `browser-policy-common@2.0.0`:
 
-  - Added method `Meteor.isAsyncCall` that can be used to check if the current method call is async or not.
+  - Updated to use `expressHandlers`
+
+- `browser-policy-content@2.0.0`:
+
+  - Some methods are now async. See below:
+    - `BrowserPolicy.content.setPolicy`
+    - `BrowserPolicy.content.allowInlineScripts`
+    - `BrowserPolicy.content.disallowInlineScripts`
+    - `BrowserPolicy.content.disallowAll`
+    - `BrowserPolicy.setDefaultPolicy`
+
+- `browser-policy@2.0.0`:
+  Updated to use async methods from `browser-policy-common` and `browser-policy-content`.
+
+- `caching-compiler@2.0.0`:
+
+  - `afterLink` is now async.
+  - Updated to use now async API.
+
+- `callback-hook@2.0.0`:
+
+  - Added `forEachAsync` method.
+
+- `check@2.0.0`:
+
+  - Removed `fibers` related tests.
+
+- `constraint-solver@2.0.0`:
+
+  - Some methods are now async. See below:
+
+    - `ConstraintSolver.getVersionCostSteps`
+    - `ConstraintSolver.analyze`
+    - `ConstraintSolver.resolve`
+
+  - Updated tests to be async.
+  - Removed a few underscore usage.
+  - Added updated to use async methods
+
+- `context@1.0.0`:
+
+  - Removed `fibers` from package.
+
+- `core-runtime@2.0.0`:
+
+  - Created package to load packages and the app.
+  - This is the pakcages that sets up the Runtime.
+
+- `ddp-client@3.0.0`:
+
+  - Added `isAsyncCall` method to know if call is being made by a async method.
+  - Removed `fibers` from package.
+  - Updated tests to use async methods.
+
+- `ddp-common@2.0.0`:
+
+  - Added `.fence` option.
+
+- `ddp-server@3.0.0`:
+
+  - Updated to use async methods.
+  - Removed `fibers` from package.
+  - Updated tests to use async methods.
+  - Turned server implementation to async.
+
+`deprecated`:
+
+- `http`:
+  - Updated handlers to use `expressHandlers`
+- `spiderable`:
+
+  - Updated handlers to use `expressHandlers`
+  - removed `fibers` usage if flag is set to `true`
+
+- `ecmascript-runtime@1.0.0`:
+
+  - Added dependency to `@babel/runtime`.
+
+- `ecmascript@1.0.0`:
+
+  - Added dependency to `@babel/runtime`.
+  - Moved runtime tests.
+
+- `email@3.0.0`:
+
+  - `Email.send` is no longer available. Use `Email.sendAsync` instead.
+  - Updated types to reflext async methods and `Email.send` depracation.
+
+- `facts-base@2.0.0`:
+
+  - turned unorderd deps on `ddp` to false.
+
+- `id-map@2.0.0`:
+
+  - Added `forEachAsync` method.
+
+- `logging@2.0.0`:
+
+  - Added dependency to `@babel/runtime`.
+
+- `logic-solver@3.0.0`:
+  `Logic.disablingAssertions` is now async.
+  `minMaxWS` is now async.
+
+- `meteor@2.0.0`:
+
+  - Async local storage was added to help deal with async methods.
+  - Added `promiseEmmiter` to help with async methods.
+  - Removed `fibers` from package.
+
+- `minifier-css@2.0.0`:
+
+  - `minifyCss` is now async.
+  - Removed `fibers` from package.
+
+- `minifier-js@3.0.0`:
+
+  - `minifyJs` is now async.
+  - `terserMinify` no longer takes callbacks
+  - Removed `fibers` from package.
+
+* `minimongo@2.0.0`:
+  - `cursor.observe` now returns `isReady` and `isReadyPromise` wich indicates
+    if the cursor is ready and if the callbacks are have been called.
+    If you only use it in the `Client` or as a `LocalCollection` things have not
+    changed.
+
+- `modules@1.0.0`:
+
+  - Updated `reify` version.
+
+- `mongo@2.0.0`:
+
+  - Updated to unify methods, `update`,`insert`,`remove`, `fetch` are now async, they are
+    the same as their `*Async` counterpart.
+  - `ensureIndex` and `createIndex` are now async.
+
+- `blaze@3.0.0`:
+- TODO
+
+- `mongo-decimal@`:
+
+  - Updated to use `async` methods.
 
 - `oauth`:
 
@@ -98,37 +248,514 @@
 
   - `OAuth._requestHandlers['2']` is now async.
 
-- `minifier-css`:
+- `ordered-dict@2.0.0`:
 
-  - `minifyCss` is now async.
+  - Added `forEachAsync` method.
 
-- `webapp`:
-  - `WebAppInternals.getBoilerplate` is now async.
+- `promise@1.0.0`:
+
+  - Removed `fibers` usage
+
+- `reload-safetybelt@2.0.0`:
+
+  - Added `ecmascript` package to `package.js`
+
+- `server-render@1.0.0`:
+
+  - Updated usage with `getBoilerplate` that are now `async`.
+
+- `service-configuration@2.0.0`:
+
+  - Updated to use `createIndexAsync`.
+
+- `shell-server@1.0.0`:
+
+  - Updated to handle promises results.
+
+- `socket-stream-client@1.0.0`:
+
+  - Updated tests to handle `async` code.
+
+- `standard-minifier-js@3.0.0`:
+
+  - `processFilesForBundle` is now `async`.
+
+- `test-helpers@2.0.0`:
+
+  - Updated to use `async` methods.
+  - Removed `fibers` usage.
+  - Added possibliy to use `async` tests.
+
+- `test-in-browser@2.0.0`:
+
+  - Updated css to be in dark mode.
+
+- `test-in-console@2.0.0`:
+
+  - Updated log identation.
+
+- `tinytest@2.0.0`:
+
+  - Added `test name` to logs.
+  - Removed `fibers` usage.
+
+- `underscore@2.0.0`:
+
+  - Removed dependency in meteor package.
+
+- `webapp@2.0.0`:
+
+  - These methods are now async:
+
+    - `WebAppInternals.reloadClientPrograms()`
+    - `WebAppInternals.pauseClient()`
+    - `WebAppInternals.generateClientProgram()`
+    - `WebAppInternals.generateBoilerplate()`
+    - `WebAppInternals.setInlineScriptsAllowed()`
+    - `WebAppInternals.enableSubresourceIntegrity()`
+    - `WebAppInternals.setBundledJsCssUrlRewriteHook()`
+    - `WebAppInternals.setBundledJsCssPrefix()`
+    - `WebAppInternals.getBoilerplate`
+
   - Changed engine from connect to express and changed api naming to match express. See below:
   - `WebApp.connectHandlers.use(middleware)` is now `WebApp.expressHandlers.use(middleware)`
   - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawExpressHandlers.use(middleware)`
   - `WebApp.connectApp` is now `WebApp.expressApp`
 
-* `minimongo@1.9.2`:
-  TODO: add this aswell to the minimongo docs
-  - `cursor.observe` now returns `isReady` and `isReadyPromise` wich indicates
-    if the cursor is ready and if the callbacks are have been called.
-    If you only use it in the `Client` or as a `LocalCollection` things have not
-    changed.
+
+ - `accounts-facebook@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `accounts-github@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `accounts-google@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `accounts-meetup@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `accounts-meteor-developer@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `accounts-oauth@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `accounts-twitter@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `accounts-ui@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `accounts-ui-unstyled@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `accounts-weibo@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `audit-argument-checks@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `autopublish@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `babel-runtime@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `base64@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `binary-heap@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `boilerplate-generator-tests@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `crosswalk@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `ddp@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `ddp-rate-limiter@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+
+ - `diff-sequence@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `disable-oplog@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `ecmascript-runtime-client@1.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `ecmascript-runtime-server@1.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `ejson@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `es5-shim@5.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `facebook-config-ui@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `facebook-oauth@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `facts-ui@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `fetch@1.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `force-ssl@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `force-ssl-common@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `geojson-utils@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `github-config-ui@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `github-oauth@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `google-config-ui@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `google-oauth@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `hot-code-push@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `insecure@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `inter-process-messaging@1.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `launch-screen@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `localstorage@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `meetup-config-ui@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `meetup-oauth@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `meteor-base@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `meteor-developer-config-ui@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `meteor-developer-oauth@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `meteor-tool@3.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `mobile-experience@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `mobile-status-bar@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `modern-browsers@1.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `modules-runtime@1.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `mongo-dev-server@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `mongo-id@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `mongo-livedata@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+
+ - `npm-mongo@5.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `oauth@3.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `oauth-encryption@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `oauth1@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `oauth2@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `package-stats-opt-out@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `package-version-parser@4.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `random@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `rate-limit@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `reactive-dict@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `reactive-var@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `reload@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `retry@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `routepolicy@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `session@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `sha@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `standard-minifier-css@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `standard-minifiers@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `static-html@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `test-server-tests-in-console-once@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `tinytest-harness@1.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `twitter-config-ui@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `twitter-oauth@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `typescript@5.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `underscore-tests@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `url@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `webapp-hashing@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `weibo-config-ui@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
+
+
+ - `weibo-oauth@2.0.0`:
+
+Package was bumped due to a dependency update. No code changes were made.
 
 
 #### New Public API
 
 - `accounts-base`: (2.9+)
+
   - `Meteor.userAsync()`
 
 - `callback-hook`:forEachAsync
+
   - `forEachAsync`
 
 - `ddp-server`: (2.8+)
+
   - `Meteor.callAsync()`
 
 - `minifier-css`: (2.9+)
+
   - `CssTools.minifyCssAsync()`
 
 - `mongo`:
@@ -166,6 +793,11 @@
 `accounts-password`:
 
 - `Accounts._checkPasswordAsync`
+
+
+#### Special thanks to
+
+
 
 ## v2.12.0, 2023-04-28
 
@@ -317,7 +949,6 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 - [@zodern](https://github.com/zodern).
 - [@dmromanov](https://github.com/dmromanov).
 - [@matheusccastroo](https://github.com/matheusccastroo).
-
 ## v2.11.0, 2023-03-02
 
 ### Highlights

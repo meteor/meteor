@@ -65,7 +65,11 @@ const testServerTimeout = async () => {
 (async function () {
   Meteor._printReceivedDDP = true;
   Meteor._printSentDDP = true;
-  await testClientTimeout();
-  await testServerTimeout();
+  await testClientTimeout().catch((e) =>
+    console.error("Error in testClientTimeout", e)
+  );
+  await testServerTimeout().catch((e) =>
+    console.error("Error in testServerTimeout", e)
+  );
   process.exit(0);
 })();

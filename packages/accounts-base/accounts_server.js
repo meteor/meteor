@@ -222,11 +222,11 @@ export class AccountsServer extends AccountsCommon {
     this._additionalFindUserOnExternalLogin = func;
   }
 
-  _validateLogin(connection, attempt) {
-    this._validateLoginHook.forEach(callback => {
+  async _validateLogin(connection, attempt) {
+    await this._validateLoginHook.forEachAsync(async (callback) => {
       let ret;
       try {
-        ret = callback(cloneAttemptWithConnection(connection, attempt));
+        ret = await callback(cloneAttemptWithConnection(connection, attempt));
       }
       catch (e) {
         attempt.allowed = false;
@@ -248,16 +248,16 @@ export class AccountsServer extends AccountsCommon {
     });
   };
 
-  _successfulLogin(connection, attempt) {
-    this._onLoginHook.each(callback => {
-      callback(cloneAttemptWithConnection(connection, attempt));
+  async _successfulLogin(connection, attempt) {
+    await this._onLoginHook.forEachAsync(async (callback) => {
+      await callback(cloneAttemptWithConnection(connection, attempt));
       return true;
     });
   };
 
-  _failedLogin(connection, attempt) {
-    this._onLoginFailureHook.each(callback => {
-      callback(cloneAttemptWithConnection(connection, attempt));
+  async _failedLogin(connection, attempt) {
+    await this._onLoginFailureHook.forEachAsync(async (callback) => {
+      await callback(cloneAttemptWithConnection(connection, attempt));
       return true;
     });
   };
@@ -473,7 +473,7 @@ export class AccountsServer extends AccountsCommon {
     // _validateLogin may mutate `attempt` by adding an error and changing allowed
     // to false, but that's the only change it can make (and the user's callbacks
     // only get a clone of `attempt`).
-    this._validateLogin(methodInvocation.connection, attempt);
+    await this._validateLogin(methodInvocation.connection, attempt);
 
     if (attempt.allowed) {
       const o = await this._loginUser(
@@ -486,11 +486,11 @@ export class AccountsServer extends AccountsCommon {
         ...result.options
       };
       ret.type = attempt.type;
-      this._successfulLogin(methodInvocation.connection, attempt);
+      await this._successfulLogin(methodInvocation.connection, attempt);
       return ret;
     }
     else {
-      this._failedLogin(methodInvocation.connection, attempt);
+      await this._failedLogin(methodInvocation.connection, attempt);
       throw attempt.error;
     }
   };
@@ -522,7 +522,7 @@ export class AccountsServer extends AccountsCommon {
   // is no corresponding method for a successful login; methods that can
   // succeed at logging a user in should always be actual login methods
   // (using either Accounts._loginMethod or Accounts.registerLoginHandler).
-  _reportLoginFailure(
+  async _reportLoginFailure(
     methodInvocation,
     methodName,
     methodArgs,
@@ -540,8 +540,8 @@ export class AccountsServer extends AccountsCommon {
       attempt.user = this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
     }
 
-    this._validateLogin(methodInvocation.connection, attempt);
-    this._failedLogin(methodInvocation.connection, attempt);
+    await this._validateLogin(methodInvocation.connection, attempt);
+    await this._failedLogin(methodInvocation.connection, attempt);
 
     // _validateLogin may mutate attempt to set a new error message. Return
     // the modified version.
@@ -1193,7 +1193,7 @@ export class AccountsServer extends AccountsCommon {
 
     let fullUser;
     if (this._onCreateUserHook) {
-      fullUser = this._onCreateUserHook(options, user);
+      fullUser = await this._onCreateUserHook(options, user);
 
       // This is *not* part of the API. We need this because we can't isolate
       // the global server environment between tests, meaning we can't test
@@ -1204,10 +1204,10 @@ export class AccountsServer extends AccountsCommon {
       fullUser = defaultCreateUserHook(options, user);
     }
 
-    this._validateNewUserHooks.forEach(hook => {
-      if (! hook(fullUser))
+    for await (const hook of this._validateNewUserHooks) {
+      if (! await hook(fullUser))
         throw new Meteor.Error(403, "User validation failed");
-    });
+    }
 
     let userId;
     try {
@@ -1342,7 +1342,7 @@ export class AccountsServer extends AccountsCommon {
     }
 
     // Before continuing, run user hook to see if we should continue
-    if (this._beforeExternalLoginHook && !this._beforeExternalLoginHook(serviceName, serviceData, user)) {
+    if (this._beforeExternalLoginHook && !(await this._beforeExternalLoginHook(serviceName, serviceData, user))) {
       throw new Meteor.Error(403, "Login forbidden");
     }
 
@@ -1354,7 +1354,7 @@ export class AccountsServer extends AccountsCommon {
     // needed.
     let opts = user ? {} : options;
     if (this._onExternalLoginHook) {
-      opts = this._onExternalLoginHook(options, user);
+      opts = await this._onExternalLoginHook(options, user);
     }
 
     if (user) {
@@ -1781,6 +1781,21 @@ const setupUsersCollection = async users => {
     // clients can modify the profile field of their own document, and
     // nothing else.
     update: (userId, user, fields, modifier) => {
+      // make sure it is our record
+      if (user._id !== userId) {
+        return false;
+      }
+
+      // user can only modify the 'profile' field. sets to multiple
+      // sub-keys (eg profile.foo and profile.bar) are merged into entry
+      // in the fields list.
+      if (fields.length !== 1 || fields[0] !== 'profile') {
+        return false;
+      }
+
+      return true;
+    },
+    updateAsync: (userId, user, fields, modifier) => {
       // make sure it is our record
       if (user._id !== userId) {
         return false;

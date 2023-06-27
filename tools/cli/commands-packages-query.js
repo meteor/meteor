@@ -155,7 +155,6 @@ var getTempContext = async function (options) {
       explicitlyAddedLocalPackageDirs: currentPackageDir
     });
   }
-  await projectContext.init();
 
   // It is possible that we can't process package.js files in our local packages
   // and have to exit early. This is unfortunate, but we can't search local

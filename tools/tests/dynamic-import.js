@@ -8,7 +8,7 @@ selftest.define("dynamic import(...) in development", async function () {
   await s.init();
 
   await s.createApp("dynamic-import-test-app-devel", "dynamic-import");
-  s.cd("dynamic-import-test-app-devel", run.bind(s, false));
+  await s.cd("dynamic-import-test-app-devel", run.bind(s, false));
 });
 
 selftest.define("dynamic import(...) in production", async function () {
@@ -16,7 +16,7 @@ selftest.define("dynamic import(...) in production", async function () {
   await s.init();
 
   await s.createApp("dynamic-import-test-app-prod", "dynamic-import");
-  s.cd("dynamic-import-test-app-prod", run.bind(s, true));
+  await s.cd("dynamic-import-test-app-prod", run.bind(s, true));
 });
 
 selftest.define("dynamic import(...) with cache", async function () {
@@ -51,7 +51,7 @@ async function run(isProduction) {
 
   const run = sandbox.run(...args);
 
-  run.waitSecs(1500);
+  run.waitSecs(90);
   await run.match("App running at");
   await run.match("SERVER FAILURES: 0");
   await run.match("CLIENT FAILURES: 0");

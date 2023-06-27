@@ -33,8 +33,6 @@ var makeProjectContext = async function (appName) {
     projectDir: projectDir
   });
 
-  await projectContext.init();
-
   await doOrThrow(async function () {
     await projectContext.prepareProjectForBuild();
   });

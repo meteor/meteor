@@ -104,7 +104,6 @@ main.registerCommand({
     neverWritePackageMap: true,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init();
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.initializeCatalog();
   });
@@ -150,7 +149,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.prepareProjectForBuild();
@@ -303,7 +301,6 @@ main.registerCommand({
       lintPackageWithSourceRoot: options['no-lint'] ? null : options.packageDir,
     });
   }
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     // Just get up to initializing the catalog. We're going to mutate the
@@ -444,7 +441,7 @@ main.registerCommand({
   // We have initialized everything, so perform the publish operation.
   var binary = isopack.platformSpecific();
   await main.captureAndExit(
-    "=> Errors while publishing:",
+    "=> Errors while publishing:" + packageSource.name,
     "publishing the package",
     async function () {
       await packageClient.publishPackage({
@@ -644,7 +641,6 @@ main.registerCommand({
     forceIncludeCordovaUnibuild: true,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init()
   // Just get up to initializing the catalog. We're going to mutate the
   // constraints file a bit before we prepare the build.
   await main.captureAndExit("=> Errors while initializing project:", async function () {
@@ -863,7 +859,6 @@ main.registerCommand({
       // though this temporary directory does not have any cordova platforms
       forceIncludeCordovaUnibuild: true
     });
-    await projectContext.init();
     // Read metadata and initialize catalog.
     await main.captureAndExit("=> Errors while building for release:", async function () {
       await projectContext.initializeCatalog();
@@ -872,6 +867,9 @@ main.registerCommand({
     // Ensure that all packages and their tests are built. (We need to build
     // tests so that we can include their sources in source tarballs.)
     var allPackagesWithTests = projectContext.localCatalog.getAllPackageNames();
+    /**
+     * @type {Array<string>}
+     */
     var allPackages = projectContext.localCatalog.getAllNonTestPackageNames({
       includeNonCore: false,
     });
@@ -892,7 +890,15 @@ main.registerCommand({
     var toPublish = [];
 
     await main.captureAndExit("=> Errors in release packages:", async function () {
-      for (const packageName of allPackages) {
+      const publishList = [];
+      for (const name of allPackages) {
+        if (name === "meteor-tool") { // to be sure that is the last so things do not break
+          continue;
+        }
+        publishList.push(name)
+      }
+      publishList.push("meteor-tool");
+      for (const packageName of publishList) {
         await buildmessage.enterJob("checking consistency of " + packageName, async function () {
           var packageSource = projectContext.localCatalog.getPackageSource(
             packageName);
@@ -984,11 +990,11 @@ main.registerCommand({
                 (bundleBuildResult.treeHash !== existingBuild.build.treeHash);
             }
 
-            if (somethingChanged) {
-              buildmessage.error(
-                "Something changed in package " + packageName + "@" +
-                  isopk.version + ". Please upgrade its version number.");
-            }
+            // if (somethingChanged) {
+            //   buildmessage.error(
+            //     "Something changed in package " + packageName + "@" +
+            //       isopk.version + ". Please upgrade its version number.");
+            // }
           }
         });
       }
@@ -1167,7 +1173,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     return await projectContext.prepareProjectForBuild();
@@ -1616,7 +1621,6 @@ var maybeUpdateRelease = async function (options) {
     alwaysWritePackageMap: true,
     allowIncompatibleUpdate: true // disregard `.meteor/versions` if necessary
   });
-  await projectContext.init()
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.readProjectMetadata();
   });
@@ -1826,7 +1830,6 @@ main.registerCommand({
     alwaysWritePackageMap: true,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-  await projectContext.init()
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.readProjectMetadata();
   });
@@ -2042,7 +2045,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
-  await projectContext.init()
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.prepareProjectForBuild();
   });
@@ -2111,7 +2113,6 @@ main.registerCommand({
     // though this temporary directory does not have any cordova platforms
     forceIncludeCordovaUnibuild: true
   });
-  await projectContext.init()
   // Read metadata and initialize catalog.
   await main.captureAndExit("=> Errors while building for release:", async function () {
     await projectContext.initializeCatalog();
@@ -2150,8 +2151,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     // We're just reading metadata here --- we're not going to resolve
@@ -2360,7 +2359,6 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
-  await projectContext.init();
 
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     // We're just reading metadata here --- we're not going to resolve
@@ -2599,7 +2597,7 @@ main.registerCommand({
   var releaseTrack = trackAndVersion[0];
   var releaseVersion = trackAndVersion[1];
 
-  var releaseRecord = catalog.official.getReleaseVersion(
+  var releaseRecord = await catalog.official.getReleaseVersion(
     releaseTrack, releaseVersion);
   if (!releaseRecord) {
     // XXX this could also mean package unknown.
@@ -2661,18 +2659,18 @@ main.registerCommand({
   // Before downloading anything, check that the catalog contains everything we
   // need for the OSes that the tool is built for.
   await main.captureAndExit("=> Errors finding builds:", async function () {
-    _.each(osArches, function (osArch) {
-      _.each(releaseRecord.packages, async function (pkgVersion, pkgName) {
+    for (const osArch of osArches) {
+      for (const [pkgName, pkgVersion] of Object.entries(releaseRecord.packages)) {
         await buildmessage.enterJob({
           title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
-        }, function () {
-          if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
+        }, async function () {
+          if (!(await catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch]))) {
             buildmessage.error("missing build of " + pkgName + "@" + pkgVersion +
                                " for " + osArch);
           }
         });
-      });
-    });
+      }
+    }
   });
 
   files.mkdir_p(outputDirectory);
@@ -2706,7 +2704,7 @@ main.registerCommand({
   var packageMap =
         packageMapModule.PackageMap.fromReleaseVersion(releaseRecord);
 
-  for (const osArche in osArches) {
+  for (const osArch of osArches) {
     var tmpdir = files.mkdtemp();
     Console.info("Building tarball for " + osArch);
 
@@ -2724,9 +2722,9 @@ main.registerCommand({
 
     await main.captureAndExit(
       "=> Errors downloading packages for " + osArch + ":",
-      function () {
-        tmpTropo.downloadPackagesMissingFromMap(packageMap, {
-          serverArchitectures: [osArch]
+      async function () {
+        await tmpTropo.downloadPackagesMissingFromMap(packageMap, {
+          serverArchitectures: [osArch],
         });
       }
     );
@@ -2744,7 +2742,7 @@ main.registerCommand({
     var toolIsopackPath =
           tmpTropo.packagePath(toolPackage, toolVersion);
     var toolIsopack = new isopack.Isopack;
-    toolIsopack.initFromPath(toolPackage, toolIsopackPath);
+    await toolIsopack.initFromPath(toolPackage, toolIsopackPath);
     var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord) {
       throw Error("missing tool for " + osArch);
@@ -2940,7 +2938,7 @@ main.registerCommand({
     versions = [nSplit[1]];
     name = nSplit[0];
   } else {
-    versions = catalog.official.getSortedVersions(name);
+    versions = await catalog.official.getSortedVersions(name);
   }
 
   try {

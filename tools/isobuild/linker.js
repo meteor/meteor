@@ -1088,10 +1088,6 @@ function wrapWithHeaderAndFooter(files, header, footer) {
       return file;
     }
 
-    if (file.source.includes('FROM SERVERRR')) {
-      console.log("FOUNDDDDDDDD", file.servePath, file.sourcePath);
-    }
-
     if (file.sourceMap) {
       var sourceMap = file.sourceMap;
       sourceMap.mappings = headerContent + sourceMap.mappings;

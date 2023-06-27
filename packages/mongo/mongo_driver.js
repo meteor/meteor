@@ -542,6 +542,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options)
         .then(async result => {
           await refresh();
+          await write.committed();
           if (result && ! options._returnObject) {
             return result.numberAffected;
           } else {

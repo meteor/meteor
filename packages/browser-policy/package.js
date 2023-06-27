@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Configure security policies enforced by the browser",
-  version: '1.1.2'
+  version: '2.0.0-alpha300.10',
 });
 
 Package.onUse(function (api) {
