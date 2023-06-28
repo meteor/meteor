@@ -739,7 +739,7 @@ main.registerCommand({
     Console.info("Available examples:");
     const [json, err] = await tryRun(() =>
       httpHelpers.request({
-        url: 'cdn.meteor.com/examples.json',
+        url: 'https://cdn.meteor.com/static/meteor.json',
         method: "GET",
         useSessionHeader: true,
         useAuthHeader: true,
@@ -963,7 +963,7 @@ main.registerCommand({
   if (options.example) {
     const [json, err] = await tryRun(() =>
       httpHelpers.request({
-        url: 'cdn.meteor.com/examples.json',
+        url: 'https://cdn.meteor.com/static/meteor.json',
         method: "GET",
         useSessionHeader: true,
         useAuthHeader: true,
