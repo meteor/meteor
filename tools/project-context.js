@@ -1735,6 +1735,9 @@ Object.assign(exports.FinishedUpgraders.prototype, {
   appendUpgraders: function (upgraders) {
     var self = this;
 
+    /**
+     * @type {string}
+     */
     var current = null;
     try {
       current = files.readFile(self.filename, 'utf8');
@@ -1757,6 +1760,7 @@ Object.assign(exports.FinishedUpgraders.prototype, {
     }
 
     _.each(upgraders, function (upgrader) {
+      if (current.includes(upgrader)) return;
       appendText += upgrader + '\n';
     });
 
