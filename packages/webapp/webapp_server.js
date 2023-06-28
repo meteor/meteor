@@ -429,10 +429,11 @@ function getBoilerplateAsync(request, arch) {
       encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
       updated: runtimeConfig.isUpdatedByArch[arch],
     });
-    if (!meteorRuntimeConfig) return;
+    if (!meteorRuntimeConfig) return true;
     boilerplate.baseData = Object.assign({}, boilerplate.baseData, {
       meteorRuntimeConfig,
     });
+    return true;
   });
   runtimeConfig.isUpdatedByArch[arch] = false;
   const data = Object.assign(
@@ -509,6 +510,7 @@ WebAppInternals.generateBoilerplateInstance = function(
   };
   runtimeConfig.updateHooks.forEach(cb => {
     cb({ arch, manifest, runtimeConfig: rtimeConfig });
+    return true;
   });
 
   const meteorRuntimeConfig = JSON.stringify(
@@ -1358,6 +1360,13 @@ function runWebAppServer() {
     },
   });
 
+    /**
+   * @name main
+   * @locus Server
+   * @summary Starts the HTTP server.
+   *  If `UNIX_SOCKET_PATH` is present Meteor's HTTP server will use that socket file for inter-process communication, instead of TCP.
+   * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work. 
+   */
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.

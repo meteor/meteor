@@ -1,13 +1,9 @@
 import _ from 'underscore';
-import util from 'util';
 import url from 'url';
-import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files';
 import { optimisticReadJsonOrNull } from "../fs/optimistic";
-import bundler from '../isobuild/bundler.js';
-import archinfo from '../utils/archinfo';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
@@ -137,9 +133,9 @@ export class CordovaBuilder {
         ios: {},
         android: {
           "AndroidXEnabled": true,
-          // we still use a port based on appId on iOS to avoid conflits on local webserver
-          // we dont need it on android, but the contentUrl can only be one, and we set this
-          // here to be able to intercept these calls
+          // We still use a port based on appId on iOS to avoid conflits on local webserver.
+          // We don't need it on android, but the contentUrl can only be one, and we set this
+          // here to be able to intercept these calls.
           "hostname": `localhost:${cordovaServerPort}`,
           "AndroidInsecureFileModeEnabled": true
         }
@@ -871,7 +867,7 @@ configuration. The key may be deprecated.`);
      * [Cordova documentation](http://cordova.apache.org/docs/en/7.x/config_ref/index.html#resource-file).
      * @param {String} src The project resource path.
      * @param {String} target Resource destination in build.
-     * @param {String} [platform] Optional. A platform name (either `ios` or `android`, both if ommited) to add a resource-file entry.
+     * @param {String} [platform] Optional. A platform name (either `ios` or `android`, both if omitted) to add a resource-file entry.
      * @memberOf App
      */
     addResourceFile: function (src, target, platform) {
