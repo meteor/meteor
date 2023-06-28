@@ -737,7 +737,20 @@ main.registerCommand({
 
   if (options.list) {
     Console.info("Available examples:");
-    _.each(EXAMPLE_REPOSITORIES, function (repoInfo, name) {
+    const [json, err] = await tryRun(() =>
+      httpHelpers.request({
+        url: 'cdn.meteor.com/examples.json',
+        method: "GET",
+        useSessionHeader: true,
+        useAuthHeader: true,
+      })
+    );
+    if (err) {
+      Console.error("Failed to fetch examples:", err.message);
+      Console.info("Using cached examples.json");
+    }
+    const examples = err ? EXAMPLE_REPOSITORIES : JSON.parse(json);
+    _.each(examples, function (repoInfo, name) {
       const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : "";
       Console.info(
         Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
@@ -748,10 +761,7 @@ main.registerCommand({
     Console.info();
     Console.info(
       "To create an example, simply",
-      Console.command("git clone"),
-      "the relevant repository and branch (run",
-      Console.command("'meteor create --example <name>'"),
-      " to see the full command)."
+      Console.command("'meteor create <app-name> --example <name>'")
     );
     return 0;
   }
@@ -823,7 +833,14 @@ main.registerCommand({
       }
     );
   }
-
+  function cmd(text) {
+    Console.info(
+      Console.command(text),
+      Console.options({
+        indent: 2,
+      })
+    );
+  }
   // Setup fn, which is called after the app is created, to print a message
   // about how to run the app.
   async function setup() {
@@ -895,14 +912,7 @@ main.registerCommand({
     // do next.
     Console.info("To run your new app:");
 
-    function cmd(text) {
-      Console.info(
-        Console.command(text),
-        Console.options({
-          indent: 2,
-        })
-      );
-    }
+    
 
     if (appPathAsEntered !== ".") {
       // Wrap the app path in quotes if it contains spaces
@@ -945,16 +955,28 @@ main.registerCommand({
     const [ok, err] = await bash`git -v`;
     if (err) throw new Error("git is not installed");
     await bash`git clone --progress ${url} ${appPath} `;
-    // remove ref from origin
-    await bash`rm -rf ${appPath}/.git`;
+    // remove .git folder from the example
+    await files.rm_recursive_async(files.pathJoin(appPath, ".git"));
     await setup();
   };
 
   if (options.example) {
-    // publish this examples to a CDN as a json file so it can be dinamically 
-    // updated
+    const [json, err] = await tryRun(() =>
+      httpHelpers.request({
+        url: 'cdn.meteor.com/examples.json',
+        method: "GET",
+        useSessionHeader: true,
+        useAuthHeader: true,
+      })
+    );
 
-    const repoInfo = EXAMPLE_REPOSITORIES[options.example];
+    if (err) {
+      Console.error("Failed to fetch examples:", err.message);
+      Console.info("Using cached examples.json");
+    }
+
+    const examples = err ? EXAMPLE_REPOSITORIES : JSON.parse(json);
+    const repoInfo = examples[options.example];
     if (!repoInfo) {
       Console.error(`${options.example}: no such example.`);
       Console.error(
@@ -985,47 +1007,7 @@ main.registerCommand({
     (skeleton) => !!options[skeleton]
   );
   const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
-  await files.cp_r(
-    files.pathJoin(
-      __dirnameConverted,
-      "..",
-      "static-assets",
-      `skel-${skeleton}`
-    ),
-    appPath,
-    {
-      transformFilename: function (f) {
-        return transform(f);
-      },
-      transformContents: function (contents, f) {
-        // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
-        if (/packages/.test(f)) {
-          const prototypePackages = () =>
-            "autopublish             # Publish all data to the clients (for prototyping)\n" +
-            "insecure                # Allow all DB writes from clients (for prototyping)";
-
-          // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
-          if (options.prototype) {
-            return Buffer.from(
-              contents.toString().replace(/~prototype~/g, prototypePackages())
-            );
-          } else {
-            return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
-          }
-        }
-        if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
-          return Buffer.from(transform(contents.toString()));
-        } else {
-          return contents;
-        }
-      },
-      ignore: toIgnore,
-      preserveSymlinks: true,
-    }
-  );
-
-
-  
+  await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`)
 
   await setup();
   if (!!skeletonExplicitOption) {
