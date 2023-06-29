@@ -23,6 +23,6 @@ addons:
       - libnss3
 
 before_install:
-  - sudo add-apt-repository --yes "deb http://archive.ubuntu.com/ubuntu bionic main universe"
+  - sudo add-apt-repository --yes "deb http://archive.ubuntu.com/ubuntu jammy main universe"
   - sudo apt-get update
   - sudo apt-get install -y libnss3
