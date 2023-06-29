@@ -554,6 +554,31 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 // create
 ///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * list of all the available skeletons similar to the property below
+ * {
+ * clock: { repo: 'https://github.com/meteor/clock' },
+ * leaderboard: { repo: 'https://github.com/meteor/leaderboard' },
+ * }
+ * @typedef {Object.<string, {repo: string}>} Skeletons
+ */
+/**
+ * Resolves into json with 
+ * @returns {Promise<[Skeletons, null]> | Promise<[null, Error]>}
+ */
+function getExamplesJSON(){
+  return tryRun(async () => {
+    const response = await httpHelpers.request({
+      url: "https://cdn.meteor.com/static/meteor.json",
+      method: "GET",
+      useSessionHeader: true,
+      useAuthHeader: true,
+    });
+    return JSON.parse(response.body);
+  });
+}
+
 const DEFAULT_SKELETON = "react";
 export const AVAILABLE_SKELETONS = [
   "apollo",
@@ -737,19 +762,12 @@ main.registerCommand({
 
   if (options.list) {
     Console.info("Available examples:");
-    const [json, err] = await tryRun(() =>
-      httpHelpers.request({
-        url: 'https://cdn.meteor.com/static/meteor.json',
-        method: "GET",
-        useSessionHeader: true,
-        useAuthHeader: true,
-      })
-    );
+    const [json, err] = await getExamplesJSON()
     if (err) {
       Console.error("Failed to fetch examples:", err.message);
       Console.info("Using cached examples.json");
     }
-    const examples = err ? EXAMPLE_REPOSITORIES : JSON.parse(json);
+    const examples = err ? EXAMPLE_REPOSITORIES : json;
     _.each(examples, function (repoInfo, name) {
       const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : "";
       Console.info(
@@ -961,21 +979,14 @@ main.registerCommand({
   };
 
   if (options.example) {
-    const [json, err] = await tryRun(() =>
-      httpHelpers.request({
-        url: 'https://cdn.meteor.com/static/meteor.json',
-        method: "GET",
-        useSessionHeader: true,
-        useAuthHeader: true,
-      })
-    );
+    const [json, err] = await getExamplesJSON();
 
     if (err) {
       Console.error("Failed to fetch examples:", err.message);
       Console.info("Using cached examples.json");
     }
 
-    const examples = err ? EXAMPLE_REPOSITORIES : JSON.parse(json);
+    const examples = err ? EXAMPLE_REPOSITORIES : json;
     const repoInfo = examples[options.example];
     if (!repoInfo) {
       Console.error(`${options.example}: no such example.`);
