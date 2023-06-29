@@ -96,9 +96,9 @@ build_machine_environment: &build_machine_environment
     # Variables for load-balancing
     NUM_GROUPS: 12
     RUNNING_AVG_LENGTH: 6
-  - run:
-      name: Create working directory
-      command: mkdir -p ~/project-18
+    - run:
+        name: Create working directory
+        command: mkdir -p ~/project-18
   working_directory: ~/project-18
 
 jobs:
