@@ -1,6 +1,6 @@
 language: node_js
 os: linux
-dist: xenial
+dist: jammy
 node_js:
   - "18.16.0"
 cache:
