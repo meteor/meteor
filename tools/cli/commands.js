@@ -1018,9 +1018,55 @@ main.registerCommand({
     (skeleton) => !!options[skeleton]
   );
   const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
-  await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`)
 
-  await setup();
+  try {
+    await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`);
+  } catch (e) {
+    Console.error(
+      `Something has happened while creating your app using git clone.
+       Will use cached version of skeletons.
+       Error message: `, e.message);
+       // TODO: decide if this should stay here or not.
+       await files.cp_r(
+        files.pathJoin(
+          __dirnameConverted,
+          "..",
+          "static-assets",
+          `skel-${skeleton}`
+        ),
+        appPath,
+        {
+          transformFilename: function (f) {
+            return transform(f);
+          },
+          transformContents: function (contents, f) {
+            // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
+            if (/packages/.test(f)) {
+              const prototypePackages = () =>
+                "autopublish             # Publish all data to the clients (for prototyping)\n" +
+                "insecure                # Allow all DB writes from clients (for prototyping)";
+    
+              // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
+              if (options.prototype) {
+                return Buffer.from(
+                  contents.toString().replace(/~prototype~/g, prototypePackages())
+                );
+              } else {
+                return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
+              }
+            }
+            if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+              return Buffer.from(transform(contents.toString()));
+            } else {
+              return contents;
+            }
+          },
+          ignore: toIgnore,
+          preserveSymlinks: true,
+        }
+      );
+      await setup();
+  }
   if (!!skeletonExplicitOption) {
     // Notify people about the skeleton options
     Console.info(
