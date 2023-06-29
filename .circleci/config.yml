@@ -99,6 +99,9 @@ build_machine_environment: &build_machine_environment
 
 jobs:
   Get Ready:
+    environment:
+      # Different directory used by builds with node 14
+      CIRCLE_WORKING_DIRECTORY: ~/project-18
     <<: *build_machine_environment
     steps:
       - run:
