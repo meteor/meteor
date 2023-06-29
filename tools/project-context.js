@@ -1760,7 +1760,6 @@ Object.assign(exports.FinishedUpgraders.prototype, {
     }
 
     _.each(upgraders, function (upgrader) {
-      if (current.includes(upgrader)) return;
       appendText += upgrader + '\n';
     });
 
