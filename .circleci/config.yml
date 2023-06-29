@@ -121,6 +121,7 @@ jobs:
       - run:
           name: Combine NPM Shrinkwrap Files
           command: |
+            ls
             for d in packages/*/.npm/package; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
             for d in packages/*/.npm/plugin/*; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
       - restore_cache:
