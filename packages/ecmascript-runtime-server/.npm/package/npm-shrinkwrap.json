@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "core-js": {
+      "version": "3.16.0",
+      "resolved": "https://registry.npmjs.org/core-js/-/core-js-3.16.0.tgz",
+      "integrity": "sha512-5+5VxRFmSf97nM8Jr2wzOwLqRo6zphH2aX+7KsAUONObyzakDNq2G/bgbhinxB4PoV9L3aXQYhiDKyIKWd2c8g=="
+    }
+  }
+}
