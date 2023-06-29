@@ -87,19 +87,19 @@ Create a new Meteor project. By default, it uses [React](https://guide.meteor.co
 and makes a subdirectory named *name* and copies in the template app.
 You can pass an absolute or relative path.
 
+_This command requires an Internet connection and having git installed._
+
+<h3 id="meteorcreate-templates">Cloning from project</h3>
+
+You can also create a new Meteor project by cloning an existing project. You can 
+list them using the command `meteor create --list` it will list all the available
+templates. You can then clone them using the command `meteor create --example <template-name> <project-name>`
+Or you can use the `--from` flag to clone a project from a git repository. For example
+`meteor create --from  "https://github.com/meteor/skel-react" <project-name>`
+
 <h3 id="meteorcreate-flags">Flags</h3>
 
 **Flags for default packages**
-
-`--prototype`
-
-Creates a package with the prototype purpose packages(`autopublish` and `insecure`) 
-if you use them you can change your collections quickly, 
-but it is not supposed to be used in production.
-For more information about security you can check
-it [here](https://guide.meteor.com/security.html#checklist)
-It can be used together with other flags that create apps such as `--react` or `--typescript`.
-
 
 `--bare`
 
