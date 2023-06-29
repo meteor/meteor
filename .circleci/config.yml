@@ -96,15 +96,15 @@ build_machine_environment: &build_machine_environment
     # Variables for load-balancing
     NUM_GROUPS: 12
     RUNNING_AVG_LENGTH: 6
-    - run:
-        name: Create working directory
-        command: mkdir -p ~/project-18
-  working_directory: ~/project-18
 
 jobs:
   Get Ready:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
+      - run:
+          name: Create working directory
+          command: mkdir -p ~/project-18
       - run:
           <<: *run_log_mem_use
       - run:
@@ -173,6 +173,7 @@ jobs:
 
   Isolated Tests:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -215,6 +216,7 @@ jobs:
 
   Test Group 0:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -255,6 +257,7 @@ jobs:
 
   Test Group 1:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -295,6 +298,7 @@ jobs:
 
   Test Group 2:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -335,6 +339,7 @@ jobs:
 
   Test Group 3:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -375,6 +380,7 @@ jobs:
 
   Test Group 4:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -415,6 +421,7 @@ jobs:
 
   Test Group 5:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -455,6 +462,7 @@ jobs:
 
   Test Group 6:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -495,6 +503,7 @@ jobs:
 
   Test Group 7:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -535,6 +544,7 @@ jobs:
 
   Test Group 8:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -575,6 +585,7 @@ jobs:
 
   Test Group 9:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -615,6 +626,7 @@ jobs:
 
   Test Group 10:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -655,6 +667,7 @@ jobs:
 
   Test Group 11:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - run:
           <<: *run_log_mem_use
@@ -703,7 +716,11 @@ jobs:
     environment:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
+      - run:
+          name: Create working directory
+          command: mkdir -p ~/project-18
       - run:
           name: Cloning "meteor" Repository's current branch
           command: |
@@ -718,6 +735,7 @@ jobs:
 
   Clean Up:
     <<: *build_machine_environment
+    working_directory: ~/project-18
     steps:
       - attach_workspace:
           at: .
