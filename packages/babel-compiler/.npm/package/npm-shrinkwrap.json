@@ -481,7 +481,8 @@
       "integrity": "sha512-xW9LVh3LMRcoimEJE2pq6LEIMRSj7ry1Q61itREn4tGcAjYYBkud5k6BpJgkIhvGPde9aAgW/M8fBAxmEnaMtw=="
     },
     "@meteorjs/reify": {
-      "version": "https://github.com/meteor/reify/tarball/cf61c57c6c4fefcbf164bf63d3c12fda1924b3d2",
+      "version": "0.24.0",
+      "resolved": "https://github.com/meteor/reify/tarball/cf61c57c6c4fefcbf164bf63d3c12fda1924b3d2",
       "integrity": "sha512-bHSgdKl4hLmAiC6oT5Ey/0jQ+ULSrSd75zCyTAeecue0fZWDLpNAZEgiaGzXx50XHQYd36B0KjQSTHniv+NYew==",
       "dependencies": {
         "semver": {

@@ -910,6 +910,58 @@ Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
   });
 });
 
+function pathMatches(path, test) {
+  // Normalize path and test to avoid trailing slash discrepancies
+  path = path.replace(/\/+$/, "");
+  test = test.replace(/\/+$/, "");
+
+  // pathMatches('node_modules/', 'node_modules/@babel/core/'); // Expected: true
+  // pathMatches('node_modules/', 'node_modules/@babel/core/node_modules/json5'); // Expected: false
+  // pathMatches('node_modules/@babel/core', 'node_modules/@babel/core/node_modules/json5'); // Expected: true
+  // pathMatches('node_modules/@babel/core', 'node_modules/@babel/core/'); // Expected: false
+  const regex = new RegExp(`^${path}(\/[^/]+)+$`);
+
+  if (!regex.test(test)) return false;
+
+  // Check if the path occurs again after the initial match
+  return test.indexOf(path, path.length) === -1;
+}
+
+const getPackageName = (pkgPath) => {
+  const split = pkgPath.split("node_modules/");
+  return split[split.length - 1];
+};
+
+function getInstalledDependenciesTreeFromPackageLock(packages, prefix) {
+  const result = {};
+
+  Object.keys(packages).forEach((pkgName) => {
+    if (!pathMatches(prefix, pkgName)) {
+      return;
+    }
+
+    const pkg = packages[pkgName];
+
+    if (!pkg) return;
+
+    const dependencies =
+      pkg.dependencies &&
+      getInstalledDependenciesTreeFromPackageLock(packages, pkgName);
+
+    const hasDependencies =
+      dependencies && Object.keys(dependencies).length > 0;
+
+    const name = getPackageName(pkgName);
+    result[name] = {
+      version: pkg.version,
+      resolved: pkg.resolved,
+      integrity: pkg.integrity,
+      ...(hasDependencies ? { dependencies } : {}),
+    };
+  });
+  return result;
+}
+
 // Gets a JSON object from `npm ls --json` (getInstalledDependenciesTree) or
 // `npm-shrinkwrap.json` (getShrinkwrappedDependenciesTree).
 //
@@ -928,79 +980,23 @@ Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
 //   }
 // }
 function getInstalledDependenciesTree(dir) {
-  function ls(nodeModulesDir) {
-    let contents;
-    try {
-      contents = files.readdir(nodeModulesDir).sort();
-    } finally {
-      if (! contents) return;
-    }
-
-    const result = {};
-
-    contents.forEach(item => {
-      if (item.startsWith(".")) {
-        return;
-      }
-
-      const pkgDir = files.pathJoin(nodeModulesDir, item);
-      const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
-
-      if (item.startsWith("@")) {
-        Object.assign(result, ls(pkgDir));
-        return;
-      }
-
-      let pkg;
-      try {
-        pkg = JSON.parse(files.readFile(pkgJsonPath));
-      } finally {
-        if (! pkg) return;
-      }
-
-      const name = pkg.name || item;
-
-      const info = result[name] = {
-        version: pkg.version
-      };
-
-      const from = pkg._from || pkg.from;
-      if (from) {
-        // Fix for https://github.com/meteor/meteor/issues/9477:
-        const prefix = name + "@";
-        let fromUrl = from;
-        if (fromUrl.startsWith(prefix)) {
-          fromUrl = fromUrl.slice(prefix.length);
-        }
-
-        if (utils.isNpmUrl(fromUrl) &&
-            ! utils.isNpmUrl(info.version)) {
-          info.version = fromUrl;
-        }
-      }
-
-      const resolved = pkg._resolved || pkg.resolved;
-      if (resolved && resolved !== info.version) {
-        info.resolved = resolved;
-      }
-
-      const integrity = pkg._integrity || pkg.integrity;
-      if (integrity) {
-        info.integrity = integrity;
-      }
-
-      const deps = ls(files.pathJoin(pkgDir, "node_modules"));
-      if (deps && ! _.isEmpty(deps)) {
-        info.dependencies = deps;
-      }
-    });
-
-    return result;
+  // As per Npm 8, now the metadata is no longer inside .npm/package/node_modules/PACKAGE_NAME/package.json
+  // now you have every metadata of every package inside .npm/package/node_modules/ at .npm/package/node_modules/.package-lock.json
+  let pkgs;
+  try {
+    const nodeModulesPath = files.pathJoin(dir, "node_modules");
+    const packageLockPath = files.pathJoin(nodeModulesPath, ".package-lock.json");
+    const packageLock = JSON.parse(files.readFile(packageLockPath));
+    pkgs = packageLock.packages;
+  } finally {
+    if (!pkgs) return;
   }
-
   return {
-    lockfileVersion: 2,
-    dependencies: ls(files.pathJoin(dir, "node_modules"))
+    lockfileVersion: 1,
+    dependencies: getInstalledDependenciesTreeFromPackageLock(
+      pkgs,
+      "node_modules"
+    ),
   };
 }
 
@@ -1008,7 +1004,7 @@ function getShrinkwrappedDependenciesTree(dir) {
   const shrinkwrap = JSON.parse(files.readFile(
     files.pathJoin(dir, 'npm-shrinkwrap.json')
   ));
-  shrinkwrap.lockfileVersion = 2
+  shrinkwrap.lockfileVersion = 1
   return shrinkwrap;
 };
 
