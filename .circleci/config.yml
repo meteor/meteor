@@ -165,6 +165,8 @@ jobs:
             npm install @types/node@18.11.9 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
             ../meteor npm install -g typescript
+            # Ensure to add node_modules to tools
+            ln -s ../dev_bundle/lib/node_modules node_modules
             popd
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
