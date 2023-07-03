@@ -165,10 +165,12 @@ jobs:
             # Ensure to add node_modules to tools
             ln -s ../dev_bundle/lib/node_modules/ tools/node_modules
             echo "Symlink node_modules added to tools"
-            echo "NODE_MODULES ON DEV BUNDLE"
-            ls -la ./dev_bundle/lib/node_modules
             echo "NODE_MODULES ON TOOLS"
             ls -la ./tools/node_modules
+            echo "LS ROOT"
+            ls -la .
+            echo "LS DEV_BUNDLE"
+            ls -la ./dev_bundle
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
           no_output_timeout: 60m
