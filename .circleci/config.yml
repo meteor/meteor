@@ -163,8 +163,11 @@ jobs:
             ../meteor npm install -g typescript
             popd
             # Ensure to add node_modules to tools
-            ln -s ./dev_bundle/lib/node_modules ./tools/node_modules
+            ln -s ../dev_bundle/lib/node_modules/ tools/node_modules
             echo "Symlink node_modules added to tools"
+            echo "NODE_MODULES ON DEV BUNDLE"
+            ls -la ./dev_bundle/lib/node_modules
+            echo "NODE_MODULES ON TOOLS"
             ls -la ./tools/node_modules
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
