@@ -648,8 +648,16 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     npmTree.dependencies[name] = { version };
   });
 
-  const minInstalledTree =
-    minimizeDependencyTree(installedDependenciesTree);
+  let minInstalledTree;
+  try {
+    minInstalledTree = minimizeDependencyTree(installedDependenciesTree);
+  } catch (e) {
+    console.error(
+      "Failed to minimize installed dependencies tree for ",
+      packageNpmDir
+    );
+    throw e;
+  }
   const minShrinkwrapTree =
     minimizeDependencyTree(shrinkwrappedDependenciesTree);
 
