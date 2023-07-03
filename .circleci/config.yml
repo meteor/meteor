@@ -162,15 +162,9 @@ jobs:
             # Ensure that meteor/tools has no TypeScript errors.
             ../meteor npm install -g typescript
             popd
-            # Ensure to add node_modules to tools
+            # tools/node_modules is a symlink, but starting on NPM 7, this symlinks are deleted https://github.com/npm/cli/issues/3669
+            # so we are copying the node_modules to tools
             cp -R dev_bundle/lib/node_modules/ tools/
-            echo "Symlink node_modules added to tools"
-            echo "NODE_MODULES ON TOOLS"
-            ls -la ./tools/node_modules
-            echo "LS ROOT"
-            ls -la .
-            echo "LS TOOLS"
-            ls -la ./tools
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
           no_output_timeout: 60m
