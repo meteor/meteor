@@ -1020,12 +1020,21 @@ main.registerCommand({
   const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
 
   try {
+    // Prototype option should use local skeleton. 
+    // Maybe we should use a different skeleton for prototype
+    if (options.prototype) throw new Error("Using prototype option");
+
     await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`);
   } catch (e) {
-    Console.error(
-      `Something has happened while creating your app using git clone.
-       Will use cached version of skeletons.
-       Error message: `, e.message);
+    
+    if (e.message !== "Using prototype option") {
+      // something has happened while creating the app using git clone
+      Console.error(
+        `Something has happened while creating your app using git clone.
+         Will use cached version of skeletons.
+         Error message: `, e.message);
+    }
+
        // TODO: decide if this should stay here or not.
        await files.cp_r(
         files.pathJoin(
