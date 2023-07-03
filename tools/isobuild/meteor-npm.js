@@ -654,7 +654,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   } catch (e) {
     console.error(
       "Failed to minimize installed dependencies tree for ",
-      packageNpmDir
+      packageNpmDir, installedDependenciesTree
     );
     throw e;
   }
