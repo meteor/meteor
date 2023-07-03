@@ -654,7 +654,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   } catch (e) {
     console.error(
       "Failed to minimize installed dependencies tree for ",
-      packageNpmDir, installedDependenciesTree
+      packageNpmDir
     );
     throw e;
   }
@@ -988,6 +988,10 @@ function getInstalledDependenciesTreeFromPackageLock(packages, prefix) {
 //   }
 // }
 function getInstalledDependenciesTree(dir) {
+  const defaultReturn = {
+    lockfileVersion: 1,
+  }
+
   // As per Npm 8, now the metadata is no longer inside .npm/package/node_modules/PACKAGE_NAME/package.json
   // now you have every metadata of every package inside .npm/package/node_modules/ at .npm/package/node_modules/.package-lock.json
   let pkgs;
@@ -997,10 +1001,10 @@ function getInstalledDependenciesTree(dir) {
     const packageLock = JSON.parse(files.readFile(packageLockPath));
     pkgs = packageLock.packages;
   } finally {
-    if (!pkgs) return;
+    if (!pkgs) return defaultReturn;
   }
   return {
-    lockfileVersion: 1,
+    ...defaultReturn,
     dependencies: getInstalledDependenciesTreeFromPackageLock(
       pkgs,
       "node_modules"
