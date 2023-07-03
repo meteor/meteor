@@ -169,8 +169,8 @@ jobs:
             ls -la ./tools/node_modules
             echo "LS ROOT"
             ls -la .
-            echo "LS DEV_BUNDLE"
-            ls -la ./dev_bundle
+            echo "LS TOOLS"
+            ls -la ./tools
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
           no_output_timeout: 60m
