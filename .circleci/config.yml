@@ -164,6 +164,8 @@ jobs:
             popd
             # Ensure to add node_modules to tools
             ln -s ../dev_bundle/lib/node_modules node_modules
+            echo "Symlink node_modules added to tools"
+            pwd
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
           no_output_timeout: 60m
