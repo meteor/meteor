@@ -270,7 +270,6 @@ export class HMRServer {
       : [];
     console.timeEnd("addedFiles");
     console.time("changedFiles");
-    console.log(reloadable)
     const iteratedChangedFiles = reloadable
       ? await Promise.all(changedFiles.map(saveFileDetails))
       : [];
