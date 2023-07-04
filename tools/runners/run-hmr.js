@@ -204,14 +204,16 @@ export class HMRServer {
         return;
       }
 
-      this.connByArch[arch].forEach(conn => {
-        conn.send(JSON.stringify({
-          type: 'changes',
-          changeSets: [changeset],
-          eager: true
-        }));
-      });
-    }
+      for (const conn of this.connByArch[arch]) {
+        conn.send(
+          JSON.stringify({
+            type: "changes",
+            changeSets: [changeset],
+            eager: true,
+          })
+        );
+      }
+    };
 
     this.cacheKeys[`${arch}-${name}`] = cacheKey;
     const previous = this.findLastChangeset(name, arch) || {};
@@ -230,6 +232,7 @@ export class HMRServer {
       return;
     }
 
+    console.time('compareFiles')
     const {
       addedFiles,
       changedFiles,
@@ -242,7 +245,7 @@ export class HMRServer {
       previous.unreloadableHashes,
       files
     );
-
+    console.timeEnd('compareFiles')
     const couldCompare = !!previous.fileHashes
     const reloadable = couldCompare &&
       onlyReplaceableChanges &&
@@ -258,31 +261,31 @@ export class HMRServer {
       };
     }
 
-    // TODO: try to improve the performance of this
-    const iterWithFn = async (iter, fn) => {
-      let arr = [];
-      for (let i = 0; i < iter.length; i++) {
-        try {
-          const d = await fn(iter[i]);
-          arr.push(d);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return arr;
-    }
 
+    console.log("Started")
+    console.time("HMR")
+    console.time("addedFiles");
+    const iteratedAddedFiles = reloadable
+      ? await Promise.all(addedFiles.map(saveFileDetails))
+      : [];
+    console.timeEnd("addedFiles");
+    console.time("changedFiles");
+    console.log(reloadable)
+    const iteratedChangedFiles = reloadable
+      ? await Promise.all(changedFiles.map(saveFileDetails))
+      : [];
+    console.timeEnd("changedFiles");
     const result = {
       fileHashes,
       unreloadableHashes: unreloadable,
       reloadable,
-      addedFiles: reloadable ? await iterWithFn(addedFiles, saveFileDetails) : [],
-      changedFiles: reloadable ? await iterWithFn(changedFiles, saveFileDetails) : [],
+      addedFiles: iteratedAddedFiles,
+      changedFiles: iteratedChangedFiles,
       linkedAt: Date.now(),
       id: this._createId(),
       name
     };
-
+    console.timeEnd("HMR");
     // TODO: we should also store the latest change set
     // for each arch and name someplace else so it doesn't
     // get removed when trimming changesets
@@ -327,7 +330,7 @@ export class HMRServer {
     const addedFiles = [];
     let onlyReplaceableChanges = true;
 
-    currentFiles.forEach(file => {
+    for (const file of currentFiles) {
       let fileConfig;
       let ignoreHash = false;
 
@@ -371,16 +374,14 @@ export class HMRServer {
         config: previousConfig
       } = previousHashes.get(file.absModuleId) || {};
 
-      if (!previousInputHash) {
-        addedFiles.push(file);
-      } else if (previousConfig !== fileConfig) {
-        onlyReplaceableChanges = false;
-      } else if (!ignoreHash && previousInputHash !== file._inputHash) {
+      if (!previousInputHash) addedFiles.push(file);
+      else if (previousConfig !== fileConfig) onlyReplaceableChanges = false;
+      else if (!ignoreHash && previousInputHash !== file._inputHash) {
         changedFiles.push(file);
       }
 
       unseenModules.delete(file.absModuleId);
-    });
+    }
 
     const removedFilePaths = Array.from(unseenModules.keys());
     if (onlyReplaceableChanges) {
