@@ -99,6 +99,15 @@ Or you can use the `--from` flag to clone a project from a git repository. For e
 
 <h3 id="meteorcreate-flags">Flags</h3>
 
+`--prototype`
+
+Creates a package with the prototype purpose packages(`autopublish` and `insecure`) 
+if you use them you can change your collections quickly, 
+but it is not supposed to be used in production.
+For more information about security you can check
+it [here](https://guide.meteor.com/security.html#checklist)
+It can be used together with other flags that create apps such as `--react` or `--typescript`.
+
 **Flags for default packages**
 
 `--bare`
