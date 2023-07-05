@@ -165,10 +165,6 @@ jobs:
             # tools/node_modules is a symlink, but starting on NPM 7, this symlinks are deleted https://github.com/npm/cli/issues/3669
             # so we are copying the node_modules to tools
             cp -R dev_bundle/lib/node_modules/ tools/
-            echo "LS COMMAND"
-            ls -la /home/circleci/project/packages/meteor/.npm/package
-            echo "CAT COMMAND"
-            cat /home/circleci/project/packages/meteor/.npm/package/npm-shrinkwrap.json
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
           no_output_timeout: 60m
