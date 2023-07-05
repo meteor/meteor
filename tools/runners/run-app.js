@@ -628,7 +628,10 @@ Object.assign(AppRunner.prototype, {
       return watchSet;
     };
     var bundleResult;
+    console.time("AppRunner#bundle")
     var bundleResultOrRunResult = await bundleApp();
+    console.timeEnd("AppRunner#bundle")
+
     if (bundleResultOrRunResult.runResult) {
       return bundleResultOrRunResult.runResult;
     }
@@ -949,6 +952,7 @@ Object.assign(AppRunner.prototype, {
     var firstRun = true;
 
     while (true) {
+    console.time("run once")
       var runResult = await self._runOnce({
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun) {
@@ -958,6 +962,8 @@ Object.assign(AppRunner.prototype, {
         },
         firstRun: firstRun
       });
+    console.timeEnd("run once")
+
       firstRun = false;
 
       var wantExit = self.onRunEnd ? !(await self.onRunEnd(runResult)) : false;
@@ -1014,6 +1020,7 @@ Object.assign(AppRunner.prototype, {
         if (!runResult.watchSet) {
           throw Error("watching for changes with no watchSet?");
         }
+        console.time("watch")
         // XXX reference to watcher is lost later?
         var watcher = new watch.Watcher({
           watchSet: runResult.watchSet,
@@ -1021,6 +1028,8 @@ Object.assign(AppRunner.prototype, {
             self._resolvePromise("watch");
           }
         });
+        console.timeEnd("watch")
+
         self.proxy.setMode("errorpage");
         if (self.hmrServer) {
           self.hmrServer.setAppState("error");
