@@ -940,31 +940,39 @@ const getPackageName = (pkgPath) => {
   return split[split.length - 1];
 };
 
-function getInstalledDependenciesTreeFromPackageLock(packages, prefix) {
+function getInstalledDependenciesTreeFromPackageLock({
+  packages,
+  dependencies,
+  prefix,
+  mappedDependencies = {},
+}) {
   const result = {};
 
-  Object.keys(packages).forEach((pkgName) => {
-    if (!pathMatches(prefix, pkgName)) {
+  Object.keys(dependencies || packages).forEach((pkgName) => {
+    if (prefix && !pathMatches(prefix, pkgName)) {
       return;
     }
+    const name = getPackageName(pkgName);
 
     const pkg = packages[pkgName];
 
-    if (!pkg) return;
+    if (!pkg || mappedDependencies[name]) return;
 
-    const dependencies =
+    const deps =
       pkg.dependencies &&
-      getInstalledDependenciesTreeFromPackageLock(packages, pkgName);
+      getInstalledDependenciesTreeFromPackageLock({
+        packages,
+        prefix: pkgName,
+        mappedDependencies,
+      });
 
-    const hasDependencies =
-      dependencies && Object.keys(dependencies).length > 0;
+    const hasDependencies = deps && Object.keys(deps).length > 0;
 
-    const name = getPackageName(pkgName);
     result[name] = {
       version: pkg.version,
       resolved: pkg.resolved,
       integrity: pkg.integrity,
-      ...(hasDependencies ? { dependencies } : {}),
+      ...(hasDependencies ? { dependencies: deps } : {}),
     };
   });
   return result;
@@ -987,28 +995,58 @@ function getInstalledDependenciesTreeFromPackageLock(packages, prefix) {
 //     }
 //   }
 // }
+
+function getPackageLockFromPath(dir, path) {
+  // As per Npm 8, now the metadata is no longer inside .npm/package/node_modules/PACKAGE_NAME/package.json
+  // now you have every metadata of every package inside .npm/package/node_modules/ at .npm/package/node_modules/.package-lock.json
+  let packageLock = {};
+  try {
+    const nodeModulesPath = files.pathJoin(dir, "node_modules");
+    const packageLockPath = files.pathJoin(nodeModulesPath, path);
+    packageLock = JSON.parse(files.readFile(packageLockPath));
+  } catch (e) {}
+  return packageLock;
+}
+
 function getInstalledDependenciesTree(dir) {
   const defaultReturn = {
     lockfileVersion: 1,
-  }
+  };
+  const pkgs = getPackageLockFromPath(dir, ".package-lock.json").packages;
 
-  // As per Npm 8, now the metadata is no longer inside .npm/package/node_modules/PACKAGE_NAME/package.json
-  // now you have every metadata of every package inside .npm/package/node_modules/ at .npm/package/node_modules/.package-lock.json
-  let pkgs;
-  try {
-    const nodeModulesPath = files.pathJoin(dir, "node_modules");
-    const packageLockPath = files.pathJoin(nodeModulesPath, ".package-lock.json");
-    const packageLock = JSON.parse(files.readFile(packageLockPath));
-    pkgs = packageLock.packages;
-  } finally {
-    if (!pkgs) return defaultReturn;
-  }
+  if (!pkgs) return defaultReturn;
+
+  let dependencies =
+    getInstalledDependenciesTreeFromPackageLock({
+      packages: pkgs,
+      prefix: "node_modules",
+    }) || {};
+
+  Object.keys(dependencies).forEach((packageName) => {
+    if (!packageName.startsWith("@")) return;
+    const deps = getPackageLockFromPath(
+      dir,
+      `${packageName}/package.json`
+    ).dependencies;
+    const packages = getPackageLockFromPath(
+      dir,
+      `${packageName}/package-lock.json`
+    ).dependencies;
+    if (!deps || !packages) return;
+
+    dependencies = {
+      ...dependencies,
+      ...getInstalledDependenciesTreeFromPackageLock({
+        packages,
+        dependencies: deps,
+        mappedDependencies: dependencies,
+      }),
+    };
+  });
+
   return {
     ...defaultReturn,
-    dependencies: getInstalledDependenciesTreeFromPackageLock(
-      pkgs,
-      "node_modules"
-    ),
+    dependencies,
   };
 }
 
