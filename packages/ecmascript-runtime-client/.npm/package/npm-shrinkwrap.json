@@ -1,7 +1,7 @@
 {
-  "lockfileVersion": 3,
+  "lockfileVersion": 4,
   "dependencies": {
-    "node_modules/core-js": {
+    "core-js": {
       "version": "3.15.2",
       "resolved": "https://registry.npmjs.org/core-js/-/core-js-3.15.2.tgz",
       "integrity": "sha512-tKs41J7NJVuaya8DxIOCnl8QuPHx5/ZVbFo1oKgVl1qHFBBrDctzQGtuLjPpRdNTWmKPH6oEvgN/MUID+l485Q=="

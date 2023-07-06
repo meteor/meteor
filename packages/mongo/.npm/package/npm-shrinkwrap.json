@@ -1,7 +1,7 @@
 {
-  "lockfileVersion": 3,
+  "lockfileVersion": 4,
   "dependencies": {
-    "node_modules/mongodb-uri": {
+    "mongodb-uri": {
       "version": "0.9.7",
       "resolved": "https://registry.npmjs.org/mongodb-uri/-/mongodb-uri-0.9.7.tgz",
       "integrity": "sha512-s6BdnqNoEYfViPJgkH85X5Nw5NpzxN8hoflKLweNa7vBxt2V7kaS06d74pAtqDxde8fn4r9h4dNdLiFGoNV0KA=="

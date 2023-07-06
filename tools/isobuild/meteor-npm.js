@@ -33,7 +33,7 @@ var meteorNpm = exports;
 
 // change this will recreate the npm-shrinkwrap.json file
 // and install all dependencies from scratch
-const LOCK_FILE_VERSION = 3;
+const LOCK_FILE_VERSION = 4;
 
 // Expose the version of npm in use from the dev bundle.
 meteorNpm.npmVersion = "8.19.4";
@@ -724,10 +724,28 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
       'npm-shrinkwrap.json'
     );
 
+    // Starting from Npm 8, it's expected to have
+    // node_modules/<package> for the package name
+    const mappedDependencies = Object.entries(
+      preservedShrinkwrap.dependencies
+    ).reduce((acc, [name, info]) => {
+      return {
+        ...acc,
+        [`node_modules/${name}`]: info,
+      };
+    }, {});
+
     // There are some unchanged packages here. Install from shrinkwrap.
     files.writeFile(
       newShrinkwrapFile,
-      JSON.stringify(preservedShrinkwrap, null, 2)
+      JSON.stringify(
+        {
+          ...preservedShrinkwrap,
+          dependencies: mappedDependencies,
+        },
+        null,
+        2
+      )
     );
 
     const newPackageJsonFile = files.pathJoin(
@@ -972,7 +990,9 @@ function getInstalledDependenciesTreeFromPackageLock({
     }
     const pkg = packages[pkgName];
 
-    if (!pkg || mappedDependencies[pkgName]) return;
+    const name = getPackageName(pkgName);
+
+    if (!pkg || mappedDependencies[name]) return;
 
     const deps =
       pkg.dependencies &&
@@ -984,7 +1004,7 @@ function getInstalledDependenciesTreeFromPackageLock({
 
     const hasDependencies = deps && Object.keys(deps).length > 0;
 
-    result[pkgName] = {
+    result[name] = {
       version: pkg.version,
       resolved: pkg.resolved,
       integrity: pkg.integrity,

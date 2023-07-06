@@ -1,17 +1,17 @@
 {
-  "lockfileVersion": 3,
+  "lockfileVersion": 4,
   "dependencies": {
-    "node_modules/@sinonjs/commons": {
+    "@sinonjs/commons": {
       "version": "1.8.6",
       "resolved": "https://registry.npmjs.org/@sinonjs/commons/-/commons-1.8.6.tgz",
       "integrity": "sha512-Ky+XkAkqPZSm3NLBeUng77EBQl3cmeJhITaGHdYH8kjVB+aun3S4XBRti2zt17mtt0mIUDiNxYeoJm6drVvBJQ=="
     },
-    "node_modules/@sinonjs/fake-timers": {
+    "@sinonjs/fake-timers": {
       "version": "7.0.5",
       "resolved": "https://registry.npmjs.org/@sinonjs/fake-timers/-/fake-timers-7.0.5.tgz",
       "integrity": "sha512-fUt6b15bjV/VW93UP5opNXJxdwZSbK1EdiwnhN7XrQrcpaOhMJpZ/CjwFpM3THpxwA+YviBUJKSuEqKlCK5alw=="
     },
-    "node_modules/type-detect": {
+    "type-detect": {
       "version": "4.0.8",
       "resolved": "https://registry.npmjs.org/type-detect/-/type-detect-4.0.8.tgz",
       "integrity": "sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g=="
