@@ -1,22 +1,22 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 3,
   "dependencies": {
-    "@types/node": {
-      "version": "20.3.2",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.3.2.tgz",
-      "integrity": "sha512-vOBLVQeCQfIcF/2Y7eKFTqrMnizK5lRNQ7ykML/5RuwVXVWxYkgwS7xbt4B6fKCUPgbSL5FSsjHQpaGQP/dQmw=="
+    "node_modules/@types/node": {
+      "version": "20.4.0",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.4.0.tgz",
+      "integrity": "sha512-jfT7iTf/4kOQ9S7CHV9BIyRaQqHu67mOjsIQBC3BKZvzvUB6zLxEwJ6sBE3ozcvP8kF6Uk5PXN0Q+c0dfhGX0g=="
     },
-    "@types/nodemailer": {
+    "node_modules/@types/nodemailer": {
       "version": "6.4.7",
       "resolved": "https://registry.npmjs.org/@types/nodemailer/-/nodemailer-6.4.7.tgz",
       "integrity": "sha512-f5qCBGAn/f0qtRcd4SEn88c8Fp3Swct1731X4ryPKqS61/A3LmmzN8zaEz7hneJvpjFbUUgY7lru/B/7ODTazg=="
     },
-    "nodemailer": {
+    "node_modules/nodemailer": {
       "version": "6.6.3",
       "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-6.6.3.tgz",
       "integrity": "sha512-faZFufgTMrphYoDjvyVpbpJcYzwyFnbAMmQtj1lVBYAUSm3SOy2fIdd9+Mr4UxPosBa0JRw9bJoIwQn+nswiew=="
     },
-    "stream-buffers": {
+    "node_modules/stream-buffers": {
       "version": "3.0.2",
       "resolved": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-3.0.2.tgz",
       "integrity": "sha512-DQi1h8VEBA/lURbSwFtEHnSTb9s2/pwLEaFuNhXwy1Dx3Sa0lOuYT2yNUr4/j2fs8oCAMANtrZ5OrPZtyVs3MQ=="

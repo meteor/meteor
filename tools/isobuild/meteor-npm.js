@@ -33,7 +33,7 @@ var meteorNpm = exports;
 
 // change this will recreate the npm-shrinkwrap.json file
 // and install all dependencies from scratch
-const LOCK_FILE_VERSION = 2;
+const LOCK_FILE_VERSION = 3;
 
 // Expose the version of npm in use from the dev bundle.
 meteorNpm.npmVersion = "8.19.4";
@@ -970,11 +970,9 @@ function getInstalledDependenciesTreeFromPackageLock({
     if (prefix && !pathMatches(prefix, pkgName)) {
       return;
     }
-    const name = getPackageName(pkgName);
-
     const pkg = packages[pkgName];
 
-    if (!pkg || mappedDependencies[name]) return;
+    if (!pkg || mappedDependencies[pkgName]) return;
 
     const deps =
       pkg.dependencies &&
@@ -986,7 +984,7 @@ function getInstalledDependenciesTreeFromPackageLock({
 
     const hasDependencies = deps && Object.keys(deps).length > 0;
 
-    result[name] = {
+    result[pkgName] = {
       version: pkg.version,
       resolved: pkg.resolved,
       integrity: pkg.integrity,
