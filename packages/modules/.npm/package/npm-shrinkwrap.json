@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 2,
   "dependencies": {
     "@meteorjs/reify": {
       "version": "0.24.0",

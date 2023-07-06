@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 2,
   "dependencies": {
     "@aws-crypto/crc32": {
       "version": "3.0.0",
@@ -244,14 +244,14 @@
       "integrity": "sha512-vWWigayk5i2cFp9xPX5vdzHyK+P0t/xZ3Ovp4Ss+c8JQ1Hlq2kpJZVWtTKsmdfND5rVo5lu0kD5wgAMUCcmuhw=="
     },
     "@smithy/middleware-endpoint": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/@smithy/middleware-endpoint/-/middleware-endpoint-1.0.1.tgz",
-      "integrity": "sha512-XEHPq73PPm0sXul//5MRC8JKDwHTaNjV3myd9FJ5YoUT+QMJ27gqiwwAMVASJ6vC4ELHzgQdmoTZxVX83Jx17w=="
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/@smithy/middleware-endpoint/-/middleware-endpoint-1.0.2.tgz",
+      "integrity": "sha512-F3CyXgjtDI4quGFkDmVNytt6KMwlzzeMxtopk6Edue4uKdKcMC1vUmoRS5xTbFzKDDp4XwpnEV7FshPaL3eCPw=="
     },
     "@smithy/middleware-retry": {
-      "version": "1.0.2",
-      "resolved": "https://registry.npmjs.org/@smithy/middleware-retry/-/middleware-retry-1.0.2.tgz",
-      "integrity": "sha512-Osj+XsqJ67RuX1MLc3+7LDtlRz8eNVqr/Pim9yPAjRa03Xberu6ST3a3oV3NqRpcUgMTifxuaKVIciuPE3rTWA=="
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/@smithy/middleware-retry/-/middleware-retry-1.0.3.tgz",
+      "integrity": "sha512-ZRsjG8adtxQ456FULPqPFmWtrW44Fq8IgdQvQB+rC2RSho3OUzS+TiEIwb5Zs6rf2IoewITKtfdtsUZcxXO0ng=="
     },
     "@smithy/middleware-serde": {
       "version": "1.0.1",
@@ -294,9 +294,9 @@
       "integrity": "sha512-zauxdMc3cwxoLitI5DZqH7xN6Fk0mwRxrUMAETbav2j6Se2U0UGak/55rZcDg2yGzOURaLYi5iOm1gHr98P+Bw=="
     },
     "@smithy/service-error-classification": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/@smithy/service-error-classification/-/service-error-classification-1.0.1.tgz",
-      "integrity": "sha512-EcFVOHFv4YZHUrJ6161tpPKXNlQsTAQKoKorODxuOQW1my14mgoyiiMXrlnSMaYRF//oaONYfFOQ2EMAUTC5DQ=="
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/@smithy/service-error-classification/-/service-error-classification-1.0.2.tgz",
+      "integrity": "sha512-Q5CCuzYL5FGo6Rr/O+lZxXHm2hrRgbmMn8MgyjqZUWZg20COg20DuNtIbho2iht6CoB7jOpmpBqhWizLlzUZgg=="
     },
     "@smithy/shared-ini-file-loader": {
       "version": "1.0.1",
@@ -369,9 +369,9 @@
       "integrity": "sha512-u9akN3Zmbr0vZH4F+2iehG7cFg+3fvDfnvS/hhsXH4UHuhqiQ+ADefibnLzPoz1pooY7rvwaQ/TVHyJmZHdLdQ=="
     },
     "@smithy/util-retry": {
-      "version": "1.0.2",
-      "resolved": "https://registry.npmjs.org/@smithy/util-retry/-/util-retry-1.0.2.tgz",
-      "integrity": "sha512-LqzAy1QzeAHpSZpsd2LtKZRbco7F5gF+Zpoa4TuuFq9f+CGmH6OuTCIN3I13LPEBa4zs2AgvGnXljvMbUw5WGw=="
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/@smithy/util-retry/-/util-retry-1.0.3.tgz",
+      "integrity": "sha512-gYQnZDD8I2XJFspVwUISyukjPWVikTzKR0IdG8hCWYPTpeULFl1o6yzXlT5SL63TBkuEYl0R1/93cdNtMiNnoA=="
     },
     "@smithy/util-stream": {
       "version": "1.0.1",
@@ -389,9 +389,9 @@
       "integrity": "sha512-iX6XHpjh4DFEUIBSKp2tjy3pYnLQMsJ62zYi1BVAC0kobE6p8AVpiZnxsU3ZkgQatAsUaEspFHUZ7CL7oSqaPQ=="
     },
     "@types/node": {
-      "version": "20.3.2",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.3.2.tgz",
-      "integrity": "sha512-vOBLVQeCQfIcF/2Y7eKFTqrMnizK5lRNQ7ykML/5RuwVXVWxYkgwS7xbt4B6fKCUPgbSL5FSsjHQpaGQP/dQmw=="
+      "version": "20.4.0",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.4.0.tgz",
+      "integrity": "sha512-jfT7iTf/4kOQ9S7CHV9BIyRaQqHu67mOjsIQBC3BKZvzvUB6zLxEwJ6sBE3ozcvP8kF6Uk5PXN0Q+c0dfhGX0g=="
     },
     "@types/webidl-conversions": {
       "version": "7.0.0",

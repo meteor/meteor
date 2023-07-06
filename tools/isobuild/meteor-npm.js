@@ -31,6 +31,10 @@ import {
 
 var meteorNpm = exports;
 
+// change this will recreate the npm-shrinkwrap.json file
+// and install all dependencies from scratch
+const LOCK_FILE_VERSION = 2;
+
 // Expose the version of npm in use from the dev bundle.
 meteorNpm.npmVersion = "8.19.4";
 
@@ -99,6 +103,20 @@ meteorNpm.updateDependencies = async function (packageName,
     if (files.exists(packageNpmDir) &&
         ! files.exists(files.pathJoin(packageNpmDir, 'npm-shrinkwrap.json'))) {
       await files.rm_recursive(packageNpmDir);
+    }
+
+    // with the changes on npm 8, where there were changes to how the packages metadata is given
+    // we need to reinstall all packages from scratch
+    // and to do that we need to rewrite all the shrinkwrap files
+    if (files.exists(packageNpmDir)) {
+      try {
+        const shrinkwrap = JSON.parse(files.readFile(
+          files.pathJoin(packageNpmDir, 'npm-shrinkwrap.json')
+        ));
+        if (shrinkwrap.lockfileVersion !== LOCK_FILE_VERSION) {
+          await files.rm_recursive(packageNpmDir);
+        }
+      } catch (e) {}
     }
 
     if (files.exists(packageNpmDir)) {
@@ -1010,7 +1028,7 @@ function getPackageLockFromPath(dir, path) {
 
 function getInstalledDependenciesTree(dir) {
   const defaultReturn = {
-    lockfileVersion: 1,
+    lockfileVersion: LOCK_FILE_VERSION,
   };
   const pkgs = getPackageLockFromPath(dir, ".package-lock.json").packages;
 
@@ -1054,7 +1072,7 @@ function getShrinkwrappedDependenciesTree(dir) {
   const shrinkwrap = JSON.parse(files.readFile(
     files.pathJoin(dir, 'npm-shrinkwrap.json')
   ));
-  shrinkwrap.lockfileVersion = 1
+  shrinkwrap.lockfileVersion = LOCK_FILE_VERSION;
   return shrinkwrap;
 };
 
