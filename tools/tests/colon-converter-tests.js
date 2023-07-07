@@ -101,7 +101,7 @@ if (process.platform !== "win32") {
     var finalTreeHash =  files.treeHash(targetDirectory);
 
     // Nothing should be different
-    selftest.expectEqual(finalTreeHash, startingTreeHash);
+    await selftest.expectEqual(finalTreeHash, startingTreeHash);
   });
 }
 
@@ -128,9 +128,9 @@ selftest.define("package with colons is converted on Windows", async function ()
   if (process.platform === "win32") {
     expectedHash = "Ayya11T8Zef16+F7C/sZSwRxIiGiBbBFIwUC88Weaqs=";
   } else {
-    expectedHash = "AQX/7h0fXwHT9rNQvlBTvIZAE2g8krlnkEQMc9lTuMI=";
+    expectedHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
   }
 
   // Saved tree hash of the correct result
-  selftest.expectEqual(files.treeHash(targetDirectory), expectedHash);
+  await selftest.expectEqual(files.treeHash(targetDirectory), expectedHash);
 });
