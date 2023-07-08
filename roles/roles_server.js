@@ -1,5 +1,13 @@
 /* global Meteor, Roles */
-if (Meteor.roles.createIndex) {
+if (Meteor.roles.createIndexAsync) {
+  Meteor.roleAssignment.createIndexAsync({ 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 })
+  Meteor.roleAssignment.createIndexAsync({ 'user._id': 1, 'role._id': 1, scope: 1 })
+  Meteor.roleAssignment.createIndexAsync({ 'role._id': 1 })
+  Meteor.roleAssignment.createIndexAsync({ scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }) // Adding userId and roleId might speed up other queries depending on the first index
+  Meteor.roleAssignment.createIndexAsync({ 'inheritedRoles._id': 1 })
+
+  Meteor.roles.createIndexAsync({ 'children._id': 1 })
+} else if (Meteor.roles.createIndex) {
   Meteor.roleAssignment.createIndex({ 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 })
   Meteor.roleAssignment.createIndex({ 'user._id': 1, 'role._id': 1, scope: 1 })
   Meteor.roleAssignment.createIndex({ 'role._id': 1 })
