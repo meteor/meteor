@@ -4,8 +4,6 @@
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // Minimum TypeScript Version: 4.1
 
-/// <reference types="meteor" />
-
 import { Mongo } from 'meteor/mongo'
 
 /**
