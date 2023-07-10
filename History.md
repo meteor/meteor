@@ -2,7 +2,7 @@
 
 ## v3.5.0
 
-* Bump `blaze` weak dependency to v2.6.2
+* Bump `blaze` weak dependency to v2.7.1
 * Bring types to the core and update them
 * If you use Meteor 2.8+ indexes are now created using the new async method
 
