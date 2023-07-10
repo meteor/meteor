@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.5.0
+
+* Bump `blaze` weak dependency to v2.7.1
+* Bring types to the core and update them
+
 ## v3.4.0
 
 * Use the new `createIndex` instead of `_ensureIndex` if available
