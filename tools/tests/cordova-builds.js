@@ -60,7 +60,7 @@ selftest.define("cordova builds with server options", ["cordova"], async functio
   await run.expectExit(1);
 
   run = s.run("build", relBuildDir, "--server", "https://example.com:5000");
-  run.waitSecs(300);
+  run.waitSecs(90);
   await run.expectExit(0);
   await checkMobileServer(s, "https://example.com:5000/");
   await cleanUpBuild(s);
