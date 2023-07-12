@@ -32,6 +32,16 @@ run_env_change: &run_env_change
     # Reload sysctl so these are in effect.
     # sudo sysctl -p
 
+log_env: &log_env
+  name: Log Environment
+  command: |
+    echo "Node version: $(node --version)"
+    echo "NPM version: $(npm --version)"
+    echo "Meteor Node version: $(./meteor node --version)"
+    echo "Meteor NPM version: $(./meteor npm --version)"
+    echo "FILES:"
+    ls -l
+
 # A reusable "run" snippet which enables the continued logging of memoryusage
 # to a file on disk which can be saved to build artifacts for later analysis.
 run_log_mem_use: &run_log_mem_use
@@ -105,6 +115,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *log_env
       - checkout
       - run:
           # https://discuss.circleci.com/t/git-submodule-url-isnt-playing-nice-with-the-cache/549/3
@@ -307,6 +319,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *log_env
       - attach_workspace:
           at: .
       - run:
@@ -347,6 +361,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *log_env
       - attach_workspace:
           at: .
       - run:
