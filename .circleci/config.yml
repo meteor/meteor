@@ -115,8 +115,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - run:
-          <<: *log_env
       - checkout
       - run:
           # https://discuss.circleci.com/t/git-submodule-url-isnt-playing-nice-with-the-cache/549/3
@@ -165,6 +163,8 @@ jobs:
       - run:
           name: Clear npm cache
           command: ./meteor npm cache clear --force
+      - run:
+          <<: *log_env
       - run:
           name: Get Ready
           command: |
@@ -319,10 +319,10 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - run:
-          <<: *log_env
       - attach_workspace:
           at: .
+      - run:
+          <<: *log_env
       - run:
           name: "Print environment"
           command: printenv
@@ -361,10 +361,10 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - run:
-          <<: *log_env
       - attach_workspace:
           at: .
+      - run:
+          <<: *log_env
       - run:
           name: "Print environment"
           command: printenv
