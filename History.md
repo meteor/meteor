@@ -3,8 +3,8 @@
 ## v3.5.0
 
 * Bump `blaze` weak dependency to v2.7.1
-* Bring types to the core and update them
-* If you use Meteor 2.8+ indexes are now created using the new async method
+* Bring types to the core and update them [#365](https://github.com/Meteor-Community-Packages/meteor-roles/pull/365) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* If you use Meteor 2.8+ indexes are now created using the new async method [#366](https://github.com/Meteor-Community-Packages/meteor-roles/pull/366) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
 
 ## v3.4.0
 
