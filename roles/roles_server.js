@@ -3,14 +3,14 @@ let indexFnAssignment
 let indexFnRoles
 
 if (Meteor.roles.createIndexAsync) {
-  indexFnAssignment = Meteor.roleAssignment.createIndexAsync
-  indexFnRoles = Meteor.roles.createIndexAsync
+  indexFnAssignment = Meteor.roleAssignment.createIndexAsync.bind(Meteor.roleAssignment)
+  indexFnRoles = Meteor.roles.createIndexAsync.bind(Meteor.roles)
 } else if (Meteor.roles.createIndex) {
-  indexFnAssignment = Meteor.roleAssignment.createIndex
-  indexFnRoles = Meteor.roles.createIndex
+  indexFnAssignment = Meteor.roleAssignment.createIndex.bind(Meteor.roleAssignment)
+  indexFnRoles = Meteor.roles.createIndex.bind(Meteor.roles)
 } else {
-  indexFnAssignment = Meteor.roleAssignment._ensureIndex
-  indexFnRoles = Meteor.roles._ensureIndex
+  indexFnAssignment = Meteor.roleAssignment._ensureIndex.bind(Meteor.roleAssignment)
+  indexFnRoles = Meteor.roles._ensureIndex.bind(Meteor.roles)
 }
 
 [
