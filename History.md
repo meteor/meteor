@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.0.0
+
+* Collections are now directly exported from the package [#344](https://github.com/Meteor-Community-Packages/meteor-roles/pull/344) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+
 ## v3.5.1
 
 * Fix for index creation functions losing context [#371](https://github.com/Meteor-Community-Packages/meteor-roles/pull/371) [@copleykj](https://github.com/sponsors/copleykj)
