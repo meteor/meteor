@@ -1,18 +1,5 @@
 /* global Meteor, Roles */
 import { RolesCollection, RoleAssignmentCollection  } from './roles_common'
-let indexFnAssignment
-let indexFnRoles
-
-if (Meteor.roles.createIndexAsync) {
-  indexFnAssignment = Meteor.roleAssignment.createIndexAsync.bind(Meteor.roleAssignment)
-  indexFnRoles = Meteor.roles.createIndexAsync.bind(Meteor.roles)
-} else if (Meteor.roles.createIndex) {
-  indexFnAssignment = Meteor.roleAssignment.createIndex.bind(Meteor.roleAssignment)
-  indexFnRoles = Meteor.roles.createIndex.bind(Meteor.roles)
-} else {
-  indexFnAssignment = Meteor.roleAssignment._ensureIndex.bind(Meteor.roleAssignment)
-  indexFnRoles = Meteor.roles._ensureIndex.bind(Meteor.roles)
-}
 
 [
   { 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 },
@@ -20,8 +7,8 @@ if (Meteor.roles.createIndexAsync) {
   { 'role._id': 1 },
   { scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }, // Adding userId and roleId might speed up other queries depending on the first index
   { 'inheritedRoles._id': 1 }
-].forEach(index => indexFnAssignment(index))
-indexFnRoles({ 'children._id': 1 })
+].forEach(index => RoleAssignmentCollection.createIndexAsync(index))
+RolesCollection.createIndexAsync({ 'children._id': 1 })
 
 
 /*
