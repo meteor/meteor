@@ -1,23 +1,28 @@
 /* global Meteor, Roles */
 import { RolesCollection, RoleAssignmentCollection  } from './roles_common'
+let indexFnAssignment
+let indexFnRoles
 
-if (Meteor.roles.createIndex) {
-  RoleAssignmentCollection.createIndex({ 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 })
-  RoleAssignmentCollection.createIndex({ 'user._id': 1, 'role._id': 1, scope: 1 })
-  RoleAssignmentCollection.createIndex({ 'role._id': 1 })
-  RoleAssignmentCollection.createIndex({ scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }) // Adding userId and roleId might speed up other queries depending on the first index
-  RoleAssignmentCollection.createIndex({ 'inheritedRoles._id': 1 })
-
-  RolesCollection.createIndex({ 'children._id': 1 })
+if (Meteor.roles.createIndexAsync) {
+  indexFnAssignment = Meteor.roleAssignment.createIndexAsync.bind(Meteor.roleAssignment)
+  indexFnRoles = Meteor.roles.createIndexAsync.bind(Meteor.roles)
+} else if (Meteor.roles.createIndex) {
+  indexFnAssignment = Meteor.roleAssignment.createIndex.bind(Meteor.roleAssignment)
+  indexFnRoles = Meteor.roles.createIndex.bind(Meteor.roles)
 } else {
-  RoleAssignmentCollection._ensureIndex({ 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 })
-  RoleAssignmentCollection._ensureIndex({ 'user._id': 1, 'role._id': 1, scope: 1 })
-  RoleAssignmentCollection._ensureIndex({ 'role._id': 1 })
-  RoleAssignmentCollection._ensureIndex({ scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }) // Adding userId and roleId might speed up other queries depending on the first index
-  RoleAssignmentCollection._ensureIndex({ 'inheritedRoles._id': 1 })
-
-  RolesCollection._ensureIndex({ 'children._id': 1 })
+  indexFnAssignment = Meteor.roleAssignment._ensureIndex.bind(Meteor.roleAssignment)
+  indexFnRoles = Meteor.roles._ensureIndex.bind(Meteor.roles)
 }
+
+[
+  { 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 },
+  { 'user._id': 1, 'role._id': 1, scope: 1 },
+  { 'role._id': 1 },
+  { scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }, // Adding userId and roleId might speed up other queries depending on the first index
+  { 'inheritedRoles._id': 1 }
+].forEach(index => indexFnAssignment(index))
+indexFnRoles({ 'children._id': 1 })
+
 
 /*
  * Publish logged-in user's roles so client-side checks can work.

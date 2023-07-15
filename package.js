@@ -8,7 +8,7 @@ Package.describe({
 })
 
 Package.onUse(function (api) {
-  api.versionsFrom(['2.8'])
+  api.versionsFrom(['2.8.0'])
 
   var both = ['client', 'server']
 
@@ -19,6 +19,8 @@ Package.onUse(function (api) {
     'mongo',
     'check'
   ], both)
+
+  api.use('zodern:types@1.0.9')
 
   api.use(['blaze@2.7.1'], 'client', { weak: true })
 

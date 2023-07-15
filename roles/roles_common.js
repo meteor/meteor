@@ -797,7 +797,7 @@ Object.assign(Roles, {
    * Retrieve cursor of all existing roles.
    *
    * @method getAllRoles
-   * @param {Object} [queryOptions] Options which are passed directly
+   * @param {Object} queryOptions Options which are passed directly
    *                                through to `Meteor.roles.find(query, options)`.
    * @return {Cursor} Cursor of existing roles.
    * @static
@@ -856,7 +856,7 @@ Object.assign(Roles, {
    *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
    *   - `queryOptions`: options which are passed directly
    *     through to `Meteor.roleAssignment.find(query, options)`
-
+   *
    * Alternatively, it can be a scope name string.
    * @return {Cursor} Cursor of user assignments for roles.
    * @static
