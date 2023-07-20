@@ -35,13 +35,21 @@ run_env_change: &run_env_change
 log_env: &log_env
   name: Log Environment
   command: |
-    echo "Node version: $(node --version)"
-    echo "NPM version: $(npm --version)"
-    echo "Meteor Node version: $(./meteor node --version)"
-    echo "Meteor NPM version: $(./meteor npm --version)"
-    echo "Dev bundle package.json:"
+    echo "==> LBS Version"
+    lsb_release -a
+    echo "==> cat /etc/os-release"
+    cat /etc/os-release
+    echo "==> hostnamectl"
+    hostnamectl
+    echo "==> uname -srm"
+    uname -srm
+    echo "==> Node version: $(node --version)"
+    echo "==> NPM version: $(npm --version)"
+    echo "==> Meteor Node version: $(./meteor node --version)"
+    echo "==> Meteor NPM version: $(./meteor npm --version)"
+    echo "==> Dev bundle package.json:"
     cat ./dev_bundle/lib/package.json
-    echo "Dev bundle node_modules:"
+    echo "==> Dev bundle node_modules:"
     ls -l ./dev_bundle/lib/node_modules
 
 # A reusable "run" snippet which enables the continued logging of memoryusage
