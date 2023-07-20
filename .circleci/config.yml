@@ -39,8 +39,6 @@ log_env: &log_env
     lsb_release -a
     echo "==> cat /etc/os-release"
     cat /etc/os-release
-    echo "==> hostnamectl"
-    hostnamectl
     echo "==> uname -srm"
     uname -srm
     echo "==> Node version: $(node --version)"
