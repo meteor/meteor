@@ -1,7 +1,3 @@
-var isEmpty = Npm.require('lodash.isempty');
-var has = Npm.require('lodash.has');
-var union = Npm.require('lodash.union');
-
 // By adding this package, you get the following default policy:
 // No eval or other string-to-code, and content can only be loaded from the
 // same origin as the app (except for XHRs and websocket connections, which can
@@ -79,7 +75,7 @@ var parseCsp = function (csp) {
   Object.entries(cspSrcs).forEach(function (entry) {
     var directive = entry[0];
     var sources = entry[1];
-    cspSrcs[directive] = union(sources || [], cspSrcs["default-src"] || []);
+    cspSrcs[directive] = [...new Set([...(sources || []), ...(cspSrcs["default-src"] || [])])];
   });
 };
 
@@ -94,7 +90,7 @@ var removeCspSrc = function (directive, src) {
 var prepareForCspDirective = function (directive) {
   cspSrcs = cspSrcs || {};
   cachedCsp = null;
-  if (!has(cspSrcs, directive))
+  if (!(directive in cspSrcs))
     cspSrcs[directive] = [].concat(cspSrcs["default-src"]);
 };
 
@@ -162,7 +158,7 @@ Object.assign(BrowserPolicy.content, {
   },
   // Exported for tests and browser-policy-common.
   _constructCsp: function () {
-    if (! cspSrcs || isEmpty(cspSrcs))
+    if (! cspSrcs || (Object.keys(cspSrcs).length === 0 && cspSrcs.constructor === Object))
       return null;
 
     if (cachedCsp)
