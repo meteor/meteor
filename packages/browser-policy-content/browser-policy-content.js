@@ -75,7 +75,7 @@ var parseCsp = function (csp) {
   Object.entries(cspSrcs).forEach(function (entry) {
     var directive = entry[0];
     var sources = entry[1];
-    cspSrcs[directive] = [...new Set([...(sources || []), ...(cspSrcs["default-src"] || [])])];
+    cspSrcs[directive] = (sources || []).filter(t=> !(cspSrcs["default-src"] || []).includes(t)).concat((cspSrcs["default-src"] || []))
   });
 };
 
