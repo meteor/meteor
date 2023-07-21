@@ -53,6 +53,10 @@ var contentSniffingAllowed = false;
 var BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
 BrowserPolicy.content = {};
 
+var mergeUnique = function (firstArray, secondArray) {
+  return firstArray.concat(secondArray.filter(function (item) {return firstArray.indexOf(item) < 0}));
+}
+
 var parseCsp = function (csp) {
   var policies = csp.split("; ");
   cspSrcs = {};
@@ -75,7 +79,7 @@ var parseCsp = function (csp) {
   Object.entries(cspSrcs).forEach(function (entry) {
     var directive = entry[0];
     var sources = entry[1];
-    cspSrcs[directive] = (sources || []).filter(t=> !(cspSrcs["default-src"] || []).includes(t)).concat((cspSrcs["default-src"] || []))
+    cspSrcs[directive] = mergeUnique(sources || [], cspSrcs["default-src"] || []);
   });
 };
 
