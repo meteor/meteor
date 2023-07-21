@@ -1,7 +1,9 @@
 ---
 title: Flowbite UI
 description: Learn how to install Tailwind CSS with Flowbite for your Meteor.js project to build full-stack JavaScript or TypeScript web, mobile, and desktop applications
----## Introduction
+---
+
+## Introduction
 
 [Flowbite](https://flowbite.com/) is an open-source library of UI components based on the utility-first Tailwind CSS framework featuring dark mode support, a Figma design system, templates, and more.
 
