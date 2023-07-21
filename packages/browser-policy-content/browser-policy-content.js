@@ -168,7 +168,7 @@ Object.assign(BrowserPolicy.content, {
         var directive = entry[0];
         var srcs = entry[1];
         srcs = srcs || [];
-        if (isEmpty(srcs))
+        if ((!Array.isArray(srcs) || !srcs.length))
           srcs = [keywords.none];
         var directiveCsp = srcs.filter(function(value, index, array) {return array.indexOf(value) === index}).join(" ");
         return directive + " " + directiveCsp + ";";
