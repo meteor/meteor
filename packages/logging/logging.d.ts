@@ -1,9 +1,10 @@
 type LogJSONInput = {
-  message: string
-  app?: string
-  [index: string]: string | object | number
-}
-type LogInput = string | LogJSONInput
+  message: string;
+  app?: string;
+  [index: string]: string | object | number;
+};
+
+type LogInput = string | LogJSONInput;
 
 type formatInput = {
   message: string;
@@ -16,10 +17,10 @@ type formatInput = {
   originApp?: string;
   program?: string;
   satellite?: string;
-  stderr?: string | Error
+  stderr?: string | Error;
 };
 
-export declare function Log(input: LogInput): void;
+export declare function Log(input: LogInput, ...optionalParams: any[]): void;
 
 export declare namespace Log {
   var outputFormat: 'json' | 'colored-text';
@@ -27,10 +28,20 @@ export declare namespace Log {
   function _suppress(count: number): void;
   function _intercepted(): string[];
   function _getCallerDetails(): { line: number; file: string };
-  function format(object: formatInput, options: { color: true }): void;
+  function parse(line: object | string): object
+  function format(object: formatInput, options: { color: true }): object | string;
+  function objFromText(
+    line: string,
+    override: object
+  ): {
+    message: string
+    level: 'info'
+    time: Date
+    timeInexact: true
+  }
 
-  function debug(input: LogInput): void;
-  function info(input: LogInput): void;
-  function warn(input: LogInput): void;
-  function error(input: LogInput): void;
+  function debug(input: LogInput, ...optionalParams: any[]): void;
+  function info(input: LogInput, ...optionalParams: any[]): void;
+  function warn(input: LogInput, ...optionalParams: any[]): void;
+  function error(input: LogInput, ...optionalParams: any[]): void;
 }

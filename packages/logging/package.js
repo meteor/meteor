@@ -1,11 +1,11 @@
 Package.describe({
   summary: 'Logging facility.',
-  version: '1.3.3',
+  version: '1.4.0',
   documentation: 'README.md'
 });
 
 Npm.depends({
-  'chalk': '5.2.0'
+  'chalk': '5.3.0'
 });
 
 Npm.strip({
