@@ -177,9 +177,11 @@ jobs:
           name: Get Ready
           command: |
             eval $PRE_TEST_COMMANDS;
-            ./meteor npm install @types/node@18.11.9 --save-dev
+            cd dev_bundle/lib
+            ../../meteor npm install @types/node@18.11.9 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
-            ./meteor npm install -g typescript
+            ../../meteor npm install -g typescript
+            cd ../../
             # tools/node_modules is a symlink, but starting on NPM 7, this symlinks are deleted https://github.com/npm/cli/issues/3669
             # so we are copying the node_modules to tools
             ./meteor --get-ready
