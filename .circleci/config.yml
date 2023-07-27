@@ -177,6 +177,7 @@ jobs:
           name: Get Ready
           command: |
             eval $PRE_TEST_COMMANDS;
+            sudo apt-get install -y libgbm-dev
             cd dev_bundle/lib
             ../../meteor npm install @types/node@18.11.9 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
