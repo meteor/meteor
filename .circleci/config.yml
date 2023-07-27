@@ -177,7 +177,6 @@ jobs:
           name: Get Ready
           command: |
             eval $PRE_TEST_COMMANDS;
-            sudo apt-get install -y libgbm-dev
             cd dev_bundle/lib
             ../../meteor npm install @types/node@18.11.9 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
@@ -427,6 +426,7 @@ jobs:
       - run:
           name: "Running self-test (Test Group 4)"
           command: |
+            sudo apt-get install -y libgbm-dev
             if [ -f ./tmp/test-groups/4.txt ]; then TEST_GROUP=$(<./tmp/test-groups/4.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^h[f-z]|^[i-l]'; fi
             echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
