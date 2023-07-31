@@ -998,9 +998,10 @@ ASYNC_COLLECTION_METHODS.forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
     try {
-    // TODO: Fibers remove this when we remove fibers.
+      // TODO: [fibers]: remove this when we remove fibers.
       this[methodName].isCalledFromAsync = true;
-      return Promise.resolve(this[methodName](...args));
+      // TODO: [fibers]: revert this change to "return Promise.resolve(this[methodName](...args));" in version 3.0
+      return Promise.asyncApply(async () => this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);
     }
