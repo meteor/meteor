@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.5.1
+
+* Fix for index creation functions losing context [#371](https://github.com/Meteor-Community-Packages/meteor-roles/pull/371) [@copleykj](https://github.com/sponsors/copleykj)
+
 ## v3.5.0
 
 * Bump `blaze` weak dependency to v2.7.1
