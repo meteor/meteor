@@ -46,7 +46,7 @@ const main = async () => {
       .map(file => {
         console.log(`reading file: ${ file }`);
         return {
-          fileName: file, 
+          fileName: file,
           buf : fs.readFile(`./generators/changelog/versions/${ file }`, 'utf8')
         };
       })
@@ -80,7 +80,7 @@ const main = async () => {
         ) return file;
 
         // add the contribuitors
-        const contribuitorsList = 
+        const contribuitorsList =
            Array
           .from(contribuitors)
           .map(name => `- [@${ name }](https://github.com/${ name }).`)
