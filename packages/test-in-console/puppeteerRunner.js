@@ -89,11 +89,7 @@ async function getFailCount(page) {
       return TEST_STATUS.FAILURES;
     }
 
-    if (typeof FAILURES === 'undefined') {
-      return 1;
-    }
-
-    return 0;
+    return typeof FAILURES !== 'undefined' && FAILURES;
   });
 }
 
