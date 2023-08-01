@@ -212,6 +212,7 @@ MongoConnection = function (url, options) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
+
 };
 
 MongoConnection.prototype._close = async function() {
@@ -886,7 +887,6 @@ Cursor.prototype.countAsync = async function () {
   const methodNameAsync = getAsyncMethodName(methodName);
   Cursor.prototype[methodNameAsync] = function (...args) {
     try {
-      this[methodName].isCalledFromAsync = true;
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);
