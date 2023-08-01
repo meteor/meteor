@@ -1,0 +1,65 @@
+# the test suite runs the tests (headless, server+client) for multiple Meteor releases
+name: Test suite
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  lint:
+    name: Javascript standard lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-16-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-16-
+
+      - run: cd testapp && npm ci && npm run setup && npm run lint
+
+  test:
+    name: Meteor package tests
+    needs: [lint]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        meteorRelease:
+          - '2.3'
+          - '2.7.3'
+          - '2.12'
+          # Latest version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Setup meteor ${{ matrix.meteorRelease }}
+        uses: meteorengineer/setup-meteor@v1
+        with:
+          meteor-release: ${{ matrix.meteorRelease }}
+
+      - name: cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-16-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-16-
+
+      - run: cd testapp && npm ci && npm run setup && npm run test

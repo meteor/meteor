@@ -15,12 +15,14 @@ Meteor.roleAssignment.allow({
   remove () { return true }
 })
 
+const hasProp = (target, prop) => Object.hasOwnProperty.call(target, prop)
+
 describe('roles', function () {
-  var users = {}
-  var roles = ['admin', 'editor', 'user']
+  let users = {}
+  const roles = ['admin', 'editor', 'user']
 
   Meteor.publish('_roleAssignments', function () {
-    var loggedInUserId = this.userId
+    const loggedInUserId = this.userId
 
     if (!loggedInUserId) {
       this.ready()
@@ -31,12 +33,12 @@ describe('roles', function () {
   })
 
   function addUser (name) {
-    return Meteor.users.insert({ 'username': name })
+    return Meteor.users.insert({ username: name })
   }
 
   function testUser (username, expectedRoles, scope) {
-    var userId = users[username]
-    var userObj = Meteor.users.findOne({ _id: userId })
+    const userId = users[username]
+    const userObj = Meteor.users.findOne({ _id: userId })
 
     // check using user ids (makes db calls)
     _innerTest(userId, username, expectedRoles, scope)
@@ -48,9 +50,9 @@ describe('roles', function () {
   function _innerTest (userParam, username, expectedRoles, scope) {
     // test that user has only the roles expected and no others
     roles.forEach(function (role) {
-      var expected = expectedRoles.includes(role)
-      var msg = username + ' expected to have \'' + role + '\' role but does not'
-      var nmsg = username + ' had the following un-expected role: ' + role
+      const expected = expectedRoles.includes(role)
+      const msg = username + ' expected to have \'' + role + '\' role but does not'
+      const nmsg = username + ' had the following un-expected role: ' + role
 
       if (expected) {
         assert.isTrue(Roles.userIsInRole(userParam, role, scope), msg)
@@ -66,18 +68,18 @@ describe('roles', function () {
     Meteor.users.remove({})
 
     users = {
-      'eve': addUser('eve'),
-      'bob': addUser('bob'),
-      'joe': addUser('joe')
+      eve: addUser('eve'),
+      bob: addUser('bob'),
+      joe: addUser('joe')
     }
   })
 
   it('can create and delete roles', function () {
-    var role1Id = Roles.createRole('test1')
+    const role1Id = Roles.createRole('test1')
     assert.equal(Meteor.roles.findOne()._id, 'test1')
     assert.equal(Meteor.roles.findOne(role1Id)._id, 'test1')
 
-    var role2Id = Roles.createRole('test2')
+    const role2Id = Roles.createRole('test2')
     assert.equal(Meteor.roles.findOne({ _id: 'test2' })._id, 'test2')
     assert.equal(Meteor.roles.findOne(role2Id)._id, 'test2')
 
@@ -275,13 +277,11 @@ describe('roles', function () {
   })
 
   it('can check user against several roles at once', function () {
-    var user
-
     Roles.createRole('admin')
     Roles.createRole('user')
 
     Roles.addUsersToRoles(users.eve, ['admin', 'user'])
-    user = Meteor.users.findOne({ _id: users.eve })
+    const user = Meteor.users.findOne({ _id: users.eve })
 
     // we can check the non-existing role
     assert.isTrue(Roles.userIsInRole(user, ['editor', 'admin']))
@@ -365,8 +365,8 @@ describe('roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
-    var eve = Meteor.users.findOne({ _id: users.eve })
-    var bob = Meteor.users.findOne({ _id: users.bob })
+    const eve = Meteor.users.findOne({ _id: users.eve })
+    const bob = Meteor.users.findOne({ _id: users.bob })
 
     Roles.addUsersToRoles(eve, ['admin', 'user'])
 
@@ -500,8 +500,8 @@ describe('roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
-    var eve = Meteor.users.findOne({ _id: users.eve })
-    var bob = Meteor.users.findOne({ _id: users.bob })
+    const eve = Meteor.users.findOne({ _id: users.eve })
+    const bob = Meteor.users.findOne({ _id: users.bob })
 
     // remove user role - one user
     Roles.addUsersToRoles([eve, bob], ['editor', 'user'])
@@ -637,8 +637,8 @@ describe('roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
-    var eve = Meteor.users.findOne({ _id: users.eve })
-    var bob = Meteor.users.findOne({ _id: users.bob })
+    const eve = Meteor.users.findOne({ _id: users.eve })
+    const bob = Meteor.users.findOne({ _id: users.bob })
 
     Roles.setUserRoles([users.eve, bob], ['editor', 'user'])
     testUser('eve', ['editor', 'user'])
@@ -672,9 +672,9 @@ describe('roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
-    var eve = Meteor.users.findOne({ _id: users.eve })
-    var bob = Meteor.users.findOne({ _id: users.bob })
-    var joe = Meteor.users.findOne({ _id: users.joe })
+    const eve = Meteor.users.findOne({ _id: users.eve })
+    const bob = Meteor.users.findOne({ _id: users.bob })
+    const joe = Meteor.users.findOne({ _id: users.joe })
 
     Roles.setUserRoles([users.eve, users.bob], ['editor', 'user'], 'scope1')
     Roles.setUserRoles([users.bob, users.joe], ['admin'], 'scope2')
@@ -732,7 +732,7 @@ describe('roles', function () {
     Roles.createRole('admin')
     Roles.createRole('editor')
 
-    var eve = Meteor.users.findOne({ _id: users.eve })
+    const eve = Meteor.users.findOne({ _id: users.eve })
 
     Roles.addUsersToRoles(eve, 'admin', Roles.GLOBAL_SCOPE)
     testUser('eve', ['admin'], 'scope1')
@@ -747,7 +747,7 @@ describe('roles', function () {
     Roles.createRole('admin')
     Roles.createRole('editor')
 
-    var eve = Meteor.users.findOne({ _id: users.eve })
+    const eve = Meteor.users.findOne({ _id: users.eve })
 
     assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
 
@@ -776,8 +776,8 @@ describe('roles', function () {
     })
 
     // compare roles, sorted alphabetically
-    var expected = roles
-    var actual = Roles.getAllRoles().fetch().map(r => r._id)
+    const expected = roles
+    const actual = Roles.getAllRoles().fetch().map(r => r._id)
 
     assert.sameMembers(actual, expected)
 
@@ -799,8 +799,8 @@ describe('roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
 
-    var userId = users.eve
-    var userObj
+    const userId = users.eve
+    let userObj
 
     // by userId
     assert.sameMembers(Roles.getRolesForUser(userId), [])
@@ -827,7 +827,7 @@ describe('roles', function () {
       role: { _id: 'user' },
       scope: null,
       user: { _id: userId },
-      inheritedRoles: [{ '_id': 'user' }]
+      inheritedRoles: [{ _id: 'user' }]
     }])
   })
 
@@ -835,8 +835,8 @@ describe('roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
 
-    var userId = users.eve
-    var userObj
+    const userId = users.eve
+    let userObj
 
     // by userId
     assert.sameMembers(Roles.getRolesForUser(userId, 'scope1'), [])
@@ -979,7 +979,7 @@ describe('roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
 
-    var userId = users.eve
+    const userId = users.eve
 
     // add roles
     Roles.addUsersToRoles(userId, ['user'], 'scope1')
@@ -1011,8 +1011,7 @@ describe('roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
-    var userId = users.eve
-    var userObj
+    const userId = users.eve
 
     Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
     Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'scope1')
@@ -1022,7 +1021,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getRolesForUser(userId), ['editor'])
 
     // by user object
-    userObj = Meteor.users.findOne({ _id: userId })
+    const userObj = Meteor.users.findOne({ _id: userId })
     assert.sameMembers(Roles.getRolesForUser(userObj, 'scope1'), ['editor', 'admin', 'user'])
     assert.sameMembers(Roles.getRolesForUser(userObj), ['editor'])
   })
@@ -1030,8 +1029,8 @@ describe('roles', function () {
   it('getRolesForUser should not return null entries if user has no roles for scope', function () {
     Roles.createRole('editor')
 
-    var userId = users.eve
-    var userObj
+    const userId = users.eve
+    let userObj
 
     // by userId
     assert.sameMembers(Roles.getRolesForUser(userId, 'scope1'), [])
@@ -1057,18 +1056,14 @@ describe('roles', function () {
   it('getRolesForUser should not fail during a call of addUsersToRoles', function () {
     Roles.createRole('editor')
 
-    var userId = users.eve
-
-    const promises = [
-    ];
-
+    const userId = users.eve
+    const promises = []
     const interval = setInterval(() => {
-      promises.push(Promise.resolve().then(() => { Roles.getRolesForUser(userId); }));
-    }, 0);
-    
-    Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
-    clearInterval(interval);
+      promises.push(Promise.resolve().then(() => { Roles.getRolesForUser(userId) }))
+    }, 0)
 
+    Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
+    clearInterval(interval)
 
     return Promise.all(promises)
   })
@@ -1086,8 +1081,7 @@ describe('roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
-    var userId = users.eve
-    var userObj
+    const userId = users.eve
 
     Roles.addUsersToRoles([users.eve], ['editor'], 'scope1')
     Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'scope2')
@@ -1096,7 +1090,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userId), ['scope1', 'scope2'])
 
     // by user object
-    userObj = Meteor.users.findOne({ _id: userId })
+    const userObj = Meteor.users.findOne({ _id: userId })
     assert.sameMembers(Roles.getScopesForUser(userObj), ['scope1', 'scope2'])
   })
 
@@ -1105,8 +1099,7 @@ describe('roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
-    var userId = users.eve
-    var userObj
+    const userId = users.eve
 
     Roles.addUsersToRoles([users.eve], ['editor'], 'scope1')
     Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'scope2')
@@ -1117,7 +1110,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userId, 'admin'), [])
 
     // by user object
-    userObj = Meteor.users.findOne({ _id: userId })
+    const userObj = Meteor.users.findOne({ _id: userId })
     assert.sameMembers(Roles.getScopesForUser(userObj, 'user'), ['scope2'])
     assert.sameMembers(Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2'])
     assert.sameMembers(Roles.getScopesForUser(userObj, 'admin'), [])
@@ -1127,8 +1120,7 @@ describe('roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
-    var userId = users.eve
-    var userObj
+    const userId = users.eve
 
     Roles.addUsersToRoles([users.eve], ['editor', 'user'])
 
@@ -1139,7 +1131,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userId, ['editor', 'user']), [])
 
     // by user object
-    userObj = Meteor.users.findOne({ _id: userId })
+    const userObj = Meteor.users.findOne({ _id: userId })
     assert.sameMembers(Roles.getScopesForUser(userObj), [])
     assert.sameMembers(Roles.getScopesForUser(userObj, 'editor'), [])
     assert.sameMembers(Roles.getScopesForUser(userObj, ['editor']), [])
@@ -1147,8 +1139,7 @@ describe('roles', function () {
   })
 
   it('can get all groups for user by role array', function () {
-    var userId = users.eve
-    var userObj
+    const userId = users.eve
 
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -1170,7 +1161,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userId, ['user', 'moderator']), ['group2', 'group3'])
 
     // by user object, one role
-    userObj = Meteor.users.findOne({ _id: userId })
+    const userObj = Meteor.users.findOne({ _id: userId })
     assert.sameMembers(Roles.getScopesForUser(userObj, ['user']), ['group2'])
     assert.sameMembers(Roles.getScopesForUser(userObj, ['editor']), ['group1', 'group2'])
     assert.sameMembers(Roles.getScopesForUser(userObj, ['admin']), [])
@@ -1186,8 +1177,7 @@ describe('roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
-    var userId = users.eve
-    var userObj
+    const userId = users.eve
 
     Roles.addUsersToRoles([users.eve], ['editor'], 'scope1')
     Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'scope2')
@@ -1203,7 +1193,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userId, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
 
     // by user object
-    userObj = Meteor.users.findOne({ _id: userId })
+    const userObj = Meteor.users.findOne({ _id: userId })
     assert.sameMembers(Roles.getScopesForUser(userObj, 'user'), ['scope2'])
     assert.sameMembers(Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2'])
     assert.sameMembers(Roles.getScopesForUser(userObj, 'admin'), [])
@@ -1221,8 +1211,8 @@ describe('roles', function () {
     Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'])
     Roles.addUsersToRoles([users.bob, users.joe], ['editor'])
 
-    var expected = [users.eve, users.joe]
-    var actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
+    const expected = [users.eve, users.joe]
+    const actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
 
     assert.sameMembers(actual, expected)
   })
@@ -1234,8 +1224,8 @@ describe('roles', function () {
     Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'scope1')
     Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'scope2')
 
-    var expected = [users.eve, users.joe]
-    var actual = Roles.getUsersInRole('admin', 'scope1').fetch().map(r => r._id)
+    let expected = [users.eve, users.joe]
+    let actual = Roles.getUsersInRole('admin', 'scope1').fetch().map(r => r._id)
 
     assert.sameMembers(actual, expected)
 
@@ -1258,8 +1248,8 @@ describe('roles', function () {
     Roles.addUsersToRoles([users.eve], ['admin', 'user'], Roles.GLOBAL_SCOPE)
     Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'scope2')
 
-    var expected = [users.eve]
-    var actual = Roles.getUsersInRole('admin', 'scope1').fetch().map(r => r._id)
+    let expected = [users.eve]
+    let actual = Roles.getUsersInRole('admin', 'scope1').fetch().map(r => r._id)
 
     assert.sameMembers(actual, expected)
 
@@ -1285,8 +1275,8 @@ describe('roles', function () {
     Roles.addUsersToRoles([users.eve], ['admin'], Roles.GLOBAL_SCOPE)
     Roles.addUsersToRoles([users.bob], ['admin'], 'scope1')
 
-    var expected = [users.eve]
-    var actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
+    let expected = [users.eve]
+    let actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
     assert.sameMembers(actual, expected)
 
     expected = [users.eve, users.bob]
@@ -1305,11 +1295,11 @@ describe('roles', function () {
     Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'scope1')
     Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'scope2')
 
-    var results = Roles.getUsersInRole('admin', 'scope1', { fields: { username: 0 }, limit: 1 }).fetch()
+    const results = Roles.getUsersInRole('admin', 'scope1', { fields: { username: 0 }, limit: 1 }).fetch()
 
     assert.equal(1, results.length)
-    assert.isTrue(results[0].hasOwnProperty('_id'))
-    assert.isFalse(results[0].hasOwnProperty('username'))
+    assert.isTrue(hasProp(results[0], '_id'))
+    assert.isFalse(hasProp(results[0], 'username'))
   })
 
   it('can use Roles.GLOBAL_SCOPE to assign blanket roles', function () {
@@ -1428,7 +1418,7 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, 'user', 'scope2'))
   })
 
-  it('migration without global groups', function () {
+  it('migration without global groups (to v2)', function () {
     assert.isOk(Meteor.roles.insert({ name: 'admin' }))
     assert.isOk(Meteor.roles.insert({ name: 'editor' }))
     assert.isOk(Meteor.roles.insert({ name: 'user' }))
@@ -1497,7 +1487,9 @@ describe('roles', function () {
     })
   })
 
-  it('migration with global groups', function () {
+  it('migration without global groups (to v3)')
+
+  it('migration with global groups (to v2)', function () {
     assert.isOk(Meteor.roles.insert({ name: 'admin' }))
     assert.isOk(Meteor.roles.insert({ name: 'editor' }))
     assert.isOk(Meteor.roles.insert({ name: 'user' }))
@@ -1624,6 +1616,8 @@ describe('roles', function () {
       children: []
     })
   })
+
+  it('migration with global groups (to v3)')
 
   it('_addUserToRole', function () {
     Roles.createRole('admin')

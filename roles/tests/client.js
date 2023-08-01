@@ -2,40 +2,39 @@
 /* global Roles */
 
 import { Meteor } from 'meteor/meteor'
-import { Tracker } from 'meteor/tracker'
 import { assert } from 'chai'
 
 // To ensure that the files are loaded for coverage
 import '../roles_common'
 
+const safeInsert = (collection, data) => {
+  try {
+    collection.insert(data)
+  } catch (e) {}
+}
+
 describe('roles', function () {
-  var users
-  var roles = ['admin', 'editor', 'user']
-
-  Tracker.autorun(function () {
-    Roles.assignmentSubscription = Meteor.subscribe('_roleAssignments')
-  })
-
-  users = {
-    'eve': {
+  const roles = ['admin', 'editor', 'user']
+  const users = {
+    eve: {
       _id: 'eve'
     },
-    'bob': {
+    bob: {
       _id: 'bob'
     },
-    'joe': {
+    joe: {
       _id: 'joe'
     }
   }
 
   function testUser (username, expectedRoles, scope) {
-    var user = users[username]
+    const user = users[username]
 
     // test using user object rather than userId to avoid mocking
     roles.forEach(function (role) {
-      var expected = expectedRoles.includes(role)
-      var msg = username + ' expected to have \'' + role + '\' permission but does not'
-      var nmsg = username + ' had un-expected permission ' + role
+      const expected = expectedRoles.includes(role)
+      const msg = username + ' expected to have \'' + role + '\' permission but does not'
+      const nmsg = username + ' had un-expected permission ' + role
 
       if (expected) {
         assert.isTrue(Roles.userIsInRole(user, role, scope), msg)
@@ -58,58 +57,47 @@ describe('roles', function () {
     Meteor.user = meteorUserMethod
   })
 
-  beforeEach((done) => {
-    Meteor.roleAssignment.insert({
+  beforeEach(() => {
+    safeInsert(Meteor.roleAssignment, {
       user: users.eve,
       role: { _id: 'admin' },
       inheritedRoles: [{ _id: 'admin' }]
     })
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.eve,
       role: { _id: 'editor' },
       inheritedRoles: [{ _id: 'editor' }]
     })
 
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.bob,
       role: { _id: 'user' },
       inheritedRoles: [{ _id: 'user' }],
       scope: 'group1'
     })
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.bob,
       role: { _id: 'editor' },
       inheritedRoles: [{ _id: 'editor' }],
       scope: 'group2'
     })
 
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.joe,
       role: { _id: 'admin' },
       inheritedRoles: [{ _id: 'admin' }]
     })
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.joe,
       role: { _id: 'editor' },
       inheritedRoles: [{ _id: 'editor' }],
       scope: 'group1'
     })
-
-    const timer = () => {
-      if (!Roles.assignmentSubscription.ready()) {
-        Meteor.setTimeout(timer, 100)
-      } else {
-        done()
-      }
-    }
-
-    timer()
   })
 
   it('can check current users roles via template helper', function () {
-    var isInRole
-    var expected
-    var actual
+    let expected
+    let actual
 
     if (!Roles._handlebarsHelpers) {
       // probably running package tests outside of a Meteor app.
@@ -117,7 +105,7 @@ describe('roles', function () {
       return
     }
 
-    isInRole = Roles._handlebarsHelpers.isInRole
+    const isInRole = Roles._handlebarsHelpers.isInRole
     assert.equal(typeof isInRole, 'function', "'isInRole' helper not registered")
 
     expected = true

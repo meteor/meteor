@@ -22,15 +22,14 @@ if (Meteor.roles.createIndexAsync) {
 ].forEach(index => indexFnAssignment(index))
 indexFnRoles({ 'children._id': 1 })
 
-
 /*
  * Publish logged-in user's roles so client-side checks can work.
  *
  * Use a named publish function so clients can check `ready()` state.
  */
 Meteor.publish('_roles', function () {
-  var loggedInUserId = this.userId
-  var fields = { roles: 1 }
+  const loggedInUserId = this.userId
+  const fields = { roles: 1 }
 
   if (!loggedInUserId) {
     this.ready()
@@ -39,7 +38,7 @@ Meteor.publish('_roles', function () {
 
   return Meteor.users.find(
     { _id: loggedInUserId },
-    { fields: fields }
+    { fields }
   )
 })
 
@@ -139,7 +138,7 @@ Object.assign(Roles, {
    * @static
    */
   _convertToNewField: function (oldRoles, convertUnderscoresToDots) {
-    var roles = []
+    const roles = []
     if (Array.isArray(oldRoles)) {
       oldRoles.forEach(function (role, index) {
         if (!(typeof role === 'string')) throw new Error("Role '" + role + "' is not a string.")
@@ -183,7 +182,7 @@ Object.assign(Roles, {
    * @static
    */
   _convertToOldField: function (newRoles, usingGroups) {
-    var roles
+    let roles
 
     if (usingGroups) {
       roles = {}
@@ -201,7 +200,7 @@ Object.assign(Roles, {
         if (!usingGroups) throw new Error("Role '" + userRole._id + "' with scope '" + userRole.scope + "' without enabled groups.")
 
         // escape
-        var scope = userRole.scope.replace(/\./g, '_')
+        const scope = userRole.scope.replace(/\./g, '_')
 
         if (scope[0] === '$') throw new Error("Group name '" + scope + "' start with $.")
 
@@ -262,8 +261,11 @@ Object.assign(Roles, {
     try {
       collection._dropIndex(indexName)
     } catch (e) {
-      if (e.name !== 'MongoError') throw e
-      if (!/index not found/.test(e.err || e.errmsg)) throw e
+      const indexNotFound = /index not found/.test(e.message || e.err || e.errmsg)
+
+      if (!indexNotFound) {
+        throw e
+      }
     }
   },
 

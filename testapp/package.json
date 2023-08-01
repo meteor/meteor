@@ -1,0 +1,41 @@
+{
+  "name": "testapp",
+  "private": true,
+  "scripts": {
+    "setup": "mkdir -p packages && ln -sfn ../../ ./packages/meteor-roles",
+    "test": "TEST_BROWSER_DRIVER=puppeteer meteor test-packages --raw-logs --once --driver-package meteortesting:mocha ./packages/meteor-roles",
+    "test:watch": "TEST_BROWSER_DRIVER=puppeteer TEST_WATCH=1 meteor test-packages --raw-logs --driver-package meteortesting:mocha ./packages/meteor-roles",
+    "test:coverage": "TEST_BROWSER_DRIVER=puppeteer TEST_CLIENT=1 TEST_SERVER=1 COVERAGE=1 COVERAGE_OUT_JSON=1 COVERAGE_OUT_HTML=1 COVERAGE_APP_FOLDER=$(pwd)/ meteor test-packages --raw-logs --once --driver-package meteortesting:mocha ./packages/meteor-roles",
+    "report": "nyc report -t .coverage",
+    "lint": "standard ../",
+    "lint:fix": "standard --fix ../"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.17.9",
+    "meteor-node-stubs": "^1.2.1",
+    "yuidocjs": "^0.10.2"
+  },
+  "devDependencies": {
+    "babel-plugin-istanbul": "^6.1.1",
+    "chai": "^4.3.7",
+    "nyc": "^15.1.0",
+    "puppeteer": "^19.4.0",
+    "standard": "^17.1.0"
+  },
+  "babel": {
+    "env": {
+      "COVERAGE": {
+        "plugins": [
+          "istanbul"
+        ]
+      }
+    }
+  },
+  "standard": {
+    "ignore": [
+      "**/.meteor/",
+      "**/examples/",
+      "**/testapp"
+    ]
+  }
+}

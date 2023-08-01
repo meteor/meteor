@@ -21,7 +21,7 @@ There are also older versions of this package:
 * [Usage examples](#roles-usage)
 * [Online API docs](#roles-docs)
 * [Example apps](#roles-example-apps)
-* [Running tests](#roles-testing)
+* [Running tests](#roles-contributions-development-and-tests)
 
 <br />
 
@@ -467,8 +467,7 @@ The `examples` directory contains Meteor apps which show off the following featu
 
 
 <a id="roles-testing" name="roles-testing"></a>
-### Tests
+### Contributions, development and tests
 
-To run tests:
-  1. `cd meteor-roles`
-  2. `npm run test`
+Please read our [contribution guidelines](./CONTRIBUTING.md),
+which also describe how to set up and run the linter and tests.

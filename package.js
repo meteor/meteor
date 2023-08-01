@@ -1,4 +1,4 @@
-/* global Package, Npm */
+/* eslint-env meteor */
 
 Package.describe({
   summary: 'Authorization package for Meteor',
@@ -10,7 +10,7 @@ Package.describe({
 Package.onUse(function (api) {
   api.versionsFrom(['1.12', '2.3', '2.8.0'])
 
-  var both = ['client', 'server']
+  const both = ['client', 'server']
 
   api.use([
     'ecmascript',
@@ -38,18 +38,14 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   // Add code coverage
   api.use([
-    'lmieulet:meteor-packages-coverage@0.2.0',
+    'lmieulet:meteor-legacy-coverage',
     'lmieulet:meteor-coverage@3.2.0',
-    'meteortesting:mocha'
+    'meteortesting:mocha@2.1.0'
   ])
-
-  Npm.depends({
-    'chai': '4.2.0'
-  })
 
   api.versionsFrom('2.3')
 
-  var both = ['client', 'server']
+  const both = ['client', 'server']
 
   // `accounts-password` is included so `Meteor.users` exists
 
@@ -59,6 +55,6 @@ Package.onTest(function (api) {
     'mongo'
   ], both)
 
-  api.addFiles('roles/tests/client.js', 'client')
   api.addFiles('roles/tests/server.js', 'server')
+  api.addFiles('roles/tests/client.js', 'client')
 })
