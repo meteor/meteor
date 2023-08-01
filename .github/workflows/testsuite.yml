@@ -30,15 +30,15 @@ jobs:
       - run: cd testapp && npm ci && npm run setup && npm run lint
 
   test:
-    name: Meteor package tests
+    name: Meteor ${{ matrix.meteorRelease }} package tests
     needs: [lint]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         meteorRelease:
-          - '2.3'
-          - '2.7.3'
-          - '2.12'
+          - '--release 2.3'
+          - '--release 2.7.3'
+          - '--release 2.12.0'
           # Latest version
     steps:
       - name: Checkout code
@@ -49,7 +49,7 @@ jobs:
         with:
           node-version: 16
 
-      - name: Setup meteor ${{ matrix.meteorRelease }}
+      - name: Setup meteor
         uses: meteorengineer/setup-meteor@v1
         with:
           meteor-release: ${{ matrix.meteorRelease }}
@@ -62,4 +62,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-16-
 
-      - run: cd testapp && npm ci && npm run setup && npm run test
+      - run: cd testapp && npm run ci && npm run setup && npm run test
