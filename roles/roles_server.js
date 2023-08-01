@@ -261,8 +261,11 @@ Object.assign(Roles, {
     try {
       collection._dropIndex(indexName)
     } catch (e) {
-      if (e.name !== 'MongoError') throw e
-      if (!/index not found/.test(e.err || e.errmsg)) throw e
+      const indexNotFound = /index not found/.test(e.message || e.err || e.errmsg)
+
+      if (!indexNotFound) {
+        throw e
+      }
     }
   },
 

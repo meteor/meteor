@@ -1418,7 +1418,7 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, 'user', 'scope2'))
   })
 
-  it('migration without global groups', function () {
+  it('migration without global groups (to v2)', function () {
     assert.isOk(Meteor.roles.insert({ name: 'admin' }))
     assert.isOk(Meteor.roles.insert({ name: 'editor' }))
     assert.isOk(Meteor.roles.insert({ name: 'user' }))
@@ -1487,7 +1487,9 @@ describe('roles', function () {
     })
   })
 
-  it('migration with global groups', function () {
+  it('migration without global groups (to v3)')
+
+  it('migration with global groups (to v2)', function () {
     assert.isOk(Meteor.roles.insert({ name: 'admin' }))
     assert.isOk(Meteor.roles.insert({ name: 'editor' }))
     assert.isOk(Meteor.roles.insert({ name: 'user' }))
@@ -1614,6 +1616,8 @@ describe('roles', function () {
       children: []
     })
   })
+
+  it('migration with global groups (to v3)')
 
   it('_addUserToRole', function () {
     Roles.createRole('admin')

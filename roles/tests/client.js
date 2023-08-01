@@ -2,19 +2,19 @@
 /* global Roles */
 
 import { Meteor } from 'meteor/meteor'
-import { Tracker } from 'meteor/tracker'
 import { assert } from 'chai'
 
 // To ensure that the files are loaded for coverage
 import '../roles_common'
 
+const safeInsert = (collection, data) => {
+  try {
+    collection.insert(data)
+  } catch (e) {}
+}
+
 describe('roles', function () {
   const roles = ['admin', 'editor', 'user']
-
-  Tracker.autorun(function () {
-    Roles.assignmentSubscription = Meteor.subscribe('_roleAssignments')
-  })
-
   const users = {
     eve: {
       _id: 'eve'
@@ -57,52 +57,42 @@ describe('roles', function () {
     Meteor.user = meteorUserMethod
   })
 
-  beforeEach((done) => {
-    Meteor.roleAssignment.insert({
+  beforeEach(() => {
+    safeInsert(Meteor.roleAssignment, {
       user: users.eve,
       role: { _id: 'admin' },
       inheritedRoles: [{ _id: 'admin' }]
     })
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.eve,
       role: { _id: 'editor' },
       inheritedRoles: [{ _id: 'editor' }]
     })
 
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.bob,
       role: { _id: 'user' },
       inheritedRoles: [{ _id: 'user' }],
       scope: 'group1'
     })
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.bob,
       role: { _id: 'editor' },
       inheritedRoles: [{ _id: 'editor' }],
       scope: 'group2'
     })
 
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.joe,
       role: { _id: 'admin' },
       inheritedRoles: [{ _id: 'admin' }]
     })
-    Meteor.roleAssignment.insert({
+    safeInsert(Meteor.roleAssignment, {
       user: users.joe,
       role: { _id: 'editor' },
       inheritedRoles: [{ _id: 'editor' }],
       scope: 'group1'
     })
-
-    const timer = () => {
-      if (!Roles.assignmentSubscription.ready()) {
-        Meteor.setTimeout(timer, 100)
-      } else {
-        done()
-      }
-    }
-
-    timer()
   })
 
   it('can check current users roles via template helper', function () {
