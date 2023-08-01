@@ -1,4 +1,4 @@
-/* global Package, Npm */
+/* eslint-env meteor */
 
 Package.describe({
   summary: 'Authorization package for Meteor',
