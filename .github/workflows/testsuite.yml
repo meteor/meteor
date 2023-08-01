@@ -62,4 +62,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-16-
 
-      - run: cd testapp && npm run ci && npm run setup && npm run test
+      - run: cd testapp && npm ci && npm run setup && npm run test
