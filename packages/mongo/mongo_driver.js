@@ -212,7 +212,7 @@ MongoConnection = function (url, options) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
-  Promise.await(self.client.connect())
+  
 };
 
 MongoConnection.prototype._close = async function() {

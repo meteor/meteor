@@ -471,7 +471,7 @@ Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(t
   var collection = new Mongo.Collection(collectionName);
   var id = await collection.insertAsync({a: 1});
   test.equal((await collection.findOneAsync(id)).a, 1);
-  collection.upsertAsync(id, {$set: {a: 2}});
+  await collection.upsertAsync(id, {$set: {a: 2}});
   id = await collection.insertAsync({a: 2});
   test.equal((await collection.findOneAsync(id)).a, 2);
   await collection.removeAsync({});
