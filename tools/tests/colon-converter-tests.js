@@ -74,7 +74,7 @@ if (process.platform !== "win32") {
       });
 
       var run = s.run("add", packageName);
-      await run.matchErrBeforeExit("colons");
+      await run.matchErr("colons");
     });
   });
 }
