@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "babel-plugin-istanbul": "^6.1.1",
+    "chai": "^4.3.7",
     "nyc": "^15.1.0",
     "puppeteer": "^19.4.0",
     "standard": "^17.1.0"
