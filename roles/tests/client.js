@@ -9,33 +9,32 @@ import { assert } from 'chai'
 import '../roles_common'
 
 describe('roles', function () {
-  var users
-  var roles = ['admin', 'editor', 'user']
+  const roles = ['admin', 'editor', 'user']
 
   Tracker.autorun(function () {
     Roles.assignmentSubscription = Meteor.subscribe('_roleAssignments')
   })
 
-  users = {
-    'eve': {
+  const users = {
+    eve: {
       _id: 'eve'
     },
-    'bob': {
+    bob: {
       _id: 'bob'
     },
-    'joe': {
+    joe: {
       _id: 'joe'
     }
   }
 
   function testUser (username, expectedRoles, scope) {
-    var user = users[username]
+    const user = users[username]
 
     // test using user object rather than userId to avoid mocking
     roles.forEach(function (role) {
-      var expected = expectedRoles.includes(role)
-      var msg = username + ' expected to have \'' + role + '\' permission but does not'
-      var nmsg = username + ' had un-expected permission ' + role
+      const expected = expectedRoles.includes(role)
+      const msg = username + ' expected to have \'' + role + '\' permission but does not'
+      const nmsg = username + ' had un-expected permission ' + role
 
       if (expected) {
         assert.isTrue(Roles.userIsInRole(user, role, scope), msg)
@@ -107,9 +106,8 @@ describe('roles', function () {
   })
 
   it('can check current users roles via template helper', function () {
-    var isInRole
-    var expected
-    var actual
+    let expected
+    let actual
 
     if (!Roles._handlebarsHelpers) {
       // probably running package tests outside of a Meteor app.
@@ -117,7 +115,7 @@ describe('roles', function () {
       return
     }
 
-    isInRole = Roles._handlebarsHelpers.isInRole
+    const isInRole = Roles._handlebarsHelpers.isInRole
     assert.equal(typeof isInRole, 'function', "'isInRole' helper not registered")
 
     expected = true

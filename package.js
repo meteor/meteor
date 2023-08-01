@@ -10,7 +10,7 @@ Package.describe({
 Package.onUse(function (api) {
   api.versionsFrom(['1.12', '2.3', '2.8.0'])
 
-  var both = ['client', 'server']
+  const both = ['client', 'server']
 
   api.use([
     'ecmascript',
@@ -44,12 +44,12 @@ Package.onTest(function (api) {
   ])
 
   Npm.depends({
-    'chai': '4.2.0'
+    chai: '4.2.0'
   })
 
   api.versionsFrom('2.3')
 
-  var both = ['client', 'server']
+  const both = ['client', 'server']
 
   // `accounts-password` is included so `Meteor.users` exists
 
