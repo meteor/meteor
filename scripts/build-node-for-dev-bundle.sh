@@ -18,7 +18,7 @@ then
         NODE_URL="https://github.com/meteor/node/archive/${NODE_COMMIT_HASH}.tar.gz"
     else
         echo "Building Node source from ${NODE_VERSION} src tarball...";
-        NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}.tar.gz"
+        NODE_URL="https://static.meteor.com/dev-bundle-node-os/v${NODE_VERSION}/node-v${NODE_VERSION}.tar.gz"
     fi
 else
     NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
