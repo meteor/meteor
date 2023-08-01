@@ -15,11 +15,6 @@ const safeInsert = (collection, data) => {
 
 describe('roles', function () {
   const roles = ['admin', 'editor', 'user']
-
-  Tracker.autorun(function () {
-    Roles.assignmentSubscription = Meteor.subscribe('_roleAssignments')
-  })
-
   const users = {
     eve: {
       _id: 'eve'
