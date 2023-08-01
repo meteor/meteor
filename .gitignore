@@ -19,6 +19,4 @@ smart.lock
 docs/
 node_modules/
 .npm/
-someapp/
-.DS_Store
 .coverage/
