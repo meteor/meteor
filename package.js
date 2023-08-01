@@ -44,6 +44,10 @@ Package.onTest(function (api) {
     'meteortesting:mocha@2.1.0'
   ])
 
+  Npm.depends({
+    chai: '4.2.0'
+  })
+
   api.versionsFrom('2.3')
 
   const both = ['client', 'server']
