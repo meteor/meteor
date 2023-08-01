@@ -2,7 +2,7 @@
   "name": "testapp",
   "private": true,
   "scripts": {
-    "setup": "mkdir packages && ln -s ../../ ./packages/roles",
+    "setup": "mkdir packages && ln -s ../ ./packages/roles",
     "test": "TEST_BROWSER_DRIVER=puppeteer meteor test-packages --raw-logs --once --driver-package meteortesting:mocha ./packages/roles",
     "test:watch": "TEST_BROWSER_DRIVER=puppeteer TEST_WATCH=1 meteor test-packages --raw-logs --driver-package meteortesting:mocha ./packages/roles",
     "test:coverage": "TEST_BROWSER_DRIVER=puppeteer TEST_CLIENT=1 TEST_SERVER=1 COVERAGE=1 COVERAGE_OUT_JSON=1 COVERAGE_OUT_HTML=1 COVERAGE_APP_FOLDER=$(pwd)/ meteor test-packages --raw-logs --once --driver-package meteortesting:mocha ./packages/roles",
