@@ -22,23 +22,25 @@ if (Meteor.roles.createIndexAsync) {
 ].forEach(index => indexFnAssignment(index))
 indexFnRoles({ 'children._id': 1 })
 
-
 /*
  * Publish logged-in user's roles so client-side checks can work.
  *
  * Use a named publish function so clients can check `ready()` state.
  */
-Meteor.publish("_roles", function () {
-  var loggedInUserId = this.userId;
-  var fields = { roles: 1 };
+Meteor.publish('_roles', function () {
+  const loggedInUserId = this.userId
+  const fields = { roles: 1 }
 
   if (!loggedInUserId) {
     this.ready();
     return;
   }
 
-  return Meteor.users.find({ _id: loggedInUserId }, { fields: fields });
-});
+  return Meteor.users.find(
+    { _id: loggedInUserId },
+    { fields }
+  )
+})
 
 Object.assign(Roles, {
   /**
@@ -141,7 +143,7 @@ Object.assign(Roles, {
    * @static
    */
   _convertToNewField: function (oldRoles, convertUnderscoresToDots) {
-    var roles = [];
+    const roles = []
     if (Array.isArray(oldRoles)) {
       oldRoles.forEach(function (role, index) {
         if (!(typeof role === "string"))
@@ -187,7 +189,7 @@ Object.assign(Roles, {
    * @static
    */
   _convertToOldField: function (newRoles, usingGroups) {
-    var roles;
+    let roles
 
     if (usingGroups) {
       roles = {};
@@ -213,7 +215,7 @@ Object.assign(Roles, {
           );
 
         // escape
-        var scope = userRole.scope.replace(/\./g, "_");
+        const scope = userRole.scope.replace(/\./g, '_')
 
         if (scope[0] === "$")
           throw new Error("Group name '" + scope + "' start with $.");
