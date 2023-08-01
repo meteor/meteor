@@ -17,7 +17,7 @@ export function warnUsingOldApi (
   ) {
    if (collectionName === undefined || collectionName.includes('oplog')) return
    console.warn(`
-   
+
    Calling method ${collectionName}.${methodName} from old API on server.
    This method will be removed, from the server, in version 3.
    Trace is below:`)
@@ -1213,6 +1213,16 @@ Object.assign(Mongo.Collection.prototype, {
       throw new Error(
         'Can only call createCappedCollectionAsync on server collections'
       );
+
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "_createCappedCollection",
+      self._name,
+      self._createCappedCollection.isCalledFromAsync
+    );
+    self._createCappedCollection.isCalledFromAsync = false;
+    self._collection._createCappedCollection(byteSize, maxDocuments);
     await self._collection.createCappedCollectionAsync(byteSize, maxDocuments);
   },
 
@@ -1292,7 +1302,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
 Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
-Object.assign(Meteor.Collection.prototype, AllowDeny.CollectionPrototype);
+Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
 
 function popCallbackFromArgs(args) {
   // Pull off any callback (or perhaps a 'callback' variable that was passed
