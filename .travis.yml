@@ -24,6 +24,10 @@ addons:
 
 before_install:
   - cat /etc/apt/sources.list
+  - sudo apt-get update
+  - sudo apt-get install -y python3.8 python3.8-distutils
+  - sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1
+  - python3 --version
   - sudo add-apt-repository --yes "deb http://archive.ubuntu.com/ubuntu jammy main universe"
   - sudo apt-get update
   - sudo apt-get install -y libnss3
