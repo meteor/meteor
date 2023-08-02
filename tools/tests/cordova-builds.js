@@ -39,6 +39,7 @@ selftest.define("cordova builds with server options", ["cordova"], async functio
   s.cd("myapp");
 
   run = s.run("add-platform", "android");
+  run.waitSecs(90);
   await run.match("added");
   await run.expectExit(0);
 
