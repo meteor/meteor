@@ -10,7 +10,7 @@
 
 
 
-## v2.13.0, 2023-05-XX
+## v2.13.0, 2023-07-26
 
 ### Highlights
 
@@ -22,28 +22,50 @@
 * Update mongo.d.ts with projection [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12635).
 * Update guide code for GraphQL [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12619).
 * Twitter Whitelist issue resolved [Atharshoyeb](https://github.com/Atharshoyeb) [PR](https://github.com/meteor/meteor/pull/12369).
+* Node security patch (14.21.4) [PR](https://github.com/meteor/node-v14-esm/pull/1).
+* Updated deprecated reference in mongo package by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12653/files).
+* Updated BlazeJS git ref in core meteor to 2.7.1 by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12651).
+* Added `Meteor.applyAsync` types by [Julusian](https://github.com/Julusian) [PR](https://github.com/meteor/meteor/pull/12645).
+
 
 #### Breaking Changes
 
 N/A
 
-####  Internal API changes
+####  Internal changes
 
-N/A
+* `ddp-server@2.6.2`:
+    - Updated livedata server test to be more easily debbuged.
+
+* `mongo@1.16.7`:
+    - Updated deprecated reference in Mongo package.
 
 #### Migration Steps
 
-TODO
+N/A
 
 #### Meteor Version Release
 
 
 * `Command line`:
     - Updated metatags for skeletons.
-    - Updated solidjs skeleton to be more idiomatic. 
+    - Updated solidjs skeleton to be more idiomatic.
 
-* `mongo@1.16.7`: 
-    TODO
+* `meteor@1.11.3`:
+    - Added types for applyAsync and added more documentation for applyAsync options.
+
+* `mongo@1.16.7`:
+    - Updated types with projection.
+    - Fixed wrong upsert logs when using WARN_WHEN_USING_OLD_API flag.
+    - Handled implicit collection creation oplog message.
+
+* `test-in-console@1.2.5`:
+    - Adjusted log indentation.
+    - All errors will be logged to console.
+    - Will always use puppeteer@20.4.0
+
+* `twitter-oauth@1.3.3`:
+    - Fixed twitter whitelist issue.
 
 
 #### Special thanks to
@@ -53,6 +75,7 @@ TODO
 - [@fredmaiaarantes](https://github.com/fredmaiaarantes).
 - [@StorytellerCZ](https://github.com/StorytellerCZ).
 - [@Atharshoyeb](https://github.com/Atharshoyeb).
+- [@Julusian](https://github.com/Julusian).
 
 ## v2.12.0, 2023-04-28
 
