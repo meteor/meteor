@@ -22,7 +22,7 @@
 * Update mongo.d.ts with projection [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12635).
 * Update guide code for GraphQL [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12619).
 * Twitter Whitelist issue resolved [Atharshoyeb](https://github.com/Atharshoyeb) [PR](https://github.com/meteor/meteor/pull/12369).
-* Node security patch (14.21.4) [PR](https://github.com/meteor/node-v14-esm/pull/1).
+* Node security patch (14.21.4) [PR](https://github.com/meteor/node-v14-esm/pull/1). Thanks a lot [denihs](https://github.com/denihs) for your contribuiton.
 * Updated deprecated reference in mongo package by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12653/files).
 * Updated BlazeJS git ref in core meteor to 2.7.1 by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12651).
 * Added `Meteor.applyAsync` types by [Julusian](https://github.com/Julusian) [PR](https://github.com/meteor/meteor/pull/12645).
@@ -30,7 +30,9 @@
 
 #### Breaking Changes
 
-N/A
+If you are running Meteor with docker you will
+need to update your docker file to use our [new docker image](https://hub.docker.com/r/meteor/node)
+that contains Nodejs v14.21.4.
 
 ####  Internal changes
 
@@ -42,7 +44,7 @@ N/A
 
 #### Migration Steps
 
-N/A
+Here is the [link](https://guide.meteor.com/2.13-migration) to the migration guide
 
 #### Meteor Version Release
 
@@ -76,7 +78,7 @@ N/A
 - [@StorytellerCZ](https://github.com/StorytellerCZ).
 - [@Atharshoyeb](https://github.com/Atharshoyeb).
 - [@Julusian](https://github.com/Julusian).
-
+- [@denihs](https://github.com/denihs).
 ## v2.12.0, 2023-04-28
 
 ### Highlights
