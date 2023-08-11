@@ -20,8 +20,8 @@ most changes will be a cherry-pick from Node.js v16.x and running all Node.js te
 
 In a more concise quote Meteor ESM Node.js 14 will include:
 
-> Security updates: We will actively monitor and backport security fixes from newer versions of Node.js (such as Node.js 16 and 18) to ensure the ongoing safety and stability of your Meteor.js applications running on Node.js 14.
-> Critical bug fixes: We will address any critical issues that might arise, prioritizing stability and compatibility for your projects.
+- Security updates: We will actively monitor and backport security fixes from newer versions of Node.js (such as Node.js 16 and 18) to ensure the ongoing safety and stability of your Meteor.js applications running on Node.js 14.
+- Critical bug fixes: We will address any critical issues that might arise, prioritizing stability and compatibility for your projects.
 
 
 More information can be found in this [Forum Topic](https://forums.meteor.com/t/announcing-extended-support-maintenance-for-node-js-14/59811/11), in this [blogpost](https://blog.meteor.com/announcing-extended-support-maintenance-for-node-js-14-f9e8381f8bb5) by [Fred Maia](https://github.com/fredmaiaarantes)
