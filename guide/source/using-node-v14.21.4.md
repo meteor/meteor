@@ -9,7 +9,7 @@ that contains Nodejs v14.21.4.
 
 
 Our plan with having a Extended Support Maintenance Node.js version is to provide a stable Node.js version for Meteor
-users that are not in Meteor v3.0 yet.
+users who are not on Meteor v3.0 yet.
 This will give more time to migrate apps to the latests Meteor version.
 
 Meteor Software will offer Meteor.js Node.js 14 ESM for 12 months beyond the official end-of-life date (April 2023 - April 2024).
