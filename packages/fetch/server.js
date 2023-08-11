@@ -1,4 +1,4 @@
-(async() => {
+(async function() {
   // import fetch from 'node-fetch' would not work due to issues with isopacket combined
   const { default: fetch, Headers, Request, Response } = await import("node-fetch");
 
