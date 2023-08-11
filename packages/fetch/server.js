@@ -1,4 +1,4 @@
-const fetch = require("node-fetch");
+import fetch from 'node-fetch';
 
 exports.fetch = fetch;
 exports.Headers = fetch.Headers;
