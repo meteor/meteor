@@ -5,7 +5,7 @@ description: How to use our ESM Node.js  version within your Meteor app.
 
 Meteor 2.13 comes with Node v14.21.4 security update. If you are using Meteor with Docker,
 you will need to update your Dockerfile to use our [new docker image](https://hub.docker.com/r/meteor/node)
-that contains Nodejs v14.21.4.
+that contains Node.js v14.21.4.
 
 
 Our plan with having a Extended Support Maintenance Node.js version is to provide a stable Node.js version for Meteor
