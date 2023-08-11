@@ -24,7 +24,7 @@ In a more concise quote Meteor ESM Node.js 14 will include:
 - Critical bug fixes: We will address any critical issues that might arise, prioritizing stability and compatibility for your projects.
 
 
-More information can be found in this [Forum Topic](https://forums.meteor.com/t/announcing-extended-support-maintenance-for-node-js-14/59811/11), in this [blogpost](https://blog.meteor.com/announcing-extended-support-maintenance-for-node-js-14-f9e8381f8bb5) by [Fred Maia](https://github.com/fredmaiaarantes)
+More information can be found in this [Forum Topic](https://forums.meteor.com/t/announcing-extended-support-maintenance-for-node-js-14/59811/11), in this [blog post](https://blog.meteor.com/announcing-extended-support-maintenance-for-node-js-14-f9e8381f8bb5) by [Fred Maia](https://github.com/fredmaiaarantes)
 and in this [PR](https://github.com/meteor/node-v14-esm/pull/1) by [denihs](https://github.com/denihs), where we have all changes that were made.
 
 The source code for this Node.js release can be seen [here](https://github.com/meteor/node-v14-esm).
