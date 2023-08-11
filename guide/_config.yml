@@ -73,6 +73,7 @@ sidebar_categories:
   Production:
     - security
     - deployment
+    - using-node-v14.21.4
   Meta:
     - CONTRIBUTING
     - CHANGELOG
