@@ -11,7 +11,6 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
-  api.use("ecmascript");
   api.use("modules");
   api.use("modern-browsers");
   api.use("promise");
