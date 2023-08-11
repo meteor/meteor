@@ -17,7 +17,7 @@ Package.onUse(function(api) {
 
   api.mainModule("modern.js", "web.browser");
   api.mainModule("legacy.js", "legacy");
-  api.mainModule("server.js", "server");
+  api.mainModule("server.mjs", "server");
 
   api.addAssets("fetch.d.ts", "server");
   // The other exports (Headers, Request, Response) can be imported
