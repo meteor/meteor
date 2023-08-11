@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "node-fetch": "3.3.2",
+  "node-fetch": "2.6.12",
   "whatwg-fetch": "3.6.17"
 });
 
@@ -17,7 +17,7 @@ Package.onUse(function(api) {
 
   api.mainModule("modern.js", "web.browser");
   api.mainModule("legacy.js", "legacy");
-  api.mainModule("server.mjs", "server");
+  api.mainModule("server.js", "server");
 
   api.addAssets("fetch.d.ts", "server");
   // The other exports (Headers, Request, Response) can be imported
