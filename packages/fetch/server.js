@@ -1,9 +1,12 @@
-import fetch from 'node-fetch';
+(async() => {
+  // import fetch from 'node-fetch' would not work due to issues with isopacket combined
+  const { default: fetch, Headers, Request, Response } = await import("node-fetch");
 
-exports.fetch = fetch;
-exports.Headers = fetch.Headers;
-exports.Request = fetch.Request;
-exports.Response = fetch.Response;
+  exports.fetch = fetch;
+  exports.Headers = fetch.Headers;
+  exports.Request = fetch.Request;
+  exports.Response = fetch.Response;
+})();
 
 const { setMinimumBrowserVersions } = require("meteor/modern-browsers");
 
