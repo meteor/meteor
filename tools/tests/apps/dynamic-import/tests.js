@@ -15,7 +15,6 @@ describe("dynamic import(...)", function () {
   maybeClearDynamicImportCache();
 
   it("ignores bad __meteor__/dynamic-import/fetch requests (#10147)", function () {
-    console.log('FETCH', fetch);
     return fetch(Meteor.absoluteUrl("/__meteor__/dynamic-import/fetch"), {
       // POST request with empty body.
       method: "POST"
