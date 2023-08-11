@@ -1,6 +1,6 @@
 ---
 title: Using Extended Support Maintenance Node.js v14.21.4
-description: How to use our Extended Support Maintenance Node.js  version within your Meteor app.
+description: How to use our ESM Node.js  version within your Meteor app.
 ---
 
 Meteor 2.13 comes with Node v14.21.4 security update. If you are using Meteor with Docker,
