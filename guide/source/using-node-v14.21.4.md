@@ -23,6 +23,12 @@ In a more concise quote, Meteor ESM Node.js 14 will include:
 - Security updates: We will actively monitor and backport security fixes from newer versions of Node.js (such as Node.js 16 and 18) to ensure the ongoing safety and stability of your Meteor.js applications running on Node.js 14.
 - Critical bug fixes: We will address any critical issues that might arise, prioritizing stability and compatibility for your projects.
 
+Node ESM 14 download links for each OS are the following:
+- [Linux x64](https://static.meteor.com/dev-bundle-node-os/v14.21.4/node-v14.21.4-linux-x64.tar.gz)
+- [MacOs x64](https://static.meteor.com/dev-bundle-node-os/v14.21.4/node-v14.21.4-darwin-x64.tar.gz)
+- [MacOs ARM](https://static.meteor.com/dev-bundle-node-os/v14.21.4/node_Darwin_arm64_v14.21.4.tar.gz)
+- [Windows x64](https://static.meteor.com/dev-bundle-node-os/v14.21.4/node-v14.21.4-win-x64.7z)
+
 
 More information can be found in this [Forum Topic](https://forums.meteor.com/t/announcing-extended-support-maintenance-for-node-js-14/59811/11), in this [blog post](https://blog.meteor.com/announcing-extended-support-maintenance-for-node-js-14-f9e8381f8bb5) by [Fred Maia](https://github.com/fredmaiaarantes)
 and in this [PR](https://github.com/meteor/node-v14-esm/pull/1) by [denihs](https://github.com/denihs), where we have all changes that were made.

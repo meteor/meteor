@@ -44,6 +44,7 @@ that contains Nodejs v14.21.4.
 
 #### Migration Steps
 
+
 Please, follow our [migration guide](https://guide.meteor.com/2.13-migration) to understand what's needed to upgrade to Meteor 2.13.
 
 #### Meteor Version Release
