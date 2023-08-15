@@ -152,9 +152,10 @@ node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
 npm install
 cp -R node_modules/* "${DIR}/lib/node_modules/"
 
-#Also copy package.json to lib folder so that npm
+#Also copy package.json and package-lock.json to lib folder so that npm
 # keep everything installed correctly
 cp package.json "${DIR}/lib/"
+cp package-lock.json "${DIR}/lib/"
 # Also include node_modules/.bin, so that `meteor npm` can make use of
 # commands like node-gyp and node-pre-gyp.
 cp -R node_modules/.bin "${DIR}/lib/node_modules/"
