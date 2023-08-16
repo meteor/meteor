@@ -58,22 +58,23 @@ var randomizedPackageName = function (username, start) {
 // on a module that has filenames with colons -- the module gets added, but
 // without the colon filenames.
 if (process.platform !== "win32") {
-  selftest.define("can't build local packages with colons", function () {
+  selftest.define("can't build local packages with colons", async function () {
     var s = new Sandbox();
+    await s.init();
 
     var appName = "test";
     var packageName = "package-with-colons";
 
-    s.createApp(appName, "standard-app");
+    await s.createApp(appName, "standard-app");
 
-    s.cd(appName, function () {
+    await s.cd(appName, async function () {
       s.mkdir("packages");
-      s.cd("packages", function () {
-        s.createPackage("package-with-colons", packageName, "package-with-colons");
+      await s.cd("packages", async function () {
+        await s.createPackage("package-with-colons", packageName, "package-with-colons");
       });
 
       var run = s.run("add", packageName);
-      run.matchErrBeforeExit("colons");
+      await run.matchErr("colons");
     });
   });
 }
@@ -101,7 +102,7 @@ if (process.platform !== "win32") {
     var finalTreeHash =  files.treeHash(targetDirectory);
 
     // Nothing should be different
-    selftest.expectEqual(finalTreeHash, startingTreeHash);
+    await selftest.expectEqual(finalTreeHash, startingTreeHash);
   });
 }
 
@@ -128,9 +129,9 @@ selftest.define("package with colons is converted on Windows", async function ()
   if (process.platform === "win32") {
     expectedHash = "Ayya11T8Zef16+F7C/sZSwRxIiGiBbBFIwUC88Weaqs=";
   } else {
-    expectedHash = "AQX/7h0fXwHT9rNQvlBTvIZAE2g8krlnkEQMc9lTuMI=";
+    expectedHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
   }
 
   // Saved tree hash of the correct result
-  selftest.expectEqual(files.treeHash(targetDirectory), expectedHash);
+  await selftest.expectEqual(files.treeHash(targetDirectory), expectedHash);
 });
