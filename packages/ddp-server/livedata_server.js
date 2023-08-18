@@ -32,11 +32,9 @@ const publicationStrategies = {
     useCollectionView: false,
     doAccountingForCollection: true,
   },
-  // NO_MERGE_MULTI is similar to NO_MERGE, but it does track whether a document
-  // is used by multiple publications, allowing to enable this strategy even
-  // when a collection is used by multiple publications. This has some memory
-  // overhead, but it still does not do diffing so it's faster and slimmer than
-  // SERVER_MERGE.
+  // NO_MERGE_MULTI is similar to `NO_MERGE`, but it does track whether a document is
+  // used by multiple publications. This has some memory overhead, but it still does not do
+  // diffing so it's faster and slimmer than SERVER_MERGE.
   NO_MERGE_MULTI: {
     useDummyDocumentView: true,
     useCollectionView: true,
