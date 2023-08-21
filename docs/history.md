@@ -659,6 +659,7 @@
 #### New Public API
 
 
+
 - `accounts-base`: (2.9+)
 
   - `Meteor.userAsync()`
