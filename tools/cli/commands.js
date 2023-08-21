@@ -38,7 +38,8 @@ const runCommand = async (command) => {
         return;
       }
       if (stderr) {
-        console.log(red`stderr: ${ stderr }`);
+        if (stderr.includes("Cloning into")) console.log(green`${ stderr }`);
+        else console.log(red`stderr: ${ stderr }`);
         reject(stderr);
         return;
       }

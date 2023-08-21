@@ -1,6 +1,6 @@
 Package.describe({
   name: "modules-runtime",
-  version: '1.0.0-alpha300.10',
+  version: '1.0.0-alpha300.11',
   summary: "CommonJS module system",
   git: "https://github.com/benjamn/install",
   documentation: "README.md"
