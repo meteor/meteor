@@ -18,8 +18,14 @@ Error: incorrect data check
   }
 
 ```
+<h3 id="the-issue"> The issue </h3>
+
+It seems related to [our first ESM version of Node.js v14.21.4](https://github.com/meteor/node-v14-esm) and the `zlib` package.
+We have been able to reproduce this issue only in Mac Intel.
 
 You can follow along with the [GitHub issue](https://github.com/meteor/meteor/issues/12731) for updates.
+
+<h3 id="workaround"> Workaround </h3>
 
 The workaround while our developers are working on this issue is as follows:
 
