@@ -21,7 +21,7 @@ Error: incorrect data check
 
 You can follow along with the [GitHub issue](https://github.com/meteor/meteor/issues/12731) for updates.
 
-The workaround while our developers are working in this issue is:
+The workaround while our developers are working on this issue is as follows:
 
 running the following command in you terminal:
 
