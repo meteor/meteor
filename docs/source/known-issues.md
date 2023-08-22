@@ -23,7 +23,7 @@ You can follow along with the [GitHub issue](https://github.com/meteor/meteor/is
 
 The workaround while our developers are working on this issue is as follows:
 
-running the following command in you terminal:
+running the following command in your terminal:
 
 ```shell
 
