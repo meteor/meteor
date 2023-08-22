@@ -5,6 +5,7 @@ edit_branch: 'devel'
 edit_path: 'guide'
 content_root: 'source'
 versions:
+  - '2.13'
   - '2.12'
   - '2.11'
   - '2.10'
@@ -41,7 +42,7 @@ sidebar_categories:
     - index
     - code-style
     - structure
-    - 2.12-migration
+    - 2.13-migration
   Data:
     - collections
     - data-loading
@@ -72,6 +73,7 @@ sidebar_categories:
   Production:
     - security
     - deployment
+    - using-node-v14.21.4
   Meta:
     - CONTRIBUTING
     - CHANGELOG
