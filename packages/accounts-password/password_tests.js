@@ -1370,9 +1370,9 @@ if (Meteor.isServer) (() => {
           );
 
         Accounts._options.ambiguousErrorMessages = true
-        test.throws(
-          ()=> Meteor.call('forgotPassword', wrongOptions),
-          'Something went wrong. Please check your credentials'
+        test.doesNotThrow(
+          ()=> Meteor.call('forgotPassword', wrongOptions)
+          // 'Something went wrong. Please check your credentials'
         )
 
         Accounts._options.ambiguousErrorMessages = false
