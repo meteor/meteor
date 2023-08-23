@@ -1,5 +1,5 @@
 # Changelog
-## 1.11.3 - 2023-08-16
+## 1.11.3 - 2023-08-XX
 ### Changes
 - Updated default version of Facebook GraphAPI to v17
 
