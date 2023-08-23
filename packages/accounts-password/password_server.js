@@ -376,6 +376,7 @@ Meteor.methods({forgotPassword: options => {
   if (!user && !Accounts._options.ambiguousErrorMessages) {
     Accounts._handleError("User not found");
   }
+  if (!user) return null
 
   const emails = pluckAddresses(user.emails);
   const caseSensitiveEmail = emails.find(
