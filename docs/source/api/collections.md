@@ -216,6 +216,10 @@ collections will be empty.
 Equivalent to [`find`](#find)`(selector, options).`[`fetch`](#fetch)`()[0]` with
 `options.limit = 1`.
 
+{% apibox "Mongo.Collection#findOneAsync" %}
+
+Async version of  [`findOne`](#findOne)` that return a `Promise`.
+
 {% apibox "Mongo.Collection#countDocuments" %}
 
 Similar to `count`, but returns a `Promise`. For a faster version, see `estimatedDocumentCount`.
@@ -258,6 +262,10 @@ const groceriesId = Lists.insert({ name: 'Groceries' });
 Items.insert({ list: groceriesId, name: 'Watercress' });
 Items.insert({ list: groceriesId, name: 'Persimmons' });
 ```
+
+{% apibox "Mongo.Collection#insertAsync" %}
+
+Async version of  [`insert`](#insert)` that return a `Promise`.
 
 {% apibox "Mongo.Collection#update" %}
 
@@ -330,6 +338,10 @@ option to true. You can also use the [`upsert`](#upsert) method to perform an
 upsert that returns the `_id` of the document that was inserted (if there was one)
 in addition to the number of affected documents.
 
+{% apibox "Mongo.Collection#updateAsync" %}
+
+Async version of  [`update`](#update)` that return a `Promise`.
+
 {% apibox "Mongo.Collection#upsert" %}
 
 Modify documents that match `selector` according to `modifier`, or insert
@@ -337,6 +349,10 @@ a document if no documents were modified. `upsert` is the same as calling
 `update` with the `upsert` option set to true, except that the return
 value of `upsert` is an object that contain the keys `numberAffected`
 and `insertedId`. (`update` returns only the number of affected documents.)
+
+{% apibox "Mongo.Collection#upsertAsync" %}
+
+Async version of  [`upsert`](#upsert)` that return a `Promise`.
 
 {% apibox "Mongo.Collection#remove" %}
 
@@ -402,6 +418,10 @@ Meteor.startup(() => {
 });
 ```
 
+{% apibox "Mongo.Collection#removeAsync" %}
+
+Async version of  [`remove`](#remove)` that return a `Promise`.
+
 {% apibox "Mongo.Collection#createIndex" %}
 
 For efficient and performant queries you will sometimes need to define indexes other than the default `_id` field.
@@ -431,6 +451,10 @@ to true in your `settings.json`:
 ```
 
 > You should use this option only when you are dealing with a change across many indexes and it is not feasible to fix them manually and you can afford the re-building of the indexes as this will destroy the old index and create a new one. Use this carefully.
+
+{% apibox "Mongo.Collection#createIndexAsync" %}
+
+Async version of  [`createIndex`](#createIndex)` that return a `Promise`.
 
 {% apibox "Mongo.Collection#allow" %}
 
@@ -626,6 +650,10 @@ topPosts.forEach((post) => {
   count += 1;
 });
 ```
+{% apibox "Mongo.Cursor#forEachAsync" %}
+
+Async version of  [`forEach`](#forEach)` that return a `Promise`.
+
 
 {% apibox "Mongo.Cursor#map" %}
 
@@ -640,16 +668,28 @@ On the server, if `callback` yields, other calls to `callback` may occur while
 the first call is waiting. If strict sequential execution is necessary, use
 `forEach` instead.
 
+{% apibox "Mongo.Collection#mapAsync" %}
+
+Async version of  [`map`](#map)` that return a `Promise`.
+
 {% apibox "Mongo.Cursor#fetch" %}
 
 When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
+
+{% apibox "Mongo.Collection#fetchAsync" %}
+
+Async version of  [`fetch`](#fetch)` that return a `Promise`.
 
 {% apibox "Mongo.Cursor#count" %}
 
 Unlike the other functions, `count` registers a dependency only on the
 number of matching documents.  (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
+
+{% apibox "Mongo.Collection#countAsync" %}
+
+Async version of  [`count`](#count)` that return a `Promise`.
 
 {% apibox "Mongo.Cursor#observe" %}
 
