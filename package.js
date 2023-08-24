@@ -40,7 +40,7 @@ Package.onTest(function (api) {
   // Add code coverage
   api.use([
     'lmieulet:meteor-legacy-coverage',
-    'lmieulet:meteor-coverage@3.2.0',
+    'lmieulet:meteor-coverage@4.1.0',
     'meteortesting:mocha@2.1.0'
   ])
 
