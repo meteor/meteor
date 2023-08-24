@@ -73,16 +73,16 @@ Roles._uiHelpers = {
 // Register UI helpers
 //
 
-if (Roles.debug && console.log) {
-  console.log('[roles] Roles.debug =', Roles.debug)
+if (Roles.debug && console.debug) {
+  console.debug('[roles] Roles.debug =', Roles.debug)
 }
 
 if (typeof Package.blaze !== 'undefined' &&
     typeof Package.blaze.Blaze !== 'undefined' &&
     typeof Package.blaze.Blaze.registerHelper === 'function') {
   Object.entries(Roles._uiHelpers).forEach(([name, func]) => {
-    if (Roles.debug && console.log) {
-      console.log('[roles] registering Blaze helper \'' + name + '\'')
+    if (Roles.debug && console.debug) {
+      console.debug('[roles] registering Blaze helper \'' + name + '\'')
     }
     Package.blaze.Blaze.registerHelper(name, func)
   })
