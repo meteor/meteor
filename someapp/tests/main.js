@@ -1,3 +1,5 @@
+/* eslint-env mocha */
+import { Meteor } from 'meteor/meteor'
 import assert from 'assert'
 
 describe('someapp', function () {

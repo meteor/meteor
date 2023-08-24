@@ -11,8 +11,8 @@
     "lint:fix": "standard --fix ../"
   },
   "dependencies": {
-    "@babel/runtime": "^7.17.9",
-    "meteor-node-stubs": "^1.2.1",
+    "@babel/runtime": "^7.22.10",
+    "meteor-node-stubs": "^1.2.5",
     "yuidocjs": "^0.10.2"
   },
   "devDependencies": {
