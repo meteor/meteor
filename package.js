@@ -8,7 +8,7 @@ Package.describe({
 })
 
 Package.onUse(function (api) {
-  api.versionsFrom(['1.12', '2.3', '2.8.0'])
+  api.versionsFrom(['2.8.0'])
 
   const both = ['client', 'server']
 
@@ -58,4 +58,5 @@ Package.onTest(function (api) {
 
   api.addFiles('roles/tests/server.js', 'server')
   api.addFiles('roles/tests/client.js', 'client')
+  api.addFiles('roles/tests/clientAsync.js', 'client')
 })
