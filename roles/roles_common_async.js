@@ -1,4 +1,6 @@
-/* global Meteor, Roles, Mongo */
+/* global Roles */
+import { Meteor } from 'meteor/meteor'
+import { Mongo } from 'meteor/mongo'
 
 /**
  * Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.
@@ -45,7 +47,7 @@ let getGroupsForUserDeprecationWarning = false
  * Helper, resolves async some
  * @param {*} arr
  * @param {*} predicate
- * @returns
+ * @returns {Promise<Boolean>}
  */
 const asyncSome = async (arr, predicate) => {
   for (const e of arr) {
@@ -71,7 +73,7 @@ Object.assign(Roles, {
    * @param {String} roleName Name of role.
    * @param {Object} [options] Options:
    *   - `unlessExists`: if `true`, exception will not be thrown in the role already exists
-   * @return {String} ID of the new role or null.
+   * @return {Promise<String>} ID of the new role or null.
    * @static
    */
   createRoleAsync: async function (roleName, options) {
@@ -103,7 +105,7 @@ Object.assign(Roles, {
 
     if (!insertedId) {
       if (options.unlessExists) return null
-      throw new Error("Role '" + roleName + "' already exists.")
+      throw new Meteor.Error("Role '" + roleName + "' already exists.")
     }
 
     return insertedId
@@ -116,6 +118,7 @@ Object.assign(Roles, {
    *
    * @method deleteRole
    * @param {String} roleName Name of role.
+   * @returns {Promise}
    * @static
    */
   deleteRoleAsync: async function (roleName) {
@@ -180,6 +183,7 @@ Object.assign(Roles, {
    * @method renameRole
    * @param {String} oldName Old name of a role.
    * @param {String} newName New name of a role.
+   * @returns {Promise}
    * @static
    */
   renameRoleAsync: async function (oldName, newName) {
@@ -193,7 +197,7 @@ Object.assign(Roles, {
     const role = await Meteor.roles.findOneAsync({ _id: oldName })
 
     if (!role) {
-      throw new Error("Role '" + oldName + "' does not exist.")
+      throw new Meteor.Error("Role '" + oldName + "' does not exist.")
     }
 
     role._id = newName
@@ -254,6 +258,7 @@ Object.assign(Roles, {
    * @method addRolesToParent
    * @param {Array|String} rolesNames Name(s) of role(s).
    * @param {String} parentName Name of parent role.
+   * @returns {Promise}
    * @static
    */
   addRolesToParentAsync: async function (rolesNames, parentName) {
@@ -269,6 +274,7 @@ Object.assign(Roles, {
    * @method _addRoleToParent
    * @param {String} roleName Name of role.
    * @param {String} parentName Name of parent role.
+   * @returns {Promise}
    * @private
    * @static
    */
@@ -280,12 +286,12 @@ Object.assign(Roles, {
     const role = await Meteor.roles.findOneAsync({ _id: roleName })
 
     if (!role) {
-      throw new Error("Role '" + roleName + "' does not exist.")
+      throw new Meteor.Error("Role '" + roleName + "' does not exist.")
     }
 
     // detect cycles
     if ((await Roles._getInheritedRoleNamesAsync(role)).includes(parentName)) {
-      throw new Error(
+      throw new Meteor.Error(
         "Roles '" + roleName + "' and '" + parentName + "' would form a cycle."
       )
     }
@@ -337,6 +343,7 @@ Object.assign(Roles, {
    * @method removeRolesFromParent
    * @param {Array|String} rolesNames Name(s) of role(s).
    * @param {String} parentName Name of parent role.
+   * @returns {Promise}
    * @static
    */
   removeRolesFromParentAsync: async function (rolesNames, parentName) {
@@ -352,6 +359,7 @@ Object.assign(Roles, {
    * @method _removeRoleFromParent
    * @param {String} roleName Name of role.
    * @param {String} parentName Name of parent role.
+   * @returns {Promise}
    * @private
    * @static
    */
@@ -367,7 +375,7 @@ Object.assign(Roles, {
     )
 
     if (!role) {
-      throw new Error("Role '" + roleName + "' does not exist.")
+      throw new Meteor.Error("Role '" + roleName + "' does not exist.")
     }
 
     const count = await Meteor.roles.updateAsync(
@@ -435,6 +443,7 @@ Object.assign(Roles, {
    * @param {Object|String} [options] Options:
    *   - `scope`: name of the scope, or `null` for the global role
    *   - `ifExists`: if `true`, do not throw an exception if the role does not exist
+   * @returns {Promise}
    *
    * Alternatively, it can be a scope name string.
    * @static
@@ -442,8 +451,8 @@ Object.assign(Roles, {
   addUsersToRolesAsync: async function (users, roles, options) {
     let id
 
-    if (!users) throw new Error("Missing 'users' param.")
-    if (!roles) throw new Error("Missing 'roles' param.")
+    if (!users) throw new Meteor.Error("Missing 'users' param.")
+    if (!roles) throw new Meteor.Error("Missing 'roles' param.")
 
     options = Roles._normalizeOptions(options)
 
@@ -491,6 +500,7 @@ Object.assign(Roles, {
    *   - `scope`: name of the scope, or `null` for the global role
    *   - `anyScope`: if `true`, remove all roles the user has, of any scope, if `false`, only the one in the same scope
    *   - `ifExists`: if `true`, do not throw an exception if the role does not exist
+   * @returns {Promise}
    *
    * Alternatively, it can be a scope name string.
    * @static
@@ -498,8 +508,8 @@ Object.assign(Roles, {
   setUserRolesAsync: async function (users, roles, options) {
     let id
 
-    if (!users) throw new Error("Missing 'users' param.")
-    if (!roles) throw new Error("Missing 'roles' param.")
+    if (!users) throw new Meteor.Error("Missing 'users' param.")
+    if (!roles) throw new Meteor.Error("Missing 'roles' param.")
 
     options = Roles._normalizeOptions(options)
 
@@ -547,6 +557,7 @@ Object.assign(Roles, {
    * @param {Object} options Options:
    *   - `scope`: name of the scope, or `null` for the global role
    *   - `ifExists`: if `true`, do not throw an exception if the role does not exist
+   * @returns {Promise}
    * @private
    * @static
    */
@@ -567,7 +578,7 @@ Object.assign(Roles, {
       if (options.ifExists) {
         return []
       } else {
-        throw new Error("Role '" + roleName + "' does not exist.")
+        throw new Meteor.Error("Role '" + roleName + "' does not exist.")
       }
     }
 
@@ -639,6 +650,7 @@ Object.assign(Roles, {
    *
    * @method _getParentRoleNames
    * @param {object} role The role object
+   * @returns {Promise}
    * @private
    * @static
    */
@@ -670,6 +682,7 @@ Object.assign(Roles, {
    *
    * @method _getInheritedRoleNames
    * @param {object} role The role object
+   * @returns {Promise}
    * @private
    * @static
    */
@@ -708,13 +721,14 @@ Object.assign(Roles, {
    * @param {Object|String} [options] Options:
    *   - `scope`: name of the scope, or `null` for the global role
    *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
+   * @returns {Promise}
    *
    * Alternatively, it can be a scope name string.
    * @static
    */
   removeUsersFromRolesAsync: async function (users, roles, options) {
-    if (!users) throw new Error("Missing 'users' param.")
-    if (!roles) throw new Error("Missing 'roles' param.")
+    if (!users) throw new Meteor.Error("Missing 'users' param.")
+    if (!roles) throw new Meteor.Error("Missing 'roles' param.")
 
     options = Roles._normalizeOptions(options)
 
@@ -749,6 +763,7 @@ Object.assign(Roles, {
    * @param {Object} options Options:
    *   - `scope`: name of the scope, or `null` for the global role
    *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
+   * @returns {Promise}
    * @private
    * @static
    */
@@ -796,7 +811,7 @@ Object.assign(Roles, {
    *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
    *
    * Alternatively, it can be a scope name string.
-   * @return {Boolean} `true` if user is in _any_ of the target roles
+   * @return {Promise<Boolean>} `true` if user is in _any_ of the target roles
    * @static
    */
   userIsInRoleAsync: async function (user, roles, options) {
@@ -864,7 +879,7 @@ Object.assign(Roles, {
    *     result strongly dependant on the internal data structure of this plugin.
    *
    * Alternatively, it can be a scope name string.
-   * @return {Array} Array of user's roles, unsorted.
+   * @return {Promise<Array>} Array of user's roles, unsorted.
    * @static
    */
   getRolesForUserAsync: async function (user, options) {
@@ -973,7 +988,7 @@ Object.assign(Roles, {
    * Alternatively, it can be a scope name string.
    * @param {Object} [queryOptions] Options which are passed directly
    *                                through to `Meteor.users.find(query, options)`
-   * @return {Cursor} Cursor of users in roles.
+   * @return {Promise<Cursor>} Cursor of users in roles.
    * @static
    */
   getUsersInRoleAsync: async function (roles, options, queryOptions) {
@@ -1082,6 +1097,7 @@ Object.assign(Roles, {
    * Deprecated. Use `getScopesForUser` instead.
    *
    * @method getGroupsForUser
+   * @returns {Promise<Array>}
    * @static
    * @deprecated
    */
@@ -1094,7 +1110,7 @@ Object.assign(Roles, {
         )
     }
 
-    return Roles.getScopesForUser(...args)
+    return await Roles.getScopesForUser(...args)
   },
 
   /**
@@ -1104,7 +1120,7 @@ Object.assign(Roles, {
    * @param {String|Object} user User ID or an actual user object.
    * @param {Array|String} [roles] Name of roles to restrict scopes to.
    *
-   * @return {Array} Array of user's scopes, unsorted.
+   * @return {Promise<Array>} Array of user's scopes, unsorted.
    * @static
    */
   getScopesForUserAsync: async function (user, roles) {
@@ -1146,6 +1162,7 @@ Object.assign(Roles, {
    * @method renameScope
    * @param {String} oldName Old name of a scope.
    * @param {String} newName New name of a scope.
+   * @returns {Promise}
    * @static
    */
   renameScopeAsync: async function (oldName, newName) {
@@ -1178,6 +1195,7 @@ Object.assign(Roles, {
    *
    * @method removeScope
    * @param {String} name The name of a scope.
+   * @returns {Promise}
    * @static
    */
   removeScopeAsync: async function (name) {
@@ -1200,7 +1218,7 @@ Object.assign(Roles, {
       typeof roleName !== 'string' ||
       roleName.trim() !== roleName
     ) {
-      throw new Error("Invalid role name '" + roleName + "'.")
+      throw new Meteor.Error(500,"Invalid role name '" + roleName + "'.")
     }
   },
 
@@ -1212,6 +1230,7 @@ Object.assign(Roles, {
    * @method isParentOf
    * @param {String} parentRoleName The role you want to research.
    * @param {String} childRoleName The role you expect to be among the children of parentRoleName.
+   * @returns {Promise}
    * @static
    */
   isParentOfAsync: async function (parentRoleName, childRoleName) {
@@ -1300,7 +1319,7 @@ Object.assign(Roles, {
       typeof scopeName !== 'string' ||
       scopeName.trim() !== scopeName
     ) {
-      throw new Error("Invalid scope name '" + scopeName + "'.")
+      throw new Meteor.Error("Invalid scope name '" + scopeName + "'.")
     }
   }
 })
