@@ -105,7 +105,7 @@ Object.assign(Roles, {
 
     if (!insertedId) {
       if (options.unlessExists) return null
-      throw new Meteor.Error("Role '" + roleName + "' already exists.")
+      throw new Error("Role '" + roleName + "' already exists.")
     }
 
     return insertedId
@@ -197,7 +197,7 @@ Object.assign(Roles, {
     const role = await Meteor.roles.findOneAsync({ _id: oldName })
 
     if (!role) {
-      throw new Meteor.Error("Role '" + oldName + "' does not exist.")
+      throw new Error("Role '" + oldName + "' does not exist.")
     }
 
     role._id = newName
@@ -286,12 +286,12 @@ Object.assign(Roles, {
     const role = await Meteor.roles.findOneAsync({ _id: roleName })
 
     if (!role) {
-      throw new Meteor.Error("Role '" + roleName + "' does not exist.")
+      throw new Error("Role '" + roleName + "' does not exist.")
     }
 
     // detect cycles
     if ((await Roles._getInheritedRoleNamesAsync(role)).includes(parentName)) {
-      throw new Meteor.Error(
+      throw new Error(
         "Roles '" + roleName + "' and '" + parentName + "' would form a cycle."
       )
     }
@@ -375,7 +375,7 @@ Object.assign(Roles, {
     )
 
     if (!role) {
-      throw new Meteor.Error("Role '" + roleName + "' does not exist.")
+      throw new Error("Role '" + roleName + "' does not exist.")
     }
 
     const count = await Meteor.roles.updateAsync(
@@ -451,8 +451,8 @@ Object.assign(Roles, {
   addUsersToRolesAsync: async function (users, roles, options) {
     let id
 
-    if (!users) throw new Meteor.Error("Missing 'users' param.")
-    if (!roles) throw new Meteor.Error("Missing 'roles' param.")
+    if (!users) throw new Error("Missing 'users' param.")
+    if (!roles) throw new Error("Missing 'roles' param.")
 
     options = Roles._normalizeOptions(options)
 
@@ -508,8 +508,8 @@ Object.assign(Roles, {
   setUserRolesAsync: async function (users, roles, options) {
     let id
 
-    if (!users) throw new Meteor.Error("Missing 'users' param.")
-    if (!roles) throw new Meteor.Error("Missing 'roles' param.")
+    if (!users) throw new Error("Missing 'users' param.")
+    if (!roles) throw new Error("Missing 'roles' param.")
 
     options = Roles._normalizeOptions(options)
 
@@ -578,7 +578,7 @@ Object.assign(Roles, {
       if (options.ifExists) {
         return []
       } else {
-        throw new Meteor.Error("Role '" + roleName + "' does not exist.")
+        throw new Error("Role '" + roleName + "' does not exist.")
       }
     }
 
@@ -727,8 +727,8 @@ Object.assign(Roles, {
    * @static
    */
   removeUsersFromRolesAsync: async function (users, roles, options) {
-    if (!users) throw new Meteor.Error("Missing 'users' param.")
-    if (!roles) throw new Meteor.Error("Missing 'roles' param.")
+    if (!users) throw new Error("Missing 'users' param.")
+    if (!roles) throw new Error("Missing 'roles' param.")
 
     options = Roles._normalizeOptions(options)
 
@@ -1218,7 +1218,7 @@ Object.assign(Roles, {
       typeof roleName !== 'string' ||
       roleName.trim() !== roleName
     ) {
-      throw new Meteor.Error(500,"Invalid role name '" + roleName + "'.")
+      throw new Error("Invalid role name '" + roleName + "'.")
     }
   },
 
@@ -1319,7 +1319,7 @@ Object.assign(Roles, {
       typeof scopeName !== 'string' ||
       scopeName.trim() !== scopeName
     ) {
-      throw new Meteor.Error("Invalid scope name '" + scopeName + "'.")
+      throw new Error("Invalid scope name '" + scopeName + "'.")
     }
   }
 })
