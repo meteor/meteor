@@ -2,7 +2,10 @@
 /* global Roles */
 
 import { Meteor } from 'meteor/meteor'
-import { assert } from 'chai'
+import chai, { assert, expect } from 'chai'
+import chaiAsPromised from 'chai-as-promised'
+
+chai.use(chaiAsPromised)
 
 // To ensure that the files are loaded for coverage
 import '../roles_server'
@@ -17,7 +20,7 @@ Meteor.roleAssignment.allow({
 
 const hasProp = (target, prop) => Object.hasOwnProperty.call(target, prop)
 
-describe('roles', function () {
+describe('roles async', async function () {
   let users = {}
   const roles = ['admin', 'editor', 'user']
 
@@ -32,8 +35,8 @@ describe('roles', function () {
     return Meteor.roleAssignment.find({ _id: loggedInUserId })
   })
 
-  function addUser (name) {
-    return Meteor.users.insert({ username: name })
+  async function addUser (name) {
+    return await Meteor.users.insertAsync({ username: name })
   }
 
   function testUser (username, expectedRoles, scope) {
