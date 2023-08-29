@@ -126,7 +126,7 @@ jobs:
     <<: *build_machine_environment
     steps:
       - run:
-          command: rm -r /home/circleci/project/circleci
+          command: rm -fR /home/circleci/project/*
       - run:
           command: ls -lR /home/circleci/project
       - checkout
