@@ -126,6 +126,8 @@ jobs:
     <<: *build_machine_environment
     steps:
       - run:
+          command: rm -fR /home/circleci/project/*
+      - run:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
