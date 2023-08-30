@@ -83,17 +83,19 @@ option to other `meteor` tool commands, such as `meteor run` and `meteor test-pa
 
 <h2 id="meteorcreate">meteor create app-name</h2>
 
-The command `meteor create app-name` is the default command to create a new Meteor project. It creates a subdirectory named *app-name* and copies in a template app.
-You can pass an absolute or relative path. If you pass a relative path, it will be resolved relative to the current working directory.
-By default, it uses React.
+The command `meteor create app-name` is the default command for creating a new Meteor project. It creates a subdirectory 
+named `app-name` and copies a template app into it. You can pass an absolute or relative path. If you pass a relative 
+path, it will be resolved relative to the current working directory. By default, it generates a React project.
 
 See the flags below to learn how you can generate different types of apps.
 
 
 <h3 id="apollo">--apollo</h3>
 
-The command `meteor create --apollo app-name` creates a Meteor app with [React](https://react.dev/), [Apollo](https://www.apollographql.com/) (GraphQL) and [MongoDB](https://www.mongodb.com/).
-To create a complete app, including testing and deployment, follow the [React tutorial](https://react-tutorial.meteor.com/). To jump on how to use Apollo, you can go to the [GraphQL section](https://react-tutorial.meteor.com/simple-todos-graphql/).
+The command `meteor create --apollo app-name` creates a Meteor app with [React](https://react.dev/), 
+[Apollo](https://www.apollographql.com/) (GraphQL), and [MongoDB](https://www.mongodb.com/). To create a complete app, 
+including testing and deployment, follow the [React tutorial](https://react-tutorial.meteor.com/). To learn how to use 
+Apollo, refer to the [GraphQL section](https://react-tutorial.meteor.com/simple-todos-graphql/).
 
 Npm packages included: `@apollo/client`, `@apollo/server`, `@babel/runtime`, `body-parser`, `express`, 
 `graphql` `meteor-node-stubs`, `react`, `react-dom`.
@@ -105,8 +107,9 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 
 <h3 id="bare">--bare</h3>
 
-The command `meteor create --bare app-name` creates an empty Meteor app with [Blaze](https://blazejs.org), and [MongoDB](https://www.mongodb.com/).
-To create a complete app, including testing and deployment, follow the [Blaze tutorial](https://blaze-tutorial.meteor.com/).
+The command `meteor create --bare app-name` creates an empty Meteor app with [Blaze](https://blazejs.org) and 
+[MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
+[Blaze tutorial](https://blaze-tutorial.meteor.com/).
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `jquery`.
 
@@ -116,8 +119,9 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 
 <h3 id="blaze-app">--blaze</h3>
 
-The command `meteor create --blaze app-name` creates a Meteor app with [Blaze](https://blazejs.org), and [MongoDB](https://www.mongodb.com/).
-To create a complete app, including testing and deployment, follow the [Blaze tutorial](https://blaze-tutorial.meteor.com/).
+The command `meteor create --blaze app-name` creates a Meteor app with [Blaze](https://blazejs.org) and 
+[MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
+[Blaze tutorial](https://blaze-tutorial.meteor.com/).
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `jquery`.
 
@@ -128,8 +132,10 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `blaze-ht
 
 <h3 id="chakra-ui">--chakra-ui</h3>
 
-The command `meteor create --chakra-ui app-name` creates a Meteor app with [React](https://react.dev/), [Chakra-UI](https://chakra-ui.com/) and [MongoDB](https://www.mongodb.com/).
-To create a complete app, including testing and deployment, follow the [React tutorial](https://react-tutorial.meteor.com/). To see how to use Chakra-UI, you can check the [Simple Tasks](https://github.com/fredmaiaarantes/simpletasks) example.
+The command `meteor create --chakra-ui app-name` creates a Meteor app with [React](https://react.dev/), 
+[Chakra-UI](https://chakra-ui.com/), and [MongoDB](https://www.mongodb.com/). To create a complete app, including 
+testing and deployment, follow the [React tutorial](https://react-tutorial.meteor.com/). To learn how to use Chakra-UI, 
+refer to the [Simple Tasks](https://github.com/fredmaiaarantes/simpletasks) example.
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`, `@chakra-ui/icons`, `@chakra-ui/react`, `@emotion/react`
 `@emotion/styled`, `@react-icons/all-files`, `framer-motion`.
@@ -141,10 +147,11 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 
 <h3 id="full">--full</h3>
 
-The command `meteor create --full app-name` creates a Meteor app with [Blaze](https://blazejs.org), and [MongoDB](https://www.mongodb.com/).
-It creates a more complete, imports-based project which
-closely matches the [file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the
-[Meteor Guide](https://guide.meteor.com/). To create a complete app, including testing and deployment, follow the [Blaze tutorial](https://blaze-tutorial.meteor.com/).
+The command `meteor create --full app-name` creates a Meteor app with [Blaze](https://blazejs.org) and 
+[MongoDB](https://www.mongodb.com/). It creates a more complete, imports-based project that closely matches the
+[file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the 
+[Meteor Guide](https://guide.meteor.com/). To create a complete app, including testing and deployment, follow the 
+[Blaze tutorial](https://blaze-tutorial.meteor.com/).
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `jquery`, `chai`.
 
@@ -165,23 +172,26 @@ Meteor packages included: `meteor`, `standard-minifier-css`, `standard-minifier-
 
 <h3 id="package">--package</h3>
 
-The command `meteor create --package package-name` creates a new package. If used in an
-existing app, it will create a package in the `packages` directory. Check the [Meteor Guide](https://guide.meteor.com/writing-atmosphere-packages.html) for more information on how to get started writing packages.
+The command `meteor create --package package-name` creates a new package. If used in an existing app, it will create a 
+package in the `packages` directory. Check the [Meteor Guide](https://guide.meteor.com/writing-atmosphere-packages.html)
+for more information on how to get started writing packages.
 
 
 <h3 id="prototype">--prototype</h3>
 
-The command `meteor create --prototype app-name` creates a project with the prototype purpose packages (`autopublish` and `insecure`).
-If you use them you can change your collections quickly and create prototype apps very fast, but these packages are not supposed to be used in production.
+The command `meteor create --prototype app-name` creates a project with the prototype purpose packages (`autopublish`
+and `insecure`). If you use them, you can change your collections quickly and create prototype apps very quickly. 
+However, these packages are not supposed to be used in production.
 
-For more information about security you can read our [security checklist](https://guide.meteor.com/security.html#checklist).
-It can be used with other flags that create apps such as `--react`, `blaze`, or `--typescript`.
+For more information about security, you can read our [security checklist](https://guide.meteor.com/security.html#checklist).
+It can be used with other flags that create apps, such as `--react`, `blaze`, or `--typescript`.
 
 
 <h3 id="react">--react</h3>
 
-The command `meteor create --react app-name` creates a Meteor app with [React](https://react.dev/) and [MongoDB](https://www.mongodb.com/).
-It functions in the same way as if you don't use any flags. To create a complete app, including testing and deployment, follow the [React tutorial](https://react-tutorial.meteor.com/).
+The command `meteor create --react app-name` creates a Meteor app with [React](https://react.dev/) and 
+[MongoDB](https://www.mongodb.com/). It functions in the same way as if you don't use any flags. To create a complete 
+app, including testing and deployment, follow the [React tutorial](https://react-tutorial.meteor.com/).
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`.
 
@@ -192,15 +202,17 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 
 <h3 id="release">--release</h3>
 
-The command `meteor create app-name --release {meteor-version}` creates a Meteor app with the release specified in the command.
-For instance, you can create a Meteor app with the `2.8` release using `meteor create app-name --release 2.8`.
-By default, it generates a React app, but you can use it with other flags that create apps such as `--blaze`, `--svelte`, `vue`, or `--typescript`.
+The command `meteor create app-name --release {meteor-version}` creates a Meteor app with the release specified in the 
+command. For instance, you can create a Meteor app with the `2.8` release using `meteor create app-name --release 2.8`. 
+By default, it generates a React app, but you can use it with other flags that create apps such as `--blaze`, 
+`--svelte`, `--vue`, or `--typescript`.
 
 
 <h3 id="solid">--solid</h3>
 
-The command `meteor create --solid app-name` creates a Meteor app with [Solid](https://www.solidjs.com/), [Vite](https://vitejs.dev/) and [MongoDB](https://www.mongodb.com/).
-You can see an example on the [meteor-solid-app](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) repository.
+The command `meteor create --solid app-name` creates a Meteor app with [Solid](https://www.solidjs.com/), 
+[Vite](https://vitejs.dev/), and [MongoDB](https://www.mongodb.com/). You can see an example on the
+[meteor-solid-app](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) repository.
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `solid-js`, `babel-preset-solid`, `vite`, `vite-plugin-solid`, `vite-plugin-solid-svg`.
 
@@ -211,8 +223,9 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 
 <h3 id="svelte">--svelte</h3>
 
-The command `meteor create --svelte app-name` creates a Meteor app with [Svelte](https://svelte.dev/) and [MongoDB](https://www.mongodb.com/).
-To create a complete app, including testing and deployment, follow the [Svelte tutorial](https://svelte-tutorial.meteor.com/).
+The command `meteor create --svelte app-name` creates a Meteor app with [Svelte](https://svelte.dev/) and 
+[MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
+[Svelte tutorial](https://svelte-tutorial.meteor.com/).
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `svelte`, `svelte-preprocess`.
 
@@ -226,7 +239,8 @@ You can see an example on the [meteor-vite repository](https://github.com/Jorgen
 
 <h3 id="tailwind">--tailwind</h3>
 
-The command `meteor create --tailwind app-name` creates a Meteor app with [React](https://react.dev/), [Tailwind CSS](https://tailwindcss.com) and [MongoDB](https://www.mongodb.com/).
+The command `meteor create --tailwind app-name` creates a Meteor app with [React](https://react.dev/), 
+[Tailwind CSS](https://tailwindcss.com), and [MongoDB](https://www.mongodb.com/).
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`, `autoprefixer`, `postcss`, `postcss-load-config`, `tailwindcss`.
 
@@ -237,8 +251,10 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 
 <h3 id="typescript">--typescript</h3>
 
-The command `meteor create --typescript app-name` creates a Meteor app with [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/) and [MongoDB](https://www.mongodb.com/).
-Check the [Meteor Guide](https://guide.meteor.com/build-tool.html#typescript) for more information about TypeScript and how to use with other UI frameworks.
+The command `meteor create --typescript app-name` creates a Meteor app with [React](https://react.dev/), 
+[TypeScript](https://www.typescriptlang.org/), and [MongoDB](https://www.mongodb.com/). Check the 
+[Meteor Guide](https://guide.meteor.com/build-tool.html#typescript) for more information about TypeScript and how to 
+use it with other UI frameworks.
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`, `@types/mocha`, `@types/node`, `@types/react`, `@types/react-dom`, `typescript`.
 
@@ -249,8 +265,9 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 
 <h3 id="vue">--vue</h3>
 
-The command `meteor create --vue app-name` creates a Meteor app with [Vue 3](https://vuejs.org/), [Tailwind CSS](https://tailwindcss.com), [Vite](https://vitejs.dev/) and [MongoDB](https://www.mongodb.com/).
-To create a complete app, including testing and deployment, follow the [Vue 3 tutorial](https://vue3-tutorial.meteor.com/).
+The command `meteor create --vue app-name` creates a Meteor app with [Vue 3](https://vuejs.org/), 
+[Tailwind CSS](https://tailwindcss.com), [Vite](https://vitejs.dev/), and [MongoDB](https://www.mongodb.com/). To 
+create a complete app, including testing and deployment, follow the [Vue 3 tutorial](https://vue3-tutorial.meteor.com/).
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `vue`, `vue-meteor-tracker`, `vue-router`, `@types/meteor`, `@vitejs/plugin-vue`, `autoprefixer`, `postcss`, `tailwindcss`, `vite`.
 
@@ -258,14 +275,16 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
 `vite:bundler`.
 
-You can also use [Vue 3](https://vuejs.org/) with [Vite](https://vitejs.dev/) by using the [jorgenvatle:meteor-vite](https://github.com/JorgenVatle/meteor-vite) package.
-You can see an example on the [meteor-vite repository](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/vue).
+You can also use Vue 3 with Vite by using the [jorgenvatle:meteor-vite](https://github.com/JorgenVatle/meteor-vite)
+package. You can see an example on the [meteor-vite](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/vue) 
+repository.
 
 
 <h3 id="vue-2">--vue-2</h3>
 
-The command `meteor create --vue-2 app-name` creates a Meteor app with [Vue 2](https://v2.vuejs.org/) and [MongoDB](https://www.mongodb.com/).
-To create a complete app, including testing and deployment, follow the [Vue 2 tutorial](https://vue-tutorial.meteor.com/).
+The command `meteor create --vue-2 app-name` creates a Meteor app with [Vue 2](https://v2.vuejs.org/) and 
+[MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
+[Vue 2 tutorial](https://vue-tutorial.meteor.com/).
 
 Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `vue`, `vue-meteor-tracker`.
 
