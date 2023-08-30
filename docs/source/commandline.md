@@ -81,7 +81,7 @@ option to other `meteor` tool commands, such as `meteor run` and `meteor test-pa
 > **Note:** Due to a [bug in `node-inspector`](https://github.com/node-inspector/node-inspector/issues/903), pushing "Enter" after a command on the Node Inspector Console will not successfully send the command to the server.  If you require this functionality, please consider using Safari or `meteor shell` in order to interact with the server console until the `node-inspector` project [fixes the bug](https://github.com/node-inspector/node-inspector/pull/955).  Alternatively, there is a hot-patch available [in this comment](https://github.com/meteor/meteor/issues/7991#issuecomment-266709459) on [#7991](https://github.com/meteor/meteor/issues/7991).
 
 
-<h2 id="meteorcreate">meteor create app-name</h2>
+<h2 id="meteorcreate">meteor create <i>app-name</i></h2>
 
 The command `meteor create app-name` is the default command for creating a new Meteor project. It creates a subdirectory 
 named `app-name` and copies a template app into it. You can pass an absolute or relative path. If you pass a relative 
@@ -234,7 +234,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `standard
 `zodern:melte`, `zodern:types`.
 
 You can also use [Svelte](https://svelte.dev/) with [Vite](https://vitejs.dev/) by using the [jorgenvatle:meteor-vite](https://github.com/JorgenVatle/meteor-vite) package.
-You can see an example on the [meteor-vite repository](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/svelte).
+You can see an example on the [meteor-vite](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/svelte) repository.
 
 
 <h3 id="tailwind">--tailwind</h3>
