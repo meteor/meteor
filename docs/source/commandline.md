@@ -83,9 +83,7 @@ option to other `meteor` tool commands, such as `meteor run` and `meteor test-pa
 
 <h2 id="meteorcreate">meteor create app-name</h2>
 
-`meteor create app-name`
-
-This is the default command to create a new Meteor project. It creates a subdirectory named *app-name* and copies in a template app.
+The command `meteor create app-name` is the default command to create a new Meteor project. It creates a subdirectory named *app-name* and copies in a template app.
 You can pass an absolute or relative path. If you pass a relative path, it will be resolved relative to the current working directory.
 By default, it uses React.
 
