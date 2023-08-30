@@ -125,12 +125,11 @@ jobs:
   Get Ready:
     <<: *build_machine_environment
     steps:
-# See: https://github.com/meteor/meteor/pull/12518#issuecomment-1697283845
-# Only use if you have problems with checkout
-#      - run:
-#          command: ls -lR /home/circleci/project
-#      - run:
-#          command: rm -fR /home/circleci/project/*
+      # See: https://github.com/meteor/meteor/pull/12518#issuecomment-1697283845 for the reason for the following two commands.
+      - run:
+          command: ls -lR /home/circleci/project
+      - run:
+          command: rm -fR /home/circleci/project/*
       - checkout
       - run:
           # https://discuss.circleci.com/t/git-submodule-url-isnt-playing-nice-with-the-cache/549/3
