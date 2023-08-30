@@ -368,7 +368,10 @@ export class CordovaBuilder {
   _copyImageToBuildFolderAndAppendToXmlNode(suppliedPath, newFilename, xmlElement, tag, attributes = {}, isIos = false) {
     // will only change for the tag splash for preference in android.
     const isAndroid = !isIos;
-    if (tag === 'splash' && isAndroid) tag = 'preference' 
+    if (tag === 'splash' && isAndroid) {
+      return
+      Console.labelWarn('Android launch screens are no longer supported. Please use App.setPreference("AndroidWindowSplashScreenAnimatedIcon", "path/to/file", "android"). Visit https://cordova.apache.org/docs/en/latest/core/features/splashscreen/index.html#android-specific-information.')
+    }
 
     const src = files.pathJoin('resources', newFilename);
 
