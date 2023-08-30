@@ -199,6 +199,18 @@ For instance, you can create a Meteor app with the `2.8` release using `meteor c
 By default, it generates a React app, but you can use it with other flags that create apps such as `--blaze`, `--svelte`, `vue`, or `--typescript`.
 
 
+<h3 id="solid">--solid</h3>
+
+The command `meteor create --solid app-name` creates a Meteor app with [Solid](https://www.solidjs.com/), [Vite](https://vitejs.dev/) and [MongoDB](https://www.mongodb.com/).
+You can see an example on the [meteor-solid-app](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) repository.
+
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `solid-js`, `babel-preset-solid`, `vite`, `vite-plugin-solid`, `vite-plugin-solid-svg`.
+
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`vite:bundler`.
+
+
 <h3 id="svelte">--svelte</h3>
 
 The command `meteor create --svelte app-name` creates a Meteor app with [Svelte](https://svelte.dev/) and [MongoDB](https://www.mongodb.com/).
@@ -212,6 +224,17 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `standard
 
 You can also use [Svelte](https://svelte.dev/) with [Vite](https://vitejs.dev/) by using the [jorgenvatle:meteor-vite](https://github.com/JorgenVatle/meteor-vite) package.
 You can see an example on the [meteor-vite repository](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/svelte).
+
+
+<h3 id="tailwind">--tailwind</h3>
+
+The command `meteor create --tailwind app-name` creates a Meteor app with [React](https://react.dev/), [Tailwind CSS](https://tailwindcss.com) and [MongoDB](https://www.mongodb.com/).
+
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`, `autoprefixer`, `postcss`, `postcss-load-config`, `tailwindcss`.
+
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`react-meteor-data`.
 
 
 <h3 id="typescript">--typescript</h3>
@@ -251,29 +274,6 @@ Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `vue`, `vue-meteor
 Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
 `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `tracker`, `static-html`, `akryum:vue-component`, 
 `meteortesting:mocha`, `johanbrook:publication-collector`.
-
-
-<h3 id="tailwind">--tailwind</h3>
-
-The command `meteor create --tailwind app-name` creates a Meteor app with [React](https://react.dev/), [Tailwind CSS](https://tailwindcss.com) and [MongoDB](https://www.mongodb.com/).
-
-Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`, `autoprefixer`, `postcss`, `postcss-load-config`, `tailwindcss`.
-
-Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
-`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
-`react-meteor-data`.
-
-
-<h3 id="solid">--solid</h3>
-
-The command `meteor create --solid app-name` creates a Meteor app with [Solid](https://www.solidjs.com/), [Vite](https://vitejs.dev/) and [MongoDB](https://www.mongodb.com/).
-You can see an example on the [meteor-solid-app](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) repository.
-
-Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `solid-js`, `babel-preset-solid`, `vite`, `vite-plugin-solid`, `vite-plugin-solid-svg`.
-
-Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
-`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
-`vite:bundler`.
 
 
 <h2 id="meteorgenerate"> meteor generate </h2>
