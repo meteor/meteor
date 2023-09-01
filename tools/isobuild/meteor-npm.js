@@ -36,7 +36,7 @@ var meteorNpm = exports;
 const LOCK_FILE_VERSION = 4;
 
 // Expose the version of npm in use from the dev bundle.
-meteorNpm.npmVersion = "8.19.4";
+meteorNpm.npmVersion = "9.6.7";
 
 // if a user exits meteor while we're trying to create a .npm
 // directory, we will have temporary directories that we clean up

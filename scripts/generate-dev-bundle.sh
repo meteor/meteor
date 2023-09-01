@@ -95,9 +95,10 @@ cd "$DIR/lib"
 # Overwrite the bundled version with the latest version of npm.
 npm install "npm@$NPM_VERSION"
 # Starting from npm v9.5.1 we can't set the python (and many others) config
-# https://github.com/npm/cli/issues/6126 - the workaround for now is to keep
-# on npm v8.19.4
-npm config set python `which python3`
+# https://github.com/npm/cli/issues/6126
+# for now we'll not set it anymore and see if it works
+# if it doesn't, we can set python3 in other ways
+#npm config set python `which python3`
 which node
 which npm
 npm version
