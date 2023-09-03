@@ -92,6 +92,6 @@ DDP._allSubscriptionsReady = () => allConnections.every(
 
 // Sometimes data is loaded using a method, this hack provide a way
 // to see if any method is currently invoked
-DDP._noMethodIsCurrentlytInvoked = () => allConnections.every(
+DDP.noMethodIsCurrentlytInvoked = () => allConnections.every(
     conn => Object.keys(conn._methodInvokers).length == 0
 );
