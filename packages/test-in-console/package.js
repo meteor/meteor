@@ -5,7 +5,7 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.use(['tinytest', 'underscore', 'random', 'ejson', 'check']);
-  api.use('http@1.0.1', 'server'); // TODO replace with fetch
+  api.use('http@3.0.0-alpha300.5', 'server'); // TODO replace with fetch
 
   api.export('TEST_STATUS', 'client');
 
