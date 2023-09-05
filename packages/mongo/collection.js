@@ -2,27 +2,24 @@
 // XXX presently there is no way to destroy/clean up a Collection
 import {
   ASYNC_COLLECTION_METHODS,
-  getAsyncMethodName
-} from "meteor/minimongo/constants";
+  getAsyncMethodName,
+} from 'meteor/minimongo/constants';
 
-import { normalizeProjection } from "./mongo_utils";
-export function warnUsingOldApi (
-    methodName,
-    collectionName,
-    isCalledFromAsync
-   ){
+import { normalizeProjection } from './mongo_utils';
+export function warnUsingOldApi(methodName, collectionName, isCalledFromAsync) {
   if (
     process.env.WARN_WHEN_USING_OLD_API && // also ensures it is on the server
     !isCalledFromAsync // must be true otherwise we should log
   ) {
-   if (collectionName === undefined || collectionName.includes('oplog')) return
-   console.warn(`
+    if (collectionName === undefined || collectionName.includes('oplog'))
+      return;
+    console.warn(`
    
    Calling method ${collectionName}.${methodName} from old API on server.
    This method will be removed, from the server, in version 3.
-   Trace is below:`)
-   console.trace()
- };
+   Trace is below:`);
+    console.trace();
+  }
 }
 /**
  * @summary Namespace for MongoDB-related items
@@ -390,7 +387,6 @@ Object.assign(Mongo.Collection.prototype, {
         )
       );
 
-
       return {
         transform: self._transform,
         ...newOptions,
@@ -449,11 +445,7 @@ Object.assign(Mongo.Collection.prototype, {
   findOne(...args) {
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "findOne",
-      this._name,
-      this.findOne.isCalledFromAsync
-    );
+    warnUsingOldApi('findOne', this._name, this.findOne.isCalledFromAsync);
     this.findOne.isCalledFromAsync = false;
 
     return this._collection.findOne(
@@ -566,11 +558,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "insert",
-      this._name,
-      this.insert.isCalledFromAsync
-    );
+    warnUsingOldApi('insert', this._name, this.insert.isCalledFromAsync);
     this.insert.isCalledFromAsync = false;
 
     // Make a shallow clone of the document, preserving its prototype.
@@ -689,11 +677,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "update",
-      this._name,
-      this.update.isCalledFromAsync
-    );
+    warnUsingOldApi('update', this._name, this.update.isCalledFromAsync);
     this.update.isCalledFromAsync = false;
 
     selector = Mongo.Collection._rewriteSelector(selector, {
@@ -749,11 +733,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "remove",
-      this._name,
-      this.remove.isCalledFromAsync
-    );
+    warnUsingOldApi('remove', this._name, this.remove.isCalledFromAsync);
     this.remove.isCalledFromAsync = false;
     // it's my collection.  descend into the collection object
     // and propagate any exception.
@@ -798,13 +778,9 @@ Object.assign(Mongo.Collection.prototype, {
 
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "upsert",
-      this._name,
-      this.upsert.isCalledFromAsync
-    );
-    this.upsert.isCalledFromAsync = false; 
-    // caught here https://github.com/meteor/meteor/issues/12626 
+    warnUsingOldApi('upsert', this._name, this.upsert.isCalledFromAsync);
+    this.upsert.isCalledFromAsync = false;
+    // caught here https://github.com/meteor/meteor/issues/12626
     this.update.isCalledFromAsync = true; // to not trigger on the next call
     return this.update(
       selector,
@@ -828,7 +804,13 @@ Object.assign(Mongo.Collection.prototype, {
       self._collection.createIndex(index, options);
     } else {
       import { Log } from 'meteor/logging';
-      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
+      Log.debug(
+        `_ensureIndex has been deprecated, please use the new 'createIndex' instead${
+          options?.name
+            ? `, index name: ${options.name}`
+            : `, index: ${JSON.stringify(index)}`
+        }`
+      );
       self._collection._ensureIndex(index, options);
     }
   },
@@ -852,7 +834,7 @@ Object.assign(Mongo.Collection.prototype, {
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
     warnUsingOldApi(
-      "createIndex",
+      'createIndex',
       self._name,
       self.createIndex.isCalledFromAsync
     );
@@ -860,14 +842,23 @@ Object.assign(Mongo.Collection.prototype, {
     try {
       self._collection.createIndex(index, options);
     } catch (e) {
-      if (e.message.includes('An equivalent index already exists with the same name but different options.') && Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch) {
+      if (
+        e.message.includes(
+          'An equivalent index already exists with the same name but different options.'
+        ) &&
+        Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch
+      ) {
         import { Log } from 'meteor/logging';
 
-        Log.info(`Re-creating index ${index} for ${self._name} due to options mismatch.`);
+        Log.info(
+          `Re-creating index ${index} for ${self._name} due to options mismatch.`
+        );
         self._collection._dropIndex(index);
         self._collection.createIndex(index, options);
       } else {
-        throw new Meteor.Error(`An error occurred when creating an index for collection "${self._name}: ${e.message}`);
+        throw new Meteor.Error(
+          `An error occurred when creating an index for collection "${self._name}: ${e.message}`
+        );
       }
     }
   },
@@ -896,7 +887,7 @@ Object.assign(Mongo.Collection.prototype, {
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
     warnUsingOldApi(
-      "_createCappedCollection",
+      '_createCappedCollection',
       self._name,
       self._createCappedCollection.isCalledFromAsync
     );
@@ -994,17 +985,88 @@ function popCallbackFromArgs(args) {
   }
 }
 
-
+/**
+ * @summary Creates the specified index on the collection.
+ * @locus server
+ * @method createIndexAsync
+ * @memberof Mongo.Collection
+ * @instance
+ * @param {Object} index A document that contains the field and value pairs where the field is the index key and the value describes the type of index for that field. For an ascending index on a field, specify a value of `1`; for descending index, specify a value of `-1`. Use `text` for text indexes.
+ * @param {Object} [options] All options are listed in [MongoDB documentation](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#options)
+ * @param {String} options.name Name of the index
+ * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
+ * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
+ * @returns {Promise}
+ */
+/**
+ * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+ * @locus Anywhere
+ * @method findOneAsync
+ * @memberof Mongo.Collection
+ * @instance
+ * @param {MongoSelector} [selector] A query describing the documents to find
+ * @param {Object} [options]
+ * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
+ * @param {Number} options.skip Number of results to skip at the beginning
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+ * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
+ * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+ * @param {String} options.readPreference (Server only) Specifies a custom MongoDB [`readPreference`](https://docs.mongodb.com/manual/core/read-preference) for fetching the document. Possible values are `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred` and `nearest`.
+ * @returns {Promise}
+ */
+/**
+ * @summary Insert a document in the collection.  Returns its unique _id.
+ * @locus Anywhere
+ * @method  insertAsync
+ * @memberof Mongo.Collection
+ * @instance
+ * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+ * @return {Promise}
+ */
+/**
+ * @summary Remove documents from the collection
+ * @locus Anywhere
+ * @method removeAsync
+ * @memberof Mongo.Collection
+ * @instance
+ * @param {MongoSelector} selector Specifies which documents to remove
+ * @return {Promise}
+ */
+/**
+ * @summary Modify one or more documents in the collection. Returns the number of matched documents.
+ * @locus Anywhere
+ * @method updateAsync
+ * @memberof Mongo.Collection
+ * @instance
+ * @param {MongoSelector} selector Specifies which documents to modify
+ * @param {MongoModifier} modifier Specifies how to modify the documents
+ * @param {Object} [options]
+ * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+ * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
+ * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
+ * @return {Promise}
+ */
+/**
+ * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
+ * @locus Anywhere
+ * @method upsertAsync
+ * @memberof Mongo.Collection
+ * @instance
+ * @param {MongoSelector} selector Specifies which documents to modify
+ * @param {MongoModifier} modifier Specifies how to modify the documents
+ * @param {Object} [options]
+ * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+ * @return {Promise}
+ */
 ASYNC_COLLECTION_METHODS.forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
     try {
-    // TODO: Fibers remove this when we remove fibers.
+      // TODO: Fibers remove this when we remove fibers.
       this[methodName].isCalledFromAsync = true;
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);
     }
   };
-
 });
