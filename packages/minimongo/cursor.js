@@ -513,55 +513,6 @@ export default class Cursor {
   }
 }
 
-/**
- * @deprecated in 2.9
- * @summary Returns the number of documents that match a query. This method is
- *          [deprecated since MongoDB 4.0](https://www.mongodb.com/docs/v4.4/reference/command/count/);
- *          see `Collection.countDocuments` and
- *          `Collection.estimatedDocumentCount` for a replacement.
- * @memberOf Mongo.Cursor
- * @method  countAsync
- * @instance
- * @locus Anywhere
- * @returns {Promise}
- */
-/**
- * @summary Return all matching documents as an Array.
- * @memberOf Mongo.Cursor
- * @method  fetchAsync
- * @instance
- * @locus Anywhere
- * @returns {Promise}
- */
-/**
- * @summary Call `callback` once for each matching document, sequentially and
- *          synchronously.
- * @locus Anywhere
- * @method  forEachAsync
- * @instance
- * @memberOf Mongo.Cursor
- * @param {IterationCallback} callback Function to call. It will be called
- *                                     with three arguments: the document, a
- *                                     0-based index, and <em>cursor</em>
- *                                     itself.
- * @param {Any} [thisArg] An object which will be the value of `this` inside
- *                        `callback`.
- * @returns {Promise}
- */
-/**
- * @summary Map callback over all matching documents.  Returns an Array.
- * @locus Anywhere
- * @method mapAsync
- * @instance
- * @memberOf Mongo.Cursor
- * @param {IterationCallback} callback Function to call. It will be called
- *                                     with three arguments: the document, a
- *                                     0-based index, and <em>cursor</em>
- *                                     itself.
- * @param {Any} [thisArg] An object which will be the value of `this` inside
- *                        `callback`.
- * @returns {Promise}
- */
 // Implements async version of cursor methods to keep collections isomorphic
 ASYNC_CURSOR_METHODS.forEach(method => {
   const asyncName = getAsyncMethodName(method);
