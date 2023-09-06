@@ -33,7 +33,7 @@ running the following command in your terminal:
 
 ```shell
 
-curl https://install.meteor.com/\?release\=2.12 | sh
+curl https://install.meteor.com/\?release\=2.13.1 | sh
 
 ```
 
