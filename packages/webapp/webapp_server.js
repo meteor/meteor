@@ -579,7 +579,6 @@ WebAppInternals.staticFilesMiddleware = async function(
   res,
   next
 ) {
-  // console.log(String(arguments.callee));
   var pathname = parseRequest(req).pathname;
   try {
     pathname = decodeURIComponent(pathname);
@@ -1372,7 +1371,7 @@ async function runWebAppServer() {
    * @locus Server
    * @summary Starts the HTTP server.
    *  If `UNIX_SOCKET_PATH` is present Meteor's HTTP server will use that socket file for inter-process communication, instead of TCP.
-   * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work. 
+   * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work.
    */
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up

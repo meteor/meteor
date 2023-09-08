@@ -4,7 +4,6 @@ Package.describe({
 });
 
 Npm.depends({
-  'basic-auth-connect': '1.0.0',
   'cookie-parser': '1.4.5',
   express: '4.18.2',
   '@types/express': '4.17.15',

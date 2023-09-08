@@ -17,10 +17,10 @@ The `webapp` package is implemented using the
 the connect API for handling requests through `Webapp.expressHandlers`.  See
 https://docs.meteor.com/#/full/webapp for more details
 
-If you'd like direct access to the connect module (for example, to use one of
+If you'd like direct access to the express module (for example, to use one of
 the middleware handlers that it defines), you can find it at
-`WebAppInternals.NpmModules.connect.module`. Its version can be read at
-`WebAppInternals.NpmModules.connect.version`.
+`WebAppInternals.NpmModules.express.module`. Its version can be read at
+`WebAppInternals.NpmModules.express.version`.
 
 The version of `express` used may change incompatibly from version to version of
 Meteor (or we may even replace it with an entirely different implementation);
