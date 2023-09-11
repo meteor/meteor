@@ -25,11 +25,9 @@ We have been able to reproduce this issue only in Mac Intel.
 
 You can follow along with the [GitHub issue](https://github.com/meteor/meteor/issues/12731) for updates.
 
-<h3 id="workaround"> Workaround </h3>
+<h3 id="solution"> Solution </h3>
 
-The workaround while our developers are working on this issue is as follows:
-
-running the following command in your terminal:
+The solution for this issue is running the following command in your terminal:
 
 ```shell
 
