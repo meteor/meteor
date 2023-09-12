@@ -55,7 +55,7 @@ For making this great framework even better!
 
 ### Highlights
 
-* Solved zlib issue with Meteor.js and ESM Node.js 14.21.4 [PR](https://github.com/meteor/meteor/pull/12761) by (GH Grubba27).
+* Solved zlib issue with Meteor.js and ESM Node.js 14.21.4 [PR](https://github.com/meteor/meteor/pull/12765) by (GH Grubba27).
 
 #### Breaking Changes
 
@@ -199,7 +199,7 @@ N/A
 
 #### Migration Steps
 
-Now if you want to check where do you call old-style api methods 
+Now if you want to check where do you call old-style api methods
 you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 
@@ -208,7 +208,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 * `accounts-base@2.2.8`:
     - Added `loginServiceConfiguration` type.
     - Added the `collection` option property, in order to be able to set the collection for Accounts,
-    more can be seen in the [discussion](https://github.com/meteor/meteor/discussions/12544#discussioncomment-5240763) 
+    more can be seen in the [discussion](https://github.com/meteor/meteor/discussions/12544#discussioncomment-5240763)
     and in the [related issue](https://github.com/meteor/meteor-feature-requests/issues/20).
     - `onCreateUserHook` now accept promises and wait if necessary.
 
@@ -220,7 +220,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 * `browser-policy-framing@1.1.2`:
     - Added `es5` compatible syntax.
-    
+
 * `browser-policy@1.1.2`:
     - Updated test name.
 
@@ -270,7 +270,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 * `mongo@1.16.6`:
     - Added `countDocuments` and `estimatedDocumentCount` types.
-    - Added warning for when old style apis are being used, to use this feature, 
+    - Added warning for when old style apis are being used, to use this feature,
     use the variable`WARN_WHEN_USING_OLD_API=true` before starting the Meteor process.
     - Oplog driver updated to not throw error when MongoDB server and Meteor client mismatch. [issue](https://github.com/meteor/meteor/issues/12516)
 
