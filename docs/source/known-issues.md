@@ -31,7 +31,7 @@ The solution for this issue is running the following command in your terminal:
 
 ```shell
 
-curl https://install.meteor.com/\?release\=2.13.1 | sh
+curl https://install.meteor.com/\?release\=2.13.3 | sh
 
 ```
 
