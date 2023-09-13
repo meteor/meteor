@@ -8,8 +8,8 @@ Package.describe({
 Package.registerBuildPlugin({
   name: "compileLessBatch",
   use: [
-    "caching-compiler",
-    "ecmascript@1.0.0-alpha300.5",
+    "caching-compiler@1.2.2",
+    "ecmascript@0.15.2",
   ],
   sources: [
     'plugin/compile-less.js'
