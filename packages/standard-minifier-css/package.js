@@ -26,5 +26,5 @@ Package.registerBuildPlugin({
 Package.onUse(function(api) {
   api.use('minifier-css');
   api.use('isobuild:minifier-plugin@1.0.0');
-  api.use('logging@2.0.0-alpha300.5');
+  api.use('logging');
 });

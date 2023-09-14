@@ -14,7 +14,7 @@ tracker@2.0.0-alpha300.10              # Meteor's client-side reactive programmi
 standard-minifier-css@2.0.0-alpha300.10  # CSS minifier run for production mode
 standard-minifier-js@3.0.0-alpha300.10    # JS minifier run for production mode
 es5-shim@5.0.0-alpha300.10               # ECMAScript 5 compatibility for older browsers.
-ecmascript@1.0.0-alpha300.10             # Enable ECMAScript2015+ syntax in app code
+ecmascript@0.16.8-alpha300.11             # Enable ECMAScript2015+ syntax in app code
 shell-server@1.0.0-alpha300.10           # Server-side component of the `meteor shell` command
 
 autopublish@2.0.0-alpha300.10            # Publish all data to the clients (for prototyping)
