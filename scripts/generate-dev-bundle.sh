@@ -125,7 +125,7 @@ export PATH="$DIR/bin:$PATH"
 
 cd "$DIR/lib"
 # Overwrite the bundled version with the latest version of npm.
-npm install "npm@$NPM_VERSION"
+# bun install "npm@$NPM_VERSION"
 # Starting from npm v9.5.1 we can't set the python (and many others) config
 # https://github.com/npm/cli/issues/6126
 # for now we'll not set it anymore and see if it works
@@ -157,10 +157,10 @@ ls -al "$INCLUDE_PATH"
 mkdir "${DIR}/build/npm-server-install"
 cd "${DIR}/build/npm-server-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" > package.json
-# XXX For no apparent reason this npm install will fail with an EISDIR
+# XXX For no apparent reason this bun install will fail with an EISDIR
 # error if we do not help it by creating the .npm/_locks directory.
 mkdir -p "${DIR}/.npm/_locks"
-npm install
+bun install
 npm shrinkwrap
 
 mkdir -p "${DIR}/server-lib/node_modules"
