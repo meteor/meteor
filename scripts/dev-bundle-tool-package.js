@@ -14,7 +14,7 @@ var packageJson = {
     "node-gyp": "8.0.0",
     "node-pre-gyp": "0.15.0",
     typescript: "4.9.4",
-    "hschmaiske-babel": "0.0.4",
+    "hschmaiske-babel": "0.0.5",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "@meteorjs/reify": "0.25.0",

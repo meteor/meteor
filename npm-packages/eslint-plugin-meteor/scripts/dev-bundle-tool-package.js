@@ -15,7 +15,7 @@ var packageJson = {
     "node-gyp": "8.0.0",
     "node-pre-gyp": "0.15.0",
     typescript: "4.9.4",
-    "hschmaiske-babel": "0.0.4",
+    "hschmaiske-babel": "0.0.5",
     "@meteorjs/reify": "0.24.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.15.3",

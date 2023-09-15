@@ -8,10 +8,8 @@ require = function require(id) {
 };
 
 const babelRuntimeVersion = require("@babel/runtime/package.json").version;
-// const babelPresetMeteor = require("babel-preset-meteor");
-// const babelPresetMeteorModern = require("babel-preset-meteor/modern");
-const babelPresetMeteor = require("../babel-preset-meteor/index.js");
-const babelPresetMeteorModern = require("../babel-preset-meteor/modern.js");
+const babelPresetMeteor = require("babel-preset-meteor");
+const babelPresetMeteorModern = require("babel-preset-meteor/modern");
 const reifyPlugin = require("@meteorjs/reify/plugins/babel");
 
 function getReifyPlugin(features) {
