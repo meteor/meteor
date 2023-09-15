@@ -146,5 +146,4 @@ fi
 # --no-wasm-code-gc is currently necessary as a workaround for
 # https://github.com/nodejs/node/issues/29767
 exec "$DEV_BUNDLE/bin/bun" \
-     ${TOOL_NODE_FLAGS} \
      "$METEOR" "$@"
