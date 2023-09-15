@@ -88,6 +88,38 @@ mv "${MONGO_NAME}/bin/mongod" "mongodb/bin"
 mv "${MONGO_NAME}/bin/mongos" "mongodb/bin"
 rm -rf "${MONGO_NAME}"
 
+# Install Bun
+# Get the latest release tag from the GitHub API
+LATEST_BUN_RELEASE=$(curl --silent "https://api.github.com/repos/oven-sh/bun/releases/latest" | awk -F'"' '/tag_name/{print $4}')
+
+if [ -z "$LATEST_BUN_RELEASE" ]; then
+    echo "Could not determine the latest release of Bun."
+    exit 1
+fi
+
+if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ]; then
+  BUN_NAME="bun-darwin-aarch64"
+else
+  BUN_NAME="bun-${OS}-${ARCH}"
+fi
+
+BUN_ZIP="${BUN_NAME}.zip"
+BUN_URL="https://github.com/oven-sh/bun/releases/download/${LATEST_BUN_RELEASE}/${BUN_ZIP}"
+echo "Downloading Bun from ${BUN_URL}"
+curl -LO "${BUN_URL}"
+
+# Unzip Bun
+unzip "${BUN_ZIP}" -d bun_temp_dir
+
+# Since the structure seems to have an additional directory layer, we'll adjust the paths
+BUN_SUB_DIR="bun_temp_dir/${BUN_NAME}"
+
+# Put Bun binaries in the right spot
+mv "${BUN_SUB_DIR}/bun" "bin/bun"
+rm -rf bun_temp_dir
+
+echo "Bun installation complete."
+
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
 
@@ -143,13 +175,14 @@ mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 mkdir "${DIR}/build/npm-tool-install"
 cd "${DIR}/build/npm-tool-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
-npm install
+bun install
 cp -R node_modules/* "${DIR}/lib/node_modules/"
 
 #Also copy package.json and package-lock.json to lib folder so that npm
 # keep everything installed correctly
 cp package.json "${DIR}/lib/"
-cp package-lock.json "${DIR}/lib/"
+# cp package-lock.json "${DIR}/lib/"
+cp bun.lockb "${DIR}/lib/"
 # Also include node_modules/.bin, so that `meteor npm` can make use of
 # commands like node-gyp and node-pre-gyp.
 cp -R node_modules/.bin "${DIR}/lib/node_modules/"

@@ -8,8 +8,10 @@ require = function require(id) {
 };
 
 const babelRuntimeVersion = require("@babel/runtime/package.json").version;
-const babelPresetMeteor = require("babel-preset-meteor");
-const babelPresetMeteorModern = require("babel-preset-meteor/modern");
+// const babelPresetMeteor = require("babel-preset-meteor");
+// const babelPresetMeteorModern = require("babel-preset-meteor/modern");
+const babelPresetMeteor = require("../babel-preset-meteor/index.js");
+const babelPresetMeteorModern = require("../babel-preset-meteor/modern.js");
 const reifyPlugin = require("@meteorjs/reify/plugins/babel");
 
 function getReifyPlugin(features) {
@@ -54,7 +56,6 @@ exports.getDefaults = function getDefaults(features) {
       return getDefaultsForModernBrowsers(features);
     }
   }
-
   const combined = {
     presets: [],
     plugins: [getReifyPlugin(features)]
@@ -152,6 +153,8 @@ function getRuntimeTransform(features) {
 
   // Import helpers from the babel-runtime package rather than redefining
   // them at the top of each module.
+  console.log(babelRuntimeVersion)
+
   return [require("@babel/plugin-transform-runtime"), {
     // Necessary to enable importing helpers like objectSpread:
     // https://github.com/babel/babel/pull/10170#issuecomment-508936150
@@ -171,12 +174,13 @@ function getDefaultsForNode8(features) {
     presets: [],
     plugins: [getReifyPlugin(features)]
   };
-
+  
   const compileModulesOnly = features.compileModulesOnly;
   if (! compileModulesOnly) {
     combined.presets.push(babelPresetMeteorModern.getPreset);
-
+    
     const rt = getRuntimeTransform(features);
+    console.log('aqui vai?')
     if (rt) {
       combined.plugins.push(rt);
     }

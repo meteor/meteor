@@ -4,11 +4,13 @@
 "use strict";
 
 function babelRegister() {
-  const meteorBabel = require("@meteorjs/babel");
+  // const meteorBabel = require("../../npm-packages/meteor-babel/index.js");
+  const meteorBabel = require("hschmaiske-babel");
   const path = require("path");
   const toolsPath = path.dirname(__dirname);
   const meteorPath = path.dirname(toolsPath);
   const cacheDir = path.join(meteorPath, ".babel-cache");
+  console.log('before babelOptions')
   const babelOptions = meteorBabel.getDefaultOptions({
     nodeMajorVersion: parseInt(process.versions.node),
     typescript: true,
@@ -19,7 +21,7 @@ function babelRegister() {
   // meteor/tools modules.
   babelOptions.sourceMaps = "inline";
 
-  require('@meteorjs/babel/register')
+  require('hschmaiske-babel/register')
     .setCacheDirectory(cacheDir)
     .setSourceMapRootPath(meteorPath)
     .allowDirectory(toolsPath)

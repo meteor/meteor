@@ -1,6 +1,6 @@
 var meteorBabel = null;
 function getMeteorBabel() {
-  return meteorBabel || (meteorBabel = Npm.require("@meteorjs/babel"));
+  return meteorBabel || (meteorBabel = Npm.require("hschmaiske-babel"));
 }
 
 /**
@@ -46,6 +46,6 @@ Babel = {
   },
 
   getMinimumModernBrowserVersions: function () {
-    return Npm.require("@meteorjs/babel/modern-versions.js").get();
+    return Npm.require("hschmaiske-babel/modern-versions.js").get();
   }
 };

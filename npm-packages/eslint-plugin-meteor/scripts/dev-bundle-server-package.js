@@ -13,7 +13,7 @@ var packageJson = {
     "@babel/parser": "7.15.3",
     "@types/underscore": "1.11.2",
     underscore: "1.13.1",
-    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/archive/refs/heads/master.tar.gz",
     "@types/semver": "5.4.0",
     semver: "5.4.1"
   },

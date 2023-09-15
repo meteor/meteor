@@ -1,4 +1,4 @@
-import { parse } from '@meteorjs/babel';
+import { parse } from 'hschmaiske-babel';
 import { analyze as analyzeScope } from 'escope';
 import LRU from "lru-cache";
 import { Profile } from '../tool-env/profile';

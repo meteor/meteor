@@ -11,11 +11,11 @@ var packageJson = {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
     npm: "6.14.15",
-    pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
+    pacote: "https://github.com/meteor/pacote/archive/refs/heads/latest.tar.gz",
     "node-gyp": "8.0.0",
     "node-pre-gyp": "0.15.0",
     typescript: "4.9.4",
-    "@meteorjs/babel": "7.19.0-beta.3",
+    "hschmaiske-babel": "0.0.4",
     "@meteorjs/reify": "0.24.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.15.3",
@@ -24,18 +24,18 @@ var packageJson = {
     "babel-runtime": "7.0.0-beta.3",
     "@types/underscore": "1.11.2",
     underscore: "1.13.1",
-    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/archive/refs/heads/master.tar.gz",
     "@types/semver": "5.4.0",
     semver: "5.4.1",
     request: "2.88.2",
     uuid: "3.4.0",
     "graceful-fs": "4.2.6",
-    fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
+    fstream: "https://github.com/meteor/fstream/archive/refs/heads/master.tar.gz",
     tar: "2.2.2",
     // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38
-    kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
+    kexec: "https://github.com/meteor/node-kexec/archive/refs/heads/master.tar.gz",
     "source-map": "0.7.3",
     chalk: "4.1.1",
     sqlite3: "5.0.2",
