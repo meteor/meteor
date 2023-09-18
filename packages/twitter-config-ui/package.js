@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.use('templating@2.0.0-alpha300.5', 'client');
+  api.use('templating@1.4.2', 'client');
 
   api.addFiles('twitter_login_button.css', 'client');
   api.addFiles(
