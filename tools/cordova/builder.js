@@ -64,16 +64,7 @@ const splashIosKeys = {
 };
 
 const splashAndroidKeys = {
-  'android_mdpi_portrait': 'port-mdpi',
-  'android_mdpi_landscape': 'land-mdpi',
-  'android_hdpi_portrait': 'port-hdpi',
-  'android_hdpi_landscape': 'land-hdpi',
-  'android_xhdpi_portrait': 'port-xhdpi',
-  'android_xhdpi_landscape': 'land-xhdpi',
-  'android_xxhdpi_portrait': 'port-xxhdpi',
-  'android_xxhdpi_landscape': 'land-xxhdpi',
-  'android_xxxhdpi_portrait': 'port-xxxhdpi',
-  'android_xxxhdpi_landscape': 'land-xxxhdpi'
+  'android_universal': 'AndroidWindowSplashScreenAnimatedIcon',
 };
 
 export class CordovaBuilder {
@@ -232,7 +223,7 @@ export class CordovaBuilder {
     _.each(iconsAndroidSizes, setDefaultIcon);
 
     setDefaultLaunchScreen('ios_universal');
-    setDefaultLaunchScreen('android_mdpi_portrait');
+    setDefaultLaunchScreen('android_universal');
 
     this.pluginsConfiguration = {};
   }
@@ -373,7 +364,7 @@ export class CordovaBuilder {
         files.pathJoin(this.resourcesPath, newFilename));
 
     // Set it to the xml tree
-    xmlElement.ele(tag, { src, ...attributes });
+    xmlElement.ele(tag, { ...(tag === "preference" ? { value: src } : { src }), ...attributes });
   }
 
   _resolveFilenameForImages = (suppliedPath, key, tag) => {
@@ -445,6 +436,7 @@ export class CordovaBuilder {
       }
 
       const filename = this._resolveFilenameForImages(suppliedPath, key, 'splash');
+      // TODO -> Check this one
       if (suppliedPathDarkMode) {
         this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPathDarkMode,
             appendDarkMode(filename, { withChar: '_' }),
@@ -455,9 +447,9 @@ export class CordovaBuilder {
       this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath,
           filename,
           xmlElement,
-          'splash',
-          { density: value });
-    })
+          'preference',
+          { name: value });
+    });
   }
 
   configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
@@ -756,9 +748,8 @@ configuration. The key may be deprecated.`);
      * devices, screen sizes, and orientations, and the values are image paths
      * relative to the project root directory or an object containing a dark mode image path too ({src, srcDarkMode}).
      *
-     * For Android, launch screen images should
-     * be special "Nine-patch" image files that specify how they should be
-     * stretched. See the [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
+     * For Android specific information, check the [Cordova docs](https://cordova.apache.org/docs/en/latest/core/features/splashscreen/index.html#android-specific-information) and [Android docs](https://developer.android.com/develop/ui/views/launch/splash-screen#splash_screen_dimensions).
+     * Also note that for android the asset can either be an XML Vector Drawable or PNG.
      *
      * For best practices when developing a splash image, see the [Apple Guidelines](https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/launch-screen/).
      * To learn more about size classes for iOS, check out the [documentation](https://cordova.apache.org/docs/en/10.x/reference/cordova-plugin-splashscreen/#size-classes) from Cordova.
@@ -782,16 +773,7 @@ configuration. The key may be deprecated.`);
      *  - `Default@2x~ipad~comany` (1278x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9" - portrait mode
      *
      * Android:
-     *  - `android_mdpi_portrait` (320x480)
-     *  - `android_mdpi_landscape` (480x320)
-     *  - `android_hdpi_portrait` (480x800)
-     *  - `android_hdpi_landscape` (800x480)
-     *  - `android_xhdpi_portrait` (720x1280)
-     *  - `android_xhdpi_landscape` (1280x720)
-     *  - `android_xxhdpi_portrait` (960x1600)
-     *  - `android_xxhdpi_landscape` (1600x960)
-     *  - `android_xxxhdpi_portrait` (1280x1920)
-     *  - `android_xxxhdpi_landscape` (1920x1280)
+     *  - `android_universal` (2732x2732)
      *
      * @memberOf App
      */
