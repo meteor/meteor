@@ -122,4 +122,6 @@ async function runTests() {
   runNextUrl(browser);
 }
 
-runTests();
+runTests().catch((e) =>
+  console.log(`something broke while running puppeter: `, e)
+);
