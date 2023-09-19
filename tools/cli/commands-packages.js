@@ -1884,12 +1884,9 @@ main.registerCommand({
       projectContext.releaseFile.releaseTrack,
       projectContext.releaseFile.releaseVersion);
     if (! releaseRecordForConstraints) {
-      Console.warn(projectContext.releaseFile, releaseRecordForConstraints)
-      throw Error(`"unknown release: " ${projectContext.releaseFile.displayReleaseName}
-      More info:
-          releaseFile: ${JSON.stringify(projectContext.releaseFile)}
-          releaseRecordForConstraints: ${JSON.stringify(releaseRecordForConstraints)}
-      `);
+      console.log(projectContext.releaseFile, releaseRecordForConstraints)
+      throw Error("unknown release: " +
+                  projectContext.releaseFile.displayReleaseName);
     }
   }
 
