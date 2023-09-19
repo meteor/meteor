@@ -27,7 +27,6 @@ Package.registerBuildPlugin({
 });
 
 Package.onUse(function (api) {
-  api.versionsFrom("1.8.1");
   api.use('isobuild:compiler-plugin@1.0.0');
 
   // Because the CoffeeScript plugin now calls
