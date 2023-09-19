@@ -17,7 +17,7 @@ then
     ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
 else
     # Installs into dev_bundle/lib/node_modules/puppeteer.
-    ./meteor npm install -g puppeteer
+    ./meteor npm install -g puppeteer@20.4.0
 fi
 
 export PATH=$METEOR_HOME:$PATH
