@@ -44,7 +44,7 @@ Meteor.absoluteUrl = function (path, options) {
     url = url.replace(/^http:/, 'https:');
 
   var localhostRegex = /^http:\/\/localhost([:\/].*)/;
-  if (localhostRegex.test(url))
+  if (localhostRegex.test(url) || options.replaceLocalhost)
     url = url.replace(localhostRegex, 'http://127.0.0.1$1');
 
   return url;
