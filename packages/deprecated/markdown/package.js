@@ -9,7 +9,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use('ecmascript@0.16.8-alpha300.11');
-  api.use("templating@2.0.0-alpha300.6", "client", {weak: true});
+  api.use("templating@1.4.2", "client", {weak: true});
   api.mainModule('template-integration.js', 'client');
 });
 
