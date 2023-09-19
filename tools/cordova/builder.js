@@ -141,6 +141,7 @@ export class CordovaBuilder {
 
     const packageMap = this.projectContext.packageMap;
 
+    // TODO -> Check if this should be kept for compatibility. Probably not.
     if (packageMap && packageMap.getInfo('launch-screen')) {
       this.additionalConfiguration.global.AutoHideSplashScreen = false;
       this.additionalConfiguration.global.SplashScreen = 'screen';
