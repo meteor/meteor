@@ -1,7 +1,7 @@
 Package.describe({
   name: 'mobile-status-bar',
   summary: "Good defaults for the mobile status bar",
-  version: "1.1.1-alpha300.13",
+  version: "1.1.1-alpha300.14",
 });
 
 Cordova.depends({

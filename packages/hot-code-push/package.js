@@ -1,6 +1,6 @@
 Package.describe({
   name: 'hot-code-push',
-  version: '1.0.5-alpha300.13',
+  version: '1.0.5-alpha300.14',
   // Brief, one-line summary of the package.
   summary: 'Update the client in place when new code is available.',
   // URL to the Git repository containing the source code for this package.
