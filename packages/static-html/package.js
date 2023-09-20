@@ -10,7 +10,7 @@ Package.registerBuildPlugin({
   use: [
     'ecmascript@0.16.8-alpha300.12',
     'caching-html-compiler@2.0.0-alpha300.12',
-    'templating-tools@2.0.0-alpha300.5'
+    'templating-tools@2.0.0-alpha300.12'
   ],
   sources: [
     'static-html.js'
