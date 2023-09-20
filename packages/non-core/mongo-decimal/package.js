@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JS simulation of MongoDB Decimal128 type",
-  version: '0.1.4-alpha300.12',
+  version: '0.1.4-alpha300.13',
 });
 
 Npm.depends({

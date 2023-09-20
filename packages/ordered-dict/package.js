@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Ordered traversable dictionary with a mutable ordering",
-  version: '1.2.0-alpha300.12',
+  version: '1.2.0-alpha300.13',
   documentation: null
 });
 
