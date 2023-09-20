@@ -8,8 +8,8 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('ecmascript');
-  api.use('ejson');
+  api.use('ecmascript@0.16.8-alpha300.13');
+  api.use('ejson@1.1.4-alpha300.13');
   api.mainModule('decimal.js');
   api.export('Decimal');
 });
