@@ -25,18 +25,34 @@ Tinytest.add("absolute-url - basics", function(test) {
                                           secure: false}),
                'https://asdf.com/foo');
 
-    test.equal(Meteor.absoluteUrl('foo', {rootUrl: prefix + 'localhost',
-                                          secure: true}),
-               'http://localhost/foo');
-    test.equal(Meteor.absoluteUrl('foo', {rootUrl: prefix + 'localhost:3000',
-                                          secure: true}),
-               'http://localhost:3000/foo');
-    test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'https://localhost:3000',
-                                          secure: true}),
-               'https://localhost:3000/foo');
-    test.equal(Meteor.absoluteUrl('foo', {rootUrl: prefix + '127.0.0.1:3000',
-                                          secure: true}),
-               'http://127.0.0.1:3000/foo');
+    test.equal(
+      Meteor.absoluteUrl("foo", {
+        rootUrl: prefix + "localhost",
+        secure: true,
+      }),
+      "http://127.0.0.1/foo"
+    );
+    test.equal(
+      Meteor.absoluteUrl("foo", {
+        rootUrl: prefix + "localhost:3000",
+        secure: true,
+      }),
+      "http://127.0.0.1:3000/foo"
+    );
+    test.equal(
+      Meteor.absoluteUrl("foo", {
+        rootUrl: "https://localhost:3000",
+        secure: true,
+      }),
+      "https://localhost:3000/foo"
+    );
+    test.equal(
+      Meteor.absoluteUrl("foo", {
+        rootUrl: prefix + "127.0.0.1:3000",
+        secure: true,
+      }),
+      "http://127.0.0.1:3000/foo"
+    );
 
     // test replaceLocalhost
     test.equal(Meteor.absoluteUrl('foo', {rootUrl: prefix + 'localhost:3000',

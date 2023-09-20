@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Twitter accounts",
-  version: '2.0.0-alpha300.11',
+  version: "1.5.0",
 });
 
 Package.onUse(api => {
@@ -12,7 +12,7 @@ Package.onUse(api => {
   api.use('twitter-oauth');
   api.imply('twitter-oauth');
 
-  api.use('http@1.0.1', ['client', 'server']);
+  api.use('http', ['client', 'server']);
 
   api.use(['accounts-ui', 'twitter-config-ui'], ['client', 'server'], { weak: true });
   api.addFiles("notice.js");

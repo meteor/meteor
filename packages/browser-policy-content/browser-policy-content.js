@@ -300,8 +300,6 @@ _.each(resources, function (resource) {
   };
 });
 
-// TODO[fibers]: change this when we have TLA
 await setDefaultPolicy();
-
 
 exports.BrowserPolicy = BrowserPolicy;
