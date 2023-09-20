@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Enable the application cache in the browser",
-  version: '1.2.9-alpha300.11',
+  version: '1.2.9-alpha300.12',
   deprecated: true,
 });
 

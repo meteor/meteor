@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'No-password login/sign-up support for accounts',
-  version: '3.0.0-alpha300.11',
+  version: '3.0.0-alpha300.12',
 });
 
 Package.onUse(api => {

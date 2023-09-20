@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload safety belt for multi-server deployments",
-  version: '2.0.0-alpha300.11',
+  version: '2.0.0-alpha300.12',
 });
 
 Package.onUse(function (api) {
