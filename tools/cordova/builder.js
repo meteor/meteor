@@ -141,15 +141,6 @@ export class CordovaBuilder {
 
     const packageMap = this.projectContext.packageMap;
 
-    // TODO -> Check if this should be kept for compatibility. Probably not.
-    if (packageMap && packageMap.getInfo('launch-screen')) {
-      this.additionalConfiguration.global.AutoHideSplashScreen = false;
-      this.additionalConfiguration.global.SplashScreen = 'screen';
-      this.additionalConfiguration.global.SplashScreenDelay = 5000;
-      this.additionalConfiguration.global.FadeSplashScreenDuration = 250;
-      this.additionalConfiguration.global.ShowSplashScreenSpinner = false;
-    }
-
     if (packageMap && packageMap.getInfo('mobile-status-bar')) {
       this.additionalConfiguration.global.StatusBarOverlaysWebView = false;
       this.additionalConfiguration.global.StatusBarStyle = 'default';

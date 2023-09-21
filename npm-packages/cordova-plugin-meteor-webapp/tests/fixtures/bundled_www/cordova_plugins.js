@@ -9,14 +9,6 @@ module.exports = [
         ]
     },
     {
-        "file": "plugins/cordova-plugin-splashscreen/www/splashscreen.js",
-        "id": "cordova-plugin-splashscreen.SplashScreen",
-        "pluginId": "cordova-plugin-splashscreen",
-        "clobbers": [
-            "navigator.splashscreen"
-        ]
-    },
-    {
         "file": "plugins/cordova-plugin-wkwebview-engine/src/www/ios/ios-wkwebview-exec.js",
         "id": "cordova-plugin-wkwebview-engine.ios-wkwebview-exec",
         "pluginId": "cordova-plugin-wkwebview-engine",
@@ -33,7 +25,7 @@ module.exports = [
         ]
     }
 ];
-module.exports.metadata = 
+module.exports.metadata =
 // TOP OF METADATA
 {}
 // BOTTOM OF METADATA
