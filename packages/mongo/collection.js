@@ -555,7 +555,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @returns {Object}
    */
   findOne(...args) {
-    return this._collection.findOne(
+    return this._collection.findOneAsync(
       this._getFindSelector(args),
       this._getFindOptions(args)
     );
@@ -724,11 +724,14 @@ Object.assign(Mongo.Collection.prototype, {
       // result will be returned through the callback instead.
       let result;
       if (!!wrappedCallback) {
-        this._collection.insert(doc, wrappedCallback);
+        this._collection
+          .insertAsync(doc)
+          .then((doc) => wrappedCallback(null, doc._id))
+          .catch((e) => wrappedCallback(e, null));
       } else {
         // If we don't have the callback, we assume the user is using the promise.
         // We can't just pass this._collection.insert to the promisify because it would lose the context.
-        result = this._collection.insert(doc);
+        result = this._collection.insertAsync(doc);
       }
 
       return chooseReturnValueFromCollectionResult(result);
@@ -1012,7 +1015,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     // it's my collection.  descend into the collection1 object
     // and propagate any exception.
-    return this._collection.remove(selector);
+    return this._collection.removeAsync(selector);
   },
 
 
