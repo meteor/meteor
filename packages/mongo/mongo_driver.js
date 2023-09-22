@@ -869,11 +869,6 @@ Cursor.prototype.countAsync = async function () {
 };
 
 [...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
-  // count is handled specially since we don't want to create a cursor.
-  // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
-  if (methodName === 'count') {
-    return
-  }
   Cursor.prototype[methodName] = function (...args) {
     const cursor = setupSynchronousCursor(this, methodName);
     return cursor[methodName](...args);
