@@ -105,7 +105,7 @@
 
 - `appcache@2.0.0`:
 
-  - Updated internal api to use `expressHandlers`
+  - Updated internal api to use `handlers`
 
 - `audit-argument-checks@2.0.0`:
 
@@ -146,11 +146,11 @@
 - `boilerplate-generator@2.0.0`:
 
   - `toHTML` is no longer available (it was already deprecated). Use `toHTMLStream` instead.
-  - Updated to use `expressHandlers`
+  - Updated to use `handlers`
 
 - `browser-policy-common@2.0.0`:
 
-  - Updated to use `expressHandlers`
+  - Updated to use `handlers`
 
 - `browser-policy-content@2.0.0`:
 
@@ -321,7 +321,7 @@
   - Package was bumped due to a dependency update. No code changes were made.
 
 - `http@`:
-  - Updated handlers to use `expressHandlers`
+  - Updated handlers to use `handlers` that are now using express.
 - `id-map@2.0.0`:
 
   - Added `forEachAsync` method.
@@ -555,7 +555,7 @@
 
 - `spiderable@`:
 
-  - Updated handlers to use `expressHandlers`
+  - Updated handlers to use `handlers` that are now using express.
   - removed `fibers` usage if flag is set to `true`
 
 - `standard-minifier-css@2.0.0`:
@@ -644,8 +644,8 @@
     - `WebAppInternals.getBoilerplate`
 
   - Changed engine from connect to express and changed api naming to match express. See below:
-  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.expressHandlers.use(middleware)`
-  - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawExpressHandlers.use(middleware)`
+  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.handlers.use(middleware)` using express.
+  - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawHandlers.use(middleware)`
   - `WebApp.connectApp` is now `WebApp.expressApp`
 
 - `weibo-config-ui@2.0.0`:

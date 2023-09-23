@@ -23,8 +23,16 @@ export declare module WebApp {
       PUBLIC_SETTINGS: any;
     };
   };
-  var expressHandlers: express.Handler;
-  var rawExpressHandlers: express.Handler;
+  /**
+   * @deprecated use handlers instead
+   */
+  var connectHandlers: express.Handler;
+  var handlers: express.Handler;
+  /**
+   * @deprecated use rawHandlers instead
+   */
+  var rawConnectHandlers: express.Handler;
+  var rawHandlers: express.Handler;
   var httpServer: http.Server;
   var expressApp: express.Application;
   function suppressConnectErrors(): void;

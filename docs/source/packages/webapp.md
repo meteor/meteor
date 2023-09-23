@@ -14,18 +14,18 @@ This lets other services access your app's data through an HTTP API, allowing
 it to easily interoperate with tools and frameworks that don't yet support DDP.
 
 `webapp` exposes the [express](https://github.com/expressjs/express) API for
-handling requests through `WebApp.expressHandlers`.
+handling requests through `WebApp.handlers`.
 Here's an example that will let you handle a specific URL:
 
 ```js
 // Listen to incoming HTTP requests (can only be used on the server).
-WebApp.expressHandlers.use('/hello', (req, res, next) => {
+WebApp.handlers.use('/hello', (req, res, next) => {
   res.writeHead(200);
   res.end(`Hello world from: ${Meteor.release}`);
 });
 ```
 
-{% apibox "WebApp.expressHandlers" %}
+{% apibox "WebApp.handlers" %}
 {% apibox "expressHandlersCallback(req, res, next)" %}
 
 ### Serving a Static Landing Page
@@ -62,14 +62,14 @@ Here's a sample _index.html_ you might use to get started:
 </html>
 ```
 
-Then using the expressHandlers method described above serve up your static HTML on app-root/ page load as shown below.
+Then using the handlers method described above serve up your static HTML on app-root/ page load as shown below.
 
 ```
 /* global WebApp Assets */
 import crypto from 'crypto'
 import connectRoute from 'connect-route'
 
-WebApp.expressHandlers.use(connectRoute(function (router) {
+WebApp.handlers.use(connectRoute(function (router) {
     router.get('/', function (req, res, next) {
         const buf = Assets.getText('index.html')
 

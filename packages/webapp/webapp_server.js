@@ -1163,7 +1163,7 @@ async function runWebAppServer() {
    */
 
   /**
-   * @method expressHandlers
+   * @method handlers
    * @memberof WebApp
    * @locus Server
    * @summary Register a handler for all HTTP requests.
@@ -1347,8 +1347,10 @@ async function runWebAppServer() {
 
   // start up app
   _.extend(WebApp, {
-    expressHandlers: packageAndAppHandlers,
-    rawExpressHandlers: rawExpressHandlers,
+    connectHandlers: packageAndAppHandlers,
+    handlers: packageAndAppHandlers,
+    rawConnectHandlers: rawExpressHandlers,
+    rawHandlers: rawExpressHandlers,
     httpServer: httpServer,
     expressApp: app,
     // For testing.

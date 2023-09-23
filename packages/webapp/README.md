@@ -14,7 +14,7 @@ page](https://github.com/meteor/meteor/tree/master/packages/webapp).
 
 The `webapp` package is implemented using the
 [`express`](https://expressjs.com/).  `webapp` exposes
-the connect API for handling requests through `Webapp.expressHandlers`.  See
+the express API for handling requests through `Webapp.handlers`.  See
 https://docs.meteor.com/#/full/webapp for more details
 
 If you'd like direct access to the express module (for example, to use one of
