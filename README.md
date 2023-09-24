@@ -15,27 +15,27 @@ There are also older versions of this package:
 <br />
 
 <a id="roles-toc" name="roles-toc"></a>
-### Table of Contents
+## Table of Contents
 - [meteor-roles v3](#meteor-roles-v3)
-    - [Table of Contents](#table-of-contents)
-    - [Contributors](#contributors)
-    - [Authorization](#authorization)
-    - [Permissions vs roles  (or What's in a name...)](#permissions-vs-roles--or-whats-in-a-name)
-    - [What are "scopes"?](#what-are-scopes)
-    - [Changes to default Meteor behavior](#changes-to-default-meteor-behavior)
-    - [Installing](#installing)
-    - [Migration to 3.0](#migration-to-30)
-      - [Changes between 2.x and 3.0](#changes-between-2x-and-30)
-    - [Usage Examples](#usage-examples)
-    - [API Docs](#api-docs)
-    - [Example Apps](#example-apps)
-    - [Contributions, development and tests](#contributions-development-and-tests)
+  - [Table of Contents](#table-of-contents)
+  - [Contributors](#contributors)
+  - [Authorization](#authorization)
+  - [Permissions vs roles  (or What's in a name...)](#permissions-vs-roles--or-whats-in-a-name)
+  - [What are "scopes"?](#what-are-scopes)
+  - [Changes to default Meteor behavior](#changes-to-default-meteor-behavior)
+  - [Installing](#installing)
+  - [Migration to 3.0](#migration-to-30)
+    - [Changes between 2.x and 3.0](#changes-between-2x-and-30)
+  - [Usage Examples](#usage-examples)
+  - [API Docs](#api-docs)
+  - [Example Apps](#example-apps)
+  - [Contributions, development and tests](#contributions-development-and-tests)
 
 <br />
 
 
 <a id="roles-contributors" name="roles-contributors"></a>
-### Contributors
+## Contributors
 
 Thanks to:
 
@@ -59,7 +59,7 @@ Thanks to:
 
 
 <a id="roles-authorization" name="roles-authorization"></a>
-### Authorization
+## Authorization
 
 This package lets you attach roles to a user, which you can then check against later when deciding whether to grant
 access to Meteor methods or publish data. The core concept is very simple, essentially you are creating an assignment
@@ -69,7 +69,7 @@ to make the process of adding, removing, and verifying those roles easier.
 <br />
 
 <a id="roles-naming" name="roles-naming"></a>
-### Permissions vs roles  (or What's in a name...)
+## Permissions vs roles  (or What's in a name...)
 
 Although the name of this package is `roles`, you can define your **roles**, **scopes** or **permissions** however you like.
 They are essentially just tags that you assign to a user and which you can check upon later.
@@ -104,7 +104,7 @@ Roles.addRolesToParent('POST_EDIT', 'user');
 <br />
 
 <a id="roles-scopes" name="roles-scopes"></a>
-### What are "scopes"?
+## What are "scopes"?
 
 Sometimes it is useful to let a user have independent sets of roles. The `roles` package calls these independent
 sets "scopes" for lack of a better term. You can use them to represent various communities inside your
@@ -142,7 +142,7 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 <br />
 
 <a id="roles-changes" name="roles-changes"></a>
-### Changes to default Meteor behavior
+## Changes to default Meteor behavior
 
   1. A new collection `Meteor.roleAssignment` contains the information about which role has been assigned to which user.
   1. A new collection `Meteor.roles` contains a global list of defined role names.
@@ -151,7 +151,7 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 <br />
 
 <a id="roles-installing" name="roles-installing"></a>
-### Installing
+## Installing
 
 1. Add one of the built-in accounts packages so the `Meteor.users` collection exists. From a command prompt:
     ```bash
@@ -182,7 +182,7 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 <br />
 
 <a id="roles-migration" name="roles-migration"></a>
-### Migration to 3.0
+## Migration to 3.0
 
 If you are currently using this package in a version older than 2.x, please upgrade to 2.0 by running the migration script required there: https://github.com/Meteor-Community-Packages/meteor-roles/tree/v2#migration-to-20
 
@@ -200,7 +200,7 @@ meteor shell
 > Package['alanning:roles'].Roles._backwardMigrate2()
 ```
 
-#### Changes between 2.x and 3.0
+### Changes between 2.x and 3.0
 
 Here is the list of important changes between meteor-roles 2.x and 3.0 to consider when migrating to 3.0:
 
@@ -225,7 +225,7 @@ Meteor.publish(null, function () {
 
 
 <a id="roles-usage" name="roles-usage"></a>
-### Usage Examples
+## Usage Examples
 
 <br />
 
@@ -434,7 +434,7 @@ To check for roles when using scopes:
 
 
 <a id="roles-docs" name="roles-docs"></a>
-### API Docs
+## API Docs
 
 Online API docs found here: https://meteor-community-packages.github.io/meteor-roles/
 
@@ -456,7 +456,7 @@ To serve documentation locally:
 
 
 <a id="roles-example-apps" name="roles-example-apps"></a>
-### Example Apps
+## Example Apps
 
 The `examples` directory contains Meteor apps which show off the following features:
 * Server-side publishing with authorization to secure sensitive data
@@ -475,7 +475,7 @@ The `examples` directory contains Meteor apps which show off the following featu
 
 
 <a id="roles-testing" name="roles-testing"></a>
-### Contributions, development and tests
+## Contributions, development and tests
 
 Please read our [contribution guidelines](./CONTRIBUTING.md),
 which also describes how to set up and run the linter and tests.
