@@ -1,5 +1,10 @@
 meteor-roles v3
 ===============
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+![GitHub](https://img.shields.io/github/license/Meteor-Community-Packages/meteor-roles)
+[![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
+![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/Meteor-Community-Packages/meteor-roles?label=latest&sort=semver)
+[![](https://img.shields.io/badge/semver-2.0.0-success)](http://semver.org/spec/v2.0.0.html) 
 
 Authorization package for Meteor - compatible with built-in accounts package.
 
@@ -11,17 +16,20 @@ There are also older versions of this package:
 
 <a id="roles-toc" name="roles-toc"></a>
 ### Table of Contents
-* [Contributors](#roles-contributors)
-* [Authorization](#roles-authorization)
-* [Permissions vs roles](#roles-naming)
-* [What are "scopes"?](#roles-scopes)
-* [Changes to default Meteor](#roles-changes)
-* [Installation](#roles-installing)
-* [Migration to 3.0](#roles-migration)
-* [Usage examples](#roles-usage)
-* [Online API docs](#roles-docs)
-* [Example apps](#roles-example-apps)
-* [Running tests](#roles-contributions-development-and-tests)
+- [meteor-roles v3](#meteor-roles-v3)
+    - [Table of Contents](#table-of-contents)
+    - [Contributors](#contributors)
+    - [Authorization](#authorization)
+    - [Permissions vs roles  (or What's in a name...)](#permissions-vs-roles--or-whats-in-a-name)
+    - [What are "scopes"?](#what-are-scopes)
+    - [Changes to default Meteor behavior](#changes-to-default-meteor-behavior)
+    - [Installing](#installing)
+    - [Migration to 3.0](#migration-to-30)
+      - [Changes between 2.x and 3.0](#changes-between-2x-and-30)
+    - [Usage Examples](#usage-examples)
+    - [API Docs](#api-docs)
+    - [Example Apps](#example-apps)
+    - [Contributions, development and tests](#contributions-development-and-tests)
 
 <br />
 
@@ -53,7 +61,7 @@ Thanks to:
 <a id="roles-authorization" name="roles-authorization"></a>
 ### Authorization
 
-This package lets you attach roles to a user which you can then check against later when deciding whether to grant
+This package lets you attach roles to a user, which you can then check against later when deciding whether to grant
 access to Meteor methods or publish data. The core concept is very simple, essentially you are creating an assignment
 of roles to a user and then checking for the existence of those roles later. This package provides helper methods
 to make the process of adding, removing, and verifying those roles easier.
@@ -99,13 +107,13 @@ Roles.addRolesToParent('POST_EDIT', 'user');
 ### What are "scopes"?
 
 Sometimes it is useful to let a user have independent sets of roles. The `roles` package calls these independent
-sets "scopes" for lack of a better term. You can use them to represent various communities inside of your
+sets "scopes" for lack of a better term. You can use them to represent various communities inside your
 application. Or maybe your application supports [multiple tenants](https://en.wikipedia.org/wiki/Multitenancy).
 You can put each of those tenants into their own scope. Alternatively, you can use scopes to represent
 various resources you have.
 
 Users can have both scope roles assigned, and global roles. Global roles are in effect for all scopes.
-But scopes are independent from each other. Users can have one set of roles in scope A and another set
+But scopes are independent of each other. Users can have one set of roles in scope A and another set
 of roles in scope B. Let's go through an example of this using soccer/football teams as scopes.
 
 ```javascript
@@ -116,7 +124,7 @@ Roles.userIsInRole(joesUserId, 'manage-team', 'manchester-united.com'); // true
 Roles.userIsInRole(joesUserId, 'manage-team', 'real-madrid.com'); // false
 ```
 
-In this example we can see that Joe manages Manchester United and plays for Real Madrid. By using scopes, we can
+In this example, we can see that Joe manages Manchester United and plays for Real Madrid. By using scopes, we can
 assign roles independently and make sure that they don't get mixed up between scopes.
 
 Now, let's take a look at how to use the global roles. Say we want to give Joe permission to do something across
@@ -136,7 +144,7 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 <a id="roles-changes" name="roles-changes"></a>
 ### Changes to default Meteor behavior
 
-  1. A new collection `Meteor.roleAssignment` contains the information which role has been assigned to which user.
+  1. A new collection `Meteor.roleAssignment` contains the information about which role has been assigned to which user.
   1. A new collection `Meteor.roles` contains a global list of defined role names.
   1. All existing roles are automatically published to the client.
 
@@ -185,7 +193,7 @@ meteor shell
 > Package['alanning:roles'].Roles._forwardMigrate2()
 ```
 
-In case something fails, there is also a script available for rolling back the changes. But be warned that a backward migration takes a magnitude longer than a foward migration. To migrate the database back to the old schema, run `Meteor._backwardMigrate2()` on the server:
+In case something fails, there is also a script available for rolling back the changes. But be warned that a backward migration takes a magnitude longer than a forward migration. To migrate the database back to the old schema, run `Meteor._backwardMigrate2()` on the server:
 
 ```bash
 meteor shell
@@ -197,7 +205,7 @@ meteor shell
 Here is the list of important changes between meteor-roles 2.x and 3.0 to consider when migrating to 3.0:
 
 * Role assignments have been moved from the `users` documents to a separate collection called `role-assignment`, available at `Meteor.roleAssignment`.
-* Role assignments are not published automatically. If you want all your role-assignments to be published automatically please include the following code:
+* Role assignments are not published automatically. If you want all your role-assignments to be published automatically, please include the following code:
 ```js
 Meteor.publish(null, function () {
   if (this.userId) {
@@ -378,7 +386,7 @@ Meteor.methods({
 
 -- **Client** --
 
-Client javascript does not by default have access to all the same Roles functions as the server unless you publish
+Client JavaScript does not by default have access to all the same Roles functions as the server unless you publish
 these role-assignments. In addition, Blaze will have the addition of a `isInRole` handlebars helper which is
 automatically registered by the Roles package.
 
@@ -388,10 +396,10 @@ for latency compensation during Meteor method calls. Roles functions which modif
 called directly, but inside the Meteor methods.
 
 NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted disclosure. To be clear, Meteor sends
-all templates, client-side javascript, and published data to the client's browser. This is by design and is a good thing.
+all templates, client-side JavaScript, and published data to the client's browser. This is by design and is a good thing.
 The following example is just sugar to help improve the user experience for normal users. Those interested in seeing
 the 'admin_nav' template in the example below will still be able to do so by manually reading the bundled `client.js`
-file. It won't be pretty but it is possible. But this is not a problem as long as the actual data is restricted server-side.
+file. It won't be pretty, but it is possible. But this is not a problem as long as the actual data is restricted server-side.
 
 To check for global roles or when not using scopes:
 
@@ -470,4 +478,4 @@ The `examples` directory contains Meteor apps which show off the following featu
 ### Contributions, development and tests
 
 Please read our [contribution guidelines](./CONTRIBUTING.md),
-which also describe how to set up and run the linter and tests.
+which also describes how to set up and run the linter and tests.
