@@ -1617,7 +1617,6 @@ describe('roles', function () {
     })
   })
 
-
   describe('v3 migration', function () {
     it('migration without global groups (to v3)')
 
