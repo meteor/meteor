@@ -706,7 +706,7 @@ Object.assign(Roles, {
    *   - `onlyAssigned`: return only assigned roles and not automatically inferred (like subroles)
    *   - `fullObjects`: return full roles objects (`true`) or just names (`false`) (`onlyAssigned` option is ignored) (default `false`)
    *     If you have a use-case for this option, please file a feature-request. You shouldn't need to use it as it's
-   *     result strongly dependant on the internal data structure of this plugin.
+   *     result strongly dependent on the internal data structure of this plugin.
    *
    * Alternatively, it can be a scope name string.
    * @return {Array} Array of user's roles, unsorted.

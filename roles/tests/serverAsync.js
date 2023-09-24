@@ -126,11 +126,11 @@ describe('roles async', async function () {
   })
 
   it('can\'t create role with empty names', async function () {
-    assert.isRejected(Roles.createRoleAsync(''), /Invalid role name/)
-    assert.isRejected(Roles.createRoleAsync(null), /Invalid role name/)
-    assert.isRejected(Roles.createRoleAsync(' '), /Invalid role name/)
-    assert.isRejected(Roles.createRoleAsync(' foobar'), /Invalid role name/)
-    assert.isRejected(Roles.createRoleAsync(' foobar '), /Invalid role name/)
+    await assert.isRejected(Roles.createRoleAsync(''), /Invalid role name/)
+    await assert.isRejected(Roles.createRoleAsync(null), /Invalid role name/)
+    await assert.isRejected(Roles.createRoleAsync(' '), /Invalid role name/)
+    await assert.isRejected(Roles.createRoleAsync(' foobar'), /Invalid role name/)
+    await assert.isRejected(Roles.createRoleAsync(' foobar '), /Invalid role name/)
   })
 
   it('can\'t use invalid scope names', async function () {
@@ -140,11 +140,11 @@ describe('roles async', async function () {
     await Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], 'scope1')
     await Roles.addUsersToRolesAsync(users.eve, ['editor'], 'scope2')
 
-    assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], ''), /Invalid scope name/)
-    assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], ' '), /Invalid scope name/)
-    assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], ' foobar'), /Invalid scope name/)
-    assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], ' foobar '), /Invalid scope name/)
-    assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], 42), /Invalid scope name/)
+    await assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], ''), /Invalid scope name/)
+    await assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], ' '), /Invalid scope name/)
+    await assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], ' foobar'), /Invalid scope name/)
+    await assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], ' foobar '), /Invalid scope name/)
+    await assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], 42), /Invalid scope name/)
   })
 
   it('can check if user is in role', async function () {
@@ -183,30 +183,30 @@ describe('roles async', async function () {
     await testUser('eve', ['editor'], { scope: 'scope2' })
   })
 
-  // it('can check if user is in role by scope with global role', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //   Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], 'scope1')
-  //   Roles.addUsersToRolesAsync(users.eve, ['editor'], 'scope2')
-  //   Roles.addUsersToRolesAsync(users.eve, ['admin'])
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, ['user'], 'scope1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, ['editor'], 'scope2'))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, ['user']))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, ['editor']))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, ['user'], null))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, ['editor'], null))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, ['user'], 'scope2'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, ['editor'], 'scope1'))
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, ['admin'], 'scope2'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, ['admin'], 'scope1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, ['admin']))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, ['admin'], null))
-  // })
+  it('can check if user is in role by scope with global role', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('editor')
+    await Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'], 'scope1')
+    await Roles.addUsersToRolesAsync(users.eve, ['editor'], 'scope2')
+    await Roles.addUsersToRolesAsync(users.eve, ['admin'])
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, ['user'], 'scope1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, ['editor'], 'scope2'))
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, ['user']))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, ['editor']))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, ['user'], null))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, ['editor'], null))
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, ['user'], 'scope2'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, ['editor'], 'scope1'))
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, ['admin'], 'scope2'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, ['admin'], 'scope1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, ['admin']))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, ['admin'], null))
+  })
 
   it('renaming scopes', async function () {
     await Roles.createRoleAsync('admin')
@@ -226,7 +226,7 @@ describe('roles async', async function () {
     assert.isFalse(await Roles.userIsInRoleAsync(users.eve, ['admin', 'user'], 'scope1'))
     assert.isFalse(await Roles.userIsInRoleAsync(users.eve, ['admin', 'user'], 'scope2'))
 
-    assert.isRejected(Roles.renameScopeAsync('scope3'), /Invalid scope name/)
+    await assert.isRejected(Roles.renameScopeAsync('scope3'), /Invalid scope name/)
 
     await Roles.renameScopeAsync('scope3', null)
 
@@ -296,7 +296,7 @@ describe('roles async', async function () {
   })
 
   it('can\'t add user to non-existent role', async function () {
-    assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin']), /Role 'admin' does not exist/)
+    await assert.isRejected(Roles.addUsersToRolesAsync(users.eve, ['admin']), /Role 'admin' does not exist/)
     await Roles.addUsersToRolesAsync(users.eve, ['admin'], { ifExists: true })
   })
 
@@ -308,7 +308,7 @@ describe('roles async', async function () {
   })
 
   it('can\'t set user to non-existent role', async function () {
-    assert.isRejected(Roles.setUserRolesAsync(users.eve, ['admin']), /Role 'admin' does not exist/)
+    await assert.isRejected(Roles.setUserRolesAsync(users.eve, ['admin']), /Role 'admin' does not exist/)
     await Roles.setUserRolesAsync(users.eve, ['admin'], { ifExists: true })
   })
 
@@ -799,452 +799,472 @@ describe('roles async', async function () {
     assert.sameMembers(await Roles.getRolesForUserAsync('1', 'scope1'), [])
   })
 
-  // it('can get all roles for user', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //
-  //   const userId = users.eve
-  //   let userObj
-  //
-  //   // by userId
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId), [])
-  //
-  //   // by user object
-  //   userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj), [])
-  //
-  //   Roles.addUsersToRolesAsync(userId, ['admin', 'user'])
-  //
-  //   // by userId
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId), ['admin', 'user'])
-  //
-  //   // by user object
-  //   userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj), ['admin', 'user'])
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: null,
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }, {
-  //     role: { _id: 'user' },
-  //     scope: null,
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'user' }]
-  //   }])
-  // })
-  //
-  // it('can get all roles for user by scope', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //
-  //   const userId = users.eve
-  //   let userObj
-  //
-  //   // by userId
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), [])
-  //
-  //   // by user object
-  //   userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), [])
-  //
-  //   // add roles
-  //   Roles.addUsersToRolesAsync(userId, ['admin', 'user'], 'scope1')
-  //   Roles.addUsersToRolesAsync(userId, ['admin'], 'scope2')
-  //
-  //   // by userId
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), ['admin', 'user'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope2'), ['admin'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId), [])
-  //
-  //   // by user object
-  //   userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), ['admin', 'user'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope2'), ['admin'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj), [])
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope1' }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }, {
-  //     role: { _id: 'user' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'user' }]
-  //   }])
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope2' }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: 'scope2',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }])
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true, anyScope: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }, {
-  //     role: { _id: 'user' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'user' }]
-  //   }, {
-  //     role: { _id: 'admin' },
-  //     scope: 'scope2',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }])
-  //
-  //   Roles.createRoleAsync('PERMISSION')
-  //   Roles.addRolesToParent('PERMISSION', 'user')
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope1' }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }, {
-  //     role: { _id: 'user' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
-  //   }])
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope2' }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: 'scope2',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, { scope: 'scope1' }), ['admin', 'user', 'PERMISSION'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, { scope: 'scope2' }), ['admin'])
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true, anyScope: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }, {
-  //     role: { _id: 'user' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
-  //   }, {
-  //     role: { _id: 'admin' },
-  //     scope: 'scope2',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, { anyScope: true }), ['admin', 'user', 'PERMISSION'])
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope1', onlyAssigned: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }, {
-  //     role: { _id: 'user' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
-  //   }])
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope2', onlyAssigned: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: 'scope2',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, { scope: 'scope1', onlyAssigned: true }), ['admin', 'user'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, { scope: 'scope2', onlyAssigned: true }), ['admin'])
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { fullObjects: true, anyScope: true, onlyAssigned: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }, {
-  //     role: { _id: 'user' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
-  //   }, {
-  //     role: { _id: 'admin' },
-  //     scope: 'scope2',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, { anyScope: true, onlyAssigned: true }), ['admin', 'user'])
-  // })
-  //
-  // it('can get only scoped roles for user', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //
-  //   const userId = users.eve
-  //
-  //   // add roles
-  //   Roles.addUsersToRolesAsync(userId, ['user'], 'scope1')
-  //   Roles.addUsersToRolesAsync(userId, ['admin'])
-  //
-  //   Roles.createRoleAsync('PERMISSION')
-  //   Roles.addRolesToParent('PERMISSION', 'user')
-  //
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, { onlyScoped: true, scope: 'scope1' }), ['user', 'PERMISSION'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, { onlyScoped: true, onlyAssigned: true, scope: 'scope1' }), ['user'])
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(userId, { onlyScoped: true, fullObjects: true, scope: 'scope1' }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'user' },
-  //     scope: 'scope1',
-  //     user: { _id: userId },
-  //     inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
-  //   }])
-  // })
-  //
-  // it('can get all roles for user by scope with periods in name', function () {
-  //   Roles.createRoleAsync('admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.joe, ['admin'], 'example.k12.va.us')
-  //
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(users.joe, 'example.k12.va.us'), ['admin'])
-  // })
-  //
-  // it('can get all roles for user by scope including Roles.GLOBAL_SCOPE', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //
-  //   const userId = users.eve
-  //
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
-  //   Roles.addUsersToRolesAsync([users.eve], ['admin', 'user'], 'scope1')
-  //
-  //   // by userId
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), ['editor', 'admin', 'user'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId), ['editor'])
-  //
-  //   // by user object
-  //   const userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), ['editor', 'admin', 'user'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj), ['editor'])
-  // })
-  //
-  // it('getRolesForUser should not return null entries if user has no roles for scope', function () {
-  //   Roles.createRoleAsync('editor')
-  //
-  //   const userId = users.eve
-  //   let userObj
-  //
-  //   // by userId
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), [])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId), [])
-  //
-  //   // by user object
-  //   userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), [])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj), [])
-  //
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
-  //
-  //   // by userId
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), ['editor'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userId), ['editor'])
-  //
-  //   // by user object
-  //   userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), ['editor'])
-  //   assert.sameMembers(await Roles.getRolesForUserAsync(userObj), ['editor'])
-  // })
-  //
-  // it('getRolesForUser should not fail during a call of addUsersToRoles', function () {
-  //   Roles.createRoleAsync('editor')
-  //
-  //   const userId = users.eve
-  //   const promises = []
-  //   const interval = setInterval(() => {
-  //     promises.push(Promise.resolve().then(() => { await Roles.getRolesForUserAsync(userId) }))
-  //   }, 0)
-  //
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
-  //   clearInterval(interval)
-  //
-  //   return Promise.all(promises)
-  // })
-  //
-  // it('returns an empty list of scopes for null as user-id', function () {
-  //   assert.sameMembers(Roles.getScopesForUser(undefined), [])
-  //   assert.sameMembers(Roles.getScopesForUser(null), [])
-  //   assert.sameMembers(Roles.getScopesForUser('foo'), [])
-  //   assert.sameMembers(Roles.getScopesForUser({}), [])
-  //   assert.sameMembers(Roles.getScopesForUser({ _id: 'foo' }), [])
-  // })
-  //
-  // it('can get all scopes for user', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //
-  //   const userId = users.eve
-  //
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor'], 'scope1')
-  //   Roles.addUsersToRolesAsync([users.eve], ['admin', 'user'], 'scope2')
-  //
-  //   // by userId
-  //   assert.sameMembers(Roles.getScopesForUser(userId), ['scope1', 'scope2'])
-  //
-  //   // by user object
-  //   const userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(Roles.getScopesForUser(userObj), ['scope1', 'scope2'])
-  // })
-  //
-  // it('can get all scopes for user by role', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //
-  //   const userId = users.eve
-  //
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor'], 'scope1')
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor', 'user'], 'scope2')
-  //
-  //   // by userId
-  //   assert.sameMembers(Roles.getScopesForUser(userId, 'user'), ['scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, 'editor'), ['scope1', 'scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, 'admin'), [])
-  //
-  //   // by user object
-  //   const userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, 'user'), ['scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, 'admin'), [])
-  // })
-  //
-  // it('getScopesForUser returns [] when not using scopes', function () {
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //
-  //   const userId = users.eve
-  //
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor', 'user'])
-  //
-  //   // by userId
-  //   assert.sameMembers(Roles.getScopesForUser(userId), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, 'editor'), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['editor']), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['editor', 'user']), [])
-  //
-  //   // by user object
-  //   const userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(Roles.getScopesForUser(userObj), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, 'editor'), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['editor']), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['editor', 'user']), [])
-  // })
-  //
-  // it('can get all groups for user by role array', function () {
-  //   const userId = users.eve
-  //
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //   Roles.createRoleAsync('moderator')
-  //   Roles.createRoleAsync('admin')
-  //
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor'], 'group1')
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor', 'user'], 'group2')
-  //   Roles.addUsersToRolesAsync([users.eve], ['moderator'], 'group3')
-  //
-  //   // by userId, one role
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['user']), ['group2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['editor']), ['group1', 'group2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['admin']), [])
-  //
-  //   // by userId, multiple roles
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['editor', 'user']), ['group1', 'group2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['editor', 'moderator']), ['group1', 'group2', 'group3'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['user', 'moderator']), ['group2', 'group3'])
-  //
-  //   // by user object, one role
-  //   const userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['user']), ['group2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['editor']), ['group1', 'group2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['admin']), [])
-  //
-  //   // by user object, multiple roles
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['editor', 'user']), ['group1', 'group2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['editor', 'moderator']), ['group1', 'group2', 'group3'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['user', 'moderator']), ['group2', 'group3'])
-  // })
-  //
-  // it('getting all scopes for user does not include GLOBAL_SCOPE', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //
-  //   const userId = users.eve
-  //
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor'], 'scope1')
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor', 'user'], 'scope2')
-  //   Roles.addUsersToRolesAsync([users.eve], ['editor', 'user', 'admin'], Roles.GLOBAL_SCOPE)
-  //
-  //   // by userId
-  //   assert.sameMembers(Roles.getScopesForUser(userId, 'user'), ['scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, 'editor'), ['scope1', 'scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, 'admin'), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['user']), ['scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['editor']), ['scope1', 'scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['admin']), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userId, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
-  //
-  //   // by user object
-  //   const userObj = Meteor.users.findOneAsync({ _id: userId })
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, 'user'), ['scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, 'admin'), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['user']), ['scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['editor']), ['scope1', 'scope2'])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['admin']), [])
-  //   assert.sameMembers(Roles.getScopesForUser(userObj, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
-  // })
-  //
-  // it('can get all users in role', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //
-  //   Roles.addUsersToRolesAsync([users.eve, users.joe], ['admin', 'user'])
-  //   Roles.addUsersToRolesAsync([users.bob, users.joe], ['editor'])
-  //
-  //   const expected = [users.eve, users.joe]
-  //   const actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
-  //
-  //   assert.sameMembers(actual, expected)
-  // })
-  //
-  // it('can get all users in role by scope', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //
-  //   Roles.addUsersToRolesAsync([users.eve, users.joe], ['admin', 'user'], 'scope1')
-  //   Roles.addUsersToRolesAsync([users.bob, users.joe], ['admin'], 'scope2')
-  //
-  //   let expected = [users.eve, users.joe]
-  //   let actual = Roles.getUsersInRole('admin', 'scope1').fetch().map(r => r._id)
-  //
-  //   assert.sameMembers(actual, expected)
-  //
-  //   expected = [users.eve, users.joe]
-  //   actual = Roles.getUsersInRole('admin', { scope: 'scope1' }).fetch().map(r => r._id)
-  //   assert.sameMembers(actual, expected)
-  //
-  //   expected = [users.eve, users.bob, users.joe]
-  //   actual = Roles.getUsersInRole('admin', { anyScope: true }).fetch().map(r => r._id)
-  //   assert.sameMembers(actual, expected)
-  //
-  //   actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
-  //   assert.sameMembers(actual, [])
-  // })
-  //
+  it('can get all roles for user', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+
+    const userId = users.eve
+    let userObj
+
+    // by userId
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId), [])
+
+    // by user object
+    userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getRolesForUserAsync(userObj), [])
+
+    await Roles.addUsersToRolesAsync(userId, ['admin', 'user'])
+
+    // by userId
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId), ['admin', 'user'])
+
+    // by user object
+    userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getRolesForUserAsync(userObj), ['admin', 'user'])
+
+    const userRoles = await Roles.getRolesForUserAsync(userId, { fullObjects: true })
+    assert.sameDeepMembers(userRoles.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: null,
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }, {
+      role: { _id: 'user' },
+      scope: null,
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }]
+    }])
+  })
+
+  it('can get all roles for user by scope', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+
+    const userId = users.eve
+    let userObj
+
+    // by userId
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), [])
+
+    // by user object
+    userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), [])
+
+    // add roles
+    await Roles.addUsersToRolesAsync(userId, ['admin', 'user'], 'scope1')
+    await Roles.addUsersToRolesAsync(userId, ['admin'], 'scope2')
+
+    // by userId
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), ['admin', 'user'])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope2'), ['admin'])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId), [])
+
+    // by user object
+    userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), ['admin', 'user'])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope2'), ['admin'])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userObj), [])
+
+    const userRoles = await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope1' })
+    assert.sameDeepMembers(userRoles.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }, {
+      role: { _id: 'user' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }]
+    }])
+    const userRoles2 = await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope2' })
+    assert.sameDeepMembers(userRoles2.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: 'scope2',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+
+    const userRoles3 = await Roles.getRolesForUserAsync(userId, { fullObjects: true, anyScope: true })
+    assert.sameDeepMembers(userRoles3.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }, {
+      role: { _id: 'user' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }]
+    }, {
+      role: { _id: 'admin' },
+      scope: 'scope2',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+
+    await Roles.createRoleAsync('PERMISSION')
+    await Roles.addRolesToParentAsync('PERMISSION', 'user')
+
+    const userRoles4 = await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope1' })
+    assert.sameDeepMembers(userRoles4.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }, {
+      role: { _id: 'user' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
+    }])
+    const userRoles5 = await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope2' })
+    assert.sameDeepMembers(userRoles5.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: 'scope2',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, { scope: 'scope1' }), ['admin', 'user', 'PERMISSION'])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, { scope: 'scope2' }), ['admin'])
+
+    const userRoles6 = await Roles.getRolesForUserAsync(userId, { fullObjects: true, anyScope: true })
+    assert.sameDeepMembers(userRoles6.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }, {
+      role: { _id: 'user' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
+    }, {
+      role: { _id: 'admin' },
+      scope: 'scope2',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, { anyScope: true }), ['admin', 'user', 'PERMISSION'])
+
+    const userRoles7 = await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope1', onlyAssigned: true })
+    assert.sameDeepMembers(userRoles7.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }, {
+      role: { _id: 'user' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
+    }])
+    const userRoles8 = await Roles.getRolesForUserAsync(userId, { fullObjects: true, scope: 'scope2', onlyAssigned: true })
+    assert.sameDeepMembers(userRoles8.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: 'scope2',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, { scope: 'scope1', onlyAssigned: true }), ['admin', 'user'])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, { scope: 'scope2', onlyAssigned: true }), ['admin'])
+
+    const userRoles9 = await Roles.getRolesForUserAsync(userId, { fullObjects: true, anyScope: true, onlyAssigned: true })
+    assert.sameDeepMembers(userRoles9.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }, {
+      role: { _id: 'user' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
+    }, {
+      role: { _id: 'admin' },
+      scope: 'scope2',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, { anyScope: true, onlyAssigned: true }), ['admin', 'user'])
+  })
+
+  it('can get only scoped roles for user', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+
+    const userId = users.eve
+
+    // add roles
+    await Roles.addUsersToRolesAsync(userId, ['user'], 'scope1')
+    await Roles.addUsersToRolesAsync(userId, ['admin'])
+
+    await Roles.createRoleAsync('PERMISSION')
+    await Roles.addRolesToParentAsync('PERMISSION', 'user')
+
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, { onlyScoped: true, scope: 'scope1' }), ['user', 'PERMISSION'])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, { onlyScoped: true, onlyAssigned: true, scope: 'scope1' }), ['user'])
+    const userRoles = await Roles.getRolesForUserAsync(userId, { onlyScoped: true, fullObjects: true, scope: 'scope1' })
+    assert.sameDeepMembers(userRoles.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
+    }])
+  })
+
+  it('can get all roles for user by scope with periods in name', async function () {
+    await Roles.createRoleAsync('admin')
+
+    await Roles.addUsersToRolesAsync(users.joe, ['admin'], 'example.k12.va.us')
+
+    assert.sameMembers(await Roles.getRolesForUserAsync(users.joe, 'example.k12.va.us'), ['admin'])
+  })
+
+  it('can get all roles for user by scope including Roles.GLOBAL_SCOPE', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('editor')
+
+    const userId = users.eve
+
+    await Roles.addUsersToRolesAsync([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
+    await Roles.addUsersToRolesAsync([users.eve], ['admin', 'user'], 'scope1')
+
+    // by userId
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), ['editor', 'admin', 'user'])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userId), ['editor'])
+
+    // by user object
+    const userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), ['editor', 'admin', 'user'])
+    assert.sameMembers(await Roles.getRolesForUserAsync(userObj), ['editor'])
+  })
+
+  describe('getRolesForUser', function () {
+    it('should not return null entries if user has no roles for scope', async function () {
+      await Roles.createRoleAsync('editor')
+
+      const userId = users.eve
+      let userObj
+
+      // by userId
+      assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), [])
+      assert.sameMembers(await Roles.getRolesForUserAsync(userId), [])
+
+      // by user object
+      userObj = await Meteor.users.findOneAsync({ _id: userId })
+      assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), [])
+      assert.sameMembers(await Roles.getRolesForUserAsync(userObj), [])
+
+      await Roles.addUsersToRolesAsync([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
+
+      // by userId
+      assert.sameMembers(await Roles.getRolesForUserAsync(userId, 'scope1'), ['editor'])
+      assert.sameMembers(await Roles.getRolesForUserAsync(userId), ['editor'])
+
+      // by user object
+      userObj = await Meteor.users.findOneAsync({ _id: userId })
+      assert.sameMembers(await Roles.getRolesForUserAsync(userObj, 'scope1'), ['editor'])
+      assert.sameMembers(await Roles.getRolesForUserAsync(userObj), ['editor'])
+    })
+
+    it('should not fail during a call of addUsersToRoles', async function () {
+      await Roles.createRoleAsync('editor')
+
+      const userId = users.eve
+      const promises = []
+      const interval = setInterval(() => {
+        promises.push(Promise.resolve().then(async () => {
+          await Roles.getRolesForUserAsync(userId)
+        }))
+      }, 0)
+
+      await Roles.addUsersToRolesAsync([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
+      clearInterval(interval)
+
+      return Promise.all(promises)
+    })
+  })
+
+  it('returns an empty list of scopes for null as user-id', async function () {
+    assert.sameMembers(await Roles.getScopesForUserAsync(undefined), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(null), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync('foo'), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync({}), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync({ _id: 'foo' }), [])
+  })
+
+  it('can get all scopes for user', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('editor')
+
+    const userId = users.eve
+
+    await Roles.addUsersToRolesAsync([users.eve], ['editor'], 'scope1')
+    await Roles.addUsersToRolesAsync([users.eve], ['admin', 'user'], 'scope2')
+
+    // by userId
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId), ['scope1', 'scope2'])
+
+    // by user object
+    const userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj), ['scope1', 'scope2'])
+  })
+
+  it('can get all scopes for user by role', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('editor')
+
+    const userId = users.eve
+
+    await Roles.addUsersToRolesAsync([users.eve], ['editor'], 'scope1')
+    await Roles.addUsersToRolesAsync([users.eve], ['editor', 'user'], 'scope2')
+
+    // by userId
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, 'user'), ['scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, 'editor'), ['scope1', 'scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, 'admin'), [])
+
+    // by user object
+    const userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, 'user'), ['scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, 'editor'), ['scope1', 'scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, 'admin'), [])
+  })
+
+  it('getScopesForUser returns [] when not using scopes', async function () {
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('editor')
+
+    const userId = users.eve
+
+    await Roles.addUsersToRolesAsync([users.eve], ['editor', 'user'])
+
+    // by userId
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, 'editor'), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['editor']), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['editor', 'user']), [])
+
+    // by user object
+    const userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, 'editor'), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['editor']), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['editor', 'user']), [])
+  })
+
+  it('can get all groups for user by role array', async function () {
+    const userId = users.eve
+
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('editor')
+    await Roles.createRoleAsync('moderator')
+    await Roles.createRoleAsync('admin')
+
+    await Roles.addUsersToRolesAsync([users.eve], ['editor'], 'group1')
+    await Roles.addUsersToRolesAsync([users.eve], ['editor', 'user'], 'group2')
+    await Roles.addUsersToRolesAsync([users.eve], ['moderator'], 'group3')
+
+    // by userId, one role
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['user']), ['group2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['editor']), ['group1', 'group2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['admin']), [])
+
+    // by userId, multiple roles
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['editor', 'user']), ['group1', 'group2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['editor', 'moderator']), ['group1', 'group2', 'group3'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['user', 'moderator']), ['group2', 'group3'])
+
+    // by user object, one role
+    const userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['user']), ['group2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['editor']), ['group1', 'group2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['admin']), [])
+
+    // by user object, multiple roles
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['editor', 'user']), ['group1', 'group2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['editor', 'moderator']), ['group1', 'group2', 'group3'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['user', 'moderator']), ['group2', 'group3'])
+  })
+
+  it('getting all scopes for user does not include GLOBAL_SCOPE', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('editor')
+
+    const userId = users.eve
+
+    await Roles.addUsersToRolesAsync([users.eve], ['editor'], 'scope1')
+    await Roles.addUsersToRolesAsync([users.eve], ['editor', 'user'], 'scope2')
+    await Roles.addUsersToRolesAsync([users.eve], ['editor', 'user', 'admin'], Roles.GLOBAL_SCOPE)
+
+    // by userId
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, 'user'), ['scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, 'editor'), ['scope1', 'scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, 'admin'), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['user']), ['scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['editor']), ['scope1', 'scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['admin']), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userId, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
+
+    // by user object
+    const userObj = await Meteor.users.findOneAsync({ _id: userId })
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, 'user'), ['scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, 'editor'), ['scope1', 'scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, 'admin'), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['user']), ['scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['editor']), ['scope1', 'scope2'])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['admin']), [])
+    assert.sameMembers(await Roles.getScopesForUserAsync(userObj, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
+  })
+
+  it('can get all users in role', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('editor')
+
+    await Roles.addUsersToRolesAsync([users.eve, users.joe], ['admin', 'user'])
+    await Roles.addUsersToRolesAsync([users.bob, users.joe], ['editor'])
+
+    const expected = [users.eve, users.joe]
+    const cursor = await Roles.getUsersInRoleAsync('admin')
+    const actual = cursor.fetch().map(r => r._id)
+
+    assert.sameMembers(actual, expected)
+  })
+
+  it('can get all users in role by scope', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+
+    await Roles.addUsersToRolesAsync([users.eve, users.joe], ['admin', 'user'], 'scope1')
+    await Roles.addUsersToRolesAsync([users.bob, users.joe], ['admin'], 'scope2')
+
+    let expected = [users.eve, users.joe]
+    const cursor1 = await Roles.getUsersInRoleAsync('admin', 'scope1')
+    let actual = cursor1.fetch().map(r => r._id)
+
+    assert.sameMembers(actual, expected)
+
+    expected = [users.eve, users.joe]
+    const cursor2 = await Roles.getUsersInRoleAsync('admin', { scope: 'scope1' })
+    actual = cursor2.fetch().map(r => r._id)
+    assert.sameMembers(actual, expected)
+
+    expected = [users.eve, users.bob, users.joe]
+    const cursor3 = await Roles.getUsersInRoleAsync('admin', { anyScope: true })
+    actual = cursor3.fetch().map(r => r._id)
+    assert.sameMembers(actual, expected)
+
+    const cursor4 = await Roles.getUsersInRoleAsync('admin')
+    actual = cursor4.fetch().map(r => r._id)
+    assert.sameMembers(actual, [])
+  })
+
   // it('can get all users in role by scope including Roles.GLOBAL_SCOPE', function () {
   //   Roles.createRoleAsync('admin')
   //   Roles.createRoleAsync('user')
@@ -1253,22 +1273,22 @@ describe('roles async', async function () {
   //   Roles.addUsersToRolesAsync([users.bob, users.joe], ['admin'], 'scope2')
   //
   //   let expected = [users.eve]
-  //   let actual = Roles.getUsersInRole('admin', 'scope1').fetch().map(r => r._id)
+  //   let actual = await Roles.getUsersInRoleAsync('admin', 'scope1').fetch().map(r => r._id)
   //
   //   assert.sameMembers(actual, expected)
   //
   //   expected = [users.eve, users.bob, users.joe]
-  //   actual = Roles.getUsersInRole('admin', 'scope2').fetch().map(r => r._id)
+  //   actual = await Roles.getUsersInRoleAsync('admin', 'scope2').fetch().map(r => r._id)
   //
   //   assert.sameMembers(actual, expected)
   //
   //   expected = [users.eve]
-  //   actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
+  //   actual = await Roles.getUsersInRoleAsync('admin').fetch().map(r => r._id)
   //
   //   assert.sameMembers(actual, expected)
   //
   //   expected = [users.eve, users.bob, users.joe]
-  //   actual = Roles.getUsersInRole('admin', { anyScope: true }).fetch().map(r => r._id)
+  //   actual = await Roles.getUsersInRoleAsync('admin', { anyScope: true }).fetch().map(r => r._id)
   //
   //   assert.sameMembers(actual, expected)
   // })
@@ -1280,15 +1300,15 @@ describe('roles async', async function () {
   //   Roles.addUsersToRolesAsync([users.bob], ['admin'], 'scope1')
   //
   //   let expected = [users.eve]
-  //   let actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
+  //   let actual = await Roles.getUsersInRoleAsync('admin').fetch().map(r => r._id)
   //   assert.sameMembers(actual, expected)
   //
   //   expected = [users.eve, users.bob]
-  //   actual = Roles.getUsersInRole('admin', { scope: 'scope1' }).fetch().map(r => r._id)
+  //   actual = await Roles.getUsersInRoleAsync('admin', { scope: 'scope1' }).fetch().map(r => r._id)
   //   assert.sameMembers(actual, expected)
   //
   //   expected = [users.bob]
-  //   actual = Roles.getUsersInRole('admin', { scope: 'scope1', onlyScoped: true }).fetch().map(r => r._id)
+  //   actual = await Roles.getUsersInRoleAsync('admin', { scope: 'scope1', onlyScoped: true }).fetch().map(r => r._id)
   //   assert.sameMembers(actual, expected)
   // })
 
@@ -1299,983 +1319,805 @@ describe('roles async', async function () {
     await Roles.addUsersToRolesAsync([users.eve, users.joe], ['admin', 'user'], 'scope1')
     await Roles.addUsersToRolesAsync([users.bob, users.joe], ['admin'], 'scope2')
 
-    const results = await Roles.getUsersInRole('admin', 'scope1', { fields: { username: 0 }, limit: 1 }).fetch()
+    const cursor = await Roles.getUsersInRoleAsync('admin', 'scope1', { fields: { username: 0 }, limit: 1 })
+    const results = cursor.fetch()
 
     assert.equal(1, results.length)
     assert.isTrue(hasProp(results[0], '_id'))
     assert.isFalse(hasProp(results[0], 'username'))
   })
 
-  // it('can use Roles.GLOBAL_SCOPE to assign blanket roles', function () {
-  //   Roles.createRoleAsync('admin')
-  //
-  //   Roles.addUsersToRolesAsync([users.joe, users.bob], ['admin'], Roles.GLOBAL_SCOPE)
-  //
-  //   testUser('eve', [], 'scope1')
-  //   testUser('joe', ['admin'], 'scope2')
-  //   testUser('joe', ['admin'], 'scope1')
-  //   testUser('bob', ['admin'], 'scope2')
-  //   testUser('bob', ['admin'], 'scope1')
-  //
-  //   Roles.removeUsersFromRolesAsync(users.joe, ['admin'], Roles.GLOBAL_SCOPE)
-  //
-  //   testUser('eve', [], 'scope1')
-  //   testUser('joe', [], 'scope2')
-  //   testUser('joe', [], 'scope1')
-  //   testUser('bob', ['admin'], 'scope2')
-  //   testUser('bob', ['admin'], 'scope1')
-  // })
-  //
-  // it('Roles.GLOBAL_SCOPE is independent of other scopes', function () {
-  //   Roles.createRoleAsync('admin')
-  //
-  //   Roles.addUsersToRolesAsync([users.joe, users.bob], ['admin'], 'scope5')
-  //   Roles.addUsersToRolesAsync([users.joe, users.bob], ['admin'], Roles.GLOBAL_SCOPE)
-  //
-  //   testUser('eve', [], 'scope1')
-  //   testUser('joe', ['admin'], 'scope5')
-  //   testUser('joe', ['admin'], 'scope2')
-  //   testUser('joe', ['admin'], 'scope1')
-  //   testUser('bob', ['admin'], 'scope5')
-  //   testUser('bob', ['admin'], 'scope2')
-  //   testUser('bob', ['admin'], 'scope1')
-  //
-  //   Roles.removeUsersFromRolesAsync(users.joe, ['admin'], Roles.GLOBAL_SCOPE)
-  //
-  //   testUser('eve', [], 'scope1')
-  //   testUser('joe', ['admin'], 'scope5')
-  //   testUser('joe', [], 'scope2')
-  //   testUser('joe', [], 'scope1')
-  //   testUser('bob', ['admin'], 'scope5')
-  //   testUser('bob', ['admin'], 'scope2')
-  //   testUser('bob', ['admin'], 'scope1')
-  // })
-  //
-  // it('Roles.GLOBAL_SCOPE also checked when scope not specified', function () {
-  //   Roles.createRoleAsync('admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.joe, 'admin', Roles.GLOBAL_SCOPE)
-  //
-  //   testUser('joe', ['admin'])
-  //
-  //   Roles.removeUsersFromRolesAsync(users.joe, 'admin', Roles.GLOBAL_SCOPE)
-  //
-  //   testUser('joe', [])
-  // })
-  //
-  // it('can use \'.\' in scope name', function () {
-  //   Roles.createRoleAsync('admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.joe, ['admin'], 'example.com')
-  //   testUser('joe', ['admin'], 'example.com')
-  // })
-  //
-  // it('can use multiple periods in scope name', function () {
-  //   Roles.createRoleAsync('admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.joe, ['admin'], 'example.k12.va.us')
-  //   testUser('joe', ['admin'], 'example.k12.va.us')
-  // })
-  //
-  // it('renaming of roles', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //
-  //   await Roles.setUserRolesAsync([users.eve, users.bob], ['editor', 'user'], 'scope1')
-  //   await Roles.setUserRolesAsync([users.bob, users.joe], ['user', 'admin'], 'scope2')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'editor', 'scope1'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'editor', 'scope2'))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.joe, 'admin', 'scope1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.joe, 'admin', 'scope2'))
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'user', 'scope1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.bob, 'user', 'scope1'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.joe, 'user', 'scope1'))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'user', 'scope2'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.bob, 'user', 'scope2'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.joe, 'user', 'scope2'))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'user2', 'scope1'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'user2', 'scope2'))
-  //
-  //   Roles.renameRole('user', 'user2')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'editor', 'scope1'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'editor', 'scope2'))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.joe, 'admin', 'scope1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.joe, 'admin', 'scope2'))
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'user2', 'scope1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.bob, 'user2', 'scope1'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.joe, 'user2', 'scope1'))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'user2', 'scope2'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.bob, 'user2', 'scope2'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.joe, 'user2', 'scope2'))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'user', 'scope1'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'user', 'scope2'))
-  // })
-  //
-  // it('migration without global groups (to v2)', function () {
-  //   assert.isOk(Meteor.roles.insert({ name: 'admin' }))
-  //   assert.isOk(Meteor.roles.insert({ name: 'editor' }))
-  //   assert.isOk(Meteor.roles.insert({ name: 'user' }))
-  //
-  //   assert.isOk(Meteor.users.update(users.eve, { $set: { roles: ['admin', 'editor'] } }))
-  //   assert.isOk(Meteor.users.update(users.bob, { $set: { roles: [] } }))
-  //   assert.isOk(Meteor.users.update(users.joe, { $set: { roles: ['user'] } }))
-  //
-  //   Roles._forwardMigrate()
-  //
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.eve, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: [{
-  //       _id: 'admin',
-  //       scope: null,
-  //       assigned: true
-  //     }, {
-  //       _id: 'editor',
-  //       scope: null,
-  //       assigned: true
-  //     }]
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.bob, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: []
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.joe, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: [{
-  //       _id: 'user',
-  //       scope: null,
-  //       assigned: true
-  //     }]
-  //   })
-  //
-  //   assert.deepEqual(Meteor.roles.findOne({ _id: 'admin' }), {
-  //     _id: 'admin',
-  //     children: []
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ _id: 'editor' }), {
-  //     _id: 'editor',
-  //     children: []
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ _id: 'user' }), {
-  //     _id: 'user',
-  //     children: []
-  //   })
-  //
-  //   Roles._backwardMigrate(null, null, false)
-  //
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.eve, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: ['admin', 'editor']
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.bob, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: []
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.joe, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: ['user']
-  //   })
-  //
-  //   assert.deepEqual(Meteor.roles.findOne({ name: 'admin' }, { fields: { _id: 0 } }), {
-  //     name: 'admin'
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ name: 'editor' }, { fields: { _id: 0 } }), {
-  //     name: 'editor'
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ name: 'user' }, { fields: { _id: 0 } }), {
-  //     name: 'user'
-  //   })
-  // })
-  //
-  // it('migration without global groups (to v3)')
-  //
-  // it('migration with global groups (to v2)', function () {
-  //   assert.isOk(Meteor.roles.insert({ name: 'admin' }))
-  //   assert.isOk(Meteor.roles.insert({ name: 'editor' }))
-  //   assert.isOk(Meteor.roles.insert({ name: 'user' }))
-  //
-  //   assert.isOk(Meteor.users.update(users.eve, { $set: { roles: { __global_roles__: ['admin', 'editor'], foo_bla: ['user'] } } }))
-  //   assert.isOk(Meteor.users.update(users.bob, { $set: { roles: { } } }))
-  //   assert.isOk(Meteor.users.update(users.joe, { $set: { roles: { __global_roles__: ['user'], foo_bla: ['user'] } } }))
-  //
-  //   Roles._forwardMigrate(null, null, false)
-  //
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.eve, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: [{
-  //       _id: 'admin',
-  //       scope: null,
-  //       assigned: true
-  //     }, {
-  //       _id: 'editor',
-  //       scope: null,
-  //       assigned: true
-  //     }, {
-  //       _id: 'user',
-  //       scope: 'foo_bla',
-  //       assigned: true
-  //     }]
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.bob, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: []
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.joe, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: [{
-  //       _id: 'user',
-  //       scope: null,
-  //       assigned: true
-  //     }, {
-  //       _id: 'user',
-  //       scope: 'foo_bla',
-  //       assigned: true
-  //     }]
-  //   })
-  //
-  //   assert.deepEqual(Meteor.roles.findOne({ _id: 'admin' }), {
-  //     _id: 'admin',
-  //     children: []
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ _id: 'editor' }), {
-  //     _id: 'editor',
-  //     children: []
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ _id: 'user' }), {
-  //     _id: 'user',
-  //     children: []
-  //   })
-  //
-  //   Roles._backwardMigrate(null, null, true)
-  //
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.eve, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: {
-  //       __global_roles__: ['admin', 'editor'],
-  //       foo_bla: ['user']
-  //     }
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.bob, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: {}
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.joe, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: {
-  //       __global_roles__: ['user'],
-  //       foo_bla: ['user']
-  //     }
-  //   })
-  //
-  //   assert.deepEqual(Meteor.roles.findOne({ name: 'admin' }, { fields: { _id: 0 } }), {
-  //     name: 'admin'
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ name: 'editor' }, { fields: { _id: 0 } }), {
-  //     name: 'editor'
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ name: 'user' }, { fields: { _id: 0 } }), {
-  //     name: 'user'
-  //   })
-  //
-  //   Roles._forwardMigrate(null, null, true)
-  //
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.eve, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: [{
-  //       _id: 'admin',
-  //       scope: null,
-  //       assigned: true
-  //     }, {
-  //       _id: 'editor',
-  //       scope: null,
-  //       assigned: true
-  //     }, {
-  //       _id: 'user',
-  //       scope: 'foo.bla',
-  //       assigned: true
-  //     }]
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.bob, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: []
-  //   })
-  //   assert.deepEqual(Meteor.users.findOneAsync(users.joe, { fields: { roles: 1, _id: 0 } }), {
-  //     roles: [{
-  //       _id: 'user',
-  //       scope: null,
-  //       assigned: true
-  //     }, {
-  //       _id: 'user',
-  //       scope: 'foo.bla',
-  //       assigned: true
-  //     }]
-  //   })
-  //
-  //   assert.deepEqual(Meteor.roles.findOne({ _id: 'admin' }), {
-  //     _id: 'admin',
-  //     children: []
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ _id: 'editor' }), {
-  //     _id: 'editor',
-  //     children: []
-  //   })
-  //   assert.deepEqual(Meteor.roles.findOne({ _id: 'user' }), {
-  //     _id: 'user',
-  //     children: []
-  //   })
-  // })
-  //
-  // it('migration with global groups (to v3)')
-  //
-  // it('_addUserToRole', function () {
-  //   Roles.createRoleAsync('admin')
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
-  //
-  //   assert.include(
-  //     Object.keys(Roles._addUserToRole(users.eve, 'admin', { scope: null, ifExists: false })),
-  //     'insertedId'
-  //   )
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }])
-  //
-  //   assert.notInclude(
-  //     Object.keys(Roles._addUserToRole(users.eve, 'admin', { scope: null, ifExists: false })),
-  //     'insertedId'
-  //   )
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }])
-  // })
-  //
-  // it('_removeUserFromRole', function () {
-  //   Roles.createRoleAsync('admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, 'admin')
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'admin' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'admin' }]
-  //   }])
-  //
-  //   Roles._removeUserFromRole(users.eve, 'admin', { scope: null })
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
-  // })
-  //
-  // it('keep assigned roles', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('ALL_PERMISSIONS')
-  //   Roles.createRoleAsync('VIEW_PERMISSION')
-  //   Roles.createRoleAsync('EDIT_PERMISSION')
-  //   Roles.createRoleAsync('DELETE_PERMISSION')
-  //   Roles.addRolesToParent('ALL_PERMISSIONS', 'user')
-  //   Roles.addRolesToParent('EDIT_PERMISSION', 'ALL_PERMISSIONS')
-  //   Roles.addRolesToParent('VIEW_PERMISSION', 'ALL_PERMISSIONS')
-  //   Roles.addRolesToParent('DELETE_PERMISSION', 'admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, ['user'])
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'VIEW_PERMISSION'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'user' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'user' },
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' }
-  //     ]
-  //   }])
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, 'VIEW_PERMISSION')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'VIEW_PERMISSION'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'user' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'user' },
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'VIEW_PERMISSION' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'VIEW_PERMISSION' }
-  //     ]
-  //   }])
-  //
-  //   Roles.removeUsersFromRolesAsync(users.eve, 'user')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'VIEW_PERMISSION'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'VIEW_PERMISSION' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'VIEW_PERMISSION' }
-  //     ]
-  //   }])
-  //
-  //   Roles.removeUsersFromRolesAsync(users.eve, 'VIEW_PERMISSION')
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'VIEW_PERMISSION'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
-  // })
-  //
-  // it('adds children of the added role to the assignments', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('ALBUM.ADMIN')
-  //   Roles.createRoleAsync('ALBUM.VIEW')
-  //   Roles.createRoleAsync('TRACK.ADMIN')
-  //   Roles.createRoleAsync('TRACK.VIEW')
-  //
-  //   Roles.addRolesToParent('ALBUM.VIEW', 'ALBUM.ADMIN')
-  //   Roles.addRolesToParent('TRACK.VIEW', 'TRACK.ADMIN')
-  //
-  //   Roles.addRolesToParent('ALBUM.ADMIN', 'admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, ['admin'])
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'TRACK.VIEW'))
-  //
-  //   Roles.addRolesToParent('TRACK.ADMIN', 'admin')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'TRACK.VIEW'))
-  // })
-  //
-  // it('removes children of the removed role from the assignments', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('ALBUM.ADMIN')
-  //   Roles.createRoleAsync('ALBUM.VIEW')
-  //   Roles.createRoleAsync('TRACK.ADMIN')
-  //   Roles.createRoleAsync('TRACK.VIEW')
-  //
-  //   Roles.addRolesToParent('ALBUM.VIEW', 'ALBUM.ADMIN')
-  //   Roles.addRolesToParent('TRACK.VIEW', 'TRACK.ADMIN')
-  //
-  //   Roles.addRolesToParent('ALBUM.ADMIN', 'admin')
-  //   Roles.addRolesToParent('TRACK.ADMIN', 'admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, ['admin'])
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'TRACK.VIEW'))
-  //
-  //   Roles.removeRolesFromParent('TRACK.ADMIN', 'admin')
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'TRACK.VIEW'))
-  // })
-  //
-  // it('modify assigned hierarchical roles', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('ALL_PERMISSIONS')
-  //   Roles.createRoleAsync('VIEW_PERMISSION')
-  //   Roles.createRoleAsync('EDIT_PERMISSION')
-  //   Roles.createRoleAsync('DELETE_PERMISSION')
-  //   Roles.addRolesToParent('ALL_PERMISSIONS', 'user')
-  //   Roles.addRolesToParent('EDIT_PERMISSION', 'ALL_PERMISSIONS')
-  //   Roles.addRolesToParent('VIEW_PERMISSION', 'ALL_PERMISSIONS')
-  //   Roles.addRolesToParent('DELETE_PERMISSION', 'admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, ['user'])
-  //   Roles.addUsersToRolesAsync(users.eve, ['ALL_PERMISSIONS'], 'scope')
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION', 'scope'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'user' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'user' },
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'ALL_PERMISSIONS' },
-  //     scope: 'scope',
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' }
-  //     ]
-  //   }])
-  //
-  //   Roles.createRoleAsync('MODERATE_PERMISSION')
-  //
-  //   Roles.addRolesToParent('MODERATE_PERMISSION', 'ALL_PERMISSIONS')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION', 'scope'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'user' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'user' },
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' },
-  //       { _id: 'MODERATE_PERMISSION' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'ALL_PERMISSIONS' },
-  //     scope: 'scope',
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' },
-  //       { _id: 'MODERATE_PERMISSION' }
-  //     ]
-  //   }])
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, ['admin'])
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION', 'scope'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'user' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'user' },
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' },
-  //       { _id: 'MODERATE_PERMISSION' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'ALL_PERMISSIONS' },
-  //     scope: 'scope',
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' },
-  //       { _id: 'MODERATE_PERMISSION' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'admin' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'admin' },
-  //       { _id: 'DELETE_PERMISSION' }
-  //     ]
-  //   }])
-  //
-  //   Roles.addRolesToParent('DELETE_PERMISSION', 'ALL_PERMISSIONS')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION', 'scope'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'user' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'user' },
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' },
-  //       { _id: 'MODERATE_PERMISSION' },
-  //       { _id: 'DELETE_PERMISSION' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'ALL_PERMISSIONS' },
-  //     scope: 'scope',
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' },
-  //       { _id: 'MODERATE_PERMISSION' },
-  //       { _id: 'DELETE_PERMISSION' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'admin' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'admin' },
-  //       { _id: 'DELETE_PERMISSION' }
-  //     ]
-  //   }])
-  //
-  //   Roles.removeUsersFromRolesAsync(users.eve, ['admin'])
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION', 'scope'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'user' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'user' },
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' },
-  //       { _id: 'MODERATE_PERMISSION' },
-  //       { _id: 'DELETE_PERMISSION' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'ALL_PERMISSIONS' },
-  //     scope: 'scope',
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'ALL_PERMISSIONS' },
-  //       { _id: 'EDIT_PERMISSION' },
-  //       { _id: 'VIEW_PERMISSION' },
-  //       { _id: 'MODERATE_PERMISSION' },
-  //       { _id: 'DELETE_PERMISSION' }
-  //     ]
-  //   }])
-  //
-  //   Roles.deleteRole('ALL_PERMISSIONS')
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION', 'scope'))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION', 'scope'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'user' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'user' }
-  //     ]
-  //   }])
-  // })
-  //
-  // it('delete role with overlapping hierarchical roles', function () {
-  //   Roles.createRoleAsync('role1')
-  //   Roles.createRoleAsync('role2')
-  //   Roles.createRoleAsync('COMMON_PERMISSION_1')
-  //   Roles.createRoleAsync('COMMON_PERMISSION_2')
-  //   Roles.createRoleAsync('COMMON_PERMISSION_3')
-  //   Roles.createRoleAsync('EXTRA_PERMISSION_ROLE_1')
-  //   Roles.createRoleAsync('EXTRA_PERMISSION_ROLE_2')
-  //
-  //   Roles.addRolesToParent('COMMON_PERMISSION_1', 'role1')
-  //   Roles.addRolesToParent('COMMON_PERMISSION_2', 'role1')
-  //   Roles.addRolesToParent('COMMON_PERMISSION_3', 'role1')
-  //   Roles.addRolesToParent('EXTRA_PERMISSION_ROLE_1', 'role1')
-  //
-  //   Roles.addRolesToParent('COMMON_PERMISSION_1', 'role2')
-  //   Roles.addRolesToParent('COMMON_PERMISSION_2', 'role2')
-  //   Roles.addRolesToParent('COMMON_PERMISSION_3', 'role2')
-  //   Roles.addRolesToParent('EXTRA_PERMISSION_ROLE_2', 'role2')
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, 'role1')
-  //   Roles.addUsersToRolesAsync(users.eve, 'role2')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'COMMON_PERMISSION_1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'role1' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'role1' },
-  //       { _id: 'COMMON_PERMISSION_1' },
-  //       { _id: 'COMMON_PERMISSION_2' },
-  //       { _id: 'COMMON_PERMISSION_3' },
-  //       { _id: 'EXTRA_PERMISSION_ROLE_1' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'role2' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'role2' },
-  //       { _id: 'COMMON_PERMISSION_1' },
-  //       { _id: 'COMMON_PERMISSION_2' },
-  //       { _id: 'COMMON_PERMISSION_3' },
-  //       { _id: 'EXTRA_PERMISSION_ROLE_2' }
-  //     ]
-  //   }])
-  //
-  //   Roles.removeUsersFromRolesAsync(users.eve, 'role2')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'COMMON_PERMISSION_1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'role1' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'role1' },
-  //       { _id: 'COMMON_PERMISSION_1' },
-  //       { _id: 'COMMON_PERMISSION_2' },
-  //       { _id: 'COMMON_PERMISSION_3' },
-  //       { _id: 'EXTRA_PERMISSION_ROLE_1' }
-  //     ]
-  //   }])
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, 'role2')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'COMMON_PERMISSION_1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'role1' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'role1' },
-  //       { _id: 'COMMON_PERMISSION_1' },
-  //       { _id: 'COMMON_PERMISSION_2' },
-  //       { _id: 'COMMON_PERMISSION_3' },
-  //       { _id: 'EXTRA_PERMISSION_ROLE_1' }
-  //     ]
-  //   }, {
-  //     role: { _id: 'role2' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'role2' },
-  //       { _id: 'COMMON_PERMISSION_1' },
-  //       { _id: 'COMMON_PERMISSION_2' },
-  //       { _id: 'COMMON_PERMISSION_3' },
-  //       { _id: 'EXTRA_PERMISSION_ROLE_2' }
-  //     ]
-  //   }])
-  //
-  //   Roles.deleteRole('role2')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'COMMON_PERMISSION_1'))
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'role1' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [
-  //       { _id: 'role1' },
-  //       { _id: 'COMMON_PERMISSION_1' },
-  //       { _id: 'COMMON_PERMISSION_2' },
-  //       { _id: 'COMMON_PERMISSION_3' },
-  //       { _id: 'EXTRA_PERMISSION_ROLE_1' }
-  //     ]
-  //   }])
-  // })
-  //
-  // it('set parent on assigned role', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('EDIT_PERMISSION')
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, 'EDIT_PERMISSION')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'admin'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'EDIT_PERMISSION' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
-  //   }])
-  //
-  //   Roles.addRolesToParent('EDIT_PERMISSION', 'admin')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'admin'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'EDIT_PERMISSION' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
-  //   }])
-  // })
-  //
-  // it('remove parent on assigned role', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('EDIT_PERMISSION')
-  //
-  //   Roles.addRolesToParent('EDIT_PERMISSION', 'admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, 'EDIT_PERMISSION')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'admin'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'EDIT_PERMISSION' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
-  //   }])
-  //
-  //   Roles.removeRolesFromParent('EDIT_PERMISSION', 'admin')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'admin'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'EDIT_PERMISSION' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
-  //   }])
-  // })
-  //
-  // it('adding and removing extra role parents', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('EDIT_PERMISSION')
-  //
-  //   Roles.addRolesToParent('EDIT_PERMISSION', 'admin')
-  //
-  //   Roles.addUsersToRolesAsync(users.eve, 'EDIT_PERMISSION')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'admin'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'EDIT_PERMISSION' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
-  //   }])
-  //
-  //   Roles.addRolesToParent('EDIT_PERMISSION', 'user')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'admin'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'EDIT_PERMISSION' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
-  //   }])
-  //
-  //   Roles.removeRolesFromParent('EDIT_PERMISSION', 'user')
-  //
-  //   assert.isTrue(Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'admin'))
-  //
-  //   assert.sameDeepMembers(await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
-  //     role: { _id: 'EDIT_PERMISSION' },
-  //     scope: null,
-  //     user: { _id: users.eve },
-  //     inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
-  //   }])
-  // })
-  //
-  // it('cyclic roles', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('editor')
-  //   Roles.createRoleAsync('user')
-  //
-  //   Roles.addRolesToParent('editor', 'admin')
-  //   Roles.addRolesToParent('user', 'editor')
-  //
-  //   assert.throws(function () {
-  //     Roles.addRolesToParent('admin', 'user')
-  //   }, /form a cycle/)
-  // })
-  //
-  // it('userIsInRole returns false for unknown roles', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.createRoleAsync('user')
-  //   Roles.createRoleAsync('editor')
-  //   Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'])
-  //   Roles.addUsersToRolesAsync(users.eve, ['editor'])
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'unknown'))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, []))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, null))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, undefined))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, 'unknown', { anyScope: true }))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, [], { anyScope: true }))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, null, { anyScope: true }))
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, undefined, { anyScope: true }))
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(users.eve, ['Role1', 'Role2', undefined], 'GroupName'))
-  // })
-  //
-  // it('userIsInRole returns false if user is a function', function () {
-  //   Roles.createRoleAsync('admin')
-  //   Roles.addUsersToRolesAsync(users.eve, ['admin'])
-  //
-  //   assert.isFalse(Roles.userIsInRoleAsync(() => {}, 'admin'))
-  // })
-  //
-  // describe('isParentOf', function () {
-  //   it('returns false for unknown roles', function () {
-  //     Roles.createRoleAsync('admin')
-  //
-  //     assert.isFalse(Roles.isParentOf('admin', 'unknown'))
-  //     assert.isFalse(Roles.isParentOf('admin', null))
-  //     assert.isFalse(Roles.isParentOf('admin', undefined))
-  //
-  //     assert.isFalse(Roles.isParentOf('unknown', 'admin'))
-  //     assert.isFalse(Roles.isParentOf(null, 'admin'))
-  //     assert.isFalse(Roles.isParentOf(undefined, 'admin'))
-  //   })
-  //
-  //   it('returns false if role is not parent of', function () {
-  //     Roles.createRoleAsync('admin')
-  //     Roles.createRoleAsync('editor')
-  //     Roles.createRoleAsync('user')
-  //     Roles.addRolesToParent(['editor'], 'admin')
-  //     Roles.addRolesToParent(['user'], 'editor')
-  //
-  //     assert.isFalse(Roles.isParentOf('user', 'admin'))
-  //     assert.isFalse(Roles.isParentOf('editor', 'admin'))
-  //   })
-  //
-  //   it('returns true if role is parent of the demanded role', function () {
-  //     Roles.createRoleAsync('admin')
-  //     Roles.createRoleAsync('editor')
-  //     Roles.createRoleAsync('user')
-  //     Roles.addRolesToParent(['editor'], 'admin')
-  //     Roles.addRolesToParent(['user'], 'editor')
-  //
-  //     assert.isTrue(Roles.isParentOf('admin', 'user'))
-  //     assert.isTrue(Roles.isParentOf('editor', 'user'))
-  //     assert.isTrue(Roles.isParentOf('admin', 'editor'))
-  //
-  //     assert.isTrue(Roles.isParentOf('admin', 'admin'))
-  //     assert.isTrue(Roles.isParentOf('editor', 'editor'))
-  //     assert.isTrue(Roles.isParentOf('user', 'user'))
-  //   })
-  // })
+  it('can use Roles.GLOBAL_SCOPE to assign blanket roles', async function () {
+    await Roles.createRoleAsync('admin')
+
+    await Roles.addUsersToRolesAsync([users.joe, users.bob], ['admin'], Roles.GLOBAL_SCOPE)
+
+    await testUser('eve', [], 'scope1')
+    await testUser('joe', ['admin'], 'scope2')
+    await testUser('joe', ['admin'], 'scope1')
+    await testUser('bob', ['admin'], 'scope2')
+    await testUser('bob', ['admin'], 'scope1')
+
+    await Roles.removeUsersFromRolesAsync(users.joe, ['admin'], Roles.GLOBAL_SCOPE)
+
+    await testUser('eve', [], 'scope1')
+    await testUser('joe', [], 'scope2')
+    await testUser('joe', [], 'scope1')
+    await testUser('bob', ['admin'], 'scope2')
+    await testUser('bob', ['admin'], 'scope1')
+  })
+
+  it('Roles.GLOBAL_SCOPE is independent of other scopes', async function () {
+    await Roles.createRoleAsync('admin')
+
+    await Roles.addUsersToRolesAsync([users.joe, users.bob], ['admin'], 'scope5')
+    await Roles.addUsersToRolesAsync([users.joe, users.bob], ['admin'], Roles.GLOBAL_SCOPE)
+
+    await testUser('eve', [], 'scope1')
+    await testUser('joe', ['admin'], 'scope5')
+    await testUser('joe', ['admin'], 'scope2')
+    await testUser('joe', ['admin'], 'scope1')
+    await testUser('bob', ['admin'], 'scope5')
+    await testUser('bob', ['admin'], 'scope2')
+    await testUser('bob', ['admin'], 'scope1')
+
+    await Roles.removeUsersFromRolesAsync(users.joe, ['admin'], Roles.GLOBAL_SCOPE)
+
+    await testUser('eve', [], 'scope1')
+    await testUser('joe', ['admin'], 'scope5')
+    await testUser('joe', [], 'scope2')
+    await testUser('joe', [], 'scope1')
+    await testUser('bob', ['admin'], 'scope5')
+    await testUser('bob', ['admin'], 'scope2')
+    await testUser('bob', ['admin'], 'scope1')
+  })
+
+  it('Roles.GLOBAL_SCOPE also checked when scope not specified', async function () {
+    await Roles.createRoleAsync('admin')
+
+    await Roles.addUsersToRolesAsync(users.joe, 'admin', Roles.GLOBAL_SCOPE)
+
+    await testUser('joe', ['admin'])
+
+    await Roles.removeUsersFromRolesAsync(users.joe, 'admin', Roles.GLOBAL_SCOPE)
+
+    await testUser('joe', [])
+  })
+
+  it('can use \'.\' in scope name', async function () {
+    await Roles.createRoleAsync('admin')
+
+    await Roles.addUsersToRolesAsync(users.joe, ['admin'], 'example.com')
+    await testUser('joe', ['admin'], 'example.com')
+  })
+
+  it('can use multiple periods in scope name', async function () {
+    await Roles.createRoleAsync('admin')
+
+    await Roles.addUsersToRolesAsync(users.joe, ['admin'], 'example.k12.va.us')
+    await testUser('joe', ['admin'], 'example.k12.va.us')
+  })
+
+  it('renaming of roles', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('editor')
+
+    await Roles.setUserRolesAsync([users.eve, users.bob], ['editor', 'user'], 'scope1')
+    await Roles.setUserRolesAsync([users.bob, users.joe], ['user', 'admin'], 'scope2')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'editor', 'scope1'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'editor', 'scope2'))
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.joe, 'admin', 'scope1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.joe, 'admin', 'scope2'))
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'user', 'scope1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.bob, 'user', 'scope1'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.joe, 'user', 'scope1'))
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'user', 'scope2'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.bob, 'user', 'scope2'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.joe, 'user', 'scope2'))
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'user2', 'scope1'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'user2', 'scope2'))
+
+    await Roles.renameRoleAsync('user', 'user2')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'editor', 'scope1'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'editor', 'scope2'))
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.joe, 'admin', 'scope1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.joe, 'admin', 'scope2'))
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'user2', 'scope1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.bob, 'user2', 'scope1'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.joe, 'user2', 'scope1'))
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'user2', 'scope2'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.bob, 'user2', 'scope2'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.joe, 'user2', 'scope2'))
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'user', 'scope1'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'user', 'scope2'))
+  })
+
+  it('_addUserToRole', async function () {
+    await Roles.createRoleAsync('admin')
+
+    const userRoles = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(userRoles.map(obj => { delete obj._id; return obj }), [])
+
+    const roles = await Roles._addUserToRoleAsync(users.eve, 'admin', { scope: null, ifExists: false })
+    assert.hasAnyKeys(roles, 'insertedId')
+
+    const userRoles2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(userRoles2.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+
+    const roles2 = await Roles._addUserToRoleAsync(users.eve, 'admin', { scope: null, ifExists: false })
+    assert.hasAnyKeys(roles2, 'insertedId')
+
+    const roles3 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(roles3.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+  })
+
+  it('_removeUserFromRole', async function () {
+    await Roles.createRoleAsync('admin')
+
+    await Roles.addUsersToRolesAsync(users.eve, 'admin')
+
+    const rolesForUser = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(rolesForUser.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+
+    Roles._removeUserFromRole(users.eve, 'admin', { scope: null })
+
+    const rolesForUser2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(rolesForUser2.map(obj => { delete obj._id; return obj }), [])
+  })
+
+  it('keep assigned roles', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('ALL_PERMISSIONS')
+    await Roles.createRoleAsync('VIEW_PERMISSION')
+    await Roles.createRoleAsync('EDIT_PERMISSION')
+    await Roles.createRoleAsync('DELETE_PERMISSION')
+    await Roles.addRolesToParentAsync('ALL_PERMISSIONS', 'user')
+    await Roles.addRolesToParentAsync('EDIT_PERMISSION', 'ALL_PERMISSIONS')
+    await Roles.addRolesToParentAsync('VIEW_PERMISSION', 'ALL_PERMISSIONS')
+    await Roles.addRolesToParentAsync('DELETE_PERMISSION', 'admin')
+
+    await Roles.addUsersToRolesAsync(users.eve, ['user'])
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'VIEW_PERMISSION'))
+
+    const rolesForUser =  await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(rolesForUser.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' }
+      ]
+    }])
+
+    await Roles.addUsersToRolesAsync(users.eve, 'VIEW_PERMISSION')
+
+    assert.eventually.isTrue(Roles.userIsInRoleAsync(users.eve, 'VIEW_PERMISSION'))
+
+    const rolesForUser2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(rolesForUser2.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' }
+      ]
+    }, {
+      role: { _id: 'VIEW_PERMISSION' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'VIEW_PERMISSION' }
+      ]
+    }])
+
+    await Roles.removeUsersFromRolesAsync(users.eve, 'user')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'VIEW_PERMISSION'))
+
+    const rolesForUser3 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(rolesForUser3.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'VIEW_PERMISSION' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'VIEW_PERMISSION' }
+      ]
+    }])
+
+    await Roles.removeUsersFromRolesAsync(users.eve, 'VIEW_PERMISSION')
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'VIEW_PERMISSION'))
+
+    const rolesForUser4 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(rolesForUser4.map(obj => { delete obj._id; return obj }), [])
+  })
+
+  it('adds children of the added role to the assignments', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('ALBUM.ADMIN')
+    await Roles.createRoleAsync('ALBUM.VIEW')
+    await Roles.createRoleAsync('TRACK.ADMIN')
+    await Roles.createRoleAsync('TRACK.VIEW')
+
+    await Roles.addRolesToParentAsync('ALBUM.VIEW', 'ALBUM.ADMIN')
+    await Roles.addRolesToParentAsync('TRACK.VIEW', 'TRACK.ADMIN')
+
+    await Roles.addRolesToParentAsync('ALBUM.ADMIN', 'admin')
+
+    await Roles.addUsersToRolesAsync(users.eve, ['admin'])
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'TRACK.VIEW'))
+
+    await Roles.addRolesToParentAsync('TRACK.ADMIN', 'admin')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'TRACK.VIEW'))
+  })
+
+  it('removes children of the removed role from the assignments', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('ALBUM.ADMIN')
+    await Roles.createRoleAsync('ALBUM.VIEW')
+    await Roles.createRoleAsync('TRACK.ADMIN')
+    await Roles.createRoleAsync('TRACK.VIEW')
+
+    await Roles.addRolesToParentAsync('ALBUM.VIEW', 'ALBUM.ADMIN')
+    await Roles.addRolesToParentAsync('TRACK.VIEW', 'TRACK.ADMIN')
+
+    await Roles.addRolesToParentAsync('ALBUM.ADMIN', 'admin')
+    await Roles.addRolesToParentAsync('TRACK.ADMIN', 'admin')
+
+    await Roles.addUsersToRolesAsync(users.eve, ['admin'])
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'TRACK.VIEW'))
+
+    await Roles.removeRolesFromParentAsync('TRACK.ADMIN', 'admin')
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'TRACK.VIEW'))
+  })
+
+  it('modify assigned hierarchical roles', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('ALL_PERMISSIONS')
+    await Roles.createRoleAsync('VIEW_PERMISSION')
+    await Roles.createRoleAsync('EDIT_PERMISSION')
+    await Roles.createRoleAsync('DELETE_PERMISSION')
+    await Roles.addRolesToParentAsync('ALL_PERMISSIONS', 'user')
+    await Roles.addRolesToParentAsync('EDIT_PERMISSION', 'ALL_PERMISSIONS')
+    await Roles.addRolesToParentAsync('VIEW_PERMISSION', 'ALL_PERMISSIONS')
+    await Roles.addRolesToParentAsync('DELETE_PERMISSION', 'admin')
+
+    await Roles.addUsersToRolesAsync(users.eve, ['user'])
+    await Roles.addUsersToRolesAsync(users.eve, ['ALL_PERMISSIONS'], 'scope')
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION', 'scope'))
+
+    const usersRoles = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' }
+      ]
+    }, {
+      role: { _id: 'ALL_PERMISSIONS' },
+      scope: 'scope',
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' }
+      ]
+    }])
+
+    await Roles.createRoleAsync('MODERATE_PERMISSION')
+
+    await Roles.addRolesToParentAsync('MODERATE_PERMISSION', 'ALL_PERMISSIONS')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION', 'scope'))
+
+    const usersRoles2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles2.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' }
+      ]
+    }, {
+      role: { _id: 'ALL_PERMISSIONS' },
+      scope: 'scope',
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' }
+      ]
+    }])
+
+    await Roles.addUsersToRolesAsync(users.eve, ['admin'])
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION', 'scope'))
+
+    const usersRoles3 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles3.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' }
+      ]
+    }, {
+      role: { _id: 'ALL_PERMISSIONS' },
+      scope: 'scope',
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' }
+      ]
+    }, {
+      role: { _id: 'admin' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'admin' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
+    }])
+
+    await Roles.addRolesToParentAsync('DELETE_PERMISSION', 'ALL_PERMISSIONS')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION', 'scope'))
+
+    const usersRoles4 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles4.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
+    }, {
+      role: { _id: 'ALL_PERMISSIONS' },
+      scope: 'scope',
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
+    }, {
+      role: { _id: 'admin' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'admin' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
+    }])
+
+    await Roles.removeUsersFromRolesAsync(users.eve, ['admin'])
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION', 'scope'))
+
+    const usersRoles5 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles5.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
+    }, {
+      role: { _id: 'ALL_PERMISSIONS' },
+      scope: 'scope',
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
+    }])
+
+    await await Roles.deleteRoleAsync('ALL_PERMISSIONS')
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'DELETE_PERMISSION', 'scope'))
+
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'MODERATE_PERMISSION', 'scope'))
+
+    const usersRoles6 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles6.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' }
+      ]
+    }])
+  })
+
+  it('delete role with overlapping hierarchical roles', async function () {
+    await Roles.createRoleAsync('role1')
+    await Roles.createRoleAsync('role2')
+    await Roles.createRoleAsync('COMMON_PERMISSION_1')
+    await Roles.createRoleAsync('COMMON_PERMISSION_2')
+    await Roles.createRoleAsync('COMMON_PERMISSION_3')
+    await Roles.createRoleAsync('EXTRA_PERMISSION_ROLE_1')
+    await Roles.createRoleAsync('EXTRA_PERMISSION_ROLE_2')
+
+    await Roles.addRolesToParentAsync('COMMON_PERMISSION_1', 'role1')
+    await Roles.addRolesToParentAsync('COMMON_PERMISSION_2', 'role1')
+    await Roles.addRolesToParentAsync('COMMON_PERMISSION_3', 'role1')
+    await Roles.addRolesToParentAsync('EXTRA_PERMISSION_ROLE_1', 'role1')
+
+    await Roles.addRolesToParentAsync('COMMON_PERMISSION_1', 'role2')
+    await Roles.addRolesToParentAsync('COMMON_PERMISSION_2', 'role2')
+    await Roles.addRolesToParentAsync('COMMON_PERMISSION_3', 'role2')
+    await Roles.addRolesToParentAsync('EXTRA_PERMISSION_ROLE_2', 'role2')
+
+    await Roles.addUsersToRolesAsync(users.eve, 'role1')
+    await Roles.addUsersToRolesAsync(users.eve, 'role2')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'COMMON_PERMISSION_1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
+
+    const usersRoles = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'role1' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role1' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_1' }
+      ]
+    }, {
+      role: { _id: 'role2' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role2' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_2' }
+      ]
+    }])
+
+    await Roles.removeUsersFromRolesAsync(users.eve, 'role2')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'COMMON_PERMISSION_1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
+
+    const usersRoles2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles2.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'role1' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role1' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_1' }
+      ]
+    }])
+
+    await Roles.addUsersToRolesAsync(users.eve, 'role2')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'COMMON_PERMISSION_1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
+
+    const usersRoles3 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles3.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'role1' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role1' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_1' }
+      ]
+    }, {
+      role: { _id: 'role2' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role2' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_2' }
+      ]
+    }])
+
+    await Roles.deleteRoleAsync('role2')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'COMMON_PERMISSION_1'))
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
+
+    const usersRoles4 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles4.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'role1' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role1' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_1' }
+      ]
+    }])
+  })
+
+  it('set parent on assigned role', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('EDIT_PERMISSION')
+
+    await Roles.addUsersToRolesAsync(users.eve, 'EDIT_PERMISSION')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'admin'))
+
+    const usersRoles = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
+    }])
+
+    await Roles.addRolesToParentAsync('EDIT_PERMISSION', 'admin')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'admin'))
+
+    const usersRoles2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles2.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
+    }])
+  })
+
+  it('remove parent on assigned role', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('EDIT_PERMISSION')
+
+    await Roles.addRolesToParentAsync('EDIT_PERMISSION', 'admin')
+
+    await Roles.addUsersToRolesAsync(users.eve, 'EDIT_PERMISSION')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'admin'))
+
+    const usersRoles = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
+    }])
+
+    await Roles.removeRolesFromParentAsync('EDIT_PERMISSION', 'admin')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'admin'))
+
+    const usersRoles2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles2.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
+    }])
+  })
+
+  it('adding and removing extra role parents', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('user')
+    await Roles.createRoleAsync('EDIT_PERMISSION')
+
+    await Roles.addRolesToParentAsync('EDIT_PERMISSION', 'admin')
+
+    await Roles.addUsersToRolesAsync(users.eve, 'EDIT_PERMISSION')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'admin'))
+
+    const usersRoles = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
+    }])
+
+    await Roles.addRolesToParentAsync('EDIT_PERMISSION', 'user')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'admin'))
+
+    const usersRoles2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles2.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
+    }])
+
+    await Roles.removeRolesFromParentAsync('EDIT_PERMISSION', 'user')
+
+    assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'EDIT_PERMISSION'))
+    assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'admin'))
+
+    const usersRoles3 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    assert.sameDeepMembers(usersRoles3.map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
+    }])
+  })
+
+  it('cyclic roles', async function () {
+    await Roles.createRoleAsync('admin')
+    await Roles.createRoleAsync('editor')
+    await Roles.createRoleAsync('user')
+
+    await Roles.addRolesToParentAsync('editor', 'admin')
+    await Roles.addRolesToParentAsync('user', 'editor')
+
+    await assert.isRejected(Roles.addRolesToParentAsync('admin', 'user'), /form a cycle/)
+  })
+
+  describe('userIsInRole', function () {
+    it('userIsInRole returns false for unknown roles', async function () {
+      await Roles.createRoleAsync('admin')
+      await Roles.createRoleAsync('user')
+      await Roles.createRoleAsync('editor')
+      await Roles.addUsersToRolesAsync(users.eve, ['admin', 'user'])
+      await Roles.addUsersToRolesAsync(users.eve, ['editor'])
+
+      assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'unknown'))
+      assert.isFalse(await Roles.userIsInRoleAsync(users.eve, []))
+      assert.isFalse(await Roles.userIsInRoleAsync(users.eve, null))
+      assert.isFalse(await Roles.userIsInRoleAsync(users.eve, undefined))
+
+      assert.isFalse(await Roles.userIsInRoleAsync(users.eve, 'unknown', { anyScope: true }))
+      assert.isFalse(await Roles.userIsInRoleAsync(users.eve, [], { anyScope: true }))
+      assert.isFalse(await Roles.userIsInRoleAsync(users.eve, null, { anyScope: true }))
+      assert.isFalse(await Roles.userIsInRoleAsync(users.eve, undefined, { anyScope: true }))
+
+      assert.isFalse(await Roles.userIsInRoleAsync(users.eve, ['Role1', 'Role2', undefined], 'GroupName'))
+    })
+
+    it('userIsInRole returns false if user is a function', async function () {
+      await Roles.createRoleAsync('admin')
+      await Roles.addUsersToRolesAsync(users.eve, ['admin'])
+
+      assert.isFalse(await Roles.userIsInRoleAsync(() => {}, 'admin'))
+    })
+  })
+
+  describe('isParentOf', function () {
+    it('returns false for unknown roles', async function () {
+      await Roles.createRoleAsync('admin')
+
+      assert.isFalse(await Roles.isParentOfAsync('admin', 'unknown'))
+      assert.isFalse(await Roles.isParentOfAsync('admin', null))
+      assert.isFalse(await Roles.isParentOfAsync('admin', undefined))
+
+      assert.isFalse(await Roles.isParentOfAsync('unknown', 'admin'))
+      assert.isFalse(await Roles.isParentOfAsync(null, 'admin'))
+      assert.isFalse(await Roles.isParentOfAsync(undefined, 'admin'))
+    })
+
+    it('returns false if role is not parent of', async function () {
+      await Roles.createRoleAsync('admin')
+      await Roles.createRoleAsync('editor')
+      await Roles.createRoleAsync('user')
+      await Roles.addRolesToParentAsync(['editor'], 'admin')
+      await Roles.addRolesToParentAsync(['user'], 'editor')
+
+      assert.isFalse(await Roles.isParentOfAsync('user', 'admin'))
+      assert.isFalse(await Roles.isParentOfAsync('editor', 'admin'))
+    })
+
+    it('returns true if role is parent of the demanded role', async function () {
+      await Roles.createRoleAsync('admin')
+      await Roles.createRoleAsync('editor')
+      await Roles.createRoleAsync('user')
+      await Roles.addRolesToParentAsync(['editor'], 'admin')
+      await Roles.addRolesToParentAsync(['user'], 'editor')
+
+      assert.isTrue(await Roles.isParentOfAsync('admin', 'user'))
+      assert.isTrue(await Roles.isParentOfAsync('editor', 'user'))
+      assert.isTrue(await Roles.isParentOfAsync('admin', 'editor'))
+
+      assert.isTrue(await Roles.isParentOfAsync('admin', 'admin'))
+      assert.isTrue(await Roles.isParentOfAsync('editor', 'editor'))
+      assert.isTrue(await Roles.isParentOfAsync('user', 'user'))
+    })
+  })
 })
