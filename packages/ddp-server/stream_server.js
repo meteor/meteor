@@ -52,7 +52,7 @@ StreamServer = function () {
     disconnect_delay: 60 * 1000,
     // Allow disabling of CORS requests to address
     // https://github.com/meteor/meteor/issues/8317.
-    disable_cors: !!process.env.DISABLE_SOCKJS_CORS
+    disable_cors: !!process.env.DISABLE_SOCKJS_CORS,
     // Set the USE_JSESSIONID environment variable to enable setting the
     // JSESSIONID cookie. This is useful for setting up proxies with
     // session affinity.
