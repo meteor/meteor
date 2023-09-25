@@ -692,7 +692,7 @@ Object.assign(Roles, {
     const inheritedRoles = new Set()
     const nestedRoles = new Set([role])
 
-    for (const r in nestedRoles) {
+    for (const r of nestedRoles) {
       const roles = await Meteor.roles
         .find(
           { _id: { $in: r.children.map((r) => r._id) } },

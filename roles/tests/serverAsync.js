@@ -1507,7 +1507,7 @@ describe('roles async', async function () {
 
     assert.isTrue(await Roles.userIsInRoleAsync(users.eve, 'VIEW_PERMISSION'))
 
-    const rolesForUser =  await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
+    const rolesForUser = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
     assert.sameDeepMembers(rolesForUser.map(obj => { delete obj._id; return obj }), [{
       role: { _id: 'user' },
       scope: null,
