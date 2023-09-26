@@ -7,13 +7,12 @@ Any contribution to this repository is highly appreciated!
 ### Clone project and create a new branch to work on
 
 First, clone this repository and create a new branch to work on.
-Branch names should start with a descriptive suffix of their intended outcome, for example:
+Branch names should follow the GitFlow standard and start with a descriptive prefix of their intended outcome, for example:
 
-- `feature-` for features
-- `tests-` for contributions that improve testing
-- `fix-` for general fixes
-- `build-` for contributions that update the build process
-- `ci-` for contributions that improve/update the ci
+- `feature/` for features
+- `fix/` for general fixes
+
+Then the name of the branch should describe the purpose of the branch and potentially reference the issue number it is solving.
 
 ```shell
 $ git clone git@github.com:Meteor-Community-Packages/meteor-roles.git
