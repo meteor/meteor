@@ -1,6 +1,9 @@
 title: Meteor API Docs
 subtitle: API Docs
 versions:
+  - '2.13'
+  - '2.12'
+  - '2.11'
   - '2.10'
   - '2.9'
   - '2.8'
@@ -92,6 +95,7 @@ sidebar_categories:
   Troubleshooting:
     - expired-certificate
     - windows
+    - known-issues
 github_repo: 'meteor/meteor'
 edit_branch: 'devel'
 edit_path: 'docs'

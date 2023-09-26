@@ -26,7 +26,7 @@ Babel = {
     return getMeteorBabel().compile(
       source,
       babelOptions || getDefaultOptions(),
-      cacheOptions,
+      cacheOptions
     );
   },
 

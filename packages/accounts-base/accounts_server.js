@@ -26,8 +26,8 @@ export class AccountsServer extends AccountsCommon {
   // Note that this constructor is less likely to be instantiated multiple
   // times than the `AccountsClient` constructor, because a single server
   // can provide only one set of methods.
-  constructor(server) {
-    super();
+  constructor(server, options) {
+    super(options || {});
 
     this._server = server || Meteor.server;
     // Set up the server's methods, as if by calling Meteor.methods.
@@ -190,7 +190,7 @@ export class AccountsServer extends AccountsCommon {
       throw new Error("Can only call onCreateUser once");
     }
 
-    this._onCreateUserHook = func;
+    this._onCreateUserHook = Meteor.wrapFn(func);
   }
 
   /**
@@ -564,7 +564,7 @@ export class AccountsServer extends AccountsCommon {
 
     this._loginHandlers.push({
       name: name,
-      handler: handler
+      handler: Meteor.wrapFn(handler)
     });
   };
 
@@ -761,11 +761,12 @@ export class AccountsServer extends AccountsCommon {
     const { users, _autopublishFields, _defaultPublishFields } = this;
 
     // Publish all login service configuration fields other than secret.
-    this._server.publish("meteor.loginServiceConfiguration", () => {
+    this._server.publish("meteor.loginServiceConfiguration", function() {
       if (Package['service-configuration']) {
         const { ServiceConfiguration } = Package['service-configuration'];
         return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
       }
+      this.ready();
     }, {is_auto: true}); // not technically autopublish, but stops the warning.
 
     // Use Meteor.startup to give other packages a chance to call

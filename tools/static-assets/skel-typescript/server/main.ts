@@ -1,7 +1,7 @@
 import { Meteor } from 'meteor/meteor';
-import { LinksCollection } from '/imports/api/links';
+import { Link, LinksCollection } from '/imports/api/links';
 
-async function insertLink({ title, url }) {
+async function insertLink({ title, url }: Pick<Link, 'title' | 'url'>) {
   await LinksCollection.insertAsync({ title, url, createdAt: new Date() });
 }
 
@@ -28,4 +28,10 @@ Meteor.startup(async () => {
       url: 'https://forums.meteor.com',
     });
   }
+
+  // We publish the entire Links collection to all clients.
+  // In order to be fetched in real-time to the clients
+  Meteor.publish("links", function () {
+    return LinksCollection.find();
+  });
 });

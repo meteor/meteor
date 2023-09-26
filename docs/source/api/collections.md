@@ -3,16 +3,16 @@ title: Collections
 description: Documentation on how to use Meteor's database collections.
 ---
 
-Meteor stores data in *collections*.  To get started, declare a
+Meteor stores data in _collections_. To get started, declare a
 collection with `new Mongo.Collection`.
 
 {% apibox "Mongo.Collection" %}
 
 Calling this function is analogous to declaring a model in a traditional ORM
-(Object-Relation Mapper)-centric framework. It sets up a *collection* (a storage
+(Object-Relation Mapper)-centric framework. It sets up a _collection_ (a storage
 space for records, or "documents") that can be used to store a particular type
 of information, like users, posts, scores, todo items, or whatever matters to
-your application.  Each document is a EJSON object.  It includes an `_id`
+your application. Each document is a EJSON object. It includes an `_id`
 property whose value is unique in the collection, which Meteor will set when you
 first create the document.
 
@@ -26,7 +26,7 @@ The function returns an object with methods to [`insert`](#insert)
 documents in the collection, [`update`](#update) their properties, and
 [`remove`](#remove) them, and to [`find`](#find) the documents in the
 collection that match arbitrary criteria. The way these methods work is
-compatible with the popular Mongo database API.  The same database API
+compatible with the popular Mongo database API. The same database API
 works on both the client and the server (see below).
 
 ```js
@@ -47,28 +47,28 @@ access the same collection using the same API.
 
 Specifically, when you pass a `name`, here's what happens:
 
-* On the server (if you do not specify a `connection`), a collection with that
-name is created on a backend Mongo server. When you call methods on that
-collection on the server, they translate directly into normal Mongo operations
-(after checking that they match your [access control rules](#allow)).
+- On the server (if you do not specify a `connection`), a collection with that
+  name is created on a backend Mongo server. When you call methods on that
+  collection on the server, they translate directly into normal Mongo operations
+  (after checking that they match your [access control rules](#allow)).
 
-* On the client (and on the server if you specify a `connection`), a Minimongo
-instance is created. Minimongo is essentially an in-memory, non-persistent
-implementation of Mongo in pure JavaScript. It serves as a local cache that
-stores just the subset of the database that this client is working with. Queries
-([`find`](#find)) on these collections are served directly out of this cache,
-without talking to the server.
+- On the client (and on the server if you specify a `connection`), a Minimongo
+  instance is created. Minimongo is essentially an in-memory, non-persistent
+  implementation of Mongo in pure JavaScript. It serves as a local cache that
+  stores just the subset of the database that this client is working with. Queries
+  ([`find`](#find)) on these collections are served directly out of this cache,
+  without talking to the server.
 
-* When you write to the database on the client ([`insert`](#insert),
-[`update`](#update), [`remove`](#remove)), the command is executed locally
-immediately, and, simultaneously, it's sent to the server and executed
-there too. This happens via [stubs](#meteor_methods), because writes are
-implemented as methods.
+- When you write to the database on the client ([`insert`](#insert),
+  [`update`](#update), [`remove`](#remove)), the command is executed locally
+  immediately, and, simultaneously, it's sent to the server and executed
+  there too. This happens via [stubs](#meteor_methods), because writes are
+  implemented as methods.
 
 > When, on the server, you write to a collection which has a specified
-`connection` to another server, it sends the corresponding method to the other
-server and receives the changed values back from it over DDP. Unlike on the
-client, it does not execute the write locally first.
+> `connection` to another server, it sends the corresponding method to the other
+> server and receives the changed values back from it over DDP. Unlike on the
+> client, it does not execute the write locally first.
 
 If you pass a name to a client-only collection, it will not be synchronized
 with the server and you need to populate the collection "manually" using the
@@ -78,11 +78,11 @@ See [`added`](#publish_added) for more information.
 If you pass `null` as the `name`, then you're creating a local
 collection. It's not synchronized anywhere; it's just a local scratchpad
 that supports Mongo-style [`find`](#find), [`insert`](#insert),
-[`update`](#update), and [`remove`](#remove) operations.  (On both the
+[`update`](#update), and [`remove`](#remove) operations. (On both the
 client and the server, this scratchpad is implemented using Minimongo.)
 
 By default, Meteor automatically publishes every document in your
-collection to each connected client.  To turn this behavior off, remove
+collection to each connected client. To turn this behavior off, remove
 the `autopublish` package, in your terminal:
 
 ```bash
@@ -108,7 +108,7 @@ assert(Posts.find().count() === 1);
 // Create a temporary, local collection. It works just like any other collection
 // but it doesn't send changes to the server, and it can't receive any data from
 // subscriptions.
-const Scratchpad = new Mongo.Collection;
+const Scratchpad = new Mongo.Collection();
 
 for (let i = 0; i < 10; i += 1) {
   Scratchpad.insert({ number: i * 2 });
@@ -118,15 +118,15 @@ assert(Scratchpad.find({ number: { $lt: 9 } }).count() === 5);
 ```
 
 Generally, you'll assign `Mongo.Collection` objects in your app to global
-variables.  You can only create one `Mongo.Collection` object for each
+variables. You can only create one `Mongo.Collection` object for each
 underlying Mongo collection.
 
 If you specify a `transform` option to the `Collection` or any of its retrieval
 methods, documents are passed through the `transform` function before being
-returned or passed to callbacks.  This allows you to add methods or otherwise
-modify the contents of your collection from their database representation.  You
+returned or passed to callbacks. This allows you to add methods or otherwise
+modify the contents of your collection from their database representation. You
 can also specify `transform` on a particular `find`, `findOne`, `allow`, or
-`deny` call.  Transform functions must return an object and they may not change
+`deny` call. Transform functions must return an object and they may not change
 the value of the document's `_id` field (though it's OK to leave it out).
 
 ```js
@@ -143,7 +143,7 @@ class Animal {
 
 // Define a collection that uses `Animal` as its document.
 const Animals = new Mongo.Collection('animals', {
-  transform: (doc) => new Animal(doc)
+  transform: doc => new Animal(doc),
 });
 
 // Create an animal and call its `makeNoise` method.
@@ -151,7 +151,7 @@ Animals.insert({ name: 'raptor', sound: 'roar' });
 Animals.findOne({ name: 'raptor' }).makeNoise(); // Prints 'roar'
 ```
 
-`transform` functions are not called reactively.  If you want to add a
+`transform` functions are not called reactively. If you want to add a
 dynamically changing attribute to an object, do it with a function that computes
 the value at the time it's called, not by computing the attribute at `transform`
 time.
@@ -159,10 +159,10 @@ time.
 {% pullquote warning %}
 In this release, Minimongo has some limitations:
 
-* `$pull` in modifiers can only accept certain kinds
-of selectors.
-* `findAndModify`, aggregate functions, and
-map/reduce aren't supported.
+- `$pull` in modifiers can only accept certain kinds
+  of selectors.
+- `findAndModify`, aggregate functions, and
+  map/reduce aren't supported.
 
 All of these will be addressed in a future release. For full
 Minimongo release notes, see packages/minimongo/NOTES
@@ -179,14 +179,14 @@ Read more about collections and how to use them in the [Collections](http://guid
 
 {% apibox "Mongo.Collection#find" %}
 
-`find` returns a cursor.  It does not immediately access the database or return
-documents.  Cursors provide `fetch` to return all matching documents, `map` and
+`find` returns a cursor. It does not immediately access the database or return
+documents. Cursors provide `fetch` to return all matching documents, `map` and
 `forEach` to iterate over all matching documents, and `observe` and
 `observeChanges` to register callbacks when the set of matching documents
 changes. Cursors also implement ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols).
 
 {% pullquote warning %}
-Collection cursors are not query snapshots.  If the database changes
+Collection cursors are not query snapshots. If the database changes
 between calling `Collection.find` and fetching the
 results of the cursor, or while fetching results from the cursor,
 those changes may or may not appear in the result set.
@@ -196,8 +196,8 @@ Cursors are a reactive data source. On the client, the first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
 reactive computation (eg, a template or
 [`autorun`](#tracker_autorun)), Meteor will register a
-dependency on the underlying data.  Any change to the collection that
-changes the documents in a cursor will trigger a recomputation.  To
+dependency on the underlying data. Any change to the collection that
+changes the documents in a cursor will trigger a recomputation. To
 disable this behavior, pass `{reactive: false}` as an option to
 `find`.
 
@@ -216,6 +216,18 @@ collections will be empty.
 Equivalent to [`find`](#find)`(selector, options).`[`fetch`](#fetch)`()[0]` with
 `options.limit = 1`.
 
+{% apibox "Mongo.Collection#findOneAsync" %}
+
+Async version of [`findOne`](#findOne) that return a `Promise`.
+
+{% apibox "Mongo.Collection#countDocuments" %}
+
+Similar to `count`, but returns a `Promise`. For a faster version, see `estimatedDocumentCount`.
+
+{% apibox  "Mongo.Collection#estimatedDocumentCount" %}
+
+Returns a `Promise` that resolves to the number of documents in the cursor's result set. The count is an estimate and not guaranteed to be exact.
+
 {% apibox "Mongo.Collection#insert" %}
 
 Add a document to the collection. A document is just an object, and
@@ -229,17 +241,17 @@ applicable [`allow`](#allow) and [`deny`](#deny) rules.
 
 On the server, if you don't provide a callback, then `insert` blocks
 until the database acknowledges the write, or throws an exception if
-something went wrong.  If you do provide a callback, `insert` still
-returns the ID immediately.  Once the insert completes (or fails), the
-callback is called with error and result arguments.  In an error case,
-`result` is undefined.  If the insert is successful, `error` is
+something went wrong. If you do provide a callback, `insert` still
+returns the ID immediately. Once the insert completes (or fails), the
+callback is called with error and result arguments. In an error case,
+`result` is undefined. If the insert is successful, `error` is
 undefined and `result` is the new document ID.
 
-On the client, `insert` never blocks.  If you do not provide a callback
+On the client, `insert` never blocks. If you do not provide a callback
 and the insert fails on the server, then Meteor will log a warning to
-the console.  If you provide a callback, Meteor will call that function
-with `error` and `result` arguments.  In an error case, `result` is
-undefined.  If the insert is successful, `error` is undefined and
+the console. If you provide a callback, Meteor will call that function
+with `error` and `result` arguments. In an error case, `result` is
+undefined. If the insert is successful, `error` is undefined and
 `result` is the new document ID.
 
 Example:
@@ -250,6 +262,10 @@ const groceriesId = Lists.insert({ name: 'Groceries' });
 Items.insert({ list: groceriesId, name: 'Watercress' });
 Items.insert({ list: groceriesId, name: 'Persimmons' });
 ```
+
+{% apibox "Mongo.Collection#insertAsync" %}
+
+Async version of [`insert`](#insert) that return a `Promise`.
 
 {% apibox "Mongo.Collection#update" %}
 
@@ -276,14 +292,14 @@ handlers and a browser's JavaScript console.
 
 On the server, if you don't provide a callback, then `update` blocks
 until the database acknowledges the write, or throws an exception if
-something went wrong.  If you do provide a callback, `update` returns
-immediately.  Once the update completes, the callback is called with a
+something went wrong. If you do provide a callback, `update` returns
+immediately. Once the update completes, the callback is called with a
 single error argument in the case of failure, or a second argument
 indicating the number of affected documents if the update was successful.
 
-On the client, `update` never blocks.  If you do not provide a callback
+On the client, `update` never blocks. If you do not provide a callback
 and the update fails on the server, then Meteor will log a warning to
-the console.  If you provide a callback, Meteor will call that function
+the console. If you provide a callback, Meteor will call that function
 with an error argument if there was an error, or a second argument
 indicating the number of affected documents if the update was successful.
 
@@ -296,9 +312,9 @@ Client example:
 Template.adminDashboard.events({
   'click .give-points'() {
     Players.update(Session.get('currentPlayer'), {
-      $inc: { score: 5 }
+      $inc: { score: 5 },
     });
-  }
+  },
 });
 ```
 
@@ -310,10 +326,14 @@ Server example:
 // automatically as they watch.
 Meteor.methods({
   declareWinners() {
-    Players.update({ score: { $gt: 10 } }, {
-      $addToSet: { badges: 'Winner' }
-    }, { multi: true });
-  }
+    Players.update(
+      { score: { $gt: 10 } },
+      {
+        $addToSet: { badges: 'Winner' },
+      },
+      { multi: true }
+    );
+  },
 });
 ```
 
@@ -322,6 +342,10 @@ option to true. You can also use the [`upsert`](#upsert) method to perform an
 upsert that returns the `_id` of the document that was inserted (if there was one)
 in addition to the number of affected documents.
 
+{% apibox "Mongo.Collection#updateAsync" %}
+
+Async version of [`update`](#update) that return a `Promise`.
+
 {% apibox "Mongo.Collection#upsert" %}
 
 Modify documents that match `selector` according to `modifier`, or insert
@@ -329,6 +353,10 @@ a document if no documents were modified. `upsert` is the same as calling
 `update` with the `upsert` option set to true, except that the return
 value of `upsert` is an object that contain the keys `numberAffected`
 and `insertedId`. (`update` returns only the number of affected documents.)
+
+{% apibox "Mongo.Collection#upsertAsync" %}
+
+Async version of [`upsert`](#upsert) that return a `Promise`.
 
 {% apibox "Mongo.Collection#remove" %}
 
@@ -359,14 +387,14 @@ handlers and a browser's JavaScript console.
 On the server, if you don't provide a callback, then `remove` blocks
 until the database acknowledges the write and then returns the number
 of removed documents, or throws an exception if
-something went wrong.  If you do provide a callback, `remove` returns
-immediately.  Once the remove completes, the callback is called with a
+something went wrong. If you do provide a callback, `remove` returns
+immediately. Once the remove completes, the callback is called with a
 single error argument in the case of failure, or a second argument
 indicating the number of removed documents if the remove was successful.
 
-On the client, `remove` never blocks.  If you do not provide a callback
+On the client, `remove` never blocks. If you do not provide a callback
 and the remove fails on the server, then Meteor will log a warning to the
-console.  If you provide a callback, Meteor will call that function with an
+console. If you provide a callback, Meteor will call that function with an
 error argument if there was an error, or a second argument indicating the number
 of removed documents if the remove was successful.
 
@@ -377,7 +405,7 @@ Example (client):
 Template.chat.events({
   'click .remove'() {
     Messages.remove(this._id);
-  }
+  },
 });
 ```
 
@@ -394,6 +422,10 @@ Meteor.startup(() => {
 });
 ```
 
+{% apibox "Mongo.Collection#removeAsync" %}
+
+Async version of [`remove`](#remove) that return a `Promise`.
+
 {% apibox "Mongo.Collection#createIndex" %}
 
 For efficient and performant queries you will sometimes need to define indexes other than the default `_id` field.
@@ -404,12 +436,13 @@ For details on how indexes work read the [MongoDB documentation](https://docs.mo
 > Note that indexes only apply to server and MongoDB collection. They are not implemented for Minimongo at this time.
 
 Example defining a simple index on Players collection in Meteor:
+
 ```js
 Players.createIndex({ userId: 1 }, { name: 'user reference on players' });
 ```
 
-Sometimes you or a package might change an already established indexes. This might throw an error and prevent a startup. 
-For cases where you can afford to re-build indexes or the change affect too many indexes you can set the `reCreateIndexOnOptionMismatch` 
+Sometimes you or a package might change an already established indexes. This might throw an error and prevent a startup.
+For cases where you can afford to re-build indexes or the change affect too many indexes you can set the `reCreateIndexOnOptionMismatch`
 to true in your `settings.json`:
 
 ```json
@@ -424,13 +457,17 @@ to true in your `settings.json`:
 
 > You should use this option only when you are dealing with a change across many indexes and it is not feasible to fix them manually and you can afford the re-building of the indexes as this will destroy the old index and create a new one. Use this carefully.
 
+{% apibox "Mongo.Collection#createIndexAsync" %}
+
+Async version of [`createIndex`](#createIndex) that return a `Promise`.
+
 {% apibox "Mongo.Collection#allow" %}
 
 {% pullquote warning %}
 While `allow` and `deny` make it easy to get started building an app, it's
 harder than it seems to write secure `allow` and `deny` rules. We recommend
 that developers avoid `allow` and `deny`, and switch directly to custom methods
-once they are ready to remove `insecure` mode from their app.  See
+once they are ready to remove `insecure` mode from their app. See
 [the Meteor Guide on security](https://guide.meteor.com/security.html#allow-deny)
 for more details.
 {% endpullquote %}
@@ -483,7 +520,7 @@ the client wants to execute; for example,
 
 Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
-$-modifiers, the request will be denied without checking the `allow`
+\$-modifiers, the request will be denied without checking the `allow`
 functions.
 
 {% enddtdd %}
@@ -529,7 +566,7 @@ Posts.allow({
     return doc.owner === userId;
   },
 
-  fetch: ['owner']
+  fetch: ['owner'],
 });
 
 Posts.deny({
@@ -543,7 +580,7 @@ Posts.deny({
     return doc.locked;
   },
 
-  fetch: ['locked'] // No need to fetch `owner`
+  fetch: ['locked'], // No need to fetch `owner`
 });
 ```
 
@@ -560,8 +597,8 @@ applications. In insecure mode, if you haven't set up any `allow` or `deny`
 rules on a collection, then all users have full write access to the
 collection. This is the only effect of insecure mode. If you call `allow` or
 `deny` at all on a collection, even `Posts.allow({})`, then access is checked
-just like normal on that collection. __New Meteor projects start in insecure
-mode by default.__ To turn it off just run in your terminal:
+just like normal on that collection. **New Meteor projects start in insecure
+mode by default.** To turn it off just run in your terminal:
 
 ```bash
 meteor remove insecure
@@ -573,7 +610,7 @@ meteor remove insecure
 While `allow` and `deny` make it easy to get started building an app, it's
 harder than it seems to write secure `allow` and `deny` rules. We recommend
 that developers avoid `allow` and `deny`, and switch directly to custom methods
-once they are ready to remove `insecure` mode from their app.  See
+once they are ready to remove `insecure` mode from their app. See
 [the Meteor Guide on security](https://guide.meteor.com/security.html#allow-deny)
 for more details.
 {% endpullquote %}
@@ -596,7 +633,7 @@ The methods (like `update` or `insert`) you call on the resulting _raw_ collecti
 
 <h2 id="mongo_cursor">Cursors</h2>
 
-To create a cursor, use [`find`](#find).  To access the documents in a
+To create a cursor, use [`find`](#find). To access the documents in a
 cursor, use [`forEach`](#foreach), [`map`](#map), [`fetch`](#fetch), or ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols).
 
 {% apibox "Mongo.Cursor#forEach" %}
@@ -613,11 +650,15 @@ Examples:
 const topPosts = Posts.find({}, { sort: { score: -1 }, limit: 5 });
 let count = 0;
 
-topPosts.forEach((post) => {
+topPosts.forEach(post => {
   console.log(`Title of post ${count}: ${post.title}`);
   count += 1;
 });
 ```
+
+{% apibox "Mongo.Cursor#forEachAsync" %}
+
+Async version of [`forEach`](#forEach) that return a `Promise`.
 
 {% apibox "Mongo.Cursor#map" %}
 
@@ -628,24 +669,37 @@ the matching documents.
 
 <!-- The following is not yet implemented, but users shouldn't assume
      sequential execution anyway because that will break. -->
+
 On the server, if `callback` yields, other calls to `callback` may occur while
 the first call is waiting. If strict sequential execution is necessary, use
 `forEach` instead.
+
+{% apibox "Mongo.Cursor#mapAsync" %}
+
+Async version of [`map`](#map) that return a `Promise`.
 
 {% apibox "Mongo.Cursor#fetch" %}
 
 When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
 
+{% apibox "Mongo.Cursor#fetchAsync" %}
+
+Async version of [`fetch`](#fetch) that return a `Promise`.
+
 {% apibox "Mongo.Cursor#count" %}
 
 Unlike the other functions, `count` registers a dependency only on the
-number of matching documents.  (Updates that just change or reorder the
+number of matching documents. (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
+
+{% apibox "Mongo.Cursor#countAsync" %}
+
+Async version of [`count`](#count) that return a `Promise`.
 
 {% apibox "Mongo.Cursor#observe" %}
 
-Establishes a *live query* that invokes callbacks when the result of
+Establishes a _live query_ that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
 document that was affected, as well as its old contents, if
 applicable. If you only need to receive the fields that changed, see
@@ -683,6 +737,7 @@ A document changed its position in the result set, from `fromIndex` to `toIndex`
 (which is before the document with id `before`). Its current contents is
 `document`.
 {% enddtdd %}
+
 </dl>
 
 Use `added`, `changed`, and `removed` when you don't care about the
@@ -694,7 +749,7 @@ or more times to deliver the initial results of the query.
 
 `observe` returns a live query handle, which is an object with a `stop` method.
 Call `stop` with no arguments to stop calling the callback functions and tear
-down the query. **The query will run forever until you call this.**  If
+down the query. **The query will run forever until you call this.** If
 `observe` is called from a `Tracker.autorun` computation, it is automatically
 stopped when the computation is rerun or stopped.
 (If the cursor was created with the option `reactive` set to false, it will
@@ -703,7 +758,7 @@ it is not necessary to call `stop` on the handle.)
 
 {% apibox "Mongo.Cursor#observeChanges" %}
 
-Establishes a *live query* that invokes callbacks when the result of
+Establishes a _live query_ that invokes callbacks when the result of
 the query changes. In contrast to [`observe`](#observe),
 `observeChanges` provides only the difference between the old and new
 result set, not the entire contents of the document that changed.
@@ -736,6 +791,7 @@ and now appears before the document identified by `before`.
 {% dtdd name:"removed(id)" %}
 The document identified by `id` was removed from the result set.
 {% enddtdd %}
+
 </dl>
 
 `observeChanges` is significantly more efficient if you do not use
@@ -745,7 +801,7 @@ Before `observeChanges` returns, `added` (or `addedBefore`) will be called
 zero or more times to deliver the initial results of the query.
 
 `observeChanges` returns a live query handle, which is an object with a `stop`
-method.  Call `stop` with no arguments to stop calling the callback functions
+method. Call `stop` with no arguments to stop calling the callback functions
 and tear down the query. **The query will run forever until you call this.**
 If
 `observeChanges` is called from a `Tracker.autorun` computation, it is automatically
@@ -755,8 +811,8 @@ only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
 
 > Unlike `observe`, `observeChanges` does not provide absolute position
-information (that is, `atIndex` positions rather than `before`
-positions.) This is for efficiency.
+> information (that is, `atIndex` positions rather than `before`
+> positions.) This is for efficiency.
 
 Example:
 
@@ -774,7 +830,7 @@ const handle = cursor.observeChanges({
   removed() {
     count -= 1;
     console.log(`Lost one. We're now down to ${count} admins.`);
-  }
+  },
 });
 
 // After five seconds, stop keeping the count.
@@ -790,8 +846,8 @@ compare them; the `===` operator will not work. If you are writing generic code
 that needs to deal with `_id` fields that may be either strings or `ObjectID`s, use
 [`EJSON.equals`](#ejson_equals) instead of `===` to compare them.
 
->   `ObjectID` values created by Meteor will not have meaningful answers to their `getTimestamp`
-  method, since Meteor currently constructs them fully randomly.
+> `ObjectID` values created by Meteor will not have meaningful answers to their `getTimestamp`
+> method, since Meteor currently constructs them fully randomly.
 
 <h2 id="selectors">Mongo-Style Selectors</h2>
 
@@ -817,13 +873,23 @@ But they can also contain more complicated tests:
 
 ```js
 // Matches documents where `age` is greater than 18.
-{ age: { $gt: 18 } }
+{
+  age: {
+    $gt: 18;
+  }
+}
 
 // Matches documents where `tags` is an array containing 'popular'.
-{ tags: 'popular' }
+{
+  tags: 'popular';
+}
 
 // Matches documents where `fruit` is one of three possibilities.
-{ fruit: { $in: ['peach', 'plum', 'pear'] } }
+{
+  fruit: {
+    $in: ['peach', 'plum', 'pear'];
+  }
+}
 ```
 
 See the [complete
@@ -843,7 +909,7 @@ place by changing some of its fields. Some examples:
 { $inc: { votes: 2 }, $push: { supporters: 'Traz' } }
 ```
 
-But if a modifier doesn't contain any $-operators, then it is instead
+But if a modifier doesn't contain any \$-operators, then it is instead
 interpreted as a literal document, and completely replaces whatever was
 previously in the database. (Literal document modifiers are not currently
 supported by [validated updates](#allow).)
@@ -855,7 +921,6 @@ Users.update({ _id: '123' }, { name: 'Alice', friends: ['Bob'] });
 
 See the [full list of
 modifiers](http://docs.mongodb.org/manual/reference/operator/update/).
-
 
 <h2 id="sortspecifiers">Sort Specifiers</h2>
 
@@ -884,7 +949,6 @@ document objects, and returns -1 if the first document comes first in order,
 1 if the second document comes first, or 0 if neither document comes before
 the other. This is a Minimongo extension to MongoDB.
 
-
 <h2 id="fieldspecifiers">Field Specifiers</h2>
 
 Queries can specify a particular set of fields to include or exclude from the
@@ -906,14 +970,13 @@ Users.find({}, { fields: { firstname: 1, lastname: 1 } });
 ```
 
 With one exception, it is not possible to mix inclusion and exclusion styles:
-the keys must either be all 1 or all 0.  The exception is that you may specify
+the keys must either be all 1 or all 0. The exception is that you may specify
 `_id: 0` in an inclusion specifier, which will leave `_id` out of the result
-object as well.  However, such field specifiers can not be used with
+object as well. However, such field specifiers can not be used with
 [`observeChanges`](#observe_changes), [`observe`](#observe), cursors returned
 from a [publish function](#meteor_publish), or cursors used in
 `{% raw %}{{#each}}{% endraw %}` in a template. They may be used with [`fetch`](#fetch),
 [`findOne`](#findone), [`forEach`](#foreach), and [`map`](#map).
-
 
 <a href="http://docs.mongodb.org/manual/reference/operator/projection/">Field
 operators</a> such as `$` and `$elemMatch` are not available on the client side
@@ -925,9 +988,9 @@ A more advanced example:
 Users.insert({
   alterEgos: [
     { name: 'Kira', alliance: 'murderer' },
-    { name: 'L', alliance: 'police' }
+    { name: 'L', alliance: 'police' },
   ],
-  name: 'Yagami Light'
+  name: 'Yagami Light',
 });
 
 Users.findOne({}, { fields: { 'alterEgos.name': 1, _id: 0 } });
@@ -945,30 +1008,31 @@ environment variable pointing at your database in [the standard mongo connection
 string format](https://docs.mongodb.com/manual/reference/connection-string).
 
 > You can also set `MONGO_URL` in development if you want to connect to a
-different MongoDB instance.
+> different MongoDB instance.
 
 If you want to use oplog tailing for livequeries, you should also set
 `MONGO_OPLOG_URL` (generally you'll need a special user with oplog access, but
 the detail can differ depending on how you host your MongoDB. Read more [here](https://github.com/meteor/docs/blob/master/long-form/oplog-observe-driver.md)).
 
 > As of Meteor 1.4, you must ensure you set the `replicaSet` parameter on your
-`METEOR_OPLOG_URL`
+> `METEOR_OPLOG_URL`
 
 <h2 id="mongo_connection_options">Mongo Connection Options</h2>
 
-MongoDB provides many connection options, usually the default works but in some 
+MongoDB provides many connection options, usually the default works but in some
 cases you may want to pass additional options. You can do it in two ways:
 
 <h3 id="mongo_connection_options_settings">Meteor settings</h3>
 
-You can use your Meteor settings file to set the options in a property called 
+You can use your Meteor settings file to set the options in a property called
 `options` inside `packages` > `mongo`, these values will be provided as options for MongoDB in
-the connect method. 
+the connect method.
 
 > this option was introduced in Meteor 1.10.2
 
 For example, you may want to specify a certificate for your
 TLS connection ([see the options here](https://mongodb.github.io/node-mongodb-native/3.5/tutorials/connect/tls/)) then you could use these options:
+
 ```json
   "packages": {
     "mongo": {
@@ -979,10 +1043,12 @@ TLS connection ([see the options here](https://mongodb.github.io/node-mongodb-na
     }
   }
 ```
-Meteor will convert relative paths to absolute paths if the option name (key) 
+
+Meteor will convert relative paths to absolute paths if the option name (key)
 ends with `Asset`, for this to work properly you need to place the files in the
- `private` folder in the root of your project. In the example Mongo connection would  
+`private` folder in the root of your project. In the example Mongo connection would  
  receive this:
+
 ```json
   "packages": {
     "mongo": {
@@ -993,15 +1059,16 @@ ends with `Asset`, for this to work properly you need to place the files in the
     }
   }
 ```
+
 See that the final option name (key) does not contain `Asset` in the end as
 expected by MongoDB.
 
-This configuration is necessary in some MongoDB host providers to avoid this 
-error `MongoNetworkError: failed to connect to server [sg-meteorappdb-32194.servers.mongodirector.com:27017] on first connect [Error: self signed certificate
-`. 
+This configuration is necessary in some MongoDB host providers to avoid this
+error `MongoNetworkError: failed to connect to server [sg-meteorappdb-32194.servers.mongodirector.com:27017] on first connect [Error: self signed certificate`.
 
-Another way to avoid this error is to allow invalid certificates with this 
+Another way to avoid this error is to allow invalid certificates with this
 option:
+
 ```json
   "packages": {
     "mongo": {
@@ -1012,13 +1079,13 @@ option:
   }
 ```
 
-You can pass any MongoDB valid option, these are just examples using 
+You can pass any MongoDB valid option, these are just examples using
 certificates configurations.
 
 <h3 id="mongo_connection_options_settings">Mongo.setConnectionOptions</h3>
 
-You can also call `Mongo.setConnectionOptions` to set the connection options but 
-you need to call it before any other package using Mongo connections is 
+You can also call `Mongo.setConnectionOptions` to set the connection options but
+you need to call it before any other package using Mongo connections is
 initialized so you need to add this code in a package and add it above the other
 packages, like accounts-base in your `.meteor/packages` file.
 
