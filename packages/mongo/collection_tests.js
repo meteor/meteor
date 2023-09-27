@@ -413,21 +413,21 @@ Tinytest.addAsync(
       await collection.insertAsync({ _id: '3' });
       const preCount = client.s.activeSessions.size;
 
-      test.equal(await collection.find().countAsync(), 3);
+      test.equal(await collection.find().count(), 3);
       // options and selector still work
       test.equal(
-        await collection.find({ _id: { $ne: '1' } }, { skip: 1 }).countAsync(),
+        await collection.find({ _id: { $ne: '1' } }, { skip: 1 }).count(),
         1
       );
 
       // cursor reuse
       const cursor1 = collection.find({ _id: { $ne: '1' } }, { skip: 1 });
-      test.equal(await cursor1.countAsync(), 1);
-      test.equal((await cursor1.fetchAsync()).length, 1);
+      test.equal(await cursor1.count(), 1);
+      test.equal((await cursor1.fetch()).length, 1);
 
       const cursor2 = collection.find({ _id: { $ne: '1' } }, { skip: 1 });
-      test.equal((await cursor2.fetchAsync()).length, 1);
-      test.equal(await cursor2.countAsync(), 1);
+      test.equal((await cursor2.fetch()).length, 1);
+      test.equal(await cursor2.count(), 1);
 
       const postCount = client.s.activeSessions.size;
       test.equal(preCount, postCount);
