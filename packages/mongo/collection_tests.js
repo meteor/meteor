@@ -132,8 +132,8 @@ Tinytest.addAsync('collection - calling native find with $reverse hint should re
       await collection.insertAsync({a: 1});
       await collection.insertAsync({a: 2});
     } else {
-      collection.insert({ a: 1 });
-      collection.insert({ b: 1 });
+      await collection.insertAsync({ a: 1 });
+      await collection.insertAsync({ b: 1 });
     }
 
     function m(doc) { return doc.a; }
@@ -155,7 +155,7 @@ Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs
     if (Meteor.isServer) {
       await collection.insertAsync({ a: 1 });
     } else {
-      collection.insert({ a: 1 });
+      await collection.insertAsync({ a: 1 });
     }
 
     return Promise.resolve(
@@ -413,24 +413,27 @@ Tinytest.addAsync(
       await collection.insertAsync({ _id: '3' });
       const preCount = client.s.activeSessions.size;
 
-      test.equal(await collection.find().count(), 3);
+      test.equal(await collection.find().countAsync(), 3);
       // options and selector still work
       test.equal(
-        await collection.find({ _id: { $ne: '1' } }, { skip: 1 }).count(),
+        await collection.find({ _id: { $ne: '1' } }, { skip: 1 }).countAsync(),
         1
       );
 
       // cursor reuse
       const cursor1 = collection.find({ _id: { $ne: '1' } }, { skip: 1 });
-      test.equal(await cursor1.count(), 1);
-      test.equal((await cursor1.fetch()).length, 1);
-
+      cursor1.countAsync()
+      cursor1.fetchAsync()
       const cursor2 = collection.find({ _id: { $ne: '1' } }, { skip: 1 });
-      test.equal((await cursor2.fetch()).length, 1);
-      test.equal(await cursor2.count(), 1);
+      test.equal((await cursor2.fetchAsync()).length, 1);
+      test.equal(await cursor2.countAsync(), 1);
 
       const postCount = client.s.activeSessions.size;
       test.equal(preCount, postCount);
+
+      test.equal(await cursor1.count(), 1);
+      test.equal((await cursor1.fetch()).length, 1);
+
     }
   }
 );
