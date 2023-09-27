@@ -3214,9 +3214,10 @@ if (Meteor.isClient) {
       const cname = Random.id();
       const coll1 = new Mongo.Collection(cname, { connection: null });
       const doc = { foo: 'bar' };
-      const docId = coll1.insert(doc, function(err, id) {
+      const docId = coll1.insert(doc, async function(err, id) {
         test.equal(docId, id);
-        test.equal(coll1.findOne(doc)._id, id);
+        const d = await coll1.findOne(doc)
+        test.equal(d._id, id);
         onComplete();
       });
     }
