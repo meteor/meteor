@@ -9,28 +9,26 @@
           <input type="submit" name="submit" @click="submit($event)" value="Add new link">
         </form>
       </li>
-      <li v-for="link in links"><a :href="link.url" target="_blank">{{link.title}}</a></li>
+
+      <li v-for="link in links" v-bind:key="link._id">
+        <a :href="link.url" target="_blank">{{ link.title }}</a>
+      </li>
+
     </ul>
   </div>
 </template>
 
 <script>
 import Links from '../../api/collections/Links'
+import { subscribe, autorun } from "vue-meteor-tracker";
 
 export default {
   data() {
     return {
       title: "",
       url: "",
+      links: []
     }
-  },
-  meteor: {
-    $subscribe: {
-      'links': [],
-    },
-    links () {
-      return Links.find({})
-    },
   },
   methods: {
     submit(event) {
@@ -43,13 +41,19 @@ export default {
           this.url = ''
         }
       })
-    }
+    },
   },
+  mounted() {
+    subscribe('links')
+    autorun(() => {
+      this.links = Links.find().fetch()
+    })
+  }
 }
 </script>
 
 <style scoped>
-  ul {
-    font-family: monospace;
-  }
+ul {
+  font-family: monospace;
+}
 </style>

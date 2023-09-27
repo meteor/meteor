@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Random number generator and utilities',
-  version: '1.2.0',
+  version: '1.2.1',
 });
 
 Package.onUse(function (api) {
@@ -8,6 +8,7 @@ Package.onUse(function (api) {
   api.export('Random');
   api.mainModule('main_client.js', 'client');
   api.mainModule('main_server.js', 'server');
+  api.addAssets('random.d.ts', 'server');
 });
 
 Package.onTest(function (api) {
