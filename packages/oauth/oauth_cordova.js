@@ -19,6 +19,8 @@ OAuth.showPopup = (url, callback, dimensions) => {
   // works that we don't understand and isn't well-documented.
   let oauthFinished = false;
 
+  const popup = cordova.InAppBrowser.open(url, '_blank', 'location=yes,hidden=yes');
+
   const pageLoaded = event => {
     if (oauthFinished) {
       return;
@@ -59,7 +61,6 @@ OAuth.showPopup = (url, callback, dimensions) => {
     popup.removeEventListener('exit', onExit);
   };
 
-  const popup = window.open(url, '_blank', 'location=yes,hidden=yes');
   popup.addEventListener('loadstop', pageLoaded);
   popup.addEventListener('loaderror', fail);
   popup.addEventListener('exit', onExit);

@@ -1,18 +1,48 @@
+import {
+  ASYNC_COLLECTION_METHODS,
+  getAsyncMethodName
+} from "meteor/minimongo/constants";
+
 MongoInternals.RemoteCollectionDriver = function (
   mongo_url, options) {
   var self = this;
   self.mongo = new MongoConnection(mongo_url, options);
 };
 
+const REMOTE_COLLECTION_METHODS = [
+  '_createCappedCollection',
+  '_dropIndex',
+  '_ensureIndex',
+  'createIndex',
+  'countDocuments',
+  'dropCollection',
+  'estimatedDocumentCount',
+  'find',
+  'findOne',
+  'insert',
+  'rawCollection',
+  'remove',
+  'update',
+  'upsert',
+];
+
 Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
-    ['find', 'findOne', 'insert', 'update', 'upsert',
-      'remove', '_ensureIndex', 'createIndex', '_dropIndex', '_createCappedCollection',
-      'dropCollection', 'rawCollection'].forEach(
+    REMOTE_COLLECTION_METHODS.forEach(
       function (m) {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
+
+        if (!ASYNC_COLLECTION_METHODS.includes(m)) return;
+        const asyncMethodName = getAsyncMethodName(m);
+        ret[asyncMethodName] = function (...args) {
+          try {
+            return Promise.resolve(ret[m](...args));
+          } catch (error) {
+            return Promise.reject(error);
+          }
+        }
       });
     return ret;
   }
