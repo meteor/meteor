@@ -1320,4 +1320,29 @@ class Console extends ConsoleBase {
   }
 }
 
+const yellow  =
+  (text, ...values) =>
+     `\x1b[33m${ String.raw({ raw: text }, ...values) }\x1b[0m`
+const red =
+  (text, ...values) =>
+    `\x1b[31m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const purple =
+  (text, ...values) =>
+    `\x1b[35m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const green =
+  (text, ...values) =>
+    `\x1b[32m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const blue =
+  (text, ...values) =>
+    `\x1b[34m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+
+const colors = {
+  yellow,
+  red,
+  purple,
+  green,
+  blue,
+};
+
+exports.colors = colors;
 exports.Console = new Console;

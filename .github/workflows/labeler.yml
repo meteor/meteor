@@ -9,10 +9,14 @@ name: Labeler
 on:
   - pull_request_target
 
+permissions:
+  contents: read  #  to determine modified files (actions/labeler)
+  pull-requests: write  #  to add labels to PRs (actions/labeler)
+
 jobs:
   label:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/labeler@v3
+    - uses: actions/labeler@v4
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
