@@ -80,7 +80,6 @@ Accounts.registerLoginHandler(async (request) => {
   if (request.googleSignIn !== true) {
     return;
   }
-  console.log({ request });
   const tokens = {
     accessToken: request.accessToken,
     refreshToken: request.refreshToken,
@@ -107,7 +106,6 @@ Accounts.registerLoginHandler(async (request) => {
       { response: err.response }
     );
   }
-  console.log({ result });
   return Accounts.updateOrCreateUserFromExternalService(
     'google',
     {
