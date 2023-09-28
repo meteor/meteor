@@ -10,6 +10,87 @@
 
 
 
+## v2.13.3, 2023-09-08
+
+### Highlights
+
+* Solves the issue [#12771: Version 2.13.1 suddenly requires a newer glibc version](https://github.com/meteor/meteor/issues/12771).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.3
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.3 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4). The previous version was generated using a different unix distribution (Ubuntu) while we should use CentOS.
+
+
+#### Special thanks to
+
+- [@aquinoit](https://github.com/aquinoit).
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes).
+- [@Grubba27](https://github.com/Grubba27).
+
+For making this great framework even better!
+
+
+## v2.13.1, 2023-09-04
+
+### Highlights
+
+* Solved zlib issue with Meteor.js and ESM Node.js 14.21.4 [PR](https://github.com/meteor/meteor/pull/12765) by (GH Grubba27).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.1
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.1 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4).
+
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27).
+
+
+For making this great framework even better!
+
+
 ## v2.13.0, 2023-07-26
 
 ### Highlights
@@ -33,6 +114,11 @@
 If you are running Meteor with docker you will
 need to update your docker file to use our [new docker image](https://hub.docker.com/r/meteor/node)
 that contains Nodejs v14.21.4.
+
+#### Known issues
+
+Please, [check our known issues page](https://docs.meteor.com/known-issues)
+for more information about the problems and issues you might find while migrating.
 
 ####  Internal changes
 
@@ -113,7 +199,7 @@ N/A
 
 #### Migration Steps
 
-Now if you want to check where do you call old-style api methods 
+Now if you want to check where do you call old-style api methods
 you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 
@@ -122,7 +208,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 * `accounts-base@2.2.8`:
     - Added `loginServiceConfiguration` type.
     - Added the `collection` option property, in order to be able to set the collection for Accounts,
-    more can be seen in the [discussion](https://github.com/meteor/meteor/discussions/12544#discussioncomment-5240763) 
+    more can be seen in the [discussion](https://github.com/meteor/meteor/discussions/12544#discussioncomment-5240763)
     and in the [related issue](https://github.com/meteor/meteor-feature-requests/issues/20).
     - `onCreateUserHook` now accept promises and wait if necessary.
 
@@ -134,7 +220,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 * `browser-policy-framing@1.1.2`:
     - Added `es5` compatible syntax.
-    
+
 * `browser-policy@1.1.2`:
     - Updated test name.
 
@@ -184,7 +270,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 * `mongo@1.16.6`:
     - Added `countDocuments` and `estimatedDocumentCount` types.
-    - Added warning for when old style apis are being used, to use this feature, 
+    - Added warning for when old style apis are being used, to use this feature,
     use the variable`WARN_WHEN_USING_OLD_API=true` before starting the Meteor process.
     - Oplog driver updated to not throw error when MongoDB server and Meteor client mismatch. [issue](https://github.com/meteor/meteor/issues/12516)
 
