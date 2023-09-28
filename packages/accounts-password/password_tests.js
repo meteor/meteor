@@ -65,18 +65,18 @@ if (Meteor.isClient) (() => {
       loggedInAs(this.username, test, expect));
   };
   const logoutStep = (test, expect) =>
-    Meteor.logout(expect(error => {
+    Meteor.logout(expect(async error => {
       if (error) {
         test.fail(error.message);
       }
-      test.equal(Meteor.user(), null);
+      test.equal( await Meteor.user(), null);
     }));
   const loggedInAs = (someUsername, test, expect) => {
-    return expect(error => {
+    return expect(async error => {
       if (error) {
         test.fail(error.message);
       }
-      test.equal(Meteor.userId() && Meteor.user().username, someUsername);
+      test.equal(Meteor.userId() && (await Meteor.user()).username, someUsername);
     });
   };
   const loggedInUserHasEmail = (someEmail, test, expect) => {
@@ -148,17 +148,17 @@ if (Meteor.isClient) (() => {
       // Set up a reactive context that only refreshes when Meteor.user() is
       // invalidated.
       let loaded = false;
-      const handle = Tracker.autorun(() => {
-        if (Meteor.user() && Meteor.user().emails)
+      const handle = Tracker.autorun(async () => {
+        if ((await Meteor.user()) && (await Meteor.user()).emails)
           loaded = true;
       });
       // At the beginning, we're not logged in.
       test.isFalse(loaded);
-      Meteor.loginWithPassword(this.username, this.password, expect(error => {
+      Meteor.loginWithPassword(this.username, this.password, expect(async error => {
         test.equal(error, undefined);
         test.notEqual(Meteor.userId(), null);
         // By the time of the login callback, the user should be loaded.
-        test.isTrue(Meteor.user().emails);
+        test.isTrue(await Meteor.user().emails);
         // Flushing should get us the rerun as well.
         Tracker.flush();
         test.isTrue(loaded);
@@ -700,8 +700,8 @@ if (Meteor.isClient) (() => {
     // test Meteor.user(). This test properly belongs in
     // accounts-base/accounts_tests.js, but this is where the tests that
     // actually log in are.
-    function (test, expect) {
-      const clientUser = Meteor.user();
+    async function (test, expect) {
+      const clientUser = await Meteor.user();
       Accounts.connection.call('testMeteorUser', expect((err, result) => {
         test.equal(result._id, clientUser._id);
         test.equal(result.username, clientUser.username);
@@ -719,8 +719,8 @@ if (Meteor.isClient) (() => {
         // https://github.com/meteor/meteor/pull/12294
       let resolve;
       const promise = new Promise(res => resolve = res);
-      Meteor.setTimeout(() => {
-        test.equal(Meteor.user(), { _id: Meteor.userId() });
+      Meteor.setTimeout(async () => {
+        test.equal(await Meteor.user(), { _id: Meteor.userId() });
         resolve();
       }, 100);
       return promise;
