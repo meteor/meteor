@@ -164,24 +164,29 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts - Meteor.user() obeys explicit and default field selectors',
+  "accounts - Meteor.user() obeys explicit and default field selectors",
   (test, done) => {
+
     logoutAndCreateUser(test, done, () => {
-      Meteor.loginWithPassword(username, password, () => {
+      Meteor.loginWithPassword(username, password, async () => {
+        const u = await Meteor.user();
         // by default, all fields should be returned
-        test.equal(Meteor.user().profile[excludeField], excludeValue);
+        test.equal(u.profile[excludeField], excludeValue);
 
         // this time we want to exclude the default fields
         const options = Accounts._options;
         Accounts._options = {};
-        Accounts.config({defaultFieldSelector: {['profile.'+defaultExcludeField]: 0}});
-        let user = Meteor.user();
+        Accounts.config({
+          defaultFieldSelector: { ["profile." + defaultExcludeField]: 0 },
+        });
+
+        let user = await Meteor.user();
         test.isUndefined(user.profile[defaultExcludeField]);
         test.equal(user.profile[excludeField], excludeValue);
         test.equal(user.profile.name, username);
 
         // this time we only want certain fields...
-        user = Meteor.user({fields: {'profile.name': 1}});
+        user = await Meteor.user({ fields: { "profile.name": 1 } });
         test.isUndefined(user.profile[excludeField]);
         test.isUndefined(user.profile[defaultExcludeField]);
         test.equal(user.profile.name, username);
