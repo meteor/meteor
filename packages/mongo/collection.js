@@ -1259,17 +1259,15 @@ function popCallbackFromArgs(args) {
 }
 
 
-// XXX: IN Meteor 3.x this code was not working....
-// It throws an error when trying to call a method on the collection.
-// the error normally is:
-// TypeError: this[methodName] is not a function
-// ASYNC_COLLECTION_METHODS.forEach(methodName => {
-//   const methodNameAsync = getAsyncMethodName(methodName);
-//   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
-//     try {
-//       return Promise.resolve(this[methodName](...args));
-//     } catch (error) {
-//       return Promise.reject(error);
-//     }
-//   };
-// });
+// this methods should not be available in the server
+if (Meteor.isServer) {
+  for (const method of ASYNC_COLLECTION_METHODS) {
+    Mongo.Collection.prototype[method] = function () {
+      throw new Error(
+        `${method} is not avaible on the server. Please use ${getAsyncMethodName(
+          method
+        )}() instead.`
+      );
+    };
+  }
+}
