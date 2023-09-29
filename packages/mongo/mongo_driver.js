@@ -868,6 +868,12 @@ Cursor.prototype.countAsync = async function () {
   );
 };
 
+Cursor.prototype.count = function () {
+  throw new Error(
+    "count() is not avaible on the server. Please use countAsync() instead."
+  );
+};
+
 [...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
   // count is handled specially since we don't want to create a cursor.
   // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
