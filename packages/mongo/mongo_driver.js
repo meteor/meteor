@@ -17,6 +17,7 @@ var MongoDB = NpmModuleMongodb;
 import { DocFetcher } from "./doc_fetcher.js";
 import {
   ASYNC_CURSOR_METHODS,
+  CLIENT_ONLY_METHODS,
   getAsyncMethodName
 } from "meteor/minimongo/constants";
 import { Meteor } from "meteor/meteor";
@@ -358,6 +359,7 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
     throw e;
   });
 };
+
 
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
@@ -790,6 +792,17 @@ MongoConnection.prototype.dropIndexAsync = async function (collectionName, index
   var collection = self.rawCollection(collectionName);
   var indexName =  await collection.dropIndex(index);
 };
+
+
+CLIENT_ONLY_METHODS.forEach(function (m) {
+  MongoConnection.prototype[m] = function () {
+    throw new Error(
+      `${m} +  is not available on the server. Please use ${getAsyncMethodName(
+        m
+      )}() instead.`
+    );
+  };
+});
 
 // CURSORS
 
