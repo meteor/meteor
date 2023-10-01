@@ -80,11 +80,15 @@ Meteor._delete = function (obj /*, arguments */) {
  * @param errorFirst - If the callback follows the errorFirst style
  * @returns {function(...[*]): Promise<unknown>}
  */
-Meteor.promisify = function (fn, context, errorFirst = true) {
-  return function (...fnArgs) {
-    return new Promise((resolve, reject) => {
-      const callback = Meteor.bindEnvironment((error, result) => {
-        let _error = error, _result = result;
+Meteor.promisify = function (fn, context, errorFirst) {
+  if (errorFirst === undefined) {
+    errorFirst = true;
+  }
+
+  return function () {
+    return new Promise(function (resolve, reject) {
+      var callback = Meteor.bindEnvironment(function (error, result) {
+        var _error = error, _result = result;
         if (!errorFirst) {
           _error = result;
           _result = error;
@@ -97,7 +101,10 @@ Meteor.promisify = function (fn, context, errorFirst = true) {
         resolve(_result);
       });
 
-      const filteredArgs = [...fnArgs, callback].filter(i => i !== undefined);
+      var filteredArgs = Array.prototype.slice.call(arguments)
+        .filter(function (i) { return i !== undefined; });
+      filteredArgs.push(callback);
+
       return fn.apply(context || this, filteredArgs);
     });
   };
@@ -154,6 +161,25 @@ Meteor.wrapAsync = function (fn, context) {
     var result = fn.apply(self, newArgs);
     return fut ? fut.wait() : result;
   };
+};
+
+Meteor.wrapFn = function (fn) {
+  if (!fn || typeof fn !== 'function') {
+    throw new Meteor.Error("Expected to receive function to wrap");
+  }
+
+  if (Meteor.isClient) {
+    return fn;
+  }
+
+  return function() {
+    var ret = fn.apply(this, arguments);
+    if (ret && typeof ret.then === 'function') {
+      return Promise.await(ret);
+    }
+
+    return ret;
+  }
 };
 
 // Sets child's prototype to a new object whose prototype is parent's

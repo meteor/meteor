@@ -1,8 +1,12 @@
+
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.0.11'
+  version: '1.0.13',
 });
 
+Npm.depends({
+  '@types/underscore': '1.11.4',
+});
 Package.onUse(function (api) {
   // Like all packages, we have an implicit depedency on the 'meteor'
   // package, which provides such things as the *.js file handler. Use
