@@ -115,7 +115,7 @@ code.
   makes sense. For example, the current connection status is reactive
   in Meteor's [DDP](https://www.meteor.com/ddp) implementation, and
   the currently logged in user is reactive in [Meteor
-  Accounts](https://www.meteor.com/accounts) system.
+  Accounts](https://docs.meteor.com/api/accounts) system.
 
 ## Future directions
 
