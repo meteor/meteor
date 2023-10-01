@@ -174,34 +174,6 @@
   // Collection Functions
   // --------------------
 
-  // METEOR CHANGE: Define _isArguments instead of depending on
-  // _.isArguments which is defined using each. In looksLikeArray
-  // (which each depends on), we then use _isArguments instead of
-  // _.isArguments.
-  var _isArguments = function (obj) {
-    return toString.call(obj) === '[object Arguments]';
-  };
-  // Define a fallback version of the method in browsers (ahem, IE), where
-  // there isn't any inspectable "Arguments" type.
-  if (!_isArguments(arguments)) {
-    _isArguments = function (obj) {
-      return has(obj, 'callee');
-      // return !!(obj && hasOwnProperty.call(obj, 'callee') && typeof obj.callee === 'function');
-    };
-  }
-
-  // METEOR CHANGE: _.each({length: 5}) should be treated like an object, not an
-  // array. This looksLikeArray function is introduced by Meteor, and replaces
-  // all instances of `obj.length === +obj.length`.
-  // https://github.com/meteor/meteor/issues/594
-  // https://github.com/jashkenas/underscore/issues/770
-  // TODO test if the new isArrayLike fixes our issue
-  var looksLikeArray = function (obj) {
-    return (obj.length === +obj.length
-            // _.isArguments not yet necessarily defined here
-            && (_isArguments(obj) || obj.constructor !== Object));
-  };
-
   // The cornerstone, an `each` implementation, aka `forEach`.
   // Handles raw objects in addition to array-likes. Treats all
   // sparse array-likes as if they were dense.
