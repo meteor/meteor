@@ -578,6 +578,37 @@ Tracker.autorun = function (f, options) {
   return c;
 };
 
+/**
+ * @callback Tracker.ComputationFunction
+ * @param {Tracker.Computation}
+ */
+/**
+ * @summary Await-able Tracker.autorun. Run a function now and rerun it later whenever its dependencies
+ * change. Returns a promise for the Computation object that can be used to stop or observe the
+ * rerunning.
+ * @locus Client
+ * @param {Tracker.ComputationFunction} runFunc The function to run. It receives
+ * one argument: the Computation object that will be returned.
+ * @param {Object} [options]
+ * @param {Function} options.onError Optional. The function to run when an error
+ * happens in the Computation. The only argument it receives is the Error
+ * thrown. Defaults to the error being logged to the console.
+ * @returns {Tracker.Computation}
+ */
+Tracker.autorunAsync = function (f, options) {
+  let fPromise
+  const newF = async(...args) => {
+    fPromise = f(...args)
+  }
+
+  const c = Tracker.autorun(newF, options)
+
+  return fPromise.then(() => {
+    return c
+  })
+};
+
+
 // http://docs.meteor.com/#tracker_nonreactive
 //
 // Run `f` with no current computation, returning the return value
