@@ -1258,16 +1258,3 @@ function popCallbackFromArgs(args) {
   }
 }
 
-
-// this methods should not be available in the server
-if (Meteor.isServer) {
-  for (const method of ASYNC_COLLECTION_METHODS) {
-    Mongo.Collection.prototype[method] = function () {
-      throw new Error(
-        `${method} is not avaible on the server. Please use ${getAsyncMethodName(
-          method
-        )}() instead.`
-      );
-    };
-  }
-}
