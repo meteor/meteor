@@ -349,6 +349,7 @@ var AppRunner = function (options) {
 
   self.projectContext = options.projectContext;
 
+
   // note: run-all.js updates port directly
   self.port = options.port;
   self.listenHost = options.listenHost;
@@ -645,11 +646,10 @@ Object.assign(AppRunner.prototype, {
           return { bundleResult: bundleResult };
         }
       } catch (e) {
-        console.log(this.arch)
         // generic catch
         var messages = await buildmessage.capture(async () => {
           await buildmessage.enterJob("building your app",  () => {
-            buildmessage.error(e.message);
+            buildmessage.exception(e.message);
           })
         });
 
@@ -672,7 +672,6 @@ Object.assign(AppRunner.prototype, {
     var bundleResultOrRunResult = await bundleApp()
 
     if (bundleResultOrRunResult.runResult) {
-      console.log("returning run result", bundleResultOrRunResult.runResult)
       return bundleResultOrRunResult.runResult;
     }
     bundleResult = bundleResultOrRunResult.bundleResult;
