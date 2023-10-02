@@ -7,9 +7,9 @@
       "integrity": "sha512-VCvq454Two3oLtBHrkWx6OC1lO6jepYOCC9PhlcHcQCDC2R8mlDTmox0XvW2rCTVOth0qEIbdxKeKxa8WkD7eA=="
     },
     "@types/estree": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.1.tgz",
-      "integrity": "sha512-LG4opVs2ANWZ1TJoKc937iMmNstM/d0ae1vNbnBvBhqCSezgVUOzcLCqbI5elV8Vy6WKwKjaqR+zO9VKirBBCA=="
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.2.tgz",
+      "integrity": "sha512-VeiPZ9MMwXjO32/Xu7+OwflfmeoRwkE/qzndw42gGtgJwZopBnzy2gD//NN1+go1mADzkDcqf/KnFRSjTJ8xJA=="
     },
     "acorn": {
       "version": "8.10.0",

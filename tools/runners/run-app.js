@@ -404,9 +404,15 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
-    global.asyncLocalStorage.run({}, () =>
-        self._runApp().catch((e) => self._resolvePromise("start", e))
-    );
+    Profile.run("Running app", function () {
+      return global.asyncLocalStorage.run({}, async () => {
+        try {
+          await self._runApp();
+        } catch (e) {
+          self._resolvePromise("start", e);
+        }
+      });
+    });
     await self.startPromise;
     self.startPromise = null;
   },
@@ -430,13 +436,13 @@ Object.assign(AppRunner.prototype, {
   },
 
   _resolvePromise: function (name, value) {
+    if (value instanceof Error) {
+      console.log(value)
+    }
     const ee = this._promiseResolvers[name];
     if (ee) {
       ee.emit(name, value);
       this._promiseResolvers[name] = null;
-    }
-    if (value instanceof Error) {
-      throw value;
     }
   },
 
@@ -501,6 +507,7 @@ Object.assign(AppRunner.prototype, {
 
     runLog.clearLog();
     self.proxy.setMode("hold");
+    runLog.log("Before bundle")
 
     // Bundle up the app
     var bundlePath = self.projectContext.getProjectLocalDirectory('build');
@@ -510,115 +517,149 @@ Object.assign(AppRunner.prototype, {
     var cachedServerWatchSet;
 
     var bundleApp = async function () {
-      if (! firstRun) {
-        // If the build fails in a way that could be fixed by a refresh, allow
-        // it even if we refreshed previously, since that might have been a
-        // little while ago.
-        catalog.triedToRefreshRecently = false;
-        // If this isn't the first time we've run, we need to reset the project
-        // context since everything we have cached may have changed.
-        // XXX We can try to be a little less conservative here:
-        // - Don't re-build the whole local catalog if we know which local
-        //   packages have changed.  (This one might be a little trickier due
-        //   to how the WatchSets are laid out.  Might be possible to avoid
-        //   re-building the local catalog at all if packages didn't change
-        //   at all, though.)
-        self.projectContext.reset({}, {
-          // Don't forget all Isopack objects; just make sure to check that they
-          // are up to date.
-          softRefreshIsopacks: true,
-          // Don't forget the package map we calculated last time, even if we
-          // didn't write it to disk (because, eg, we're not running with a
-          // release that matches the app's release).  While we will still check
-          // our constraints, we will use the map we calculated last time as the
-          // previous solution (not what's on disk). Package deltas should be
-          // shown from the previous solution.
-          preservePackageMap: true
-        });
-        var messages = await buildmessage.capture(() => self.projectContext.readProjectMetadata());
+      try {
+        if (!firstRun) {
+          // If the build fails in a way that could be fixed by a refresh, allow
+          // it even if we refreshed previously, since that might have been a
+          // little while ago.
+          catalog.triedToRefreshRecently = false;
+          // If this isn't the first time we've run, we need to reset the project
+          // context since everything we have cached may have changed.
+          // XXX We can try to be a little less conservative here:
+          // - Don't re-build the whole local catalog if we know which local
+          //   packages have changed.  (This one might be a little trickier due
+          //   to how the WatchSets are laid out.  Might be possible to avoid
+          //   re-building the local catalog at all if packages didn't change
+          //   at all, though.)
+          self.projectContext.reset(
+            {},
+            {
+              // Don't forget all Isopack objects; just make sure to check that they
+              // are up to date.
+              softRefreshIsopacks: true,
+              // Don't forget the package map we calculated last time, even if we
+              // didn't write it to disk (because, eg, we're not running with a
+              // release that matches the app's release).  While we will still check
+              // our constraints, we will use the map we calculated last time as the
+              // previous solution (not what's on disk). Package deltas should be
+              // shown from the previous solution.
+              preservePackageMap: true,
+            }
+          );
+          var messages = await buildmessage.capture(() =>
+            self.projectContext.readProjectMetadata()
+          );
+          if (messages.hasMessages()) {
+            return {
+              runResult: {
+                outcome: "bundle-fail",
+                errors: messages,
+                watchSet:
+                  self.projectContext.getProjectAndLocalPackagesWatchSet(),
+              },
+            };
+          }
+        }
+
+        // Check to make sure we're running the right version of Meteor.
+        var wrongRelease = !release.usingRightReleaseForApp(
+          self.projectContext
+        );
+        if (wrongRelease) {
+          return {
+            runResult: {
+              outcome: "wrong-release",
+              displayReleaseNeeded:
+                self.projectContext.releaseFile.displayReleaseName,
+            },
+          };
+        }
+
+        messages = await buildmessage.capture(() =>
+          self.projectContext.prepareProjectForBuild()
+        );
         if (messages.hasMessages()) {
           return {
             runResult: {
-              outcome: 'bundle-fail',
+              outcome: "bundle-fail",
               errors: messages,
-              watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
-            }
+              watchSet:
+                self.projectContext.getProjectAndLocalPackagesWatchSet(),
+            },
           };
         }
-      }
 
-      // Check to make sure we're running the right version of Meteor.
-      var wrongRelease = ! release.usingRightReleaseForApp(self.projectContext);
-      if (wrongRelease) {
-        return {
-          runResult: {
-            outcome: 'wrong-release',
-            displayReleaseNeeded:
-              self.projectContext.releaseFile.displayReleaseName
-          }
-        };
-      }
+        // Show package changes... unless it's the first time in test-packages.
+        if (!(self.omitPackageMapDeltaDisplayOnFirstRun && firstRun)) {
+          self.projectContext.packageMapDelta.displayOnConsole();
+        }
 
-      messages = await buildmessage.capture(() => self.projectContext.prepareProjectForBuild());
-      if (messages.hasMessages()) {
-        return {
-          runResult: {
-            outcome: 'bundle-fail',
-            errors: messages,
-            watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
-          }
-        };
-      }
+        if (self.recordPackageUsage) {
+          // Maybe this doesn't need to be awaited for?
+          await stats.recordPackages({
+            what: "sdk.run",
+            projectContext: self.projectContext,
+          });
+        }
+        console.log("happened here?")
+        var bundleResult = await Profile.run(
+          (firstRun ? "B" : "Reb") + "uild App",
+          async () =>
+            bundler.bundle({
+              projectContext: self.projectContext,
+              outputPath: bundlePath,
+              includeNodeModules: "symlink",
+              buildOptions: self.buildOptions,
+              hasCachedBundle: !!cachedServerWatchSet,
+              previousBuilders: self.builders,
+              onJsOutputFiles: self.hmrServer
+                ? self.hmrServer.compare.bind(self.hmrServer)
+                : undefined,
+              // Permit delayed bundling of client architectures if the
+              // console is interactive.
+              allowDelayedClientBuilds: !Console.isHeadless(),
 
-      // Show package changes... unless it's the first time in test-packages.
-      if (!(self.omitPackageMapDeltaDisplayOnFirstRun && firstRun)) {
-        self.projectContext.packageMapDelta.displayOnConsole();
-      }
+              // None of the targets are used during full rebuilds
+              // so we can safely build in place on Windows
+              forceInPlaceBuild: !cachedServerWatchSet,
+            })
+        );
 
-      if (self.recordPackageUsage) {
-        // Maybe this doesn't need to be awaited for?
-        await stats.recordPackages({
-          what: "sdk.run",
-          projectContext: self.projectContext
+        // Keep the server watch set from the initial bundle, because subsequent
+        // bundles will not contain a server target.
+        if (cachedServerWatchSet) {
+          bundleResult.serverWatchSet = cachedServerWatchSet;
+        } else {
+          cachedServerWatchSet = bundleResult.serverWatchSet;
+        }
+
+        if (bundleResult.errors) {
+          return {
+            runResult: {
+              outcome: "bundle-fail",
+              errors: bundleResult.errors,
+              watchSet: combinedWatchSetForBundleResult(bundleResult),
+            },
+          };
+        } else {
+          return { bundleResult: bundleResult };
+        }
+      } catch (e) {
+        console.log(this.arch)
+        // generic catch
+        var messages = await buildmessage.capture(async () => {
+          await buildmessage.enterJob("building your app",  () => {
+            buildmessage.error(e.message);
+          })
         });
-      }
 
-      var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async () =>
-        bundler.bundle({
-          projectContext: self.projectContext,
-          outputPath: bundlePath,
-          includeNodeModules: "symlink",
-          buildOptions: self.buildOptions,
-          hasCachedBundle: !! cachedServerWatchSet,
-          previousBuilders: self.builders,
-          onJsOutputFiles: self.hmrServer ? self.hmrServer.compare.bind(self.hmrServer) : undefined,
-          // Permit delayed bundling of client architectures if the
-          // console is interactive.
-          allowDelayedClientBuilds: ! Console.isHeadless(),
-
-          // None of the targets are used during full rebuilds
-          // so we can safely build in place on Windows
-          forceInPlaceBuild: !cachedServerWatchSet
-        }));
-
-      // Keep the server watch set from the initial bundle, because subsequent
-      // bundles will not contain a server target.
-      if (cachedServerWatchSet) {
-        bundleResult.serverWatchSet = cachedServerWatchSet;
-      } else {
-        cachedServerWatchSet = bundleResult.serverWatchSet;
-      }
-
-      if (bundleResult.errors) {
         return {
           runResult: {
-            outcome: 'bundle-fail',
-            errors: bundleResult.errors,
-            watchSet: combinedWatchSetForBundleResult(bundleResult)
-          }
+            outcome: "bundle-fail",
+            errors: messages,
+            watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet(),
+          },
         };
-      } else {
-        return { bundleResult: bundleResult };
       }
     };
 
@@ -628,8 +669,10 @@ Object.assign(AppRunner.prototype, {
       return watchSet;
     };
     var bundleResult;
-    var bundleResultOrRunResult = await bundleApp();
+    var bundleResultOrRunResult = await bundleApp()
+
     if (bundleResultOrRunResult.runResult) {
+      console.log("returning run result", bundleResultOrRunResult.runResult)
       return bundleResultOrRunResult.runResult;
     }
     bundleResult = bundleResultOrRunResult.bundleResult;
@@ -926,6 +969,7 @@ Object.assign(AppRunner.prototype, {
       }
     } finally {
       self.runPromise = null;
+      console.log("Err here?>", ret)
 
       if (ret.outcome === 'changed') {
         runLog.logTemporary("=> Server modified -- restarting...");
@@ -950,17 +994,17 @@ Object.assign(AppRunner.prototype, {
 
     while (true) {
       var runResult = await self._runOnce({
-        onListen: function () {
-          if (! self.noRestartBanner && ! firstRun) {
-            runLog.logRestart(self);
-            Console.enableProgressDisplay(false);
-          }
-        },
-        firstRun: firstRun
-      });
+          onListen: function () {
+            if (! self.noRestartBanner && ! firstRun) {
+              runLog.logRestart(self);
+              Console.enableProgressDisplay(false);
+            }
+          },
+          firstRun: firstRun
+        });
       firstRun = false;
 
-      var wantExit = self.onRunEnd ? !(await self.onRunEnd(runResult)) : false;
+            var wantExit = self.onRunEnd ? !(await self.onRunEnd(runResult)) : false;
       if (wantExit || self.exitPromise || runResult.outcome === "stopped") {
         break;
       }

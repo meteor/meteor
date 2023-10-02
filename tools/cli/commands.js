@@ -485,28 +485,33 @@ async function doRunCommand(options) {
   }
 
   var runAll = require('../runners/run-all.js');
-  return runAll.run({
-    projectContext: projectContext,
-    proxyPort: parsedServerUrl.port,
-    proxyHost: parsedServerUrl.hostname,
-    appPort: appPort,
-    appHost: appHost,
-    ...normalizeInspectOptions(options),
-    settingsFile: options.settings,
-    buildOptions: {
-      minifyMode: options.production ? 'production' : 'development',
-      buildMode,
-      webArchs: webArchs
-    },
-    rootUrl: process.env.ROOT_URL,
-    mongoUrl: process.env.MONGO_URL,
-    oplogUrl: process.env.MONGO_OPLOG_URL,
-    mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
-    cordovaServerPort: parsedCordovaServerPort,
-    once: options.once,
-    noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
-    cordovaRunner: cordovaRunner
-  });
+  try {
+    return runAll.run({
+      projectContext: projectContext,
+      proxyPort: parsedServerUrl.port,
+      proxyHost: parsedServerUrl.hostname,
+      appPort: appPort,
+      appHost: appHost,
+      ...normalizeInspectOptions(options),
+      settingsFile: options.settings,
+      buildOptions: {
+        minifyMode: options.production ? 'production' : 'development',
+        buildMode,
+        webArchs: webArchs
+      },
+      rootUrl: process.env.ROOT_URL,
+      mongoUrl: process.env.MONGO_URL,
+      oplogUrl: process.env.MONGO_OPLOG_URL,
+      mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+      cordovaServerPort: parsedCordovaServerPort,
+      once: options.once,
+      noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
+      cordovaRunner: cordovaRunner
+    });
+  } catch (e) {
+    // empty
+  }
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
