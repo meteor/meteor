@@ -49,7 +49,11 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
       ret[m] = _.bind(self.mongo[m], self.mongo, name);
 
       ret[m] = function (...args) {
-        throw new Error(`${m} is not available on the server-side. please use ${getAsyncMethodName(m)}()`);
+        throw new Error(
+          `${m} +  is not available on the server. Please use ${getAsyncMethodName(
+            m
+          )}() instead.`
+        );
       };
     });
     return ret;
