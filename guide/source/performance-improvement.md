@@ -15,7 +15,7 @@ and talk by Paulo Mogollón's talk at Impact 2022 titled ["First steps on scalin
 <h2 id="performance-monitoring">Performance monitoring</h2>
 
 Before any optimization can take place we need to know what is our problem. This is where APM (Application Performance Monitor) comes in.
-If you are hosting on Galaxy then this is automatically included in the [Professional plan](https://www.meteor.com/cloud#pricing-section) 
+If you are hosting on Galaxy then this is automatically included in the [Professional plan](https://www.meteor.com/cloud/pricing) 
 and you can learn more about in its [own dedicated guide article](https://cloud-guide.meteor.com/apm-getting-started.html).  
 For those hosting outside of Galaxy the most popular solution is to go with [Monti APM](https://montiapm.com/) which shares 
 all the main functionality with Galaxy APM. You can also choose other APM for Node.js, but they will not show you Meteor 
