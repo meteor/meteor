@@ -33,6 +33,11 @@ In the event that your own deployment platform does not support WebSockets, or y
 
 Set `DISABLE_SOCKJS=1` if you want to use the native WebSocket implementation instead of SockJS on the client side, for example, if you want to use a custom WebSocket implementation (e.g. [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/)) on the server side.
 
+## DISABLE_SOCKJS_CORS
+(_development, production_)
+
+Set `DISABLE_SOCKJS_CORS=1` if you want to prevent SockJS from setting CORS headers from being set by SockJS. Do not set this option if you will have DDP clients from other origins connecting to the DDP server.
+
 ## HTTP_FORWARDED_COUNT
 (_production_)
 
