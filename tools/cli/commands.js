@@ -531,6 +531,7 @@ export const AVAILABLE_SKELETONS = [
 main.registerCommand({
   name: 'create',
   maxArgs: 1,
+  minArgs: 0,
   options: {
     list: { type: Boolean },
     example: { type: String },
@@ -550,8 +551,50 @@ main.registerCommand({
     solid: { type: Boolean },
     prototype: { type: Boolean }
   },
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
+
+  const setup = async () => {
+    const ask = createPrompt();
+    if(!options.hasOwnProperty("list") && !options.hasOwnProperty("example") && !options.hasOwnProperty("package")) {
+      let appName, templateName;
+      if(!options.args[0]) {
+        const appName = await ask(`What is the name/path of your ${yellow`app`}? `);
+        checkScaffoldName(appName);
+        options.args.push(appName)
+      }
+      else {
+        // This part is just for better clarity
+        Console.info(`Name of your app: ${options.args[0]}`);
+      }
+  
+      const skeletonIndex = AVAILABLE_SKELETONS.findIndex(skeleton => {
+        return Object.keys(options).includes(skeleton);
+      })
+      if(skeletonIndex === -1) {
+        let skeletonPrompt = `Which skeleton do you want to use?\nPress Enter for Default (${DEFAULT_SKELETON})\n`;
+        AVAILABLE_SKELETONS.forEach((skeleton, index) => {
+          skeletonPrompt += `${index} - ${skeleton}\n`;
+        })
+        skeletonPrompt += `Please Enter the Skeleton Number: `
+  
+        const skeletonIndex2 = await ask(skeletonPrompt);
+        if(skeletonIndex2 === '') {
+          options = {...options, [DEFAULT_SKELETON]: true}
+        }
+        else if(skeletonIndex2 >= 0 && skeletonIndex2 < AVAILABLE_SKELETONS.length) {
+          options = {...options, [AVAILABLE_SKELETONS[skeletonIndex2]]: true}
+        }
+        else {  
+          Console.error(red`Invalid Skeleton number`);
+        }
+      }
+    }
+  }
+  
+  await setup();  
+  
   // Creating a package is much easier than creating an app, so if that's what
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
