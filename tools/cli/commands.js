@@ -591,6 +591,7 @@ main.registerCommand({
         }
       }
     }
+    Console.setPretty(true)
   }
   
   await setup();  
