@@ -405,7 +405,9 @@ Object.assign(AppRunner.prototype, {
     self.startPromise = self._makePromise("start");
 
     self.isRunning = true;
+
     Profile.run("Running app", function () {
+
       return global.asyncLocalStorage.run({}, async () => {
         try {
           await self._runApp();
@@ -649,7 +651,7 @@ Object.assign(AppRunner.prototype, {
         // generic catch
         var messages = await buildmessage.capture(async () => {
           await buildmessage.enterJob("building your app",  () => {
-            buildmessage.exception(e.message);
+            buildmessage.error(e.message);
           })
         });
 
