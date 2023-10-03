@@ -788,7 +788,7 @@ Meteor.methods(
         async () => {
           check(token, String);
 
-          const user = await Meteor.users.findOne(
+          const user = await Meteor.users.findOneAsync(
             { 'services.email.verificationTokens.token': token },
             {
               fields: {

@@ -212,6 +212,7 @@ MongoConnection = function (url, options) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
+
 };
 
 MongoConnection.prototype._close = async function() {
@@ -542,6 +543,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options)
         .then(async result => {
           await refresh();
+          await write.committed();
           if (result && ! options._returnObject) {
             return result.numberAffected;
           } else {
@@ -885,7 +887,6 @@ Cursor.prototype.countAsync = async function () {
   const methodNameAsync = getAsyncMethodName(methodName);
   Cursor.prototype[methodNameAsync] = function (...args) {
     try {
-      this[methodName].isCalledFromAsync = true;
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=14.21.3.6
+BUNDLE_VERSION=18.16.0.5
 
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
 # Use of : "${ARCH:=$(uname)}" assignment permits users to set their
 # architecture manually; this is useful for multi-arch systems whose
-# uname executables may sometimes return different architectures in
+# uname executables may sometimes return different architectures
+# in
 # different contexts.
 #   Ex: ARCH=arm64 meteor ARGS...;
 UNAME="$(uname)"

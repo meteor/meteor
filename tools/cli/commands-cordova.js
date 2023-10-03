@@ -3,6 +3,7 @@ import main from './main.js';
 import { Console } from '../console/console.js';
 import catalog from '../packaging/catalog/catalog.js';
 import buildmessage from '../utils/buildmessage.js';
+var files = require('../fs/files');
 import {
   CORDOVA_PLATFORMS,
   ensureDevBundleDependencies,
@@ -16,7 +17,6 @@ async function createProjectContext(appDir) {
   const projectContext = new ProjectContext({
     projectDir: appDir
   });
-  await projectContext.init();
   await main.captureAndExit('=> Errors while initializing project:', async () => {
     // We're just reading metadata here; we don't need to resolve constraints.
     await projectContext.readProjectMetadata();
@@ -148,8 +148,8 @@ main.registerCommand({
   name: 'list-platforms',
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  const projectContext = createProjectContext(options.appDir);
+}, async function (options) {
+  const projectContext = await createProjectContext(options.appDir);
 
   const installedPlatforms = projectContext.platformList.getPlatforms();
 

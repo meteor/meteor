@@ -140,8 +140,10 @@ Object.assign(OplogHandle.prototype, {
       // find a TS that won't show up in the actual tail stream.
       try {
         lastEntry = await self._oplogLastEntryConnection.findOneAsync(
-            OPLOG_COLLECTION, self._baseOplogSelector,
-            {fields: {ts: 1}, sort: {$natural: -1}});
+          OPLOG_COLLECTION,
+          self._baseOplogSelector,
+          { projection: { ts: 1 }, sort: { $natural: -1 } }
+        );
         break;
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
@@ -232,7 +234,7 @@ Object.assign(OplogHandle.prototype, {
           else resolve(result);
         });
     });
-    
+
     if (!(isMasterDoc && isMasterDoc.setName)) {
       throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
           "a Mongo replica set");
@@ -240,7 +242,10 @@ Object.assign(OplogHandle.prototype, {
 
     // Find the last oplog entry.
     var lastOplogEntry = await self._oplogLastEntryConnection.findOneAsync(
-        OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
+      OPLOG_COLLECTION,
+      {},
+      { sort: { $natural: -1 }, projection: { ts: 1 } }
+    );
 
     var oplogSelector = Object.assign({}, self._baseOplogSelector);
     if (lastOplogEntry) {
@@ -320,6 +325,9 @@ Object.assign(OplogHandle.prototype, {
             trigger.collection = doc.o.drop;
             trigger.dropCollection = true;
             trigger.id = null;
+          } else if ("create" in doc.o && "idIndex" in doc.o) {
+            // A collection got implicitly created within a transaction. There's
+            // no need to do anything about it.
           } else {
             throw Error("Unknown command " + EJSON.stringify(doc));
           }

@@ -6,24 +6,7 @@ import {
 } from "meteor/minimongo/constants";
 
 import { normalizeProjection } from "./mongo_utils";
-export function warnUsingOldApi (
-    methodName,
-    collectionName,
-    isCalledFromAsync
-   ){
-  if (
-    process.env.WARN_WHEN_USING_OLD_API && // also ensures it is on the server
-    !isCalledFromAsync // must be true otherwise we should log
-  ) {
-   if (collectionName === undefined || collectionName.includes('oplog')) return
-   console.warn(`
-   
-   Calling method ${collectionName}.${methodName} from old API on server.
-   This method will be removed, from the server, in version 3.
-   Trace is below:`)
-   console.trace()
- };
-}
+
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
@@ -572,15 +555,6 @@ Object.assign(Mongo.Collection.prototype, {
    * @returns {Object}
    */
   findOne(...args) {
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "findOne",
-      this._name,
-      this.findOne.isCalledFromAsync
-    );
-    this.findOne.isCalledFromAsync = false;
-
     return this._collection.findOne(
       this._getFindSelector(args),
       this._getFindOptions(args)
@@ -680,14 +654,6 @@ Object.assign(Mongo.Collection.prototype, {
       throw new Error('insert requires an argument');
     }
 
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "insert",
-      this._name,
-      this.insert.isCalledFromAsync
-    );
-    this.insert.isCalledFromAsync = false;
 
     // Make a shallow clone of the document, preserving its prototype.
     doc = Object.create(
@@ -971,15 +937,6 @@ Object.assign(Mongo.Collection.prototype, {
       }
     }
 
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "update",
-      this._name,
-      this.update.isCalledFromAsync
-    );
-    this.update.isCalledFromAsync = false;
-
     selector = Mongo.Collection._rewriteSelector(selector, {
       fallbackId: insertedId,
     });
@@ -1002,7 +959,7 @@ Object.assign(Mongo.Collection.prototype, {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
-      return this._collection.update(
+      return this._collection.updateAsync(
         selector,
         modifier,
         options,
@@ -1052,14 +1009,7 @@ Object.assign(Mongo.Collection.prototype, {
       return this._callMutatorMethod('remove', [selector]);
     }
 
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "remove",
-      this._name,
-      this.remove.isCalledFromAsync
-    );
-    this.remove.isCalledFromAsync = false;
+
     // it's my collection.  descend into the collection1 object
     // and propagate any exception.
     return this._collection.remove(selector);
@@ -1162,14 +1112,7 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection.createIndexAsync)
       throw new Error('Can only call createIndexAsync on server collections');
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "createIndex",
-      self._name,
-      self.createIndex.isCalledFromAsync
-    );
-    self.createIndex.isCalledFromAsync = false;
+
     try {
       await self._collection.createIndexAsync(index, options);
     } catch (e) {
@@ -1301,7 +1244,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
 Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
-Object.assign(Meteor.Collection.prototype, AllowDeny.CollectionPrototype);
+Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
 
 function popCallbackFromArgs(args) {
   // Pull off any callback (or perhaps a 'callback' variable that was passed

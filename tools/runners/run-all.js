@@ -170,10 +170,6 @@ class Runner {
       runLog.log("Started proxy.",  { arrow: true });
     }
 
-    /**
-     *
-     * @type {(function(): *)}
-     */
     var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
 
     function startMongo(tries = 3) {
@@ -185,7 +181,7 @@ class Runner {
           const left = tries + (tries === 1 ? " try" : " tries");
           Console.log(`Error starting Mongo (${left} left): ${error.message}`);
           if (tries > 0) {
-            await self.mongoRunner.stop();
+            self.mongoRunner.stop();
             setTimeout(() => startMongo(tries), 1000);
           } else {
             await self.mongoRunner._fail();
@@ -208,9 +204,7 @@ class Runner {
     }
 
     if (! self.stopped) {
-      await buildmessage.enterJob({ title: "starting your app" }, async function () {
-         await self.appRunner.start();
-      });
+      await buildmessage.enterJob({ title: "starting your app" }, () => self.appRunner.start());
       if (! self.quiet && ! self.stopped) {
         runLog.log("Started your app.",  { arrow: true });
       }
@@ -402,7 +396,7 @@ exports.run = async function (options) {
   var runner = new Runner(runOptions);
   await runner.init();
   // don't wait this on to finish
-  runner.start();
+  setTimeout(() => runner.start(), 0);
   var result = await promise;
   await runner.stop();
 

@@ -158,7 +158,7 @@ export class CordovaProject {
 outdated platforms`);
         // Remove Cordova project directory to start afresh
         // and avoid a broken project
-        files.rm_recursive(this.projectRoot);
+        await files.rm_recursive(this.projectRoot);
       }
     }
 
@@ -195,7 +195,7 @@ outdated platforms`);
       }
 
       // Don't copy resources (they will be copied as part of the prepare)
-      builder.writeConfigXmlAndCopyResources(false);
+      await builder.writeConfigXmlAndCopyResources(false);
 
       // Create the Cordova project root directory
       files.mkdir_p(files.pathDirname(this.projectRoot));
@@ -271,7 +271,7 @@ outdated platforms`);
       return;
     }
 
-    builder.writeConfigXmlAndCopyResources();
+    await builder.writeConfigXmlAndCopyResources();
     await builder.copyWWW(bundlePath);
 
     await this.ensurePluginsAreSynchronized(pluginVersions,
@@ -291,7 +291,7 @@ outdated platforms`);
         'LD_RUNPATH_SEARCH_PATHS = @executable_path/Frameworks;');
     }
 
-    builder.copyBuildOverride();
+    await builder.copyBuildOverride();
   }
 
   async prepareForPlatform(platform, options) {
@@ -348,11 +348,7 @@ ${displayNameForPlatform(platform)}`, async () => {
     await this.runCommands(
       `running Cordova app for platform \
 ${displayNameForPlatform(platform)} with options ${options}`,
-      async () => {
-        await cordova_lib.run(commandOptions);
-      }
-    );
-
+      () => cordova_lib.run(commandOptions));
   }
 
   // Platforms
@@ -456,11 +452,37 @@ ${displayNamesForPlatforms(platforms)}`, async () => {
   }
 
   async addPlatform(platform) {
-    return this.runCommands(`adding platform ${displayNameForPlatform(platform)} \
+    const self = this;
+    return self.runCommands(`adding platform ${displayNameForPlatform(platform)} \
 to Cordova project`, async () => {
       let version = pinnedPlatformVersions[platform];
       let platformSpec = version ? `${platform}@${version}` : platform;
       await cordova_lib.platform('add', platformSpec, this.defaultOptions);
+
+      // As per Npm 8, we need now do inject a package.json file
+      // with the dependencies so that when running any npm command
+      // it keeps the dependencies installed.
+      const packageLock = JSON.parse(files.readFile(
+        files.pathJoin(self.projectRoot, 'node_modules/.package-lock.json')
+      ));
+      const getPackageName = (pkgPath) => {
+        const split = pkgPath.split("node_modules/");
+        return split[split.length - 1];
+      };
+
+      const packageJsonObj = Object.entries(packageLock.packages).reduce((acc, [key, value]) => {
+        const name = getPackageName(key);
+        return ({
+          dependencies: {
+            ...acc.dependencies,
+            [name]: value.version,
+          }
+        });
+      }, { dependencies: {} });
+      files.writeFile(
+        files.pathJoin(self.projectRoot, "package.json"),
+        JSON.stringify(packageJsonObj, null, 2) + "\n"
+      );
     });
   }
 
