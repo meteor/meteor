@@ -36,7 +36,7 @@ Set `DISABLE_SOCKJS=1` if you want to use the native WebSocket implementation in
 ## DISABLE_SOCKJS_CORS
 (_development, production_)
 
-Set `DISABLE_SOCKJS_CORS=1` if you want to prevent SockJS from setting CORS headers from being set by SockJS. Do not set this option if you will have DDP clients from other origins connecting to the DDP server.
+Set `DISABLE_SOCKJS_CORS=1` if you want to prevent SockJS from setting CORS headers. Do not set this option if you will have DDP clients from other origins connecting to the DDP server.
 
 ## HTTP_FORWARDED_COUNT
 (_production_)
