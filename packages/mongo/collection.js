@@ -2,27 +2,24 @@
 // XXX presently there is no way to destroy/clean up a Collection
 import {
   ASYNC_COLLECTION_METHODS,
-  getAsyncMethodName
-} from "meteor/minimongo/constants";
+  getAsyncMethodName,
+} from 'meteor/minimongo/constants';
 
-import { normalizeProjection } from "./mongo_utils";
-export function warnUsingOldApi (
-    methodName,
-    collectionName,
-    isCalledFromAsync
-   ){
+import { normalizeProjection } from './mongo_utils';
+export function warnUsingOldApi(methodName, collectionName, isCalledFromAsync) {
   if (
     process.env.WARN_WHEN_USING_OLD_API && // also ensures it is on the server
     !isCalledFromAsync // must be true otherwise we should log
   ) {
-   if (collectionName === undefined || collectionName.includes('oplog')) return
-   console.warn(`
+    if (collectionName === undefined || collectionName.includes('oplog'))
+      return;
+    console.warn(`
    
    Calling method ${collectionName}.${methodName} from old API on server.
    This method will be removed, from the server, in version 3.
-   Trace is below:`)
-   console.trace()
- };
+   Trace is below:`);
+    console.trace();
+  }
 }
 /**
  * @summary Namespace for MongoDB-related items
@@ -390,7 +387,6 @@ Object.assign(Mongo.Collection.prototype, {
         )
       );
 
-
       return {
         transform: self._transform,
         ...newOptions,
@@ -449,11 +445,7 @@ Object.assign(Mongo.Collection.prototype, {
   findOne(...args) {
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "findOne",
-      this._name,
-      this.findOne.isCalledFromAsync
-    );
+    warnUsingOldApi('findOne', this._name, this.findOne.isCalledFromAsync);
     this.findOne.isCalledFromAsync = false;
 
     return this._collection.findOne(
@@ -566,11 +558,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "insert",
-      this._name,
-      this.insert.isCalledFromAsync
-    );
+    warnUsingOldApi('insert', this._name, this.insert.isCalledFromAsync);
     this.insert.isCalledFromAsync = false;
 
     // Make a shallow clone of the document, preserving its prototype.
@@ -689,11 +677,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "update",
-      this._name,
-      this.update.isCalledFromAsync
-    );
+    warnUsingOldApi('update', this._name, this.update.isCalledFromAsync);
     this.update.isCalledFromAsync = false;
 
     selector = Mongo.Collection._rewriteSelector(selector, {
@@ -749,11 +733,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "remove",
-      this._name,
-      this.remove.isCalledFromAsync
-    );
+    warnUsingOldApi('remove', this._name, this.remove.isCalledFromAsync);
     this.remove.isCalledFromAsync = false;
     // it's my collection.  descend into the collection object
     // and propagate any exception.
@@ -798,13 +778,9 @@ Object.assign(Mongo.Collection.prototype, {
 
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "upsert",
-      this._name,
-      this.upsert.isCalledFromAsync
-    );
-    this.upsert.isCalledFromAsync = false; 
-    // caught here https://github.com/meteor/meteor/issues/12626 
+    warnUsingOldApi('upsert', this._name, this.upsert.isCalledFromAsync);
+    this.upsert.isCalledFromAsync = false;
+    // caught here https://github.com/meteor/meteor/issues/12626
     this.update.isCalledFromAsync = true; // to not trigger on the next call
     return this.update(
       selector,
@@ -828,7 +804,13 @@ Object.assign(Mongo.Collection.prototype, {
       self._collection.createIndex(index, options);
     } else {
       import { Log } from 'meteor/logging';
-      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
+      Log.debug(
+        `_ensureIndex has been deprecated, please use the new 'createIndex' instead${
+          options?.name
+            ? `, index name: ${options.name}`
+            : `, index: ${JSON.stringify(index)}`
+        }`
+      );
       self._collection._ensureIndex(index, options);
     }
   },
@@ -852,7 +834,7 @@ Object.assign(Mongo.Collection.prototype, {
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
     warnUsingOldApi(
-      "createIndex",
+      'createIndex',
       self._name,
       self.createIndex.isCalledFromAsync
     );
@@ -860,14 +842,23 @@ Object.assign(Mongo.Collection.prototype, {
     try {
       self._collection.createIndex(index, options);
     } catch (e) {
-      if (e.message.includes('An equivalent index already exists with the same name but different options.') && Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch) {
+      if (
+        e.message.includes(
+          'An equivalent index already exists with the same name but different options.'
+        ) &&
+        Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch
+      ) {
         import { Log } from 'meteor/logging';
 
-        Log.info(`Re-creating index ${index} for ${self._name} due to options mismatch.`);
+        Log.info(
+          `Re-creating index ${index} for ${self._name} due to options mismatch.`
+        );
         self._collection._dropIndex(index);
         self._collection.createIndex(index, options);
       } else {
-        throw new Meteor.Error(`An error occurred when creating an index for collection "${self._name}: ${e.message}`);
+        throw new Meteor.Error(
+          `An error occurred when creating an index for collection "${self._name}: ${e.message}`
+        );
       }
     }
   },
@@ -896,7 +887,7 @@ Object.assign(Mongo.Collection.prototype, {
     // [FIBERS]
     // TODO: Remove this when 3.0 is released.
     warnUsingOldApi(
-      "_createCappedCollection",
+      '_createCappedCollection',
       self._name,
       self._createCappedCollection.isCalledFromAsync
     );
@@ -994,17 +985,15 @@ function popCallbackFromArgs(args) {
   }
 }
 
-
 ASYNC_COLLECTION_METHODS.forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
     try {
-    // TODO: Fibers remove this when we remove fibers.
+      // TODO: Fibers remove this when we remove fibers.
       this[methodName].isCalledFromAsync = true;
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);
     }
   };
-
 });
