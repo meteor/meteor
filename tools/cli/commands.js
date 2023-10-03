@@ -575,7 +575,7 @@ main.registerCommand({
       if(skeletonIndex === -1) {
         let skeletonPrompt = `Which skeleton do you want to use?\nPress Enter for Default (${DEFAULT_SKELETON})\n`;
         AVAILABLE_SKELETONS.forEach((skeleton, index) => {
-          skeletonPrompt += `${index} - ${skeleton}\n`;
+          skeletonPrompt += `${index+1} - ${skeleton}\n`;
         })
         skeletonPrompt += `Please Enter the Skeleton Number: `
   
@@ -583,8 +583,8 @@ main.registerCommand({
         if(skeletonIndex2 === '') {
           options = {...options, [DEFAULT_SKELETON]: true}
         }
-        else if(skeletonIndex2 >= 0 && skeletonIndex2 < AVAILABLE_SKELETONS.length) {
-          options = {...options, [AVAILABLE_SKELETONS[skeletonIndex2]]: true}
+        else if(skeletonIndex2 > 0 && skeletonIndex2 <= AVAILABLE_SKELETONS.length) {
+          options = {...options, [AVAILABLE_SKELETONS[skeletonIndex2-1]]: true}
         }
         else {  
           Console.error(red`Invalid Skeleton number`);
