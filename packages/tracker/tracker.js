@@ -196,6 +196,27 @@ Tracker.Computation = class Computation {
     this._onError = onError;
     this._recomputing = false;
 
+    /**
+     * Computation.firstRunPromise will be set to the result of the call of the autorun function after the initial computation has been completed.
+     * If the autorun function is an async function, it'll then contain its promise, thus making the completion of the execution
+     * await-able.
+     *
+     * That allows us to manually synchronize autoruns like this:
+     *
+     * await Tracker.autorun(async () => {
+     *     await Meteor.userAsync();
+     *     (... more async code...)
+     * }).firstRunPromise;
+     *
+     * await Tracker.autorun(async () => {
+     *     await asyncSomeOrOther();
+     *     (... more async code...)
+     * }).firstRunPromise;
+     *
+     * // ta-daa! We'll get here only after both the autorun functions will have returned & executed in their entirety.
+     */
+    this.firstRunPromise = undefined;
+
     var errored = true;
     try {
       this._compute();
@@ -297,10 +318,18 @@ Tracker.Computation = class Computation {
 
     var previousInCompute = inCompute;
     inCompute = true;
+
     try {
-      Tracker.withComputation(this, () => {
+      // In case of async functions, the result of this function will contain the promise of the autorun function
+      // & make autoruns await-able.
+      const firstRunPromise = Tracker.withComputation(this, () => {
         withNoYieldsAllowed(this._func)(this);
-      });
+      })
+      // We'll store the firstRunPromise on the computation so it can be awaited by the callers, but only
+      // during the first run. We don't want things to get mixed up.
+      if (this.firstRun) {
+        this.firstRunPromise = firstRunPromise;
+      }
     } finally {
       inCompute = previousInCompute;
     }
