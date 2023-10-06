@@ -145,7 +145,7 @@ if (Meteor.isServer) {
       }, {
         insert: function(userId, doc) {
           // Don't allow explicit ID to be set by the client.
-          return doc.has('_id');
+          return has(doc, '_id');
         },
         update: function(userId, doc, fields, modifier) {
           return -1 !== fields.indexOf('verySecret');
