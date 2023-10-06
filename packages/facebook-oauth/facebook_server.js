@@ -2,7 +2,7 @@ Facebook = {};
 import crypto from 'crypto';
 import { Accounts } from 'meteor/accounts-base';
 
-const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '13.0';
+const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '17.0';
 
 Facebook.handleAuthFromAccessToken = async (accessToken, expiresAt) => {
   // include basic fields from facebook
