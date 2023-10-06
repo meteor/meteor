@@ -4,12 +4,11 @@ Package.describe({
 });
 
 Npm.depends({
-  "combined-stream2": "1.1.2",
-  "lodash.template": "4.5.0"
+  "combined-stream2": "1.1.2"
 });
 
 Package.onUse(api => {
-  api.use('ecmascript');
+  api.use(['ecmascript', 'utilities']);
   api.mainModule('generator.js', 'server');
   api.export('Boilerplate', 'server');
 });

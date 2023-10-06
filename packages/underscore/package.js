@@ -8,7 +8,7 @@ Npm.depends({
   '@types/underscore': '1.11.4',
 });
 Package.onUse(function (api) {
-  // Like all packages, we have an implicit depedency on the 'meteor'
+  // Like all packages, we have an implicit dependency on the 'meteor'
   // package, which provides such things as the *.js file handler. Use
   // an undocumented API to allow 'meteor' to alter us even though we
   // depend on it. This is necessary since 'meteor' depends on us. One

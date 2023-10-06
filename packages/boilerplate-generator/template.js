@@ -1,4 +1,4 @@
-import lodashTemplate from 'lodash.template';
+import { lodashTemplate } from 'meteor/utilities';
 
 // As identified in issue #9149, when an application overrides the default
 // _.template settings using _.templateSettings, those new settings are
