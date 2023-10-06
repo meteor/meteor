@@ -49,7 +49,7 @@ var replaceNames = function (filter, thing) {
       return thing.map(replaceNames.bind(null, filter));
     }
     var ret = {};
-    thing.forEach(function (value, key) {
+    Object.entries(thing).forEach(function ([key, value]) {
       ret[filter(key)] = replaceNames(filter, value);
     });
     return ret;
@@ -1487,9 +1487,9 @@ forEachTrigger = function (cursorDescription, triggerCallback) {
     cursorDescription.selector);
   if (specificIds) {
     specificIds.forEach(function (id) {
-      triggerCallback(_.extend({id: id}, key));
+      triggerCallback(Object.assign({id: id}, key));
     });
-    triggerCallback(_.extend({dropCollection: true, id: null}, key));
+    triggerCallback(Object.assign({dropCollection: true, id: null}, key));
   } else {
     triggerCallback(key);
   }

@@ -1721,7 +1721,7 @@ if (Meteor.isServer) {
       polls,
       {all: 1, id1Direct: 1, id1InQuery: 1, id2Direct: 1, id2InQuery: 1,
        bothIds: 1});
-
+        
     handlesToStop.forEach(function (h) {h.stop();});
     onComplete();
   });
@@ -2426,56 +2426,57 @@ function functionChain2Upsert (test, expect, coll, index) {
   }));
 }
 
-Object.keys( {collectionInsert: collectionInsert,
-         collectionUpsert: collectionUpsert,
-         functionCallsInsert: functionCallsInsert,
-         functionCallsUpsert: functionCallsUpsert,
-         functionCallsUpsertExisting: functionCallsUpsertExisting,
-         functionCalls3Insert: functionCalls3Inserts,
-         functionChainInsert: functionChainInsert,
-         functionChain2Insert: functionChain2Insert,
-         functionChain2Upsert: functionChain2Upsert}).forEach(function (fn, name) {
-[1, 3].forEach(function (repetitions) {
-  [1, 3].forEach( function (collectionCount) {
-    ['STRING', 'MONGO'].forEach( function (idGeneration) {
+Object.entries( {collectionInsert: collectionInsert,
+  collectionUpsert: collectionUpsert,
+  functionCallsInsert: functionCallsInsert,
+  functionCallsUpsert: functionCallsUpsert,
+  functionCallsUpsertExisting: functionCallsUpsertExisting,
+  functionCalls3Insert: functionCalls3Inserts,
+  functionChainInsert: functionChainInsert,
+  functionChain2Insert: functionChain2Insert,
+  functionChain2Upsert: functionChain2Upsert}).forEach(function ([name, fn]) {
+    [1, 3].forEach(function (repetitions) {
+      [1, 3].forEach( function (collectionCount) {
+        ['STRING', 'MONGO'].forEach(function (idGeneration) {
 
-  testAsyncMulti('mongo-livedata - consistent _id generation ' + name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
-    var collectionOptions = { idGeneration: idGeneration };
+testAsyncMulti('mongo-livedata - consistent _id generation ' + name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
+var collectionOptions = { idGeneration: idGeneration };
 
-    var cleanups = this.cleanups = [];
-    this.collections = times(collectionCount, function () {
-      var collectionName = "consistentid_" + Random.id();
-      if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-        Meteor.subscribe('c-' + collectionName, expect());
-        cleanups.push(function (expect) { Meteor.call('dropInsecureCollection', collectionName, expect(function () {})); });
-      }
+var cleanups = this.cleanups = [];
+this.collections = times(collectionCount, function () {
+var collectionName = "consistentid_" + Random.id();
+if (Meteor.isClient) {
+ Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+ Meteor.subscribe('c-' + collectionName, expect());
+ cleanups.push(function (expect) { Meteor.call('dropInsecureCollection', collectionName, expect(function () {})); });
+}
 
-      var collection = new Mongo.Collection(collectionName, collectionOptions);
-      if (Meteor.isServer) {
-        cleanups.push(function () { collection._dropCollection(); });
-      }
-      COLLECTIONS[collectionName] = collection;
-      return collection;
-    });
-  }, function (test, expect) {
-    // now run the actual test
-    for (var i = 0; i < repetitions; i++) {
-      for (var j = 0; j < collectionCount; j++) {
-        fn(test, expect, this.collections[j], i);
-      }
-    }
-  }, function (test, expect) {
-    // Run any registered cleanup functions (e.g. to drop collections)
-    this.cleanups.forEach(function(cleanup) {
-      cleanup(expect);
-    });
-  }]);
+var collection = new Mongo.Collection(collectionName, collectionOptions);
+if (Meteor.isServer) {
+ cleanups.push(function () { collection._dropCollection(); });
+}
+COLLECTIONS[collectionName] = collection;
+return collection;
+});
+}, function (test, expect) {
+// now run the actual test
+for (var i = 0; i < repetitions; i++) {
+for (var j = 0; j < collectionCount; j++) {
+ fn(test, expect, this.collections[j], i);
+}
+}
+}, function (test, expect) {
+// Run any registered cleanup functions (e.g. to drop collections)
+this.cleanups.forEach(function(cleanup) {
+cleanup(expect);
+});
+}]);
 
 });
 });
 });
 });
+
 
 
 
