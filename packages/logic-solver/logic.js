@@ -1,4 +1,4 @@
-const has = Npm.require('lodash.has');
+var has = Npm.require('lodash.has');
 
 Logic._MiniSat = MiniSat; // Expose for testing and poking around
 
@@ -123,16 +123,16 @@ Logic.Formula.prototype.guid = function () {
 // Solver data structure, which is the final result of formula
 // generation and mapping variable names to numbers, before passing
 // the clauses to MiniSat.
-Logic.Clause = function (...args) {
-  var terms = args.flat(Infinity);
+Logic.Clause = function () {
+  var terms = Array.from(arguments).flat(Infinity);
   if (assert) assert(terms, isArrayWhere(Logic.isNumTerm));
 
   this.terms = terms; // immutable [NumTerm]
 };
 
 // Returns a new Clause with the extra term or terms appended
-Logic.Clause.prototype.append = function (...args) {
-  return new Logic.Clause(this.terms.concat(args.flat(Infinity)));
+Logic.Clause.prototype.append = function () {
+  return new Logic.Clause(this.terms.concat(Array.from(arguments).flat(Infinity)));
 };
 
 var FormulaInfo = function () {
@@ -212,9 +212,9 @@ Logic.Termifier = function (solver) {
 // `$or1` to make the Clause.  When the Clause is actually used, it
 // will trigger generation of the clauses that relate `$or1` to the
 // operands of the OrFormula.
-Logic.Termifier.prototype.clause = function (...args) {
+Logic.Termifier.prototype.clause = function () {
   var self = this;
-  var formulas = args.flat(Infinity);
+  var formulas = Array.from(arguments).flat(Infinity);
   if (assert) assert(formulas, isArrayWhere(isFormulaOrTerm));
 
   return new Logic.Clause(formulas.map(function (f) {
@@ -508,12 +508,12 @@ Logic.Solver.prototype._addClauses = function (array, _extraTerms,
   });
 };
 
-Logic.Solver.prototype.require = function (...args) {
-  this._requireForbidImpl(true, args.flat(Infinity));
+Logic.Solver.prototype.require = function () {
+  this._requireForbidImpl(true, Array.from(arguments).flat(Infinity));
 };
 
-Logic.Solver.prototype.forbid = function (...args) {
-  this._requireForbidImpl(false, args.flat(Infinity));
+Logic.Solver.prototype.forbid = function () {
+  this._requireForbidImpl(false, Array.from(arguments).flat(Infinity));
 };
 
 Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
@@ -666,8 +666,8 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
   }
 };
 
-Logic.or = function (...args) {
-  const operands = args.flat(Infinity);
+Logic.or = function () {
+  var operands = Array.from(arguments).flat(Infinity);
   if (operands.length === 0) {
     return Logic.FALSE;
   } else if (operands.length === 1) {
@@ -708,8 +708,8 @@ Logic.NotFormula = function (operand) {
 // simplified away by the solver itself.
 Logic._defineFormula(Logic.NotFormula, 'not');
 
-Logic.and = function (...args) {
-  var flattenedArgs = args.flat(Infinity);
+Logic.and = function () {
+  var flattenedArgs = Array.from(arguments).flat(Infinity);
   if (flattenedArgs.length === 0) {
     return Logic.TRUE;
   } else if (flattenedArgs.length === 1) {
@@ -751,8 +751,8 @@ var group = function (array, N) {
   return ret;
 };
 
-Logic.xor = function (...args) {
-  var flattenedArgs = args.flat(Infinity);
+Logic.xor = function () {
+  var flattenedArgs = Array.from(arguments).flat(Infinity);
   if (flattenedArgs.length === 0) {
     return Logic.FALSE;
   } else if (flattenedArgs.length === 1) {
@@ -815,8 +815,8 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
   }
 });
 
-Logic.atMostOne = function (...args) {
-  var flattenedArgs = args.flat(Infinity);
+Logic.atMostOne = function () {
+  var flattenedArgs = Array.from(arguments).flat(Infinity);
   if (flattenedArgs.length <= 1) {
     return Logic.TRUE;
   } else {
@@ -915,12 +915,12 @@ Logic._defineFormula(Logic.EquivFormula, 'equiv', {
   }
 });
 
-Logic.exactlyOne = function (...args) {
-  var flattenedArgs = args.flat(Infinity);
+Logic.exactlyOne = function () {
+  var flattenedArgs = Array.from(arguments).flat(Infinity);
   if (flattenedArgs.length === 0) {
     return Logic.FALSE;
   } else if (flattenedArgs.length === 1) {
-    if (assert) assert(args[0], isFormulaOrTerm);
+    if (assert) assert(arguments[0], isFormulaOrTerm);
     return flattenedArgs[0];
   } else {
     return new Logic.ExactlyOneFormula(flattenedArgs);
@@ -1206,7 +1206,9 @@ var binaryWeightedSum = function (varsByWeight) {
   if (assert) assert(varsByWeight,
                      isArrayWhere(isArrayWhere(isFormulaOrTerm)));
   // initialize buckets to a two-level clone of varsByWeight
-  var buckets = varsByWeight.map((vars) => [...vars]);
+  var buckets = varsByWeight.map(function(vars) {
+    return Array.from(vars).flat()
+  });
   
   var lowestWeight = 0; // index of the first non-empty array
   var output = [];
@@ -1293,8 +1295,8 @@ Logic.weightedSum = function (formulas, weights) {
   return new Logic.Bits(binaryWeightedSum(binaryWeighted));
 };
 
-Logic.sum = function (...args) {
-  var things = args.flat(Infinity);
+Logic.sum = function () {
+  var things = Array.from(arguments).flat(Infinity);
   if (assert) assert(things, isArrayWhere(isFormulaOrTermOrBits));
 
   var binaryWeighted = [];
