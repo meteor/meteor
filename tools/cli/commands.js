@@ -555,44 +555,7 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
 
-  const setup = async () => {
-    const ask = createPrompt();
-    if(!options.hasOwnProperty("list") && !options.hasOwnProperty("example") && !options.hasOwnProperty("package")) {
-      let appName, templateName;
-      if(!options.args[0]) {
-        const appName = await ask(`What is the name/path of your ${yellow`app`}? `);
-        checkScaffoldName(appName);
-        options.args.push(appName)
-      }
-      else {
-        // This part is just for better clarity
-        Console.info(`Name of your app: ${options.args[0]}`);
-      }
   
-      const skeletonIndex = AVAILABLE_SKELETONS.findIndex(skeleton => {
-        return Object.keys(options).includes(skeleton);
-      })
-      if(skeletonIndex === -1) {
-        let skeletonPrompt = `Which skeleton do you want to use?\nPress Enter for Default (${DEFAULT_SKELETON})\n`;
-        AVAILABLE_SKELETONS.forEach((skeleton, index) => {
-          skeletonPrompt += `${index+1} - ${skeleton}\n`;
-        })
-        skeletonPrompt += `Please Enter the Skeleton Number: `
-  
-        const skeletonIndex2 = await ask(skeletonPrompt);
-        if(skeletonIndex2 === '') {
-          options = {...options, [DEFAULT_SKELETON]: true}
-        }
-        else if(skeletonIndex2 > 0 && skeletonIndex2 <= AVAILABLE_SKELETONS.length) {
-          options = {...options, [AVAILABLE_SKELETONS[skeletonIndex2-1]]: true}
-        }
-        else {  
-          Console.error(red`Invalid Skeleton number`);
-        }
-      }
-    }
-    Console.setPretty(true)
-  }
   
   await setup();  
   
@@ -768,12 +731,71 @@ main.registerCommand({
     return 0;
   }
 
-  var appPathAsEntered;
-  if (options.args.length === 1) {
-    appPathAsEntered = options.args[0];
-  } else {
-    throw new main.ShowUsage;
+  const setup = async () => {
+    const ask = createPrompt();
+
+    let appPathAsEntered, skeleton;
+      if(options.args.length === 1) {
+        appPathAsEntered = options.args[0];
+        // This part is just for better clarity
+        Console.info(`Name of your app: ${options.args[0]}`);
+      }
+      else {
+        appPathAsEntered = await ask(`What is the name/path of your ${yellow`app`}? `);
+        checkScaffoldName(appPathAsEntered);
+      }
+
+      const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
+        !!options[skeleton]);
+
+      if(skeletonExplicitOption) {
+        skeleton = skeletonExplicitOption;
+      }
+      else {
+
+      // }
+      // const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
+  
+      // const skeletonIndex = AVAILABLE_SKELETONS.findIndex(skeleton => {
+      //   return Object.keys(options).includes(skeleton);
+      // })
+      // if(skeletonIndex === -1) {
+        let skeletonPrompt = `Which skeleton do you want to use?\nPress Enter for Default (${DEFAULT_SKELETON})\n`;
+        AVAILABLE_SKELETONS.forEach((skeleton, index) => {
+          skeletonPrompt += `${index+1} - ${skeleton}\n`;
+        })
+        skeletonPrompt += `Please Enter the Skeleton Number: `
+  
+        const skeletonIndex2 = await ask(skeletonPrompt);
+        if(skeletonIndex2 === '') {
+          options = {...options, [DEFAULT_SKELETON]: true}
+        }
+        else if(skeletonIndex2 > 0 && skeletonIndex2 <= AVAILABLE_SKELETONS.length) {
+          options = {...options, [AVAILABLE_SKELETONS[skeletonIndex2-1]]: true}
+        }
+        else {  
+          Console.error(red`Invalid Skeleton number`);
+        }
+      }
+    Console.setPretty(true)
+
+    return {
+      appPathAsEntered,
+      skeleton
+    }
   }
+
+  var {
+    appPathAsEntered, 
+    skeleton
+  } = await setup();
+
+  // var appPathAsEntered;
+  // if (options.args.length === 1) {
+  //   appPathAsEntered = options.args[0];
+  // } else {
+  //   throw new main.ShowUsage;
+  // }
   var appPath = files.pathResolve(appPathAsEntered);
 
   if (files.findAppDir(appPath)) {
@@ -841,9 +863,9 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/);
   }
 
-  const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
-    !!options[skeleton]);
-  const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
+  // const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
+  //   !!options[skeleton]);
+  // const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
     `skel-${skeleton}`), appPath, {
     transformFilename: function (f) {
