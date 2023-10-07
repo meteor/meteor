@@ -554,11 +554,6 @@ main.registerCommand({
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
-
-  
-  
-  await setup();  
-  
   // Creating a package is much easier than creating an app, so if that's what
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
@@ -752,7 +747,7 @@ main.registerCommand({
       // Constructing the prompt for choosing skeleton
       // It can be made better with inquirer package
       let skeletonPrompt = `Which ${yellow`skeleton`} do you want to use?\n`;
-      
+
       AVAILABLE_SKELETONS.forEach((skeleton, i) => {
         skeletonPrompt += `${i+1} - ${skeleton}\n`;
       })
