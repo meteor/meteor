@@ -746,23 +746,27 @@ main.registerCommand({
     else {
       // Constructing the prompt for choosing skeleton
       // It can be made better with inquirer package
-      let skeletonPrompt = `Which ${yellow`skeleton`} do you want to use?\n`;
+      let skeletonsInfo = `Which ${yellow`skeleton`} do you want to use?\n`;
 
       AVAILABLE_SKELETONS.forEach((skeleton, i) => {
-        skeletonPrompt += `${i+1} - ${skeleton}\n`;
+        skeletonsInfo += `${i+1} - ${skeleton}\n`;
       })
-      skeletonPrompt += `Press Enter for Default (${DEFAULT_SKELETON})\nPlease Enter the Skeleton Number: `
-  
-      const skeletonIndex = await ask(skeletonPrompt);
-      if(skeletonIndex === '') {
-        skeleton = DEFAULT_SKELETON;
-      }
-      else if(skeletonIndex > 0 && skeletonIndex <= AVAILABLE_SKELETONS.length) {
-        skeleton = AVAILABLE_SKELETONS[skeletonIndex-1];
-      }
-      else {
-        Console.error(red`Invalid Skeleton Number entered`);
-      }
+      skeletonsInfo += `press Enter for ${green`default (${DEFAULT_SKELETON})`}`
+
+      Console.info(skeletonsInfo)
+      
+      do {
+        const skeletonIndex = await ask("Please Enter the Skeleton Number: ");
+        if(skeletonIndex === '') {
+          skeleton = DEFAULT_SKELETON;
+        }
+        else if(skeletonIndex > 0 && skeletonIndex <= AVAILABLE_SKELETONS.length) {
+          skeleton = AVAILABLE_SKELETONS[skeletonIndex-1];
+        }
+        else {
+          Console.error(red`Invalid Skeleton Number entered`);
+        }
+      } while(!skeleton);
     }
     Console.setPretty(true)
 
