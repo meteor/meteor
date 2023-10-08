@@ -528,6 +528,22 @@ export const AVAILABLE_SKELETONS = [
   "solid",
 ];
 
+const SKELETON_INFO = {
+  "bare": "to create an empty app",
+  "minimal": "to create an app with as few Meteor packages as possible",
+  "full": "to create a more complete scaffolded app",
+  "react": "to create a basic React-based app",
+  "vue": "to create a basic Vue3-based app",
+  "vue-2": "to create a basic Vue2-based app",
+  "apollo": "to create a basic Apollo + React app",
+  "svelte": "to create a basic Svelte app",
+  "typescript": "to create an app using TypeScript and React",
+  "blaze": "to create an app using Blaze",
+  "tailwind": "to create an app using React and Tailwind",
+  "chakra-ui": "to create an app Chakra UI and React",
+  "solid": "to create a basic Solid app"
+}
+
 main.registerCommand({
   name: 'create',
   maxArgs: 1,
@@ -748,8 +764,12 @@ main.registerCommand({
       // It can be made better with inquirer package
       let skeletonsInfo = `Which ${yellow`skeleton`} do you want to use?\n`;
 
+      // can be modified as suitable
+      const maxKeyLength = 14
       AVAILABLE_SKELETONS.forEach((skeleton, i) => {
-        skeletonsInfo += `${i+1} - ${skeleton}\n`;
+        // spaces for alignment of info string
+        const spaces = ' '.repeat(maxKeyLength - skeleton.length - String(i+1).length);
+        skeletonsInfo += `${i+1} - ${skeleton} ${spaces} #${SKELETON_INFO[skeleton]}\n`;
       })
       skeletonsInfo += `press Enter for ${green`default (${DEFAULT_SKELETON})`}`
 
@@ -972,29 +992,6 @@ main.registerCommand({
   Console.info(
     Console.url("https://www.meteor.com/cloud"),
       Console.options({ indent: 2 }));
-
-  if (!!skeletonExplicitOption) {
-    // Notify people about the skeleton options
-    Console.info([
-      "",
-      "To start with a different app template, try one of the following:",
-      "",
-    ].join("\n"));
-
-    cmd("meteor create --bare       # to create an empty app");
-    cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
-    cmd("meteor create --full       # to create a more complete scaffolded app");
-    cmd("meteor create --react      # to create a basic React-based app");
-    cmd("meteor create --vue        # to create a basic Vue3-based app");
-    cmd("meteor create --vue-2      # to create a basic Vue2-based app");
-    cmd("meteor create --apollo     # to create a basic Apollo + React app");
-    cmd("meteor create --svelte     # to create a basic Svelte app");
-    cmd("meteor create --typescript # to create an app using TypeScript and React");
-    cmd("meteor create --blaze      # to create an app using Blaze");
-    cmd("meteor create --tailwind   # to create an app using React and Tailwind");
-    cmd("meteor create --chakra-ui  # to create an app Chakra UI and React");
-    cmd("meteor create --solid      # to create a basic Solid app");
-  }
 
   Console.info("");
 });
