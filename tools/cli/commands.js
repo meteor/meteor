@@ -774,7 +774,7 @@ main.registerCommand({
         AVAILABLE_SKELETONS.forEach((skeleton, i) => {
           // spaces for alignment of info string
           const spaces = ' '.repeat(maxKeyLength - skeleton.length - String(i+1).length);
-          skeletonsInfo += `${i+1} - ${skeleton} ${spaces} #${SKELETON_INFO[skeleton]}\n`;
+          skeletonsInfo += `${i+1} - ${skeleton} ${spaces} # ${SKELETON_INFO[skeleton]}\n`;
         })
         skeletonsInfo += `press Enter for ${green`default (${DEFAULT_SKELETON})`}`
   
