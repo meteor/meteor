@@ -745,49 +745,56 @@ main.registerCommand({
   const setup = async () => {
     const ask = createPrompt();
 
-    let appPathAsEntered, skeleton;
-    if(options.args.length === 1) {
-      appPathAsEntered = options.args[0];
-    }
-    else {
-      appPathAsEntered = await ask(`What is the name/path of your ${yellow`app`}? `);
-    }
-
     const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
       !!options[skeleton]);
 
-    if(skeletonExplicitOption) {
-      skeleton = skeletonExplicitOption;
+    let appPathAsEntered, skeleton;
+    if(options.args.length === 1) {
+      appPathAsEntered = options.args[0];
+      if(skeletonExplicitOption) {
+        skeleton = skeletonExplicitOption;
+      }
+      else {
+        skeleton = DEFAULT_SKELETON;
+        Console.info(`No skeleton specified, using default ${green`${DEFAULT_SKELETON}`}`)
+      }
     }
     else {
-      // Constructing the prompt for choosing skeleton
-      // It can be made better with inquirer package
-      let skeletonsInfo = `Which ${yellow`skeleton`} do you want to use?\n`;
-
-      // can be modified as suitable
-      const maxKeyLength = 14
-      AVAILABLE_SKELETONS.forEach((skeleton, i) => {
-        // spaces for alignment of info string
-        const spaces = ' '.repeat(maxKeyLength - skeleton.length - String(i+1).length);
-        skeletonsInfo += `${i+1} - ${skeleton} ${spaces} #${SKELETON_INFO[skeleton]}\n`;
-      })
-      skeletonsInfo += `press Enter for ${green`default (${DEFAULT_SKELETON})`}`
-
-      Console.info(skeletonsInfo)
-      
-      do {
-        const skeletonIndex = await ask("Please Enter the Skeleton Number: ");
-        if(skeletonIndex === '') {
-          skeleton = DEFAULT_SKELETON;
-        }
-        else if(skeletonIndex > 0 && skeletonIndex <= AVAILABLE_SKELETONS.length) {
-          skeleton = AVAILABLE_SKELETONS[skeletonIndex-1];
-        }
-        else {
-          Console.error(red`Invalid Skeleton Number entered`);
-        }
-      } while(!skeleton);
+      appPathAsEntered = await ask(`What is the name/path of your ${yellow`app`}? `);
+      if(skeletonExplicitOption) {
+        skeleton = skeletonExplicitOption;
+      }
+      else {
+        // Constructing the prompt for choosing skeleton
+        // It can be made better with inquirer package
+        let skeletonsInfo = `Which ${yellow`skeleton`} do you want to use?\n`;
+  
+        // can be modified as suitable
+        const maxKeyLength = 14
+        AVAILABLE_SKELETONS.forEach((skeleton, i) => {
+          // spaces for alignment of info string
+          const spaces = ' '.repeat(maxKeyLength - skeleton.length - String(i+1).length);
+          skeletonsInfo += `${i+1} - ${skeleton} ${spaces} #${SKELETON_INFO[skeleton]}\n`;
+        })
+        skeletonsInfo += `press Enter for ${green`default (${DEFAULT_SKELETON})`}`
+  
+        Console.info(skeletonsInfo)
+        
+        do {
+          const skeletonIndex = await ask("Please Enter the Skeleton Number: ");
+          if(skeletonIndex === '') {
+            skeleton = DEFAULT_SKELETON;
+          }
+          else if(skeletonIndex > 0 && skeletonIndex <= AVAILABLE_SKELETONS.length) {
+            skeleton = AVAILABLE_SKELETONS[skeletonIndex-1];
+          }
+          else {
+            Console.error(red`Invalid Skeleton Number entered`);
+          }
+        } while(!skeleton);
+      }
     }
+
     Console.setPretty(true)
 
     return {
