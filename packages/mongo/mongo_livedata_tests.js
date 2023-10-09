@@ -879,7 +879,7 @@ if (Meteor.isServer) {
 
   // This test mainly checks the correctness of oplog code dealing with limited
   // queries. Compitablity with poll-diff is added as well.
-  Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, function (test, onComplete) {
+  Tinytest.add("mongo-livedata - observe sorted, limited " + idGeneration, function (test) {
     var run = test.runId();
     var coll = new Mongo.Collection("observeLimit-"+run, collectionOptions);
 
@@ -1146,7 +1146,6 @@ if (Meteor.isServer) {
     testSafeAppendToBufferFlag(false);
 
     o.handle.stop();
-    onComplete();
   });
 
   Tinytest.addAsync("mongo-livedata - observe sorted, limited, sort fields " + idGeneration, function (test, onComplete) {
