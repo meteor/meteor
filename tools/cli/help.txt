@@ -106,6 +106,7 @@ Options:
   --exclude-archs  Don't create bundles for certain web architectures
                   (comma separated, for example:
                    --exclude-archs "web.browser.legacy, web.cordova")
+  --open           Opens a browser window when it finishes building      
 
 >>> debug
 Run the project with server-side debugging enabled.
@@ -760,6 +761,7 @@ Options:
   --exclude-archs   Don't create test bundles for certain web architectures
                     (comma separated, for example:
                     --exclude-archs "web.browser.legacy, web.cordova")
+  --open            Opens a browser window when it finishes building                  
 
 >>> self-test
 Run tests of the 'meteor' tool.

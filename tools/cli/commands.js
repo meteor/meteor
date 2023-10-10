@@ -23,6 +23,7 @@ var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
 const { Profile } = require("../tool-env/profile");
+const open = require('open')
 
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
@@ -332,7 +333,8 @@ var runCommandOptions = {
     // of top-level dependencies.
     'allow-incompatible-update': { type: Boolean },
     'extra-packages': { type: String },
-    'exclude-archs': { type: String }
+    'exclude-archs': { type: String },
+    'open': {type: Boolean, short: "o", default: false}
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -404,6 +406,16 @@ function doRunCommand(options) {
 
   if (options['raw-logs']) {
     runLog.setRawLogs(true);
+  }
+
+  //Opens a browser window when it finishes building
+  if (options.open) {
+    if(process.env.ROOT_URL){
+      open(process.env.ROOT_URL)
+    } else {
+      open('https://localhost:3000')
+    }
+    
   }
 
   let webArchs = projectContext.platformList.getWebArchs();
