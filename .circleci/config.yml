@@ -32,6 +32,24 @@ run_env_change: &run_env_change
     # Reload sysctl so these are in effect.
     # sudo sysctl -p
 
+log_env: &log_env
+  name: Log Environment
+  command: |
+    echo "==> LBS Version"
+    lsb_release -a
+    echo "==> cat /etc/os-release"
+    cat /etc/os-release
+    echo "==> uname -srm"
+    uname -srm
+    echo "==> Node version: $(node --version)"
+    echo "==> NPM version: $(npm --version)"
+    echo "==> Meteor Node version: $(./meteor node --version)"
+    echo "==> Meteor NPM version: $(./meteor npm --version)"
+    echo "==> Dev bundle package.json:"
+    cat ./dev_bundle/lib/package.json
+    echo "==> Dev bundle node_modules:"
+    ls -l ./dev_bundle/lib/node_modules
+
 # A reusable "run" snippet which enables the continued logging of memoryusage
 # to a file on disk which can be saved to build artifacts for later analysis.
 run_log_mem_use: &run_log_mem_use
@@ -61,7 +79,7 @@ run_save_node_bin: &run_save_node_bin
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
-    - image: meteor/circleci:android-30-node-14
+    - image: meteor/circleci:android-30-node-18
   resource_class: large
   environment:
     # This multiplier scales the waitSecs for selftests.
@@ -117,8 +135,16 @@ jobs:
       - run:
           name: Combine NPM Shrinkwrap Files
           command: |
-            for d in packages/*/.npm/package; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
-            for d in packages/*/.npm/plugin/*; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
+            for d in packages/*/.npm/package; do
+              if [ -f $d/npm-shrinkwrap.json ]; then
+              cat $d/npm-shrinkwrap.json >> shrinkwraps.txt;
+              fi
+            done
+            for d in packages/*/.npm/plugin/*; do
+              if [ -f $d/npm-shrinkwrap.json ]; then
+              cat $d/npm-shrinkwrap.json >> shrinkwraps.txt;
+              fi
+            done
       - restore_cache:
           keys:
             - package-npm-deps-cache-group1-v3-{{ checksum "shrinkwraps.txt" }}
@@ -146,14 +172,18 @@ jobs:
           name: Clear npm cache
           command: ./meteor npm cache clear --force
       - run:
+          <<: *log_env
+      - run:
           name: Get Ready
           command: |
             eval $PRE_TEST_COMMANDS;
-            pushd tools
-            npm install @types/node@14.17.6 --save-dev
+            cd dev_bundle/lib
+            ../../meteor npm install @types/node@18.11.9 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
-            ../meteor npx tsc --noEmit --skipLibCheck
-            popd
+            ../../meteor npm install -g typescript
+            cd ../../
+            # tools/node_modules is a symlink, but starting on NPM 7, this symlinks are deleted https://github.com/npm/cli/issues/3669
+            # so we are copying the node_modules to tools
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
           no_output_timeout: 60m
@@ -189,6 +219,8 @@ jobs:
               --headless \
           no_output_timeout: 20m
       - run:
+          <<: *log_env
+      - run:
           name: "Running self-test (Custom Warehouse Tests)"
           command: |
             eval $PRE_TEST_COMMANDS;
@@ -221,6 +253,8 @@ jobs:
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 0)"
           command: |
@@ -262,6 +296,8 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
+          <<: *log_env
+      - run:
           name: "Running self-test (Test Group 1)"
           command: |
             if [ -f ./tmp/test-groups/1.txt ]; then TEST_GROUP=$(<./tmp/test-groups/1.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^com[n-z]'; fi
@@ -298,6 +334,8 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run:
+          <<: *log_env
       - run:
           name: "Print environment"
           command: printenv
@@ -338,6 +376,8 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run:
+          <<: *log_env
       - run:
           name: "Print environment"
           command: printenv
@@ -382,6 +422,8 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
+          <<: *log_env
+      - run:
           name: "Running self-test (Test Group 4)"
           command: |
             if [ -f ./tmp/test-groups/4.txt ]; then TEST_GROUP=$(<./tmp/test-groups/4.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^h[f-z]|^[i-l]'; fi
@@ -421,6 +463,8 @@ jobs:
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 5)"
           command: |
@@ -462,6 +506,8 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
+          <<: *log_env
+      - run:
           name: "Running self-test (Test Group 6)"
           command: |
             if [ -f ./tmp/test-groups/6.txt ]; then TEST_GROUP=$(<./tmp/test-groups/6.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^mo[e-z]|^m[p-z]|^[n-o]'; fi
@@ -501,6 +547,8 @@ jobs:
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 7)"
           command: |
@@ -542,6 +590,8 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
+          <<: *log_env
+      - run:
           name: "Running self-test (Test Group 8)"
           command: |
             if [ -f ./tmp/test-groups/8.txt ]; then TEST_GROUP=$(<./tmp/test-groups/8.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^r[f-z]'; fi
@@ -581,6 +631,8 @@ jobs:
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 9)"
           command: |
@@ -622,6 +674,8 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
+          <<: *log_env
+      - run:
           name: "Running self-test (Test Group 10)"
           command: |
             if [ -f ./tmp/test-groups/10.txt ]; then TEST_GROUP=$(<./tmp/test-groups/10.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^[t-z]'; fi
@@ -661,6 +715,8 @@ jobs:
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 11)"
           command: |

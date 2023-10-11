@@ -6,7 +6,7 @@ Package.describe({
   // between such packages and the build tool.
   name: 'launch-screen',
   summary: 'Default and customizable launch screen on mobile.',
-  version: '2.0.0-alpha300.10',
+  version: '1.3.1-alpha300.15',
 });
 
 Cordova.depends({

@@ -10,8 +10,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.14.17",
-    pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
+    npm: "9.6.7",
     "node-gyp": "8.0.0",
     "node-pre-gyp": "0.15.0",
     typescript: "4.9.4",
@@ -39,7 +38,7 @@ var packageJson = {
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
-    "source-map": "0.7.3",
+    "source-map": "0.7.4",
     chalk: "4.1.1",
     sqlite3: "5.0.2",
     "http-proxy": "1.18.1",

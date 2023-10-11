@@ -550,7 +550,13 @@ export class PackageAPI {
       }
       var releaseRecord = await catalog.official.getReleaseVersion(
         relInf[0], relInf[1]);
+        console.log(
+          "record", releaseRecord,
+        `Track: ${relInf[0]};
+        Version: ${relInf[1]}`)
+
       if (!releaseRecord) {
+        console.log("record", releaseRecord)
         buildmessage.error("Unknown release "+ release,
                            { tags: { refreshCouldHelp: true } });
       } else {

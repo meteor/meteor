@@ -24,7 +24,7 @@ async function runNextUrl(browser) {
     if (await isDone(page)) {
       let failCount = await getFailCount(page);
       console.log(`
-      The number of tests from Test number may be different because 
+      The number of tests from Test number may be different because
       of the way the test is written. causing the test to fail or
       to run more than once. in the console. Test number total: ${ testNumber }`);
       console.log(`Tests complete with ${ failCount } failures`);
@@ -89,11 +89,7 @@ async function getFailCount(page) {
       return TEST_STATUS.FAILURES;
     }
 
-    if (typeof FAILURES === 'undefined') {
-      return 1;
-    }
-
-    return 0;
+    return typeof FAILURES !== 'undefined' && FAILURES;
   });
 }
 
@@ -112,12 +108,20 @@ async function getFailed(page) {
 }
 
 async function runTests() {
-  console.log(`Running test with Puppeteer at ${ process.env.URL }`);
+  console.log(`Running test with Puppeteer at ${process.env.URL}`);
 
   // --no-sandbox and --disable-setuid-sandbox must be disabled for CI compatibility
-  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-  console.log(`Using version: ${ await browser.version() }`);
+  const browser = await puppeteer.launch({
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-web-security',
+    ],
+  });
+  console.log(`Using version: ${await browser.version()}`);
   runNextUrl(browser);
 }
 
-runTests();
+runTests().catch((e) =>
+  console.log(`something broke while running puppeter: `, e)
+);

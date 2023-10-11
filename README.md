@@ -48,7 +48,7 @@ Use the same code whether you’re developing for web, iOS, Android, or desktop 
 
 How about trying a getting started tutorial in your favorite technology?
 
-| [<img align="left" width="25" src="https://www.quantumversity.com/wp-content/uploads/2020/11/Adding-Authentication-to-React-with-Auth0-Login-and-Profile.png"> React](https://react-tutorial.meteor.com/) |
+| [<img align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"> React](https://react-tutorial.meteor.com/) |
 | - |
 | [<img align="left" width="25" src="https://progsoft.net/images/blaze-css-icon-3e80acb3996047afd09f1150f53fcd78e98c1e1b.png"> Blaze](https://blaze-tutorial.meteor.com/) |
 | [<img align="left" width="25" src="https://vuejs.org/images/logo.png"> Vue](https://vue-tutorial.meteor.com/) |

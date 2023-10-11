@@ -41,11 +41,15 @@ selftest.define("add cordova platforms", ["cordova"], async function () {
   if (process.platform !== 'win32') {
     const originalAndroidHome = process.env.ANDROID_HOME;
     const originalPath = process.env.PATH;
+    const originalAndroidSdkRoot = process.env.ANDROID_SDK_ROOT;
+    const originalHome = process.env.HOME;
 
     // Hide the fact that Android is installed (as it is on CircleCI) by providing
     // access to only bare system functionality. Android is installed globally in /usr/local/
     // on CircleCI and on Mac.
     s.set("ANDROID_HOME", undefined);
+    s.set("ANDROID_SDK_ROOT", undefined);
+    s.set("HOME", undefined);
     s.set("PATH", "/usr/bin:/bin:/usr/sbin:/sbin");
 
     run = s.run("add-platform", "android");
@@ -58,6 +62,8 @@ selftest.define("add cordova platforms", ["cordova"], async function () {
     await run.expectExit(0);
 
     s.set("ANDROID_HOME", originalAndroidHome);
+    s.set("ANDROID_SDK_ROOT", originalAndroidSdkRoot);
+    s.set("HOME", originalHome);
     s.set("PATH", originalPath);
   }
 });
