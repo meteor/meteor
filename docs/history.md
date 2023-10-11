@@ -45,8 +45,14 @@ N/A
 
 * Tool
   - Rename `EACCESS` to `EACCES` to follow the Windows spelling
+  - Fixed links in skeletons
+  - Fixed build issue in Vue skeleton
+  - Updated `source-map-support`
 
 ## Core dependencies
+
+* `accounts-base@2.2.8`
+  - Ensure that `onLogin` callback fires properly
 
 * `ddp-server@2.6.2`:
   - Allow setting `DISABLE_SOCKJS_CORS` to prevent SockJS from setting CORS headers
@@ -79,6 +85,8 @@ N/A
 - [@realyze](https://github.com/realyze)
 - [@jamauro](https://github.com/jamauro)
 - [@Torgen](https://github.com/Torgen)
+- [@brucejo75](https://github.com/brucejo75)
+- [@zodern](https://github.com/sponsors/zodern)
 
 For making this great framework even better!
 
@@ -123,12 +131,6 @@ meteor update --release 2.13.3
 For making this great framework even better!
 
 
-
-
-## Contributors
-
-
-
 ## v2.13.1, 2023-09-04
 
 ### Highlights
@@ -167,12 +169,6 @@ meteor update --release 2.13.1
 
 
 For making this great framework even better!
-
-
-
-
-## Contributors
-
 
 
 ## v2.13.0, 2023-07-26
@@ -250,12 +246,6 @@ Please, follow our [migration guide](https://guide.meteor.com/2.13-migration) to
 - [@Atharshoyeb](https://github.com/Atharshoyeb).
 - [@Julusian](https://github.com/Julusian).
 - [@denihs](https://github.com/denihs).
-
-
-## Contributors
-
-
-
 ## v2.12.0, 2023-04-28
 
 ### Highlights
@@ -407,12 +397,6 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 - [@dmromanov](https://github.com/dmromanov).
 - [@matheusccastroo](https://github.com/matheusccastroo).
 
-
-
-## Contributors
-
-
-
 ## v2.11.0, 2023-03-02
 
 ### Highlights
@@ -551,13 +535,6 @@ For making this great framework even better!
 
 
 
-
-## Contributors
-
-- [@ebroder](https://github.com/ebroder).
-- [@StorytellerCZ](https://github.com/StorytellerCZ).
-
-
 ## v2.10.0, 2023-01-13
 
 ### Highlights
@@ -641,12 +618,6 @@ N/A
 - [@afrokick](https://github.com/afrokick).
 
 For making this great framework even better!
-
-
-## Contributors
-
-
-
 
 
 
