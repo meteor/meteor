@@ -1651,9 +1651,17 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
       { nonMutatingCallbacks: true });
 
   // If needed, re-enable callbacks as soon as the initial batch is ready.
-  if (handle.isReady) suppressed = false;
-  else handle.isReadyPromise.then(() => (suppressed = false));
-
+  const setSuppressed = (h) => {
+    if (h.isReady) suppressed = false;
+    else h.isReadyPromise?.then(() => (suppressed = false));
+  };
+  // When we call cursor.observeChanges() it can be the on from
+  // the mongo package (instead of the minimongo one) and it doesn't have isReady and isReadyPromise
+  if (Meteor._isPromise(handle)) {
+    handle.then(setSuppressed);
+  } else {
+    setSuppressed(handle);
+  }
   return handle;
 };
 

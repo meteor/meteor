@@ -59,7 +59,7 @@ Meteor.methods({
     });
     const svg = new QRCode(uri).svg();
 
-    await Meteor.users.update(
+    await Meteor.users.updateAsync(
       { _id: user._id },
       {
         $set: {
@@ -94,7 +94,7 @@ Meteor.methods({
       Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
     }
 
-    await Meteor.users.update(
+    await Meteor.users.updateAsync(
       { _id: user._id },
       {
         $set: {
@@ -113,7 +113,7 @@ Meteor.methods({
       throw new Meteor.Error(400, 'No user logged in.');
     }
 
-    await Meteor.users.update(
+    await Meteor.users.updateAsync(
       { _id: userId },
       {
         $unset: {

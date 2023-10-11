@@ -18,3 +18,5 @@ export const ASYNC_COLLECTION_METHODS = [
 ];
 
 export const ASYNC_CURSOR_METHODS = ['count', 'fetch', 'forEach', 'map'];
+
+export const CLIENT_ONLY_METHODS = ["findOne", "insert", "remove", "update", "upsert"];

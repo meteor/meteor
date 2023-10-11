@@ -34,8 +34,7 @@ async function run(isProduction) {
     "test",
     "--once",
     "--full-app",
-    // TODO: Fibers revert this to meteortesting:mocha when 3.0.0 is released
-    "--driver-package", "grubba:mocha"
+    "--driver-package", "meteortesting:mocha"
   ];
 
   // For meteortesting:mocha to work we must set test broswer driver
@@ -51,7 +50,7 @@ async function run(isProduction) {
 
   const run = sandbox.run(...args);
 
-  run.waitSecs(1500);
+  run.waitSecs(90);
   await run.match("App running at");
   await run.match("SERVER FAILURES: 0");
   await run.match("CLIENT FAILURES: 0");

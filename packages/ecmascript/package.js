@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ecmascript',
-  version: '1.0.0-alpha300.9',
+  version: '0.16.8-alpha300.15',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md',
 });

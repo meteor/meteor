@@ -200,12 +200,18 @@ export async function ensureIsopacketsLoadable() {
           }
 
           // Now bundle them into a program.
-          var built = await bundler.buildJsImage({
-            name: "isopacket-" + isopacketName,
-            packageMap: isopacketBuildContext.packageMap,
-            isopackCache: isopacketBuildContext.isopackCache,
-            use: packages
-          });
+          var built;
+          try {
+            built = await bundler.buildJsImage({
+              name: "isopacket-" + isopacketName,
+              packageMap: isopacketBuildContext.packageMap,
+              isopackCache: isopacketBuildContext.isopackCache,
+              use: packages
+            });
+          } catch (e) {
+            console.error("Error trying to buildJsImage", e);
+            throw e;
+          }
           if (buildmessage.jobHasMessages()) {
             return;
           }

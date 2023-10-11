@@ -477,14 +477,14 @@ if (Meteor.isServer) {
       self.xs = [];
       self.expects = [];
       self.insert = async function(fields) {
-        coll.insertAsync(
+        return coll.insertAsync(
           _.extend({ ts: new MongoInternals.MongoTimestamp(0, 0) }, fields)
         );
       };
 
       // Tailable observe shouldn't show things that are in the initial
       // contents.
-      self.insert({ x: 1 });
+      await self.insert({ x: 1 });
       // Wait for one added call before going to the next test function.
 
       const [resolver, promise] = getPromiseAndResolver();
@@ -519,11 +519,11 @@ if (Meteor.isServer) {
       const [resolver1, promise1] = getPromiseAndResolver();
       const [resolver2, promise2] = getPromiseAndResolver();
 
-      self.insert({x: 2, y: 3});
-      self.insert({x: 3, y: 7});  // filtered out by the query
-      self.insert({x: 4});
+      await self.insert({x: 2, y: 3});
+      self.expects.push(resolver1, resolver2);
+      await self.insert({x: 3, y: 7});  // filtered out by the query
+      await self.insert({x: 4});
       // Expect two added calls to happen.
-      self.expects = [resolver1, resolver2];
       await Promise.all([promise1, promise2]);
     },
     function (test, expect) {

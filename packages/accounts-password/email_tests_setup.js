@@ -44,7 +44,7 @@ Meteor.methods(
     addEmailForTestAndVerify:
       async email => {
         check(email, String);
-        await Meteor.users.update(
+        await Meteor.users.updateAsync(
           { _id: Accounts.userId() },
           { $push: { emails: { address: email, verified: false } } });
         await Accounts.sendVerificationEmail(Accounts.userId(), email);
@@ -55,7 +55,7 @@ Meteor.methods(
         check(email, String);
         const userId = await Accounts.createUser({ email });
         await Accounts.sendEnrollmentEmail(userId);
-        return await Meteor.users.findOne(userId);
+        return await Meteor.users.findOneAsync(userId);
       }
   }
 );

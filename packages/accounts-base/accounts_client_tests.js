@@ -47,13 +47,13 @@ const createUserAndLogout = (test, done, nextTests) => {
 };
 
 const removeTestUser = done => {
-  Meteor.call('removeAccountsTestUser', username, () => {
+  Meteor.callAsync('removeAccountsTestUser', username).then(() => {
     done();
   });
 };
 
 const forceEnableUser2fa = done => {
-  Meteor.call('forceEnableUser2fa', { username }, secret2fa, (err, token) => {
+  Meteor.callAsync('forceEnableUser2fa', {returnServerPromise:true}, { username }, secret2fa).then((token) => {
     done(token);
   });
 };

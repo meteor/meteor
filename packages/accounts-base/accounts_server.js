@@ -1193,6 +1193,7 @@ export class AccountsServer extends AccountsCommon {
 
     let fullUser;
     if (this._onCreateUserHook) {
+      // Allows _onCreateUserHook to be a promise returning func
       fullUser = await this._onCreateUserHook(options, user);
 
       // This is *not* part of the API. We need this because we can't isolate
@@ -1781,6 +1782,21 @@ const setupUsersCollection = async users => {
     // clients can modify the profile field of their own document, and
     // nothing else.
     update: (userId, user, fields, modifier) => {
+      // make sure it is our record
+      if (user._id !== userId) {
+        return false;
+      }
+
+      // user can only modify the 'profile' field. sets to multiple
+      // sub-keys (eg profile.foo and profile.bar) are merged into entry
+      // in the fields list.
+      if (fields.length !== 1 || fields[0] !== 'profile') {
+        return false;
+      }
+
+      return true;
+    },
+    updateAsync: (userId, user, fields, modifier) => {
       // make sure it is our record
       if (user._id !== userId) {
         return false;

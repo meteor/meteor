@@ -105,19 +105,21 @@ Tinytest.add('collection - call native find with sort function',
 
 Tinytest.addAsync('collection - calling native find with maxTimeMs should timeout',
   async function(test) {
+    if (Meteor.isClient) return;
     var collectionName = 'findOptions1' + test.id;
     var collection = new Mongo.Collection(collectionName);
     await collection.insertAsync({a: 1});
 
 
     async function doTest() {
-      return collection.find({$where: "sleep(100) || true"}, {maxTimeMs: 50}).countAsync();
+      return collection
+        .find({ $where: "sleep(100) || true" }, { maxTimeMs: 50 })
+        .countAsync();
     }
-    if (Meteor.isServer) {
-      await test.throwsAsync(async () => {
-        await doTest()
-      });
-    }
+
+    await test.throwsAsync(async () => {
+      await doTest();
+    });
   }
 );
 
@@ -126,8 +128,13 @@ Tinytest.addAsync('collection - calling native find with $reverse hint should re
   async function(test) {
     var collectionName = 'findOptions2' + test.id;
     var collection = new Mongo.Collection(collectionName);
-    await collection.insertAsync({a: 1});
-    await collection.insertAsync({a: 2});
+    if (Meteor.isServer) {
+      await collection.insertAsync({a: 1});
+      await collection.insertAsync({a: 2});
+    } else {
+      collection.insert({ a: 1 });
+      collection.insert({ b: 1 });
+    }
 
     function m(doc) { return doc.a; }
     var fwd = await collection.find({}, {hint: {$natural: 1}}).map(m);
@@ -145,7 +152,11 @@ Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs
   async function(test, done) {
     var collectionName = 'findOptions3' + test.id;
     var collection = new Mongo.Collection(collectionName);
-    await collection.insertAsync({a: 1});
+    if (Meteor.isServer) {
+      await collection.insertAsync({ a: 1 });
+    } else {
+      collection.insert({ a: 1 });
+    }
 
     return Promise.resolve(
       Meteor.isServer &&
@@ -433,9 +444,9 @@ Tinytest.addAsync('collection - should not block on cursor mismatch (#12516)',
 
     // Setup
     const collection = new Mongo.Collection('test' + test.id);
-    Array.from({ length: 5 }).forEach((_, i) => {
-      collection.insert({ name: "Test-" + i });
-    });
+    for (let i = 0; i < 5; i++) {
+      await collection.insertAsync({ name: "Test-" + i });
+    }
 
     // Test
     const cursor = collection.find({ name: undefined });
@@ -447,7 +458,7 @@ Tinytest.addAsync('collection - should not block on cursor mismatch (#12516)',
         resolve();
       }, 500);
     });
-    subscription = cursor.observe({});
+    subscription = await cursor.observe({});
     subscription.stop();
     await promise;
   }
@@ -455,14 +466,14 @@ Tinytest.addAsync('collection - should not block on cursor mismatch (#12516)',
 
 
 
-Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(test){ 
+Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(test){
   var collectionName = 'add' + test.id;
   var collection = new Mongo.Collection(collectionName);
-  var id = await collection.insert({a: 1});
+  var id = await collection.insertAsync({a: 1});
   test.equal((await collection.findOneAsync(id)).a, 1);
+  await collection.upsertAsync(id, {$set: {a: 2}});
   id = await collection.insertAsync({a: 2});
   test.equal((await collection.findOneAsync(id)).a, 2);
   await collection.removeAsync({});
-  
 })
 

@@ -1,11 +1,11 @@
 Package.describe({
   summary: 'Run tests noninteractively, with results going to the console.',
-  version: '2.0.0-alpha300.9',
+  version: '2.0.0-alpha300.15',
 });
 
 Package.onUse(function(api) {
   api.use(['tinytest', 'underscore', 'random', 'ejson', 'check']);
-  api.use('http@1.0.1', 'server'); // TODO replace with fetch
+  api.use('http', 'server'); // TODO replace with fetch
 
   api.export('TEST_STATUS', 'client');
 

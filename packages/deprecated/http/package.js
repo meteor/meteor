@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '2.0.0-alpha300.5',
+  version: '3.0.0-alpha300.5',
   deprecated: 'Please use the fetch package'
 });
 
@@ -17,6 +17,10 @@ Package.onUse(function (api) {
 
   api.export('HTTP');
   api.export('HTTPInternals', 'server');
+});
+
+Npm.depends({
+  "express-basic-auth": "1.2.1"
 });
 
 Package.onTest(function (api) {
