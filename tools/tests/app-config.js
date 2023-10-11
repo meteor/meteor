@@ -15,8 +15,7 @@ selftest.define("mainModule", async function () {
   const run = s.run(
     "test",
     "--full-app",
-    /// TODO: [Fibers] => turn this back to meteortesthing:mocha when 3.0.0 is released
-    "--driver-package", "grubba:mocha" /// meteortesting:mocha"
+    "--driver-package", "meteortesting:mocha"
   );
 
   run.waitSecs(60);
@@ -161,8 +160,7 @@ selftest.define("testModule", async function () {
     "test",
     // Not running with the --full-app option here, in order to exercise
     // the normal `meteor test` behavior.
-    /// TODO: [Fibers] => turn this back to meteortesthing:mocha when 3.0.0 is released
-    "--driver-package", "grubba:mocha" /// meteortesting:mocha"
+    "--driver-package", "meteortesting:mocha"
   );
 
   run.waitSecs(60);

@@ -7,7 +7,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use(['underscore'], ['client', 'server']);
-  api.use(['templating@2.0.0-alpha300.5', 'mongo', 'ddp'], ['client']);
+  api.use(['templating@1.2.13', 'mongo', 'ddp'], ['client']);
 
   // Detect whether autopublish is used.
   api.use('autopublish', 'server', {weak: true});

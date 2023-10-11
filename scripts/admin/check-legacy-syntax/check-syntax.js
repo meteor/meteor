@@ -54,9 +54,9 @@ const packages = {
   "browser-policy-framing": {},
   // 'constraint-solver': {},
   crosswalk: {},
-  context: {
-    serverFiles: ["context.js"],
-  },
+  // context: { Removed/moved to depracated, we don't need it anymore because of fibers
+  //   serverFiles: ["context.js"],
+  // },
   ddp: {},
   "disable-oplog": {},
   "dynamic-import": {

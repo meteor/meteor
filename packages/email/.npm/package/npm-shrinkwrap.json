@@ -1,10 +1,10 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 4,
   "dependencies": {
     "@types/node": {
-      "version": "18.13.0",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-18.13.0.tgz",
-      "integrity": "sha512-gC3TazRzGoOnoKAhUx+Q0t8S9Tzs74z7m0ipwGpSqQrleP14hKxP4/JUeEQcD3W1/aIpnWl8pHowI7WokuZpXg=="
+      "version": "20.6.2",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.6.2.tgz",
+      "integrity": "sha512-Y+/1vGBHV/cYk6OI1Na/LHzwnlNCAfU3ZNGrc1LdRe/LAIbdDPTTv/HU3M7yXN448aTVDq3eKRm2cg7iKLb8gw=="
     },
     "@types/nodemailer": {
       "version": "6.4.7",

@@ -17,6 +17,7 @@ var MongoDB = NpmModuleMongodb;
 import { DocFetcher } from "./doc_fetcher.js";
 import {
   ASYNC_CURSOR_METHODS,
+  CLIENT_ONLY_METHODS,
   getAsyncMethodName
 } from "meteor/minimongo/constants";
 import { Meteor } from "meteor/meteor";
@@ -212,6 +213,7 @@ MongoConnection = function (url, options) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
+
 };
 
 MongoConnection.prototype._close = async function() {
@@ -357,6 +359,7 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
     throw e;
   });
 };
+
 
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
@@ -790,6 +793,17 @@ MongoConnection.prototype.dropIndexAsync = async function (collectionName, index
   var indexName =  await collection.dropIndex(index);
 };
 
+
+CLIENT_ONLY_METHODS.forEach(function (m) {
+  MongoConnection.prototype[m] = function () {
+    throw new Error(
+      `${m} +  is not available on the server. Please use ${getAsyncMethodName(
+        m
+      )}() instead.`
+    );
+  };
+});
+
 // CURSORS
 
 // There are several classes which relate to cursors:
@@ -867,6 +881,12 @@ Cursor.prototype.countAsync = async function () {
   );
 };
 
+Cursor.prototype.count = function () {
+  throw new Error(
+    "count() is not avaible on the server. Please use countAsync() instead."
+  );
+};
+
 [...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
   // count is handled specially since we don't want to create a cursor.
   // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
@@ -886,7 +906,6 @@ Cursor.prototype.countAsync = async function () {
   const methodNameAsync = getAsyncMethodName(methodName);
   Cursor.prototype[methodNameAsync] = function (...args) {
     try {
-      this[methodName].isCalledFromAsync = true;
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
       return Promise.reject(error);

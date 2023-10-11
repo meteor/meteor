@@ -38,7 +38,8 @@ const runCommand = async (command) => {
         return;
       }
       if (stderr) {
-        console.log(red`stderr: ${ stderr }`);
+        if (stderr.includes("Cloning into")) console.log(green`${ stderr }`);
+        else console.log(red`stderr: ${ stderr }`);
         reject(stderr);
         return;
       }
@@ -47,8 +48,8 @@ const runCommand = async (command) => {
   })
 }
 /**
- * 
- * @param {Promise<<T>() => T>} fn 
+ *
+ * @param {Promise<<T>() => T>} fn
  * @returns {Promise<[T, null]> | Promise<[null, Error]>}
  */
 const tryRun = async (fn) => {
@@ -56,10 +57,10 @@ const tryRun = async (fn) => {
 }
 
 /**
- * 
- * @param {string} bash command 
+ *
+ * @param {string} bash command
  * @param  {[string, null] | [null, Error]}} Result or Error
- * @returns 
+ * @returns
  */
 const bash =
   (text, ...values) =>
@@ -564,7 +565,7 @@ main.registerCommand({
  * @typedef {Object.<string, {repo: string}>} Skeletons
  */
 /**
- * Resolves into json with 
+ * Resolves into json with
  * @returns {Promise<[Skeletons, null]> | Promise<[null, Error]>}
  */
 function getExamplesJSON(){
@@ -930,7 +931,7 @@ main.registerCommand({
     // do next.
     Console.info("To run your new app:");
 
-    
+
 
     if (appPathAsEntered !== ".") {
       // Wrap the app path in quotes if it contains spaces
@@ -1004,7 +1005,7 @@ main.registerCommand({
 
   if (options.from) {
     await setupExampleByURL(options.from);
-    return 0; 
+    return 0;
   }
 
   var toIgnore = [/^local$/, /^\.id$/];
@@ -1020,19 +1021,27 @@ main.registerCommand({
   const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
 
   try {
-    // Prototype option should use local skeleton. 
+    // Prototype option should use local skeleton.
     // Maybe we should use a different skeleton for prototype
     if (options.prototype) throw new Error("Using prototype option");
+    // if using the release option we should use the default skeleton
+    // using it as it was before 2.x
+    if (release.explicit) throw new Error("Using release option");
 
     await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`);
   } catch (e) {
-    
-    if (e.message !== "Using prototype option") {
+
+    if (
+      e.message !== "Using prototype option" ||
+      e.message !== "Using release option"
+    ) {
       // something has happened while creating the app using git clone
       Console.error(
         `Something has happened while creating your app using git clone.
          Will use cached version of skeletons.
-         Error message: `, e.message);
+         Error message: `,
+        e.message
+      );
     }
 
        // TODO: decide if this should stay here or not.
@@ -1054,7 +1063,7 @@ main.registerCommand({
               const prototypePackages = () =>
                 "autopublish             # Publish all data to the clients (for prototyping)\n" +
                 "insecure                # Allow all DB writes from clients (for prototyping)";
-    
+
               // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
               if (options.prototype) {
                 return Buffer.from(
