@@ -65,6 +65,6 @@ ReactFastRefresh = {
     return [
       [babelPlugin, { skipEnvCheck: true }],
       enableReactRefreshBabelPlugin,
-    ]
+    ];
   }
 };

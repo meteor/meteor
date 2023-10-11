@@ -43,6 +43,7 @@ sidebar_categories:
     - code-style
     - structure
     - 2.13-migration
+    - prepare-meteor-3.0
   Data:
     - collections
     - data-loading

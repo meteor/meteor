@@ -10,6 +10,78 @@
 
 
 
+## v2.14.0, 2023-10-XX
+
+### Highlights
+
+Hacktoberfest release! 🎉
+
+* You can now set `DISABLE_SOCKJS_CORS=1` if you want to prevent SockJS from setting CORS headers. Do not set this option if you will have DDP clients from other origins connecting to the DDP server.
+
+* Added guide on (how to prepare for Meteor 3.0 migration)[https://guide.meteor.com/prepare-meteor-3.0].
+
+
+#### Migration Steps
+
+TODO
+
+
+## New Features
+- Option to disable sockjs cors headers. [PR](https://github.com/meteor/meteor/pull/12789)
+
+## Patch changes
+- Fixed EACCESS typo. [PR](https://github.com/meteor/meteor/pull/12698)
+
+## Breaking Changes
+
+N/A
+
+## Docs
+
+- Added guide on (how to prepare for Meteor 3.0 migration)[https://guide.meteor.com/prepare-meteor-3.0].
+- Added guide on (performance improvements)[https://guide.meteor.com/performance-improvement].
+
+##  Internal API changes
+
+* Tool
+  - Rename `EACCESS` to `EACCES` to follow the Windows spelling
+
+## Core dependencies
+
+* `ddp-server@2.6.2`:
+  - Allow setting `DISABLE_SOCKJS_CORS` to prevent SockJS from setting CORS headers
+
+* `fetch@0.1.4`:
+  - Update `node-fetch` to version 1.6.12
+  - Update `whatwg-fetch` to version 3.6.17
+
+* `accounts-passwordless@2.1.3`
+  - Fix #12401, ensure that user is found with ID
+
+* `react-fast-refresh@0.2.7`:
+    - Updated `semver` to version 7.5.4
+
+* `facebook-oauth@1.11.3`:
+    - Updated default version of Facebook GraphAPI to v17
+
+## Dependencies
+
+* `google-oauth@1.4.4`:
+  - Remove logging request/response in google_server
+
+* NPM `@meteorjs/babel-preset-meteor@7.10.1`
+  - Add Facebook in-app browser
+
+## Contributors
+
+- [@StorytellerCZ](https://github.com/sponsors/StorytellerCZ).
+- [@vit0rr](https://github.com/vit0rr)
+- [@realyze](https://github.com/realyze)
+- [@jamauro](https://github.com/jamauro)
+- [@Torgen](https://github.com/Torgen)
+
+For making this great framework even better!
+
 ## v2.13.3, 2023-09-08
 
 ### Highlights
@@ -51,6 +123,12 @@ meteor update --release 2.13.3
 For making this great framework even better!
 
 
+
+
+## Contributors
+
+
+
 ## v2.13.1, 2023-09-04
 
 ### Highlights
@@ -89,6 +167,12 @@ meteor update --release 2.13.1
 
 
 For making this great framework even better!
+
+
+
+
+## Contributors
+
 
 
 ## v2.13.0, 2023-07-26
@@ -166,6 +250,12 @@ Please, follow our [migration guide](https://guide.meteor.com/2.13-migration) to
 - [@Atharshoyeb](https://github.com/Atharshoyeb).
 - [@Julusian](https://github.com/Julusian).
 - [@denihs](https://github.com/denihs).
+
+
+## Contributors
+
+
+
 ## v2.12.0, 2023-04-28
 
 ### Highlights
@@ -199,7 +289,7 @@ N/A
 
 #### Migration Steps
 
-Now if you want to check where do you call old-style api methods
+Now if you want to check where do you call old-style api methods 
 you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 
@@ -208,7 +298,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 * `accounts-base@2.2.8`:
     - Added `loginServiceConfiguration` type.
     - Added the `collection` option property, in order to be able to set the collection for Accounts,
-    more can be seen in the [discussion](https://github.com/meteor/meteor/discussions/12544#discussioncomment-5240763)
+    more can be seen in the [discussion](https://github.com/meteor/meteor/discussions/12544#discussioncomment-5240763) 
     and in the [related issue](https://github.com/meteor/meteor-feature-requests/issues/20).
     - `onCreateUserHook` now accept promises and wait if necessary.
 
@@ -220,7 +310,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 * `browser-policy-framing@1.1.2`:
     - Added `es5` compatible syntax.
-
+    
 * `browser-policy@1.1.2`:
     - Updated test name.
 
@@ -270,7 +360,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 * `mongo@1.16.6`:
     - Added `countDocuments` and `estimatedDocumentCount` types.
-    - Added warning for when old style apis are being used, to use this feature,
+    - Added warning for when old style apis are being used, to use this feature, 
     use the variable`WARN_WHEN_USING_OLD_API=true` before starting the Meteor process.
     - Oplog driver updated to not throw error when MongoDB server and Meteor client mismatch. [issue](https://github.com/meteor/meteor/issues/12516)
 
@@ -316,6 +406,12 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 - [@zodern](https://github.com/zodern).
 - [@dmromanov](https://github.com/dmromanov).
 - [@matheusccastroo](https://github.com/matheusccastroo).
+
+
+
+## Contributors
+
+
 
 ## v2.11.0, 2023-03-02
 
@@ -455,6 +551,13 @@ For making this great framework even better!
 
 
 
+
+## Contributors
+
+- [@ebroder](https://github.com/ebroder).
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
+
+
 ## v2.10.0, 2023-01-13
 
 ### Highlights
@@ -538,6 +641,12 @@ N/A
 - [@afrokick](https://github.com/afrokick).
 
 For making this great framework even better!
+
+
+## Contributors
+
+
+
 
 
 
