@@ -39,7 +39,7 @@ Here are descriptions of the existing project roles, along with the current cont
 
 #### Reviewer
 
-Reviwers are members of the community that help with Pull Requests reviews.
+Reviewers are members of the community that help with Pull Requests reviews.
 
 Current Reviewers:
 - [meteor](https://github.com/meteor/meteor)
