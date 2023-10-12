@@ -314,6 +314,26 @@ recomputed at flush time.
 This property is a convenience to support the common pattern where a
 computation has logic specific to the first run.
 
+{% apibox "Tracker.Computation#firstRunPromise" %}
+
+`Computation.firstRunPromise` will be set to the result of the call of the autorun function after the initial computation has been completed. If the autorun function is an async function, it'll then contain its promise, thus making the completion of the execution await-able. That allows us to manually synchronize autoruns like this:
+
+```js  
+
+await Tracker.autorun(async () => {
+  await Meteor.userAsync();
+  (...more async code...)
+}).firstRunPromise;
+
+await Tracker.autorun(async () => {
+  await asyncSomeOrOther();
+  (...more async code...)
+}).firstRunPromise;
+
+// ta-daa! We'll get here only after both the autorun functions will have returned & executed in their entirety.
+
+
+```
 <h2 id="tracker_dependency"><span>Tracker.Dependency</span></h2>
 
 A Dependency represents an atomic unit of reactive data that a

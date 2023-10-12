@@ -197,23 +197,12 @@ Tracker.Computation = class Computation {
     this._recomputing = false;
 
     /**
-     * Computation.firstRunPromise will be set to the result of the call of the autorun function after the initial computation has been completed.
-     * If the autorun function is an async function, it'll then contain its promise, thus making the completion of the execution
-     * await-able.
-     *
-     * That allows us to manually synchronize autoruns like this:
-     *
-     * await Tracker.autorun(async () => {
-     *     await Meteor.userAsync();
-     *     (... more async code...)
-     * }).firstRunPromise;
-     *
-     * await Tracker.autorun(async () => {
-     *     await asyncSomeOrOther();
-     *     (... more async code...)
-     * }).firstRunPromise;
-     *
-     * // ta-daa! We'll get here only after both the autorun functions will have returned & executed in their entirety.
+     * @summary Forces autorun blocks to be executed in synchronous-looking order by storing the value autorun promise thus making it awaitable.
+     * @locus Client
+     * @memberOf Tracker.Computation
+     * @instance
+     * @name  firstRunPromise
+     * @returns {Promise<unknown>}
      */
     this.firstRunPromise = undefined;
 

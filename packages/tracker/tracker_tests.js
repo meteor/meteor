@@ -630,6 +630,30 @@ Tinytest.addAsync('tracker - async function - stepped', async function (test) {
   test.equal(count, limit, 'after resolve');
 });
 
+
+Tinytest.addAsync('tracker - async function - synchronize', async test => {
+  let counter = 0
+  await Tracker.autorun(async () => {
+    test.equal(counter, 0);
+    counter += 1;
+    test.equal(counter, 1);
+    await Promise.resolve();
+    test.equal(counter, 1);
+    counter *= 2;
+    test.equal(counter, 2);
+  }).firstRunPromise;
+
+  await Tracker.autorun(async () => {
+    test.equal(counter, 2);
+    counter += 1;
+    test.equal(counter, 3);
+    await Promise.resolve();
+    test.equal(counter, 3);
+    counter *= 2;
+    test.equal(counter, 6);
+  }).firstRunPromise;
+})
+
 Tinytest.add('computation - #flush', function (test) {
   var i = 0, j = 0, d = new Tracker.Dependency;
   var c1 = Tracker.autorun(function () {
