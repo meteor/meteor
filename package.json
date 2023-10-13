@@ -37,8 +37,5 @@
       "no-use-before-define": "warn",
       "import/no-unresolved": "warn"
     }
-  },
-  "dependencies": {
-    "open": "8.4.2"
   }
 }

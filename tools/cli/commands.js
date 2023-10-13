@@ -413,7 +413,7 @@ function doRunCommand(options) {
     if(process.env.ROOT_URL){
       open(process.env.ROOT_URL)
     } else {
-      open('https://localhost:3000')
+      open('https://localhost:'+ options.port)
     }
     
   }
