@@ -107,6 +107,8 @@ export namespace Mongo {
       byteSize?: number,
       maxDocuments?: number
     ): Promise<void>;
+
+    /** @deprecated since 2.8 */
     createIndex(
       indexSpec: NpmModuleMongodb.IndexSpecification,
       options?: NpmModuleMongodb.CreateIndexesOptions
@@ -150,11 +152,13 @@ export namespace Mongo {
     ): Cursor<T, DispatchTransform<O['transform'], T, U>>;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * @deprecated since 2.8
      * @param selector A query describing the documents to find
      */
     findOne(selector?: Selector<T> | ObjectID | string): U | undefined;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * @deprecated since 2.8
      * @param selector A query describing the documents to find
      */
     findOne<O extends Omit<Options<T>, 'limit'>>(
@@ -178,17 +182,20 @@ export namespace Mongo {
     ): Promise<DispatchTransform<O['transform'], T, U> | undefined>;
     /**
      * Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
+     * @deprecated
      * @param selector The query for filtering the set of documents to count
      * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
      */
     countDocuments(selector?: Selector<T> | ObjectID | string, options?: NpmModuleMongodb.CountDocumentsOptions): Promise<number>;
     /**
      * Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
+     * @deprecated
      * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
      */
     estimatedDocumentCount(options?: NpmModuleMongodb.EstimatedDocumentCountOptions): Promise<number>;
     /**
      * Insert a document in the collection.  Returns its unique _id.
+     * @deprecated since 2.8
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
@@ -211,6 +218,7 @@ export namespace Mongo {
     rawDatabase(): NpmModuleMongodb.Db;
     /**
      * Remove documents from the collection
+     * @deprecated since 2.8
      * @param selector Specifies which documents to remove
      * @param callback If present, called with an error object as its argument.
      */
@@ -229,6 +237,7 @@ export namespace Mongo {
     ): Promise<number>;
     /**
      * Modify one or more documents in the collection. Returns the number of matched documents.
+     * @deprecated since 2.8
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
      * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
@@ -274,6 +283,7 @@ export namespace Mongo {
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
      * `insertedId` (the unique _id of the document that was inserted, if any).
+     * @deprecated since 2.8
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
      * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
@@ -316,6 +326,7 @@ export namespace Mongo {
       options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     _dropCollection(): Promise<void>;
+    /** @deprecated since 2.8 */
     _dropIndex(indexName: string): void;
   }
 
