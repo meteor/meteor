@@ -40,5 +40,59 @@
   },
   "dependencies": {
     "underscore": "^1.9.2"
+  },
+  "scripts": {
+    "start": "node script.js",
+    "build": "npm build",
+    "test": "npm start"
+  }
+}
+{
+  "name": "meteor",
+  "version": "0.0.1",
+  "description": "Used to apply Prettier and ESLint manually",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meteor/meteor.git"
+  },
+  "author": "Filipe Névola",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/meteor/meteor/issues"
+  },
+  "homepage": "https://github.com/meteor/meteor#readme",
+  "devDependencies": {
+    "@quave/eslint-config-quave": "^1.0.3",
+    "@types/node": "^14.17.6"
+  },
+  "eslintConfig": {
+    "extends": [
+      "@quave/quave"
+    ],
+    "rules": {
+      "global-require": "off",
+      "no-console": "off",
+      "camelcase": "warn",
+      "consistent-return": "off",
+      "quotes": "warn",
+      "no-shadow": [
+        "error",
+        {
+          "allow": [
+            "resolve"
+          ]
+        }
+      ],
+      "no-use-before-define": "warn",
+      "import/no-unresolved": "warn"
+    }
+  },
+  "dependencies": {
+    "underscore": "^1.9.2"
+  },
+  "scripts": {
+    "start": "node script.js",
+    "build": "npm run build",
+    "test": "npm run test"
   }
 }
