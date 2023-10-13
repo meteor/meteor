@@ -20,7 +20,8 @@ Npm.depends({
   "lodash.throttle": "4.1.1",
   "lodash.once": "4.1.1",
   "lodash.identity": "3.0.0",
-  "lodash.isobject": "3.0.2"
+  "lodash.isobject": "3.0.2",
+  "lodash.clone": "4.5.0"
 });
 
 Npm.strip({

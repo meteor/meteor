@@ -1,5 +1,6 @@
 import has from 'lodash.has';
 import identity from 'lodash.identity';
+import clone from 'lodash.clone';
 
 /**
  * Provide a synchronous Collection API using fibers, backed by
@@ -141,7 +142,7 @@ var replaceTypes = function (document, atomTransformer) {
     if (val !== valReplaced) {
       // Lazy clone. Shallow copy.
       if (ret === document)
-        ret = Object.assign({}, document);
+        ret = clone(document);
       ret[key] = valReplaced;
     }
   });
