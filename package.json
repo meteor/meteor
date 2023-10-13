@@ -29,11 +29,16 @@
       "no-shadow": [
         "error",
         {
-          "allow": ["resolve"]
+          "allow": [
+            "resolve"
+          ]
         }
       ],
       "no-use-before-define": "warn",
       "import/no-unresolved": "warn"
     }
+  },
+  "dependencies": {
+    "underscore": "^1.9.2"
   }
 }
