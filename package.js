@@ -44,7 +44,7 @@ Package.onTest(function (api) {
     'meteortesting:mocha@2.1.0'
   ])
 
-  api.versionsFrom('2.3')
+  api.versionsFrom(['2.3', '2.8.1'])
 
   const both = ['client', 'server']
 

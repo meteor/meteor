@@ -2,7 +2,10 @@
 /* global Roles */
 
 import { Meteor } from 'meteor/meteor'
-import { assert } from 'chai'
+import chai, { assert } from 'chai'
+import chaiAsPromised from 'chai-as-promised'
+
+chai.use(chaiAsPromised)
 
 // To ensure that the files are loaded for coverage
 import '../roles_common'

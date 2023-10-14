@@ -313,7 +313,7 @@ Object.assign(Roles, {
     )
 
     // if there was no change, parent role might not exist, or role is
-    // already a subrole; in any case we do not have anything more to do
+    // already a sub-role; in any case we do not have anything more to do
     if (!count) return
 
     await Meteor.roleAssignment.updateAsync(

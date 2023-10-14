@@ -37,7 +37,7 @@ jobs:
       matrix:
         meteorRelease:
           - '2.8.0'
-          - '2.13'
+          - '2.13.3'
           # Latest version
     steps:
       - name: Checkout code
