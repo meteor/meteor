@@ -5,10 +5,10 @@ import { Meteor } from 'meteor/meteor'
 import chai, { assert } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 
-chai.use(chaiAsPromised)
-
 // To ensure that the files are loaded for coverage
 import '../roles_common'
+
+chai.use(chaiAsPromised)
 
 const safeInsert = async (collection, data) => {
   try {
