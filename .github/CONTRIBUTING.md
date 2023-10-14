@@ -17,7 +17,7 @@ Then the name of the branch should describe the purpose of the branch and potent
 ```shell
 $ git clone git@github.com:Meteor-Community-Packages/meteor-roles.git
 $ cd meteor-roles
-$ git checkout -b fix-some-issue
+$ git checkout -b fix/some-issue
 ```
 
 ### Initialize test app
