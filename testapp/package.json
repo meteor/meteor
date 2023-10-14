@@ -11,15 +11,15 @@
     "lint:fix": "standard --fix ../"
   },
   "dependencies": {
-    "@babel/runtime": "^7.17.9",
-    "meteor-node-stubs": "^1.2.1",
+    "@babel/runtime": "^7.23.2",
+    "meteor-node-stubs": "^1.2.5",
     "yuidocjs": "^0.10.2"
   },
   "devDependencies": {
     "babel-plugin-istanbul": "^6.1.1",
-    "chai": "^4.3.7",
+    "chai": "^4.3.10",
     "nyc": "^15.1.0",
-    "puppeteer": "^19.4.0",
+    "puppeteer": "^19.11.1",
     "standard": "^17.1.0"
   },
   "babel": {
