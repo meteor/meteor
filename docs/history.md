@@ -981,7 +981,7 @@ N/A
 
 * `mongo@1.15.0`
     - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created.
-    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured. [PR](https://github.com/meteor/meteor/pull/11995).
+    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occurred. [PR](https://github.com/meteor/meteor/pull/11995).
 * `modern-browsers@0.1.8`
     - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
 * `socket-stream-client@0.5.0`
@@ -9661,7 +9661,7 @@ Patches contributed by GitHub user benjaminchelli.
 * Terminate `phantomjs` properly on error when using the `spiderable`
   package. [#571](https://github.com/meteor/meteor/issues/571)
 
-* Stop serving non-cachable files with caching headers. [#631](https://github.com/meteor/meteor/issues/631)
+* Stop serving non-cacheable files with caching headers. [#631](https://github.com/meteor/meteor/issues/631)
 
 * Fix race condition if server restarted between page load and initial
   DDP connection. [#653](https://github.com/meteor/meteor/issues/653)
