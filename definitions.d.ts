@@ -357,6 +357,7 @@ declare namespace Roles {
   interface Role {
     _id: string
     name: string
+    children: { _id: string }[]
   }
 
   interface RoleAssignment {
@@ -387,4 +388,5 @@ declare namespace Roles {
 
 declare namespace Meteor {
   var roles: Mongo.Collection<Roles.Role>
+  var roleAssignment: Mongo.Collection<Roles.RoleAssignment>
 }
