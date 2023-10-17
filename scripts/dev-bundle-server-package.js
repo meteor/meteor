@@ -15,7 +15,6 @@ var packageJson = {
     promise: "8.1.0",
     "@meteorjs/reify": "0.24.0",
     "@babel/parser": "7.17.0",
-    "@types/underscore": "1.11.4",
     underscore: "1.13.6",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/81bce1f99625e62af73338f63afcf2b44c6cfa5e",
     "@types/semver": "5.5.0",
@@ -24,6 +23,7 @@ var packageJson = {
   // These are only used in dev mode (by shell.js) so end-users can avoid
   // needing to install them if they use `npm install --production`.
   devDependencies: {
+    "@types/underscore": "1.11.2",
     split2: "3.2.2",
     multipipe: "2.0.1",
     chalk: "4.1.2"
