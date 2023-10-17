@@ -28,7 +28,7 @@ var packageJson = {
     "babel-runtime": "7.0.0-beta.3",
     "@types/underscore": "1.11.2",
     underscore: "1.13.6",
-    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/81bce1f99625e62af73338f63afcf2b44c6cfa5e",
     "@types/semver": "5.5.0",
     semver: "5.7.1",
     request: "2.88.2",

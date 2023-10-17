@@ -441,7 +441,7 @@ N/A
 
 * `mongo@1.15.0`
     - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created.
-    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured. [PR](https://github.com/meteor/meteor/pull/11995).
+    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occurred. [PR](https://github.com/meteor/meteor/pull/11995).
 * `modern-browsers@0.1.8`
     - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
 * `socket-stream-client@0.5.0`
@@ -656,7 +656,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
     - useUnifiedTopology is not an option anymore, it defaults to true.
     - native parser is not an option anymore, it defaults to false in the mongo connection.
     - poolSize not an option anymore, we are using max/minPoolSize for the same behavior on mongo connection.
-    - fields option is deprecated, we are maintaining a translation layer to "projection" field (now prefered) until the next minor version, where we will start showing alerts.
+    - fields option is deprecated, we are maintaining a translation layer to "projection" field (now preferred) until the next minor version, where we will start showing alerts.
     - _ensureIndex is now showing a deprecation message
     - we are maintaining a translation layer for the new oplog format, so if you read or rely on any behavior of it please read our oplog_v2_converter.js code
     - update/insert/remove behavior is maintained in the Meteor way, documented in our docs, but we are now using replaceOne/updateOne/updateMany internally. This is subject to changes in the API rewrite of MongoDB without Fibers AND if you are using rawCollection directly you have to review your methods otherwise you will see deprecation messages if you are still using the old mongodb style directly.

@@ -10,8 +10,8 @@
 
 [![Travis CI Status](https://api.travis-ci.com/meteor/meteor.svg?branch=devel)](https://app.travis-ci.com/github/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor.svg?style=svg)](https://app.circleci.com/pipelines/github/meteor/meteor?branch=devel)
-[![built with Meteor](https://img.shields.io/badge/Meteor-2.12-green?logo=meteor&logoColor=white)](https://meteor.com)
-  
+[![built with Meteor](https://img.shields.io/badge/Meteor-2.13.3-green?logo=meteor&logoColor=white)](https://meteor.com)
+
 </div>
 
 <hr>
@@ -82,7 +82,7 @@ meteor
 **Building an application with Meteor?**
 
 * Deploy on [Meteor Cloud](https://www.meteor.com/cloud)
-* Discussion [Forums](https://forums.meteor.com/)
+* Discuss on [Forums](https://forums.meteor.com/)
 * Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
 * Announcement list. Subscribe in the [footer](https://www.meteor.com/).
 
@@ -94,4 +94,14 @@ Interested in helping or contributing to Meteor?  These resources will help:
 * [Feature requests](https://github.com/meteor/meteor/discussions/)
 * [Issue tracker](https://github.com/meteor/meteor/issues)
 
-To uninstall Meteor [read here](https://docs.meteor.com/install.html#uninstall).
+To uninstall Meteor: 
+  - If installed via npm, run:
+      ```shell
+      meteor-installer uninstall
+      ```
+  - If installed via curl, run:
+    ```shell
+    rm -rf ~/.meteor 
+    sudo rm /usr/local/bin/meteor
+    ```
+To find more information about installation, [read here](https://docs.meteor.com/install.html#uninstall).
