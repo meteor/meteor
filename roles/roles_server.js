@@ -79,7 +79,7 @@ Object.assign(Roles, {
    * @static
    */
   _isNewField: function (roles) {
-    return Array.isArray(roles) && (typeof roles[0] === 'object')
+    return Array.isArray(roles) && typeof roles[0] === 'object'
   },
 
   /**
@@ -92,7 +92,10 @@ Object.assign(Roles, {
    * @static
    */
   _isOldField: function (roles) {
-    return (Array.isArray(roles) && (typeof roles[0] === 'string')) || ((typeof roles === 'object') && !Array.isArray(roles))
+    return (
+      (Array.isArray(roles) && typeof roles[0] === 'string') ||
+      (typeof roles === 'object' && !Array.isArray(roles))
+    )
   },
 
   /**
@@ -104,7 +107,7 @@ Object.assign(Roles, {
    * @static
    */
   _convertToNewRole: function (oldRole) {
-    if (!(typeof oldRole.name === 'string')) throw new Error("Role name '" + oldRole.name + "' is not a string.")
+    if (!(typeof oldRole.name === 'string')) { throw new Error("Role name '" + oldRole.name + "' is not a string.") }
 
     return {
       _id: oldRole.name,
@@ -121,7 +124,7 @@ Object.assign(Roles, {
    * @static
    */
   _convertToOldRole: function (newRole) {
-    if (!(typeof newRole._id === 'string')) throw new Error("Role name '" + newRole._id + "' is not a string.")
+    if (!(typeof newRole._id === 'string')) { throw new Error("Role name '" + newRole._id + "' is not a string.") }
 
     return {
       name: newRole._id
@@ -141,7 +144,7 @@ Object.assign(Roles, {
     const roles = []
     if (Array.isArray(oldRoles)) {
       oldRoles.forEach(function (role, index) {
-        if (!(typeof role === 'string')) throw new Error("Role '" + role + "' is not a string.")
+        if (!(typeof role === 'string')) { throw new Error("Role '" + role + "' is not a string.") }
 
         roles.push({
           _id: role,
@@ -159,7 +162,7 @@ Object.assign(Roles, {
         }
 
         rolesArray.forEach(function (role) {
-          if (!(typeof role === 'string')) throw new Error("Role '" + role + "' is not a string.")
+          if (!(typeof role === 'string')) { throw new Error("Role '" + role + "' is not a string.") }
 
           roles.push({
             _id: role,
@@ -191,18 +194,26 @@ Object.assign(Roles, {
     }
 
     newRoles.forEach(function (userRole) {
-      if (!(typeof userRole === 'object')) throw new Error("Role '" + userRole + "' is not an object.")
+      if (!(typeof userRole === 'object')) { throw new Error("Role '" + userRole + "' is not an object.") }
 
       // We assume that we are converting back a failed migration, so values can only be
       // what were valid values in 1.0. So no group names starting with $ and no subroles.
 
       if (userRole.scope) {
-        if (!usingGroups) throw new Error("Role '" + userRole._id + "' with scope '" + userRole.scope + "' without enabled groups.")
+        if (!usingGroups) {
+          throw new Error(
+            "Role '" +
+              userRole._id +
+              "' with scope '" +
+              userRole.scope +
+              "' without enabled groups."
+          )
+        }
 
         // escape
         const scope = userRole.scope.replace(/\./g, '_')
 
-        if (scope[0] === '$') throw new Error("Group name '" + scope + "' start with $.")
+        if (scope[0] === '$') { throw new Error("Group name '" + scope + "' start with $.") }
 
         roles[scope] = roles[scope] || []
         roles[scope].push(userRole._id)
@@ -227,13 +238,16 @@ Object.assign(Roles, {
    * @static
    */
   _defaultUpdateUser: function (user, roles) {
-    Meteor.users.update({
-      _id: user._id,
-      // making sure nothing changed in meantime
-      roles: user.roles
-    }, {
-      $set: { roles }
-    })
+    Meteor.users.update(
+      {
+        _id: user._id,
+        // making sure nothing changed in meantime
+        roles: user.roles
+      },
+      {
+        $set: { roles }
+      }
+    )
   },
 
   /**
@@ -294,7 +308,10 @@ Object.assign(Roles, {
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isNewField(user.roles)) {
-        updateUser(user, Roles._convertToNewField(user.roles, convertUnderscoresToDots))
+        updateUser(
+          user,
+          Roles._convertToNewField(user.roles, convertUnderscoresToDots)
+        )
       }
     })
   },
@@ -313,10 +330,15 @@ Object.assign(Roles, {
     Object.assign(userSelector, { roles: { $ne: null } })
 
     Meteor.users.find(userSelector).forEach(function (user, index) {
-      user.roles.filter((r) => r.assigned).forEach(r => {
-        // Added `ifExists` to make it less error-prone
-        Roles._addUserToRole(user._id, r._id, { scope: r.scope, ifExists: true })
-      })
+      user.roles
+        .filter((r) => r.assigned)
+        .forEach((r) => {
+          // Added `ifExists` to make it less error-prone
+          Roles._addUserToRole(user._id, r._id, {
+            scope: r.scope,
+            ifExists: true
+          })
+        })
 
       Meteor.users.update({ _id: user._id }, { $unset: { roles: '' } })
     })
@@ -381,10 +403,12 @@ Object.assign(Roles, {
       Meteor.users._ensureIndex({ 'roles.scope': 1 })
     }
 
-    Meteor.roleAssignment.find(assignmentSelector).forEach(r => {
+    Meteor.roleAssignment.find(assignmentSelector).forEach((r) => {
       const roles = Meteor.users.findOne({ _id: r.user._id }).roles || []
 
-      const currentRole = roles.find(oldRole => oldRole._id === r.role._id && oldRole.scope === r.scope)
+      const currentRole = roles.find(
+        (oldRole) => oldRole._id === r.role._id && oldRole.scope === r.scope
+      )
       if (currentRole) {
         currentRole.assigned = true
       } else {
@@ -394,8 +418,11 @@ Object.assign(Roles, {
           assigned: true
         })
 
-        r.inheritedRoles.forEach(inheritedRole => {
-          const currentInheritedRole = roles.find(oldRole => oldRole._id === inheritedRole._id && oldRole.scope === r.scope)
+        r.inheritedRoles.forEach((inheritedRole) => {
+          const currentInheritedRole = roles.find(
+            (oldRole) =>
+              oldRole._id === inheritedRole._id && oldRole.scope === r.scope
+          )
 
           if (!currentInheritedRole) {
             roles.push({

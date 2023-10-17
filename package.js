@@ -8,7 +8,7 @@ Package.describe({
 })
 
 Package.onUse(function (api) {
-  api.versionsFrom(['1.12', '2.3', '2.8.0'])
+  api.versionsFrom(['2.8.0'])
 
   const both = ['client', 'server']
 
@@ -27,6 +27,7 @@ Package.onUse(function (api) {
   api.export('Roles')
 
   api.addFiles('roles/roles_common.js', both)
+  api.addFiles('roles/roles_common_async.js', both)
   api.addFiles('roles/roles_server.js', 'server')
   api.addFiles([
     'roles/client/debug.js',
@@ -43,7 +44,7 @@ Package.onTest(function (api) {
     'meteortesting:mocha@2.1.0'
   ])
 
-  api.versionsFrom('2.3')
+  api.versionsFrom(['2.3', '2.8.1'])
 
   const both = ['client', 'server']
 
@@ -56,5 +57,7 @@ Package.onTest(function (api) {
   ], both)
 
   api.addFiles('roles/tests/server.js', 'server')
+  api.addFiles('roles/tests/serverAsync.js', 'server')
   api.addFiles('roles/tests/client.js', 'client')
+  api.addFiles('roles/tests/clientAsync.js', 'client')
 })
