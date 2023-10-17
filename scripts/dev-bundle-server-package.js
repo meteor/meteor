@@ -26,7 +26,7 @@ var packageJson = {
   devDependencies: {
     split2: "3.2.2",
     multipipe: "1.0.2",
-    chalk: "4.1.1"
+    chalk: "0.5.1"
   }
 };
 
