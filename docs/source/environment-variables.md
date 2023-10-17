@@ -15,7 +15,7 @@ See also: [`PORT`](#PORT).
 > In development, this can be accomplished with `meteor run --port a.b.c.d:port`.
 
 ## DDP_DEFAULT_CONNECTION_URL
-(_develoment, production_)
+(_development, production_)
 
 There are some situations where it is valuable for the meteor client to use a different DDP server than the `ROOT_URL` server.
 
@@ -77,7 +77,7 @@ When running your bundled application in production mode, pass a string of JSON 
 ## METEOR_SQLITE_JOURNAL_MODE
 (_development_)
 
-The Meteor package catalog uses the `WAL` [SQLite Journal Mode](https://www.sqlite.org/pragma.html#pragma_journal_mode) by default.  The Journal mode for the package catalog can be modifed by setting `METEOR_SQLITE_JOURNAL_MODE`.
+The Meteor package catalog uses the `WAL` [SQLite Journal Mode](https://www.sqlite.org/pragma.html#pragma_journal_mode) by default.  The Journal mode for the package catalog can be modified by setting `METEOR_SQLITE_JOURNAL_MODE`.
 
 When running multiple concurrent meteor servers on [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/) some meteor developers have seen issues with the package catalog.  Setting the environment variable `METEOR_SQLITE_JOURNAL_MODE=TRUNCATE` can overcome the issue.
 
