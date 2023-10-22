@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use('modules@1.0.0-alpha300.10');
+  api.use('modules@0.19.1-alpha300.15');
 
   // Note that you can `meteor npm install jquery` (any version) into your
   // application's node_modules directory, and the meteor/jquery package

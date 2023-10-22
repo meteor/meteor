@@ -1,6 +1,6 @@
 Package.describe({
   summary: "route policy declarations",
-  version: '2.0.0-alpha300.11',
+  version: '1.1.2-alpha300.15'
 });
 
 Package.onUse(function (api) {

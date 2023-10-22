@@ -379,6 +379,7 @@
   - Async local storage was added to help deal with async methods.
   - Added `promiseEmmiter` to help with async methods.
   - Removed `fibers` from package.
+  - `Meteor.absoluteUrl` in localhost uses `127.0.1` by default.
 
 - `minifier-css@2.0.0`:
 
@@ -736,6 +737,11 @@
 If you are running Meteor with docker you will
 need to update your docker file to use our [new docker image](https://hub.docker.com/r/meteor/node)
 that contains Nodejs v14.21.4.
+
+#### Known issues
+
+Please, [check our known issues page](https://docs.meteor.com/known-issues)
+for more information about the problems and issues you might find while migrating.
 
 ####  Internal changes
 
