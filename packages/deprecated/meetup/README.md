@@ -4,4 +4,4 @@
 
 **Deprecated, use meetup-oauth instead.**
 
-An implementation of the Meetup OAuth flow. See the [project page](https://www.meteor.com/accounts) on Meteor Accounts for more details.
+An implementation of the Meetup OAuth flow. See the [project page](https://docs.meteor.com/api/accounts) on Meteor Accounts for more details.
