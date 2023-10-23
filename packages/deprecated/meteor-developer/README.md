@@ -4,4 +4,4 @@
 
 **Deprecated, use meteor-developer-oauth instead.**
 
-An implementation of the Meteor developer accounts OAuth flow. See the [project page](https://www.meteor.com/accounts) on Meteor Accounts for more details.
+An implementation of the Meteor developer accounts OAuth flow. See the [project page](https://docs.meteor.com/api/accounts) on Meteor Accounts for more details.
