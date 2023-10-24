@@ -312,6 +312,7 @@ var runCommandOptions = {
   maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
+    open: { type: Boolean, short: "o", default: false },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
     'app-port': { type: String },
@@ -334,7 +335,6 @@ var runCommandOptions = {
     'allow-incompatible-update': { type: Boolean },
     'extra-packages': { type: String },
     'exclude-archs': { type: String },
-    'open': {type: Boolean, short: "o", default: false}
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -408,15 +408,6 @@ function doRunCommand(options) {
     runLog.setRawLogs(true);
   }
 
-  //Opens a browser window when it finishes building
-  if (options.open) {
-    if(process.env.ROOT_URL){
-      open(process.env.ROOT_URL)
-    } else {
-      open('https://localhost:'+ options.port)
-    }
-    
-  }
 
   let webArchs = projectContext.platformList.getWebArchs();
   if (! _.isEmpty(runTargets) ||
@@ -473,7 +464,18 @@ function doRunCommand(options) {
     cordovaServerPort: parsedCordovaServerPort,
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
-    cordovaRunner: cordovaRunner
+    cordovaRunner: cordovaRunner,
+    onBuilt: function () {
+      // Opens a browser window when it finishes building
+      if (options.open) {
+        console.log("=> Opening your app in a browser...");
+        if (process.env.ROOT_URL) {
+          open(process.env.ROOT_URL)
+        } else {
+          open(`http://localhost:${options.port}`)
+        }
+      }
+    }
   });
 }
 
@@ -1742,6 +1744,7 @@ testCommandOptions = {
   catalogRefresh: new catalog.Refresh.Never(),
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
+    open: { type: Boolean, short: "o", default: false },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
     'debug-port': { type: String },
@@ -2195,7 +2198,18 @@ var runTestAppForPackages = function (projectContext, options) {
       // On the first run, we shouldn't display the delta between "no packages
       // in the temp app" and "all the packages we're testing". If we make
       // changes and reload, though, it's fine to display them.
-      omitPackageMapDeltaDisplayOnFirstRun: true
+      omitPackageMapDeltaDisplayOnFirstRun: true,
+      onBuilt: function () {
+        // Opens a browser window when it finishes building
+        if (options.open) {
+          console.log("=> Opening your app in a browser...");
+          if (process.env.ROOT_URL) {
+            open(process.env.ROOT_URL)
+          } else {
+            open(`http://localhost:${options.port}`)
+          }
+        }
+      }
     });
   }
 };
