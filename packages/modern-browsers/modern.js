@@ -32,7 +32,7 @@ const browserAliases = {
 
   // The webapp package converts browser names to camel case, so
   // mobile_safari and mobileSafari should be synonymous.
-  mobile_safari: ['mobileSafari', 'mobileSafariUI', 'mobileSafariUI/WKWebView'],
+  mobile_safari: ['mobileSafari', 'mobileSafariUI', 'mobileSafariUI/WKWebView', 'appleMail'],
 };
 
 // Expand the given minimum versions by reusing chrome versions for
