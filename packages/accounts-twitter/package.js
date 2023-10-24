@@ -12,7 +12,7 @@ Package.onUse(api => {
   api.use('twitter-oauth');
   api.imply('twitter-oauth');
 
-  api.use('http', ['client', 'server']);
+  api.use('http@1.0.1', ['client', 'server']);
 
   api.use(['accounts-ui', 'twitter-config-ui'], ['client', 'server'], { weak: true });
   api.addFiles("notice.js");
