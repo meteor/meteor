@@ -81,45 +81,33 @@ is automatically stopped and won't be rerun.
 
 ### Tracker.autorun and async callbacks
 `Tracker.autorun` can accept an `async` callback function.  
-However, to make the async call reactive, you should wrap your async function in
-a `Tracker.withComputation` call.
-
-```javascript
-Tracker.autorun(async function example1(computation) {
-  let asyncData = await asyncDataFunction();
-  let users =
-    await Tracker.withComputation(computation, () => Meteor.users.find({}).fetch());
-});
-```
-> If you want to get computation in other way you can use `Tracker.currentComputation`
-
+ To preserve reactivity for the reactive variables inside the async callback function, you must use a `Tracker.withComputation` call as described below:
 
 {% apibox "Tracker.withComputation" %}
 
-In general, the rules to use `Tracker.withComputation` like this:
-1. `async` function *before the first* `await` if just like a sync one.
-2. `async` function *after the first* `await` looses the `Tracker.currentComputation`
-but it can be restored using `Tracker.withComputation`, *but only within the callback*.
-
-If you have for example:
-
 ```javascript
-Tracker.autorun(async function (computation) {
-  let asyncData = await someAsyncCall();
-  let links = await LinksCollection.find({}).fetch(); 
-  // code above will not trigger reruns.
-});
-```
-You can make this example reactive by wrapping the `Meteor.users.find` call in a `Tracker.withComputation` call:
+Tracker.autorun(async function example1(computation) {
+	// Code before the first await will stay reactive.
+	reactiveVar1.get() // will trigger rerun
 
-```javascript
-Tracker.autorun(async function (computation) {
-  let asyncData = await someAsyncCall();
+  let links = await LinksCollection.findAsync({}).fetch(); // first async call will stay reactive.
+
+	// Code after the first await looses Tracker.currentComputation: no reactivity.
+	reactiveVar2.get() // won't trigger rerun
+ 
+	// You can bring back reactivity with the Tracker.withCompuation wrapper:
   let users =
-    await Tracker.withComputation(computation, () => Meteor.users.find({}).fetch());
-  // code above will trigger reruns.
+    await Tracker.withComputation(computation, () => Meteor.users.findAsync({}).fetch());
+
+	// Code below will again not be reactive, so you will need another Tracker.withComputation
+	const value = Tracker.withComputation(computation, () => reactiveVar3.get()) // will trigger rerun
 });
 ```
+
+As a rule of thumb, you are fine with wrapping all reactive statements inside a Tracker.withComputation to preserve current computation.
+
+Reason is, that an await implicitly *"moves"* the code below in a Promise resolved function. When this function runs (after it has been fetched from the micro task queue), Tracker.withComputation preserves the reference to the computation of the Tracker.autorun.
+
 The `react-meteor-data` package uses `Tracker.withComputation` to make the `useTracker` accept async callbacks.
 More can be seen [here](https://github.com/meteor/react-packages/tree/master/packages/react-meteor-data#maintaining-the-reactive-context)
 
