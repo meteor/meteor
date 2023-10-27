@@ -74,7 +74,7 @@ DDPRateLimiter.setErrorMessageOnRule = (ruleId, message) => {
  * - `connectionId`: A string representing the user's DDP connection
  * - `clientAddress`: The IP address of the user
  *
- * Returns unique `ruleId` that can be passed to `removeRule`.
+ * Returns unique `ruleId` that can be passed to `removeRule` and `setErrorMessageOnRule`
  *
  * @param {Object} matcher
  *   Matchers specify which events are counted towards a rate limit. A matcher

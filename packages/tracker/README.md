@@ -14,8 +14,8 @@ Tracker is essentially a simple _convention_, or interface, that lets reactive d
 
 This README has a short introduction to Tracker. For a complete guide
 to Tracker, consult the thorough and informative [Tracker
-Manual](https://github.com/meteor/meteor/wiki/Tracker-Manual), which
-is five times longer than the Tracker source code itself. You can also browse the API reference on the [main Meteor docs page](http://docs.meteor.com/#tracker).
+Manual](https://github.com/meteor/docs/blob/version-NEXT/long-form/tracker-manual.md), which
+is five times longer than the Tracker source code itself. You can also browse the API reference on the [main Meteor docs page](https://docs.meteor.com/api/tracker.html).
 
 ## Example
 
@@ -115,7 +115,7 @@ code.
   makes sense. For example, the current connection status is reactive
   in Meteor's [DDP](https://www.meteor.com/ddp) implementation, and
   the currently logged in user is reactive in [Meteor
-  Accounts](https://www.meteor.com/accounts) system.
+  Accounts](https://docs.meteor.com/api/accounts) system.
 
 ## Future directions
 
