@@ -29,7 +29,9 @@
       "no-shadow": [
         "error",
         {
-          "allow": ["resolve"]
+          "allow": [
+            "resolve"
+          ]
         }
       ],
       "no-use-before-define": "warn",
