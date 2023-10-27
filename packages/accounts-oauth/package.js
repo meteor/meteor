@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based login services",
-  version: "1.4.3-alpha300.16",
+  version: "1.4.3-alpha300.17",
 });
 
 Package.onUse(api => {
