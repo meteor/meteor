@@ -159,7 +159,13 @@ export namespace Meteor {
    */
   function callAsync(name: string, ...args: any[]): Promise<any>;
 
-  interface MethodApplyOptions {
+  interface MethodApplyOptions<
+    Result extends
+      | EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  > {
     /**
      * (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
      */
@@ -203,7 +209,7 @@ export namespace Meteor {
   >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
-    options?: MethodApplyOptions,
+    options?: MethodApplyOptions<Result>,
     asyncCallback?: (
       error: global_Error | Meteor.Error | undefined,
       result?: Result

@@ -323,7 +323,7 @@ import { exportedPackageMethod } from "meteor/<package name>";
 ```
 
 > Note: Packages with `lazy` main modules cannot use `api.export` to export global
-symbols to other packages/apps.  Also, prior to Meteor 1.4.4.2 it is neccessary to explicitly name the file containing the module: `import "meteor/<package name>/client.js"`.
+symbols to other packages/apps.  Also, prior to Meteor 1.4.4.2 it is necessary to explicitly name the file containing the module: `import "meteor/<package name>/client.js"`.
 
 
 ## Local `node_modules`
