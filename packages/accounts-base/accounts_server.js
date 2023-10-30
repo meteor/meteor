@@ -1,18 +1,13 @@
 import crypto from 'crypto';
+import { URL } from 'url';
 import { Meteor } from 'meteor/meteor'
+import { check, Match, NonEmptyString } from 'meteor/check';
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
-import { URL } from 'meteor/url';
 
 const hasOwn = Object.prototype.hasOwnProperty;
-
-// XXX maybe this belongs in the check package
-const NonEmptyString = Match.Where(x => {
-  check(x, String);
-  return x.length > 0;
-});
 
 /**
  * @summary Constructor for the `Accounts` namespace on the server.

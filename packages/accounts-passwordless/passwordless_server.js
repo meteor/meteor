@@ -1,12 +1,12 @@
 import { Accounts } from 'meteor/accounts-base';
+import { Random } from 'meteor/random';
+import { check, Match, NonEmptyString } from 'meteor/check';
 import {
   DEFAULT_TOKEN_SEQUENCE_LENGTH,
   getUserById,
-  NonEmptyString,
   tokenValidator,
   checkToken,
 } from './server_utils';
-import { Random } from 'meteor/random';
 
 const findUserWithOptions = ({ selector }) => {
   if (!selector) {

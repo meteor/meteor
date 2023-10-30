@@ -1,5 +1,6 @@
-import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
 import { Accounts } from "meteor/accounts-base";
+import { check, Match, NonEmptyString } from 'meteor/check';
+import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
 
 // Utility for grabbing user
 const getUserById = (id, options) => Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
@@ -139,12 +140,6 @@ Accounts.findUserByUsername =
  */
 Accounts.findUserByEmail =
   (email, options) => Accounts._findUserByQuery({ email }, options);
-
-// XXX maybe this belongs in the check package
-const NonEmptyString = Match.Where(x => {
-  check(x, String);
-  return x.length > 0;
-});
 
 const passwordValidator = Match.OneOf(
   Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256), {
