@@ -264,7 +264,7 @@ Read more about using Cordova in the [mobile guide](mobile.html).
 
 <h2 id="testing">Testing packages</h2>
 
-Meteor has a test mode for packages invoked with `meteor test-packages` command. Navigate to your package's directory and then use the command to run a special app containing only a "test" version of your package.
+Meteor has a test mode for packages invoked with the `meteor test-packages` command. Navigate to your package's directory and then use the command to run a special app containing only a "test" version of your package.
 
 If you are using [Tinytest](https://github.com/meteor/meteor/tree/devel/packages/tinytest) for your package's tests, you can run:
 
