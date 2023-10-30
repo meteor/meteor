@@ -19,6 +19,15 @@ export namespace Meteor {
    * of Meteor.
    */
   var release: string;
+
+  var meteorRelease: string;
+  
+  interface ErrorConstructor {
+    new (...args: any[]): Error;
+    errorType: string;
+  }
+
+  function makeErrorType(name: string, constructor: Function): ErrorConstructor;
   /** Global props **/
 
   /** Settings **/
