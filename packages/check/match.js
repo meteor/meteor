@@ -192,6 +192,17 @@ const stringForErrorMessage = (value, options = {}) => {
   return EJSON.stringify(value);
 };
 
+/**
+ * @summary Returns true if the value is a non empty string.
+ * @locus Anywhere
+ * @param {Any} value The value to check
+ */
+
+export const NonEmptyString = Match.Where((x) => {
+  check(x, String);
+  return x.length > 0;
+});
+
 const typeofChecks = [
   [String, 'string'],
   [Number, 'number'],
