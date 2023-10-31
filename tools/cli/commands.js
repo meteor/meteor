@@ -19,6 +19,8 @@ const {
   red,
   yellow
 } = require('../console/console.js').colors;
+const inquirer = require('inquirer');
+
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
@@ -529,19 +531,19 @@ export const AVAILABLE_SKELETONS = [
 ];
 
 const SKELETON_INFO = {
-  "bare": "to create an empty app",
-  "minimal": "to create an app with as few Meteor packages as possible",
-  "full": "to create a more complete scaffolded app",
-  "react": "to create a basic React-based app",
-  "vue": "to create a basic Vue3-based app",
-  "vue-2": "to create a basic Vue2-based app",
-  "apollo": "to create a basic Apollo + React app",
-  "svelte": "to create a basic Svelte app",
-  "typescript": "to create an app using TypeScript and React",
-  "blaze": "to create an app using Blaze",
-  "tailwind": "to create an app using React and Tailwind",
-  "chakra-ui": "to create an app Chakra UI and React",
-  "solid": "to create a basic Solid app"
+  "apollo": "To create a basic Apollo + React app",
+  "bare": "To create an empty app",
+  "blaze": "To create an app using Blaze",
+  "full": "To create a more complete scaffolded app",
+  "minimal": "To create an app with as few Meteor packages as possible",
+  "react": "To create a basic React-based app",
+  "typescript": "To create an app using TypeScript and React",
+  "vue": "To create a basic Vue3-based app",
+  "vue-2": "To create a basic Vue2-based app",
+  "svelte": "To create a basic Svelte app",
+  "tailwind": "To create an app using React and Tailwind",
+  "chakra-ui": "To create an app Chakra UI and React",
+  "solid": "To create a basic Solid app"
 }
 
 main.registerCommand({
@@ -742,69 +744,61 @@ main.registerCommand({
     return 0;
   }
 
+  /**
+   *
+   * @returns {{appPathAsEntered: string, skeleton: string }}
+   */
   const setup = async () => {
-    const ask = createPrompt();
+    // meteor create app-name
+    if (options.args.length === 1) {
+      const appPathAsEntered = options.args[0];
+      const skeletonExplicitOption =
+        AVAILABLE_SKELETONS.find(skeleton => !!options[skeleton]);
 
-    const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
-      !!options[skeleton]);
+      const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
 
-    let appPathAsEntered, skeleton;
-    if(options.args.length === 1) {
-      appPathAsEntered = options.args[0];
-      if(skeletonExplicitOption) {
-        skeleton = skeletonExplicitOption;
-      }
-      else {
-        skeleton = DEFAULT_SKELETON;
-        Console.info(`No skeleton specified, using default ${green`${DEFAULT_SKELETON}`}`)
+      console.log(`Using ${green`${skeleton}`} skeleton`);
+      return {
+        appPathAsEntered,
+        skeleton
       }
     }
-    else {
-      appPathAsEntered = await ask(`What is the name/path of your ${yellow`app`}? `);
-      if(skeletonExplicitOption) {
-        skeleton = skeletonExplicitOption;
-      }
-      else {
-        // Constructing the prompt for choosing skeleton
-        // It can be made better with inquirer package
-        let skeletonsInfo = `Which ${yellow`skeleton`} do you want to use?\n`;
-  
-        // can be modified as suitable
-        const maxKeyLength = 14
-        AVAILABLE_SKELETONS.forEach((skeleton, i) => {
-          // spaces for alignment of info string
-          const spaces = ' '.repeat(maxKeyLength - skeleton.length - String(i+1).length);
-          skeletonsInfo += `${i+1} - ${skeleton} ${spaces} # ${SKELETON_INFO[skeleton]}\n`;
-        })
-        skeletonsInfo += `press Enter for ${green`default (${DEFAULT_SKELETON})`}`
-  
-        Console.info(skeletonsInfo)
-        
-        do {
-          const skeletonIndex = await ask("Please Enter the Skeleton Number: ");
-          if(skeletonIndex === '') {
-            skeleton = DEFAULT_SKELETON;
-          }
-          else if(skeletonIndex > 0 && skeletonIndex <= AVAILABLE_SKELETONS.length) {
-            skeleton = AVAILABLE_SKELETONS[skeletonIndex-1];
-          }
-          else {
-            Console.error(red`Invalid Skeleton Number entered`);
-          }
-        } while(!skeleton);
-      }
+    function capitalizeFirstLetter(string) {
+      return string.charAt(0).toUpperCase() + string.slice(1);
     }
-
-    Console.setPretty(true)
-
-    return {
-      appPathAsEntered,
-      skeleton
-    }
+    const prompt = inquirer.createPromptModule();
+    // meteor create
+    // need to ask app name and skeleton
+    const r = await prompt([
+      {
+        type: 'input',
+        name: 'appPathAsEntered',
+        message: `What is the name/path of your ${yellow`app`}? `,
+        default(){
+          return 'my-app';
+        }
+      },
+      {
+        type: 'list',
+        name: 'skeleton',
+        message: `Which ${yellow`skeleton`} do you want to use?`,
+        choices: AVAILABLE_SKELETONS.map(skeleton => {return `${capitalizeFirstLetter(skeleton)} # ${SKELETON_INFO[skeleton]}`}),
+        default(){
+          return `${capitalizeFirstLetter(DEFAULT_SKELETON)} # ${SKELETON_INFO[DEFAULT_SKELETON]}`;
+        },
+        filter(val) {
+          const skel = val.split(' ')[0];
+          console.log(`Using ${green`${skel}`} skeleton`);
+          return skel.toLowerCase();
+        }
+      }
+    ])
+    Console.setPretty(true) // to not lose the console
+    return r;
   }
 
   var {
-    appPathAsEntered, 
+    appPathAsEntered,
     skeleton
   } = await setup();
 
