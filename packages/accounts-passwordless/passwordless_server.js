@@ -12,9 +12,13 @@ const findUserWithOptions = ({ selector }) => {
   if (!selector) {
     Accounts._handleError('A selector is necessary');
   }
-  const { email, ...rest } = selector;
+  const { email, id, ...rest } = selector;
   return Meteor.users.findOne(
-    { ...rest, ...(email ? { 'emails.address': selector.email } : {}) },
+    {
+      ...rest,
+      ...(id && { _id: id }),
+      ...(email && { 'emails.address': email })
+    },
     {
       fields: {
         services: 1,
@@ -230,12 +234,12 @@ Accounts.sendLoginTokenEmail = ({ userId, sequence, email, extra = {} }) => {
   return { email, user, token: sequence, url, options };
 };
 
-const setupUsersCollection = async () => {
-  await Meteor.users.createIndexAsync('services.passwordless.tokens.token', {
+const setupUsersCollection = () => {
+  Meteor.users.createIndexAsync('services.passwordless.tokens.token', {
     unique: true,
     sparse: true,
   });
-  await Meteor.users.createIndexAsync('services.passwordless.token', {
+  Meteor.users.createIndexAsync('services.passwordless.token', {
     unique: true,
     sparse: true,
   });

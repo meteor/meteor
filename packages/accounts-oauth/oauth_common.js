@@ -36,7 +36,7 @@ Accounts.oauth.registerService = async (name) => {
     // so this should be a unique index. You might want to add indexes for other
     // fields returned by your service (eg services.github.login) but you can do
     // that in your app.
-    await Meteor.users.createIndexAsync(`services.${name}.id`, {unique: true, sparse: true});
+    Meteor.users.createIndexAsync(`services.${name}.id`, {unique: true, sparse: true});
   }
 };
 

@@ -30,7 +30,7 @@ Facebook.requestCredential = (options, credentialRequestCompleteCallback) => {
 
   const loginStyle = OAuth._loginStyle('facebook', config, options);
 
-  const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '15.0';
+  const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '17.0';
 
   let loginUrl =
       `https://www.facebook.com/v${API_VERSION}/dialog/oauth?client_id=${config.appId}` +

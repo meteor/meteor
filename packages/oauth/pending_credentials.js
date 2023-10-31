@@ -16,9 +16,9 @@ OAuth._pendingCredentials = new Mongo.Collection(
     _preventAutopublish: true
   });
 
-await OAuth._pendingCredentials.createIndexAsync('key', { unique: true });
-await OAuth._pendingCredentials.createIndexAsync('credentialSecret');
-await OAuth._pendingCredentials.createIndexAsync('createdAt');
+OAuth._pendingCredentials.createIndexAsync('key', { unique: true });
+OAuth._pendingCredentials.createIndexAsync('credentialSecret');
+OAuth._pendingCredentials.createIndexAsync('createdAt');
 
 
 

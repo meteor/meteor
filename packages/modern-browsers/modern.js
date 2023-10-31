@@ -33,6 +33,9 @@ const browserAliases = {
   // The webapp package converts browser names to camel case, so
   // mobile_safari and mobileSafari should be synonymous.
   mobile_safari: ['mobileSafari', 'mobileSafariUI', 'mobileSafariUI/WKWebView'],
+
+  // Embedded WebViews on iPads will be reported as Apple Mail
+  safari: ['appleMail'],
 };
 
 // Expand the given minimum versions by reusing chrome versions for

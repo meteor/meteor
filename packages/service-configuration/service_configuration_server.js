@@ -5,7 +5,7 @@ import { Meteor } from 'meteor/meteor';
 // otherwise lead to an inconsistent database state (when there are multiple
 // configurations for a single service, which configuration is correct?)
 try {
-  await ServiceConfiguration.configurations.createIndexAsync(
+  ServiceConfiguration.configurations.createIndexAsync(
     { service: 1 },
     { unique: true }
   );
