@@ -42,6 +42,12 @@ An alternative for Linux and OS X, is to install Meteor by using curl:
 curl https://install.meteor.com/ | sh
 ```
 
+You can also install a specific Meteor.js version by using curl:
+
+```bash
+curl https://install.meteor.com/\?release\=2.8 | sh
+```
+
 > Do not install the npm Meteor Tool in your project's package.json. This library is just an installer.
 
 <h2 id="troubleshooting">Troubleshooting</h2>
