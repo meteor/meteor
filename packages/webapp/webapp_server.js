@@ -92,13 +92,13 @@ function shouldCompress(req, res) {
 //
 // Also here is an early version of a Meteor `request` object, intended
 // to be a high-level description of the request without exposing
-// details of connect's low-level `req`.  Currently it contains:
+// details of Express's low-level `req`.  Currently it contains:
 //
 // * `browser`: browser identification object described above
 // * `url`: parsed url, including parsed query params
 //
 // As a temporary hack there is a `categorizeRequest` function on WebApp which
-// converts a connect `req` to a Meteor `request`. This can go away once smart
+// converts a Express `req` to a Meteor `request`. This can go away once smart
 // packages such as appcache are being passed a `request` object directly when
 // they serve content.
 //
@@ -325,7 +325,7 @@ WebAppInternals.registerBoilerplateDataCallback = function(key, callback) {
 // Given a request (as returned from `categorizeRequest`), return the
 // boilerplate HTML to serve for that request.
 //
-// If a previous connect middleware has rendered content for the head or body,
+// If a previous Express middleware has rendered content for the head or body,
 // returns the boilerplate with that content patched in otherwise
 // memoizes on HTML attributes (used by, eg, appcache) and whether inline
 // scripts are currently allowed.
@@ -1183,12 +1183,12 @@ async function runWebAppServer() {
   var packageAndAppHandlers = createExpressApp()
   app.use(packageAndAppHandlers);
 
-  var suppressConnectErrors = false;
-  // connect knows it is an error handler because it has 4 arguments instead of
+  let suppressExpressErrors = false;
+  // Express knows it is an error handler because it has 4 arguments instead of
   // 3. go figure.  (It is not smart enough to find such a thing if it's hidden
   // inside packageAndAppHandlers.)
   app.use(function(err, req, res, next) {
-    if (!err || !suppressConnectErrors || !req.headers['x-suppress-error']) {
+    if (!err || !suppressExpressErrors || !req.headers['x-suppress-error']) {
       next(err);
       return;
     }
@@ -1345,6 +1345,10 @@ async function runWebAppServer() {
     }
   });
 
+  const suppressErrors = function() {
+    suppressExpressErrors = true;
+  };
+
   // start up app
   _.extend(WebApp, {
     connectHandlers: packageAndAppHandlers,
@@ -1354,9 +1358,8 @@ async function runWebAppServer() {
     httpServer: httpServer,
     expressApp: app,
     // For testing.
-    suppressConnectErrors: function() {
-      suppressConnectErrors = true;
-    },
+    suppressConnectErrors: suppressErrors,
+    suppressExpressErrors: suppressErrors,
     onListening: function(f) {
       if (onListeningCallbacks) onListeningCallbacks.push(f);
       else f();
@@ -1375,7 +1378,7 @@ async function runWebAppServer() {
    *  If `UNIX_SOCKET_PATH` is present Meteor's HTTP server will use that socket file for inter-process communication, instead of TCP.
    * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work.
    */
-  // Let the rest of the packages (and Meteor.startup hooks) insert connect
+  // Let the rest of the packages (and Meteor.startup hooks) insert Express
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
   exports.main = async argv => {

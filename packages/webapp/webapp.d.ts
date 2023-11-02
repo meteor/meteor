@@ -35,7 +35,11 @@ export declare module WebApp {
   var rawHandlers: express.Handler;
   var httpServer: http.Server;
   var expressApp: express.Application;
+  /**
+   * @deprecated use suppressExpressErrors instead
+   */
   function suppressConnectErrors(): void;
+  function suppressExpressErrors(): void;
   function onListening(callback: Function): void;
 
   type RuntimeConfigHookCallback = (options: {
