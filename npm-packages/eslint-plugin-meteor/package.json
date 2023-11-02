@@ -41,8 +41,6 @@
     "coveralls": "^3.1.0",
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^7.13.0",
-    "eslint-config-prettier": "^6.15.0",
-    "eslint-plugin-prettier": "^3.1.4",
     "mocha": "^8.2.1",
     "nyc": "^15.1.0",
     "prettier": "^2.1.2",
