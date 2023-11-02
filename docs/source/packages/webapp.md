@@ -67,31 +67,33 @@ Then using the handlers method described above serve up your static HTML on app-
 ```
 /* global WebApp Assets */
 import crypto from 'crypto'
-import connectRoute from 'connect-route'
+import express from 'express'
 
-WebApp.handlers.use(connectRoute(function (router) {
-    router.get('/', function (req, res, next) {
-        const buf = Assets.getText('index.html')
+const router = express.Router()
 
-        if (buf.length > 0) {
-            const eTag = crypto.createHash('md5').update(buf).digest('hex')
+router.get('/', function (req, res, next) {
+    const buf = Assets.getText('index.html')
 
-            if (req.headers['if-none-match'] === eTag) {
-                res.writeHead(304, 'Not Modified')
-                return res.end()
-            }
+    if (buf.length > 0) {
+        const eTag = crypto.createHash('md5').update(buf).digest('hex')
 
-            res.writeHead(200, {
-                ETag: eTag,
-                'Content-Type': 'text/html'
-            })
-
-            return res.end(buf);
+        if (req.headers['if-none-match'] === eTag) {
+            res.writeHead(304, 'Not Modified')
+            return res.end()
         }
 
-        return res.end('<html><body>Index page not found!</body></html>')
-    })
-}))
+        res.writeHead(200, {
+            ETag: eTag,
+            'Content-Type': 'text/html'
+        })
+
+        return res.end(buf)
+    }
+
+    return res.end('<html><body>Index page not found!</body></html>')
+})
+
+WebApp.handlers.use(router)
 ```
 
 There are a couple things to think about with this approach.
