@@ -12,5 +12,5 @@ class ConfigError extends Error {
 
 export declare var ServiceConfiguration: {
   configurations: Mongo.Collection<Configuration>;
-  ConfigError
+  ConfigError: typeof ConfigError
 };
