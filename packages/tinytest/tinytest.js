@@ -1,7 +1,5 @@
 import isEqual from "lodash.isequal";
 
-const Future = Meteor.isServer && require('fibers/future');
-
 /******************************************************************************/
 /* TestCaseResults                                                            */
 /******************************************************************************/
