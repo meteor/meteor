@@ -188,6 +188,43 @@ export class TestCaseResults {
       this.ok();
   }
 
+  _assertActual(actual, predicate, message) {
+    if (actual && predicate(actual))
+      this.ok();
+    else
+      this.fail({
+        type: "throws",
+        message: (actual ?
+            "wrong error thrown: " + actual.message :
+            "did not throw an error as expected") + (message ? ": " + message : ""),
+      });
+  }
+
+  _guessPredicate(expected) {
+    let predicate;
+
+    if (expected === undefined) {
+      predicate = function () {
+        return true;
+      };
+    } else if (typeof expected === "string") {
+      predicate = function (actual) {
+        return typeof actual.message === "string" &&
+            actual.message.indexOf(expected) !== -1;
+      };
+    } else if (expected instanceof RegExp) {
+      predicate = function (actual) {
+        return expected.test(actual.message);
+      };
+    } else if (typeof expected === 'function') {
+      predicate = expected;
+    } else {
+      throw new Error('expected should be a string, regexp, or predicate function');
+    }
+
+    return predicate;
+  }
+
   // expected can be:
   //  undefined: accept any exception.
   //  string: pass if the string is a substring of the exception message.
@@ -206,26 +243,8 @@ export class TestCaseResults {
   // particular class, use a predicate function.
   //
   throws(f, expected, message) {
-    var actual, predicate;
-
-    if (expected === undefined) {
-      predicate = function (actual) {
-        return true;
-      };
-    } else if (typeof expected === "string") {
-      predicate = function (actual) {
-        return typeof actual.message === "string" &&
-               actual.message.indexOf(expected) !== -1;
-      };
-    } else if (expected instanceof RegExp) {
-      predicate = function (actual) {
-        return expected.test(actual.message);
-      };
-    } else if (typeof expected === 'function') {
-      predicate = expected;
-    } else {
-      throw new Error('expected should be a string, regexp, or predicate function');
-    }
+    let actual;
+    const predicate = this._guessPredicate(expected);
 
     try {
       f();
@@ -233,15 +252,27 @@ export class TestCaseResults {
       actual = exception;
     }
 
-    if (actual && predicate(actual))
-      this.ok();
-    else
-      this.fail({
-        type: "throws",
-        message: (actual ?
-          "wrong error thrown: " + actual.message :
-          "did not throw an error as expected") + (message ? ": " + message : ""),
-      });
+    this._assertActual(actual, predicate, message);
+  }
+
+  /**
+   * Same as throw, but accepts an async function as a parameter.
+   * @param f
+   * @param expected
+   * @param message
+   * @returns {Promise<void>}
+   */
+  async throwsAsync(f, expected, message) {
+    let actual;
+    const predicate = this._guessPredicate(expected);
+
+    try {
+      await f();
+    } catch (exception) {
+      actual = exception;
+    }
+
+    this._assertActual(actual, predicate, message);
   }
 
   isTrue(v, msg) {
@@ -311,7 +342,7 @@ export class TestCaseResults {
         pass = true;
       }
     } else {
-      /* fail -- not something that contains other things */;
+      /* fail -- not something that contains other things */
     }
 
     if (pass === ! not) {
@@ -548,37 +579,37 @@ export class TestRun {
     }
 
     if (Meteor.isServer) {
-      // On the server, ensure that only one test runs at a time, even
-      // with multiple clients.
       this.manager.testQueue.queueTask(() => {
-        // The future resolves when the test completes or times out.
-        var future = new Future();
-        Meteor.setTimeout(
-          () => {
-            if (future.isResolved())
-              // If the future has resolved the test has completed.
-              return;
-            test.timedOut = true;
-            this._report(test, {
-              type: "exception",
-              details: {
-                message: "test timed out"
-              }
-            });
-            future['return']();
-          },
-          3 * 60 * 1000  // 3 minutes
-        );
-        this._runTest(test, () => {
-          // The test can complete after it has timed out (it might
-          // just be slow), so only resolve the future if the test
-          // hasn't timed out.
-          if (! future.isResolved())
-            future['return']();
-        }, stop_at_offset);
-        // Wait for the test to complete or time out.
-        future.wait();
-        onComplete && onComplete();
+        // On the server, ensure that only one test runs at a time, even
+        // with multiple clients.
+        let hasRan = false;
+        const timeoutPromise = new Promise((resolve) => {
+          Meteor.setTimeout(() => {
+            if (!hasRan) {
+              test.timedOut = true;
+              this._report(test, {
+                type: "exception",
+                details: {
+                  message: "test timed out"
+                }
+              });
+            }
+
+            resolve();
+          }, 3 * 60 * 1000);
+        });
+        const runnerPromise = new Promise((resolve) => {
+          this._runTest(test, () => {
+            if (!hasRan) {
+              hasRan = true;
+            }
+            resolve();
+          }, stop_at_offset);
+        });
+
+        Promise.race([runnerPromise, timeoutPromise]).finally(() => {
+          onComplete && onComplete();
+        });
       });
     } else {
       // client

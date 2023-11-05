@@ -29,6 +29,7 @@
   "exclude": [
     "./tests/apps/**",
     "./tests/packages/**",
-    "./static-assets/skel*/**"
+    "./static-assets/skel*/**",
+    "./static-assets/scaffolds*/**",
   ]
 }
