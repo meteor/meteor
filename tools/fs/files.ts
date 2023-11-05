@@ -1619,7 +1619,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
     attempt();
   }).catch((error: any) => {
     if (error.code === 'EPERM' ||
-        error.code === 'EACCESS') {
+        error.code === 'EACCES') {
       cp_r(from, to, { preserveSymlinks: true });
       rm_recursive(from);
     } else {
