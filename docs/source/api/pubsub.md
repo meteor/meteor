@@ -268,7 +268,7 @@ stay subscribed to your private messages.
 > The following features are available from Meteor 2.4 or `ddp-server@2.5.0`
 
 Once you start scaling your application you might want to have more control on how the data from publications is being handled on the client.
-There are three publications strategies:
+There are four publications strategies:
 
 #### SERVER_MERGE
 `SERVER_MERGE` is the default strategy. When using this strategy, the server maintains a copy of all data a connection is subscribed to.
