@@ -464,14 +464,14 @@ Tinytest.add("package-version-parser - Invalid in 0.9.2", function (test) {
   var invalidVersions =
     ["1.0.0_1", "1.0.0 || 2.0.0", "1.0.0-rc1_1",
      "3.4.0-rc1 || =1.0.0"];
-  _.each(invalidVersions, function (v) {
+  invalidVersions.forEach(function (v) {
     test.isTrue(PackageVersion.invalidFirstFormatConstraint(v));
   });
 
   // These are all valid in 0.9.2.
   var validVersions =
     ["1.0.0", "2.0.0-rc1", "=2.5.0"];
-  _.each(validVersions, function (v) {
+    validVersions.forEach(function (v) {
     test.isFalse(PackageVersion.invalidFirstFormatConstraint(v));
   });
 });

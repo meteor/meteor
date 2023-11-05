@@ -3,7 +3,7 @@ import { Random } from 'meteor/random';
 
 const MongoID = {};
 
-MongoID._looksLikeObjectID = str => str.length === 24 && str.match(/^[0-9a-f]*$/);
+MongoID._looksLikeObjectID = str => str.length === 24 && /^[0-9a-f]*$/.test(str);
 
 MongoID.ObjectID = class ObjectID {
   constructor (hexString) {

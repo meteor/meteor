@@ -23,8 +23,7 @@ prior to being upgraded to TLS/SSL (using `STARTTLS`) typically use port 587
 (and _sometimes_ 25) and should use `smtp://`.  For more information see the
 [Nodemailer docs](https://nodemailer.com/smtp/)
 
-Second, if you are using a one of the [supported services](https://nodemailer.com/smtp/well-known/#supported-services) 
-you can setup the sending options in your app settings like this:
+Second, if you are using a one of the [supported services](https://community.nodemailer.com/smtp/well-known/#supported-services) you can setup the sending options in your app settings like this:
 
 ```json
 {
@@ -82,6 +81,28 @@ Meteor.call(
   'Hello from Meteor!',
   'This is a test of Email.send.'
 );
+```
+{% apibox "Email.sendAsync" %}
+
+`sendAsync` only works on the server. It has the same behavior as `Email.send`, but returns a Promise.
+If you defined `Email.customTransport`, the `callAsync` method returns the return value from the `customTransport` method or a Promise, if this method is async.
+
+```js
+// Server: Define a method that the client can call.
+Meteor.methods({
+  sendEmail(to, from, subject, text) {
+    // Make sure that all arguments are strings.
+    check([to, from, subject, text], [String]);
+
+    // Let other method calls from the same client start running, without
+    // waiting for the email sending to complete.
+    this.unblock();
+
+    return Email.sendAsync({ to, from, subject, text }).catch(err => {
+      // 
+    });
+  }
+});
 ```
 
 {% apibox "Email.hookSend" %}
