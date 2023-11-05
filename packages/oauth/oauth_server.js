@@ -136,7 +136,7 @@ OAuth._checkRedirectUrlOrigin = redirectUrl => {
   );
 };
 
-const middleware = (req, res, next) => {
+const middleware = async (req, res, next) => {
   let requestData;
 
   // Make sure to catch any exceptions because otherwise we'd crash
@@ -168,7 +168,7 @@ const middleware = (req, res, next) => {
       requestData = req.body;
     }
 
-    handler(service, requestData, res);
+    await handler(service, requestData, res);
   } catch (err) {
     // if we got thrown an error, save it off, it will get passed to
     // the appropriate login call (if any) and reported there.
@@ -358,7 +358,7 @@ const renderEndOfLoginResponse = options => {
 // to the OAuth server and authorized this app, we communicate the
 // credentialToken and credentialSecret to the main window. The main
 // window must provide both these values to the DDP `login` method to
-// authenticate its DDP connection. After communicating these vaues to
+// authenticate its DDP connection. After communicating these values to
 // the main window, we close the popup.
 //
 // We export this function so that developers can override this
@@ -472,4 +472,32 @@ OAuth.openSecrets = (serviceData, userId) => {
     result[key] = OAuth.openSecret(serviceData[key], userId)
   );
   return result;
+};
+
+OAuth._addValuesToQueryParams = (
+  values = {},
+  queryParams = new URLSearchParams()
+) => {
+  Object.entries(values).forEach(([key, value]) => {
+    queryParams.set(key, `${value}`);
+  });
+  return queryParams;
+};
+
+OAuth._fetch = async (
+  url,
+  method = 'GET',
+  { headers = {}, queryParams = {}, body, ...options } = {}
+) => {
+  const urlWithParams = new URL(url);
+
+  OAuth._addValuesToQueryParams(queryParams, urlWithParams.searchParams);
+
+  const requestOptions = {
+    method: method.toUpperCase(),
+    headers,
+    ...(body ? { body } : {}),
+    ...options,
+  };
+  return fetch(urlWithParams.toString(), requestOptions);
 };

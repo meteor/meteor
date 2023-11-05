@@ -7,12 +7,10 @@ const reportError = (error, callback) => {
    }
 };
 
-
 const internalLoginWithPassword = ({ selector, password, code, callback }) => {
   if (typeof selector === 'string')
     if (!selector.includes('@')) selector = { username: selector };
     else selector = { email: selector };
-
   Accounts.callLoginMethod({
     methodArguments: [
       {
@@ -123,6 +121,29 @@ Accounts.createUser = (options, callback) => {
   });
 };
 
+
+/**
+ * @summary Create a new user and returns a promise of its result.
+ * @locus Anywhere
+ * @param {Object} options
+ * @param {String} options.username A unique name for this user.
+ * @param {String} options.email The user's email address.
+ * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
+ * @param {Object} options.profile The user's profile, typically including the `name` field.
+ * @importFromPackage accounts-base
+ */
+Accounts.createUserAsync = (options) => {
+  return new Promise((resolve, reject) =>
+    Accounts.createUser(options, (e) => {
+      if (e) {
+        reject(e);
+      } else {
+        resolve();
+      }
+    })
+  );
+};
+
 // Change password. Must be logged in.
 //
 // @param oldPassword {String|null} By default servers no longer allow
@@ -144,7 +165,7 @@ Accounts.changePassword = (oldPassword, newPassword, callback) => {
     return reportError(new Error("Must be logged in to change password."), callback);
   }
 
-  if (!newPassword instanceof String) {
+  if (!(typeof newPassword === "string" || newPassword instanceof String)) {
     return reportError(new Meteor.Error(400, "Password must be a string"), callback);
   }
 
@@ -203,7 +224,7 @@ Accounts.forgotPassword = (options, callback) => {
 // @param callback (optional) {Function(error|undefined)}
 
 /**
- * @summary Reset the password for a user using a token received in email. Logs the user in afterwards.
+ * @summary Reset the password for a user using a token received in email. Logs the user in afterwards if the user doesn't have 2FA enabled.
  * @locus Client
  * @param {String} token The token retrieved from the reset password URL.
  * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.
@@ -211,11 +232,11 @@ Accounts.forgotPassword = (options, callback) => {
  * @importFromPackage accounts-base
  */
 Accounts.resetPassword = (token, newPassword, callback) => {
-  if (!token instanceof String) {
+  if (!(typeof token === "string" || token instanceof String)) {
     return reportError(new Meteor.Error(400, "Token must be a string"), callback);
   }
 
-  if (!newPassword instanceof String) {
+  if (!(typeof newPassword === "string" || newPassword instanceof String)) {
     return reportError(new Meteor.Error(400, "Password must be a string"), callback);
   }
 
@@ -236,7 +257,7 @@ Accounts.resetPassword = (token, newPassword, callback) => {
 // @param callback (optional) {Function(error|undefined)}
 
 /**
- * @summary Marks the user's email address as verified. Logs the user in afterwards.
+ * @summary Marks the user's email address as verified. Logs the user in afterwards if the user doesn't have 2FA enabled.
  * @locus Client
  * @param {String} token The token retrieved from the verification URL.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.

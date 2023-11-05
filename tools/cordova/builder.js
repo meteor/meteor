@@ -133,9 +133,9 @@ export class CordovaBuilder {
         ios: {},
         android: {
           "AndroidXEnabled": true,
-          // we still use a port based on appId on iOS to avoid conflits on local webserver
-          // we dont need it on android, but the contentUrl can only be one, and we set this
-          // here to be able to intercept these calls
+          // We still use a port based on appId on iOS to avoid conflits on local webserver.
+          // We don't need it on android, but the contentUrl can only be one, and we set this
+          // here to be able to intercept these calls.
           "hostname": `localhost:${cordovaServerPort}`,
           "AndroidInsecureFileModeEnabled": true
         }
@@ -800,7 +800,7 @@ configuration. The key may be deprecated.`);
         Object.keys(splashIosKeys).concat(Object.keys(splashAndroidKeys));
 
       Object.keys(launchScreens).forEach((key) => {
-        if (!key in validDevices) {
+        if (!(key in validDevices)) {
           Console.labelWarn(`${key}: unknown key in App.launchScreens \
 configuration. The key may be deprecated.`);
         }
@@ -867,7 +867,7 @@ configuration. The key may be deprecated.`);
      * [Cordova documentation](http://cordova.apache.org/docs/en/7.x/config_ref/index.html#resource-file).
      * @param {String} src The project resource path.
      * @param {String} target Resource destination in build.
-     * @param {String} [platform] Optional. A platform name (either `ios` or `android`, both if ommited) to add a resource-file entry.
+     * @param {String} [platform] Optional. A platform name (either `ios` or `android`, both if omitted) to add a resource-file entry.
      * @memberOf App
      */
     addResourceFile: function (src, target, platform) {

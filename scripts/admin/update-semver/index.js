@@ -7,7 +7,13 @@
 const semver = require('semver');
 const fs = require('fs');
 const { exec } = require("child_process");
+const { readdir } = require("fs/promises");
 
+/**
+ *
+ * @param command
+ * @return {Promise<string>}
+ */
 const runCommand = async (command) => {
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
@@ -26,33 +32,94 @@ const runCommand = async (command) => {
   })
 }
 
+/**
+ *
+ * @returns {Promise<string>}
+ */
 async function getPackages() {
   return await runCommand("./get-diff.sh");
 }
 
-async function main() {
-  let args = process.argv.slice(2);
+async function getReleaseNumber() {
+  // only works if you are in the release branch. it will return someting
+  // like release-2.4 or release-2.4.2
+  const gitBranch = await runCommand("./get-branch-name.sh");
+  if (!gitBranch.includes('release')) throw new Error('You are not in a release branch');
 
-  if (args[0] === '@auto') {
-    const packages = await getPackages();
+  const releaseNumber = gitBranch
+    .replace('release-', '')
+    .replace('.', '')
+    .replace('\n', '');
+
+  // this is when we have release-2.4 and we want to make sure that we have release-2.4.0
+  if (gitBranch.match(/\./g).length === 1) return `${ releaseNumber }0`;
+
+  return releaseNumber;
+}
+
+async function getFile(path) {
+  try {
+    const data = await fs.promises.readFile(path, 'utf8');
+    return [data, null]
+  } catch (e) {
+    console.error(e);
+    return ['', e];
+  }
+
+}
+
+const getDirectories = async source =>
+  (await readdir(source, { withFileTypes: true }))
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => dirent.name);
+
+async function main() {
+  /**
+   * @type {string[]}
+   */
+  let args = process.argv.slice(2);
+  const releaseNumber = await getReleaseNumber();
+  if (args[0].startsWith('@all')) {
+    const [_, type] = args[0].split('.');
+    const allPackages = await getDirectories('../../../packages');
+    args = allPackages.map((packageName) => `${ packageName }.${ type }`);
+  }
+
+  if (args[0].startsWith('@auto')) {
+    const [_, type] = args[0].split('.');
+    // List of packages that for some reason are not in the diff.
+    // If there is a change in one of them please do not forget
+    // to add it to the list.
+    // List:
+    // ddp-common
+
+    const p = await getPackages();
+    console.log('****************')
+    console.log('Will be updating the following packages:');
+    console.dir(p)
+    console.log('****************')
+    const packages = p.concat(`packages/meteor-tool.${ type }`);
     args = packages
       .split('/')
-      .filter((packageName) => packageName !== 'packages' && packageName !== "\npackages" && packageName !== "\n");
+      .filter((packageName) => packageName !== 'packages' && packageName !== "\npackages" && packageName !== "\n")
+      .map((packageName) => `${ packageName }.${ type }`);
   }
+
   /**
-   * @type {{
-   *   name: string,
-   *   version: string,
-   * }[]}
+   * @type {{release, name: string|null}[]}
    */
   const packages = args.map(arg => {
     const [name, release] = arg.split('.');
     return { name, release: release || 'patch' };
-  });
+  })
+    // we remove duplicates by name
+    .filter((value, index, self) => self.findIndex((v) => v.name === value.name) === index);
+
   for (const { name, release } of packages) {
     const filePath = `../../../packages/${ name }/package.js`;
-    const code = await fs.promises.readFile(filePath, 'utf8');
-
+    const [code, err] = await getFile(filePath);
+    // if there is an error reading the file, we will skip it.
+    if (err) continue;
     for (const line of code.split(/\n/)) {
       // should only run on lines that have a version
       if (!line.includes('version')) continue;
@@ -61,9 +128,29 @@ async function main() {
       //   summary: 'some description.',
       //   version: '1.2.3' <--- this is the line we want, we assure that it has a version in the previous if
       //});
-      const [_, versionValue] = line.split(':');
-      const currentVersion = versionValue.trim().replace(',', '');
-      const semverVersion = semver.coerce(currentVersion);
+      const [_, version] = line.split(':');
+      if (!version) continue;
+      const getVersionValue = (value) => {
+        const removeQuotes =
+          (v) => v
+            .trim()
+            .replace(',', '')
+            .replace(/'/g, '')
+            .replace(/"/g, '');
+
+        if (value.includes('-')) {
+          return {
+            currentVersion: removeQuotes(value.replace(releaseNumber, '')),
+            rawVersion: value
+          }
+        }
+        return {
+          currentVersion: removeQuotes(value),
+          rawVersion: value
+        }
+      }
+      const { currentVersion, rawVersion } = getVersionValue(version)
+
 
       /**
        *
@@ -71,18 +158,23 @@ async function main() {
        * @returns {string}
        */
       function incrementNewVersion(release) {
-        if (release.includes('beta') || release.includes('rc')) {
-          return semver.inc(semverVersion, 'prerelease', release);
+        if (release === 'beta' || release === 'rc') {
+          const version =
+            semver.inc(currentVersion, 'prerelease', release);
+          if (name === 'meteor-tool') return version;
+          return version.replace(release, `${ release }${ releaseNumber }`);
         }
-        return semver.inc(semverVersion, release);
+        return semver.inc(currentVersion, release);
       }
 
       const newVersion = incrementNewVersion(release);
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
-      const newCode = code.replace(currentVersion, "'" + newVersion + "'");
+      const newCode = code.replace(rawVersion, ` '${ newVersion }',`);
       await fs.promises.writeFile(filePath, newCode);
     }
   }
+  console.log('Done!');
+  if (!args.some(arg => arg.includes('meteor-tool'))) console.log('Do not forget to update meteor-tool');
 }
 
 main();

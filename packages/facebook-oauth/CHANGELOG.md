@@ -1,10 +1,34 @@
 # Changelog
-## 1.8.0 - unreleased
-### Breaking changes
-- N/A
-
+## 1.11.3 - 2023-08-XX
 ### Changes
-- Updated to use Facebook GraphAPI v10
+- Updated default version of Facebook GraphAPI to v17
+
+## 1.11.2 - 2022-12-07
+### Changes
+- Updated internal code to use new Meteor async format from Meteor 2.9
+
+## 1.11.1 - 2022-11-14
+### Changes
+- Updated default version of Facebook GraphAPI to v15
+
+## 1.11.0 - 2022-03-24
+### Changes
+- Updated default version of Facebook GraphAPI to v12
+
+## 1.10.0 - 2021-09-14
+### Changes
+- Added login handler hook, like in the Google package for easier management in React Native and similar apps. [PR](https://github.com/meteor/meteor/pull/11603)
+
+## 1.9.1 - 2021-08-12
+### Changes
+- Allow usage of `http` package both v1 and v2 for backward compatibility
+
+## 1.9.0 - 2021-06-24
+### Changes
+- Upgrade default Facebook API to v10 [#11362](https://github.com/meteor/meteor/pull/11362)
+
+## 1.8.0 - 2021-04-15
+### Changes
 - You can now override the default API version by setting `Meteor.settings.public.packages.facebook-oauth.apiVersion` to for example `8.0` 
 
 ## 1.7.3 - 2020-10-05

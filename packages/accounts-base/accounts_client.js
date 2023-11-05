@@ -226,13 +226,14 @@ export class AccountsClient extends AccountsCommon {
     const loginCallbacks = ({ error, loginDetails }) => {
       if (!called) {
         called = true;
-        this._loginCallbacksCalled = true;
         if (!error) {
           this._onLoginHook.forEach(callback => {
             callback(loginDetails);
             return true;
           });
+          this._loginCallbacksCalled = true;
         } else {
+          this._loginCallbacksCalled = false;
           this._onLoginFailureHook.forEach(callback => {
             callback({ error });
             return true;
@@ -797,6 +798,11 @@ if (Package.blaze) {
    * @summary Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in.
    */
   Template.registerHelper('currentUser', () => Meteor.user());
+
+  // TODO: the code above needs to be changed to Meteor.userAsync() when we have
+  // a way to make it reactive using async.
+  // Template.registerHelper('currentUserAsync',
+  //  async () => await Meteor.userAsync());
 
   /**
    * @global
