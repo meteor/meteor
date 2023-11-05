@@ -10,6 +10,162 @@
 
 
 
+## v2.13.3, 2023-09-08
+
+### Highlights
+
+* Solves the issue [#12771: Version 2.13.1 suddenly requires a newer glibc version](https://github.com/meteor/meteor/issues/12771).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.3
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.3 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4). The previous version was generated using a different unix distribution (Ubuntu) while we should use CentOS.
+
+
+#### Special thanks to
+
+- [@aquinoit](https://github.com/aquinoit).
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes).
+- [@Grubba27](https://github.com/Grubba27).
+
+For making this great framework even better!
+
+
+## v2.13.1, 2023-09-04
+
+### Highlights
+
+* Solved zlib issue with Meteor.js and ESM Node.js 14.21.4 [PR](https://github.com/meteor/meteor/pull/12765) by (GH Grubba27).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.1
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.1 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4).
+
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27).
+
+
+For making this great framework even better!
+
+
+## v2.13.0, 2023-07-26
+
+### Highlights
+
+* Handled implicit collection creation oplog message by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12643).
+* Fix upsert logs when using WARN_WHEN_USING_OLD_API flag by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12640).
+* Updating mongo types by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12639).
+* Fix solid skeleton by [fredmaiaarantes](https://github.com/fredmaiaarantes) [PR](https://github.com/meteor/meteor/pull/12637).
+* Setting The Viewport meta tag on skeletons [fredmaiaarantes](https://github.com/fredmaiaarantes) [PR](https://github.com/meteor/meteor/pull/12636).
+* Update mongo.d.ts with projection [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12635).
+* Update guide code for GraphQL [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12619).
+* Twitter Whitelist issue resolved [Atharshoyeb](https://github.com/Atharshoyeb) [PR](https://github.com/meteor/meteor/pull/12369).
+* Node security patch (14.21.4) [PR](https://github.com/meteor/node-v14-esm/pull/1). Thanks a lot [denihs](https://github.com/denihs) for your contribuiton.
+* Updated deprecated reference in mongo package by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12653/files).
+* Updated BlazeJS git ref in core meteor to 2.7.1 by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12651).
+* Added `Meteor.applyAsync` types by [Julusian](https://github.com/Julusian) [PR](https://github.com/meteor/meteor/pull/12645).
+
+
+#### Breaking Changes
+
+If you are running Meteor with docker you will
+need to update your docker file to use our [new docker image](https://hub.docker.com/r/meteor/node)
+that contains Nodejs v14.21.4.
+
+#### Known issues
+
+Please, [check our known issues page](https://docs.meteor.com/known-issues)
+for more information about the problems and issues you might find while migrating.
+
+####  Internal changes
+
+* `ddp-server@2.6.2`:
+    - Updated livedata server test to be more easily debbuged.
+
+* `mongo@1.16.7`:
+    - Updated deprecated reference in Mongo package.
+
+#### Migration Steps
+
+
+Please, follow our [migration guide](https://guide.meteor.com/2.13-migration) to understand what's needed to upgrade to Meteor 2.13.
+
+#### Meteor Version Release
+
+
+* `Command line`:
+    - Updated metatags for skeletons.
+    - Updated solidjs skeleton to be more idiomatic.
+
+* `meteor@1.11.3`:
+    - Added types for applyAsync and added more documentation for applyAsync options.
+
+* `mongo@1.16.7`:
+    - Updated types with projection.
+    - Fixed wrong upsert logs when using WARN_WHEN_USING_OLD_API flag.
+    - Handled implicit collection creation oplog message.
+
+* `test-in-console@1.2.5`:
+    - Adjusted log indentation.
+    - All errors will be logged to console.
+    - Will always use puppeteer@20.4.0
+
+* `twitter-oauth@1.3.3`:
+    - Fixed twitter whitelist issue.
+
+
+#### Special thanks to
+
+- [@radekmie](https://github.com/radekmie).
+- [@Grubba27](https://github.com/Grubba27).
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes).
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
+- [@Atharshoyeb](https://github.com/Atharshoyeb).
+- [@Julusian](https://github.com/Julusian).
+- [@denihs](https://github.com/denihs).
 ## v2.12.0, 2023-04-28
 
 ### Highlights
@@ -43,7 +199,7 @@ N/A
 
 #### Migration Steps
 
-Now if you want to check where do you call old-style api methods 
+Now if you want to check where do you call old-style api methods
 you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 
@@ -52,7 +208,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 * `accounts-base@2.2.8`:
     - Added `loginServiceConfiguration` type.
     - Added the `collection` option property, in order to be able to set the collection for Accounts,
-    more can be seen in the [discussion](https://github.com/meteor/meteor/discussions/12544#discussioncomment-5240763) 
+    more can be seen in the [discussion](https://github.com/meteor/meteor/discussions/12544#discussioncomment-5240763)
     and in the [related issue](https://github.com/meteor/meteor-feature-requests/issues/20).
     - `onCreateUserHook` now accept promises and wait if necessary.
 
@@ -64,7 +220,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 * `browser-policy-framing@1.1.2`:
     - Added `es5` compatible syntax.
-    
+
 * `browser-policy@1.1.2`:
     - Updated test name.
 
@@ -114,7 +270,7 @@ you can use ```WARN_WHEN_USING_OLD_API``` before starting your meteor process.
 
 * `mongo@1.16.6`:
     - Added `countDocuments` and `estimatedDocumentCount` types.
-    - Added warning for when old style apis are being used, to use this feature, 
+    - Added warning for when old style apis are being used, to use this feature,
     use the variable`WARN_WHEN_USING_OLD_API=true` before starting the Meteor process.
     - Oplog driver updated to not throw error when MongoDB server and Meteor client mismatch. [issue](https://github.com/meteor/meteor/issues/12516)
 
