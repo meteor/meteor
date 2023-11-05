@@ -123,11 +123,11 @@ connection is already closed, the callback will be called immediately.
 
 > In previous versions of Meteor, when a client reconnects to the server (such as after temporarily losing its Internet connection), it will get a new connection each time.  The `onConnection` callbacks will be called again, and the new connection will have a new connection `id`.
 
-> With the new client reconnection feature ([DDP resumption](https://github.com/meteor/meteor/pull/12436)) introduced in Meteor version 2.13, the client will attempt to automatically resume the previous connection to the server without calling the `onConnection` callback again and the connection will still keep the previous connection `id`. This functionality is controlled by the following new server options:
+> With the new client reconnection feature ([DDP resumption](https://github.com/meteor/meteor/pull/12436)) introduced in Meteor version 2.14, the client will attempt to automatically resume the previous connection to the server without calling the `onConnection` callback again and the connection will still keep the previous connection `id`. This functionality is controlled by the following new server options:
 
 <dl class="objdesc">
-{% dtdd name:"Meteor.server.options.disconnectGracePeriod" type:"Number" default:"5000" %}
-  Defines how long (in milliseconds) we should maintain a session for after a non-graceful disconnect before destroying it. Sessions that reconnect within this time will be resumed with minimal performance impact. Defaults to `5000`.
+{% dtdd name:"Meteor.server.options.disconnectGracePeriod" type:"Number" default:"15000" %}
+  Defines how long (in milliseconds) we should maintain a session for after a non-graceful disconnect before destroying it. Sessions that reconnect within this time will be resumed with minimal performance impact. Defaults to `15000`.
 {% enddtdd %}
 
 {% dtdd name:"Meteor.server.options.maxMessageQueueLength" type:"Number" default:"100" %}
