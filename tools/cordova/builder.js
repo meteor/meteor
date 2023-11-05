@@ -800,7 +800,7 @@ configuration. The key may be deprecated.`);
         Object.keys(splashIosKeys).concat(Object.keys(splashAndroidKeys));
 
       Object.keys(launchScreens).forEach((key) => {
-        if (!key in validDevices) {
+        if (!(key in validDevices)) {
           Console.labelWarn(`${key}: unknown key in App.launchScreens \
 configuration. The key may be deprecated.`);
         }

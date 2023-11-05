@@ -10,6 +10,265 @@
 
 
 
+## v2.14.0, 2023-10-XX
+
+### Highlights
+
+Hacktoberfest release! 🎉
+
+* MongoDB driver has been updated to v4.17.0
+
+* You can now set `DISABLE_SOCKJS_CORS=1` if you want to prevent SockJS from setting CORS headers. Do not set this option if you will have DDP clients from other origins connecting to the DDP server. [PR](https://github.com/meteor/meteor/pull/12789)
+
+* Added guide on (how to prepare for Meteor 3.0 migration)[https://guide.meteor.com/prepare-meteor-3.0].
+
+* New DDP merge strategy `NO_MERGE_MULTI`, which is similar to `NO_MERGE`, but it does track whether a document is used by multiple publications. [PR](https://github.com/meteor/meteor/pull/12742)
+
+* Appcache has been further deprecated and moved to the deprecated packages folder.
+
+* Added `Accounts.createUserAsync` into the client.
+
+#### Migration Steps
+
+TODO
+
+## Breaking Changes
+
+N/A
+
+## Docs
+
+- Added guide on (how to prepare for Meteor 3.0 migration)[https://guide.meteor.com/prepare-meteor-3.0].
+- Added guide on (performance improvements)[https://guide.meteor.com/performance-improvement].
+
+##  Internal API changes
+
+* Tool
+  - Rename `EACCESS` to `EACCES` to follow the Windows spelling
+  - Fixed links in skeletons
+  - Fixed build issue in Vue skeleton
+  - Updated `source-map-support`
+  - Fixed bugs in negated “in” and “instanceof” expressions
+
+## Meteor Version Release
+
+* `accounts-base@2.2.8`
+  - Ensure that `onLogin` callback fires properly
+
+* `accounts-password@2.4.0`
+  - Add `Accounts.createUserAsync` to the client, a promise-based version of `Accounts.createUser`
+
+* `accounts-passwordless@2.1.3`
+  - Fix #12401, ensure that user is found with ID
+
+* `ddp-server@2.6.2`:
+  - Allow setting `DISABLE_SOCKJS_CORS` to prevent SockJS from setting CORS headers
+  - Added new publication strategy `NO_MERGE_MULTI`
+
+* `facebook-oauth@1.11.3`:
+  - Updated default version of Facebook GraphAPI to v17
+
+* `fetch@0.1.4`:
+  - Update `node-fetch` to version 1.6.12
+  - Update `whatwg-fetch` to version 3.6.17
+
+* `logging@1.3.2`:
+  - Added TS types
+
+* `meteor@1.11.3`:
+  - Improve TS types
+
+* `npm-mongo@4.17.0`:
+  - Bumped MongoDB driver to version 4.17
+
+* `react-fast-refresh@0.2.7`:
+  - Updated `semver` to version 7.5.4
+
+
+## Independent releases
+
+* `google-oauth@1.4.4`:
+  - Remove logging request/response in google_server
+
+* NPM `@meteorjs/babel-preset-meteor@7.10.1`
+  - Add Facebook in-app browser
+
+* NPM `cordova-plugin-meteor-webapp@2.0.2`
+  - Fixed Android hot code push failing
+
+## Contributors
+
+- [@StorytellerCZ](https://github.com/sponsors/StorytellerCZ)
+- [@Grubba27](https://github.com/sponsors/Grubba27)
+- [@vit0rr](https://github.com/vit0rr)
+- [@realyze](https://github.com/realyze)
+- [@jamauro](https://github.com/jamauro)
+- [@Torgen](https://github.com/Torgen)
+- [@brucejo75](https://github.com/brucejo75)
+- [@zodern](https://github.com/sponsors/zodern)
+- [@alisnic](https://github.com/alisnic)
+- [@ebroder](https://github.com/ebroder)
+- [@BANSAL-NISHU](https://github.com/BANSAL-NISHU)
+- [@salmanhasni](https://github.com/salmanhasni)
+
+For making this great framework even better!
+
+## v2.13.3, 2023-09-08
+
+### Highlights
+
+* Solves the issue [#12771: Version 2.13.1 suddenly requires a newer glibc version](https://github.com/meteor/meteor/issues/12771).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.3
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.3 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4). The previous version was generated using a different unix distribution (Ubuntu) while we should use CentOS.
+
+
+#### Special thanks to
+
+- [@aquinoit](https://github.com/aquinoit).
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes).
+- [@Grubba27](https://github.com/Grubba27).
+
+For making this great framework even better!
+
+
+## v2.13.1, 2023-09-04
+
+### Highlights
+
+* Solved zlib issue with Meteor.js and ESM Node.js 14.21.4 [PR](https://github.com/meteor/meteor/pull/12765) by (GH Grubba27).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.1
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.1 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4).
+
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27).
+
+
+For making this great framework even better!
+
+
+## v2.13.0, 2023-07-26
+
+### Highlights
+
+* Handled implicit collection creation oplog message by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12643).
+* Fix upsert logs when using WARN_WHEN_USING_OLD_API flag by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12640).
+* Updating mongo types by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12639).
+* Fix solid skeleton by [fredmaiaarantes](https://github.com/fredmaiaarantes) [PR](https://github.com/meteor/meteor/pull/12637).
+* Setting The Viewport meta tag on skeletons [fredmaiaarantes](https://github.com/fredmaiaarantes) [PR](https://github.com/meteor/meteor/pull/12636).
+* Update mongo.d.ts with projection [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12635).
+* Update guide code for GraphQL [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12619).
+* Twitter Whitelist issue resolved [Atharshoyeb](https://github.com/Atharshoyeb) [PR](https://github.com/meteor/meteor/pull/12369).
+* Node security patch (14.21.4) [PR](https://github.com/meteor/node-v14-esm/pull/1). Thanks a lot [denihs](https://github.com/denihs) for your contribuiton.
+* Updated deprecated reference in mongo package by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12653/files).
+* Updated BlazeJS git ref in core meteor to 2.7.1 by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12651).
+* Added `Meteor.applyAsync` types by [Julusian](https://github.com/Julusian) [PR](https://github.com/meteor/meteor/pull/12645).
+
+
+#### Breaking Changes
+
+If you are running Meteor with docker you will
+need to update your docker file to use our [new docker image](https://hub.docker.com/r/meteor/node)
+that contains Nodejs v14.21.4.
+
+#### Known issues
+
+Please, [check our known issues page](https://docs.meteor.com/known-issues)
+for more information about the problems and issues you might find while migrating.
+
+####  Internal changes
+
+* `ddp-server@2.6.2`:
+    - Updated livedata server test to be more easily debbuged.
+
+* `mongo@1.16.7`:
+    - Updated deprecated reference in Mongo package.
+
+#### Migration Steps
+
+
+Please, follow our [migration guide](https://guide.meteor.com/2.13-migration) to understand what's needed to upgrade to Meteor 2.13.
+
+#### Meteor Version Release
+
+
+* `Command line`:
+    - Updated metatags for skeletons.
+    - Updated solidjs skeleton to be more idiomatic.
+
+* `meteor@1.11.3`:
+    - Added types for applyAsync and added more documentation for applyAsync options.
+
+* `mongo@1.16.7`:
+    - Updated types with projection.
+    - Fixed wrong upsert logs when using WARN_WHEN_USING_OLD_API flag.
+    - Handled implicit collection creation oplog message.
+
+* `test-in-console@1.2.5`:
+    - Adjusted log indentation.
+    - All errors will be logged to console.
+    - Will always use puppeteer@20.4.0
+
+* `twitter-oauth@1.3.3`:
+    - Fixed twitter whitelist issue.
+
+
+#### Special thanks to
+
+- [@radekmie](https://github.com/radekmie).
+- [@Grubba27](https://github.com/Grubba27).
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes).
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
+- [@Atharshoyeb](https://github.com/Atharshoyeb).
+- [@Julusian](https://github.com/Julusian).
+- [@denihs](https://github.com/denihs).
 ## v2.12.0, 2023-04-28
 
 ### Highlights
@@ -825,7 +1084,7 @@ N/A
 
 * `mongo@1.15.0`
     - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created.
-    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured. [PR](https://github.com/meteor/meteor/pull/11995).
+    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occurred. [PR](https://github.com/meteor/meteor/pull/11995).
 * `modern-browsers@0.1.8`
     - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
 * `socket-stream-client@0.5.0`
@@ -1040,7 +1299,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
     - useUnifiedTopology is not an option anymore, it defaults to true.
     - native parser is not an option anymore, it defaults to false in the mongo connection.
     - poolSize not an option anymore, we are using max/minPoolSize for the same behavior on mongo connection.
-    - fields option is deprecated, we are maintaining a translation layer to "projection" field (now prefered) until the next minor version, where we will start showing alerts.
+    - fields option is deprecated, we are maintaining a translation layer to "projection" field (now preferred) until the next minor version, where we will start showing alerts.
     - _ensureIndex is now showing a deprecation message
     - we are maintaining a translation layer for the new oplog format, so if you read or rely on any behavior of it please read our oplog_v2_converter.js code
     - update/insert/remove behavior is maintained in the Meteor way, documented in our docs, but we are now using replaceOne/updateOne/updateMany internally. This is subject to changes in the API rewrite of MongoDB without Fibers AND if you are using rawCollection directly you have to review your methods otherwise you will see deprecation messages if you are still using the old mongodb style directly.
