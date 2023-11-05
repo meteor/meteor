@@ -2,11 +2,25 @@
 // XXX presently there is no way to destroy/clean up a Collection
 import {
   ASYNC_COLLECTION_METHODS,
-  getAsyncMethodName
-} from "meteor/minimongo/constants";
+  getAsyncMethodName,
+} from 'meteor/minimongo/constants';
 
-import { normalizeProjection } from "./mongo_utils";
-
+import { normalizeProjection } from './mongo_utils';
+export function warnUsingOldApi(methodName, collectionName, isCalledFromAsync) {
+  if (
+    process.env.WARN_WHEN_USING_OLD_API && // also ensures it is on the server
+    !isCalledFromAsync // must be true otherwise we should log
+  ) {
+    if (collectionName === undefined || collectionName.includes('oplog'))
+      return;
+    console.warn(`
+   
+   Calling method ${collectionName}.${methodName} from old API on server.
+   This method will be removed, from the server, in version 3.
+   Trace is below:`);
+    console.trace();
+  }
+}
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
@@ -319,6 +333,32 @@ Object.assign(Mongo.Collection.prototype, {
   ///
   /// Main collection API
   ///
+  /**
+   * @summary Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
+   * @locus Anywhere
+   * @method countDocuments
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to count
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
+   * @returns {Promise<number>}
+   */
+  countDocuments(...args) {
+    return this._collection.countDocuments(...args);
+  },
+
+  /**
+   * @summary Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
+   * @locus Anywhere
+   * @method estimatedDocumentCount
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/EstimatedDocumentCountOptions.html). Please note that not all of them are available on the client.
+   * @returns {Promise<number>}
+   */
+  estimatedDocumentCount(...args) {
+    return this._collection.estimatedDocumentCount(...args);
+  },
 
   _getFindSelector(args) {
     if (args.length == 0) return {};
@@ -346,7 +386,6 @@ Object.assign(Mongo.Collection.prototype, {
           })
         )
       );
-
 
       return {
         transform: self._transform,
@@ -404,6 +443,11 @@ Object.assign(Mongo.Collection.prototype, {
    * @returns {Object}
    */
   findOne(...args) {
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi('findOne', this._name, this.findOne.isCalledFromAsync);
+    this.findOne.isCalledFromAsync = false;
+
     return this._collection.findOne(
       this._getFindSelector(args),
       this._getFindOptions(args)
@@ -511,6 +555,11 @@ Object.assign(Mongo.Collection.prototype, {
     if (!doc) {
       throw new Error('insert requires an argument');
     }
+
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi('insert', this._name, this.insert.isCalledFromAsync);
+    this.insert.isCalledFromAsync = false;
 
     // Make a shallow clone of the document, preserving its prototype.
     doc = Object.create(
@@ -626,6 +675,11 @@ Object.assign(Mongo.Collection.prototype, {
       }
     }
 
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi('update', this._name, this.update.isCalledFromAsync);
+    this.update.isCalledFromAsync = false;
+
     selector = Mongo.Collection._rewriteSelector(selector, {
       fallbackId: insertedId,
     });
@@ -677,6 +731,10 @@ Object.assign(Mongo.Collection.prototype, {
       return this._callMutatorMethod('remove', [selector], wrappedCallback);
     }
 
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi('remove', this._name, this.remove.isCalledFromAsync);
+    this.remove.isCalledFromAsync = false;
     // it's my collection.  descend into the collection object
     // and propagate any exception.
     try {
@@ -718,6 +776,12 @@ Object.assign(Mongo.Collection.prototype, {
       options = {};
     }
 
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi('upsert', this._name, this.upsert.isCalledFromAsync);
+    this.upsert.isCalledFromAsync = false;
+    // caught here https://github.com/meteor/meteor/issues/12626
+    this.update.isCalledFromAsync = true; // to not trigger on the next call
     return this.update(
       selector,
       modifier,
@@ -740,7 +804,13 @@ Object.assign(Mongo.Collection.prototype, {
       self._collection.createIndex(index, options);
     } else {
       import { Log } from 'meteor/logging';
-      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
+      Log.debug(
+        `_ensureIndex has been deprecated, please use the new 'createIndex' instead${
+          options?.name
+            ? `, index name: ${options.name}`
+            : `, index: ${JSON.stringify(index)}`
+        }`
+      );
       self._collection._ensureIndex(index, options);
     }
   },
@@ -761,17 +831,34 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      'createIndex',
+      self._name,
+      self.createIndex.isCalledFromAsync
+    );
+    self.createIndex.isCalledFromAsync = false;
     try {
       self._collection.createIndex(index, options);
     } catch (e) {
-      if (e.message.includes('An equivalent index already exists with the same name but different options.') && Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch) {
+      if (
+        e.message.includes(
+          'An equivalent index already exists with the same name but different options.'
+        ) &&
+        Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch
+      ) {
         import { Log } from 'meteor/logging';
 
-        Log.info(`Re-creating index ${index} for ${self._name} due to options mismatch.`);
+        Log.info(
+          `Re-creating index ${index} for ${self._name} due to options mismatch.`
+        );
         self._collection._dropIndex(index);
         self._collection.createIndex(index, options);
       } else {
-        throw new Meteor.Error(`An error occurred when creating an index for collection "${self._name}: ${e.message}`);
+        throw new Meteor.Error(
+          `An error occurred when creating an index for collection "${self._name}: ${e.message}`
+        );
       }
     }
   },
@@ -796,6 +883,15 @@ Object.assign(Mongo.Collection.prototype, {
       throw new Error(
         'Can only call _createCappedCollection on server collections'
       );
+
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      '_createCappedCollection',
+      self._name,
+      self._createCappedCollection.isCalledFromAsync
+    );
+    self._createCappedCollection.isCalledFromAsync = false;
     self._collection._createCappedCollection(byteSize, maxDocuments);
   },
 
@@ -875,7 +971,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
 Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
-Object.assign(Meteor.Collection.prototype, AllowDeny.CollectionPrototype);
+Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
 
 function popCallbackFromArgs(args) {
   // Pull off any callback (or perhaps a 'callback' variable that was passed
@@ -892,6 +988,12 @@ function popCallbackFromArgs(args) {
 ASYNC_COLLECTION_METHODS.forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
-    return Promise.resolve(this[methodName](...args));
+    try {
+      // TODO: Fibers remove this when we remove fibers.
+      this[methodName].isCalledFromAsync = true;
+      return Promise.resolve(this[methodName](...args));
+    } catch (error) {
+      return Promise.reject(error);
+    }
   };
 });

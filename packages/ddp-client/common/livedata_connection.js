@@ -695,7 +695,14 @@ export class Connection {
           invocation
         );
         try {
-          stubOptions.stubReturnValue = await stubInvocation();
+          const resultOrThenable = stubInvocation();
+          const isThenable =
+            resultOrThenable && typeof resultOrThenable.then === 'function';
+          if (isThenable) {
+            stubOptions.stubReturnValue = await resultOrThenable;
+          } else {
+            stubOptions.stubReturnValue = resultOrThenable;
+          }
         } finally {
           DDP._CurrentMethodInvocation._set(currentContext);
         }
