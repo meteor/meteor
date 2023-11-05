@@ -1,5 +1,13 @@
 # Changelog
-## 1.12.0 - UNRELEASED
+## 1.11.3 - 2023-08-XX
+### Changes
+- Updated default version of Facebook GraphAPI to v17
+
+## 1.11.2 - 2022-12-07
+### Changes
+- Updated internal code to use new Meteor async format from Meteor 2.9
+
+## 1.11.1 - 2022-11-14
 ### Changes
 - Updated default version of Facebook GraphAPI to v15
 
