@@ -40,7 +40,7 @@ var packageJson = {
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.7.4",
     chalk: "4.1.1",
-    sqlite3: "5.0.2",
+    sqlite3: "5.1.6",
     "http-proxy": "1.18.1",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
