@@ -22,6 +22,7 @@
   ],
   "author": "Meteor Development Group",
   "license": "MIT",
+  "type": "commonjs",
   "scripts": {
     "pretest": "ios-sim start --devicetypeid=iPhone-11-Pro-Max",
     "test": "cordova-paramedic --plugin . --platform ios --target 'iPhone-11-Pro-Max' --args=--buildFlag='-UseModernBuildSystem=0' --verbose"
