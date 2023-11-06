@@ -87,26 +87,26 @@ is automatically stopped and won't be rerun.
 
 ```javascript
 Tracker.autorun(async function example1(computation) {
-	// Code before the first await will stay reactive.
-	reactiveVar1.get() // will trigger rerun
+  // Code before the first await will stay reactive.
+  reactiveVar1.get(); // This will trigger a rerun.
 
-  let links = await LinksCollection.findAsync({}).fetch(); // first async call will stay reactive.
+  let links = await LinksCollection.findAsync({}).fetch(); // First async call will stay reactive.
 
-	// Code after the first await looses Tracker.currentComputation: no reactivity.
-	reactiveVar2.get() // won't trigger rerun
+  // Code after the first await looses Tracker.currentComputation: no reactivity.
+  reactiveVar2.get(); // This won't trigger a rerun.
  
-	// You can bring back reactivity with the Tracker.withCompuation wrapper:
-  let users =
-    await Tracker.withComputation(computation, () => Meteor.users.findAsync({}).fetch());
+  // You can bring back reactivity with the Tracker.withCompuation wrapper:
+  let users = await Tracker.withComputation(computation, () => Meteor.users.findAsync({}).fetch());
 
-	// Code below will again not be reactive, so you will need another Tracker.withComputation
-	const value = Tracker.withComputation(computation, () => reactiveVar3.get()) // will trigger rerun
+  // Code below will again not be reactive, so you will need another Tracker.withComputation.
+  const value = Tracker.withComputation(computation, () => reactiveVar3.get()); // This will trigger a rerun.
 });
 ```
 
-As a rule of thumb, you are fine with wrapping all reactive statements inside a Tracker.withComputation to preserve current computation.
+As a rule of thumb, you are okay with wrapping all reactive statements inside a `Tracker.withComputation` to preserve current computation.
+But it comes at a performance cost - it should be used only where needed.
 
-Reason is, that an await implicitly *"moves"* the code below in a Promise resolved function. When this function runs (after it has been fetched from the micro task queue), Tracker.withComputation preserves the reference to the computation of the Tracker.autorun.
+Reason behind is, that an await implicitly *"moves"* the code below in a Promise resolved function. When this function runs (after it has been fetched from the micro task queue), `Tracker.withComputation` preserves the reference to the computation of the `Tracker.autorun`.
 
 The `react-meteor-data` package uses `Tracker.withComputation` to make the `useTracker` accept async callbacks.
 More can be seen [here](https://github.com/meteor/react-packages/tree/master/packages/react-meteor-data#maintaining-the-reactive-context)
