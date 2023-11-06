@@ -272,7 +272,7 @@ If you are using [Tinytest](https://github.com/meteor/meteor/tree/devel/packages
 meteor test-packages ./
 ```
 
-If you are using Mocha for your package's tests, you'll need to specify a `driver-package`. You'll need to run the following to start the Mocha [test driver package](testing.html#driver-packages):
+If you are using a different testing framework for your package's tests, you'll need to specify a `driver-package`. For example, if you are using Mocha, run the following to start the Mocha [test driver package](testing.html#driver-packages):
 
 ```bash
 meteor test-packages ./ --driver-package meteortesting:mocha
