@@ -37,6 +37,7 @@ selftest.define("cordova builds with server options", ["cordova"], function () {
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
+  s.run("remove-platform", "android");
   run = s.run("add-platform", "android");
   run.match("added");
   run.expectExit(0);
