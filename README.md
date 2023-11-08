@@ -24,7 +24,7 @@ $ meteor add quave:synced-cron
 
 To write a cron job, give it a unique name, a schedule and a function to run like below. SyncedCron uses the fantastic [later.js](http://bunkat.github.io/later/) library behind the scenes. A Later.js `parse` object is passed into the schedule call that gives you a huge amount of flexibility for scheduling your jobs, see the [documentation](http://bunkat.github.io/later/parsers.html#overview).
 
-``` js
+```js
 SyncedCron.add({
   name: 'Crunch some important numbers for the marketing department',
   schedule: function(parser) {
@@ -32,8 +32,7 @@ SyncedCron.add({
     return parser.text('every 2 hours');
   },
   job: function() {
-    var numbersCrunched = CrushSomeNumbers();
-    return numbersCrunched;
+    crushSomeNumbers();
   }
 });
 ```
@@ -109,7 +108,7 @@ SyncedCron uses Meteor's `logging` package by default. If you want to use your o
 SyncedCron expects a function as `logger`, and will pass arguments to it for you to take action on.
 
 ```js
-var MyLogger = function(opts) {
+const MyLogger = function(opts) {
   console.log('Level', opts.level);
   console.log('Message', opts.message);
   console.log('Tag', opts.tag);
