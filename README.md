@@ -2,20 +2,20 @@
 
 A simple cron system for [Meteor](http://meteor.com). It supports syncronizing jobs between multiple processes. In other words, if you add a job that runs every hour and your deployment consists of multiple app servers, only one of the app servers will execute the job each time (whichever tries first).
 
-## Migrated from percolate:synced-cron littledata:synced-cron
+## Migrated from littledata:synced-cron
 
-Since the original creator of the project could no longer maintain it, we had to migrate the package to another organisation to allow further maintenance and updates.
+Quave version is compatible with Meteor 3.0 and forward.
 
 To migrate you can simply run
 
 ``` sh
-$ meteor remove percolate:synced-cron && meteor add littledata:synced-cron
+$ meteor remove littledata:synced-cron && meteor add quave:synced-cron
 ```
 
 ## Installation
 
 ``` sh
-$ meteor add littledata:synced-cron
+$ meteor add quave:synced-cron
 ```
 
 ## API
@@ -141,9 +141,3 @@ Write some code. Write some tests. To run the tests, do:
 ``` sh
 $ meteor test-packages ./
 ```
-
-## License
-
-MIT. (c) Percolate Studio, originally designed and built by Zoltan Olah (@zol), now community maintained.
-
-Synced Cron was developed as part of the [Verso](http://versoapp.com) project.
