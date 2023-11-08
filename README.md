@@ -1,15 +1,15 @@
-# percolate:migrations
-
-[![Build Status](https://travis-ci.org/percolatestudio/meteor-migrations.svg?branch=master)](https://travis-ci.org/percolatestudio/meteor-migrations)
+# quave:migrations
 
 A simple migration system for [Meteor](http://meteor.com) supporting up/downwards migrations and command line usage. There is also [a fork available](https://github.com/emmanuelbuah/mgdb-migrator) for use outside of Meteor.
+
+Compatible with Meteor 3.0 and forward.
 
 ## Installation
 
 Meteor Migrations can be installed through Meteor's package manager. Type:
 
 ``` sh
-$ meteor add percolate:migrations
+$ meteor add quave:migrations
 ```
 
 ## API
