@@ -3,6 +3,7 @@
   "author": "Meteor <dev@meteor.com>",
   "version": "7.18.0",
   "license": "MIT",
+  "type": "commonjs",
   "description": "Babel wrapper package for use with Meteor",
   "keywords": [
     "meteor",

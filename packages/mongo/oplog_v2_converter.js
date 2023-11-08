@@ -47,7 +47,8 @@ function isArrayOperator(operator) {
 }
 
 function flattenObjectInto(target, source, prefix) {
-  if (Array.isArray(source) || typeof source !== 'object' || source === null) {
+  if (Array.isArray(source) || typeof source !== 'object' || source === null ||
+      source instanceof Mongo.ObjectID) {
     target[prefix] = source;
   } else {
     const entries = Object.entries(source);
