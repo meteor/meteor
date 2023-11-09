@@ -16,7 +16,7 @@ var packageJson = {
     "@meteorjs/reify": "0.24.0",
     "@babel/parser": "7.17.0",
     underscore: "1.13.6",
-    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/81bce1f99625e62af73338f63afcf2b44c6cfa5e",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     "@types/semver": "5.5.0",
     semver: "5.7.1"
   },
