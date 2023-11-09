@@ -1422,21 +1422,21 @@ export class AccountsServer extends AccountsCommon {
    * @returns {Object} Options which can be passed to `Email.send`.
    * @importFromPackage accounts-base
    */
-  generateOptionsForEmail(email, user, url, reason, extra = {}){
+  async generateOptionsForEmail(email, user, url, reason, extra = {}){
     const options = {
       to: email,
       from: this.emailTemplates[reason].from
-        ? this.emailTemplates[reason].from(user)
+        ? await this.emailTemplates[reason].from(user)
         : this.emailTemplates.from,
-      subject: this.emailTemplates[reason].subject(user, url, extra),
+      subject: await this.emailTemplates[reason].subject(user, url, extra),
     };
 
     if (typeof this.emailTemplates[reason].text === 'function') {
-      options.text = this.emailTemplates[reason].text(user, url, extra);
+      options.text = await this.emailTemplates[reason].text(user, url, extra);
     }
 
     if (typeof this.emailTemplates[reason].html === 'function') {
-      options.html = this.emailTemplates[reason].html(user, url, extra);
+      options.html = await this.emailTemplates[reason].html(user, url, extra);
     }
 
     if (typeof this.emailTemplates.headers === 'object') {

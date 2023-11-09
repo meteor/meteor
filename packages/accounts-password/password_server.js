@@ -550,7 +550,7 @@ Accounts.sendResetPasswordEmail =
     const { email: realEmail, user, token } =
       await Accounts.generateResetToken(userId, email, 'resetPassword', extraTokenData);
     const url = Accounts.urls.resetPassword(token, extraParams);
-    const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
+    const options = await Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
     await Email.sendAsync(options);
 
     if (Meteor.isDevelopment) {
@@ -586,7 +586,7 @@ Accounts.sendEnrollmentEmail =
     const url = Accounts.urls.enrollAccount(token, extraParams);
 
     const options =
-      Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
+      await Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
 
     await Email.sendAsync(options);
     if (Meteor.isDevelopment) {
@@ -766,7 +766,7 @@ Accounts.sendVerificationEmail =
     const { email: realEmail, user, token } =
       await Accounts.generateVerificationToken(userId, email, extraTokenData);
     const url = Accounts.urls.verifyEmail(token, extraParams);
-    const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
+    const options = await Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
     await Email.sendAsync(options);
     if (Meteor.isDevelopment) {
       console.log(`\nVerification email URL: ${ url }`);
