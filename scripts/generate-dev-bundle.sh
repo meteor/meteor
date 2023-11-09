@@ -56,7 +56,7 @@ downloadReleaseCandidateNode() {
 }
 
 # Try each strategy in the following order:
-extractNodeFromTarGz || downloadNodeFromS3 || \
+extractNodeFromTarGz || \
   downloadOfficialNode14 || downloadReleaseCandidateNode
 
 # On macOS, download MongoDB from mongodb.com. On Linux, download a custom build
