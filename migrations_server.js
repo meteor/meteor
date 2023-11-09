@@ -315,6 +315,6 @@ Migrations._reset = async function () {
 };
 
 // unlock control
-Migrations.unlock = function () {
-  getMigrationsCollection().update({ _id: "control" }, { $set: { locked: false } });
+Migrations.unlock = async function () {
+  await getMigrationsCollection().updateAsync({ _id: "control" }, { $set: { locked: false } });
 };

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1 (2023-11-8)
+
+- Migrations.unlock() is now async
+
 ## 2.0.0 (2023-11-8)
 
 - Moves away from `var` usage

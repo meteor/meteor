@@ -216,7 +216,7 @@ Tinytest.addAsync(
 
     shouldError = false;
     // migrate up again, should succeed
-    Migrations.unlock();
+    await Migrations.unlock();
     await Migrations.migrateTo("latest");
     test.equal(run, ["u1", "u2"]);
     test.equal(await Migrations.getVersion(), 2);
