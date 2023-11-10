@@ -807,7 +807,6 @@ main.registerCommand({
         }
       }
     ])
-    Console.setPretty(true) // to not lose the console
     return r;
   }
 
@@ -815,6 +814,7 @@ main.registerCommand({
     appPathAsEntered,
     skeleton
   } = await setup();
+  Console.setPretty(true) // to not lose the console
 
   var appPath = files.pathResolve(appPathAsEntered);
 
