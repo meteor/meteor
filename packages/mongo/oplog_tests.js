@@ -163,3 +163,43 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
     }
   ]
 );
+
+import { Mongo, MongoInternals } from 'meteor/mongo';
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - x - implicit collection creation',
+  async test => {
+    const collection = new Mongo.Collection(`oplog-implicit-${test.runId()}`);
+    const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
+    test.equal(await collection.find().countAsync(), 0);
+    await client.withSession(async session => {
+      await session.withTransaction(async () => {
+        await collection.rawCollection().insertOne({}, { session });
+      });
+    });
+    test.equal(await collection.find().countAsync(), 1);
+  },
+);
+
+// Meteor.isServer && Tinytest.addAsync(
+//   "mongo-livedata - oplog - _onFailover",
+//   async function (test) {
+//     const driver = MongoInternals.defaultRemoteCollectionDriver();
+//     const failoverPromise = new Promise(resolve => {
+//       driver.mongo._onFailover(() => {
+//         resolve(true);
+//       });
+//     });
+//
+//
+//     await driver.mongo.db.admin().command({
+//       replSetStepDown: 1,
+//       force: true
+//     });
+//
+//     try {
+//       const result = await failoverPromise;
+//       test.isTrue(result);
+//     } catch (e) {
+//       test.fail({ message: "Error waiting on Promise", value: JSON.stringify(e) });
+//     }
+//   });

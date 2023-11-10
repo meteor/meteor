@@ -20,7 +20,6 @@ import {
   doInteractivePasswordLogin,
   loggedInUsername,
   isLoggedIn,
-  maybePrintRegistrationLink,
 } from './auth.js';
 import { recordPackages } from './stats.js';
 import { Console } from '../console/console.js';
@@ -489,7 +488,7 @@ export async function bundleAndDeploy(options) {
   let preflightPassword = null;
 
   if (options.isBuildOnly) {
-    Console.info('Skipping pre authentication as the option --build-only was provded.');
+    Console.info('Skipping pre authentication as the option --build-only was provided.');
   } else {
     site = options.site && canonicalizeSite(options.site)
     if (! site) {

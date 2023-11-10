@@ -1,11 +1,17 @@
 // Global flag for phantomjs (or other browser) to eval to see if we're done.
 DONE = false;
 // Failure count for phantomjs exit code
-FAILURES = null;
+FAILURES = 0;
+// Where are the failures
+WHERE_FAILED = [];
+// Passed count for phantomjs exit code
+PASSED = null;
 
 TEST_STATUS = {
   DONE: false,
-  FAILURES: null
+  FAILURES: 0,
+  PASSED: null,
+  WHERE_FAILED: []
 };
 
 // xUnit format uses XML output
@@ -55,6 +61,7 @@ var xunit = function (s) {
 
 var passed = 0;
 var failed = 0;
+var whereFailed = [];
 var expected = 0;
 var resultSet = {};
 var toReport = [];
@@ -142,6 +149,7 @@ runTests = function () {
           else
             log("Test failed with exception");
           failed++;
+          whereFailed.push({ name: name, info: JSON.stringify(event) });
           break;
         case "finish":
           switch (resultSet[name].status) {
@@ -163,6 +171,7 @@ runTests = function () {
             report(name, true);
             log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
             log(JSON.stringify(resultSet[name].info));
+            whereFailed.push({ name: name, info: JSON.stringify(resultSet[name].info) });
             break;
           default:
             log(name, ": unknown state for the test to be in");
@@ -187,10 +196,14 @@ runTests = function () {
           log("Waiting 3s for any last reports to get sent out");
           setTimeout(function () {
             TEST_STATUS.FAILURES = FAILURES = failed;
+            TEST_STATUS.WHERE_FAILED = WHERE_FAILED = whereFailed;
+            TEST_STATUS.PASSED = PASSED = passed;
             TEST_STATUS.DONE = DONE = true;
           }, 3000);
         } else {
           TEST_STATUS.FAILURES = FAILURES = failed;
+          TEST_STATUS.WHERE_FAILED = WHERE_FAILED = whereFailed;
+          TEST_STATUS.PASSED = PASSED = passed;
           TEST_STATUS.DONE = DONE = true;
         }
       });

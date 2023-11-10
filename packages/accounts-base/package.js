@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'A user account system',
-  version: '2.2.3',
+  version: '2.2.8',
 });
 
 Package.onUse(api => {
@@ -14,10 +14,6 @@ Package.onUse(api => {
   api.use('callback-hook', ['client', 'server']);
   api.use('reactive-var', 'client');
   api.use('url', ['client', 'server']);
-
-  // use unordered to work around a circular dependency
-  // (service-configuration needs Accounts.connection)
-  api.use('service-configuration', ['client', 'server'], { unordered: true });
 
   // needed for getting the currently logged-in user and handling reconnects
   api.use('ddp', ['client', 'server']);
@@ -48,6 +44,8 @@ Package.onUse(api => {
   // modules that import the accounts-base package.
   api.mainModule('server_main.js', 'server');
   api.mainModule('client_main.js', 'client');
+
+  api.addAssets('accounts-base.d.ts', 'server');
 });
 
 Package.onTest(api => {

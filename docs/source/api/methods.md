@@ -130,7 +130,7 @@ sanitized version is available, the client gets
 
 {% apibox "Meteor.call" %}
 
-This is how to invoke a method.  It will run the method on the server.  If a
+This is how to invoke a method with a sync stub.  It will run the method on the server.  If a
 stub is available, it will also run the stub on the client.  (See also
 [`Meteor.apply`](#meteor_apply), which is identical to `Meteor.call` except that
 you specify the parameters as an array instead of as separate arguments and you
@@ -186,11 +186,21 @@ you want to process the method's result as soon as it arrives from the server,
 even if the method's writes are not available yet, you can specify an
 `onResultReceived` callback to [`Meteor.apply`](#meteor_apply).
 
+{% apibox "Meteor.callAsync" %}
+
+`Meteor.callAsync` is just like `Meteor.call`, except that it'll return a promise that you need to solve to get the result.
+
+> Be aware that you should never call a method (async or not) after calling `Meteor.callAsync` without waiting for the promise to solve. To understand why, please read this part of our [migration guide](https://guide.meteor.com/2.8-migration.html#the-limitations).
+
 {% apibox "Meteor.apply" %}
 
 `Meteor.apply` is just like `Meteor.call`, except that the method arguments are
 passed as an array rather than directly as arguments, and you can specify
 options about how the client executes the method.
+
+{% apibox "Meteor.applyAsync" %}
+
+`Meteor.applyAsync` is just like `Meteor.apply`, except it is an async function, and it will consider that the stub is async.
 
 <h2 id="ddpratelimiter"><span>DDPRateLimiter</span></h2>
 
@@ -239,3 +249,35 @@ DDPRateLimiter.addRule(loginRule, 5, 1000);
 ```
 {% apibox "DDPRateLimiter.removeRule" nested:true instanceDelimiter:. %}
 {% apibox "DDPRateLimiter.setErrorMessage" nested:true instanceDelimiter:. %}
+{% apibox "DDPRateLimiter.setErrorMessageOnRule" nested:true instanceDelimiter:. %}
+
+Allows developers to specify custom error messages for each rule instead of being
+limited to one global error message for every rule.
+It adds some clarity to what rules triggered which errors, allowing for better UX 
+and also opens the door for i18nable error messages per rule instead of the
+default English error message.
+
+Here is an example with a custom error message:
+```js
+const setupGoogleAuthenticatorRule = {
+  userId(userId) {
+    const user = Meteor.users.findOne(userId);
+    return user;
+  },
+  type: 'method',
+  name: 'Users.setupGoogleAuthenticator',
+};
+
+// Add the rule, allowing up to 1 google auth setup message every 60 seconds
+const ruleId = DDPRateLimiter.addRule(setupGoogleAuthenticatorRule, 1, 60000);
+DDPRateLimiter.setErrorMessageOnRule(ruleId, function (data) {
+  return `You have reached the maximum number of Google Authenticator attempts. Please try again in ${Math.ceil(data.timeToReset / 1000)} seconds.`;
+});
+```
+
+Or a more simple approach:
+
+```js
+const ruleId = DDPRateLimiter.addRule(setupGoogleAuthenticatorRule, 1, 60000);
+DDPRateLimiter.setErrorMessageOnRule(ruleId, 'Example as a single string error message');
+```

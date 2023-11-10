@@ -80,12 +80,45 @@ If the initial run of an autorun throws an exception, the computation
 is automatically stopped and won't be rerun.
 
 ### Tracker.autorun and async callbacks
-`Tracker.autorun` can accept an `async` callback function.  However, the async call back function will only be dependent on reactive functions called prior to any called functions that return a promise.
+`Tracker.autorun` can accept an `async` callback function.  
+ To preserve reactivity for the reactive variables inside the async callback function, you must use a `Tracker.withComputation` call as described below:
+
+{% apibox "Tracker.withComputation" %}
+
+```javascript
+Tracker.autorun(async function example1(computation) {
+  // Code before the first await will stay reactive.
+  reactiveVar1.get(); // This will trigger a rerun.
+
+  let links = await LinksCollection.findAsync({}).fetch(); // First async call will stay reactive.
+
+  // Code after the first await looses Tracker.currentComputation: no reactivity.
+  reactiveVar2.get(); // This won't trigger a rerun.
+ 
+  // You can bring back reactivity with the Tracker.withCompuation wrapper:
+  let users = await Tracker.withComputation(computation, () => Meteor.users.findAsync({}).fetch());
+
+  // Code below will again not be reactive, so you will need another Tracker.withComputation.
+  const value = Tracker.withComputation(computation, () => reactiveVar3.get()); // This will trigger a rerun.
+});
+```
+
+As a rule of thumb, you are okay with wrapping all reactive statements inside a `Tracker.withComputation` to preserve current computation.
+But it comes at a performance cost - it should be used only where needed.
+
+Reason behind is, that an await implicitly *"moves"* the code below in a Promise resolved function. When this function runs (after it has been fetched from the micro task queue), `Tracker.withComputation` preserves the reference to the computation of the `Tracker.autorun`.
+
+The `react-meteor-data` package uses `Tracker.withComputation` to make the `useTracker` accept async callbacks.
+More can be seen [here](https://github.com/meteor/react-packages/tree/master/packages/react-meteor-data#maintaining-the-reactive-context)
+
+### Using async callbacks in versions of Meteor prior to 2.10
+`Tracker.autorun` can accept an `async` callback function.  
+However, the async call back function will only be dependent on reactive functions called prior to any called functions that return a promise.
 
 Example 1 - autorun `example1()` **is not** dependent on reactive changes to the `Meteor.users` collection.  Because it is dependent on nothing reactive it will run only once:
 ```javascript
   Tracker.autorun(async function example1() {
-    let asyncData = await  asyncDataFunction();
+    let asyncData = await asyncDataFunction();
     let users = Meteor.users.find({}).fetch();
   });
 ```
@@ -96,10 +129,9 @@ Example 2 -  autorun `example2()` **is** dependent on reactive changes to the Me
 ```javascript
   Tracker.autorun(async function example2()  {
     let users = Meteor.users.find({}).fetch();
-    let asyncData = await  asyncDataFunction();
+    let asyncData = await asyncDataFunction();
   });
 ```
-
 {% apibox "Tracker.flush" %}
 
 Normally, when you make changes (like writing to the database),

@@ -3,11 +3,14 @@ const cliProgress = require('cli-progress');
 const Seven = require('node-7z');
 const path = require('path');
 const sevenBin = require('7zip-bin');
-const fs = require('fs');
+const semver = require('semver');
 const child_process = require('child_process');
-const fsPromises = fs.promises;
 const tmp = require('tmp');
 const os = require('os');
+const fs = require('fs');
+
+const fsPromises = fs.promises;
+
 const {
   meteorPath,
   release,
@@ -20,14 +23,28 @@ const {
   isMac,
   METEOR_LATEST_VERSION,
   shouldSetupExecPath,
-} = require('./config.js');
+} = require('./config');
 const { uninstall } = require('./uninstall');
 const {
   extractWithTar,
   extractWith7Zip,
   extractWithNativeTar,
-} = require('./extract.js');
-const semver = require('semver');
+} = require('./extract');
+const { engines } = require('./package.json');
+
+const nodeVersion = engines.node;
+const npmVersion = engines.npm;
+
+// Compare installed NodeJs version with required NodeJs version
+if (!semver.satisfies(process.version, nodeVersion)) {
+  console.warn(
+    `WARNING: Recommended versions are Node.js ${nodeVersion} and npm ${npmVersion}.`
+  );
+  console.warn(
+    `We recommend using a Node version manager like NVM or Volta to install Node.js and npm.\n`
+  );
+}
+
 const isInstalledGlobally = process.env.npm_config_global === 'true';
 
 if (!isInstalledGlobally) {
@@ -36,7 +53,7 @@ if (!isInstalledGlobally) {
     'You are not using a global npm context to install, you should never add meteor to your package.json.'
   );
   console.error('Make sure you pass -g to npm install.');
-  console.error('Aborting');
+  console.error('Aborting...');
   console.error('******************************************');
   process.exit(1);
 }
@@ -44,7 +61,10 @@ process.on('unhandledRejection', err => {
   throw err;
 });
 if (os.arch() !== 'x64') {
-  const isValidM1Version = semver.gte(semver.coerce(METEOR_LATEST_VERSION), '2.5.1-beta.3');
+  const isValidM1Version = semver.gte(
+    semver.coerce(METEOR_LATEST_VERSION),
+    '2.5.1-beta.3'
+  );
   if (os.arch() !== 'arm64' || !isMac() || !isValidM1Version) {
     console.error(
       'The current architecture is not supported in this version: ',
@@ -133,6 +153,17 @@ try {
 
 download();
 
+function generateProxyAgent() {
+  const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY;
+  if (!proxyUrl) {
+    return undefined;
+  }
+
+  const HttpsProxyAgent = require('https-proxy-agent');
+
+  return new HttpsProxyAgent(proxyUrl);
+}
+
 function download() {
   const start = Date.now();
   const downloadProgress = new cliProgress.SingleBar(
@@ -148,6 +179,9 @@ function download() {
     retry: { maxRetries: 5, delay: 5000 },
     override: true,
     fileName: tarGzName,
+    httpsRequestOptions: {
+      agent: generateProxyAgent(),
+    },
   });
 
   dl.on('progress', ({ progress }) => {
@@ -226,7 +260,7 @@ async function extract() {
     fileCount: 0,
   });
 
-  let tarPath = path.resolve(tempPath, tarName);
+  const tarPath = path.resolve(tempPath, tarName);
   // 7Zip is ~15% faster, but doesn't work when the user doesn't have permission to create symlinks
   // TODO: we could always use 7zip if we have it ignore the symlinks, and then manually create them as
   // is done in extractWithTar
@@ -255,15 +289,14 @@ async function setup() {
 }
 async function setupExecPath() {
   if (isWindows()) {
-    //set for the current session and beyond
+    // set for the current session and beyond
     child_process.execSync(`setx path "${meteorPath}/;%path%`);
     return;
   }
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
 
-  const appendPathToFile = async file => {
-    return fsPromises.appendFile(`${rootPath}/${file}`, `${exportCommand}\n`);
-  };
+  const appendPathToFile = async file =>
+    fsPromises.appendFile(`${rootPath}/${file}`, `${exportCommand}\n`);
 
   if (process.env.SHELL && process.env.SHELL.includes('zsh')) {
     await appendPathToFile('.zshrc');

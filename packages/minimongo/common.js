@@ -972,21 +972,19 @@ export function makeLookupFunction(key, options = {}) {
     makeLookupFunction(parts.slice(1).join('.'), options)
   );
 
-  const omitUnnecessaryFields = result => {
-    if (!result.dontIterate) {
-      delete result.dontIterate;
-    }
-
-    if (result.arrayIndices && !result.arrayIndices.length) {
-      delete result.arrayIndices;
-    }
-
-    return result;
-  };
+  function buildResult(arrayIndices, dontIterate, value) {
+    return arrayIndices && arrayIndices.length
+      ? dontIterate
+        ? [{ arrayIndices, dontIterate, value }]
+        : [{ arrayIndices, value }]
+      : dontIterate
+        ? [{ dontIterate, value }]
+        : [{ value }];
+  }
 
   // Doc will always be a plain object or an array.
   // apply an explicit numeric index, an array.
-  return (doc, arrayIndices = []) => {
+  return (doc, arrayIndices) => {
     if (Array.isArray(doc)) {
       // If we're being asked to do an invalid lookup into an array (non-integer
       // or out-of-bounds), return no results (which is different from returning
@@ -998,7 +996,7 @@ export function makeLookupFunction(key, options = {}) {
       // Remember that we used this array index. Include an 'x' to indicate that
       // the previous index came from being considered as an explicit array
       // index (not branching).
-      arrayIndices = arrayIndices.concat(+firstPart, 'x');
+      arrayIndices = arrayIndices ? arrayIndices.concat(+firstPart, 'x') : [+firstPart, 'x'];
     }
 
     // Do our first lookup.
@@ -1017,11 +1015,11 @@ export function makeLookupFunction(key, options = {}) {
     // selectors to iterate over it.  eg, {'a.0': 5} does not match {a: [[5]]}.
     // So in that case, we mark the return value as 'don't iterate'.
     if (!lookupRest) {
-      return [omitUnnecessaryFields({
+      return buildResult(
         arrayIndices,
-        dontIterate: Array.isArray(doc) && Array.isArray(firstLevel),
-        value: firstLevel
-      })];
+        Array.isArray(doc) && Array.isArray(firstLevel),
+        firstLevel,
+      );
     }
 
     // We need to dig deeper.  But if we can't, because what we've found is not
@@ -1035,7 +1033,7 @@ export function makeLookupFunction(key, options = {}) {
         return [];
       }
 
-      return [omitUnnecessaryFields({arrayIndices, value: undefined})];
+      return buildResult(arrayIndices, false, undefined);
     }
 
     const result = [];
@@ -1067,7 +1065,7 @@ export function makeLookupFunction(key, options = {}) {
         !(isNumericKey(parts[1]) && options.forSort)) {
       firstLevel.forEach((branch, arrayIndex) => {
         if (LocalCollection._isPlainObject(branch)) {
-          appendToResult(lookupRest(branch, arrayIndices.concat(arrayIndex)));
+          appendToResult(lookupRest(branch, arrayIndices ? arrayIndices.concat(arrayIndex) : [arrayIndex]));
         }
       });
     }

@@ -12,6 +12,13 @@ var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
+const {
+  blue,
+  green,
+  purple,
+  red,
+  yellow
+} = require('../console/console.js').colors;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
@@ -514,8 +521,11 @@ export const AVAILABLE_SKELETONS = [
   DEFAULT_SKELETON,
   "typescript",
   "vue",
+  'vue-2',
   "svelte",
   "tailwind",
+  "chakra-ui",
+  "solid",
 ];
 
 main.registerCommand({
@@ -531,10 +541,14 @@ main.registerCommand({
     blaze: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
+    'vue-2': { type: Boolean },
     typescript: { type: Boolean },
     apollo: { type: Boolean },
     svelte: { type: Boolean },
     tailwind: { type: Boolean },
+    'chakra-ui': { type: Boolean },
+    solid: { type: Boolean },
+    prototype: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -543,7 +557,13 @@ main.registerCommand({
   // latest release to create a package if we are inside an app)
   if (options.package) {
     var packageName = options.args[0];
-
+    if (options.prototype) {
+      Console.error(
+        `The ${Console.command('--prototype')} option is no longer supported for packages.`
+      );
+      Console.error();
+      throw new main.ShowUsage;
+    }
     if (options.list || options.example) {
       Console.error("No package examples exist at this time.");
       Console.error();
@@ -786,6 +806,22 @@ main.registerCommand({
       return transform(f);
     },
     transformContents: function (contents, f) {
+
+      // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
+      if ((/packages/).test(f)) {
+
+        const prototypePackages =
+          () =>
+            'autopublish             # Publish all data to the clients (for prototyping)\n' +
+            'insecure                # Allow all DB writes from clients (for prototyping)';
+
+        // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
+        if (options.prototype) {
+          return Buffer.from(contents.toString().replace(/~prototype~/g, prototypePackages()))
+        } else {
+          return Buffer.from(contents.toString().replace(/~prototype~/g, ''))
+        }
+      }
       if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
         return Buffer.from(transform(contents.toString()));
       } else {
@@ -901,12 +937,15 @@ main.registerCommand({
     cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
     cmd("meteor create --full       # to create a more complete scaffolded app");
     cmd("meteor create --react      # to create a basic React-based app");
-    cmd("meteor create --vue        # to create a basic Vue-based app");
+    cmd("meteor create --vue        # to create a basic Vue3-based app");
+    cmd("meteor create --vue-2      # to create a basic Vue2-based app");
     cmd("meteor create --apollo     # to create a basic Apollo + React app");
     cmd("meteor create --svelte     # to create a basic Svelte app");
     cmd("meteor create --typescript # to create an app using TypeScript and React");
     cmd("meteor create --blaze      # to create an app using Blaze");
     cmd("meteor create --tailwind   # to create an app using React and Tailwind");
+    cmd("meteor create --chakra-ui  # to create an app Chakra UI and React");
+    cmd("meteor create --solid      # to create a basic Solid app");
   }
 
   Console.info("");
@@ -1254,6 +1293,11 @@ main.registerCommand({
   maxArgs: 0,
   requiresAppOrPackage: true,
   options: {
+    'allow-incompatible-update': { type: Boolean },
+
+    // This option has never done anything, but we are keeping it for
+    // backwards compatibility since it existed for 7 years before adding
+    // the correctly named option
     'allow-incompatible-updates': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
@@ -1323,7 +1367,7 @@ main.registerCommand({
     throw new main.ExitWithCode(2);
   }
 
-  if (bundle.warnings) {
+  if (bundle.warnings && bundle.warnings.hasMessages()) {
     Console.warn(bundle.warnings.formatMessages());
     return 1;
   }
@@ -1339,7 +1383,8 @@ main.registerCommand({
   name: 'mongo',
   maxArgs: 1,
   options: {
-    url: { type: Boolean, short: 'U' }
+    url: { type: Boolean, short: 'U' },
+    verbose: { type: Boolean, short: 'V' },
   },
   requiresApp: function (options) {
     return options.args.length === 0;
@@ -1383,20 +1428,45 @@ to this command.`);
     mongoUrl = deploy.temporaryMongoUrl(site);
     usedMeteorAccount = true;
 
-    if (! mongoUrl) {
+    if (!mongoUrl) {
       // temporaryMongoUrl() will have printed an error message
       return 1;
     }
   }
   if (options.url) {
-    console.log(mongoUrl);
+    console.log(`${yellow`$`} ${ purple`mongosh` } ${ blue(mongoUrl) }`);
   } else {
     if (usedMeteorAccount) {
       auth.maybePrintRegistrationLink();
     }
     process.stdin.pause();
     var runMongo = require('../runners/run-mongo.js');
-    runMongo.runMongoShell(mongoUrl);
+    runMongo.runMongoShell(mongoUrl,
+      (err) => {
+        console.log(red`Some error occured while trying to run mongosh.`);
+        console.log(yellow`Check bellow for some more info:`);
+        console.log(`
+     Since version v5.0.5 the mongo shell has been superseded by the mongosh
+     below there is the url to use with mongosh
+     ${yellow`$`} ${ purple`mongosh` } ${ blue(mongoUrl) }
+     `)
+
+        if (err.code === 'ENOENT') {
+          console.log(red`The 'mongosh' command line tool was not found in your PATH.`);
+          console.log(`Check https://www.mongodb.com/docs/mongodb-shell/`);
+          process.exit(2);
+          return;
+        }
+
+        if (options.verbose) {
+          console.log("here is a more verbose error message:");
+          console.log(yellow`=====================================`);
+          console.log(err);
+          console.log(yellow`=====================================`);
+        }
+
+        process.exit(1);
+      });
     throw new main.WaitForExit;
   }
 });
@@ -2494,6 +2564,298 @@ main.registerCommand({
   }
 
   return deploy.listSites();
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// generate
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ *
+ * @param question
+ * @returns {function(string): Promise<string>}
+ */
+const createPrompt = () => {
+  const readline = require('readline')
+    .createInterface({ input: process.stdin, output: process.stdout });
+  return async (question) => new Promise((resolve, reject) => {
+    readline.question(question, (answer) => {
+      resolve(answer);
+    })
+  })
+}
+
+const sanitizeBoolAnswer = (string) => {
+  if (string === '') return true;
+
+  if (string.toLowerCase() === 'y' || string.toLowerCase() === 'yes') return true;
+
+  if (string.toLowerCase() === 'n' || string.toLowerCase() === 'no' ) return false;
+
+  Console.error(red('You must provide a valid answer'));
+  Console.error(yellow('it should be either (y)es or (n)o or just press enter to accept the default value'));
+  throw new main.ExitWithCode(2);
+}
+
+/**
+ * simple verification for the name
+ * @param scaffoldName {string}
+ */
+const checkScaffoldName = (scaffoldName) => {
+  if (scaffoldName === '') {
+    Console.error(red('You must provide a name for your model.'));
+    Console.error(yellow('Model names should not be empty.'));
+    throw new main.ExitWithCode(2);
+  }
+
+  if (scaffoldName.includes('/')) {
+    Console.error(red('You must provide a valid name for your model.'));
+    Console.error(yellow('Model names should not contain slashes.'));
+    throw new main.ExitWithCode(2);
+  }
+
+  const allNonWordRegex = /[^a-zA-Z0-9_-]/g; // all numbers and letters plus _ and -
+  if (allNonWordRegex.test(scaffoldName)) {
+    Console.error(red('You must provide a valid name for your model.'));
+    Console.error(yellow('Model names should not contain special characters except _ and -'));
+    throw new main.ExitWithCode(2);
+  }
+}
+
+main.registerCommand({
+  name: 'generate',
+  maxArgs: 1,
+  minArgs: 0,
+  options: {
+    path: { type: String },
+    methods: { type: Boolean },
+    publications: { type: Boolean },
+    templatePath : { type: String },
+    replaceFn : { type: String },
+  },
+  pretty: false,
+  catalogRefresh: new catalog.Refresh.Never()
+}, async function (options) {
+  const { args, appDir } = options;
+
+  const setup = async (arg0) => {
+    if (arg0 === undefined) {
+      const ask = createPrompt();
+      // the ANSI color chart is here: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+      const scaffoldName = await ask(`What is the name of your ${yellow`model`}? `);
+      checkScaffoldName(scaffoldName);
+      const areMethods = await ask(`There will be methods [${green`Y`}/${red`n`}]? press enter for ${green`yes`}  `);
+      const methods = sanitizeBoolAnswer(areMethods);
+      const arePublications = await ask(`There will be publications [${green`Y`}/${red`n`}]? press enter for ${green`yes`}  `);
+      const publications = sanitizeBoolAnswer(arePublications);
+      const path = await ask(`Where it will be placed? press enter for ${yellow`./imports/api/`} `);
+      return {
+        isWizard: true,
+        scaffoldName,
+        path,
+        methods,
+        publications,
+      }
+    }
+
+    const {
+      path,
+      methods,
+      publications
+    } = options;
+
+    return {
+      isWizard: false,
+      scaffoldName: arg0,
+      path,
+      methods,
+      publications,
+    }
+  }
+  /**
+   * @type{string}
+   */
+  const {
+    isWizard,
+    scaffoldName,
+    path,
+    methods,
+    publications
+  } = await setup(args[0]);
+
+  checkScaffoldName(scaffoldName);
+  // get directory where we will place our files
+  const scaffoldPath = path ||`${ appDir }/imports/api/${ scaffoldName }`;
+
+  /**
+   *
+   * @param appDir
+   * @returns {string[]}
+   */
+  const getFilesInDir = (appDir) => {
+    const appPath = files.pathResolve(appDir);
+    return files.readdir(appPath);
+  }
+
+  const getExtension = () => {
+    const rootFiles = getFilesInDir(appDir);
+    if (rootFiles.includes('tsconfig.json')) return 'ts'
+    else return 'js'
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  const userTransformFilenameFn = (filename) => {
+    const path = files.pathResolve(files.pathJoin(appDir, options.replaceFn));
+    const replaceFn = require(path).transformFilename;
+    if (typeof replaceFn !== 'function') {
+      Console.error(red`You must provide a valid function transformFilename.`);
+      Console.error(yellow`The function should be named transformFilename and should be exported.`);
+      throw new main.ExitWithCode(2);
+    }
+    return replaceFn(scaffoldName, filename);
+  }
+  /**
+   *
+   * @returns {string}
+   */
+  const userTransformContentsFn = (contents, fileName) => {
+    const path = files.pathResolve(files.pathJoin(appDir, options.replaceFn));
+    const replaceFn = require(path).transformContents;
+    if (typeof replaceFn !== 'function') {
+      Console.error(red`You must provide a valid function transformContents.`);
+      Console.error(yellow`The function should be named transformContents and should be exported.`);
+      throw new main.ExitWithCode(2);
+    }
+    return replaceFn(scaffoldName, contents, fileName);
+  }
+
+  /**
+   * if contains - turns into pascal
+   * @param str{string}
+   * @returns {string}
+   */
+  const toPascalCase = (str) => {
+    if(!str.includes('-')) return str.charAt(0).toUpperCase() + str.slice(1);
+    else return str.split('-').map(toPascalCase).join('');
+  }
+  const toCamelCase = (str) => {
+    if(!str.includes('-')) return str.charAt(0).toLowerCase() + str.slice(1);
+    else return str.split('-').map(toPascalCase).join('');
+  }
+
+  /**
+   *
+   * @param name {string}
+   */
+  const transformName = (name) => {
+    return name.replace(/\$\$name\$\$|\$\$PascalName\$\$|\$\$camelName\$\$/g, function (substring, args) {
+      if (substring === '$$name$$') return scaffoldName;
+      if (substring === '$$PascalName$$') return toPascalCase(scaffoldName);
+      if (substring === '$$camelName$$') return toCamelCase(scaffoldName);
+    })
+  }
+
+  /**
+   *
+   * @param content{string}
+   * @param fileName{string}
+   * @returns {string}
+   */
+  const removeUnusedLines = (content, fileName) => {
+    if (methods && publications) return content;
+    if (!methods && !publications) return content;
+    if(!fileName.startsWith('index')) return content;
+    return content
+      .split('\n')
+      .filter(line => {
+        if (!methods && line.includes('methods')) return false;
+        if (!publications && line.includes('publications')) return false;
+        return true;
+      })
+      .join('\n');
+  }
+  /// Program
+  const rootFiles = getFilesInDir(appDir);
+  if (!rootFiles.includes('.meteor')) {
+    Console.error(red`You must be in a Meteor project to run this command`);
+    Console.error(yellow`You can create a new Meteor project with 'meteor create'`);
+    throw new main.ExitWithCode(2);
+  }
+
+  const extension = getExtension()
+  const assetsPath = () => {
+    if (options.templatePath){
+      const templatePath = files.pathJoin(appDir, options.templatePath)
+      Console.info(`Using template that is in: ${purple(templatePath)}`)
+      return templatePath;
+    }
+    return files.pathJoin(
+      __dirnameConverted,
+      '..',
+      'static-assets',
+      `scaffolds-${ extension }`)
+  }
+  // create directory
+  const isOk = files.mkdir_p(scaffoldPath);
+  if (!isOk) {
+    Console.error(red`Something went wrong when creating the folder`);
+    Console.error(yellow`Do you have the correct permissions?`);
+    throw new main.ExitWithCode(2);
+  }
+
+  files.cp_r(assetsPath(), files.pathResolve(scaffoldPath), {
+    transformFilename: function (f) {
+      if (options.replaceFn) return userTransformFilenameFn(f);
+      return transformName(f);
+    },
+    transformContents: function (contents, fileName) {
+      if (options.replaceFn) return userTransformContentsFn(contents.toString(), fileName);
+      const cleaned = removeUnusedLines(contents.toString(), fileName);
+      return transformName(cleaned);
+    }
+  })
+
+  const checkAndRemoveFiles = () => {
+    if (!methods)
+      files.unlink(files.pathJoin(scaffoldPath, `methods.${ extension }`));
+
+    if (!publications)
+      files.unlink(files.pathJoin(scaffoldPath, `publications.${ extension }`));
+  }
+
+  const xor = (a, b) => ( a || b ) && !( a && b );
+
+  if (!isWizard && xor(methods, publications)) {
+    checkAndRemoveFiles()
+  }
+
+  if (isWizard) {
+    checkAndRemoveFiles()
+  }
+
+  const packageJsonPath = files.pathJoin(appDir, 'package.json');
+  const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
+  const packageJson = JSON.parse(packageJsonFile);
+
+  const mainJsPath =
+    packageJson?.meteor?.mainModule?.server
+      ? files.pathJoin(appDir, packageJson.meteor.mainModule.server)
+      : files.pathJoin(appDir, 'server', 'main.js');
+  const mainJs = files.readFile(mainJsPath);
+  const mainJsLines = mainJs.toString().split('\n');
+  const importLine = path
+    ? `import '${path}';`
+    : `import '/imports/api/${ scaffoldName }';`
+  const mainJsFile = [importLine, ...mainJsLines].join('\n');
+  files.writeFile(mainJsPath, mainJsFile);
+
+  Console.info(`Created ${ blue(scaffoldName) } scaffold in ${ yellow(scaffoldPath) }`);
+
+  return 0;
 });
 
 

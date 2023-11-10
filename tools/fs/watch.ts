@@ -726,9 +726,9 @@ export class Watcher {
     return stat;
   }
 
-  // Iterates over the array, calling handleItem for each item
-  // When this._async is true, it pauses ocassionally to avoid blocking for too long
-  // Stops iterating after watcher is stopped
+  // Iterates over the array, calling handleItem for each item.
+  // When this._async is true, it pauses occasionally to avoid blocking for too long.
+  // Stops iterating after watcher is stopped.
   private processBatches<T>(
     array: T[],
     handleItem: (item: T) => any,
@@ -843,10 +843,6 @@ export function readAndWatchDirectory(
 // Calculating the sha hash can be expensive for large files.  By
 // returning the calculated hash along with the file contents, the
 // hash doesn't need to be calculated again for static files.
-//
-// We only calculate the hash if needed here, so callers must not
-// *rely* on the hash being returned; merely that if the hash is
-// present, it is the correct hash of the contents.
 export function readAndWatchFileWithHash(watchSet: WatchSet, absPath: string) {
   const result: {
     contents: string | Buffer | null;

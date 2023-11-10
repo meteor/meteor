@@ -57,7 +57,7 @@ async function postData (url, data) {
       const data = await response.json();
       return response(null, data);
     } catch (err) {
-      return response(error, null);
+      return response(err, null);
     }
 }
 
