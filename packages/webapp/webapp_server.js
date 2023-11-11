@@ -1349,6 +1349,8 @@ async function runWebAppServer() {
     suppressExpressErrors = true;
   };
 
+  let warnedAboutConnectUsage = false;
+
   // start up app
   _.extend(WebApp, {
     connectHandlers: packageAndAppHandlers,
@@ -1358,8 +1360,14 @@ async function runWebAppServer() {
     httpServer: httpServer,
     expressApp: app,
     // For testing.
-    suppressConnectErrors: suppressErrors,
-    suppressExpressErrors: suppressErrors,
+    suppressConnectErrors: () => {
+      if (! warnedAboutConnectUsage) {
+        Meteor._debug("WebApp.suppressConnectErrors has been renamed to Meteor._suppressExpressErrors and it should be used only in tests.");
+        warnedAboutConnectUsage = true;
+      }
+      suppressErrors();
+    },
+    _suppressExpressErrors: suppressErrors,
     onListening: function(f) {
       if (onListeningCallbacks) onListeningCallbacks.push(f);
       else f();

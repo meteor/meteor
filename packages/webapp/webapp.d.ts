@@ -36,10 +36,14 @@ export declare module WebApp {
   var httpServer: http.Server;
   var expressApp: express.Application;
   /**
-   * @deprecated use suppressExpressErrors instead
+   * Should be used only for testing
+   * @deprecated use _suppressExpressErrors instead
    */
   function suppressConnectErrors(): void;
-  function suppressExpressErrors(): void;
+  /**
+   * Should be used only for testing
+   */
+  function _suppressExpressErrors(): void;
   function onListening(callback: Function): void;
 
   type RuntimeConfigHookCallback = (options: {
