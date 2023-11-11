@@ -34,7 +34,7 @@ versioned-netlify-redirects:
   netlify_site_id: meteor-guide
 
 logo:
-  title:
+  title: Meteor
   subtitle: Guide
 
 sidebar_categories:
