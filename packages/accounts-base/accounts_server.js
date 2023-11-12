@@ -322,7 +322,7 @@ export class AccountsServer extends AccountsCommon {
       // If user is not found, try a case insensitive lookup
       if (!user) {
         selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-        const candidateUsers = await Meteor.users.find(selector, { ...options, limit: 2 }).fetch();
+        const candidateUsers = await Meteor.users.find(selector, { ...options, limit: 2 }).fetchAsync();
         // No match if multiple candidates are found
         if (candidateUsers.length === 1) {
           user = candidateUsers[0];
@@ -1469,7 +1469,7 @@ export class AccountsServer extends AccountsCommon {
             limit: 2,
           }
         )
-        .fetch();
+        .fetchAsync();
 
       if (
         matchedUsers.length > 0 &&
