@@ -22,7 +22,6 @@ Tinytest.addAsync("Syncing works", async function (test) {
 
   const entry = SyncedCron._entries[TestEntry.name];
   const intendedAt = new Date(); //whatever
-  console.log(`entry`, entry);
 
   // first run
   await SyncedCron._entryWrapper(entry)(intendedAt);
