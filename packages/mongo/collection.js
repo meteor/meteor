@@ -1032,6 +1032,29 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {MongoModifier} modifier Specifies how to modify the documents
    * @param {Object} [options]
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+   */
+    async upsertAsync(selector, modifier, options) {
+      return this.updateAsync(
+        selector,
+        modifier,
+        {
+          ...options,
+          _returnObject: true,
+          upsert: true,
+        });
+    },
+
+
+  /**
+   * @summary Asynchronously modifies one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
+   * @locus Anywhere
+   * @method upsert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to modify
+   * @param {MongoModifier} modifier Specifies how to modify the documents
+   * @param {Object} [options]
+   * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
   upsert(selector, modifier, options, callback) {
@@ -1040,10 +1063,6 @@ Object.assign(Mongo.Collection.prototype, {
       options = {};
     }
 
-
-    this.upsert.isCalledFromAsync = false;
-    // caught here https://github.com/meteor/meteor/issues/12626
-    this.update.isCalledFromAsync = true; // to not trigger on the next call
     return this.update(
       selector,
       modifier,
