@@ -2776,8 +2776,8 @@ class ServerTarget extends JsImageTarget {
     serverPkgJson.dependencies["node-gyp"] =
       require("node-gyp/package.json").version;
 
-    serverPkgJson.dependencies["node-pre-gyp"] =
-      require("node-pre-gyp/package.json").version;
+    serverPkgJson.dependencies["@mapbox/node-pre-gyp"] =
+      require("@mapbox/node-pre-gyp/package.json").version;
 
     await builder.write('package.json', {
       data: Buffer.from(
