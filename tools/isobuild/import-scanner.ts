@@ -1081,7 +1081,7 @@ export default class ImportScanner {
     setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
 
     if (file.reportPendingErrors &&
-        file.reportPendingErrors() > 0) {
+        await file.reportPendingErrors() > 0) {
       file.hasErrors = true;
       // Any errors reported to InputFile#error were saved but not
       // reported at compilation time. Now that we know the file has been
