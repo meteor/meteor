@@ -247,8 +247,6 @@ export default class Cursor {
 
     const distances =
       this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap();
-    const distances =
-      this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap();
 
     const query = {
       cursor: this,
