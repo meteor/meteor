@@ -6,24 +6,7 @@ import {
 } from 'meteor/minimongo/constants';
 
 import { normalizeProjection } from "./mongo_utils";
-export function warnUsingOldApi (
-    methodName,
-    collectionName,
-    isCalledFromAsync
-   ){
-  if (
-    process.env.WARN_WHEN_USING_OLD_API && // also ensures it is on the server
-    !isCalledFromAsync // must be true otherwise we should log
-  ) {
-   if (collectionName === undefined || collectionName.includes('oplog')) return
-   console.warn(`
 
-   Calling method ${collectionName}.${methodName} from old API on server.
-   This method will be removed, from the server, in version 3.
-   Trace is below:`)
-   console.trace()
- };
-}
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
@@ -1057,13 +1040,7 @@ Object.assign(Mongo.Collection.prototype, {
       options = {};
     }
 
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "upsert",
-      this._name,
-      this.upsert.isCalledFromAsync
-    );
+
     this.upsert.isCalledFromAsync = false;
     // caught here https://github.com/meteor/meteor/issues/12626
     this.update.isCalledFromAsync = true; // to not trigger on the next call
