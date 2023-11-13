@@ -2117,6 +2117,18 @@ class JsImage {
         continue;
       }
 
+      let moduleStubs = Object.create(null);
+      if (item.targetPath === 'packages/meteor.js') {
+        // Old versions of the Meteor package would require
+        // fibers but only use it in certain api's.
+        // Adds a stub so build plugins with old versions of the Meteor package
+        // can still work as long as they don't directly or indirectly use
+        // fibers.
+        let stubs = require('./fiber-stubs.js');
+        moduleStubs.fibers = stubs.Fiber;
+        moduleStubs['fibers/future'] = stubs.Future;
+      }
+
       var env = Object.assign({
         Package: ret,
         Npm: {
@@ -2128,6 +2140,10 @@ class JsImage {
             // Replace all backslashes with forward slashes, just in case
             // someone passes a Windows-y module identifier.
             name = name.split("\\").join("/");
+
+            if (name in moduleStubs) {
+              return moduleStubs[name];
+            }
 
             let resolved;
             try {

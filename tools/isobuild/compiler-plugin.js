@@ -977,7 +977,7 @@ class OutputResource {
       // to access computed properties like .data, .hash, or .sourceMap.
       // If you get here without checking for errors first, those errors
       // will be fatal.
-      throw this._errors[0];
+      throw new Error(`_get "${name}" called for file with pending errors`);
     }
 
     switch (name) {
