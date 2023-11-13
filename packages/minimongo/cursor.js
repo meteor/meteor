@@ -237,7 +237,6 @@ export default class Cursor {
       throw new Error(
         "Must use an ordered observe with skip or limit (i.e. 'addedBefore' " +
           "for observeChanges or 'addedAt' for observe, instead of 'added')."
-          "for observeChanges or 'addedAt' for observe, instead of 'added')."
       );
     }
 
