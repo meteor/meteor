@@ -7,14 +7,14 @@
       "integrity": "sha512-VCvq454Two3oLtBHrkWx6OC1lO6jepYOCC9PhlcHcQCDC2R8mlDTmox0XvW2rCTVOth0qEIbdxKeKxa8WkD7eA=="
     },
     "@types/estree": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.1.tgz",
-      "integrity": "sha512-LG4opVs2ANWZ1TJoKc937iMmNstM/d0ae1vNbnBvBhqCSezgVUOzcLCqbI5elV8Vy6WKwKjaqR+zO9VKirBBCA=="
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.4.tgz",
+      "integrity": "sha512-2JwWnHK9H+wUZNorf2Zr6ves96WHoWDJIftkcxPKsS7Djta6Zu519LarhRNljPXkpsZR2ZMwNCPeW7omW07BJw=="
     },
     "acorn": {
-      "version": "8.10.0",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.10.0.tgz",
-      "integrity": "sha512-F0SAmZ8iUtS//m8DmCTA0jlh6TDKkHQyK6xc6V4KDTyZKA9dnvX9/3sRTVQrWm79glUAZbnmmNcdYwUIHWVybw=="
+      "version": "8.11.2",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.11.2.tgz",
+      "integrity": "sha512-nc0Axzp/0FILLEVsm4fNwLCwMttvhEI263QtVPQcbpfZZ3ts0hLsZGOpE6czNlid7CJ9MlyH8reXkpsf3YUY4w=="
     },
     "estree-walker": {
       "version": "2.0.2",
