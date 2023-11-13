@@ -136,6 +136,14 @@ export default class Matcher {
     }
   }
 
+  async awaitMatchPromise() {
+    if (!this.matchPromise) {
+      return;
+    }
+    await this.matchPromise;
+    this.matchPattern = null;
+  }
+
   async _tryMatch() {
     const mp = this.matchPromise;
     if (! mp) {

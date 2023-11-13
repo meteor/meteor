@@ -123,11 +123,14 @@ export default class Run {
   }
 
   _endMatchers() {
-    this.matcherEndPromise =
-      this.matcherEndPromise || Promise.all([
-        this.stdoutMatcher.endAsync(),
-        this.stderrMatcher.endAsync()
-      ]);
+    const self = this;
+    async function endFunctions() {
+      await self.stdoutMatcher.awaitMatchPromise();
+      await self.stdoutMatcher.endAsync();
+      await self.stderrMatcher.awaitMatchPromise();
+      await self.stderrMatcher.endAsync();
+    }
+    this.matcherEndPromise = this.matcherEndPromise || endFunctions();
     return this.matcherEndPromise;
   }
 
