@@ -347,7 +347,7 @@ interface File extends RawFile {
   implicit?: boolean;
   imported: string | boolean;
   [fakeSymbol]?: boolean;
-  reportPendingErrors?: () => number;
+  reportPendingErrors?: () => Promise<number>;
   hasErrors?: boolean;
   missingModules?: Record<string, ImportInfo>;
   alias?: FileAlias;
