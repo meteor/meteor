@@ -2,11 +2,28 @@
 // XXX presently there is no way to destroy/clean up a Collection
 import {
   ASYNC_COLLECTION_METHODS,
-  getAsyncMethodName
-} from "meteor/minimongo/constants";
+  getAsyncMethodName,
+} from 'meteor/minimongo/constants';
 
 import { normalizeProjection } from "./mongo_utils";
+export function warnUsingOldApi (
+    methodName,
+    collectionName,
+    isCalledFromAsync
+   ){
+  if (
+    process.env.WARN_WHEN_USING_OLD_API && // also ensures it is on the server
+    !isCalledFromAsync // must be true otherwise we should log
+  ) {
+   if (collectionName === undefined || collectionName.includes('oplog')) return
+   console.warn(`
 
+   Calling method ${collectionName}.${methodName} from old API on server.
+   This method will be removed, from the server, in version 3.
+   Trace is below:`)
+   console.trace()
+ };
+}
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
@@ -475,7 +492,6 @@ Object.assign(Mongo.Collection.prototype, {
           })
         )
       );
-
 
       return {
         transform: self._transform,
@@ -1033,30 +1049,24 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {MongoModifier} modifier Specifies how to modify the documents
    * @param {Object} [options]
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
-  async upsertAsync(selector, modifier, options) {
-    return this.updateAsync(
-      selector,
-      modifier,
-      {
-        ...options,
-        _returnObject: true,
-        upsert: true,
-      });
-  },
+  upsert(selector, modifier, options, callback) {
+    if (!callback && typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
 
-  /**
-   * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
-   * @locus Anywhere
-   * @method upsert
-   * @memberof Mongo.Collection
-   * @instance
-   * @param {MongoSelector} selector Specifies which documents to modify
-   * @param {MongoModifier} modifier Specifies how to modify the documents
-   * @param {Object} [options]
-   * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
-   */
-  upsert(selector, modifier, options) {
+    // [FIBERS]
+    // TODO: Remove this when 3.0 is released.
+    warnUsingOldApi(
+      "upsert",
+      this._name,
+      this.upsert.isCalledFromAsync
+    );
+    this.upsert.isCalledFromAsync = false;
+    // caught here https://github.com/meteor/meteor/issues/12626
+    this.update.isCalledFromAsync = true; // to not trigger on the next call
     return this.update(
       selector,
       modifier,
@@ -1116,7 +1126,12 @@ Object.assign(Mongo.Collection.prototype, {
     try {
       await self._collection.createIndexAsync(index, options);
     } catch (e) {
-      if (e.message.includes('An equivalent index already exists with the same name but different options.') && Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch) {
+      if (
+        e.message.includes(
+          'An equivalent index already exists with the same name but different options.'
+        ) &&
+        Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch
+      ) {
         import { Log } from 'meteor/logging';
 
         Log.info(`Re-creating index ${ index } for ${ self._name } due to options mismatch.`);

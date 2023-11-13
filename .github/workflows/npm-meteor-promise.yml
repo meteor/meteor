@@ -1,11 +1,11 @@
-name: NPM eslint-plugin-meteor
+name: NPM meteor-promise
 on:
   push:
     paths:
-      - "npm-packages/eslint-plugin-meteor/**"
+      - "npm-packages/meteor-promise/**"
   pull_request:
     paths:
-      - "npm-packages/eslint-plugin-meteor/**"
+      - "npm-packages/meteor-promise/**"
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)
@@ -15,10 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: npm-packages/eslint-plugin-meteor
+        working-directory: npm-packages/meteor-promise
     strategy:
       matrix:
-        node-version: [16.x, 18.x]
+        node-version: [12.x, 14.x]
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
@@ -27,4 +27,4 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm run test
