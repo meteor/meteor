@@ -29,8 +29,8 @@ versioned-netlify-redirects:
   netlify_site_id: meteor-docs
 
 logo:
-  title:
-  subtitle: Docs
+  title: Meteor
+  subtitle: API Docs
 
 sidebar_categories:
   null:
