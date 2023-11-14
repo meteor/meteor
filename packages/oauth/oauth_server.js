@@ -205,9 +205,9 @@ const middleware = async (req, res, next) => {
 };
 
 // Listen to incoming OAuth http requests
-WebApp.expressHandlers.use('/_oauth', bodyParser.json());
-WebApp.expressHandlers.use('/_oauth', bodyParser.urlencoded({ extended: false }));
-WebApp.expressHandlers.use(middleware);
+WebApp.handlers.use('/_oauth', bodyParser.json());
+WebApp.handlers.use('/_oauth', bodyParser.urlencoded({ extended: false }));
+WebApp.handlers.use(middleware);
 
 OAuthTest.middleware = middleware;
 

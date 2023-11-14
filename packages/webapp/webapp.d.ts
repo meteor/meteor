@@ -23,11 +23,27 @@ export declare module WebApp {
       PUBLIC_SETTINGS: any;
     };
   };
-  var expressHandlers: express.Handler;
-  var rawExpressHandlers: express.Handler;
+  /**
+   * @deprecated use handlers instead
+   */
+  var connectHandlers: express.Handler;
+  var handlers: express.Handler;
+  /**
+   * @deprecated use rawHandlers instead
+   */
+  var rawConnectHandlers: express.Handler;
+  var rawHandlers: express.Handler;
   var httpServer: http.Server;
   var expressApp: express.Application;
+  /**
+   * Should be used only for testing
+   * @deprecated use _suppressExpressErrors instead
+   */
   function suppressConnectErrors(): void;
+  /**
+   * Should be used only for testing
+   */
+  function _suppressExpressErrors(): void;
   function onListening(callback: Function): void;
 
   type RuntimeConfigHookCallback = (options: {

@@ -27,7 +27,7 @@ const server = new ApolloServer({
 export async function startApolloServer() {
   await server.start();
 
-  WebApp.expressHandlers.use(
+  WebApp.handlers.use(
     '/graphql',                                     // Configure the path as you want.
     express()                                       // Create new Express router.
       .disable('etag')                              // We don't server GET requests, so there's no need for that.

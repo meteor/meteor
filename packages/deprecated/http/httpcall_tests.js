@@ -467,7 +467,7 @@ if (Meteor.isServer) {
     function (test, expect) {
       // Suppress error printing for this test (and for any other code that sets
       // the x-suppress-error header).
-      WebApp.suppressConnectErrors();
+      WebApp._suppressExpressErrors();
 
       function do_test (path, code, match) {
         const prefix = Meteor.isModern
