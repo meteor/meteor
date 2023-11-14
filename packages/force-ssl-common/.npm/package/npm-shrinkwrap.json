@@ -42,9 +42,9 @@
       "integrity": "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA=="
     },
     "deep-equal": {
-      "version": "1.1.1",
-      "resolved": "https://registry.npmjs.org/deep-equal/-/deep-equal-1.1.1.tgz",
-      "integrity": "sha512-yd9c5AdiqVcR+JjcwUQb9DkhJc8ngNr0MahEBGvDiJw8puWab2yZlh+nkasOnZP+EGTAP6rRp2JzJhJZzvNF8g=="
+      "version": "1.1.2",
+      "resolved": "https://registry.npmjs.org/deep-equal/-/deep-equal-1.1.2.tgz",
+      "integrity": "sha512-5tdhKF6DbU7iIzrIOa1AOUt39ZRm13cmL1cGEh//aqR8x9+tNfbywRf0n5FD/18OKMdo7DNEtrX2t22ZAkI+eg=="
     },
     "define-data-property": {
       "version": "1.1.1",
