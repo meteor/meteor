@@ -322,7 +322,7 @@ export class AccountsServer extends AccountsCommon {
       // If user is not found, try a case insensitive lookup
       if (!user) {
         selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-        const candidateUsers = await Meteor.users.find(selector, { ...options, limit: 2 }).fetch();
+        const candidateUsers = await Meteor.users.find(selector, { ...options, limit: 2 }).fetchAsync();
         // No match if multiple candidates are found
         if (candidateUsers.length === 1) {
           user = candidateUsers[0];
@@ -1430,21 +1430,21 @@ export class AccountsServer extends AccountsCommon {
    * @returns {Object} Options which can be passed to `Email.send`.
    * @importFromPackage accounts-base
    */
-  generateOptionsForEmail(email, user, url, reason, extra = {}){
+  async generateOptionsForEmail(email, user, url, reason, extra = {}){
     const options = {
       to: email,
       from: this.emailTemplates[reason].from
-        ? this.emailTemplates[reason].from(user)
+        ? await this.emailTemplates[reason].from(user)
         : this.emailTemplates.from,
-      subject: this.emailTemplates[reason].subject(user, url, extra),
+      subject: await this.emailTemplates[reason].subject(user, url, extra),
     };
 
     if (typeof this.emailTemplates[reason].text === 'function') {
-      options.text = this.emailTemplates[reason].text(user, url, extra);
+      options.text = await this.emailTemplates[reason].text(user, url, extra);
     }
 
     if (typeof this.emailTemplates[reason].html === 'function') {
-      options.html = this.emailTemplates[reason].html(user, url, extra);
+      options.html = await this.emailTemplates[reason].html(user, url, extra);
     }
 
     if (typeof this.emailTemplates.headers === 'object') {
@@ -1477,7 +1477,7 @@ export class AccountsServer extends AccountsCommon {
             limit: 2,
           }
         )
-        .fetch();
+        .fetchAsync();
 
       if (
         matchedUsers.length > 0 &&
