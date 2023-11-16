@@ -556,7 +556,6 @@ export class PackageAPI {
         Version: ${relInf[1]}`)
 
       if (!releaseRecord) {
-        console.log("record", releaseRecord)
         buildmessage.error("Unknown release "+ release,
                            { tags: { refreshCouldHelp: true } });
       } else {
