@@ -48,13 +48,13 @@ selftest.define("cordova builds with server options", ["cordova"], function () {
   }
 
   run = s.run("build", relBuildDir);
-  run.waitSecs(120);
+  run.waitSecs(90);
   run.matchErr(
     "Supply the server hostname and port in the --server option");
   run.expectExit(1);
 
   run = s.run("build", relBuildDir, "--server", "5000");
-  run.waitSecs(120);
+  run.waitSecs(90);
   run.matchErr("--server must include a hostname");
   run.expectExit(1);
 
@@ -65,19 +65,19 @@ selftest.define("cordova builds with server options", ["cordova"], function () {
   cleanUpBuild(s);
 
   run = s.run("build", relBuildDir, "--server", "example.com:5000");
-  run.waitSecs(120);
+  run.waitSecs(90);
   run.expectExit(0);
   checkMobileServer(s, "http://example.com:5000/");
   cleanUpBuild(s);
 
   run = s.run("build", relBuildDir, "--server", "example.com");
-  run.waitSecs(120);
+  run.waitSecs(90);
   run.expectExit(0);
   checkMobileServer(s, "http://example.com/");
   cleanUpBuild(s);
 
   run = s.run("build", relBuildDir, "--server", "https://example.com");
-  run.waitSecs(120);
+  run.waitSecs(90);
   run.expectExit(0);
   checkMobileServer(s, "https://example.com/");
   cleanUpBuild(s);
