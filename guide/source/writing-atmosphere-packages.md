@@ -300,7 +300,7 @@ You can read more about testing in Meteor in the [Testing article](testing.html)
 
 <h2 id="publishing-atmosphere">Publishing your package</h2>
 
-To publish your package to Atmosphere, run [`meteor publish`](http://docs.meteor.com/#/full/meteorpublish) from the package directory. To publish a package the package name must follow the format of `username:my-package` and the package must contain a [SemVer version number](#version-constraints).
+To publish your package to Atmosphere for the first time, run [`meteor publish --create`](http://docs.meteor.com/#/full/meteorpublish) from the package directory. The package name must follow the format of `username:my-package` and the package must contain a [SemVer version number](#version-constraints). When you want to publish an update to your package, change the version number in `package.js` and then run `meteor publish`.
 
 > Note that if you have a local `node_modules` directory in your package, remove it before running `meteor publish`. While local `node_modules` directories are allowed in Meteor packages, their paths can collide with the paths of `Npm.depends` dependencies when published.
 
