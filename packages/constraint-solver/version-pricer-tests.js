@@ -1,3 +1,6 @@
+const zip = Npm.require('lodash.zip');
+const isObject = Npm.require('lodash.isobject');
+
 var CS = ConstraintSolver;
 var PV = PackageVersion;
 
@@ -7,24 +10,26 @@ Tinytest.add("constraint solver - version pricer", function (test) {
   var pricer = new CS.VersionPricer();
 
   var testScanVersions = function (versions, mode, options, expected) {
-    if (options && _.isArray(options)) {
+    if (options && Array.isArray(options)) {
       expected = options;
       options = null;
     }
     var result, tuples;
     // Accepts either a mode like CS.VersionPricer.MODE_UPDATE or
     // an object that looks like `{ previous: version }`
-    if (_.isObject(mode) && mode.previous) {
+    if (isObject(mode) && mode.previous) {
       result = pricer.priceVersionsWithPrevious(versions, mode.previous);
-      tuples = _.zip(versions, result[0], result[1], result[2], result[3],
+      tuples = zip(versions, result[0], result[1], result[2], result[3],
                      result[4]);
     } else {
       result = pricer.priceVersions(versions, mode, options);
-      tuples = _.zip(versions, result[0], result[1], result[2], result[3]);
+      tuples = zip(versions, result[0], result[1], result[2], result[3]);
     }
     test.equal(tuples.length, expected.length);
-    test.equal(_.pluck(tuples, 0), versions);
-    _.each(_.zip(tuples, expected), function (x) {
+    test.equal(tuples.map(function(x){
+      return x[0]
+    }), versions);
+    zip(tuples, expected).forEach(function (x) {
       var tuple = x[0];
       var expectedTuple = x[1];
       if (typeof expectedTuple[0] !== 'string') {

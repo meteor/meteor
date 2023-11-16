@@ -1364,15 +1364,23 @@ export class AccountsServer extends AccountsCommon {
     }
   };
 
-  // Removes default rate limiting rule
+  /**
+   * @summary Removes default rate limiting rule
+   * @locus Server
+   * @importFromPackage accounts-base
+   */
   removeDefaultRateLimit() {
     const resp = DDPRateLimiter.removeRule(this.defaultRateLimiterRuleId);
     this.defaultRateLimiterRuleId = null;
     return resp;
   };
 
-  // Add a default rule of limiting logins, creating new users and password reset
-  // to 5 times every 10 seconds per connection.
+  /**
+   * @summary Add a default rule of limiting logins, creating new users and password reset
+   * to 5 times every 10 seconds per connection.
+   * @locus Server
+   * @importFromPackage accounts-base
+   */
   addDefaultRateLimit() {
     if (!this.defaultRateLimiterRuleId) {
       this.defaultRateLimiterRuleId = DDPRateLimiter.addRule({

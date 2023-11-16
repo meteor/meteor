@@ -19,10 +19,13 @@ const {
   red,
   yellow
 } = require('../console/console.js').colors;
+const inquirer = require('inquirer');
+
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
 const { Profile } = require("../tool-env/profile");
+const open = require('open')
 
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
@@ -311,6 +314,7 @@ var runCommandOptions = {
   maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
+    open: { type: Boolean, short: "o", default: false },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
     'app-port': { type: String },
@@ -332,7 +336,7 @@ var runCommandOptions = {
     // of top-level dependencies.
     'allow-incompatible-update': { type: Boolean },
     'extra-packages': { type: String },
-    'exclude-archs': { type: String }
+    'exclude-archs': { type: String },
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -406,6 +410,7 @@ function doRunCommand(options) {
     runLog.setRawLogs(true);
   }
 
+
   let webArchs = projectContext.platformList.getWebArchs();
   if (! _.isEmpty(runTargets) ||
       options['mobile-server']) {
@@ -461,7 +466,18 @@ function doRunCommand(options) {
     cordovaServerPort: parsedCordovaServerPort,
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
-    cordovaRunner: cordovaRunner
+    cordovaRunner: cordovaRunner,
+    onBuilt: function () {
+      // Opens a browser window when it finishes building
+      if (options.open) {
+        console.log("=> Opening your app in a browser...");
+        if (process.env.ROOT_URL) {
+          open(process.env.ROOT_URL)
+        } else {
+          open(`http://localhost:${options.port}`)
+        }
+      }
+    }
   });
 }
 
@@ -528,9 +544,26 @@ export const AVAILABLE_SKELETONS = [
   "solid",
 ];
 
+const SKELETON_INFO = {
+  "apollo": "To create a basic Apollo + React app",
+  "bare": "To create an empty app",
+  "blaze": "To create an app using Blaze",
+  "full": "To create a more complete scaffolded app",
+  "minimal": "To create an app with as few Meteor packages as possible",
+  "react": "To create a basic React-based app",
+  "typescript": "To create an app using TypeScript and React",
+  "vue": "To create a basic Vue3-based app",
+  "vue-2": "To create a basic Vue2-based app",
+  "svelte": "To create a basic Svelte app",
+  "tailwind": "To create an app using React and Tailwind",
+  "chakra-ui": "To create an app Chakra UI and React",
+  "solid": "To create a basic Solid app"
+}
+
 main.registerCommand({
   name: 'create',
   maxArgs: 1,
+  minArgs: 0,
   options: {
     list: { type: Boolean },
     example: { type: String },
@@ -550,8 +583,9 @@ main.registerCommand({
     solid: { type: Boolean },
     prototype: { type: Boolean }
   },
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   // Creating a package is much easier than creating an app, so if that's what
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
@@ -724,12 +758,64 @@ main.registerCommand({
     return 0;
   }
 
-  var appPathAsEntered;
-  if (options.args.length === 1) {
-    appPathAsEntered = options.args[0];
-  } else {
-    throw new main.ShowUsage;
+  /**
+   *
+   * @returns {{appPathAsEntered: string, skeleton: string }}
+   */
+  const setup = async () => {
+    // meteor create app-name
+    if (options.args.length === 1) {
+      const appPathAsEntered = options.args[0];
+      const skeletonExplicitOption =
+        AVAILABLE_SKELETONS.find(skeleton => !!options[skeleton]);
+
+      const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
+
+      console.log(`Using ${green`${skeleton}`} skeleton`);
+      return {
+        appPathAsEntered,
+        skeleton
+      }
+    }
+    function capitalizeFirstLetter(string) {
+      return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+    const prompt = inquirer.createPromptModule();
+    // meteor create
+    // need to ask app name and skeleton
+    const r = await prompt([
+      {
+        type: 'input',
+        name: 'appPathAsEntered',
+        message: `What is the name/path of your ${yellow`app`}? `,
+        default(){
+          return 'my-app';
+        }
+      },
+      {
+        type: 'list',
+        name: 'skeleton',
+        message: `Which ${yellow`skeleton`} do you want to use?`,
+        choices: AVAILABLE_SKELETONS.map(skeleton => {return `${capitalizeFirstLetter(skeleton)} # ${SKELETON_INFO[skeleton]}`}),
+        default(){
+          return `${capitalizeFirstLetter(DEFAULT_SKELETON)} # ${SKELETON_INFO[DEFAULT_SKELETON]}`;
+        },
+        filter(val) {
+          const skel = val.split(' ')[0];
+          console.log(`Using ${green`${skel}`} skeleton`);
+          return skel.toLowerCase();
+        }
+      }
+    ])
+    return r;
   }
+
+  var {
+    appPathAsEntered,
+    skeleton
+  } = await setup();
+  Console.setPretty(true) // to not lose the console
+
   var appPath = files.pathResolve(appPathAsEntered);
 
   if (files.findAppDir(appPath)) {
@@ -797,9 +883,6 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/);
   }
 
-  const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
-    !!options[skeleton]);
-  const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
     `skel-${skeleton}`), appPath, {
     transformFilename: function (f) {
@@ -924,29 +1007,6 @@ main.registerCommand({
   Console.info(
     Console.url("https://www.meteor.com/cloud"),
       Console.options({ indent: 2 }));
-
-  if (!!skeletonExplicitOption) {
-    // Notify people about the skeleton options
-    Console.info([
-      "",
-      "To start with a different app template, try one of the following:",
-      "",
-    ].join("\n"));
-
-    cmd("meteor create --bare       # to create an empty app");
-    cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
-    cmd("meteor create --full       # to create a more complete scaffolded app");
-    cmd("meteor create --react      # to create a basic React-based app");
-    cmd("meteor create --vue        # to create a basic Vue3-based app");
-    cmd("meteor create --vue-2      # to create a basic Vue2-based app");
-    cmd("meteor create --apollo     # to create a basic Apollo + React app");
-    cmd("meteor create --svelte     # to create a basic Svelte app");
-    cmd("meteor create --typescript # to create an app using TypeScript and React");
-    cmd("meteor create --blaze      # to create an app using Blaze");
-    cmd("meteor create --tailwind   # to create an app using React and Tailwind");
-    cmd("meteor create --chakra-ui  # to create an app Chakra UI and React");
-    cmd("meteor create --solid      # to create a basic Solid app");
-  }
 
   Console.info("");
 });
@@ -1730,6 +1790,7 @@ testCommandOptions = {
   catalogRefresh: new catalog.Refresh.Never(),
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
+    open: { type: Boolean, short: "o", default: false },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
     'debug-port': { type: String },
@@ -2183,7 +2244,18 @@ var runTestAppForPackages = function (projectContext, options) {
       // On the first run, we shouldn't display the delta between "no packages
       // in the temp app" and "all the packages we're testing". If we make
       // changes and reload, though, it's fine to display them.
-      omitPackageMapDeltaDisplayOnFirstRun: true
+      omitPackageMapDeltaDisplayOnFirstRun: true,
+      onBuilt: function () {
+        // Opens a browser window when it finishes building
+        if (options.open) {
+          console.log("=> Opening your app in a browser...");
+          if (process.env.ROOT_URL) {
+            open(process.env.ROOT_URL)
+          } else {
+            open(`http://localhost:${options.port}`)
+          }
+        }
+      }
     });
   }
 };
