@@ -1973,10 +1973,10 @@ main.registerCommand({
     var nonlatestDirectDeps = [];
     var nonlatestIndirectDeps = [];
     var deprecatedDeps = [];
-    projectContext.packageMap.eachPackage(function (name, info) {
+    await projectContext.packageMap.eachPackage(async function(name, info) {
       var selectedVersion = info.version;
       var catalog = projectContext.projectCatalog;
-      var latestVersion = getNewerVersion(name, selectedVersion, catalog);
+      var latestVersion = await getNewerVersion(name, selectedVersion, catalog);
       if (latestVersion) {
         var rec = { name: name, selectedVersion: selectedVersion,
                     latestVersion: latestVersion };
