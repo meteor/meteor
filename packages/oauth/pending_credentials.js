@@ -27,7 +27,7 @@ const _cleanStaleResults = () => {
   // Remove credentials older than 1 minute
   const timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
-  OAuth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
+  OAuth._pendingCredentials.removeAsync({ createdAt: { $lt: timeCutoff } });
 };
 const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
@@ -78,7 +78,7 @@ OAuth._retrievePendingCredential = (key, credentialSecret = null) => {
   });
 
   if (pendingCredential) {
-    OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
+    OAuth._pendingCredentials.removeAsync({ _id: pendingCredential._id });
     if (pendingCredential.credential.error)
       return recreateError(pendingCredential.credential.error);
     else

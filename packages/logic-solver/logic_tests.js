@@ -1299,13 +1299,13 @@ Tinytest.add("logic-solver - eight queens", function (test) {
   Logic._disablingTypeChecks(function () {
 
     var solver = new Logic.Solver;
-    var nums = _.range(1, 9); // 1..8
-    _.each(nums, function (x) {
+    var nums = Array.from({length: 8}, (_, i) => i + 1); // 1..8
+    nums.forEach(function (x) {
       // one per row x, one per column x
-      solver.require(Logic.exactlyOne(_.map(nums, function (y) {
+      solver.require(Logic.exactlyOne(nums.map(function (y) {
         return boardSquare(x, y);
       })));
-      solver.require(Logic.exactlyOne(_.map(nums, function (y) {
+      solver.require(Logic.exactlyOne(nums.map(function (y) {
         return boardSquare(y, x);
       })));
     });
@@ -1336,7 +1336,7 @@ Tinytest.add("logic-solver - eight queens", function (test) {
     test.equal(solution.length, 8);
     test.isTrue(/^([1-8],[1-8] ){7}[1-8],[1-8]$/.test(solution.join(' ')));
     var assertEightDifferent = function (transformFunc) {
-      test.equal(_.uniq(_.map(solution, transformFunc)).length, 8);
+      test.equal([...new Set(solution.map(transformFunc))].length, 8);
     };
     // queens occur in eight different rows, eight different columns
     assertEightDifferent(function (queen) { return queen.charAt(0); });
@@ -1414,7 +1414,7 @@ Tinytest.add("logic-solver - Sudoku", function (test) {
     }
 
     var solution = solver.solve().getTrueVars();
-    var solutionString = _.map(solution, function (v) {
+    var solutionString = solution.map(function (v) {
       return String(Number(v.slice(-1)) + 1);
     }).join('').match(/.{9}/g).join('\n');
     test.equal(solutionString, [
@@ -1508,8 +1508,8 @@ Tinytest.add("logic-solver - toy packages", function (test) {
 
     var solver = new Logic.Solver();
 
-    _.each(allPackageVersions, function (versions, pkg) {
-      versions = _.map(versions, function (v) {
+    Object.entries(allPackageVersions).forEach(function ([pkg, versions]) {
+      versions = versions.map(function (v) {
         return pkg + "@" + v;
       });
       // e.g. atMostOne(["foo@1.0.0", "foo@1.0.1", "foo@2.0.0"])
@@ -1518,16 +1518,16 @@ Tinytest.add("logic-solver - toy packages", function (test) {
       solver.require(Logic.equiv(pkg, Logic.or(versions)));
     });
 
-    _.each(dependencies, function (depMap, packageVersion) {
-      _.each(depMap, function (compatibleVersions, package2) {
+    Object.entries(dependencies).forEach(function ([packageVersion, depMap]) {
+      Object.entries(depMap).forEach(function ([package2, compatibleVersions]) {
         // e.g. implies("bar@1.2.4", "foo")
         solver.require(Logic.implies(packageVersion, package2));
         // Now ban all incompatible versions of package2 if
         // we select this packageVersion.
         // NOTE: This is not the best way to express constraints.  It's
         // not what we do in the real package constraint solver.
-        _.each(allPackageVersions[package2], function (v) {
-          if (! _.contains(compatibleVersions, v)) {
+        allPackageVersions[package2].forEach(function (v) {
+          if (! compatibleVersions.includes(v)) {
             solver.require(Logic.implies(packageVersion,
                                          Logic.not(package2 + "@" + v)));
           }
@@ -1544,7 +1544,7 @@ Tinytest.add("logic-solver - toy packages", function (test) {
       var terms = [];
       var weightVectors = [];
       var vectorLength = null;
-      _.each(costVectorMap, function (vector, key) {
+      Object.entries(costVectorMap).forEach(function ([key, vector]) {
         terms.push(key);
         weightVectors.push(vector);
         if (vectorLength === null) {
@@ -1558,7 +1558,9 @@ Tinytest.add("logic-solver - toy packages", function (test) {
       });
 
       for (var i = 0; i < vectorLength; i++) {
-        var weights = _.pluck(weightVectors, i);
+        var weights = weightVectors.map(function(vector){
+          return vector[i]
+        });
         solution = solver.minimizeWeightedSum(solution, terms, weights);
       }
 
@@ -1572,7 +1574,7 @@ Tinytest.add("logic-solver - toy packages", function (test) {
         return solution; // null
       } else {
         // only return variables like "foo@1.0.0", not "foo"
-        return _.filter(solution.getTrueVars(), function (v) {
+        return solution.getTrueVars().filter(function (v) {
           return v.indexOf('@') >= 0;
         });
       }
@@ -1704,7 +1706,7 @@ Tinytest.add("logic-solver - maximize", function (test) {
   // as possible to 19 without going over.
   var costWeights = [2, 5, 10, 11, 15];
   // name variables after the weights
-  var costTerms = _.map(costWeights, function (w) {
+  var costTerms = costWeights.map(function (w) {
     return "#"+w;
   });
   var ws = Logic.weightedSum(costTerms, costWeights);
