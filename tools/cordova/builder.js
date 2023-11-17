@@ -443,19 +443,12 @@ export class CordovaBuilder {
       }
 
       const filename = this._resolveFilenameForImages(suppliedPath, key, 'splash');
-      if (suppliedPathDarkMode) {
-        this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPathDarkMode,
-          appendDarkMode(filename, { withChar: '_' }),
-          xmlElement, 'splash',
-          { density: appendDarkMode(value, { separator: '-', withChar: '-' })},
-          isIos
-        );
-      }
+
       this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath,
         filename,
         xmlElement,
-        'splash',
-        { density: value },
+        'settings',
+        { name: value },
         isIos);
     });
   }
