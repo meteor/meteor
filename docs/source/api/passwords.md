@@ -27,6 +27,10 @@ include a turn-key user interface for password-based sign-in.
 
 {% apibox "Accounts.createUser" %}
 
+Or a promise based version of `Accounts.createUser`:
+
+{% apibox "Accounts.createUserAsync" %}
+
 On the client, this function logs in as the newly created user on
 successful completion. On the server, it returns the newly created user
 id.
@@ -60,7 +64,7 @@ email with a link the user can use to verify their email address.
 {% apibox "Accounts.verifyEmail" %}
 
 If the user trying to verify the email has 2FA enabled, this error will be thrown:
-* "Email verified, but user not logged in because 2FA is enabled [2fa-enabled]": No longer signing in the user automatically if the user has 2FA enabled. 
+* "Email verified, but user not logged in because 2FA is enabled [2fa-enabled]": No longer signing in the user automatically if the user has 2FA enabled.
 
 
 This function accepts tokens passed into the callback registered with
