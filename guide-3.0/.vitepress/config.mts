@@ -27,8 +27,19 @@ export default defineConfig({
         text: 'Introduction',
         items: [
           { text: 'What is Meteor 3.0', link: '/index' },
-          { text: 'Markdown Examples', link: '/markdown-examples' },
-          { text: 'Runtime API Examples', link: '/api-examples' }
+          { text: 'How to install', link: '/docs/introduction/how-to-install' },
+        ]
+      },
+      {
+        text: 'Collection and Schemas',
+        items: [
+          { text: 'MongoDB collections in Meteor', link: '/docs/collections-schemas/mongo-db-collection-meteor' },
+        ]
+      },
+      {
+        text: 'Publications and Data Loading',
+        items: [
+          { text: 'Publications and subscriptions', link: '/docs/collections-schemas/undefined' },
         ]
       }
     ],
