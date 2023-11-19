@@ -144,7 +144,7 @@ var constructingComputation = false;
  * computation.
  * @instancename computation
  */
-Tracker.Computation = class Computation {
+Tracker.Computation = class Computation { 
   constructor(f, parent, onError) {
     if (! constructingComputation)
       throw new Error(
@@ -205,6 +205,21 @@ Tracker.Computation = class Computation {
      * @returns {Promise<unknown>}
      */
     this.firstRunPromise = undefined;
+
+    /**
+   * 
+   * @param {*} onResolved 
+   * @param {*} onRejected 
+   * @returns 
+   */
+  this.then = function (onResolved, onRejected) {
+    return this.firstRunPromise.then(onResolved, onRejected);
+  };
+
+
+  this.catch = function (onRejected) {
+    return this.firstRunPromise.catch(onRejected)
+  };
 
     var errored = true;
     try {
@@ -578,21 +593,18 @@ Tracker._runFlush = function (options) {
  * thrown. Defaults to the error being logged to the console.
  * @returns {Tracker.Computation}
  */
-Tracker.autorun = function (f, options) {
+Tracker.autorun = function (f, options = {}) {
   if (typeof f !== 'function')
     throw new Error('Tracker.autorun requires a function argument');
 
-  options = options || {};
-
   constructingComputation = true;
-  var c = new Tracker.Computation(
-    f, Tracker.currentComputation, options.onError);
+  var c = new Tracker.Computation(f, Tracker.currentComputation, options.onError);
 
   if (Tracker.active)
     Tracker.onInvalidate(function () {
       c.stop();
     });
-
+  // console.log("C - Computation: ", c)
   return c;
 };
 
