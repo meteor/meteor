@@ -461,10 +461,9 @@ if (Meteor.isClient) {
           test.equal(actualRemovedMessageCount, expectedRemovedMessageCount);
           expectedNamesInCollection.sort();
           test.equal(
-            _.pluck(
-              objectsWithUsers.find({}, { sort: ['name'] }).fetch(),
-              'name'
-            ),
+            objectsWithUsers.find({}, { sort: ['name'] }).fetch().map(function(x) {
+            return x.name;
+          }),
             expectedNamesInCollection
           );
           messages.length = 0; // clear messages without creating a new object

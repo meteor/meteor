@@ -46,7 +46,7 @@ Object.assign(StubStream.prototype, {
 
   reset: function() {
     const self = this;
-    callbacks['reset'].forEach(function(cb) {
+    self.callbacks['reset'].forEach(function(cb) {
       cb();
     });
   },
