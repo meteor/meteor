@@ -58,3 +58,70 @@ Meteor.connection = DDP.connect(ddpUrl, {
 ].forEach(name => {
   Meteor[name] = Meteor.connection[name].bind(Meteor.connection);
 });
+
+
+// https://forums.meteor.com/t/proposal-to-fix-issues-with-async-method-stubs/60826/13
+class Queue {
+  constructor() {
+    /**
+     * @type {id: number[]}
+     */
+    this.queue = [];
+    this.lastId = 0;
+    /**
+     * @type {number[]}
+     */
+    this.currentRunningStack = [];
+  }
+
+  /**
+   * @param {<T>() => Promise<T>} fn
+   * @returns {Promise<T>}
+   */
+  push(fn) {
+    this.lastId = this.lastId + 1;
+    const id = this.lastId;
+    this.queue.push(id);
+    const stack = [...this.currentRunningStack]; // maybe this can be a performance issue
+    return new Promise((resolve, reject) => {
+      const internval = setInterval(() => {
+        const deps = this.queue.filter(el => el < id && !stack.includes(el));
+
+        if (deps.length > 0) return;
+
+        clearInterval(internval);
+
+        this.currentRunningStack.push(id);
+
+        fn()
+          .then(resolve)
+          .catch(reject)
+          .finally(() => {
+            this.currentRunningStack.pop();
+            this.queue = this.queue.filter(el => el !== id);
+          });
+      }, 10);
+    });
+  }
+}
+const queue = new Queue();
+const originalApplyAsync = Meteor.applyAsync;
+const originalCallAsync = Meteor.callAsync;
+
+Meteor.applyAsync = (...args) => {
+  // NOTE: make sure only isomorphic methods are globally executed in sequence.
+  if (Meteor.connection._methodHandlers[args[0]]) {
+    return queue.push(() => originalApplyAsync(...args));
+  }
+
+  return originalApplyAsync(...args);
+};
+
+Meteor.callAsync = (...args) => {
+  // NOTE: make sure only isomorphic methods are globally executed in sequence.
+  if (Meteor.connection._methodHandlers[args[0]]) {
+    return queue.push(() => originalCallAsync(...args));
+  }
+
+  return originalCallAsync(...args);
+};

@@ -1214,6 +1214,42 @@ testAsyncMulti('livedata - methods with nested stubs', [
   test.equal(result, true)
 })
 
+
+const checkOrThrow = (v1, v2) => {
+  if (v1 !== v2) throw new Error(`Expected ${v1} to equal ${v2}`);
+}
+
+Meteor.methods({
+  async foo(value) {
+    value = value + 1;
+    checkOrThrow(value, 1);
+    value = await Meteor.callAsync('bar', value);
+    value = value + 1;
+    checkOrThrow(value, 5);
+    return value;
+  },
+  async bar(value) {
+    value = value + 1;
+    checkOrThrow(value, 2);
+    value = await Meteor.callAsync('qux', value);
+    value = value + 1;
+    checkOrThrow(value, 4);
+    return value
+  },
+  async qux(value) {
+    value = value + 1;
+    checkOrThrow(value, 3);
+    return value
+  },
+});
+
+
+Meteor.isClient && Tinytest.addAsync('livedata server - check if queue works', async function(t) {
+  let value = 0;
+  const r = await (await Meteor.callAsync('foo', value)).stubValuePromise;
+  t.equal(r, 5);
+})
+
 // XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp
