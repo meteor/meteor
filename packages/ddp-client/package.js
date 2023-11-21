@@ -60,4 +60,6 @@ Package.onTest((api) => {
   api.addFiles('test/livedata_tests.js');
   api.addFiles('test/livedata_test_service.js');
   api.addFiles('test/random_stream_tests.js');
+  api.addFiles('test/async_stubs/client.js', 'client');
+  api.addFiles('test/async_stubs/server_setup.js', 'server');
 });
