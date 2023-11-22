@@ -3,7 +3,7 @@ import { Migrations } from "./migrations_server";
 // Not sure why but without this it was saying migrations was already defined
 Migrations.options.collectionName = 'test_migrations';
 
-Tinytest.addAsync("Migrates up once and only once.", async function (test) {
+Tinytest.addAsync("Sync Migrations - Migrates up once and only once.", async function (test) {
   const run = []; //keeps track of migrations in here
   await Migrations._reset();
 
@@ -26,7 +26,7 @@ Tinytest.addAsync("Migrates up once and only once.", async function (test) {
   test.equal(await Migrations.getVersion(), 1);
 });
 
-Tinytest.addAsync("Migrates up once and back down.", async function (test) {
+Tinytest.addAsync("Sync Migrations - Migrates up once and back down.", async function (test) {
   const run = []; //keeps track of migrations in here
   await Migrations._reset();
 
@@ -51,7 +51,7 @@ Tinytest.addAsync("Migrates up once and back down.", async function (test) {
   test.equal(await Migrations.getVersion(), 0);
 });
 
-Tinytest.addAsync("Migrates up several times.", async function (test) {
+Tinytest.addAsync("Sync Migrations - Migrates up several times.", async function (test) {
   const run = []; //keeps track of migrations in here
   await Migrations._reset();
 
@@ -88,7 +88,7 @@ Tinytest.addAsync("Migrates up several times.", async function (test) {
   test.equal(await Migrations.getVersion(), 4);
 });
 
-Tinytest.addAsync("Tests migrating down", async function (test) {
+Tinytest.addAsync("Sync Migrations - Tests migrating down", async function (test) {
   const run = []; //keeps track of migrations in here
   await Migrations._reset();
 
@@ -134,7 +134,7 @@ Tinytest.addAsync("Tests migrating down", async function (test) {
   test.equal(await Migrations.getVersion(), 2);
 });
 
-Tinytest.addAsync("Tests migrating down to version 0", async function (test) {
+Tinytest.addAsync("Sync Migrations - Tests migrating down to version 0", async function (test) {
   const run = []; //keeps track of migrations in here
   await Migrations._reset();
 
@@ -161,7 +161,7 @@ Tinytest.addAsync("Tests migrating down to version 0", async function (test) {
   test.equal(await Migrations.getVersion(), 0);
 });
 
-Tinytest.addAsync("Checks that locking works correctly", async function (test) {
+Tinytest.addAsync("Sync Migrations - Checks that locking works correctly", async function (test) {
   const run = []; //keeps track of migrations in here
   await Migrations._reset();
 
@@ -184,7 +184,7 @@ Tinytest.addAsync("Checks that locking works correctly", async function (test) {
 });
 
 Tinytest.addAsync(
-  "Checks that version is updated if subsequent migration fails",
+  "Sync Migrations - Checks that version is updated if subsequent migration fails",
   async function (test) {
     const run = [];
     let shouldError = true;
@@ -223,7 +223,7 @@ Tinytest.addAsync(
   },
 );
 
-Tinytest.addAsync("Does nothing for no migrations.", async function (test) {
+Tinytest.addAsync("Sync Migrations - Does nothing for no migrations.", async function (test) {
   await Migrations._reset();
 
   // shouldnt do anything
@@ -231,7 +231,7 @@ Tinytest.addAsync("Does nothing for no migrations.", async function (test) {
   test.equal(await Migrations.getVersion(), 0);
 });
 
-Tinytest.addAsync("Checks that rerun works correctly", async function (test) {
+Tinytest.addAsync("Sync Migrations - Checks that rerun works correctly", async function (test) {
   const run = []; //keeps track of migrations in here
   await Migrations._reset();
 
@@ -259,7 +259,7 @@ Tinytest.addAsync("Checks that rerun works correctly", async function (test) {
 });
 
 Tinytest.addAsync(
-  "Checks that rerun works even if there are missing versions",
+  "Sync Migrations - Checks that rerun works even if there are missing versions",
   async function (test) {
     const run = []; //keeps track of migrations in here
     await Migrations._reset();
@@ -289,7 +289,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "Migration callbacks include the migration as an argument",
+  "Sync Migrations - Migration callbacks include the migration as an argument",
   async function (test) {
     let contextArg;
     await Migrations._reset();
@@ -309,7 +309,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "Migrations can log to injected logger",
+  "Sync Migrations - Migrations can log to injected logger",
   async function (test, done) {
     await Migrations._reset();
 
@@ -333,7 +333,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "Migrations should pass correct arguments to logger",
+  "Sync Migrations - Migrations should pass correct arguments to logger",
   async function (test, done) {
     await Migrations._reset();
 
@@ -358,4 +358,69 @@ Tinytest.addAsync(
 
     Migrations.options.logger = null;
   },
+);
+
+Tinytest.addAsync("Async Migrations - Migrates up once and only once.", async function (test) {
+    const run = []; //keeps track of migrations in here
+    await Migrations._reset();
+
+    // first one
+    Migrations.add({
+        up: async function () {
+            run.push("u1");
+        },
+        version: 1,
+    });
+
+    // migrates once
+    await Migrations.migrateTo("latest");
+    test.equal(run, ["u1"]);
+    test.equal(await Migrations.getVersion(), 1);
+
+    // shouldn't do anything
+    await Migrations.migrateTo("latest");
+    test.equal(run, ["u1"]);
+    test.equal(await Migrations.getVersion(), 1);
+});
+
+Tinytest.addAsync(
+    "Async Migrations - Checks that version is updated if subsequent migration fails",
+    async function (test) {
+        const run = [];
+        let shouldError = true;
+        await Migrations._reset();
+
+        // add the migrations
+        Migrations.add({
+            version: 1,
+            up: async function () {
+                run.push("u1");
+            },
+        });
+        Migrations.add({
+            version: 2,
+            up: async function () {
+                if (shouldError) {
+                    throw new Error("Error in migration");
+                }
+                run.push("u2");
+            },
+        });
+
+        // migrate up, which should throw
+        await test.throwsAsync(async function () {
+            await Migrations.migrateTo("latest");
+        });
+        test.equal(run, ["u1"]);
+        test.equal(await Migrations.getVersion(), 1);
+        const control = await Migrations._getControl();
+        test.equal(control.locked, true);
+
+        shouldError = false;
+        // migrate up again, should succeed
+        await Migrations.unlock();
+        await Migrations.migrateTo("latest");
+        test.equal(run, ["u1", "u2"]);
+        test.equal(await Migrations.getVersion(), 2);
+    },
 );

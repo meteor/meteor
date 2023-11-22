@@ -1,8 +1,10 @@
 # quave:migrations
 
-A simple migration system for [Meteor](http://meteor.com) supporting up/downwards migrations and command line usage. There is also [a fork available](https://github.com/emmanuelbuah/mgdb-migrator) for use outside of Meteor.
+A simple migration system for [Meteor](http://meteor.com) supporting up/downwards migrations and command line usage. 
 
 Compatible with Meteor 3.0 and forward.
+
+> This package started with the code from `percolate:migrations`.
 
 ## Installation
 
@@ -21,7 +23,9 @@ To write a simple migration, somewhere in the server section of your project def
 ``` javascript
 Migrations.add({
   version: 1,
-  up: function() {//code to migrate up to version 1}
+  up: async function() {
+    //code to migrate up to version 1
+  }
 });
 ```
 
@@ -29,7 +33,9 @@ To run this migration from within your app call:
 
 ``` javascript
 Meteor.startup(() => {
-  Migrations.migrateTo('latest');
+  Migrations.migrateTo('latest').catch((e) =>
+    console.error(`Error running migrations`, e)
+  );
 });
 ```
 
@@ -41,23 +47,25 @@ A more complete set of migrations might look like:
 Migrations.add({
   version: 1,
   name: 'Adds pants to some people in the db.',
-  up: function() {//code to migrate up to version 1}
-  down: function() {//code to migrate down to version 0}
+  up: async function() {//code to migrate up to version 1}
+  down: async function() {//code to migrate down to version 0}
 });
 
 Migrations.add({
   version: 2,
   name: 'Adds a hat to all people in the db who are wearing pants.',
-  up: function() {//code to migrate up to version 2}
-  down: function() {//code to migrate down to version 1}
+  up: async function() {//code to migrate up to version 2}
+  down: async function() {//code to migrate down to version 1}
 });
 ```
 
 As in 'Basics', you can migrate to the latest by running:
 
 ``` javascript
-Meteor.startup(function() {
-  Migrations.migrateTo('latest');
+Meteor.startup(() => {
+  Migrations.migrateTo('latest').catch((e) =>
+    console.error(`Error running migrations`, e)
+  );
 });
 ```
 
@@ -68,19 +76,19 @@ By specifying a version, you can migrate directly to that version (if possible).
 In the above example, you could migrate directly to version 2 by running:
 
 ``` javascript
-Migrations.migrateTo(2);
+await Migrations.migrateTo(2);
 ```
 
 If you wanted to undo all of your migrations, you could migrate back down to version 0 by running:
 
 ``` javascript
-Migrations.migrateTo(0);
+await Migrations.migrateTo(0);
 ```
 
 Sometimes (usually when somethings gone awry), you may need to re-run a migration. You can do this with the rerun subcommand, like:
 
 ``` javascript
-Migrations.migrateTo('3,rerun');
+await Migrations.migrateTo('3,rerun');
 ```
 
 **NOTE**: You cannot create your own migration at version 0. This version is reserved by migrations for a 'vanilla' system, that is, one without any migrations applied.
@@ -88,7 +96,7 @@ Migrations.migrateTo('3,rerun');
 To see what version the database is at, call:
 
 ``` javascript
-Migrations.getVersion();
+await Migrations.getVersion();
 ```
 
 ### Configuration
@@ -144,30 +152,6 @@ The `opts` object passed to `MyLogger` above includes `level`, `message`, and `t
 
 By default, the collection name is **migrations**. There may be cases where this is inadequate such as using the same Mongo database for multiple Meteor applications that each have their own set of migrations that need to be run.
 
-### Command line use
-
-*** DEPRECATED ***
-
-This info is for pre 0.9 users as post 0.9 the `migrate.sh` script is no longer included in the package folder.
-
-You can also run migrations from the command line using the included shell script. This will
-
-1. Launch your Meteor app
-2. Call `Migrations.migrateTo(version)`
-3. Exit your app
-
-For instance, from your project's root, run:
-
-``` sh
-$ ./packages/percolatestudio-migrations/migrate.sh latest
-```
-
-You can also specify additional arguments to be passed into meteor, like:
-
-``` sh
-$ ./packages/percolatestudio-migrations/migrate.sh latest --settings ./setting.json
-```
-
 ### Errors
 1. `Not migrating, control is locked`
 
@@ -178,39 +162,16 @@ $ ./packages/percolatestudio-migrations/migrate.sh latest --settings ./setting.j
   ```
   $ meteor mongo
 
-  db.migrations.update({_id:"control"}, {$set:{"locked":false}});
+  db.migrations.updateOne({_id:"control"}, {$set:{"locked":false}});
   exit
   ```
   
   Alternatively you can unlock the collection from either server code or the meteor shell using:
 
   ```
-  Migrations.unlock();
+  await Migrations.unlock();
   ```
 
-### Threading and Callbacks
-The following is example code to wait for asynchronous code to complete prior to going on to next migration.
-
-```js
-Migrations.add({
-  version: 1,
-  up: Meteor.wrapAsync(async (_, next) => {
-    await doSomethingAsynchonously();
-    next();
-  }),
-  down: Meteor.wrapAsync(async (_, next) => {
-    await doDownAsynchronously();
-    next();
-  }),
-});
-```
-
-* Note: You may want to to call migration after startup in case your host (such as Heroku) limits the amount of time given for startup
-``` javascript
-Meteor.startup(function() {
-  setTimetout("Migrations.migrateTo('latest')", 0);
-});
-```
 
 ## Contributing
 
@@ -227,6 +188,4 @@ Meteor.startup(function() {
 
 ## License
 
-MIT. (c) Percolate Studio, maintained by Zoltan Olah (@zol).
-
-Meteor Migrations was developed as part of the [Verso](http://versoapp.com) project.
+MIT

@@ -281,7 +281,11 @@ Migrations._migrateTo = async function (version, rerun) {
 Migrations._getControl = async function () {
   const control = await getMigrationsCollection().findOneAsync({ _id: "control" });
 
-  return control || this._setControl({ version: 0, locked: false });
+  if (control) {
+    return control;
+  }
+
+  return this._setControl({ version: 0, locked: false });
 };
 
 // sets the control record
@@ -310,6 +314,8 @@ Migrations._findIndexByVersion = function (version) {
 
 //reset (mainly intended for tests)
 Migrations._reset = async function () {
+  // to force the test to await the version to be updated in the db
+  await this.getVersion();
   this._list = [{ version: 0, up: function () {} }];
   await getMigrationsCollection().removeAsync({});
 };

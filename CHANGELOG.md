@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.2 (2023-11-22)
+
+- Improves tests reliability
+- Adds tests for async migration functions
+
 ## 2.0.1 (2023-11-8)
 
 - Migrations.unlock() is now async

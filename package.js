@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Define and run db migrations.',
-  version: '2.0.1',
+  version: '2.0.2',
   name: 'quave:migrations',
   git: 'https://github.com/quavedev/meteor-migrations.git',
 });
