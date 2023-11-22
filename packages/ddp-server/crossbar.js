@@ -152,10 +152,9 @@ Object.assign(DDPServer._Crossbar.prototype, {
       return false;
     }
 
-    return Object.entries(trigger).every(function ([triggerValue, key]) {
-      return !has(notification, key) ||
-        EJSON.equals(triggerValue, notification[key]);
-    });
+    return Object.keys(trigger).every(function (key) {
+      return !(key in notification) || EJSON.equals(trigger[key], notification[key]);
+     });
   }
 });
 
