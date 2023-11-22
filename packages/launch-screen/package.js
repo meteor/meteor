@@ -6,7 +6,7 @@ Package.describe({
   // between such packages and the build tool.
   name: 'launch-screen',
   summary: 'Default and customizable launch screen on mobile.',
-  version: '2.0.0-beta2140.3'
+  version: '2.0.0-beta2140.4'
 });
 
 Package.onUse(function(api) {
