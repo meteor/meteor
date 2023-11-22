@@ -212,13 +212,13 @@ Tracker.Computation = class Computation {
    * @param {*} onRejected 
    * @returns 
    */
-  this.then = function (onResolved, onRejected) {
-    return this.firstRunPromise.then(onResolved, onRejected);
+  this.then = async function (onResolved, onRejected) {
+    await this.firstRunPromise.then(onResolved, onRejected);
   };
 
 
-  this.catch = function (onRejected) {
-    return this.firstRunPromise.catch(onRejected)
+  this.catch = async function (onRejected) {
+    await this.firstRunPromise.catch(onRejected)
   };
 
     var errored = true;
@@ -604,7 +604,7 @@ Tracker.autorun = function (f, options = {}) {
     Tracker.onInvalidate(function () {
       c.stop();
     });
-  // console.log("C - Computation: ", c)
+    
   return c;
 };
 
