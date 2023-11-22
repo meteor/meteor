@@ -3,11 +3,6 @@ Package.describe({
   version: '1.2.5',
 });
 
-Npm.depends({
-  'lodash.has': '4.5.2',
-  'lodash.isempty': '4.4.0'
-});
-
 Package.onUse(function(api) {
   api.use(['tinytest', 'random', 'ejson', 'check']);
   api.use('http@2.0.0', 'server'); // TODO replace with fetch

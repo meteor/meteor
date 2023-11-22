@@ -1,6 +1,3 @@
-import isEmpty from 'lodash.isempty';
-import has from 'lodash.has';
-
 // Global flag for phantomjs (or other browser) to eval to see if we're done.
 DONE = false;
 // Failure count for phantomjs exit code
@@ -92,7 +89,7 @@ var report = function (name, last) {
       fullName: name.substr(3)
     };
     if ((data.status === "FAIL" || data.status === "EXPECTED") &&
-        !isEmpty(resultSet[name].events)) {
+    !(Object.keys(resultSet[name].events).length === 0)) {
       // only send events when bad things happen
       data.events = resultSet[name].events;
     }
@@ -121,7 +118,7 @@ runTests = function () {
   Tinytest._runTestsEverywhere(
     function (results) {
       var name = getName(results);
-      if (!has(resultSet, name)) {
+      if (!(name in resultSet)) {
         var testPath = EJSON.clone(results.groupPath);
         testPath.push(results.test);
         resultSet[name] = {
