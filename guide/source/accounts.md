@@ -280,7 +280,7 @@ For more details about the data stored in the user database, read the section be
 
 Now that you have the access token, you need to actually make a request to the appropriate API. Here you have two options:
 
-1. Use the [`http` package](http://docs.meteor.com/#/full/http) to access the service's API directly. You'll probably need to pass the access token from above in a header. For details you'll need to search the API documentation for the service.
+1. Use the [`fetch` package](https://docs.meteor.com/packages/fetch.html) to access the service's API directly. You'll probably need to pass the access token from above in a header. For details you'll need to search the API documentation for the service.
 2. Use a package from Atmosphere or npm that wraps the API into a nice JavaScript interface. For example, if you're trying to load data from Facebook you could use the [fbgraph](https://www.npmjs.com/package/fbgraph) npm package. Read more about how to use npm with your app in the [Build System article](build-tool.html#npm).
 
 <h2 id="displaying-user-data">Loading and displaying user data</h2>
