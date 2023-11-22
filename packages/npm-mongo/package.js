@@ -8,7 +8,8 @@ Package.describe({
 });
 
 Npm.depends({
-  mongodb: "4.17.0"
+  mongodb: "4.17.0",
+  saslprep: "1.0.3"
 });
 
 Package.onUse(function (api) {
