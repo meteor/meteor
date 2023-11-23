@@ -1,6 +1,6 @@
 Package.describe({
   name: "socket-stream-client",
-  version: '0.5.2-alpha300.18',
+  version: '0.5.2-alpha300.19',
   summary: "Provides the ClientStream abstraction used by ddp-client",
   documentation: "README.md"
 });
