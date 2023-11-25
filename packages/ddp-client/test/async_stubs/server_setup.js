@@ -16,11 +16,6 @@ Meteor.methods({
     await 0
     return 'server-only-async-result';
   },
-  echo(message) {
-    events.push('echo');
-    return message;
-  },
-
   'sync-stub' () {
     events.push('sync-stub');
     return 'sync-server-result'
