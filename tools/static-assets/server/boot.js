@@ -14,6 +14,14 @@ var MIN_NODE_VERSION = 'v14.0.0';
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
+//  For now it's a function to ensure we don't get a falsy value.
+//  Once we figure out the best place to create this EV (maybe it's here),
+//  it won't need to be a function anymore.
+
+global._isFibersEnabled = function () {
+  return !process.env.DISABLE_FIBERS;
+};
+
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
     'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -307,10 +315,14 @@ var loadServerBundles = Profile("Load server bundles", function () {
     };
 
     var getAsset = function (assetPath, encoding, callback) {
-      var fut;
+      var promiseResolver, promise;
       if (! callback) {
-        fut = new Future();
-        callback = fut.resolver();
+        promise = new Promise((resolve, reject) => {
+          promiseResolver = function (error, result) {
+            error ? reject(error) : resolve(result);
+          }
+        });
+        callback = promiseResolver;
       }
       // This assumes that we've already loaded the meteor package, so meteor
       // itself can't call Assets.get*. (We could change this function so that
@@ -339,16 +351,29 @@ var loadServerBundles = Profile("Load server bundles", function () {
         var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
         fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
       }
-      if (fut)
-        return fut.wait();
+
+      if (promise)
+        return promise;
     };
 
     var Assets = {
       getText: function (assetPath, callback) {
-        return getAsset(assetPath, "utf8", callback);
+        const result = getAsset(assetPath, "utf8", callback);
+        if (!callback) {
+          return Future.fromPromise(result).wait();
+        }
+      },
+      getTextAsync: function (assetPath) {
+        return getAsset(assetPath, "utf8");
       },
       getBinary: function (assetPath, callback) {
-        return getAsset(assetPath, undefined, callback);
+        const result = getAsset(assetPath, undefined, callback);
+        if (!callback) {
+          return Future.fromPromise(result).wait();
+        }
+      },
+      getBinaryAsync: function (assetPath) {
+        return getAsset(assetPath, undefined);
       },
       /**
        * @summary Get the absolute path to the static server asset. Note that assets are read-only.

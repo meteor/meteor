@@ -2,6 +2,7 @@
 
 var nextSlot = 0;
 var currentValues = [];
+var callAsyncMethodRunning = false;
 
 Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
@@ -9,6 +10,9 @@ Meteor.EnvironmentVariable = function () {
 
 var EVp = Meteor.EnvironmentVariable.prototype;
 
+EVp.getCurrentValues = function () {
+  return currentValues;
+};
 EVp.get = function () {
   return currentValues[this.slot];
 };
@@ -27,6 +31,25 @@ EVp.withValue = function (value, func) {
   }
   return ret;
 };
+
+EVp._set = function (context) {
+  currentValues[this.slot] = context;
+};
+
+EVp._setNewContextAndGetCurrent = function (value) {
+  var saved = currentValues[this.slot];
+  this._set(value);
+  return saved;
+};
+
+EVp._isCallAsyncMethodRunning = function () {
+  return callAsyncMethodRunning;
+};
+
+EVp._setCallAsyncMethodRunning = function (value) {
+  callAsyncMethodRunning = value;
+};
+
 
 Meteor.bindEnvironment = function (func, onException, _this) {
   // needed in order to be able to create closures inside func and

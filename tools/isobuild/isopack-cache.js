@@ -7,7 +7,6 @@ var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile').Profile;
-var archinfo = require('../utils/archinfo');
 import { requestGarbageCollection } from "../utils/gc.js";
 
 export class IsopackCache {

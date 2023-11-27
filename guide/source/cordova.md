@@ -100,6 +100,7 @@ After installing Xcode from the Mac App Store, it is still necessary to enable t
 {% youtube vhlNO0dVvjE %}
 
 > For Mac OSX Intel and Linux architectures, follow the following instructions. Mac M1 users, keep scrolling to the next section.
+> Note: if you want to target the SDK 31 of Android, you will need to use Java 11 or higher and also have the latest cmdline-tools installed.
 
 In order to build and run Android apps, you will need to:
 

@@ -9,10 +9,10 @@
 var defaultXFrameOptions = "SAMEORIGIN";
 var xFrameOptions = defaultXFrameOptions;
 
-const BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
+var BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
 BrowserPolicy.framing = {};
 
-_.extend(BrowserPolicy.framing, {
+Object.assign(BrowserPolicy.framing, {
   // Exported for tests and browser-policy-common.
   _constructXFrameOptions: function () {
     return xFrameOptions;

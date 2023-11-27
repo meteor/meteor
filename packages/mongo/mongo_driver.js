@@ -10,10 +10,16 @@ import { normalizeProjection } from "./mongo_utils";
  */
 
 const path = require("path");
+const util = require("util");
 
+/** @type {import('mongodb')} */
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
+import {
+  ASYNC_CURSOR_METHODS,
+  getAsyncMethodName
+} from "meteor/minimongo/constants";
 
 MongoInternals = {};
 
@@ -63,6 +69,10 @@ var unmakeMongoLegal = function (name) { return name.substr(5); };
 
 var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Binary) {
+    // for backwards compatibility
+    if (document.sub_type !== 0) {
+      return document;
+    }
     var buffer = document.value(true);
     return new Uint8Array(buffer);
   }
@@ -91,6 +101,9 @@ var replaceMeteorAtomWithMongo = function (document) {
     // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
     // serialize it correctly).
     return new MongoDB.Binary(Buffer.from(document));
+  }
+  if (document instanceof MongoDB.Binary) {
+     return document;
   }
   if (document instanceof Mongo.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
@@ -172,76 +185,32 @@ MongoConnection = function (url, options) {
     });
 
   self.db = null;
-  // We keep track of the ReplSet's primary, so that we can trigger hooks when
-  // it changes.  The Node driver's joined callback seems to fire way too
-  // often, which is why we need to track it ourselves.
-  self._primary = null;
   self._oplogHandle = null;
   self._docFetcher = null;
 
+  self.client = new MongoDB.MongoClient(url, mongoOptions);
+  self.db = self.client.db();
 
-  var connectFuture = new Future;
-  new MongoDB.MongoClient(
-    url,
-    mongoOptions
-  ).connect(
-    Meteor.bindEnvironment(
-      function (err, client) {
-        if (err) {
-          throw err;
-        }
-
-        var db = client.db();
-        try {
-          const helloDocument = db.admin().command({hello: 1}).await();
-          // First, figure out what the current primary is, if any.
-          if (helloDocument.primary) {
-            self._primary = helloDocument.primary;
-          }
-        }catch(_){
-          // ismaster command is supported on older mongodb versions
-          const isMasterDocument = db.admin().command({ismaster:1}).await();
-          // First, figure out what the current primary is, if any.
-          if (isMasterDocument.primary) {
-            self._primary = isMasterDocument.primary;
-          }
-        }
-
-        client.topology.on(
-          'joined', Meteor.bindEnvironment(function (kind, doc) {
-            if (kind === 'primary') {
-              if (doc.primary !== self._primary) {
-                self._primary = doc.primary;
-                self._onFailoverHook.each(function (callback) {
-                  callback();
-                  return true;
-                });
-              }
-            } else if (doc.me === self._primary) {
-              // The thing we thought was primary is now something other than
-              // primary.  Forget that we thought it was primary.  (This means
-              // that if a server stops being primary and then starts being
-              // primary again without another server becoming primary in the
-              // middle, we'll correctly count it as a failover.)
-              self._primary = null;
-            }
-          }));
-
-        // Allow the constructor to return.
-        connectFuture['return']({ client, db });
-      },
-      connectFuture.resolver()  // onException
-    )
-  );
-
-  // Wait for the connection to be successful (throws on failure) and assign the
-  // results (`client` and `db`) to `self`.
-  Object.assign(self, connectFuture.wait());
+  self.client.on('serverDescriptionChanged', Meteor.bindEnvironment(event => {
+    // When the connection is no longer against the primary node, execute all
+    // failover hooks. This is important for the driver as it has to re-pool the
+    // query when it happens.
+    if (
+      event.previousDescription.type !== 'RSPrimary' &&
+      event.newDescription.type === 'RSPrimary'
+    ) {
+      self._onFailoverHook.each(callback => {
+        callback();
+        return true;
+      });
+    }
+  }));
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
+  Promise.await(self.client.connect())
 };
 
 MongoConnection.prototype.close = function() {
@@ -278,6 +247,7 @@ MongoConnection.prototype._createCappedCollection = function (
 
   if (! self.db)
     throw Error("_createCappedCollection called before Connection created?");
+
 
   var future = new Future();
   self.db.createCollection(
@@ -459,11 +429,14 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 MongoConnection.prototype._dropCollection = function (collectionName, cb) {
   var self = this;
 
+
   var write = self._maybeBeginWrite();
   var refresh = function () {
     Meteor.refresh({collection: collectionName, id: null,
                     dropCollection: true});
   };
+
+
   cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
 
   try {
@@ -497,6 +470,8 @@ MongoConnection.prototype._dropDatabase = function (cb) {
 MongoConnection.prototype._update = function (collection_name, selector, mod,
                                               options, callback) {
   var self = this;
+
+
 
   if (! callback && options instanceof Function) {
     callback = options;
@@ -811,6 +786,9 @@ _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], functio
 MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                                              options, callback) {
   var self = this;
+
+
+  
   if (typeof options === "function" && ! callback) {
     callback = options;
     options = {};
@@ -833,15 +811,32 @@ MongoConnection.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-MongoConnection.prototype.findOne = function (collection_name, selector,
-                                              options) {
+MongoConnection.prototype.findOneAsync = async function (collection_name, selector,
+                                               options) {
   var self = this;
   if (arguments.length === 1)
     selector = {};
 
   options = options || {};
   options.limit = 1;
-  return self.find(collection_name, selector, options).fetch()[0];
+  return (await self.find(collection_name, selector, options).fetchAsync())[0];
+};
+
+MongoConnection.prototype.findOne = function (collection_name, selector,
+                                              options) {
+  var self = this;
+
+  return Future.fromPromise(self.findOneAsync(collection_name, selector, options)).wait();
+};
+
+MongoConnection.prototype.createIndexAsync = function (collectionName, index,
+                                                  options) {
+  var self = this;
+
+  // We expect this function to be called at startup, not from within a method,
+  // so we don't interact with the write fence.
+  var collection = self.rawCollection(collectionName);
+  return collection.createIndex(index, options);
 };
 
 // We'll actually design an index API later. For now, we just pass through to
@@ -849,13 +844,21 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
 MongoConnection.prototype.createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
+  
 
-  // We expect this function to be called at startup, not from within a method,
-  // so we don't interact with the write fence.
-  var collection = self.rawCollection(collectionName);
-  var future = new Future;
-  var indexName = collection.createIndex(index, options, future.resolver());
-  future.wait();
+  return Future.fromPromise(self.createIndexAsync(collectionName, index, options));
+};
+
+MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.countDocuments(...args);
+};
+
+MongoConnection.prototype.estimatedDocumentCount = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.estimatedDocumentCount(...args);
 };
 
 MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
@@ -863,6 +866,7 @@ MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 
+  
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
@@ -919,26 +923,59 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-_.each(['forEach', 'map', 'fetch', 'count', Symbol.iterator], function (method) {
-  Cursor.prototype[method] = function () {
-    var self = this;
+function setupSynchronousCursor(cursor, method) {
+  // You can only observe a tailable cursor.
+  if (cursor._cursorDescription.options.tailable)
+    throw new Error('Cannot call ' + method + ' on a tailable cursor');
 
-    // You can only observe a tailable cursor.
-    if (self._cursorDescription.options.tailable)
-      throw new Error("Cannot call " + method + " on a tailable cursor");
+  if (!cursor._synchronousCursor) {
+    cursor._synchronousCursor = cursor._mongo._createSynchronousCursor(
+      cursor._cursorDescription,
+      {
+        // Make sure that the "cursor" argument to forEach/map callbacks is the
+        // Cursor, not the SynchronousCursor.
+        selfForIteration: cursor,
+        useTransform: true,
+      }
+    );
+  }
 
-    if (!self._synchronousCursor) {
-      self._synchronousCursor = self._mongo._createSynchronousCursor(
-        self._cursorDescription, {
-          // Make sure that the "self" argument to forEach/map callbacks is the
-          // Cursor, not the SynchronousCursor.
-          selfForIteration: self,
-          useTransform: true
-        });
+  return cursor._synchronousCursor;
+}
+
+
+Cursor.prototype.count = function () {
+
+  const collection = this._mongo.rawCollection(this._cursorDescription.collectionName);
+  return Promise.await(collection.countDocuments(
+    replaceTypes(this._cursorDescription.selector, replaceMeteorAtomWithMongo),
+    replaceTypes(this._cursorDescription.options, replaceMeteorAtomWithMongo),
+  ));
+};
+
+[...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
+  // count is handled specially since we don't want to create a cursor.
+  // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
+  if (methodName !== 'count') {
+    Cursor.prototype[methodName] = function (...args) {
+      const cursor = setupSynchronousCursor(this, methodName);
+      return cursor[methodName](...args);
+    };
+  }
+
+  // These methods are handled separately.
+  if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) {
+    return;
+  }
+
+  const methodNameAsync = getAsyncMethodName(methodName);
+  Cursor.prototype[methodNameAsync] = function (...args) {
+    try {
+      this[methodName].isCalledFromAsync = true;
+      return Promise.resolve(this[methodName](...args));
+    } catch (error) {
+      return Promise.reject(error);
     }
-
-    return self._synchronousCursor[method].apply(
-      self._synchronousCursor, arguments);
   };
 });
 
@@ -1044,10 +1081,10 @@ MongoConnection.prototype._createSynchronousCursor = function(
     dbCursor = dbCursor.hint(cursorOptions.hint);
   }
 
-  return new SynchronousCursor(dbCursor, cursorDescription, options);
+  return new SynchronousCursor(dbCursor, cursorDescription, options, collection);
 };
 
-var SynchronousCursor = function (dbCursor, cursorDescription, options) {
+var SynchronousCursor = function (dbCursor, cursorDescription, options, collection) {
   var self = this;
   options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
@@ -1063,7 +1100,13 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
     self._transform = null;
   }
 
-  self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
+  self._synchronousCount = Future.wrap(
+    collection.countDocuments.bind(
+      collection,
+      replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
+      replaceTypes(cursorDescription.options, replaceMeteorAtomWithMongo),
+    )
+  );
   self._visitedIds = new LocalCollection._IdMap;
 };
 
@@ -1143,6 +1186,7 @@ _.extend(SynchronousCursor.prototype, {
 
   forEach: function (callback, thisArg) {
     var self = this;
+    const wrappedFn = Meteor.wrapFn(callback);
 
     // Get back to the beginning.
     self._rewind();
@@ -1154,16 +1198,17 @@ _.extend(SynchronousCursor.prototype, {
     while (true) {
       var doc = self._nextObject();
       if (!doc) return;
-      callback.call(thisArg, doc, index++, self._selfForIteration);
+      wrappedFn.call(thisArg, doc, index++, self._selfForIteration);
     }
   },
 
   // XXX Allow overlapping callback executions if callback yields.
   map: function (callback, thisArg) {
     var self = this;
+    const wrappedFn = Meteor.wrapFn(callback);
     var res = [];
     self.forEach(function (doc, index) {
-      res.push(callback.call(thisArg, doc, index, self._selfForIteration));
+      res.push(wrappedFn.call(thisArg, doc, index, self._selfForIteration));
     });
     return res;
   },
@@ -1226,6 +1271,15 @@ SynchronousCursor.prototype[Symbol.iterator] = function () {
     }
   };
 };
+
+SynchronousCursor.prototype[Symbol.asyncIterator] = function () {
+  const syncResult = this[Symbol.iterator]();
+  return {
+    async next() {
+      return Promise.resolve(syncResult.next());
+    }
+  };
+}
 
 // Tails the cursor described by cursorDescription, most likely on the
 // oplog. Calls docCallback with each document found. Ignores errors and just
