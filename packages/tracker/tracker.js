@@ -144,7 +144,7 @@ var constructingComputation = false;
  * computation.
  * @instancename computation
  */
-Tracker.Computation = class Computation { 
+Tracker.Computation = class Computation {
   constructor(f, parent, onError) {
     if (! constructingComputation)
       throw new Error(
