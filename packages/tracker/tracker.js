@@ -206,21 +206,6 @@ Tracker.Computation = class Computation {
      */
     this.firstRunPromise = undefined;
 
-    /**
-   * 
-   * @param {*} onResolved 
-   * @param {*} onRejected 
-   * @returns 
-   */
-  this.then = async function (onResolved, onRejected) {
-    await this.firstRunPromise.then(onResolved, onRejected);
-  };
-
-
-  this.catch = async function (onRejected) {
-    await this.firstRunPromise.catch(onRejected)
-  };
-
     var errored = true;
     try {
       this._compute();
@@ -231,6 +216,22 @@ Tracker.Computation = class Computation {
         this.stop();
     }
   }
+
+
+    /**
+   * 
+   * @param {*} onResolved 
+   * @param {*} onRejected 
+   * @returns 
+   */
+    then(onResolved, onRejected) {
+      return this.firstRunPromise.then(onResolved, onRejected);
+    };
+  
+  
+    catch(onRejected) {
+      return this.firstRunPromise.catch(onRejected)
+    };
 
   // http://docs.meteor.com/#computation_oninvalidate
 
