@@ -893,11 +893,13 @@ export class Connection {
       if (options.returnServerPromise) {
         return future;
       }
-      return options.returnStubValue
-        ? future.then(() => stubReturnValue)
-        : {
-            stubValuePromise: future,
-          };
+
+      if (options.returnStubValue) {
+        return future.then(() => stubReturnValue);
+      }
+      
+      future.stub = stubReturnValue;
+      return future;
     }
     return options.returnStubValue ? stubReturnValue : undefined;
   }
