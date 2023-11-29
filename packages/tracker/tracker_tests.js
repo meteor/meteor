@@ -297,7 +297,7 @@ Tinytest.add("tracker - lifecycle", function (test) {
     test.equal(c, Tracker.currentComputation);
     test.equal(c.stopped, false);
     test.equal(c.invalidated, false);
-      test.equal(c.firstRun, firstRun);
+    test.equal(c.firstRun, firstRun);
 
     Tracker.onInvalidate(makeCb()); // 1, 6, ...
     Tracker.afterFlush(makeCb()); // 2, 7, ...
@@ -632,6 +632,30 @@ Tinytest.addAsync('tracker - async function - stepped', async function (test) {
 
 
 Tinytest.addAsync('tracker - async function - synchronize', async test => {
+  let counter = 0;
+  
+  await Tracker.autorun(async () => {
+    test.equal(counter, 0);
+    counter += 1;
+    test.equal(counter, 1);
+    await Promise.resolve();
+    test.equal(counter, 1);
+    counter *= 2;
+    test.equal(counter, 2);
+  });
+
+  await Tracker.autorun(async () => {
+    test.equal(counter, 2);
+    counter += 1;
+    test.equal(counter, 3);
+    await Promise.resolve();
+    test.equal(counter, 3);
+    counter *= 2;
+    test.equal(counter, 6);
+  });
+})
+
+Tinytest.addAsync('tracker - async function - synchronize - firstRunPromise', async test => {
   let counter = 0
   await Tracker.autorun(async () => {
     test.equal(counter, 0);
