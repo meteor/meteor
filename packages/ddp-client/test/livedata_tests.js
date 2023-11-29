@@ -1045,7 +1045,7 @@ if (Meteor.isServer) {
         const self = this;
         if (self.conn.status().connected) {
           const callResult = await self.conn.callAsync('s2s', 'foo');
-          test.equal(await callResult.stubValuePromise, 's2s foo');
+          test.equal(callResult, 's2s foo');
         }
       },
     ]);
@@ -1194,12 +1194,12 @@ testAsyncMulti('livedata - methods with nested stubs', [
     if (Meteor.isClient) {
       return Meteor.callAsync('insertData', { a: 1 })
         .then(async data => {
-          const [id, message] = await data.stubValuePromise;
+          const [id, message] =  data;
           test.equal(message, `inserted with: ${id}`);
           return Meteor.callAsync('updateData', id, { a: 2 });
         })
         .then(async data => {
-          const [count, message] = await data.stubValuePromise;
+          const [count, message] = data;
           test.equal(count, 1);
           test.equal(message.before, 'before update: a:1');
           test.equal(message.after, 'after update: a:2, gotData:true');
