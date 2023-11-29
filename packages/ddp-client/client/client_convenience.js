@@ -214,6 +214,35 @@ function queueMethodInvoker(methodInvoker, wait) {
   });
 }
 
+/**
+ * Queue subscriptions in case they rely on previous method calls
+ */
+let queueSend = false;
+let oldSubscribe = Meteor.connection.subscribe;
+Meteor.connection.subscribe = function () {
+  queueSend = true;
+  try {
+    return oldSubscribe.apply(this, arguments);
+  } finally {
+    queueSend = false;
+  }
+};
+
+let oldSend = Meteor.connection._send;
+Meteor.connection._send = function () {
+  if (!queueSend) {
+    return oldSend.apply(this, arguments);
+  }
+
+  queueSend = false;
+  queueFunction((resolve) => {
+    try {
+      oldSend.apply(this, arguments);
+    } finally {
+      resolve();
+    }
+  });
+};
 
 // Proxy the public methods of Meteor.connection so they can
 // be called directly on Meteor.
