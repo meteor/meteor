@@ -328,12 +328,12 @@ Tracker.Computation = class Computation {
       // In case of async functions, the result of this function will contain the promise of the autorun function
       // & make autoruns await-able.
       const firstRunPromise = Tracker.withComputation(this, () => {
-        withNoYieldsAllowed(this._func)(this);
-      })
+        return withNoYieldsAllowed(this._func)(this);
+      });
       // We'll store the firstRunPromise on the computation so it can be awaited by the callers, but only
       // during the first run. We don't want things to get mixed up.
       if (this.firstRun) {
-        this.firstRunPromise = firstRunPromise;
+        this.firstRunPromise = Promise.resolve(firstRunPromise);
       }
     } finally {
       inCompute = previousInCompute;

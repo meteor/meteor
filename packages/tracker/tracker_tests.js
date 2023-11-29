@@ -630,15 +630,14 @@ Tinytest.addAsync('tracker - async function - stepped', async function (test) {
   test.equal(count, limit, 'after resolve');
 });
 
-
 Tinytest.addAsync('tracker - async function - synchronize', async test => {
   let counter = 0;
-  
+
   await Tracker.autorun(async () => {
     test.equal(counter, 0);
     counter += 1;
     test.equal(counter, 1);
-    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve));
     test.equal(counter, 1);
     counter *= 2;
     test.equal(counter, 2);
@@ -648,7 +647,7 @@ Tinytest.addAsync('tracker - async function - synchronize', async test => {
     test.equal(counter, 2);
     counter += 1;
     test.equal(counter, 3);
-    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve));
     test.equal(counter, 3);
     counter *= 2;
     test.equal(counter, 6);
@@ -661,7 +660,7 @@ Tinytest.addAsync('tracker - async function - synchronize - firstRunPromise', as
     test.equal(counter, 0);
     counter += 1;
     test.equal(counter, 1);
-    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve));
     test.equal(counter, 1);
     counter *= 2;
     test.equal(counter, 2);
@@ -671,7 +670,7 @@ Tinytest.addAsync('tracker - async function - synchronize - firstRunPromise', as
     test.equal(counter, 2);
     counter += 1;
     test.equal(counter, 3);
-    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve));
     test.equal(counter, 3);
     counter *= 2;
     test.equal(counter, 6);
