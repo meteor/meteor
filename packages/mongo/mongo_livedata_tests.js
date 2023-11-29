@@ -245,9 +245,6 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
               } else {
                 result = await ftc[op](arg);
               }
-              if (result?.stubValuePromise) {
-                await result.stubValuePromise;
-              }
             } catch (e) {
               callback(e);
             }
@@ -4046,12 +4043,12 @@ if (Meteor.isClient) {
       var self = this;
       self.nonce = Random.id();
       const r = await Meteor.callAsync('fenceOnBeforeFireError1', self.nonce);
-      test.isTrue(await r.stubValuePromise);
+      test.isTrue(r);
     },
     async function(test, expect) {
       var self = this;
       const r = await Meteor.callAsync('fenceOnBeforeFireError2', self.nonce);
-      test.isTrue(await r.stubValuePromise);
+      test.isTrue(r);
     },
   ]);
 } else {
