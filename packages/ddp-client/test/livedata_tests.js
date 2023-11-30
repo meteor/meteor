@@ -414,11 +414,7 @@ testAsyncMulti('livedata - compound methods', [
       );
     } catch (e) {
     }
-    if (Meteor.isClient)
-      // client can fool itself by cheating, but only until the sync
-      // finishes
-      await checkBalances(test, -10, 160);
-    else await checkBalances(test, 90, 60);
+     await checkBalances(test, 90, 60);
   },
 ]);
 
