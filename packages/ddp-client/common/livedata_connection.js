@@ -897,8 +897,10 @@ export class Connection {
       if (options.returnStubValue) {
         return future.then(() => stubReturnValue);
       }
-      
+
       future.stub = stubReturnValue;
+      future.serverResult = future;
+
       return future;
     }
     return options.returnStubValue ? stubReturnValue : undefined;
