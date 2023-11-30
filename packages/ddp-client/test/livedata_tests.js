@@ -379,42 +379,42 @@ const subscribeBeforeRun = async (subName, testId, cb) => {
 
 // would be nice to have a database-aware test harness of some kind --
 // this is a big hack (and XXX pollutes the global test namespace)
-testAsyncMulti('livedata - compound methods', [
-  async function(test) {
+testAsyncMulti("livedata - compound methods", [
+  async function (test) {
     if (Meteor.isClient) {
-      Meteor.subscribe('ledger', test.runId(), () => {});
+      Meteor.subscribe("ledger", test.runId(), () => {});
     }
 
-    await Ledger.insertAsync(
-      { name: 'alice', balance: 100, world: test.runId() }
-    );
-    await Ledger.insertAsync(
-      { name: 'bob', balance: 50, world: test.runId() }
-    );
+    await Ledger.insertAsync({
+      name: "alice",
+      balance: 100,
+      world: test.runId(),
+    });
+    await Ledger.insertAsync({ name: "bob", balance: 50, world: test.runId() });
   },
-  async function(test) {
-    await Meteor.callAsync(
-      'ledger/transfer',
-      test.runId(),
-      'alice',
-      'bob',
-      10,
-    )
+  async function (test) {
+    await Meteor.callAsync("ledger/transfer", test.runId(), "alice", "bob", 10);
     await checkBalances(test, 90, 60);
   },
-  async function(test) {
-    try {
-      await Meteor.callAsync(
-        'ledger/transfer',
-        test.runId(),
-        'alice',
-        'bob',
-        100,
-        true,
-      );
-    } catch (e) {
+  async function (test) {
+    const promise= Meteor.callAsync(
+      "ledger/transfer",
+      test.runId(),
+      "alice",
+      "bob",
+      100,
+      true
+    ).catch(err => { failure(test, 409)(err); });
+
+    if (Meteor.isClient) {
+      // client can fool itself by cheating, but only until the sync
+      // finishes
+      await promise.stub;
+      await checkBalances(test, -10, 160);
     }
-     await checkBalances(test, 90, 60);
+    await promise;
+    // Balances are reverted back to pre-stub values.
+    await checkBalances(test, 90, 60);
   },
 ]);
 

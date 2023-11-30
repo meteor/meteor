@@ -890,6 +890,9 @@ export class Connection {
     // If we're using the default callback on the server,
     // block waiting for the result.
     if (future) {
+      future.stub = stubReturnValue;
+      future.serverResult = future;
+
       if (options.returnServerPromise) {
         return future;
       }
@@ -897,9 +900,6 @@ export class Connection {
       if (options.returnStubValue) {
         return future.then(() => stubReturnValue);
       }
-
-      future.stub = stubReturnValue;
-      future.serverResult = future;
 
       return future;
     }
