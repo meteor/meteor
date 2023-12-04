@@ -38,8 +38,8 @@ Tinytest.add("constraint solver - CatalogCache", function (test) {
   var pvs = {};
   cache.eachPackageVersion(function (pv, deps) {
     check(pv, CS.PackageAndVersion);
-    check(_.values(deps), [CS.Dependency]);
-    pvs[pv.package+' '+pv.version] = _.keys(deps).sort();
+    check(Object.values(deps), [CS.Dependency]);
+    pvs[`${pv.package} ${pv.version}`] = Object.keys(deps).sort();
   });
   test.equal(pvs, {'foo 1.0.0': ['bar'],
                    'foo 1.0.1': ['bar', 'bzzz', 'weakly1', 'weakly2']});
@@ -52,9 +52,9 @@ Tinytest.add("constraint solver - CatalogCache", function (test) {
   test.equal(oneVersion.length, 1); // don't know which it is
 
   var foos = [];
-  _.each(cache.getPackageVersions('foo'), function (v) {
+  cache.getPackageVersions('foo').forEach(function (v) {
     var depMap = cache.getDependencyMap('foo', v);
-    foos.push([v, _.map(depMap, String).sort()]);
+    foos.push([v, Object.values(depMap).map(String).sort()]);
   });
   // versions should come out sorted, just like this.
   test.equal(foos,

@@ -61,7 +61,7 @@ run_save_node_bin: &run_save_node_bin
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
-    - image: meteor/circleci:android-30-node-14
+    - image: meteor/circleci:20231116-android-33-node-14
   resource_class: large
   environment:
     # This multiplier scales the waitSecs for selftests.
@@ -111,7 +111,7 @@ set_fibers_env: &set_fibers_env
       echo 'export DISABLE_FIBERS=1' >> "$BASH_ENV"
       source "$BASH_ENV"
     fi
-    
+
 
 # Run tests with Fibers and then without.
 matrix_for_fibers: &matrix_for_fibers
@@ -125,6 +125,8 @@ jobs:
   Get Ready:
     <<: *build_machine_environment
     steps:
+      - run:
+          command: rm -fR /home/circleci/project/*
       - run:
           <<: *run_log_mem_use
       - run:

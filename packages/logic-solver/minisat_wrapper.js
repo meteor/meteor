@@ -67,7 +67,7 @@ MiniSat.prototype.addClause = function (terms) {
   this._clauses.push(terms);
   return this._native.savingStack(function (native, C) {
     var termsPtr = C.allocate((terms.length+1)*4, 'i32', C.ALLOC_STACK);
-    _.each(terms, function (t, i) {
+    terms.forEach(function (t, i) {
       C.setValue(termsPtr + i*4, t, 'i32');
     });
     C.setValue(termsPtr + terms.length*4, 0, 'i32'); // 0-terminate
