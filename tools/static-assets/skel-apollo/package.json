@@ -8,13 +8,13 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@apollo/client": "^3.7.14",
-    "@apollo/server": "^4.7.1",
-    "@babel/runtime": "^7.21.5",
+    "@apollo/client": "^3.8.8",
+    "@apollo/server": "^4.9.5",
+    "@babel/runtime": "^7.23.5",
     "body-parser": "^1.20.2",
     "express": "^4.18.2",
-    "graphql": "^16.6.0",
-    "meteor-node-stubs": "^1.2.5",
+    "graphql": "^16.8.1",
+    "meteor-node-stubs": "^1.2.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
