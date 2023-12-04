@@ -1,6 +1,5 @@
 Package.describe({
   summary: 'Logging facility.',
-  version: '1.4.0',
   documentation: 'README.md'
 });
 

@@ -12,7 +12,7 @@ var CS = ConstraintSolver;
 // in that order.  If that's not true, these tests will break.
 var sortKeys = function (obj) {
   var result = {};
-  _.each(_.keys(obj).sort(), function (k) {
+  Object.keys(obj).sort().forEach(function (k) {
     result[k] = obj[k];
   });
   return result;
@@ -22,7 +22,7 @@ var formatSolution = function (obj) {
   // results into tests.
   return JSON.stringify({
     answer: sortKeys(obj.answer),
-    allAnswers: obj.allAnswers && _.map(obj.allAnswers, sortKeys),
+    allAnswers: obj.allAnswers && obj.allAnswers.map(sortKeys),
     neededToUseUnanticipatedPrereleases: obj.neededToUseUnanticipatedPrereleases
   }, null, 2);
 };
@@ -36,7 +36,7 @@ var doTest = function (test, inputJSONable, outputJSONable, options) {
   }
 
   if (typeof outputJSONable.neededToUseUnanticipatedPrereleases !== 'boolean') {
-    outputJSONable = _.extend(outputJSONable, {
+    outputJSONable = Object.assign(outputJSONable, {
       neededToUseUnanticipatedPrereleases: (
         !! outputJSONable.neededToUseUnanticipatedPrereleases)
     });
