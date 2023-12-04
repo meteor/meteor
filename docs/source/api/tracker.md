@@ -318,8 +318,6 @@ await Tracker.autorun(async () => {
   (...more async code...)
 }).firstRunPromise;
 
-// ta-daa! We'll get here only after both the autorun functions will have returned & executed in their entirety.
-
 
 ```
 <h2 id="tracker_dependency"><span>Tracker.Dependency</span></h2>
