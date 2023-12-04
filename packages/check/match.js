@@ -65,6 +65,13 @@ export const Match = {
     return new Where(condition);
   },
 
+  NonEmptyString: function(x) {
+    return Match.Where((x) => {
+      check(x, String);
+      return x.length > 0;
+    })
+  },
+
   ObjectIncluding: function(pattern) {
     return new ObjectIncluding(pattern)
   },
@@ -192,16 +199,6 @@ const stringForErrorMessage = (value, options = {}) => {
   return EJSON.stringify(value);
 };
 
-/**
- * @summary Returns true if the value is a non empty string.
- * @locus Anywhere
- * @param {Any} value The value to check
- */
-
-export const NonEmptyString = Match.Where((x) => {
-  check(x, String);
-  return x.length > 0;
-});
 
 const typeofChecks = [
   [String, 'string'],

@@ -13,7 +13,6 @@ Package.onUse(api => {
 
   api.export('check');
   api.export('Match');
-  api.export('NonEmptyString');
 });
 
 Package.onTest(api => {

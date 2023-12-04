@@ -1,5 +1,5 @@
 import { Accounts } from "meteor/accounts-base";
-import { check, Match, NonEmptyString } from 'meteor/check';
+import { check, Match } from 'meteor/check';
 import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
 
 // Utility for grabbing user
@@ -169,7 +169,7 @@ Accounts.registerLoginHandler("password", async options => {
   check(options, {
     user: Accounts._userQueryValidator,
     password: passwordValidator,
-    code: Match.Optional(NonEmptyString),
+    code: Match.Optional(Match.NonEmptyString),
   });
 
 
@@ -224,8 +224,8 @@ Accounts.registerLoginHandler("password", async options => {
  * @importFromPackage accounts-base
  */
 Accounts.setUsername = (userId, newUsername) => {
-  check(userId, NonEmptyString);
-  check(newUsername, NonEmptyString);
+  check(userId, Match.NonEmptyString);
+  check(newUsername, Match.NonEmptyString);
 
   const user = getUserById(userId, {fields: {
     username: 1,
@@ -813,8 +813,8 @@ Meteor.methods({verifyEmail: async function (...args) {
  * @importFromPackage accounts-base
  */
 Accounts.addEmail = (userId, newEmail, verified) => {
-  check(userId, NonEmptyString);
-  check(newEmail, NonEmptyString);
+  check(userId, Match.NonEmptyString);
+  check(newEmail, Match.NonEmptyString);
   check(verified, Match.Optional(Boolean));
 
   if (verified === void 0) {
@@ -902,8 +902,8 @@ Accounts.addEmail = (userId, newEmail, verified) => {
  * @importFromPackage accounts-base
  */
 Accounts.removeEmail = (userId, email) => {
-  check(userId, NonEmptyString);
-  check(email, NonEmptyString);
+  check(userId, Match.NonEmptyString);
+  check(email, Match.NonEmptyString);
 
   const user = getUserById(userId, {fields: {_id: 1}});
   if (!user)

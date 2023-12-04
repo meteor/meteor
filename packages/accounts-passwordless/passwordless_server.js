@@ -1,6 +1,6 @@
 import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
-import { check, Match, NonEmptyString } from 'meteor/check';
+import { check, Match } from 'meteor/check';
 import {
   DEFAULT_TOKEN_SEQUENCE_LENGTH,
   getUserById,
@@ -29,7 +29,7 @@ Accounts.registerLoginHandler('passwordless', options => {
 
   check(options, {
     token: tokenValidator(),
-    code: Match.Optional(NonEmptyString),
+    code: Match.Optional(Match.NonEmptyString),
     selector: Accounts._userQueryValidator,
   });
 
