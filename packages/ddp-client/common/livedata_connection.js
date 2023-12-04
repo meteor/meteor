@@ -890,8 +890,13 @@ export class Connection {
     // If we're using the default callback on the server,
     // block waiting for the result.
     if (future) {
-      future.stub = stubReturnValue;
-      future.serverResult = future;
+      // This is the result of the method ran in the client.
+      // You can opt-in in getting the local result by running:
+      // const { stubPromise, serverPromise } = Meteor.callAsync(...);
+      // const whatServerDid = await serverPromise;
+      future.serverPromise = future;
+      // const whatClientDid = await stubPromise;
+      future.stubPromise = stubReturnValue;
 
       if (options.returnServerPromise) {
         return future;
