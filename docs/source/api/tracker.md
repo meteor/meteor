@@ -318,8 +318,25 @@ await Tracker.autorun(async () => {
   (...more async code...)
 }).firstRunPromise;
 
+```
+
+For a better developer experience `firstRunPromise` is automagically appended to your async `autorun` calls so you don't have to write them yourself. Meaning this also works: 
+
+```js  
+
+await Tracker.autorun(async () => {
+  await Meteor.userAsync();
+  (...more async code...)
+});
+
+await Tracker.autorun(async () => {
+  await asyncSomeOrOther();
+  (...more async code...)
+});
 
 ```
+
+
 <h2 id="tracker_dependency"><span>Tracker.Dependency</span></h2>
 
 A Dependency represents an atomic unit of reactive data that a
