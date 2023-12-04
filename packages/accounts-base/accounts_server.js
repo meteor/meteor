@@ -1,11 +1,11 @@
 import crypto from 'crypto';
-import { URL } from 'url';
 import { Meteor } from 'meteor/meteor'
-import { check, Match, NonEmptyString } from 'meteor/check';
+import { check, Match } from 'meteor/check';
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
+import { URL } from 'meteor/url';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -1494,9 +1494,9 @@ export class AccountsServer extends AccountsCommon {
 
   _userQueryValidator = Match.Where(user => {
     check(user, {
-      id: Match.Optional(NonEmptyString),
-      username: Match.Optional(NonEmptyString),
-      email: Match.Optional(NonEmptyString)
+      id: Match.Optional(Match.NonEmptyString),
+      username: Match.Optional(Match.NonEmptyString),
+      email: Match.Optional(Match.NonEmptyString)
     });
     if (Object.keys(user).length !== 1)
       throw new Match.Error("User property must have exactly one field");
