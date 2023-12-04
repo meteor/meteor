@@ -219,16 +219,16 @@ Tracker.Computation = class Computation {
 
 
     /**
-   * 
-   * @param {*} onResolved 
-   * @param {*} onRejected 
-   * @returns 
+   * Resolves the firstRunPromise with the result of the autorun function.
+   * @param {*} onResolved
+   * @param {*} onRejected
+   * @returns{Promise<unknown}
    */
     then(onResolved, onRejected) {
       return this.firstRunPromise.then(onResolved, onRejected);
     };
-  
-  
+
+
     catch(onRejected) {
       return this.firstRunPromise.catch(onRejected)
     };
@@ -605,7 +605,7 @@ Tracker.autorun = function (f, options = {}) {
     Tracker.onInvalidate(function () {
       c.stop();
     });
-    
+
   return c;
 };
 
