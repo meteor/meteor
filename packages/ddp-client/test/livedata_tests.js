@@ -397,22 +397,32 @@ testAsyncMulti("livedata - compound methods", [
     await checkBalances(test, 90, 60);
   },
   async function (test) {
-    const promise= Meteor.callAsync(
+    let promise = Meteor.callAsync(
       "ledger/transfer",
       test.runId(),
       "alice",
       "bob",
       100,
       true
-    ).catch(err => { failure(test, 409)(err); });
+    );
 
     if (Meteor.isClient) {
       // client can fool itself by cheating, but only until the sync
       // finishes
-      await promise.stub;
+
+      // for some reason, this doesn't work without the sleep
+      // .stubPromise is undefined.
+      // promise does not have a stubPromise property.
+      await promise.stubPromise;
+      await Meteor._sleepForMs(0);
       await checkBalances(test, -10, 160);
     }
-    await promise;
+
+    await promise.catch((err) => {
+      failure(test, 409)(err);
+    });
+
+
     // Balances are reverted back to pre-stub values.
     await checkBalances(test, 90, 60);
   },
