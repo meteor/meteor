@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Moved to meteor-platform",
-  version: '1.0.11-beta2140.5',
+  version: '1.0.11-beta2140.6',
   deprecated: true,
   documentation: 'README.md'
 });
