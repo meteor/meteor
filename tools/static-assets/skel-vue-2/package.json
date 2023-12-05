@@ -8,9 +8,9 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.17.9",
-    "meteor-node-stubs": "^1.2.1",
-    "vue": "^2.6.14",
+    "@babel/runtime": "^7.23.5",
+    "meteor-node-stubs": "^1.2.7",
+    "vue": "^2.7.15",
     "vue-meteor-tracker": "^3.0.0-beta.7"
   },
   "meteor": {
