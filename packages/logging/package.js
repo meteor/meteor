@@ -4,8 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'chalk': '5.3.0',
-  '@babel/runtime': '7.23.5'
+  'chalk': '5.3.0'
 });
 
 Npm.strip({
@@ -14,11 +13,7 @@ Npm.strip({
 
 Package.onUse(function (api) {
   api.export('Log');
-  // The `ecmascript-runtime-client` package is explicitly depended upon
-  // here due to this package's dependency on
-  // `String.prototype.padRight` which is polyfilled only in
-  // `ecmascript-runtime-client@0.6.2` or newer.
-  api.use(['ejson', 'ecmascript', 'ecmascript-runtime-client']);
+  api.use(['ejson', 'ecmascript']);
   api.mainModule('logging.js');
   api.addFiles('logging_server.js', 'server');
   api.addFiles('logging_browser.js', 'client');
