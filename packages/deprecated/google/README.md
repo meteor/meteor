@@ -4,4 +4,4 @@
 
 ** Deprecated, use google-oauth instead**
 
-An implementation of the Google OAuth flow. See the [project page](https://www.meteor.com/accounts) on Meteor Accounts for more details. XXX link
+An implementation of the Google OAuth flow. See the [project page](https://docs.meteor.com/api/accounts) on Meteor Accounts for more details. XXX link
