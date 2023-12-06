@@ -124,7 +124,7 @@ You can use the [`Meteor.isFibersDisabled`](https://github.com/meteor/meteor/blo
 is using Fibers or not. In all releases before Meteor 3.0 this property will be `falsy`(`undefined`).
 In Meteor 3.0 this property will be return `true`.
 
-Wich means that you can have a code like this:
+Which means that you can have a code like this:
 
 ```js
 
@@ -136,9 +136,9 @@ if (Meteor.isFibersDisabled) {
 
 ```
 
-### Changes for packages that are client only
+### Changes for packages that are client-only
 
-If your package is client only, you don't need to worry about the async changes. You can just update your package to be compatible with Meteor 3.0 by adding the following line to your `package.js`:
+If your package is client-only, you don't need to worry about the async changes. You can update your package to be compatible with Meteor 3.0 by adding the following line to your `package.js`:
 
 ```js
 Package.onUse((api) => {
@@ -150,8 +150,8 @@ Package.onUse((api) => {
 });
 ```
 
-If you want to an example of this change you can take a look in this [commit](https://github.com/meteor/react-packages/commit/96313a1afcc41ef9a23c7496470b375e7d357793)
-where we made possible to a package be used in Meteor 3.0.
+If you want an example of this change, you can take a look at this [commit](https://github.com/meteor/react-packages/commit/96313a1afcc41ef9a23c7496470b375e7d357793)
+where it was made possible for a package to be used in Meteor 3.0.
 
 This change makes sure that your package is still compatible with Meteor 2.x
 and also with Meteor 3.0.
@@ -159,9 +159,9 @@ and also with Meteor 3.0.
 
 ### Changes for packages that do not use Meteor packages that had breaking change
 
-Similar to what happens with client only packages,
+Similar to what happens with client-only packages,
 if your package is not using Meteor packages that had breaking changes,
-you can just update your package to be compatible with Meteor 3.0
+you can update your package to be compatible with Meteor 3.0
 by adding the following line to your `package.js`:
 
 ```js
@@ -174,16 +174,16 @@ Package.onUse((api) => {
 });
 ```
 
-For example we have `mdg:seo` where we just needed to add the line above to make it
+For example, we have `mdg:seo` where we just needed to add the line above to make it
 compatible with Meteor 3.0.
 You can see the [commit](https://github.com/meteor/galaxy-seo-package/commit/8a30b32688df40e62ce434475dd3ee931dedf2b3).
 
 
 ### Changes for packages that are using Meteor API that will become async
 
-In these packages there will be necessary to refactor and migrate some of its API.
+In these packages, it will be necessary to refactor and migrate some of its APIs.
 You can be ready for Meteor 3.0 by migrating its API to be async. You can run your tests
-using Meteor 3.0 and make sure that everything is working as expected.
+using Meteor 3.0 and ensure everything works as expected.
 
 A good example can be seen here in this [PR](https://github.com/percolatestudio/meteor-synced-cron/pull/149), where we added support for any Meteor version
 beyond v2.8 and also for Meteor 3.0.
