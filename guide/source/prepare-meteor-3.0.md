@@ -116,6 +116,63 @@ Note that we're not using the if (loading) anymore. To see a practical project, 
 If you use `Tracker.autorun()`, for example, reading about the tracker with the [async callback function](https://blog.meteor.com/new-meteor-js-2-10-and-the-async-tracker-feature-ffdbe817c801) is also recommended.
 
 
+## Changes for packages
+
+
+### Changes for packages that are client only
+
+If your package is client only, you don't need to worry about the async changes. You can just update your package to be compatible with Meteor 3.0 by adding the following line to your `package.js`:
+
+```js
+Package.onUse((api) => {
+  api.versionsFrom(['1.10', '2.3', '3.0-alpha.19']);
+  //                            ^^^^^^^ for testing your package with meteor 3.0
+
+  api.versionsFrom(['1.10', '2.3', '3.0']);
+  //                           ^^^^^^^ for meteor 3.0
+});
+```
+
+If you want to an example of this change you can take a look in this [commit](https://github.com/meteor/react-packages/commit/96313a1afcc41ef9a23c7496470b375e7d357793)
+where we made possible to a package be used in Meteor 3.0.
+
+This change makes sure that your package is still compatible with Meteor 2.x
+and also with Meteor 3.0.
+
+
+### Changes for packages that are do not using Meteor packages that had breaking changes
+
+
+Similar to what happens with client only packages,
+if your package is not using Meteor packages that had breaking changes,
+you can just update your package to be compatible with Meteor 3.0
+by adding the following line to your `package.js`:
+
+```js
+Package.onUse((api) => {
+  api.versionsFrom(['1.10', '2.3', '3.0-alpha.19']);
+  //                            ^^^^^^^ for testing your package with meteor 3.0
+
+  api.versionsFrom(['1.10', '2.3', '3.0']);
+  //                           ^^^^^^^ for meteor 3.0
+});
+```
+
+For example we have `mdg:seo` where we just needed to add the line above to make it
+compatible with Meteor 3.0.
+You can see the [commit](https://github.com/meteor/galaxy-seo-package/commit/8a30b32688df40e62ce434475dd3ee931dedf2b3).
+
+
+### Changes for packages that are using Meteor API that will become async
+
+In these packages there will be necessary to refactor and migrate some of its API.
+You can be ready for Meteor 3.0 by migrating its API to be async. You can run your tests
+using Meteor 3.0 and make sure that everything is working as expected.
+
+A good example can be seen here in this [PR](https://github.com/percolatestudio/meteor-synced-cron/pull/149), where we added support for any Meteor version
+beyond v2.8 and also for Meteor 3.0.
+
+
 -----------
 
 We hope to make your transition easier with these instructions, references, and tools. You may face some challenges, but remember that you can progressively refactor it. For more detailed updates on Meteor 3.0, please check our [Fibers project board](https://github.com/orgs/meteor/projects/10) and the [Meteor 3.0 PR](https://github.com/meteor/meteor/pull/12359).
