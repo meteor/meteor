@@ -162,6 +162,22 @@ For example we have `mdg:seo` where we just needed to add the line above to make
 compatible with Meteor 3.0.
 You can see the [commit](https://github.com/meteor/galaxy-seo-package/commit/8a30b32688df40e62ce434475dd3ee931dedf2b3).
 
+You can use the `Meteor.isFibersDisabled` property to check if the current Meteor version
+is using Fibers or not. In all releases before Meteor 3.0 this property will be `falsy`(`undefined`).
+In Meteor 3.0 this property will be return `true`.
+
+Wich means that you can have a code like this:
+
+```js
+
+if (Meteor.isFibersDisabled) {
+  // Meteor 3.0
+} else {
+  // Meteor 2.x
+}
+
+
+```
 
 ### Changes for packages that are using Meteor API that will become async
 
