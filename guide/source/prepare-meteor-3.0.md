@@ -120,7 +120,7 @@ If you use `Tracker.autorun()`, for example, reading about the tracker with the 
 
 ### Meteor.isFibersDisabled
 
-You can use the `Meteor.isFibersDisabled` property to check if the current Meteor version
+You can use the [`Meteor.isFibersDisabled`](https://github.com/meteor/meteor/blob/6ac474627a4d2536090484eb95e7c021370aaefe/packages/meteor/asl-helpers-client.js#L1-L8) property to check if the current Meteor version
 is using Fibers or not. In all releases before Meteor 3.0 this property will be `falsy`(`undefined`).
 In Meteor 3.0 this property will be return `true`.
 
