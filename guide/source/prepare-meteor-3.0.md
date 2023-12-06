@@ -157,8 +157,7 @@ This change makes sure that your package is still compatible with Meteor 2.x
 and also with Meteor 3.0.
 
 
-### Changes for packages that are do not using Meteor packages that had breaking changes
-
+### Changes for packages that do not use Meteor packages that had breaking change
 
 Similar to what happens with client only packages,
 if your package is not using Meteor packages that had breaking changes,
