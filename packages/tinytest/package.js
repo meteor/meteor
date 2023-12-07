@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Tiny testing framework",
-  version: '1.2.3-rc2140.0'
+  version: '1.2.3-rc2140.1'
 });
 
 Npm.depends({
