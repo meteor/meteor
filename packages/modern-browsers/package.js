@@ -1,6 +1,6 @@
 Package.describe({
   name: 'modern-browsers',
-  version: '0.1.10-beta2140.7',
+  version: '0.1.10-rc2140.0',
   summary:
     'API for defining the boundary between modern and legacy ' +
     'JavaScript clients',
