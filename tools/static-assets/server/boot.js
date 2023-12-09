@@ -183,8 +183,10 @@ function tryLoadSourceMap() {
 }
 
 // Read all the source maps into memory once.
-if(!process.env.DISABLE_SOURCE_MAP) {
+if (!process.env.DISABLE_SOURCE_MAP) {
   tryLoadSourceMap();
+} else {
+  console.log(`DISABLE_SOURCE_MAP was informed so source-map is disabled.`);
 }
 
 // As a replacement to the old keepalives mechanism, check for a running
