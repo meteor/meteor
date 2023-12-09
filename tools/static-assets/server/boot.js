@@ -121,7 +121,6 @@ function loadSourceMap() {
         // source-map-support doesn't ever look at the sourcesContent field, so
         // there's no point in keeping it in memory.
         delete parsedSourceMap.sourcesContent;
-        var url;
         if (fileInfo.sourceMapRoot) {
           // Add the specified root to any root that may be in the file.
           parsedSourceMap.sourceRoot = path.join(
@@ -169,7 +168,8 @@ function loadSourceMap() {
     // For now, don't fix the source line in uncaught exceptions, because we
     // haven't fixed handleUncaughtExceptions in source-map-support to properly
     // locate the source files.
-    handleUncaughtExceptions: false,
+    // TODO testing if with true it handles the exception we are trying to catch
+    handleUncaughtExceptions: true,
     wrapCallSite: wrapCallSite
   });
 }
