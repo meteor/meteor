@@ -112,21 +112,27 @@ async function maybeWaitForDebuggerToAttach() {
 // Read all the source maps into memory once.
 serverJson.load.forEach(function (fileInfo) {
   if (fileInfo.sourceMap) {
-    var rawSourceMap = fs.readFileSync(
-      path.resolve(serverDir, fileInfo.sourceMap), 'utf8');
-    // Parse the source map only once, not each time it's needed. Also remove
-    // the anti-XSSI header if it's there.
-    var parsedSourceMap = JSON.parse(rawSourceMap.replace(/^\)\]\}'/, ''));
-    // source-map-support doesn't ever look at the sourcesContent field, so
-    // there's no point in keeping it in memory.
-    delete parsedSourceMap.sourcesContent;
-    var url;
-    if (fileInfo.sourceMapRoot) {
-      // Add the specified root to any root that may be in the file.
-      parsedSourceMap.sourceRoot = path.join(
-        fileInfo.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+    try {
+      var rawSourceMap = fs.readFileSync(
+          path.resolve(serverDir, fileInfo.sourceMap), 'utf8');
+      // Parse the source map only once, not each time it's needed. Also remove
+      // the anti-XSSI header if it's there.
+      var parsedSourceMap = JSON.parse(rawSourceMap.replace(/^\)\]\}'/, ''));
+      // source-map-support doesn't ever look at the sourcesContent field, so
+      // there's no point in keeping it in memory.
+      delete parsedSourceMap.sourcesContent;
+      var url;
+      if (fileInfo.sourceMapRoot) {
+        // Add the specified root to any root that may be in the file.
+        parsedSourceMap.sourceRoot = path.join(
+            fileInfo.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+      }
+      parsedSourceMaps[path.resolve(__dirname, fileInfo.path)] = parsedSourceMap;
+    } catch(e) {
+      console.error(
+          `Error parsing sourceMap from ${fileInfo.path}, continuing.`, e
+      );
     }
-    parsedSourceMaps[path.resolve(__dirname, fileInfo.path)] = parsedSourceMap;
   }
 });
 
