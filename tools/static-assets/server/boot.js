@@ -182,6 +182,8 @@ function tryLoadSourceMap() {
   }
 }
 
+console.log('process.env.DISABLE_SOURCE_MAP', process.env.DISABLE_SOURCE_MAP);
+
 // Read all the source maps into memory once.
 if (!process.env.DISABLE_SOURCE_MAP) {
   tryLoadSourceMap();
