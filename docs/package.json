@@ -23,8 +23,9 @@
     "underscore": "1.13.1"
   },
   "scripts": {
+    "list-core-packages": "node ./generators/packages-listing/script.js",
     "generate-history": "node ./generators/changelog/script.js",
-    "build": "npm run generate-history && jsdoc/jsdoc.sh && chexo @meteorjs/meteor-hexo-config -- generate",
+    "build": "npm run list-core-packages && npm run generate-history && jsdoc/jsdoc.sh && chexo @meteorjs/meteor-hexo-config -- generate",
     "clean": "hexo clean; rm data/data.js data/names.json",
     "test": "npm run clean; npm run build",
     "predeploy": "npm run build",

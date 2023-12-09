@@ -89,6 +89,7 @@ sidebar_categories:
     - packages/underscore
     - packages/url
     - packages/webapp
+    - packages/packages-listing
   Command Line:
     - commandline
     - environment-variables
