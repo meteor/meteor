@@ -109,63 +109,70 @@ async function maybeWaitForDebuggerToAttach() {
   }
 }
 
-// Read all the source maps into memory once.
-serverJson.load.forEach(function (fileInfo) {
-  if (fileInfo.sourceMap) {
-    var rawSourceMap = fs.readFileSync(
-      path.resolve(serverDir, fileInfo.sourceMap), 'utf8');
-    // Parse the source map only once, not each time it's needed. Also remove
-    // the anti-XSSI header if it's there.
-    var parsedSourceMap = JSON.parse(rawSourceMap.replace(/^\)\]\}'/, ''));
-    // source-map-support doesn't ever look at the sourcesContent field, so
-    // there's no point in keeping it in memory.
-    delete parsedSourceMap.sourcesContent;
-    var url;
-    if (fileInfo.sourceMapRoot) {
-      // Add the specified root to any root that may be in the file.
-      parsedSourceMap.sourceRoot = path.join(
-        fileInfo.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+function loadSourceMap() {
+  serverJson.load.forEach(function (fileInfo) {
+    if (fileInfo.sourceMap) {
+      const rawSourceMap = fs.readFileSync(
+          path.resolve(serverDir, fileInfo.sourceMap), 'utf8');
+      // Parse the source map only once, not each time it's needed. Also remove
+      // the anti-XSSI header if it's there.
+      const parsedSourceMap = JSON.parse(rawSourceMap.replace(/^\)\]\}'/, ''));
+      // source-map-support doesn't ever look at the sourcesContent field, so
+      // there's no point in keeping it in memory.
+      delete parsedSourceMap.sourcesContent;
+      if (fileInfo.sourceMapRoot) {
+        // Add the specified root to any root that may be in the file.
+        parsedSourceMap.sourceRoot = path.join(
+            fileInfo.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+      }
+      parsedSourceMaps[path.resolve(__dirname, fileInfo.path)] = parsedSourceMap;
     }
-    parsedSourceMaps[path.resolve(__dirname, fileInfo.path)] = parsedSourceMap;
-  }
-});
+  });
 
-function retrieveSourceMap(pathForSourceMap) {
-  if (hasOwn.call(parsedSourceMaps, pathForSourceMap)) {
-    return { map: parsedSourceMaps[pathForSourceMap] };
+  function retrieveSourceMap(pathForSourceMap) {
+    if (hasOwn.call(parsedSourceMaps, pathForSourceMap)) {
+      return {map: parsedSourceMaps[pathForSourceMap]};
+    }
+    return null;
   }
-  return null;
+
+  const origWrapper = sourcemap_support.wrapCallSite;
+  const wrapCallSite = function (frameParam) {
+    const frame = origWrapper(frameParam);
+    const wrapGetter = function (name) {
+      const origGetter = frame[name];
+      frame[name] = function (arg) {
+        // replace a custom location domain that we set for better UX in Chrome
+        // DevTools (separate domain group) in source maps.
+        var source = origGetter(arg);
+        if (!source)
+          return source;
+        return source.replace(/(^|\()meteor:\/\/..app\//, '$1');
+      };
+    };
+    wrapGetter('getScriptNameOrSourceURL');
+    wrapGetter('getEvalOrigin');
+
+    return frame;
+  };
+  sourcemap_support.install({
+    // Use the source maps specified in program.json instead of parsing source
+    // code for them.
+    retrieveSourceMap: retrieveSourceMap,
+    // For now, don't fix the source line in uncaught exceptions, because we
+    // haven't fixed handleUncaughtExceptions in source-map-support to properly
+    // locate the source files.
+    handleUncaughtExceptions: false,
+    wrapCallSite: wrapCallSite
+  });
 }
 
-var origWrapper = sourcemap_support.wrapCallSite;
-var wrapCallSite = function (frame) {
-  var frame = origWrapper(frame);
-  var wrapGetter = function (name) {
-    var origGetter = frame[name];
-    frame[name] = function (arg) {
-      // replace a custom location domain that we set for better UX in Chrome
-      // DevTools (separate domain group) in source maps.
-      var source = origGetter(arg);
-      if (! source)
-        return source;
-      return source.replace(/(^|\()meteor:\/\/..app\//, '$1');
-    };
-  };
-  wrapGetter('getScriptNameOrSourceURL');
-  wrapGetter('getEvalOrigin');
-
-  return frame;
-};
-sourcemap_support.install({
-  // Use the source maps specified in program.json instead of parsing source
-  // code for them.
-  retrieveSourceMap: retrieveSourceMap,
-  // For now, don't fix the source line in uncaught exceptions, because we
-  // haven't fixed handleUncaughtExceptions in source-map-support to properly
-  // locate the source files.
-  handleUncaughtExceptions: false,
-  wrapCallSite: wrapCallSite
-});
+// Read all the source maps into memory once.
+if (!process.env.DISABLE_SOURCE_MAP) {
+  loadSourceMap();
+} else {
+  console.log(`DISABLE_SOURCE_MAP was informed so source-map is disabled.`);
+}
 
 // As a replacement to the old keepalives mechanism, check for a running
 // parent every few seconds. Exit if the parent is not running.
