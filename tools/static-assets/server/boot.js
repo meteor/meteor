@@ -183,7 +183,9 @@ function tryLoadSourceMap() {
 }
 
 // Read all the source maps into memory once.
-tryLoadSourceMap();
+if(!process.env.DISABLE_SOURCE_MAP) {
+  tryLoadSourceMap();
+}
 
 // As a replacement to the old keepalives mechanism, check for a running
 // parent every few seconds. Exit if the parent is not running.
