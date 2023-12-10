@@ -8,8 +8,7 @@ Npm.depends({
 });
 
 Package.onUse(api => {
-  api.use('ecmascript');
-  api.use('underscore', 'server');
+  api.use(['ecmascript', 'utilities']);
   api.mainModule('generator.js', 'server');
   api.export('Boilerplate', 'server');
 });
