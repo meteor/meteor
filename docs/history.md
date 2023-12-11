@@ -10,7 +10,7 @@
 
 
 
-## v2.14.0, 2023-10-XX
+## v2.14.0, 2023-12-XX
 
 ### Highlights
 
@@ -34,18 +34,20 @@ Hacktoberfest release! 🎉
 
 * `meteor create` command is now interactive!
 
+* Added `firstRunPromise` property to `Tracker` autorun blocks, that forces autorun blocks to be executed in synchronous-looking order by storing the value autorun promise thus making it awaitable.
+
 #### Migration Steps
 
 ##### Android splash screen
-If you have been using `splash-screen` for Cordova, you need to update your code as Android changed their splash screen API, 
-the `cordova-plugin-splashscreen` is now on `cordova-android` core, so we have removed the dependency from the `splash-screen` 
+If you have been using `splash-screen` for Cordova, you need to update your code as Android changed their splash screen API,
+the `cordova-plugin-splashscreen` is now on `cordova-android` core, so we have removed the dependency from the `splash-screen`
 package. As a result we are dropping the support for dark mode splash screen on Android.
 
 To create this now you need to create two themes on your `config.xml` file.
 
->  Note that it's still possible to have it by adding the according themes with App.appendToConfig and App.addResourceFile - but this is not something Meteor will do automagically right now.
+>  Note that it's still possible to have it by adding the according themes with App.appendToConfig and App.addResourceFile - but this is not something Meteor will do automatically right now.
 
-TODO: @matheusccastroo sample on how the new config should look and link to relevant Cordova docs 
+For more information you can check our [Migration Guide](https://guide.meteor.com/2.14-migration.html)
 
 ## Breaking Changes
 
@@ -67,7 +69,7 @@ TODO: @matheusccastroo sample on how the new config should look and link to rele
   - Updated `semver` to v7.5.4
   - Updated `@meteorjs/babel` to v7.18.4
   - Cordova has been updated to v12.0.1 for Android and v7.0.1 for iOS
-  - `meteor create` command was re-made to be more interactive 
+  - `meteor create` command was re-made to be more interactive
 
 ## Meteor Version Release
 
@@ -108,8 +110,14 @@ TODO: @matheusccastroo sample on how the new config should look and link to rele
   - Allow setting `DISABLE_SOCKJS_CORS` to prevent SockJS from setting CORS headers
   - Added new publication strategy `NO_MERGE_MULTI`
 
+* `ecmascript@0.16.8`:
+  - Bumped to get latest version of `@babel/compiler`
+
 * `facebook-oauth@1.11.3`:
   - Updated default version of Facebook GraphAPI to v17
+
+* `launch-screen@2.0.0`
+  - Removed `cordova-plugin-splashscreen` dependency
 
 * `fetch@0.1.4`:
   - Update `node-fetch` to version 1.6.12
@@ -117,32 +125,33 @@ TODO: @matheusccastroo sample on how the new config should look and link to rele
 
 * `logging@1.3.3`:
   - Added TS types
+  - Updated `chalk` to v4.1.2
+
+* `logic-solver@2.0.9`
+  - Removed Underscore dependency
 
 * `meteor@1.11.4`:
   - Improve TS types
 
+* `mobile-experience@1.1.1`:
+  - Bumped to get latests version of `cordova` dependencies
+
 * `modern-browsers@0.1.10`
   - Added `appleMail` user agent to allow modern bundle on iPads
 
+* `modules@0.20.0`
+  - Updated version of reify to v0.24.1
+
 * `mongo@1.16.8`
-  - Added deprecation messages into type definitions 
+  - Added deprecation messages into type definitions
   - Fix ObjectIDs handling in oplogV2V1Converter
 
-* `modules@0.20.0`
-  - Updated `@meteorjs/babel` to v7.18.4
-
 * `npm-mongo@4.17.0`:
-  - Bumped MongoDB driver to version 4.17
+  - Bumped MongoDB driver to version 4.17.2
 
 * `oauth@2.2.1`
   - Indexes are now created asynchronously
-  - `remove` DB calls migrated to `removeAsync
-
-* `launch-screen@2.0.0`
-  - Removed `cordova-plugin-splashscreen` dependency
-
-* `logic-solver@2.0.8`
-  - Removed Underscore dependency
+  - `remove` DB calls migrated to `removeAsync`
 
 * `package-version-parser@3.2.2`
   - Updated `semver` to v7.5.4
@@ -157,13 +166,26 @@ TODO: @matheusccastroo sample on how the new config should look and link to rele
 * `socket-stream-client@0.5.2`
   - Removed Underscore dependency
 
+* `standard-minifier-css@1.9.2`
+  - Updated `@babel/runtime` to v7.23.5
+  - Updated `minifier-css` to v1.6.4
+  - Updated `logging` package to v1.3.2
+
 * `test-server-tests-in-console-once@1.0.12`
   - Removed Underscore dependency
 
 * `tinytest@1.2.3`
   - Removed Underscore dependency
 
-* `webapp@1.13.5`
+* `tracker@1.3.3`
+  - Added `firstRunPromise` property, that forces autorun blocks to be executed
+   in synchronous-looking order by storing the value autorun promise
+    thus making it awaitable
+
+* `typescript@4.9.5`:
+  - Updated to 4.9.5
+
+* `webapp@1.13.6`
   - Updated `cordova-plugin-meteor-webapp` to v2.0.3
   - Updated `cookie-parser` to v1.4.6
   - Updated `send` to v0.18.0
@@ -178,7 +200,7 @@ TODO: @matheusccastroo sample on how the new config should look and link to rele
   - Remove logging request/response in google_server
 
 * NPM `@meteorjs/babel@7.18.4`
-  - Updated `@meteorjs/reify` to v0.24.1 
+  - Updated `@meteorjs/reify` to v0.24.1
 
 * NPM `@meteorjs/babel-preset-meteor@7.10.1`
   - Add Facebook in-app browser
