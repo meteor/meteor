@@ -16,7 +16,7 @@
 
 Hacktoberfest release! 🎉
 
-* MongoDB driver has been updated to v4.17.0
+* MongoDB driver has been updated to v4.17.2.
 
 * You can now set `DISABLE_SOCKJS_CORS=1` if you want to prevent SockJS from setting CORS headers. Do not set this option if you will have DDP clients from other origins connecting to the DDP server. [PR](https://github.com/meteor/meteor/pull/12789)
 
@@ -30,7 +30,7 @@ Hacktoberfest release! 🎉
 
 * Many packages had their underscore dependency removed.
 
-* Cordova has been updated to v12.0.1 for Android and v7.0.1 for iOS
+* Cordova has been updated to v12.0.1 for Android and v7.0.1 for iOS, being able to build to SDK 33.
 
 * `meteor create` command is now interactive!
 
@@ -55,8 +55,9 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
 
 ## Docs
 
-- Added guide on (how to prepare for Meteor 3.0 migration)[https://guide.meteor.com/prepare-meteor-3.0].
-- Added guide on (performance improvements)[https://guide.meteor.com/performance-improvement].
+- Added guide on [how to prepare for Meteor 3.0 migration](https://guide.meteor.com/prepare-meteor-3.0).
+- Added guide on [performance improvements](https://guide.meteor.com/performance-improvement).
+- Added FAQ about [Meteor 3](https://guide.meteor.com/3.0-migration).
 
 ##  Internal API changes
 
@@ -68,7 +69,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
   - Fixed bugs in negated “in” and “instanceof” expressions
   - Updated `semver` to v7.5.4
   - Updated `@meteorjs/babel` to v7.18.4
-  - Cordova has been updated to v12.0.1 for Android and v7.0.1 for iOS
+  - Cordova has been updated to v12.0.1 for Android and v7.0.1 for iOS, being able to build to SDK 33.
   - `meteor create` command was re-made to be more interactive
 
 ## Meteor Version Release
@@ -146,7 +147,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
   - Added deprecation messages into type definitions
   - Fix ObjectIDs handling in oplogV2V1Converter
 
-* `npm-mongo@4.17.0`:
+* `npm-mongo@4.17.2`:
   - Bumped MongoDB driver to version 4.17.2
 
 * `oauth@2.2.1`
