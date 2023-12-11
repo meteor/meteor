@@ -1,6 +1,6 @@
 Package.describe({
   summary: "(Deprecated) Include a standard set of Meteor packages in your app",
-  version: '1.2.8-rc2140.1',
+  version: '1.2.8-rc2140.2',
   deprecated: true,
   documentation: 'README.md'
 });

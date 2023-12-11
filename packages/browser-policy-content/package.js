@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Configure content security policies",
-  version: "1.1.3-rc2140.1"
+  version: "1.1.3-rc2140.2"
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "General satisfiability solver for logic problems",
-  version: '2.0.9-rc2140.1'
+  version: '2.0.9-rc2140.2'
 });
 
 Npm.depends({
