@@ -1,0 +1,8 @@
+{
+  "name": "meteor-synced-cron",
+  "description": "Meteor package for SyncedCron. package.json only to install prettier",
+  "version": "1.0.0",
+  "devDependencies": {
+    "prettier": "^3.0.3"
+  }
+}

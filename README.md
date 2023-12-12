@@ -2,20 +2,20 @@
 
 A simple cron system for [Meteor](http://meteor.com). It supports syncronizing jobs between multiple processes. In other words, if you add a job that runs every hour and your deployment consists of multiple app servers, only one of the app servers will execute the job each time (whichever tries first).
 
-## Migrated from percolate:synced-cron littledata:synced-cron
+## Migrated from littledata:synced-cron
 
-Since the original creator of the project could no longer maintain it, we had to migrate the package to another organisation to allow further maintenance and updates.
+Quave version is compatible with Meteor 3.0 and forward.
 
 To migrate you can simply run
 
 ``` sh
-$ meteor remove percolate:synced-cron && meteor add littledata:synced-cron
+$ meteor remove littledata:synced-cron && meteor add quave:synced-cron
 ```
 
 ## Installation
 
 ``` sh
-$ meteor add littledata:synced-cron
+$ meteor add quave:synced-cron
 ```
 
 ## API
@@ -24,7 +24,7 @@ $ meteor add littledata:synced-cron
 
 To write a cron job, give it a unique name, a schedule and a function to run like below. SyncedCron uses the fantastic [later.js](http://bunkat.github.io/later/) library behind the scenes. A Later.js `parse` object is passed into the schedule call that gives you a huge amount of flexibility for scheduling your jobs, see the [documentation](http://bunkat.github.io/later/parsers.html#overview).
 
-``` js
+```js
 SyncedCron.add({
   name: 'Crunch some important numbers for the marketing department',
   schedule: function(parser) {
@@ -32,8 +32,7 @@ SyncedCron.add({
     return parser.text('every 2 hours');
   },
   job: function() {
-    var numbersCrunched = CrushSomeNumbers();
-    return numbersCrunched;
+    crushSomeNumbers();
   }
 });
 ```
@@ -109,7 +108,7 @@ SyncedCron uses Meteor's `logging` package by default. If you want to use your o
 SyncedCron expects a function as `logger`, and will pass arguments to it for you to take action on.
 
 ```js
-var MyLogger = function(opts) {
+const MyLogger = function(opts) {
   console.log('Level', opts.level);
   console.log('Message', opts.message);
   console.log('Tag', opts.tag);
@@ -141,9 +140,3 @@ Write some code. Write some tests. To run the tests, do:
 ``` sh
 $ meteor test-packages ./
 ```
-
-## License
-
-MIT. (c) Percolate Studio, originally designed and built by Zoltan Olah (@zol), now community maintained.
-
-Synced Cron was developed as part of the [Verso](http://versoapp.com) project.
