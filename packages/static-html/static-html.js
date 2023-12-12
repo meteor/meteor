@@ -1,22 +1,24 @@
+import { CachingHtmlCompiler, scanHtmlForTags, throwCompileError } from 'meteor/static-html-tools';
+
 Plugin.registerCompiler({
   extensions: ['html'],
   archMatching: 'web',
   isTemplate: true
-}, () => new CachingHtmlCompiler("static-html", TemplatingTools.scanHtmlForTags, compileTagsToStaticHtml));
+}, () => new CachingHtmlCompiler("static-html", scanHtmlForTags, compileTagsToStaticHtml));
 
 // Same API as TutorialTools.compileTagsWithSpacebars, but instead of compiling
 // with Spacebars, it just returns static HTML
 function compileTagsToStaticHtml(tags) {
-  var handler = new StaticHtmlTagHandler();
+  const handler = new StaticHtmlTagHandler();
 
   tags.forEach((tag) => {
     handler.addTagToResults(tag);
   });
 
   return handler.getResults();
-};
+}
 
-var isEmpty = obj => [Object, Array].includes((obj || {}).constructor) && !Object.entries((obj || {})).length;
+const isEmpty = obj => [Object, Array].includes((obj || {}).constructor) && !Object.entries((obj || {})).length;
 
 class StaticHtmlTagHandler {
   constructor() {
@@ -86,7 +88,7 @@ class StaticHtmlTagHandler {
   }
 
   throwCompileError(message, overrideIndex) {
-    TemplatingTools.throwCompileError(this.tag, message, overrideIndex);
+    throwCompileError(this.tag, message, overrideIndex);
   }
 }
 
