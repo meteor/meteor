@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const HEADER_TEMPLATE = `
 ---
 title: Core Package Listing
@@ -33,9 +33,9 @@ const IGNORED = [
   'depracated',
   'non-core'
 ];
-const getPackages = () => {
+const getPackages = async () => {
   const packages =
-  fs.readdirSync('../packages', { withFileTypes: true })
+  (await fs.readdir('../packages', { withFileTypes: true }))
     .filter(dirent => dirent.isDirectory())
     .map(dirent => dirent.name)
     .filter(name => !IGNORED.includes(name))
@@ -55,13 +55,13 @@ const generateMarkdown = (packages) =>
 
 
 
-function main() {
+async function main() {
   console.log("🚂 Started listing 🚂");
-  const packages = getPackages();
+  const packages = await getPackages();
   const markdown = generateMarkdown(packages);
   const content = HEADER_TEMPLATE + markdown;
   console.log("📝 Writing to file 📝");
-  fs.writeFileSync('./source/packages/packages-listing.md', content);
+  await fs.writeFile('./source/packages/packages-listing.md', content);
   console.log("🚀 Done 🚀");
 }
 
