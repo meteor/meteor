@@ -187,6 +187,7 @@ Options:
   --vue-2       Create a basic vue2-based app.
   --apollo      Create a basic apollo-based app.
   --svelte      Create a basic svelte-based app.
+  --ts-vue      Create a basic Typescript Vue3-based app.
   --typescript  Create a basic Typescript React-based app.
   --blaze       Create a basic blaze-based app.
   --tailwind    Create a basic react-based app, with tailwind configured.

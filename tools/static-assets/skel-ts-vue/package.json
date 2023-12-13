@@ -1,0 +1,37 @@
+{
+  "name": "~name~",
+  "private": true,
+  "scripts": {
+    "start": "meteor run",
+    "build": "meteor build ../output/vue --directory",
+    "test": "meteor test --once --driver-package meteortesting:mocha",
+    "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
+    "visualize": "meteor --production --extra-packages bundle-visualizer"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.17.9",
+    "meteor-node-stubs": "^1.2.1",
+    "ts-node": "^10.9.1",
+    "vue": "^3.2.45",
+    "vue-meteor-tracker": "^3.0.0-beta.7",
+    "vue-router": "^4.1.6"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.ts",
+      "server": "server/main.ts"
+    },
+    "testModule": "tests/main.ts"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/meteor": "^2.8.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.0.0",
+    "@vitejs/plugin-vue": "^3.2.0",
+    "autoprefixer": "^10.4.13",
+    "postcss": "^8.4.19",
+    "tailwindcss": "^3.2.4",
+    "vite": "^3.2.3"
+  }
+}

@@ -519,6 +519,7 @@ export const AVAILABLE_SKELETONS = [
   "full",
   "minimal",
   DEFAULT_SKELETON,
+  "ts-vue",
   "typescript",
   "vue",
   'vue-2',
@@ -542,6 +543,7 @@ main.registerCommand({
     react: { type: Boolean },
     vue: { type: Boolean },
     'vue-2': { type: Boolean },
+    'ts-vue': { type: Boolean},
     typescript: { type: Boolean },
     apollo: { type: Boolean },
     svelte: { type: Boolean },
@@ -941,6 +943,7 @@ main.registerCommand({
     cmd("meteor create --vue-2      # to create a basic Vue2-based app");
     cmd("meteor create --apollo     # to create a basic Apollo + React app");
     cmd("meteor create --svelte     # to create a basic Svelte app");
+    cmd("meteor create --ts-vue     # to create an app using TypeScript and basic Vue3-based app");
     cmd("meteor create --typescript # to create an app using TypeScript and React");
     cmd("meteor create --blaze      # to create an app using Blaze");
     cmd("meteor create --tailwind   # to create an app using React and Tailwind");
