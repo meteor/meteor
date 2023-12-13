@@ -80,7 +80,7 @@ If the initial run of an autorun throws an exception, the computation
 is automatically stopped and won't be rerun.
 
 ### Tracker.autorun and async callbacks
-`Tracker.autorun` can accept an `async` callback function.  
+`Tracker.autorun` can accept an `async` callback function.
  To preserve reactivity for the reactive variables inside the async callback function, you must use a `Tracker.withComputation` call as described below:
 
 {% apibox "Tracker.withComputation" %}
@@ -94,7 +94,7 @@ Tracker.autorun(async function example1(computation) {
 
   // Code after the first await looses Tracker.currentComputation: no reactivity.
   reactiveVar2.get(); // This won't trigger a rerun.
- 
+
   // You can bring back reactivity with the Tracker.withCompuation wrapper:
   let users = await Tracker.withComputation(computation, () => Meteor.users.findAsync({}).fetch());
 
@@ -112,7 +112,7 @@ The `react-meteor-data` package uses `Tracker.withComputation` to make the `useT
 More can be seen [here](https://github.com/meteor/react-packages/tree/master/packages/react-meteor-data#maintaining-the-reactive-context)
 
 ### Using async callbacks in versions of Meteor prior to 2.10
-`Tracker.autorun` can accept an `async` callback function.  
+`Tracker.autorun` can accept an `async` callback function.
 However, the async call back function will only be dependent on reactive functions called prior to any called functions that return a promise.
 
 Example 1 - autorun `example1()` **is not** dependent on reactive changes to the `Meteor.users` collection.  Because it is dependent on nothing reactive it will run only once:
@@ -301,6 +301,41 @@ recomputed at flush time.
 
 This property is a convenience to support the common pattern where a
 computation has logic specific to the first run.
+
+{% apibox "Tracker.Computation#firstRunPromise" %}
+
+`Computation.firstRunPromise` will be set to the result of the call of the autorun function after the initial computation has been completed. If the autorun function is an async function, it'll then contain its promise, thus making the completion of the execution await-able. That allows us to manually synchronize autoruns like this:
+
+```js
+
+await Tracker.autorun(async () => {
+  await Meteor.userAsync();
+  (...more async code...)
+}).firstRunPromise;
+
+await Tracker.autorun(async () => {
+  await asyncSomeOrOther();
+  (...more async code...)
+}).firstRunPromise;
+
+```
+
+For a better developer experience `firstRunPromise` is automatically appended to your async `autorun` calls so you don't have to write them yourself. Meaning this also works:
+
+```js
+
+await Tracker.autorun(async () => {
+  await Meteor.userAsync();
+  (...more async code...)
+});
+
+await Tracker.autorun(async () => {
+  await asyncSomeOrOther();
+  (...more async code...)
+});
+
+```
+
 
 <h2 id="tracker_dependency"><span>Tracker.Dependency</span></h2>
 

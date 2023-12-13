@@ -1,21 +1,21 @@
 Package.describe({
   summary: 'Serves a Meteor app over HTTP',
-  version: '1.13.5',
+  version: '1.13.6',
 });
 
 Npm.depends({
   'basic-auth-connect': '1.0.0',
-  'cookie-parser': '1.4.5',
+  'cookie-parser': '1.4.6',
   connect: '3.7.0',
   compression: '1.7.4',
   errorhandler: '1.5.1',
   parseurl: '1.3.3',
-  send: '0.17.1',
-  'stream-to-string': '1.2.0',
-  qs: '6.10.1',
+  send: '0.18.0',
+  'stream-to-string': '1.2.1',
+  qs: '6.11.2',
   useragent: '2.3.0',
   '@vlasky/whomst': '0.1.7',
-  '@types/connect': '3.4.35',
+  '@types/connect': '3.4.38',
 });
 
 Npm.strip({
@@ -25,7 +25,7 @@ Npm.strip({
 
 // whitelist plugin is now included in the core
 Cordova.depends({
-  'cordova-plugin-meteor-webapp': '2.0.0',
+  'cordova-plugin-meteor-webapp': '2.0.3',
 });
 
 Package.onUse(function(api) {

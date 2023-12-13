@@ -1,7 +1,7 @@
 const path = require('path');
 const os = require('os');
 
-const METEOR_LATEST_VERSION = '2.13.3';
+const METEOR_LATEST_VERSION = '2.14';
 const sudoUser = process.env.SUDO_USER || '';
 function isRoot() {
   return process.getuid && process.getuid() === 0;
