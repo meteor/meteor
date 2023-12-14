@@ -27,7 +27,7 @@ export default defineConfig({
     ],
 
     socialLinks: [{ icon: "github", link: "https://github.com/meteor/meteor" }],
-    logo: "/meteor-logo.png",
+    logo: "/meteor.png",
     search: {
       provider: "local",
     },

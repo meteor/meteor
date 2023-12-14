@@ -7,7 +7,7 @@ hero:
   text: "All api and examples in one place"
   tagline: "Learn about Meteor.js API and how to use it in your application"
   image:
-    src: /meteor-logo.png
+    src: /logo.png
     alt: Meteor
   actions:
     - theme: brand
