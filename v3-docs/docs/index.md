@@ -12,7 +12,7 @@ hero:
   actions:
     - theme: brand
       text: Api Doc
-      link: /api-sitemap
+      link: /api
     - theme: alt
       text: API Examples
       link: /api-examples
