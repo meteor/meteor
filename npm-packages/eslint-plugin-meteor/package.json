@@ -21,7 +21,7 @@
     "rule": "node scripts/new-rule.js",
     "test": "npm run unit-test && npm run coverage:report && npm run coverage:check",
     "unit-test": "nyc --reporter=lcov mocha tests --recursive",
-    "unit-test:watch": "npm run unit-test -s -- --watch"
+    "unit-test:watch": "npm run unit-test -s -- --watch -g no-sync-mongo-methods-on-server"
   },
   "files": [
     "LICENSE",
@@ -38,16 +38,21 @@
     "invariant": "2.2.4"
   },
   "devDependencies": {
+    "@types/eslint": "^8.44.9",
     "babel-eslint": "^10.1.0",
+    "babel-plugin-module-resolver": "^5.0.0",
     "coveralls": "^3.1.0",
     "cz-conventional-changelog": "^3.3.0",
-    "eslint": "^7.13.0",
-    "eslint-config-prettier": "^6.15.0",
-    "eslint-plugin-prettier": "^3.1.4",
+    "eslint": "^8.55.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "meteor-babel": "^7.10.7",
     "mocha": "^8.2.1",
     "nyc": "^15.1.0",
-    "prettier": "^2.1.2",
+    "prettier": "^3.1.1",
     "readline-sync": "^1.4.10",
+    "recast": "^0.23.4",
+    "reify": "^0.20.12",
     "semantic-release": "^17.2.2",
     "validate-commit-msg": "^2.14.0"
   },

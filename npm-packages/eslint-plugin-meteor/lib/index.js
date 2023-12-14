@@ -10,6 +10,7 @@ const allRules = {
   'scope-dom-lookups': require('./rules/scope-dom-lookups'),
   'no-dom-lookup-on-created': require('./rules/no-dom-lookup-on-created'),
   'no-template-parent-data': require('./rules/no-template-parent-data'),
+  'no-sync-mongo-methods-on-server': require('./rules/no-sync-mongo-methods-on-server/no-sync-mongo-methods-on-server'),
 };
 
 module.exports = {
@@ -17,7 +18,7 @@ module.exports = {
   configs: {
     recommended: {
       parserOptions: {
-        ecmaVersion: 6,
+        ecmaVersion: 2024,
         sourceType: 'module',
         ecmaFeatures: { jsx: true },
       },
@@ -34,6 +35,7 @@ module.exports = {
         'meteor/scope-dom-lookups': 0,
         'meteor/no-dom-lookup-on-created': 0,
         'meteor/no-template-parent-data': 0,
+        'meteor/no-sync-mongo-methods-on-server': 0,
       },
     },
   },

@@ -93,8 +93,7 @@ ruleTester.run('prefix-eventmap-selectors', rule, {
       ],
     },
     {
-      code:
-        'Template.foo.events({"click .js-foo": () => {}, "click .foo": () => {}})',
+      code: 'Template.foo.events({"click .js-foo": () => {}, "click .foo": () => {}})',
       parserOptions: { ecmaVersion: 6 },
       errors: [
         {
@@ -107,8 +106,7 @@ ruleTester.run('prefix-eventmap-selectors', rule, {
     // Strict mode
     // ------------------------------------------------------------------------
     {
-      code:
-        'Template.foo.events({"click .js-foo": () => {}, "click input": () => {}})',
+      code: 'Template.foo.events({"click .js-foo": () => {}, "click input": () => {}})',
       options: ['js-', 'strict'],
       parserOptions: { ecmaVersion: 6 },
       errors: [{ message: 'Expected selector to be a class', type: 'Literal' }],

@@ -1,7 +1,7 @@
 root: true # ignore config in main folder
 
 parserOptions:
-  ecmaVersion: 6
+  ecmaVersion: 2024
   sourceType: module
 
 extends:
@@ -10,6 +10,7 @@ extends:
 env:
   node: true
   mocha: true
+  es2024: true
 
 plugins:
   - prettier

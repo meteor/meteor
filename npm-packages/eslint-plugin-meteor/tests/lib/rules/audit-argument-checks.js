@@ -43,8 +43,7 @@ ruleTester.run('audit-argument-checks', rule, {
       options: [{ checkEquivalents: ['checkId'] }],
     },
     {
-      code:
-        'Meteor.publish("foo", function (bar) { var r; r = checkId(bar); })',
+      code: 'Meteor.publish("foo", function (bar) { var r; r = checkId(bar); })',
       options: [{ checkEquivalents: ['checkId'] }],
     },
     {
@@ -132,8 +131,7 @@ ruleTester.run('audit-argument-checks', rule, {
       ],
     },
     {
-      code:
-        'Meteor.publish("foo", function (bar, baz) { check(bar, Match.Any); })',
+      code: 'Meteor.publish("foo", function (bar, baz) { check(bar, Match.Any); })',
       errors: [
         {
           message: '"baz" is not checked',
