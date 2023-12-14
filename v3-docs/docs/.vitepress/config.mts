@@ -2,27 +2,30 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Meteor API Doc",
-  description: "API doc for Meteor 3.0",
+  title: "API Docs",
+  description: "Meteor.js API docs",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: 'Home', link: '/' },
-      { text: 'API Doc', link: '/api-sitemap' }
+      { text: 'Galaxy', link: 'https://www.meteor.com/cloud' },
+      { text: 'Tutorials', link: 'https://www.meteor.com/developers/tutorials' },
+      { text: 'Guide', link: 'https://guide.meteor.com/' },
+      { text: 'API Docs', link: '/api' },
+      { text: 'Forums', link: 'https://forums.meteor.com/' },
     ],
-
     sidebar: [
       {
         text: 'Examples',
         items: [
-          { text: 'API Doc', link: '/api-sitemap' },
+          { text: 'API Reference', link: '/api' },
           { text: 'Runtime API Examples', link: '/api-examples' }
         ]
       }
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/vuejs/vitepress' }
-    ]
+      { icon: 'github', link: 'https://github.com/meteor/meteor' }
+    ],
+    logo: '/meteor-logo.png',
   }
 })
