@@ -20,7 +20,7 @@ export default defineConfig({
       {
         text: "Examples",
         items: [
-          { text: "API Reference", link: "/api" },
+          { text: "API", link: "/api" },
           { text: "Runtime API Examples", link: "/api-examples" },
         ],
       },
