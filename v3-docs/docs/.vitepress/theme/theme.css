@@ -54,10 +54,20 @@
   --vp-c-indigo-3: #5672cd;
   --vp-c-indigo-soft: rgba(100, 108, 255, 0.14);
 
+  --vp-c-blue-1: #383695;
+  --vp-c-blue-2: #3e3e9e;
+  --vp-c-blue-3: #4c4ca7;
+  --vp-c-blue-soft: rgba(100, 108, 255, 0.14);
+
   --vp-c-green-1: #18794e;
   --vp-c-green-2: #299764;
   --vp-c-green-3: #30a46c;
   --vp-c-green-soft: rgba(16, 185, 129, 0.14);
+
+  --vp-c-orange-1: #FF6A3E;
+  --vp-c-orange-2: #FF7A4D;
+  --vp-c-orange-3: #FF8A5C;
+  --vp-c-orange-soft: rgba(255, 106, 62, 0.14);
 
   --vp-c-yellow-1: #915930;
   --vp-c-yellow-2: #946300;
@@ -83,10 +93,20 @@
   --vp-c-indigo-3: #3e63dd;
   --vp-c-indigo-soft: rgba(100, 108, 255, 0.16);
 
+  --vp-c-blue-1: #4b6cb7;
+  --vp-c-blue-2: #3e4f8c;
+  --vp-c-blue-3: #36436b;
+  --vp-c-blue-soft: rgba(100, 108, 255, 0.16);
+
   --vp-c-green-1: #3dd68c;
   --vp-c-green-2: #30a46c;
   --vp-c-green-3: #298459;
   --vp-c-green-soft: rgba(16, 185, 129, 0.16);
+
+  --vc-c-orange-1: #ff7e17;
+  --vc-c-orange-2: #e66c00;
+  --vc-c-orange-3: #b35e00;
+  --vc-c-orange-soft: rgba(255, 126, 23, 0.16);
 
   --vp-c-yellow-1: #f9b44e;
   --vp-c-yellow-2: #da8b17;
@@ -202,10 +222,10 @@
   --vp-c-default-3: var(--vp-c-gray-3);
   --vp-c-default-soft: var(--vp-c-gray-soft);
 
-  --vp-c-brand-1: var(--vp-c-indigo-1);
-  --vp-c-brand-2: var(--vp-c-indigo-2);
-  --vp-c-brand-3: var(--vp-c-indigo-3);
-  --vp-c-brand-soft: var(--vp-c-indigo-soft);
+  --vp-c-brand-1: var(--vp-c-orange-1);
+  --vp-c-brand-2: var(--vp-c-orange-2);
+  --vp-c-brand-3: var(--vp-c-orange-3);
+  --vp-c-brand-soft: var(--vp-c-blue-soft);
 
   /* DEPRECATED: Use `--vp-c-brand-1` instead. */
   --vp-c-brand: var(--vp-c-brand-1);
@@ -341,13 +361,13 @@
 :root {
   --vp-button-brand-border: transparent;
   --vp-button-brand-text: var(--vp-c-white);
-  --vp-button-brand-bg: var(--vp-c-brand-3);
+  --vp-button-brand-bg: var(--vp-c-blue-3);
   --vp-button-brand-hover-border: transparent;
   --vp-button-brand-hover-text: var(--vp-c-white);
-  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-hover-bg: var(--vp-c-blue-2);
   --vp-button-brand-active-border: transparent;
   --vp-button-brand-active-text: var(--vp-c-white);
-  --vp-button-brand-active-bg: var(--vp-c-brand-1);
+  --vp-button-brand-active-bg: var(--vp-c-blue-1);
 
   --vp-button-alt-border: transparent;
   --vp-button-alt-text: var(--vp-c-text-1);
