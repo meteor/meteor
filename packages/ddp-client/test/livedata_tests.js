@@ -414,7 +414,6 @@ testAsyncMulti("livedata - compound methods", [
       // .stubPromise is undefined.
       // promise does not have a stubPromise property.
       await promise.stubPromise;
-      await Meteor._sleepForMs(0);
       await checkBalances(test, -10, 160);
     }
 

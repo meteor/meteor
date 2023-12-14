@@ -571,7 +571,7 @@ export class Connection {
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
    * @returns {Promise}
    */
-  async callAsync(name /* .. [arguments] .. */) {
+  callAsync(name /* .. [arguments] .. */) {
     const args = slice.call(arguments, 1);
     if (args.length && typeof args[args.length - 1] === 'function') {
       throw new Error(
@@ -627,18 +627,25 @@ export class Connection {
     * */
     DDP._CurrentMethodInvocation._set();
     DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
+    let applyAsyncPromise = {};
     const promise = new Promise((resolve, reject) => {
       DDP._CurrentCallAsyncInvocation._set({ name, hasCallAsyncParent: true });
-      this.applyAsync(name, args, { isFromCallAsync: true, ...options })
-        .then(resolve)
+      const p = this.applyAsync(name, args, { isFromCallAsync: true, ...options })
+      p.then(resolve)
         .catch(reject)
         .finally(() => {
           DDP._CurrentCallAsyncInvocation._set();
         });
+      applyAsyncPromise = p;
     });
-    return promise.finally(() =>
-      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
+
+    promise.stubPromise = applyAsyncPromise.stubPromise;
+    promise.serverPromise = applyAsyncPromise.serverPromise;
+
+    promise.finally(() =>
+      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false),
     );
+    return promise;
   }
 
   /**
@@ -694,7 +701,26 @@ export class Connection {
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    */
-  async applyAsync(name, args, options, callback = null) {
+  applyAsync(name, args, options, callback = null) {
+    const stubPromise = this._applyAsyncStubInvocation(name, args, options);
+
+    const promise = this._applyAsync({
+      name,
+      args,
+      options,
+      callback,
+      stubPromise,
+    });
+    // only return the stubReturnValue
+    promise.stubPromise = stubPromise.then(o => o.stubReturnValue);
+    // this avoids attribute recursion
+    promise.serverPromise = new Promise((resolve, reject) =>
+      promise.then(resolve).catch(reject),
+    );
+
+    return promise;
+  }
+  async _applyAsyncStubInvocation(name, args, options) {
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args), options);
     if (stubOptions.hasStub) {
       if (
@@ -728,6 +754,10 @@ export class Connection {
         stubOptions.exception = e;
       }
     }
+    return stubOptions;
+  }
+  async _applyAsync({ name, args, options, callback, stubPromise }) {
+    const stubOptions = await stubPromise;
     return this._apply(name, stubOptions, args, options, callback);
   }
 
@@ -894,18 +924,6 @@ export class Connection {
       // You can opt-in in getting the local result by running:
       // const { stubPromise, serverPromise } = Meteor.callAsync(...);
       // const whatServerDid = await serverPromise;
-      future.serverPromise = future;
-      // const whatClientDid = await stubPromise;
-      future.stubPromise = stubReturnValue;
-
-      if (options.returnServerPromise) {
-        return future;
-      }
-
-      if (options.returnStubValue) {
-        return future.then(() => stubReturnValue);
-      }
-
       return future;
     }
     return options.returnStubValue ? stubReturnValue : undefined;
