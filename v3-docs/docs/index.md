@@ -3,9 +3,12 @@
 layout: home
 
 hero:
-  name: "Meteor API Doc"
-  text: "API doc for Meteor 3.0"
-  tagline: My great project tagline
+  name: "Meteor API Docs"
+  text: "All api and examples in one place"
+  tagline: "Learn about Meteor.js API and how to use it in your application"
+  image:
+    src: /meteor-logo.png
+    alt: Meteor
   actions:
     - theme: brand
       text: Api Doc
