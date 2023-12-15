@@ -31,5 +31,11 @@ export default defineConfig({
     search: {
       provider: "local",
     },
+    footer: {
+      message:
+        'Released under the <a href="https://github.com/meteor/meteor?tab=License-1-ov-file#readme">MIT License</a>.',
+      copyright:
+        'Copyright (c) 2011 - present <a href="https://www.meteor.com/">Meteor Software</a>.',
+    },
   },
 });
