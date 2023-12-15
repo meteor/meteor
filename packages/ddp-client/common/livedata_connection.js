@@ -635,6 +635,7 @@ export class Connection {
         .catch(reject)
         .finally(() => {
           DDP._CurrentCallAsyncInvocation._set();
+          DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false);
         });
       applyAsyncPromise = p;
     });
@@ -642,9 +643,6 @@ export class Connection {
     promise.stubPromise = applyAsyncPromise.stubPromise;
     promise.serverPromise = applyAsyncPromise.serverPromise;
 
-    promise.finally(() =>
-      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false),
-    );
     return promise;
   }
 
@@ -711,13 +709,14 @@ export class Connection {
       callback,
       stubPromise,
     });
-    // only return the stubReturnValue
-    promise.stubPromise = stubPromise.then(o => o.stubReturnValue);
-    // this avoids attribute recursion
-    promise.serverPromise = new Promise((resolve, reject) =>
-      promise.then(resolve).catch(reject),
-    );
-
+    if (Meteor.isClient) {
+      // only return the stubReturnValue
+      promise.stubPromise = stubPromise.then(o => o.stubReturnValue);
+      // this avoids attribute recursion
+      promise.serverPromise = new Promise((resolve, reject) =>
+        promise.then(resolve).catch(reject),
+      );
+    }
     return promise;
   }
   async _applyAsyncStubInvocation(name, args, options) {
