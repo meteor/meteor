@@ -3,11 +3,10 @@
 layout: home
 
 hero:
-  name: "Meteor"
   text: "The full-stack JavaScript platform"
   tagline: "Stop fighting with frameworks and start shipping real apps"
   image:
-    src: /logo.png
+    src: /meteor-logo.png
     alt: Meteor
   actions:
     - theme: brand
