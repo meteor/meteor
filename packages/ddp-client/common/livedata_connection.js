@@ -579,71 +579,7 @@ export class Connection {
       );
     }
 
-    const applyOptions = ['returnStubValue', 'returnServerResultPromise', 'returnServerPromise'];
-    const defaultOptions = {
-      returnServerResultPromise: true,
-    };
-    const options = {
-      ...defaultOptions,
-      ...(applyOptions.some(o => args[0]?.hasOwnProperty(o))
-        ? args.shift()
-        : {}),
-    };
-
-    const invocation = DDP._CurrentCallAsyncInvocation.get();
-
-    if (invocation?.hasCallAsyncParent) {
-      return this.applyAsync(name, args, { ...options, isFromCallAsync: true });
-    }
-
-    /*
-    * This is necessary because when you call a Promise.then, you're actually calling a bound function by Meteor.
-    *
-    * This is done by this code https://github.com/meteor/meteor/blob/17673c66878d3f7b1d564a4215eb0633fa679017/npm-packages/meteor-promise/promise_client.js#L1-L16. (All the logic below can be removed in the future, when we stop overwriting the
-    * Promise.)
-    *
-    * When you call a ".then()", like "Meteor.callAsync().then()", the global context (inside currentValues)
-    * will be from the call of Meteor.callAsync(), and not the context after the promise is done.
-    *
-    * This means that without this code if you call a stub inside the ".then()", this stub will act as a simulation
-    * and won't reach the server.
-    *
-    * Inside the function _getIsSimulation(), if isFromCallAsync is false, we continue to consider just the
-    * alreadyInSimulation, otherwise, isFromCallAsync is true, we also check the value of callAsyncMethodRunning (by
-    * calling DDP._CurrentMethodInvocation._isCallAsyncMethodRunning()).
-    *
-    * With this, if a stub is running inside a ".then()", it'll know it's not a simulation, because callAsyncMethodRunning
-    * will be false.
-    *
-    * DDP._CurrentMethodInvocation._set() is important because without it, if you have a code like:
-    *
-    * Meteor.callAsync("m1").then(() => {
-    *   Meteor.callAsync("m2")
-    * })
-    *
-    * The call the method m2 will act as a simulation and won't reach the server. That's why we reset the context here
-    * before calling everything else.
-    *
-    * */
-    DDP._CurrentMethodInvocation._set();
-    DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
-    let applyAsyncPromise = {};
-    const promise = new Promise((resolve, reject) => {
-      DDP._CurrentCallAsyncInvocation._set({ name, hasCallAsyncParent: true });
-      const p = this.applyAsync(name, args, { isFromCallAsync: true, ...options })
-      p.then(resolve)
-        .catch(reject)
-        .finally(() => {
-          DDP._CurrentCallAsyncInvocation._set();
-          DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false);
-        });
-      applyAsyncPromise = p;
-    });
-
-    promise.stubPromise = applyAsyncPromise.stubPromise;
-    promise.serverPromise = applyAsyncPromise.serverPromise;
-
-    return promise;
+    return this.applyAsync(name, args, { returnServerResultPromise: true });
   }
 
   /**

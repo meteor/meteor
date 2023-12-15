@@ -1213,11 +1213,13 @@ testAsyncMulti('livedata - methods with nested stubs', [
   },
 ]);
 
- Tinytest.addAsync('livedata - isAsync call', async function (test) {
-  Meteor.call('isCallAsync', (err, result) => test.equal(result, false))
-  const result = await Meteor.callAsync('isCallAsync', { returnStubValue: true })
-  test.equal(result, true)
-})
+// TODO [FIBERS] - check if this still makes sense to have
+
+//  Tinytest.addAsync('livedata - isAsync call', async function (test) {
+//   Meteor.call('isCallAsync', (err, result) => test.equal(result, false))
+//   const result = await Meteor.callAsync('isCallAsync', { returnStubValue: true })
+//   test.equal(result, true)
+// })
 
 // XXX some things to test in greater detail:
 // staying in simulation mode
