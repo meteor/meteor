@@ -142,10 +142,10 @@
 }
 
 .dark {
-  --vp-c-bg: #1b1b1f;
-  --vp-c-bg-alt: #161618;
-  --vp-c-bg-elv: #202127;
-  --vp-c-bg-soft: #202127;
+  --vp-c-bg: #101926;
+  --vp-c-bg-alt: #0a0f1f;
+  --vp-c-bg-elv: #101926;
+  --vp-c-bg-soft: #0a0f1f;
 }
 
 /**
