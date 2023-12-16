@@ -859,6 +859,9 @@ export class Connection {
       // You can opt-in in getting the local result by running:
       // const { stubPromise, serverPromise } = Meteor.callAsync(...);
       // const whatServerDid = await serverPromise;
+      if (options.returnStubValue) {
+        return future.then(() => stubReturnValue);
+      }
       return future;
     }
     return options.returnStubValue ? stubReturnValue : undefined;
