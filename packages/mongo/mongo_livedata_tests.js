@@ -239,11 +239,10 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
 
           const callOp = async function(callback) {
             try {
-              let result;
               if (op === 'updateAsync') {
-                result = await ftc[op](arg, arg2);
+                await ftc[op](arg, arg2);
               } else {
-                result = await ftc[op](arg);
+                await ftc[op](arg);
               }
             } catch (e) {
               callback(e);
@@ -263,7 +262,6 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
 
             // This would log to console in normal operation.
             Meteor._suppress_log(1);
-            await callOp();
           }
         }
       } catch (e) {}

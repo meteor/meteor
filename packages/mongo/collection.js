@@ -889,7 +889,7 @@ Object.assign(Mongo.Collection.prototype, {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
-    //console.log({callback, options, selector, modifier, coll: this._collection});
+
     return this._collection.updateAsync(
       selector,
       modifier,

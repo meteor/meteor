@@ -1,5 +1,6 @@
 import { DDP } from '../common/namespace.js';
 import { Meteor } from 'meteor/meteor';
+import { loadAsyncStubHelpers } from "./queueStubsHelpers";
 
 // Meteor.refresh can be called on the client (if you're in common code) but it
 // only has an effect on the server.
@@ -41,6 +42,9 @@ function onDDPVersionNegotiationFailure(description) {
 Meteor.connection = DDP.connect(ddpUrl, {
   onDDPVersionNegotiationFailure: onDDPVersionNegotiationFailure
 });
+
+// Makes sure Meteor.connect is already created before injecting the helpers
+loadAsyncStubHelpers();
 
 // Proxy the public methods of Meteor.connection so they can
 // be called directly on Meteor.
