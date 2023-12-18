@@ -77,6 +77,7 @@ export function createMap(names) {
     "loggingIn",
     "main",
     "loggingOut",
+    "IterationCallback"
   ];
   Object.keys(apiList).forEach((key) => {
     if (TO_IGNORE.includes(key)) {
