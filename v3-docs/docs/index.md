@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: View API Docs
-      link: /api
+      link: /api/index
     - theme: alt
       text: View on GitHub
       link: https://github.com/meteor/meteor
