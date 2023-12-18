@@ -665,6 +665,7 @@ Object.assign(PackageSource.prototype, {
       try {
         const marked = buildmessage.markBoundary(Package._fileAndDepLoader)
         await marked(api);
+        await api._waitForAsyncWork();
       } catch (e) {
         console.log(e.stack); // XXX should we keep this here -- or do we want broken
                               // packages to fail silently?
