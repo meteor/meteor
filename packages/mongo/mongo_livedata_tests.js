@@ -3694,12 +3694,12 @@ EJSON.addType('someCustomType', function (json) {
 });
 
 testAsyncMulti('mongo-livedata - oplog - update EJSON', [
-  async function(test) {
+  async function(test, expect) {
     var self = this;
     var collectionName = 'ejson' + Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName);
-      Meteor.subscribe('c-' + collectionName);
+      await Meteor.callAsync('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName, expect());
     }
 
     self.collection = new Mongo.Collection(collectionName);
@@ -3712,7 +3712,6 @@ testAsyncMulti('mongo-livedata - oplog - update EJSON', [
         oi: self.objId,
         custom: new TestCustomType('a', 'b'),
       },
-      { returnServerResultPromise: true }
     );
   },
   async function(test, expect) {
