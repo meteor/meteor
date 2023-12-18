@@ -21,6 +21,7 @@ export default defineConfig({
         text: "Examples",
         items: [
           { text: "API", link: "/api" },
+          { text: "API Map", link: "/source/index" },
           { text: "Runtime API Examples", link: "/api-examples" },
         ],
       },
