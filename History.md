@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.6.1
+
+* Added types for async functions [#386](https://github.com/Meteor-Community-Packages/meteor-roles/pull/386) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Updated docs with async functions [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Updated `zodern:types` to v1.0.10
+
 ## v3.6.0
 
 * Added async versions of functions [#361](https://github.com/Meteor-Community-Packages/meteor-roles/pull/361) [#378](https://github.com/Meteor-Community-Packages/meteor-roles/pull/378) [@bratelefant](https://github.com/bratelefant) [@storytellercz](https://github.com/sponsors/StorytellerCZ) [@jankapunkt](https://github.com/sponsors/jankapunkt)
