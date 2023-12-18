@@ -20,12 +20,14 @@ watchEffect(() => {
     <br />
     <input class="search" type="text" v-model="search" />
     <div v-for="(list, api, index) in listRef" :key="index">
-      <h2>
-        {{ api }}
+      <h2 style="text-transform:capitalize;">
+        <a :href="api" style="text-decoration: none;">
+          {{ api }}
+        </a>
       </h2>
       <div v-for="(links, key) in list" :key="key">
         <h5 v-for="(link) in links" :key="link">
-          <a :href="'api/' + api + '#' + link.replace('#', '-').replace('.', '-')">
+          <a :href="api + '#' + link.replace('#', '-').replace('.', '-')">
             {{ link }}
           </a>
         </h5>
@@ -42,6 +44,15 @@ watchEffect(() => {
   border: 1px solid #ccc;
   padding: 0.5rem;
   margin-bottom: 1rem;
+}
+
+a {
+  color: var(--vp-c-text-1);
+}
+
+a:hover {
+  color: var(--vp-c-brand-1);
+  text-decoration: underline;
 }
 </style>
 
