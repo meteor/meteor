@@ -1662,7 +1662,7 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
         const testWidget = {
           name: 'Widget name',
         };
-        const insertDetails = await coll.upsertAsync(testWidget._id, testWidget, { returnStubValue: true });
+        const insertDetails = await coll.upsertAsync(testWidget._id, testWidget);
         test.equal(
           await coll.findOneAsync(insertDetails.insertedId),
           Object.assign({ _id: insertDetails.insertedId }, testWidget)
@@ -2820,7 +2820,7 @@ testAsyncMulti("mongo-livedata - specified _id", [
 // Consistent id generation tests
 async function collectionInsert (test, expect, coll, index) {
   const id = await coll.insertAsync({name: "foo"});
-  const o = await coll.findOneAsync(id);
+  const o = await coll.findOneAsync(id) || {};
   test.isTrue(_.isObject(o));
   test.equal(o.name, 'foo');
 }
@@ -2855,7 +2855,6 @@ async function collectionUpsertExisting(test, expect, coll, index) {
 async function functionCallsInsert(test, expect, coll, index) {
   const ids = await Meteor.callAsync(
     'insertObjects',
-    { returnStubValue: Meteor.isClient },
     coll._name,
     { name: 'foo' },
     1,
@@ -2876,7 +2875,6 @@ async function functionCallsUpsert(test, expect, coll, index) {
   const upsertId = '123456' + index;
   const result = await Meteor.callAsync(
     'upsertObject',
-    { returnStubValue: Meteor.isClient },
     coll._name,
     upsertId,
     {
@@ -2900,7 +2898,6 @@ async function functionCallsUpsertExisting(test, expect, coll, index) {
 
   const result = await Meteor.callAsync(
     'upsertObject',
-    { returnStubValue: Meteor.isClient },
     coll._name,
     id,
     {
@@ -2918,7 +2915,6 @@ async function functionCallsUpsertExisting(test, expect, coll, index) {
 async function functionCalls3Inserts(test, expect, coll, index) {
   const ids = await Meteor.callAsync(
     'insertObjects',
-    { returnStubValue: Meteor.isClient },
     coll._name,
     { name: 'foo' },
     3
@@ -2939,7 +2935,6 @@ async function functionCalls3Inserts(test, expect, coll, index) {
 async function functionChainInsert(test, expect, coll, index) {
   const ids = await Meteor.callAsync(
     'doMeteorCall',
-    { returnStubValue: Meteor.isClient },
     'insertObjects',
     coll._name,
     { name: 'foo' },
@@ -2961,7 +2956,6 @@ async function functionChainInsert(test, expect, coll, index) {
 async function functionChain2Insert(test, expect, coll, index) {
   const ids = await Meteor.callAsync(
     'doMeteorCall',
-    { returnStubValue: Meteor.isClient },
     'doMeteorCall',
     'insertObjects',
     coll._name,
@@ -2985,7 +2979,6 @@ async function functionChain2Upsert(test, expect, coll, index) {
   const upsertId = '123456' + index;
   const result = await Meteor.callAsync(
     'doMeteorCall',
-    { returnStubValue: Meteor.isClient },
     'doMeteorCall',
     'upsertObject',
     coll._name,
@@ -3023,7 +3016,7 @@ _.each(
               repetitions +
               ' repetitions on ' +
               collectionCount +
-              ' collections, idGeneration=' +
+              ` collections, [${fn.name}], idGeneration=` +
               idGeneration,
             [
               function(test) {

@@ -1160,7 +1160,6 @@ testAsyncMulti('livedata - methods with nested stubs', [
         const r = await self.coll.updateAsync(
           id,
           { $set: data },
-          { returnStubValue: true }
         );
         const afterUpdateData = await Meteor.callAsync('getData', id);
         return [
