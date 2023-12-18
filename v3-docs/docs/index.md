@@ -3,8 +3,8 @@
 layout: home
 
 hero:
-  text: "The full-stack JavaScript platform"
-  tagline: "Stop fighting with frameworks and start shipping real apps"
+  text: "Meteor API Docs"
+  tagline: "All the documentation you need to build and deploy your app with Meteor."
   image:
     src: /logo.png
     alt: Meteor
@@ -15,6 +15,8 @@ hero:
     - theme: alt
       text: View on GitHub
       link: https://github.com/meteor/meteor
+
+# TODO: Update with Docs features and links as they are added
 features:
   - title: Zero Config
     icon: 🛠️
