@@ -69,7 +69,7 @@ Object.assign(Roles, {
   /**
    * Create a new role.
    *
-   * @method createRole
+   * @method createRoleAsync
    * @param {String} roleName Name of role.
    * @param {Object} [options] Options:
    *   - `unlessExists`: if `true`, exception will not be thrown in the role already exists
@@ -116,7 +116,7 @@ Object.assign(Roles, {
    *
    * If the role is set for any user, it is automatically unset.
    *
-   * @method deleteRole
+   * @method deleteRoleAsync
    * @param {String} roleName Name of role.
    * @returns {Promise}
    * @static
@@ -180,7 +180,7 @@ Object.assign(Roles, {
   /**
    * Rename an existing role.
    *
-   * @method renameRole
+   * @method renameRoleAsync
    * @param {String} oldName Old name of a role.
    * @param {String} newName New name of a role.
    * @returns {Promise}
@@ -255,7 +255,7 @@ Object.assign(Roles, {
    * Previous parents are kept (role can have multiple parents). For users which have the
    * parent role set, new subroles are added automatically.
    *
-   * @method addRolesToParent
+   * @method addRolesToParentAsync
    * @param {Array|String} rolesNames Name(s) of role(s).
    * @param {String} parentName Name of parent role.
    * @returns {Promise}
@@ -271,7 +271,7 @@ Object.assign(Roles, {
   },
 
   /**
-   * @method _addRoleToParent
+   * @method _addRoleToParentAsync
    * @param {String} roleName Name of role.
    * @param {String} parentName Name of parent role.
    * @returns {Promise}
@@ -340,7 +340,7 @@ Object.assign(Roles, {
    * Other parents are kept (role can have multiple parents). For users which have the
    * parent role set, removed subrole is removed automatically.
    *
-   * @method removeRolesFromParent
+   * @method removeRolesFromParentAsync
    * @param {Array|String} rolesNames Name(s) of role(s).
    * @param {String} parentName Name of parent role.
    * @returns {Promise}
@@ -356,7 +356,7 @@ Object.assign(Roles, {
   },
 
   /**
-   * @method _removeRoleFromParent
+   * @method _removeRoleFromParentAsync
    * @param {String} roleName Name of role.
    * @param {String} parentName Name of parent role.
    * @returns {Promise}
@@ -432,12 +432,12 @@ Object.assign(Roles, {
    * Adds roles to existing roles for each user.
    *
    * @example
-   *     Roles.addUsersToRoles(userId, 'admin')
-   *     Roles.addUsersToRoles(userId, ['view-secrets'], 'example.com')
-   *     Roles.addUsersToRoles([user1, user2], ['user','editor'])
-   *     Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')
+   *     Roles.addUsersToRolesAsync(userId, 'admin')
+   *     Roles.addUsersToRolesAsync(userId, ['view-secrets'], 'example.com')
+   *     Roles.addUsersToRolesAsync([user1, user2], ['user','editor'])
+   *     Roles.addUsersToRolesAsync([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')
    *
-   * @method addUsersToRoles
+   * @method addUsersToRolesAsync
    * @param {Array|String} users User ID(s) or object(s) with an `_id` field.
    * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
    * @param {Object|String} [options] Options:
@@ -488,12 +488,12 @@ Object.assign(Roles, {
    * Replaces all existing roles with a new set of roles.
    *
    * @example
-   *     Roles.setUserRoles(userId, 'admin')
-   *     Roles.setUserRoles(userId, ['view-secrets'], 'example.com')
-   *     Roles.setUserRoles([user1, user2], ['user','editor'])
-   *     Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')
+   *     await Roles.setUserRolesAsync(userId, 'admin')
+   *     await Roles.setUserRolesAsync(userId, ['view-secrets'], 'example.com')
+   *     await Roles.setUserRolesAsync([user1, user2], ['user','editor'])
+   *     await Roles.setUserRolesAsync([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')
    *
-   * @method setUserRoles
+   * @method setUserRolesAsync
    * @param {Array|String} users User ID(s) or object(s) with an `_id` field.
    * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
    * @param {Object|String} [options] Options:
@@ -713,11 +713,11 @@ Object.assign(Roles, {
    * Remove users from assigned roles.
    *
    * @example
-   *     Roles.removeUsersFromRoles(userId, 'admin')
-   *     Roles.removeUsersFromRoles([userId, user2], ['editor'])
-   *     Roles.removeUsersFromRoles(userId, ['user'], 'group1')
+   *     await Roles.removeUsersFromRolesAsync(userId, 'admin')
+   *     await Roles.removeUsersFromRolesAsync([userId, user2], ['editor'])
+   *     await Roles.removeUsersFromRolesAsync(userId, ['user'], 'group1')
    *
-   * @method removeUsersFromRoles
+   * @method removeUsersFromRolesAsync
    * @param {Array|String} users User ID(s) or object(s) with an `_id` field.
    * @param {Array|String} roles Name(s) of roles to remove users from. Roles have to exist.
    * @param {Object|String} [options] Options:
@@ -792,17 +792,17 @@ Object.assign(Roles, {
    *
    * @example
    *     // global roles
-   *     Roles.userIsInRole(user, 'admin')
-   *     Roles.userIsInRole(user, ['admin','editor'])
-   *     Roles.userIsInRole(userId, 'admin')
-   *     Roles.userIsInRole(userId, ['admin','editor'])
+   *     await Roles.userIsInRoleAsync(user, 'admin')
+   *     await Roles.userIsInRoleAsync(user, ['admin','editor'])
+   *     await Roles.userIsInRoleAsync(userId, 'admin')
+   *     await Roles.userIsInRoleAsync(userId, ['admin','editor'])
    *
    *     // scope roles (global roles are still checked)
-   *     Roles.userIsInRole(user, 'admin', 'group1')
-   *     Roles.userIsInRole(userId, ['admin','editor'], 'group1')
-   *     Roles.userIsInRole(userId, ['admin','editor'], {scope: 'group1'})
+   *     await Roles.userIsInRoleAsync(user, 'admin', 'group1')
+   *     await Roles.userIsInRoleAsync(userId, ['admin','editor'], 'group1')
+   *     await Roles.userIsInRoleAsync(userId, ['admin','editor'], {scope: 'group1'})
    *
-   * @method userIsInRole
+   * @method userIsInRoleAsync
    * @param {String|Object} user User ID or an actual user object.
    * @param {Array|String} roles Name of role or an array of roles to check against. If array,
    *                             will return `true` if user is in _any_ role.
@@ -869,7 +869,7 @@ Object.assign(Roles, {
   /**
    * Retrieve user's roles.
    *
-   * @method getRolesForUser
+   * @method getRolesForUserAsync
    * @param {String|Object} user User ID or an actual user object.
    * @param {Object|String} [options] Options:
    *   - `scope`: name of scope to provide roles for; if not specified, global roles are returned
@@ -971,7 +971,7 @@ Object.assign(Roles, {
    *
    * Options:
    *
-   * @method getUsersInRole
+   * @method getUsersInRoleAsync
    * @param {Array|String} roles Name of role or an array of roles. If array, users
    *                             returned will have at least one of the roles
    *                             specified but need not have _all_ roles.
@@ -1095,7 +1095,7 @@ Object.assign(Roles, {
   /**
    * Deprecated. Use `getScopesForUser` instead.
    *
-   * @method getGroupsForUser
+   * @method getGroupsForUserAsync
    * @returns {Promise<Array>}
    * @static
    * @deprecated
@@ -1115,7 +1115,7 @@ Object.assign(Roles, {
   /**
    * Retrieve users scopes, if any.
    *
-   * @method getScopesForUser
+   * @method getScopesForUserAsync
    * @param {String|Object} user User ID or an actual user object.
    * @param {Array|String} [roles] Name of roles to restrict scopes to.
    *
@@ -1158,7 +1158,7 @@ Object.assign(Roles, {
    *
    * Roles assigned with a given scope are changed to be under the new scope.
    *
-   * @method renameScope
+   * @method renameScopeAsync
    * @param {String} oldName Old name of a scope.
    * @param {String} newName New name of a scope.
    * @returns {Promise}
@@ -1192,7 +1192,7 @@ Object.assign(Roles, {
    *
    * Roles assigned with a given scope are removed.
    *
-   * @method removeScope
+   * @method removeScopeAsync
    * @param {String} name The name of a scope.
    * @returns {Promise}
    * @static
@@ -1226,7 +1226,7 @@ Object.assign(Roles, {
    *
    * WARNING: If you check this on the client, please make sure all roles are published.
    *
-   * @method isParentOf
+   * @method isParentOfAsync
    * @param {String} parentRoleName The role you want to research.
    * @param {String} childRoleName The role you expect to be among the children of parentRoleName.
    * @returns {Promise}
