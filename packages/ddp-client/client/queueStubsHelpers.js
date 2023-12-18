@@ -113,52 +113,45 @@ export const loadAsyncStubHelpers = () => {
     );
   };
 
-  // TODO: Do we really need to queue apply?
-      // when we call `result = oldApply.apply(this, arguments);` we're already calling
-      // the method invoker. Here we would be calling it twice...
-      // Also some tests fail when we queue apply
-      // uncomment this code and running: TINYTEST_FILTER="consistent _id generation collectionInsert," ./meteor test-packages
-      // to see it fail.
+  let oldApply = Meteor.connection.apply;
+  Meteor.connection.apply = function () {
+    // [name, args, options]
+    let options = arguments[2] || {};
+    let wait = options.wait;
 
-  // let oldApply = Meteor.connection.apply;
-  // Meteor.connection.apply = function () {
-  //   // [name, args, options]
-  //   let options = arguments[2] || {};
-  //   let wait = options.wait;
-  //
-  //   // Apply runs the stub before synchronously returning.
-  //   //
-  //   // However, we want the server to run the methods in the original call order
-  //   // so we have to queue sending the message to the server until any previous async
-  //   // methods run.
-  //   // This does mean the stubs run in a different order than the methods on the
-  //   // server.
-  //   // TODO: can we queue Meteor.apply in some situations instead of running
-  //   // immediately?
-  //
-  //   let oldOutstandingMethodBlocks = Meteor.connection._outstandingMethodBlocks;
-  //   // Meteor only sends the method if _outstandingMethodBlocks.length is 1.
-  //   // Add a wait block to force Meteor to put the new method in a second block.
-  //   let outstandingMethodBlocks = [{ wait: true, methods: [] }];
-  //   Meteor.connection._outstandingMethodBlocks = outstandingMethodBlocks;
-  //
-  //   let result;
-  //   try {
-  //     result = oldApply.apply(this, arguments);
-  //   } finally {
-  //     Meteor.connection._outstandingMethodBlocks = oldOutstandingMethodBlocks;
-  //   }
-  //
-  //   if (outstandingMethodBlocks[1]) {
-  //     let methodInvoker = outstandingMethodBlocks[1].methods[0];
-  //
-  //     if (methodInvoker) {
-  //       queueMethodInvoker(methodInvoker, wait);
-  //     }
-  //   }
-  //
-  //   return result;
-  // };
+    // Apply runs the stub before synchronously returning.
+    //
+    // However, we want the server to run the methods in the original call order
+    // so we have to queue sending the message to the server until any previous async
+    // methods run.
+    // This does mean the stubs run in a different order than the methods on the
+    // server.
+    // TODO: can we queue Meteor.apply in some situations instead of running
+    // immediately?
+
+    let oldOutstandingMethodBlocks = Meteor.connection._outstandingMethodBlocks;
+    // Meteor only sends the method if _outstandingMethodBlocks.length is 1.
+    // Add a wait block to force Meteor to put the new method in a second block.
+    let outstandingMethodBlocks = [{ wait: true, methods: [] }];
+    Meteor.connection._outstandingMethodBlocks = outstandingMethodBlocks;
+
+    let result;
+    try {
+      result = oldApply.apply(this, arguments);
+    } finally {
+      Meteor.connection._outstandingMethodBlocks = oldOutstandingMethodBlocks;
+    }
+
+    if (outstandingMethodBlocks[1]) {
+      let methodInvoker = outstandingMethodBlocks[1].methods[0];
+
+      if (methodInvoker) {
+        queueMethodInvoker(methodInvoker, wait);
+      }
+    }
+
+    return result;
+  };
 
   function queueMethodInvoker(methodInvoker, wait) {
     queueFunction((resolve) => {

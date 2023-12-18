@@ -3016,10 +3016,10 @@ _.each(
               repetitions +
               ' repetitions on ' +
               collectionCount +
-              ` collections, [${fn.name}], idGeneration=` +
+              ' collections, idGeneration=' +
               idGeneration,
             [
-              function(test) {
+              function(test, expect) {
                 var collectionOptions = { idGeneration: idGeneration };
 
                 var cleanups = (this.cleanups = []);
@@ -3031,7 +3031,7 @@ _.each(
                       collectionName,
                       collectionOptions
                     );
-                    Meteor.subscribe('c-' + collectionName);
+                    Meteor.subscribe('c-' + collectionName, expect());
                     cleanups.push(async function(expect) {
                       await Meteor.callAsync(
                         'dropInsecureCollection',
