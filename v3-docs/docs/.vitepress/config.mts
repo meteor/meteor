@@ -13,15 +13,14 @@ export default defineConfig({
         link: "https://www.meteor.com/developers/tutorials",
       },
       { text: "Guide", link: "https://guide.meteor.com/" },
-      { text: "API Docs", link: "/api" },
+      { text: "API Docs", link: "/api/index" },
       { text: "Forums", link: "https://forums.meteor.com/" },
     ],
     sidebar: [
       {
         text: "Examples",
         items: [
-          { text: "API", link: "/api" },
-          { text: "API Map", link: "/source/index" },
+          { text: "API map", link: "/api/index" },
           { text: "Runtime API Examples", link: "/api-examples" },
         ],
       },
