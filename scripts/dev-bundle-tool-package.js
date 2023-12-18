@@ -25,7 +25,7 @@ var packageJson = {
     "babel-runtime": "7.0.0-beta.3",
     "@types/underscore": "1.11.2",
     underscore: "1.13.1",
-    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/81bce1f99625e62af73338f63afcf2b44c6cfa5e",
     "@types/semver": "5.4.0",
     semver: "5.4.1",
     request: "2.88.2",
@@ -40,7 +40,8 @@ var packageJson = {
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.7.4",
     chalk: "4.1.1",
-    sqlite3: "5.1.6",
+    // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
+    sqlite3: "5.0.2",
     "http-proxy": "1.18.1",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",

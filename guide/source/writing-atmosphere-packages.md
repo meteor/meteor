@@ -264,13 +264,19 @@ Read more about using Cordova in the [mobile guide](mobile.html).
 
 <h2 id="testing">Testing packages</h2>
 
-Meteor has a test mode for packages called `meteor test-packages`. If you are in a package's directory, you can run
+Meteor has a test mode for packages invoked with the `meteor test-packages` command. Navigate to your package's directory and then use the command to run a special app containing only a "test" version of your package.
+
+If you are using [Tinytest](https://github.com/meteor/meteor/tree/devel/packages/tinytest) for your package's tests, you can run:
+
+```bash
+meteor test-packages ./
+```
+
+If you are using a different testing framework for your package's tests, you'll need to specify a `driver-package`. For example, if you are using Mocha, run the following to start the Mocha [test driver package](testing.html#driver-packages):
 
 ```bash
 meteor test-packages ./ --driver-package meteortesting:mocha
 ```
-
-This will run a special app containing only a "test" version of your package and start a Mocha [test driver package](testing.html#driver-packages).
 
 When your package starts in test mode, rather than loading the `onUse` block, Meteor loads the `onTest` block:
 

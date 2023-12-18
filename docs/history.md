@@ -321,7 +321,7 @@
   - Package was bumped due to a dependency update. No code changes were made.
 
 - `http@`:
-  - Updated handlers to use `handlers` that are now using express.
+  - Updated handlers to use `handlers`
 - `id-map@2.0.0`:
 
   - Added `forEachAsync` method.
@@ -556,7 +556,7 @@
 
 - `spiderable@`:
 
-  - Updated handlers to use `handlers` that are now using express.
+  - Updated handlers to use `handlers` that are now using express
   - removed `fibers` usage if flag is set to `true`
 
 - `standard-minifier-css@2.0.0`:
@@ -645,7 +645,7 @@
     - `WebAppInternals.getBoilerplate`
 
   - Changed engine from connect to express and changed api naming to match express. See below:
-  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.handlers.use(middleware)` using express.
+  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.handlers.use(middleware)`
   - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawHandlers.use(middleware)`
   - `WebApp.connectApp` is now `WebApp.expressApp`
 

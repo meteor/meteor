@@ -1,6 +1,6 @@
 Package.describe({
   summary: "General satisfiability solver for logic problems",
-  version: '3.0.0-alpha300.18',
+  version: '3.0.0-alpha300.19',
 });
 
 Package.onUse(function (api) {
