@@ -939,7 +939,15 @@ main.registerCommand({
       }
     );
   }
-  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
+  function cmd(text) {
+    Console.info(
+      Console.command(text),
+      Console.options({
+        indent: 2,
+      })
+    );
+  }
+  await files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
     `skel-${skeleton}`), appPath, {
     transformFilename: function (f) {
       return transform(f);
@@ -971,24 +979,26 @@ main.registerCommand({
     preserveSymlinks: true,
   });
 
-  // We are actually working with a new meteor project at this point, so
-  // set up its context.
-  var projectContext = new projectContextModule.ProjectContext({
-    projectDir: appPath,
-    // Write .meteor/versions even if --release is specified.
-    alwaysWritePackageMap: true,
-    // examples come with a .meteor/versions file, but we shouldn't take it
-    // too seriously
-    allowIncompatibleUpdate: true
-  });
-
-  await main.captureAndExit(
-    "=> Errors while creating your project",
-    async function () {
-      await projectContext.readProjectMetadata();
-      if (buildmessage.jobHasMessages()) {
-        return;
-      }
+  // Setup fn, which is called after the app is created, to print a message
+  // about how to run the app.
+  async function setupMessages() {
+    // We are actually working with a new meteor project at this point, so
+    // set up its context.
+    var projectContext = new projectContextModule.ProjectContext({
+      projectDir: appPath,
+      // Write .meteor/versions even if --release is specified.
+      alwaysWritePackageMap: true,
+      // examples come with a .meteor/versions file, but we shouldn't take it
+      // too seriously
+      allowIncompatibleUpdate: true,
+    });
+    await main.captureAndExit(
+      "=> Errors while creating your project",
+      async function () {
+        await projectContext.readProjectMetadata();
+        if (buildmessage.jobHasMessages()) {
+          return;
+        }
 
         await projectContext.releaseFile.write(
           release.current.isCheckout() ? "none" : release.current.name
@@ -1073,6 +1083,8 @@ main.registerCommand({
       Console.options({ indent: 2 })
     );
 
+  }
+
   /**
    *
    * @param {string} url
@@ -1083,7 +1095,7 @@ main.registerCommand({
     await bash`git clone --progress ${url} ${appPath} `;
     // remove .git folder from the example
     await files.rm_recursive_async(files.pathJoin(appPath, ".git"));
-    await setup();
+    await setupMessages();
   };
 
   if (options.example) {
@@ -1185,7 +1197,7 @@ main.registerCommand({
           preserveSymlinks: true,
         }
       );
-      await setup();
+      await setupMessages();
   }
 
   Console.info("");
