@@ -79,7 +79,7 @@ run_save_node_bin: &run_save_node_bin
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
-    - image: meteor/circleci:android-30-node-18
+    - image: meteor/circleci:20231116-android-33-node-18
   resource_class: large
   environment:
     # This multiplier scales the waitSecs for selftests.
@@ -119,6 +119,8 @@ jobs:
   Get Ready:
     <<: *build_machine_environment
     steps:
+      - run:
+          command: rm -fR /home/circleci/project/*
       - run:
           <<: *run_log_mem_use
       - run:

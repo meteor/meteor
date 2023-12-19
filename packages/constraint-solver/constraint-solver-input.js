@@ -1,3 +1,7 @@
+const has = Npm.require('lodash.has');
+const isEqual = Npm.require('lodash.isequal');
+const isEmpty = Npm.require('lodash.isempty');
+
 var PV = PackageVersion;
 var CS = ConstraintSolver;
 
@@ -18,7 +22,7 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   // Convert them to our PackageConstraint class if necessary.  (This is
   // just top-level constraints from .meteor/packages or running from
   // checkout, so it's not a lot of data.)
-  constraints = _.map(constraints, function (c) {
+  constraints = constraints.map(function (c) {
     if (c instanceof PV.PackageConstraint) {
       return c;
     } else {
@@ -62,27 +66,27 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
     validatePackageName(packageName);
   });
   self.catalogCache.eachPackageVersion(function (packageName, depsMap) {
-    _.each(depsMap, function (deps, depPackageName) {
+    Object.entries(depsMap).forEach(function ([depPackageName, deps]) {
       validatePackageName(depPackageName);
     });
   });
 
-  _.each(self.dependencies, validatePackageName);
-  _.each(self.upgrade, validatePackageName);
-  _.each(self.constraints, function (c) {
+  self.dependencies.forEach(validatePackageName);
+  self.upgrade.forEach(validatePackageName);
+  self.constraints.forEach(function (c) {
     validatePackageName(c.package);
   });
   if (self.previousSolution) {
-    _.each(_.keys(self.previousSolution),
+    Object.keys(self.previousSolution).forEach(
            validatePackageName);
   }
 
   self._dependencySet = {}; // package name -> true
-  _.each(self.dependencies, function (d) {
+  self.dependencies.forEach(function (d) {
     self._dependencySet[d] = true;
   });
   self._upgradeSet = {};
-  _.each(self.upgrade, function (u) {
+  self.upgrade.forEach(function (u) {
     self._upgradeSet[u] = true;
   });
 };
@@ -107,33 +111,33 @@ CS.Input.prototype.isKnownPackage = function (p) {
 };
 
 CS.Input.prototype.isRootDependency = function (p) {
-  return _.has(this._dependencySet, p);
+  return has(this._dependencySet, p);
 };
 
 CS.Input.prototype.isUpgrading = function (p) {
-  return _.has(this._upgradeSet, p);
+  return has(this._upgradeSet, p);
 };
 
 CS.Input.prototype.isInPreviousSolution = function (p) {
-  return !! (this.previousSolution && _.has(this.previousSolution, p));
+  return !! (this.previousSolution && has(this.previousSolution, p));
 };
 
 function getMentionedPackages(input) {
   var packages = {}; // package -> true
 
-  _.each(input.dependencies, function (pkg) {
+  input.dependencies.forEach(function (pkg) {
     packages[pkg] = true;
   });
-  _.each(input.constraints, function (constraint) {
+  input.constraints.forEach(function (constraint) {
     packages[constraint.package] = true;
   });
   if (input.previousSolution) {
-    _.each(input.previousSolution, function (version, pkg) {
+    Object.entries(input.previousSolution).forEach(function ([pkg, version]) {
       packages[pkg] = true;
     });
   }
 
-  return _.keys(packages);
+  return Object.keys(packages);
 }
 
 CS.Input.prototype.loadFromCatalog = async function (catalogLoader) {
@@ -170,7 +174,7 @@ CS.Input.prototype.isEqual = function (otherInput) {
   // the same input. So by omitting `catalogCache` we no longer need
   // to reload the entire relevant part of the catalog from SQLite on
   // every rebuild!
-  return _.isEqual(
+  return isEqual(
     a.toJSONable(true),
     b.toJSONable(true)
   );
@@ -180,7 +184,7 @@ CS.Input.prototype.toJSONable = function (omitCatalogCache) {
   var self = this;
   var obj = {
     dependencies: self.dependencies,
-    constraints: _.map(self.constraints, function (c) {
+    constraints: self.constraints.map(function (c) {
       return c.toString();
     })
   };
@@ -194,7 +198,7 @@ CS.Input.prototype.toJSONable = function (omitCatalogCache) {
   if (self.upgrade.length) {
     obj.upgrade = self.upgrade;
   }
-  if (! _.isEmpty(self.anticipatedPrereleases)) {
+  if (!isEmpty(self.anticipatedPrereleases)) {
     obj.anticipatedPrereleases = self.anticipatedPrereleases;
   }
   if (self.previousSolution !== null) {
@@ -225,7 +229,7 @@ CS.Input.fromJSONable = function (obj) {
 
   return new CS.Input(
     obj.dependencies,
-    _.map(obj.constraints, function (cstr) {
+    obj.constraints.map(function (cstr) {
       return PV.parsePackageConstraint(cstr);
     }),
     CS.CatalogCache.fromJSONable(obj.catalogCache),

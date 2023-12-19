@@ -17,7 +17,7 @@ Meteor.startup(async () => {
   if (await LinksCollection.find().countAsync() === 0) {
     await insertLink({
       title: 'Do the Tutorial',
-      url: 'https://www.meteor.com/tutorials/react/creating-an-app',
+      url: 'https://react-tutorial.meteor.com/simple-todos/01-creating-app.html',
     });
 
     await insertLink({

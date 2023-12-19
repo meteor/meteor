@@ -3,6 +3,7 @@
   "author": "Meteor <dev@meteor.com>",
   "version": "7.19.0-beta.3",
   "license": "MIT",
+  "type": "commonjs",
   "description": "Babel wrapper package for use with Meteor",
   "keywords": [
     "meteor",
@@ -47,7 +48,7 @@
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.21",
     "meteor-babel-helpers": "0.0.3",
-    "typescript": "~4.9.4"
+    "typescript": "~4.9.5"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "7.14.5",

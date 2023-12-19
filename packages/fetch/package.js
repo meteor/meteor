@@ -6,8 +6,8 @@ Package.describe({
 });
 
 Npm.depends({
-  "node-fetch": "2.3.0",
-  "whatwg-fetch": "2.0.4"
+  "node-fetch": "2.6.12",
+  "whatwg-fetch": "3.6.17"
 });
 
 Package.onUse(function(api) {

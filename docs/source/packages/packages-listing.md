@@ -14,7 +14,6 @@ description: list of all Meteor core packages.
 
 # Core Packages
 
-This is a list of all Meteor core packages and their repos.
 
 - [blaze](https://github.com/meteor/blaze)
 - [react-packages](https://github.com/meteor/react-packages)

@@ -1,3 +1,5 @@
+var has = Npm.require('lodash.has');
+
 Logic._MiniSat = MiniSat; // Expose for testing and poking around
 
 // import the private testers from types.js
@@ -92,7 +94,7 @@ Logic._defineFormula = function (constructor, typeName, methods) {
   constructor.prototype = new Logic.Formula();
   constructor.prototype.type = typeName;
   if (methods) {
-    _.extend(constructor.prototype, methods);
+    Object.assign(constructor.prototype, methods);
   }
 };
 
@@ -121,16 +123,16 @@ Logic.Formula.prototype.guid = function () {
 // Solver data structure, which is the final result of formula
 // generation and mapping variable names to numbers, before passing
 // the clauses to MiniSat.
-Logic.Clause = function (/*formulaOrArray, ...*/) {
-  var terms = _.flatten(arguments);
+Logic.Clause = function () {
+  var terms = Array.from(arguments).flat(Infinity);
   if (assert) assert(terms, isArrayWhere(Logic.isNumTerm));
 
   this.terms = terms; // immutable [NumTerm]
 };
 
 // Returns a new Clause with the extra term or terms appended
-Logic.Clause.prototype.append = function (/*formulaOrArray, ...*/) {
-  return new Logic.Clause(this.terms.concat(_.flatten(arguments)));
+Logic.Clause.prototype.append = function () {
+  return new Logic.Clause(this.terms.concat(Array.from(arguments).flat(Infinity)));
 };
 
 var FormulaInfo = function () {
@@ -210,12 +212,12 @@ Logic.Termifier = function (solver) {
 // `$or1` to make the Clause.  When the Clause is actually used, it
 // will trigger generation of the clauses that relate `$or1` to the
 // operands of the OrFormula.
-Logic.Termifier.prototype.clause = function (/*args*/) {
+Logic.Termifier.prototype.clause = function () {
   var self = this;
-  var formulas = _.flatten(arguments);
+  var formulas = Array.from(arguments).flat(Infinity);
   if (assert) assert(formulas, isArrayWhere(isFormulaOrTerm));
 
-  return new Logic.Clause(_.map(formulas, function (f) {
+  return new Logic.Clause(formulas.map(function (f) {
     return self.term(f);
   }));
 };
@@ -283,7 +285,7 @@ Logic.Solver = function () {
 // Setting "_createInternals" to true grants the ability to create $ variables.
 Logic.Solver.prototype.getVarNum = function (vname, noCreate, _createInternals) {
   var key = ' '+vname;
-  if (_.has(this._name2num, key)) {
+  if (has(this._name2num, key)) {
     return this._name2num[key];
   } else if (noCreate) {
     return 0;
@@ -425,7 +427,7 @@ Logic.Solver.prototype._useFormulaTerm = function (t, _addClausesOverride) {
   if (assert) assert(t, Logic.isNumTerm);
   var v = (t < 0) ? -t : t;
 
-  if (! _.has(self._ungeneratedFormulas, v)) {
+  if (!has(self._ungeneratedFormulas, v)) {
     return;
   }
 
@@ -501,24 +503,23 @@ Logic.Solver.prototype._addClauses = function (array, _extraTerms,
                                                _useTermOverride) {
   if (assert) assert(array, isArrayWhere(Logic.isClause));
   var self = this;
-  _.each(array, function (cls) {
+  array.forEach(function (cls) {
     self._addClause(cls, _extraTerms, _useTermOverride);
   });
 };
 
-Logic.Solver.prototype.require = function (/*formulaOrArray, ...*/) {
-  this._requireForbidImpl(true, _.flatten(arguments));
+Logic.Solver.prototype.require = function () {
+  this._requireForbidImpl(true, Array.from(arguments).flat(Infinity));
 };
 
-Logic.Solver.prototype.forbid = function (/*formulaOrArray, ...*/) {
-  this._requireForbidImpl(false, _.flatten(arguments));
+Logic.Solver.prototype.forbid = function () {
+  this._requireForbidImpl(false, Array.from(arguments).flat(Infinity));
 };
 
 Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
   var self = this;
   if (assert) assert(formulas, isArrayWhere(isFormulaOrTerm));
-
-  _.each(formulas, function (f) {
+  formulas.forEach(function (f) {
     if (f instanceof Logic.NotFormula) {
       self._requireForbidImpl(!isRequire, [f.operand]);
     } else if (f instanceof Logic.Formula) {
@@ -557,7 +558,7 @@ Logic.Solver.prototype._generateFormula = function (isTrue, formula, _termifier)
       } else {
         var ret = formula.generateClauses(isTrue,
                                           _termifier || self._termifier);
-        return _.isArray(ret) ? ret : [ret];
+        return Array.isArray(ret) ? ret : [ret];
       }
   } else { // Term
     var t = self.toNumTerm(formula);
@@ -575,7 +576,9 @@ Logic.Solver.prototype._generateFormula = function (isTrue, formula, _termifier)
 // Get clause data as an array of arrays of integers,
 // for testing and debugging purposes.
 Logic.Solver.prototype._clauseData = function () {
-  var clauses = _.pluck(this.clauses, 'terms');
+  var clauses = this.clauses.map(function(clause){
+    return clause.terms;
+  });
   if (! this._T_used) {
     clauses.splice(1, 1);
   }
@@ -592,8 +595,8 @@ Logic.Solver.prototype._clauseData = function () {
 Logic.Solver.prototype._clauseStrings = function () {
   var self = this;
   var clauseData = self._clauseData();
-  return _.map(clauseData, function (clause) {
-    return _.map(clause, function (nterm) {
+  return clauseData.map(function (clause) {
+    return clause.map(function (nterm) {
       var str = self.toNameTerm(nterm);
       if (/\s/.test(str)) {
         // write name in quotes for readability.  we don't bother
@@ -628,9 +631,9 @@ Logic.Solver.prototype._getFormulaInfo = function (formula, _noCreate) {
 Logic.Solver.prototype._formulaToTerm = function (formula) {
   var self = this;
 
-  if (_.isArray(formula)) {
+  if (Array.isArray(formula)) {
     if (assert) assert(formula, isArrayWhere(isFormulaOrTerm));
-    return _.map(formula, _.bind(self._formulaToTerm, self));
+    return formula.map(self._formulaToTerm.bind(self));
   } else {
     if (assert) assert(formula, isFormulaOrTerm);
   }
@@ -663,15 +666,15 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
   }
 };
 
-Logic.or = function (/*formulaOrArray, ...*/) {
-  var args = _.flatten(arguments);
-  if (args.length === 0) {
+Logic.or = function () {
+  var operands = Array.from(arguments).flat(Infinity);
+  if (operands.length === 0) {
     return Logic.FALSE;
-  } else if (args.length === 1) {
-    if (assert) assert(args[0], isFormulaOrTerm);
-    return args[0];
+  } else if (operands.length === 1) {
+    if (assert) assert(operands[0], isFormulaOrTerm);
+    return operands[0];
   } else {
-    return new Logic.OrFormula(args);
+    return new Logic.OrFormula(operands);
   }
 };
 
@@ -688,7 +691,7 @@ Logic._defineFormula(Logic.OrFormula, 'or', {
     } else {
       // eg -A; -B; -C
       var result = [];
-      _.each(this.operands, function (o) {
+      this.operands.forEach(function (o) {
         result.push.apply(result, t.generate(false, o));
       });
       return result;
@@ -705,15 +708,15 @@ Logic.NotFormula = function (operand) {
 // simplified away by the solver itself.
 Logic._defineFormula(Logic.NotFormula, 'not');
 
-Logic.and = function (/*formulaOrArray, ...*/) {
-  var args = _.flatten(arguments);
-  if (args.length === 0) {
+Logic.and = function () {
+  var flattenedArgs = Array.from(arguments).flat(Infinity);
+  if (flattenedArgs.length === 0) {
     return Logic.TRUE;
-  } else if (args.length === 1) {
-    if (assert) assert(args[0], isFormulaOrTerm);
-    return args[0];
+  } else if (flattenedArgs.length === 1) {
+    if (assert) assert(flattenedArgs[0], isFormulaOrTerm);
+    return flattenedArgs[0];
   } else {
-    return new Logic.AndFormula(args);
+    return new Logic.AndFormula(flattenedArgs);
   }
 };
 
@@ -727,13 +730,13 @@ Logic._defineFormula(Logic.AndFormula, 'and', {
     if (isTrue) {
       // eg A; B; C
       var result = [];
-      _.each(this.operands, function (o) {
+      this.operands.forEach(function (o) {
         result.push.apply(result, t.generate(true, o));
       });
       return result;
     } else {
       // eg -A v -B v -C
-      return t.clause(_.map(this.operands, Logic.not));
+      return t.clause(this.operands.map(Logic.not));
     }
   }
 });
@@ -748,15 +751,15 @@ var group = function (array, N) {
   return ret;
 };
 
-Logic.xor = function (/*formulaOrArray, ...*/) {
-  var args = _.flatten(arguments);
-  if (args.length === 0) {
+Logic.xor = function () {
+  var flattenedArgs = Array.from(arguments).flat(Infinity);
+  if (flattenedArgs.length === 0) {
     return Logic.FALSE;
-  } else if (args.length === 1) {
-    if (assert) assert(args[0], isFormulaOrTerm);
-    return args[0];
+  } else if (flattenedArgs.length === 1) {
+    if (assert) assert(flattenedArgs[0], isFormulaOrTerm);
+    return flattenedArgs[0];
   } else {
-    return new Logic.XorFormula(args);
+    return new Logic.XorFormula(flattenedArgs);
   }
 };
 
@@ -773,7 +776,7 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
       return t.generate(
         isTrue,
         Logic.xor(
-          _.map(group(this.operands, 3), function (group) {
+          group(this.operands, 3).map(function (group) {
             return Logic.xor(group);
           })));
     } else if (isTrue) { // args.length <= 3
@@ -812,12 +815,12 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
   }
 });
 
-Logic.atMostOne = function (/*formulaOrArray, ...*/) {
-  var args = _.flatten(arguments);
-  if (args.length <= 1) {
+Logic.atMostOne = function () {
+  var flattenedArgs = Array.from(arguments).flat(Infinity);
+  if (flattenedArgs.length <= 1) {
     return Logic.TRUE;
   } else {
-    return new Logic.AtMostOneFormula(args);
+    return new Logic.AtMostOneFormula(flattenedArgs);
   }
 };
 
@@ -860,13 +863,13 @@ Logic._defineFormula(Logic.AtMostOneFormula, 'atMostOne', {
        // and each group has at most one "true".  Formula generation
        // automatically generates the right implications.
        var groups = group(args, 3);
-       var ors = _.map(groups, function (g) { return Logic.or(g); });
+       var ors = groups.map(function (g) { return Logic.or(g); });
        if (groups[groups.length - 1].length < 2) {
          // Remove final group of length 1 so we don't generate
          // no-op clauses of one sort or another
          groups.pop();
        }
-       var atMostOnes = _.map(groups, function (g) {
+       var atMostOnes = groups.map(function (g) {
          return Logic.atMostOne(g);
        });
        return t.generate(isTrue, Logic.and(Logic.atMostOne(ors), atMostOnes));
@@ -912,15 +915,15 @@ Logic._defineFormula(Logic.EquivFormula, 'equiv', {
   }
 });
 
-Logic.exactlyOne = function (/*formulaOrArray, ...*/) {
-  var args = _.flatten(arguments);
-  if (args.length === 0) {
+Logic.exactlyOne = function () {
+  var flattenedArgs = Array.from(arguments).flat(Infinity);
+  if (flattenedArgs.length === 0) {
     return Logic.FALSE;
-  } else if (args.length === 1) {
-    if (assert) assert(args[0], isFormulaOrTerm);
-    return args[0];
+  } else if (flattenedArgs.length === 1) {
+    if (assert) assert(arguments[0], isFormulaOrTerm);
+    return flattenedArgs[0];
   } else {
-    return new Logic.ExactlyOneFormula(args);
+    return new Logic.ExactlyOneFormula(flattenedArgs);
   }
 };
 
@@ -999,7 +1002,7 @@ var genLTE = function (bits1, bits2, t, notEqual) {
   // now B.length >= A.length
   // Let xors[i] be (A[i] xor B[i]), or just
   // B[i] if A is too short.
-  var xors = _.map(B, function (b, i) {
+  var xors = B.map(function (b, i) {
     if (i < A.length) {
       return Logic.xor(A[i], b);
     } else {
@@ -1203,12 +1206,15 @@ var binaryWeightedSum = function (varsByWeight) {
   if (assert) assert(varsByWeight,
                      isArrayWhere(isArrayWhere(isFormulaOrTerm)));
   // initialize buckets to a two-level clone of varsByWeight
-  var buckets = _.map(varsByWeight, _.clone);
+  var buckets = varsByWeight.map(function(vars) {
+    return Array.from(vars).flat()
+  });
+  
   var lowestWeight = 0; // index of the first non-empty array
   var output = [];
   while (lowestWeight < buckets.length) {
     var bucket = buckets[lowestWeight];
-    if (! bucket.length) {
+    if (!bucket.length) {
       output.push(Logic.FALSE);
       lowestWeight++;
     } else if (bucket.length === 1) {
@@ -1270,11 +1276,11 @@ Logic.weightedSum = function (formulas, weights) {
   }
 
   if (typeof weights === 'number') {
-    weights = _.map(formulas, function () { return weights; });
+    weights = formulas.map(function () { return weights; });
   }
 
   var binaryWeighted = [];
-  _.each(formulas, function (f, i) {
+  formulas.forEach(function (f, i) {
     var w = weights[i];
     var whichBit = 0;
     while (w) {
@@ -1289,14 +1295,14 @@ Logic.weightedSum = function (formulas, weights) {
   return new Logic.Bits(binaryWeightedSum(binaryWeighted));
 };
 
-Logic.sum = function (/*formulaOrBitsOrArray, ...*/) {
-  var things = _.flatten(arguments);
+Logic.sum = function () {
+  var things = Array.from(arguments).flat(Infinity);
   if (assert) assert(things, isArrayWhere(isFormulaOrTermOrBits));
 
   var binaryWeighted = [];
-  _.each(things, function (x) {
+  things.forEach(function (x) {
     if (x instanceof Logic.Bits) {
-      _.each(x.bits, function (b, i) {
+      x.bits.forEach(function (b, i) {
         pushToNth(binaryWeighted, i, b);
       });
     } else {
@@ -1398,7 +1404,7 @@ Logic.Solution = function (_solver, _assignment) {
   // save a snapshot of which formulas have variables designated
   // for them, but where we haven't generated clauses that constrain
   // those variables in both the positive and the negative direction.
-  self._ungeneratedFormulas = _.clone(_solver._ungeneratedFormulas);
+  self._ungeneratedFormulas = Object.assign({}, _solver._ungeneratedFormulas);
 
   self._formulaValueCache = {};
   self._termifier = new Logic.Termifier(self._solver);
@@ -1487,7 +1493,7 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
   if (formulaOrBits instanceof Logic.Bits) {
     // Evaluate to an integer
     var ret = 0;
-    _.each(formulaOrBits.bits, function (f, i) {
+    formulaOrBits.bits.forEach(function (f, i) {
       if (self.evaluate(f)) {
         ret += 1 << i;
       }
@@ -1509,7 +1515,7 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
       var value;
       var info = solver._getFormulaInfo(formula, true);
       if (info && info.varNum && info.varNum < assignment.length &&
-          ! _.has(self._ungeneratedFormulas, info.varNum)) {
+          !has(self._ungeneratedFormulas, info.varNum)) {
         // as an optimization, read the value of the formula directly
         // from a variable if the formula's clauses were completely
         // generated at the time of solving.  (We must be careful,
@@ -1520,8 +1526,8 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
         value = assignment[info.varNum];
       } else {
         var clauses = solver._generateFormula(true, formula, self._termifier);
-        var value = _.all(clauses, function (cls) {
-          return _.any(cls.terms, function (t) {
+        var value = clauses.every(function (cls) {
+          return cls.terms.some(function (t) {
             return self.evaluate(t);
           });
         });
