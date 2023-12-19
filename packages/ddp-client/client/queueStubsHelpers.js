@@ -81,12 +81,19 @@ export const loadAsyncStubHelpers = () => {
       return oldApplyAsync.apply(this, args);
     }
 
-    const applyAsyncPromise = oldApplyAsync.apply(this, args);
+    let stubPromiseResolver;
+    let serverPromiseResolver;
+    const stubPromise = new Promise((r) => (stubPromiseResolver = r));
+    const serverPromise = new Promise((r) => (serverPromiseResolver = r));
+
     return queueFunction(
       (resolve, reject) => {
         let finished = false;
 
         Meteor._setImmediate(() => {
+          const applyAsyncPromise = oldApplyAsync.apply(this, args);
+          stubPromiseResolver(applyAsyncPromise.stubPromise);
+          serverPromiseResolver(applyAsyncPromise.serverPromise);
           applyAsyncPromise
             .then((result) => {
               finished = true;
@@ -107,8 +114,8 @@ export const loadAsyncStubHelpers = () => {
         });
       },
       {
-        stubPromise: applyAsyncPromise.stubPromise,
-        serverPromise: applyAsyncPromise.serverPromise,
+        stubPromise,
+        serverPromise,
       }
     );
   };
