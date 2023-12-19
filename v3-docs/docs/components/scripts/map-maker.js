@@ -1,30 +1,20 @@
-/**
- *
- * @param {Array<string} names
- * @returns {Object<string, Object<string, Array<string>>}
- */
-export function createMap(names) {
-  /**
-   * @type {string[]}
-   */
-  let modules = [];
 
+const makeUnique = (arr) => [...new Set(arr)];
+
+const makeModules = (names) => {
+  const modules = [];
+  // check for modules (names with no dots or hashes)
   for (const name of names) {
-    if (name.includes("#")) {
-      continue;
-    }
-    if (name.includes(".")) {
-      continue;
-    }
+    if (name.includes("#")) continue;
+    if (name.includes(".")) continue;
     modules.push(name);
   }
+  return modules;
+}
 
+const makeApiList = (modules) => {
   let currentModule = modules[0];
-  /**
-   * @type {Object<string, Object<string, Array<string>>}
-   */
   const apiList = {};
-
   for (const name of modules) {
     if (!apiList[currentModule]) {
       apiList[currentModule] = {
@@ -37,6 +27,25 @@ export function createMap(names) {
     }
     currentModule = name;
   }
+  return apiList;
+}
+
+/**
+ *
+ * @param {Array<string} names
+ * @returns {Object<string, Object<string, Array<string>>}
+ */
+export function createMap(names) {
+  /**
+   * @type {string[]}
+   */
+  const modules = makeModules(names);
+
+
+  /**
+   * @type {Object<string, Object<string, Array<string>>}
+   */
+  const apiList = makeApiList(modules);
 
   const MODULES_TO_ADD = {
     module: { module: [] },
@@ -53,7 +62,7 @@ export function createMap(names) {
       const linkWithDot = names.filter((name) => name.includes(link + "."));
       const linkWithHash = names.filter((name) => name.includes(link + "#"));
       const allApis = [...linkWithDot, ...linkWithHash];
-      apiList[api][link] = allApis;
+      apiList[api][link] = makeUnique(allApis);
     }
   }
 
@@ -79,6 +88,7 @@ export function createMap(names) {
     "loggingOut",
     "IterationCallback",
   ];
+  
   Object.keys(apiList).forEach((key) => {
     if (TO_IGNORE.includes(key)) {
       delete apiList[key];
