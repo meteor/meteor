@@ -2,7 +2,7 @@
   "scripts": {
     "generate-jsdoc": "jsdoc/jsdoc.sh",
     "docs:dev": "npm run generate-jsdoc && vitepress dev",
-    "docs:build": "vitepress build",
+    "docs:build": "npm run generate-jsdoc && vitepress build",
     "docs:preview": "vitepress preview",
     "deploy:preview" : "npm run docs:build && npm run docs:preview"
   },
