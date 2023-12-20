@@ -1,4 +1,4 @@
-const isEqual = Npm.require('lodash.isequal');
+const isEqual = require('lodash.isequal');
 
 var PV = PackageVersion;
 var CS = ConstraintSolver;

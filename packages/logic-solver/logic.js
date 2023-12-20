@@ -1,4 +1,4 @@
-var has = Npm.require('lodash.has');
+var has = require('lodash.has');
 
 Logic._MiniSat = MiniSat; // Expose for testing and poking around
 
@@ -1209,7 +1209,7 @@ var binaryWeightedSum = function (varsByWeight) {
   var buckets = varsByWeight.map(function(vars) {
     return Array.from(vars).flat()
   });
-  
+
   var lowestWeight = 0; // index of the first non-empty array
   var output = [];
   while (lowestWeight < buckets.length) {

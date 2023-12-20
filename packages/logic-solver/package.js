@@ -1,6 +1,6 @@
 Package.describe({
   summary: "General satisfiability solver for logic problems",
-  version: '2.0.8'
+  version: '3.0.0-alpha300.19',
 });
 
 Npm.depends({
@@ -9,6 +9,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.export('Logic');
+  api.use('ecmascript');
   api.addFiles(['minisat.js',
                  'minisat_wrapper.js',
                  'types.js',

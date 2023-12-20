@@ -1,7 +1,7 @@
-const has = Npm.require('lodash.has');
-const zip = Npm.require('lodash.zip');
-const memoize = Npm.require('lodash.memoize');
-const groupBy = Npm.require('lodash.groupby');
+const groupBy = require('lodash.groupby');
+const has = require('lodash.has');
+const memoize = require('lodash.memoize');
+const zip = require('lodash.zip');
 
 var CS = ConstraintSolver;
 var PV = PackageVersion;

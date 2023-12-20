@@ -1,6 +1,6 @@
-const has = Npm.require('lodash.has');
-const isEqual = Npm.require('lodash.isequal');
-const isEmpty = Npm.require('lodash.isempty');
+const has = require('lodash.has');
+const isEmpty = require('lodash.isempty');
+const isEqual = require('lodash.isequal');
 
 var PV = PackageVersion;
 var CS = ConstraintSolver;

@@ -17,6 +17,7 @@ Npm.depends({
 Package.onUse(function (api) {
   api.export('ConstraintSolver');
   api.use([
+    'ecmascript',
     'check',
     'package-version-parser',
     'logic-solver'

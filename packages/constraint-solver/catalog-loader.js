@@ -1,4 +1,4 @@
-const has = Npm.require('lodash.has');
+const has = require('lodash.has');
 
 var PV = PackageVersion;
 var CS = ConstraintSolver;
