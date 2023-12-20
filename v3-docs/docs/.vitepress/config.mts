@@ -18,10 +18,12 @@ export default defineConfig({
     ],
     sidebar: [
       {
-        text: "Examples",
+        text: "API",
         items: [
           { text: "API map", link: "/api/index" },
           { text: "Runtime API Examples", link: "/api-examples" },
+          { text: "Accounts", link: "/api/accounts" },
+          { text: "Meteor", link: "/api/meteor" },
         ],
       },
     ],
