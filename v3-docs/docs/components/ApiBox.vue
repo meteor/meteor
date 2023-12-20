@@ -103,7 +103,7 @@ const isBoolean = ui.type.names.at(0) === 'Boolean'
         </h2>
 
         <div v-html="ui.summary"></div>
-        <Locus :locus="ui.locus" />
+        <Locus v-if="ui.locus !== 'Anywhere'" :locus="ui.locus" />
         <div v-if="isBoolean">
             <Booleans :from="ui.module" :longname="ui.longname" />
         </div>

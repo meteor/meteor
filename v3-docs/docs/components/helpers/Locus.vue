@@ -1,8 +1,8 @@
 
 <template>
-  <div class="info custom-block">
-    <p class="custom-block-title">Locus:</p>
-    <p>{{ props.locus }}</p>
+  <div class="warning custom-block">
+    <p class="custom-block-title">WARNING</p>
+    <p>{{ props.locus }} only.</p>
   </div>
 </template>
 
