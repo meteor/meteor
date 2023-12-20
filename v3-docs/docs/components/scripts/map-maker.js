@@ -1,4 +1,3 @@
-
 const makeUnique = (arr) => [...new Set(arr)];
 
 const makeModules = (names) => {
@@ -10,7 +9,7 @@ const makeModules = (names) => {
     modules.push(name);
   }
   return modules;
-}
+};
 
 const makeApiList = (modules) => {
   let currentModule = modules[0];
@@ -28,7 +27,7 @@ const makeApiList = (modules) => {
     currentModule = name;
   }
   return apiList;
-}
+};
 
 /**
  *
@@ -40,7 +39,6 @@ export function createMap(names) {
    * @type {string[]}
    */
   const modules = makeModules(names);
-
 
   /**
    * @type {Object<string, Object<string, Array<string>>}
@@ -56,12 +54,13 @@ export function createMap(names) {
 
   Object.assign(apiList, MODULES_TO_ADD);
 
+  // populating map with links
   for (const api of Object.keys(apiList)) {
     const links = apiList[api];
     for (const link of Object.keys(links)) {
-      const linkWithDot = names.filter((name) => name.includes(link + "."));
-      const linkWithHash = names.filter((name) => name.includes(link + "#"));
-      const allApis = [...linkWithDot, ...linkWithHash];
+      const allApis = names.filter(
+        (name) => name.includes(link + ".") || name.includes(link + "#")
+      );
       apiList[api][link] = makeUnique(allApis);
     }
   }
@@ -88,7 +87,7 @@ export function createMap(names) {
     "loggingOut",
     "IterationCallback",
   ];
-  
+
   Object.keys(apiList).forEach((key) => {
     if (TO_IGNORE.includes(key)) {
       delete apiList[key];
