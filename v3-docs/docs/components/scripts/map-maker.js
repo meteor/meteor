@@ -88,11 +88,9 @@ export function createMap(names) {
     "IterationCallback",
   ];
 
-  Object.keys(apiList).forEach((key) => {
-    if (TO_IGNORE.includes(key)) {
-      delete apiList[key];
-    }
-  });
+  for (const key of Object.keys(apiList))
+    if (TO_IGNORE.includes(key)) delete apiList[key];
+
   return apiList;
 }
 
