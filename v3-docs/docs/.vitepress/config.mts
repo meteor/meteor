@@ -61,6 +61,14 @@ export default defineConfig({
           },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
+      },
+      {
+        text: "Troubleshooting",
+        items: [
+          {text: "Expired Certificates", link: "/troubleshooting/expired-certificate"},
+          {text: "Windows", link: "/troubleshooting/windows"},
+          {text: "Known issues in 2.13", link: "/troubleshooting/known-issues"},
+        ],
         collapsed: true,
       },
       {
