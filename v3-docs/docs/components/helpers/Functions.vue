@@ -25,7 +25,7 @@ const primitiveMap = {
 }
 const primitiveDefault = {
   function: `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  () </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> {}`,
-  String: '<span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">  ""',
+  String: '<span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">  "foo"',
   Number: '<span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">  42',
   Boolean: '<span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">  false',
   Object: '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  {}',
