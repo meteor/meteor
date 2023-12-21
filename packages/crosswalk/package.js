@@ -6,5 +6,5 @@ instead of the System WebView on Android",
 });
 
 Cordova.depends({
-  'cordova-plugin-crosswalk-webview': '2.3.0'
+  'cordova-plugin-crosswalk-webview': '2.4.0'
 });

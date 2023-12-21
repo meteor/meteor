@@ -79,7 +79,7 @@ run_save_node_bin: &run_save_node_bin
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
-    - image: meteor/circleci:android-30-node-18
+    - image: meteor/circleci:2023.12.1-android-34-node-18
   resource_class: large
   environment:
     # This multiplier scales the waitSecs for selftests.
@@ -178,7 +178,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             cd dev_bundle/lib
-            ../../meteor npm install @types/node@18.11.9 --save-dev
+            ../../meteor npm install @types/node@20.9.0 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
             ../../meteor npm install -g typescript
             cd ../../
@@ -750,7 +750,7 @@ jobs:
   Docs:
     docker:
       # This Node version should match that in the meteor/docs CircleCI config.
-      - image: meteor/circleci:android-28-node-12
+      - image: meteor/circleci:2023.12.1-android-34-node-20
     resource_class: large
     environment:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs

@@ -315,7 +315,6 @@ describe("@meteorjs/babel", () => {
       "  }",
       "});",
       "var Test;",
-      "",
       "(function (Test) {",
       "  Test.enabled = true;",
       "})(Test || module.runSetters(Test = {}, [\"Test\"]));",

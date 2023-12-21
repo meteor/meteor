@@ -13,7 +13,7 @@ Package.registerBuildPlugin({
     'logging',
   ],
   npmDependencies: {
-    "@babel/runtime": "7.21.0",
+    "@babel/runtime": "7.23.5",
     "source-map": "0.7.4",
     "lru-cache": "8.0.0",
     "micromatch": "4.0.5",
