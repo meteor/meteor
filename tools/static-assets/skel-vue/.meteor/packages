@@ -4,18 +4,20 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
-meteor-base@1.5.1             # Packages every Meteor app needs to have
-mobile-experience@1.1.0       # Packages for a great mobile UX
-mongo@1.16.0                   # The database Meteor supports right now
-reactive-var@1.0.11            # Reactive variable for tracker
+meteor-base                    # Packages every Meteor app needs to have
+mobile-experience              # Packages for a great mobile UX
+mongo                          # The database Meteor supports right now
+reactive-var                   # Reactive variable for tracker
 
-standard-minifier-css@1.8.2   # CSS minifier run for production mode
-standard-minifier-js@2.8.1    # JS minifier run for production mode
-es5-shim@4.8.0                # ECMAScript 5 compatibility for older browsers
-ecmascript@0.16.2              # Enable ECMAScript2015+ syntax in app code
-typescript@4.5.4              # Enable TypeScript syntax in .ts and .tsx modules
-shell-server@0.5.0            # Server-side component of the `meteor shell` command
-hot-module-replacement@0.5.1  # Update client in development without reloading the page
+standard-minifier-css          # CSS minifier run for production mode
+standard-minifier-js           # JS minifier run for production mode
+es5-shim                       # ECMAScript 5 compatibility for older browsers
+ecmascript                     # Enable ECMAScript2015+ syntax in app code
+typescript                     # Enable TypeScript syntax in .ts and .tsx modules
+shell-server                   # Server-side component of the `meteor shell` command
+hot-module-replacement         # Update client in development without reloading the page
 
-static-html@1.3.2             # Define static page content in .html files
-vite:bundler
+static-html                    # Define static page content in .html files
+jorgenvatle:vite-bundler
+~prototype~
+

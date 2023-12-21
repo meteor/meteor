@@ -9,6 +9,7 @@ const publicationStrategies = {
   // When using this strategy, the server maintains a copy of all data a connection is subscribed to.
   // This allows us to only send deltas over multiple publications.
   SERVER_MERGE: {
+    useDummyDocumentView: false,
     useCollectionView: true,
     doAccountingForCollection: true,
   },
@@ -17,6 +18,7 @@ const publicationStrategies = {
   // to it will not trigger removed messages when a subscription is stopped.
   // This should only be chosen for special use cases like send-and-forget queues.
   NO_MERGE_NO_HISTORY: {
+    useDummyDocumentView: false,
     useCollectionView: false,
     doAccountingForCollection: false,
   },
@@ -24,8 +26,17 @@ const publicationStrategies = {
   // sent to the client so it can remove them when a subscription is stopped.
   // This strategy can be used when a collection is only used in a single publication.
   NO_MERGE: {
+    useDummyDocumentView: false,
     useCollectionView: false,
     doAccountingForCollection: true,
+  },
+  // NO_MERGE_MULTI is similar to `NO_MERGE`, but it does track whether a document is
+  // used by multiple publications. This has some memory overhead, but it still does not do
+  // diffing so it's faster and slimmer than SERVER_MERGE.
+  NO_MERGE_MULTI: {
+    useDummyDocumentView: true,
+    useCollectionView: true,
+    doAccountingForCollection: true
   }
 };
 
@@ -39,6 +50,26 @@ DDPServer.publicationStrategies = publicationStrategies;
 // Session and Subscription are file scope. For now, until we freeze
 // the interface, Server is package scope (in the future it should be
 // exported).
+var DummyDocumentView = function () {
+  var self = this;
+  self.existsIn = new Set(); // set of subscriptionHandle
+  self.dataByKey = new Map(); // key-> [ {subscriptionHandle, value} by precedence]
+};
+
+Object.assign(DummyDocumentView.prototype, {
+  getFields: function () {
+    return {}
+  },
+
+  clearField: function (subscriptionHandle, key, changeCollector) {
+    changeCollector[key] = undefined
+  },
+
+  changeField: function (subscriptionHandle, key, value,
+                         changeCollector, isAdd) {
+    changeCollector[key] = value
+  }
+});
 
 // Represents a single document in a SessionCollectionView
 var SessionDocumentView = function () {
@@ -202,7 +233,12 @@ Object.assign(SessionCollectionView.prototype, {
     var added = false;
     if (!docView) {
       added = true;
-      docView = new SessionDocumentView();
+      if (Meteor.server.getPublicationStrategy(this.collectionName).useDummyDocumentView) {
+        docView = new DummyDocumentView();
+      } else {
+        docView = new SessionDocumentView();
+      }
+
       self.documents.set(id, docView);
     }
     docView.existsIn.add(subscriptionHandle);
