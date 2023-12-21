@@ -2,6 +2,7 @@
 import Booleans from './helpers/Booleans.vue'
 import Functions from './helpers/Functions.vue'
 import Locus from './helpers/Locus.vue'
+import ParamTable from './helpers/ParamTable.vue'
 import { useData } from 'vitepress'
 
 import jsdoc from '../data/data.js'
@@ -110,11 +111,10 @@ if (isFunction) {
     }
 }
 
-// const debug = (name) => {
-//     if (ui.longname !== name) return
-//     console.log(ui)
-
-// }
+const debug = (name) => {
+    if (ui.longname !== name) return
+    console.log(ui)
+}
 
 </script>
 
@@ -127,6 +127,7 @@ if (isFunction) {
 
         <div v-html="ui.summary"></div>
         <Locus v-if="ui.locus !== 'Anywhere'" :locus="ui.locus" />
+        <ParamTable v-if="isFunction" :params="ui.params"/>
         <template v-if="!hasCustomExample">
             <Booleans v-if="isBoolean" :memberof="ui.memberof" :from="ui.module" :longname="ui.longname" />
             <Functions v-if="isFunction" :from="ui.module" :longname="ui.longname" :params="ui.params" :fnName="ui.name"
@@ -141,4 +142,5 @@ span {
     font-size: 0.8rem;
     color: var(--vp-c-text-2);
 }
+
 </style>
