@@ -7,5 +7,6 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.use("ecmascript", "server");
+  api.use("babel-compiler", "server");
   api.mainModule("main.js", "server");
 });
