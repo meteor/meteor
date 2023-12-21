@@ -4,7 +4,6 @@ Meteor global object has many functions and properties for handling utilities, n
 
 <ApiBox name="Meteor.startup"/>
 
-
 <ApiBox name="Meteor.isClient" />
 
 <ApiBox name="Meteor.isServer" />
