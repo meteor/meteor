@@ -779,8 +779,10 @@ jobs:
             sudo mkdir -p ./tmp/test-groups
             sudo chmod a+rwx ./tmp/test-groups
       - run:
-          name: Update npm
-          command: npm install -g npm@latest
+          name: Clear npm cache
+          command: |
+            rm -rf node_modules
+            npm cache clean --force
       - run:
           <<: *log_env
       - run:
