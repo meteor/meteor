@@ -18,10 +18,38 @@ export default defineConfig({
     ],
     sidebar: [
       {
-        text: "API",
+        text: "About",
         items: [
-          { text: "API map", link: "/api/index" },
-          { text: "Runtime API Examples", link: "/api-examples" },
+          {
+            text: "What is Meteor?",
+            link: "/about/what-is#what-is-meteor",
+          },
+          {
+            text: "Meteor resources",
+            link: "/about/what-is#learning-more",
+          },
+          {
+            text: "Roadmap",
+            link: "/about/roadmap",
+          },
+        ],
+        collapsed: true,
+      },
+      {
+        text: "Quick Start",
+        items: [
+          {
+            text: "Install Meteor",
+            link: "/about/install",
+          },
+          // TODO: Your first app meteor app
+        ],
+        collapsed: true,
+      },
+      {
+        text: "API",
+        link: "/api/index",
+        items: [
           { text: "Accounts", link: "/api/accounts" },
           {
             text: "Meteor",
@@ -29,9 +57,21 @@ export default defineConfig({
             items: [
               { text: "Core", link: "/api/meteor#core" },
               { text: "Methods", link: "/api/meteor#methods" },
-          ],
+            ],
           },
+          { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
+        collapsed: true,
+      },
+      {
+        text: "Changelog",
+        items: [
+          // TODO: Open issue in Vitepress about this
+          { link: "/history", text: "Current" },
+          { link: "old-changelogs/pre-2.0", text: "Pre-2.0" },
+          { link: "old-changelogs/pre-1.0", text: "Pre-1.0" },
+        ],
+        collapsed: true,
       },
     ],
 
@@ -47,8 +87,8 @@ export default defineConfig({
         'Copyright (c) 2011 - present <a href="https://www.meteor.com/">Meteor Software</a>.',
     },
     editLink: {
-      pattern: 'https://github.com/meteor/meteor/edit/main/v3-docs/docs/:path',
-      text: 'Edit this page on GitHub'
-    }
+      pattern: "https://github.com/meteor/meteor/edit/main/v3-docs/docs/:path",
+      text: "Edit this page on GitHub",
+    },
   },
 });
