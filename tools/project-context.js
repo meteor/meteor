@@ -654,14 +654,14 @@ Object.assign(ProjectContext.prototype, {
           supportedIsobuildFeaturePackages: KNOWN_ISOBUILD_FEATURE_PACKAGES,
           explainTopLevel(name) {
             if (localPackages.includes(name)) {
-              return 'local package'
+              return 'local package';
             }
 
             if (
               self._releaseForConstraints &&
               self._releaseForConstraints.packages[name]
             ) {
-              return 'constrained by release'
+              return 'constrained by release';
             }
           }
         };
