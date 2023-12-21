@@ -1,11 +1,13 @@
 {
   "scripts": {
     "generate-jsdoc": "jsdoc/jsdoc.sh",
-    "docs:dev": "npm run generate-jsdoc && vitepress dev",
-    "docs:build": "npm run generate-jsdoc && vitepress build",
+    "codegen": "jsdoc/jsdoc.sh && node ./generators/codegen.js",
+    "docs:dev": "npm run codegen && vitepress dev",
+    "docs:build": "npm run codegen && vitepress build",
     "docs:preview": "vitepress preview",
     "deploy:preview" : "npm run docs:build && npm run docs:preview"
   },
+  
   "devDependencies": {
     "canonical-json": "^0.0.4",
     "jsdoc": "^4.0.2",
