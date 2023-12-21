@@ -779,8 +779,12 @@ jobs:
             sudo mkdir -p ./tmp/test-groups
             sudo chmod a+rwx ./tmp/test-groups
       - run:
+          <<: *log_env
+      - run:
           name: Calculate Balanced Test Groups
           command: |
+            npm -g uninstall npm
+            npm install -g npm
             npm install --prefix ./scripts/test-balancer
             npm start --prefix ./scripts/test-balancer --num-groups ${NUM_GROUPS} --running-avg-length ${RUNNING_AVG_LENGTH}
       - save_cache:
