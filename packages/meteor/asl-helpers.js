@@ -24,7 +24,7 @@ function getAslStore() {
     return {};
   }
 
-  let asyncLocalStorage = getAsl();
+  var asyncLocalStorage = getAsl();
   return asyncLocalStorage.getStore() || {};
 }
 
@@ -45,7 +45,7 @@ Meteor._runAsync = function (fn, ctx, store) {
   if (store === undefined) {
     store = {};
   }
-  let asyncLocalStorage = getAsl();
+  var asyncLocalStorage = getAsl();
 
   return asyncLocalStorage.run(
     store || Meteor._getAslStore(),
