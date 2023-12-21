@@ -43,6 +43,7 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   self.allowIncompatibleUpdate = options.allowIncompatibleUpdate || false;
   self.upgradeIndirectDepPatchVersions =
     options.upgradeIndirectDepPatchVersions || false;
+  self.explainTopLevel = options.explainTopLevel || (() => {});
 
   _check(self.dependencies, [String]);
   _check(self.constraints, [PV.PackageConstraint]);
