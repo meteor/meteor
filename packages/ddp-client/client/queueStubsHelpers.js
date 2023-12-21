@@ -133,8 +133,6 @@ export const loadAsyncStubHelpers = () => {
     // methods run.
     // This does mean the stubs run in a different order than the methods on the
     // server.
-    // TODO: can we queue Meteor.apply in some situations instead of running
-    // immediately?
 
     let oldOutstandingMethodBlocks = Meteor.connection._outstandingMethodBlocks;
     // Meteor only sends the method if _outstandingMethodBlocks.length is 1.

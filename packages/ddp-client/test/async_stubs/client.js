@@ -31,7 +31,6 @@ Meteor.methods({
   },
 });
 
-const sortArray = (array) => array.sort((a, b) => (a > b ? 1 : -1));
 Tinytest.addAsync("applyAsync - server only", async function (test) {
   let serverResolver;
   let serverPromise = new Promise((resolve) => {
@@ -106,8 +105,8 @@ Tinytest.addAsync("applyAsync - callAsync twice", async function (test) {
     ]
   );
   test.equal(
-    sortArray(results),
-    sortArray(["async-server-result", "async-server-result"])
+    results,
+    ["async-server-result", "async-server-result"],
   );
 });
 
@@ -156,15 +155,15 @@ Tinytest.addAsync("applyAsync - callAsync in then", async function (test) {
   let serverEvents = await Meteor.callAsync("getAndResetEvents");
 
   test.equal(
-    sortArray(events),
-    sortArray([
+    events,
+    [
       "start async-stub",
       "end async-stub",
       "start async-stub",
       "end async-stub",
-    ])
+    ]
   );
-  test.equal(sortArray(serverEvents), sortArray(["async-stub", "async-stub"]));
+  test.equal(serverEvents, ["async-stub", "async-stub"]);
   test.equal(result, "async-server-result");
 });
 
