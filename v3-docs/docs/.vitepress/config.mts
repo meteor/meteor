@@ -23,7 +23,14 @@ export default defineConfig({
           { text: "API map", link: "/api/index" },
           { text: "Runtime API Examples", link: "/api-examples" },
           { text: "Accounts", link: "/api/accounts" },
-          { text: "Meteor", link: "/api/meteor" },
+          {
+            text: "Meteor",
+            link: "/api/meteor",
+            items: [
+              { text: "Core", link: "/api/meteor#core" },
+              { text: "Methods", link: "/api/meteor#methods" },
+          ],
+          },
         ],
       },
     ],
@@ -39,5 +46,9 @@ export default defineConfig({
       copyright:
         'Copyright (c) 2011 - present <a href="https://www.meteor.com/">Meteor Software</a>.',
     },
+    editLink: {
+      pattern: 'https://github.com/meteor/meteor/edit/main/v3-docs/docs/:path',
+      text: 'Edit this page on GitHub'
+    }
   },
 });

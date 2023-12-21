@@ -2,6 +2,9 @@
 
 Meteor global object has many functions and properties for handling utilities, network and much more.
 
+
+### Core APIs {#core}
+
 <ApiBox name="Meteor.startup" hasCustomExample/>
 
 On a server, the function will run as soon as the server process is
@@ -51,6 +54,11 @@ Meteor.startup(() => {
 
 :::
 
+<ApiBox name="Meteor.wrapAsync" />
+<ApiBox name="Meteor.defer" />
+<ApiBox name="Meteor.absoluteUrl" />
+<ApiBox name="Meteor.settings" />
+<ApiBox name="Meteor.release" />
 
 <ApiBox name="Meteor.isClient" />
 
@@ -70,3 +78,7 @@ should be kept in the `server` directory.
 <ApiBox name="Meteor.isTest" />
 <ApiBox name="Meteor.isAppTest" />
 <ApiBox name="Meteor.isPackageTest" />
+
+<ApiBox name="Meteor.gitCommitHash" />
+
+### Method APIs {#methods}
