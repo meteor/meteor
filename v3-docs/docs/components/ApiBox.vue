@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Booleans from './helpers/Booleans.vue'
+import Functions from './helpers/Functions.vue'
 import Locus from './helpers/Locus.vue'
 import { useData } from 'vitepress'
 
@@ -9,7 +10,8 @@ type Jsdoc = typeof jsdoc
 type Params = keyof Jsdoc
 
 const props = defineProps<{
-    name: Params
+    name: Params;
+    hasCustomExample?: boolean
 }>()
 
 function getJsdoc<T extends Params>(key: T): Jsdoc[T] {
@@ -26,9 +28,7 @@ function getJsdoc<T extends Params>(key: T): Jsdoc[T] {
 }
 
 const ui = getJsdoc(props.name)
-console.log(ui)
 
-// <div class="api {{bare}} new-api-box">
 //   <div class="api-heading">
 //     <div class="locus">
 //       {{locus}}
@@ -92,7 +92,30 @@ console.log(ui)
 //   </div>
 // </div>
 const link = ui.longname.replace('.', '-').replace('#', '-')
-const isBoolean = ui.type.names.at(0) === 'Boolean'
+
+const isBoolean = ui.type?.names?.at(0) === 'Boolean'
+
+const isFunction = ui.kind === 'function';
+if (isFunction) {
+    for (const param of ui.params) {
+        const shouldVerify = param.type.names.length > 1
+        if (shouldVerify) {
+            const { page } = useData()
+            throw new Error(`
+                jsdoc error: "${param.name}" from ${ui.longname} has more than one type.
+                Check as well in ${ui.filepath} at line ${ui.lineno}
+                Error come from ${page.value.filePath}
+                `)
+        }
+    }
+}
+
+// const debug = (name) => {
+//     if (ui.longname !== name) return
+//     console.log(ui)
+
+// }
+
 </script>
 
 <template>
@@ -104,9 +127,12 @@ const isBoolean = ui.type.names.at(0) === 'Boolean'
 
         <div v-html="ui.summary"></div>
         <Locus v-if="ui.locus !== 'Anywhere'" :locus="ui.locus" />
-        <div v-if="isBoolean">
-            <Booleans :from="ui.module" :longname="ui.longname" />
-        </div>
+        <template v-if="!hasCustomExample">
+            <Booleans v-if="isBoolean" :memberof="ui.memberof" :from="ui.module" :longname="ui.longname" />
+            <Functions v-if="isFunction" :from="ui.module" :longname="ui.longname" :params="ui.params" :fnName="ui.name"
+                :memberof="ui.memberof" />
+        </template>
+
     </div>
 </template>
 

@@ -1,7 +1,9 @@
-
 # Meteor API
 
 Meteor global object has many functions and properties for handling utilities, network and much more.
+
+<ApiBox name="Meteor.startup"/>
+
 
 <ApiBox name="Meteor.isClient" />
 
