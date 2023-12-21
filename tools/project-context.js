@@ -637,6 +637,8 @@ Object.assign(ProjectContext.prototype, {
       return buildmessage.enterJob("selecting package versions", async function () {
         var resolver = await self._buildResolver();
 
+        let localPackages = self.localCatalog.getAllPackageNames();
+
         var resolveOptions = {
           previousSolution: cachedVersions,
           anticipatedPrereleases: anticipatedPrereleases,
@@ -650,6 +652,18 @@ Object.assign(ProjectContext.prototype, {
           // exist.  They'll end up getting changed or removed if possible.
           missingPreviousVersionIsError: canRetry,
           supportedIsobuildFeaturePackages: KNOWN_ISOBUILD_FEATURE_PACKAGES,
+          explainTopLevel(name) {
+            if (localPackages.includes(name)) {
+              return 'local package'
+            }
+
+            if (
+              self._releaseForConstraints &&
+              self._releaseForConstraints.packages[name]
+            ) {
+              return 'constrained by release'
+            }
+          }
         };
         if (self._upgradePackageNames) {
           resolveOptions.upgrade = self._upgradePackageNames;
@@ -868,7 +882,7 @@ Object.assign(ProjectContext.prototype, {
     };
 
     this._addAppConstraints(depsAndConstraints);
-    await this._addLocalPackageConstraints(depsAndConstraints);
+    this._addLocalPackageConstraints(depsAndConstraints);
     this._addReleaseConstraints(depsAndConstraints);
 
     return depsAndConstraints;
@@ -883,9 +897,9 @@ Object.assign(ProjectContext.prototype, {
     });
   },
 
-  _addLocalPackageConstraints: async function (depsAndConstraints) {
+  _addLocalPackageConstraints: function (depsAndConstraints) {
     var self = this;
-    const packageNames = await self.localCatalog.getAllPackageNames();
+    const packageNames = self.localCatalog.getAllPackageNames();
     packageNames.forEach((packageName) => {
       var versionRecord = self.localCatalog.getLatestVersion(packageName);
       var constraint = utils.parsePackageConstraint(

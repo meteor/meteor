@@ -56,7 +56,8 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
                                 'anticipatedPrereleases',
                                 'previousSolution',
                                 'allowIncompatibleUpdate',
-                                'upgradeIndirectDepPatchVersions'));
+                                'upgradeIndirectDepPatchVersions',
+                                'explainTopLevel'));
   });
 
   // The constraint solver avoids re-solving everything from scratch on

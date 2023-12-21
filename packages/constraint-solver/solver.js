@@ -1043,7 +1043,14 @@ CS.Solver.prototype.listConstraintsOnPackage = function (pkg) {
         paths = self.getPathsToPackageVersion(
           CS.PackageAndVersion.fromString(c.fromVar));
       } else {
-        paths = [['top level']];
+        let description = 'top level';
+        let explanation = self.input.explainTopLevel(c.toPackage);
+
+        if (explanation) {
+          description += ' (' + explanation + ')';
+        }
+
+        paths = [[description]];
       }
       _.each(paths, function (path) {
         result += '\n* ' + (new PV.PackageConstraint(
