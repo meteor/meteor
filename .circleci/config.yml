@@ -779,6 +779,9 @@ jobs:
             sudo mkdir -p ./tmp/test-groups
             sudo chmod a+rwx ./tmp/test-groups
       - run:
+          name: Clear npm cache
+          command: ./meteor npm cache clear --force
+      - run:
           <<: *log_env
       - run:
           name: Calculate Balanced Test Groups
@@ -891,18 +894,4 @@ workflows:
       - Test Group 11:
           requires:
             - Get Ready
-      - Clean Up:
-          requires:
-            - Isolated Tests
-            - Test Group 0
-            - Test Group 1
-            - Test Group 2
-            - Test Group 3
-            - Test Group 4
-            - Test Group 5
-            - Test Group 6
-            - Test Group 7
-            - Test Group 8
-            - Test Group 9
-            - Test Group 10
-            - Test Group 11
+      - Clean Up
