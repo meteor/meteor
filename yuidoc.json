@@ -1,7 +1,7 @@
 {
   "name": "The meteor-roles API",
   "description": "The meteor-roles API: an authorization package for Meteor",
-  "version": "v3.4.0",
+  "version": "v3.6.0",
   "options": {
     "outdir": "./docs",
     "exclude": ".meteor,.build,tests",

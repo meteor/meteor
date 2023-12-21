@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: 'Authorization package for Meteor',
-  version: '3.6.0',
+  version: '3.6.1',
   git: 'https://github.com/Meteor-Community-Packages/meteor-roles.git',
   name: 'alanning:roles'
 })
@@ -20,7 +20,7 @@ Package.onUse(function (api) {
     'check'
   ], both)
 
-  api.use('zodern:types@1.0.9')
+  api.use('zodern:types@1.0.10')
 
   api.use(['blaze@2.7.1'], 'client', { weak: true })
 
