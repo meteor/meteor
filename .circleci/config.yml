@@ -780,7 +780,7 @@ jobs:
             sudo chmod a+rwx ./tmp/test-groups
       - run:
           name: Clear npm cache
-          command: ./meteor npm cache clear --force
+          command: npm cache clear --force
       - run:
           <<: *log_env
       - run:
