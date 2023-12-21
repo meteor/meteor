@@ -750,7 +750,7 @@ jobs:
   Docs:
     docker:
       # This Node version should match that in the meteor/docs CircleCI config.
-      - image: meteor/circleci:android-28-node-12
+      - image: meteor/circleci:2023.12.1-android-34-node-20
     resource_class: large
     environment:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs
@@ -778,13 +778,6 @@ jobs:
           command: |
             sudo mkdir -p ./tmp/test-groups
             sudo chmod a+rwx ./tmp/test-groups
-      - run:
-          name: Clear npm cache
-          command: |
-            rm -rf node_modules
-            npm cache clean --force
-      - run:
-          <<: *log_env
       - run:
           name: Calculate Balanced Test Groups
           command: |
@@ -896,4 +889,18 @@ workflows:
       - Test Group 11:
           requires:
             - Get Ready
-      - Clean Up
+      - Clean Up:
+          requires:
+            - Isolated Tests
+            - Test Group 0
+            - Test Group 1
+            - Test Group 2
+            - Test Group 3
+            - Test Group 4
+            - Test Group 5
+            - Test Group 6
+            - Test Group 7
+            - Test Group 8
+            - Test Group 9
+            - Test Group 10
+            - Test Group 11
