@@ -1,5 +1,17 @@
 # Changelog
 
+## v3.6.1
+
+* Added types for async functions [#386](https://github.com/Meteor-Community-Packages/meteor-roles/pull/386) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Updated docs with async functions [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Updated `zodern:types` to v1.0.10
+
+## v3.6.0
+
+* Added async versions of functions [#361](https://github.com/Meteor-Community-Packages/meteor-roles/pull/361) [#378](https://github.com/Meteor-Community-Packages/meteor-roles/pull/378) [@bratelefant](https://github.com/bratelefant) [@storytellercz](https://github.com/sponsors/StorytellerCZ) [@jankapunkt](https://github.com/sponsors/jankapunkt)
+* Added missing types [#383](https://github.com/Meteor-Community-Packages/meteor-roles/pull/383) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Add complete test suite [#375](https://github.com/Meteor-Community-Packages/meteor-roles/pull/375) [@jankapunkt](https://github.com/sponsors/jankapunkt) [#380](https://github.com/Meteor-Community-Packages/meteor-roles/pull/380) [@bratelefant](https://github.com/bratelefant)
+
 ## v3.5.1
 
 * Fix for index creation functions losing context [#371](https://github.com/Meteor-Community-Packages/meteor-roles/pull/371) [@copleykj](https://github.com/sponsors/copleykj)

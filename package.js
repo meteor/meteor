@@ -20,13 +20,14 @@ Package.onUse(function (api) {
     'check'
   ], both)
 
-  api.use('zodern:types@1.0.9')
+  api.use('zodern:types@1.0.10')
 
   api.use(['blaze@2.7.1'], 'client', { weak: true })
 
   api.export('Roles')
 
   api.addFiles('roles/roles_common.js', both)
+  api.addFiles('roles/roles_common_async.js', both)
   api.addFiles('roles/roles_server.js', 'server')
   api.addFiles([
     'roles/client/debug.js',
@@ -56,5 +57,7 @@ Package.onTest(function (api) {
   ], both)
 
   api.addFiles('roles/tests/server.js', 'server')
+  api.addFiles('roles/tests/serverAsync.js', 'server')
   api.addFiles('roles/tests/client.js', 'client')
+  api.addFiles('roles/tests/clientAsync.js', 'client')
 })

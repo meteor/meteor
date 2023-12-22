@@ -1418,206 +1418,210 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, 'user', 'scope2'))
   })
 
-  it('migration without global groups (to v2)', function () {
-    assert.isOk(Meteor.roles.insert({ name: 'admin' }))
-    assert.isOk(Meteor.roles.insert({ name: 'editor' }))
-    assert.isOk(Meteor.roles.insert({ name: 'user' }))
+  describe('v2 migration', function () {
+    it('migration without global groups (to v2)', function () {
+      assert.isOk(Meteor.roles.insert({ name: 'admin' }))
+      assert.isOk(Meteor.roles.insert({ name: 'editor' }))
+      assert.isOk(Meteor.roles.insert({ name: 'user' }))
 
-    assert.isOk(Meteor.users.update(users.eve, { $set: { roles: ['admin', 'editor'] } }))
-    assert.isOk(Meteor.users.update(users.bob, { $set: { roles: [] } }))
-    assert.isOk(Meteor.users.update(users.joe, { $set: { roles: ['user'] } }))
+      assert.isOk(Meteor.users.update(users.eve, { $set: { roles: ['admin', 'editor'] } }))
+      assert.isOk(Meteor.users.update(users.bob, { $set: { roles: [] } }))
+      assert.isOk(Meteor.users.update(users.joe, { $set: { roles: ['user'] } }))
 
-    Roles._forwardMigrate()
+      Roles._forwardMigrate()
 
-    assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
-      roles: [{
+      assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
+        roles: [{
+          _id: 'admin',
+          scope: null,
+          assigned: true
+        }, {
+          _id: 'editor',
+          scope: null,
+          assigned: true
+        }]
+      })
+      assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
+        roles: []
+      })
+      assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
+        roles: [{
+          _id: 'user',
+          scope: null,
+          assigned: true
+        }]
+      })
+
+      assert.deepEqual(Meteor.roles.findOne({ _id: 'admin' }), {
         _id: 'admin',
-        scope: null,
-        assigned: true
-      }, {
+        children: []
+      })
+      assert.deepEqual(Meteor.roles.findOne({ _id: 'editor' }), {
         _id: 'editor',
-        scope: null,
-        assigned: true
-      }]
-    })
-    assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
-      roles: []
-    })
-    assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
-      roles: [{
+        children: []
+      })
+      assert.deepEqual(Meteor.roles.findOne({ _id: 'user' }), {
         _id: 'user',
-        scope: null,
-        assigned: true
-      }]
+        children: []
+      })
+
+      Roles._backwardMigrate(null, null, false)
+
+      assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
+        roles: ['admin', 'editor']
+      })
+      assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
+        roles: []
+      })
+      assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
+        roles: ['user']
+      })
+
+      assert.deepEqual(Meteor.roles.findOne({ name: 'admin' }, { fields: { _id: 0 } }), {
+        name: 'admin'
+      })
+      assert.deepEqual(Meteor.roles.findOne({ name: 'editor' }, { fields: { _id: 0 } }), {
+        name: 'editor'
+      })
+      assert.deepEqual(Meteor.roles.findOne({ name: 'user' }, { fields: { _id: 0 } }), {
+        name: 'user'
+      })
     })
 
-    assert.deepEqual(Meteor.roles.findOne({ _id: 'admin' }), {
-      _id: 'admin',
-      children: []
-    })
-    assert.deepEqual(Meteor.roles.findOne({ _id: 'editor' }), {
-      _id: 'editor',
-      children: []
-    })
-    assert.deepEqual(Meteor.roles.findOne({ _id: 'user' }), {
-      _id: 'user',
-      children: []
-    })
+    it('migration with global groups (to v2)', function () {
+      assert.isOk(Meteor.roles.insert({ name: 'admin' }))
+      assert.isOk(Meteor.roles.insert({ name: 'editor' }))
+      assert.isOk(Meteor.roles.insert({ name: 'user' }))
 
-    Roles._backwardMigrate(null, null, false)
+      assert.isOk(Meteor.users.update(users.eve, { $set: { roles: { __global_roles__: ['admin', 'editor'], foo_bla: ['user'] } } }))
+      assert.isOk(Meteor.users.update(users.bob, { $set: { roles: { } } }))
+      assert.isOk(Meteor.users.update(users.joe, { $set: { roles: { __global_roles__: ['user'], foo_bla: ['user'] } } }))
 
-    assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
-      roles: ['admin', 'editor']
-    })
-    assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
-      roles: []
-    })
-    assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
-      roles: ['user']
-    })
+      Roles._forwardMigrate(null, null, false)
 
-    assert.deepEqual(Meteor.roles.findOne({ name: 'admin' }, { fields: { _id: 0 } }), {
-      name: 'admin'
-    })
-    assert.deepEqual(Meteor.roles.findOne({ name: 'editor' }, { fields: { _id: 0 } }), {
-      name: 'editor'
-    })
-    assert.deepEqual(Meteor.roles.findOne({ name: 'user' }, { fields: { _id: 0 } }), {
-      name: 'user'
+      assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
+        roles: [{
+          _id: 'admin',
+          scope: null,
+          assigned: true
+        }, {
+          _id: 'editor',
+          scope: null,
+          assigned: true
+        }, {
+          _id: 'user',
+          scope: 'foo_bla',
+          assigned: true
+        }]
+      })
+      assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
+        roles: []
+      })
+      assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
+        roles: [{
+          _id: 'user',
+          scope: null,
+          assigned: true
+        }, {
+          _id: 'user',
+          scope: 'foo_bla',
+          assigned: true
+        }]
+      })
+
+      assert.deepEqual(Meteor.roles.findOne({ _id: 'admin' }), {
+        _id: 'admin',
+        children: []
+      })
+      assert.deepEqual(Meteor.roles.findOne({ _id: 'editor' }), {
+        _id: 'editor',
+        children: []
+      })
+      assert.deepEqual(Meteor.roles.findOne({ _id: 'user' }), {
+        _id: 'user',
+        children: []
+      })
+
+      Roles._backwardMigrate(null, null, true)
+
+      assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
+        roles: {
+          __global_roles__: ['admin', 'editor'],
+          foo_bla: ['user']
+        }
+      })
+      assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
+        roles: {}
+      })
+      assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
+        roles: {
+          __global_roles__: ['user'],
+          foo_bla: ['user']
+        }
+      })
+
+      assert.deepEqual(Meteor.roles.findOne({ name: 'admin' }, { fields: { _id: 0 } }), {
+        name: 'admin'
+      })
+      assert.deepEqual(Meteor.roles.findOne({ name: 'editor' }, { fields: { _id: 0 } }), {
+        name: 'editor'
+      })
+      assert.deepEqual(Meteor.roles.findOne({ name: 'user' }, { fields: { _id: 0 } }), {
+        name: 'user'
+      })
+
+      Roles._forwardMigrate(null, null, true)
+
+      assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
+        roles: [{
+          _id: 'admin',
+          scope: null,
+          assigned: true
+        }, {
+          _id: 'editor',
+          scope: null,
+          assigned: true
+        }, {
+          _id: 'user',
+          scope: 'foo.bla',
+          assigned: true
+        }]
+      })
+      assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
+        roles: []
+      })
+      assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
+        roles: [{
+          _id: 'user',
+          scope: null,
+          assigned: true
+        }, {
+          _id: 'user',
+          scope: 'foo.bla',
+          assigned: true
+        }]
+      })
+
+      assert.deepEqual(Meteor.roles.findOne({ _id: 'admin' }), {
+        _id: 'admin',
+        children: []
+      })
+      assert.deepEqual(Meteor.roles.findOne({ _id: 'editor' }), {
+        _id: 'editor',
+        children: []
+      })
+      assert.deepEqual(Meteor.roles.findOne({ _id: 'user' }), {
+        _id: 'user',
+        children: []
+      })
     })
   })
 
-  it('migration without global groups (to v3)')
+  describe('v3 migration', function () {
+    it('migration without global groups (to v3)')
 
-  it('migration with global groups (to v2)', function () {
-    assert.isOk(Meteor.roles.insert({ name: 'admin' }))
-    assert.isOk(Meteor.roles.insert({ name: 'editor' }))
-    assert.isOk(Meteor.roles.insert({ name: 'user' }))
-
-    assert.isOk(Meteor.users.update(users.eve, { $set: { roles: { __global_roles__: ['admin', 'editor'], foo_bla: ['user'] } } }))
-    assert.isOk(Meteor.users.update(users.bob, { $set: { roles: { } } }))
-    assert.isOk(Meteor.users.update(users.joe, { $set: { roles: { __global_roles__: ['user'], foo_bla: ['user'] } } }))
-
-    Roles._forwardMigrate(null, null, false)
-
-    assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
-      roles: [{
-        _id: 'admin',
-        scope: null,
-        assigned: true
-      }, {
-        _id: 'editor',
-        scope: null,
-        assigned: true
-      }, {
-        _id: 'user',
-        scope: 'foo_bla',
-        assigned: true
-      }]
-    })
-    assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
-      roles: []
-    })
-    assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
-      roles: [{
-        _id: 'user',
-        scope: null,
-        assigned: true
-      }, {
-        _id: 'user',
-        scope: 'foo_bla',
-        assigned: true
-      }]
-    })
-
-    assert.deepEqual(Meteor.roles.findOne({ _id: 'admin' }), {
-      _id: 'admin',
-      children: []
-    })
-    assert.deepEqual(Meteor.roles.findOne({ _id: 'editor' }), {
-      _id: 'editor',
-      children: []
-    })
-    assert.deepEqual(Meteor.roles.findOne({ _id: 'user' }), {
-      _id: 'user',
-      children: []
-    })
-
-    Roles._backwardMigrate(null, null, true)
-
-    assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
-      roles: {
-        __global_roles__: ['admin', 'editor'],
-        foo_bla: ['user']
-      }
-    })
-    assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
-      roles: {}
-    })
-    assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
-      roles: {
-        __global_roles__: ['user'],
-        foo_bla: ['user']
-      }
-    })
-
-    assert.deepEqual(Meteor.roles.findOne({ name: 'admin' }, { fields: { _id: 0 } }), {
-      name: 'admin'
-    })
-    assert.deepEqual(Meteor.roles.findOne({ name: 'editor' }, { fields: { _id: 0 } }), {
-      name: 'editor'
-    })
-    assert.deepEqual(Meteor.roles.findOne({ name: 'user' }, { fields: { _id: 0 } }), {
-      name: 'user'
-    })
-
-    Roles._forwardMigrate(null, null, true)
-
-    assert.deepEqual(Meteor.users.findOne(users.eve, { fields: { roles: 1, _id: 0 } }), {
-      roles: [{
-        _id: 'admin',
-        scope: null,
-        assigned: true
-      }, {
-        _id: 'editor',
-        scope: null,
-        assigned: true
-      }, {
-        _id: 'user',
-        scope: 'foo.bla',
-        assigned: true
-      }]
-    })
-    assert.deepEqual(Meteor.users.findOne(users.bob, { fields: { roles: 1, _id: 0 } }), {
-      roles: []
-    })
-    assert.deepEqual(Meteor.users.findOne(users.joe, { fields: { roles: 1, _id: 0 } }), {
-      roles: [{
-        _id: 'user',
-        scope: null,
-        assigned: true
-      }, {
-        _id: 'user',
-        scope: 'foo.bla',
-        assigned: true
-      }]
-    })
-
-    assert.deepEqual(Meteor.roles.findOne({ _id: 'admin' }), {
-      _id: 'admin',
-      children: []
-    })
-    assert.deepEqual(Meteor.roles.findOne({ _id: 'editor' }), {
-      _id: 'editor',
-      children: []
-    })
-    assert.deepEqual(Meteor.roles.findOne({ _id: 'user' }), {
-      _id: 'user',
-      children: []
-    })
+    it('migration with global groups (to v3)')
   })
-
-  it('migration with global groups (to v3)')
 
   it('_addUserToRole', function () {
     Roles.createRole('admin')
