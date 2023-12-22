@@ -77,6 +77,7 @@ export default defineConfig({
         items: [
           {link: "cli/index", text: "CLI" },
           {link: "cli/using-core-types", text: "Using Core Types" },
+          {link: "cli/environment-variables", text: "Environment Variables" },
         ],
         collapsed: true
       },
