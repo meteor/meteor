@@ -75,7 +75,8 @@ export default defineConfig({
       {
         text: "Command Line",
         items: [
-          {link: "cli/index", text: "CLI" }
+          {link: "cli/index", text: "CLI" },
+          {link: "cli/using-core-types", text: "Using Core Types" },
         ],
         collapsed: true
       },
