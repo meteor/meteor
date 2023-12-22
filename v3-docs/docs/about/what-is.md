@@ -16,7 +16,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 ## Meteor resources {#learning-more}
 
-1. First, learn how to install meteor in the [installation section](/install.html).
+1. First, learn how to install meteor in the [installation section](/about/install.html).
 
 1. The place to get started with Meteor is the [tutorials page](https://www.meteor.com/developers/tutorials).
 
