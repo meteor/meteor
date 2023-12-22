@@ -571,7 +571,7 @@ export class Connection {
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
    * @returns {Promise}
    */
-  async callAsync(name /* .. [arguments] .. */) {
+  callAsync(name /* .. [arguments] .. */) {
     const args = slice.call(arguments, 1);
     if (args.length && typeof args[args.length - 1] === 'function') {
       throw new Error(
@@ -579,66 +579,7 @@ export class Connection {
       );
     }
 
-    const applyOptions = ['returnStubValue', 'returnServerResultPromise', 'returnServerPromise'];
-    const defaultOptions = {
-      returnServerResultPromise: true,
-    };
-    const options = {
-      ...defaultOptions,
-      ...(applyOptions.some(o => args[0]?.hasOwnProperty(o))
-        ? args.shift()
-        : {}),
-    };
-
-    const invocation = DDP._CurrentCallAsyncInvocation.get();
-
-    if (invocation?.hasCallAsyncParent) {
-      return this.applyAsync(name, args, { ...options, isFromCallAsync: true });
-    }
-
-    /*
-    * This is necessary because when you call a Promise.then, you're actually calling a bound function by Meteor.
-    *
-    * This is done by this code https://github.com/meteor/meteor/blob/17673c66878d3f7b1d564a4215eb0633fa679017/npm-packages/meteor-promise/promise_client.js#L1-L16. (All the logic below can be removed in the future, when we stop overwriting the
-    * Promise.)
-    *
-    * When you call a ".then()", like "Meteor.callAsync().then()", the global context (inside currentValues)
-    * will be from the call of Meteor.callAsync(), and not the context after the promise is done.
-    *
-    * This means that without this code if you call a stub inside the ".then()", this stub will act as a simulation
-    * and won't reach the server.
-    *
-    * Inside the function _getIsSimulation(), if isFromCallAsync is false, we continue to consider just the
-    * alreadyInSimulation, otherwise, isFromCallAsync is true, we also check the value of callAsyncMethodRunning (by
-    * calling DDP._CurrentMethodInvocation._isCallAsyncMethodRunning()).
-    *
-    * With this, if a stub is running inside a ".then()", it'll know it's not a simulation, because callAsyncMethodRunning
-    * will be false.
-    *
-    * DDP._CurrentMethodInvocation._set() is important because without it, if you have a code like:
-    *
-    * Meteor.callAsync("m1").then(() => {
-    *   Meteor.callAsync("m2")
-    * })
-    *
-    * The call the method m2 will act as a simulation and won't reach the server. That's why we reset the context here
-    * before calling everything else.
-    *
-    * */
-    DDP._CurrentMethodInvocation._set();
-    DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
-    const promise = new Promise((resolve, reject) => {
-      DDP._CurrentCallAsyncInvocation._set({ name, hasCallAsyncParent: true });
-      this.applyAsync(name, args, { isFromCallAsync: true, ...options })
-        .then(resolve)
-        .catch(reject)
-        .finally(() => {
-          DDP._CurrentCallAsyncInvocation._set();
-        });
-    });
-    return promise.finally(() =>
-      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
-    );
+    return this.applyAsync(name, args, { returnServerResultPromise: true });
   }
 
   /**
@@ -694,7 +635,27 @@ export class Connection {
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    */
-  async applyAsync(name, args, options, callback = null) {
+  applyAsync(name, args, options, callback = null) {
+    const stubPromise = this._applyAsyncStubInvocation(name, args, options);
+
+    const promise = this._applyAsync({
+      name,
+      args,
+      options,
+      callback,
+      stubPromise,
+    });
+    if (Meteor.isClient) {
+      // only return the stubReturnValue
+      promise.stubPromise = stubPromise.then(o => o.stubReturnValue);
+      // this avoids attribute recursion
+      promise.serverPromise = new Promise((resolve, reject) =>
+        promise.then(resolve).catch(reject),
+      );
+    }
+    return promise;
+  }
+  async _applyAsyncStubInvocation(name, args, options) {
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args), options);
     if (stubOptions.hasStub) {
       if (
@@ -728,6 +689,10 @@ export class Connection {
         stubOptions.exception = e;
       }
     }
+    return stubOptions;
+  }
+  async _applyAsync({ name, args, options, callback, stubPromise }) {
+    const stubOptions = await stubPromise;
     return this._apply(name, stubOptions, args, options, callback);
   }
 
@@ -890,14 +855,14 @@ export class Connection {
     // If we're using the default callback on the server,
     // block waiting for the result.
     if (future) {
-      if (options.returnServerPromise) {
-        return future;
+      // This is the result of the method ran in the client.
+      // You can opt-in in getting the local result by running:
+      // const { stubPromise, serverPromise } = Meteor.callAsync(...);
+      // const whatServerDid = await serverPromise;
+      if (options.returnStubValue) {
+        return future.then(() => stubReturnValue);
       }
-      return options.returnStubValue
-        ? future.then(() => stubReturnValue)
-        : {
-            stubValuePromise: future,
-          };
+      return future;
     }
     return options.returnStubValue ? stubReturnValue : undefined;
   }
