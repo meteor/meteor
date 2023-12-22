@@ -8,7 +8,7 @@ command-line tool. This is just an overview and does not mention every command
 or every option to every command; for more details, use the `meteor help`
 command.
 
-<h2 id="meteorhelp">meteor help</h2>
+## meteor help {meteorhelp}
 
 Get help on meteor command line usage. Running `meteor help` by
 itself will list the common meteor
@@ -16,7 +16,7 @@ commands. Running <code>meteor help <i>command</i></code> will print
 detailed help about the command.
 
 
-<h2 id="meteorrun">meteor run</h2>
+## meteor run {meteorrun}
 
 Run a meteor development server in the current project. Searches
 upward from the current directory for the root directory of a Meteor
@@ -43,7 +43,7 @@ and the development MongoDB instance on `mongodb://localhost:4001`.
 
 Run `meteor help run` to see the full list of options.
 
-<h2 id="meteordebug">meteor debug</h2>
+## meteor debug {meteordebug}
 
 Run the project, but suspend the server process for debugging.
 
@@ -79,7 +79,7 @@ option to other `meteor` tool commands, such as `meteor run` and `meteor test-pa
 > **Note:** Due to a [bug in `node-inspector`](https://github.com/node-inspector/node-inspector/issues/903), pushing "Enter" after a command on the Node Inspector Console will not successfully send the command to the server.  If you require this functionality, please consider using Safari or `meteor shell` in order to interact with the server console until the `node-inspector` project [fixes the bug](https://github.com/node-inspector/node-inspector/pull/955).  Alternatively, there is a hot-patch available [in this comment](https://github.com/meteor/meteor/issues/7991#issuecomment-266709459) on [#7991](https://github.com/meteor/meteor/issues/7991).
 
 
-<h2 id="meteorcreate">meteor create <i>app-name</i></h2>
+## meteor create  _app-name_ {meteorcreate}
 
 The command `meteor create app-name` is the default command for creating a new Meteor project. It creates a subdirectory
 named `app-name` and copies a template app into it. You can pass an absolute or relative path. If you pass a relative
@@ -88,7 +88,7 @@ path, it will be resolved relative to the current working directory. By default,
 See the flags below to learn how you can generate different types of apps.
 
 
-<h2 id="apollo">--apollo</h2>
+## --apollo {apollo}
 
 The command `meteor create --apollo app-name` creates a Meteor app with [React](https://react.dev/),
 [Apollo](https://www.apollographql.com/) (GraphQL), and [MongoDB](https://www.mongodb.com/). To create a complete app,
@@ -102,7 +102,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
 `react-meteor-data`, `apollo`, `swydo:graphql`.
 
-<h2 id="bare">--bare</h2>
+## --bare {bare}
 
 The command `meteor create --bare app-name` creates an empty Meteor app with [Blaze](https://blazejs.org) and
 [MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
@@ -114,7 +114,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`.
 
 
-<h2 id="blaze-app">--blaze</h2>
+## --blaze {blaze-app}
 
 The command `meteor create --blaze app-name` creates a Meteor app with [Blaze](https://blazejs.org) and
 [MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
@@ -127,7 +127,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `blaze-ht
 `hot-module-replacement`, `blaze-hot`.
 
 
-<h2 id="chakra-ui">--chakra-ui</h2>
+## --chakra-ui {chakra-ui}
 
 The command `meteor create --chakra-ui app-name` creates a Meteor app with [React](https://react.dev/),
 [Chakra-UI](https://chakra-ui.com/), and [MongoDB](https://www.mongodb.com/). To create a complete app, including
@@ -142,7 +142,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 `react-meteor-data`.
 
 
-<h2 id="full">--full</h2>
+## --full {full}
 
 The command `meteor create --full app-name` creates a Meteor app with [Blaze](https://blazejs.org) and
 [MongoDB](https://www.mongodb.com/). It creates a more complete, imports-based project that closely matches the
@@ -157,7 +157,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `blaze-ht
 `ostrio:flow-router-extra`, `less`, `meteortesting:mocha`, `johanbrook:publication-collector`.
 
 
-<h2 id="minimal">--minimal</h2>
+## --minimal {minimal}
 
 The command `meteor create --minimal app-name` creates a project with as few Meteor packages as possible.
 
@@ -167,14 +167,14 @@ Meteor packages included: `meteor`, `standard-minifier-css`, `standard-minifier-
 `static-html`, `webapp`, `server-render`, `hot-module-replacement`.
 
 
-<h2 id="package">--package</h2>
+## --package {package}
 
 The command `meteor create --package package-name` creates a new package. If used in an existing app, it will create a
 package in the `packages` directory. Check the [Meteor Guide](https://guide.meteor.com/writing-atmosphere-packages.html)
 for more information on how to get started writing packages.
 
 
-<h2 id="prototype">--prototype</h2>
+## --prototype {prototype}
 
 The command `meteor create --prototype app-name` creates a project with the prototype purpose packages (`autopublish`
 and `insecure`). If you use them, you can change your collections quickly and create prototype apps very quickly.
@@ -184,7 +184,7 @@ For more information about security, you can read our [security checklist](https
 It can be used with other flags that create apps, such as `--react`, `blaze`, or `--typescript`.
 
 
-<h2 id="react">--react</h2>
+## --react {react}
 
 The command `meteor create --react app-name` creates a Meteor app with [React](https://react.dev/) and
 [MongoDB](https://www.mongodb.com/). It functions in the same way as if you don't use any flags. To create a complete
@@ -198,7 +198,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 
 
 
-<h2 id="release">--release</h2>
+## --release {release}
 
 The command `meteor create app-name --release {meteor-version}` creates a Meteor app with the release specified in the
 command. For instance, you can create a Meteor app with the `2.8` release using `meteor create app-name --release 2.8`.
@@ -206,7 +206,7 @@ By default, it generates a React app, but you can use it with other flags that c
 `--svelte`, `--vue`, or `--typescript`.
 
 
-<h2 id="solid">--solid</h2>
+## --solid {solid}
 
 The command `meteor create --solid app-name` creates a Meteor app with [Solid](https://www.solidjs.com/),
 [Vite](https://vitejs.dev/), and [MongoDB](https://www.mongodb.com/). You can see an example on the
@@ -219,7 +219,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 `vite:bundler`.
 
 
-<h2 id="svelte">--svelte</h2>
+## --svelte {svelte}
 
 The command `meteor create --svelte app-name` creates a Meteor app with [Svelte](https://svelte.dev/) and
 [MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
@@ -235,7 +235,7 @@ You can also use [Svelte](https://svelte.dev/) with [Vite](https://vitejs.dev/) 
 You can see an example on the [meteor-vite](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/svelte) repository.
 
 
-<h2 id="tailwind">--tailwind</h2>
+## --tailwind {tailwind}
 
 The command `meteor create --tailwind app-name` creates a Meteor app with [React](https://react.dev/),
 [Tailwind CSS](https://tailwindcss.com), and [MongoDB](https://www.mongodb.com/).
@@ -247,7 +247,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 `react-meteor-data`.
 
 
-<h2 id="typescript">--typescript</h2>
+## --typescript {typescript}
 
 The command `meteor create --typescript app-name` creates a Meteor app with [React](https://react.dev/),
 [TypeScript](https://www.typescriptlang.org/), and [MongoDB](https://www.mongodb.com/). Check the
@@ -261,7 +261,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 `react-meteor-data`, `zodern:types`.
 
 
-<h2 id="vue">--vue</h2>
+## --vue {vue}
 
 The command `meteor create --vue app-name` creates a Meteor app with [Vue 3](https://vuejs.org/),
 [Tailwind CSS](https://tailwindcss.com), [Vite](https://vitejs.dev/), and [MongoDB](https://www.mongodb.com/). To
@@ -278,7 +278,7 @@ package. You can see an example on the [meteor-vite](https://github.com/JorgenVa
 repository.
 
 
-<h2 id="vue-2">--vue-2</h2>
+## --vue-2 {vue-2}
 
 The command `meteor create --vue-2 app-name` creates a Meteor app with [Vue 2](https://v2.vuejs.org/) and
 [MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
@@ -291,7 +291,7 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 `meteortesting:mocha`, `johanbrook:publication-collector`.
 
 
-<h2 id="meteorgenerate"> meteor generate </h2>
+##  meteor generate  {meteorgenerate}
 
 ``meteor generate`` is a command for generating scaffolds for your current project. When ran without arguments, it will ask
 you what is the name of the model you want to generate, if you do want methods for your api and publications. It can be
@@ -313,7 +313,7 @@ It will generate the following code in ``/imports/api``
 That will have the following code:
 
 
-<h2 id="meteorgenerate-collection.js">collection.js</h2>
+## collection.js {meteorgenerate-collection.js}
 
 ```js
 import { Mongo } from 'meteor/mongo';
@@ -323,7 +323,7 @@ export const CustomerCollection = new Mongo.Collection('customer');
 
 
 
-<h2 id="meteorgenerate-methods.js">methods.js</h2>
+## methods.js {meteorgenerate-methods.js}
 
 ```js
 import { Meteor } from 'meteor/meteor';
@@ -359,7 +359,7 @@ Meteor.methods({
 
 
 
-<h2 id="meteorgenerate-publication.js">publication.js</h2>
+## publication.js {meteorgenerate-publication.js}
 
 ```js
 import { Meteor } from 'meteor/meteor';
@@ -373,7 +373,7 @@ Meteor.publish('allCustomers', function publishCustomers() {
 
 
 
-<h2 id="meteorgenerate-index.js">index.js</h2>
+## index.js {meteorgenerate-index.js}
 
 ```js
 export * from './collection';
@@ -383,7 +383,7 @@ export * from './publications';
 
 Also, there is the same version of these methods using TypeScript, that will be shown bellow.
 
-<h2 id="meteorgenerate-path">path option</h2>
+## path option {meteorgenerate-path}
 
 If you want to create in another path, you can use the ``--path`` option in order to select where to place this boilerplate.
 It will generate the model in that path. Note that is used TypeScript in this example.
@@ -399,7 +399,7 @@ It will generate in ``server/admin`` the another-client code:
 ![Screenshot 2022-11-09 at 11 32 39](https://user-images.githubusercontent.com/70247653/200857560-a4874e4c-1078-4b7a-9381-4c6590d2f63b.png)
 
 
-<h2 id="meteorgenerate-collection.ts">collection.ts</h2>
+## collection.ts {meteorgenerate-collection.ts}
 
 ```typescript
 import { Mongo } from 'meteor/mongo';
@@ -413,7 +413,7 @@ export type AnotherCustomer = {
 export const AnotherCustomerCollection = new Mongo.Collection<AnotherCustomer>('another-customer');
 ```
 
-<h2 id="meteorgenerate-methods.ts">methods.ts</h2>
+## methods.ts {meteorgenerate-methods.ts}
 
 ```typescript
 import { Meteor } from 'meteor/meteor';
@@ -450,7 +450,7 @@ Meteor.methods({
 
 
 
-<h2 id="meteorgenerate-publications.ts">publications.ts</h2>
+## publications.ts {meteorgenerate-publications.ts}
 
 ```typescript
 import { Meteor } from 'meteor/meteor';
@@ -463,7 +463,7 @@ Meteor.publish('allAnotherCustomers', function publishAnotherCustomers() {
 
 
 
-<h2 id="meteorgenerate-index.ts">index.ts</h2>
+## index.ts {meteorgenerate-index.ts}
 
 ```typescript
 export * from './collection';
@@ -474,7 +474,7 @@ export * from './publications';
 ---
 
 
-<h2 id="meteorgenerate-wizard"> Using the Wizard  </h2>
+##  Using the Wizard   {meteorgenerate-wizard}
 
 
 If you run the following command:
@@ -492,7 +492,7 @@ It will prompt the following questions.
 
 ---
 
-<h2 id="meteorgenerate-templating"> Using your own template </h2>
+##  Using your own template  {meteorgenerate-templating}
 
 `--templatePath`
 
@@ -507,7 +507,7 @@ meteor generate feed --templatePath=/scaffolds-ts
 
 You can use your own templates for scaffolding your specific workloads. To do that, you should pass in a template directory URL so that it can copy it with its changes.
 
-<h2 id="meteorgenerate-template-rename"> How to rename things?</h2>
+##  How to rename things? {meteorgenerate-template-rename}
 
 Out of the box is provided a few functions such as replacing ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$``
 
@@ -525,7 +525,7 @@ const transformName = (name) => {
   }
 ```
 
-<h2 id="meteorgenerate-template-faq"> How to bring your own templates? </h2>
+##  How to bring your own templates?  {meteorgenerate-template-faq}
 
 `--replaceFn`
 
@@ -578,7 +578,7 @@ export function transformContents(scaffoldName, contents, fileName) {
 }
 ```
 
-<h2 id="meteorloginlogout">meteor login / logout</h2>
+## meteor login / logout {meteorloginlogout}
 
 Log in and out of your account using Meteor's authentication system.
 
@@ -589,7 +589,7 @@ third-party service providers.
 Once you have your account you can log in and log out from the command line, and
 check your username with `meteor whoami`.
 
-<h2 id="meteordeploy">meteor deploy <i>site</i></h2>
+## meteor deploy  _site_ {meteordeploy}
 
 Deploy the project in your current directory to
 <a href="https://www.meteor.com/galaxy" target="_blank">Galaxy</a>.
@@ -666,7 +666,7 @@ With the argument `--container-size` you can change your app's container size us
 The `--container-size` option is available since Meteor 2.4.1.
 :::
 
-<h2 id="meteorupdate">meteor update</h2>
+## meteor update {meteorupdate}
 
 Attempts to bring you to the latest version of Meteor, and then to upgrade your
 packages to their latest versions. By default, update will not break
@@ -696,7 +696,7 @@ packages, it will log a warning, but perform the update anyway. This will only
 change your package versions if necessary.
 
 
-<h2 id="meteoradd">meteor add <i>package</i></h2>
+## meteor add  _package_ {meteoradd}
 
 Add packages to your Meteor project. By convention, names of community packages
 include the name of the maintainer. For example: `meteor add iron:router`. You
@@ -713,7 +713,7 @@ without specifying a version. For example above, to stop using version `1.1.0`
 exactly, run `meteor add package`.
 
 
-<h2 id="meteorremove">meteor remove <i>package</i></h2>
+## meteor remove  _package_ {meteorremove}
 
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, run
@@ -728,7 +728,7 @@ version, your project will continue to use X at the new version even after you
 run `meteor remove A`.
 
 
-<h2 id="meteorlist">meteor list</h2>
+## meteor list {meteorlist}
 
 Lists all the packages that you have added to your project. For each package,
 lists the version that you are using. Lets you know if a newer version of that
@@ -758,7 +758,7 @@ Adds more package details to the JSON output.
 Only functional in combination with `--json`.
 
 
-<h2 id="meteoraddplatform">meteor add-platform <i>platform</i></h2>
+## meteor add-platform  _platform_ {meteoraddplatform}
 
 Adds platforms to your Meteor project. You can add multiple
 platforms with one command. Once a platform has been added, you
@@ -766,23 +766,23 @@ can use 'meteor run <i>platform</i>' to run on the platform, and `meteor build`
 to build the Meteor project for every added platform.
 
 
-<h2 id="meteorremoveplatform">meteor remove-platform <i>platform</i></h2>
+## meteor remove-platform  _platform_ {meteorremoveplatform}
 
 Removes a platform previously added to your Meteor project. For a
 list of the platforms that your application is currently using, see
 `meteor list-platforms`.
 
 
-<h2 id="meteorlistplatforms">meteor list-platforms</h2>
+## meteor list-platforms {meteorlistplatforms}
 
 Lists all of the platforms that have been explicitly added to your project.
 
 
-<h2 id="meteorensurecordovadependencies">meteor ensure-cordova-dependencies</h2>
+## meteor ensure-cordova-dependencies {meteorensurecordovadependencies}
 
 Check if the dependencies are installed, otherwise install them.
 
-<h2 id="meteormongo">meteor mongo</h2>
+## meteor mongo {meteormongo}
 
 Open a MongoDB shell on your local development database, so that you
 can view or manipulate it directly.
@@ -793,7 +793,7 @@ with `meteor run`. This will be easier in the future.
 :::
 
 
-<h2 id="meteorreset">meteor reset</h2>
+## meteor reset {meteorreset}
 
 Reset the current project to a fresh state. Removes the local
 mongo database.
@@ -811,7 +811,7 @@ running. Quit all running meteor applications before running this.
 :::
 
 
-<h2 id="meteorbuild">meteor build</h2>
+## meteor build {meteorbuild}
 
 Package this project up for deployment. The output is a directory with several
 build artifacts:
@@ -844,19 +844,19 @@ in your mobile application with the `--mobile-settings` flag. A new value for
 You can also specify which platforms you want to build with the `--platforms` flag.
 Examples: `--platforms=android`, `--platforms=ios`, `--platforms=web.browser`.
 
-<h2 id="meteorlint">meteor lint</h2>
+## meteor lint {meteorlint}
 
 Run through the whole build process for the app and run all linters the app
 uses. Outputs all build errors or linting warnings to the standard output.
 
 
-<h2 id="meteorsearch">meteor search</h2>
+## meteor search {meteorsearch}
 
 Searches for Meteor packages and releases, whose names contain the specified
 regular expression.
 
 
-<h2 id="meteorshow">meteor show</h2>
+## meteor show {meteorshow}
 
 Shows more information about a specific package or release: name, summary, the
 usernames of its maintainers, and, if specified, its homepage and git URL.
@@ -872,7 +872,7 @@ meteor show --show-all METEOR
 ```
 
 
-<h2 id="meteorpublish">meteor publish</h2>
+## meteor publish {meteorpublish}
 
 Publishes your package. To publish, you must `cd` into the package directory, log
 in with your Meteor Developer Account and run `meteor publish`. By convention,
@@ -891,7 +891,7 @@ If you have already published a package but need to update it's metadata
 (the content of `Package.describe`) or the README you can actually achieve this
 via `meteor publish --update`.
 
-<h2 id="meteorpublishforarch">meteor publish-for-arch</h2>
+## meteor publish-for-arch {meteorpublishforarch}
 
 Publishes a build of an existing package version from a different architecture.
 
@@ -911,7 +911,7 @@ Currently, the supported architectures for Meteor are 32-bit Linux, 64-bit Linux
 and Mac OS. Galaxy's servers run 64-bit Linux.
 
 
-<h2 id="meteorpublishrelease">meteor publish-release</h2>
+## meteor publish-release {meteorpublishrelease}
 
 Publishes a release of Meteor. Takes in a JSON configuration file.
 
@@ -931,7 +931,7 @@ switching to a corresponding release. For more information, run
 `meteor help publish-release`.
 
 
-<h2 id="meteortestpackages">meteor test-packages</h2>
+## meteor test-packages {meteortestpackages}
 
 Test Meteor packages, either by name, or by directory. Not specifying an
 argument will run tests for all local packages. The results are displayed in an
@@ -939,7 +939,7 @@ app that runs at `localhost:3000` by default. If you need to, you can pass the
 `--settings` and `--port` arguments.
 
 
-<h2 id="meteoradmin">meteor admin</h2>
+## meteor admin {meteoradmin}
 
 Catch-all for miscellaneous commands that require authorization to use.
 
@@ -948,7 +948,7 @@ maintainers and setting a homepage for a package. It also includes various
 helpful functions for managing a Meteor release.  Run `meteor help admin` for
 more information.
 
-<h2 id="meteorshell">meteor shell</h2>
+## meteor shell {meteorshell}
 
 When `meteor shell` is executed in an application directory where a server
 is already running, it connects to the server and starts an interactive
@@ -969,7 +969,7 @@ The shell supports tab completion for global variables like `Meteor`,
 The shell maintains a persistent history across sessions. Previously-run
 commands can be accessed by pressing the up arrow.
 
-<h2 id="meteornpm">meteor npm</h2>
+## meteor npm {meteornpm}
 
 The `meteor npm` command calls the
 [`npm`](https://docs.npmjs.com/getting-started/what-is-npm) version bundled
@@ -992,7 +992,7 @@ because doing so ensures that they are built using the same libraries.
 Additionally, this access to the npm that comes with Meteor avoids the need to
 download and install npm separately.
 
-<h2 id="meteornode">meteor node</h2>
+## meteor node {meteornode}
 
 The `meteor node` command calls the
 [`node`](https://nodejs.org) version bundled with Meteor itself.
