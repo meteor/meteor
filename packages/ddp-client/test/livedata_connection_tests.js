@@ -500,7 +500,7 @@ if (Meteor.isClient) {
     // setup method
     conn.methods({
       do_something: async function(x) {
-        return coll.insertAsync({ value: x });
+        return coll.insertAsync({ value: x }).stubPromise;
       }
     });
 
@@ -686,7 +686,7 @@ if (Meteor.isClient) {
         await conn.applyAsync('do_something_else', []);
       },
       do_something_else: async function() {
-        await coll.insertAsync({ a: 1 });
+        await coll.insertAsync({ a: 1 }).stubPromise;
       }
     });
 
@@ -1037,7 +1037,7 @@ if (Meteor.isClient) {
       conn.methods({
         writeSomething: async function() {
           // stub write
-          await coll.insertAsync({ foo: 'bar' });
+          await coll.insertAsync({ foo: 'bar' }).stubPromise;
         }
       });
 
@@ -1374,10 +1374,10 @@ if (Meteor.isClient) {
     conn.methods({
       insertSomething: async function() {
         // stub write
-        await coll.insertAsync({ foo: 'bar' });
+        await coll.insertAsync({ foo: 'bar' }).stubPromise;
       },
       updateIt: async function(id) {
-        await coll.updateAsync(id, { $set: { baz: 42 } });
+        await coll.updateAsync(id, { $set: { baz: 42 } }).stubPromise;
       }
     });
 
@@ -1496,7 +1496,7 @@ if (Meteor.isClient) {
       conn.methods({
         insertSomething: async function() {
           // stub write
-          await coll.insertAsync({ foo: 'bar' });
+          await coll.insertAsync({ foo: 'bar' }).stubPromise;
         }
       });
 
@@ -2297,7 +2297,7 @@ if (Meteor.isClient) {
     test.length(stream.sent, 0);
 
     // Insert a document. The stub updates "conn" directly.
-    coll.insertAsync({ _id: 'foo', bar: 42 });
+    await coll.insertAsync({ _id: 'foo', bar: 42 }).stubPromise;
     test.equal(await coll.find().countAsync(), 1);
     test.equal(await coll.findOneAsync(), { _id: 'foo', bar: 42 });
     // It also sends the method message.
@@ -2339,7 +2339,7 @@ if (Meteor.isClient) {
 
       conn.methods({
         update_value: async function() {
-          await coll.updateAsync('aaa', { value: 222, tet: "dfsdfsdf" });
+          await coll.updateAsync('aaa', { value: 222, tet: "dfsdfsdf" }).stubPromise;
         }
       });
 
@@ -2431,7 +2431,7 @@ if (Meteor.isClient) {
       update_value: async function() {
         const value = (await coll.findOneAsync('aaa')).subscription;
         // Method should have access to the latest value of the collection.
-        await coll.updateAsync('aaa', { $set: { method: value + 110 } });
+        await coll.updateAsync('aaa', { $set: { method: value + 110 } }).stubPromise;
       }
     });
 

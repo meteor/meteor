@@ -39,12 +39,12 @@ function onDDPVersionNegotiationFailure(description) {
   }
 }
 
+// Makes sure to inject the stub async helpers before creating the connection
+loadAsyncStubHelpers();
+
 Meteor.connection = DDP.connect(ddpUrl, {
   onDDPVersionNegotiationFailure: onDDPVersionNegotiationFailure
 });
-
-// Makes sure Meteor.connect is already created before injecting the helpers
-loadAsyncStubHelpers();
 
 // Proxy the public methods of Meteor.connection so they can
 // be called directly on Meteor.

@@ -825,14 +825,8 @@ if (Meteor.isClient) {
               onError: function() {
                 gotErrorFromStopper = true;
               },
+              onStop: expect(function () {}),
             }
-          );
-          // Call a method. This method won't be processed until the publisher's
-          // function returns, so blocking on it being done ensures that we've
-          // gotten the removed/nosub/etc.
-          conn.call(
-            'nothing',
-            expect(function() {})
           );
         },
         function(test, expect) {
@@ -920,6 +914,7 @@ if (Meteor.isClient) {
           test.equal(errorFromRerun.reason, 'Explicit error');
           test.equal(_.size(conn._subscriptions), 0); // white-box test
 
+          const expected = expect();
           conn.subscribe(
             'publisherErrors',
             collName,
@@ -929,15 +924,9 @@ if (Meteor.isClient) {
                 if (error) {
                   gotErrorFromStopper = true;
                 }
+                expected();
               },
             }
-          );
-          // Call a method. This method won't be processed until the publisher's
-          // function returns, so blocking on it being done ensures that we've
-          // gotten the removed/nosub/etc.
-          conn.call(
-            'nothing',
-            expect(function() {})
           );
         },
         function(test, expect) {

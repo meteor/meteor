@@ -42,3 +42,8 @@ Meteor.methods({
     return 'server result';
   }
 });
+
+Meteor.publish("simple-publication", function () {
+  events.push("publication");
+  this.ready();
+});

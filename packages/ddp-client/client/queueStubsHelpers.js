@@ -1,5 +1,6 @@
 import { DDP } from "../common/namespace.js";
 import { isEmpty, last } from "meteor/ddp-common/utils.js";
+import { Connection } from "../common/livedata_connection";
 
 // https://forums.meteor.com/t/proposal-to-fix-issues-with-async-method-stubs/60826
 
@@ -35,8 +36,8 @@ export const loadAsyncStubHelpers = () => {
     return promise;
   }
 
-  let oldReadyToMigrate = Meteor.connection._readyToMigrate;
-  Meteor.connection._readyToMigrate = function () {
+  let oldReadyToMigrate = Connection.prototype._readyToMigrate;
+  Connection.prototype._readyToMigrate = function () {
     if (queueSize > 0) {
       return false;
     }
@@ -57,8 +58,8 @@ export const loadAsyncStubHelpers = () => {
    * the stub is running, so we don't need to worry about this.
    */
 
-  let oldApplyAsync = Meteor.connection.applyAsync;
-  Meteor.connection.applyAsync = function () {
+  let oldApplyAsync = Connection.prototype.applyAsync;
+  Connection.prototype.applyAsync = function () {
     let args = arguments;
     let name = args[0];
 
@@ -120,8 +121,8 @@ export const loadAsyncStubHelpers = () => {
     );
   };
 
-  let oldApply = Meteor.connection.apply;
-  Meteor.connection.apply = function () {
+  let oldApply = Connection.prototype.apply;
+  Connection.prototype.apply = function () {
     // [name, args, options]
     let options = arguments[2] || {};
     let wait = options.wait;
@@ -196,8 +197,12 @@ export const loadAsyncStubHelpers = () => {
    * Queue subscriptions in case they rely on previous method calls
    */
   let queueSend = false;
-  let oldSubscribe = Meteor.connection.subscribe;
-  Meteor.connection.subscribe = function () {
+  let oldSubscribe = Connection.prototype.subscribe;
+  Connection.prototype.subscribe = function () {
+    if (this._stream._neverQueued) {
+      return oldSubscribe.apply(this, arguments);
+    }
+
     queueSend = true;
     try {
       return oldSubscribe.apply(this, arguments);
@@ -206,8 +211,8 @@ export const loadAsyncStubHelpers = () => {
     }
   };
 
-  let oldSend = Meteor.connection._send;
-  Meteor.connection._send = function () {
+  let oldSend = Connection.prototype._send;
+  Connection.prototype._send = function () {
     if (!queueSend) {
       return oldSend.apply(this, arguments);
     }

@@ -95,19 +95,13 @@ Tinytest.addAsync("applyAsync - callAsync twice", async function (test) {
   console.log("PROMISESS", promise1, promise2);
   let results = await Promise.all([promise1, promise2]);
 
-  test.equal(
-    events,
-    [
-      "start async-stub",
-      "end async-stub",
-      "start async-stub",
-      "end async-stub",
-    ]
-  );
-  test.equal(
-    results,
-    ["async-server-result", "async-server-result"],
-  );
+  test.equal(events, [
+    "start async-stub",
+    "end async-stub",
+    "start async-stub",
+    "end async-stub",
+  ]);
+  test.equal(results, ["async-server-result", "async-server-result"]);
 });
 
 // Broken in Meteor 2.13: https://github.com/meteor/meteor/issues/12889#issue-1998128607
@@ -154,15 +148,12 @@ Tinytest.addAsync("applyAsync - callAsync in then", async function (test) {
   );
   let serverEvents = await Meteor.callAsync("getAndResetEvents");
 
-  test.equal(
-    events,
-    [
-      "start async-stub",
-      "end async-stub",
-      "start async-stub",
-      "end async-stub",
-    ]
-  );
+  test.equal(events, [
+    "start async-stub",
+    "end async-stub",
+    "start async-stub",
+    "end async-stub",
+  ]);
   test.equal(serverEvents, ["async-stub", "async-stub"]);
   test.equal(result, "async-server-result");
 });
@@ -298,3 +289,34 @@ Tinytest.addAsync("apply - wait", async function (test) {
   test.equal(stubResult, "sync-stub-result");
   test.equal(serverResult, "server result");
 });
+
+Tinytest.addAsync(
+  "apply - preserve order with subscriptions",
+  async function (test) {
+    await Meteor.callAsync("getAndResetEvents");
+    let serverResolver;
+    let serverPromise = new Promise((resolve) => {
+      serverResolver = resolve;
+    });
+    let subResolver;
+    let subPromise = new Promise((resolve) => {
+      subResolver = resolve;
+    });
+
+    Meteor.call("server-only-sync", (err, result) => {
+      if (!err) {
+        serverResolver(result);
+      }
+    });
+
+    let handle = Meteor.subscribe("simple-publication", () => subResolver());
+
+    await serverPromise;
+    await subPromise;
+    handle.stop();
+
+    let serverEvents = await Meteor.callAsync("getAndResetEvents");
+
+    test.equal(serverEvents, ["server-only-sync", "publication"]);
+  }
+);

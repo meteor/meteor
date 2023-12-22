@@ -620,7 +620,8 @@ CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(n
   const mutatorMethodName = this._prefix + name;
   return this._connection.applyAsync(mutatorMethodName, args, {
     returnStubValue: true,
-    returnServerResultPromise: true,
+    // StubStream is only used for testing where you don't care about the server
+    returnServerResultPromise: !this._connection._stream._isStub,
     ...options,
   });
 }
