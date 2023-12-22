@@ -84,8 +84,7 @@ export default defineConfig({
         items: [
           // TODO: Open issue in Vitepress about this
           { link: "/history", text: "Current" },
-          { link: "old-changelogs/pre-2.0", text: "Pre-2.0" },
-          { link: "old-changelogs/pre-1.0", text: "Pre-1.0" },
+          { link: "https://docs.meteor.com/changelog#v2020210120", text: "Pre-2.0 (legacy)" },
         ],
         collapsed: true,
       },
