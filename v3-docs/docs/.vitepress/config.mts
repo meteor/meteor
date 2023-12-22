@@ -61,6 +61,7 @@ export default defineConfig({
           },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
+        collapsed: true,
       },
       {
         text: "Troubleshooting",
@@ -70,6 +71,13 @@ export default defineConfig({
           {text: "Known issues in 2.13", link: "/troubleshooting/known-issues"},
         ],
         collapsed: true,
+      },
+      {
+        text: "Command Line",
+        items: [
+          {link: "cli/index", text: "CLI" }
+        ],
+        collapsed: true
       },
       {
         text: "Changelog",

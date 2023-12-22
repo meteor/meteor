@@ -115,7 +115,7 @@ const debug = (name) => {
     if (ui.longname !== name) return
     console.log(ui)
 }
-
+debug('Meteor.absoluteUrl')
 </script>
 
 <template>
