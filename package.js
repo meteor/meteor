@@ -20,7 +20,7 @@ Package.onUse(function (api) {
     'check'
   ], both)
 
-  api.use('zodern:types@1.0.10')
+  api.use('zodern:types@1.0.11')
 
   api.use(['blaze@2.7.1'], 'client', { weak: true })
 
