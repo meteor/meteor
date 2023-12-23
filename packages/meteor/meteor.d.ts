@@ -241,7 +241,7 @@ export namespace Meteor {
   >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
-    options?: MethodApplyOptions,
+    options?: MethodApplyOptions<Result>,
     asyncCallback?: (
       error: global_Error | Meteor.Error | undefined,
       result?: Result
