@@ -4,6 +4,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   title: "API Docs",
   description: "Meteor.js API docs",
+  head:  [['link', { rel: 'icon', href: '/logo.png' }]],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -93,7 +94,7 @@ export default defineConfig({
     ],
 
     socialLinks: [{ icon: "github", link: "https://github.com/meteor/meteor" }],
-    logo: "/meteor-logo.png",
+    logo: {dark: "/meteor-logo.png", light: "/meteor.png"},
     search: {
       provider: "local",
     },
