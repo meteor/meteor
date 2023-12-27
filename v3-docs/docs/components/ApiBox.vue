@@ -127,7 +127,7 @@ debug('Meteor.absoluteUrl')
 
         <div v-html="ui.summary"></div>
         <Locus v-if="ui.locus !== 'Anywhere'" :locus="ui.locus" />
-        <ParamTable v-if="isFunction" :params="ui.params"/>
+        <ParamTable v-if="isFunction" :params="ui.params" :options="ui.options"/>
         <template v-if="!hasCustomExample">
             <Booleans v-if="isBoolean" :memberof="ui.memberof" :from="ui.module" :longname="ui.longname" />
             <Functions v-if="isFunction" :from="ui.module" :longname="ui.longname" :params="ui.params" :fnName="ui.name"
