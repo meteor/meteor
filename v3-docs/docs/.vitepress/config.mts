@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "API Docs",
+  title: "Meteor API Docs",
   description: "Meteor.js API docs",
   head:  [['link', { rel: 'icon', href: '/logo.png' }]],
   themeConfig: {
