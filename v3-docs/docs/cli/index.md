@@ -862,12 +862,12 @@ Shows more information about a specific package or release: name, summary, the
 usernames of its maintainers, and, if specified, its homepage and git URL.
 
 Get information on meteor recommended releases:
-```
+```bash
 meteor show METEOR
 ```
 
 Get information on all meteor releases (including intermediate releases)"
-```
+```bash
 meteor show --show-all METEOR
 ```
 
