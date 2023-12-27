@@ -1,5 +1,5 @@
 Package.describe({
-  version: '3.0.0-alpha300.19',
+  version: '3.0.0-alpha300.20',
   summary:
     'Package used to enable two factor authentication through OTP protocol',
 });

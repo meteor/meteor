@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for browser-policy packages",
-  version: '1.0.13-alpha300.19',
+  version: '1.0.13-alpha300.20',
 });
 
 Package.onUse(function (api) {

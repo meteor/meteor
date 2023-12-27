@@ -1,15 +1,15 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '3.0.0-alpha300.19',
+  version: '3.0.0-alpha300.20',
   deprecated: 'Please use the fetch package'
 });
 
 Package.onUse(function (api) {
   api.use([
     'url@1.3.2',
-    'ecmascript@0.16.8-alpha300.19',
-    'fetch@0.1.4-alpha300.19',
-    'modules@0.19.1-alpha300.19'
+    'ecmascript@0.16.8-alpha300.20',
+    'fetch@0.1.4-alpha300.20',
+    'modules@0.19.1-alpha300.20'
   ]);
 
   api.mainModule('httpcall_client.js', 'client');

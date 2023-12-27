@@ -1,6 +1,6 @@
 Package.describe({
   name: "shell-server",
-  version: '0.6.0-alpha300.19',
+  version: '0.6.0-alpha300.20',
   summary: "Server-side component of the `meteor shell` command.",
   documentation: "README.md"
 });
