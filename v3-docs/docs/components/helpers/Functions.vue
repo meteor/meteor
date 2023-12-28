@@ -32,6 +32,9 @@ const primitiveDefault = {
   Boolean: () => '<span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">  false',
   Object: (name) => `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  ${name}`,
   Array: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  []',
+  "Array.<String>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">"string"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">]',
+  "Array.<Object>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">{</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}]',
+  "Array.<EJSONable>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">{</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}]',
 }
 
 const comma = `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">,</span>`
