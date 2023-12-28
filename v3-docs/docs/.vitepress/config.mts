@@ -5,6 +5,7 @@ export default defineConfig({
   title: "Meteor API Docs",
   description: "Meteor.js API docs",
   head:  [['link', { rel: 'icon', href: '/logo.png' }]],
+  lastUpdated: true,
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
