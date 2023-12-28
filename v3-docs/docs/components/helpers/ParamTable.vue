@@ -35,15 +35,15 @@ if (hasOptions(props) && props.options) {
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Optional</th>
+          <th>Required</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="param in localArr" :key="param.name">
           <td>{{ param.name }}</td>
           <td>{{ param.type.names[0] }}</td>
-          <td v-html="param.description"></td>
-          <td>{{ param.optional ? "✅" : "❌" }}</td>
+          <td v-html="param.description ?? ``"></td>
+          <td>{{ param.optional ? "❌" : "✅" }}</td>
         </tr>
       </tbody>
     </table>
