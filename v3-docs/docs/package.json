@@ -5,12 +5,14 @@
     "docs:dev": "npm run codegen && vitepress dev",
     "docs:build": "npm run codegen && vitepress build",
     "docs:preview": "vitepress preview",
-    "deploy:preview" : "npm run docs:build && npm run docs:preview"
+    "deploy:preview": "npm run docs:build && npm run docs:preview"
   },
-  
   "devDependencies": {
     "canonical-json": "^0.0.4",
     "jsdoc": "^4.0.2",
     "vitepress": "^1.0.0-rc.31"
+  },
+  "dependencies": {
+    "vue-collapsed": "^1.3.0"
   }
 }

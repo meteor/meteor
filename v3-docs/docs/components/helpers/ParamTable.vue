@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { Collapse } from 'vue-collapsed'
+import { ref } from 'vue'
+import Caret from './Caret.vue'
+
 const copyArray = <T>(arr: T[]): T[] => {
   const newArr: T[] = []
   for (const item of arr) newArr.push(item)
@@ -18,12 +22,12 @@ const hasOptions = ({ params }: typeof props) => {
   for (const param of params) if (param.name === "options") return true
 }
 
-if (hasOptions(props) && props.options) {
-  for (const opt of props.options) {
-    const { name, type, description } = opt
-    localArr.push({ name: `options.${name}`, type, description, optional: true })
-  }
+const isOptionsTableOpen = ref(false);
+
+function toggleOptionsTable() {
+  isOptionsTableOpen.value = !isOptionsTableOpen.value
 }
+
 </script>
 
 <template>
@@ -42,16 +46,61 @@ if (hasOptions(props) && props.options) {
         <tr v-for="param in localArr" :key="param.name">
           <td>{{ param.name }}</td>
           <td>{{ param.type.names[0] }}</td>
-          <td v-html="param.description ?? ``"></td>
+          <template v-if="param.name === 'options'">
+            <td>
+              <button type="button" @click="toggleOptionsTable">
+                {{ isOptionsTableOpen ? "Close" : "Open" }} options table
+                <Caret :is-open="isOptionsTableOpen" />
+              </button>
+            </td>
+          </template>
+          <template v-else>
+            <td v-html="param.description ?? ``"></td>
+          </template>
           <td>{{ param.optional ? "❌" : "✅" }}</td>
         </tr>
       </tbody>
     </table>
+    <Collapse v-if="hasOptions(props) && props.options" :when="isOptionsTableOpen" class="options-table">
+      <h4>Options:</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="param in props.options" :key="param.name">
+            <td>{{ param.name }}</td>
+            <td>{{ param.type.names[0] }}</td>
+            <td v-html="param.description ?? ``"></td>
+            <td> ❌ </td>
+          </tr>
+        </tbody>
+      </table>
+    </Collapse>
   </div>
 </template>
 
 <style scoped>
 table {
   text-align: center;
+}
+
+.options-table {
+  --easing-dur: calc(var(--vc-auto-duration) * 1.5) cubic-bezier(0.33, 1, 0.68, 1);
+
+  transition:
+    height var(--easing-dur),
+    background-color var(--easing-dur),
+    border-radius var(--easing-dur);
+}
+
+button:hover {
+  cursor: pointer;
+  color: var(--vp-c-brand-1);
 }
 </style>
