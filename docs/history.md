@@ -10,6 +10,7 @@
 
 
 
+
 ## v3.0, TBD
 
 ### Highlights
@@ -722,7 +723,8 @@
 
 For making this great framework even better!
 
-## v2.14.0, 2023-12-XX
+## v2.14.0, 2023-12-12
+
 
 ### Highlights
 
