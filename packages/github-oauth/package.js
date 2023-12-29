@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'GitHub OAuth flow',
-  version: '1.4.2-alpha300.20'
+  version: '1.4.2-beta300.0'
 });
 
 Package.onUse(api => {

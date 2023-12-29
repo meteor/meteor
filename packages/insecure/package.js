@@ -1,6 +1,6 @@
 Package.describe({
   summary: "(For prototyping only) Allow all database writes from the client",
-  version: '1.0.8-alpha300.20'
+  version: '1.0.8-beta300.0'
 });
 
 // This package is empty; its presence is detected by mongo-livedata.
