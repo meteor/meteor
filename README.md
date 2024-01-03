@@ -46,7 +46,7 @@ Use the same code whether you’re developing for web, iOS, Android, or desktop 
 
 # 🔥 Getting Started
 
-How about trying a getting started tutorial in your favorite technology?
+How about trying a tutorial to get started with your favorite technology?
 
 | [<img align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"> React](https://react-tutorial.meteor.com/) |
 | - |
