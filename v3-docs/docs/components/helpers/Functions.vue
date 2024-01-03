@@ -27,14 +27,19 @@ const primitiveMap = {
 }
 const primitiveDefault = {
   function: () => `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  () </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> {}`,
-  String: (name) => `<span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">  "${name}"`,
-  Number: () => '<span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">  42',
-  Boolean: () => '<span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">  false',
-  Object: (name) => `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  ${name}`,
-  Array: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  []',
-  "Array.<String>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">"string"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">]',
-  "Array.<Object>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">{</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}]',
-  "Array.<EJSONable>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">{</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}]',
+  string: (name) => `<span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">  "${name}"`,
+  number: () => '<span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">  42',
+  boolean: () => '<span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">  false',
+  object: (name) => `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  ${name}`,
+  array: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  []',
+  "array.<string>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">"string"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">]',
+  "array.<object>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">{</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}]',
+  "array.<ejsonable>": () => `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [${primitiveDefault.ejsonable()}]`,
+  // someProp: 'string', num: 42, bool: false, arr: [], obj: {}
+  "ejsonable"() {
+    return `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  { num:${primitiveDefault.number()}</span>, someProp:${primitiveDefault.string("foo")}</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}`
+  },
+  promise: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  Promise {</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}',
 }
 
 const comma = `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">,</span>`
@@ -42,9 +47,11 @@ const br = `<br/>`;
 const comment = `<span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">  // this param is optional </span>`
 
 const line = ({ html, pre, post } = { pre: '', post: '', html: '' }) => `${pre}<span class="line">${html}</span>${post}`
+
 const makePrimitiveHTML =
   ({ primitive, arr, index, isOptional, name }) => {
-    const value = primitiveDefault[primitive](name);
+    const n = primitive[0]
+    const value = primitiveDefault[n.toLowerCase()](name);
     if (arr.length > 1) return line(
       {
         html: value + `${comma}</span>`,

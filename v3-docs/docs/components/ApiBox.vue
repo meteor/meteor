@@ -96,26 +96,14 @@ const link = ui.longname.replace('.', '-').replace('#', '-')
 
 const isBoolean = ui.type?.names?.at(0) === 'Boolean'
 
-const isFunction = ui.kind === 'function';
-if (isFunction) {
-    for (const param of ui.params) {
-        const shouldVerify = param.type.names.length > 1
-        if (shouldVerify) {
-            const { page } = useData()
-            throw new Error(`
-                jsdoc error: "${param.name}" from ${ui.longname} has more than one type.
-                Check as well in ${ui.filepath} at line ${ui.lineno}
-                Error come from ${page.value.filePath}
-                `)
-        }
-    }
-}
+const isFunction = ui.kind === 'function' || ui?.params?.length > 0;
+
 
 const debug = (name) => {
     if (ui.longname !== name) return
     console.log(ui)
 }
-debug('Meteor.absoluteUrl')
+// debug('Meteor.absoluteUrl')
 </script>
 
 <template>

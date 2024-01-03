@@ -2,6 +2,7 @@
 import { Collapse } from 'vue-collapsed'
 import { ref } from 'vue'
 import Caret from './Caret.vue'
+import { types } from 'util'
 
 const copyArray = <T>(arr: T[]): T[] => {
   const newArr: T[] = []
@@ -27,11 +28,17 @@ const isOptionsTableOpen = ref(false);
 function toggleOptionsTable() {
   isOptionsTableOpen.value = !isOptionsTableOpen.value
 }
+const showTypes = (types: string[]) => {
+  const typesArr = copyArray(types)
+  if (typesArr.length === 1) return typesArr[0]
 
+  const last = typesArr.pop()
+  return typesArr.join(", ") + " or " + last
+}
 </script>
 
 <template>
-  <div>
+  <div v-if="localArr.length > 0">
     <h4>Arguments:</h4>
     <table>
       <thead>
@@ -45,7 +52,7 @@ function toggleOptionsTable() {
       <tbody>
         <tr v-for="param in localArr" :key="param.name">
           <td>{{ param.name }}</td>
-          <td>{{ param.type.names[0] }}</td>
+          <td>{{ showTypes(param.type.names) }}</td>
           <template v-if="param.name === 'options'">
             <td>
               <button type="button" @click="toggleOptionsTable">

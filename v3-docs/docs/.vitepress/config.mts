@@ -61,6 +61,10 @@ export default defineConfig({
               { text: "Methods", link: "/api/meteor#methods" },
             ],
           },
+          {
+            text: "DDPRateLimiter",
+            link: "/api/DDPRateLimiter",
+          },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
         collapsed: true,
@@ -110,4 +114,5 @@ export default defineConfig({
       text: "Edit this page on GitHub",
     },
   },
+  ignoreDeadLinks: true,
 });

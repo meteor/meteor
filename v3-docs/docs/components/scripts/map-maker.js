@@ -50,6 +50,7 @@ export function createMap(names) {
     Session: { Session: [] },
     Random: { Random: [] },
     Email: { Email: [] },
+    DDPRateLimiter: { DDPRateLimiter: [] },
   };
 
   Object.assign(apiList, MODULES_TO_ADD);

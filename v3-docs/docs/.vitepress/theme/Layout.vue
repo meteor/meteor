@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { useData } from 'vitepress'
+import { useData, useRouter } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 import { nextTick, provide } from 'vue'
-
+import { redirect } from './redirects/script';
 const { isDark } = useData()
+const router = useRouter()
+const { path, shouldRedirect } = redirect(window.location.href)
+
+if (shouldRedirect) router.go(path)
 
 const enableTransitions = () =>
   'startViewTransition' in document &&
