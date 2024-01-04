@@ -65,6 +65,10 @@ export default defineConfig({
             text: "DDPRateLimiter",
             link: "/api/DDPRateLimiter",
           },
+          {
+            text: "Check",
+            link: "/api/check",
+          },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
         collapsed: true,
@@ -115,4 +119,7 @@ export default defineConfig({
     },
   },
   ignoreDeadLinks: true,
+  markdown: {
+    lineNumbers: true
+  }
 });

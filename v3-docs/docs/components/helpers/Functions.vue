@@ -40,6 +40,7 @@ const primitiveDefault = {
     return `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  { num:${primitiveDefault.number()}</span>, someProp:${primitiveDefault.string("foo")}</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}`
   },
   promise: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  Promise {</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}',
+  any: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  any',
 }
 
 const comma = `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">,</span>`
@@ -47,11 +48,26 @@ const br = `<br/>`;
 const comment = `<span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">  // this param is optional </span>`
 
 const line = ({ html, pre, post } = { pre: '', post: '', html: '' }) => `${pre}<span class="line">${html}</span>${post}`
-
+const tryWith = (fn) => {
+  try {
+    return [fn(), null]
+  } catch (e) {
+    return [null, e]
+  }
+}
 const makePrimitiveHTML =
   ({ primitive, arr, index, isOptional, name }) => {
-    const n = primitive[0]
-    const value = primitiveDefault[n.toLowerCase()](name);
+    let n: string = primitive[0],
+      primitiveName = n.toLowerCase(),
+      value;
+
+    try {
+      value = primitiveDefault[primitiveName](name);
+    } catch (e) {
+      console.error('primitive that we got:', primitive)
+      throw new Error(`primitive ${primitiveName} is not registred in the map, here is the error: ${e}`)
+    }
+
     if (arr.length > 1) return line(
       {
         html: value + `${comma}</span>`,
