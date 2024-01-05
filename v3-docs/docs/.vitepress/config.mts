@@ -59,6 +59,7 @@ export default defineConfig({
             items: [
               { text: "Core", link: "/api/meteor#core" },
               { text: "Methods", link: "/api/meteor#methods" },
+              { text: "Publish and Subscribe", link: "/api/meteor#pubsub" },
             ],
           },
           {
@@ -119,7 +120,4 @@ export default defineConfig({
     },
   },
   ignoreDeadLinks: true,
-  markdown: {
-    lineNumbers: true
-  }
 });
