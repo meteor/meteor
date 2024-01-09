@@ -1,12 +1,23 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: '2.0.0-alpha300.19',
+  version: '2.0.0-beta300.0',
+});
+
+Npm.depends({
+  'lodash.has': '4.5.2',
+  'lodash.memoize': '4.1.2',
+  'lodash.isequal': '4.5.0',
+  'lodash.isempty': '4.4.0',
+  'lodash.zip': '4.2.0',
+  'lodash.groupby': '4.6.0',
+  'lodash.isstring': '4.0.1',
+  'lodash.isobject': '3.0.2'
 });
 
 Package.onUse(function (api) {
   api.export('ConstraintSolver');
   api.use([
-    'underscore',
+    'ecmascript',
     'check',
     'package-version-parser',
     'logic-solver'
@@ -27,7 +38,6 @@ Package.onTest(function (api) {
     'tinytest',
     'minimongo',
     'package-version-parser',
-    'underscore',
     'check'
   ]);
 

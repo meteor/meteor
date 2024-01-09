@@ -292,7 +292,7 @@ if (Meteor.isClient) (() => {
     },
     // Make sure the new user has not been inserted
     async function (test) {
-      const result = await Meteor.callAsync('countUsersOnServer', { returnServerPromise: true }, {
+      const result = await Meteor.callAsync('countUsersOnServer', {
         username: this.newUsername,
       });
       test.equal(result, 0);
@@ -400,7 +400,7 @@ if (Meteor.isClient) (() => {
     },
     // Make sure the new user has not been inserted
     async function (test) {
-      const result = await Meteor.callAsync('countUsersOnServer', { returnServerPromise: true }, {
+      const result = await Meteor.callAsync('countUsersOnServer', {
         'emails.address': this.newEmail,
       });
       test.equal(result, 0);
@@ -428,7 +428,7 @@ if (Meteor.isClient) (() => {
         }));
     },
     async function (test) {
-      const token = await Meteor.callAsync("getResetToken", { returnServerPromise: true });
+      const token = await Meteor.callAsync("getResetToken");
       test.isTrue(token);
       this.token = token;
     },
@@ -452,7 +452,7 @@ if (Meteor.isClient) (() => {
         loggedInAs(this.username, test, expect));
     },
     async function (test) {
-      const token = await Meteor.callAsync("getResetToken", { returnServerPromise: true });
+      const token = await Meteor.callAsync("getResetToken");
       test.isFalse(token);
     },
     logoutStep,
@@ -1253,7 +1253,7 @@ if (Meteor.isServer) (() => {
           test.fail('observe should be gone');
       })
 
-      const result = await clientConn.callAsync('login', { returnServerPromise: true }, {
+      const result = await clientConn.callAsync('login', {
         user: { username: username },
         password: hashPassword('password')
       });

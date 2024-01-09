@@ -235,9 +235,9 @@ class Server {
     const defaultEval = repl.eval;
 
     function wrappedDefaultEval(code, context, file, callback) {
-      if (Package.ecmascript) {
+      if (Package['babel-compiler']) {
         try {
-          code = Package.ecmascript.ECMAScript.compileForShell(code, {
+          code = Package['babel-compiler'].Babel.compileForShell(code, {
             cacheDirectory: getCacheDirectory(shellDir)
           });
         } catch (err) {

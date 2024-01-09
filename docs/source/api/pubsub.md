@@ -268,7 +268,7 @@ stay subscribed to your private messages.
 > The following features are available from Meteor 2.4 or `ddp-server@2.5.0`
 
 Once you start scaling your application you might want to have more control on how the data from publications is being handled on the client.
-There are three publications strategies:
+There are four publications strategies:
 
 #### SERVER_MERGE
 `SERVER_MERGE` is the default strategy. When using this strategy, the server maintains a copy of all data a connection is subscribed to.
@@ -291,12 +291,17 @@ Specifically:
 * When we receive a change message for a document that is not in the client's collection, it will be added.
 * When we receive a removed message for a document that is not in the client's collection, nothing will happen.
 
+#### NO_MERGE_MULTI
+`NO_MERGE_MULTI` is similar to `NO_MERGE`, but it does track whether a document is used by multiple publications.
+This has some memory overhead, but it still does not do diffing so it's faster and slimmer than
+`SERVER_MERGE`.
+
 You can import the publication strategies from `DDPServer`.
 
 ```js
 import { DDPServer } from 'meteor/ddp-server'
 
-const { SERVER_MERGE, NO_MERGE_NO_HISTORY, NO_MERGE } = DDPServer.publicationStrategies
+const { SERVER_MERGE, NO_MERGE_NO_HISTORY, NO_MERGE, NO_MERGE_MULTI } = DDPServer.publicationStrategies
 ```
 
 You can use the following methods to set or get the publication strategy for publications:

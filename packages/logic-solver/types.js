@@ -84,7 +84,7 @@ Logic._isArrayWhere = function (tester) {
     description += ' of ' + tester.description;
   }
   return withDescription(description, function (x) {
-    if (! _.isArray(x)) {
+    if (! Array.isArray(x)) {
       return false;
     } else {
       for (var i = 0; i < x.length; i++) {

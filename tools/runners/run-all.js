@@ -317,6 +317,7 @@ class Runner {
 // - buildOptions: 'buildOptions' argument to bundler.bundle()
 // - settingsFile: path to file containing deploy-time settings
 // - once: see above
+// - onBuilt: callback to call when the app bundle is built
 // - banner: replace the application path that is normally printed on
 //   startup with an arbitrary string (eg, 'Tests')
 // - rootUrl: tell the app that traffic at this URL will be routed to
@@ -334,6 +335,8 @@ class Runner {
 exports.run = async function (options) {
   var runOptions = _.clone(options);
   var once = runOptions.once;
+  var onBuilt = runOptions.onBuilt;
+
   var promise = new Promise(function (resolve) {
     runOptions.onFailure = async function () {
       // Ensure that runner stops now. You might think this is unnecessary
@@ -397,6 +400,7 @@ exports.run = async function (options) {
   await runner.init();
   // don't wait this on to finish
   setTimeout(() => runner.start(), 0);
+  onBuilt && onBuilt();
   var result = await promise;
   await runner.stop();
 

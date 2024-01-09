@@ -73,6 +73,7 @@ Options:
                    uses port N+1 and a port specified by --app-port.
                    Specify as --port=host:port to bind to a specific
                    interface.
+  --open, -o       Opens a browser window when the app starts.
   --inspect[-brk][=<port>]
                    Enable server-side debugging via debugging clients like
                    the Node.js command-line debugger, Chrome DevTools, or
@@ -106,6 +107,7 @@ Options:
   --exclude-archs  Don't create bundles for certain web architectures
                   (comma separated, for example:
                    --exclude-archs "web.browser.legacy, web.cordova")
+  --open           Opens a browser window when it finishes building
 
 >>> debug
 Run the project with server-side debugging enabled.
@@ -637,6 +639,7 @@ with --port.
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
+  --open, -o        Opens a browser window when the app starts.
   --inspect[-brk][=<port>]
                     Enable server-side debugging via debugging clients like
                     the Node.js command-line debugger, Chrome DevTools, or
@@ -726,6 +729,7 @@ Meteor Guide - https://guide.meteor.com/testing.html
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
+  --open, -o        Opens a browser window when the app starts.
   --inspect[-brk][=<port>]
                     Enable server-side debugging via debugging clients like
                     the Node.js command-line debugger, Chrome DevTools, or
@@ -762,6 +766,7 @@ Options:
   --exclude-archs   Don't create test bundles for certain web architectures
                     (comma separated, for example:
                     --exclude-archs "web.browser.legacy, web.cordova")
+  --open            Opens a browser window when it finishes building
 
 >>> self-test
 Run tests of the 'meteor' tool.
