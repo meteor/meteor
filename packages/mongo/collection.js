@@ -20,7 +20,7 @@ Mongo = {};
  * @class
  * @param {String} name The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection.
  * @param {Object} [options]
- * @param {Object} options.connection The server connection that will manage this collection. Uses the default connection if not specified.  Pass the return value of calling [`DDP.connect`](#ddp_connect) to specify a different server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection.
+ * @param {Object} options.connection The server connection that will manage this collection. Uses the default connection if not specified.  Pass the return value of calling [`DDP.connect`](#DDP-connect) to specify a different server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection.
  * @param {String} options.idGeneration The method of generating the `_id` fields of new documents in this collection.  Possible values:
 
  - **`'STRING'`**: random strings

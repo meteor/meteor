@@ -616,10 +616,10 @@ collection name.
 // It's okay to subscribe (and possibly receive data) before declaring the
 // client collection that will hold it. Assume 'allPlayers' publishes data from
 // the server's 'players' collection.
-Meteor.subscribe('allPlayers');
+Meteor.subscribe("allPlayers");
 
 // The client queues incoming 'players' records until the collection is created:
-const Players = new Mongo.Collection('players');
+const Players = new Mongo.Collection("players");
 ```
 
 The client will see a document if the document is currently in the published
@@ -658,7 +658,6 @@ handle.subscriptionId; // The id of the subscription this handle is for.
 When you run Meteor.subscribe inside of Tracker.autorun, the handles you get will always have the same subscriptionId field.
 You can use this to deduplicate subscription handles if you are storing them in some data structure.
 
-
 If you call `Meteor.subscribe` within a [reactive computation](#reactivity),
 for example using
 [`Tracker.autorun`](#tracker_autorun), the subscription will automatically be
@@ -671,8 +670,8 @@ unsubscribe/resubscribe. For example:
 
 ```js
 Tracker.autorun(() => {
-  Meteor.subscribe('chat', { room: Session.get('currentRoom') });
-  Meteor.subscribe('privateMessages');
+  Meteor.subscribe("chat", { room: Session.get("currentRoom") });
+  Meteor.subscribe("privateMessages");
 });
 ```
 
@@ -682,8 +681,6 @@ messages. When you change rooms by calling `Session.set('currentRoom',
 unsubscribe from the original room's chat messages, and continue to
 stay subscribed to your private messages.
 
-
-
 ## Publication strategies
 
 > The following features are available from Meteor 2.4 or `ddp-server@2.5.0`
@@ -692,15 +689,18 @@ Once you start scaling your application you might want to have more control on h
 There are three publications strategies:
 
 #### SERVER_MERGE
+
 `SERVER_MERGE` is the default strategy. When using this strategy, the server maintains a copy of all data a connection is subscribed to.
 This allows us to only send deltas over multiple publications.
 
 #### NO_MERGE_NO_HISTORY
+
 The `NO_MERGE_NO_HISTORY` strategy results in the server sending all publication data directly to the client.
 It does not remember what it has previously sent to client and will not trigger removed messages when a subscription is stopped.
 This should only be chosen for special use cases like send-and-forget queues.
 
 #### NO_MERGE
+
 `NO_MERGE` is similar to `NO_MERGE_NO_HISTORY` but the server will remember the IDs it has
 sent to the client so it can remove them when a subscription is stopped.
 This strategy can be used when a collection is only used in a single publication.
@@ -708,16 +708,17 @@ This strategy can be used when a collection is only used in a single publication
 When `NO_MERGE` is selected the client will be handling gracefully duplicate events without throwing an exception.
 Specifically:
 
-* When we receive an added message for a document that is already present in the client's collection, it will be changed.
-* When we receive a change message for a document that is not in the client's collection, it will be added.
-* When we receive a removed message for a document that is not in the client's collection, nothing will happen.
+- When we receive an added message for a document that is already present in the client's collection, it will be changed.
+- When we receive a change message for a document that is not in the client's collection, it will be added.
+- When we receive a removed message for a document that is not in the client's collection, nothing will happen.
 
 You can import the publication strategies from `DDPServer`.
 
 ```js
-import { DDPServer } from 'meteor/ddp-server'
+import { DDPServer } from "meteor/ddp-server";
 
-const { SERVER_MERGE, NO_MERGE_NO_HISTORY, NO_MERGE } = DDPServer.publicationStrategies
+const { SERVER_MERGE, NO_MERGE_NO_HISTORY, NO_MERGE } =
+  DDPServer.publicationStrategies;
 ```
 
 You can use the following methods to set or get the publication strategy for publications:
@@ -728,7 +729,180 @@ For the `foo` collection, you can set the `NO_MERGE` strategy as shown:
 
 ```js
 import { DDPServer } from "meteor/ddp-server";
-Meteor.server.setPublicationStrategy('foo', DDPServer.publicationStrategies.NO_MERGE);
+Meteor.server.setPublicationStrategy(
+  "foo",
+  DDPServer.publicationStrategies.NO_MERGE
+);
 ```
 
 <ApiBox name="getPublicationStrategy" />
+
+### Server connections {#connections}
+
+Functions to manage and inspect the network connection between the Meteor client and server.
+
+<ApiBox name="Meteor.status" hasCustomExample/>
+
+```js
+import { Meteor } from "meteor/meteor";
+const status = Meteor.status();
+
+console.log(status);
+//          ^^^^
+// {
+//   connected: Boolean,
+//   status: String,
+//   retryCount: Number,
+//   retryTime: Number,
+//   reason: String,
+// }
+```
+
+Status object has the following fields:
+
+- `connected` - _*Boolean*_ : True if currently connected to the server. If false, changes and
+  method invocations will be queued up until the connection is reestablished.
+- `status` - _*String*_: Describes the current reconnection status. The possible
+  values are `connected` (the connection is up and
+  running), `connecting` (disconnected and trying to open a
+  new connection), `failed` (permanently failed to connect; e.g., the client
+  and server support different versions of DDP), `waiting` (failed
+  to connect and waiting to try to reconnect) and `offline` (user has disconnected the connection).
+- `retryCount` - _*Number*_: The number of times the client has tried to reconnect since the
+  connection was lost. 0 when connected.
+- `retryTime` - _*Number or undefined*_: The estimated time of the next reconnection attempt. To turn this
+  into an interval until the next reconnection, This key will be set only when `status` is `waiting`.
+  You canuse this snippet:
+  ```js
+  retryTime - new Date().getTime();
+  ```
+- `reason` - _*String or undefined*_: If `status` is `failed`, a description of why the connection failed.
+
+<ApiBox name="Meteor.reconnect" />
+
+<ApiBox name="Meteor.disconnect" />
+
+Call this method to disconnect from the server and stop all
+live data updates. While the client is disconnected it will not receive
+updates to collections, method calls will be queued until the
+connection is reestablished, and hot code push will be disabled.
+
+Call [Meteor.reconnect](#meteor_reconnect) to reestablish the connection
+and resume data transfer.
+
+This can be used to save battery on mobile devices when real time
+updates are not required.
+
+<ApiBox name="Meteor.onConnection"  hasCustomExample/>
+
+```js
+import { Meteor } from "meteor/meteor";
+
+const handle = Meteor.onConnection((connection) => {
+  console.log(connection);
+  //          ^^^^^^^^^^^
+  // {
+  //   id: String,
+  //   close: Function,
+  //   onClose: Function,
+  //   clientAddress: String,
+  //   httpHeaders: Object,
+  // }
+});
+
+handle.stop(); // Unregister the callback
+```
+
+`onConnection` returns an object with a single method `stop`. Calling
+`stop` unregisters the callback, so that this callback will no longer
+be called on new connections.
+
+The callback is called with a single argument, the server-side
+`connection` representing the connection from the client. This object
+contains the following fields:
+
+- `id` - _*String*_: A globally unique id for this connection.
+- `close` - _*Function*_: Close this DDP connection. The client is free to reconnect, but will
+  receive a different connection with a new `id` if it does.
+- `onClose` - _*Function*_: Register a callback to be called when the connection is closed.
+  If the connection is already closed, the callback will be called immediately.
+- `clientAddress` - _*String*_: The IP address of the client in dotted form (such as `127.0.0.1`). If you're running your Meteor server behind a proxy (so that clients
+  are connecting to the proxy instead of to your server directly),
+  you'll need to set the `HTTP_FORWARDED_COUNT` environment variable
+  for the correct IP address to be reported by `clientAddress`.
+
+  Set `HTTP_FORWARDED_COUNT` to an integer representing the number of
+  proxies in front of your server. For example, you'd set it to `1`
+  when your server was behind one proxy.
+
+- `httpHeaders` - _*Object*_: When the connection came in over an HTTP transport (such as with
+  Meteor's default SockJS implementation), this field contains
+  whitelisted HTTP headers.
+
+  Cookies are deliberately excluded from the headers as they are a
+  security risk for this transport. For details and alternatives, see
+  the [SockJS documentation](https://github.com/sockjs/sockjs-node#authorisation).
+
+> Currently when a client reconnects to the server (such as after
+> temporarily losing its Internet connection), it will get a new
+> connection each time. The `onConnection` callbacks will be called
+> again, and the new connection will have a new connection `id`.
+
+> In the future, when client reconnection is fully implemented,
+> reconnecting from the client will reconnect to the same connection on
+> the server: the `onConnection` callback won't be called for that
+> connection again, and the connection will still have the same
+> connection `id`.
+
+<ApiBox name="DDP.connect"  hasCustomExample/>
+
+```js
+import { DDP } from "meteor/ddp-client";
+import { Mongo } from "meteor/mongo";
+import { Meteor } from "meteor/meteor";
+const options = {...};
+
+const otherServer = DDP.connect("http://example.com", options);
+
+otherServer.call("foo.from.other.server", 1, 2, function (err, result) {
+  // ...
+});
+
+Metepr.call("foo.from.this.server", 1, 2, function (err, result) {
+  // ...
+});
+const remoteColl = new Mongo.Collection("collectionName", { connection: otherServer });
+remoteColl.find(...);
+
+
+```
+
+To call methods on another Meteor application or subscribe to its data
+sets, call `DDP.connect` with the URL of the application.
+`DDP.connect` returns an object which provides:
+
+- `subscribe` -
+  Subscribe to a record set. See
+  [Meteor.subscribe](#Meteor-subscribe).
+- `call` -
+  Invoke a method. See [Meteor.call](#Meteor-call).
+- `apply` -
+  Invoke a method with an argument array. See
+  [Meteor.apply](#Meteor-apply).
+- `methods` -
+  Define client-only stubs for methods defined on the remote server. See
+  [Meteor.methods](#Meteor-methods).
+- `status` -
+  Get the current connection status. See
+  [Meteor.status](#Meteor-status).
+- `reconnect` -
+  See [Meteor.reconnect](#Meteor-reconnect).
+- `disconnect` -
+  See [Meteor.disconnect](#Meteor-disconnect).
+
+By default, clients open a connection to the server from which they're loaded.
+When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
+`Meteor.apply`, you are using a connection back to that default
+server.
+
+<ApiBox name="DDP.onReconnect" />

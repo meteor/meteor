@@ -25,10 +25,10 @@ const primitiveDefault = {
   array: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  []',
   "array.<string>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">"string"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">]',
   "array.<object>": () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">{</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}]',
-  "array.<ejsonable>": () => `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [${primitiveDefault.ejsonable()}]`,
+  "array.<ejsonable>": () => `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> ${primitiveDefault.ejsonable("[","]")}`,
   // someProp: 'string', num: 42, bool: false, arr: [], obj: {}
-  "ejsonable"() {
-    return `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  { num:${primitiveDefault.number()}</span>, someProp:${primitiveDefault.string("foo")}</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}`
+  "ejsonable"(pre,post) {
+    return `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> ${pre}{ num:${primitiveDefault.number()}</span> , someProp:${primitiveDefault.string("foo")} </span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}${post}`
   },
   promise: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  Promise {</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}',
   any: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  any',
@@ -64,15 +64,16 @@ const makePrimitiveHTML =
     return value + `</span>`;
   }
 
+const isOneLiner = props.params.length === 0;
 </script>
 
 <template>
   <div class="language-js vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">js</span>
     <pre class="shiki shiki-themes github-light github-dark vp-code"><code><span class="line" v-if="props.scope !== 'instance'"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">import</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> { {{ props.memberof.split(".")[0] }} } </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">from</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;"> "meteor/{{ props.from }}"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">;</span></span>
 <span class="line"></span>
-<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">{{ props.memberof }}.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;">{{ props.fnName }}</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">{{ props.memberof }}.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;">{{ props.fnName }}</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(<span v-show="isOneLiner">);</span></span></span>
 <span class="line" v-for="(param, index) in props.params" :key="param.name"><span v-html="makePrimitiveHTML({ primitive: [param.type.names[0]], arr: props.params, index, isOptional: param.optional, name: param.name })"/></span>
-<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">);</span></span></code></pre>  </div>
+<span v-show="!isOneLiner" class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">);</span></span></code></pre>  </div>
 </template>
 
 

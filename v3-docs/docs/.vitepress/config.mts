@@ -60,6 +60,7 @@ export default defineConfig({
               { text: "Core", link: "/api/meteor#core" },
               { text: "Methods", link: "/api/meteor#methods" },
               { text: "Publish and Subscribe", link: "/api/meteor#pubsub" },
+              { text: "Server connections", link: "/api/meteor#connections" },
             ],
           },
           {
