@@ -57,11 +57,13 @@ class EnvironmentVariableAsync {
         return ret;
       },
       this,
-      {
-        callId: `${this.slot}-${Math.random()}`,
-        [SLOT_CALL_KEY]: this.slot,
-        ...options,
-      }
+      Object.assign(
+        {
+          callId: `${this.slot}-${Math.random()}`,
+          [SLOT_CALL_KEY]: this.slot,
+        },
+        options,
+      )
     );
   }
 
@@ -177,6 +179,6 @@ Meteor.bindEnvironment = (func, onException, _this) => {
       return runWithEnvironment();
     }
 
-    return global.asyncLocalStorage.run({}, runWithEnvironment);
+    return Meteor._getAsl().run({}, runWithEnvironment);
   };
 };
