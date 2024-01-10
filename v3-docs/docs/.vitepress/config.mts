@@ -71,6 +71,10 @@ export default defineConfig({
             text: "Check",
             link: "/api/check",
           },
+          {
+            text: "Session",
+            link: "/api/session",
+          },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
         collapsed: true,
