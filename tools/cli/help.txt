@@ -914,11 +914,11 @@ Options:
 Publish a new version of a package to the package server.
 
 Usage: meteor publish [--create]
-       meteor publish --update
+       meteor publish --update [--release <version>]
 
 Publishes a new version of a local package to the package server. Must be run
 from the directory containing the package. Reads the package.js file for version
-information, builds the package and sends both the package source and the built
+information, builds the package, and sends both the package source and the built
 version of the package to the package server.
 
 This will create at most one build of the package. If the package has an
@@ -941,6 +941,12 @@ Pass --create to create a new package.
 Options:
   --create   publish a new package
   --update   changed metadata of a previously published version
+  --release <version>
+             resolve top-level version conflicts by specifying the release
+             version. This option is particularly useful during the migration
+             process when dealing with packages that have conflicting version
+             requirements. Specify the version that satisfies all package
+             version constraints.
   --allow-incompatible-update   Allow packages in your project to be upgraded or
              downgraded to versions that are potentially incompatible with the
              current versions, if required to satisfy all package version
