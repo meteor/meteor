@@ -1043,6 +1043,20 @@ class AsynchronousCursor {
   [Symbol.iterator]() {
     return this._cursor[Symbol.iterator]();
   }
+  
+  [Symbol.asyncIterator]() {
+    return {
+      next: async () => {
+        const next = await this._nextObjectPromise();
+        if (next) {
+          return { done: false, value: next };
+        }
+        return {
+          done: true,
+        };
+      },
+    };
+  }
 
   // Returns a Promise for the next object from the underlying cursor (before
   // the Mongo->Meteor type replacement).
