@@ -74,7 +74,7 @@ esac
 if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ] ; then
   MONGO_NAME="mongodb-${OS}-x86_64-${MONGO_VERSION}"
 elif [ $OS = "linux" ] && [ "$ARCH" = "aarch64" ] ; then
-  MONGO_NAME="mongodb-linux-aarch64-ubuntu2004-${MONGO_VERSION}"
+  MONGO_NAME="mongodb-linux-aarch64-ubuntu2204-${MONGO_VERSION}"
 else
   MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
 fi
