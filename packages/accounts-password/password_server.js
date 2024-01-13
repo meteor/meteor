@@ -1049,9 +1049,9 @@ Accounts.createUser = (options, callback) => {
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
-Meteor.users.createIndex('services.email.verificationTokens.token',
-                          { unique: true, sparse: true });
-Meteor.users.createIndex('services.password.reset.token',
-                          { unique: true, sparse: true });
-Meteor.users.createIndex('services.password.enroll.token',
-                          { unique: true, sparse: true });
+Meteor.users.createIndexAsync('services.email.verificationTokens.token',
+                              { unique: true, sparse: true });
+Meteor.users.createIndexAsync('services.password.reset.token',
+                              { unique: true, sparse: true });
+Meteor.users.createIndexAsync('services.password.enroll.token',
+                              { unique: true, sparse: true });

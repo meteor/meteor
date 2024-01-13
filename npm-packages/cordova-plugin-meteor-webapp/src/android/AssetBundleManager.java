@@ -86,7 +86,7 @@ class AssetBundleManager {
     }
 
     public void checkForUpdates(final HttpUrl baseUrl) {
-        HttpUrl manifestUrl = baseUrl.resolve("manifest.json");
+        HttpUrl manifestUrl = baseUrl.newBuilder().addPathSegment("manifest.json").build();
 
         Request request = new Request.Builder().url(manifestUrl).build();
 

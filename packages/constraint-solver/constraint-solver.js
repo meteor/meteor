@@ -1,3 +1,5 @@
+const isEqual = Npm.require('lodash.isequal');
+
 var PV = PackageVersion;
 var CS = ConstraintSolver;
 
@@ -50,13 +52,17 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
 
   var input;
   Profile.time("new CS.Input", function () {
+    const { upgrade,
+    anticipatedPrereleases,
+    previousSolution,
+    allowIncompatibleUpdate,
+    upgradeIndirectDepPatchVersions } = options;
     input = new CS.Input(dependencies, constraints, self.catalogCache,
-                         _.pick(options,
-                                'upgrade',
-                                'anticipatedPrereleases',
-                                'previousSolution',
-                                'allowIncompatibleUpdate',
-                                'upgradeIndirectDepPatchVersions'));
+      { upgrade,
+        anticipatedPrereleases,
+        previousSolution,
+        allowIncompatibleUpdate,
+        upgradeIndirectDepPatchVersions });
   });
 
   // The constraint solver avoids re-solving everything from scratch on
@@ -78,14 +84,14 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
     resultCache = null;
   } else if (resultCache &&
              resultCache.lastInput &&
-             _.isEqual(resultCache.lastInput,
+             isEqual(resultCache.lastInput,
                        input.toJSONable(true))) {
     return resultCache.lastOutput;
   }
 
   if (options.supportedIsobuildFeaturePackages) {
-    _.each(options.supportedIsobuildFeaturePackages, function (versions, pkg) {
-      _.each(versions, function (version) {
+    Object.entries(options.supportedIsobuildFeaturePackages).forEach(function ([pkg, versions]) {
+      versions.forEach(function (version) {
         input.catalogCache.addPackageVersion(pkg, version, []);
       });
     });
@@ -100,7 +106,7 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
   if (options.previousSolution && options.missingPreviousVersionIsError) {
     // see comment where missingPreviousVersionIsError is passed in
     Profile.time("check for previous versions in catalog", function () {
-      _.each(options.previousSolution, function (version, pkg) {
+      Object.entries(options.previousSolution).forEach(function ([pkg, version]) {
         if (! input.catalogCache.hasPackageVersion(pkg, version)) {
           CS.throwConstraintSolverError(
             "Package version not in catalog: " + pkg + " " + version);
@@ -193,7 +199,7 @@ CS.PackagesResolver._resolveWithInput = function (input, options) {
 //   with an `alternatives` property lifted from one.
 // - version: version String
 CS.isConstraintSatisfied = function (pkg, vConstraint, version) {
-  return _.some(vConstraint.alternatives, function (simpleConstraint) {
+  return vConstraint.alternatives.some(function (simpleConstraint) {
     var type = simpleConstraint.type;
 
     if (type === "any-reasonable") {

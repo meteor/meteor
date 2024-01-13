@@ -1,6 +1,6 @@
 ---
 title: Check
-desription: Documentation on how to use check, Meteor's type checking library.
+description: Documentation on how to use check, Meteor's type checking library.
 ---
 
 The `check` package includes pattern checking functions useful for checking the types and structure
