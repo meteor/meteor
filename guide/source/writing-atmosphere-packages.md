@@ -296,6 +296,12 @@ Package.onTest(function(api) {
 
 From within your test entry point, you can import other files as you would in the package proper.
 
+You can also use [`mtest`](https://github.com/zodern/mtest) to test your packages like so:
+
+`mtest --package ./ --once 2.14`
+
+Which helps immensely if you'd like to test your package in CI/CD setup. You can see an example [here](https://github.com/monti-apm/monti-apm-agent/blob/master/.github/workflows/test.yml).
+
 You can read more about testing in Meteor in the [Testing article](testing.html).
 
 <h2 id="publishing-atmosphere">Publishing your package</h2>
