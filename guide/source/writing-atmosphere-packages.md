@@ -298,7 +298,9 @@ From within your test entry point, you can import other files as you would in th
 
 You can also use [`mtest`](https://github.com/zodern/mtest) to test your packages like so:
 
-`mtest --package ./ --once 2.14`
+```bash
+mtest --package ./ --once 2.14
+```
 
 Which helps immensely if you'd like to test your package in CI/CD setup. You can see an example [here](https://github.com/monti-apm/monti-apm-agent/blob/master/.github/workflows/test.yml).
 
