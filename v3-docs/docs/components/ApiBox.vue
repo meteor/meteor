@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Booleans from './helpers/Booleans.vue'
+import Classes from './helpers/Classes.vue'
 import Functions from './helpers/Functions.vue'
 import Locus from './helpers/Locus.vue'
 import ParamTable from './helpers/ParamTable.vue'
@@ -10,10 +11,20 @@ type Jsdoc = typeof jsdoc
 
 type Params = keyof Jsdoc
 
-const props = defineProps<{
-    name: Params;
-    hasCustomExample?: boolean
-}>()
+const props = defineProps({
+    name: {
+        type: String,
+        required: true
+    },
+    hasCustomExample: {
+        type: Boolean,
+        default: false
+    },
+    instanceName: {
+        type: String,
+        default: 'this'
+    }
+})
 
 function getJsdoc<T extends Params>(key: T): Jsdoc[T] {
     if (!jsdoc[key]) {
@@ -35,15 +46,23 @@ const isInstance = ui.scope === 'instance';
 const showName = (longname) => {
     if (isInstance) {
         // what is before # becomes `this`
-        return longname.replace(/.*#/, 'this.')
+        return longname.replace(/.*#/, `${props.instanceName}.`)
     }
 
     return longname
 }
 const isBoolean = ui.type?.names?.at(0) === 'Boolean'
 
-const isFunction = ui.kind === 'function' || ui?.params?.length > 0;
+// if is constructor/class we change this to false;
+let isFunction = ui.kind === 'function' || ui?.params?.length > 0;
 
+const isClass = (() => {
+    if (ui.kind === 'class') {
+        isFunction = false
+        return true
+    }
+    return false;
+})()
 
 const debug = (name) => {
     if (ui.longname !== name) return
@@ -61,11 +80,13 @@ const debug = (name) => {
 
         <div v-html="ui.summary"></div>
         <Locus v-if="ui.locus !== 'Anywhere'" :locus="ui.locus" />
-        <ParamTable v-if="isFunction" :params="ui.params" :options="ui.options" />
+        <ParamTable v-if="isFunction || isClass" :params="ui.params" :options="ui.options" />
         <template v-if="!hasCustomExample">
             <Booleans v-if="isBoolean" :memberof="ui.memberof" :from="ui.module" :longname="ui.longname" />
             <Functions v-if="isFunction" :from="ui.module" :longname="ui.longname" :params="ui.params" :fnName="ui.name"
-                :memberof="isInstance ? 'this' : ui.memberof" :scope="ui.scope" />
+                :memberof="isInstance ? instanceName : ui.memberof" :scope="ui.scope" />
+            <Classes v-if="isClass" :params="ui.params" :from="ui.module" :longname="ui.longname" />
+
         </template>
 
     </div>

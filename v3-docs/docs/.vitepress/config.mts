@@ -88,6 +88,14 @@ export default defineConfig({
             text: "Email",
             link: "/api/email",
           },
+          {
+            text: "Reactive Var",
+            link: "/api/ReactiveVar",
+          },
+          {
+            text: "Reactive Dict",
+            link: "/api/ReactiveDict",
+          },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
         collapsed: true,
