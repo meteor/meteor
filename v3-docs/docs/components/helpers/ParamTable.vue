@@ -55,7 +55,8 @@ const showTypes = (types: string[]) => {
           <td>{{ showTypes(param.type.names) }}</td>
           <template v-if="param.name === 'options'">
             <td>
-              <button type="button" @click="toggleOptionsTable">
+              <span v-html="param.description"></span>
+              <button v-if="(props.options?.length || -1) > 0" type="button" @click="toggleOptionsTable">
                 {{ isOptionsTableOpen ? "Close" : "Open" }} options table
                 <Caret :is-open="isOptionsTableOpen" />
               </button>
@@ -68,7 +69,7 @@ const showTypes = (types: string[]) => {
         </tr>
       </tbody>
     </table>
-    <Collapse v-if="hasOptions(props) && props.options" :when="isOptionsTableOpen" class="options-table">
+    <Collapse v-if="hasOptions(props) && props.options && props.options?.length > 0" :when="isOptionsTableOpen" class="options-table">
       <h4>Options:</h4>
       <table>
         <thead>

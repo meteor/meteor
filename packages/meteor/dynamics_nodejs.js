@@ -41,7 +41,7 @@ class EnvironmentVariableAsync {
    * @method withValue
    * @param {any} value The value to set for the duration of the function call
    * @param {Function} func The function to call with the new value of the
-   * @param {Object} [options] Optional additional options
+   * @param {Object} [options] Optional additional properties for adding in [asl](https://nodejs.org/api/async_context.html#class-asynclocalstorage)
    * @returns {Promise<any>} The return value of the function
    */
   withValue(value, func, options = {}) {

@@ -930,3 +930,28 @@ Returns a handle that can be used by `Meteor.clearInterval`.
 
 <ApiBox name="Meteor.clearTimeout" />
 <ApiBox name="Meteor.clearInterval" />
+
+## Enviroment variables {#envs}
+
+teor runs most app code within Fibers, which allows keeping track of the context a function is running in. `Meteor.EnvironmentVariable` works with `Meteor.bindEnvironment`, promises, and many other Meteor API's to preserve the context in async code. Some examples of how it is used in Meteor are to store the current user in methods, and record which arguments have been checked when using `audit-argument-checks`.
+
+```js
+import { Meteor } from "meteor/meteor";
+const currentRequest = new Meteor.EnvironmentVariable();
+
+function log(message) {
+  const requestId = currentRequest.get() || "None";
+  console.log(`[${requestId}]`, message);
+}
+
+currentRequest.withValue("12345", () => {
+  log("Handling request"); // Logs: [12345] Handling request
+});
+```
+
+<ApiBox name="Meteor.EnvironmentVariable" />
+<ApiBox name="Meteor.EnvironmentVariableAsync" />
+<ApiBox name="Meteor.EnvironmentVariable.get" />
+<ApiBox name="Meteor.EnvironmentVariable.withValue" />
+
+<ApiBox name="Meteor.bindEnvironment" />
