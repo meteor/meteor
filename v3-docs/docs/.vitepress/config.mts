@@ -75,6 +75,14 @@ export default defineConfig({
             text: "Session",
             link: "/api/session",
           },
+          {
+            text: "Blaze",
+            link: "/api/blaze",
+          },
+          {
+            text: "Template",
+            link: "/api/template",
+          },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
         collapsed: true,
