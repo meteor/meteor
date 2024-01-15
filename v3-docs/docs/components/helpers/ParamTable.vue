@@ -16,7 +16,7 @@ const props = defineProps<{
     description: string;
     optional: boolean;
   }[];
-  options?: { description: string, name: string, type: { names: string[] } }[]
+  options?: { description: string, name: string, type: { names: string[] }; optional?: boolean }[]
 }>()
 const localArr = copyArray(props.params)
 const hasOptions = ({ params }: typeof props) => {

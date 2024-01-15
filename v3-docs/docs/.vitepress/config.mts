@@ -4,7 +4,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   title: "Meteor API Docs",
   description: "Meteor.js API docs",
-  head:  [['link', { rel: 'icon', href: '/logo.png' }]],
+  head: [["link", { rel: "icon", href: "/logo.png" }]],
   lastUpdated: true,
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
@@ -81,8 +81,12 @@ export default defineConfig({
             link: "/api/blaze",
           },
           {
-            text: "Template",
-            link: "/api/template",
+            text: "Templates",
+            link: "/api/templates",
+          },
+          {
+            text: "Email",
+            link: "/api/email",
           },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
@@ -91,34 +95,43 @@ export default defineConfig({
       {
         text: "Troubleshooting",
         items: [
-          {text: "Expired Certificates", link: "/troubleshooting/expired-certificate"},
-          {text: "Windows", link: "/troubleshooting/windows"},
-          {text: "Known issues in 2.13", link: "/troubleshooting/known-issues"},
+          {
+            text: "Expired Certificates",
+            link: "/troubleshooting/expired-certificate",
+          },
+          { text: "Windows", link: "/troubleshooting/windows" },
+          {
+            text: "Known issues in 2.13",
+            link: "/troubleshooting/known-issues",
+          },
         ],
         collapsed: true,
       },
       {
         text: "Command Line",
         items: [
-          {link: "cli/index", text: "CLI" },
-          {link: "cli/using-core-types", text: "Using Core Types" },
-          {link: "cli/environment-variables", text: "Environment Variables" },
+          { link: "cli/index", text: "CLI" },
+          { link: "cli/using-core-types", text: "Using Core Types" },
+          { link: "cli/environment-variables", text: "Environment Variables" },
         ],
-        collapsed: true
+        collapsed: true,
       },
       {
         text: "Changelog",
         items: [
           // TODO: Open issue in Vitepress about this
           { link: "/history", text: "Current" },
-          { link: "https://docs.meteor.com/changelog#v2020210120", text: "Pre-2.0 (legacy)" },
+          {
+            link: "https://docs.meteor.com/changelog#v2020210120",
+            text: "Pre-2.0 (legacy)",
+          },
         ],
         collapsed: true,
       },
     ],
 
     socialLinks: [{ icon: "github", link: "https://github.com/meteor/meteor" }],
-    logo: {dark: "/meteor-logo.png", light: "/meteor.png"},
+    logo: { dark: "/meteor-logo.png", light: "/meteor.png" },
     search: {
       provider: "local",
     },
