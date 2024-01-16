@@ -26,13 +26,13 @@ export declare module WebApp {
   /**
    * @deprecated use handlers instead
    */
-  var connectHandlers: express.Handler;
-  var handlers: express.Handler;
+  var connectHandlers: express.Application;
+  var handlers: express.Application;
   /**
    * @deprecated use rawHandlers instead
    */
-  var rawConnectHandlers: express.Handler;
-  var rawHandlers: express.Handler;
+  var rawConnectHandlers: express.Application;
+  var rawHandlers: express.Application;
   var httpServer: http.Server;
   var expressApp: express.Application;
   /**
