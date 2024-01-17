@@ -65,7 +65,7 @@ const showTypes = (types: string[]) => {
           <template v-else>
             <td v-html="param.description ?? `----`"></td>
           </template>
-          <td>{{ param.optional ? "❌" : "✅" }}</td>
+          <td>{{ param.optional ? "No" : "Yes" }}</td>
         </tr>
       </tbody>
     </table>
@@ -85,7 +85,7 @@ const showTypes = (types: string[]) => {
             <td>{{ param.name }}</td>
             <td>{{ param.type.names[0] }}</td>
             <td v-html="param.description ?? ``"></td>
-            <td> ❌ </td>
+            <td> No </td>
           </tr>
         </tbody>
       </table>

@@ -16,18 +16,34 @@ const primitiveDefault = {
     '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  [</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">{</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}]',
   "array.<ejsonable>": () =>
     `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> ${primitiveDefault.ejsonable(
-      "[",
-      "]"
+      {
+        pre: "[",
+        post: "]",
+      }
     )}`,
   // someProp: 'string', num: 42, bool: false, arr: [], obj: {}
-  ejsonable(pre, post) {
+  ejsonable(obj) {
+    let pre, post;
+    if (typeof obj === "string") pre = "";
+    if (typeof obj === "object") {
+      pre = obj.pre;
+      post = obj.post;
+    }
     if (pre.length > 1) pre = "";
     // if (post.length > 1) post = "";
-    return `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> ${pre}{ num:${primitiveDefault.number()}</span> , someProp:${primitiveDefault.string(
+    return `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> ${
+      pre ?? ``
+    }{ num:${primitiveDefault.number()}</span> , someProp:${primitiveDefault.string(
       "foo"
     )} </span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}${
       post ?? ``
     }`;
+  },
+  ejson(pre, post) {
+    return primitiveDefault.ejsonable(pre, post);
+  },
+  jsoncompatible(pre, post) {
+    return primitiveDefault.ejsonable(pre, post);
   },
   promise: () =>
     '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  Promise {</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}',
@@ -66,7 +82,4 @@ const makePrimitiveHTML = ({ primitive, arr, index, isOptional, name }) => {
   return value + `</span>`;
 };
 
-
-export {
-  makePrimitiveHTML
-}
+export { makePrimitiveHTML };

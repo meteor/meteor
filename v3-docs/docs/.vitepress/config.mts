@@ -96,6 +96,10 @@ export default defineConfig({
             text: "Reactive Dict",
             link: "/api/ReactiveDict",
           },
+          {
+            text: "EJSON",
+            link: "/api/EJSON",
+          },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
         collapsed: true,
