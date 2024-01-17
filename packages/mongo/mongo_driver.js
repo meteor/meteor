@@ -1039,10 +1039,6 @@ class AsynchronousCursor {
 
     this._visitedIds = new LocalCollection._IdMap;
   }
-
-  [Symbol.iterator]() {
-    return this._cursor[Symbol.iterator]();
-  }
   
   [Symbol.asyncIterator]() {
     return {
