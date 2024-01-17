@@ -1042,7 +1042,7 @@ class AsynchronousCursor {
   
   [Symbol.asyncIterator]() {
     return {
-      async next {
+      async next() {
         const value = await this._nextObjectPromise();
         return { done: !value, value };
       },
