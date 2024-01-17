@@ -7,17 +7,31 @@ import { isPlainObject } from './isPlainObject';
 const currentArgumentChecker = new Meteor.EnvironmentVariable;
 const hasOwn = Object.prototype.hasOwnProperty;
 
+const format = result => {
+  const err = new Match.Error(result.message);
+  if (result.path) {
+    err.message += ` in field ${result.path}`;
+    err.path = result.path;
+  }
+
+  return err;
+}
+
 /**
  * @summary Check that a value matches a [pattern](#matchpatterns).
  * If the value does not match the pattern, throw a `Match.Error`.
+ * By default, it will throw immediately at the first error encountered. Pass in { throwAllErrors: true } to throw all errors.
  *
  * Particularly useful to assert that arguments to a function have the right
  * types and structure.
  * @locus Anywhere
  * @param {Any} value The value to check
  * @param {MatchPattern} pattern The pattern to match `value` against
+ * @param {{
+ *  throwAllErrors?: Boolean
+ * }} [options={}] - Additional options for check
  */
-export function check(value, pattern) {
+export function check(value, pattern, options = { throwAllErrors: false }) {
   // Record that check got called, if somebody cared.
   //
   // We use getOrNullIfOutsideFiber so that it's OK to call check()
@@ -31,15 +45,14 @@ export function check(value, pattern) {
     argChecker.checking(value);
   }
 
-  const result = testSubtree(value, pattern);
-  if (result) {
-    const err = new Match.Error(result.message);
-    if (result.path) {
-      err.message += ` in field ${result.path}`;
-      err.path = result.path;
-    }
+  const result = testSubtree(value, pattern, options.throwAllErrors);
 
-    throw err;
+  if (result) {
+    if (options.throwAllErrors) {
+      throw Array.isArray(result) ? result.map(r => format(r)) : [format(result)]
+    } else {
+      throw format(result)
+    }
   }
 };
 
@@ -203,9 +216,8 @@ const typeofChecks = [
   [undefined, 'undefined'],
 ];
 
-// Return `false` if it matches. Otherwise, return an object with a `message` and a `path` field.
-const testSubtree = (value, pattern) => {
-
+// Return `false` if it matches. Otherwise, returns an object with a `message` and a `path` field or an array of objects each with a `message` and a `path` field when collecting errors.
+const testSubtree = (value, pattern, collectErrors = false, errors = [], path = '') => {
   // Match anything!
   if (pattern === Match.Any) {
     return false;
@@ -289,15 +301,19 @@ const testSubtree = (value, pattern) => {
       };
     }
 
+
     for (let i = 0, length = value.length; i < length; i++) {
-      const result = testSubtree(value[i], pattern[0]);
+      const arrPath = `${path}[${i}]`
+      const result = testSubtree(value[i], pattern[0], collectErrors, errors, arrPath);
       if (result) {
-        result.path = _prependPath(i, result.path);
-        return result;
+        result.path = _prependPath(collectErrors ? arrPath : i, result.path)
+        if (!collectErrors) return result;
+        if (typeof value[i] !== 'object' || result.message) errors.push(result)
       }
     }
 
-    return false;
+    if (!collectErrors) return false;
+    return errors.length === 0 ? false : errors;
   }
 
   // Arbitrary validation checks. The condition can return false or throw a
@@ -322,6 +338,7 @@ const testSubtree = (value, pattern) => {
     }
 
     // XXX this error is terrible
+
     return {
       message: 'Failed Match.Where validation',
       path: '',
@@ -425,34 +442,40 @@ const testSubtree = (value, pattern) => {
 
   for (let key in Object(value)) {
     const subValue = value[key];
+    const objPath = path ? `${path}.${key}` : key;
     if (hasOwn.call(requiredPatterns, key)) {
-      const result = testSubtree(subValue, requiredPatterns[key]);
+      const result = testSubtree(subValue, requiredPatterns[key], collectErrors, errors, objPath);
       if (result) {
-        result.path = _prependPath(key, result.path);
-        return result;
+        result.path = _prependPath(collectErrors ? objPath : key, result.path)
+        if (!collectErrors) return result;
+        if (typeof subValue !== 'object' || result.message) errors.push(result);
       }
 
       delete requiredPatterns[key];
     } else if (hasOwn.call(optionalPatterns, key)) {
-      const result = testSubtree(subValue, optionalPatterns[key]);
+      const result = testSubtree(subValue, optionalPatterns[key], collectErrors, errors, objPath);
       if (result) {
-        result.path = _prependPath(key, result.path);
-        return result;
+        result.path = _prependPath(collectErrors ? objPath : key, result.path)
+        if (!collectErrors) return result;
+        if (typeof subValue !== 'object' || result.message) errors.push(result);
       }
 
     } else {
       if (!unknownKeysAllowed) {
-        return {
+        const result = {
           message: 'Unknown key',
           path: key,
         };
+        if (!collectErrors) return result;
+        errors.push(result);
       }
 
       if (unknownKeyPattern) {
-        const result = testSubtree(subValue, unknownKeyPattern[0]);
+        const result = testSubtree(subValue, unknownKeyPattern[0], collectErrors, errors, objPath);
         if (result) {
-          result.path = _prependPath(key, result.path);
-          return result;
+          result.path = _prependPath(collectErrors ? objPath : key, result.path)
+          if (!collectErrors) return result;
+          if (typeof subValue !== 'object' || result.message) errors.push(result);
         }
       }
     }
@@ -460,11 +483,17 @@ const testSubtree = (value, pattern) => {
 
   const keys = Object.keys(requiredPatterns);
   if (keys.length) {
-    return {
+    const result = {
       message: `Missing key '${keys[0]}'`,
       path: '',
     };
+
+    if (!collectErrors) return result;
+    errors.push(result);
   }
+
+  if (!collectErrors) return false;
+  return errors.length === 0 ? false : errors;
 };
 
 class ArgumentChecker {
@@ -529,7 +558,7 @@ const _jsKeywords = ['do', 'if', 'in', 'for', 'let', 'new', 'try', 'var', 'case'
 const _prependPath = (key, base) => {
   if ((typeof key) === 'number' || key.match(/^[0-9]+$/)) {
     key = `[${key}]`;
-  } else if (!key.match(/^[a-z_$][0-9a-z_$]*$/i) ||
+  } else if (!key.match(/^[a-z_$][0-9a-z_$.[\]]*$/i) ||
              _jsKeywords.indexOf(key) >= 0) {
     key = JSON.stringify([key]);
   }
