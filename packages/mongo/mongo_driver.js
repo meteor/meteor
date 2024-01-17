@@ -1046,14 +1046,9 @@ class AsynchronousCursor {
   
   [Symbol.asyncIterator]() {
     return {
-      next: async () => {
-        const next = await this._nextObjectPromise();
-        if (next) {
-          return { done: false, value: next };
-        }
-        return {
-          done: true,
-        };
+      async next {
+        const value = await this._nextObjectPromise();
+        return { done: !value, value };
       },
     };
   }
