@@ -48,6 +48,9 @@ const showName = (longname) => {
         // what is before # becomes `this`
         return longname.replace(/.*#/, `${props.instanceName}.`)
     }
+    if (ui.ishelper) {
+        return `{{ ${longname} }}`
+    }
 
     return longname
 }
@@ -79,7 +82,7 @@ const debug = (name) => {
         </h2>
 
         <div v-html="ui.summary"></div>
-        <Locus v-if="ui.locus !== 'Anywhere'" :locus="ui.locus" />
+        <Locus v-if="ui.locus && ui.locus !== 'Anywhere'" :locus="ui.locus" />
         <ParamTable v-if="isFunction || isClass" :params="ui.params" :options="ui.options" />
         <template v-if="!hasCustomExample">
             <Booleans v-if="isBoolean" :memberof="ui.memberof" :from="ui.module" :longname="ui.longname" />
