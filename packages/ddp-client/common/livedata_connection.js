@@ -785,6 +785,7 @@ export class Connection {
     // If the caller didn't give a callback, decide what to do.
     let future;
     if (!callback) {
+      callback = () => {}; // initialize to an empty function as will execute in MethodInvoker
       if (
         Meteor.isClient &&
         !options.returnServerResultPromise &&
@@ -797,7 +798,7 @@ export class Connection {
         callback = (err) => {
           err && Meteor._debug("Error invoking Method '" + name + "'", err);
         };
-      } else {
+      } else if (Meteor.isServer) {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
         future = new Promise((resolve, reject) => {
