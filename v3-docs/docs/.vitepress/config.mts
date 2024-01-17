@@ -52,7 +52,16 @@ export default defineConfig({
         text: "API",
         link: "/api/index",
         items: [
-          { text: "Accounts", link: "/api/accounts" },
+          {
+            text: "Accounts",
+            link: "/api/accounts",
+            items: [
+              { text: "Accounts-Base", link: "/api/accounts#accounts-base" },
+              { text: "Multi-server", link: "/api/accounts#multi-server" },
+              { text: "Passwords", link: "/api/accounts#passwords" },
+            ],
+            collapsed: true,
+          },
           {
             text: "Meteor",
             link: "/api/meteor",
