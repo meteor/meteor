@@ -86,9 +86,8 @@ export namespace Match {
  * types and structure.
  * @param value The value to check
  * @param pattern The pattern to match `value` against
- * @param {{
- *   throwAllErrors?: Boolean
- * }} [options={}] - Additional options for check
+ * @param {Object} [options={}] Additional options for check
+ * @param {Boolean} [options.throwAllErrors=false] If true, throw all errors
  */
 export declare function check<T extends Match.Pattern>(
   value: any,

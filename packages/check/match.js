@@ -27,9 +27,8 @@ const format = result => {
  * @locus Anywhere
  * @param {Any} value The value to check
  * @param {MatchPattern} pattern The pattern to match `value` against
- * @param {{
- *  throwAllErrors?: Boolean
- * }} [options={}] - Additional options for check
+ * @param {Object} [options={}] Additional options for check
+ * @param {Boolean} [options.throwAllErrors=false] If true, throw all errors
  */
 export function check(value, pattern, options = { throwAllErrors: false }) {
   // Record that check got called, if somebody cared.
