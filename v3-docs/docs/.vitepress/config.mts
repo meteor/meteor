@@ -113,6 +113,10 @@ export default defineConfig({
             text: "Assets",
             link: "/api/assets",
           },
+          {
+            text: "Mobile Configuration",
+            link: "/api/app",
+          },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
         collapsed: true,
