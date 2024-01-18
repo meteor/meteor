@@ -95,7 +95,7 @@ export const loadAsyncStubHelpers = () => {
           const applyAsyncPromise = oldApplyAsync.apply(this, args);
           stubPromiseResolver(applyAsyncPromise.stubPromise);
           serverPromiseResolver(applyAsyncPromise.serverPromise);
-          applyAsyncPromise
+          applyAsyncPromise.stubPromise
             .then((result) => {
               finished = true;
               resolve(result);
@@ -104,6 +104,15 @@ export const loadAsyncStubHelpers = () => {
               finished = true;
               reject(err);
             });
+          applyAsyncPromise.serverPromise
+              .then((result) => {
+                finished = true;
+                resolve(result);
+              })
+              .catch((err) => {
+                finished = true;
+                reject(err);
+              });
         });
 
         Meteor._setImmediate(() => {

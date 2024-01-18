@@ -798,7 +798,7 @@ export class Connection {
         callback = (err) => {
           err && Meteor._debug("Error invoking Method '" + name + "'", err);
         };
-      } else if (Meteor.isServer) {
+      } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
         future = new Promise((resolve, reject) => {
