@@ -50,11 +50,17 @@ const primitiveDefault = {
   any: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  any',
   error: (name) =>
     `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  Error(${name})`,
+    mongoselector: () =>
+    `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  MongoSelector`,
+    mongomodifier: () =>
+    `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  MongoModifier`,
+    iterationcallback: () =>
+    `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  IterationCallback`,
 };
 
 const comma = `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">,</span>`;
 const br = `<br/>`;
-const comment = `<span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">  // this param is optional </span>`;
+const comment = (text = "  // this param is optional ")=>`<span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">${text}</span>`;
 
 const line = ({ html, pre, post } = { pre: "", post: "", html: "" }) =>
   `${pre}<span class="line">${html}</span>${post}`;
@@ -77,9 +83,9 @@ const makePrimitiveHTML = ({ primitive, arr, index, isOptional, name }) => {
     return line({
       html: value + `${comma}</span>`,
       pre: index === 0 ? "" : br,
-      post: isOptional ? comment : "",
+      post: isOptional ? comment() : "",
     });
   return value + `</span>`;
 };
 
-export { makePrimitiveHTML };
+export { makePrimitiveHTML, comment };

@@ -71,7 +71,7 @@ const debug = (name) => {
     if (ui.longname !== name) return
     console.log(ui)
 }
-// debug('Subscription#ready')
+// debug('Mongo.Cursor#observeChanges')
 </script>
 
 <template>

@@ -74,6 +74,10 @@ export default defineConfig({
             ],
           },
           {
+            text: "Collections",
+            link: "/api/collections",
+          },
+          {
             text: "DDPRateLimiter",
             link: "/api/DDPRateLimiter",
           },
