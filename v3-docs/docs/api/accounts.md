@@ -1,6 +1,6 @@
 # Accounts
 
-### Accounts-base {#accounts-base}
+## Accounts-base {#accounts-base}
 
 The Meteor Accounts system builds on top of the `userId` support in
 [`publish`](./meteor#Subscription-userId) and [`methods`](./meteor#methods-userId). The core
@@ -361,7 +361,7 @@ Accounts.ui.config({
 
 Since Meteor 2.7 you can configure these in your Meteor settings under `Meteor.settings.public.packages.accounts-ui-unstyled`.
 
-### Multi-server {#multi-server}
+## Multi-server {#multi-server}
 
 The `accounts-base` package exports two constructors, called
 `AccountsClient` and `AccountsServer`, which are used to create the
@@ -748,7 +748,7 @@ These rate limiting rules can be removed by calling
 
 <ApiBox name="AccountsServer#removeDefaultRateLimit" instanceName="accountsServer"/>
 
-### Passwords {#passwords}
+## Passwords {#passwords}
 
 The `accounts-password` package contains a full system for password-based
 authentication. In addition to the basic username and password-based

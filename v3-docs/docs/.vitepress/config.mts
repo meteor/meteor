@@ -109,6 +109,10 @@ export default defineConfig({
             text: "EJSON",
             link: "/api/EJSON",
           },
+          {
+            text: "Assets",
+            link: "/api/assets",
+          },
           { text: "Maintained Packages", link: "/api/packages-listing" },
         ],
         collapsed: true,
