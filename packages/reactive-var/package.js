@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reactive variable",
-  version: '1.0.13-alpha300.19'
+  version: '1.0.13-beta300.0'
 });
 
 Package.onUse(function (api) {

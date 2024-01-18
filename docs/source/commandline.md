@@ -43,6 +43,9 @@ For example: `meteor run --port 4000`
 will run the development server on `http://localhost:4000`
 and the development MongoDB instance on `mongodb://localhost:4001`.
 
+To open your default browser you can pass the `--open` flag.
+For example: `meteor run --open`
+
 Run `meteor help run` to see the full list of options.
 
 <h2 id="meteordebug">meteor debug</h2>
@@ -88,6 +91,9 @@ named `app-name` and copies a template app into it. You can pass an absolute or 
 path, it will be resolved relative to the current working directory. By default, it generates a React project.
 
 See the flags below to learn how you can generate different types of apps.
+
+Using only `meteor create` will create a promt to help you choose the type of app you want to create,
+giving you the options with the flags below.
 
 
 <h3 id="apollo">--apollo</h3>

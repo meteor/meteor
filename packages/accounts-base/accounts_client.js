@@ -229,13 +229,14 @@ export class AccountsClient extends AccountsCommon {
     const loginCallbacks = ({ error, loginDetails }) => {
       if (!called) {
         called = true;
-        this._loginCallbacksCalled = true;
         if (!error) {
           this._onLoginHook.forEach(callback => {
             callback(loginDetails);
             return true;
           });
+          this._loginCallbacksCalled = true;
         } else {
+          this._loginCallbacksCalled = false;
           this._onLoginFailureHook.forEach(callback => {
             callback({ error });
             return true;

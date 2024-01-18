@@ -753,7 +753,7 @@ Object.assign(Mongo.Collection.prototype, {
     return this._insert(doc, callback);
   },
 
-  async _insertAsync(doc, options = {}) {
+  _insertAsync(doc, options = {}) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -810,19 +810,17 @@ Object.assign(Mongo.Collection.prototype, {
     };
 
     if (this._isRemoteCollection()) {
-      const result = await this._callMutatorMethodAsync('insertAsync', [doc], options);
-
-      return chooseReturnValueFromCollectionResult(result);
+      const promise = this._callMutatorMethodAsync('insertAsync', [doc], options);
+      promise.then(chooseReturnValueFromCollectionResult);
+      promise.stubPromise = promise.stubPromise.then(chooseReturnValueFromCollectionResult);
+      promise.serverPromise = promise.serverPromise.then(chooseReturnValueFromCollectionResult);
+      return promise;
     }
 
     // it's my collection.  descend into the collection object
     // and propagate any exception.
-    try {
-      const result = await this._collection.insertAsync(doc);
-      return chooseReturnValueFromCollectionResult(result);
-    } catch (e) {
-      throw e;
-    }
+    return this._collection.insertAsync(doc)
+      .then(chooseReturnValueFromCollectionResult);
   },
 
   /**
@@ -850,7 +848,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
    * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
    */
-  async updateAsync(selector, modifier, ...optionsAndCallback) {
+  updateAsync(selector, modifier, ...optionsAndCallback) {
 
     // We've already popped off the callback, so we are left with an array
     // of one or zero items
@@ -889,7 +887,7 @@ Object.assign(Mongo.Collection.prototype, {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
-    //console.log({callback, options, selector, modifier, coll: this._collection});
+
     return this._collection.updateAsync(
       selector,
       modifier,
@@ -981,7 +979,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
    */
-  async removeAsync(selector, options = {}) {
+  removeAsync(selector, options = {}) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
     if (this._isRemoteCollection()) {

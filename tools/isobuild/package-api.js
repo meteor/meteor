@@ -103,6 +103,7 @@ export class PackageAPI {
     });
 
     this.releaseRecords = [];
+    this.pendingPromises = [];
   }
 
   // Called when this package wants to make another package be
@@ -514,7 +515,7 @@ export class PackageAPI {
    * track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the
    * default release track `METEOR`. Can be an array of specifications.
    */
-  async versionsFrom(releases) {
+  versionsFrom(releases) {
     var self = this;
 
     // Packages in isopackets really ought to be in the core release, by
@@ -548,16 +549,27 @@ export class PackageAPI {
                            { useMyCaller: true });
         return;
       }
-      var releaseRecord = await catalog.official.getReleaseVersion(
-        relInf[0], relInf[1]);
 
-      if (!releaseRecord) {
-        buildmessage.error("Unknown release "+ release,
-                           { tags: { refreshCouldHelp: true } });
-      } else {
-        self.releaseRecords.push(releaseRecord);
-      }
+      let promise = catalog.official.getReleaseVersion(relInf[0], relInf[1])
+        .then(releaseRecord => {
+          if (!releaseRecord) {
+            buildmessage.error("Unknown release "+ release,
+                               { tags: { refreshCouldHelp: true } });
+          } else {
+            self.releaseRecords.push(releaseRecord);
+          }
+        });
+
+      this.pendingPromises.push(promise);
     }
+  }
+
+  // Internal method used by the meteor-tool
+  _waitForAsyncWork() {
+    let promises = this.pendingPromises;
+    this.pendingPromises = [];
+
+    return Promise.all(promises);
   }
 
   // Export symbols from this package.
