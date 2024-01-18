@@ -28,7 +28,6 @@
 ### [accounts-ui-unstyled](https://github.com/meteor/meteor/tree/devel/packages/accounts-ui-unstyled) {#accounts-ui-unstyled}
 ### [accounts-weibo](https://github.com/meteor/meteor/tree/devel/packages/accounts-weibo) {#accounts-weibo}
 ### [allow-deny](https://github.com/meteor/meteor/tree/devel/packages/allow-deny) {#allow-deny}
-### [appcache](https://github.com/meteor/meteor/tree/devel/packages/appcache) {#appcache}
 ### [audit-argument-checks](https://github.com/meteor/meteor/tree/devel/packages/audit-argument-checks) {#audit-argument-checks}
 ### [autopublish](https://github.com/meteor/meteor/tree/devel/packages/autopublish) {#autopublish}
 ### [autoupdate](https://github.com/meteor/meteor/tree/devel/packages/autoupdate) {#autoupdate}
