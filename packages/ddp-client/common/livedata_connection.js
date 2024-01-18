@@ -785,7 +785,6 @@ export class Connection {
     // If the caller didn't give a callback, decide what to do.
     let future;
     if (!callback) {
-      callback = () => {}; // initialize to an empty function as will execute in MethodInvoker
       if (
         Meteor.isClient &&
         !options.returnServerResultPromise &&
