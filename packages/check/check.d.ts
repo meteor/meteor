@@ -66,7 +66,7 @@ export namespace Match {
   function Where<T>(condition: (val: any) => val is T): Matcher<T>;
   function Where(condition: (val: any) => boolean): Matcher<any>;
 
-  function NonEmptyString<T extends Match.Where>(x: any): boolean;
+  function NonEmptyString: Matcher<string>;
   /**
    * Returns true if the value matches the pattern.
    * @param value The value to check

@@ -65,12 +65,7 @@ export const Match = {
     return new Where(condition);
   },
 
-  NonEmptyString: function(x) {
-    return Match.Where((x) => {
-      check(x, String);
-      return x.length > 0;
-    })
-  },
+  NonEmptyString: ['__NonEmptyString__'],
 
   ObjectIncluding: function(pattern) {
     return new ObjectIncluding(pattern)
@@ -279,6 +274,17 @@ const testSubtree = (value, pattern) => {
   // 'Object' is shorthand for Match.ObjectIncluding({});
   if (pattern === Object) {
     pattern = Match.ObjectIncluding({});
+  }
+  // This must be invoked before pattern instanceof Array as strings are regarded as arrays
+  // We invoke the pattern as IIFE so that `pattern isntanceof Where` catches it 
+  if (pattern === Match.NonEmptyString) {
+    pattern = (function() {
+      const condition = (val) => {
+         check(val, String);
+         return val.length > 0;
+      }
+      return new Where(condition);
+    })();
   }
 
   // Array (checked AFTER Any, which is implemented as an Array).

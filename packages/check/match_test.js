@@ -175,7 +175,8 @@ Tinytest.add('check - check', test => {
   fails(true, false);
   fails(true, 'true');
   fails('false', false);
-
+  matches('xx', Match.NonEmptyString);
+  fails('', Match.NonEmptyString);
   matches(/foo/, RegExp);
   fails(/foo/, String);
   matches(new Date, Date);
@@ -478,3 +479,5 @@ Tinytest.add(
     test.equal(new Match.ObjectWithValues(), Match.ObjectWithValues());
   }
 );
+
+
