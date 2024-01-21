@@ -110,24 +110,24 @@ const getTransport = function () {
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
   if (
-    this.cacheKey === undefined ||
-    this.cacheKey !== url ||
-    this.cacheKey !== packageSettings.service ||
-    this.cacheKey !== 'settings'
+    globalThis.cacheKey === undefined ||
+    globalThis.cacheKey !== url ||
+    globalThis.cacheKey !== packageSettings.service ||
+    globalThis.cacheKey !== 'settings'
   ) {
     if (
       (packageSettings.service && wellKnow(packageSettings.service)) ||
       (url && wellKnow(new URL(url).hostname)) ||
       wellKnow(url?.split(':')[0] || '')
     ) {
-      this.cacheKey = packageSettings.service || 'settings';
-      this.cache = knownHostsTransport(packageSettings, url);
+      globalThis.cacheKey = packageSettings.service || 'settings';
+      globalThis.cache = knownHostsTransport(packageSettings, url);
     } else {
-      this.cacheKey = url;
-      this.cache = url ? await makeTransport(url, packageSettings) : null;
+      globalThis.cacheKey = url;
+      globalThis.cache = url ? makeTransport(url, packageSettings) : null;
     }
   }
-  return this.cache;
+  return globalThis.cache;
 };
 
 let nextDevModeMailId = 0;
