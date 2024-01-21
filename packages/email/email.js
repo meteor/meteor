@@ -24,7 +24,7 @@ export const EmailInternals = {
 
 const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
-const makeTransport = async function (mailUrlString) {
+const makeTransport = function (mailUrlString) {
   const mailUrl = new URL(mailUrlString);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
@@ -103,7 +103,7 @@ const knownHostsTransport = function (settings = undefined, url = undefined) {
 };
 EmailTest.knowHostsTransport = knownHostsTransport;
 
-const getTransport = async function () {
+const getTransport = function () {
   const packageSettings = Meteor.settings.packages?.email || {};
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
@@ -250,10 +250,9 @@ Email.sendAsync = async function (options) {
   }
 
   if (mailUrlEnv || mailUrlSettings) {
-    const transport = await getTransport();
-    await transport.sendMail(email);
-    return;
+    return getTransport().sendMail(email);
   }
+
   return devModeSendAsync(email, options);
 };
 
