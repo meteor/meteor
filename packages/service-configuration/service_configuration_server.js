@@ -31,15 +31,15 @@ try {
   throw err;
 }
 
-Meteor.startup(() => {
+Meteor.startup(async () => {
   const settings = Meteor.settings?.packages?.['service-configuration'];
   if (!settings) return;
-  Object.keys(settings).forEach(key => {
-    ServiceConfiguration.configurations.upsert(
+  for (const key of Object.keys(settings)) {
+    ServiceConfiguration.configurations.upsertAsync(
       { service: key },
       {
         $set: settings[key],
       }
     );
-  });
+  }
 });
