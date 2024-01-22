@@ -125,7 +125,36 @@ export default defineConfig({
             text: "Package.js",
             link: "/api/package",
           },
-          { text: "Maintained Packages", link: "/api/packages-listing" },
+        ],
+        collapsed: true,
+      },
+      {
+        text: "Packages",
+        items: [
+          {
+            text: "accounts-ui",
+            link: "/packages/accounts-ui",
+          },
+          {
+            text: "accounts-passwordless",
+            link: "/packages/accounts-passwordless",
+          },
+          {
+            text: "accounts-2fa",
+            link: "/packages/accounts-2fa",
+          },
+          {
+            text: "url",
+            link: "/packages/url",
+          },
+          {
+            text: "webapp",
+            link: "/packages/webapp",
+          },
+          {
+            link: "packages/packages-listing",
+            text: "Maintained Packages",
+          },
         ],
         collapsed: true,
       },
