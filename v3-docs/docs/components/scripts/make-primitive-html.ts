@@ -50,17 +50,24 @@ const primitiveDefault = {
   any: () => '<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  any',
   error: (name) =>
     `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  Error(${name})`,
-    mongoselector: () =>
+  mongoselector: () =>
     `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  MongoSelector`,
-    mongomodifier: () =>
+  mongomodifier: () =>
     `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  MongoModifier`,
-    iterationcallback: () =>
+  iterationcallback: () =>
     `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  IterationCallback`,
+  expresshandlerscallback: () =>
+    `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  ExpressHandlersCallback`,
+  addruntimeconfighookcallback: () =>
+    `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  addRuntimeConfigHookCallback`,
+  addupdatednotifyhookcallback: () =>
+    `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  addUpdatedNotifyHookCallback`,
 };
 
 const comma = `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">,</span>`;
 const br = `<br/>`;
-const comment = (text = "  // this param is optional ")=>`<span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">${text}</span>`;
+const comment = (text = "  // this param is optional ") =>
+  `<span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">${text}</span>`;
 
 const line = ({ html, pre, post } = { pre: "", post: "", html: "" }) =>
   `${pre}<span class="line">${html}</span>${post}`;
