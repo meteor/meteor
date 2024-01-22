@@ -23,6 +23,10 @@ const props = defineProps({
     instanceName: {
         type: String,
         default: 'this'
+    },
+    from: {
+        type: String,
+        default: ''
     }
 })
 
@@ -41,7 +45,22 @@ function getJsdoc<T extends Params>(key: T): Jsdoc[T] {
 
 const ui = getJsdoc(props.name)
 
+if (props.from) {
+    ui.module = props.from
+}
 const link = ui.longname.replace('.', '-').replace('#', '-')
+const isBoolean = ui.type?.names?.at(0) === 'Boolean'
+// if is constructor/class we change this to false;
+let isFunction = ui.kind === 'function' || ui?.params?.length > 0;
+
+const isClass = (() => {
+    if (ui.kind === 'class') {
+        isFunction = false
+        return true
+    }
+    return false;
+})();
+
 const isInstance = ui.scope === 'instance';
 const showName = (longname) => {
     if (isInstance) {
@@ -54,18 +73,7 @@ const showName = (longname) => {
 
     return longname
 }
-const isBoolean = ui.type?.names?.at(0) === 'Boolean'
 
-// if is constructor/class we change this to false;
-let isFunction = ui.kind === 'function' || ui?.params?.length > 0;
-
-const isClass = (() => {
-    if (ui.kind === 'class') {
-        isFunction = false
-        return true
-    }
-    return false;
-})()
 
 const debug = (name) => {
     if (ui.longname !== name) return
