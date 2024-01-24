@@ -11,7 +11,7 @@ script:
   - travis_retry ./packages/test-in-console/run.sh
 env:
   global:
-    - CXX=g++-4.8
+    - CXX=g++-4.11
     - phantom=false
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
   jobs:
@@ -24,5 +24,4 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - g++-4.8
-      - libstdc++6
+      - g++-4.11
