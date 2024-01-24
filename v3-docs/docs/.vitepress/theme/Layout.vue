@@ -5,11 +5,17 @@ import { nextTick, provide } from 'vue'
 import { redirect } from './redirects/script';
 const { isDark } = useData()
 const router = useRouter()
-const { path, shouldRedirect } = redirect(window.location.href)
 
-if (shouldRedirect) router.go(path)
+const isClient = typeof window !== 'undefined';
+
+if (isClient) {
+  const { path, shouldRedirect } = redirect(window.location.href)
+
+  if (shouldRedirect) router.go(path)
+}
 
 const enableTransitions = () =>
+  isClient &&
   'startViewTransition' in document &&
   window.matchMedia('(prefers-reduced-motion: no-preference)').matches
 
