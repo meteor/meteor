@@ -15,7 +15,7 @@ export default defineConfig({
         link: "https://www.meteor.com/developers/tutorials",
       },
       { text: "Guide", link: "https://guide.meteor.com/" },
-      { text: "API Docs", link: "/api/index" },
+      { text: "API Docs", link: "/about/what-is" },
       { text: "Forums", link: "https://forums.meteor.com/" },
     ],
     sidebar: [
@@ -198,6 +198,7 @@ export default defineConfig({
 
     socialLinks: [{ icon: "github", link: "https://github.com/meteor/meteor" }],
     logo: { dark: "/meteor-logo.png", light: "/meteor.png" },
+
     search: {
       provider: "local",
     },
