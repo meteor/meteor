@@ -56,7 +56,7 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     // in scripts/generate-dev-bundle.sh) neither displays the banner nor
     // supports the flag, so it's safe/important to avoid passing the flag
     // to mongod on 64-bit linux.
-    args.push('--enableFreeMonitoring', 'off');
+    // args.push('--enableFreeMonitoring', 'off');
   }
 
   // run with rosetta on mac m1
