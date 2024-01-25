@@ -20,12 +20,7 @@ So you need to import it in your template.
 import 'meteor/markdown';
 ```
 
-Then just put your markdown inside `{{#markdown}} ... {{/markdown}}`
-tags. You can still use all of the usual Meteor template features
-inside a Markdown block, such as `{{#each}}`, and you still get
-reactivity.
-
-Example:
+Then you can use the `markdown` helper in your templates:
 
 ```html
 <!-- myTemplate.html -->
