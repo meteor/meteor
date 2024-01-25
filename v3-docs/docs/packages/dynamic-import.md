@@ -9,9 +9,9 @@ statement, an up-and-coming (ECMA2020) addition to the
 ECMAScript standard.
 
 The dynamic `import(...)` statement is a complementary method to the static
-`import` technique of requiring a module. While a statically <nobr>`import`-ed
-</nobr>module would be bundled into the initial JavaScript bundle, a
-dynamically <nobr>`import()`-ed</nobr> module is fetched from the server at
+`import` technique of requiring a module. While a statically `import`-ed
+module would be bundled into the initial JavaScript bundle, a
+dynamically `import()`-ed module is fetched from the server at
 runtime.
 
 Once a module is fetched dynamically from the server, it is cached permanently
