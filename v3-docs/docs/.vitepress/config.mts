@@ -144,6 +144,78 @@ export default defineConfig({
             link: "/packages/accounts-2fa",
           },
           {
+            text: "appcache",
+            link: "/packages/appcache",
+          },
+          {
+            text: "audit-arguments-checks",
+            link: "/packages/audit-argument-checks",
+          },
+          {
+            text: "autoupdate",
+            link: "/packages/autoupdate",
+          },
+          {
+            text: "browser-policy",
+            link: "/packages/browser-policy",
+          },
+          {
+            text: "bundler-visualizer",
+            link: "/packages/bundle-visualizer",
+          },
+          {
+            text: "coffeescript",
+            link: "/packages/coffeescript",
+          },
+          {
+            text: "ecmascript",
+            link: "/packages/ecmascript",
+          },
+          {
+            text: "fetch",
+            link: "/packages/fetch",
+          },
+          {
+            text: "hot-module-replacement",
+            link: "/packages/hot-module-replacement",
+          },
+          {
+            text: "less",
+            link: "/packages/less",
+          },
+          {
+            text: "logging",
+            link: "/packages/logging",
+          },
+          {
+            text: "markdown",
+            link: "/packages/markdown",
+          },
+          {
+            text: "modules",
+            link: "/packages/modules",
+          },
+          {
+            text: "oauth-encryption",
+            link: "/packages/oauth-encryption",
+          },
+          {
+            text: "random",
+            link: "/packages/random",
+          },
+          {
+            text: "server-render",
+            link: "/packages/server-render",
+          },
+          {
+            text: "standard-minifier-css",
+            link: "/packages/standard-minifier-css",
+          },
+          {
+            text: "underscore",
+            link: "/packages/underscore",
+          },
+          {
             text: "url",
             link: "/packages/url",
           },
