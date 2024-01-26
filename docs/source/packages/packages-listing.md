@@ -32,7 +32,6 @@ description: list of all Meteor core packages.
 - [accounts-ui-unstyled](https://github.com/meteor/meteor/tree/devel/packages/accounts-ui-unstyled)
 - [accounts-weibo](https://github.com/meteor/meteor/tree/devel/packages/accounts-weibo)
 - [allow-deny](https://github.com/meteor/meteor/tree/devel/packages/allow-deny)
-- [appcache](https://github.com/meteor/meteor/tree/devel/packages/appcache)
 - [audit-argument-checks](https://github.com/meteor/meteor/tree/devel/packages/audit-argument-checks)
 - [autopublish](https://github.com/meteor/meteor/tree/devel/packages/autopublish)
 - [autoupdate](https://github.com/meteor/meteor/tree/devel/packages/autoupdate)
