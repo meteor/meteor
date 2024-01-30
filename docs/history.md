@@ -10,6 +10,46 @@
 
 
 
+## v2.15.0, 2024-01-XX
+
+### Highlights
+
+* Bumps embedded MongoDB to 7.0.5.
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.15.0
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to include embedded MongoDB to 7.0.5.
+
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27).
+- [@denihs](https://github.com/denihs).
+
+For making this great framework even better!
+
+
 ## v2.14.0, 2023-12-12
 
 ### Highlights
@@ -74,7 +114,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
 
 ## Meteor Version Release
 
-* `accounts-base@2.2.9`
+* `accounts-base@2.2.10`
   - Ensure that `onLogin` callback fires properly
   - Indexes are now created asynchronously
 
@@ -131,7 +171,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
 * `logic-solver@2.0.9`
   - Removed Underscore dependency
 
-* `meteor@1.11.4`:
+* `meteor@1.11.5`:
   - Improve TS types
 
 * `mobile-experience@1.1.1`:
@@ -160,7 +200,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
 * `react-fast-refresh@0.2.8`:
   - Updated `semver` to version 7.5.4
 
-* `service-configuration@1.3.2`
+* `service-configuration@1.3.3`
   - Indexes are now created asynchronously
   - Add types for ConfigError
 
@@ -186,7 +226,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
 * `typescript@4.9.5`:
   - Updated to 4.9.5
 
-* `webapp@1.13.6`
+* `webapp@1.13.8`
   - Updated `cordova-plugin-meteor-webapp` to v2.0.3
   - Updated `cookie-parser` to v1.4.6
   - Updated `send` to v0.18.0
