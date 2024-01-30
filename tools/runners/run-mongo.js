@@ -49,14 +49,6 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
   // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
   if (process.arch === 'ia32') {
     args.push('--storageEngine', 'mmapv1', '--smallfiles');
-  } else if (process.platform !== 'linux') {
-    // MongoDB 4, which we use on 64-bit systems, displays a banner in the
-    // Mongo shell about a free monitoring service, which can be disabled
-    // with this flag. However, the custom Linux build (see MONGO_BASE_URL
-    // in scripts/generate-dev-bundle.sh) neither displays the banner nor
-    // supports the flag, so it's safe/important to avoid passing the flag
-    // to mongod on 64-bit linux.
-    // args.push('--enableFreeMonitoring', 'off');
   }
 
   // run with rosetta on mac m1
