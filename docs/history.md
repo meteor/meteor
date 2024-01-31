@@ -26,11 +26,17 @@ N/A
 
 #### Migration Steps
 
-Please run the following command to update your project:
+In development, if you're using Linux, you might get an error like `version GLIBCXX_3.4.26 not found` or something related to g++.
+
+This is related to your g++ version. With MongoDB 7, you need to have g++ 11 or higher. So make sure to have this updated.
+
+This will happen only if you are trying to run your Meteor application with a MongoDB 7 version. If you run your app with a MONGO_URL pointing to a different MongoDB version, you won't have this issue. 
 
 ```bash
 
-meteor update --release 2.15.0
+```bash
+
+meteor update --release 2.15
 
 ```
 
@@ -40,12 +46,24 @@ meteor update --release 2.15.0
 
 * `Command line`:
   - The bundle version was changed to include embedded MongoDB to 7.0.5.
-
+  - Fix cordova launch screen warnings on 2.15 [PR](https://github.com/meteor/meteor/pull/12971)
+* `underscore@1.6.0`:
+  - A test related to [PR](https://github.com/meteor/meteor/pull/12798) to see if the tests can manage the first update step. [PR](https://github.com/meteor/meteor/pull/12912)
+* `service-configuration@1.3.3`:
+  - added new types* [PR](https://github.com/meteor/meteor/pull/12922)
+* `meteor@1.11.5`:
+  - added new types [PR](https://github.com/meteor/meteor/pull/12922)
+* `accounts-base@2.2.10`:
+  - Added missing type for createUserVerifyingEmail [PR](https://github.com/meteor/meteor/pull/12919)
 
 #### Special thanks to
 
 - [@Grubba27](https://github.com/Grubba27).
 - [@denihs](https://github.com/denihs).
+- [@mcorbelli](https://github.com/mcorbelli).
+- [@matheusccastroo](https://github.com/matheusccastroo).
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
+- [@ebroder](https://github.com/ebroder).
 
 For making this great framework even better!
 
