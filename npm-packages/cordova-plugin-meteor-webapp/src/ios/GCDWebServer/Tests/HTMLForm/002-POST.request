@@ -1,0 +1,15 @@
+POST / HTTP/1.1
+Host: localhost:8080
+Connection: keep-alive
+Content-Length: 30
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://localhost:8080
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.131 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+DNT: 1
+Referer: http://localhost:8080/
+Accept-Encoding: gzip,deflate,sdch
+Accept-Language: en-US,en;q=0.8,fr;q=0.6
+
+value=Hell%C3%B8+W%C3%B6rld%21

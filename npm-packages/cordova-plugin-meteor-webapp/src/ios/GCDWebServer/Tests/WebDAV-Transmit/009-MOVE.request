@@ -1,0 +1,8 @@
+MOVE /PDF%20Reports/ HTTP/1.1
+User-Agent: Transmit/4.4.6 neon/0.29.3
+Connection: TE
+TE: trailers
+Host: localhost:8080
+Destination: http://localhost:8080/Apple%20PDF%20Reports
+Overwrite: T
+

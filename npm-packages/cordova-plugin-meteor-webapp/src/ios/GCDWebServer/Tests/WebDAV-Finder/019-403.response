@@ -1,0 +1,8 @@
+HTTP/1.1 403 Forbidden
+Content-Length: 221
+Content-Type: text/html; charset=utf-8
+Connection: Close
+Server: GCDWebDAVServer
+Date: Sat, 12 Apr 2014 05:10:55 GMT
+
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>HTTP Error 403</title></head><body><h1>HTTP Error 403: Retrieving properties for item name &quot;.DS_Store&quot; is not allowed</h1><h3></h3></body></html>

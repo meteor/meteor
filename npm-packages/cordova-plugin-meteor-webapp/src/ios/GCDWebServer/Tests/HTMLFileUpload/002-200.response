@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Content-Length: 447
+Content-Type: text/html; charset=utf-8
+Connection: Close
+Server: GCDWebServer
+Date: Fri, 25 Apr 2014 14:15:21 GMT
+
+<html><body><p>secret = 42<br>files = &quot;hero_mba_11.jpg&quot; (image/jpeg | 106 KB)<br>files = &quot;Test File.txt&quot; (text/plain | 21 Bytes)<br></p><hr>           <form name="input" action="/" method="post" enctype="multipart/form-data">           <input type="hidden" name="secret" value="42">           <input type="file" name="files" multiple><br/>           <input type="submit" value="Submit">           </form>         </body></html>

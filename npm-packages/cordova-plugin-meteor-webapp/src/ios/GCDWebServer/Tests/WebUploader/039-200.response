@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Content-Length: 145
+Content-Type: application/json
+Connection: Close
+Server: GCDWebUploader
+Date: Sat, 12 Apr 2014 05:37:43 GMT
+
+[{"path":"\/images\/hero_mba_11.jpg","name":"hero_mba_11.jpg","size":106799},{"path":"\/images\/Test File.txt","name":"Test File.txt","size":21}]
