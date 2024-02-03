@@ -430,7 +430,9 @@ declare namespace Roles {
 
 } // module
 
-declare namespace Meteor {
-  var roles: Mongo.Collection<Roles.Role>
-  var roleAssignment: Mongo.Collection<Roles.RoleAssignment>
+declare module 'meteor/meteor' {
+  namespace Meteor {
+    const roles: Mongo.Collection<Roles.Role>
+    const roleAssignment: Mongo.Collection<Roles.RoleAssignment>
+  }
 }
