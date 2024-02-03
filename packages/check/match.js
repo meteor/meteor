@@ -6,6 +6,13 @@ import { isPlainObject } from './isPlainObject';
 
 const currentArgumentChecker = new Meteor.EnvironmentVariable;
 const hasOwn = Object.prototype.hasOwnProperty;
+const NonEmptyString = function(value) {
+  const condition = (value) => {
+     check(value, String);
+     return value.length > 0;
+  }
+  return new Where(condition);
+}
 
 /**
  * @summary Check that a value matches a [pattern](#matchpatterns).
@@ -278,13 +285,7 @@ const testSubtree = (value, pattern) => {
   // This must be invoked before pattern instanceof Array as strings are regarded as arrays
   // We invoke the pattern as IIFE so that `pattern isntanceof Where` catches it 
   if (pattern === Match.NonEmptyString) {
-    pattern = (function() {
-      const condition = (val) => {
-         check(val, String);
-         return val.length > 0;
-      }
-      return new Where(condition);
-    })();
+    pattern = NonEmptyString();
   }
 
   // Array (checked AFTER Any, which is implemented as an Array).
