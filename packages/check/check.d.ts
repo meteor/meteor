@@ -91,14 +91,3 @@ export declare function check<T extends Match.Pattern>(
   value: any,
   pattern: T
 ): asserts value is Match.PatternMatch<T>;
-
-
-/**
- * Check that a value matches a pattern.
- * If the value does not match the pattern, throw a `Match.Error`.
- *
- * Particularly useful to assert that arguments to a function have the right
- * types and structure.
- * @param value The value to check
- * @param pattern The pattern to match `value` against
- */
