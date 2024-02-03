@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.6.2
+
+* Fixed TypeScript definition to play nice with Meteor definition [#389](https://github.com/Meteor-Community-Packages/meteor-roles/pull/389) [@bruceborrett](https://github.com/sponsors/bruceborrett)
+
 ## v3.6.1
 
 * Added types for async functions [#386](https://github.com/Meteor-Community-Packages/meteor-roles/pull/386) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
