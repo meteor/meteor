@@ -479,5 +479,3 @@ Tinytest.add(
     test.equal(new Match.ObjectWithValues(), Match.ObjectWithValues());
   }
 );
-
-
