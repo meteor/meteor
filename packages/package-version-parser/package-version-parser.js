@@ -212,10 +212,10 @@ PV.compare = function (versionOne, versionTwo) {
   // per the semver spec.)
   if (v1.semver !== v2.semver) {
     if (! v1._semverParsed) {
-      v1._semverParsed = new semver(v1.semver);
+      v1._semverParsed = semver.parse(v1.semver);
     }
     if (! v2._semverParsed) {
-      v2._semverParsed = new semver(v2.semver);
+      v2._semverParsed = semver.parse(v2.semver);
     }
     return semver.compare(v1._semverParsed, v2._semverParsed);
   } else {

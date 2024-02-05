@@ -1,6 +1,6 @@
 Package.describe({
   summary: "(Deprecated) Include a standard set of Meteor packages in your app",
-  version: '1.2.6',
+  version: '1.2.8',
   deprecated: true,
   documentation: 'README.md'
 });
@@ -43,8 +43,6 @@ Package.onUse(function(api) {
     'check',
     // _.isUseful(true)
     'underscore',
-    // $(".usefulToo")
-    'jquery',
     // Life isn't always predictable.
     'random',
     // People like being able to clone objects.

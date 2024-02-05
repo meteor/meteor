@@ -13,12 +13,12 @@ var packageJson = {
     fibers: "5.0.1",
     "meteor-promise": "0.9.0",
     promise: "8.1.0",
-    "@meteorjs/reify": "0.24.0",
+    "@meteorjs/reify": "0.24.1",
     "@babel/parser": "7.17.0",
     underscore: "1.13.6",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     "@types/semver": "5.5.0",
-    semver: "5.7.1"
+    semver: "7.5.4"
   },
   // These are only used in dev mode (by shell.js) so end-users can avoid
   // needing to install them if they use `npm install --production`.
