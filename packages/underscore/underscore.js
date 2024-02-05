@@ -126,7 +126,7 @@
   // The cornerstone, an `each` implementation, aka `forEach`.
   // Handles objects with the built-in `forEach`, arrays, and raw objects.
   // Delegates to **ECMAScript 5**'s native `forEach` if available.
-  _.each = _.forEach = function(obj, iterator, context) {
+  _.each = _.forEach = function(obj, iteratee, context) {
     if (obj == null) return obj;
     iteratee = createCallback(iteratee, context);
     var i, length = obj.length;
