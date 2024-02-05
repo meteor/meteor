@@ -10,7 +10,7 @@
 
 
 
-## v2.15.0, 2024-01-XX
+## v2.15.0, 2024-02-05
 
 ### Highlights
 
@@ -31,8 +31,6 @@ In development, if you're using Linux, you might get an error like `version GLIB
 This is related to your g++ version. With MongoDB 7, you need to have g++ 11 or higher. So make sure to have this updated.
 
 This will happen only if you are trying to run your Meteor application with a MongoDB 7 version. If you run your app with a MONGO_URL pointing to a different MongoDB version, you won't have this issue. 
-
-```bash
 
 ```bash
 
@@ -64,6 +62,7 @@ meteor update --release 2.15
 - [@matheusccastroo](https://github.com/matheusccastroo).
 - [@StorytellerCZ](https://github.com/StorytellerCZ).
 - [@ebroder](https://github.com/ebroder).
+- [@nachocodoner](https://github.com/nachocodoner).
 
 For making this great framework even better!
 
