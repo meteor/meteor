@@ -356,9 +356,9 @@
       "integrity": "sha512-PV0dzCYDNfRi1jCDbJzpW7jNNDRuCOG/jI5ctQcGKt/clZD+YcPS3yIlWuTJMmESC8aevCFmWJy5wjAFgNqN6w=="
     },
     "set-function-length": {
-      "version": "1.1.1",
-      "resolved": "https://registry.npmjs.org/set-function-length/-/set-function-length-1.1.1.tgz",
-      "integrity": "sha512-VoaqjbBJKiWtg4yRcKBQ7g7wnGnLV3M8oLvVWwOk2PdYY6PEFegR1vezXR0tw6fZGF9csVakIRjrJiy2veSBFQ=="
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/set-function-length/-/set-function-length-1.2.0.tgz",
+      "integrity": "sha512-4DBHDoyHlM1IRPGYcoxexgh67y4ueR53FKV1yyxwFMY7aCqcN/38M1+SwZ/qJQ8iLv7+ck385ot4CcisOAPT9w=="
     },
     "set-function-name": {
       "version": "2.0.1",
