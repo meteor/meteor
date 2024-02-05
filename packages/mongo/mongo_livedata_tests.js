@@ -4259,3 +4259,19 @@ if (Meteor.isServer) {
     });
   });
 }
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('mongo-livedata - asyncIterator', async function(test) {
+    const Collection = new Mongo.Collection(`asynciterator_test_${test.runId()}`);
+
+    await Collection.insertAsync({ _id: 'a' });
+    await Collection.insertAsync({ _id: 'b' });
+
+    let itemIds = [];
+    for await (const item of Collection.find()) {
+      itemIds.push(item._id);
+    }
+    test.equal(itemIds.length, 2);
+    test.equal(itemIds, ['a', 'b']);
+  });
+}
