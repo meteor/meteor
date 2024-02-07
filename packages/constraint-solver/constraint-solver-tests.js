@@ -1,16 +1,20 @@
+const has = Npm.require('lodash.has');
+const isString = Npm.require('lodash.isstring');
+const isEmpty = Npm.require('lodash.isempty');
+
 var PV = PackageVersion;
 var CS = ConstraintSolver;
 
 var makeResolver = function (data) {
   var Versions = new LocalCollection;
 
-  _.each(data, function (versionDescription) {
+  data.forEach(function (versionDescription) {
     var packageName = versionDescription.shift();
     var version = versionDescription.shift();
     var deps = versionDescription.shift();
-
     var constructedDeps = {};
-    _.each(deps, function (constraint, name) {
+    if (!isEmpty(deps)) { 
+    Object.entries(deps).forEach(function ([name, constraint]) {
       constructedDeps[name] = {
         constraint: constraint,
         references: [
@@ -20,6 +24,7 @@ var makeResolver = function (data) {
         ]
       };
     });
+  }
     Versions.insert({ packageName: packageName, version: version,
                       dependencies: constructedDeps });
   });
@@ -73,8 +78,7 @@ var defaultResolver = makeResolver([
 // in the returned arrays.
 splitArgs = function (deps) {
   var dependencies = [], constraints = [];
-
-  _.each(deps, function (constr, dep) {
+  Object.entries(deps).forEach(function ([dep, constr]) {
     if (constr && constr.charAt(0) === 'w') {
       constr = constr.slice(1);
     } else {
@@ -89,7 +93,7 @@ splitArgs = function (deps) {
 
 var testWithResolver = function (test, resolver, f) {
   var answerToString = function (answer) {
-    var pvs = _.map(answer, function (v, p) { return p + ' ' + v; });
+    var pvs = Object.keys(answer).map(function (p) { return p + ' ' + answer[p]; });
     return pvs.sort().join('\n');
   };
   var t = function (deps, expected, options) {
@@ -306,7 +310,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
 
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
   var versions = defaultResolver.resolve(["sparkle"], []).answer;
-  test.isTrue(_.isString(versions.sparkle));
+  test.isTrue(isString(versions.sparkle));
 });
 
 
@@ -333,9 +337,9 @@ Tinytest.add("constraint solver - input serialization", function (test) {
   test.equal(input1.upgradeIndirectDepPatchVersions, false);
 
   var obj1 = input1.toJSONable();
-  test.isFalse(_.has(obj1, 'upgrade'));
-  test.isFalse(_.has(obj1, 'anticipatedPrereleases'));
-  test.isFalse(_.has(obj1, 'previousSolution'));
+  test.isFalse(has(obj1, 'upgrade'));
+  test.isFalse(has(obj1, 'anticipatedPrereleases'));
+  test.isFalse(has(obj1, 'previousSolution'));
   var input2 = CS.Input.fromJSONable(obj1);
   var obj2 = input2.toJSONable();
 
