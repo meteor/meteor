@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.use(['tinytest', 'random', 'ejson', 'check']);
+  api.use(['tinytest', 'random', 'ejson', 'check', 'jquery']);
   api.use('fetch', 'server');
 
   api.export('TEST_STATUS', 'client');
