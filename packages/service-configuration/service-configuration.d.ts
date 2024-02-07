@@ -10,7 +10,7 @@ declare class ConfigError extends Error {
   message: string;
 }
 
-export declare var ServiceConfiguration: {
+export var ServiceConfiguration: {
   configurations: Mongo.Collection<Configuration>;
   ConfigError: typeof ConfigError
 };
