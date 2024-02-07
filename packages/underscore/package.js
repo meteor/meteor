@@ -1,7 +1,7 @@
 
 Package.describe({
-  summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.7.0-rc215.1',
+  summary: "JavaScript's utility _ belt",
+  version: '1.8.3',
 });
 
 Npm.depends({
