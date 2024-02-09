@@ -69,6 +69,9 @@ export namespace Meteor {
   function user(options?: {
     fields?: Mongo.FieldSpecifier | undefined;
   }): User | null;
+  function userAsync(options?: {
+    fields?: Mongo.FieldSpecifier | undefined;
+  }): Promise<Meteor.User | null>;
 
   function userId(): string | null;
   var users: Mongo.Collection<User>;
@@ -241,7 +244,7 @@ export namespace Meteor {
   >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
-    options?: MethodApplyOptions,
+    options?: MethodApplyOptions<Result>,
     asyncCallback?: (
       error: global_Error | Meteor.Error | undefined,
       result?: Result
