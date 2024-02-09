@@ -82,7 +82,8 @@
   // https://github.com/jashkenas/underscore/issues/770
   // TODO merge into isArrayLike
   var looksLikeArray = function (obj) {
-    return (obj.length === +obj.length
+    var length = getLength(collection);
+    return (typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX
             // _.isArguments not yet necessarily defined here
             && (_isArguments(obj) || obj.constructor !== Object));
   };
