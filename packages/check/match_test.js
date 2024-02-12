@@ -180,8 +180,8 @@ Tinytest.add('check - check', test => {
   fails(/foo/, String);
   matches(new Date, Date);
   fails(new Date, Number);
-  matches(EJSON.newBinary(42), Match.Where(EJSON.isBinary));
-  fails([], Match.Where(EJSON.isBinary));
+  matches(binary.newBinary(42), Match.Where(binary.isBinary));
+  fails([], Match.Where(binary.isBinary));
 
   matches(42, Match.Where(x => x % 2 === 0));
   fails(43, Match.Where(x => x % 2 === 0));

@@ -6,10 +6,11 @@ Package.describe({
 Package.onUse(api => {
   api.export('Base64');
   api.use('ecmascript');
+  api.use("binary")
   api.mainModule('base64.js');
 });
 
 Package.onTest(api => {
-  api.use(['ecmascript', 'tinytest', 'ejson']);
+  api.use(['ecmascript', 'tinytest', 'ejson', 'binary']);
   api.addFiles('base64_test.js', ['client', 'server']);
 });

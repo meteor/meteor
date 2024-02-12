@@ -970,9 +970,9 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({a: {$type: 3}}, {a: []});
   nomatch({a: {$type: 3}}, {a: [1]});
   nomatch({a: {$type: 3}}, {a: null});
-  match({a: {$type: 5}}, {a: EJSON.newBinary(0)});
-  match({a: {$type: 'binData'}}, {a: EJSON.newBinary(0)});
-  match({a: {$type: 5}}, {a: EJSON.newBinary(4)});
+  match({a: {$type: 5}}, {a: binary.newBinary(0)});
+  match({a: {$type: 'binData'}}, {a: binary.newBinary(0)});
+  match({a: {$type: 5}}, {a: binary.newBinary(4)});
   nomatch({a: {$type: 5}}, {a: []});
   nomatch({a: {$type: 5}}, {a: [42]});
   match({a: {$type: 7}}, {a: new MongoID.ObjectID()});
@@ -1961,11 +1961,11 @@ Tinytest.add('minimongo - observe ordered with projection', test => {
 
 
 Tinytest.add('minimongo - ordering', test => {
-  const shortBinary = EJSON.newBinary(1);
+  const shortBinary = binary.newBinary(1);
   shortBinary[0] = 128;
-  const longBinary1 = EJSON.newBinary(2);
+  const longBinary1 = binary.newBinary(2);
   longBinary1[1] = 42;
-  const longBinary2 = EJSON.newBinary(2);
+  const longBinary2 = binary.newBinary(2);
   longBinary2[1] = 50;
 
   const date1 = new Date;

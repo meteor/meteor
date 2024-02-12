@@ -96,7 +96,7 @@ var replaceMongoAtomWithMeteor = function (document) {
 };
 
 var replaceMeteorAtomWithMongo = function (document) {
-  if (EJSON.isBinary(document)) {
+  if (binary.isBinary(document)) {
     // This does more copies than we'd like, but is necessary because
     // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
     // serialize it correctly).

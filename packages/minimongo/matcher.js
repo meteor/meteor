@@ -106,7 +106,7 @@ export default class Matcher {
 
     // Top level can't be an array or true or binary.
     if (Array.isArray(selector) ||
-        EJSON.isBinary(selector) ||
+        binary.isBinary(selector) ||
         typeof selector === 'boolean') {
       throw new Error(`Invalid selector: ${selector}`);
     }
@@ -164,7 +164,7 @@ LocalCollection._f = {
       return 9;
     }
 
-    if (EJSON.isBinary(v)) {
+    if (binary.isBinary(v)) {
       return 5;
     }
 
