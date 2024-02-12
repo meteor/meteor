@@ -62,7 +62,6 @@ export const loadAsyncStubHelpers = () => {
   Connection.prototype.applyAsync = function () {
     let args = arguments;
     let name = args[0];
-    let options = args[2];
 
     if (currentMethodInvocation) {
       DDP._CurrentMethodInvocation._set(currentMethodInvocation);
@@ -93,23 +92,9 @@ export const loadAsyncStubHelpers = () => {
         let finished = false;
 
         Meteor._setImmediate(() => {
-          let { returnStubValue, returnServerResultPromise } = options || {};
-
           const applyAsyncPromise = oldApplyAsync.apply(this, args);
           stubPromiseResolver(applyAsyncPromise.stubPromise);
           serverPromiseResolver(applyAsyncPromise.serverPromise);
-          if (returnStubValue && returnServerResultPromise) {
-            applyAsyncPromise.stubPromise
-              .then((result) => {
-                finished = true;
-                resolve(result);
-              })
-              .catch((err) => {
-                finished = true;
-                reject(err);
-              });
-            return;
-          }
           applyAsyncPromise
             .then((result) => {
               finished = true;
