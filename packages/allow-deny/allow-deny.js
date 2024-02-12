@@ -619,9 +619,9 @@ CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(n
 
   const mutatorMethodName = this._prefix + name;
   return this._connection.applyAsync(mutatorMethodName, args, {
-    returnStubValue: Meteor.isClient && (this.promiseResolver === 'stub' || this.promiseResolver == null),
+    returnStubValue: this.promiseResolver === 'stub',
     // StubStream is only used for testing where you don't care about the server
-    returnServerResultPromise: !this._connection._stream._isStub || Meteor.isClient && this.promiseResolver === 'server',
+    returnServerResultPromise: !this._connection._stream._isStub && this.promiseResolver !== 'stub',
     ...options,
   });
 }
