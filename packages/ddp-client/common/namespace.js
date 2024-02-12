@@ -89,3 +89,9 @@ DDP.onReconnect = callback => DDP._reconnectHook.register(callback);
 DDP._allSubscriptionsReady = () => allConnections.every(
   conn => Object.values(conn._subscriptions).every(sub => sub.ready)
 );
+
+// Sometimes data is loaded using a method, this hack provide a way
+// to see if any method is currently invoked
+DDP.noMethodIsCurrentlytInvoked = () => allConnections.every(
+    conn => Object.keys(conn._methodInvokers).length == 0
+);
