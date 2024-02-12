@@ -1039,9 +1039,15 @@ class AsynchronousCursor {
 
     this._visitedIds = new LocalCollection._IdMap;
   }
-
-  [Symbol.iterator]() {
-    return this._cursor[Symbol.iterator]();
+  
+  [Symbol.asyncIterator]() {
+    var cursor = this;
+    return {
+      async next() {
+        const value = await cursor._nextObjectPromise();
+        return { done: !value, value };
+      },
+    };
   }
 
   // Returns a Promise for the next object from the underlying cursor (before
