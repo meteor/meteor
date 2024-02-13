@@ -619,9 +619,9 @@ CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(n
 
   const mutatorMethodName = this._prefix + name;
   return this._connection.applyAsync(mutatorMethodName, args, {
-    returnStubValue: this.promiseResolver === 'stub' || this.promiseResolver == null,
+    returnStubValue: this.resolverType === 'stub' || this.resolverType == null,
     // StubStream is only used for testing where you don't care about the server
-    returnServerResultPromise: !this._connection._stream._isStub && this.promiseResolver !== 'stub',
+    returnServerResultPromise: !this._connection._stream._isStub && this.resolverType !== 'stub',
     ...options,
   });
 }
