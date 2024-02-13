@@ -4276,7 +4276,7 @@ if (Meteor.isServer) {
   });
 }
 
-Tinytest.addAsync('mongo-livedata - maintained isomorphism using resolver-type config for both client and server', async function(test, expect) {
+Tinytest.addAsync('mongo-livedata - maintained isomorphism using resolverType config for both client and server', async function(test, expect) {
   const Collection = new Mongo.Collection(`resolver_type${test.runId()}`, { resolverType: 'stub' });
 
   await Collection.insertAsync({ _id: 'a' });
