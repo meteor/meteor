@@ -261,7 +261,7 @@ export default defineConfig({
           { link: "/history", text: "Current" },
           {
             link: "https://docs.meteor.com/changelog#v2020210120",
-            text: "Pre-2.0 (legacy)",
+            text: "Pre-2.0",
           },
         ],
         collapsed: true,

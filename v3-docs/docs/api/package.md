@@ -363,6 +363,11 @@ The minifier class must implement the method `processFilesForBundle`. The first
 argument is a list of processed files and the options object specifies if the
 minifier is ran in production mode or development mode.
 
+::: info
+This method can be asynchronous. If it returns a Promise, the build process will
+wait for it to resolve before continuing.
+:::
+
 ```js
 class UglifyJsMinifier {
   processFilesForBundle(files, options) {
