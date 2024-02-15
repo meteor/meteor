@@ -25,7 +25,7 @@ type ParsedStackFrame = {
  * More recently called functions appear first.
  * 
  * Accomplishes this by parsing the text representation of the stack
- * with regular expressions. Unlikey to work anywhere but v8.
+ * with regular expressions. Unlikely to work anywhere but v8.
  * 
  * If a function on the stack has been marked with mark(), will not
  * return anything past that function. We call this the "user portion"

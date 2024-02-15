@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'JS simulation of MongoDB ObjectIDs',
-  version: '1.0.8',
+  version: '1.0.9-beta300.0',
   documentation: null
 });
 

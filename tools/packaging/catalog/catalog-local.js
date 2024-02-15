@@ -1,4 +1,3 @@
-
 var _ = require('underscore');
 var buildmessage = require('../../utils/buildmessage.js');
 var files = require('../../fs/files');
@@ -71,6 +70,10 @@ const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // allowed to return a Promise instead of having to await async
   // compilation using fibers and/or futures.
   'isobuild:async-plugins': ['1.6.1'],
+
+  // This package requires functionality introduced in meteor-tools@3.0
+  // to enable using top level await
+  'isobuild:top-level-await': ['3.0.0'],
 }
 
 // LocalCatalog represents packages located in the application's
@@ -135,7 +138,7 @@ Object.assign(LocalCatalog.prototype, {
   //    are package source trees.  Takes precedence over packages found
   //    via localPackageSearchDirs.
   //  - buildingIsopackets: true if we are building isopackets
-  initialize(options) {
+  async initialize(options) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -168,8 +171,8 @@ Object.assign(LocalCatalog.prototype, {
       self.explicitlyAddedLocalPackageDirs = [],
     );
 
-    self._computeEffectiveLocalPackages();
-    self._loadLocalPackages(options.buildingIsopackets);
+    await self._computeEffectiveLocalPackages();
+    await self._loadLocalPackages(options.buildingIsopackets);
     self.initialized = true;
   },
 
@@ -313,7 +316,7 @@ Object.assign(LocalCatalog.prototype, {
 
     self.effectiveLocalPackageDirs = [];
 
-    buildmessage.enterJob("looking for packages", function () {
+    return buildmessage.enterJob("looking for packages", function () {
       _.each(self.explicitlyAddedLocalPackageDirs, (explicitDir) => {
         const packageJsPath = files.pathJoin(explicitDir, "package.js");
         const packageJsHash = optimisticHashOrNull(packageJsPath);
@@ -375,7 +378,7 @@ Object.assign(LocalCatalog.prototype, {
     });
   },
 
-  _loadLocalPackages(buildingIsopackets) {
+  async _loadLocalPackages(buildingIsopackets) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -389,12 +392,12 @@ Object.assign(LocalCatalog.prototype, {
     // (note: this is the behavior that we want for overriding things in
     //  checkout.  It is not clear that you get good UX if you have two packages
     //  with the same name in your app. We don't check that.)
-    var initSourceFromDir = function (packageDir, definiteName) {
-      var packageSource = new PackageSource;
-      buildmessage.enterJob({
+    var initSourceFromDir = async function (packageDir, definiteName) {
+      var packageSource = new PackageSource();
+      await buildmessage.enterJob({
         title: "reading package from `" + packageDir + "`",
         rootPath: packageDir
-      }, function () {
+      }, async function () {
         var initFromPackageDirOptions = {
           buildingIsopackets: !! buildingIsopackets
         };
@@ -404,7 +407,7 @@ Object.assign(LocalCatalog.prototype, {
         if (definiteName) {
           initFromPackageDirOptions.name = definiteName;
         }
-        packageSource.initFromPackageDir(packageDir, initFromPackageDirOptions);
+        await packageSource.initFromPackageDir(packageDir, initFromPackageDirOptions);
         if (buildmessage.jobHasMessages())
           return;  // recover by ignoring
 
@@ -454,17 +457,17 @@ Object.assign(LocalCatalog.prototype, {
         // marked as test packages by package source, so we will not recurse
         // infinitely), then process that too.
         if (!packageSource.isTest && packageSource.testName) {
-          initSourceFromDir(packageSource.sourceRoot, packageSource.testName);
+          await initSourceFromDir(packageSource.sourceRoot, packageSource.testName);
         }
       });
     };
 
     // Load the package sources for packages and their tests into
     // self.packages.
-    buildmessage.enterJob('initializing packages', function() {
-      _.each(self.effectiveLocalPackageDirs, function (dir) {
-        initSourceFromDir(dir);
-      });
+    await buildmessage.enterJob('initializing packages', async function() {
+      for (const dir of self.effectiveLocalPackageDirs) {
+        await initSourceFromDir(dir);
+      }
     });
   },
 

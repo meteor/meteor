@@ -726,9 +726,9 @@ export class Watcher {
     return stat;
   }
 
-  // Iterates over the array, calling handleItem for each item
-  // When this._async is true, it pauses ocassionally to avoid blocking for too long
-  // Stops iterating after watcher is stopped
+  // Iterates over the array, calling handleItem for each item.
+  // When this._async is true, it pauses occasionally to avoid blocking for too long.
+  // Stops iterating after watcher is stopped.
   private processBatches<T>(
     array: T[],
     handleItem: (item: T) => any,

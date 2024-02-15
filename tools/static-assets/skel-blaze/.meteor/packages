@@ -19,8 +19,7 @@ ecmascript              # Enable ECMAScript2015+ syntax in app code
 typescript              # Enable TypeScript syntax in .ts and .tsx modules
 shell-server            # Server-side component of the `meteor shell` command
 
-autopublish             # Publish all data to the clients (for prototyping)
-insecure                # Allow all DB writes from clients (for prototyping)
+~prototype~
 
 hot-module-replacement  # Update code in development without reloading the page
 blaze-hot               # Update files using Blaze's API with HMR

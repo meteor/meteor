@@ -6,7 +6,7 @@
 //
 // Because of this, we do have to be careful that the files used by this code
 // and the files used by tropohouse.js (the modern version of the warehouse)
-// don't overlap. tropohouse does not use tools or releases directorys, and
+// don't overlap. tropohouse does not use tools or releases directories, and
 // while they both have packages directories with similar structures, the
 // version names should not overlap: warehouse versions are SHAs and tropohouse
 // versions are semvers.  Additionally, while they do both use the 'meteor'
@@ -191,7 +191,7 @@ Object.assign(warehouse, {
   // fetches the manifest file for the given release version. also fetches
   // all of the missing versioned packages referenced from the release manifest
   // @param releaseVersion {String} eg "0.1"
-  _populateWarehouseForRelease: function (releaseVersion, showInstalling) {
+  _populateWarehouseForRelease: async function (releaseVersion, showInstalling) {
     var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0o755);
     var releaseManifestPath = files.pathJoin(releasesDir,
@@ -221,7 +221,7 @@ Object.assign(warehouse, {
       }
 
       try {
-        var result = httpHelpers.request(
+        var result = await httpHelpers.request(
           WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");
       } catch (e) {
         throw new files.OfflineError(e);

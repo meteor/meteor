@@ -49,6 +49,11 @@ export class Hook {
       this.bindEnvironment = false;
     }
 
+    this.wrapAsync = true;
+    if (options.wrapAsync === false) {
+      this.wrapAsync = false;
+    }
+
     if (options.exceptionHandler) {
       this.exceptionHandler = options.exceptionHandler;
     } else if (options.debugPrintExceptions) {
@@ -73,6 +78,10 @@ export class Hook {
       callback = dontBindEnvironment(callback, exceptionHandler);
     }
 
+    if (this.wrapAsync) {
+      callback = Meteor.wrapFn(callback);
+    }
+
     const id = this.nextCallbackId++;
     this.callbacks[id] = callback;
 
@@ -82,6 +91,11 @@ export class Hook {
         delete this.callbacks[id];
       }
     };
+  }
+
+  clear() {
+    this.nextCallbackId = 0;
+    this.callbacks = [];
   }
 
   /**
@@ -96,10 +110,6 @@ export class Hook {
    * @param iterator
    */
   forEach(iterator) {
-    // Invoking bindEnvironment'd callbacks outside of a Fiber in Node doesn't
-    // run them to completion (and exceptions thrown from onException are not
-    // propagated), so we need to be in a Fiber.
-    Meteor._nodeCodeMustBeInFiber();
 
     const ids = Object.keys(this.callbacks);
     for (let i = 0;  i < ids.length;  ++i) {
@@ -108,6 +118,42 @@ export class Hook {
       if (hasOwn.call(this.callbacks, id)) {
         const callback = this.callbacks[id];
         if (! iterator(callback)) {
+          break;
+        }
+      }
+    }
+  }
+
+  async forEachAsync(iterator) {
+    const ids = Object.keys(this.callbacks);
+    for (let i = 0;  i < ids.length;  ++i) {
+      const id = ids[i];
+      // check to see if the callback was removed during iteration
+      if (hasOwn.call(this.callbacks, id)) {
+        const callback = this.callbacks[id];
+        if (!await iterator(callback)) {
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * For each registered callback, call the passed iterator function with the callback.
+   *
+   * it is a counterpart of forEach, but it is async and returns a promise
+   * @param iterator
+   * @return {Promise<void>}
+   * @see forEach
+   */
+  async forEachAsync(iterator) {
+    const ids = Object.keys(this.callbacks);
+    for (let i = 0;  i < ids.length;  ++i) {
+      const id = ids[i];
+      // check to see if the callback was removed during iteration
+      if (hasOwn.call(this.callbacks, id)) {
+        const callback = this.callbacks[id];
+        if (!await iterator(callback)) {
           break;
         }
       }

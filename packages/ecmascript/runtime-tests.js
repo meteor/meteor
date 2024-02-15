@@ -216,7 +216,7 @@ Tinytest.add('ecmascript - runtime - block scope', test => {
       });
     }
 
-    _.each(thunks, f => f());
+    thunks.forEach(f => f());
     test.equal(buf, [0, 1, 2]);
   }
 });
@@ -336,74 +336,4 @@ Tinytest.add('ecmascript - runtime - destructuring', test => {
   test.equal(x, 1);
   test.equal(y, 2);
   test.equal(z, 3);
-});
-
-Tinytest.addAsync('ecmascript - runtime - misc support', (test, done) => {
-  // Verify that the runtime was installed.
-  if (Meteor.isLegacy) {
-    test.equal(typeof meteorBabelHelpers, 'object');
-    test.equal(typeof meteorBabelHelpers.sanitizeForInObject, 'function');
-  }
-
-  class Base {
-    constructor(...args) {
-      this.sum = 0;
-      args.forEach(arg => (this.sum += arg));
-    }
-
-    static inherited() {
-      return 'inherited';
-    }
-  }
-
-  class Derived extends Base {
-    constructor() {
-      super(1, 2, 3);
-    }
-  }
-
-  // Check that static methods are inherited.
-  test.equal(Derived.inherited(), 'inherited');
-
-  const d = new Derived();
-  test.equal(d.sum, 6);
-
-  const expectedError = new Error('expected');
-
-  Promise.resolve('working')
-    .then(result => {
-      test.equal(result, 'working');
-      throw expectedError;
-    })
-    .catch(error => {
-      test.equal(error, expectedError);
-      if (Meteor.isServer) {
-        const Fiber = Npm.require('fibers');
-        // Make sure the Promise polyfill runs callbacks in a Fiber.
-        test.instanceOf(Fiber.current, Fiber);
-      }
-    })
-    .then(done, error => test.exception(error));
-});
-
-Tinytest.addAsync('ecmascript - runtime - async fibers', (test, done) => {
-  if (!Meteor.isServer) {
-    return done();
-  }
-
-  const Fiber = Npm.require('fibers');
-
-  function wait() {
-    return new Promise(resolve => setTimeout(resolve, 10));
-  }
-
-  async function check() {
-    const fiberBeforeAwait = Fiber.current;
-    await wait();
-    const fiberAfterAwait = Fiber.current;
-    test.isTrue(fiberBeforeAwait instanceof Fiber);
-    test.isTrue(fiberBeforeAwait === fiberAfterAwait);
-  }
-
-  check().then(done);
 });

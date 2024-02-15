@@ -47,7 +47,7 @@ compiler.ALL_ARCHES = [
 
 compiler.compile = Profile(function (packageSource, options) {
   return `compiler.compile(${ packageSource.name || 'the app' })`;
-}, function (packageSource, options) {
+}, async function (packageSource, options) {
   buildmessage.assertInCapture();
 
   var packageMap = options.packageMap;
@@ -59,14 +59,14 @@ compiler.compile = Profile(function (packageSource, options) {
 
   var pluginProviderPackageNames = {};
 
-  // Build plugins
-  _.each(packageSource.pluginInfo, function (info) {
-    buildmessage.enterJob({
+  for (const info of Object.values(packageSource.pluginInfo)) {
+    // build plugins
+    await buildmessage.enterJob({
       title: "building plugin `" + info.name +
-        "` in package `" + packageSource.name + "`",
+          "` in package `" + packageSource.name + "`",
       rootPath: packageSource.sourceRoot
-    }, function () {
-      var buildResult = buildJsImage({
+    }, async function () {
+      var buildResult = await buildJsImage({
         name: info.name,
         packageMap: packageMap,
         isopackCache: isopackCache,
@@ -81,8 +81,8 @@ compiler.compile = Profile(function (packageSource, options) {
         // rest of the package, so they need their own separate npm
         // shrinkwrap and cache state.
         npmDir: files.pathResolve(files.pathJoin(
-          packageSource.sourceRoot,
-          '.npm', 'plugin', colonConverter.convert(info.name)
+            packageSource.sourceRoot,
+            '.npm', 'plugin', colonConverter.convert(info.name)
         ))
       });
       // Add this plugin's dependencies to our "plugin dependency"
@@ -109,7 +109,7 @@ compiler.compile = Profile(function (packageSource, options) {
       }
       plugins[info.name][buildResult.image.arch] = buildResult.image;
     });
-  });
+  }
 
   // Grab any npm dependencies. Keep them in a cache in the package
   // source directory so we don't have to do this from scratch on
@@ -125,7 +125,7 @@ compiler.compile = Profile(function (packageSource, options) {
   // need to delete dependencies we used to have.
   var nodeModulesPath = null;
   if (packageSource.npmCacheDirectory) {
-    if (meteorNpm.updateDependencies(packageSource.name,
+    if (await meteorNpm.updateDependencies(packageSource.name,
                                      packageSource.npmCacheDirectory,
                                      packageSource.npmDependencies)) {
       nodeModulesPath = files.pathJoin(
@@ -159,7 +159,7 @@ compiler.compile = Profile(function (packageSource, options) {
   });
   isobuildFeatures = _.uniq(isobuildFeatures);
 
-  var isopk = new isopack.Isopack;
+  var isopk = new isopack.Isopack();
   isopk.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,
@@ -177,13 +177,14 @@ compiler.compile = Profile(function (packageSource, options) {
     isobuildFeatures
   });
 
-  _.each(packageSource.architectures, function (architecture) {
+  for (const architecture of packageSource.architectures) {
     if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
-      return;
+      continue;
     }
 
-    files.withCache(() => {
-      var unibuildResult = compileUnibuild({
+    // TODO -> Maybe this withCache will bring some problems in other commands.
+    await files.withCache(async () => {
+      var unibuildResult = await compileUnibuild({
         isopack: isopk,
         sourceArch: architecture,
         isopackCache: isopackCache,
@@ -191,9 +192,9 @@ compiler.compile = Profile(function (packageSource, options) {
       });
 
       Object.assign(pluginProviderPackageNames,
-               unibuildResult.pluginProviderPackageNames);
+          unibuildResult.pluginProviderPackageNames);
     });
-  });
+  }
 
   if (options.includePluginProviderPackageMap) {
     isopk.setPluginProviderPackageMap(
@@ -209,23 +210,24 @@ compiler.compile = Profile(function (packageSource, options) {
 // - includeCordovaUnibuild
 compiler.lint = Profile(function (packageSource, options) {
   return `compiler.lint(${ packageSource.name || 'the app' })`;
-}, function (packageSource, options) {
+}, async function (packageSource, options) {
   // Note: the buildmessage context of compiler.lint and lintUnibuild is a
   // normal error message context (eg, there might be errors from initializing
   // plugins in getLinterSourceProcessorSet).  We return the linter warnings as
   // our return value.
   buildmessage.assertInJob();
 
-  const warnings = new buildmessage._MessageSet;
+  const warnings = new buildmessage._MessageSet();
   let linted = false;
-  _.each(packageSource.architectures, function (architecture) {
+
+  for (const architecture of packageSource.architectures) {
     // skip Cordova if not required
     if (! options.includeCordovaUnibuild
         && architecture.arch === 'web.cordova') {
-      return;
+      continue;
     }
 
-    const unibuildWarnings = lintUnibuild({
+    const unibuildWarnings = await lintUnibuild({
       isopack: options.isopack,
       isopackCache: options.isopackCache,
       sourceArch: architecture
@@ -234,28 +236,29 @@ compiler.lint = Profile(function (packageSource, options) {
       linted = true;
       warnings.merge(unibuildWarnings);
     }
-  });
+  }
+
   return {warnings, linted};
 });
 
-compiler.getMinifiers = function (packageSource, options) {
+compiler.getMinifiers = async function (packageSource, options) {
   buildmessage.assertInJob();
 
   var minifiers = [];
-  _.each(packageSource.architectures, function (architecture) {
-    var activePluginPackages = getActivePluginPackages(options.isopack, {
+  for (const architecture of packageSource.architectures) {
+    var activePluginPackages = await getActivePluginPackages(options.isopack, {
       isopackCache: options.isopackCache,
       uses: architecture.uses
     });
 
-    _.each(activePluginPackages, function (otherPkg) {
-      otherPkg.ensurePluginsInitialized();
+    for (const otherPkg of activePluginPackages) {
+      await otherPkg.ensurePluginsInitialized();
 
       _.each(otherPkg.sourceProcessors.minifier.allSourceProcessors, (sp) => {
         minifiers.push(sp);
       });
-    });
-  });
+    }
+  }
 
   minifiers = _.uniq(minifiers);
   // check for extension-wise uniqness
@@ -273,36 +276,36 @@ compiler.getMinifiers = function (packageSource, options) {
   return minifiers;
 };
 
-function getLinterSourceProcessorSet({isopack, activePluginPackages}) {
+async function getLinterSourceProcessorSet({isopack, activePluginPackages}) {
   buildmessage.assertInJob();
 
   const sourceProcessorSet = new SourceProcessorSet(
     isopack.displayName, { allowConflicts: true });
 
-  _.each(activePluginPackages, function (otherPkg) {
-    otherPkg.ensurePluginsInitialized();
+  for (const otherPkg of Object.values(activePluginPackages)) {
+    await otherPkg.ensurePluginsInitialized();
 
     sourceProcessorSet.merge(otherPkg.sourceProcessors.linter);
-  });
+  }
 
   return sourceProcessorSet;
 }
 
-var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
+var lintUnibuild = async function ({isopack, isopackCache, sourceArch}) {
   // Note: the buildmessage context of compiler.lint and lintUnibuild is a
   // normal error message context (eg, there might be errors from initializing
   // plugins in getLinterSourceProcessorSet).  We return the linter warnings as
   // our return value.
   buildmessage.assertInJob();
 
-  var activePluginPackages = getActivePluginPackages(
+  var activePluginPackages = await getActivePluginPackages(
     isopack, {
       isopackCache,
       uses: sourceArch.uses
     });
 
   const sourceProcessorSet =
-          getLinterSourceProcessorSet({isopack, activePluginPackages});
+          await getLinterSourceProcessorSet({isopack, activePluginPackages});
   // bail out early if we had trouble loading plugins or if we're not
   // going to lint anything
   if (buildmessage.jobHasMessages() || sourceProcessorSet.isEmpty()) {
@@ -320,8 +323,8 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 
   const {sources} = sourceArch.getFiles(sourceProcessorSet, unibuild.watchSet);
 
-  const linterMessages = buildmessage.capture(() => {
-    runLinters({
+  const linterMessages = await buildmessage.capture(() => {
+    return runLinters({
       isopackCache,
       sources,
       sourceProcessorSet,
@@ -339,7 +342,7 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 // Returns a list of source files that were used in the compilation.
 var compileUnibuild = Profile(function (options) {
   return `compileUnibuild (${options.isopack.name || 'the app'})`;
-}, function (options) {
+}, async function (options) {
   buildmessage.assertInCapture();
 
   const isopk = options.isopack;
@@ -352,7 +355,7 @@ var compileUnibuild = Profile(function (options) {
   const watchSet = inputSourceArch.watchSet.clone();
 
   // *** Determine and load active plugins
-  const activePluginPackages = getActivePluginPackages(isopk, {
+  const activePluginPackages = await getActivePluginPackages(isopk, {
     uses: inputSourceArch.uses,
     isopackCache: isopackCache,
     // If other package is built from source, then we need to rebuild this
@@ -373,22 +376,23 @@ var compileUnibuild = Profile(function (options) {
   // handled by anything (which is an error unless explicitly declared
   // as a static asset).
   let sourceProcessorSet, linterSourceProcessorSet;
-  buildmessage.enterJob("determining active plugins", () => {
+  await buildmessage.enterJob("determining active plugins", async () => {
     sourceProcessorSet = new SourceProcessorSet(
       isopk.displayName(), { hardcodeJs: true});
 
-    activePluginPackages.forEach((otherPkg) => {
-      otherPkg.ensurePluginsInitialized();
+    for (const otherPkg of activePluginPackages) {
+      await otherPkg.ensurePluginsInitialized();
 
       // Note that this may log a buildmessage if there are conflicts.
       sourceProcessorSet.merge(otherPkg.sourceProcessors.compiler);
-    });
+    }
 
     // Used to excuse functions from the "undeclared static asset" check.
-    linterSourceProcessorSet = getLinterSourceProcessorSet({
+    linterSourceProcessorSet = await getLinterSourceProcessorSet({
       activePluginPackages,
       isopack: isopk
     });
+
     if (buildmessage.jobHasMessages()) {
       // Recover by not calling getFiles and pretending there are no
       // items.
@@ -487,7 +491,7 @@ var compileUnibuild = Profile(function (options) {
   });
 
   // Add and compile all source files
-  _.values(sources).forEach((source) => {
+  for (const source of sources) {
     const relPath = source.relPath;
     const fileOptions = _.clone(source.fileOptions) || {};
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
@@ -496,14 +500,14 @@ var compileUnibuild = Profile(function (options) {
     // Find the handler for source files with this extension
     let classification = null;
     classification = sourceProcessorSet.classifyFilename(
-      filename, inputSourceArch.arch);
+        filename, inputSourceArch.arch);
 
     if (classification.type === 'wrong-arch') {
       // This file is for a compiler plugin but not for this arch. Skip it,
       // and don't even watch it.  (eg, skip CSS preprocessor files on the
       // server.)  This `return` skips this source file and goes on to the next
       // one.
-      return;
+      continue;
     }
 
     if (classification.type === 'unmatched') {
@@ -516,7 +520,7 @@ var compileUnibuild = Profile(function (options) {
       // addAssets or putting it in the public/private directories in an app.
       //
       // This is a backwards-incompatible change, but it doesn't affect
-      // previously-published packages (because the check is occuring in the
+      // previously-published packages (because the check is occurring in the
       // compiler), and it doesn't affect apps (where random files outside of
       // private/public never end up in the source list anyway).
       //
@@ -535,23 +539,23 @@ var compileUnibuild = Profile(function (options) {
         // removed while the Tool is running. Given that this is not a
         // common occurrence however, we'll ignore this situation and let the
         // Tool rebuild continue.
-        return;
+        continue;
       }
 
       const linterClassification = linterSourceProcessorSet.classifyFilename(
-        filename, inputSourceArch.arch);
+          filename, inputSourceArch.arch);
       if (linterClassification.type !== 'unmatched') {
         // The linter knows about this, so we'll just ignore it instead of
         // throwing an error.
-        return;
+        continue;
       }
 
       buildmessage.error(
-        `No plugin known to handle file '${ relPath }'. If you want this \
+          `No plugin known to handle file '${ relPath }'. If you want this \
 file to be a static asset, use addAssets instead of addFiles; eg, \
 api.addAssets('${relPath}', 'client').`);
       // recover by ignoring
-      return;
+      continue;
     }
 
     const contents = optimisticReadFile(absPath);
@@ -565,14 +569,13 @@ api.addAssets('${relPath}', 'client').`);
     } else {
       watchSet.addFile(absPath, hash);
     }
-
-    Console.nudge(true);
+    await Console.yield();
 
     if (classification.type === "meteor-ignore") {
       // Return after watching .meteorignore files but before adding them
       // as resources to be processed by compiler plugins. To see how
       // these files are handled, see PackageSource#_findSources.
-      return;
+      continue;
     }
 
     if (contents === null) {
@@ -583,15 +586,15 @@ api.addAssets('${relPath}', 'client').`);
       // more.
       if (source.relPath.match(/:/)) {
         buildmessage.error(
-          "Couldn't build this package on Windows due to the following file " +
-          "with a colon -- " + source.relPath + ". Please rename and " +
-          "and re-publish the package.");
+            "Couldn't build this package on Windows due to the following file " +
+            "with a colon -- " + source.relPath + ". Please rename and " +
+            "and re-publish the package.");
       } else {
         buildmessage.error("File not found: " + source.relPath);
       }
 
       // recover by ignoring (but still watching the file)
-      return;
+      continue;
     }
 
     if (classification.isNonLegacySource()) {
@@ -605,7 +608,7 @@ api.addAssets('${relPath}', 'client').`);
         hash,
         fileOptions
       }));
-      return;
+      continue;
     }
 
     if (classification.type !== 'legacy-handler') {
@@ -614,16 +617,16 @@ api.addAssets('${relPath}', 'client').`);
 
     // OK, time to handle legacy handlers.
     var compileStep = compileStepModule.makeCompileStep(
-      source, file, inputSourceArch, {
-        resources: resources,
-        addAsset: addAsset
-      });
+        source, file, inputSourceArch, {
+          resources: resources,
+          addAsset: addAsset
+        });
 
     const handler = buildmessage.markBoundary(classification.legacyHandler);
 
     try {
-      Profile.time(`legacy handler (.${classification.extension})`, () => {
-        handler(compileStep);
+      await Profile.time(`legacy handler (.${classification.extension})`, () => {
+        return handler(compileStep);
       });
     } catch (e) {
       e.message = e.message + " (compiling " + relPath + ")";
@@ -632,7 +635,7 @@ api.addAssets('${relPath}', 'client').`);
       // Recover by ignoring this source file (as best we can -- the
       // handler might already have emitted resources)
     }
-  });
+  }
 
   // *** Determine captured variables
   var declaredExports = _.map(inputSourceArch.declaredExports, function (symbol) {
@@ -651,16 +654,16 @@ api.addAssets('${relPath}', 'client').`);
   if (! process.env.METEOR_FORCE_PORTABLE) {
     // Make sure we've rebuilt these npm packages according to the current
     // process.{platform,arch,versions}.
-    _.each(nodeModulesDirectories, nmd => {
+    for (const nmd of Object.values(nodeModulesDirectories)) {
       if (nmd.local) {
         // Meteor never attempts to modify the contents of local
         // node_modules directories (such as the one in the root directory
         // of an application), so we call nmd.rebuildIfNonPortable() only
         // when nmd.local is false.
       } else {
-        nmd.rebuildIfNonPortable();
+        await nmd.rebuildIfNonPortable();
       }
-    });
+    }
 
     if (process.env.METEOR_ALLOW_NON_PORTABLE ||
         isopk.name === "meteor-tool") {
@@ -698,7 +701,7 @@ api.addAssets('${relPath}', 'client').`);
   };
 });
 
-function runLinters({inputSourceArch, isopackCache, sources,
+async function runLinters({inputSourceArch, isopackCache, sources,
                      sourceProcessorSet, watchSet}) {
   // The buildmessage context here is for linter warnings only! runLinters
   // should not do anything that can have a real build failure.
@@ -740,7 +743,7 @@ function runLinters({inputSourceArch, isopackCache, sources,
     globalImports.push('Npm', 'Assets');
   }
 
-  compiler.eachUsedUnibuild({
+  await compiler.eachUsedUnibuild({
     dependencies: inputSourceArch.uses,
     arch: whichArch,
     isopackCache: isopackCache,
@@ -786,10 +789,10 @@ function runLinters({inputSourceArch, isopackCache, sources,
         `Unexpected classification for ${ relPath }: ${ classification.type }`);
     }
 
-    // Read the file and add it to the WatchSet.
-    const {hash, contents} = watch.readAndWatchFileWithHash(
-      watchSet,
-      files.pathResolve(inputSourceArch.sourceRoot, relPath));
+    const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
+    const hash = optimisticHashOrNull(absPath);
+    const contents = optimisticReadFile(absPath);
+    watchSet.addFile(absPath, hash);
 
     if (classification.type === "meteor-ignore") {
       // Return after watching .meteorignore files but before adding them
@@ -817,14 +820,14 @@ function runLinters({inputSourceArch, isopackCache, sources,
   });
 
   // Run linters on files. This skips linters that don't have any files.
-  _.each(sourceItemsForLinter, ({sourceProcessor, sources}) => {
+  for (const {sourceProcessor, sources} of Object.values(sourceItemsForLinter)) {
     const sourcesToLint = sources.map(
-      wrappedSource => new linterPluginModule.LintingFile(wrappedSource)
+        wrappedSource => new linterPluginModule.LintingFile(wrappedSource)
     );
 
     const markedLinter = buildmessage.markBoundary(
-      sourceProcessor.userPlugin.processFilesForPackage,
-      sourceProcessor.userPlugin
+        sourceProcessor.userPlugin.processFilesForPackage,
+        sourceProcessor.userPlugin
     );
 
     function archToString(arch) {
@@ -840,27 +843,27 @@ function runLinters({inputSourceArch, isopackCache, sources,
       throw new Error("Don't know how to display the arch: " + arch);
     }
 
-    buildmessage.enterJob({
+    await buildmessage.enterJob({
       title: "linting files with " +
-        sourceProcessor.isopack.name +
-        " for " +
-        inputSourceArch.pkg.displayName() +
-        " (" + archToString(inputSourceArch.arch) + ")"
-    }, () => {
+          sourceProcessor.isopack.name +
+          " for " +
+          inputSourceArch.pkg.displayName() +
+          " (" + archToString(inputSourceArch.arch) + ")"
+    }, async () => {
       try {
-        Promise.await(markedLinter(sourcesToLint, {
+        await markedLinter(sourcesToLint, {
           globals: globalImports
-        }));
+        });
       } catch (e) {
         buildmessage.exception(e);
       }
     });
-  });
+  }
 };
 
 // takes an isopack and returns a list of packages isopack depends on,
 // containing at least one plugin
-export function getActivePluginPackages(isopk, {
+export async function getActivePluginPackages(isopk, {
   uses,
   isopackCache,
   pluginProviderPackageNames,
@@ -892,7 +895,7 @@ export function getActivePluginPackages(isopk, {
   //
   // We pass archinfo.host here, not self.arch, because it may be more specific,
   // and because plugins always have to run on the host architecture.
-  compiler.eachUsedUnibuild({
+  await compiler.eachUsedUnibuild({
     dependencies: uses,
     arch: archinfo.host(),
     isopackCache: isopackCache,
@@ -923,7 +926,7 @@ export function getActivePluginPackages(isopk, {
 // options.isopackCache.
 //
 // Skips isobuild:* pseudo-packages.
-compiler.eachUsedUnibuild = function (
+compiler.eachUsedUnibuild = async function (
   options, callback) {
   buildmessage.assertInCapture();
   var dependencies = options.dependencies;
@@ -980,7 +983,7 @@ compiler.eachUsedUnibuild = function (
     }
     processedUnibuildId[unibuild.id] = true;
 
-    callback(unibuild, {
+    await callback(unibuild, {
       unordered: !!use.unordered,
       weak: !!use.weak
     });

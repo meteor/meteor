@@ -1299,13 +1299,13 @@ Tinytest.add("logic-solver - eight queens", function (test) {
   Logic._disablingTypeChecks(function () {
 
     var solver = new Logic.Solver;
-    var nums = _.range(1, 9); // 1..8
-    _.each(nums, function (x) {
+    var nums = Array.from({length: 8}, (_, i) => i + 1); // 1..8
+    nums.forEach(function (x) {
       // one per row x, one per column x
-      solver.require(Logic.exactlyOne(_.map(nums, function (y) {
+      solver.require(Logic.exactlyOne(nums.map(function (y) {
         return boardSquare(x, y);
       })));
-      solver.require(Logic.exactlyOne(_.map(nums, function (y) {
+      solver.require(Logic.exactlyOne(nums.map(function (y) {
         return boardSquare(y, x);
       })));
     });
@@ -1336,7 +1336,7 @@ Tinytest.add("logic-solver - eight queens", function (test) {
     test.equal(solution.length, 8);
     test.isTrue(/^([1-8],[1-8] ){7}[1-8],[1-8]$/.test(solution.join(' ')));
     var assertEightDifferent = function (transformFunc) {
-      test.equal(_.uniq(_.map(solution, transformFunc)).length, 8);
+      test.equal([...new Set(solution.map(transformFunc))].length, 8);
     };
     // queens occur in eight different rows, eight different columns
     assertEightDifferent(function (queen) { return queen.charAt(0); });
@@ -1414,7 +1414,7 @@ Tinytest.add("logic-solver - Sudoku", function (test) {
     }
 
     var solution = solver.solve().getTrueVars();
-    var solutionString = _.map(solution, function (v) {
+    var solutionString = solution.map(function (v) {
       return String(Number(v.slice(-1)) + 1);
     }).join('').match(/.{9}/g).join('\n');
     test.equal(solutionString, [
@@ -1502,14 +1502,14 @@ Tinytest.add("logic-solver - evaluate", function (test) {
   test.equal(s.clauses.length, numClauses);
 });
 
-Tinytest.add("logic-solver - toy packages", function (test) {
+Tinytest.addAsync("logic-solver - toy packages", async function (test) {
 
-  var withSolver = function (func) {
+  var withSolver = async function (func) {
 
     var solver = new Logic.Solver();
 
-    _.each(allPackageVersions, function (versions, pkg) {
-      versions = _.map(versions, function (v) {
+    Object.entries(allPackageVersions).forEach(function ([pkg, versions]) {
+      versions = versions.map(function (v) {
         return pkg + "@" + v;
       });
       // e.g. atMostOne(["foo@1.0.0", "foo@1.0.1", "foo@2.0.0"])
@@ -1518,16 +1518,16 @@ Tinytest.add("logic-solver - toy packages", function (test) {
       solver.require(Logic.equiv(pkg, Logic.or(versions)));
     });
 
-    _.each(dependencies, function (depMap, packageVersion) {
-      _.each(depMap, function (compatibleVersions, package2) {
+    Object.entries(dependencies).forEach(function ([packageVersion, depMap]) {
+      Object.entries(depMap).forEach(function ([package2, compatibleVersions]) {
         // e.g. implies("bar@1.2.4", "foo")
         solver.require(Logic.implies(packageVersion, package2));
         // Now ban all incompatible versions of package2 if
         // we select this packageVersion.
         // NOTE: This is not the best way to express constraints.  It's
         // not what we do in the real package constraint solver.
-        _.each(allPackageVersions[package2], function (v) {
-          if (! _.contains(compatibleVersions, v)) {
+        allPackageVersions[package2].forEach(function (v) {
+          if (! compatibleVersions.includes(v)) {
             solver.require(Logic.implies(packageVersion,
                                          Logic.not(package2 + "@" + v)));
           }
@@ -1535,8 +1535,8 @@ Tinytest.add("logic-solver - toy packages", function (test) {
       });
     });
 
-    var optimize = function (solver, costVectorMap) {
-      var solution = solver.solve();
+    var optimize = async function (solver, costVectorMap) {
+      var solution = await solver.solve();
       if (! solution) {
         return null;
       }
@@ -1544,7 +1544,7 @@ Tinytest.add("logic-solver - toy packages", function (test) {
       var terms = [];
       var weightVectors = [];
       var vectorLength = null;
-      _.each(costVectorMap, function (vector, key) {
+      Object.entries(costVectorMap).forEach(function ([key, vector]) {
         terms.push(key);
         weightVectors.push(vector);
         if (vectorLength === null) {
@@ -1558,27 +1558,29 @@ Tinytest.add("logic-solver - toy packages", function (test) {
       });
 
       for (var i = 0; i < vectorLength; i++) {
-        var weights = _.pluck(weightVectors, i);
-        solution = solver.minimizeWeightedSum(solution, terms, weights);
+        var weights = weightVectors.map(function(vector){
+          return vector[i]
+        });
+        solution = await solver.minimizeWeightedSum(solution, terms, weights);
       }
 
       return solution;
     };
 
-    var solve = function (optionalCosts) {
-      var solution = (optionalCosts ? optimize(solver, optionalCosts) :
+    var solve = async function (optionalCosts) {
+      var solution = await (optionalCosts ? optimize(solver, optionalCosts) :
                       solver.solve());
       if (! solution) {
         return solution; // null
       } else {
         // only return variables like "foo@1.0.0", not "foo"
-        return _.filter(solution.getTrueVars(), function (v) {
+        return solution.getTrueVars().filter(function (v) {
           return v.indexOf('@') >= 0;
         });
       }
     };
 
-    func(solver, solve);
+    await func(solver, solve);
   };
 
   var allPackageVersions = {
@@ -1596,40 +1598,40 @@ Tinytest.add("logic-solver - toy packages", function (test) {
                    bar: ['1.2.4', '1.2.5'] }
   };
 
-  withSolver(function (solver, solve) {
+  await withSolver(async function (solver, solve) {
     // Ask for "bar@1.2.5", get both it and "foo@2.0.0"
     solver.require("bar@1.2.5");
-    test.equal(solve(), ["bar@1.2.5", "foo@2.0.0"]);
+    test.equal(await solve(), ["bar@1.2.5", "foo@2.0.0"]);
   });
 
-  withSolver(function (solver, solve) {
+  await withSolver(async function (solver, solve) {
     // Ask for "foo@1.0.1" and *some* version of bar!
     solver.require("foo@1.0.1");
     solver.require("bar");
-    test.equal(solve(), ["bar@1.2.4", "foo@1.0.1"]);
+    test.equal(await solve(), ["bar@1.2.4", "foo@1.0.1"]);
   });
 
-  withSolver(function (solver, solve) {
+  await withSolver(async function (solver, solve) {
     // Ask for versions that can't be combined
     solver.require("foo@1.0.1");
     solver.require("bar@1.2.3");
-    test.equal(solve(), null);
+    test.equal(await solve(), null);
   });
 
-  withSolver(function (solver, solve) {
+  await withSolver(async function (solver, solve) {
     // Ask for baz, automatically get versions of foo and bar
     // such that foo satisfies bar's dependency!
     solver.require("baz");
-    test.equal(solve(), ["bar@1.2.4",
+    test.equal(await solve(), ["bar@1.2.4",
                          "baz@3.0.0",
                          "foo@1.0.1"]);
   });
 
-  withSolver(function (solver, solve) {
+  await withSolver(async function (solver, solve) {
     // pick earliest versions
     solver.require("foo");
     solver.require("bar");
-    test.equal(solve({ "foo@1.0.0": [0],
+    test.equal(await solve({ "foo@1.0.0": [0],
                        "foo@1.0.1": [1],
                        "foo@2.0.0": [2],
                        "bar@1.2.3": [0],
@@ -1638,11 +1640,11 @@ Tinytest.add("logic-solver - toy packages", function (test) {
                ["bar@1.2.3", "foo@1.0.0"]);
   });
 
-  withSolver(function (solver, solve) {
+  await withSolver(async function (solver, solve) {
     // pick latest versions
     solver.require("foo");
     solver.require("bar");
-    test.equal(solve({ "foo@1.0.0": [2],
+    test.equal(await solve({ "foo@1.0.0": [2],
                        "foo@1.0.1": [1],
                        "foo@2.0.0": [0],
                        "bar@1.2.3": [2],
@@ -1651,12 +1653,12 @@ Tinytest.add("logic-solver - toy packages", function (test) {
                ["bar@1.2.5", "foo@2.0.0"]);
   });
 
-  withSolver(function (solver, solve) {
+  await withSolver(async function (solver, solve) {
     // pick earliest versions (but give solver a
     // cost vector with extra stuff)
     solver.require("foo");
     solver.require("bar");
-    test.equal(solve({ "foo@1.0.0": [1, 0],
+    test.equal(await solve({ "foo@1.0.0": [1, 0],
                        "foo@1.0.1": [1, 1],
                        "foo@2.0.0": [1, 2],
                        "bar@1.2.3": [2, 0],
@@ -1665,12 +1667,12 @@ Tinytest.add("logic-solver - toy packages", function (test) {
                ["bar@1.2.3", "foo@1.0.0"]);
   });
 
-  withSolver(function (solver, solve) {
+  await withSolver(async function (solver, solve) {
     // pick latest versions (but give solver a
     // bigger vector to work with)
     solver.require("foo");
     solver.require("bar");
-    test.equal(solve({ "foo@1.0.0": [1, 2],
+    test.equal(await solve({ "foo@1.0.0": [1, 2],
                        "foo@1.0.1": [1, 1],
                        "foo@2.0.0": [1, 0],
                        "bar@1.2.3": [2, 2],
@@ -1681,36 +1683,36 @@ Tinytest.add("logic-solver - toy packages", function (test) {
 
 });
 
-Tinytest.add("logic-solver - minimize", function (test) {
+Tinytest.addAsync("logic-solver - minimize", async function (test) {
   var s = new Logic.Solver();
   s.require(Logic.or("A", "B", "C", "D"));
   // cost is equal to the number of false variables
   var costTerms = ["-A", "-B", "-C", "-D"];
   var costWeights = 1;
-  var solution1 = s.solve();
+  var solution1 = await s.solve();
   // nothing forces the cost (= the number of false variables)
   // to be greater than 0, but MiniSat will always discover
   // a sparser solution than (1,1,1,1) first.
   test.isTrue(solution1.getWeightedSum(costTerms, costWeights) > 0);
-  var solution2 = s.minimizeWeightedSum(solution1, costTerms, costWeights);
+  var solution2 = await s.minimizeWeightedSum(solution1, costTerms, costWeights);
   test.isFalse(solution1 === solution2);
   test.equal(solution2.getWeightedSum(costTerms, costWeights), 0);
   test.equal(solution2.getTrueVars(), ["A", "B", "C", "D"]);
 });
 
-Tinytest.add("logic-solver - maximize", function (test) {
+Tinytest.addAsync("logic-solver - maximize", async function (test) {
   var s = new Logic.Solver();
   // Find subset of {2, 5, 10, 11, 15} that sums to as close
   // as possible to 19 without going over.
   var costWeights = [2, 5, 10, 11, 15];
   // name variables after the weights
-  var costTerms = _.map(costWeights, function (w) {
+  var costTerms = costWeights.map(function (w) {
     return "#"+w;
   });
   var ws = Logic.weightedSum(costTerms, costWeights);
   s.require(Logic.lessThanOrEqual(ws, Logic.constantBits(19)));
-  var sol = s.solve();
-  var sol2 = s.maximizeWeightedSum(sol, costTerms, costWeights, ws);
+  var sol = await s.solve();
+  var sol2 = await s.maximizeWeightedSum(sol, costTerms, costWeights, ws);
   test.equal(sol2.getTrueVars(), ["#11", "#2", "#5"]);
 });
 

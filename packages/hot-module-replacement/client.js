@@ -1,28 +1,28 @@
 // TODO: add an api to Reify to update cached exports for a module
-const ReifyEntry = require('/node_modules/meteor/modules/node_modules/@meteorjs/reify/lib/runtime/entry.js')
+var ReifyEntry = require('/node_modules/meteor/modules/node_modules/@meteorjs/reify/lib/runtime/entry.js')
 
-const SOURCE_URL_PREFIX = "meteor://\ud83d\udcbbapp";
+var SOURCE_URL_PREFIX = "meteor://\ud83d\udcbbapp";
 
-let appliedChangeSets = [];
-let removeErrorMessage = null;
+var appliedChangeSets = [];
+var removeErrorMessage = null;
 
-const arch = Meteor.isCordova ? "web.cordova" :
+var arch = Meteor.isCordova ? "web.cordova" :
   Meteor.isModern ? "web.browser" : "web.browser.legacy";
 
-const initialVersions = __meteor_runtime_config__.autoupdate.versions[arch];
-let lastUpdated = initialVersions.versionHmr;
-const hmrSecret = __meteor_runtime_config__._hmrSecret;
+var initialVersions = __meteor_runtime_config__.autoupdate.versions[arch];
+var lastUpdated = initialVersions.versionHmr;
+var hmrSecret = __meteor_runtime_config__._hmrSecret;
 
 // Cordova doesn't need the hmrSecret, though cordova is also unable to tell
 // if Meteor needs to be restarted to enable HMR;
-const enabled = Meteor.isCordova || !!hmrSecret;
+var enabled = Meteor.isCordova || !!hmrSecret;
 
 if (!enabled) {
   console.log('Restart Meteor to enable HMR');
 }
 
-const imported = Object.create(null);
-const importedBy = Object.create(null);
+var imported = Object.create(null);
+var importedBy = Object.create(null);
 
 if (module._onRequire) {
   module._onRequire({
@@ -44,10 +44,10 @@ if (module._onRequire) {
 
 // On web, we can reload the page any time to get the new version. On cordova,
 // we have to wait until Reload._onMigrate is called
-let hotCodePushReady = arch !== 'web.cordova';
+var hotCodePushReady = arch !== 'web.cordova';
 
-let useHotCodePush = false;
-let forceReload = function () {
+var useHotCodePush = false;
+var forceReload = function () {
   useHotCodePush = true;
   // Wait until Reload package has been loaded
   Meteor.startup(function () {
@@ -60,7 +60,7 @@ let forceReload = function () {
 // Once an eager update fails, we stop processing future updates since they
 // might depend on the failed update. This gets reset when we re-try applying
 // the changes as non-eager updates.
-let applyEagerUpdates = true;
+var applyEagerUpdates = true;
 
 function handleMessage(message) {
   if (message.type === 'register-failed') {
@@ -103,7 +103,7 @@ function handleMessage(message) {
     applyEagerUpdates = true;
   }
 
-  const hasUnreloadable = message.changeSets.find(function (changeSet) {
+  var hasUnreloadable = message.changeSets.find(function (changeSet) {
     return !changeSet.reloadable;
   });
 
@@ -128,10 +128,10 @@ function handleMessage(message) {
   // In case the user changed how a module works with HMR
   // in one of the earlier change sets, we want to apply each
   // change set one at a time in order.
-  const succeeded = message.changeSets.filter(function (changeSet) {
+  var succeeded = message.changeSets.filter(function (changeSet) {
     return !appliedChangeSets.includes(changeSet.id)
   }).every(function (changeSet) {
-    const applied = applyChangeset(changeSet, message.eager);
+    var applied = applyChangeset(changeSet, message.eager);
 
     // We don't record if a module is unreplaceable
     // during an eager update so we can retry and
@@ -162,9 +162,9 @@ function handleMessage(message) {
   }
 }
 
-let socket;
-let disconnected = false;
-let pendingMessages = [];
+var socket;
+var disconnected = false;
+var pendingMessages = [];
 
 function send(message) {
   if (socket) {
@@ -183,9 +183,9 @@ function connect() {
 
   // If we've successfully connected and then was disconnected, we avoid showing
   // any more connection errors in the console until we've connected again
-  let logDisconnect = !disconnected;
-  let wsUrl = Meteor.absoluteUrl('__meteor__hmr__/websocket');
-  const protocol = wsUrl.startsWith('https://') ? 'wss://' : 'ws://';
+  var logDisconnect = !disconnected;
+  var wsUrl = Meteor.absoluteUrl('__meteor__hmr__/websocket');
+  var protocol = wsUrl.startsWith('https://') ? 'wss://' : 'ws://';
   wsUrl = wsUrl.replace(/^.+\/\//, protocol);
   socket = new WebSocket(wsUrl);
 
@@ -212,7 +212,7 @@ function connect() {
       appId: __meteor_runtime_config__.appId,
     }));
 
-    const toSend = pendingMessages.slice();
+    var toSend = pendingMessages.slice();
     pendingMessages = [];
 
     toSend.forEach(function (message) {
@@ -240,8 +240,8 @@ function requestChanges() {
 }
 
 function walkTree(pathParts, tree) {
-  const part = pathParts.shift();
-  const _module = tree.contents[part];
+  var part = pathParts.shift();
+  var _module = tree.contents[part];
 
   if (!_module) {
     console.log('HMR: file does not exist', part, pathParts, _module, tree);
@@ -284,7 +284,7 @@ function createModuleContent (code, map) {
 function replaceFileContent(file, contents) {
   // TODO: to replace content in packages, we need an eval function that runs
   // within the package scope, like dynamic imports does.
-  const moduleFunction = createModuleContent(contents.code, contents.map, file.module.id);
+  var moduleFunction = createModuleContent(contents.code, contents.map, file.module.id);
 
   file.contents = moduleFunction;
 }
@@ -296,15 +296,15 @@ function checkModuleAcceptsUpdate(moduleId, checked) {
     return false;
   }
 
-  const file = findFile(moduleId);
-  const moduleHot = file.module.hot;
-  const moduleAccepts = moduleHot ? moduleHot._canAcceptUpdate() : false;
+  var file = findFile(moduleId);
+  var moduleHot = file.module.hot;
+  var moduleAccepts = moduleHot ? moduleHot._canAcceptUpdate() : false;
 
   if (moduleAccepts !== null) {
     return moduleAccepts;
   }
 
-  let accepts = null;
+  var accepts = null;
 
   // The module did not accept the update. If the update is accepted depends
   // on if the modules that imported this module accept the update.
@@ -321,7 +321,7 @@ function checkModuleAcceptsUpdate(moduleId, checked) {
       return;
     }
 
-    const depResult = checkModuleAcceptsUpdate(depId, checked);
+    var depResult = checkModuleAcceptsUpdate(depId, checked);
 
     if (accepts !== false) {
       accepts = depResult;
@@ -333,11 +333,11 @@ function checkModuleAcceptsUpdate(moduleId, checked) {
 
 function addFiles(addedFiles) {
   addedFiles.forEach(function (file) {
-    const tree = {};
-    const segments = file.path.split('/').slice(1);
-    const fileName = segments.pop();
+    var tree = {};
+    var segments = file.path.split('/').slice(1);
+    var fileName = segments.pop();
 
-    let previous = tree;
+    var previous = tree;
     segments.forEach(function (segment) {
       previous[segment] = previous[segment] || {}
       previous = previous[segment]
@@ -353,12 +353,12 @@ function addFiles(addedFiles) {
 }
 
 module.constructor.prototype._reset = function (id) {
-  const moduleId = id || this.id;
-  const file = findFile(moduleId);
+  var moduleId = id || this.id;
+  var file = findFile(moduleId);
 
-  const hotState = file.module._hotState;
+  var hotState = file.module._hotState;
 
-  const hotData = {};
+  var hotData = {};
   hotState._disposeHandlers.forEach(function (cb) {
     cb(hotData);
   });
@@ -371,7 +371,7 @@ module.constructor.prototype._reset = function (id) {
   // Clear cached exports
   // TODO: check how this affects live bindings for ecmascript modules
   delete file.module.exports;
-  const entry = ReifyEntry.getOrCreate(moduleId);
+  var entry = ReifyEntry.getOrCreate(moduleId);
   entry.getters = {};
   entry.setters = {};
   entry.module = null;
@@ -390,10 +390,10 @@ module.constructor.prototype._reset = function (id) {
 }
 
 module.constructor.prototype._replaceModule = function (id, contents) {
-  const moduleId = id || this.id;
-  const root = this._getRoot();
+  var moduleId = id || this.id;
+  var root = this._getRoot();
 
-  let file;
+  var file;
   try {
     file = walkTree(moduleId.split('/').slice(1), root);
   } catch (e) {
@@ -418,21 +418,21 @@ module.constructor.prototype._replaceModule = function (id, contents) {
 }
 
 function applyChangeset(options) {
-  const changedFiles = options.changedFiles;
-  const addedFiles = options.addedFiles;
+  var changedFiles = options.changedFiles;
+  var addedFiles = options.addedFiles;
 
-  let canApply = true;
-  let toRerun = new Set();
+  var canApply = true;
+  var toRerun = new Set();
 
   changedFiles.forEach(function (changed) {
-    const path = changed.path;
-    const file = findFile(path);
+    var path = changed.path;
+    var file = findFile(path);
 
     // Check if the file has been imported. If it hasn't been,
     // we can assume update to it can be accepted
     if (file.module.exports) {
-      const checked = new Set();
-      const accepts = checkModuleAcceptsUpdate(path, checked);
+      var checked = new Set();
+      var accepts = checkModuleAcceptsUpdate(path, checked);
 
       if (canApply) {
         canApply = accepts;
@@ -456,7 +456,7 @@ function applyChangeset(options) {
   }
 
   toRerun.forEach(function (moduleId) {
-    const file = findFile(moduleId);
+    var file = findFile(moduleId);
     // clear module caches and hot state
     file.module._reset();
     file.module.loaded = false;
@@ -470,13 +470,13 @@ function applyChangeset(options) {
     console.error('HMR: Error while applying changes:', error);
   }
 
-  const updateCount = changedFiles.length + addedFiles.length;
+  var updateCount = changedFiles.length + addedFiles.length;
   console.log('HMR: updated ' + updateCount + ' ' + (updateCount === 1 ? 'file' : 'files'));
   return true;
 }
 
-let nonRefreshableVersion = initialVersions.versionNonRefreshable;
-let replaceableVersion = initialVersions.versionReplaceable;
+var nonRefreshableVersion = initialVersions.versionNonRefreshable;
+var replaceableVersion = initialVersions.versionReplaceable;
 
 Meteor.startup(function () {
   if (!enabled) {

@@ -1,29 +1,34 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-const { mkdtemp } = require("../fs/files");
 
 const offlineStorageQuotaKB = 10000;
 
-selftest.define("dynamic import(...) in development", function () {
+selftest.define("dynamic import(...) in development", async function () {
   const s = new Sandbox();
-  s.createApp("dynamic-import-test-app-devel", "dynamic-import");
-  s.cd("dynamic-import-test-app-devel", run.bind(s, false));
+  await s.init();
+
+  await s.createApp("dynamic-import-test-app-devel", "dynamic-import");
+  await s.cd("dynamic-import-test-app-devel", run.bind(s, false));
 });
 
-selftest.define("dynamic import(...) in production", function () {
+selftest.define("dynamic import(...) in production", async function () {
   const s = new Sandbox();
-  s.createApp("dynamic-import-test-app-prod", "dynamic-import");
-  s.cd("dynamic-import-test-app-prod", run.bind(s, true));
+  await s.init();
+
+  await s.createApp("dynamic-import-test-app-prod", "dynamic-import");
+  await s.cd("dynamic-import-test-app-prod", run.bind(s, true));
 });
 
-selftest.define("dynamic import(...) with cache", function () {
+selftest.define("dynamic import(...) with cache", async function () {
   const s = new Sandbox();
-  s.createApp("dynamic-import-test-app-cache", "dynamic-import");
+  await s.init();
+
+  await s.createApp("dynamic-import-test-app-cache", "dynamic-import");
   s.set("METEOR_SAVE_DYNAMIC_IMPORT_CACHE", "true");
-  s.cd("dynamic-import-test-app-cache", run.bind(s, true));
+  await s.cd("dynamic-import-test-app-cache", run.bind(s, true));
 });
 
-function run(isProduction) {
+async function run(isProduction) {
   const sandbox = this;
   const args = [
     "test",
@@ -31,7 +36,7 @@ function run(isProduction) {
     "--full-app",
     "--driver-package", "meteortesting:mocha"
   ];
-  
+
   // For meteortesting:mocha to work we must set test broswer driver
   // See https://github.com/meteortesting/meteor-mocha
   sandbox.set("TEST_BROWSER_DRIVER", "puppeteer");
@@ -46,9 +51,9 @@ function run(isProduction) {
   const run = sandbox.run(...args);
 
   run.waitSecs(90);
-  run.match("App running at");
-  run.match("SERVER FAILURES: 0");
-  run.match("CLIENT FAILURES: 0");
+  await run.match("App running at");
+  await run.match("SERVER FAILURES: 0");
+  await run.match("CLIENT FAILURES: 0");
   run.waitSecs(30);
-  run.expectExit(0);
+  await run.expectExit(0);
 }

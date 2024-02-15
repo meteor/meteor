@@ -1,20 +1,21 @@
 Package.describe({
   summary: 'Serves a Meteor app over HTTP',
-  version: '1.13.1',
+  version: '2.0.0-beta300.0',
 });
 
 Npm.depends({
-  'basic-auth-connect': '1.0.0',
-  'cookie-parser': '1.4.5',
-  connect: '3.7.0',
+  'cookie-parser': '1.4.6',
+  express: '4.18.2',
+  '@types/express': '4.17.15',
   compression: '1.7.4',
   errorhandler: '1.5.1',
   parseurl: '1.3.3',
-  send: '0.17.1',
-  'stream-to-string': '1.2.0',
-  qs: '6.10.1',
+  send: '0.18.0',
+  'stream-to-string': '1.2.1',
+  qs: '6.11.2',
   useragent: '2.3.0',
   '@vlasky/whomst': '0.1.7',
+  '@types/connect': '3.4.38',
 });
 
 Npm.strip({
@@ -24,7 +25,7 @@ Npm.strip({
 
 // whitelist plugin is now included in the core
 Cordova.depends({
-  'cordova-plugin-meteor-webapp': '2.0.0',
+  'cordova-plugin-meteor-webapp': '2.0.3',
 });
 
 Package.onUse(function(api) {
@@ -57,10 +58,11 @@ Package.onUse(function(api) {
   api.export('WebApp', 'client');
 
   api.mainModule('webapp_cordova.js', 'web.cordova');
+  api.addAssets('webapp.d.ts', 'server');
 });
 
 Package.onTest(function(api) {
-  api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore']);
+  api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore','fetch']);
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
   api.addFiles('socket_file_tests.js', 'server');

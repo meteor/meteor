@@ -7,7 +7,6 @@
 meteor-base             # Packages every Meteor app needs to have
 mobile-experience       # Packages for a great mobile UX
 mongo                   # The database Meteor supports right now
-reactive-var            # Reactive variable for tracker
 
 standard-minifier-css   # CSS minifier run for production mode
 standard-minifier-js    # JS minifier run for production mode
@@ -16,9 +15,8 @@ ecmascript              # Enable ECMAScript2015+ syntax in app code
 typescript              # Enable TypeScript syntax in .ts and .tsx modules
 shell-server            # Server-side component of the `meteor shell` command
 
-autopublish             # Publish all data to the clients (for prototyping)
-insecure                # Allow all DB writes from clients (for prototyping)
+~prototype~
 static-html             # Define static page content in .html files
 zodern:melte            # Meteor package to allow us to create files with the .svelte extension
-rdb:svelte-meteor-data  # Meteor package which allows us to consume Meteor's reactive data sources inside of our Svelte components
 hot-module-replacement  # Update client in development without reloading the page
+zodern:types            # Enable types from meteor/atmosphere packages

@@ -119,18 +119,21 @@ export class AccountsClient extends AccountsCommon {
    */
   logout(callback) {
     this._loggingOut.set(true);
-    this.connection.apply('logout', [], {
+
+    this.connection.applyAsync('logout', [], {
+      // TODO[FIBERS]: Look this { wait: true } later.
       wait: true
-    }, (error, result) => {
-      this._loggingOut.set(false);
-      this._loginCallbacksCalled = false;
-      if (error) {
-        callback && callback(error);
-      } else {
+    })
+      .then((result) => {
+        this._loggingOut.set(false);
+        this._loginCallbacksCalled = false;
         this.makeClientLoggedOut();
         callback && callback();
-      }
-    });
+      })
+      .catch((e) => {
+        this._loggingOut.set(false);
+        callback && callback(e);
+      });
   }
 
   /**
@@ -226,13 +229,14 @@ export class AccountsClient extends AccountsCommon {
     const loginCallbacks = ({ error, loginDetails }) => {
       if (!called) {
         called = true;
-        this._loginCallbacksCalled = true;
         if (!error) {
           this._onLoginHook.forEach(callback => {
             callback(loginDetails);
             return true;
           });
+          this._loginCallbacksCalled = true;
         } else {
+          this._loginCallbacksCalled = false;
           this._onLoginFailureHook.forEach(callback => {
             callback({ error });
             return true;
@@ -361,7 +365,12 @@ export class AccountsClient extends AccountsCommon {
 
       // Make the client logged in. (The user data should already be loaded!)
       this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
-      loginCallbacks({ loginDetails: result });
+      // TODO [FIBERS]: this is a big workaround. The Tracker is now receiving promises,
+        // so it's finishing before time. Hopefully this PR will fix this behavior
+        // https://github.com/meteor/meteor/pull/12294
+      Meteor.setTimeout(() => {
+        loginCallbacks({ loginDetails: result });
+      }, 100);
     };
 
     if (!options._suppressLoggingIn) {
@@ -797,6 +806,11 @@ if (Package.blaze) {
    * @summary Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in.
    */
   Template.registerHelper('currentUser', () => Meteor.user());
+
+  // TODO: the code above needs to be changed to Meteor.userAsync() when we have
+  // a way to make it reactive using async.
+  // Template.registerHelper('currentUserAsync',
+  //  async () => await Meteor.userAsync());
 
   /**
    * @global

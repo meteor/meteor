@@ -1,15 +1,9 @@
 var _ = require('underscore');
-var sourcemap = require('source-map');
-
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var watch = require('../fs/watch');
 var buildmessage = require('../utils/buildmessage.js');
-var meteorNpm = require('./meteor-npm.js');
-import Builder from './builder.js';
 var archinfo = require('../utils/archinfo');
-var catalog = require('../packaging/catalog/catalog.js');
-var packageVersionParser = require('../packaging/package-version-parser.js');
 var compiler = require('./compiler.js');
 var Profile = require('../tool-env/profile').Profile;
 
@@ -491,7 +485,7 @@ Object.assign(PackageSource.prototype, {
 
   // Initialize a PackageSource from a package.js-style package directory. Uses
   // the name field provided and the name/test fields in the package.js file to
-  // figre out if this is a test package (load from onTest) or a use package
+  // figure out if this is a test package (load from onTest) or a use package
   // (load from onUse).
   //
   // name: name of the package.
@@ -504,7 +498,7 @@ Object.assign(PackageSource.prototype, {
     return `PackageSource#initFromPackageDir for ${
       options?.name || dir.split(files.pathSep).pop()
     }`;
-  }, function (dir, options) {
+  }, async function (dir, options) {
     var self = this;
     buildmessage.assertInCapture();
     var isPortable = true;
@@ -512,7 +506,7 @@ Object.assign(PackageSource.prototype, {
     var initFromPackageDirOptions = options;
 
     // If we know what package we are initializing, we pass in a
-    // name. Otherwise, we are intializing the base package specified by 'name:'
+    // name. Otherwise, we are initializing the base package specified by 'name:'
     // field in Package.Describe. In that case, it is clearly not a test
     // package. (Though we could be initializing a specific package without it
     // being a test, for a variety of reasons).
@@ -594,7 +588,7 @@ Object.assign(PackageSource.prototype, {
     const Cordova = new PackageCordova();
 
     try {
-      files.runJavaScript(packageJsCode.toString('utf8'), {
+      await files.runJavaScript(packageJsCode.toString('utf8'), {
         filename: 'package.js',
         symbols: { Package, Npm, Cordova }
       });
@@ -669,7 +663,9 @@ Object.assign(PackageSource.prototype, {
 
     if (Package._fileAndDepLoader) {
       try {
-        buildmessage.markBoundary(Package._fileAndDepLoader)(api);
+        const marked = buildmessage.markBoundary(Package._fileAndDepLoader)
+        await marked(api);
+        await api._waitForAsyncWork();
       } catch (e) {
         console.log(e.stack); // XXX should we keep this here -- or do we want broken
                               // packages to fail silently?
@@ -964,10 +960,21 @@ Object.assign(PackageSource.prototype, {
           // If this architecture has a mainModule defined in
           // package.json, it's an error if _findSources doesn't find that
           // module. If no mainModule is defined, anything goes.
-          let missingMainModule = !! mainModule;
+          // If the source processor set allows conflicts (such as when linting)
+          // then sources will not be the same files used to bundle the app.
+          let missingMainModule = !! mainModule &&
+            !sourceProcessorSet.isConflictsAllowed();
+
+          // Similar to the main module, when conflicts are allowed
+          // these sources won't be used to build the app so the order
+          // isn't important, and is difficult to accurately create when
+          // there are conflicts
+          let sorter = sourceProcessorSet.isConflictsAllowed() ?
+            () => 0 :
+            loadOrderSort(sourceProcessorSet, arch);
 
           const sources = self._findSources(findOptions).sort(
-            loadOrderSort(sourceProcessorSet, arch)
+            sorter
           ).map(relPath => {
             if (relPath === mainModule) {
               missingMainModule = false;
@@ -1414,7 +1421,7 @@ Object.assign(PackageSource.prototype, {
           // subdirectories, so that we know whether we need to descend
           // further. If sources is still empty after we handle everything
           // else in dir, then nothing in this node_modules subdir can be
-          // imported by anthing outside of it, so we can ignore it.
+          // imported by anything outside of it, so we can ignore it.
           nodeModulesDir = subdir;
 
           // A "local" node_modules directory is one that's managed by the

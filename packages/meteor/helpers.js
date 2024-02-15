@@ -1,6 +1,3 @@
-if (Meteor.isServer)
-  var Future = Npm.require('fibers/future');
-
 if (typeof __meteor_runtime_config__ === 'object' &&
     __meteor_runtime_config__.meteorRelease) {
   /**
@@ -71,6 +68,45 @@ Meteor._delete = function (obj /*, arguments */) {
   }
 };
 
+
+/**
+ * Takes a function that has a callback argument as the last one and promissify it.
+ * One option would be to use node utils.promisify, but it won't work on the browser.
+ * @param fn
+ * @param context
+ * @param errorFirst - If the callback follows the errorFirst style
+ * @returns {function(...[*]): Promise<unknown>}
+ */
+Meteor.promisify = function (fn, context, errorFirst) {
+  if (errorFirst === undefined) {
+    errorFirst = true;
+  }
+
+  return function () {
+    return new Promise(function (resolve, reject) {
+      var callback = Meteor.bindEnvironment(function (error, result) {
+        var _error = error, _result = result;
+        if (!errorFirst) {
+          _error = result;
+          _result = error;
+        }
+
+        if (_error) {
+          return reject(_error);
+        }
+
+        resolve(_result);
+      });
+
+      var filteredArgs = Array.prototype.slice.call(arguments)
+        .filter(function (i) { return i !== undefined; });
+      filteredArgs.push(callback);
+
+      return fn.apply(context || this, filteredArgs);
+    });
+  };
+};
+
 // wrapAsync can wrap any function that takes some number of arguments that
 // can't be undefined, followed by some optional arguments, where the callback
 // is the last optional argument.
@@ -109,19 +145,17 @@ Meteor.wrapAsync = function (fn, context) {
     }
 
     if (! callback) {
-      if (Meteor.isClient) {
-        callback = logErr;
-      } else {
-        var fut = new Future();
-        callback = fut.resolver();
-      }
+      callback = logErr;
       ++i; // Insert the callback just after arg.
     }
 
     newArgs[i] = Meteor.bindEnvironment(callback);
-    var result = fn.apply(self, newArgs);
-    return fut ? fut.wait() : result;
+    return fn.apply(self, newArgs);
   };
+};
+
+Meteor.wrapFn = function (fn) {
+  return fn;
 };
 
 // Sets child's prototype to a new object whose prototype is parent's

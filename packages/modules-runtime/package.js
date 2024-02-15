@@ -1,6 +1,6 @@
 Package.describe({
   name: "modules-runtime",
-  version: "0.13.0",
+  version: '0.13.2-beta300.0',
   summary: "CommonJS module system",
   git: "https://github.com/benjamn/install",
   documentation: "README.md"
@@ -18,12 +18,16 @@ Package.onUse(function(api) {
     bare: true
   });
 
-  api.addFiles("modern.js", "modern");
-  api.addFiles("legacy.js", "legacy");
-  api.addFiles("server.js", "server");
-  api.addFiles("profile.js");
+  api.addFiles(['./errors/importsErrors.js',
+    './errors/cannotFindMeteorPackage.js']);
+  api.addFiles('modern.js', 'modern');
+  api.addFiles('legacy.js', 'legacy');
+  api.addFiles('server.js', 'server');
+  api.addFiles('profile.js');
+  api.addFiles('verifyErrors.js');
 
-  api.export("meteorInstall");
+  api.export('meteorInstall');
+  api.export('verifyErrors');
 });
 
 Package.onTest(function(api) {

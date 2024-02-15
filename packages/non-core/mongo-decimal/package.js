@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JS simulation of MongoDB Decimal128 type",
-  version: '0.1.3'
+  version: '0.1.4-beta300.0',
 });
 
 Npm.depends({
@@ -8,8 +8,8 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('ecmascript');
-  api.use('ejson');
+  api.use('ecmascript@0.16.8-beta300.0');
+  api.use('ejson@1.1.4-beta300.0');
   api.mainModule('decimal.js');
   api.export('Decimal');
 });

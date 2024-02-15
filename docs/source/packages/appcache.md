@@ -3,6 +3,8 @@ title: appcache
 description: Documentation of Meteor's `appcache` package.
 ---
 
+> This package has been deprecated since [applicationCache](https://developer.mozilla.org/en-US/docs/Web/API/Window/applicationCache), which this package relies on, has been deprecated and is not available on the latest browsers. Plaese consider using [Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API) as an replacement.
+
 The `appcache` package stores the static parts of a Meteor application
 (the client side Javascript, HTML, CSS, and images) in the browser's
 [application cache](https://en.wikipedia.org/wiki/AppCache). To enable

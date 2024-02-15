@@ -1,0 +1,28 @@
+{
+  "name": "~name~",
+  "private": true,
+  "scripts": {
+    "start": "meteor run",
+    "test": "meteor test --once --driver-package meteortesting:mocha",
+    "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
+    "visualize": "meteor --production --extra-packages bundle-visualizer"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.23.5",
+    "meteor-node-stubs": "^1.2.7",
+    "solid-js": "^1.8.6"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.jsx",
+      "server": "server/main.js"
+    },
+    "testModule": "tests/main.js"
+  },
+  "devDependencies": {
+    "babel-preset-solid": "^1.5.4",
+    "vite": "^3.0.9",
+    "vite-plugin-solid": "^2.3.0",
+    "vite-plugin-solid-svg": "^0.4.1"
+  }
+}

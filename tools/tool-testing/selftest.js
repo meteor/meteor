@@ -4,12 +4,10 @@ import { createHash } from 'crypto';
 import {
   markBottom as parseStackMarkBottom,
   markTop as parseStackMarkTop,
-  parse as parseStackParse,
 } from '../utils/parse-stack';
 import { Console } from '../console/console.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import TestFailure from './test-failure.js';
-import { setRunningTest } from './run.js';
 import Run from './run.js';
 
 // These are accessed through selftest directly on many tests.
@@ -31,11 +29,21 @@ export const fail = parseStackMarkTop(function (reason) {
 // Call from a test to assert that 'actual' is equal to 'expected',
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
-export const expectEqual = parseStackMarkTop(function (actual, expected) {
-  if (! loadIsopackage('ejson').EJSON.equals(actual, expected)) {
-    throw new TestFailure("not-equal", {
-      expected,
-      actual,
+export const expectEqual = parseStackMarkTop(async function (actual, expected) {
+  try {
+    const ejson = await loadIsopackage("ejson");
+    if (!ejson.EJSON.equals(actual, expected)) {
+      throw new TestFailure("not-equal", {
+        expected,
+        actual,
+      });
+    }
+  } catch (e) {
+    if (e.reason === 'not-equal') {
+      throw e;
+    };
+    throw new TestFailure("Can't load ejson isopackage" , {
+      stack: e.stack,
     });
   }
 });
@@ -82,10 +90,10 @@ class Test {
     this.cleanupHandlers.push(cleanupHandler);
   }
 
-  cleanup() {
-    this.cleanupHandlers.forEach((cleanupHandler) => {
-      cleanupHandler();
-    });
+  async cleanup() {
+    for (const cleanupHandler of this.cleanupHandlers) {
+      await cleanupHandler();
+    }
     this.cleanupHandlers = [];
   }
 }
@@ -94,7 +102,7 @@ let allTests = null;
 let fileBeingLoaded = null;
 let fileBeingLoadedHash = null;
 
-const getAllTests = () => {
+const getAllTests = async () => {
   if (allTests) {
     return allTests;
   }
@@ -188,9 +196,9 @@ const tagDescriptions = {
 // and runTests.
 //
 // Options: testRegexp, fileRegexp, onlyChanged, offline, includeSlowTests, galaxyOnly
-function getFilteredTests(options) {
+async function getFilteredTests(options) {
   options = options || {};
-  let allTests = getAllTests();
+  let allTests = await getAllTests();
   let testState;
 
   if (allTests.length) {
@@ -534,8 +542,8 @@ function writeTestState(testState) {
 }
 
 // Same options as getFilteredTests.  Writes to stdout and stderr.
-export function listTests(options) {
-  const testList = getFilteredTests(options);
+export async function listTests(options) {
+  const testList = await getFilteredTests(options);
 
   if (! testList.allTests.length) {
     Console.error("No tests defined.\n");
@@ -582,8 +590,8 @@ const shouldSkipCurrentTest = ({currentTestIndex, options: {skip, limit} = {}}) 
 //          fileRegexp,
 //          clients:
 //             - browserstack (need s3cmd credentials)
-export function runTests(options) {
-  const testList = getFilteredTests(options);
+export async function runTests(options) {
+  const testList = await getFilteredTests(options);
 
   if (! testList.allTests.length) {
     Console.error("No tests defined.");
@@ -594,7 +602,7 @@ export function runTests(options) {
 
   let totalRun = 0;
 
-  testList.filteredTests.forEach((test, index) => {
+  for (const [index, test] of testList.filteredTests.entries()) {
     totalRun++;
     const shouldSkip = shouldSkipCurrentTest({
       currentTestIndex: index,
@@ -615,17 +623,17 @@ export function runTests(options) {
       return;
     }
 
-    Run.runTest(
-      testList,
-      test,
-      parseStackMarkBottom(() => {
-        test.f(options);
-      }),
-      {
-        retries: options.retries,
-      }
+    await Run.runTest(
+        testList,
+        test,
+        parseStackMarkBottom(() => {
+          return test.f(options);
+        }),
+        {
+          retries: options.retries,
+        }
     );
-  });
+  }
 
   testList.endTime = new Date;
   testList.durationMs = testList.endTime - testList.startTime;

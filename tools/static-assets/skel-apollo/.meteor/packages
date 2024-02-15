@@ -16,7 +16,7 @@ ecmascript              # Enable ECMAScript2015+ syntax in app code
 typescript              # Enable TypeScript syntax in .ts and .tsx modules
 shell-server            # Server-side component of the `meteor shell` command
 hot-module-replacement  # Update client in development without reloading the page
-
+~prototype~
 static-html             # Define static page content in .html files
 apollo                  # Basic Apollo integration for Meteor apps
 swydo:graphql           # Import .graphql files

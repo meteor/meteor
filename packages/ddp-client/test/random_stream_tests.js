@@ -1,8 +1,8 @@
-Tinytest.add('livedata - DDP.randomStream', function(test) {
+Tinytest.addAsync('livedata - DDP.randomStream', async function(test) {
   const randomSeed = Random.id();
   const context = { randomSeed: randomSeed };
 
-  let sequence = DDP._CurrentMethodInvocation.withValue(context, function() {
+  let sequence = await DDP._CurrentMethodInvocation.withValue(context, function() {
     return DDP.randomStream('1');
   });
 
@@ -21,7 +21,7 @@ Tinytest.add('livedata - DDP.randomStream', function(test) {
   test.equal(id1, id1Cloned);
 
   // We should get the same sequence when we use the same key
-  sequence = DDP._CurrentMethodInvocation.withValue(context, function() {
+  sequence = await DDP._CurrentMethodInvocation.withValue(context, function() {
     return DDP.randomStream('1');
   });
   seeds = sequence.alea.args;

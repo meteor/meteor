@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Configure security policies enforced by the browser",
-  version: "1.1.0"
+  version: '1.1.3-beta300.0'
 });
 
 Package.onUse(function (api) {
@@ -11,6 +11,6 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(["tinytest", "browser-policy", "ejson", "underscore"], "server");
-  api.addFiles("browser-policy-test.js", "server");
+  api.use(["tinytest", "browser-policy", "ejson"], "server");
+  api.addFiles("browser-policy-tests.js", "server");
 });

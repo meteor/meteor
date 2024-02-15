@@ -10,12 +10,21 @@ import { normalizeProjection } from "./mongo_utils";
  */
 
 const path = require("path");
+const util = require("util");
 
+/** @type {import('mongodb')} */
 var MongoDB = NpmModuleMongodb;
-var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
+import {
+  ASYNC_CURSOR_METHODS,
+  CLIENT_ONLY_METHODS,
+  getAsyncMethodName
+} from "meteor/minimongo/constants";
+import { Meteor } from "meteor/meteor";
 
 MongoInternals = {};
+
+MongoInternals.__packageName = 'mongo';
 
 MongoInternals.NpmModules = {
   mongodb: {
@@ -63,6 +72,10 @@ var unmakeMongoLegal = function (name) { return name.substr(5); };
 
 var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Binary) {
+    // for backwards compatibility
+    if (document.sub_type !== 0) {
+      return document;
+    }
     var buffer = document.value(true);
     return new Uint8Array(buffer);
   }
@@ -91,6 +104,9 @@ var replaceMeteorAtomWithMongo = function (document) {
     // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
     // serialize it correctly).
     return new MongoDB.Binary(Buffer.from(document));
+  }
+  if (document instanceof MongoDB.Binary) {
+     return document;
   }
   if (document instanceof Mongo.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
@@ -172,79 +188,35 @@ MongoConnection = function (url, options) {
     });
 
   self.db = null;
-  // We keep track of the ReplSet's primary, so that we can trigger hooks when
-  // it changes.  The Node driver's joined callback seems to fire way too
-  // often, which is why we need to track it ourselves.
-  self._primary = null;
   self._oplogHandle = null;
   self._docFetcher = null;
 
+  self.client = new MongoDB.MongoClient(url, mongoOptions);
+  self.db = self.client.db();
 
-  var connectFuture = new Future;
-  new MongoDB.MongoClient(
-    url,
-    mongoOptions
-  ).connect(
-    Meteor.bindEnvironment(
-      function (err, client) {
-        if (err) {
-          throw err;
-        }
-
-        var db = client.db();
-        try {
-          const helloDocument = db.admin().command({hello: 1}).await();
-          // First, figure out what the current primary is, if any.
-          if (helloDocument.primary) {
-            self._primary = helloDocument.primary;
-          }
-        }catch(_){
-          // ismaster command is supported on older mongodb versions
-          const isMasterDocument = db.admin().command({ismaster:1}).await();
-          // First, figure out what the current primary is, if any.
-          if (isMasterDocument.primary) {
-            self._primary = isMasterDocument.primary;
-          }
-        }
-
-        client.topology.on(
-          'joined', Meteor.bindEnvironment(function (kind, doc) {
-            if (kind === 'primary') {
-              if (doc.primary !== self._primary) {
-                self._primary = doc.primary;
-                self._onFailoverHook.each(function (callback) {
-                  callback();
-                  return true;
-                });
-              }
-            } else if (doc.me === self._primary) {
-              // The thing we thought was primary is now something other than
-              // primary.  Forget that we thought it was primary.  (This means
-              // that if a server stops being primary and then starts being
-              // primary again without another server becoming primary in the
-              // middle, we'll correctly count it as a failover.)
-              self._primary = null;
-            }
-          }));
-
-        // Allow the constructor to return.
-        connectFuture['return']({ client, db });
-      },
-      connectFuture.resolver()  // onException
-    )
-  );
-
-  // Wait for the connection to be successful (throws on failure) and assign the
-  // results (`client` and `db`) to `self`.
-  Object.assign(self, connectFuture.wait());
+  self.client.on('serverDescriptionChanged', Meteor.bindEnvironment(event => {
+    // When the connection is no longer against the primary node, execute all
+    // failover hooks. This is important for the driver as it has to re-pool the
+    // query when it happens.
+    if (
+      event.previousDescription.type !== 'RSPrimary' &&
+      event.newDescription.type === 'RSPrimary'
+    ) {
+      self._onFailoverHook.each(callback => {
+        callback();
+        return true;
+      });
+    }
+  }));
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
+
 };
 
-MongoConnection.prototype.close = function() {
+MongoConnection.prototype._close = async function() {
   var self = this;
 
   if (! self.db)
@@ -254,12 +226,16 @@ MongoConnection.prototype.close = function() {
   var oplogHandle = self._oplogHandle;
   self._oplogHandle = null;
   if (oplogHandle)
-    oplogHandle.stop();
+    await oplogHandle.stop();
 
   // Use Future.wrap so that errors get thrown. This happens to
   // work even outside a fiber since the 'close' method is not
   // actually asynchronous.
-  Future.wrap(_.bind(self.client.close, self.client))(true).wait();
+  await self.client.close();
+};
+
+MongoConnection.prototype.close = function () {
+  return this._close();
 };
 
 // Returns the Mongo Collection object; may yield.
@@ -272,19 +248,16 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
   return self.db.collection(collectionName);
 };
 
-MongoConnection.prototype._createCappedCollection = function (
+MongoConnection.prototype.createCappedCollectionAsync = async function (
     collectionName, byteSize, maxDocuments) {
   var self = this;
 
   if (! self.db)
-    throw Error("_createCappedCollection called before Connection created?");
+    throw Error("createCappedCollectionAsync called before Connection created?");
 
-  var future = new Future();
-  self.db.createCollection(
-    collectionName,
-    { capped: true, size: byteSize, max: maxDocuments },
-    future.resolver());
-  future.wait();
+
+  await self.db.createCollection(collectionName,
+    { capped: true, size: byteSize, max: maxDocuments });
 };
 
 // This should be called synchronously with a write, to create a
@@ -293,7 +266,7 @@ MongoConnection.prototype._createCappedCollection = function (
 // after the observer notifiers have added themselves to the write
 // fence), you should call 'committed()' on the object returned.
 MongoConnection.prototype._maybeBeginWrite = function () {
-  var fence = DDPServer._CurrentWriteFence.get();
+  const fence = DDPServer._getCurrentFence();
   if (fence) {
     return fence.beginWrite();
   } else {
@@ -354,56 +327,43 @@ var bindEnvironmentForWrite = function (callback) {
   return Meteor.bindEnvironment(callback, "Mongo write");
 };
 
-MongoConnection.prototype._insert = function (collection_name, document,
-                                              callback) {
-  var self = this;
-
-  var sendError = function (e) {
-    if (callback)
-      return callback(e);
-    throw e;
-  };
+MongoConnection.prototype.insertAsync = async function (collection_name, document) {
+  const self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
-    var e = new Error("Failure test");
+    const e = new Error("Failure test");
     e._expectedByTest = true;
-    sendError(e);
-    return;
+    throw e;
   }
 
   if (!(LocalCollection._isPlainObject(document) &&
         !EJSON._isCustomType(document))) {
-    sendError(new Error(
-      "Only plain objects may be inserted into MongoDB"));
-    return;
+    throw new Error("Only plain objects may be inserted into MongoDB");
   }
 
   var write = self._maybeBeginWrite();
-  var refresh = function () {
-    Meteor.refresh({collection: collection_name, id: document._id });
+  var refresh = async function () {
+    await Meteor.refresh({collection: collection_name, id: document._id });
   };
-  callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
-  try {
-    var collection = self.rawCollection(collection_name);
-    collection.insertOne(
-      replaceTypes(document, replaceMeteorAtomWithMongo),
-      {
-        safe: true,
-      }
-    ).then(({insertedId}) => {
-      callback(null, insertedId);
-    }).catch((e) => {
-      callback(e, null)
-    });
-  } catch (err) {
-    write.committed();
-    throw err;
-  }
+  return self.rawCollection(collection_name).insertOne(
+    replaceTypes(document, replaceMeteorAtomWithMongo),
+    {
+      safe: true,
+    }
+  ).then(async ({insertedId}) => {
+    await refresh();
+    await write.committed();
+    return insertedId;
+  }).catch(async e => {
+    await write.committed();
+    throw e;
+  });
 };
+
 
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
-MongoConnection.prototype._refresh = function (collectionName, selector) {
+MongoConnection.prototype._refresh = async function (collectionName, selector) {
   var refreshKey = {collection: collectionName};
   // If we know which documents we're removing, don't poll queries that are
   // specific to other documents. (Note that multiple notifications here should
@@ -411,106 +371,96 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   // poll.)
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
   if (specificIds) {
-    _.each(specificIds, function (id) {
-      Meteor.refresh(_.extend({id: id}, refreshKey));
-    });
+    for (const id of specificIds) {
+      await Meteor.refresh(_.extend({id: id}, refreshKey));
+    }
   } else {
-    Meteor.refresh(refreshKey);
+    await Meteor.refresh(refreshKey);
   }
 };
 
-MongoConnection.prototype._remove = function (collection_name, selector,
-                                              callback) {
+MongoConnection.prototype.removeAsync = async function (collection_name, selector) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e._expectedByTest = true;
-    if (callback) {
-      return callback(e);
-    } else {
-      throw e;
-    }
-  }
-
-  var write = self._maybeBeginWrite();
-  var refresh = function () {
-    self._refresh(collection_name, selector);
-  };
-  callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
-
-  try {
-    var collection = self.rawCollection(collection_name);
-    collection
-      .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
-        safe: true,
-      })
-      .then(({ deletedCount }) => {
-        callback(null, transformResult({ result : {modifiedCount : deletedCount} }).numberAffected);
-      }).catch((err) => {
-      callback(err);
-    });
-  } catch (err) {
-    write.committed();
-    throw err;
-  }
-};
-
-MongoConnection.prototype._dropCollection = function (collectionName, cb) {
-  var self = this;
-
-  var write = self._maybeBeginWrite();
-  var refresh = function () {
-    Meteor.refresh({collection: collectionName, id: null,
-                    dropCollection: true});
-  };
-  cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
-
-  try {
-    var collection = self.rawCollection(collectionName);
-    collection.drop(cb);
-  } catch (e) {
-    write.committed();
     throw e;
   }
+
+  var write = self._maybeBeginWrite();
+  var refresh = async function () {
+    await self._refresh(collection_name, selector);
+  };
+
+  return self.rawCollection(collection_name)
+    .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
+      safe: true,
+    })
+    .then(async ({ deletedCount }) => {
+      await refresh();
+      await write.committed();
+      return transformResult({ result : {modifiedCount : deletedCount} }).numberAffected;
+    }).catch(async (err) => {
+        await write.committed();
+        throw err;
+    });
+};
+
+MongoConnection.prototype.dropCollectionAsync = async function(collectionName) {
+  var self = this;
+
+
+  var write = self._maybeBeginWrite();
+  var refresh = function() {
+    return Meteor.refresh({
+      collection: collectionName,
+      id: null,
+      dropCollection: true,
+    });
+  };
+
+  return self
+    .rawCollection(collectionName)
+    .drop()
+    .then(async result => {
+      await refresh();
+      await write.committed();
+      return result;
+    })
+    .catch(async e => {
+      await write.committed();
+      throw e;
+    });
 };
 
 // For testing only.  Slightly better than `c.rawDatabase().dropDatabase()`
 // because it lets the test's fence wait for it to be complete.
-MongoConnection.prototype._dropDatabase = function (cb) {
+MongoConnection.prototype.dropDatabaseAsync = async function () {
   var self = this;
 
   var write = self._maybeBeginWrite();
-  var refresh = function () {
-    Meteor.refresh({ dropDatabase: true });
+  var refresh = async function () {
+    await Meteor.refresh({ dropDatabase: true });
   };
-  cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
 
   try {
-    self.db.dropDatabase(cb);
+    await self.db._dropDatabase();
+    await refresh();
+    await write.committed();
   } catch (e) {
-    write.committed();
+    await write.committed();
     throw e;
   }
 };
 
-MongoConnection.prototype._update = function (collection_name, selector, mod,
-                                              options, callback) {
+MongoConnection.prototype.updateAsync = async function (collection_name, selector, mod, options) {
   var self = this;
-
-  if (! callback && options instanceof Function) {
-    callback = options;
-    options = null;
-  }
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e._expectedByTest = true;
-    if (callback) {
-      return callback(e);
-    } else {
-      throw e;
-    }
+    throw e;
   }
 
   // explicit safety check. null and undefined can crash the mongo
@@ -518,149 +468,132 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   // non-object modifier in that they don't crash, they are not
   // meaningful operations and do not do anything. Defensively throw an
   // error here.
-  if (!mod || typeof mod !== 'object')
-    throw new Error("Invalid modifier. Modifier must be an object.");
+  if (!mod || typeof mod !== 'object') {
+    const error = new Error("Invalid modifier. Modifier must be an object.");
 
-  if (!(LocalCollection._isPlainObject(mod) &&
-        !EJSON._isCustomType(mod))) {
-    throw new Error(
-      "Only plain objects may be used as replacement" +
+    throw error;
+  }
+
+  if (!(LocalCollection._isPlainObject(mod) && !EJSON._isCustomType(mod))) {
+    const error = new Error(
+        "Only plain objects may be used as replacement" +
         " documents in MongoDB");
+
+    throw error;
   }
 
   if (!options) options = {};
 
   var write = self._maybeBeginWrite();
-  var refresh = function () {
-    self._refresh(collection_name, selector);
+  var refresh = async function () {
+    await self._refresh(collection_name, selector);
   };
-  callback = writeCallback(write, refresh, callback);
-  try {
-    var collection = self.rawCollection(collection_name);
-    var mongoOpts = {safe: true};
-    // Add support for filtered positional operator
-    if (options.arrayFilters !== undefined) mongoOpts.arrayFilters = options.arrayFilters;
-    // explictly enumerate options that minimongo supports
-    if (options.upsert) mongoOpts.upsert = true;
-    if (options.multi) mongoOpts.multi = true;
-    // Lets you get a more more full result from MongoDB. Use with caution:
-    // might not work with C.upsert (as opposed to C.update({upsert:true}) or
-    // with simulated upsert.
-    if (options.fullResult) mongoOpts.fullResult = true;
 
-    var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
-    var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
+  var collection = self.rawCollection(collection_name);
+  var mongoOpts = {safe: true};
+  // Add support for filtered positional operator
+  if (options.arrayFilters !== undefined) mongoOpts.arrayFilters = options.arrayFilters;
+  // explictly enumerate options that minimongo supports
+  if (options.upsert) mongoOpts.upsert = true;
+  if (options.multi) mongoOpts.multi = true;
+  // Lets you get a more more full result from MongoDB. Use with caution:
+  // might not work with C.upsert (as opposed to C.update({upsert:true}) or
+  // with simulated upsert.
+  if (options.fullResult) mongoOpts.fullResult = true;
 
-    var isModify = LocalCollection._isModificationMod(mongoMod);
+  var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
+  var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
 
-    if (options._forbidReplace && !isModify) {
-      var err = new Error("Invalid modifier. Replacements are forbidden.");
-      if (callback) {
-        return callback(err);
-      } else {
-        throw err;
-      }
+  var isModify = LocalCollection._isModificationMod(mongoMod);
+
+  if (options._forbidReplace && !isModify) {
+    var err = new Error("Invalid modifier. Replacements are forbidden.");
+    throw err;
+  }
+
+  // We've already run replaceTypes/replaceMeteorAtomWithMongo on
+  // selector and mod.  We assume it doesn't matter, as far as
+  // the behavior of modifiers is concerned, whether `_modify`
+  // is run on EJSON or on mongo-converted EJSON.
+
+  // Run this code up front so that it fails fast if someone uses
+  // a Mongo update operator we don't support.
+  let knownId;
+  if (options.upsert) {
+    try {
+      let newDoc = LocalCollection._createUpsertDocument(selector, mod);
+      knownId = newDoc._id;
+    } catch (err) {
+      throw err;
     }
+  }
+  if (options.upsert &&
+      ! isModify &&
+      ! knownId &&
+      options.insertedId &&
+      ! (options.insertedId instanceof Mongo.ObjectID &&
+         options.generatedId)) {
+    // In case of an upsert with a replacement, where there is no _id defined
+    // in either the query or the replacement doc, mongo will generate an id itself.
+    // Therefore we need this special strategy if we want to control the id ourselves.
 
-    // We've already run replaceTypes/replaceMeteorAtomWithMongo on
-    // selector and mod.  We assume it doesn't matter, as far as
-    // the behavior of modifiers is concerned, whether `_modify`
-    // is run on EJSON or on mongo-converted EJSON.
-
-    // Run this code up front so that it fails fast if someone uses
-    // a Mongo update operator we don't support.
-    let knownId;
-    if (options.upsert) {
-      try {
-        let newDoc = LocalCollection._createUpsertDocument(selector, mod);
-        knownId = newDoc._id;
-      } catch (err) {
-        if (callback) {
-          return callback(err);
-        } else {
-          throw err;
-        }
-      }
-    }
-
-    if (options.upsert &&
-        ! isModify &&
-        ! knownId &&
-        options.insertedId &&
-        ! (options.insertedId instanceof Mongo.ObjectID &&
-           options.generatedId)) {
-      // In case of an upsert with a replacement, where there is no _id defined
-      // in either the query or the replacement doc, mongo will generate an id itself.
-      // Therefore we need this special strategy if we want to control the id ourselves.
-
-      // We don't need to do this when:
-      // - This is not a replacement, so we can add an _id to $setOnInsert
-      // - The id is defined by query or mod we can just add it to the replacement doc
-      // - The user did not specify any id preference and the id is a Mongo ObjectId,
-      //     then we can just let Mongo generate the id
-
-      simulateUpsertWithInsertedId(
-        collection, mongoSelector, mongoMod, options,
-        // This callback does not need to be bindEnvironment'ed because
-        // simulateUpsertWithInsertedId() wraps it and then passes it through
-        // bindEnvironmentForWrite.
-        function (error, result) {
-          // If we got here via a upsert() call, then options._returnObject will
-          // be set and we should return the whole object. Otherwise, we should
-          // just return the number of affected docs to match the mongo API.
+    // We don't need to do this when:
+    // - This is not a replacement, so we can add an _id to $setOnInsert
+    // - The id is defined by query or mod we can just add it to the replacement doc
+    // - The user did not specify any id preference and the id is a Mongo ObjectId,
+    //     then we can just let Mongo generate the id
+    return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options)
+        .then(async result => {
+          await refresh();
+          await write.committed();
           if (result && ! options._returnObject) {
-            callback(error, result.numberAffected);
+            return result.numberAffected;
           } else {
-            callback(error, result);
+            return result;
           }
-        }
-      );
-    } else {
-
-      if (options.upsert && !knownId && options.insertedId && isModify) {
-        if (!mongoMod.hasOwnProperty('$setOnInsert')) {
-          mongoMod.$setOnInsert = {};
-        }
-        knownId = options.insertedId;
-        Object.assign(mongoMod.$setOnInsert, replaceTypes({_id: options.insertedId}, replaceMeteorAtomWithMongo));
+        });
+  } else {
+    if (options.upsert && !knownId && options.insertedId && isModify) {
+      if (!mongoMod.hasOwnProperty('$setOnInsert')) {
+        mongoMod.$setOnInsert = {};
       }
-
-      const strings = Object.keys(mongoMod).filter((key) => !key.startsWith("$"));
-      let updateMethod = strings.length > 0 ? 'replaceOne' : 'updateMany';
-      updateMethod =
-        updateMethod === 'updateMany' && !mongoOpts.multi
-          ? 'updateOne'
-          : updateMethod;
-      collection[updateMethod].bind(collection)(
-        mongoSelector, mongoMod, mongoOpts,
-          // mongo driver now returns undefined for err in the callback
-          bindEnvironmentForWrite(function (err = null, result) {
-          if (! err) {
-            var meteorResult = transformResult({result});
-            if (meteorResult && options._returnObject) {
-              // If this was an upsert() call, and we ended up
-              // inserting a new doc and we know its id, then
-              // return that id as well.
-              if (options.upsert && meteorResult.insertedId) {
-                if (knownId) {
-                  meteorResult.insertedId = knownId;
-                } else if (meteorResult.insertedId instanceof MongoDB.ObjectID) {
-                  meteorResult.insertedId = new Mongo.ObjectID(meteorResult.insertedId.toHexString());
-                }
-              }
-
-              callback(err, meteorResult);
-            } else {
-              callback(err, meteorResult.numberAffected);
-            }
-          } else {
-            callback(err);
-          }
-        }));
+      knownId = options.insertedId;
+      Object.assign(mongoMod.$setOnInsert, replaceTypes({_id: options.insertedId}, replaceMeteorAtomWithMongo));
     }
-  } catch (e) {
-    write.committed();
-    throw e;
+
+    const strings = Object.keys(mongoMod).filter((key) => !key.startsWith("$"));
+    let updateMethod = strings.length > 0 ? 'replaceOne' : 'updateMany';
+    updateMethod =
+        updateMethod === 'updateMany' && !mongoOpts.multi
+            ? 'updateOne'
+            : updateMethod;
+    return collection[updateMethod]
+        .bind(collection)(mongoSelector, mongoMod, mongoOpts)
+        .then(async result => {
+          var meteorResult = transformResult({result});
+          if (meteorResult && options._returnObject) {
+            // If this was an upsertAsync() call, and we ended up
+            // inserting a new doc and we know its id, then
+            // return that id as well.
+            if (options.upsert && meteorResult.insertedId) {
+              if (knownId) {
+                meteorResult.insertedId = knownId;
+              } else if (meteorResult.insertedId instanceof MongoDB.ObjectID) {
+                meteorResult.insertedId = new Mongo.ObjectID(meteorResult.insertedId.toHexString());
+              }
+            }
+            await refresh();
+            await write.committed();
+            return meteorResult;
+          } else {
+            await refresh();
+            await write.committed();
+            return meteorResult.numberAffected;
+          }
+        }).catch(async (err) => {
+          await write.committed();
+          throw err;
+        });
   }
 };
 
@@ -710,8 +643,7 @@ MongoConnection._isCannotChangeIdError = function (err) {
   return false;
 };
 
-var simulateUpsertWithInsertedId = function (collection, selector, mod,
-                                             options, callback) {
+var simulateUpsertWithInsertedId = async function (collection, selector, mod, options) {
   // STRATEGY: First try doing an upsert with a generated ID.
   // If this throws an error about changing the ID on an existing document
   // then without affecting the database, we know we should probably try
@@ -741,86 +673,60 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 
   var tries = NUM_OPTIMISTIC_TRIES;
 
-  var doUpdate = function () {
+  var doUpdate = async function () {
     tries--;
     if (! tries) {
-      callback(new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries."));
+      throw new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries.");
     } else {
       let method = collection.updateMany;
       if(!Object.keys(mod).some(key => key.startsWith("$"))){
         method = collection.replaceOne.bind(collection);
       }
-      method(
+      return method(
         selector,
         mod,
-        mongoOptsForUpdate,
-        bindEnvironmentForWrite(function(err, result) {
-          if (err) {
-            callback(err);
-          } else if (result && (result.modifiedCount || result.upsertedCount)) {
-            callback(null, {
-              numberAffected: result.modifiedCount || result.upsertedCount,
-              insertedId: result.upsertedId || undefined,
-            });
-          } else {
-            doConditionalInsert();
-          }
-        })
-      );
+        mongoOptsForUpdate).then(result => {
+        if (result && (result.modifiedCount || result.upsertedCount)) {
+          return {
+            numberAffected: result.modifiedCount || result.upsertedCount,
+            insertedId: result.upsertedId || undefined,
+          };
+        } else {
+          return doConditionalInsert();
+        }
+      });
     }
   };
 
   var doConditionalInsert = function() {
-    collection.replaceOne(
-      selector,
-      replacementWithId,
-      mongoOptsForInsert,
-      bindEnvironmentForWrite(function(err, result) {
-        if (err) {
-          // figure out if this is a
-          // "cannot change _id of document" error, and
-          // if so, try doUpdate() again, up to 3 times.
-          if (MongoConnection._isCannotChangeIdError(err)) {
-            doUpdate();
-          } else {
-            callback(err);
-          }
-        } else {
-          callback(null, {
+    return collection.replaceOne(selector, replacementWithId, mongoOptsForInsert)
+        .then(result => ({
             numberAffected: result.upsertedCount,
             insertedId: result.upsertedId,
-          });
+          })).catch(err => {
+        if (MongoConnection._isCannotChangeIdError(err)) {
+          return doUpdate();
+        } else {
+          throw err;
         }
-      })
-    );
-  };
+      });
 
-  doUpdate();
+  };
+  return doUpdate();
 };
 
-_.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
-  MongoConnection.prototype[method] = function (/* arguments */) {
-    var self = this;
-    return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
-  };
-});
 
-// XXX MongoConnection.upsert() does not return the id of the inserted document
+// XXX MongoConnection.upsertAsync() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
 // doc).
-MongoConnection.prototype.upsert = function (collectionName, selector, mod,
-                                             options, callback) {
+MongoConnection.prototype.upsertAsync = async function (collectionName, selector, mod, options) {
   var self = this;
-  if (typeof options === "function" && ! callback) {
-    callback = options;
-    options = {};
-  }
 
-  return self.update(collectionName, selector, mod,
+  return self.updateAsync(collectionName, selector, mod,
                      _.extend({}, options, {
                        upsert: true,
                        _returnObject: true
-                     }), callback);
+                     }));
 };
 
 MongoConnection.prototype.find = function (collectionName, selector, options) {
@@ -833,43 +739,70 @@ MongoConnection.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-MongoConnection.prototype.findOne = function (collection_name, selector,
-                                              options) {
+MongoConnection.prototype.findOneAsync = async function (collection_name, selector, options) {
   var self = this;
-  if (arguments.length === 1)
+  if (arguments.length === 1) {
     selector = {};
+  }
 
   options = options || {};
   options.limit = 1;
-  return self.find(collection_name, selector, options).fetch()[0];
+
+  const results = await self.find(collection_name, selector, options).fetch();
+
+  return results[0];
 };
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-MongoConnection.prototype.createIndex = function (collectionName, index,
+MongoConnection.prototype.createIndexAsync = async function (collectionName, index,
                                                    options) {
   var self = this;
 
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
   var collection = self.rawCollection(collectionName);
-  var future = new Future;
-  var indexName = collection.createIndex(index, options, future.resolver());
-  future.wait();
+  await collection.createIndex(index, options);
 };
 
-MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
+// just to be consistent with the other methods
+MongoConnection.prototype.createIndex =
+  MongoConnection.prototype.createIndexAsync;
 
-MongoConnection.prototype._dropIndex = function (collectionName, index) {
+MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.countDocuments(...args);
+};
+
+MongoConnection.prototype.estimatedDocumentCount = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
+  const collection = this.rawCollection(collectionName);
+  return collection.estimatedDocumentCount(...args);
+};
+
+MongoConnection.prototype.ensureIndexAsync = MongoConnection.prototype.createIndexAsync;
+
+MongoConnection.prototype.dropIndexAsync = async function (collectionName, index) {
   var self = this;
+
 
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
-  var future = new Future;
-  var indexName = collection.dropIndex(index, future.resolver());
-  future.wait();
+  var indexName =  await collection.dropIndex(index);
 };
+
+
+CLIENT_ONLY_METHODS.forEach(function (m) {
+  MongoConnection.prototype[m] = function () {
+    throw new Error(
+      `${m} +  is not available on the server. Please use ${getAsyncMethodName(
+        m
+      )}() instead.`
+    );
+  };
+});
 
 // CURSORS
 
@@ -919,26 +852,64 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-_.each(['forEach', 'map', 'fetch', 'count', Symbol.iterator], function (method) {
-  Cursor.prototype[method] = function () {
-    var self = this;
+function setupSynchronousCursor(cursor, method) {
+  // You can only observe a tailable cursor.
+  if (cursor._cursorDescription.options.tailable)
+    throw new Error('Cannot call ' + method + ' on a tailable cursor');
 
-    // You can only observe a tailable cursor.
-    if (self._cursorDescription.options.tailable)
-      throw new Error("Cannot call " + method + " on a tailable cursor");
+  if (!cursor._synchronousCursor) {
+    cursor._synchronousCursor = cursor._mongo._createSynchronousCursor(
+      cursor._cursorDescription,
+      {
+        // Make sure that the "cursor" argument to forEach/map callbacks is the
+        // Cursor, not the SynchronousCursor.
+        selfForIteration: cursor,
+        useTransform: true,
+      }
+    );
+  }
 
-    if (!self._synchronousCursor) {
-      self._synchronousCursor = self._mongo._createSynchronousCursor(
-        self._cursorDescription, {
-          // Make sure that the "self" argument to forEach/map callbacks is the
-          // Cursor, not the SynchronousCursor.
-          selfForIteration: self,
-          useTransform: true
-        });
+  return cursor._synchronousCursor;
+}
+
+
+Cursor.prototype.countAsync = async function () {
+  const collection = this._mongo.rawCollection(this._cursorDescription.collectionName);
+  return await collection.countDocuments(
+    replaceTypes(this._cursorDescription.selector, replaceMeteorAtomWithMongo),
+    replaceTypes(this._cursorDescription.options, replaceMeteorAtomWithMongo),
+  );
+};
+
+Cursor.prototype.count = function () {
+  throw new Error(
+    "count() is not avaible on the server. Please use countAsync() instead."
+  );
+};
+
+[...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
+  // count is handled specially since we don't want to create a cursor.
+  // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
+  if (methodName === 'count') {
+    return
+  }
+  Cursor.prototype[methodName] = function (...args) {
+    const cursor = setupSynchronousCursor(this, methodName);
+    return cursor[methodName](...args);
+  };
+
+  // These methods are handled separately.
+  if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) {
+    return;
+  }
+
+  const methodNameAsync = getAsyncMethodName(methodName);
+  Cursor.prototype[methodNameAsync] = function (...args) {
+    try {
+      return Promise.resolve(this[methodName](...args));
+    } catch (error) {
+      return Promise.reject(error);
     }
-
-    return self._synchronousCursor[method].apply(
-      self._synchronousCursor, arguments);
   };
 });
 
@@ -1044,10 +1015,163 @@ MongoConnection.prototype._createSynchronousCursor = function(
     dbCursor = dbCursor.hint(cursorOptions.hint);
   }
 
-  return new SynchronousCursor(dbCursor, cursorDescription, options);
+  return new AsynchronousCursor(dbCursor, cursorDescription, options, collection);
 };
 
-var SynchronousCursor = function (dbCursor, cursorDescription, options) {
+/**
+ * This is just a light wrapper for the cursor. The goal here is to ensure compatibility even if
+ * there are breaking changes on the MongoDB driver.
+ *
+ * @constructor
+ */
+class AsynchronousCursor {
+  constructor(dbCursor, cursorDescription, options) {
+    this._dbCursor = dbCursor;
+    this._cursorDescription = cursorDescription;
+
+    this._selfForIteration = options.selfForIteration || this;
+    if (options.useTransform && cursorDescription.options.transform) {
+      this._transform = LocalCollection.wrapTransform(
+          cursorDescription.options.transform);
+    } else {
+      this._transform = null;
+    }
+
+    this._visitedIds = new LocalCollection._IdMap;
+  }
+  
+  [Symbol.asyncIterator]() {
+    var cursor = this;
+    return {
+      async next() {
+        const value = await cursor._nextObjectPromise();
+        return { done: !value, value };
+      },
+    };
+  }
+
+  // Returns a Promise for the next object from the underlying cursor (before
+  // the Mongo->Meteor type replacement).
+  async _rawNextObjectPromise() {
+    try {
+      return this._dbCursor.next();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Returns a Promise for the next object from the cursor, skipping those whose
+  // IDs we've already seen and replacing Mongo atoms with Meteor atoms.
+  async _nextObjectPromise () {
+    while (true) {
+      var doc = await this._rawNextObjectPromise();
+
+      if (!doc) return null;
+      doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
+
+      if (!this._cursorDescription.options.tailable && _.has(doc, '_id')) {
+        // Did Mongo give us duplicate documents in the same cursor? If so,
+        // ignore this one. (Do this before the transform, since transform might
+        // return some unrelated value.) We don't do this for tailable cursors,
+        // because we want to maintain O(1) memory usage. And if there isn't _id
+        // for some reason (maybe it's the oplog), then we don't do this either.
+        // (Be careful to do this for falsey but existing _id, though.)
+        if (this._visitedIds.has(doc._id)) continue;
+        this._visitedIds.set(doc._id, true);
+      }
+
+      if (this._transform)
+        doc = this._transform(doc);
+
+      return doc;
+    }
+  }
+
+  // Returns a promise which is resolved with the next object (like with
+  // _nextObjectPromise) or rejected if the cursor doesn't return within
+  // timeoutMS ms.
+  _nextObjectPromiseWithTimeout(timeoutMS) {
+    if (!timeoutMS) {
+      return this._nextObjectPromise();
+    }
+    const nextObjectPromise = this._nextObjectPromise();
+    const timeoutErr = new Error('Client-side timeout waiting for next object');
+    const timeoutPromise = new Promise((resolve, reject) => {
+      setTimeout(() => {
+        reject(timeoutErr);
+      }, timeoutMS);
+    });
+    return Promise.race([nextObjectPromise, timeoutPromise])
+        .catch((err) => {
+          if (err === timeoutErr) {
+            this.close();
+          }
+          throw err;
+        });
+  }
+
+  async forEach(callback, thisArg) {
+    // Get back to the beginning.
+    this._rewind();
+
+    let idx = 0;
+    while (true) {
+      const doc = await this._nextObjectPromise();
+      if (!doc) return;
+      await callback.call(thisArg, doc, idx++, this._selfForIteration);
+    }
+  }
+
+  async map(callback, thisArg) {
+    const results = [];
+    await this.forEach(async (doc, index) => {
+      results.push(await callback.call(thisArg, doc, index, this._selfForIteration));
+    });
+
+    return results;
+  }
+
+  _rewind() {
+    // known to be synchronous
+    this._dbCursor.rewind();
+
+    this._visitedIds = new LocalCollection._IdMap;
+  }
+
+  // Mostly usable for tailable cursors.
+  close() {
+    this._dbCursor.close();
+  }
+
+  fetch() {
+    return this.map(_.identity);
+  }
+
+  /**
+   * FIXME: (node:34680) [MONGODB DRIVER] Warning: cursor.count is deprecated and will be
+   *  removed in the next major version, please use `collection.estimatedDocumentCount` or
+   *  `collection.countDocuments` instead.
+   */
+  count() {
+    return this._dbCursor.count();
+  }
+
+  // This method is NOT wrapped in Cursor.
+  async getRawObjects(ordered) {
+    var self = this;
+    if (ordered) {
+      return self.fetch();
+    } else {
+      var results = new LocalCollection._IdMap;
+      await self.forEach(function (doc) {
+        results.set(doc._id, doc);
+      });
+      return results;
+    }
+  }
+}
+
+var SynchronousCursor = function (dbCursor, cursorDescription, options, collection) {
   var self = this;
   options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
@@ -1063,7 +1187,13 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
     self._transform = null;
   }
 
-  self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
+  self._synchronousCount = Future.wrap(
+    collection.countDocuments.bind(
+      collection,
+      replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
+      replaceTypes(cursorDescription.options, replaceMeteorAtomWithMongo),
+    )
+  );
   self._visitedIds = new LocalCollection._IdMap;
 };
 
@@ -1143,6 +1273,7 @@ _.extend(SynchronousCursor.prototype, {
 
   forEach: function (callback, thisArg) {
     var self = this;
+    const wrappedFn = Meteor.wrapFn(callback);
 
     // Get back to the beginning.
     self._rewind();
@@ -1154,16 +1285,17 @@ _.extend(SynchronousCursor.prototype, {
     while (true) {
       var doc = self._nextObject();
       if (!doc) return;
-      callback.call(thisArg, doc, index++, self._selfForIteration);
+      wrappedFn.call(thisArg, doc, index++, self._selfForIteration);
     }
   },
 
   // XXX Allow overlapping callback executions if callback yields.
   map: function (callback, thisArg) {
     var self = this;
+    const wrappedFn = Meteor.wrapFn(callback);
     var res = [];
     self.forEach(function (doc, index) {
-      res.push(callback.call(thisArg, doc, index, self._selfForIteration));
+      res.push(wrappedFn.call(thisArg, doc, index, self._selfForIteration));
     });
     return res;
   },
@@ -1227,6 +1359,15 @@ SynchronousCursor.prototype[Symbol.iterator] = function () {
   };
 };
 
+SynchronousCursor.prototype[Symbol.asyncIterator] = function () {
+  const syncResult = this[Symbol.iterator]();
+  return {
+    async next() {
+      return Promise.resolve(syncResult.next());
+    }
+  };
+}
+
 // Tails the cursor described by cursorDescription, most likely on the
 // oplog. Calls docCallback with each document found. Ignores errors and just
 // restarts the tail on error.
@@ -1242,13 +1383,14 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
 
   var stopped = false;
   var lastTS;
-  var loop = function () {
+
+  Meteor.defer(async function loop() {
     var doc = null;
     while (true) {
       if (stopped)
         return;
       try {
-        doc = cursor._nextObjectPromiseWithTimeout(timeoutMS).await();
+        doc = await cursor._nextObjectPromiseWithTimeout(timeoutMS);
       } catch (err) {
         // There's no good way to figure out if this was actually an error from
         // Mongo, or just client-side (including our own timeout error). Ah
@@ -1279,13 +1421,11 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
         // Mongo failover takes many seconds.  Retry in a bit.  (Without this
         // setTimeout, we peg the CPU at 100% and never notice the actual
         // failover.
-        Meteor.setTimeout(loop, 100);
+        setTimeout(loop, 100);
         break;
       }
     }
-  };
-
-  Meteor.defer(loop);
+  });
 
   return {
     stop: function () {
@@ -1295,33 +1435,33 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   };
 };
 
-MongoConnection.prototype._observeChanges = function (
-    cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
-  var self = this;
+Object.assign(MongoConnection.prototype, {
+  _observeChanges: async function (
+      cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
+    var self = this;
 
-  if (cursorDescription.options.tailable) {
-    return self._observeChangesTailable(cursorDescription, ordered, callbacks);
-  }
+    if (cursorDescription.options.tailable) {
+      return self._observeChangesTailable(cursorDescription, ordered, callbacks);
+    }
 
-  // You may not filter out _id when observing changes, because the id is a core
-  // part of the observeChanges API.
-  const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
-  if (fieldsOptions &&
-      (fieldsOptions._id === 0 ||
-       fieldsOptions._id === false)) {
-    throw Error("You may not observe a cursor with {fields: {_id: 0}}");
-  }
+    // You may not filter out _id when observing changes, because the id is a core
+    // part of the observeChanges API.
+    const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
+    if (fieldsOptions &&
+        (fieldsOptions._id === 0 ||
+            fieldsOptions._id === false)) {
+      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+    }
 
-  var observeKey = EJSON.stringify(
-    _.extend({ordered: ordered}, cursorDescription));
+    var observeKey = EJSON.stringify(
+        _.extend({ordered: ordered}, cursorDescription));
 
-  var multiplexer, observeDriver;
-  var firstHandle = false;
+    var multiplexer, observeDriver;
+    var firstHandle = false;
 
-  // Find a matching ObserveMultiplexer, or create a new one. This next block is
-  // guaranteed to not yield (and it doesn't call anything that can observe a
-  // new query), so no other calls to this function can interleave with it.
-  Meteor._noYieldsAllowed(function () {
+    // Find a matching ObserveMultiplexer, or create a new one. This next block is
+    // guaranteed to not yield (and it doesn't call anything that can observe a
+    // new query), so no other calls to this function can interleave with it.
     if (_.has(self._observeMultiplexers, observeKey)) {
       multiplexer = self._observeMultiplexers[observeKey];
     } else {
@@ -1331,76 +1471,81 @@ MongoConnection.prototype._observeChanges = function (
         ordered: ordered,
         onStop: function () {
           delete self._observeMultiplexers[observeKey];
-          observeDriver.stop();
+          return observeDriver.stop();
         }
       });
-      self._observeMultiplexers[observeKey] = multiplexer;
     }
-  });
 
-  var observeHandle = new ObserveHandle(multiplexer,
-    callbacks,
-    nonMutatingCallbacks,
-  );
+    var observeHandle = new ObserveHandle(multiplexer,
+        callbacks,
+        nonMutatingCallbacks,
+    );
 
-  if (firstHandle) {
-    var matcher, sorter;
-    var canUseOplog = _.all([
-      function () {
-        // At a bare minimum, using the oplog requires us to have an oplog, to
-        // want unordered callbacks, and to not want a callback on the polls
-        // that won't happen.
-        return self._oplogHandle && !ordered &&
-          !callbacks._testOnlyPollCallback;
-      }, function () {
-        // We need to be able to compile the selector. Fall back to polling for
-        // some newfangled $selector that minimongo doesn't support yet.
-        try {
-          matcher = new Minimongo.Matcher(cursorDescription.selector);
-          return true;
-        } catch (e) {
-          // XXX make all compilation errors MinimongoError or something
-          //     so that this doesn't ignore unrelated exceptions
-          return false;
-        }
-      }, function () {
-        // ... and the selector itself needs to support oplog.
-        return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
-      }, function () {
-        // And we need to be able to compile the sort, if any.  eg, can't be
-        // {$natural: 1}.
-        if (!cursorDescription.options.sort)
-          return true;
-        try {
-          sorter = new Minimongo.Sorter(cursorDescription.options.sort);
-          return true;
-        } catch (e) {
-          // XXX make all compilation errors MinimongoError or something
-          //     so that this doesn't ignore unrelated exceptions
-          return false;
-        }
-      }], function (f) { return f(); });  // invoke each function
+    if (firstHandle) {
+      var matcher, sorter;
+      var canUseOplog = _.all([
+        function () {
+          // At a bare minimum, using the oplog requires us to have an oplog, to
+          // want unordered callbacks, and to not want a callback on the polls
+          // that won't happen.
+          return self._oplogHandle && !ordered &&
+              !callbacks._testOnlyPollCallback;
+        }, function () {
+          // We need to be able to compile the selector. Fall back to polling for
+          // some newfangled $selector that minimongo doesn't support yet.
+          try {
+            matcher = new Minimongo.Matcher(cursorDescription.selector);
+            return true;
+          } catch (e) {
+            // XXX make all compilation errors MinimongoError or something
+            //     so that this doesn't ignore unrelated exceptions
+            return false;
+          }
+        }, function () {
+          // ... and the selector itself needs to support oplog.
+          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
+        }, function () {
+          // And we need to be able to compile the sort, if any.  eg, can't be
+          // {$natural: 1}.
+          if (!cursorDescription.options.sort)
+            return true;
+          try {
+            sorter = new Minimongo.Sorter(cursorDescription.options.sort);
+            return true;
+          } catch (e) {
+            // XXX make all compilation errors MinimongoError or something
+            //     so that this doesn't ignore unrelated exceptions
+            return false;
+          }
+        }], function (f) { return f(); });  // invoke each function
 
-    var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
-    observeDriver = new driverClass({
-      cursorDescription: cursorDescription,
-      mongoHandle: self,
-      multiplexer: multiplexer,
-      ordered: ordered,
-      matcher: matcher,  // ignored by polling
-      sorter: sorter,  // ignored by polling
-      _testOnlyPollCallback: callbacks._testOnlyPollCallback
-    });
+      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+      observeDriver = new driverClass({
+        cursorDescription: cursorDescription,
+        mongoHandle: self,
+        multiplexer: multiplexer,
+        ordered: ordered,
+        matcher: matcher,  // ignored by polling
+        sorter: sorter,  // ignored by polling
+        _testOnlyPollCallback: callbacks._testOnlyPollCallback
+      });
 
-    // This field is only set for use in tests.
-    multiplexer._observeDriver = observeDriver;
-  }
+      if (observeDriver._init) {
+        await observeDriver._init();
+      }
 
-  // Blocks until the initial adds have been sent.
-  multiplexer.addHandleAndSendInitialAdds(observeHandle);
+      // This field is only set for use in tests.
+      multiplexer._observeDriver = observeDriver;
+    }
+    self._observeMultiplexers[observeKey] = multiplexer;
+    // Blocks until the initial adds have been sent.
+    await multiplexer.addHandleAndSendInitialAdds(observeHandle);
 
-  return observeHandle;
-};
+    return observeHandle;
+  },
+
+});
+
 
 // Listen for the invalidation messages that will trigger us to poll the
 // database for changes. If this selector specifies specific IDs, specify them

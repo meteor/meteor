@@ -15,3 +15,4 @@ shell-server            # Server-side component of the `meteor shell` command
 webapp                  # Serves a Meteor app over HTTP
 server-render           # Support for server-side rendering
 hot-module-replacement  # Rebuilds the client if there is a change on the client without restarting the server
+~prototype~

@@ -11,7 +11,7 @@ PollingObserveDriver = function (options) {
   self._stopCallbacks = [];
   self._stopped = false;
 
-  self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
+  self._cursor = self._mongoHandle._createSynchronousCursor(
     self._cursorDescription);
 
   // previous results snapshot.  on each poll cycle, diffs against
@@ -35,14 +35,14 @@ PollingObserveDriver = function (options) {
     self._cursorDescription.options.pollingThrottleMs || POLLING_THROTTLE_MS /* ms */);
 
   // XXX figure out if we still need a queue
-  self._taskQueue = new Meteor._SynchronousQueue();
+  self._taskQueue = new Meteor._AsynchronousQueue();
 
   var listenersHandle = listenAll(
     self._cursorDescription, function (notification) {
       // When someone does a transaction that might affect us, schedule a poll
       // of the database. If that transaction happens inside of a write fence,
       // block the fence until we've polled and notified observers.
-      var fence = DDPServer._CurrentWriteFence.get();
+      var fence = DDPServer._getCurrentFence();
       if (fence)
         self._pendingWrites.push(fence.beginWrite());
       // Ensure a poll is scheduled... but if we already know that one is,
@@ -52,7 +52,7 @@ PollingObserveDriver = function (options) {
         self._ensurePollIsScheduled();
     }
   );
-  self._stopCallbacks.push(function () { listenersHandle.stop(); });
+  self._stopCallbacks.push(async function () { await listenersHandle.stop(); });
 
   // every once and a while, poll even if we don't think we're dirty, for
   // eventual consistency with database writes from outside the Meteor
@@ -74,23 +74,24 @@ PollingObserveDriver = function (options) {
       Meteor.clearInterval(intervalHandle);
     });
   }
-
-  // Make sure we actually poll soon!
-  self._unthrottledEnsurePollIsScheduled();
-
-  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
-    "mongo-livedata", "observe-drivers-polling", 1);
 };
 
 _.extend(PollingObserveDriver.prototype, {
+  _init: async function () {
+    // Make sure we actually poll soon!
+    await this._unthrottledEnsurePollIsScheduled();
+
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
+        "mongo-livedata", "observe-drivers-polling", 1);
+  },
   // This is always called through _.throttle (except once at startup).
-  _unthrottledEnsurePollIsScheduled: function () {
+  _unthrottledEnsurePollIsScheduled: async function () {
     var self = this;
     if (self._pollsScheduledButNotStarted > 0)
       return;
     ++self._pollsScheduledButNotStarted;
-    self._taskQueue.queueTask(function () {
-      self._pollMongo();
+    await self._taskQueue.runTask(async function () {
+      await self._pollMongo();
     });
   },
 
@@ -116,7 +117,7 @@ _.extend(PollingObserveDriver.prototype, {
       throw new Error("_pollsScheduledButNotStarted is " +
                       self._pollsScheduledButNotStarted);
   },
-  _resumePolling: function() {
+  _resumePolling: async function() {
     var self = this;
     // We should be in the same state as in the end of _suspendPolling.
     if (self._pollsScheduledButNotStarted !== 1)
@@ -124,12 +125,12 @@ _.extend(PollingObserveDriver.prototype, {
                       self._pollsScheduledButNotStarted);
     // Run a poll synchronously (which will counteract the
     // ++_pollsScheduledButNotStarted from _suspendPolling).
-    self._taskQueue.runTask(function () {
-      self._pollMongo();
+    await self._taskQueue.runTask(async function () {
+      await self._pollMongo();
     });
   },
 
-  _pollMongo: function () {
+  async _pollMongo() {
     var self = this;
     --self._pollsScheduledButNotStarted;
 
@@ -153,7 +154,7 @@ _.extend(PollingObserveDriver.prototype, {
 
     // Get the new query results. (This yields.)
     try {
-      newResults = self._synchronousCursor.getRawObjects(self._ordered);
+      newResults = await self._cursor.getRawObjects(self._ordered);
     } catch (e) {
       if (first && typeof(e.code) === 'number') {
         // This is an error document sent to us by mongod, not a connection
@@ -161,11 +162,10 @@ _.extend(PollingObserveDriver.prototype, {
         // successfully. Probably it's a bad selector or something, so we should
         // NOT retry. Instead, we should halt the observe (which ends up calling
         // `stop` on us).
-        self._multiplexer.queryError(
-          new Error(
-            "Exception while polling query " +
-              JSON.stringify(self._cursorDescription) + ": " + e.message));
-        return;
+        await self._multiplexer.queryError(
+            new Error(
+                "Exception while polling query " +
+                JSON.stringify(self._cursorDescription) + ": " + e.message));
       }
 
       // getRawObjects can throw if we're having trouble talking to the
@@ -176,14 +176,14 @@ _.extend(PollingObserveDriver.prototype, {
       // "cancel" the observe from the inside in this case.
       Array.prototype.push.apply(self._pendingWrites, writesForCycle);
       Meteor._debug("Exception while polling query " +
-                    JSON.stringify(self._cursorDescription), e);
+          JSON.stringify(self._cursorDescription), e);
       return;
     }
 
     // Run diffs.
     if (!self._stopped) {
       LocalCollection._diffQueryChanges(
-        self._ordered, oldResults, newResults, self._multiplexer);
+          self._ordered, oldResults, newResults, self._multiplexer);
     }
 
     // Signals the multiplexer to allow all observeChanges calls that share this
@@ -201,20 +201,24 @@ _.extend(PollingObserveDriver.prototype, {
     // round, mark all the writes which existed before this call as
     // commmitted. (If new writes have shown up in the meantime, there'll
     // already be another _pollMongo task scheduled.)
-    self._multiplexer.onFlush(function () {
-      _.each(writesForCycle, function (w) {
-        w.committed();
-      });
+    await self._multiplexer.onFlush(async function () {
+      for (const w of writesForCycle) {
+        await w.committed();
+      }
     });
   },
 
   stop: function () {
     var self = this;
     self._stopped = true;
-    _.each(self._stopCallbacks, function (c) { c(); });
+    const stopCallbacksCaller = async function(c) {
+      await c();
+    };
+
+    _.each(self._stopCallbacks, stopCallbacksCaller);
     // Release any write fences that are waiting on us.
-    _.each(self._pendingWrites, function (w) {
-      w.committed();
+    _.each(self._pendingWrites, async function (w) {
+      await w.committed();
     });
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", -1);

@@ -2,9 +2,7 @@ android_bundle/
 dev_bundle/
 docs/
 examples/
-packages/
 scripts/
-tools/
 !tools/*.js
 !tools/isobuild/*.js
 !tools/catalog/*.js
@@ -67,7 +65,6 @@ tools/runners/run-app.js
 tools/runners/run-mongo.js
 tools/runners/run-proxy.js
 tools/runners/run-selenium.js
-tools/runners/run-updater.js
 
 tools/packaging/package-client.js
 tools/packaging/package-map.js

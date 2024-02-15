@@ -2,10 +2,16 @@ import sourcemap from "source-map";
 import { createHash } from "crypto";
 import LRU from "lru-cache";
 import { loadPostCss, watchAndHashDeps, usePostCss } from './postcss.js';
+import { Log } from 'meteor/logging';
+
+const { argv, env:{ DEBUG_CSS } } = process;
+const verbose = (DEBUG_CSS!=="false" && DEBUG_CSS!=="0" && (
+  DEBUG_CSS || argv.indexOf('--verbose') > -1 || argv.indexOf('--debug') > -1
+));
 
 Plugin.registerMinifier({
   extensions: ["css"],
-  archMatching: "web"
+  archMatching: "web",
 }, function () {
   const minifier = new CssToolsMinifier();
   return minifier;
@@ -14,14 +20,21 @@ Plugin.registerMinifier({
 class CssToolsMinifier {
   constructor() {
     this.cache = new LRU({
-      max: 100
+      max: 100,
     });
 
     this.depsHashCache = Object.create(null);
+    this.totalSize = 0;
+    this.totalMinifiedSize = 0;
+    this.haveHitAnyCache = false; // once we hit the cache, there's no point in showing 'Adding CSS', we know it will be fine and floods the terminal needlessly.
   }
 
   beforeMinify() {
     this.depsHashCache = Object.create(null);
+  }
+
+  formatSize(bytes) {
+    return bytes < 1024 ? `${bytes} bytes` : `${Math.round(bytes/1024)}k`;
   }
 
   watchAndHashDeps(deps, file) {
@@ -47,30 +60,53 @@ class CssToolsMinifier {
       cachedResult &&
       cachedResult.depsCacheKey === this.watchAndHashDeps(cachedResult.deps, files[0])
     ) {
+      if (verbose && !this.haveHitAnyCache) {
+        this.haveHitAnyCache = true;
+        setTimeout( () => { // we use a timeout to give all files a chance to finish being minified
+          const stats = [`minifyStdCSS: Total CSS ${this.formatSize(this.totalSize)}`];
+          if (this.totalMinifiedSize!==0) {
+            stats.push(`minified ${this.formatSize(this.totalMinifiedSize)}`);
+            stats.push(`reduction ${Math.round(100-this.totalMinifiedSize*100/this.totalSize)}%`);
+          }
+          console.log(stats.join(", "));
+        }, 500);
+      }
       return cachedResult.stylesheets;
     }
 
     let result = [];
+    if (verbose) process.stdout.write(` > Merging [ ${files.map( ({ _source:{ targetPath } }) => targetPath ).join(' ')} ]`);
     const merged = await mergeCss(files, postcssConfig);
+    if (verbose) {
+      process.stdout.write(` > ${this.formatSize(merged.code.length)}`);
+      this.totalSize += merged.code.length;
+    }
 
     if (mode === 'development') {
       result = [{
         data: merged.code,
         sourceMap: merged.sourceMap,
-        path: 'merged-stylesheets.css'
+        path: 'merged-stylesheets.css',
       }];
     } else {
-      const minifiedFiles = CssTools.minifyCss(merged.code);
+      if (verbose) process.stdout.write(` > minifying`);
 
-      result = minifiedFiles.map(minified => ({
-        data: minified
-      }));
+      const minifiedFiles = await CssTools.minifyCssAsync(merged.code);
+      result = minifiedFiles.map( minified => ({ data:minified }) );
+
+      if (verbose) {
+        const minifiedSize = minifiedFiles.reduce( (sum, minifiedFile) => sum + minifiedFile.length, 0);
+        process.stdout.write(` > ${this.formatSize(minifiedSize)}`);
+        this.totalMinifiedSize += minifiedSize;
+      }
     }
+
+    if (verbose) process.stdout.write('\n');
 
     this.cache.set(cacheKey, {
       stylesheets: result,
       deps: merged.deps,
-      depsCacheKey: this.watchAndHashDeps(merged.deps, files[0])
+      depsCacheKey: this.watchAndHashDeps(merged.deps, files[0]),
     });
     return result;
   }
@@ -81,13 +117,15 @@ class CssToolsMinifier {
     const { error, postcssConfig } = await loadPostCss();
 
     if (error) {
+      if (verbose) Log.error('processFilesForBundle loadPostCss error', error);
       files[0].error(error);
       return;
     }
 
     const stylesheets = await this.minifyFiles(files, minifyMode, postcssConfig);
 
-    stylesheets.forEach(stylesheet => {
+    stylesheets.forEach( (stylesheet,i) => {
+      if (verbose && !this.haveHitAnyCache) process.stdout.write(`Adding CSS${i===0?'':' '+i+1}`);
       files[0].addStylesheet(stylesheet);
     });
   }
@@ -128,7 +166,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
           postcssConfig.plugins
         ).process(content, {
           from: Plugin.convertToOSPath(file.getSourcePath()),
-          parser: postcssConfig.options.parser
+          parser: postcssConfig.options.parser,
         });
 
         result.warnings().forEach(warning => {
@@ -150,7 +188,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
         file.error({
           message: e.reason,
           line: e.line,
-          column: e.column
+          column: e.column,
         });
       } else {
         // Just in case it's not the normal error the library makes.
@@ -171,7 +209,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   const stringifiedCss = CssTools.stringifyCss(mergedCssAst, {
     sourcemap: true,
     // don't try to read the referenced sourcemaps from the input
-    inputSourcemaps: false
+    inputSourcemaps: false,
   });
 
   if (! stringifiedCss.code) {
@@ -220,7 +258,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
 
       let original = {
         line: mapping.originalLine,
-        column: mapping.originalColumn
+        column: mapping.originalColumn,
       };
 
       // If there is a source map for the original file, e.g., if it has been
@@ -256,7 +294,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
       newMap.addMapping({
         generated: {
           line: mapping.generatedLine,
-          column: mapping.generatedColumn
+          column: mapping.generatedColumn,
         },
         original,
         source,
@@ -281,7 +319,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   return {
     code: stringifiedCss.code,
     sourceMap: newMap.toString(),
-    deps
+    deps,
   };
 });
 
@@ -289,5 +327,5 @@ function warnCb (filename, msg) {
   // XXX make this a buildmessage.warning call rather than a random log.
   //     this API would be like buildmessage.error, but wouldn't cause
   //     the build to fail.
-  console.log(`${filename}: warn: ${msg}`);
+  Log.warn(`${filename}: warn: ${msg}`);
 };

@@ -17,7 +17,7 @@ typescript              # Enable TypeScript syntax in .ts and .tsx modules
 shell-server            # Server-side component of the `meteor shell` command
 hot-module-replacement  # Update client in development without reloading the page
 
-autopublish             # Publish all data to the clients (for prototyping)
-insecure                # Allow all DB writes from clients (for prototyping)
+~prototype~
 static-html             # Define static page content in .html files
 react-meteor-data       # React higher-order component for reactively tracking Meteor data
+zodern:types            # Pull in type declarations from other Meteor packages

@@ -6,7 +6,7 @@ OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitel
 
   Object.assign(
     redirectUrlObj.query,
-    whitelistedQueryParams.reduce((prev, param) => 
+    whitelistedQueryParams.reduce((prev, param) =>
       params.query[param] ? { ...prev, param: params.query[param] } : prev,
       {}
     ),
@@ -25,8 +25,8 @@ OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitel
 };
 
 // connect middleware
-OAuth._requestHandlers['1'] = (service, query, res) => {
-  const config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
+OAuth._requestHandlers['1'] = async (service, query, res) => {
+  const config = await ServiceConfiguration.configurations.findOneAsync({service: service.serviceName});
   if (! config) {
     throw new ServiceConfiguration.ConfigError(service.serviceName);
   }
@@ -45,10 +45,10 @@ OAuth._requestHandlers['1'] = (service, query, res) => {
     });
 
     // Get a request token to start auth process
-    oauthBinding.prepareRequestToken(callbackUrl);
+    await oauthBinding.prepareRequestToken(callbackUrl);
 
     // Keep track of request token so we can verify it on the next step
-    OAuth._storeRequestToken(
+    await OAuth._storeRequestToken(
       OAuth._credentialTokenFromQuery(query),
       oauthBinding.requestToken,
       oauthBinding.requestTokenSecret);
@@ -76,7 +76,7 @@ OAuth._requestHandlers['1'] = (service, query, res) => {
     // and close the window to allow the login handler to proceed
 
     // Get the user's request token so we can verify it and clear it
-    const requestTokenInfo = OAuth._retrieveRequestToken(
+    const requestTokenInfo = await OAuth._retrieveRequestToken(
       OAuth._credentialTokenFromQuery(query));
 
     if (! requestTokenInfo) {
@@ -91,10 +91,10 @@ OAuth._requestHandlers['1'] = (service, query, res) => {
       // subsequent call to the `login` method will be immediate.
 
       // Get the access token for signing requests
-      oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
+      await oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
 
       // Run service-specific handler.
-      const oauthResult = service.handleOauthRequest(
+      const oauthResult = await service.handleOauthRequest(
         oauthBinding, { query: query });
 
       const credentialToken = OAuth._credentialTokenFromQuery(query);
@@ -102,7 +102,7 @@ OAuth._requestHandlers['1'] = (service, query, res) => {
 
       // Store the login result so it can be retrieved in another
       // browser tab by the result handler
-      OAuth._storePendingCredential(credentialToken, {
+      await OAuth._storePendingCredential(credentialToken, {
         serviceName: service.serviceName,
         serviceData: oauthResult.serviceData,
         options: oauthResult.options
@@ -111,6 +111,6 @@ OAuth._requestHandlers['1'] = (service, query, res) => {
 
     // Either close the window, redirect, or render nothing
     // if all else fails
-    OAuth._renderOauthResults(res, query, credentialSecret);
+    await OAuth._renderOauthResults(res, query, credentialSecret);
   }
 };

@@ -1,164 +1,127 @@
-// we are mapping the new oplog format on mongo 5
-// to what we know better, $set and $unset format
-// new oplog format ex:
-// {
-//  '$v': 2,
-//  diff: { u: { key1: 2022-01-06T18:23:16.131Z, key2: [ObjectID] } }
-// }
+// Converter of the new MongoDB Oplog format (>=5.0) to the one that Meteor
+// handles well, i.e., `$set` and `$unset`. The new format is completely new,
+// and looks as follows:
+//
+//   { $v: 2, diff: Diff }
+//
+// where `Diff` is a recursive structure:
+//
+//   {
+//     // Nested updates (sometimes also represented with an s-field).
+//     // Example: `{ $set: { 'foo.bar': 1 } }`.
+//     i: { <key>: <value>, ... },
+//
+//     // Top-level updates.
+//     // Example: `{ $set: { foo: { bar: 1 } } }`.
+//     u: { <key>: <value>, ... },
+//
+//     // Unsets.
+//     // Example: `{ $unset: { foo: '' } }`.
+//     d: { <key>: false, ... },
+//
+//     // Array operations.
+//     // Example: `{ $push: { foo: 'bar' } }`.
+//     s<key>: { a: true, u<index>: <value>, ... },
+//     ...
+//
+//     // Nested operations (sometimes also represented in the `i` field).
+//     // Example: `{ $set: { 'foo.bar': 1 } }`.
+//     s<key>: Diff,
+//     ...
+//   }
+//
+// (all fields are optional).
 
-function logConverterCalls(oplogEntry, prefixKey, key) {
-  if (!process.env.OPLOG_CONVERTER_DEBUG) {
-    return;
-  }
-  console.log('Calling nestedOplogEntryParsers with the following values: ');
-  console.log(
-    `Oplog entry: ${JSON.stringify(
-      oplogEntry
-    )}, prefixKey: ${prefixKey}, key: ${key}`
-  );
+function join(prefix, key) {
+  return prefix ? `${prefix}.${key}` : key;
 }
 
-/*
-the structure of an entry is:
+const arrayOperatorKeyRegex = /^(a|[su]\d+)$/;
 
-
--> entry: i, u, d + sFields.
--> sFields: i, u, d + sFields
--> sFields: arrayOperator -> { a: true, u0: 2 }
--> i,u,d: { key: value }
--> value: {key: value}
-
-i and u are both $set
-d is $unset
-on mongo 4
- */
-
-const isArrayOperator = possibleArrayOperator => {
-  if (!possibleArrayOperator || !Object.keys(possibleArrayOperator).length)
-    return false;
-
-  if (!possibleArrayOperator.a) {
-    return false;
-  }
-  return !Object.keys(possibleArrayOperator).find(
-      key => key !== 'a' && !key.match(/^u\d+/)
-  );
-};
-function logOplogEntryError(oplogEntry, prefixKey, key) {
-  console.log('---');
-  console.log(
-    'WARNING: Unsupported oplog operation, please fill an issue with this message at github.com/meteor/meteor'
-  );
-  console.log(
-    `Oplog entry: ${JSON.stringify(
-      oplogEntry
-    )}, prefixKey: ${prefixKey}, key: ${key}`
-  );
-  console.log('---');
+function isArrayOperatorKey(field) {
+  return arrayOperatorKeyRegex.test(field);
 }
 
-const nestedOplogEntryParsers = (oplogEntry, prefixKey = '') => {
-  const { i = {}, u = {}, d = {}, ...sFields } = oplogEntry;
-  logConverterCalls(oplogEntry, prefixKey, 'ENTRY_POINT');
-  const sFieldsOperators = [];
-  Object.entries(sFields).forEach(([key, value]) => {
-    const actualKeyNameWithoutSPrefix = key.substring(1);
-    if (isArrayOperator(value || {})) {
-      const { a, ...uPosition } = value;
-      if (uPosition) {
-        for (const [positionKey, newArrayIndexValue] of Object.entries(
-          uPosition
-        )) {
-          sFieldsOperators.push({
-            [newArrayIndexValue === null ? '$unset' : '$set']: {
-              [`${prefixKey}${actualKeyNameWithoutSPrefix}.${positionKey.substring(
-                1
-              )}`]: newArrayIndexValue === null ? true : newArrayIndexValue,
-            },
-          });
-        }
-      } else {
-        logOplogEntryError(oplogEntry, prefixKey, key);
-        throw new Error(
-          `Unsupported oplog array entry, please review the input: ${JSON.stringify(
-            value
-          )}`
-        );
-      }
+function isArrayOperator(operator) {
+  return operator.a === true && Object.keys(operator).every(isArrayOperatorKey);
+}
+
+function flattenObjectInto(target, source, prefix) {
+  if (Array.isArray(source) || typeof source !== 'object' || source === null ||
+      source instanceof Mongo.ObjectID) {
+    target[prefix] = source;
+  } else {
+    const entries = Object.entries(source);
+    if (entries.length) {
+      entries.forEach(([key, value]) => {
+        flattenObjectInto(target, value, join(prefix, key));
+      });
     } else {
-      // we are looking at something that we expected to be "sSomething" but is null after removing s
-      // this happens on "a": true which is a simply ack that comes embeded
-      // we dont need to call recursion on this case, only ignore it
-      if (!actualKeyNameWithoutSPrefix || actualKeyNameWithoutSPrefix === '') {
-        return null;
+      target[prefix] = source;
+    }
+  }
+}
+
+const logDebugMessages = !!process.env.OPLOG_CONVERTER_DEBUG;
+
+function convertOplogDiff(oplogEntry, diff, prefix) {
+  if (logDebugMessages) {
+    console.log(`convertOplogDiff(${JSON.stringify(oplogEntry)}, ${JSON.stringify(diff)}, ${JSON.stringify(prefix)})`);
+  }
+
+  Object.entries(diff).forEach(([diffKey, value]) => {
+    if (diffKey === 'd') {
+      // Handle `$unset`s.
+      oplogEntry.$unset ??= {};
+      Object.keys(value).forEach(key => {
+        oplogEntry.$unset[join(prefix, key)] = true;
+      });
+    } else if (diffKey === 'i') {
+      // Handle (potentially) nested `$set`s.
+      oplogEntry.$set ??= {};
+      flattenObjectInto(oplogEntry.$set, value, prefix);
+    } else if (diffKey === 'u') {
+      // Handle flat `$set`s.
+      oplogEntry.$set ??= {};
+      Object.entries(value).forEach(([key, value]) => {
+        oplogEntry.$set[join(prefix, key)] = value;
+      });
+    } else {
+      // Handle s-fields.
+      const key = diffKey.slice(1);
+      if (isArrayOperator(value)) {
+        // Array operator.
+        Object.entries(value).forEach(([position, value]) => {
+          if (position === 'a') {
+            return;
+          }
+
+          const positionKey = join(join(prefix, key), position.slice(1));
+          if (position[0] === 's') {
+            convertOplogDiff(oplogEntry, value, positionKey);
+          } else if (value === null) {
+            oplogEntry.$unset ??= {};
+            oplogEntry.$unset[positionKey] = true;
+          } else {
+            oplogEntry.$set ??= {};
+            oplogEntry.$set[positionKey] = value;
+          }
+        });
+      } else if (key) {
+        // Nested object.
+        convertOplogDiff(oplogEntry, value, join(prefix, key));
       }
-      // we are looking at a "sSomething" that is actually a nested object set
-      logConverterCalls(oplogEntry, prefixKey, key);
-      sFieldsOperators.push(
-        nestedOplogEntryParsers(
-          value,
-          `${prefixKey}${actualKeyNameWithoutSPrefix}.`
-        )
-      );
     }
   });
-  const $unset = Object.keys(d).reduce((acc, key) => {
-    return { ...acc, [`${prefixKey}${key}`]: true };
-  }, {});
-  const setObjectSource = { ...i, ...u };
-  const $set = Object.keys(setObjectSource).reduce((acc, key) => {
-    const prefixedKey = `${prefixKey}${key}`;
-    return {
-      ...acc,
-      ...(!Array.isArray(setObjectSource[key]) &&
-      typeof setObjectSource[key] === 'object'
-        ? flattenObject({ [prefixedKey]: setObjectSource[key] })
-        : {
-            [prefixedKey]: setObjectSource[key],
-          }),
-    };
-  }, {});
+}
 
-  const c = [...sFieldsOperators, { $unset, $set }];
-  const { $set: s, $unset: un } = c.reduce(
-    (acc, { $set: set = {}, $unset: unset = {} }) => {
-      return {
-        $set: { ...acc.$set, ...set },
-        $unset: { ...acc.$unset, ...unset },
-      };
-    },
-    {}
-  );
-  return {
-    ...(Object.keys(s).length ? { $set: s } : {}),
-    ...(Object.keys(un).length ? { $unset: un } : {}),
-  };
-};
-
-export const oplogV2V1Converter = v2OplogEntry => {
-  if (v2OplogEntry.$v !== 2 || !v2OplogEntry.diff) return v2OplogEntry;
-  logConverterCalls(v2OplogEntry, 'INITIAL_CALL', 'INITIAL_CALL');
-  return { $v: 2, ...nestedOplogEntryParsers(v2OplogEntry.diff || {}) };
-};
-
-function flattenObject(ob) {
-  const toReturn = {};
-
-  for (const i in ob) {
-    if (!ob.hasOwnProperty(i)) continue;
-
-    if (!Array.isArray(ob[i]) && typeof ob[i] == 'object' && ob[i] !== null) {
-      const flatObject = flattenObject(ob[i]);
-      let objectKeys = Object.keys(flatObject);
-      if (objectKeys.length === 0) {
-        return ob;
-      }
-      for (const x of objectKeys) {
-        toReturn[i + '.' + x] = flatObject[x];
-      }
-    } else {
-      toReturn[i] = ob[i];
-    }
+export function oplogV2V1Converter(oplogEntry) {
+  // Pass-through v1 and (probably) invalid entries.
+  if (oplogEntry.$v !== 2 || !oplogEntry.diff) {
+    return oplogEntry;
   }
-  return toReturn;
+
+  const convertedOplogEntry = { $v: 2 };
+  convertOplogDiff(convertedOplogEntry, oplogEntry.diff, '');
+  return convertedOplogEntry;
 }

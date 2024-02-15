@@ -40,6 +40,8 @@ elif [ "$UNAME" == "Darwin" ] ; then
           echo "Meteor only supports x86_64 for now."
           exit 1
       fi
+    else
+      NODE_BUILD_NUMBER="${NODE_BUILD_NUMBER:="187"}"
     fi
 
     OS="macos"

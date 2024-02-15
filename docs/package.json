@@ -16,18 +16,20 @@
     "hexo-renderer-marked": "2.0.0",
     "hexo-server": "1.0.0",
     "hexo-versioned-netlify-redirects": "1.1.0",
-    "jsdoc": "3.5.5",
-    "meteor-hexo-config": "1.0.12",
-    "meteor-theme-hexo": "2.0.3",
+    "jsdoc": "^4.0.2",
+    "@meteorjs/meteor-hexo-config": "1.0.14",
+    "@meteorjs/meteor-theme-hexo": "2.0.8",
     "showdown": "1.9.1",
     "underscore": "1.13.1"
   },
   "scripts": {
-    "build": "jsdoc/jsdoc.sh && chexo meteor-hexo-config -- generate",
+    "list-core-packages": "node ./generators/packages-listing/script.js",
+    "generate-history": "node ./generators/changelog/script.js",
+    "build": "npm run list-core-packages && npm run generate-history && jsdoc/jsdoc.sh && chexo @meteorjs/meteor-hexo-config -- generate",
     "clean": "hexo clean; rm data/data.js data/names.json",
     "test": "npm run clean; npm run build",
     "predeploy": "npm run build",
     "deploy": "hexo-s3-deploy",
-    "start": "npm run build && chexo meteor-hexo-config -- server"
+    "start": "npm run build && chexo @meteorjs/meteor-hexo-config -- server"
   }
 }

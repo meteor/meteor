@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.15.0'
+  version: '2.0.0-beta300.0',
 });
 
 Npm.depends({
@@ -41,6 +41,7 @@ Package.onUse(function (api) {
   // Make weak use of Decimal type on client
   api.use('mongo-decimal', 'client', {weak: true});
   api.use('mongo-decimal', 'server');
+  //api.use('emitter-promise', 'server');
 
   api.use('underscore', 'server');
 
@@ -82,12 +83,15 @@ Package.onUse(function (api) {
   api.addFiles('remote_collection_driver.js', 'server');
   api.addFiles('collection.js', ['client', 'server']);
   api.addFiles('connection_options.js', 'server');
+  api.addAssets('mongo.d.ts', 'server');
 });
 
 Package.onTest(function (api) {
   api.use('mongo');
   api.use('check');
   api.use('ecmascript');
+  api.use('npm-mongo', 'server');
+  //api.use('emitter-promise', 'server');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
            'ddp', 'base64']);
   // XXX test order dependency: the allow_tests "partial allow" test
@@ -96,6 +100,7 @@ Package.onTest(function (api) {
   api.addFiles('upsert_compatibility_test.js', 'server');
   api.addFiles('allow_tests.js', ['client', 'server']);
   api.addFiles('collection_tests.js', ['client', 'server']);
+  api.addFiles('collection_async_tests.js', ['client', 'server']);
   api.addFiles('observe_changes_tests.js', ['client', 'server']);
   api.addFiles('oplog_tests.js', 'server');
   api.addFiles('oplog_v2_converter_tests.js', 'server');

@@ -1,23 +1,32 @@
 language: node_js
 os: linux
-dist: xenial
+dist: jammy
+sudo: required
+services: xvfb
 node_js:
-  - "14.17.6"
+  - "18.16.0"
 cache:
   directories:
     - ".meteor"
     - ".babel-cache"
 script:
-  - export phantom=false
-  # to skip Downloading Chromium on every run
-  # https://github.com/dfernandez79/puppeteer/blob/main/README.md#q-chromium-gets-downloaded-on-every-npm-ci-run-how-can-i-cache-the-download
-  - export PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
   - travis_retry ./packages/test-in-console/run.sh
 env:
-  - CXX=g++-4.8
+  global:
+    - CXX=g++-12
+    - phantom=false
+    - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - g++-4.8
+      - g++-12
+      - libnss3
+
+before_install:
+  - cat /etc/apt/sources.list
+  - python3 --version
+  - echo "deb http://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee -a /etc/apt/sources.list
+  - sudo apt-get update
+  - sudo apt-get install -y libnss3

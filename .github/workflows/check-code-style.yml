@@ -1,0 +1,19 @@
+name: Check code-style
+on:
+  push:
+    paths:
+      - 'npm-packages/meteor-installer/**'
+  pull_request:
+    paths:
+      - 'npm-packages/meteor-installer/**'
+jobs:
+  check-code-style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14.x
+      - run: npm ci
+      - name: Run ESLint@8
+        run: npx eslint@8 "./npm-packages/meteor-installer/**/*.js"

@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'A user account system',
-  version: '2.2.4',
+  version: '3.0.0-beta300.0',
 });
 
 Package.onUse(api => {
@@ -15,10 +15,6 @@ Package.onUse(api => {
   api.use('reactive-var', 'client');
   api.use('url', ['client', 'server']);
 
-  // use unordered to work around a circular dependency
-  // (service-configuration needs Accounts.connection)
-  api.use('service-configuration', ['client', 'server'], { unordered: true });
-
   // needed for getting the currently logged-in user and handling reconnects
   api.use('ddp', ['client', 'server']);
 
@@ -28,7 +24,7 @@ Package.onUse(api => {
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
-  api.use('blaze@2.5.0', 'client', { weak: true });
+  api.use('blaze', 'client', { weak: true });
 
   // Allow us to detect 'autopublish', and publish some Meteor.users fields if
   // it's loaded.
@@ -48,6 +44,8 @@ Package.onUse(api => {
   // modules that import the accounts-base package.
   api.mainModule('server_main.js', 'server');
   api.mainModule('client_main.js', 'client');
+
+  api.addAssets('accounts-base.d.ts', 'server');
 });
 
 Package.onTest(api => {

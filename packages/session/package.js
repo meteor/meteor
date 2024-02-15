@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Session variable",
-  version: '1.2.0'
+  version: '1.2.2-beta300.0'
 });
 
 Package.onUse(function (api) {
@@ -13,6 +13,7 @@ Package.onUse(function (api) {
 
   api.export('Session', 'client');
   api.mainModule('session.js', 'client');
+  api.addAssets('session.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

@@ -65,13 +65,13 @@ _.extend(ExpectationManager.prototype, {
       throw new Error("Too late to add more expectations to the test");
     self.outstanding++;
 
-    return function (/* arguments */) {
+    return async function (/* arguments */) {
       if (self.dead)
         return;
 
       if (typeof expected === "function") {
         try {
-          expected.apply({}, arguments);
+          await expected.apply({}, arguments);
         } catch (e) {
           if (self.cancel())
             self.test.exception(e);
@@ -127,11 +127,11 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
       }
       else {
         var em = new ExpectationManager(test, function () {
-          Meteor.clearTimeout(timer);
+          clearTimeout(timer);
           runNext();
         });
 
-        var timer = Meteor.setTimeout(function () {
+        var timer = setTimeout(function () {
           if (em.cancel()) {
             test.fail({type: "timeout", message: "Async batch timed out"});
             onComplete();
@@ -142,15 +142,20 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
         test.extraDetails.asyncBlock = i++;
 
         new Promise(resolve => {
-          resolve(func.apply(context, [test, _.bind(em.expect, em)]));
-        }).then(result => {
+          const result = func.apply(context, [test, _.bind(em.expect, em)]);
+          if (result && typeof result.then === "function") {
+            return result.then((r) => resolve(r))
+          }
+
+          return resolve(result);
+        }).then(() => {
           em.done();
         }, exception => {
           if (em.cancel()) {
             test.exception(exception);
             // Because we called test.exception, we're not to call onComplete.
           }
-          Meteor.clearTimeout(timer);
+          clearTimeout(timer);
         });
       }
     };
@@ -165,16 +170,19 @@ simplePoll = function (fn, success, failed, timeout, step) {
   timeout = timeout || 10000;
   step = step || 100;
   var start = (new Date()).valueOf();
+  let timeOutId;
   var helper = function () {
     if (fn()) {
       success();
+      Meteor.clearTimeout(timeOutId);
       return;
     }
     if (start + timeout < (new Date()).valueOf()) {
       failed();
+      Meteor.clearTimeout(timeOutId);
       return;
     }
-    Meteor.setTimeout(helper, step);
+    timeOutId = Meteor.setTimeout(helper, step);
   };
   helper();
 };
@@ -190,4 +198,25 @@ pollUntil = function (expect, f, timeout, step, noFail) {
     timeout,
     step
   );
+};
+
+/**
+ * Helper that is used on the async tests.
+ * Just run the function and assert if we have an error or not.
+ * @param fn
+ * @param test
+ * @param shouldErrorOut
+ * @returns {Promise<*>}
+ */
+runAndThrowIfNeeded = async (fn, test, shouldErrorOut) => {
+  let err, result;
+  try {
+    result = await fn();
+  } catch (e) {
+    err = e;
+  }
+
+  test[shouldErrorOut ? "isTrue" : "isFalse"](err);
+
+  return result;
 };

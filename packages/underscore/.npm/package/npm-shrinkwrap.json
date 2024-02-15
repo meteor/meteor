@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 4,
+  "dependencies": {
+    "@types/underscore": {
+      "version": "1.11.4",
+      "resolved": "https://registry.npmjs.org/@types/underscore/-/underscore-1.11.4.tgz",
+      "integrity": "sha512-uO4CD2ELOjw8tasUrAhvnn2W4A0ZECOvMjCivJr4gA9pGgjv+qxKWY9GLTMVEK8ej85BxQOocUyE7hImmSQYcg=="
+    }
+  }
+}

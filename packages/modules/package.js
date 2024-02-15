@@ -1,13 +1,13 @@
 Package.describe({
   name: "modules",
-  version: "0.18.0",
+  version: '0.19.1-beta300.0',
   summary: "CommonJS module system",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "@meteorjs/reify": "0.23.0",
-  "meteor-babel-helpers": "0.0.3"
+  "@meteorjs/reify": "git+https://github.com/meteor/reify.git#cf61c57c6c4fefcbf164bf63d3c12fda1924b3d2",
+  "meteor-babel-helpers": "0.0.3",
 });
 
 Package.onUse(function(api) {

@@ -1,28 +1,44 @@
 Accounts._connectionCloseDelayMsForTests = 1000;
-
+const makeTestConnAsync =
+  (test) =>
+    new Promise((resolve, reject) => {
+      makeTestConnection(
+        test,
+        (clientConn, serverConn) => resolve({ clientConn, serverConn }),
+        reject
+      );
+    })
+const simplePollAsync = (fn) =>
+  new Promise((resolve, reject) => simplePoll(fn,resolve,reject))
 function hashPassword(password) {
   return {
     digest: SHA256(password),
-      algorithm: "sha-256"
+    algorithm: "sha-256"
   };
 }
 
 if (Meteor.isServer) {
   Accounts.removeDefaultRateLimit();
 
-  Meteor.methods({
-    getResetToken: function () {
-      const token = Meteor.users.findOne(this.userId).services.password.reset;
-      return token;
-    },
-    addSkipCaseInsensitiveChecksForTest: value => {
-      Accounts._skipCaseInsensitiveChecksForTest[value] = true;
-    },
-    removeSkipCaseInsensitiveChecksForTest: value => {
-      delete Accounts._skipCaseInsensitiveChecksForTest[value];
-    },
-    countUsersOnServer: query => Meteor.users.find(query).count(),
-  });
+  Meteor.methods(
+    {
+      getResetToken:
+        async function () {
+          const user = await Meteor.users.findOneAsync(this.userId);
+          return user.services.password.reset;
+        },
+
+      addSkipCaseInsensitiveChecksForTest:
+        value => Accounts._skipCaseInsensitiveChecksForTest[value] = true,
+
+      removeSkipCaseInsensitiveChecksForTest:
+        value => delete Accounts._skipCaseInsensitiveChecksForTest[value],
+
+      async countUsersOnServer(query) {
+        return await Meteor.users.find(query).countAsync();
+      }
+    }
+  );
 }
 
 if (Meteor.isClient) (() => {
@@ -41,11 +57,11 @@ if (Meteor.isClient) (() => {
   const createUserStep = function (test, expect) {
     // Hack because Tinytest does not clean the database between tests/runs
     this.randomSuffix = Random.id(10);
-    this.username = `AdaLovelace${this.randomSuffix}`;
-    this.email =  `Ada-intercept@lovelace.com${this.randomSuffix}`;
+    this.username = `AdaLovelace${ this.randomSuffix }`;
+    this.email = `Ada-intercept@lovelace.com${ this.randomSuffix }`;
     this.password = 'password';
     Accounts.createUser(
-      {username: this.username, email: this.email, password: this.password},
+      { username: this.username, email: this.email, password: this.password },
       loggedInAs(this.username, test, expect));
   };
   const logoutStep = (test, expect) =>
@@ -110,11 +126,11 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       // setup
       this.username = Random.id();
-      this.email = `${Random.id()}-intercept@example.com`;
+      this.email = `${ Random.id() }-intercept@example.com`;
       this.password = 'password';
 
       Accounts.createUser(
-        {username: this.username, email: this.email, password: this.password},
+        { username: this.username, email: this.email, password: this.password },
         loggedInAs(this.username, test, expect));
     },
     function (test, expect) {
@@ -123,7 +139,7 @@ if (Meteor.isClient) (() => {
     logoutStep,
     function (test, expect) {
       Meteor.loginWithPassword(this.username, this.password,
-                               loggedInAs(this.username, test, expect));
+        loggedInAs(this.username, test, expect));
     },
     logoutStep,
     // This next step tests reactive contexts which are reactive on
@@ -151,18 +167,18 @@ if (Meteor.isClient) (() => {
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword({username: this.username}, this.password,
-                               loggedInAs(this.username, test, expect));
+      Meteor.loginWithPassword({ username: this.username }, this.password,
+        loggedInAs(this.username, test, expect));
     },
     logoutStep,
     function (test, expect) {
       Meteor.loginWithPassword(this.email, this.password,
-                               loggedInAs(this.username, test, expect));
+        loggedInAs(this.username, test, expect));
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword({email: this.email}, this.password,
-                               loggedInAs(this.username, test, expect));
+      Meteor.loginWithPassword({ email: this.email }, this.password,
+        loggedInAs(this.username, test, expect));
     },
     logoutStep
   ]);
@@ -173,65 +189,65 @@ if (Meteor.isClient) (() => {
     // We should be able to log in with the username in lower case
     function (test, expect) {
       Meteor.loginWithPassword(
-        { username: `adalovelace${this.randomSuffix}` },
+        { username: `adalovelace${ this.randomSuffix }` },
         this.password,
         loggedInAs(this.username, test, expect));
     }
   ]);
 
   testAsyncMulti("passwords - logging in with case insensitive username " +
-      "with non-ASCII characters", [
+    "with non-ASCII characters", [
     function (test, expect) {
       // Hack because Tinytest does not clean the database between tests/runs
       this.randomSuffix = Random.id(10);
-      this.username = `ÁdaLØvela😈e${this.randomSuffix}`;
+      this.username = `ÁdaLØvela😈e${ this.randomSuffix }`;
       this.password = 'password';
       Accounts.createUser(
-        {username: this.username, email: this.email, password: this.password},
+        { username: this.username, email: this.email, password: this.password },
         loggedInAs(this.username, test, expect));
     },
     logoutStep,
     // We should be able to log in with the username in lower case
     function (test, expect) {
       Meteor.loginWithPassword(
-        { username: `ádaløvela😈e${this.randomSuffix}` },
+        { username: `ádaløvela😈e${ this.randomSuffix }` },
         this.password,
         loggedInAs(this.username, test, expect));
     }
   ]);
 
   testAsyncMulti("passwords - logging in with case insensitive username " +
-      "should escape regex special characters", [
+    "should escape regex special characters", [
     createUserStep,
     logoutStep,
     // We shouldn't be able to log in with a regex expression for the username
     function (test, expect) {
       Meteor.loginWithPassword(
-        { username: `.+${this.randomSuffix}` },
+        { username: `.+${ this.randomSuffix }` },
         this.password,
         expectUserNotFound(test, expect));
     }
   ]);
 
   testAsyncMulti("passwords - logging in with case insensitive username " +
-     "should require a match of the full string", [
+    "should require a match of the full string", [
     createUserStep,
     logoutStep,
     // We shouldn't be able to log in with a partial match for the username
     function (test, expect) {
       Meteor.loginWithPassword(
-        { username: `lovelace${this.randomSuffix}` },
+        { username: `lovelace${ this.randomSuffix }` },
         this.password,
         expectUserNotFound(test, expect));
     }
   ]);
 
   testAsyncMulti("passwords - logging in with case insensitive username when " +
-      "there are multiple matches", [
+    "there are multiple matches", [
     createUserStep,
     logoutStep,
     function (test, expect) {
-      this.otherUsername = `Adalovelace${this.randomSuffix}`;
+      this.otherUsername = `Adalovelace${ this.randomSuffix }`;
       addSkipCaseInsensitiveChecksForTest(this.otherUsername, test, expect);
     },
     // Create another user with a username that only differs in case
@@ -246,7 +262,7 @@ if (Meteor.isClient) (() => {
     // We shouldn't be able to log in with the username in lower case
     function (test, expect) {
       Meteor.loginWithPassword(
-        { username: `adalovelace${this.randomSuffix}` },
+        { username: `adalovelace${ this.randomSuffix }` },
         this.password,
         expectUserNotFound(test, expect));
     },
@@ -260,13 +276,13 @@ if (Meteor.isClient) (() => {
   ]);
 
   testAsyncMulti("passwords - creating users with the same case insensitive " +
-      "username", [
+    "username", [
     createUserStep,
     logoutStep,
     // Attempting to create another user with a username that only differs in
     // case should fail
     function (test, expect) {
-      this.newUsername = `adalovelace${this.randomSuffix}`;
+      this.newUsername = `adalovelace${ this.randomSuffix }`;
       Accounts.createUser(
         { username: this.newUsername, password: this.password },
         expectError(
@@ -275,12 +291,11 @@ if (Meteor.isClient) (() => {
           expect));
     },
     // Make sure the new user has not been inserted
-    function (test, expect) {
-      Meteor.call('countUsersOnServer',
-        { username: this.newUsername },
-        expect(function (error, result) {
-          test.equal(result, 0);
-      }));
+    async function (test) {
+      const result = await Meteor.callAsync('countUsersOnServer', {
+        username: this.newUsername,
+      });
+      test.equal(result, 0);
     }
   ]);
 
@@ -290,53 +305,55 @@ if (Meteor.isClient) (() => {
     // We should be able to log in with the email in lower case
     function (test, expect) {
       Meteor.loginWithPassword(
-        { email: `ada-intercept@lovelace.com${this.randomSuffix}` },
+        { email: `ada-intercept@lovelace.com${ this.randomSuffix }` },
         this.password,
         loggedInAs(this.username, test, expect));
     }
   ]);
 
   testAsyncMulti("passwords - logging in with case insensitive email should " +
-      "escape regex special characters", [
+    "escape regex special characters", [
     createUserStep,
     logoutStep,
     // We shouldn't be able to log in with a regex expression for the email
     function (test, expect) {
       Meteor.loginWithPassword(
-        { email: `.+${this.randomSuffix}` },
+        { email: `.+${ this.randomSuffix }` },
         this.password,
         expectUserNotFound(test, expect));
     }
   ]);
 
   testAsyncMulti("passwords - logging in with case insensitive email should " +
-     "require a match of the full string", [
+    "require a match of the full string", [
     createUserStep,
     logoutStep,
     // We shouldn't be able to log in with a partial match for the email
     function (test, expect) {
       Meteor.loginWithPassword(
-        { email: `com${this.randomSuffix}` },
+        { email: `com${ this.randomSuffix }` },
         this.password,
         expectUserNotFound(test, expect));
     }
   ]);
 
   testAsyncMulti("passwords - logging in with case insensitive email when " +
-      "there are multiple matches", [
+    "there are multiple matches", [
     createUserStep,
     logoutStep,
     function (test, expect) {
-      this.otherUsername = `AdaLovelace${Random.id(10)}`;
-      this.otherEmail = `ADA-intercept@lovelace.com${this.randomSuffix}`;
+      this.otherUsername = `AdaLovelace${ Random.id(10) }`;
+      this.otherEmail = `ADA-intercept@lovelace.com${ this.randomSuffix }`;
       addSkipCaseInsensitiveChecksForTest(this.otherEmail, test, expect);
     },
     // Create another user with an email that only differs in case
     function (test, expect) {
       Accounts.createUser(
-        { username: this.otherUsername,
+        {
+          username: this.otherUsername,
           email: this.otherEmail,
-          password: this.password },
+          password: this.password
+        },
         loggedInAs(this.otherUsername, test, expect));
     },
     function (test, expect) {
@@ -346,7 +363,7 @@ if (Meteor.isClient) (() => {
     // We shouldn't be able to log in with the email in lower case
     function (test, expect) {
       Meteor.loginWithPassword(
-        { email: `ada-intercept@lovelace.com${this.randomSuffix}` },
+        { email: `ada-intercept@lovelace.com${ this.randomSuffix }` },
         this.password,
         expectUserNotFound(test, expect));
     },
@@ -360,20 +377,20 @@ if (Meteor.isClient) (() => {
   ]);
 
   testAsyncMulti("passwords - creating users with the same case insensitive " +
-      "email", [
+    "email", [
     createUserStep,
     logoutStep,
     // Create user error without callback should throw error
     function (test, expect) {
-      this.newUsername = `adalovelace${this.randomSuffix}`;
-      test.throws(function(){
+      this.newUsername = `adalovelace${ this.randomSuffix }`;
+      test.throws(function () {
         Accounts.createUser({ username: this.newUsername, password: '' });
       }, /Password may not be empty/);
     },
     // Attempting to create another user with an email that only differs in
     // case should fail
     function (test, expect) {
-      this.newEmail = `ada-intercept@lovelace.com${this.randomSuffix}`;
+      this.newEmail = `ada-intercept@lovelace.com${ this.randomSuffix }`;
       Accounts.createUser(
         { email: this.newEmail, password: this.password },
         expectError(
@@ -382,13 +399,11 @@ if (Meteor.isClient) (() => {
           expect));
     },
     // Make sure the new user has not been inserted
-    function (test, expect) {
-      Meteor.call('countUsersOnServer',
-        { 'emails.address': this.newEmail },
-        expect (function (error, result) {
-          test.equal(result, 0);
-        })
-      );
+    async function (test) {
+      const result = await Meteor.callAsync('countUsersOnServer', {
+        'emails.address': this.newEmail,
+      });
+      test.equal(result, 0);
     }
   ]);
 
@@ -396,7 +411,7 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       // setup
       this.username = Random.id();
-      this.email = `${Random.id()}-intercept@example.com`;
+      this.email = `${ Random.id() }-intercept@example.com`;
       this.password = 'password';
       this.password2 = 'password2';
 
@@ -409,15 +424,13 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       Meteor.call("forgotPassword",
         { email: this.email }, expect(error => {
-        test.isFalse(error);
-      }));
+          test.isFalse(error);
+        }));
     },
-    function (test, expect) {
-      Meteor.call("getResetToken", expect((err, token) => {
-        test.isFalse(err);
-        test.isTrue(token);
-        this.token = token;
-      }));
+    async function (test) {
+      const token = await Meteor.callAsync("getResetToken");
+      test.isTrue(token);
+      this.token = token;
     },
     // change password with bad old password. we stay logged in.
     function (test, expect) {
@@ -436,13 +449,11 @@ if (Meteor.isClient) (() => {
     // change password with good old password.
     function (test, expect) {
       Accounts.changePassword(this.password, this.password2,
-                              loggedInAs(this.username, test, expect));
+        loggedInAs(this.username, test, expect));
     },
-    function (test, expect) {
-      Meteor.call("getResetToken", expect((err, token) => {
-        test.isFalse(err);
-        test.isFalse(token);
-      }));
+    async function (test) {
+      const token = await Meteor.callAsync("getResetToken");
+      test.isFalse(token);
     },
     logoutStep,
     // old password, failed login
@@ -455,7 +466,7 @@ if (Meteor.isClient) (() => {
     // new password, success
     function (test, expect) {
       Meteor.loginWithPassword(this.email, this.password2,
-                               loggedInAs(this.username, test, expect));
+        loggedInAs(this.username, test, expect));
     },
     logoutStep
   ]);
@@ -463,7 +474,7 @@ if (Meteor.isClient) (() => {
   testAsyncMulti("passwords - changing password logs out other clients", [
     function (test, expect) {
       this.username = Random.id();
-      this.email = `${Random.id()}-intercept@example.com`;
+      this.email = `${ Random.id() }-intercept@example.com`;
       this.password = 'password';
       this.password2 = 'password2';
       Accounts.createUser(
@@ -475,21 +486,21 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       this.secondConn = DDP.connect(Meteor.absoluteUrl());
       this.secondConn.call('login',
-                { user: { username: this.username }, password: hashPassword(this.password) },
-                expect((err, result) => {
-                  test.isFalse(err);
-                  this.secondConn.setUserId(result.id);
-                  test.isTrue(this.secondConn.userId());
+        { user: { username: this.username }, password: hashPassword(this.password) },
+        expect((err, result) => {
+          test.isFalse(err);
+          this.secondConn.setUserId(result.id);
+          test.isTrue(this.secondConn.userId());
 
-                  this.secondConn.onReconnect = () =>
-                    this.secondConn.apply(
-                      'login',
-                      [{ resume: result.token }],
-                      { wait: true },
-                      (err, result) =>
-                        this.secondConn.setUserId(result && result.id || null)
-                    );
-                }));
+          this.secondConn.onReconnect = () =>
+            this.secondConn.apply(
+              'login',
+              [{ resume: result.token }],
+              { wait: true },
+              (err, result) =>
+                this.secondConn.setUserId(result && result.id || null)
+            );
+        }));
     },
     function (test, expect) {
       Accounts.changePassword(
@@ -550,7 +561,8 @@ if (Meteor.isClient) (() => {
         'Method call should have 2 arguments since no callback is passed in'
       );
 
-      Accounts.forgotPassword({ email: 'test@meteor.com' }, () => {});
+      Accounts.forgotPassword({ email: 'test@meteor.com' }, () => {
+      });
       test.equal(
         methodCallArgumentCount,
         3,
@@ -623,27 +635,31 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       // setup
       this.username = Random.id();
-      this.email = `${Random.id()}-intercept@example.com`;
+      this.email = `${ Random.id() }-intercept@example.com`;
       this.password = 'password';
     },
     // test Accounts.validateNewUser
-    function(test, expect) {
+    function (test, expect) {
       Accounts.createUser(
-        {username: this.username, password: this.password,
-         // should fail the new user validators
-         profile: {invalid: true}},
+        {
+          username: this.username, password: this.password,
+          // should fail the new user validators
+          profile: { invalid: true }
+        },
         expect(error => {
           test.equal(error.error, 403);
           test.equal(error.reason, "User validation failed");
         }));
     },
     logoutStep,
-    function(test, expect) {
+    function (test, expect) {
       Accounts.createUser(
-        {username: this.username, password: this.password,
-         // should fail the new user validator with a special
-         // exception
-         profile: {invalidAndThrowException: true}},
+        {
+          username: this.username, password: this.password,
+          // should fail the new user validator with a special
+          // exception
+          profile: { invalidAndThrowException: true }
+        },
         expect(error =>
           test.equal(
             error.reason,
@@ -653,13 +669,15 @@ if (Meteor.isClient) (() => {
       );
     },
     // test Accounts.onCreateUser
-    function(test, expect) {
+    function (test, expect) {
       Accounts.createUser(
-        {username: this.username, password: this.password,
-         testOnCreateUserHook: true},
+        {
+          username: this.username, password: this.password,
+          testOnCreateUserHook: true
+        },
         loggedInAs(this.username, test, expect));
     },
-    function(test, expect) {
+    function (test, expect) {
       test.equal(Meteor.user().profile.touchedByOnCreateUser, true);
     },
     logoutStep
@@ -673,15 +691,17 @@ if (Meteor.isClient) (() => {
       this.password = 'password';
 
       Accounts.createUser(
-        {username: this.username, password: this.password,
-         testOnCreateUserHook: true},
+        {
+          username: this.username, password: this.password,
+          testOnCreateUserHook: true
+        },
         loggedInAs(this.username, test, expect));
     },
     // test Meteor.user(). This test properly belongs in
     // accounts-base/accounts_tests.js, but this is where the tests that
     // actually log in are.
-    function(test, expect) {
-      const clientUser = Meteor.user();
+    async function (test, expect) {
+      const clientUser = await Meteor.user();
       Accounts.connection.call('testMeteorUser', expect((err, result) => {
         test.equal(result._id, clientUser._id);
         test.equal(result.username, clientUser.username);
@@ -690,16 +710,23 @@ if (Meteor.isClient) (() => {
         test.equal(err, undefined);
       }));
     },
-    function(test, expect) {
+    async function (test, expect) {
       // Test that even with no published fields, we still have a document.
-      Accounts.connection.call('clearUsernameAndProfile', expect(() => {
-        test.isTrue(Meteor.userId());
-        const user = Meteor.user();
-        test.equal(user, {_id: Meteor.userId()});
-      }));
+      await Accounts.connection.callAsync('clearUsernameAndProfile');
+      test.isTrue(Meteor.userId());
+      // TODO [FIBERS]: this is a big workaround. The Tracker is now receiving promises,
+        // so it's finishing before time. Hopefully this PR will fix this behavior
+        // https://github.com/meteor/meteor/pull/12294
+      let resolve;
+      const promise = new Promise(res => resolve = res);
+      Meteor.setTimeout(() => {
+        test.equal(Meteor.user(), { _id: Meteor.userId() });
+        resolve();
+      }, 100);
+      return promise;
     },
     logoutStep,
-    function(test, expect) {
+    function (test, expect) {
       const clientUser = Meteor.user();
       test.equal(clientUser, null);
       test.equal(Meteor.userId(), null);
@@ -715,8 +742,10 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       this.otherUsername = Random.id();
       Accounts.createUser(
-        {username: this.otherUsername, password: 'dontcare',
-         testOnCreateUserHook: true},
+        {
+          username: this.otherUsername, password: 'dontcare',
+          testOnCreateUserHook: true
+        },
         loggedInAs(this.otherUsername, test, expect));
     },
     function (test, expect) {
@@ -728,51 +757,62 @@ if (Meteor.isClient) (() => {
       this.password = 'password';
 
       Accounts.createUser(
-        {username: this.username, password: this.password,
-         testOnCreateUserHook: true},
+        {
+          username: this.username, password: this.password,
+          testOnCreateUserHook: true
+        },
         loggedInAs(this.username, test, expect));
     },
     // test the default Meteor.users allow rule. This test properly belongs in
     // accounts-base/accounts_tests.js, but this is where the tests that
     // actually log in are.
-    function(test, expect) {
+    async function (test, expect) {
       this.userId = Meteor.userId();
       test.notEqual(this.userId, null);
       test.notEqual(this.userId, this.otherUserId);
       // Can't update fields other than profile.
-      Meteor.users.update(
-        this.userId, {$set: {disallowed: true, 'profile.updated': 42}},
-        expect(err => {
+      await Meteor.users
+        .updateAsync(this.userId, {
+          $set: { disallowed: true, "profile.updated": 42 },
+        })
+        .catch((err) => {
           test.isTrue(err);
           test.equal(err.error, 403);
-          test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user(), 'disallowed'));
-          test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
-        }));
+          test.isFalse(
+            Object.prototype.hasOwnProperty.call(Meteor.user(), "disallowed")
+          );
+          test.isFalse(
+            Object.prototype.hasOwnProperty.call(
+              Meteor.user().profile,
+              "updated"
+            )
+          );
+        });
     },
-    function(test, expect) {
+    async function (test, expect) {
       // Can't update another user.
-      Meteor.users.update(
-        this.otherUserId, {$set: {'profile.updated': 42}},
-        expect(err => {
-          test.isTrue(err);
-          test.equal(err.error, 403);
-        }));
+      await Meteor.users
+        .updateAsync(this.otherUserId, { $set: { "profile.updated": 42 } })
+        .catch(
+          expect((err) => {
+            test.isTrue(err);
+            test.equal(err.error, 403);
+          })
+        );
     },
-    function(test, expect) {
+    async function (test, expect) {
       // Can't update using a non-ID selector. (This one is thrown client-side.)
-      test.throws(() => Meteor.users.update(
-        {username: this.username}, {$set: {'profile.updated': 42}}
+      await test.throwsAsync(async () => await Meteor.users.updateAsync(
+        { username: this.username }, { $set: { 'profile.updated': 42 } }
       ));
       test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
     },
-    function(test, expect) {
+    async function (test) {
       // Can update own profile using ID.
-      Meteor.users.update(
-        this.userId, {$set: {'profile.updated': 42}},
-        expect(err => {
-          test.isFalse(err);
-          test.equal(42, Meteor.user().profile.updated);
-        }));
+      await Meteor.users.updateAsync(
+        this.userId, { $set: { 'profile.updated': 42 } },
+       );
+      test.equal(42, Meteor.user().profile.updated);
     },
     logoutStep
   ]);
@@ -785,7 +825,7 @@ if (Meteor.isClient) (() => {
       this.password = 'password';
 
       Accounts.createUser(
-        {username: this.username, password: this.password},
+        { username: this.username, password: this.password },
         loggedInAs(this.username, test, expect));
     },
 
@@ -856,7 +896,7 @@ if (Meteor.isClient) (() => {
         Meteor.logoutOtherClients(err => {
           test.isFalse(err);
           secondConn.call('login', { resume: token },
-                          expectSecondConnLoggedOut);
+            expectSecondConnLoggedOut);
           Accounts.connection.call('login', {
             resume: Accounts._storedLoginToken()
           }, expectAccountsConnLoggedIn);
@@ -871,7 +911,7 @@ if (Meteor.isClient) (() => {
           token = Accounts._storedLoginToken();
           test.isTrue(token);
           secondConn.call('login', { resume: token },
-                          expectSecondConnLoggedIn);
+            expectSecondConnLoggedIn);
         })
       );
     },
@@ -884,7 +924,7 @@ if (Meteor.isClient) (() => {
       this.password = "password";
 
       Accounts.createUser(
-        {username: this.username, password: this.password},
+        { username: this.username, password: this.password },
         loggedInAs(this.username, test, expect));
     },
     logoutStep,
@@ -933,7 +973,7 @@ if (Meteor.isClient) (() => {
       this.password = "password";
 
       Accounts.createUser(
-        {username: this.username, password: this.password},
+        { username: this.username, password: this.password },
         loggedInAs(this.username, test, expect));
     },
     function (test, expect) {
@@ -961,7 +1001,7 @@ if (Meteor.isClient) (() => {
       });
 
       Accounts.createUser(
-        {username: this.username, password: this.password},
+        { username: this.username, password: this.password },
         loggedInAs(this.username, test, expect));
     },
     function (test, expect) {
@@ -980,7 +1020,7 @@ if (Meteor.isClient) (() => {
       this.password = "password";
 
       Accounts.createUser(
-        {username: this.username, password: this.password},
+        { username: this.username, password: this.password },
         loggedInAs(this.username, test, expect));
     },
     logoutStep,
@@ -1003,13 +1043,14 @@ if (Meteor.isClient) (() => {
       this.onLogout = Accounts.onLogout(() => this.logoutSuccess = true);
 
       Accounts.createUser(
-        {username: this.username, password: this.password},
+        { username: this.username, password: this.password },
         loggedInAs(this.username, test, expect));
     },
     logoutStep,
     function (test, expect) {
       test.isTrue(this.logoutSuccess);
-      expect(function() {})();
+      expect(function () {
+      })();
     }
   ]);
 
@@ -1019,7 +1060,7 @@ if (Meteor.isClient) (() => {
       this.password = "password";
 
       Accounts.createUser(
-        {username: this.username, password: this.password},
+        { username: this.username, password: this.password },
         loggedInAs(this.username, test, expect));
     },
     logoutStep,
@@ -1078,7 +1119,7 @@ if (Meteor.isClient) (() => {
       this.onLoginFailure = Accounts.onLoginFailure(() => this.attempt = true);
 
       Accounts.createUser(
-        {username: this.username, password: this.password},
+        { username: this.username, password: this.password },
         loggedInAs(this.username, test, expect));
     },
     logoutStep,
@@ -1098,713 +1139,766 @@ if (Meteor.isClient) (() => {
       expect(() => ({}))();
     }
   ]);
-}) ();
+})();
 
 
 if (Meteor.isServer) (() => {
 
   Tinytest.add('passwords - setup more than one onCreateUserHook', test => {
-      test.throws(() => Accounts.onCreateUser(() => ({})));
+    test.throws(() => Accounts.onCreateUser(() => ({})));
   });
 
 
-  Tinytest.add('passwords - createUser hooks', test => {
-      const username = Random.id();
-      // should fail the new user validators
-      test.throws(() => Accounts.createUser(
-        {username: username, profile: {invalid: true}}
-      ));
+  Tinytest.addAsync('passwords - createUser hooks', async test => {
+    const username = Random.id();
+    // should fail the new user validators
+    await test.throwsAsync(
+      async () =>
+        await Accounts.createUser({ username: username, profile: { invalid: true } }));
 
-      const userId = Accounts.createUser({username: username,
-                                        testOnCreateUserHook: true});
+    const userId = await Accounts
+      .createUser({ username: username, testOnCreateUserHook: true });
 
-      test.isTrue(userId);
-      const user = Meteor.users.findOne(userId);
-      test.equal(user.profile.touchedByOnCreateUser, true);
-    });
+    test.isTrue(userId);
+    const user = await Meteor.users.findOneAsync(userId);
+    test.equal(user.profile.touchedByOnCreateUser, true);
+  });
 
 
-  Tinytest.add(
+  Tinytest.addAsync(
     'passwords - setPassword',
-    test => {
+    async test => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      const email = `${ username }-intercept@example.com`;
 
-      const userId = Accounts.createUser({username: username, email: email});
+      const userId = await Accounts.createUser({ username: username, email: email });
 
-      let user = Meteor.users.findOne(userId);
+      let user = await Meteor.users.findOneAsync(userId);
       // no services yet.
       test.equal(user.services.password, undefined);
 
       // set a new password.
-      Accounts.setPassword(userId, 'new password');
-      user = Meteor.users.findOne(userId);
+      await Accounts.setPasswordAsync(userId, 'new password');
+      user = await Meteor.users.findOneAsync(userId);
       const oldSaltedHash = user.services.password.bcrypt;
       test.isTrue(oldSaltedHash);
-
       // Send a reset password email (setting a reset token) and insert a login
       // token.
-      Accounts.sendResetPasswordEmail(userId, email);
-      Accounts._insertLoginToken(userId, Accounts._generateStampedLoginToken());
-      test.isTrue(Meteor.users.findOne(userId).services.password.reset);
-      test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
+      await Accounts.sendResetPasswordEmail(userId, email);
+      await Accounts._insertLoginToken(userId, Accounts._generateStampedLoginToken());
+      const user2 = await Meteor.users.findOneAsync(userId)
+      test.isTrue(user2.services.password.reset);
+      test.isTrue(user2.services.resume.loginTokens);
 
       // reset with the same password, see we get a different salted hash
-      Accounts.setPassword(userId, 'new password', {logout: false});
-      user = Meteor.users.findOne(userId);
+      await Accounts.setPasswordAsync(userId, 'new password', { logout: false });
+      user = await Meteor.users.findOneAsync(userId);
       const newSaltedHash = user.services.password.bcrypt;
       test.isTrue(newSaltedHash);
       test.notEqual(oldSaltedHash, newSaltedHash);
       // No more reset token.
-      test.isFalse(Meteor.users.findOne(userId).services.password.reset);
+      const user3 = await Meteor.users.findOneAsync(userId)
+      test.isFalse(user3.services.password.reset);
       // But loginTokens are still here since we did logout: false.
-      test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
+      test.isTrue(user3.services.resume.loginTokens);
 
       // reset again, see that the login tokens are gone.
-      Accounts.setPassword(userId, 'new password');
-      user = Meteor.users.findOne(userId);
+      await Accounts.setPasswordAsync(userId, 'new password');
+      user = await Meteor.users.findOneAsync(userId);
       const newerSaltedHash = user.services.password.bcrypt;
       test.isTrue(newerSaltedHash);
       test.notEqual(oldSaltedHash, newerSaltedHash);
       test.notEqual(newSaltedHash, newerSaltedHash);
       // No more tokens.
-      test.isFalse(Meteor.users.findOne(userId).services.password.reset);
-      test.isFalse(Meteor.users.findOne(userId).services.resume.loginTokens);
+      const user4 = await Meteor.users.findOneAsync(userId)
+      test.isFalse(user4.services.password.reset);
+      test.isFalse(user4.services.resume.loginTokens);
 
       // cleanup
-      Meteor.users.remove(userId);
+      await Meteor.users.removeAsync(userId);
     });
 
 
   // This test properly belongs in accounts-base/accounts_tests.js, but
   // this is where the tests that actually log in are.
-  Tinytest.add('accounts - user() out of context', test => {
+  Tinytest.addAsync('accounts - user() out of context', async test => {
     // basic server context, no method.
-    test.throws(() => Meteor.user());
+    await test.throwsAsync(
+      async () =>
+        await Meteor.user()
+    );
+    await Meteor.users.removeAsync({});
   });
 
   // XXX would be nice to test
   // Accounts.config({forbidClientAccountCreation: true})
 
+  //TODO[FIBERS] Continue later
   Tinytest.addAsync(
     'passwords - login token observes get cleaned up',
-    (test, onComplete) => {
+    async (test) => {
       const username = Random.id();
-      Accounts.createUser({
+      const id = await Accounts.createUser({
         username: username,
         password: hashPassword('password')
       });
 
-      makeTestConnection(
-        test,
-        (clientConn, serverConn) => {
-          serverConn.onClose(() => {
-            test.isFalse(Accounts._getUserObserve(serverConn.id));
-            onComplete();
-          });
-          const result = clientConn.call('login', {
-            user: {username: username},
-            password: hashPassword('password')
-          });
-          test.isTrue(result);
-          const token = Accounts._getAccountData(serverConn.id, 'loginToken');
-          test.isTrue(token);
+      const {
+        clientConn, serverConn
+      } = await makeTestConnAsync(test)
 
-          // We poll here, instead of just checking `_getUserObserve`
-          // once, because the login method defers the creation of the
-          // observe, and setting up the observe yields, so we could end
-          // up here before the observe has been set up.
-          simplePoll(
-            () => !! Accounts._getUserObserve(serverConn.id),
-            () => {
-              test.isTrue(Accounts._getUserObserve(serverConn.id));
-              clientConn.disconnect();
-            },
-            () => {
-              test.fail(
-                `timed out waiting for user observe for connection ${serverConn.id}`
-              );
-              onComplete();
-            }
-          );
-        },
-        onComplete
-      );
+
+      serverConn.onClose(() => {
+        if (Accounts._getUserObserve(serverConn.id) !== undefined)
+          test.fail('observe should be gone');
+      })
+
+      const result = await clientConn.callAsync('login', {
+        user: { username: username },
+        password: hashPassword('password')
+      });
+
+      test.isTrue(result);
+      const token = Accounts._getAccountData(serverConn.id, 'loginToken');
+      test.isTrue(token)
+      test.isTrue(Accounts._getUserObserve(serverConn.id));
+
+
+      try {
+        const r =
+          await simplePollAsync(() => !!Accounts._getUserObserve(serverConn.id))
+        test.isTrue(Accounts._getUserObserve(serverConn.id));
+        clientConn.disconnect()
+        serverConn.close()
+      } catch (e) {
+        test.fail(
+          `timed out waiting for user observe for connection ${ serverConn.id }`
+        );
+      }
+
     }
   );
 
-  Tinytest.add(
+  Tinytest.addAsync(
     "passwords - reset password doesn't work if email changed after email sent",
-    test => {
-      const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+    async test => {
+      const username = Random.id() + 'reset-password-doesnt-work-if-email-changed'
+      const email = `${ username }-intercept@example.com`;
 
-      const userId = Accounts.createUser({
+      const userId = await Accounts.createUser({
         username: username,
         email: email,
         password: hashPassword("old-password")
       });
+      const user = await Meteor.users.findOneAsync(userId);
 
-      const user = Meteor.users.findOne(userId);
-
-      Accounts.sendResetPasswordEmail(userId, email);
-
-      const resetPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      await Accounts.sendResetPasswordEmail(userId, email);
+      const [resetPasswordEmailOptions] =
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/reset-password/(\\S*)`);
+
       const match = resetPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const resetPasswordToken = match[1];
 
-      const newEmail = `${Random.id()}-new@example.com`;
-      Meteor.users.update(userId, {$set: {"emails.0.address": newEmail}});
+      const newEmail = `${ Random.id() }-new@example.com`;
+      await Meteor.users.updateAsync(userId, { $set: { "emails.0.address": newEmail } });
 
-      test.throws(
-        () => Meteor.call("resetPassword", resetPasswordToken, hashPassword("new-password")),
+      await test.throwsAsync(
+        async () =>
+          await Meteor.callAsync("resetPassword", resetPasswordToken, hashPassword("new-password")),
         /Token has invalid email address/
       );
-      test.throws(
-        () => Meteor.call(
-          "login",
-          {user: {username: username},
-          password: hashPassword("new-password")}
-        ),
+      await test.throwsAsync(
+        async () =>
+          await Meteor.callAsync(
+            "login",
+            {
+              user: { username: username },
+              password: hashPassword("new-password")
+            }
+          ),
         /Incorrect password/);
     });
 
   Tinytest.addAsync(
     'passwords - reset password should work when token is not expired',
-    (test, onComplete) => {
-      const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+    async (test) => {
+      const username = Random.id() + 'reset-password-should-work-when-token-is-not-expired';
+      const email = `${ username }-intercept-reset@example.com`;
 
-      const userId = Accounts.createUser({
+      const userId = await Accounts.createUser({
         username: username,
         email: email,
         password: hashPassword("old-password")
       });
 
-      const user = Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOneAsync(userId);
 
-      Accounts.sendResetPasswordEmail(userId, email);
-
-      const resetPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      await Accounts.sendResetPasswordEmail(userId, email);
+      const [resetPasswordEmailOptions] =
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/reset-password/(\\S*)`);
       const match = resetPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const resetPasswordToken = match[1];
-
-      makeTestConnection(
-        test,
-        clientConn => {
-          test.isTrue(clientConn.call(
-            "resetPassword",
-            resetPasswordToken,
-            hashPassword("new-password")
-          ));
-
-          test.isTrue(clientConn.call("login", {
-            user: { username },
-            password: hashPassword("new-password")
-          }));
-
-          onComplete();
-        }
-      );
+      const { clientConn } = await makeTestConnAsync(test)
+      test.isTrue(await clientConn.callAsync(
+        "resetPassword",
+        resetPasswordToken,
+        hashPassword("new-password")
+      ));
+      test.isTrue(await clientConn.callAsync("login", {
+        user: { username },
+        password: hashPassword("new-password")
+      }));
     });
 
-  Tinytest.add(
+  Tinytest.addAsync(
     'passwords - reset password should not work when token is expired',
-    test => {
+    async test => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      const email = `${ username }-intercept@example.com`;
 
-      const userId = Accounts.createUser({
+      const userId = await Accounts.createUser({
         username: username,
         email: email,
         password: hashPassword("old-password")
       });
 
-      const user = Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOneAsync(userId);
 
-      Accounts.sendResetPasswordEmail(userId, email);
+      await Accounts.sendResetPasswordEmail(userId, email);
 
-      const resetPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      const [resetPasswordEmailOptions] =
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/reset-password/(\\S*)`);
       const match = resetPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const resetPasswordToken = match[1];
 
-      Meteor.users.update(userId, {$set: {"services.password.reset.when":  new Date(Date.now() + -5 * 24 * 3600 * 1000) }});
+      await Meteor.users.updateAsync(userId, { $set: { "services.password.reset.when": new Date(Date.now() + -5 * 24 * 3600 * 1000) } });
 
-      test.throws(
-        () => Meteor.call("resetPassword", resetPasswordToken, hashPassword("new-password")),
-        /Token expired/
-      );
-      test.throws(
-        () => Meteor.call(
+      try {
+        await Meteor.callAsync("resetPassword", resetPasswordToken, hashPassword("new-password"))
+      } catch (e) {
+        test.throws(() => {
+          throw e;
+        })
+      }
+
+      await test.throwsAsync(
+        async () => await Meteor.callAsync(
           "login",
-          {user: {username: username},
-          password: hashPassword("new-password")}
+          {
+            user: { username: username },
+            password: hashPassword("new-password")
+          }
         ),
         /Incorrect password/);
     });
 
-  Tinytest.add('forgotPassword - different error messages returned depending' +
-  ' on whether ambiguousErrorMessages flag is passed in Account.config',
-    test =>{
-        const username = Random.id();
-        const email = `${Random.id()}-intercept@example.com`;
-        const randomEmail = `${Random.id()}-Ada_intercept@some.com`;
-        const wrongOptions = {email: randomEmail}
-        const password = 'password';
-        const options = Accounts._options
+  Tinytest.addAsync('forgotPassword - different error messages returned depending' +
+    ' on whether ambiguousErrorMessages flag is passed in Account.config',
+    async test => {
+      const username = Random.id();
+      const email = `${ Random.id() }-intercept@example.com`;
+      const randomEmail = `${ Random.id() }-Ada_intercept@some.com`;
+      const wrongOptions = { email: randomEmail }
+      const password = 'password';
+      const options = Accounts._options
 
-        Accounts.createUser(
-          { username: username, email: email, password: hashPassword(password) },
-          );
+      await Accounts.createUser(
+        {
+          username: username,
+          email: email,
+          password: hashPassword(password)
+        },
+      );
 
-        Accounts._options.ambiguousErrorMessages = true
-        test.throws(
-          ()=> Meteor.call('forgotPassword', wrongOptions),
-          'Something went wrong. Please check your credentials'
-        )
+      Accounts._options.ambiguousErrorMessages = true
+      await test.throwsAsync(
+        async () => await Meteor.callAsync('forgotPassword', wrongOptions),
+        'Something went wrong. Please check your credentials'
+      )
 
-        Accounts._options.ambiguousErrorMessages = false
-        test.throws(
-          ()=> Meteor.call('forgotPassword', wrongOptions),
-          'User not found'
-        )
-        // return accounts as it were
-        Accounts._options = options
+      Accounts._options.ambiguousErrorMessages = false
+      await test.throwsAsync(
+        async () => await Meteor.callAsync('forgotPassword', wrongOptions),
+        /User not found/
+      )
+      // return accounts as it were
+      Accounts._options = options
     });
 
-  Tinytest.add(
+  Tinytest.addAsync(
     'passwords - reset tokens with reasons get cleaned up',
-    test => {
-      const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
-      Accounts.sendResetPasswordEmail(userId, email);
-      test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
+    async test => {
+      const email = `${ test.id }-intercept@example.com`;
+      const userId =
+        await Accounts.createUser(
+          {
+            email: email,
+            password: hashPassword('password')
+          }
+        );
+      await Accounts.sendResetPasswordEmail(userId, email);
+      const user1 = await Meteor.users.findOneAsync(userId);
+      test.isTrue(!!user1.services.password.reset);
 
-      Accounts._expirePasswordResetTokens(new Date(), userId);
-
-      test.isUndefined(Meteor.users.findOne(userId).services.password.reset);
+      await Accounts._expirePasswordResetTokens(new Date(), userId);
+      const user2 = await Meteor.users.findOneAsync(userId);
+      test.isUndefined(user2.services.password.reset);
     });
 
-  Tinytest.add(
+  Tinytest.addAsync(
     'passwords - reset tokens without reasons get cleaned up',
-    test => {
-      const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
-      Accounts.sendResetPasswordEmail(userId, email);
-      Meteor.users.update({_id: userId}, {$unset: {"services.password.reset.reason": 1}});
-      test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
-      test.isUndefined(Meteor.users.findOne(userId).services.password.reset.reason);
+    async test => {
+      const email = `${ test.id }-intercept@example.com`;
+      const userId =
+        await Accounts.createUser(
+          {
+            email: email,
+            password: hashPassword('password')
+          }
+        );
+      await Accounts.sendResetPasswordEmail(userId, email);
+      await Meteor.users.updateAsync(
+        { _id: userId },
+        { $unset: { "services.password.reset.reason": 1 } }
+      );
+      const user1 = await Meteor.users.findOneAsync(userId);
+      test.isTrue(!!user1.services.password.reset);
+      test.isUndefined(user1.services.password.reset.reason);
 
-      Accounts._expirePasswordResetTokens(new Date(), userId);
-
-      test.isUndefined(Meteor.users.findOne(userId).services.password.reset);
+      await Accounts._expirePasswordResetTokens(new Date(), userId);
+      const user2 = await Meteor.users.findOneAsync(userId);
+      test.isUndefined(user2.services.password.reset);
     });
 
   Tinytest.addAsync(
     'passwords - enroll password should work when token is not expired',
-    (test, onComplete) => {
+    async test => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      const email = `${ username }-intercept@example.com`;
 
-      const userId = Accounts.createUser({
+      const userId = await Accounts.createUser({
         username: username,
         email: email
       });
 
-      const user = Meteor.users.findOne(userId);
-
-      Accounts.sendEnrollmentEmail(userId, email);
-
-      const enrollPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      const user = await Meteor.users.findOneAsync(userId);
+      await Accounts.sendEnrollmentEmail(userId, email);
+      const [enrollPasswordEmailOptions] =
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/enroll-account/(\\S*)`);
       const match = enrollPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const enrollPasswordToken = match[1];
 
-      makeTestConnection(
-        test,
-        clientConn => {
-          test.isTrue(clientConn.call(
-            "resetPassword",
-            enrollPasswordToken,
-            hashPassword("new-password")
-          ));
+      const {
+        clientConn
+      } = await makeTestConnAsync(test)
 
-          test.isTrue(clientConn.call("login", {
-            user: { username },
-            password: hashPassword("new-password")
-          }));
+      test.isTrue(
+        await clientConn.callAsync(
+          "resetPassword",
+          enrollPasswordToken,
+          hashPassword("new-password"))
+      );
+      test.isTrue(
+        await clientConn.callAsync("login", {
+          user: { username },
+          password: hashPassword("new-password")
+        })
+      );
 
-          onComplete();
-        });
     });
 
-  Tinytest.add(
+  Tinytest.addAsync(
     'passwords - enroll password should not work when token is expired',
-    test => {
+    async test => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      const email = `${ username }-intercept@example.com`;
 
-      const userId = Accounts.createUser({
+      const userId = await Accounts.createUser({
         username: username,
         email: email
       });
 
-      const user = Meteor.users.findOne(userId);
+      const user = await Meteor.users.findOneAsync(userId);
 
-      Accounts.sendEnrollmentEmail(userId, email);
+      await Accounts.sendEnrollmentEmail(userId, email);
 
-      const enrollPasswordEmailOptions =
-        Meteor.call("getInterceptedEmails", email)[0];
+      const [enrollPasswordEmailOptions] =
+        await Meteor.callAsync("getInterceptedEmails", email);
 
       const re = new RegExp(`${Meteor.absoluteUrl()}#/enroll-account/(\\S*)`);
       const match = enrollPasswordEmailOptions.text.match(re);
       test.isTrue(match);
       const enrollPasswordToken = match[1];
 
-      Meteor.users.update(userId, {$set: {"services.password.enroll.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) }});
+      await Meteor.users.updateAsync(userId, { $set: { "services.password.enroll.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) } });
 
-      test.throws(
-        () => Meteor.call("resetPassword", enrollPasswordToken, hashPassword("new-password")),
+      await test.throwsAsync(
+        async () => await Meteor.callAsync("resetPassword", enrollPasswordToken, hashPassword("new-password")),
         /Token expired/
       );
     });
 
-  Tinytest.add('passwords - enroll tokens get cleaned up', test => {
-    const email = `${test.id}-intercept@example.com`;
-    const userId = Accounts.createUser({email: email, password: hashPassword('password')});
+  Tinytest.addAsync('passwords - enroll tokens get cleaned up',
+    async test => {
+      const email = `${ test.id }-intercept@example.com`;
+      const userId =
+        await Accounts.createUser({ email: email, password: hashPassword('password') });
 
-    Accounts.sendEnrollmentEmail(userId, email);
-    test.isTrue(!!Meteor.users.findOne(userId).services.password.enroll);
-    Accounts._expirePasswordEnrollTokens(new Date(), userId);
-    test.isUndefined(Meteor.users.findOne(userId).services.password.enroll);
-  });
+      await Accounts.sendEnrollmentEmail(userId, email);
+      const user1 = await Meteor.users.findOneAsync(userId);
+      test.isTrue(!!user1.services.password.enroll);
+      await Accounts._expirePasswordEnrollTokens(new Date(), userId);
+      const user2 = await Meteor.users.findOneAsync(userId);
+      test.isUndefined(user2.services.password.enroll);
+    });
 
-  Tinytest.add(
+  Tinytest.addAsync(
     "passwords - enroll tokens don't get cleaned up when reset tokens are cleaned up",
-    test => {
-      const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
+    async test => {
+      const email = `${ test.id }-intercept@example.com`;
+      const userId =
+        await Accounts.createUser({
+          email: email,
+          password: hashPassword('password')
+        });
 
-      Accounts.sendEnrollmentEmail(userId, email);
-      const enrollToken = Meteor.users.findOne(userId).services.password.enroll;
+      await Accounts.sendEnrollmentEmail(userId, email);
+      const user1 = await Meteor.users.findOneAsync(userId);
+      const enrollToken = user1.services.password.enroll;
       test.isTrue(enrollToken);
 
-      Accounts._expirePasswordResetTokens(new Date(), userId);
-      test.equal(enrollToken, Meteor.users.findOne(userId).services.password.enroll);
+      await Accounts._expirePasswordResetTokens(new Date(), userId);
+      const user2 = await Meteor.users.findOneAsync(userId)
+      test.equal(enrollToken, user2.services.password.enroll);
     }
   )
 
-  Tinytest.add(
+  Tinytest.addAsync(
     "passwords - reset tokens don't get cleaned up when enroll tokens are cleaned up",
-    test => {
-      const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
+    async test => {
+      const email = `${ test.id }-intercept@example.com`;
+      const userId =
+        await Accounts.createUser({ email: email, password: hashPassword('password') });
 
-      Accounts.sendResetPasswordEmail(userId, email);
-      const resetToken = Meteor.users.findOne(userId).services.password.reset;
+      await Accounts.sendResetPasswordEmail(userId, email);
+      const user1 = await Meteor.users.findOneAsync(userId);
+      const resetToken = user1.services.password.reset;
       test.isTrue(resetToken);
 
-      Accounts._expirePasswordEnrollTokens(new Date(), userId);
-      test.equal(resetToken,Meteor.users.findOne(userId).services.password.reset);
+      await Accounts._expirePasswordEnrollTokens(new Date(), userId);
+      const user2 = await Meteor.users.findOneAsync(userId);
+      test.equal(resetToken, user2.services.password.reset);
     }
   )
 
   // We should be able to change the username
-  Tinytest.add("passwords - change username & findUserByUsername", test => {
-    const username = Random.id();
-    const ignoreFieldName = "profile";
-    const userId = Accounts.createUser({
-      username,
-      [ignoreFieldName]: {name: 'foo'},
+  Tinytest.addAsync("passwords - change username & findUserByUsername",
+    async test => {
+      const username = Random.id();
+      const ignoreFieldName = "profile";
+      const userId = await Accounts.createUser({
+        username,
+        [ignoreFieldName]: { name: 'foo' },
+      });
+
+      test.isTrue(userId);
+
+      const newUsername = Random.id();
+      await Accounts.setUsername(userId, newUsername);
+      const u1 = await Accounts._findUserByQuery({ id: userId })
+      test.equal(u1.username, newUsername);
+
+      // Test findUserByUsername as well while we're here
+      let user = await Accounts.findUserByUsername(newUsername);
+      test.equal(user._id, userId, 'userId - ignore');
+      test.isNotUndefined(user[ignoreFieldName], 'field - no ignore');
+
+      // Test default field selector
+      const options = Accounts._options;
+      Accounts._options = { defaultFieldSelector: { [ignoreFieldName]: 0 } };
+      user = await Accounts.findUserByUsername(newUsername);
+      test.equal(user.username, newUsername, 'username - default ignore');
+      test.isUndefined(user[ignoreFieldName], 'field - default ignore');
+
+      // Test default field selector over-ride
+      user = await Accounts.findUserByUsername(newUsername, {
+        fields: {
+          [ignoreFieldName]: 1
+        }
+      });
+      test.isUndefined(user.username, 'username - override');
+      test.isNotUndefined(user[ignoreFieldName], 'field - override');
+
+      Accounts._options = options;
     });
 
-    test.isTrue(userId);
-
-    const newUsername = Random.id();
-    Accounts.setUsername(userId, newUsername);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).username, newUsername);
-
-    // Test findUserByUsername as well while we're here
-    let user = Accounts.findUserByUsername(newUsername);
-    test.equal(user._id, userId, 'userId - ignore');
-    test.isNotUndefined(user[ignoreFieldName], 'field - no ignore');
-
-    // Test default field selector
-    const options = Accounts._options;
-    Accounts._options = {defaultFieldSelector: {[ignoreFieldName]: 0}};
-    user = Accounts.findUserByUsername(newUsername);
-    test.equal(user.username, newUsername, 'username - default ignore');
-    test.isUndefined(user[ignoreFieldName], 'field - default ignore');
-
-    // Test default field selector over-ride
-    user = Accounts.findUserByUsername(newUsername, {
-      fields: {
-        [ignoreFieldName]: 1
-      }
-    });
-    test.isUndefined(user.username, 'username - override');
-    test.isNotUndefined(user[ignoreFieldName], 'field - override');
-
-    Accounts._options = options;
-  });
-
-  Tinytest.add("passwords - change username to a new one only differing " +
-      "in case", test => {
-    const username = `${Random.id()}user`;
-    const userId = Accounts.createUser({
+  Tinytest.addAsync("passwords - change username to a new one only differing " +
+    "in case", async test => {
+    const username = `${ Random.id() }user`;
+    const userId = await Accounts.createUser({
       username: username.toUpperCase()
     });
 
     test.isTrue(userId);
 
     const newUsername = username.toLowerCase();
-    Accounts.setUsername(userId, newUsername);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).username, newUsername);
+    await Accounts.setUsername(userId, newUsername);
+    const u1 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u1.username, newUsername);
   });
 
   // We should not be able to change the username to one that only
   // differs in case from an existing one
-  Tinytest.add("passwords - change username should fail when there are " +
-      "existing users with a username only differing in case", test => {
-    const username = `${Random.id()}user`;
-    const usernameUpper = username.toUpperCase();
+  Tinytest.addAsync("passwords - change username should fail when there are " +
+    "existing users with a username only differing in case",
+    async test => {
+      const username = `${ Random.id() }user`;
+      const usernameUpper = username.toUpperCase();
 
-    const userId1 = Accounts.createUser({
-      username: username
+      const userId1 = await Accounts.createUser({
+        username: username
+      });
+
+      const user2OriginalUsername = Random.id();
+      const userId2 = await Accounts.createUser({
+        username: user2OriginalUsername
+      });
+
+      test.isTrue(userId1);
+      test.isTrue(userId2);
+
+      await test.throwsAsync(
+        async () => await Accounts.setUsername(userId2, usernameUpper),
+        /Username already exists/
+      );
+
+      const u2 = await Accounts._findUserByQuery({ id: userId2 })
+      test.equal(u2.username, user2OriginalUsername);
     });
 
-    const user2OriginalUsername = Random.id();
-    const userId2 = Accounts.createUser({
-      username: user2OriginalUsername
+  Tinytest.addAsync("passwords - add email & findUserByEmail",
+    async test => {
+      const origEmail = `${ Random.id() }@turing.com`;
+      const username = Random.id();
+      const ignoreFieldName = "profile";
+      const userId = await Accounts.createUser({
+        email: origEmail,
+        username,
+        [ignoreFieldName]: { name: 'foo' },
+      });
+
+      const newEmail = `${ Random.id() }@turing.com`;
+      await Accounts.addEmail(userId, newEmail);
+
+      const thirdEmail = `${ Random.id() }@turing.com`;
+      await Accounts.addEmail(userId, thirdEmail, true);
+      const u1 = await Accounts._findUserByQuery({ id: userId })
+      test.equal(u1.emails, [
+        { address: origEmail, verified: false },
+        { address: newEmail, verified: false },
+        { address: thirdEmail, verified: true }
+      ]);
+
+      // Test findUserByEmail as well while we're here
+      let user = await Accounts.findUserByEmail(origEmail);
+      test.equal(user._id, userId);
+      test.isNotUndefined(user[ignoreFieldName], 'field - no ignore');
+
+      // Test default field selector
+      const options = Accounts._options;
+      Accounts._options = { defaultFieldSelector: { [ignoreFieldName]: 0 } };
+      user = await Accounts.findUserByEmail(origEmail);
+      test.equal(user.username, username, 'username - default ignore');
+      test.isUndefined(user[ignoreFieldName], 'field - default ignore');
+
+      // Test default field selector over-ride
+      user = await Accounts.findUserByEmail(origEmail, {
+        fields: {
+          [ignoreFieldName]: 1
+        }
+      });
+      test.equal(user._id, userId, 'userId - override');
+      test.isUndefined(user.username, 'username - override');
+      test.isNotUndefined(user[ignoreFieldName], 'field - override');
+
+      Accounts._options = options;
     });
 
-    test.isTrue(userId1);
-    test.isTrue(userId2);
-
-    test.throws(
-      () => Accounts.setUsername(userId2, usernameUpper),
-      /Username already exists/
-    );
-
-    test.equal(Accounts._findUserByQuery({id: userId2}).username,
-      user2OriginalUsername);
-  });
-
-  Tinytest.add("passwords - add email & findUserByEmail", test => {
-    const origEmail = `${Random.id()}@turing.com`;
-    const username = Random.id();
-    const ignoreFieldName = "profile";
-    const userId = Accounts.createUser({
-      email: origEmail,
-      username,
-      [ignoreFieldName]: {name: 'foo'},
+  Tinytest.addAsync("passwords - add email when user has not an existing email",
+      async test => {
+    const userId = await Accounts.createUser({
+      username: `user${ Random.id() }`
     });
 
-    const newEmail = `${Random.id()}@turing.com`;
-    Accounts.addEmail(userId, newEmail);
-
-    const thirdEmail = `${Random.id()}@turing.com`;
-    Accounts.addEmail(userId, thirdEmail, true);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
-      { address: origEmail, verified: false },
+    const newEmail = `${ Random.id() }@turing.com`;
+    await Accounts.addEmail(userId, newEmail);
+    const u1 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u1.emails, [
       { address: newEmail, verified: false },
-      { address: thirdEmail, verified: true }
-    ]);
-
-    // Test findUserByEmail as well while we're here
-    let user = Accounts.findUserByEmail(origEmail);
-    test.equal(user._id, userId);
-    test.isNotUndefined(user[ignoreFieldName], 'field - no ignore');
-
-    // Test default field selector
-    const options = Accounts._options;
-    Accounts._options = {defaultFieldSelector: {[ignoreFieldName]: 0}};
-    user = Accounts.findUserByEmail(origEmail);
-    test.equal(user.username, username, 'username - default ignore');
-    test.isUndefined(user[ignoreFieldName], 'field - default ignore');
-
-    // Test default field selector over-ride
-    user = Accounts.findUserByEmail(origEmail, {
-      fields: {
-        [ignoreFieldName]: 1
-      }
-    });
-    test.equal(user._id, userId, 'userId - override');
-    test.isUndefined(user.username, 'username - override');
-    test.isNotUndefined(user[ignoreFieldName], 'field - override');
-
-    Accounts._options = options;
-  });
-
-  Tinytest.add("passwords - add email when user has not an existing email", test => {
-    const userId = Accounts.createUser({
-      username: `user${Random.id()}`
-    });
-
-    const newEmail = `${Random.id()}@turing.com`;
-    Accounts.addEmail(userId, newEmail);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
-      { address: newEmail, verified: false },
     ]);
   });
 
-  Tinytest.add("passwords - add email when the user has an existing email " +
-      "only differing in case", test => {
-    const origEmail = `${Random.id()}@turing.com`;
-    const userId = Accounts.createUser({
+  Tinytest.addAsync("passwords - add email when the user has an existing email " +
+    "only differing in case",
+    async test => {
+    const origEmail = `${ Random.id() }@turing.com`;
+    const userId = await Accounts.createUser({
       email: origEmail
     });
 
-    const newEmail = `${Random.id()}@turing.com`;
-    Accounts.addEmail(userId, newEmail);
+    const newEmail = `${ Random.id() }@turing.com`;
+    await Accounts.addEmail(userId, newEmail);
 
     const thirdEmail = origEmail.toUpperCase();
-    Accounts.addEmail(userId, thirdEmail, true);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
+    await Accounts.addEmail(userId, thirdEmail, true);
+    const u1 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u1.emails, [
       { address: thirdEmail, verified: true },
       { address: newEmail, verified: false }
     ]);
   });
 
-  Tinytest.add("passwords - add email should fail when there is an existing " +
-      "user with an email only differing in case", test => {
-    const user1Email = `${Random.id()}@turing.com`;
-    const userId1 = Accounts.createUser({
+  Tinytest.addAsync("passwords - add email should fail when there is an existing " +
+    "user with an email only differing in case",
+    async test => {
+    const user1Email = `${ Random.id() }@turing.com`;
+    const userId1 = await Accounts.createUser({
       email: user1Email
     });
 
-    const user2Email = `${Random.id()}@turing.com`;
-    const userId2 = Accounts.createUser({
+    const user2Email = `${ Random.id() }@turing.com`;
+    const userId2 = await Accounts.createUser({
       email: user2Email
     });
 
     const dupEmail = user1Email.toUpperCase();
-    test.throws(
-      () => Accounts.addEmail(userId2, dupEmail),
+    await test.throwsAsync(
+     async () => await Accounts.addEmail(userId2, dupEmail),
       /Email already exists/
     );
 
-    test.equal(Accounts._findUserByQuery({id: userId1}).emails, [
+    const u1 = await Accounts._findUserByQuery({ id: userId1 })
+    test.equal(u1.emails, [
       { address: user1Email, verified: false }
     ]);
-
-    test.equal(Accounts._findUserByQuery({id: userId2}).emails, [
+    const u2 = await Accounts._findUserByQuery({ id: userId2 })
+    test.equal(u2.emails, [
       { address: user2Email, verified: false }
     ]);
   });
 
-  Tinytest.add("passwords - remove email", test => {
-    const origEmail = `${Random.id()}@turing.com`;
-    const userId = Accounts.createUser({
+  Tinytest.addAsync("passwords - remove email",
+    async test => {
+    const origEmail = `${ Random.id() }@turing.com`;
+    const userId = await Accounts.createUser({
       email: origEmail
     });
 
-    const newEmail = `${Random.id()}@turing.com`;
-    Accounts.addEmail(userId, newEmail);
+    const newEmail = `${ Random.id() }@turing.com`;
+    await Accounts.addEmail(userId, newEmail);
 
-    const thirdEmail = `${Random.id()}@turing.com`;
-    Accounts.addEmail(userId, thirdEmail, true);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
+    const thirdEmail = `${ Random.id() }@turing.com`;
+    await Accounts.addEmail(userId, thirdEmail, true);
+    const u1 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u1.emails, [
       { address: origEmail, verified: false },
       { address: newEmail, verified: false },
       { address: thirdEmail, verified: true }
     ]);
 
-    Accounts.removeEmail(userId, newEmail);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
+    await Accounts.removeEmail(userId, newEmail);
+    const u2 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u2.emails, [
       { address: origEmail, verified: false },
       { address: thirdEmail, verified: true }
     ]);
 
-    Accounts.removeEmail(userId, origEmail);
-
-    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
+    await Accounts.removeEmail(userId, origEmail);
+    const u3 = await Accounts._findUserByQuery({ id: userId })
+    test.equal(u3.emails, [
       { address: thirdEmail, verified: true }
     ]);
   });
 
-  Tinytest.addAsync(
-    'passwords - allow custom bcrypt rounds',
-    (test, done) => {
-      const getUserHashRounds = user =>
-        Number(user.services.password.bcrypt.substring(4, 6));
-
-
+  const getUserHashRounds = user =>
+    Number(user.services.password.bcrypt.substring(4, 6));
+  testAsyncMulti("passwords - allow custom bcrypt rounds",[
+    async function (test) {
       // Verify that a bcrypt hash generated for a new account uses the
-      // default number of rounds.
       let username = Random.id();
-      const password = hashPassword('abc123');
-      const userId1 = Accounts.createUser({ username, password });
-      let user1 = Meteor.users.findOne(userId1);
-      let rounds = getUserHashRounds(user1);
+      this.password = hashPassword('abc123');
+      this.userId1 = await Accounts.createUser({ username, password: this.password });
+      this.user1 =  await Meteor.users.findOneAsync(this.userId1);
+      let rounds = getUserHashRounds(this.user1);
       test.equal(rounds, Accounts._bcryptRounds());
 
       // When a custom number of bcrypt rounds is set via Accounts.config,
       // and an account was already created using the default number of rounds,
       // make sure that a new hash is created (and stored) using the new number
       // of rounds, the next time the password is checked.
+      this.customRounds = 11;
+      Accounts._options.bcryptRounds = this.customRounds;
+      await Accounts._checkPasswordAsync(this.user1, this.password);
+    },
+    async function(test) {
       const defaultRounds = Accounts._bcryptRounds();
-      const customRounds = 11;
-      Accounts._options.bcryptRounds = customRounds;
-      Accounts._checkPassword(user1, password);
-      Meteor.setTimeout(() => {
-        user1 = Meteor.users.findOne(userId1);
-        rounds = getUserHashRounds(user1);
-        test.equal(rounds, customRounds);
+      let rounds;
+      let username;
 
+      let resolve;
+      const promise = new Promise(res => resolve = res);
+
+      Meteor.setTimeout(async () => {
+        this.user1 = await Meteor.users.findOneAsync(this.userId1);
+        rounds = getUserHashRounds(this.user1);
+        test.equal(rounds, this.customRounds);
         // When a custom number of bcrypt rounds is set, make sure it's
         // used for new bcrypt password hashes.
         username = Random.id();
-        const userId2 = Accounts.createUser({ username, password });
-        const user2 = Meteor.users.findOne(userId2);
+        const userId2 = await Accounts.createUser({ username, password: this.password });
+        const user2 = await Meteor.users.findOneAsync(userId2);
         rounds = getUserHashRounds(user2);
-        test.equal(rounds, customRounds);
+        test.equal(rounds, this.customRounds);
 
         // Cleanup
         Accounts._options.bcryptRounds = defaultRounds;
-        Meteor.users.remove(userId1);
-        Meteor.users.remove(userId2);
-        done();
+        await Meteor.users.removeAsync(this.userId1);
+        await Meteor.users.removeAsync(userId2);
+        resolve();
       }, 5000);
+
+      return promise;
     }
-  );
+  ]); // default number of rounds.
 
-  Tinytest.add('passwords - extra params in email urls', (test) => {
+
+  Tinytest.addAsync('passwords - extra params in email urls',
+    async (test) => {
     const username = Random.id();
-    const email = `${username}-intercept@example.com`;
+    const email = `${ username }-intercept@example.com`;
 
-    const userId = Accounts.createUser({
+    const userId = await Accounts.createUser({
       username: username,
       email: email
     });
 
     const extraParams = { test: 'success' };
-    Accounts.sendEnrollmentEmail(userId, email, null, extraParams);
+    await Accounts.sendEnrollmentEmail(userId, email, null, extraParams);
 
-    const enrollPasswordEmailOptions =
-      Meteor.call("getInterceptedEmails", email)[0];
+    const [enrollPasswordEmailOptions] =
+     await Meteor.callAsync("getInterceptedEmails", email);
 
     const re = new RegExp(`${Meteor.absoluteUrl()}(\\S*)`);
     const match = enrollPasswordEmailOptions.text.match(re);
@@ -1812,4 +1906,4 @@ if (Meteor.isServer) (() => {
     test.equal(url.searchParams.get('test'), extraParams.test);
   });
 
-}) ();
+})();

@@ -1,25 +1,20 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 4,
   "dependencies": {
     "@meteorjs/reify": {
-      "version": "0.23.0",
-      "resolved": "https://registry.npmjs.org/@meteorjs/reify/-/reify-0.23.0.tgz",
-      "integrity": "sha512-sHQCbZHoM+PxT+pWvkJDsaOpJP+tMQ31Mr2t1T0YcXl18eScb0bQNafe8TugNCc4pngByppfscVX4ppr84MzDw=="
+      "version": "0.24.0",
+      "resolved": "git+ssh://git@github.com/meteor/reify.git#cf61c57c6c4fefcbf164bf63d3c12fda1924b3d2",
+      "integrity": "sha512-VCvq454Two3oLtBHrkWx6OC1lO6jepYOCC9PhlcHcQCDC2R8mlDTmox0XvW2rCTVOth0qEIbdxKeKxa8WkD7eA=="
     },
     "@types/estree": {
-      "version": "0.0.50",
-      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-0.0.50.tgz",
-      "integrity": "sha512-C6N5s2ZFtuZRj54k2/zyRhNDjJwwcViAM3Nbm8zjBpbqAdZ00mr0CFxvSKeO8Y/e03WVFLpQMdHYVfUd6SB+Hw=="
+      "version": "1.0.5",
+      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.5.tgz",
+      "integrity": "sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw=="
     },
     "acorn": {
-      "version": "6.4.2",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-6.4.2.tgz",
-      "integrity": "sha512-XtGIhXwF8YM8bJhGxG5kXgjkEuNGLTkoYqVE+KMR+aspr4KGYmKYg7yUe3KghyQ9yheNwLnjmzh/7+gfDBmHCQ=="
-    },
-    "acorn-dynamic-import": {
-      "version": "4.0.0",
-      "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
-      "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
+      "version": "8.11.3",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.11.3.tgz",
+      "integrity": "sha512-Y9rRfJG5jcKOE0CLisYbojUjIrIEE7AGMzA/Sm4BslANhbS+cDMpgBdcPT91oJ7OuJ9hYJBx59RjbhxVnrF8Xg=="
     },
     "estree-walker": {
       "version": "2.0.2",
@@ -32,14 +27,14 @@
       "integrity": "sha512-U82MsXXiFIrjCK4otLT+o2NA2Cd2g5MLoOVXUZjIOhLurrRxpEXzI8O0KZHr3IjLvlAH1kTPYSuqer5T9ZVBKQ=="
     },
     "magic-string": {
-      "version": "0.25.7",
-      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.25.7.tgz",
-      "integrity": "sha512-4CrMT5DOHTDk4HYDlzmwu4FVCcIYI8gauveasrdCu2IKIFOJ3f0v/8MDGJCDL9oD2ppz/Av1b0Nj345H9M+XIA=="
+      "version": "0.25.9",
+      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.25.9.tgz",
+      "integrity": "sha512-RmF0AsMzgt25qzqqLc1+MbHmhdx0ojF2Fvs4XnOqz2ZOBXzzkEwc/dJQZCYHAn7v1jbVOjAZfK8msRn4BxO4VQ=="
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
       "resolved": "https://registry.npmjs.org/meteor-babel-helpers/-/meteor-babel-helpers-0.0.3.tgz",
-      "integrity": "sha1-8uXZ+HlvvS6JAQI9dpnlsgLqn7A="
+      "integrity": "sha512-PgfmiyT/HiBaxwGHxS4t3Qi0fpmEW3O0WW2VfrgekiMGz3aZPd9/4PRIaMMZsfyjQ1vyEm6dZqTAFZENbuoTxw=="
     },
     "periscopic": {
       "version": "2.0.3",
@@ -47,9 +42,9 @@
       "integrity": "sha512-FuCZe61mWxQOJAQFEfmt9FjzebRlcpFz8sFPbyaCKtdusPkMEbA9ey0eARnRav5zAhmXznhaQkKGFAPn7X9NUw=="
     },
     "semver": {
-      "version": "5.7.1",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-5.7.1.tgz",
-      "integrity": "sha512-sauaDf/PZdVgrLTNYHRtpXa1iRiKcaebiKQ1BJdpQlWH2lCvexQdX55snPFyK7QzpudqbCI0qXFfOasHdyNDGQ=="
+      "version": "5.7.2",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.7.2.tgz",
+      "integrity": "sha512-cBznnQ9KjJqU67B52RMC65CMarK2600WFnbkcaiwWq3xy/5haFJlshgnpjovMVJ+Hff49d8GEn0b87C5pDQ10g=="
     },
     "sourcemap-codec": {
       "version": "1.4.8",

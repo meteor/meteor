@@ -1,12 +1,12 @@
 import http from 'http';
 
-const testPendingCredential = function (test, method) {
+const testPendingCredential = async function (test, method) {
   const foobookId = Random.id();
   const foobookOption1 = Random.id();
   const credentialToken = Random.id();
   const serviceName = Random.id();
 
-  ServiceConfiguration.configurations.insert({service: serviceName});
+  await ServiceConfiguration.configurations.insertAsync({service: serviceName});
 
   try {
     // register a fake login service
@@ -51,11 +51,11 @@ const testPendingCredential = function (test, method) {
       return end.apply(this, args);
     };
 
-    OAuthTest.middleware(req, res);
+    await OAuthTest.middleware(req, res);
     const credentialSecret = respData;
 
     // Test that the result for the token is available
-    let result = OAuth._retrievePendingCredential(credentialToken,
+    let result = await OAuth._retrievePendingCredential(credentialToken,
                                                   credentialSecret);
     const serviceData = OAuth.openSecrets(result.serviceData);
     test.equal(result.serviceName, serviceName);
@@ -64,7 +64,7 @@ const testPendingCredential = function (test, method) {
     test.equal(result.options.option1, foobookOption1);
 
     // Test that pending credential is removed after being retrieved
-    result = OAuth._retrievePendingCredential(credentialToken);
+    result = await OAuth._retrievePendingCredential(credentialToken);
     test.isUndefined(result);
 
   } finally {
@@ -72,17 +72,17 @@ const testPendingCredential = function (test, method) {
   }
 };
 
-Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (without oauth encryption)", test => {
+Tinytest.addAsync("oauth2 - pendingCredential is stored and can be retrieved (without oauth encryption)", async test => {
   OAuthEncryption.loadKey(null);
-  testPendingCredential(test, "GET");
-  testPendingCredential(test, "POST");
+  await testPendingCredential(test, "GET");
+  await testPendingCredential(test, "POST");
 });
 
-Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (with oauth encryption)", test => {
+Tinytest.addAsync("oauth2 - pendingCredential is stored and can be retrieved (with oauth encryption)", async test => {
   try {
     OAuthEncryption.loadKey(Buffer.from([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
-    testPendingCredential(test, "GET");
-    testPendingCredential(test, "POST");
+    await testPendingCredential(test, "GET");
+    await testPendingCredential(test, "POST");
   } finally {
     OAuthEncryption.loadKey(null);
   }

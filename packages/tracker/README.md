@@ -14,8 +14,8 @@ Tracker is essentially a simple _convention_, or interface, that lets reactive d
 
 This README has a short introduction to Tracker. For a complete guide
 to Tracker, consult the thorough and informative [Tracker
-Manual](https://github.com/meteor/meteor/wiki/Tracker-Manual), which
-is five times longer than the Tracker source code itself. You can also browse the API reference on the [main Meteor docs page](http://docs.meteor.com/#tracker).
+Manual](https://github.com/meteor/docs/blob/version-NEXT/long-form/tracker-manual.md), which
+is five times longer than the Tracker source code itself. You can also browse the API reference on the [main Meteor docs page](https://docs.meteor.com/api/tracker.html).
 
 ## Example
 
@@ -50,7 +50,7 @@ The current temperature is 71.9 F       (printed a few minutes later)
 
 The function passed to `Tracker.autorun` is called once immediately, and then it's called again whenever there are any changes to any of the _reactive data sources_ that it referenced. To make this work, `currentTemperatureCelsius` just needs to register with Tracker as a reactive data source when it's called, which takes only a few lines of code.
 
-Or, instead of calling `Tracker.autorun` ourselves, we might use `currentTemperatureFahrenheit` in a [Blaze](https://www.meteor.com/blaze) template:
+Or, instead of calling `Tracker.autorun` ourselves, we might use `currentTemperatureFahrenheit` in a [Blaze](https://www.blazejs.org/) template:
 
 ```handlebars
 <!-- In demo.html -->
@@ -100,9 +100,9 @@ It's easy for a library to detect if Tracker is available, and cooperate with it
 
 The Meteor project provides a variety of Tracker-aware libraries:
 
-- [Blaze](https://www.meteor.com/blaze) is a reactive templating/DOM update library designed to work well with Tracker.
+- [Blaze](https://www.blazejs.org/) is a reactive templating/DOM update library designed to work well with Tracker.
 
-- [Minimongo](https://www.meteor.com/mini-databases) is a Tracker-aware reimplementation of the MongoDB API in JavaScript, very useful for storing and querying client-side data. We also have a ["full stack database driver"](https://www.meteor.com/full-stack-db-drivers) for Mongo that replicates data from a real server-side MongoDB database into Minimongo.
+- [Minimongo](https://github.com/meteor/meteor/tree/devel/packages/minimongo) is a Tracker-aware reimplementation of the MongoDB API in JavaScript, very useful for storing and querying client-side data. We also have a ["full stack database driver"](https://docs.meteor.com/api/collections.html#Mongo-Collection) for Mongo that replicates data from a real server-side MongoDB database into Minimongo.
 
 - [reactive-dict](https://atmospherejs.com/meteor/reactive-dict), and
 [reactive-var](https://atmospherejs.com/meteor/reactive-var) provide
@@ -113,9 +113,9 @@ code.
 
 - Other Meteor core packages are generally Tracker-aware wherever it
   makes sense. For example, the current connection status is reactive
-  in Meteor's [DDP](https://www.meteor.com/ddp) implementation, and
+  in Meteor's [DDP](https://github.com/meteor/meteor/tree/devel/packages/ddp) implementation, and
   the currently logged in user is reactive in [Meteor
-  Accounts](https://www.meteor.com/accounts) system.
+  Accounts](https://docs.meteor.com/api/accounts) system.
 
 ## Future directions
 
@@ -126,4 +126,3 @@ Ideas for future work include:
 - Providing a contract for _settable_ reactive values, to make it easier to build bidirectionally bound forms. There is some discussion of this [here](https://meteor.hackpad.com/Lickable-Forms-and-Components-6CVspZsVwJY).
 - Making it possible to control invalidation order, for example by specifying that if autorun B was created inside autorun A, then if both A and B are invalidated and eligible to be rerun, then A will rerun before B. It is easy to construct theoretical situations where this would be valuable, but situations where this makes a difference in real apps seem to be surprisingly rare.
 
-Also as described on the project pages for [Mini databases](https://www.meteor.com/mini-databases) and [Full stack database drivers](https://www.meteor.com/full-stack-db-drivers), the Meteor project intends to eventually sponsor development of Tracker-aware libraries that emulate other server-side databases besides Mongo.
