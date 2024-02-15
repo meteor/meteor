@@ -45,7 +45,6 @@
 ### [callback-hook](https://github.com/meteor/meteor/tree/devel/packages/callback-hook) {#callback-hook}
 ### [check](https://github.com/meteor/meteor/tree/devel/packages/check) {#check}
 ### [constraint-solver](https://github.com/meteor/meteor/tree/devel/packages/constraint-solver) {#constraint-solver}
-### [context](https://github.com/meteor/meteor/tree/devel/packages/context) {#context}
 ### [core-runtime](https://github.com/meteor/meteor/tree/devel/packages/core-runtime) {#core-runtime}
 ### [crosswalk](https://github.com/meteor/meteor/tree/devel/packages/crosswalk) {#crosswalk}
 ### [ddp](https://github.com/meteor/meteor/tree/devel/packages/ddp) {#ddp}
@@ -92,7 +91,6 @@
 ### [meteor-base](https://github.com/meteor/meteor/tree/devel/packages/meteor-base) {#meteor-base}
 ### [meteor-developer-config-ui](https://github.com/meteor/meteor/tree/devel/packages/meteor-developer-config-ui) {#meteor-developer-config-ui}
 ### [meteor-developer-oauth](https://github.com/meteor/meteor/tree/devel/packages/meteor-developer-oauth) {#meteor-developer-oauth}
-### [meteor-platform](https://github.com/meteor/meteor/tree/devel/packages/meteor-platform) {#meteor-platform}
 ### [meteor-tool](https://github.com/meteor/meteor/tree/devel/packages/meteor-tool) {#meteor-tool}
 ### [minifier-css](https://github.com/meteor/meteor/tree/devel/packages/minifier-css) {#minifier-css}
 ### [minifier-js](https://github.com/meteor/meteor/tree/devel/packages/minifier-js) {#minifier-js}
@@ -131,7 +129,6 @@
 ### [sha](https://github.com/meteor/meteor/tree/devel/packages/sha) {#sha}
 ### [shell-server](https://github.com/meteor/meteor/tree/devel/packages/shell-server) {#shell-server}
 ### [socket-stream-client](https://github.com/meteor/meteor/tree/devel/packages/socket-stream-client) {#socket-stream-client}
-### [standard-app-packages](https://github.com/meteor/meteor/tree/devel/packages/standard-app-packages) {#standard-app-packages}
 ### [standard-minifier-css](https://github.com/meteor/meteor/tree/devel/packages/standard-minifier-css) {#standard-minifier-css}
 ### [standard-minifier-js](https://github.com/meteor/meteor/tree/devel/packages/standard-minifier-js) {#standard-minifier-js}
 ### [standard-minifiers](https://github.com/meteor/meteor/tree/devel/packages/standard-minifiers) {#standard-minifiers}
