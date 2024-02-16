@@ -714,6 +714,7 @@ applicable. If you only need to receive the fields that changed, see
 
 `callbacks` may have the following functions as properties:
 
+
 ### Callbacks
 
 - `added(document)` or `addedAt(document, atIndex, before)`
@@ -748,6 +749,14 @@ Call `stop` with no arguments to stop calling the callback functions and tear
 down the query. **The query will run forever until you call this.** If
 `observe` is called from a `Tracker.autorun` computation, it is automatically
 stopped when the computation is rerun or stopped.
+
+Live query handles have also `isReady` and `isReadyPromise` properties that
+indicate if the cursor is ready to be observed.
+
+::: warning
+`observe` in server returns a promise.
+:::
+
 (If the cursor was created with the option `reactive` set to false, it will
 only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
@@ -796,6 +805,14 @@ and tear down the query. **The query will run forever until you call this.**
 If
 `observeChanges` is called from a `Tracker.autorun` computation, it is automatically
 stopped when the computation is rerun or stopped.
+
+Live query handles have also `isReady` and `isReadyPromise` properties that
+indicate if the cursor is ready to be observed.
+
+::: warning
+`observe` in server returns a promise.
+:::
+
 (If the cursor was created with the option `reactive` set to false, it will
 only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
