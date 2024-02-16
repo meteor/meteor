@@ -653,7 +653,8 @@ The methods (like `update` or `insert`) you call on the resulting _raw_ collecti
 ## Cursors {#mongo_cursor}
 
 To create a cursor, use [`find`](#find). To access the documents in a
-cursor, use [`forEach`](#foreach), [`map`](#map), [`fetch`](#fetch), or ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols).
+cursor, use [`forEach`](#foreach), [`map`](#map), [`fetch`](#fetch),
+[`forEachAsync`](#foreachasync), [`mapAsync`](#map), [`fetchAsync`](#fetch) or ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols).
 
 <ApiBox name="Mongo.Cursor#forEach" instanceName="Cursor"/>
 
@@ -675,10 +676,31 @@ topPosts.forEach((post) => {
 });
 ```
 
+::: warning
+Client only.
+For server/isomorphic usage see [removeAsync](#Mongo-Cursor-forEachAsync).
+:::
+
 <ApiBox name="Mongo.Cursor#forEachAsync" instanceName="Cursor"/>
 
-
 Async version of [`forEach`](#forEach) that return a `Promise`.
+
+The same example as from `forEach` but using `forEachAsync`:
+
+```js
+
+// Print the titles of the five top-scoring posts.
+const topPosts = Posts.find({}, { sort: { score: -1 }, limit: 5 });
+let count = 0;
+
+await topPosts.forEachAsync((post) => {
+  console.log(`Title of post ${count}: ${post.title}`);
+  count += 1;
+});
+
+console.log("All done!"); // This will be printed after all the posts are printed.
+
+```
 
 <ApiBox name="Mongo.Cursor#map" instanceName="Cursor"/>
 
@@ -694,6 +716,10 @@ On the server, if `callback` yields, other calls to `callback` may occur while
 the first call is waiting. If strict sequential execution is necessary, use
 `forEach` instead.
 
+::: warning
+Client only.
+For server/isomorphic usage see [mapAsync](#Mongo-Cursor-mapAsync).
+:::
 
 
 <ApiBox name="Mongo.Cursor#mapAsync" instanceName="Cursor" />
@@ -705,6 +731,11 @@ Async version of [`map`](#map) that return a `Promise`.
 When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
 
+::: warning
+Client only.
+For server/isomorphic usage see [fetchAsync](#Mongo-Cursor-fetchAsync).
+:::
+
 <ApiBox name="Mongo.Cursor#fetchAsync" instanceName="Cursor"/>
 
 Async version of [`fetch`](#fetch) that return a `Promise`.
@@ -715,6 +746,11 @@ Async version of [`fetch`](#fetch) that return a `Promise`.
 Unlike the other functions, `count` registers a dependency only on the
 number of matching documents. (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
+
+::: warning
+Client only.
+For server/isomorphic usage see [countAsync](#Mongo-Cursor-countAsync).
+:::
 
 <ApiBox name="Mongo.Cursor#countAsync" instanceName="Cursor"/>
 
