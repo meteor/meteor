@@ -241,6 +241,29 @@ Object.assign(OplogHandle.prototype, {
       self._lastProcessedTS = lastOplogEntry.ts;
     }
 
+    // these 2 settings allow you to either only watch certain collections (oplogWatchCollections), or exclude some collections you don't want to watch for oplog updates (oplogExcludeCollections)
+    const includeCollections = Meteor.settings?.packages?.mongo?.oplogWatchCollections;
+    const excludeCollections = Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
+    if (includeCollections?.length && excludeCollections?.length) {
+      throw new Error("Can't use both mongo oplog settings oplogWatchCollections and oplogExcludeCollections at the same time.");
+    }
+    if (excludeCollections?.length) {
+      oplogSelector.ns = {
+        $regex: oplogSelector.ns,
+        $nin: excludeCollections.map((collName) => `${self._dbName}.${collName}`)
+      }
+    }
+    else if (includeCollections?.length) {
+      oplogSelector = { $and: [
+        { $or: [
+          { ns: /^admin\.\$cmd/ },
+          { ns: { $in: includeCollections.map((collName) => `${self._dbName}.${collName}`) } }
+        ] },
+        { $or: oplogSelector.$or }, // the initial $or to select only certain operations (op)
+        { ts: oplogSelector.ts }
+      ] };
+    }
+
     var cursorDescription = new CursorDescription(
       OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
