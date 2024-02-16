@@ -285,5 +285,4 @@ export default defineConfig({
       text: "Edit this page on GitHub",
     },
   },
-  ignoreDeadLinks: true,
 });

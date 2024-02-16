@@ -5,7 +5,7 @@ Passwordless package allows you to create a login for users without the need for
 The first step to in the passwordless process is for the user to sign-up or request a token to their email address. You can do that with the following:
 <ApiBox name="Accounts.requestLoginTokenForUser" from="accounts-base"/>
 
-If the user is signing up you can pass in the `userData` object like in [Accounts.createUser](/api/passwords.html#Accounts-createUser).
+If the user is signing up you can pass in the `userData` object like in [Accounts.createUser](/api/accounts#Accounts-createUser).
 
 <ApiBox name="Meteor.passwordlessLoginWithToken" />
 The second step in the passwordless flow. Like all the other `loginWith` functions call this method to login the user with the token they have inputted.

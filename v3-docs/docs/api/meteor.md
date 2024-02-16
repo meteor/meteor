@@ -164,7 +164,7 @@ function Component() {
 :::
 
 Calling `methods` on the server defines functions that can be called remotely by
-clients. They should return an [EJSON](./ejson)-able value or throw an
+clients. They should return an [EJSON](./EJSON)-able value or throw an
 exception. Inside your method invocation, `this` is bound to a method
 invocation object, which provides the following:
 
@@ -189,7 +189,7 @@ but without waiting for the round trip delay. If a stub throws an
 exception it will be logged to the console.
 
 You use methods all the time, because the database mutators
-([`insert`](./mongo#insert), [`update`](./mongo#update), [`remove`](./mongo#remove)) are implemented
+([`insert`](./collections#Mongo-Collection-insert), [`update`](./collections#Mongo-Collection-update), [`remove`](./collections#Mongo-Collection-remove)) are implemented
 as methods. When you call any of these functions on the client, you're invoking
 their stub version that update the local cache, and sending the same write
 request to the server. When the server responds, the client updates the local
