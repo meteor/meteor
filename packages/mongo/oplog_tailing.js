@@ -241,7 +241,16 @@ Object.assign(OplogHandle.prototype, {
       self._lastProcessedTS = lastOplogEntry.ts;
     }
 
-    // these 2 settings allow you to either only watch certain collections (oplogWatchCollections), or exclude some collections you don't want to watch for oplog updates (oplogExcludeCollections)
+    // These 2 settings allow you to either only watch certain collections (oplogWatchCollections), or exclude some collections you don't want to watch for oplog updates (oplogExcludeCollections)
+    // Usage:
+    // settings.json = {
+    //   "packages": {
+    //     "mongo": {
+    //       "oplogExcludeCollections": ["products", "prices"] // This would exclude both collections "products" and "prices" from any oplog tailing. 
+    //                                                            Beware! This means, that no subscriptions on these 2 collections will update anymore!
+    //     }
+    //   }
+    // }
     const includeCollections = Meteor.settings?.packages?.mongo?.oplogWatchCollections;
     const excludeCollections = Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
     if (includeCollections?.length && excludeCollections?.length) {
