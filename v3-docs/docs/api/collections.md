@@ -68,6 +68,14 @@ Specifically, when you pass a `name`, here's what happens:
 > server and receives the changed values back from it over DDP. Unlike on the
 > client, it does not execute the write locally first.
 
+::: danger
+On Meteor 3.x and later using `insert`, `update`, `upsert`,
+`remove`, `findOne` on the server will throw and error. Use the
+`*Async` counterparts instead.
+
+For example, instead of `collection.insert(doc)`, use `collection.insertAsync(doc)`.
+:::
+
 If you pass a name to a client-only collection, it will not be synchronized
 with the server and you need to populate the collection "manually" using the
 low-level publication interface (`added/changed/removed`).
@@ -91,6 +99,7 @@ and instead call [`Meteor.publish`](#meteor_publish) to specify which parts of
 your collection should be published to which users.
 
 ```js
+// client.js
 // Create a collection called `Posts` and put a document in it. The document
 // will be immediately visible in the local copy of the collection. It will be
 // written to the server-side database a fraction of a second later, and a
@@ -215,6 +224,11 @@ collections will be empty.
 
 <ApiBox name="Mongo.Collection#findOne"  instanceName="Collection"/>
 
+::: warning
+Client only.
+For server/isomorphic usage see [findOneAsync](#Mongo-Collection-findOneAsync).
+:::
+
 Equivalent to [`find`](#find)`(selector, options).`[`fetch`](#fetch)`()[0]` with
 `options.limit = 1`.
 
@@ -224,7 +238,7 @@ Async version of [`findOne`](#findOne) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#countDocuments" instanceName="Collection"/>
 
-Similar to `count`, but returns a `Promise`. For a faster version, see `estimatedDocumentCount`.
+Similar to `cursor.count`, but returns a `Promise`. For a faster version, see `estimatedDocumentCount`.
 
 <ApiBox name= "Mongo.Collection#estimatedDocumentCount" instanceName="Collection"/>
 
@@ -232,6 +246,10 @@ Returns a `Promise` that resolves to the number of documents in the cursor's res
 
 <ApiBox name="Mongo.Collection#insert" instanceName="Collection"/>
 
+::: warning
+Client only.
+For server/isomorphic usage see [insertAsync](#Mongo-Collection-insertAsync).
+:::
 
 Add a document to the collection. A document is just an object, and
 its fields can contain any combination of EJSON-compatible datatypes
@@ -242,13 +260,8 @@ in the database, and return the ID. When `insert` is called from
 untrusted client code, it will be allowed only if passes any
 applicable [`allow`](#allow) and [`deny`](#deny) rules.
 
-On the server, if you don't provide a callback, then `insert` blocks
-until the database acknowledges the write, or throws an exception if
-something went wrong. If you do provide a callback, `insert` still
-returns the ID immediately. Once the insert completes (or fails), the
-callback is called with error and result arguments. In an error case,
-`result` is undefined. If the insert is successful, `error` is
-undefined and `result` is the new document ID.
+On the server, it should be used `insertAsync` that will return a promise with the `ID` of your
+object.
 
 On the client, `insert` never blocks. If you do not provide a callback
 and the insert fails on the server, then Meteor will log a warning to
@@ -273,6 +286,11 @@ Async version of [`insert`](#insert) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#update" instanceName="Collection"/>
 
+::: warning
+Client only.
+For server/isomorphic usage see [updateAsync](#Mongo-Collection-updateAsync).
+:::
+
 Modify documents that match `selector` according to `modifier` (see
 [modifier documentation](#modifiers)).
 
@@ -294,12 +312,7 @@ handlers and a browser's JavaScript console.
   of affected documents will be returned to the callback. Untrusted
   code cannot perform upserts, except in insecure mode.
 
-On the server, if you don't provide a callback, then `update` blocks
-until the database acknowledges the write, or throws an exception if
-something went wrong. If you do provide a callback, `update` returns
-immediately. Once the update completes, the callback is called with a
-single error argument in the case of failure, or a second argument
-indicating the number of affected documents if the update was successful.
+On the server, it should be used `updateAsync`.
 
 On the client, `update` never blocks. If you do not provide a callback
 and the update fails on the server, then Meteor will log a warning to
@@ -351,6 +364,10 @@ Async version of [`update`](#update) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#upsert" instanceName="Collection"/>
 
+::: warning
+Client only.
+For server/isomorphic usage see [upsertAsync](#Mongo-Collection-upsertAsync).
+:::
 
 Modify documents that match `selector` according to `modifier`, or insert
 a document if no documents were modified. `upsert` is the same as calling
@@ -363,6 +380,11 @@ and `insertedId`. (`update` returns only the number of affected documents.)
 Async version of [`upsert`](#upsert) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#remove" instanceName="Collection"/>
+
+::: warning
+Client only.
+For server/isomorphic usage see [removeAsync](#Mongo-Collection-removeAsync).
+:::
 
 Find all of the documents that match `selector` and delete them from
 the collection.
@@ -388,13 +410,7 @@ handlers and a browser's JavaScript console.
   any applicable [`allow`](#allow) and [`deny`](#deny) rules. The
   number of removed documents will be returned to the callback.
 
-On the server, if you don't provide a callback, then `remove` blocks
-until the database acknowledges the write and then returns the number
-of removed documents, or throws an exception if
-something went wrong. If you do provide a callback, `remove` returns
-immediately. Once the remove completes, the callback is called with a
-single error argument in the case of failure, or a second argument
-indicating the number of removed documents if the remove was successful.
+On the server, it should be used `removeAsync`.
 
 On the client, `remove` never blocks. If you do not provide a callback
 and the remove fails on the server, then Meteor will log a warning to the
