@@ -62,6 +62,12 @@ const primitiveDefault = {
     `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  addRuntimeConfigHookCallback`,
   addupdatednotifyhookcallback: () =>
     `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  addUpdatedNotifyHookCallback`,
+    'tracker.computationfunction': () =>
+    `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  Tracker.ComputationFunction`,
+    computation: () =>
+    `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  Computation`,
+    func: () => primitiveDefault.function(),
+    'tracker.computation': () => primitiveDefault.computation(),
 };
 
 const comma = `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">,</span>`;
