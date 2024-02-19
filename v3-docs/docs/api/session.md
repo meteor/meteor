@@ -8,9 +8,9 @@ store an arbitrary set of key-value pairs. Use it to store things like
 the currently selected item in a list.
 
 What's special about `Session` is that it's reactive. If
-you call [`Session.get`](#session_get)`('currentList')`
+you call [`Session.get`](#Session-get)`('currentList')`
 from inside a template, the template will automatically be rerendered
-whenever [`Session.set`](#session_set)`('currentList', x)` is called.
+whenever [`Session.set`](#Session-set)`('currentList', x)` is called.
 
 To add `Session` to your application, run this command in your terminal:
 
