@@ -611,7 +611,7 @@ the `--delete` option along with the site.
 You can add information specific to a particular deployment of your application
 by using the `--settings` option.  The argument to `--settings` is a file
 containing any JSON string.  The object in your settings file will appear on the
-server side of your application in [`Meteor.settings`](#meteor_settings).
+server side of your application in [`Meteor.settings`](../api/meteor#Meteor-settings).
 
 Settings are persistent.  When you redeploy your app, the old value will be
 preserved unless you explicitly pass new settings using the `--settings` option.
@@ -642,7 +642,7 @@ packages: {
   },
 }
 ```
-This is necessary as our database provider does not have certificates installed on every machine and we don't want to force apps to have this certificate. More about this option [here](https://docs.meteor.com/api/collections.html#mongo_connection_options_settings)
+This is necessary as our database provider does not have certificates installed on every machine and we don't want to force apps to have this certificate. More about this option [here](../api/collections.html#mongo_connection_options_settings)
 :::
 
 
@@ -720,7 +720,7 @@ list of the packages that your application is currently using, run
 `meteor list`.
 
 This removes the package entirely. To continue using the package,
-but remove its version constraint, use [`meteor add`](#meteoradd).
+but remove its version constraint, use [`meteor add`](#meteor-add-package).
 
 Meteor does not downgrade transitive dependencies unless it's necessary. This
 means that if running `meteor add A` upgrades A's parent package X to a new
@@ -997,7 +997,7 @@ download and install npm separately.
 The `meteor node` command calls the
 [`node`](https://nodejs.org) version bundled with Meteor itself.
 
-> This is not to be confused with [`meteor shell`](#meteorshell), which provides
+> This is not to be confused with [`meteor shell`](#meteor-shell), which provides
 > an almost identical experience but also gives you access to the "server" context
 > of a Meteor application. Typically, `meteor shell` will be preferred.
 
