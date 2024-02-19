@@ -8,7 +8,7 @@ List of environment variables that you can use with your Meteor application.
 
 Bind the application server to a specific network interface by IP address, for example: `BIND_IP=192.168.0.2`.
 
-See also: [`PORT`](#PORT).
+See also: [`PORT`](#port).
 
 > In development, this can be accomplished with `meteor run --port a.b.c.d:port`.
 
@@ -65,7 +65,7 @@ Colon-delimited list of local package directories to look in, outside your norma
 
 When running your bundled application in production mode, pass a string of JSON containing your settings with `METEOR_SETTINGS='{ "server_only_setting": "foo", "public": { "client_and_server_setting": "bar" } }'`.
 
-> In development, this is accomplished with `meteor --settings [file.json]` in order to provide full-reactivity when changing settings.  Those settings are simply passed as a string here. Please see the [Meteor.settings](http://docs.meteor.com/api/core.html#Meteor-settings) documentation for further information. 
+> In development, this is accomplished with `meteor --settings [file.json]` in order to provide full-reactivity when changing settings.  Those settings are simply passed as a string here. Please see the [Meteor.settings](../api/meteor#Meteor-settings) documentation for further information.
 
 ## METEOR_SQLITE_JOURNAL_MODE
 (_development_)
@@ -89,14 +89,14 @@ MongoDB server URL. Give a fully qualified URL (or comma-separated list of URLs)
 
 Which port the app should listen on, for example: `PORT=3030`
 
-See also: [`BIND_IP`](#BIND-IP).
+See also: [`BIND_IP`](#bind-ip).
 
 > In development, this can be accomplished with `meteor run --port <port>`.
 
 ## ROOT_URL
 (_development, production_)
 
-Used to generate URLs to your application by, among others, the accounts package. Provide a full URL to your application like this: `ROOT_URL="https://www.myapp.com"`. 
+Used to generate URLs to your application by, among others, the accounts package. Provide a full URL to your application like this: `ROOT_URL="https://www.myapp.com"`.
 
 ## TOOL_NODE_FLAGS
 (_development, production_)
