@@ -231,6 +231,11 @@ MongoConnection.prototype.close = function() {
   Future.wrap(_.bind(self.client.close, self.client))(true).wait();
 };
 
+MongoConnection.prototype._setOplogHandle = function(oplogHandle) {
+  this._oplogHandle = oplogHandle;
+  return this;
+};
+
 // Returns the Mongo Collection object; may yield.
 MongoConnection.prototype.rawCollection = function (collectionName) {
   var self = this;

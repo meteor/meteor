@@ -30,6 +30,7 @@ OplogHandle = function (oplogUrl, dbName) {
   var self = this;
   self._oplogUrl = oplogUrl;
   self._dbName = dbName;
+  console.log('OplogHandle CONSTRUCTOR()');
 
   self._oplogLastEntryConnection = null;
   self._oplogTailConnection = null;
@@ -84,6 +85,8 @@ OplogHandle = function (oplogUrl, dbName) {
 
   self._startTailing();
 };
+
+MongoInternals.OplogHandle = OplogHandle;
 
 Object.assign(OplogHandle.prototype, {
   stop: function () {
@@ -241,7 +244,7 @@ Object.assign(OplogHandle.prototype, {
       self._lastProcessedTS = lastOplogEntry.ts;
     }
 
-    // These 2 settings allow you to either only watch certain collections (oplogWatchCollections), or exclude some collections you don't want to watch for oplog updates (oplogExcludeCollections)
+    // These 2 settings allow you to either only watch certain collections (oplogIncludeCollections), or exclude some collections you don't want to watch for oplog updates (oplogExcludeCollections)
     // Usage:
     // settings.json = {
     //   "packages": {
@@ -251,11 +254,12 @@ Object.assign(OplogHandle.prototype, {
     //     }
     //   }
     // }
-    const includeCollections = Meteor.settings?.packages?.mongo?.oplogWatchCollections;
+    const includeCollections = Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
     const excludeCollections = Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
     if (includeCollections?.length && excludeCollections?.length) {
-      throw new Error("Can't use both mongo oplog settings oplogWatchCollections and oplogExcludeCollections at the same time.");
+      throw new Error("Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time.");
     }
+    console.log('OplogHandle _startTailing() excludeCollections', excludeCollections);
     if (excludeCollections?.length) {
       oplogSelector.ns = {
         $regex: oplogSelector.ns,

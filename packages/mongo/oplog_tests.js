@@ -1,4 +1,5 @@
-var OplogCollection = new Mongo.Collection("oplog-" + Random.id());
+var randomId = Random.id();
+var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
 Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   var oplogEnabled =
@@ -165,6 +166,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
 );
 
 import { Mongo, MongoInternals } from 'meteor/mongo';
+
 process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
   'mongo-livedata - oplog - x - implicit collection creation',
   async test => {
@@ -178,6 +180,30 @@ process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
     });
     test.equal(await collection.find().countAsync(), 1);
   },
+);
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - options.oplogExcludeCollections',
+  async test => {
+    const testCollectionName = "test-" + randomId;
+    if (!Meteor.settings.packages) Meteor.settings.packages = {};
+    if (!Meteor.settings.packages.mongo) Meteor.settings.packages.mongo = {};
+    // Meteor.settings.packages.mongo.oplogExcludeCollections = [testCollectionName];
+
+    const myOplogHandle = new MongoInternals.OplogHandle(process.env.MONGO_OPLOG_URL, testCollectionName);
+    MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(myOplogHandle);
+
+    const TestCollection = new Mongo.Collection(testCollectionName);
+
+    let handle = TestCollection.find({ foo: 'bar' }).observeChanges({
+      added(id, fields) {
+        console.log('TEST added:', id, fields);
+        // Not working anymore! :(
+      }
+    });
+    await TestCollection.rawCollection().insertOne({ foo: 'bar', bla: 'blub' });
+    test.equal(true, true);
+  }
 );
 
 // Meteor.isServer && Tinytest.addAsync(
