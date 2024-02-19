@@ -47,4 +47,4 @@ you'd like to see changed.
 
 ### Modules and CoffeeScript
 
-See [Modules » Syntax » CoffeeScript](/packages/modules.html#CoffeeScript).
+See [Modules » Syntax » CoffeeScript](/packages/modules.html#coffeescript).
