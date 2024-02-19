@@ -102,6 +102,10 @@ export default defineConfig({
             link: "/api/email",
           },
           {
+            text: "Tracker",
+            link: "/api/Tracker",
+          },
+          {
             text: "Reactive Var",
             link: "/api/ReactiveVar",
           },
