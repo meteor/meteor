@@ -59,7 +59,7 @@ Npm.depends({
 });
 ```
 
-`api.mainModule` is documented in the [modules](http://docs.meteor.com/packages/modules.html#Modular-package-structure) section.
+`api.mainModule` is documented in the [modules](../packages/modules.md#modular-application-structure) section.
 
 Build plugins are created with
 [`Package.registerBuildPlugin`](#PackageNamespace-registerBuildPlugin). See the
@@ -67,7 +67,7 @@ coffeescript package for an example. Build plugins are fully-fledged Meteor
 programs in their own right and have their own namespace, package dependencies,
 source files and npm requirements.
 
-> You can use [local packages](#writingpackages) to define custom build plugins
+> You can use local packages to define custom build plugins
 for your app, with one caveat. In published packages, build plugins are already
 bundled with their transitive dependencies. So if you want a dependency of a
 build plugin to be satisfied by a local package, you must use a local copy of
@@ -207,7 +207,7 @@ To register a linter build plugin in your package, you need to do a couple of
 things in your `package.js`:
 - depend on the `isobuild:linter-plugin@1.0.0` package
 - register a build plugin: `Package.registerBuildPlugin({ name, sources, ... });`
-  (see [docs](http://docs.meteor.com/#/full/PackageNamespace#registerBuildPlugin))
+  (see [docs](#PackageNamespace-registerBuildPlugin))
 
 In your build plugin sources, register a Linter Plugin: provide details such as
 a name, list of extensions and filenames the plugin will handle and a factory
@@ -264,7 +264,7 @@ To register a compiler plugin in your package, you need to do the following in
 your `package.js` file:
 - depend on the `isobuild:compiler-plugin@1.0.0` package
 - register a build plugin: `Package.registerBuildPlugin({ name, sources, ... });`
-  (see [docs](http://docs.meteor.com/#/full/PackageNamespace#registerBuildPlugin))
+  (see [docs](#PackageNamespace-registerBuildPlugin))
 
 In your build plugin source, register a Compiler Plugin: similar to other types
 of build plugins, provide the details, extensions and filenames and a factory
@@ -347,7 +347,7 @@ To register a minifier plugin in your package, add the following in your
 `package.js` file:
 - depend on `isobuild:minifier-plugin@1.0.0` package
 - register a build plugin: `Package.registerBuildPlugin({ name, sources, ... });`
-  (see [docs](http://docs.meteor.com/#/full/PackageNamespace#registerBuildPlugin))
+  (see [docs](#PackageNamespace-registerBuildPlugin))
 
 In your build plugin source, register a Minifier Plugin. Similar to Linter and
 Compiler plugin, specify the interested extensions (`css` or `js`). The factory
