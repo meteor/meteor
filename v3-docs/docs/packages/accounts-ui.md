@@ -17,11 +17,12 @@ position the login dropdown in the right edge of the screen, use
 itself out without expanding off the edge of the screen.
 
 To configure the behavior of <span v-pre>`{{> loginButtons}}`</span>, use
-[`Accounts.ui.config`](#accounts-ui-config).
+[`Accounts.ui.config`](../api/accounts.md#loggingIn).
 
 `accounts-ui` also includes modal popup dialogs to handle links from
-[`sendResetPasswordEmail`](#accounts-sendresetpasswordemail), [`sendVerificationEmail`](#accounts_sendverificationemail),
-and [`sendEnrollmentEmail`](#accounts-sendenrollmentemail). These
+[`sendResetPasswordEmail`](../api/accounts.md#Accounts-sendResetPasswordEmail),
+[`sendVerificationEmail`](../api/accounts.md#Accounts-sendVerificationEmail),
+and [`sendEnrollmentEmail`](../api/accounts.md#Accounts-sendEnrollmentEmail). These
 do not have to be manually placed in HTML: they are automatically activated
 when the URLs are loaded.
 
