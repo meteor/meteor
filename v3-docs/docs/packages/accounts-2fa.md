@@ -4,9 +4,9 @@ This package allows you to provide a way for your users to enable 2FA on their a
 
 To provide codes that are exactly compatible with all other Authenticator apps and services that implements TOTP, this package uses [node-2fa](https://www.npmjs.com/package/node-2fa) which works on top of [notp](https://github.com/guyht/notp), **that** implements TOTP ([RFC 6238](https://www.ietf.org/rfc/rfc6238.txt)) (the Authenticator standard), which is based on HOTP ([RFC 4226](https://www.ietf.org/rfc/rfc4226.txt)).
 
-> This package is meant to be used with [`accounts-password`](https://docs.meteor.com/api/passwords.html) or [`accounts-passwordless`](https://docs.meteor.com/packages/accounts-passwordless.html), so if you don't have either of those in your project, you'll need to add one of them. In the future, we want to enable the use of this package with other login methods, our oauth methods (Google, GitHub, etc...).
+> This package is meant to be used with [`accounts-password`](../api/accounts.md#passwords) or [`accounts-passwordless`](./accounts-passwordless.md), so if you don't have either of those in your project, you'll need to add one of them. In the future, we want to enable the use of this package with other login methods, our oauth methods (Google, GitHub, etc...).
 
-<h2 id="activating-2fa">Activating 2FA</h2>
+## 2FA Activation Flow {#activating-2fa}
 
 The first step, in order to enable 2FA, is to generate a QR code so that the user can scan it in an authenticator app and start receiving codes.
 
@@ -83,7 +83,8 @@ To verify whether or not a user has 2FA enabled, you can call the function `Acco
 
 This function must be called when the user is logged in.
 
-<h2 id="disabling-2fa">Disabling 2FA</h2>
+
+## Disabling 2FA {#disabling-2fa}
 
 To disable 2FA for a user use this method:
 
@@ -91,13 +92,14 @@ To disable 2FA for a user use this method:
 
 To call this function the user must be already logged in.
 
-<h2 id="log-in-with-2fa">Log in with 2FA</h2>
+## Log in with 2FA {#log-in-with-2fa}
 
 Now that you have a way to allow your users to enable 2FA on their accounts, you can create a login flow based on that.
 
 As said at the beginning of this guide, this package is currently working with two other packages: `accounts-password` and `accounts-passwordless`. Below there is an explanation on how to use this package with them.
 
-<h3 id="working-with-accounts-password">Working with accounts-password</h3>
+
+## Working with accounts-password {#working-with-accounts-password}
 
 When calling the function `Meteor.loginWithPassword`, if the 2FA is enabled for the user, an error will be returned to the callback, so you can redirect the user to a place where they can provide a code.
 
@@ -152,9 +154,12 @@ This method can fail throwing one of the following errors:
 - "2FA code must be informed [no-2fa-code]" if a 2FA code was not provided.
 - "Invalid 2FA code [invalid-2fa-code]" if the provided 2FA code is invalid.
 
-<h3 id="working-with-accounts-passwordless">Working with accounts-passwordless</h3>
 
-Following the same logic from the previous package, if the 2FA is enabled, an error will be returned to the callback of the function [`Meteor.passwordlessLoginWithToken`](https://docs.meteor.com/packages/accounts-passwordless.html#Meteor-passwordlessLoginWithToken), then you can redirect the user to a place where they can provide a code.
+## Working with accounts-passwordless {#working-with-accounts-passwordless}
+
+Following the same logic from the previous package, if the 2FA is enabled, an error will be returned to the callback of the function
+[`Meteor.passwordlessLoginWithToken`](./accounts-passwordless.md#Meteor-passwordlessLoginWithToken),
+ then you can redirect the user to a place where they can provide a code.
 
 Here is an example:
 
@@ -188,7 +193,7 @@ This method can fail throwing one of the following errors:
 - "2FA code must be informed [no-2fa-code]" if a 2FA code was not provided.
 - "Invalid 2FA code [invalid-2fa-code]" if the provided 2FA code is invalid.
 
-<h2 id="integrating-auth-package">How to integrate an Authentication Package with accounts-2fa</h2>
+## Integrating an Authentication Package with accounts-2fa {#integrating-auth-package}
 
 To integrate this package with any other existing Login method, it's necessary following two steps:
 
