@@ -5,7 +5,7 @@
 The Meteor Accounts system builds on top of the `userId` support in
 [`publish`](./meteor#Subscription-userId) and [`methods`](./meteor#methods-userId). The core
 packages add the concept of user documents stored in the database, and
-additional packages add [secure password authentication](#accounts_passwords),
+additional packages add [secure password authentication](#passwords),
 [integration with third party login services](#Meteor-loginWith%3CExternalService%3E),
 and a [pre-built userinterface](/packages/accounts-ui.html).
 
@@ -20,12 +20,12 @@ Read more about customizing user accounts in the [Accounts](http://guide.meteor.
 <ApiBox name="Meteor.user" hasCustomExample/>
 
 Retrieves the user record for the current user from
-the [`Meteor.users`](#meteor_users) collection.
+the [`Meteor.users`](#Meteor-users) collection.
 
 On the client, the available fields will be those that
 are published from the server (other fields won't be available on the
 client). By default the server publishes `username`, `emails`, and
-`profile` (writable by user). See [`Meteor.users`](#meteor_users) for more on
+`profile` (writable by user). See [`Meteor.users`](#Meteor-users) for more on
 the fields used in user documents.
 
 On the server, this will fetch the record from the database. To improve the
@@ -44,7 +44,7 @@ const userName = Meteor.user({ fields: { "profile.name": 1 } }).profile.name;
 
 <ApiBox name="Meteor.userAsync" hasCustomExample/>
 
-Same as [`Meteor.user`](#meteor_user), but returns a promise and is available on the server.
+Same as [`Meteor.user`](#Meteor-user), but returns a promise and is available on the server.
 
 ```js
 import { Meteor } from "meteor/meteor";
@@ -93,19 +93,18 @@ treats the following fields specially:
 - `username`: a unique String identifying the user.
 - `emails`: an Array of Objects with keys `address` and `verified`;
   an email address may belong to at most one user. `verified` is
-  a Boolean which is true if the user has [verified the
-  address](#accounts_verifyemail) with a token sent over email.
+  a Boolean which is true if the user has [verified the address](#Accounts-verifyEmail) with a token sent over email.
 - `createdAt`: the Date at which the user document was created.
 - `profile`: an Object which the user can create and update with any data.
   Do not store anything on `profile` that you wouldn't want the user to edit
   unless you have a deny rule on the `Meteor.users` collection.
 - `services`: an Object containing data used by particular
   login services. For example, its `reset` field contains
-  tokens used by [forgot password](#accounts_forgotpassword) links,
+  tokens used by [forgot password](#Accounts-forgotPassword) links,
   and its `resume` field contains tokens used to keep you
   logged in between sessions.
 
-Like all [Mongo.Collection](#collections)s, you can access all
+Like all [Mongo.Collection](./collections.md)s, you can access all
 documents on the server, but only those specifically published by the server are
 available on the client. You can also use all Collection methods, for instance
 `Meteor.users.remove` on the server to delete a user.
@@ -146,9 +145,9 @@ including access tokens. This allows making API calls directly from
 the client for services that allow this.
 
 Users are by default allowed to specify their own `profile` field with
-[`Accounts.createUser`](#accounts_createuser) and modify it with
+[`Accounts.createUser`](#Accounts-createUser) and modify it with
 `Meteor.users.update`. To allow users to edit additional fields, use
-[`Meteor.users.allow`](#allow). To forbid users from making any modifications to
+[`Meteor.users.allow`](./collections.md#Mongo-Collection-allow). To forbid users from making any modifications to
 their user document:
 
 ```js
@@ -158,7 +157,7 @@ Meteor.users.deny({ update: () => true });
 
 <ApiBox name="Meteor.loggingIn" />
 
-For example, [the `accounts-ui` package](#accountsui) uses this to display an
+For example, [the `accounts-ui` package](../packages/accounts-ui.md) uses this to display an
 animation while the login request is being processed.
 
 <ApiBox name="Meteor.loggingOut" />
@@ -184,7 +183,7 @@ This method can fail throwing one of the following errors:
 - "User has no password set [403]" if `user` doesn't have a password.
 
 This function is provided by the `accounts-password` package. See the
-[Passwords](#accounts_passwords) section below.
+[Passwords](#passwords) section below.
 
 <ApiBox name="Meteor.loginWith<ExternalService>" />
 
@@ -229,7 +228,7 @@ sites:
 
 External login services typically require registering and configuring
 your application before use. The easiest way to do this is with the
-[`accounts-ui` package](#accountsui) which presents a step-by-step guide
+[`accounts-ui` package](../packages/accounts-ui.md) which presents a step-by-step guide
 to configuring each service. However, the data can be also be entered
 manually in the `ServiceConfiguration.configurations` collection, which
 is exported by the `service-configuration` package.
@@ -311,7 +310,7 @@ is loaded. The function `Accounts.loginServicesConfigured()` is a reactive data
 source that will return true once the login service is configured; you should
 not make login buttons visible or active until it is true.
 
-Ensure that your [`$ROOT_URL`](#meteor_absoluteurl) matches the authorized
+Ensure that your [`$ROOT_URL`](./meteor.md#Meteor-absoluteUrl) matches the authorized
 domain and callback URL that you configure with the external service (for
 instance, if you are running Meteor behind a proxy server, `$ROOT_URL` should be
 the externally-accessible URL, not the URL inside your proxy).
@@ -329,7 +328,7 @@ Accounts.loginServiceConfiguration.find();
 
 When configuring OAuth login with a provider (such as Facebook or Google), Meteor lets you choose a popup- or redirect-based flow. In a popup-based flow, when a user logs in, they will be prompted to login at the provider in a popup window. In a redirect-based flow, the user's whole browser window will be redirected to the login provider, and the window will redirect back to your app when the login is completed.
 
-You can also pick which type of login to do by passing an option to [`Meteor.loginWith<ExternalService>`](#meteor_loginwithexternalservice)
+You can also pick which type of login to do by passing an option to [`Meteor.loginWith<ExternalService>`](#Meteor-loginWith%3CExternalService%3E)
 
 Usually, the popup-based flow is preferable because the user will not have to reload your whole app at the end of the login flow. However, the popup-based flow requires browser features such as `window.close` and `window.opener` that are not available in all mobile environments. In particular, we recommend using `Meteor.loginWith<ExternalService>({ loginStyle: 'redirect' })` in the following environments:
 
@@ -369,7 +368,7 @@ The `accounts-base` package exports two constructors, called
 respectively.
 
 This predefined `Accounts` object (along with similar convenience methods
-of `Meteor`, such as [`Meteor.logout`](#meteor-logout)) is sufficient to
+of `Meteor`, such as [`Meteor.logout`](#Meteor-logout)) is sufficient to
 implement most accounts-related logic in Meteor apps. Nevertheless, these
 two constructors can be instantiated more than once, to create multiple
 independent connections between different accounts servers and their
@@ -396,7 +395,7 @@ From Meteor 2.5 you can set these in your Meteor settings under `Meteor.settings
 
 <ApiBox name="AccountsCommon#onLogin" instanceName="accountsCommon"/>
 
-See description of [AccountsCommon#onLoginFailure](#accounts_onloginfailure)
+See description of [AccountsCommon#onLoginFailure](#AccountsCommon-onLoginFailure)
 for details.
 
 <ApiBox name="AccountsCommon#onLoginFailure" instanceName="accountsCommon"/>
@@ -410,7 +409,7 @@ These functions return an object with a single method, `stop`. Calling
 `stop()` unregisters the callback.
 
 On the server, the callbacks get a single argument, the same attempt info
-object as [`validateLoginAttempt`](#accounts_validateloginattempt). On the
+object as [`validateLoginAttempt`](#AccountsServer-validateLoginAttempt). On the
 client, the callback argument is an object containing a single `error`
 property set to the `Error`-object which was received from the failed login
 attempt.
@@ -472,7 +471,7 @@ available only on the server:
 
 This can be called multiple times. If any of the functions return `false` or
 throw an error, the new user creation is aborted. To set a specific error
-message (which will be displayed by [`accounts-ui`](#accountsui)), throw a new
+message (which will be displayed by [`accounts-ui`](../packages/accounts-ui.md)), throw a new
 [`Meteor.Error`](./meteor#meteor-api).
 
 Example:
@@ -496,10 +495,10 @@ Accounts.validateNewUser((user) => {
 ```
 
 If the user is being created as part of a login attempt from a client (eg,
-calling [`Accounts.createUser`](#accounts-createuser) from the client, or
+calling [`Accounts.createUser`](#Accounts-createUser) from the client, or
 [logging in for the first time with an external
 service](#meteor_loginwithexternalservice)), these callbacks are called _before_
-the [`Accounts.validateLoginAttempt`](#accounts-validateloginattempt)
+the [`Accounts.validateLoginAttempt`](#Accounts-validateLoginAttempt)
 callbacks. If these callbacks succeed but those fail, the user will still be
 created but the connection will not be logged in as that user.
 
@@ -511,7 +510,7 @@ contents of new user documents.
 
 The function you pass will be called with two arguments: `options` and
 `user`. The `options` argument comes
-from [`Accounts.createUser`](#accounts-createuser) for
+from [`Accounts.createUser`](#Accounts-createUser) for
 password-based users or from an external service login flow. `options` may come
 from an untrusted client so make sure to validate any values you read from
 it. The `user` argument is created on the server and contains a
@@ -520,7 +519,7 @@ required for the user to log in, including the `_id`.
 
 The function should return the user document (either the one passed in or a
 newly-created object) with whatever modifications are desired. The returned
-document is inserted directly into the [`Meteor.users`](#meteor-users) collection.
+document is inserted directly into the [`Meteor.users`](#Meteor-users) collection.
 
 The default create user function simply copies `options.profile` into
 the new user document. Calling `onCreateUser` overrides the default
@@ -742,7 +741,7 @@ of legitimate users by attempting all possible passwords.
 
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the
-[`DDPRateLimiter`](#ddpratelimiter) docs for more information.
+[`DDPRateLimiter`](./DDPRateLimiter.md) docs for more information.
 
 <ApiBox name="AccountsServer#addDefaultRateLimit" instanceName="accountsServer"/>
 
@@ -766,10 +765,10 @@ To add password support to your application, run this command in your terminal:
 meteor add accounts-password
 ```
 
-> In addition to configuring the [`email`](email.html) package's `MAIL_URL`, it is critical that you set proper values (specifically the `from` address) in [`Accounts.emailTemplates`](#Accounts-emailTemplates) to ensure proper delivery of e-mails!
+> In addition to configuring the [`email`](./email.md) package's `MAIL_URL`, it is critical that you set proper values (specifically the `from` address) in [`Accounts.emailTemplates`](#Accounts-emailTemplates) to ensure proper delivery of e-mails!
 
 You can construct your own user interface using the
-functions below, or use the [`accounts-ui` package](#accountsui) to
+functions below, or use the [`accounts-ui` package](../packages/accounts-ui.md) to
 include a turn-key user interface for password-based sign-in.
 
 <ApiBox name="Accounts.createUser" />
@@ -780,15 +779,15 @@ id.
 
 On the client, you must pass `password` and at least one of `username` or `email` &mdash; enough information for the user to be able to log in again later. If there are existing users with a username or email only differing in case, `createUser` will fail. The callback's `error.reason` will be `'Username already exists.'` or `'Email already exists.'` In the latter case, the user can then either [login](accounts.html#Meteor-loginWithPassword) or [reset their password](#Accounts-resetPassword).
 
-On the server, you do not need to specify `password`, but the user will not be able to log in until it has a password (eg, set with [`Accounts.setPassword`](#accounts_setpassword)). To create an account without a password on the server and still let the user pick their own password, call `createUser` with the `email` option and then call [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail). This will send the user an email with a link to set their initial password.
+On the server, you do not need to specify `password`, but the user will not be able to log in until it has a password (eg, set with [`Accounts.setPassword`](#Accounts-setPassword)). To create an account without a password on the server and still let the user pick their own password, call `createUser` with the `email` option and then call [`Accounts.sendEnrollmentEmail`](#Accounts-sendEnrollmentEmail). This will send the user an email with a link to set their initial password.
 
 By default the `profile` option is added directly to the new user document. To
-override this behavior, use [`Accounts.onCreateUser`](#accounts_oncreateuser).
+override this behavior, use [`Accounts.onCreateUser`](#Accounts-onCreateUser).
 
 This function is only used for creating users with passwords. The external
 service login flows do not use this function.
 
-Instead of modifying documents in the [`Meteor.users`](#meteor_users) collection
+Instead of modifying documents in the [`Meteor.users`](#Meteor-users) collection
 directly, use these convenience functions which correctly check for case
 insensitive duplicates before updates.
 
@@ -825,12 +824,12 @@ or the client.
 <ApiBox name="Accounts.forgotPassword" />
 
 This triggers a call
-to [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
+to [`Accounts.sendResetPasswordEmail`](#Accounts-sendResetPasswordEmail)
 on the server. When the user visits the link in this email, the callback
 registered with [`Accounts.onResetPasswordLink`](#Accounts-onResetPasswordLink)
 will be called.
 
-If you are using the [`accounts-ui` package](#accountsui), this is handled
+If you are using the [`accounts-ui` package](../packages/accounts-ui.md), this is handled
 automatically. Otherwise, it is your responsibility to prompt the user for the
 new password and call `resetPassword`.
 
@@ -852,7 +851,7 @@ When the user visits the link in this email, the callback registered with
 [`AccountsClient#onResetPasswordLink`](#Accounts-onResetPasswordLink) will be called.
 
 To customize the contents of the email, see
-[`Accounts.emailTemplates`](#accounts_emailtemplates).
+[`Accounts.emailTemplates`](#Accounts-emailTemplates).
 
 <ApiBox name="Accounts.sendEnrollmentEmail" />
 
@@ -860,7 +859,7 @@ When the user visits the link in this email, the callback registered with
 [`Accounts.onEnrollmentLink`](#Accounts-onEnrollmentLink) will be called.
 
 To customize the contents of the email, see
-[`Accounts.emailTemplates`](#accounts_emailtemplates).
+[`Accounts.emailTemplates`](#Accounts-emailTemplates).
 
 <ApiBox name="Accounts.sendVerificationEmail" />
 
@@ -869,7 +868,7 @@ When the user visits the link in this email, the callback registered with
 be called.
 
 To customize the contents of the email, see
-[`Accounts.emailTemplates`](#accounts_emailtemplates).
+[`Accounts.emailTemplates`](#Accounts-emailTemplates).
 
 <ApiBox name="Accounts.onResetPasswordLink" />
 
@@ -892,7 +891,7 @@ Set the fields of the object by assigning to them:
 - `siteName`: The public name of your application. Defaults to the DNS name of
   the application (eg: `awesome.meteor.com`).
 - `headers`: An `Object` for custom email headers as described in
-  [`Email.send`](#email_send).
+  [`Email.send`](./email.md#Email-send).
 - `resetPassword`: An `Object` with the fields:
 - `from`: A `Function` used to override the `from` address defined
   by the `emailTemplates.from` field.
@@ -944,4 +943,6 @@ Accounts.emailTemplates.verifyEmail = {
 
 <h3 id="enabling-2fa">Enable 2FA for this package</h3>
 
-You can add 2FA to your login flow by using the package [accounts-2fa](https://docs.meteor.com/packages/accounts-2fa.html). You can find an example showing how this would look like [here](https://docs.meteor.com/packages/accounts-2fa.html#working-with-accounts-password).
+You can add 2FA to your login flow by
+using the package [accounts-2fa](../packages/accounts-2fa.md).
+You can find an example showing how this would look like [here](../packages/accounts-2fa.md#working-with-accounts-password).
