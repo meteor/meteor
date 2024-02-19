@@ -658,7 +658,7 @@ You can use this to deduplicate subscription handles if you are storing them in 
 
 If you call `Meteor.subscribe` within a reactive computation,
 for example using
-[`Tracker.autorun`](./tracker#Tracker-autorun), the subscription will automatically be
+[`Tracker.autorun`](./Tracker#Tracker-autorun), the subscription will automatically be
 cancelled when the computation is invalidated or stopped; it is not necessary
 to call `stop` on
 subscriptions made from inside `autorun`. However, if the next iteration

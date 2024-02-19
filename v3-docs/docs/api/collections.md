@@ -83,7 +83,7 @@ See [`added`](./meteor.md#Subscription-added) for more information.
 
 If you pass `null` as the `name`, then you're creating a local
 collection. It's not synchronized anywhere; it's just a local scratchpad
-that supports Mongo-style [`find`](#Mongo-Collection-find), [`insert`](Mongo-Collection-insert),
+that supports Mongo-style [`find`](#Mongo-Collection-find), [`insert`](#Mongo-Collection-insert),
 [`update`](#Mongo-Collection-update), and [`remove`](#Mongo-Collection-remove) operations. (On both the
 client and the server, this scratchpad is implemented using Minimongo.)
 
