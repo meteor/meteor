@@ -97,7 +97,7 @@ WebApp.handlers.use(router);
 :::
 There are a couple things to think about with this approach.
 
-We're reading the contents of index.html using the [Assets](https://docs.meteor.com/api/assets.html) module that makes it really easy to read files out of the _private_ root folder.
+We're reading the contents of index.html using the [Assets](../api/assets.md) module that makes it really easy to read files out of the _private_ root folder.
 
 We're using the [connect-route](https://www.npmjs.com/package/connect-route) NPM package to simplify WebApp route processing. But you can use any package you want to understand what is being requested.
 
