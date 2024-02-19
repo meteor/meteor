@@ -19,9 +19,9 @@ const Chatrooms = new Mongo.Collection("chatrooms");
 const Messages = new Mongo.Collection("messages");
 ```
 
-The function returns an object with methods to [`insert`](#insert)
-documents in the collection, [`update`](#update) their properties, and
-[`remove`](#remove) them, and to [`find`](#find) the documents in the
+The function returns an object with methods to [`insert`](#Mongo-Collection-insert)
+documents in the collection, [`update`](#Mongo-Collection-update) their properties, and
+[`remove`](#Mongo-Collection-remove) them, and to [`find`](#Mongo-Collection-find) the documents in the
 collection that match arbitrary criteria. The way these methods work is
 compatible with the popular Mongo database API. The same database API
 works on both the client and the server (see below).
@@ -48,19 +48,19 @@ Specifically, when you pass a `name`, here's what happens:
 - On the server (if you do not specify a `connection`), a collection with that
   name is created on a backend Mongo server. When you call methods on that
   collection on the server, they translate directly into normal Mongo operations
-  (after checking that they match your [access control rules](#allow)).
+  (after checking that they match your [access control rules](#Mongo-Collection-allow)).
 
 - On the client (and on the server if you specify a `connection`), a Minimongo
   instance is created. Minimongo is essentially an in-memory, non-persistent
   implementation of Mongo in pure JavaScript. It serves as a local cache that
   stores just the subset of the database that this client is working with. Queries
-  ([`find`](#find)) on these collections are served directly out of this cache,
+  ([`find`](#Mongo-Collection-find)) on these collections are served directly out of this cache,
   without talking to the server.
 
-- When you write to the database on the client ([`insert`](#insert),
-  [`update`](#update), [`remove`](#remove)), the command is executed locally
+- When you write to the database on the client ([`insert`](#Mongo-Collection-insert),
+  [`update`](#Mongo-Collection-update), [`remove`](#Mongo-Collection-remove)), the command is executed locally
   immediately, and, simultaneously, it's sent to the server and executed
-  there too. This happens via [stubs](#meteor_methods), because writes are
+  there too. This happens via [stubs](./meteor.md#meteor-methods), because writes are
   implemented as methods.
 
 > When, on the server, you write to a collection which has a specified
@@ -79,12 +79,12 @@ For example, instead of `collection.insert(doc)`, use `collection.insertAsync(do
 If you pass a name to a client-only collection, it will not be synchronized
 with the server and you need to populate the collection "manually" using the
 low-level publication interface (`added/changed/removed`).
-See [`added`](#publish_added) for more information.
+See [`added`](./meteor.md#Subscription-added) for more information.
 
 If you pass `null` as the `name`, then you're creating a local
 collection. It's not synchronized anywhere; it's just a local scratchpad
-that supports Mongo-style [`find`](#find), [`insert`](#insert),
-[`update`](#update), and [`remove`](#remove) operations. (On both the
+that supports Mongo-style [`find`](#Mongo-Collection-find), [`insert`](Mongo-Collection-insert),
+[`update`](#Mongo-Collection-update), and [`remove`](#Mongo-Collection-remove) operations. (On both the
 client and the server, this scratchpad is implemented using Minimongo.)
 
 By default, Meteor automatically publishes every document in your
@@ -95,7 +95,7 @@ the `autopublish` package, in your terminal:
 meteor remove autopublish
 ```
 
-and instead call [`Meteor.publish`](#meteor_publish) to specify which parts of
+and instead call [`Meteor.publish`](./meteor.md#Meteor-publish) to specify which parts of
 your collection should be published to which users.
 
 ```js
@@ -205,7 +205,7 @@ those changes may or may not appear in the result set.
 Cursors are a reactive data source. On the client, the first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
 reactive computation (eg, a template or
-[`autorun`](#tracker_autorun)), Meteor will register a
+[`autorun`](./Tracker.md#Tracker-autorun)), Meteor will register a
 dependency on the underlying data. Any change to the collection that
 changes the documents in a cursor will trigger a recomputation. To
 disable this behavior, pass `{reactive: false}` as an option to
@@ -229,12 +229,12 @@ Client only.
 For server/isomorphic usage see [findOneAsync](#Mongo-Collection-findOneAsync).
 :::
 
-Equivalent to [`find`](#find)`(selector, options).`[`fetch`](#fetch)`()[0]` with
+Equivalent to [`find`](#Mongo-Collection-find)`(selector, options).`[`fetch`](#Mongo-Cursor-fetch)`()[0]` with
 `options.limit = 1`.
 
 <ApiBox name="Mongo.Collection#findOneAsync" instanceName="Collection"/>
 
-Async version of [`findOne`](#findOne) that return a `Promise`.
+Async version of [`findOne`](#Mongo-Collection-findOne) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#countDocuments" instanceName="Collection"/>
 
@@ -258,7 +258,7 @@ its fields can contain any combination of EJSON-compatible datatypes
 `insert` will generate a unique ID for the object you pass, insert it
 in the database, and return the ID. When `insert` is called from
 untrusted client code, it will be allowed only if passes any
-applicable [`allow`](#allow) and [`deny`](#deny) rules.
+applicable [`allow`](#Mongo-Collection-allow) and [`deny`](#Mongo-Collection-deny) rules.
 
 On the server, it should be used `insertAsync` that will return a promise with the `ID` of your
 object.
@@ -282,7 +282,7 @@ Items.insert({ list: groceriesId, name: "Persimmons" });
 
 <ApiBox name="Mongo.Collection#insertAsync" instanceName="Collection"/>
 
-Async version of [`insert`](#insert) that return a `Promise`.
+Async version of [`insert`](#Mongo-Collection-insert) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#update" instanceName="Collection"/>
 
@@ -302,13 +302,13 @@ handlers and a browser's JavaScript console.
 - Trusted code can modify multiple documents at once by setting
   `multi` to true, and can use an arbitrary [Mongo
   selector](#selectors) to find the documents to modify. It bypasses
-  any access control rules set up by [`allow`](#allow) and
-  [`deny`](#deny). The number of affected documents will be returned
+  any access control rules set up by [`allow`](#Mongo-Collection-allow) and
+  [`deny`](#Mongo-Collection-deny). The number of affected documents will be returned
   from the `update` call if you don't pass a callback.
 
 - Untrusted code can only modify a single document at once, specified
   by its `_id`. The modification is allowed only after checking any
-  applicable [`allow`](#allow) and [`deny`](#deny) rules. The number
+  applicable [`allow`](#Mongo-Collection-allow) and [`deny`](#Mongo-Collection-deny) rules. The number
   of affected documents will be returned to the callback. Untrusted
   code cannot perform upserts, except in insecure mode.
 
@@ -354,13 +354,13 @@ Template.adminDashboard.events({
 
 
 You can use `update` to perform a Mongo upsert by setting the `upsert`
-option to true. You can also use the [`upsert`](#upsert) method to perform an
+option to true. You can also use the [`upsert`](#Mongo-Collection-upsert) method to perform an
 upsert that returns the `_id` of the document that was inserted (if there was one)
 in addition to the number of affected documents.
 
 <ApiBox name="Mongo.Collection#updateAsync" instanceName="Collection"/>
 
-Async version of [`update`](#update) that return a `Promise`.
+Async version of [`update`](#Mongo-Collection-update) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#upsert" instanceName="Collection"/>
 
@@ -377,7 +377,7 @@ and `insertedId`. (`update` returns only the number of affected documents.)
 
 <ApiBox name="Mongo.Collection#upsertAsync" instanceName="Collection"/>
 
-Async version of [`upsert`](#upsert) that return a `Promise`.
+Async version of [`upsert`](#Mongo-Collection-upsert) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#remove" instanceName="Collection"/>
 
@@ -397,8 +397,8 @@ handlers and a browser's JavaScript console.
 - Trusted code can use an arbitrary [Mongo selector](#selectors) to
   find the documents to remove, and can remove more than one document
   at once by passing a selector that matches multiple documents. It
-  bypasses any access control rules set up by [`allow`](#allow) and
-  [`deny`](#deny). The number of removed documents will be returned
+  bypasses any access control rules set up by [`allow`](#Mongo-Collection-allow) and
+  [`deny`](#Mongo-Collection-deny). The number of removed documents will be returned
   from `remove` if you don't pass a callback.
 
   As a safety measure, if `selector` is omitted (or is `undefined`),
@@ -407,7 +407,7 @@ handlers and a browser's JavaScript console.
 
 - Untrusted code can only remove a single document at a time,
   specified by its `_id`. The document is removed only after checking
-  any applicable [`allow`](#allow) and [`deny`](#deny) rules. The
+  any applicable [`allow`](#Mongo-Collection-allow) and [`deny`](#Mongo-Collection-deny) rules. The
   number of removed documents will be returned to the callback.
 
 On the server, it should be used `removeAsync`.
@@ -446,7 +446,7 @@ Template.chat.events({
 
 <ApiBox name="Mongo.Collection#removeAsync" instanceName="Collection"/>
 
-Async version of [`remove`](#remove) that return a `Promise`.
+Async version of [`remove`](#Mongo-Collection-remove) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#createIndex" instanceName="Collection"/>
 
@@ -483,7 +483,7 @@ to true in your `settings.json`:
 
 <ApiBox name="Mongo.Collection#createIndexAsync" instanceName="Collection"/>
 
-Async version of [`createIndex`](#createIndex) that return a `Promise`.
+Async version of [`createIndex`](#Mongo-Collection-createIndex) that return a `Promise`.
 
 <ApiBox name="Mongo.Collection#allow" instanceName="Collection"/>
 
@@ -498,7 +498,7 @@ for more details.
 :::
 
 When a client calls `insert`, `update`, or `remove` on a collection, the
-collection's `allow` and [`deny`](#deny) callbacks are called
+collection's `allow` and [`deny`](#Mongo-Collection-deny) callbacks are called
 on the server to determine if the write should be allowed. If at least
 one `allow` callback allows the write, and no `deny` callbacks deny the
 write, then the write is allowed to proceed.
@@ -633,7 +633,7 @@ once they are ready to remove `insecure` mode from their app. See
 for more details.
 :::
 
-This works just like [`allow`](#allow), except it lets you
+This works just like [`allow`](#Mongo-Collection-allow), except it lets you
 make sure that certain writes are definitely denied, even if there is an
 `allow` rule that says that they should be permitted.
 
@@ -652,9 +652,9 @@ The methods (like `update` or `insert`) you call on the resulting _raw_ collecti
 
 ## Cursors {#mongo_cursor}
 
-To create a cursor, use [`find`](#find). To access the documents in a
-cursor, use [`forEach`](#foreach), [`map`](#map), [`fetch`](#fetch),
-[`forEachAsync`](#foreachasync), [`mapAsync`](#map), [`fetchAsync`](#fetch) or ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols).
+To create a cursor, use [`find`](#Mongo-Collection-find). To access the documents in a
+cursor, use [`forEach`](#Mongo-Cursor-forEach), [`map`](##Mongo-Cursor-map), [`fetch`](#Mongo-Cursor-fetch),
+[`forEachAsync`](#Mongo-Cursor-forEachAsync), [`mapAsync`](#Mongo-Cursor-mapAsync), [`fetchAsync`](#Mongo-Cursor-fetchAsync) or ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols).
 
 <ApiBox name="Mongo.Cursor#forEach" instanceName="Cursor"/>
 
@@ -683,7 +683,7 @@ For server/isomorphic usage see [removeAsync](#Mongo-Cursor-forEachAsync).
 
 <ApiBox name="Mongo.Cursor#forEachAsync" instanceName="Cursor"/>
 
-Async version of [`forEach`](#forEach) that return a `Promise`.
+Async version of [`forEach`](#Mongo-Cursor-forEach) that return a `Promise`.
 
 The same example as from `forEach` but using `forEachAsync`:
 
@@ -724,7 +724,7 @@ For server/isomorphic usage see [mapAsync](#Mongo-Cursor-mapAsync).
 
 <ApiBox name="Mongo.Cursor#mapAsync" instanceName="Cursor" />
 
-Async version of [`map`](#map) that return a `Promise`.
+Async version of [`map`](#Mongo-Cursor-map) that return a `Promise`.
 
 <ApiBox name="Mongo.Cursor#fetch" instanceName="Cursor"/>
 
@@ -738,7 +738,7 @@ For server/isomorphic usage see [fetchAsync](#Mongo-Cursor-fetchAsync).
 
 <ApiBox name="Mongo.Cursor#fetchAsync" instanceName="Cursor"/>
 
-Async version of [`fetch`](#fetch) that return a `Promise`.
+Async version of [`fetch`](#Mongo-Cursor-fetch) that return a `Promise`.
 
 <ApiBox name="Mongo.Cursor#count" instanceName="Cursor"/>
 
@@ -754,7 +754,7 @@ For server/isomorphic usage see [countAsync](#Mongo-Cursor-countAsync).
 
 <ApiBox name="Mongo.Cursor#countAsync" instanceName="Cursor"/>
 
-Async version of [`count`](#count) that return a `Promise`.
+Async version of [`count`](#Mongo-Cursor-count) that return a `Promise`.
 
 <ApiBox name="Mongo.Cursor#observe" instanceName="Cursor"/>
 
@@ -762,7 +762,7 @@ Establishes a _live query_ that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
 document that was affected, as well as its old contents, if
 applicable. If you only need to receive the fields that changed, see
-[`observeChanges`](#observe_changes).
+[`observeChanges`](#Mongo-Cursor-observeChanges).
 
 `callbacks` may have the following functions as properties:
 
@@ -817,7 +817,7 @@ it is not necessary to call `stop` on the handle.)
 <ApiBox name="Mongo.Cursor#observeChanges" instanceName="Cursor"/>
 
 Establishes a _live query_ that invokes callbacks when the result of
-the query changes. In contrast to [`observe`](#observe),
+the query changes. In contrast to [`observe`](#Mongo-Cursor-observe),
 `observeChanges` provides only the difference between the old and new
 result set, not the entire contents of the document that changed.
 
@@ -899,12 +899,11 @@ setTimeout(() => handle.stop(), 5000);
 <ApiBox name="Mongo.ObjectID" />
 
 
-`Mongo.ObjectID` follows the same API as the [Node MongoDB driver
-`ObjectID`](http://mongodb.github.io/node-mongodb-native/3.0/api/ObjectID.html)
-class. Note that you must use the `equals` method (or [`EJSON.equals`](#ejson_equals)) to
+`Mongo.ObjectID` follows the same API as the [Node MongoDB driver `ObjectID`](http://mongodb.github.io/node-mongodb-native/3.0/api/ObjectID.html)
+class. Note that you must use the `equals` method (or [`EJSON.equals`](./EJSON.md#EJSON-equals)) to
 compare them; the `===` operator will not work. If you are writing generic code
 that needs to deal with `_id` fields that may be either strings or `ObjectID`s, use
-[`EJSON.equals`](#ejson_equals) instead of `===` to compare them.
+[`EJSON.equals`](./EJSON.md#EJSON-equals) instead of `===` to compare them.
 
 > `ObjectID` values created by Meteor will not have meaningful answers to their `getTimestamp`
 > method, since Meteor currently constructs them fully randomly.
@@ -914,7 +913,7 @@ that needs to deal with `_id` fields that may be either strings or `ObjectID`s, 
 ## Selectors {#selectors}
 
 The simplest selectors are just a string or
-[`Mongo.ObjectID`](#mongo_object_id). These selectors match the
+[`Mongo.ObjectID`](#Mongo-ObjectID). These selectors match the
 document with that value in its `_id` field.
 
 A slightly more complex form of selector is an object containing a set of keys
@@ -975,7 +974,7 @@ place by changing some of its fields. Some examples:
 But if a modifier doesn't contain any \$-operators, then it is instead
 interpreted as a literal document, and completely replaces whatever was
 previously in the database. (Literal document modifiers are not currently
-supported by [validated updates](#allow).)
+supported by [validated updates](#Mongo-Collection-allow).)
 
 
 ```js
@@ -1036,9 +1035,9 @@ With one exception, it is not possible to mix inclusion and exclusion styles:
 the keys must either be all 1 or all 0. The exception is that you may specify
 `_id: 0` in an inclusion specifier, which will leave `_id` out of the result
 object as well. However, such field specifiers can not be used with
-[`observeChanges`](#observe_changes), [`observe`](#observe), cursors returned
-from a [publish function](#meteor_publish). They may be used with [`fetch`](#fetch),
-[`findOne`](#findone), [`forEach`](#foreach), and [`map`](#map).
+[`observeChanges`](#Mongo-Cursor-observeChanges), [`observe`](#Mongo-Cursor-observe), cursors returned
+from a [publish function](./meteor.md#Meteor-publish). They may be used with [`fetch`](#Mongo-Cursor-fetch),
+[`findOne`](#Mongo-Collection-findOne), [`forEach`](#Mongo-Cursor-forEach), and [`map`](#Mongo-Cursor-map).
 
 <a href="http://docs.mongodb.org/manual/reference/operator/projection/">Field
 operators</a> such as `$` and `$elemMatch` are not available on the client side
