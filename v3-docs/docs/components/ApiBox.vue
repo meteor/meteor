@@ -74,6 +74,14 @@ const showName = (longname) => {
     return longname
 }
 
+if (isFunction) {
+    for (const param of ui.params) {
+        if (!param.type) {
+            param.type = { names: [param.name] }
+        }
+    }
+
+}
 
 const debug = (name) => {
     if (ui.longname !== name) return
