@@ -35,6 +35,7 @@ const showTypes = (types: string[]) => {
   const last = typesArr.pop()
   return typesArr.join(", ") + " or " + last
 }
+
 </script>
 
 <template>
