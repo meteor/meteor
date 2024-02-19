@@ -649,9 +649,9 @@ export class Connection {
       // only return the stubReturnValue
       promise.stubPromise = stubPromise.then(o => o.stubReturnValue);
       // this avoids attribute recursion
-      promise.serverPromise = new Promise((resolve, reject) =>
-        promise.then(resolve).catch(reject),
-      );
+      // promise.serverPromise = new Promise((resolve, reject) =>
+      //   promise.then(resolve).catch(reject)
+      // );
     }
     return promise;
   }
