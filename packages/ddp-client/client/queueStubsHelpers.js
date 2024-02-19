@@ -20,6 +20,7 @@ export const loadAsyncStubHelpers = () => {
 
     queue = queue.finally(() => {
       fn(resolve, reject);
+      return promise.catch(() => {});
     });
 
     promise.finally(() => {
