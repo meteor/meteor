@@ -204,7 +204,7 @@ call a method multiple times when it only means to call it once. If this
 behavior is problematic for your method, consider attaching a unique ID
 to each method call on the client, and checking on the server whether a call
 with this ID has already been made. Alternatively, you can use
-[`Meteor.apply`](#meteor-apply) with the noRetry option set to true.
+[`Meteor.apply`](#Meteor-apply) with the noRetry option set to true.
 
 Read more about methods and how to use them in the [Methods](http://guide.meteor.com/methods.html) article in the Meteor Guide.
 
@@ -243,7 +243,7 @@ Meteor.call("foo", (err, result) => {
 
 The user id is an arbitrary string &mdash; typically the id of the user record
 in the database. You can set it with the `setUserId` function. If you're using
-the [Meteor accounts system](#accounts_api) then this is handled for you.
+the [Meteor accounts system](./accounts.md) then this is handled for you.
 
 ```js
 import { Meteor } from "meteor/meteor";
@@ -264,7 +264,7 @@ connection that made this method call. This simply sets the value of
 
 If you are using the [built-in Meteor accounts system](./accounts) then this
 should correspond to the `_id` field of a document in the
-[`Meteor.users`](./accounts.md#meteor-users) collection.
+[`Meteor.users`](./accounts.md#Meteor-user) collection.
 
 `setUserId` is not retroactive. It affects the current method call and
 any future method calls on the connection. Any previous method calls on
@@ -287,7 +287,7 @@ Meteor.methods({
 
 ## this.connection {#methods-connection}
 
-Access inside a method invocation. The [connection](#meteor-onConnection) that this method was received on.
+Access inside a method invocation. The [connection](#Meteor-onConnection) that this method was received on.
 null if the method is not associated with a connection,
 eg. a server initiated method call. Calls to methods
 made from a server method which was in turn initiated from the client share the same
@@ -340,7 +340,7 @@ sanitized version is available, the client gets
 
 This is how to invoke a method with a sync stub. It will run the method on the server. If a
 stub is available, it will also run the stub on the client. (See also
-[`Meteor.apply`](#meteor-apply), which is identical to `Meteor.call` except that
+[`Meteor.apply`](#Meteor-apply), which is identical to `Meteor.call` except that
 you specify the parameters as an array instead of as separate arguments and you
 can specify a few options controlling how the method is executed.)
 
@@ -392,7 +392,7 @@ for example, if another method still outstanding wrote to the same document, the
 local cache may not be up to date until the other method finishes as well. If
 you want to process the method's result as soon as it arrives from the server,
 even if the method's writes are not available yet, you can specify an
-`onResultReceived` callback to [`Meteor.apply`](#meteor-apply).
+`onResultReceived` callback to [`Meteor.apply`](#Meteor-apply).
 
 <ApiBox name="Meteor.callAsync" />
 
@@ -420,7 +420,7 @@ two parameters: the name of the record set, and a _publish function_
 that Meteor will call each time a client subscribes to the name.
 
 Publish functions can return a
-[`Collection.Cursor`](#mongo_cursor), in which case Meteor
+[`Collection.Cursor`](./collections.md#mongo_cursor), in which case Meteor
 will publish that cursor's documents to each subscribed client. You can
 also return an array of `Collection.Cursor`s, in which case Meteor will
 publish all of the cursors.
@@ -477,15 +477,15 @@ Meteor.publish("roomAndMessages", function (roomId) {
 ```
 
 Alternatively, a publish function can directly control its published record set
-by calling the functions [`added`](#publish_added) (to add a new document to the
-published record set), [`changed`](#publish_changed) (to change or clear some
+by calling the functions [`added`](#Subscription-added) (to add a new document to the
+published record set), [`changed`](#Subscription-changed) (to change or clear some
 fields on a document already in the published record set), and
-[`removed`](#publish_removed) (to remove documents from the published record
+[`removed`](#Subscription-removed) (to remove documents from the published record
 set). These methods are provided by `this` in your publish function.
 
 If a publish function does not return a cursor or array of cursors, it is
 assumed to be using the low-level `added`/`changed`/`removed` interface, and it
-**must also call [`ready`](#publish_ready) once the initial record set is
+**must also call [`ready`](#Subscription-ready) once the initial record set is
 complete**.
 
 ::: code-group
@@ -594,7 +594,7 @@ function is rerun with the new value, assuming it didn't throw an error at the p
 <ApiBox name="Subscription#ready" />
 <ApiBox name="Subscription#onStop" />
 
-If you call [`observe`](#observe) or [`observeChanges`](#observe_changes) in your
+If you call [`observe`](./collections.md#Mongo-Cursor-observe) or [`observeChanges`](./collections.md#Mongo-Cursor-observeChanges) in your
 publish handler, this is the place to stop the observes.
 
 <ApiBox name="Subscription#error" />
@@ -604,12 +604,11 @@ publish handler, this is the place to stop the observes.
 <ApiBox name="Meteor.subscribe" hasCustomExample/>
 
 When you subscribe to a record set, it tells the server to send records to the
-client. The client stores these records in local [Minimongo
-collections](#mongo_collection), with the same name as the `collection`
-argument used in the publish handler's [`added`](#publish_added),
-[`changed`](#publish_changed), and [`removed`](#publish_removed)
+client. The client stores these records in local [Minimongo collections](./collections.md), with the same name as the `collection`
+argument used in the publish handler's [`added`](#Subscription-added),
+[`changed`](#Subscription-changed), and [`removed`](#Subscription-removed)
 callbacks. Meteor will queue incoming records until you declare the
-[`Mongo.Collection`](#mongo_collection) on the client with the matching
+[`Mongo.Collection`](./collections.md) on the client with the matching
 collection name.
 
 ```js
@@ -635,9 +634,8 @@ include different sub-fields of the same top level field, not all of them will
 be available on the client. We hope to lift this restriction in a future release.
 :::
 
-The `onReady` callback is called with no arguments when the server [marks the
-subscription as ready](#publish_ready). The `onStop` callback is called with
-a [`Meteor.Error`](#meteor_error) if the subscription fails or is terminated by
+The `onReady` callback is called with no arguments when the server [marks the subscription as ready](#Subscription-ready). The `onStop` callback is called with
+a [`Meteor.Error`](#Meteor-Error) if the subscription fails or is terminated by
 the server. If the subscription is stopped by calling `stop` on the subscription
 handle or inside the publication, `onStop` is called with no arguments.
 
@@ -658,9 +656,9 @@ handle.subscriptionId; // The id of the subscription this handle is for.
 When you run Meteor.subscribe inside of Tracker.autorun, the handles you get will always have the same subscriptionId field.
 You can use this to deduplicate subscription handles if you are storing them in some data structure.
 
-If you call `Meteor.subscribe` within a [reactive computation](#reactivity),
+If you call `Meteor.subscribe` within a reactive computation,
 for example using
-[`Tracker.autorun`](#tracker_autorun), the subscription will automatically be
+[`Tracker.autorun`](./tracker#Tracker-autorun), the subscription will automatically be
 cancelled when the computation is invalidated or stopped; it is not necessary
 to call `stop` on
 subscriptions made from inside `autorun`. However, if the next iteration
@@ -787,7 +785,7 @@ live data updates. While the client is disconnected it will not receive
 updates to collections, method calls will be queued until the
 connection is reestablished, and hot code push will be disabled.
 
-Call [Meteor.reconnect](#meteor_reconnect) to reestablish the connection
+Call [Meteor.reconnect](#Meteor-reconnect) to reestablish the connection
 and resume data transfer.
 
 This can be used to save battery on mobile devices when real time
