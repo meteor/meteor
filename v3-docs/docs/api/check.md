@@ -14,7 +14,7 @@ meteor add check
 
 <ApiBox name="check" hasCustomExample/>
 
-Meteor methods and publish functions can take arbitrary [EJSON](#ejson) types as arguments, but most
+Meteor methods and publish functions can take arbitrary [EJSON](./EJSON.md) types as arguments, but most
 functions expect their arguments to be of a particular type. `check` is a lightweight function for
 checking that arguments and other values are of the expected type. For example:
 
