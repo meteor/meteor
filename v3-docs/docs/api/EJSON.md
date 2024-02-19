@@ -4,11 +4,11 @@ EJSON is an extension of JSON to support more types. It supports all JSON-safe t
 
 - **Date** (JavaScript `Date`)
 - **Binary** (JavaScript `Uint8Array` or the
-  result of [`EJSON.newBinary`](#ejson_new_binary))
+  result of [`EJSON.newBinary`](#EJSON-newBinary))
 - **Special numbers** (JavaScript `NaN`, `Infinity`, and `-Infinity`)
 - **Regular expressions** (JavaScript `RegExp`)
-- **User-defined types** (see [`EJSON.addType`](#ejson_add_type). For example,
-  [`Mongo.ObjectID`](#mongo_object_id) is implemented this way.)
+- **User-defined types** (see [`EJSON.addType`](#EJSON-addType). For example,
+  [`Mongo.ObjectID`](./collections.md#Mongo-ObjectID) is implemented this way.)
 
 All EJSON serializations are also valid JSON. For example an object with a date
 and a binary buffer would be serialized in EJSON as:
@@ -21,7 +21,7 @@ and a binary buffer would be serialized in EJSON as:
 ```
 
 Meteor supports all built-in EJSON data types in publishers, method arguments
-and results, Mongo databases, and [`Session`](#session) variables.
+and results, Mongo databases, and [`Session`](./session.md) variables.
 
 <ApiBox name="EJSON.parse" />
 
@@ -91,20 +91,20 @@ When you add a type to EJSON, Meteor will be able to use that type in:
 
 - publishing objects of your type if you pass them to publish handlers.
 - allowing your type in the return values or arguments to
-  [methods](#methods_header).
+  [methods](./meteor.md#methods).
 - storing your type client-side in Minimongo.
-- allowing your type in [`Session`](#session) variables.
+- allowing your type in [`Session`](./session.md) variables.
 
-Instances of your type must implement [`typeName`](#ejson_type_typeName) and
-[`toJSONValue`](#ejson_type_toJSONValue) methods, and may implement
-[`clone`](#ejson_type_clone) and [`equals`](#ejson_type_equals) methods if the
+Instances of your type must implement [`typeName`](#EJSON-CustomType-typeName) and
+[`toJSONValue`](#EJSON-CustomType-toJSONValue) methods, and may implement
+[`clone`](#EJSON-CustomType-clone) and [`equals`](#EJSON-CustomType-equals) methods if the
 default implementations are not sufficient.
 
 <ApiBox name="EJSON.CustomType#typeName" hasCustomExample  instanceName="CustomType"/>
 <ApiBox name="EJSON.CustomType#toJSONValue" hasCustomExample  instanceName="CustomType"/>
 
 For example, the `toJSONValue` method for
-[`Mongo.ObjectID`](#mongo_object_id) could be:
+[`Mongo.ObjectID`](./collections.md#Mongo-ObjectID) could be:
 
 ```js
 function () {
@@ -115,12 +115,11 @@ function () {
 <ApiBox name="EJSON.CustomType#clone" hasCustomExample  instanceName="CustomType"/>
 
 If your type does not have a `clone` method, `EJSON.clone` will use
-[`toJSONValue`](#ejson_type_toJSONValue) and the factory instead.
+[`toJSONValue`](#EJSON-CustomType-toJSONValue) and the factory instead.
 
 <ApiBox name="EJSON.CustomType#equals" hasCustomExample instanceName="CustomType"/>
 
-The `equals` method should define an [equivalence
-relation](http://en.wikipedia.org/wiki/Equivalence_relation). It should have
+The `equals` method should define an [equivalence relation](http://en.wikipedia.org/wiki/Equivalence_relation). It should have
 the following properties:
 
 - _Reflexivity_ - for any instance `a`: `a.equals(a)` must be true.
@@ -128,4 +127,4 @@ the following properties:
 - _Transitivity_ - for any three instances `a`, `b`, and `c`: `a.equals(b)` and `b.equals(c)` implies `a.equals(c)`.
 
 If your type does not have an `equals` method, `EJSON.equals` will compare the
-result of calling [`toJSONValue`](#ejson_type_toJSONValue) instead.
+result of calling [`toJSONValue`](#EJSON-CustomType-toJSONValue) instead.
