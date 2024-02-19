@@ -1419,17 +1419,17 @@ if (Meteor.isServer) (() => {
         },
       );
 
-      Accounts._options.ambiguousErrorMessages = true
+      Accounts._options.ambiguousErrorMessages = true;
       await test.throwsAsync(
         async () => await Meteor.callAsync('forgotPassword', wrongOptions),
         'Something went wrong. Please check your credentials'
-      )
+      );
 
-      Accounts._options.ambiguousErrorMessages = false
+      Accounts._options.ambiguousErrorMessages = false;
       await test.throwsAsync(
         async () => await Meteor.callAsync('forgotPassword', wrongOptions),
         /User not found/
-      )
+      );
       // return accounts as it were
       Accounts._options = options
     });
