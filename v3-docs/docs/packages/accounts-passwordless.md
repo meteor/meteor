@@ -35,4 +35,5 @@ sendLoginToken: {
 
 <h3 id="enabling-2fa">Enable 2FA for this package</h3>
 
-You can add 2FA to your login flow by using the package [accounts-2fa](https://docs.meteor.com/packages/accounts-2fa.html). You can find an example showing how this would look like [here](https://docs.meteor.com/packages/accounts-2fa.html#working-with-accounts-passwordless).
+You can add 2FA to your login flow by using the package [accounts-2fa](./accounts-2fa.md).
+You can find an example showing how this would look like [here](./accounts-2fa.md#working-with-accounts-passwordless).
