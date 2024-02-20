@@ -988,20 +988,22 @@ Cursor.prototype.getTransform = function () {
   return this._cursorDescription.options.transform;
 };
 
+const oplogCollectionWarnings = [];
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
-
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
   const oplogOptions = self?._mongo?._oplogHandle?._oplogOptions || {};
   const { includeCollections, excludeCollections } = oplogOptions;
-  if (excludeCollections?.length && excludeCollections.includes(collection)) {
+  if (excludeCollections?.length && excludeCollections.includes(collection) && !oplogCollectionWarnings.includes(collection)) {
     console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collection} - no subscriptions/publications on this collection will return any updates`);
+    oplogCollectionWarnings.push(collection); // we only want to show the warnings once per collection!
   }
-  if (includeCollections?.length && !includeCollections.includes(collection)) {
+  if (includeCollections?.length && !includeCollections.includes(collection) && !oplogCollectionWarnings.includes(collection)) {
     console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collection} - no subscriptions/publications on this collection will return any updates`);
+    oplogCollectionWarnings.push(collection); // we only want to show the warnings once per collection!
   }
   return Mongo.Collection._publishCursor(self, sub, collection);
 };
