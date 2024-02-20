@@ -30,7 +30,6 @@ OplogHandle = function (oplogUrl, dbName) {
   var self = this;
   self._oplogUrl = oplogUrl;
   self._dbName = dbName;
-  console.log('OplogHandle CONSTRUCTOR()');
 
   self._oplogLastEntryConnection = null;
   self._oplogTailConnection = null;
@@ -259,7 +258,6 @@ Object.assign(OplogHandle.prototype, {
     if (includeCollections?.length && excludeCollections?.length) {
       throw new Error("Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time.");
     }
-    console.log('OplogHandle _startTailing() excludeCollections', excludeCollections);
     if (excludeCollections?.length) {
       oplogSelector.ns = {
         $regex: oplogSelector.ns,

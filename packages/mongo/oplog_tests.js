@@ -182,27 +182,113 @@ process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
   },
 );
 
-process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
-  'mongo-livedata - oplog - options.oplogExcludeCollections',
-  async test => {
-    const testCollectionName = "test-" + randomId;
-    if (!Meteor.settings.packages) Meteor.settings.packages = {};
-    if (!Meteor.settings.packages.mongo) Meteor.settings.packages.mongo = {};
-    // Meteor.settings.packages.mongo.oplogExcludeCollections = [testCollectionName];
+let defaultOplogHandle = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
 
-    const myOplogHandle = new MongoInternals.OplogHandle(process.env.MONGO_OPLOG_URL, testCollectionName);
-    MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(myOplogHandle);
+async function oplogOptionsTest({
+  test,
+  includeCollectionName,
+  excludeCollectionName,
+  mongoPackageSettings = {}
+}) {
+  if (!Meteor.settings.packages) Meteor.settings.packages = {};
+  if (!Meteor.settings.packages.mongo) Meteor.settings.packages.mongo = mongoPackageSettings;
 
-    const TestCollection = new Mongo.Collection(testCollectionName);
+  const myOplogHandle = new MongoInternals.OplogHandle(process.env.MONGO_OPLOG_URL, 'meteor');
+  MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(myOplogHandle);
 
-    let handle = TestCollection.find({ foo: 'bar' }).observeChanges({
-      added(id, fields) {
-        console.log('TEST added:', id, fields);
-        // Not working anymore! :(
+  const IncludeCollection = new Mongo.Collection(includeCollectionName);
+  const ExcludeCollection = new Mongo.Collection(excludeCollectionName);
+
+  const shouldBeTracked = new Promise((resolve) => {
+    IncludeCollection.find({ include: 'yes' }).observeChanges({
+      added(id, fields) { resolve(true) }
+    });
+  });
+  const shouldBeIgnored = new Promise((resolve, reject) => {
+    ExcludeCollection.find({ include: 'no' }).observeChanges({
+      added(id, fields) { 
+        // should NOT fire, because this is an excluded collection:
+        reject(false);
       }
     });
-    await TestCollection.rawCollection().insertOne({ foo: 'bar', bla: 'blub' });
-    test.equal(true, true);
+    // we give it just 2 seconds until we resolve this promise:
+    setTimeout(() => {
+      resolve(true);
+    }, 2000);
+  });
+
+  // do the inserts:
+  await IncludeCollection.rawCollection().insertOne({ include: 'yes', foo: 'bar' });
+  await ExcludeCollection.rawCollection().insertOne({ include: 'no', foo: 'bar' });
+
+  test.equal(await shouldBeTracked, true);
+  test.equal(await shouldBeIgnored, true);
+
+  // reset the package settings:
+  delete Meteor.settings.packages.mongo;
+}
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - oplogSettings - oplogExcludeCollections',
+  async test => {
+    const collectionNameA = "oplog-a-" + Random.id();
+    const collectionNameB = "oplog-b-" + Random.id();
+    const mongoPackageSettings = {
+      oplogExcludeCollections: [collectionNameB]
+    };
+    await oplogOptionsTest({
+      test,
+      includeCollectionName: collectionNameA,
+      excludeCollectionName: collectionNameB,
+      mongoPackageSettings
+    });
+  }
+);
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - oplogSettings - oplogIncludeCollections',
+  async test => {
+    const collectionNameA = "oplog-a-" + Random.id();
+    const collectionNameB = "oplog-b-" + Random.id();
+    const mongoPackageSettings = {
+      oplogIncludeCollections: [collectionNameB]
+    };
+    await oplogOptionsTest({
+      test,
+      includeCollectionName: collectionNameB,
+      excludeCollectionName: collectionNameA,
+      mongoPackageSettings
+    });
+  }
+);
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - oplogSettings - oplogExcludeCollections & oplogIncludeCollections',
+  async test => {
+    // should fail, because we don't allow including and excluding at the same time!
+    const collectionNameA = "oplog-a-" + Random.id();
+    const collectionNameB = "oplog-b-" + Random.id();
+    const mongoPackageSettings = {
+      oplogIncludeCollections: [collectionNameA],
+      oplogExcludeCollections: [collectionNameB]
+    };
+    try {
+      await oplogOptionsTest({
+        test,
+        includeCollectionName: collectionNameA,
+        oplogExcludeCollections: collectionNameB,
+        mongoPackageSettings
+      });
+      // reset the package settings:
+      delete Meteor.settings.packages.mongo;
+      MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
+      test.fail();
+    } catch (err) {
+      // reset the package settings:
+      delete Meteor.settings.packages.mongo;
+      MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
+      test.expect_fail();
+    }
   }
 );
 
