@@ -647,7 +647,12 @@ export class Connection {
     });
     if (Meteor.isClient) {
       // only return the stubReturnValue
-      promise.stubPromise = stubPromise.then(o => o.stubReturnValue);
+      promise.stubPromise = stubPromise.then(o => {
+        if (o.exception) {
+          throw o.exception;
+        }
+        return o.stubReturnValue
+      });
       // this avoids attribute recursion
       promise.serverPromise = new Promise((resolve, reject) =>
         promise.then(resolve).catch(reject),
