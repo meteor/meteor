@@ -1082,6 +1082,38 @@ option:
 You can pass any MongoDB valid option, these are just examples using
 certificates configurations.
 
+<h3 id="mongo_oplog_options">Mongo Oplog Options</h3>
+
+> Oplog options were introduced in Meteor 2.15.1
+
+If you set the [`MONGO_OPLOG_URL`](https://docs.meteor.com/environment-variables.html#MONGO-OPLOG-URL) env var, Meteor will use MongoDb's Oplog to show efficient, real time updates to your users via your subscriptions.
+
+Due to how Meteor's Oplog implementation is built behind the scenes, if you have certain collections where you expect **big amounts of `insert` or `update` transactions**, this might lead to **big CPU spikes on your meteor app server, even if you have no publications/subscriptions on any data/documents of these collections**. For more information on this, please have a look into [this blog post from 2016](https://blog.meteor.com/tuning-meteor-mongo-livedata-for-scalability-13fe9deb8908), [this github discussion from 2022](https://github.com/meteor/meteor/discussions/11842) or [this meteor forums post from 2023](https://forums.meteor.com/t/cpu-spikes-due-to-oplog-updates-without-subscriptions/60028).
+
+To solve this, **2 Oplog settings** have been introduced **to tweak, which collections are *watched* or *ignored* in the oplog**.
+
+**Exclusion**: To *exclude* for example all updates/inserts of documents in the 2 collections called `products` and `prices`, you would need to set the following setting in your Meteor settings file:
+
+```json
+  "packages": {
+    "mongo": {
+      "oplogExcludeCollections": ["products", "prices"]
+    }
+  }
+```
+
+**Inclusion**: vice versa, if you only want to watch/*include* the oplog for changes on documents in the 2 collections `chats` and `messages`, you would use:
+
+```json
+  "packages": {
+    "mongo": {
+      "oplogIncludeCollections": ["chats", "messages"]
+    }
+  }
+```
+
+For obvious reasons, using both `oplogExcludeCollections` and `oplogIncludeCollections` at the same time is not possible and will result in an error.
+
 <h3 id="mongo_connection_options_settings">Mongo.setConnectionOptions</h3>
 
 You can also call `Mongo.setConnectionOptions` to set the connection options but
