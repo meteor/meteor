@@ -33,6 +33,7 @@ OplogHandle = function (oplogUrl, dbName) {
 
   self._oplogLastEntryConnection = null;
   self._oplogTailConnection = null;
+  self._oplogOptions = null;
   self._stopped = false;
   self._tailHandle = null;
   self._readyFuture = new Future();
@@ -263,6 +264,7 @@ Object.assign(OplogHandle.prototype, {
         $regex: oplogSelector.ns,
         $nin: excludeCollections.map((collName) => `${self._dbName}.${collName}`)
       }
+      self._oplogOptions = { excludeCollections };
     }
     else if (includeCollections?.length) {
       oplogSelector = { $and: [
@@ -273,6 +275,7 @@ Object.assign(OplogHandle.prototype, {
         { $or: oplogSelector.$or }, // the initial $or to select only certain operations (op)
         { ts: oplogSelector.ts }
       ] };
+      self._oplogOptions = { includeCollections };
     }
 
     var cursorDescription = new CursorDescription(

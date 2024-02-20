@@ -995,6 +995,14 @@ Cursor.prototype.getTransform = function () {
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
+  const oplogOptions = self?._mongo?._oplogHandle?._oplogOptions || {};
+  const { includeCollections, excludeCollections } = oplogOptions;
+  if (excludeCollections?.length && excludeCollections.includes(collection)) {
+    console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collection} - no subscriptions/publications on this collection will return any updates`);
+  }
+  if (includeCollections?.length && !includeCollections.includes(collection)) {
+    console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collection} - no subscriptions/publications on this collection will return any updates`);
+  }
   return Mongo.Collection._publishCursor(self, sub, collection);
 };
 
