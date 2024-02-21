@@ -222,11 +222,19 @@ ObserveHandle = class {
     this._stopped = false;
     this._id = nextObserveHandleId++;
     this.nonMutatingCallbacks = nonMutatingCallbacks;
+    this.initObserver = undefined;
+    this.initHandler = undefined;
+  }
+
+  async ready() {
+    if (this.initObserver) await this.initObserver;
+    if (this.initHandler) await this.initHandler;
   }
 
   async stop() {
     if (this._stopped) return;
     this._stopped = true;
+    await this.ready();
     await this._multiplexer.removeHandle(this._id);
   }
 };

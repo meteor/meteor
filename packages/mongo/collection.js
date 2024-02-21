@@ -565,7 +565,7 @@ Object.assign(Mongo.Collection.prototype, {
 
 Object.assign(Mongo.Collection, {
   async _publishCursor(cursor, sub, collection) {
-    var observeHandle = await cursor.observeChanges(
+    var observeHandle = await cursor.observeChangesAsync(
         {
           added: function(id, fields) {
             sub.added(collection, id, fields);

@@ -965,6 +965,13 @@ Cursor.prototype.observeChanges = function (callbacks, options = {}) {
     self._cursorDescription, ordered, callbacks, options.nonMutatingCallbacks);
 };
 
+Cursor.prototype.observeChangesAsync = async function (callbacks, options = {}) {
+  var self = this;
+  var handler = self.observeChanges(callbacks, options);
+  await handler.ready();
+  return handler;
+};
+
 MongoConnection.prototype._createSynchronousCursor = function(
     cursorDescription, options) {
   var self = this;
@@ -1436,7 +1443,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
 };
 
 Object.assign(MongoConnection.prototype, {
-  _observeChanges: async function (
+  _observeChanges: function (
       cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
     var self = this;
 
@@ -1531,7 +1538,7 @@ Object.assign(MongoConnection.prototype, {
       });
 
       if (observeDriver._init) {
-        await observeDriver._init();
+        observeHandle.initObserver = observeDriver._init();
       }
 
       // This field is only set for use in tests.
@@ -1539,7 +1546,7 @@ Object.assign(MongoConnection.prototype, {
     }
     self._observeMultiplexers[observeKey] = multiplexer;
     // Blocks until the initial adds have been sent.
-    await multiplexer.addHandleAndSendInitialAdds(observeHandle);
+    observeHandle.initHandler = multiplexer.addHandleAndSendInitialAdds(observeHandle);
 
     return observeHandle;
   },

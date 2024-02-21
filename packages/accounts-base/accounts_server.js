@@ -999,7 +999,7 @@ export class AccountsServer extends AccountsCommon {
         const observe = await this.users.find({
           _id: userId,
           'services.resume.loginTokens.hashedToken': newToken
-        }, { fields: { _id: 1 } }).observeChanges({
+        }, { fields: { _id: 1 } }).observeChangesAsync({
           added: () => {
             foundMatchingUser = true;
           },
@@ -1860,4 +1860,3 @@ const generateCasePermutationsForString = string => {
   }
   return permutations;
 }
-
