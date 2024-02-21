@@ -53,6 +53,10 @@ class EnvironmentVariableAsync {
     const slotCall = Meteor._getValueFromAslStore(SLOT_CALL_KEY);
 
     const self = this;
+    self.upperCallDynamics = {
+      ...dynamics,
+      [slotCall]: Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME),
+    };
     return Meteor._runAsync(
       async function () {
         let ret;
@@ -68,13 +72,7 @@ class EnvironmentVariableAsync {
         }
         return ret;
       },
-      {
-        ...self,
-        upperCallDynamics: {
-          ...dynamics,
-          [slotCall]: Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME),
-        },
-      },
+      self,
       Object.assign(
         {
           callId: `${this.slot}-${Math.random()}`,
