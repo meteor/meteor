@@ -988,23 +988,12 @@ Cursor.prototype.getTransform = function () {
   return this._cursorDescription.options.transform;
 };
 
-const oplogCollectionWarnings = [];
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
-  const oplogOptions = self?._mongo?._oplogHandle?._oplogOptions || {};
-  const { includeCollections, excludeCollections } = oplogOptions;
-  if (excludeCollections?.length && excludeCollections.includes(collection) && !oplogCollectionWarnings.includes(collection)) {
-    console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collection} - no subscriptions/publications on this collection will return any updates`);
-    oplogCollectionWarnings.push(collection); // we only want to show the warnings once per collection!
-  }
-  if (includeCollections?.length && !includeCollections.includes(collection) && !oplogCollectionWarnings.includes(collection)) {
-    console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collection} - no subscriptions/publications on this collection will return any updates`);
-    oplogCollectionWarnings.push(collection); // we only want to show the warnings once per collection!
-  }
   return Mongo.Collection._publishCursor(self, sub, collection);
 };
 
@@ -1364,9 +1353,12 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   };
 };
 
+const oplogCollectionWarnings = [];
+
 MongoConnection.prototype._observeChanges = function (
     cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
   var self = this;
+  const collectionName = cursorDescription.collectionName;
 
   if (cursorDescription.options.tailable) {
     return self._observeChangesTailable(cursorDescription, ordered, callbacks);
@@ -1412,6 +1404,9 @@ MongoConnection.prototype._observeChanges = function (
     nonMutatingCallbacks,
   );
 
+  const oplogOptions = self?._oplogHandle?._oplogOptions || {};
+  const { includeCollections, excludeCollections } = oplogOptions;
+
   if (firstHandle) {
     var matcher, sorter;
     var canUseOplog = _.all([
@@ -1421,6 +1416,24 @@ MongoConnection.prototype._observeChanges = function (
         // that won't happen.
         return self._oplogHandle && !ordered &&
           !callbacks._testOnlyPollCallback;
+      }, function () {
+        // We also need to check, if the collection of this Cursor is actually being "watched" by the Oplog handle
+        // if not, we have to fallback to long polling
+        if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        if (includeCollections?.length && !includeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        return true;
       }, function () {
         // We need to be able to compile the selector. Fall back to polling for
         // some newfangled $selector that minimongo doesn't support yet.
