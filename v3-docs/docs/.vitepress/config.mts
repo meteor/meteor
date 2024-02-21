@@ -130,7 +130,7 @@ export default defineConfig({
             link: "/api/package",
           },
         ],
-        collapsed: true,
+        collapsed: false,
       },
       {
         text: "Packages",

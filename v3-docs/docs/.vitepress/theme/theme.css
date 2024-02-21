@@ -551,5 +551,7 @@
 }
 
 ::selection {
-  background: var(--vp-c-brand-1);
+    background: var(--vp-c-brand-soft);
 }
+
+
