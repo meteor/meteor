@@ -48,15 +48,12 @@ class EnvironmentVariableAsync {
    * @returns {Promise<any>} The return value of the function
    */
   withValue(value, func, options = {}) {
+    const self = this;
+    const slotCall = Meteor._getValueFromAslStore(SLOT_CALL_KEY);
     const dynamics =
       Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {};
-    const slotCall = Meteor._getValueFromAslStore(SLOT_CALL_KEY);
-
-    const self = this;
-    self.upperCallDynamics = {
-      ...dynamics,
-      [slotCall]: Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME),
-    };
+    dynamics[slotCall] = Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
+    self.upperCallDynamics = dynamics;
     return Meteor._runAsync(
       async function () {
         let ret;
