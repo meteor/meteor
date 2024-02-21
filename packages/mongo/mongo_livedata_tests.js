@@ -700,7 +700,7 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
           },
         });
 
-        const handle2 = await coll.find({ run }).observeChanges(
+        const handle2 = await coll.find({ run }).observeChangesAsync(
           {
             added: expectNotMutatable,
             changed: function(id, o) {
@@ -2017,7 +2017,7 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
         let polls = {};
         const handlesToStop = [];
         const observe = async function(name, query) {
-          const handle = await coll.find(query).observeChanges({
+          const handle = await coll.find(query).observeChangesAsync({
             // Make sure that we only poll on invalidation, not due to time, and
             // keep track of when we do. Note: this option disables the use of
             // oplogs (which admittedly is somewhat irrelevant to this feature).
@@ -3149,7 +3149,7 @@ if (Meteor.isServer) {
     async function (test, expect) {
       var self = this;
       if (self.miniC) {
-        self.obs = await self.miniC.find().observeChanges({
+        self.obs = await self.miniC.find().observeChangesAsync({
           added: async function (id, fields) {
             self.events.push({evt: "a", id: id});
             await Meteor._sleepForMs(200);
@@ -3476,13 +3476,13 @@ Meteor.isServer &&
     if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
       var observeWithOplog = await coll
         .find({ x: 5 })
-        .observeChanges({ added: function() {} });
+        .observeChangesAsync({ added: function() {} });
       test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
       await observeWithOplog.stop();
     }
     var observeWithoutOplog = await coll
       .find({ x: 6 }, { _disableOplog: true })
-      .observeChanges({ added: function() {} });
+      .observeChangesAsync({ added: function() {} });
     test.isFalse(observeWithoutOplog._multiplexer._observeDriver._usesOplog);
     await observeWithoutOplog.stop();
   });
@@ -3506,7 +3506,7 @@ Meteor.isServer &&
       var output = [];
       var handle = await coll
         .find({ a: 1, b: 2 }, { fields: { c: 1 } })
-        .observeChanges({
+        .observeChangesAsync({
           added: function(id, fields) {
             output.push(['added', id, fields]);
           },
@@ -3559,7 +3559,7 @@ Meteor.isServer &&
     );
 
     var changesOutput = [];
-    var changesHandle = await cursor.observeChanges({
+    var changesHandle = await cursor.observeChangesAsync({
       added: function(id, fields) {
         changesOutput.push(['added', fields]);
       },
@@ -3604,7 +3604,7 @@ Meteor.isServer &&
     var tmp;
 
     var output = [];
-    var handle = await coll.find({ a: 'foo' }).observeChanges({
+    var handle = await coll.find({ a: 'foo' }).observeChangesAsync({
       added: function(id, fields) {
         output.push(['added', id, fields]);
       },
@@ -3717,7 +3717,7 @@ testAsyncMulti('mongo-livedata - oplog - update EJSON', [
   async function(test, expect) {
     var self = this;
     self.changes = [];
-    self.handle = await self.collection.find({}).observeChanges({
+    self.handle = await self.collection.find({}).observeChangesAsync({
       added: function(id, fields) {
         self.changes.push(['a', id, fields]);
       },
@@ -3819,7 +3819,7 @@ Meteor.isServer &&
     _.times(100, async function() {
       await coll.insertAsync({ foo: 'baz' });
     });
-    var handler = await coll.find({}).observeChanges({
+    var handler = await coll.find({}).observeChangesAsync({
       added: async function(id) {
         await coll.updateAsync(id, { $set: { foo: 'bar' } });
       },
@@ -4050,7 +4050,7 @@ if (Meteor.isClient) {
       futuresByNonce[nonce] = new Promise(r => (resolver = r));
       var observe = await fenceOnBeforeFireErrorCollection
         .find({ nonce: nonce })
-        .observeChanges({ added: function() {} });
+        .observeChangesAsync({ added: function() {} });
       Meteor.setTimeout(async function() {
         try {
           await fenceOnBeforeFireErrorCollection.insertAsync({ nonce });
@@ -4214,7 +4214,7 @@ if (Meteor.isServer) {
         resolve();
       }
 
-      const observeHandle = await Collection.find().observeChanges({
+      const observeHandle = await Collection.find().observeChangesAsync({
         async changed(id, fields) {
           let expectedValue;
 

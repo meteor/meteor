@@ -63,7 +63,7 @@ steps.steppedDown = function () {
   process.exit(0);
 };
 
-C.find().observeChanges({
+C.find().observeChangesAsync({
   added: function (id, fields) {
     if (nextStepTimeout) {
       Meteor.clearTimeout(nextStepTimeout);
