@@ -8,7 +8,7 @@ Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
 
   var supported = async function(expected, selector, options) {
     var cursor = OplogCollection.find(selector, options);
-    var handle = await cursor.observeChangesAsync({ added: function() {} });
+    var handle = await cursor.observeChanges({ added: function() {} });
     // If there's no oplog at all, we shouldn't ever use it.
     if (!oplogEnabled) expected = false;
     test.equal(!!handle._multiplexer._observeDriver._usesOplog, expected);
@@ -125,7 +125,7 @@ process.env.MONGO_OPLOG_URL &&
           species: 'dog',
           color: 'blue',
         })
-        .observeChangesAsync({
+        .observeChanges({
           added(id, fields) {
             if (fields.name === 'dog 5') {
               blueDog5Id = id;

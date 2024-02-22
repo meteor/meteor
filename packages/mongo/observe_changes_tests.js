@@ -25,7 +25,7 @@ _.each ([{added: 'added', forceOrdered: true},
         var barid = await c.insertAsync({ thing: 'stuff' });
         var fooid = await c.insertAsync({ noodles: 'good', bacon: 'bad', apples: 'ok' });
 
-        var handle = await c.find(fooid).observeChangesAsync(logger);
+        var handle = await c.find(fooid).observeChanges(logger);
         if (added === 'added') {
           await logger.expectResult(added, [
             fooid,
@@ -60,7 +60,7 @@ _.each ([{added: 'added', forceOrdered: true},
 
         const badCursor = c.find({}, { fields: { noodles: 1, _id: false } });
         await test.throwsAsync(async function() {
-          await badCursor.observeChangesAsync(logger);
+          await badCursor.observeChanges(logger);
         });
 
         onComplete();
@@ -81,10 +81,10 @@ Tinytest.addAsync('observeChanges - callback isolation', async function(
     async function(logger) {
       var handles = [];
       var cursor = c.find();
-      handles.push(await cursor.observeChangesAsync(logger));
+      handles.push(await cursor.observeChanges(logger));
       // fields-tampering observer
       handles.push(
-        await cursor.observeChangesAsync({
+        await cursor.observeChanges({
           added: function(id, fields) {
             fields.apples = 'green';
           },
@@ -122,7 +122,7 @@ Tinytest.addAsync('observeChanges - single id - initial adds', async function(
     Meteor.isServer,
     async function(logger) {
       var fooid = await c.insertAsync({ noodles: 'good', bacon: 'bad', apples: 'ok' });
-      var handle = await c.find(fooid).observeChangesAsync(logger);
+      var handle = await c.find(fooid).observeChanges(logger);
       await logger.expectResult('added', [
         fooid,
         { noodles: 'good', bacon: 'bad', apples: 'ok' },
@@ -148,7 +148,7 @@ Tinytest.addAsync('observeChanges - unordered - initial adds', async function(
     async function(logger) {
       var fooid = await c.insertAsync({ noodles: 'good', bacon: 'bad', apples: 'ok' });
       var barid = await c.insertAsync({ noodles: 'good', bacon: 'weird', apples: 'ok' });
-      var handle = await c.find().observeChangesAsync(logger);
+      var handle = await c.find().observeChanges(logger);
       await logger.expectResultUnordered([
         {
           callback: 'added',
@@ -176,7 +176,7 @@ Tinytest.addAsync('observeChanges - unordered - basics', async function(
     ['added', 'changed', 'removed'],
     Meteor.isServer,
     async function(logger) {
-      var handle = await c.find().observeChangesAsync(logger);
+      var handle = await c.find().observeChanges(logger);
       var barid = await c.insertAsync({ thing: 'stuff' });
       await logger.expectResultOnly('added', [barid, { thing: 'stuff' }]);
 
@@ -228,7 +228,7 @@ if (Meteor.isServer) {
       async function(logger) {
         var handle = await c
           .find({}, { fields: { noodles: 1, bacon: 1 } })
-          .observeChangesAsync(logger);
+          .observeChanges(logger);
         var barid = await c.insertAsync({ thing: 'stuff' });
         await logger.expectResultOnly('added', [barid, {}]);
 
@@ -281,7 +281,7 @@ if (Meteor.isServer) {
               { mac: 1, cheese: 2 },
               { fields: { noodles: 1, bacon: 1, eggs: 1 } }
             )
-            .observeChangesAsync(logger);
+            .observeChanges(logger);
           var barid = await c.insertAsync({ thing: 'stuff', mac: 1, cheese: 2 });
           await logger.expectResultOnly('added', [barid, {}]);
 
@@ -360,7 +360,7 @@ Tinytest.addAsync(
             { mac: 1, cheese: 2 },
             { fields: { noodles: 1, bacon: 1, eggs: 1 } }
           )
-          .observeChangesAsync(logger);
+          .observeChanges(logger);
         var fooid = await c.insertAsync({
           noodles: 'good',
           bacon: 'bad',
@@ -402,7 +402,7 @@ Tinytest.addAsync(
       async function(logger) {
         var handle = await c
           .find({}, { fields: { 'type.name': 1 } })
-          .observeChangesAsync(logger);
+          .observeChanges(logger);
         var id = await c.insertAsync({ type: { name: 'foobar' } });
         await logger.expectResultOnly('added', [id, { type: { name: 'foobar' } }]);
 
@@ -428,7 +428,7 @@ Tinytest.addAsync(
       ['added', 'changed', 'removed'],
       Meteor.isServer,
       async function(logger) {
-        var handle = await c.find({ noodles: 'good' }).observeChangesAsync(logger);
+        var handle = await c.find({ noodles: 'good' }).observeChanges(logger);
         var barid = await c.insertAsync({ thing: 'stuff' });
 
         var fooid = await c.insertAsync({ noodles: 'good', bacon: 'bad', apples: 'ok' });
@@ -492,7 +492,7 @@ if (Meteor.isServer) {
       self.expects.push(resolver);
 
       var cursor = coll.find({ y: { $ne: 7 } }, { tailable: true });
-      self.handle = await cursor.observeChangesAsync({
+      self.handle = await cursor.observeChanges({
         added: function(id, fields) {
           self.xs.push(fields.x);
           test.notEqual(self.expects.length, 0);
@@ -550,7 +550,7 @@ testAsyncMulti("observeChanges - bad query", [
     var c = makeCollection();
     var observeThrows = async function () {
       await test.throwsAsync(async function () {
-        await c.find({__id: {$in: null}}).observeChangesAsync({
+        await c.find({__id: {$in: null}}).observeChanges({
           added: function () {
             test.fail("added shouldn't be called");
           }
@@ -588,7 +588,7 @@ if (Meteor.isServer) {
       await environmentVariable.withValue(true, async function() {
         var handle = await c
           .find({}, { fields: { 'type.name': 1 } })
-          .observeChangesAsync({
+          .observeChanges({
             added: function() {
               test.isTrue(environmentVariable.get());
               handle.stop();

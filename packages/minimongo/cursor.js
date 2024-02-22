@@ -373,13 +373,6 @@ export default class Cursor {
     return handle;
   }
 
-  observeChangesAsync(options) {
-    return new Promise((resolve) => {
-      const handle = this.observeChanges(options);
-      handle.isReadyPromise.then(() => resolve(handle));
-    });
-  }
-
   // XXX Maybe we need a version of observe that just calls a callback if
   // anything changed.
   _depend(changers, _allow_unordered) {
