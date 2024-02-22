@@ -3496,3 +3496,21 @@ if (Meteor.isServer) {
     });
   });
 }
+
+Tinytest.addAsync("mongo-livedata - support observeChangesAsync to keep isomorphism on client and server", async (test) => {
+  const Collection = new Mongo.Collection(`observe_changes_async${test.runId()}`);
+  const id = 'a';
+  await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+  return new Promise(async resolve => {
+    const obs = await Collection.find(id).observeChangesAsync({
+      async changed(_id, fields) {
+        await obs.stop();
+        resolve();
+        test.equal(_id, id);
+        test.equal(fields?.foo?.bar, 456);
+      },
+    });
+    await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+  });
+});

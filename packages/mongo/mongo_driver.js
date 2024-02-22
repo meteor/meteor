@@ -1031,6 +1031,10 @@ Cursor.prototype.observeChanges = function (callbacks, options = {}) {
     self._cursorDescription, ordered, callbacks, options.nonMutatingCallbacks);
 };
 
+Cursor.prototype.observeChangesAsync = async function (callbacks, options = {}) {
+  return new Promise(resolve => resolve(this.observeChanges(callbacks, options)));
+};
+
 MongoConnection.prototype._createSynchronousCursor = function(
     cursorDescription, options) {
   var self = this;
