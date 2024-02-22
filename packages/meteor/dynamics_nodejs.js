@@ -66,6 +66,10 @@ class EnvironmentVariableAsync {
           ret = await func();
         } finally {
           Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, undefined);
+          Meteor._updateAslStore(
+            UPPER_CALL_DYNAMICS_KEY_NAME,
+            undefined,
+          );
         }
         return ret;
       },
