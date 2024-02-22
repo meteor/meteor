@@ -2,13 +2,13 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "3.0.0-beta300.1",
+  version: "3.0.0-beta300.2",
   deprecated: true,
   documentation: 'README.md'
 });
 
 Package.onUse(function (api) {
-  api.use('ecmascript@0.16.8-beta300.1');
+  api.use('ecmascript@0.16.8-beta300.2');
   api.use("templating@1.4.2", "client", {weak: true});
   api.mainModule('template-integration.js', 'client');
 });

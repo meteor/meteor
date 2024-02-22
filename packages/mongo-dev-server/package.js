@@ -3,7 +3,7 @@ Package.describe({
   documentation: 'README.md',
   name: 'mongo-dev-server',
   summary: 'Start MongoDB alongside Meteor, in development mode.',
-  version: '1.1.1-beta300.1',
+  version: '1.1.1-beta300.2',
 });
 
 Package.onUse(function (api) {
