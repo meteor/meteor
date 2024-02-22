@@ -738,7 +738,7 @@ class ResourceSlot {
         if (! css && typeof css !== "string") {
           // The minifier didn't do anything, so we should use the
           // original contents of cssResource.data.
-          css = cssResource.data.toString("utf8");
+          css = (await cssResource.data).toString("utf8");
 
           if (cssResource.sourceMap) {
             // Add the source map as an asset, and append a
