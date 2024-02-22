@@ -4302,3 +4302,19 @@ Tinytest.addAsync('mongo-livedata - maintained isomorphism using resolverType co
 
   test.equal(items, []);
 });
+
+Tinytest.addAsync("mongo-livedata - support observeChangesAsync on client and server to keep isomorphism", async (test) => {
+  const Collection = new Mongo.Collection(`observe_changes_async${test.runId()}`, { resolverType: 'stub' });
+  const id = 'a';
+  await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+  return new Promise(async resolve => {
+    const obs = await Collection.find(id).observeChangesAsync({
+      async changed() {
+        resolve();
+        await obs.stop();
+      },
+    });
+    await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+  });
+});
