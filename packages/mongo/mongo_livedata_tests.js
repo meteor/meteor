@@ -4310,9 +4310,11 @@ Tinytest.addAsync("mongo-livedata - support observeChangesAsync to keep isomorph
 
   return new Promise(async resolve => {
     const obs = await Collection.find(id).observeChangesAsync({
-      async changed() {
+      async changed(_id, fields) {
         await obs.stop();
         resolve();
+        test.equal(_id, id);
+        test.equal(fields?.foo?.bar, 456);
       },
     });
     await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
