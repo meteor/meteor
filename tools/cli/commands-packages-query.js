@@ -111,8 +111,8 @@ var formatHiddenVersions = function (hiddenVersions, oldestShownVersion) {
 };
 
 // Converts an object to an EJSON string with the right spacing.
-function formatEJSON(data) {
-  const { EJSON } = loadIsopackage('ejson');
+async function formatEJSON(data) {
+  const { EJSON } = await loadIsopackage('ejson');
   return EJSON.stringify(data, { indent: true }) + "\n";
 }
 
@@ -466,13 +466,13 @@ Object.assign(PackageQuery.prototype, {
   // options:
   //   - ejson: Don't pretty-print the data. Print a machine-readable ejson
   //     object.
-  print: function (options) {
+  print: async function (options) {
     var self = this;
 
     // If we are asking for an EJSON-style output, we will only print out the
     // relevant fields.
     if (options.ejson) {
-      Console.rawInfo(formatEJSON(
+      Console.rawInfo(await formatEJSON(
         self.data.version ?
           self._generateVersionObject(self.data) :
           self._generatePackageObject(self.data)));
@@ -1112,7 +1112,7 @@ Object.assign(ReleaseQuery.prototype, {
   // options:
   //   - ejson: Don't pretty-print the data. Return a machine-readable ejson
   //     object.
-  print: function (options) {
+  print: async function (options) {
     var self = this;
 
     // If we are asking for an EJSON-style output, print out the relevant fields.
@@ -1123,7 +1123,7 @@ Object.assign(ReleaseQuery.prototype, {
       ];
       var packageFields = [ "name", "maintainers", "versions" ];
       var fields = self.data.version ? versionFields : packageFields;
-      Console.rawInfo(formatEJSON(_.pick(self.data, fields)));
+      Console.rawInfo(await formatEJSON(_.pick(self.data, fields)));
       return;
     }
 
@@ -1482,7 +1482,7 @@ main.registerCommand({
     return itemNotFound(fullName);
   }
 
-  query.print({ ejson: !! options.ejson });
+  await query.print({ ejson: !! options.ejson });
   return 0;
 });
 
@@ -1652,7 +1652,7 @@ main.registerCommand({
       packages: matchingPackages,
       releases: matchingReleases
     };
-    Console.rawInfo(formatEJSON(ret));
+    Console.rawInfo(await formatEJSON(ret));
     return 0;
   }
 
