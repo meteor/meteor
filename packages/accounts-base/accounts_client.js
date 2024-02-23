@@ -366,7 +366,7 @@ export class AccountsClient extends AccountsCommon {
       // Make the client logged in. (The user data should already be loaded!)
       this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
 
-      // use Tracker to make we have a user before calling the callbacks
+      // use Tracker to make we sure have a user before calling the callbacks
       Tracker.autorun(async function (computation) {
         const user = await Tracker.withComputation(computation, () =>
           Meteor.userAsync(),
