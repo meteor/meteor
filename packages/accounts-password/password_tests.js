@@ -714,16 +714,7 @@ if (Meteor.isClient) (() => {
       // Test that even with no published fields, we still have a document.
       await Accounts.connection.callAsync('clearUsernameAndProfile');
       test.isTrue(Meteor.userId());
-      // TODO [FIBERS]: this is a big workaround. The Tracker is now receiving promises,
-        // so it's finishing before time. Hopefully this PR will fix this behavior
-        // https://github.com/meteor/meteor/pull/12294
-      let resolve;
-      const promise = new Promise(res => resolve = res);
-      Meteor.setTimeout(() => {
-        test.equal(Meteor.user(), { _id: Meteor.userId() });
-        resolve();
-      }, 100);
-      return promise;
+      test.equal(await Meteor.userAsync(), { _id: Meteor.userId() });
     },
     logoutStep,
     function (test, expect) {
