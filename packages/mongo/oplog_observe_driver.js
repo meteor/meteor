@@ -79,6 +79,10 @@ OplogObserveDriver = function (options) {
 
   self._stopped = false;
   self._stopHandles = [];
+  self._addStopHandles = function (newStopHandles) {
+    check(newStopHandles, [{ stop: Function }])
+    self._stopHandles.push(newStopHandles);
+  }
 
   Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "mongo-livedata", "observe-drivers-oplog", 1);
@@ -107,14 +111,14 @@ OplogObserveDriver = function (options) {
 
   // If the oplog handle tells us that it skipped some entries (because it got
   // behind, say), re-poll.
-  self._stopHandles.push(self._mongoHandle._oplogHandle.onSkippedEntries(
+  self._addStopHandles(self._mongoHandle._oplogHandle.onSkippedEntries(
     finishIfNeedToPollQuery(function () {
       return self._needToPollQuery();
     })
   ));
 
   forEachTrigger(self._cursorDescription, function (trigger) {
-    self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
+    self._addStopHandles(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
         finishIfNeedToPollQuery(function () {
           var op = notification.op;
@@ -137,7 +141,7 @@ OplogObserveDriver = function (options) {
   });
 
   // XXX ordering w.r.t. everything else?
-  self._stopHandles.push(listenAll(
+  self._addStopHandles(listenAll(
     self._cursorDescription, function () {
       // If we're not in a pre-fire write fence, we don't have to do anything.
       var fence = DDPServer._getCurrentFence();
@@ -180,7 +184,7 @@ OplogObserveDriver = function (options) {
 
   // When Mongo fails over, we need to repoll the query, in case we processed an
   // oplog entry that got rolled back.
-  self._stopHandles.push(self._mongoHandle._onFailover(finishIfNeedToPollQuery(
+  self._addStopHandles(self._mongoHandle._onFailover(finishIfNeedToPollQuery(
     function () {
       return self._needToPollQuery();
     })));
