@@ -182,7 +182,7 @@ process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
   },
 );
 
-let defaultOplogHandle = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+const defaultOplogHandle = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
 
 async function oplogOptionsTest({
   test,
@@ -224,8 +224,9 @@ async function oplogOptionsTest({
   test.equal(await shouldBeTracked, true);
   test.equal(await shouldBeIgnored, true);
 
-  // reset the package settings:
+  // Reset:
   delete Meteor.settings.packages.mongo;
+  MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
 }
 
 process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
@@ -276,15 +277,15 @@ process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
       await oplogOptionsTest({
         test,
         includeCollectionName: collectionNameA,
-        oplogExcludeCollections: collectionNameB,
+        excludeCollectionName: collectionNameB,
         mongoPackageSettings
       });
-      // reset the package settings:
+      // Reset:
       delete Meteor.settings.packages.mongo;
       MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
       test.fail();
     } catch (err) {
-      // reset the package settings:
+      // Reset:
       delete Meteor.settings.packages.mongo;
       MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
       test.expect_fail();
