@@ -226,9 +226,6 @@ async function oplogOptionsTest({
 
     test.equal(await shouldBeTracked, true);
     test.equal(await shouldBeIgnored, true);
-  } catch(err) {
-    // we just have this catch to be able to use the finally! ;)
-    throw err;
   } finally {
     // Reset:
     Meteor.settings.packages.mongo = { ...previousMongoPackageSettings };
