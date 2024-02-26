@@ -1,4 +1,5 @@
 import { oplogV2V1Converter } from "./oplog_v2_converter";
+import { check, Match } from 'meteor/check';
 
 var PHASE = {
   QUERYING: "QUERYING",
@@ -28,7 +29,7 @@ var currentId = 0;
 // callbacks (and a ready() invocation) to the ObserveMultiplexer, and you stop
 // it by calling the stop() method.
 OplogObserveDriver = function (options) {
-  var self = this;
+  const self = this;
   self._usesOplog = true;  // tests look at this
 
   self._id = currentId;
@@ -42,10 +43,10 @@ OplogObserveDriver = function (options) {
     throw Error("OplogObserveDriver only supports unordered observeChanges");
   }
 
-  var sorter = options.sorter;
+  const sorter = options.sorter;
   // We don't support $near and other geo-queries so it's OK to initialize the
   // comparator only once in the constructor.
-  var comparator = sorter && sorter.getComparator();
+  const comparator = sorter && sorter.getComparator();
 
   if (options.cursorDescription.options.limit) {
     // There are several properties ordered driver implements:
@@ -57,7 +58,7 @@ OplogObserveDriver = function (options) {
     //                      into published set.
     // - _published - Max Heap (also implements IdMap methods)
 
-    var heapOptions = { IdMap: LocalCollection._IdMap };
+    const heapOptions = { IdMap: LocalCollection._IdMap };
     self._limit = self._cursorDescription.options.limit;
     self._comparator = comparator;
     self._sorter = sorter;
@@ -80,7 +81,9 @@ OplogObserveDriver = function (options) {
   self._stopped = false;
   self._stopHandles = [];
   self._addStopHandles = function (newStopHandles) {
-    check(newStopHandles, [{ stop: Function }])
+    const expectedPattern = Match.ObjectIncluding({ stop: Function });
+    // Single item or array
+    check(newStopHandles, Match.OneOf([expectedPattern], expectedPattern));
     self._stopHandles.push(newStopHandles);
   }
 
@@ -92,7 +95,7 @@ OplogObserveDriver = function (options) {
   self._matcher = options.matcher;
   // we are now using projection, not fields in the cursor description even if you pass {fields}
   // in the cursor construction
-  var projection = self._cursorDescription.options.fields || self._cursorDescription.options.projection || {};
+  const projection = self._cursorDescription.options.fields || self._cursorDescription.options.projection || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection
@@ -109,90 +112,94 @@ OplogObserveDriver = function (options) {
   self._requeryWhenDoneThisQuery = false;
   self._writesToCommitWhenWeReachSteady = [];
 
-  // If the oplog handle tells us that it skipped some entries (because it got
-  // behind, say), re-poll.
-  self._addStopHandles(self._mongoHandle._oplogHandle.onSkippedEntries(
-    finishIfNeedToPollQuery(function () {
-      return self._needToPollQuery();
-    })
-  ));
 
-  forEachTrigger(self._cursorDescription, function (trigger) {
-    self._addStopHandles(self._mongoHandle._oplogHandle.onOplogEntry(
-      trigger, function (notification) {
-        finishIfNeedToPollQuery(function () {
-          var op = notification.op;
-          if (notification.dropCollection || notification.dropDatabase) {
-            // Note: this call is not allowed to block on anything (especially
-            // on waiting for oplog entries to catch up) because that will block
-            // onOplogEntry!
-            return self._needToPollQuery();
-          } else {
-            // All other operators should be handled depending on phase
-            if (self._phase === PHASE.QUERYING) {
-              return self._handleOplogEntryQuerying(op);
-            } else {
-              return self._handleOplogEntrySteadyOrFetching(op);
-            }
-          }
-        })();
-      }
-    ));
-  });
 
-  // XXX ordering w.r.t. everything else?
-  self._addStopHandles(listenAll(
-    self._cursorDescription, function () {
-      // If we're not in a pre-fire write fence, we don't have to do anything.
-      var fence = DDPServer._getCurrentFence();
-      if (!fence || fence.fired)
-        return;
-
-      if (fence._oplogObserveDrivers) {
-        fence._oplogObserveDrivers[self._id] = self;
-        return;
-      }
-
-      fence._oplogObserveDrivers = {};
-      fence._oplogObserveDrivers[self._id] = self;
-
-      fence.onBeforeFire(async function () {
-        var drivers = fence._oplogObserveDrivers;
-        delete fence._oplogObserveDrivers;
-
-        // This fence cannot fire until we've caught up to "this point" in the
-        // oplog, and all observers made it back to the steady state.
-        await self._mongoHandle._oplogHandle.waitUntilCaughtUp();
-
-        for (const driver of Object.values(drivers)) {
-          if (driver._stopped)
-            continue;
-
-          var write = await fence.beginWrite();
-          if (driver._phase === PHASE.STEADY) {
-            // Make sure that all of the callbacks have made it through the
-            // multiplexer and been delivered to ObserveHandles before committing
-            // writes.
-            await driver._multiplexer.onFlush(write.committed);
-          } else {
-            driver._writesToCommitWhenWeReachSteady.push(write);
-          }
-        }
-      });
-    }
-  ));
-
-  // When Mongo fails over, we need to repoll the query, in case we processed an
-  // oplog entry that got rolled back.
-  self._addStopHandles(self._mongoHandle._onFailover(finishIfNeedToPollQuery(
-    function () {
-      return self._needToPollQuery();
-    })));
-};
+ };
 
 _.extend(OplogObserveDriver.prototype, {
-  _init: function() {
+  _init: async function() {
     const self = this;
+
+    // If the oplog handle tells us that it skipped some entries (because it got
+    // behind, say), re-poll.
+    self._addStopHandles(self._mongoHandle._oplogHandle.onSkippedEntries(
+      finishIfNeedToPollQuery(function () {
+        return self._needToPollQuery();
+      })
+    ));
+    
+    await forEachTrigger(self._cursorDescription, async function (trigger) {
+      self._addStopHandles(await self._mongoHandle._oplogHandle.onOplogEntry(
+        trigger, function (notification) {
+          finishIfNeedToPollQuery(function () {
+            const op = notification.op;
+            if (notification.dropCollection || notification.dropDatabase) {
+              // Note: this call is not allowed to block on anything (especially
+              // on waiting for oplog entries to catch up) because that will block
+              // onOplogEntry!
+              return self._needToPollQuery();
+            } else {
+              // All other operators should be handled depending on phase
+              if (self._phase === PHASE.QUERYING) {
+                return self._handleOplogEntryQuerying(op);
+              } else {
+                return self._handleOplogEntrySteadyOrFetching(op);
+              }
+            }
+          })();
+        }
+      ));
+    });
+  
+    // XXX ordering w.r.t. everything else?
+    self._addStopHandles(await listenAll(
+      self._cursorDescription, function () {
+        // If we're not in a pre-fire write fence, we don't have to do anything.
+        const fence = DDPServer._getCurrentFence();
+        if (!fence || fence.fired)
+          return;
+  
+        if (fence._oplogObserveDrivers) {
+          fence._oplogObserveDrivers[self._id] = self;
+          return;
+        }
+  
+        fence._oplogObserveDrivers = {};
+        fence._oplogObserveDrivers[self._id] = self;
+  
+        fence.onBeforeFire(async function () {
+          const drivers = fence._oplogObserveDrivers;
+          delete fence._oplogObserveDrivers;
+  
+          // This fence cannot fire until we've caught up to "this point" in the
+          // oplog, and all observers made it back to the steady state.
+          await self._mongoHandle._oplogHandle.waitUntilCaughtUp();
+  
+          for (const driver of Object.values(drivers)) {
+            if (driver._stopped)
+              continue;
+  
+            const write = await fence.beginWrite();
+            if (driver._phase === PHASE.STEADY) {
+              // Make sure that all of the callbacks have made it through the
+              // multiplexer and been delivered to ObserveHandles before committing
+              // writes.
+              await driver._multiplexer.onFlush(write.committed);
+            } else {
+              driver._writesToCommitWhenWeReachSteady.push(write);
+            }
+          }
+        });
+      }
+    ));
+  
+    // When Mongo fails over, we need to repoll the query, in case we processed an
+    // oplog entry that got rolled back.
+    self._addStopHandles(self._mongoHandle._onFailover(finishIfNeedToPollQuery(
+      function () {
+        return self._needToPollQuery();
+      })));
+  
     // Give _observeChanges a chance to add the new ObserveHandle to our
     // multiplexer, so that the added calls get streamed.
     return self._runInitialQuery();
