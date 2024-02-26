@@ -1035,6 +1035,10 @@ Cursor.prototype.observeChangesAsync = async function (callbacks, options = {}) 
   return new Promise(resolve => resolve(this.observeChanges(callbacks, options)));
 };
 
+Cursor.prototype.observeAsync = async function (callbacks) {
+  return new Promise(resolve => resolve(this.observe(callbacks)));
+};
+
 MongoConnection.prototype._createSynchronousCursor = function(
     cursorDescription, options) {
   var self = this;
