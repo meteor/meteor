@@ -183,6 +183,7 @@ process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
 );
 
 const defaultOplogHandle = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+let previousMongoPackageSettings = {};
 
 async function oplogOptionsTest({
   test,
@@ -190,43 +191,49 @@ async function oplogOptionsTest({
   excludeCollectionName,
   mongoPackageSettings = {}
 }) {
-  if (!Meteor.settings.packages) Meteor.settings.packages = {};
-  if (!Meteor.settings.packages.mongo) Meteor.settings.packages.mongo = mongoPackageSettings;
+  try {
+    previousMongoPackageSettings = { ...(Meteor.settings?.packages?.mongo || {}) };
+    if (!Meteor.settings.packages) Meteor.settings.packages = {};
+    Meteor.settings.packages.mongo = mongoPackageSettings;
 
-  const myOplogHandle = new MongoInternals.OplogHandle(process.env.MONGO_OPLOG_URL, 'meteor');
-  MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(myOplogHandle);
+    const myOplogHandle = new MongoInternals.OplogHandle(process.env.MONGO_OPLOG_URL, 'meteor');
+    MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(myOplogHandle);
 
-  const IncludeCollection = new Mongo.Collection(includeCollectionName);
-  const ExcludeCollection = new Mongo.Collection(excludeCollectionName);
+    const IncludeCollection = new Mongo.Collection(includeCollectionName);
+    const ExcludeCollection = new Mongo.Collection(excludeCollectionName);
 
-  const shouldBeTracked = new Promise((resolve) => {
-    IncludeCollection.find({ include: 'yes' }).observeChanges({
-      added(id, fields) { resolve(true) }
+    const shouldBeTracked = new Promise((resolve) => {
+      IncludeCollection.find({ include: 'yes' }).observeChanges({
+        added(id, fields) { resolve(true) }
+      });
     });
-  });
-  const shouldBeIgnored = new Promise((resolve, reject) => {
-    ExcludeCollection.find({ include: 'no' }).observeChanges({
-      added(id, fields) { 
-        // should NOT fire, because this is an excluded collection:
-        reject(false);
-      }
+    const shouldBeIgnored = new Promise((resolve, reject) => {
+      ExcludeCollection.find({ include: 'no' }).observeChanges({
+        added(id, fields) { 
+          // should NOT fire, because this is an excluded collection:
+          reject(false);
+        }
+      });
+      // we give it just 2 seconds until we resolve this promise:
+      setTimeout(() => {
+        resolve(true);
+      }, 2000);
     });
-    // we give it just 2 seconds until we resolve this promise:
-    setTimeout(() => {
-      resolve(true);
-    }, 2000);
-  });
 
-  // do the inserts:
-  await IncludeCollection.rawCollection().insertOne({ include: 'yes', foo: 'bar' });
-  await ExcludeCollection.rawCollection().insertOne({ include: 'no', foo: 'bar' });
+    // do the inserts:
+    await IncludeCollection.rawCollection().insertOne({ include: 'yes', foo: 'bar' });
+    await ExcludeCollection.rawCollection().insertOne({ include: 'no', foo: 'bar' });
 
-  test.equal(await shouldBeTracked, true);
-  test.equal(await shouldBeIgnored, true);
-
-  // Reset:
-  delete Meteor.settings.packages.mongo;
-  MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
+    test.equal(await shouldBeTracked, true);
+    test.equal(await shouldBeIgnored, true);
+  } catch(err) {
+    // we just have this catch to be able to use the finally! ;)
+    throw err;
+  } finally {
+    // Reset:
+    Meteor.settings.packages.mongo = { ...previousMongoPackageSettings };
+    MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
+  }
 }
 
 process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
@@ -280,14 +287,8 @@ process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
         excludeCollectionName: collectionNameB,
         mongoPackageSettings
       });
-      // Reset:
-      delete Meteor.settings.packages.mongo;
-      MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
       test.fail();
     } catch (err) {
-      // Reset:
-      delete Meteor.settings.packages.mongo;
-      MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
       test.expect_fail();
     }
   }
