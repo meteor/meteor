@@ -1006,6 +1006,10 @@ Cursor.prototype.observe = function (callbacks) {
   return LocalCollection._observeFromObserveChanges(self, callbacks);
 };
 
+Cursor.prototype.observeAsync = async function (callbacks) {
+  return new Promise(resolve => resolve(this.observe(callbacks)));
+};
+
 Cursor.prototype.observeChanges = function (callbacks, options = {}) {
   var self = this;
   var methods = [
@@ -1033,10 +1037,6 @@ Cursor.prototype.observeChanges = function (callbacks, options = {}) {
 
 Cursor.prototype.observeChangesAsync = async function (callbacks, options = {}) {
   return new Promise(resolve => resolve(this.observeChanges(callbacks, options)));
-};
-
-Cursor.prototype.observeAsync = async function (callbacks) {
-  return new Promise(resolve => resolve(this.observe(callbacks)));
 };
 
 MongoConnection.prototype._createSynchronousCursor = function(
