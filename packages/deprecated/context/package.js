@@ -1,6 +1,6 @@
 Package.describe({
   name: "context",
-  version: '1.0.0-beta300.0',
+  version: '1.0.0-beta300.4',
   summary: "Manage contextual information without passing objects around",
   documentation: "README.md",
   deprecated: 'You should not be needing this package in Meteor 3'

@@ -179,7 +179,7 @@ class Runner {
         .catch(async (error) => {
           --tries;
           const left = tries + (tries === 1 ? " try" : " tries");
-          Console.log(`Error starting Mongo (${left} left): ${error.message}`);
+          Console.error(`Error starting Mongo (${left} left): ${error.message}`);
           if (tries > 0) {
             self.mongoRunner.stop();
             setTimeout(() => startMongo(tries), 1000);

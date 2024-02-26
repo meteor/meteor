@@ -1,6 +1,6 @@
 Package.describe({
   name: 'modules-runtime-hot',
-  version: '0.14.3-beta300.0',
+  version: '0.14.3-beta300.4',
   summary: 'Patches modules-runtime to support Hot Module Replacement',
   git: 'https://github.com/benjamn/install',
   documentation: 'README.md',

@@ -4259,3 +4259,46 @@ if (Meteor.isServer) {
     });
   });
 }
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('mongo-livedata - asyncIterator', async function(test) {
+    const Collection = new Mongo.Collection(`asynciterator_test_${test.runId()}`);
+
+    await Collection.insertAsync({ _id: 'a' });
+    await Collection.insertAsync({ _id: 'b' });
+
+    let itemIds = [];
+    for await (const item of Collection.find()) {
+      itemIds.push(item._id);
+    }
+    test.equal(itemIds.length, 2);
+    test.equal(itemIds, ['a', 'b']);
+  });
+}
+
+Tinytest.addAsync('mongo-livedata - maintained isomorphism using resolverType config for both client and server', async function(test, expect) {
+  const Collection = new Mongo.Collection(`resolver_type${test.runId()}`, { resolverType: 'stub' });
+
+  await Collection.insertAsync({ _id: 'a' });
+  await Collection.insertAsync({ _id: 'b' });
+
+  let items = await Collection.find().fetchAsync();
+  let itemIds = items.map(_item => _item._id);
+
+  test.equal(itemIds, ['a', 'b']);
+
+  await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+  await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
+
+  items = await Collection.find().fetchAsync();
+  itemIds = items.map(_item => _item.num);
+
+  test.equal(itemIds, [1, 2]);
+
+  await Collection.removeAsync({ _id: 'a' });
+  await Collection.removeAsync({ _id: 'b' });
+
+  items = await Collection.find().fetchAsync();
+
+  test.equal(items, []);
+});

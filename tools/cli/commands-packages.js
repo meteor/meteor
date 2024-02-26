@@ -2645,7 +2645,7 @@ main.registerCommand({
     // check if the passed arch is in the list
     var arch = options['target-arch'];
     if (! osArches.includes(arch)) {
-      throw new Error(
+	      throw new Error(
         arch + ": the arch is not available for the release. Available arches: "
         + osArches.join(', '));
     }

@@ -3983,3 +3983,17 @@ Tinytest.add('minimongo - cannot $rename with null bytes', test => {
     collection.update({ _id: id }, { $rename: { a: '\0a', c: 'c\0' } });
   }, "The 'to' field for $rename cannot contain an embedded null byte");
 });
+
+Tinytest.addAsync('minimongo - asyncIterator', async (test) => {
+  const collection = new LocalCollection();
+
+  collection.insert({ _id: 'a' });
+  collection.insert({ _id: 'b' });
+
+  let itemIds = [];
+  for await (const item of collection.find()) {
+    itemIds.push(item._id);
+  }
+  test.equal(itemIds.length, 2);
+  test.equal(itemIds, ['a', 'b']);
+});

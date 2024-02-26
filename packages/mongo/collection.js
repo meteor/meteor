@@ -89,6 +89,8 @@ Mongo.Collection = function Collection(name, options) {
 
   this._transform = LocalCollection.wrapTransform(options.transform);
 
+  this.resolverType = options.resolverType;
+
   if (!name || options.connection === null)
     // note: nameless collections never have a connection
     this._connection = null;
@@ -1266,4 +1268,3 @@ function popCallbackFromArgs(args) {
     return args.pop();
   }
 }
-
