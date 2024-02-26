@@ -222,7 +222,7 @@ export default class Cursor {
    * @memberOf Promise<Mongo.Cursor>
    * @instance
    */
-  async observeAsync(options) {
+  observeAsync(options) {
     return new Promise(resolve => resolve(this.observe(options)));
   }
 
@@ -368,7 +368,7 @@ export default class Cursor {
    * @memberOf Promise<Mongo.Cursor>
    * @instance
    */
-  async observeChangesAsync(options) {
+  observeChangesAsync(options) {
     return new Promise(resolve => resolve(this.observeChanges(options)));
   }
 
