@@ -352,7 +352,7 @@ export default class Cursor {
     return handle;
   }
 
-  async observeChangesAsync() {
+  async observeChangesAsync(options) {
     return new Promise(resolve => resolve(this.observeChanges(options)));
   }
 
