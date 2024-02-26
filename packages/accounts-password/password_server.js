@@ -1086,12 +1086,7 @@ Accounts.createUserAsync =
 // method calling Accounts.createUser could set?
 //
 
-Accounts.createUser =
-  !Meteor._isFibersEnabled
-    ? Accounts.createUserAsync
-    : (options, callback) =>
-        Promise.await(Accounts.createUserAsync(options, callback));
-
+Accounts.createUser = Accounts.createUserAsync;
 
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
