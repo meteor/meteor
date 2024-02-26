@@ -1006,7 +1006,7 @@ Cursor.prototype.observe = function (callbacks) {
   return LocalCollection._observeFromObserveChanges(self, callbacks);
 };
 
-Cursor.prototype.observeAsync = async function (callbacks) {
+Cursor.prototype.observeAsync = function (callbacks) {
   return new Promise(resolve => resolve(this.observe(callbacks)));
 };
 
