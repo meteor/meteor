@@ -201,12 +201,6 @@ export namespace Accounts {
 
   function setUsername(userId: string, newUsername: string): void;
 
-  function setPassword(
-    userId: string,
-    newPassword: string,
-    options?: { logout?: boolean | undefined }
-  ): void;
-
   function setPasswordAsync(
     userId: string,
     newPassword: string,
