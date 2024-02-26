@@ -1,4 +1,4 @@
-import {debug} from "util";
+import { debug } from "util";
 
 var _ = require('underscore');
 var sourcemap = require('source-map');
@@ -11,12 +11,10 @@ import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
-import * as oldLinker from './old-linker';
-import SourceMap from '@parcel/source-map';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
-const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024*1024*20;
+const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024 * 1024 * 20;
 
 // Cache individual files prelinked
 const APP_PRELINK_CACHE = new LRU({
@@ -39,36 +37,248 @@ var packageDot = function (name) {
 };
 
 const enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
-const USE_OLD_LINKER = process.env.METEOR_LINKER !== 'new';
-
-const MIN_BANNER_WIDTH = 80;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Module
 ///////////////////////////////////////////////////////////////////////////////
 
-// TODO: this comment is out of date - we no longer have import()
-// useGlobalNamespace has the same meaning as when passed
+// options include name, imports, exports, useGlobalNamespace,
+// combinedServePath, all of which have the same meaning as they do when passed
 // to import().
-var Module = function (files, useGlobalNamespace) {
-  // files in the module. array of File
-  this.files = files;
+var Module = function (options) {
+  var self = this;
 
-  this.useGlobalNamespace = useGlobalNamespace;
+  // module name or null
+  self.name = options.name || null;
+
+  // The architecture for which this bundle is being linked.
+  self.bundleArch = options.bundleArch;
+
+  // files in the module. array of File
+  self.files = [];
+
+  // options
+  self.useGlobalNamespace = options.useGlobalNamespace;
+  self.combinedServePath = options.combinedServePath;
+  self.addEagerRequires = !!options.addEagerRequires;
 };
 
 Object.assign(Module.prototype, {
+  // source: the source code
+  // servePath: the path where it would prefer to be served if possible
+  addFile: function (inputFile) {
+    var self = this;
+    self.files.push(new File(inputFile, self.bundleArch));
+  },
+
+
+  maxLineLength: function (ignoreOver) {
+    var self = this;
+
+    var maxInFile = [];
+    _.each(self.files, function (file) {
+      var m = 0;
+      _.each(file.source.split('\n'), function (line) {
+        if (line.length <= ignoreOver && line.length > m) {
+          m = line.length;
+        }
+      });
+      maxInFile.push(m);
+    });
+
+    return _.max(maxInFile);
+  },
+
+  // Figure out which vars need to be specifically put in the module
+  // scope.
+  computeAssignedVariables: Profile("linker Module#computeAssignedVariables", async function () {
+    var self = this;
+
+    // The assigned variables in the app aren't actually used for anything:
+    // we're using the global namespace, so there's no header where we declare
+    // all of the assigned variables as vars.  So there's no use wasting time
+    // running static analysis on app code.
+    if (self.useGlobalNamespace) {
+      return [];
+    }
+
+    // Find all global references in any files
+    var assignedVariables = [];
+    for (const file of self.files) {
+      assignedVariables = assignedVariables.concat(
+        await file.computeAssignedVariables());
+    }
+    assignedVariables = _.uniq(assignedVariables);
+
+    return assignedVariables;
+  }),
+
+  // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
+  // 'sourcePath'
+  getPrelinkedFiles: Profile("linker Module#getPrelinkedFiles", async function () {
+    var self = this;
+
+    const haveMeteorInstallOptions =
+      self.files.some(file => file.meteorInstallOptions);
+
+    // If we don't want to create a separate scope for this module,
+    // then our job is much simpler. And we can get away with
+    // preserving the line numbers.
+    if (self.useGlobalNamespace &&
+      !haveMeteorInstallOptions) {
+      // Ignore lazy files unless we have a module system.
+      const eagerFiles = _.filter(self.files, file => !file.lazy);
+
+      const ret = [];
+      for (const file of eagerFiles) {
+        const cacheKey = JSON.stringify([
+          file._inputHash,
+          file.bare,
+          file.servePath,
+        ]);
+
+        if (APP_PRELINK_CACHE.has(cacheKey)) {
+          ret.push(APP_PRELINK_CACHE.get(cacheKey));
+        }
+
+        const node = await file.getPrelinkedOutput({ preserveLineNumbers: true });
+        const results = await Profile.time(
+          "toStringWithSourceMap (app)", () => {
+            return node.toStringWithSourceMap({
+              file: file.servePath
+            }); // results has 'code' and 'map' attributes
+          }
+        );
+
+        let sourceMap = results.map.toJSON();
+        if (!sourceMap.mappings) {
+          sourceMap = null;
+        }
+
+        const prelinked = {
+          source: results.code,
+          sourcePath: file.sourcePath,
+          servePath: file.servePath,
+          sourceMap: sourceMap,
+          hash: file._inputHash,
+        };
+
+        APP_PRELINK_CACHE.set(cacheKey, prelinked);
+        ret.push(prelinked);
+      }
+
+      // TODO[fibers]: This is a temporary hack to make sure that we don't return the same
+      // file twice. I'm not sure why, but self.files sometimes contains the same file twice.
+      // these tool tests fail without this hack:
+      // - assets - unicode asset names are allowed
+      // - javascript hot code push
+      // and probably others
+      const uniqueHashes = [...new Set(ret.map((f) => f.hash))];
+      return uniqueHashes.map((h) => ret.find((f) => f.hash === h));
+    }
+
+    // Otherwise..
+
+    // Find the maximum line length.
+    var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]);
+
+    const result = {
+      // This object will be populated with .source, .servePath,
+      // .sourceMap, and (optionally) .exportsName properties before being
+      // returned from this method in a singleton array.
+      servePath: self.combinedServePath,
+      hash: watch.sha1(
+        JSON.stringify(self.files.map(file => file._inputHash))
+      ),
+    };
+
+    const results = [result];
+    // An array of strings and SourceNode objects.
+    let chunks = [];
+    let fileCount = 0;
+
+    // Emit each file
+    if (haveMeteorInstallOptions) {
+      const trees = await self._buildModuleTrees(results, sourceWidth);
+      fileCount = await self._chunkifyModuleTrees(trees, chunks, sourceWidth);
+
+      // During the full link, code will be added to pass these to the
+      // core runtime so it can handle evaluating the modules
+      result.eagerModulePaths = [];
+      result.mainModulePath = null;
+
+      for (const file of this.files) {
+        if (file.bare) {
+          chunks.push('\n', await file.getPrelinkedOutput({
+            sourceWidth
+          }));
+        } else if (!file.lazy) {
+          result.eagerModulePaths.push(file.absModuleId);
+          if (file.mainModule) {
+            result.mainModulePath = file.absModuleId;
+          }
+
+          if (self.addEagerRequires) {
+            chunks.push(`\nrequire(${JSON.stringify(file.absModuleId)});`);
+          }
+        }
+      }
+    } else {
+      for (const file of self.files) {
+        if (file.lazy) {
+          // Ignore lazy files unless we have a module system.
+          continue;
+        }
+
+        if (!_.isEmpty(chunks)) {
+          chunks.push("\n\n\n\n\n\n");
+        }
+
+        chunks.push(await file.getPrelinkedOutput({
+          sourceWidth: sourceWidth,
+        }));
+
+        ++fileCount;
+      }
+    }
+
+    var node = new sourcemap.SourceNode(null, null, null, chunks);
+
+    await Profile.time(
+      'getPrelinkedFiles toStringWithSourceMap',
+      function () {
+        if (fileCount > 0) {
+          var swsm = node.toStringWithSourceMap({
+            file: self.combinedServePath
+          });
+          result.source = swsm.code;
+          result.sourceMap = swsm.map.toJSON();
+          if (!result.sourceMap.mappings) {
+            result.sourceMap = null;
+          }
+        } else {
+          // If there were no files in this bundle, we do not need to
+          // generate a source map.
+          result.source = node.toString();
+          result.sourceMap = null;
+        }
+      }
+    );
+
+    return results;
+  }),
+
   // Builds a tree of nested objects where the properties are names of
   // files or directories, and the values are either nested objects
   // (representing directories) or File objects (representing modules).
   // Bare files and lazy files that are never imported are ignored.
-  _buildModuleTrees(dynamicFiles) {
+  async _buildModuleTrees(results, sourceWidth) {
     // Map from meteorInstallOptions objects to trees of File objects for
     // all non-dynamic modules.
     const trees = new Map();
 
     function getTree({ meteorInstallOptions }) {
-      if (! trees.has(meteorInstallOptions)) {
+      if (!trees.has(meteorInstallOptions)) {
         trees.set(meteorInstallOptions, {});
       }
       return trees.get(meteorInstallOptions);
@@ -80,15 +290,10 @@ Object.assign(Module.prototype, {
         continue;
       }
 
-      if (file.lazy && ! file.imported) {
+      if (file.lazy && !file.imported) {
         // If the file is not eagerly evaluated, and no other files
         // import or require it, then it need not be included in the
         // bundle.
-  
-        // We can easily allow unused files by filtering them out
-        // but we will also want to make sure to exclude them when
-        // computing assigned variables
-        assert(false, 'unexpected unused file in linker');
         continue;
       }
 
@@ -101,26 +306,26 @@ Object.assign(Module.prototype, {
 
       if (file.isDynamic()) {
         const servePath = files.pathJoin("dynamic", file.absModuleId);
-        const { source, sourceMap } =
-            getOutputWithSourceMapCached(file, servePath);
+        const { code: source, map } =
+          await getOutputWithSourceMapCached(file, servePath, { sourceWidth })
 
-        dynamicFiles.push({
+        results.push({
           source,
           servePath,
-          sourceMap,
+          sourceMap: map && map.toJSON(),
           dynamic: true,
         });
 
-        const stubArray = file.getNonDynamicDeps();
+        const stubArray = file.deps.slice(0);
 
         if (file.absModuleId.endsWith("/package.json") &&
-            file.jsonData) {
+          file.jsonData) {
           const stub = {};
 
           function tryMain(name) {
             const value = file.jsonData[name];
             if (_.isString(value) ||
-                _.isObject(value)) {
+              _.isObject(value)) {
               stub[name] = value;
             }
           }
@@ -147,17 +352,18 @@ Object.assign(Module.prototype, {
   // Take the tree generated in getPrelinkedFiles and populate the chunks
   // array with strings and SourceNode objects that can be combined into a
   // single SourceNode object. Return the count of modules in the tree.
-  _chunkifyModuleTrees(trees, combinedFile) {
+  async _chunkifyModuleTrees(trees, chunks, sourceWidth) {
     const self = this;
 
-    assert.ok(combinedFile instanceof CombinedFile);
+    assert.ok(_.isArray(chunks));
+    assert.ok(_.isNumber(sourceWidth));
 
     let moduleCount = 0;
 
-    function walk(t) {
+    async function walk(t) {
       if (Array.isArray(t)) {
         ++moduleCount;
-        combinedFile.addGeneratedCode(JSON.stringify(t, null, 2));
+        chunks.push(JSON.stringify(t, null, 2));
       } else if (typeof t === "string") {
         // This case can happen if a package.json file has an
         // object-valued "browser" field that aliases this module to a
@@ -168,55 +374,53 @@ Object.assign(Module.prototype, {
         // ambiguity, since identifiers in package.json "browser" fields
         // are meant to be resolved relative to the package.json file.
         ++moduleCount;
-        combinedFile.addGeneratedCode(JSON.stringify(t));
+        chunks.push(JSON.stringify(t));
       } else if (t === false) {
         // This case can happen if a package.json file has an
         // object-valued "browser" field that maps this module to `false`,
         // indicating it should be replaced by an empty stub.
         ++moduleCount;
-        combinedFile.addGeneratedCode("function(){}");
+        chunks.push("function(){}");
       } else if (t instanceof File) {
         ++moduleCount;
 
-        const { header, code, map, footer } = t.getPrelinkedOutput();
-        combinedFile.addGeneratedCode(header);
-        combinedFile.addCodeWithMap(t.sourcePath, code, map);
-        combinedFile.addGeneratedCode(footer);
+        chunks.push(await t.getPrelinkedOutput({
+          sourceWidth,
+        }));
       } else if (_.isObject(t)) {
-        combinedFile.addGeneratedCode("{");
+        chunks.push("{");
         const keys = Object.keys(t);
         for (const [i, key] of keys.entries()) {
-          combinedFile.addGeneratedCode(JSON.stringify(key) + ":");
-          walk(t[key]);
+          chunks.push(JSON.stringify(key), ":");
+          await walk(t[key]);
           if (i < keys.length - 1) {
-            combinedFile.addGeneratedCode(",");
+            chunks.push(",");
           }
         }
-        combinedFile.addGeneratedCode("}");
+        chunks.push("}");
       }
     }
 
-    // const chunksLengthBeforeWalk = chunks.length;
+    const chunksLengthBeforeWalk = chunks.length;
 
     if (trees.size > 0) {
-      combinedFile.addGeneratedCode("var require = ");
+      chunks.push("var require = ");
     }
 
     // Emit one meteorInstall call per distinct meteorInstallOptions
     // object, since the options apply to all modules installed by a given
     // call to meteorInstall.
     for (const [options, tree] of trees) {
-      combinedFile.addGeneratedCode("meteorInstall(");
-      walk(tree);
-      combinedFile.addGeneratedCode("," + self._stringifyInstallOptions(options) + ");\n");
+      chunks.push("meteorInstall(");
+      await walk(tree);
+      chunks.push(",", self._stringifyInstallOptions(options), ");\n");
     }
 
-    // TODO: fix this
-    // if (moduleCount === 0) {
-    //   // If no files were actually added to the chunks array, roll back
-    //   // to before the `var require = meteorInstall(` chunk.
-    //   chunks.length = chunksLengthBeforeWalk;
-    // }
+    if (moduleCount === 0) {
+      // If no files were actually added to the chunks array, roll back
+      // to before the `var require = meteorInstall(` chunk.
+      chunks.length = chunksLengthBeforeWalk;
+    }
 
     return moduleCount;
   },
@@ -228,7 +432,7 @@ Object.assign(Module.prototype, {
       return optionsString;
     }
 
-    if (! this.files.some(file => file.isDynamic())) {
+    if (!this.files.some(file => file.isDynamic())) {
       // If the package contains no files that can be imported
       // dynamically, then we don't need to provide an options.eval
       // function for evaluating dynamic modules.
@@ -248,12 +452,11 @@ Object.assign(Module.prototype, {
       "  }",
       "}"
     ].join("\n");
-  }
-});
+  },
 
-['computeAssignedVariables', '_buildModuleTrees', '_chunkifyModuleTrees'].forEach(method => {
-  Module.prototype[method] =
-    Profile(`linker Module#${method}`, Module.prototype[method]);
+  _hasDynamicModules() {
+    return this.files.some(file => file.isDynamic());
+  }
 });
 
 // Insert the given value into the tree by splitting the path and
@@ -289,7 +492,7 @@ var buildSymbolTree = function (symbolMap) {
 
     var walk = ret;
     _.each(parts, function (part) {
-      if (! (part in walk)) {
+      if (!(part in walk)) {
         walk[part] = {};
       }
       walk = walk[part];
@@ -334,7 +537,6 @@ export function File(inputFile, arch) {
   var self = this;
 
   // source code for this file (a string)
-  // TODO: is there a reason inputFile stores the data as a buffer?
   self.source = inputFile.data.toString('utf8');
 
   // hash of source (precalculated for *.js files, calculated here for files
@@ -357,7 +559,10 @@ export function File(inputFile, arch) {
     self.aliasId = inputFile.alias.absModuleId;
   }
 
-  self._allDeps = inputFile.deps;
+  // Module identifiers imported or required by this module, if any.
+  // Excludes dynamically imported dependencies, and may exclude
+  // dependencies already included in the non-dynamic initial bundle.
+  self.deps = getNonDynamicDeps(inputFile.deps);
 
   // True if the input file should not be evaluated eagerly.
   self.lazy = inputFile.lazy; // could be `true`, `false` or `undefined` <sigh>
@@ -389,24 +594,21 @@ export function File(inputFile, arch) {
   self.meteorInstallOptions = inputFile.meteorInstallOptions;
 };
 
+function getNonDynamicDeps(inputFileDeps) {
+  const nonDynamicDeps = Object.create(null);
+
+  if (!_.isEmpty(inputFileDeps)) {
+    _.each(inputFileDeps, (info, id) => {
+      if (!info.dynamic) {
+        nonDynamicDeps[id] = info;
+      }
+    });
+  }
+
+  return Object.keys(nonDynamicDeps);
+}
+
 Object.assign(File.prototype, {
-  // Module identifiers imported or required by this module, if any.
-  // Excludes dynamically imported dependencies, and may exclude
-  // dependencies already included in the non-dynamic initial bundle.
-  getNonDynamicDeps() {
-    const nonDynamicDeps = Object.create(null);
-
-    if (!_.isEmpty(this._allDeps)) {
-      _.each(this._allDeps, (info, id) => {
-        if (!info.dynamic) {
-          nonDynamicDeps[id] = info;
-        }
-      });
-    }
-
-    return Object.keys(nonDynamicDeps);
-  },
-
   // Return the globals in this file as an array of symbol names.  For
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
   // neither are declared in a scope enclosing the point where they're
@@ -440,7 +642,7 @@ Object.assign(File.prototype, {
       if (self.sourceMap) {
         var parsed = await new sourcemap.SourceMapConsumer(self.sourceMap);
         var original = parsed.originalPositionFor(
-          {line: e.lineNumber, column: e.column - 1});
+          { line: e.lineNumber, column: e.column - 1 });
         if (original.source) {
           errorOptions.file = original.source;
           errorOptions.line = original.line;
@@ -464,28 +666,25 @@ Object.assign(File.prototype, {
     return this.lazy && this.imported === "dynamic";
   },
 
-  _getClosureHeader () {
+  _getClosureHeader() {
     if (this.meteorInstallOptions) {
-      let params = '';
+      const headerParts = ["function module("];
 
-      // __dirname and __filename are less common, so we check for both at
-      // once to quickly eliminate them.
-      if (this.source.match(/\b(__dirname|__filename)\b/)) {
-        if (this.source.match(/\b__dirname\b/)) {
-          params = "require,exports,module,__filename,__dirname";
-        } else {
-          // __dirname wasn't found, so there must be __filename
-          params = "require,exports,module,__filename";
-        }
+      if (this.source.match(/\b__dirname\b/)) {
+        headerParts.push("require,exports,module,__filename,__dirname");
+      } else if (this.source.match(/\b__filename\b/)) {
+        headerParts.push("require,exports,module,__filename");
       } else if (this.source.match(/\bmodule\b/)) {
-        params = "require,exports,module";
+        headerParts.push("require,exports,module");
       } else if (this.source.match(/\bexports\b/)) {
-        params = "require,exports";
+        headerParts.push("require,exports");
       } else if (this.source.match(/\brequire\b/)) {
-        params = "require";
+        headerParts.push("require");
       }
 
-      return `function module(${params}){`;
+      headerParts.push("){");
+
+      return headerParts.join("");
     }
 
     return "(function(){";
@@ -497,308 +696,182 @@ Object.assign(File.prototype, {
       : "}).call(this);\n";
   },
 
-  getPrelinkedOutput: Profile('linker File#getPrelinkedOutput', function (options) {
-    let header = this.bare ? '' : this._getClosureHeader() + '\n\n';
-    let code = this.source;
-    let map = this.sourceMap || null
-
-    let pathNoSlash = convertColons(this.servePath.replace(/^\//, ""));
-    let bannerLines = [pathNoSlash];
-
-    if (this.bare) {
-      bannerLines.push('This file is in bare mode and is not in its own closure.');
-    }
-
-    header += banner(bannerLines) + '\n';
-
-    if (code) {
-      if (this.bare) {
-        // TODO: handle app bare files
-      }
-
-      // It's important for the code to end with a newline, so that a
-      // trailing // comment can't snarf code appended after it.
-      if (!code.endsWith('\n')) {
-        code += '\n';
-      }
-    } else {
-      code = '';
-    }
-    
-    let footer = dividerLine(MIN_BANNER_WIDTH) + '\n';
-    if (!this.bare) {
-      footer += this._getClosureFooter();
-    }
-
-    return { header, code, map, footer };
+  // Options:
+  // - preserveLineNumbers: if true, decorate minimally so that line
+  //   numbers don't change between input and output. In this case,
+  //   sourceWidth is ignored.
+  // - sourceWidth: width in columns to use for the source code
+  //
+  // Returns a SourceNode.
+  getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
+    return getPrelinkedOutputCached(this, options);
   })
 });
 
-function getOutputWithSourceMapCached(file, servePath) {
+const getPrelinkedOutputCached = require("optimism").wrap(
+  async function (file, options) {
+    var width = options.sourceWidth || 70;
+    var bannerWidth = width + 3;
+    var preserveLineNumbers = options.preserveLineNumbers;
+
+    if (file.sourceMap) {
+      // Honoring options.preserveLineNumbers is likely impossible if we
+      // have a source map, since file.source has probably already been
+      // transformed in a way that does not preserve line numbers. That's
+      // ok, though, because we have a source map, and we also annotate
+      // line numbers using comments (see above), just in case source maps
+      // are not supported.
+      preserveLineNumbers = false;
+    }
+
+    const result = {
+      code: file.source,
+      map: file.sourceMap || null,
+    };
+
+    var chunks = [];
+    var pathNoSlash = convertColons(file.servePath.replace(/^\//, ""));
+
+    if (!file.bare) {
+      var closureHeader = file._getClosureHeader();
+      chunks.push(
+        closureHeader,
+        preserveLineNumbers ? "" : "\n\n"
+      );
+    }
+
+    if (!preserveLineNumbers) {
+      // Banner
+      var bannerLines = [pathNoSlash];
+
+      if (file.bare) {
+        bannerLines.push(
+          "This file is in bare mode and is not in its own closure.");
+      }
+
+      chunks.push(banner(bannerLines, bannerWidth));
+
+      var blankLine = new Array(width + 1).join(' ') + " //\n";
+      chunks.push(blankLine);
+    }
+
+    if (result.code) {
+      // If we have a source map for result.code, push a SourceNode onto
+      // the chunks array that encapsulates that source map. If we don't
+      // have a source map, just push result.code.
+
+      let chunk = result.code;
+
+      if (result.map) {
+        const sourcemapConsumer = await new sourcemap.SourceMapConsumer(result.map);
+        chunk = sourcemap.SourceNode.fromStringWithSourceMap(
+          result.code,
+          sourcemapConsumer,
+        );
+        sourcemapConsumer.destroy();
+      }
+
+      chunks.push(chunk);
+
+      // It's important for the code to end with a newline, so that a
+      // trailing // comment can't snarf code appended after it.
+      if (result.code[result.code - 1] !== "\n") {
+        chunks.push("\n");
+      }
+    }
+
+    // Footer
+    if (file.bare) {
+      if (!preserveLineNumbers) {
+        chunks.push(dividerLine(bannerWidth), "\n");
+      }
+    } else {
+      const closureFooter = file._getClosureFooter();
+      if (preserveLineNumbers) {
+        chunks.push(closureFooter);
+      } else {
+        chunks.push(
+          dividerLine(bannerWidth),
+          "\n",
+          closureFooter
+        );
+      }
+    }
+
+    return new sourcemap.SourceNode(null, null, null, chunks);
+  }, {
+  // Store at most 4096 Files worth of prelinked output in this cache.
+  max: Math.pow(2, 12),
+
+  makeCacheKey(file, options) {
+    if (options.disableCache) {
+      return;
+    }
+
+    return JSON.stringify({
+      hash: file._inputHash,
+      arch: file.bundleArch,
+      bare: file.bare,
+      servePath: file.servePath,
+      options,
+    });
+  }
+}
+);
+
+async function getOutputWithSourceMapCached(file, servePath, options) {
   const key = JSON.stringify({
     hash: file._inputHash,
     arch: file.bundleArch,
     bare: file.bare,
     servePath: file.servePath,
     dynamic: file.isDynamic(),
+    options,
   });
 
-  // TODO: look into removing this cache
   if (DYNAMIC_PRELINKED_OUTPUT_CACHE.has(key)) {
     return DYNAMIC_PRELINKED_OUTPUT_CACHE.get(key);
   }
 
-  let combinedFile = new CombinedFile();
+  const linkedOutput = await file.getPrelinkedOutput({
+    ...options,
+    disableCache: true
+  });
 
-  const { header, code, map, footer } = file.getPrelinkedOutput();
-
-  combinedFile.addGeneratedCode(header);
-  // TODO: should this use servePath or sourcePath?
-  combinedFile.addCodeWithMap(file.servePath, code, map);
-  combinedFile.addGeneratedCode(footer);
-
-  const result = combinedFile.toStringWithMap();
+  const result = linkedOutput.toStringWithSourceMap({
+    file: servePath,
+  });
 
   DYNAMIC_PRELINKED_OUTPUT_CACHE.set(key, result);
 
   return result;
 }
 
-const prelinkWithoutModules = Profile('linker prelinkWithoutModules', (files, isApp) => {
-  let mainBundle = new CombinedFile();
-
-  files.forEach((file, index) => {
-    // TODO: there are lazy files, for example from mobile-experience
-    // Lazy files can only be used if there is a module system.
-    // We can easily allow lazy files by filtering them out,
-    // but we will also want to make sure to exclude them when
-    // computing assigned variables
-    assert(!file.lazy, 'unexpected unused file in linker');
-
-    if (index > 0) {
-      mainBundle.addEmptyLines(6);
-    }
-
-    const { header, code, map, footer } = file.getPrelinkedOutput();
-    mainBundle.addGeneratedCode(header);
-    mainBundle.addCodeWithMap(file.sourcePath, code, map);
-    mainBundle.addGeneratedCode(footer);
-  });
-
-  let output = mainBundle.toStringWithMap();
-
-  return {
-    mainBundle: output,
-  };
-});
-
-const prelinkWithModules = Profile('linker prelinkWithModules', (files, name, isApp) => {
-  let mainBundle = new CombinedFile();
-  let dynamicFiles = [];
-  let eagerModulePaths = [];
-  let mainModulePath = null;
- 
-  let module = new Module(files, isApp);
-  // TODO: do we need to calculate a hash?
-  // TODO: do not use internal methods on module
-  const trees = module._buildModuleTrees(dynamicFiles);
-  const fileCount = module._chunkifyModuleTrees(trees, mainBundle);
-
-  for (const file of files) {
-    if (file.bare) {
-      mainBundle.addEmptyLines(1);
-
-      const { header, code, map, footer } = file.getPrelinkedOutput();
-      mainBundle.addGeneratedCode(header);
-      mainBundle.addCodeWithMap(file.sourcePath, code, map);
-      mainBundle.addGeneratedCode(footer);
-    } else if (!file.lazy) {
-      eagerModulePaths.push(file.absModuleId);
-      if (file.mainModule) {
-        mainModulePath = file.absModuleId;
-      }
-    }
-  }
-
-  let output =  mainBundle.toStringWithMap();
-
-  return {
-    mainBundle: output,
-    dynamicFiles,
-    eagerModulePaths,
-    mainModulePath
-  };
-});
-
-const newLineRegex = /\n/g;
-
-class CombinedFile {
-  constructor() {
-    this._chunks = [];
-    this._lineOffset = 0;
-    this._addedFiles = 0;
-  }
-
-  addEmptyLines(lineCount) {
-    this._chunks.push('\n'.repeat(lineCount));
-    this._lineOffset += lineCount;
-  }
-
-  addGeneratedCode(code) {
-    let lineCount = this._countLines(code);
-    this._chunks.push(code);
-    this._lineOffset += lineCount;
-  }
-
-  // TODO: add footer and header options
-  addCodeWithMap(sourceName, code, map) {
-    this._addedFiles += 1;
-    let lineCount = this._countLines(code);
-
-    this._chunks.push({
-      code,
-      map,
-      sourceName,
-      lineOffset: this._lineOffset,
-      lines: lineCount
-    });
-
-    this._lineOffset += lineCount;
-  }
-
-  _countLines(text) {
-    let matches = text.match(newLineRegex);
-
-    return matches ? matches.length : 0;
-  }
-
-  _buildWithMap() {
-    let source = '';
-    let sourceMap = new SourceMap();
-
-    this._chunks.forEach(chunk => {
-      if (typeof chunk === 'string') {
-        source += chunk;
-      } else if (typeof chunk === 'object') {
-        source += chunk.code;
-
-        if (chunk.map) {
-          sourceMap.addVLQMap(chunk.map, chunk.lineOffset)
-        } else {
-          sourceMap.addEmptyMap(chunk.sourceName, chunk.code, chunk.lineOffset);
-        }
-      } else {
-        throw new Error(`unrecognized chunk type, ${typeof chunk}`);
-      }
-    });
-
-    let map = sourceMap.toVLQ();
-    map.version = 3;
-    sourceMap.delete();
-
-    return { source, map };
-  }
-
-  // Optimization for when there are 1 or 0 files.
-  // We can avoid parsing the source map if there is one, and instead
-  // modify it to account for the offset from the header. 
-  _buildWithBiasedMap() {
-    let file;
-    let header = '';
-    let footer = '';
-    
-    this._chunks.forEach(chunk => {
-      if (typeof chunk === 'string') {
-        if (file) {
-          footer += chunk;
-        } else {
-          header += chunk;
-        }
-      } else if (typeof chunk === 'object') {
-        if (file) {
-          throw new Error('_buildWithBiasedMap does not support multiple files');
-        }
-        file = chunk;
-      } else {
-        throw new Error(`unrecognized chunk type, ${typeof chunk}`);
-      }
-    });
-
-    if (!file) {
-      return { source: header + footer, map: null };
-    }
-
-    let map = file.map;
-
-    if (!map) {
-      let sourceMap = new SourceMap();
-      sourceMap.addEmptyMap(file.sourceName, file.code, file.lineOffset);
-      map = sourceMap.toVLQ();
-      map.version = 3;
-      sourceMap.delete();
-    } else {
-      // Bias the input sourcemap to account for the lines added by the header
-      // This is much faster than parsing and re-encoding the sourcemap
-      let headerMappings = ';'.repeat(file.lineOffset);
-      map.mappings = headerMappings + map.mappings;
-    }
-
-    return {
-      // TODO: standardize on source or code for naming
-      source: header + file.code + footer,
-      map
-    };
-  }
-
-  toStringWithMap() {
-    let source;
-    let map;
-
-    if (this._addedFiles < 2) {
-      ({ source, map } = this._buildWithBiasedMap());
-    } else {
-      ({source, map} = this._buildWithMap())
-    }
-
-    return {
-      source,
-      sourceMap: map
-    };
-  }
-}
-
-['toStringWithMap', '_buildWithMap', '_buildWithBiasedMap'].forEach(method => {
-  CombinedFile.prototype[method] =
-    Profile(`CombinedFile#${method}`, CombinedFile.prototype[method]);
-});
-
 // Given a list of lines (not newline-terminated), returns a string placing them
-// in a pretty banner.
-function banner (lines) {
-  let contentWidth = MIN_BANNER_WIDTH - 6;
-  lines.forEach(line => {
-    if (line.length > contentWidth) {
-      contentWidth = line.length;
-    }
-  });
-  let bannerWidth = contentWidth + 6;
+// in a pretty banner of width bannerWidth. All lines must have length at most
+// (bannerWidth - 6); if bannerWidth is not provided, the smallest width that
+// fits is used.
+var banner = function (lines, bannerWidth) {
+  if (!bannerWidth) {
+    bannerWidth = 6 + _.max(lines, function (x) { return x.length; }).length;
+  }
 
   var divider = dividerLine(bannerWidth);
-  var spacer = "// " + bannerPadding(contentWidth) + " //\n";
+  var spacer = "// " + new Array(bannerWidth - 6 + 1).join(' ') + " //\n";
+  var padding = bannerPadding(bannerWidth);
 
   var buf = divider + spacer;
-  lines.forEach((line) => {
-    buf += "// " + line + (' '.repeat(contentWidth - line.length)) + " //\n";
+  _.each(lines, function (line) {
+    buf += "// " + (line + padding).slice(0, bannerWidth - 6) + " //\n";
   });
-
   buf += spacer + divider;
   return buf;
-}
+};
 var dividerLine = function (bannerWidth) {
-  return '/'.repeat(bannerWidth) + '\n';
+  return new Array(bannerWidth + 1).join('/') + "\n";
 };
 var bannerPadding = function (bannerWidth) {
-  return ' '.repeat(bannerWidth);
+  return new Array(bannerWidth + 1).join(' ');
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -845,8 +918,6 @@ var bannerPadding = function (bannerWidth) {
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
 export var prelink = Profile("linker.prelink", async function (options) {
-  return oldLinker.prelink(options);
-
   var module = new Module({
     name: options.name,
     combinedServePath: options.combinedServePath,
@@ -882,7 +953,7 @@ var getHeader = function (options) {
 
   var isApp = options.name === null;
   var chunks = [];
-   let orderedDeps = [];
+  let orderedDeps = [];
 
   options.deps.forEach(dep => {
     if (!dep.unordered) {
@@ -891,9 +962,9 @@ var getHeader = function (options) {
   });
 
   chunks.push(
-      `Package["core-runtime"].queue("${options.name}", [`,
-      orderedDeps.join(', '),
-      '], function () {'
+    `Package["core-runtime"].queue("${options.name}", [`,
+    orderedDeps.join(', '),
+    '], function () {'
   );
 
   if (isApp) {
@@ -908,7 +979,7 @@ var getHeader = function (options) {
 
   const packageVariables = _.filter(
     options.packageVariables,
-    name => ! _.has(options.imports, name),
+    name => !_.has(options.imports, name),
   );
 
   if (!_.isEmpty(packageVariables)) {
@@ -940,7 +1011,7 @@ function getImportCode(imports, header, omitVar) {
   // Generate output
   var buf = header;
   _.each(tree, function (node, key) {
-    buf += (omitVar ? "" : "var " ) +
+    buf += (omitVar ? "" : "var ") +
       key + " = " + writeSymbolTree(node) + ";\n";
   });
   buf += "\n";
@@ -948,7 +1019,7 @@ function getImportCode(imports, header, omitVar) {
   return buf;
 }
 
-function getFooter ({
+function getFooter({
   name,
   exported,
   mainModulePath,
@@ -963,7 +1034,7 @@ function getFooter ({
   let chunks = [];
   let returnObj = Object.create(null);
 
-  if (! _.isEmpty(exported)) {
+  if (!_.isEmpty(exported)) {
     const scratch = {};
     _.each(exported, symbol => scratch[symbol] = symbol);
     const symbolTree = writeSymbolTree(buildSymbolTree(scratch), 4);
@@ -985,7 +1056,7 @@ function getFooter ({
   chunks.push('return {\n');
 
   let entries = Object.entries(returnObj);
-  entries.forEach(([ key, value ], index) => {
+  entries.forEach(([key, value], index) => {
     chunks.push(`  ${key}: ${value}`);
     if (index !== entries.length - 1) {
       chunks.push(',\n');
@@ -997,7 +1068,6 @@ function getFooter ({
   return chunks.join('');
 }
 
-// TODO: simplify wrapWithHeaderAndFooter
 function wrapWithHeaderAndFooter(files, header, footer) {
   // Bias the source map by the length of the header without
   // (fully) parsing and re-serializing it. (We used to do this
@@ -1016,6 +1086,10 @@ function wrapWithHeaderAndFooter(files, header, footer) {
   return files.map(file => {
     if (file.dynamic) {
       return file;
+    }
+
+    if (file.source.includes('FROM SERVERRR')) {
+      console.log("FOUNDDDDDDDD", file.servePath, file.sourcePath);
     }
 
     if (file.sourceMap) {
@@ -1056,7 +1130,7 @@ function wrapWithHeaderAndFooter(files, header, footer) {
 //
 // Output is an array of output files: objects with keys source, servePath,
 // sourceMap.
-export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
+export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // True if we're linking the application (as opposed to a
   // package). Among other consequences, this makes the top level
   // namespace be the same as the global namespace, so that symbols are
@@ -1086,43 +1160,18 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
   // it uses
   deps
 }) {
-  if (USE_OLD_LINKER ) {
-    return oldLinker.fullLink(
-      inputFiles,
-      {
-        isApp,
-        bundleArch,
-        combinedServePath,
-        name,
-        declaredExports,
-        imports,
-        includeSourceMapInstructions,
-        deps
-      }
-      );
-    }
-
   buildmessage.assertInJob();
-  
-  const hasModules = inputFiles.some(file => file.meteorInstallOptions);
 
-  let filesToLink = inputFiles.map(file => new File(file, bundleArch));
-
-  let mainBundle;
-  let dynamicFiles = [];
-  let mainModulePath;
-  let eagerModulePaths;
-
-  if (hasModules) {
-    ({
-      mainBundle,
-      dynamicFiles,
-      mainModulePath,
-      eagerModulePaths
-    } = prelinkWithModules(filesToLink, name, isApp));
-  } else {
-    ({ mainBundle } = prelinkWithoutModules(filesToLink, isApp));
-  }
+  var module = new Module({
+    name,
+    bundleArch,
+    useGlobalNamespace: isApp,
+    combinedServePath,
+    // To support `/client/compatibility`, we can't use the runtime for the
+    // app on the client when TLA is disabled since it wraps all of
+    // the app code in a function. Instead, we have the module add eager requires.
+    addEagerRequires: !bundleArch.startsWith('os.') && isApp && !enableClientTLA
+  });
 
   // Check if the core-runtime package will already be loaded
   // It is a dependency of the meteor package, and all packages depend
@@ -1132,6 +1181,19 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
   // package itself, or any build plugins with no dependencies
   let hasRuntime = deps.some(entry => entry.unordered !== true);
 
+  _.each(inputFiles, file => module.addFile(file));
+
+  var prelinkedFiles = await module.getPrelinkedFiles();
+
+  let eagerModulePaths;
+  let mainModulePath;
+  _.each(prelinkedFiles, file => {
+    if (file.eagerModulePaths && file.eagerModulePaths.length > 0) {
+      eagerModulePaths = file.eagerModulePaths;
+      mainModulePath = file.mainModulePath;
+    }
+  });
+
   if (!hasRuntime && (
     Object.keys(declaredExports).length > 0 ||
     eagerModulePaths ||
@@ -1140,25 +1202,64 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
     throw new Error(`Runtime is not available, but it uses features needing the runtime: ${name}`);
   }
 
+  // If we're in the app, then we just add the import code as its own file in
+  // the front.
+  if (isApp) {
+    let wrapForTLA = hasRuntime &&
+      (bundleArch.startsWith('os.') || enableClientTLA);
+
+    if (wrapForTLA) {
+      // Ensure there is always at least one file
+      // so the globals can be defined
+      if (prelinkedFiles.length === 0) {
+        prelinkedFiles.unshift({
+          source: '',
+          servePath: "/global-imports.js"
+        });
+      }
+
+      let header = getHeader({
+        name: null,
+        imports,
+        packageVariables: [],
+        hasRuntime,
+        deps
+      });
+      let footer = getFooter({
+        name: null,
+        exported: {},
+        eagerModulePaths,
+        hasRuntime
+      });
+
+      return wrapWithHeaderAndFooter(prelinkedFiles, header, footer);
+    }
+
+    if (!_.isEmpty(imports)) {
+      prelinkedFiles.unshift({
+        source: getImportCode(
+          imports,
+          "/* Imports for global scope */\n\n",
+          true, // Omit the var keyword.
+        ),
+        servePath: "/global-imports.js"
+      });
+    }
+
+    return prelinkedFiles;
+  }
+
   // Do static analysis to compute module-scoped variables. Error recovery from
   // the static analysis mutates the sources, so this has to be done before
   // concatenation.
-  let packageVariables = new Set(declaredExports);
-  if (!isApp) {
-    const failed = await buildmessage.enterJob('computing assigned variables', async () => {
-      await Profile.time('linker-computeAssignedVariables', async () => {
-        for (const file of filesToLink) {
-          let globals = await file.computeAssignedVariables();
-          globals.forEach(name => packageVariables.add(name));
-        }
-      });
-
-      return buildmessage.jobHasMessages();
-    });
-    if (failed) {
-      // recover by pretending there are no files
-      return [];
-    }
+  let assignedVariables;
+  const failed = await buildmessage.enterJob('computing assigned variables', async () => {
+    assignedVariables = await module.computeAssignedVariables();
+    return buildmessage.jobHasMessages();
+  });
+  if (failed) {
+    // recover by pretending there are no files
+    return [];
   }
 
   // If none of the prelinkedFiles contain any code, then the only
@@ -1166,10 +1267,7 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
   // we filter the set of imported symbols according to declaredExports.
   // When there are no declaredExports, this effectively slims the package
   // bundle down to just Package[name] = {}.
-  // TODO: should this also check the dynamic imports?
-  //       - probably not since there has to be code in the main bundle for
-  //         dynamic imports to work
-  if (!isApp && !mainBundle.source) {
+  if (prelinkedFiles.every(file => !file.source)) {
     const newImports = {};
     declaredExports.forEach(name => {
       if (_.has(imports, name)) {
@@ -1184,7 +1282,7 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
   var header = getHeader({
     name,
     imports,
-    packageVariables: Array.from(packageVariables),
+    packageVariables: _.union(assignedVariables, declaredExports),
     hasRuntime,
     deps
   });
@@ -1202,11 +1300,5 @@ export var fullLink = Profile("linker.fullLink2", async function (inputFiles, {
     header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
   }
 
-  return wrapWithHeaderAndFooter([{
-    source: mainBundle.source,
-    sourceMap: mainBundle.sourceMap,
-    servePath: combinedServePath,
-    // TODO: is source path ever used?
-    // sourcePath: 
-  }], header, footer).concat(dynamicFiles);
+  return wrapWithHeaderAndFooter(prelinkedFiles, header, footer);
 });
