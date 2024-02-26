@@ -12,6 +12,13 @@ watchEffect(() => {
   listRef.value = filterMap(search.value, apiList);
 })
 
+const shouldRedirect = (list, api) => {
+  if (list?.shouldGoTo) {
+    return `${list.shouldGoTo}`;
+  }
+  return api;
+}
+
 </script>
 
 <template>
@@ -21,16 +28,20 @@ watchEffect(() => {
     <input class="search" type="text" v-model="search" />
     <div v-for="(list, api, index) in listRef" :key="index">
       <h2 style="text-transform:capitalize;">
-        <a :href="api" style="text-decoration: none;">
+        <a :href="shouldRedirect(list, api)" style="text-decoration: none;">
           {{ api }}
         </a>
       </h2>
+
       <div v-for="(links, key) in list" :key="key">
-        <h5 v-for="(link) in links" :key="link">
-          <a :href="api + '#' + link.replace('#', '-').replace('.', '-')">
-            {{ link }}
-          </a>
-        </h5>
+        <!-- Should not render the shouldGoTo section  -->
+        <div v-if="key !== 'shouldGoTo'">
+          <h5 v-for="(link) in links" :key="link">
+            <a :href="shouldRedirect(list, api) + '#' + link.replace('#', '-').replace('.', '-')">
+              {{ link }}
+            </a>
+          </h5>
+        </div>
       </div>
     </div>
   </main>

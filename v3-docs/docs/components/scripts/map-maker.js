@@ -87,11 +87,31 @@ export function createMap(names) {
     "main",
     "loggingOut",
     "IterationCallback",
+    "CompileStep",
+    "Cordova",
+    "Plugin"
   ];
+
 
   for (const key of Object.keys(apiList))
     if (TO_IGNORE.includes(key)) delete apiList[key];
 
+  // reroute DDP to -> meteor.html#DDP-connect
+  apiList.DDP.shouldGoTo = '/api/meteor';
+  // Match -> check#Match
+  apiList.check.shouldGoTo = '/api/check';
+  // Mongo -> collections.html#Mongo
+  apiList.Mongo.shouldGoTo = '/api/collections';
+  // Npm -> package.html#Npm
+  apiList.Npm.shouldGoTo = '/api/package';
+  // Subscription -> meteor.html#Meteor-publish
+  apiList.Subscription.shouldGoTo = '/api/meteor';
+  // Module -> packages/hot-module-replacement.html
+  apiList.module.shouldGoTo = '/packages/hot-module-replacement';
+  // Random -> packages/random.html
+  apiList.Random.shouldGoTo = '/packages/random';
+  // WebApp -> packages/webapp.html
+  apiList.WebApp.shouldGoTo = '/packages/webapp';
   return apiList;
 }
 
