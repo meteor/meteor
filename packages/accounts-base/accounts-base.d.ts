@@ -346,7 +346,7 @@ export namespace Accounts {
    * properties `digest` and `algorithm` (in which case we bcrypt
    * `password.digest`).
    */
-  function _checkPassword(
+  function _checkPasswordAsync(
     user: Meteor.User,
     password: Password
   ): { userId: string; error?: any };

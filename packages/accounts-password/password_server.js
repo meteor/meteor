@@ -100,11 +100,6 @@ const checkPasswordAsync = async (user, password) => {
   return result;
 };
 
-const checkPassword = (user, password) => {
-  return Promise.await(checkPasswordAsync(user, password));
-};
-
-Accounts._checkPassword = checkPassword;
 Accounts._checkPasswordAsync =  checkPasswordAsync;
 
 ///
