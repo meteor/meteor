@@ -16,6 +16,10 @@ const props = defineProps<{
     description: string;
     optional: boolean;
   }[];
+  from: {
+    lineNumber: number;
+    filePath: string;
+  }
   options?: { description: string, name: string, type: { names: string[] }; optional?: boolean }[]
 }>()
 const localArr = copyArray(props.params)
@@ -36,11 +40,18 @@ const showTypes = (types: string[]) => {
   return typesArr.join(", ") + " or " + last
 }
 
+const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props.from.filePath}#L${props.from.lineNumber}`
+
 </script>
 
 <template>
   <div v-if="localArr.length > 0">
-    <h4>Arguments:</h4>
+    <header>
+      <h4>Arguments:</h4>
+      <a :href="sourceCode">
+        Source code
+      </a>
+    </header>
     <table>
       <thead>
         <tr>
@@ -70,7 +81,8 @@ const showTypes = (types: string[]) => {
         </tr>
       </tbody>
     </table>
-    <Collapse v-if="hasOptions(props) && props.options && props.options?.length > 0" :when="isOptionsTableOpen" class="options-table">
+    <Collapse v-if="hasOptions(props) && props.options && props.options?.length > 0" :when="isOptionsTableOpen"
+      class="options-table">
       <h4>Options:</h4>
       <table>
         <thead>
@@ -111,5 +123,10 @@ table {
 button:hover {
   cursor: pointer;
   color: var(--vp-c-brand-1);
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
 }
 </style>
