@@ -87,18 +87,23 @@ const debug = (name) => {
     if (ui.longname !== name) return
     console.log(ui)
 }
-// debug('Mongo.Cursor#observeChanges')
+// debug('Mongo.Cursor#countAsync')
 </script>
 
 <template>
     <div>
         <h2 :id="link">
-            {{ showName(ui.longname) }}
             <a class="header-anchor" :href="'#' + link" :aria-label="'Permalink to &quot;' + ui.longname + '&quot;'">​</a>
-        </h2>
 
+            {{ showName(ui.longname) }}
+            <Locus v-if="ui.locus && ui.locus !== 'Anywhere'" :locus="ui.locus" />
+
+        </h2>
+        <h4>
+            Summary:
+        </h4>
         <div v-html="ui.summary"></div>
-        <Locus v-if="ui.locus && ui.locus !== 'Anywhere'" :locus="ui.locus" />
+        <slot />
         <ParamTable v-if="isFunction || isClass" :params="ui.params" :options="ui.options" />
         <template v-if="!hasCustomExample">
             <Booleans v-if="isBoolean" :memberof="ui.memberof" :from="ui.module" :longname="ui.longname" />
@@ -115,5 +120,10 @@ const debug = (name) => {
 span {
     font-size: 0.8rem;
     color: var(--vp-c-text-2);
+}
+h2 {
+    display : flex;
+    align-content: center;
+    justify-content: space-between;
 }
 </style>
