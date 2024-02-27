@@ -413,8 +413,7 @@ options about how the client executes the method.
 These functions control how Meteor servers publish sets of records and
 how clients can subscribe to those sets.
 
-<ApiBox name="Meteor.publish" hasCustomExample/>
-
+<ApiBox name="Meteor.publish" hasCustomExample>
 To publish records to clients, call `Meteor.publish` on the server with
 two parameters: the name of the record set, and a _publish function_
 that Meteor will call each time a client subscribes to the name.
@@ -429,6 +428,10 @@ publish all of the cursors.
 If you return multiple cursors in an array, they currently must all be from
 different collections. We hope to lift this restriction in a future release.
 :::
+
+</ApiBox>
+
+
 
 ```js
 import { Meteor } from "meteor/meteor";
