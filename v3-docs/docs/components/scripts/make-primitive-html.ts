@@ -74,7 +74,7 @@ const comma = `<span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">,</span
 const br = `<br/>`;
 
 const typeComment = (type) =>{
-  return `<span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">/** </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">@type</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;"> {${type}}</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;"> */</span>`
+  return `<span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">/** </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">@returns</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;"> {${type}}</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;"> */</span>`
 
 }
 const comment = (text = "  // this param is optional ") =>
