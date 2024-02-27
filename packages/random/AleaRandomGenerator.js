@@ -38,16 +38,16 @@ function Alea(seeds) {
   s1 = mash(' ');
   s2 = mash(' ');
 
-  for (let i = 0; i < seeds.length; i++) {
-    s0 -= mash(seeds[i]);
+  for (const seed of seeds) {
+    s0 -= mash(seed);
     if (s0 < 0) {
       s0 += 1;
     }
-    s1 -= mash(seeds[i]);
+    s1 -= mash(seed);
     if (s1 < 0) {
       s1 += 1;
     }
-    s2 -= mash(seeds[i]);
+    s2 -= mash(seed);
     if (s2 < 0) {
       s2 += 1;
     }
