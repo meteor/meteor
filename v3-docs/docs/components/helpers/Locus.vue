@@ -1,8 +1,7 @@
 
 <template>
   <div class="warning custom-block">
-    <p class="custom-block-title">WARNING</p>
-    <p>{{ props.locus }} only.</p>
+    <p>{{ props.locus }} only</p>
   </div>
 </template>
 
@@ -12,3 +11,9 @@ const props = defineProps<{
 }>()
 </script>
 
+<style scoped>
+div {
+  margin: 0 !important;
+  padding: 5px;
+}
+</style>
