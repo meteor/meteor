@@ -100,11 +100,6 @@ const checkPasswordAsync = async (user, password) => {
   return result;
 };
 
-const checkPassword = (user, password) => {
-  return Promise.await(checkPasswordAsync(user, password));
-};
-
-Accounts._checkPassword = checkPassword;
 Accounts._checkPasswordAsync =  checkPasswordAsync;
 
 ///
@@ -355,20 +350,6 @@ Accounts.setPasswordAsync =
 
   await Meteor.users.updateAsync({_id: user._id}, update);
 };
-
-/**
- * @summary Forcibly change the password for a user.
- * @locus Server
- * @param {String} userId The id of the user to update.
- * @param {String} newPassword A new password for the user.
- * @param {Object} [options]
- * @param {Object} options.logout Logout all current connections with this userId (default: true)
- * @importFromPackage accounts-base
- */
-Accounts.setPassword = (userId, newPlaintextPassword, options) => {
-  return Promise.await(Accounts.setPasswordAsync(userId, newPlaintextPassword, options));
-};
-
 
 ///
 /// RESETTING VIA EMAIL
@@ -1105,12 +1086,7 @@ Accounts.createUserAsync =
 // method calling Accounts.createUser could set?
 //
 
-Accounts.createUser =
-  !Meteor._isFibersEnabled
-    ? Accounts.createUserAsync
-    : (options, callback) =>
-        Promise.await(Accounts.createUserAsync(options, callback));
-
+Accounts.createUser = Accounts.createUserAsync;
 
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
