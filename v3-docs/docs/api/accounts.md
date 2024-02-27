@@ -791,6 +791,8 @@ Instead of modifying documents in the [`Meteor.users`](#Meteor-users) collection
 directly, use these convenience functions which correctly check for case
 insensitive duplicates before updates.
 
+<ApiBox name="Accounts.createUserAsync" />
+
 <ApiBox name="Accounts.createUserVerifyingEmail" />
 
 <ApiBox name="Accounts.setUsername" />
