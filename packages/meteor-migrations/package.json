@@ -1,0 +1,8 @@
+{
+  "name": "meteor-migrations-cron",
+  "description": "Define and run db migrations. package.json only to install prettier",
+  "version": "1.0.0",
+  "devDependencies": {
+    "prettier": "^3.0.3"
+  }
+}
