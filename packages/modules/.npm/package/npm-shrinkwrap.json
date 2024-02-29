@@ -4,7 +4,7 @@
     "@meteorjs/reify": {
       "version": "0.24.0",
       "resolved": "git+ssh://git@github.com/meteor/reify.git#cf61c57c6c4fefcbf164bf63d3c12fda1924b3d2",
-      "integrity": "sha512-VCvq454Two3oLtBHrkWx6OC1lO6jepYOCC9PhlcHcQCDC2R8mlDTmox0XvW2rCTVOth0qEIbdxKeKxa8WkD7eA=="
+      "integrity": "sha512-NN0E7fURAY9XrtgkmP1XqV6fMSwKHIjENOE6V5AqWXU0wynLlXb+l5NhMC72hYwbtT73R9E35dDR1lqBKQSFdg=="
     },
     "@types/estree": {
       "version": "1.0.5",
