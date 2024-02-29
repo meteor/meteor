@@ -419,14 +419,14 @@ export class AccountsCommon {
 
 /**
  * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
+ * @locus Anywhere
  * @importFromPackage meteor
  */
 Meteor.userId = () => Accounts.userId();
 
 /**
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
+ * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
@@ -435,7 +435,7 @@ Meteor.user = options => Accounts.user(options);
 
 /**
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
+ * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.

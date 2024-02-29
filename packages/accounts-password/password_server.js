@@ -108,7 +108,7 @@ Accounts._checkPasswordAsync =  checkPasswordAsync;
 
 
 /**
- * @summary Finds the user with the specified username.
+ * @summary Finds the user asynchronously with the specified username.
  * First tries to match username case sensitively; if that fails, it
  * tries case insensitively; but if more than one user matches the case
  * insensitive search, it returns null.
@@ -116,7 +116,7 @@ Accounts._checkPasswordAsync =  checkPasswordAsync;
  * @param {String} username The username to look for
  * @param {Object} [options]
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
- * @returns {Object} A user if found, else null
+ * @returns {Promise<Object>} A user if found, else null
  * @importFromPackage accounts-base
  */
 Accounts.findUserByUsername =
@@ -124,7 +124,7 @@ Accounts.findUserByUsername =
     await Accounts._findUserByQuery({ username }, options);
 
 /**
- * @summary Finds the user with the specified email.
+ * @summary Finds the user asynchronously with the specified email.
  * First tries to match email case sensitively; if that fails, it
  * tries case insensitively; but if more than one user matches the case
  * insensitive search, it returns null.
@@ -132,7 +132,7 @@ Accounts.findUserByUsername =
  * @param {String} email The email address to look for
  * @param {Object} [options]
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
- * @returns {Object} A user if found, else null
+ * @returns {Promise<Object>} A user if found, else null
  * @importFromPackage accounts-base
  */
 Accounts.findUserByEmail =
@@ -219,7 +219,7 @@ Accounts.registerLoginHandler("password", async options => {
 ///
 
 /**
- * @summary Change a user's username. Use this instead of updating the
+ * @summary Change a user's username asynchronously. Use this instead of updating the
  * database directly. The operation will fail if there is an existing user
  * with a username only differing in case.
  * @locus Server
@@ -378,13 +378,13 @@ Meteor.methods({forgotPassword: async options => {
 }});
 
 /**
- * @summary Generates a reset token and saves it into the database.
+ * @summary Asynchronously generates a reset token and saves it into the database.
  * @locus Server
  * @param {String} userId The id of the user to generate the reset token for.
  * @param {String} email Which address of the user to generate the reset token for. This address must be in the user's `emails` list. If `null`, defaults to the first email in the list.
  * @param {String} reason `resetPassword` or `enrollAccount`.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
- * @returns {Object} Object with {email, user, token} values.
+ * @returns {Promise<Object>} Promise of an object with {email, user, token} values.
  * @importFromPackage accounts-base
  */
 Accounts.generateResetToken =
@@ -452,12 +452,12 @@ Accounts.generateResetToken =
 };
 
 /**
- * @summary Generates an e-mail verification token and saves it into the database.
+ * @summary Generates asynchronously an e-mail verification token and saves it into the database.
  * @locus Server
  * @param {String} userId The id of the user to generate the  e-mail verification token for.
  * @param {String} email Which address of the user to generate the e-mail verification token for. This address must be in the user's `emails` list. If `null`, defaults to the first unverified email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
- * @returns {Object} Object with {email, user, token} values.
+ * @returns {Promise<Object>} Promise of an object with {email, user, token} values.
  * @importFromPackage accounts-base
  */
 Accounts.generateVerificationToken =
@@ -517,13 +517,13 @@ Accounts.generateVerificationToken =
 // to set a new password, without the old password.
 
 /**
- * @summary Send an email with a link the user can use to reset their password.
+ * @summary Send an email asynchronously with a link the user can use to reset their password.
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
  * @param {Object} [extraParams] Optional additional params to be added to the reset url.
- * @returns {Object} Object with {email, user, token, url, options} values.
+ * @returns {Promise<Object>} Promise of an object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
 Accounts.sendResetPasswordEmail =
@@ -549,13 +549,13 @@ Accounts.sendResetPasswordEmail =
 // want to use enrollment emails.
 
 /**
- * @summary Send an email with a link the user can use to set their initial password.
+ * @summary Send an email asynchronously with a link the user can use to set their initial password.
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
  * @param {Object} [extraParams] Optional additional params to be added to the enrollment url.
- * @returns {Object} Object with {email, user, token, url, options} values.
+ * @returns {Promise<Object>} Promise of an object {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
 Accounts.sendEnrollmentEmail =
@@ -728,14 +728,13 @@ Meteor.methods(
 // address as verified
 
 /**
- * @summary Send an email with a link the user can use verify their email address.
+ * @summary Send an email asynchronously with a link the user can use verify their email address.
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
  * @param {Object} [extraParams] Optional additional params to be added to the verification url.
- *
- * @returns {Object} Object with {email, user, token, url, options} values.
+ * @returns {Promise<Object>} Promise of an object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
 Accounts.sendVerificationEmail =
@@ -831,7 +830,7 @@ Meteor.methods(
   });
 
 /**
- * @summary Add an email address for a user. Use this instead of directly
+ * @summary Add an email asynchronously address for a user. Use this instead of directly
  * updating the database. The operation will fail if there is a different user
  * with an email only differing in case. If the specified user has an existing
  * email only differing in case however, we replace it.
@@ -931,7 +930,7 @@ Accounts.addEmail =
 }
 
 /**
- * @summary Remove an email address for a user. Use this instead of updating
+ * @summary Remove an email address asynchronously for a user. Use this instead of updating
  * the database directly.
  * @locus Server
  * @param {String} userId The ID of the user to update.
@@ -1011,7 +1010,7 @@ Meteor.methods(
   });
 
 /**
- * @summary Creates an user and sends an email if `options.email` is informed.
+ * @summary Creates an user asynchronously and sends an email if `options.email` is informed.
  * Then if the `sendVerificationEmail` option from the `Accounts` package is
  * enabled, you'll send a verification email if `options.password` is informed,
  * otherwise you'll send an enrollment email.
