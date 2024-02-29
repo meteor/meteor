@@ -1,0 +1,25 @@
+{
+  "name": "guide-3.0",
+  "version": "1.0.0",
+  "description": "Meteor 3.0 guide",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meteor/meteor.git"
+  },
+  "author": "Vitor S. Almeida",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/meteor/meteor/issues"
+  },
+  "homepage": "https://github.com/meteor/meteor#readme",
+  "devDependencies": {
+    "vitepress": "^1.0.0-rc.27"
+  }
+}

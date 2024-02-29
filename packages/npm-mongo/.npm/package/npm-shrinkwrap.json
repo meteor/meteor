@@ -92,12 +92,10 @@
       "version": "3.523.0",
       "resolved": "https://registry.npmjs.org/@aws-sdk/client-sts/-/client-sts-3.523.0.tgz",
       "integrity": "sha512-ggAkL8szaJkqD8oOsS68URJ9XMDbLA/INO/NPZJqv9BhmftecJvfy43uUVWGNs6n4YXNzfF0Y+zQ3DT0fZkv9g=="
-    },
     "@aws-sdk/core": {
       "version": "3.523.0",
       "resolved": "https://registry.npmjs.org/@aws-sdk/core/-/core-3.523.0.tgz",
       "integrity": "sha512-JHa3ngEWkTzZ2YTn6EavcADC8gv6zZU4U9WBAleClh6ioXH0kGMBawZje3y0F0mKyLTfLhFqFUlCV5sngI/Qcw=="
-    },
     "@aws-sdk/credential-provider-cognito-identity": {
       "version": "3.523.0",
       "resolved": "https://registry.npmjs.org/@aws-sdk/credential-provider-cognito-identity/-/credential-provider-cognito-identity-3.523.0.tgz",
@@ -167,7 +165,6 @@
       "version": "3.523.0",
       "resolved": "https://registry.npmjs.org/@aws-sdk/region-config-resolver/-/region-config-resolver-3.523.0.tgz",
       "integrity": "sha512-IypIAecBc8b4jM0uVBEj90NYaIsc0vuLdSFyH4LPO7is4rQUet4CkkD+S036NvDdcdxBsQ4hJZBmWrqiizMHhQ=="
-    },
     "@aws-sdk/token-providers": {
       "version": "3.523.0",
       "resolved": "https://registry.npmjs.org/@aws-sdk/token-providers/-/token-providers-3.523.0.tgz",
@@ -222,7 +219,6 @@
       "version": "1.3.5",
       "resolved": "https://registry.npmjs.org/@smithy/core/-/core-1.3.5.tgz",
       "integrity": "sha512-Rrc+e2Jj6Gu7Xbn0jvrzZlSiP2CZocIOfZ9aNUA82+1sa6GBnxqL9+iZ9EKHeD9aqD1nU8EK4+oN2EiFpSv7Yw=="
-    },
     "@smithy/credential-provider-imds": {
       "version": "2.2.4",
       "resolved": "https://registry.npmjs.org/@smithy/credential-provider-imds/-/credential-provider-imds-2.2.4.tgz",
@@ -242,7 +238,6 @@
       "version": "2.1.3",
       "resolved": "https://registry.npmjs.org/@smithy/hash-node/-/hash-node-2.1.3.tgz",
       "integrity": "sha512-FsAPCUj7VNJIdHbSxMd5uiZiF20G2zdSDgrgrDrHqIs/VMxK85Vqk5kMVNNDMCZmMezp6UKnac0B4nAyx7HJ9g=="
-    },
     "@smithy/invalid-dependency": {
       "version": "2.1.3",
       "resolved": "https://registry.npmjs.org/@smithy/invalid-dependency/-/invalid-dependency-2.1.3.tgz",
@@ -317,7 +312,6 @@
       "version": "2.3.4",
       "resolved": "https://registry.npmjs.org/@smithy/shared-ini-file-loader/-/shared-ini-file-loader-2.3.4.tgz",
       "integrity": "sha512-CiZmPg9GeDKbKmJGEFvJBsJcFnh0AQRzOtQAzj1XEa8N/0/uSN/v1LYzgO7ry8hhO8+9KB7+DhSW0weqBra4Aw=="
-    },
     "@smithy/signature-v4": {
       "version": "2.1.3",
       "resolved": "https://registry.npmjs.org/@smithy/signature-v4/-/signature-v4-2.1.3.tgz",
