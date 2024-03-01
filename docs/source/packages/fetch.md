@@ -3,7 +3,7 @@ title: fetch
 description: Isomorphic modern/legacy/Node polyfill for WHATWG fetch().
 ---
 
-This package replaces the `http` package for HTTP calls. `fetch` package provides polyfill for the [WHATWG fetch specification](https://fetch.spec.whatwg.org/) for legacy browsers or defaults to the global class which is available in modern browsers and Node. It is recomended that you use this package for compatibility with non-modern browsers.
+This package replaces the `http` package for HTTP calls. `fetch` package provides polyfill for the [WHATWG fetch specification](https://fetch.spec.whatwg.org/) for legacy browsers or defaults to the global class which is available in modern browsers and Node. It is recommended that you use this package for compatibility with non-modern browsers.
 
 For more information we recommend [reading the MDN articles](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) about it as this article covers only basic usage in Meteor.
 

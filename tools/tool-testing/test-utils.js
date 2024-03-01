@@ -4,6 +4,7 @@ import { withAccountsConnection } from '../meteor-services/auth.js';
 import { fail, markStack } from './selftest.js';
 import { request } from '../utils/http-helpers.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
+import { networkInterfaces } from 'os';
 
 export function randomString(charsCount) {
   var chars = 'abcdefghijklmnopqrstuvwxyz';
@@ -147,4 +148,24 @@ export function markThrowingMethods(prototype) {
       }
     }
   });
+}
+
+export function getPrivateIPAddress() {
+  const nets = networkInterfaces();
+  let localIp = "";
+  Object.keys(nets).some((name)=> {
+      let ret = false;
+      for (const net of nets[name]) {
+          // Skip over non-IPv4, bridge and internal (i.e. 127.0.0.1) addresses
+          // 'IPv4' is in Node <= 17, from 18 it's a number 4 or 6
+          const familyV4Value =  typeof net.family === 'string' ? 'IPv4' : 4
+          if ((net.family === familyV4Value && !net.internal) && !name.startsWith('br')) {
+              localIp = net.address;
+              ret = true;
+              break;
+          }
+      }
+      return ret;
+  })
+  return localIp
 }
