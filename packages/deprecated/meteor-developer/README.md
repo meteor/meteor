@@ -1,5 +1,5 @@
 # meteor-developer
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/meteor-developer) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/meteor-developer)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/deprecated/meteor-developer) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/deprecated/meteor-developer)
 ***
 
 **Deprecated, use meteor-developer-oauth instead.**

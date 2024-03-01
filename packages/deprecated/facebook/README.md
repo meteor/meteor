@@ -1,5 +1,5 @@
 # facebook
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/facebook) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/facebook)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/deprecated/facebook) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/deprecated/facebook)
 ***
 
 ** Deprecated, use facebook-oauth instead**
