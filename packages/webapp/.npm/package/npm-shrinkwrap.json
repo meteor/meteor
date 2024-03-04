@@ -32,9 +32,9 @@
       "integrity": "sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w=="
     },
     "@types/node": {
-      "version": "20.11.23",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.11.23.tgz",
-      "integrity": "sha512-ZUarKKfQuRILSNYt32FuPL20HS7XwNT7/uRwSV8tiHWfyyVwDLYZNF6DZKc2bove++pgfsXn9sUwII/OsQ82cQ=="
+      "version": "20.11.24",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.11.24.tgz",
+      "integrity": "sha512-Kza43ewS3xoLgCEpQrsT+xRo/EJej1y0kVYGiLFE1NEODXGzTfwiC6tXTLMQskn1X4/Rjlh0MQUvx9W+L9long=="
     },
     "@types/qs": {
       "version": "6.9.12",
@@ -512,9 +512,9 @@
       "integrity": "sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A=="
     },
     "side-channel": {
-      "version": "1.0.5",
-      "resolved": "https://registry.npmjs.org/side-channel/-/side-channel-1.0.5.tgz",
-      "integrity": "sha512-QcgiIWV4WV7qWExbN5llt6frQB/lBven9pqliLXfGPB+K9ZYXxDozp0wLkHS24kWCm+6YXH/f0HhnObZnZOBnQ=="
+      "version": "1.0.6",
+      "resolved": "https://registry.npmjs.org/side-channel/-/side-channel-1.0.6.tgz",
+      "integrity": "sha512-fDW/EZ6Q9RiO8eFG8Hj+7u/oW+XrPTIChwCOM2+th2A6OblDtYYIpve9m+KvI9Z4C9qSEXlaGR6bTEYHReuglA=="
     },
     "signal-exit": {
       "version": "3.0.7",
