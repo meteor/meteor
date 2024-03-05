@@ -4259,3 +4259,83 @@ if (Meteor.isServer) {
     });
   });
 }
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('mongo-livedata - asyncIterator', async function(test) {
+    const Collection = new Mongo.Collection(`asynciterator_test_${test.runId()}`);
+
+    await Collection.insertAsync({ _id: 'a' });
+    await Collection.insertAsync({ _id: 'b' });
+
+    let itemIds = [];
+    for await (const item of Collection.find()) {
+      itemIds.push(item._id);
+    }
+    test.equal(itemIds.length, 2);
+    test.equal(itemIds, ['a', 'b']);
+  });
+}
+
+Tinytest.addAsync('mongo-livedata - maintained isomorphism using resolverType config for both client and server', async function(test, expect) {
+  const Collection = new Mongo.Collection(`resolver_type${test.runId()}`, { resolverType: 'stub' });
+
+  await Collection.insertAsync({ _id: 'a' });
+  await Collection.insertAsync({ _id: 'b' });
+
+  let items = await Collection.find().fetchAsync();
+  let itemIds = items.map(_item => _item._id);
+
+  test.equal(itemIds, ['a', 'b']);
+
+  await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+  await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
+
+  items = await Collection.find().fetchAsync();
+  itemIds = items.map(_item => _item.num);
+
+  test.equal(itemIds, [1, 2]);
+
+  await Collection.removeAsync({ _id: 'a' });
+  await Collection.removeAsync({ _id: 'b' });
+
+  items = await Collection.find().fetchAsync();
+
+  test.equal(items, []);
+});
+
+testAsyncMulti("mongo-livedata - support observeChangesAsync and observeAsync to keep isomorphism on client and server", [
+  async (test) => {
+    const Collection = new Mongo.Collection(`observe_changes_async${test.runId()}`, { resolverType: 'stub' });
+    const id = 'a';
+    await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+    return new Promise(async resolve => {
+      const obs = await Collection.find(id).observeChangesAsync({
+        async changed(_id, fields) {
+          await obs.stop();
+          resolve();
+          test.equal(_id, id);
+          test.equal(fields?.foo?.bar, 456);
+        },
+      });
+      await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+    });
+  },
+  async (test) => {
+    const Collection = new Mongo.Collection(`observe_async${test.runId()}`, { resolverType: 'stub' });
+    const id = 'a';
+    await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+    return new Promise(async resolve => {
+      const obs = await Collection.find(id).observeAsync({
+        async changed(newDocument) {
+          await obs.stop();
+          test.equal(newDocument._id, id);
+          test.equal(newDocument?.foo?.bar, 456);
+          resolve();
+        },
+      });
+      await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+    });
+  }
+]);
