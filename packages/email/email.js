@@ -203,7 +203,7 @@ Email.customTransport = undefined;
  * @locus Server
  * @return {Promise}
  * @param {Object} options
- * @param {String} [options.from] "From:" address (required)
+ * @param {String} options.from "From:" address (required)
  * @param {String|String[]} options.to,cc,bcc,replyTo
  *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
  * @param {String} [options.inReplyTo] Message-ID this message is replying to
@@ -272,7 +272,7 @@ Email.sendAsync = async function (options) {
  * @locus Server
  * @return {Promise}
  * @param {Object} options
- * @param {String} [options.from] "From:" address (required)
+ * @param {String} options.from "From:" address (required)
  * @param {String|String[]} options.to,cc,bcc,replyTo
  *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
  * @param {String} [options.inReplyTo] Message-ID this message is replying to

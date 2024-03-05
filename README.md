@@ -10,7 +10,9 @@
 
 [![Travis CI Status](https://api.travis-ci.com/meteor/meteor.svg?branch=devel)](https://app.travis-ci.com/github/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor.svg?style=svg)](https://app.circleci.com/pipelines/github/meteor/meteor?branch=devel)
-[![built with Meteor](https://img.shields.io/badge/Meteor-2.13.3-green?logo=meteor&logoColor=white)](https://meteor.com)
+[![built with Meteor](https://img.shields.io/badge/Meteor-2.15-green?logo=meteor&logoColor=white)](https://meteor.com)
+[![built with Meteor](https://img.shields.io/badge/Meteor-3.0_beta-yellow?logo=meteor&logoColor=white)](https://guide.meteor.com/3.0-migration)
+
 
 </div>
 
@@ -46,7 +48,7 @@ Use the same code whether you’re developing for web, iOS, Android, or desktop 
 
 # 🔥 Getting Started
 
-How about trying a getting started tutorial in your favorite technology?
+How about trying a tutorial to get started with your favorite technology?
 
 | [<img align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"> React](https://react-tutorial.meteor.com/) |
 | - |

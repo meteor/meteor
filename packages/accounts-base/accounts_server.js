@@ -181,7 +181,7 @@ export class AccountsServer extends AccountsCommon {
     }
 
     this._onCreateLoginTokenHook = func;
-  };
+  }
 
   /**
    * @summary Customize new user creation.
@@ -1518,9 +1518,10 @@ export class AccountsServer extends AccountsCommon {
   }
 
   _handleError = (msg, throwError = true, errorCode = 403) => {
+    const isErrorAmbiguous = this._options.ambiguousErrorMessages ?? Meteor.isProduction;
     const error = new Meteor.Error(
       errorCode,
-      this._options.ambiguousErrorMessages
+      isErrorAmbiguous
         ? "Something went wrong. Please check your credentials."
         : msg
     );
