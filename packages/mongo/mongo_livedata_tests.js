@@ -3497,7 +3497,7 @@ if (Meteor.isServer) {
   });
 }
 
-testAsyncMulti('mongo-livedata - collection operations data persistence', [
+testAsyncMulti('mongo-livedata - collection async operations data persistence', [
   async function (test) { // Using remote collection
     const Collection = new Mongo.Collection(
       `remoteop_persistence${test.runId()}`,
