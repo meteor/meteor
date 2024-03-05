@@ -4303,24 +4303,35 @@ Tinytest.addAsync('mongo-livedata - maintained isomorphism on collection operati
   test.equal(items, []);
 });
 
-testAsyncMulti('mongo-livedata - collection operations data persistence', [
-  async function (test) {
+testAsyncMulti('mongo-livedata - collection async operations data persistence', [
+  async function (test) { // Using remote collection
     const Collection = new Mongo.Collection(
       `remoteop_persistence${test.runId()}`,
     );
 
-    // Using remote collection
     await Collection.insertAsync({ _id: 'a' });
-    await Collection.insertAsync({ _id: 'b' });
+    await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+    const insertedId = await Collection.insertAsync({ num: 2 });
 
     let items = await Collection.find().fetchAsync();
     let itemIds = items.map(_item => _item._id);
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible
 
-    test.equal(itemIds, ['a', 'b']);
+    const aItem = items[0];
+    const insertedItem = items[1];
+    test.equal(aItem?.num, 1);
+    test.equal(insertedItem?.num, 2);
+
+    await Collection.removeAsync({ _id: insertedId });
+
+    items = await Collection.find().fetchAsync();
+    itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible
 
     if (Meteor.isClient) {
       return new Promise(resolve => {
-        setTimeout(async () => {
+        Meteor.setTimeout(async () => {
           items = await Collection.find().fetchAsync();
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, []); // data IS NOT persisted
@@ -4331,58 +4342,68 @@ testAsyncMulti('mongo-livedata - collection operations data persistence', [
 
     return Promise.resolve();
   },
-  async function (test) {
-    const Collection = new Mongo.Collection(
-      `methodop_persistence${test.runId()}`,
-    );
-    // Using methods
-    Meteor.methods({
-      [`insertMethodPersistence${test.runId()}`]: async () => {
-        await Collection.insertAsync({ _id: 'a' });
-        await Collection.insertAsync({ _id: 'b' });
-      },
-    });
-
-    await Meteor.callAsync(`insertMethodPersistence${test.runId()}`);
-
-    let items = await Collection.find().fetchAsync();
-    let itemIds = items.map(_item => _item._id);
-
-    test.equal(itemIds, ['a', 'b']);
-
-    if (Meteor.isClient) {
-      return new Promise(resolve => {
-        setTimeout(async () => {
-          items = await Collection.find().fetchAsync();
-          itemIds = items.map(_item => _item._id);
-          test.equal(itemIds, []); // data IS NOT persisted
-          resolve();
-        }, 100);
-      });
-    }
-
-    return Promise.resolve();
-  },
-  async function (test) {
+  async function (test) { // Using local collection
     const Collection = new Mongo.Collection(
       `localop_persistence${test.runId()}`,
     );
 
-    // Using local collection
     await Collection._collection.insertAsync({ _id: 'a' });
-    await Collection._collection.insertAsync({ _id: 'b' });
+    await Collection._collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+    const insertedId = await Collection._collection.insertAsync({ num: 2 });
+
+    let items = await Collection.find().fetchAsync();
+    let itemIds = items.map(_item => _item._id);
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible
+
+    const aItem = items[0];
+    const insertedItem = items[1];
+    test.equal(aItem?.num, 1);
+    test.equal(insertedItem?.num, 2);
+
+    await Collection._collection.removeAsync({ _id: insertedId });
+
+    items = await Collection.find().fetchAsync();
+    itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, ['a']); // data is persisted
+          resolve();
+        }, 100);
+      });
+    }
+
+    return Promise.resolve();
+  },
+  async function (test) { // Using methods
+    const Collection = new Mongo.Collection(
+      `methodop_persistence${test.runId()}`,
+    );
+
+    Meteor.methods({
+      [`insertMethodPersistence${test.runId()}`]: async () => {
+        await Collection.insertAsync({ _id: 'a' });
+      },
+    });
+
+    Meteor.callAsync(`insertMethodPersistence${test.runId()}`);
 
     let items = await Collection.find().fetchAsync();
     let itemIds = items.map(_item => _item._id);
 
-    test.equal(itemIds, ['a', 'b']);
+    test.equal(itemIds, ['a']); // temporary data accessible
 
     if (Meteor.isClient) {
       return new Promise(resolve => {
-        setTimeout(async () => {
+        Meteor.setTimeout(async () => {
           items = await Collection.find().fetchAsync();
           itemIds = items.map(_item => _item._id);
-          test.equal(itemIds, ['a', 'b']); // data is persisted
+          test.equal(itemIds, []); // data IS NOT persisted
           resolve();
         }, 100);
       });
