@@ -166,7 +166,7 @@ extends CachingCompilerBase {
       } else if (this.isRoot(inputFile)) {
         const result = await getResult();
         if (result) {
-          this.addCompileResult(inputFile, result);
+          await this.addCompileResult(inputFile, result);
         }
       }
     }

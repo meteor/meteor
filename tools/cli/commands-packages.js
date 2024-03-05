@@ -1528,7 +1528,7 @@ var maybeUpdateRelease = async function (options) {
     if (release.current && ! release.current.isRecommended() &&
         options.appDir && ! options.patch) {
       var releaseVersion = await release.current.getReleaseVersion();
-      var newerRecommendedReleases = getLaterReleaseVersions(
+      var newerRecommendedReleases = await getLaterReleaseVersions(
         releaseTrack, releaseVersion);
       if (!newerRecommendedReleases.length) {
         // When running 'meteor update' without --release in an app,

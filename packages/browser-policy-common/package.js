@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for browser-policy packages",
-  version: '1.0.13-beta300.4',
+  version: '1.0.13-beta300.6',
 });
 
 Package.onUse(function (api) {
