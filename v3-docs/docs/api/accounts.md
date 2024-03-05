@@ -779,7 +779,7 @@ id.
 
 On the client, you must pass `password` and at least one of `username` or `email` &mdash; enough information for the user to be able to log in again later. If there are existing users with a username or email only differing in case, `createUser` will fail. The callback's `error.reason` will be `'Username already exists.'` or `'Email already exists.'` In the latter case, the user can then either [login](accounts.html#Meteor-loginWithPassword) or [reset their password](#Accounts-resetPassword).
 
-On the server, you do not need to specify `password`, but the user will not be able to log in until it has a password (eg, set with [`Accounts.setPassword`](#Accounts-setPassword)). To create an account without a password on the server and still let the user pick their own password, call `createUser` with the `email` option and then call [`Accounts.sendEnrollmentEmail`](#Accounts-sendEnrollmentEmail). This will send the user an email with a link to set their initial password.
+On the server, you do not need to specify `password`, but the user will not be able to log in until it has a password (eg, set with [`Accounts.setPasswordAsync`](#Accounts-setPasswordAsync)). To create an account without a password on the server and still let the user pick their own password, call `createUser` with the `email` option and then call [`Accounts.sendEnrollmentEmail`](#Accounts-sendEnrollmentEmail). This will send the user an email with a link to set their initial password.
 
 By default the `profile` option is added directly to the new user document. To
 override this behavior, use [`Accounts.onCreateUser`](#Accounts-onCreateUser).
@@ -845,7 +845,7 @@ If the user trying to reset the password has 2FA enabled, this error will be thr
 
 - "Changed password, but user not logged in because 2FA is enabled [2fa-enabled]": No longer signing in the user automatically if the user has 2FA enabled.
 
-<ApiBox name="Accounts.setPassword" />
+<ApiBox name="Accounts.setPasswordAsync" />
 
 <ApiBox name="Accounts.sendResetPasswordEmail" />
 
