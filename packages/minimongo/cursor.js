@@ -1,6 +1,6 @@
 import LocalCollection from './local_collection.js';
 import { hasOwn } from './common.js';
-import { ASYNC_CURSOR_METHODS, getAsyncMethodName } from "./constants";
+import { ASYNC_CURSOR_METHODS, getAsyncMethodName } from './constants';
 
 // Cursor: a specification for a particular subset of documents, w/ a defined
 // order, limit, and offset.  creating a Cursor with LocalCollection.find(),
@@ -13,9 +13,7 @@ export default class Cursor {
 
     if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
       // stash for fast _id and { _id }
-      this._selectorId = hasOwn.call(selector, '_id')
-        ? selector._id
-        : selector;
+      this._selectorId = hasOwn.call(selector, '_id') ? selector._id : selector;
     } else {
       this._selectorId = undefined;
 
@@ -53,7 +51,7 @@ export default class Cursor {
   count() {
     if (this.reactive) {
       // allow the observe to be unordered
-      this._depend({added: true, removed: true}, true);
+      this._depend({ added: true, removed: true }, true);
     }
 
     return this._getRawObjects({
@@ -85,11 +83,12 @@ export default class Cursor {
         addedBefore: true,
         removed: true,
         changed: true,
-        movedBefore: true});
+        movedBefore: true,
+      });
     }
 
     let index = 0;
-    const objects = this._getRawObjects({ordered: true});
+    const objects = this._getRawObjects({ ordered: true });
 
     return {
       next: () => {
@@ -97,14 +96,13 @@ export default class Cursor {
           // This doubles as a clone operation.
           let element = this._projectionFn(objects[index++]);
 
-          if (this._transform)
-            element = this._transform(element);
+          if (this._transform) element = this._transform(element);
 
-          return {value: element};
+          return { value: element };
         }
 
-        return {done: true};
-      }
+        return { done: true };
+      },
     };
   }
 
@@ -113,7 +111,7 @@ export default class Cursor {
     return {
       async next() {
         return Promise.resolve(syncResult.next());
-      }
+      },
     };
   }
 
@@ -142,10 +140,11 @@ export default class Cursor {
         addedBefore: true,
         removed: true,
         changed: true,
-        movedBefore: true});
+        movedBefore: true,
+      });
     }
 
-    this._getRawObjects({ordered: true}).forEach((element, i) => {
+    this._getRawObjects({ ordered: true }).forEach((element, i) => {
       // This doubles as a clone operation.
       element = this._projectionFn(element);
 
@@ -215,6 +214,16 @@ export default class Cursor {
    */
   observe(options) {
     return LocalCollection._observeFromObserveChanges(this, options);
+  }
+
+  /**
+   * @summary observe async version
+   * @locus Anywhere
+   * @memberOf Promise<Mongo.Cursor>
+   * @instance
+   */
+  observeAsync(options) {
+    return new Promise(resolve => resolve(this.observe(options)));
   }
 
   /**
@@ -374,23 +383,37 @@ export default class Cursor {
     return handle;
   }
 
+  /**
+   * @summary observeChanges async version
+   * @locus Anywhere
+   * @memberOf Promise<Mongo.Cursor>
+   * @instance
+   */
+  observeChangesAsync(options) {
+    return new Promise((resolve) => {
+      const handle = this.observeChanges(options);
+      handle.isReadyPromise.then(() => resolve(handle));
+    });
+  }
+
   // XXX Maybe we need a version of observe that just calls a callback if
   // anything changed.
   _depend(changers, _allow_unordered) {
     if (Tracker.active) {
-      const dependency = new Tracker.Dependency;
+      const dependency = new Tracker.Dependency();
       const notify = dependency.changed.bind(dependency);
 
       dependency.depend();
 
-      const options = {_allow_unordered, _suppress_initial: true};
+      const options = { _allow_unordered, _suppress_initial: true };
 
-      ['added', 'addedBefore', 'changed', 'movedBefore', 'removed']
-        .forEach(fn => {
+      ['added', 'addedBefore', 'changed', 'movedBefore', 'removed'].forEach(
+        fn => {
           if (changers[fn]) {
             options[fn] = notify;
           }
-        });
+        }
+      );
 
       // observeChanges will stop() when this computation is invalidated
       this.observeChanges(options);
@@ -427,7 +450,7 @@ export default class Cursor {
 
     // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
     // compatible
-    const results = options.ordered ? [] : new LocalCollection._IdMap;
+    const results = options.ordered ? [] : new LocalCollection._IdMap();
 
     // fast path for single ID value
     if (this._selectorId !== undefined) {
@@ -484,10 +507,7 @@ export default class Cursor {
       // Fast path for limited unsorted queries.
       // XXX 'length' check here seems wrong for ordered
       return (
-        !this.limit ||
-        this.skip ||
-        this.sorter ||
-        results.length !== this.limit
+        !this.limit || this.skip || this.sorter || results.length !== this.limit
       );
     });
 
@@ -496,7 +516,7 @@ export default class Cursor {
     }
 
     if (this.sorter) {
-      results.sort(this.sorter.getComparator({distances}));
+      results.sort(this.sorter.getComparator({ distances }));
     }
 
     // Return the full set of results if there is no skip or limit or if we're
@@ -515,13 +535,13 @@ export default class Cursor {
     // XXX minimongo should not depend on mongo-livedata!
     if (!Package.mongo) {
       throw new Error(
-        'Can\'t publish from Minimongo without the `mongo` package.'
+        "Can't publish from Minimongo without the `mongo` package."
       );
     }
 
     if (!this.collection.name) {
       throw new Error(
-        'Can\'t publish a cursor from a collection without a name.'
+        "Can't publish a cursor from a collection without a name."
       );
     }
 

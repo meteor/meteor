@@ -297,7 +297,7 @@ The function will be called with a single argument, the info object:
 {% enddtdd %}
 
 {% dtdd name:"options" type:"Exception" %}
-  An optional arugment passed down from the oauth service that may contain
+  An optional argument passed down from the oauth service that may contain
   additional user profile information. As the data in `options` comes from an
   external source, make sure you validate any values you read from it.
 {% enddtdd %}
@@ -346,3 +346,7 @@ of legitimate users by attempting all possible passwords.
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the
 [`DDPRateLimiter`](#ddpratelimiter) docs for more information.
+
+{% apibox "AccountsServer#addDefaultRateLimit" %}
+
+{% apibox "AccountsServer#removeDefaultRateLimit" %}

@@ -205,9 +205,9 @@ const middleware = async (req, res, next) => {
 };
 
 // Listen to incoming OAuth http requests
-WebApp.expressHandlers.use('/_oauth', bodyParser.json());
-WebApp.expressHandlers.use('/_oauth', bodyParser.urlencoded({ extended: false }));
-WebApp.expressHandlers.use(middleware);
+WebApp.handlers.use('/_oauth', bodyParser.json());
+WebApp.handlers.use('/_oauth', bodyParser.urlencoded({ extended: false }));
+WebApp.handlers.use(middleware);
 
 OAuthTest.middleware = middleware;
 
@@ -364,7 +364,7 @@ const renderEndOfLoginResponse = async options => {
 // to the OAuth server and authorized this app, we communicate the
 // credentialToken and credentialSecret to the main window. The main
 // window must provide both these values to the DDP `login` method to
-// authenticate its DDP connection. After communicating these vaues to
+// authenticate its DDP connection. After communicating these values to
 // the main window, we close the popup.
 //
 // We export this function so that developers can override this

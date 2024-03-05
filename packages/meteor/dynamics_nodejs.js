@@ -3,8 +3,9 @@ let nextSlot = 0;
 let callAsyncMethodRunning = false;
 
 const CURRENT_VALUE_KEY_NAME = "currentValue";
-const SLOT_CALL_KEY = "slotCall";
+const UPPER_CALL_DYNAMICS_KEY_NAME = "upperCallDynamics";
 
+const SLOT_CALL_KEY = "slotCall";
 /**
  * @memberOf Meteor
  * @summary Constructor for EnvironmentVariable
@@ -26,7 +27,9 @@ class EnvironmentVariableAsync {
    */
   get() {
     if (this.slot !== Meteor._getValueFromAslStore(SLOT_CALL_KEY)) {
-      return;
+      const dynamics = Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {};
+
+      return dynamics[this.slot];
     }
     return Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
   }
@@ -41,27 +44,43 @@ class EnvironmentVariableAsync {
    * @method withValue
    * @param {any} value The value to set for the duration of the function call
    * @param {Function} func The function to call with the new value of the
-   * @param {Object} [options] Optional additional options
+   * @param {Object} [options] Optional additional properties for adding in [asl](https://nodejs.org/api/async_context.html#class-asynclocalstorage)
    * @returns {Promise<any>} The return value of the function
    */
   withValue(value, func, options = {}) {
+    const self = this;
+    const slotCall = Meteor._getValueFromAslStore(SLOT_CALL_KEY);
+    const dynamics =
+      Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {};
+    dynamics[slotCall] = Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
+    self.upperCallDynamics = dynamics;
     return Meteor._runAsync(
-      async () => {
+      async function () {
         let ret;
         try {
+          Meteor._updateAslStore(
+            UPPER_CALL_DYNAMICS_KEY_NAME,
+            this.upperCallDynamics,
+          );
           Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
           ret = await func();
         } finally {
           Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, undefined);
+          Meteor._updateAslStore(
+            UPPER_CALL_DYNAMICS_KEY_NAME,
+            undefined,
+          );
         }
         return ret;
       },
-      this,
-      {
-        callId: `${this.slot}-${Math.random()}`,
-        [SLOT_CALL_KEY]: this.slot,
-        ...options,
-      }
+      self,
+      Object.assign(
+        {
+          callId: `${this.slot}-${Math.random()}`,
+          [SLOT_CALL_KEY]: this.slot,
+        },
+        options,
+      )
     );
   }
 
@@ -177,6 +196,6 @@ Meteor.bindEnvironment = (func, onException, _this) => {
       return runWithEnvironment();
     }
 
-    return global.asyncLocalStorage.run({}, runWithEnvironment);
+    return Meteor._getAsl().run({}, runWithEnvironment);
   };
 };

@@ -1,6 +1,6 @@
 {
   "name": "meteor",
-  "version": "2.13.0",
+  "version": "3.0.0-beta.6",
   "description": "Install Meteor",
   "main": "install.js",
   "scripts": {
@@ -8,6 +8,7 @@
   },
   "author": "zodern",
   "license": "MIT",
+  "type": "commonjs",
   "dependencies": {
     "7zip-bin": "^5.2.0",
     "cli-progress": "^3.11.1",
@@ -23,7 +24,7 @@
     "meteor-installer": "cli.js"
   },
   "engines": {
-    "node": "<=14.x",
-    "npm": "<=6.x"
+    "node": "<=20.x",
+    "npm": "<=10.x"
   }
 }

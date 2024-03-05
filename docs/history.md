@@ -10,6 +10,7 @@
 
 
 
+
 ## v3.0, TBD
 
 ### Highlights
@@ -105,7 +106,7 @@
 
 - `appcache@2.0.0`:
 
-  - Updated internal api to use `expressHandlers`
+  - Updated internal api to use `handlers`
 
 - `audit-argument-checks@2.0.0`:
 
@@ -146,11 +147,11 @@
 - `boilerplate-generator@2.0.0`:
 
   - `toHTML` is no longer available (it was already deprecated). Use `toHTMLStream` instead.
-  - Updated to use `expressHandlers`
+  - Updated to use `handlers`
 
 - `browser-policy-common@2.0.0`:
 
-  - Updated to use `expressHandlers`
+  - Updated to use `handlers`
 
 - `browser-policy-content@2.0.0`:
 
@@ -321,7 +322,7 @@
   - Package was bumped due to a dependency update. No code changes were made.
 
 - `http@`:
-  - Updated handlers to use `expressHandlers`
+  - Updated handlers to use `handlers`
 - `id-map@2.0.0`:
 
   - Added `forEachAsync` method.
@@ -556,7 +557,7 @@
 
 - `spiderable@`:
 
-  - Updated handlers to use `expressHandlers`
+  - Updated handlers to use `handlers` that are now using express
   - removed `fibers` usage if flag is set to `true`
 
 - `standard-minifier-css@2.0.0`:
@@ -645,8 +646,8 @@
     - `WebAppInternals.getBoilerplate`
 
   - Changed engine from connect to express and changed api naming to match express. See below:
-  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.expressHandlers.use(middleware)`
-  - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawExpressHandlers.use(middleware)`
+  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.handlers.use(middleware)`
+  - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawHandlers.use(middleware)`
   - `WebApp.connectApp` is now `WebApp.expressApp`
 
 - `weibo-config-ui@2.0.0`:
@@ -707,6 +708,9 @@
 - `_loginMethod`
 - `_runLoginHandlers`
 
+* Upgraded `node-gyp` to v9.4.0
+* Upgraded `node-pre-gyp` to `@mapbox/node-pre-gyp` v1.0.11
+
 #### New Internal API
 
 `accounts-password`:
@@ -714,6 +718,380 @@
 - `Accounts._checkPasswordAsync`
 
 #### Special thanks to
+
+- [@StorytellerCZ](https://github.com/sponsors/StorytellerCZ/)
+
+For making this great framework even better!
+
+## v2.15.0, 2024-02-05
+
+### Highlights
+
+* Bumps embedded MongoDB to 7.0.5.
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+In development, if you're using Linux, you might get an error like `version GLIBCXX_3.4.26 not found` or something related to g++.
+
+This is related to your g++ version. With MongoDB 7, you need to have g++ 11 or higher. So make sure to have this updated.
+
+This will happen only if you are trying to run your Meteor application with a MongoDB 7 version. If you run your app with a MONGO_URL pointing to a different MongoDB version, you won't have this issue. 
+
+```bash
+
+meteor update --release 2.15
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to include embedded MongoDB to 7.0.5.
+  - Fix cordova launch screen warnings on 2.15 [PR](https://github.com/meteor/meteor/pull/12971)
+* `underscore@1.6.0`:
+  - A test related to [PR](https://github.com/meteor/meteor/pull/12798) to see if the tests can manage the first update step. [PR](https://github.com/meteor/meteor/pull/12912)
+* `service-configuration@1.3.3`:
+  - added new types* [PR](https://github.com/meteor/meteor/pull/12922)
+* `meteor@1.11.5`:
+  - added new types [PR](https://github.com/meteor/meteor/pull/12922)
+* `accounts-base@2.2.10`:
+  - Added missing type for createUserVerifyingEmail [PR](https://github.com/meteor/meteor/pull/12919)
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27).
+- [@denihs](https://github.com/denihs).
+- [@mcorbelli](https://github.com/mcorbelli).
+- [@matheusccastroo](https://github.com/matheusccastroo).
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
+- [@ebroder](https://github.com/ebroder).
+- [@nachocodoner](https://github.com/nachocodoner).
+
+For making this great framework even better!
+
+
+## v2.14.0, 2023-12-12
+
+
+### Highlights
+
+Hacktoberfest release! 🎉
+
+* MongoDB driver has been updated to v4.17.2.
+
+* You can now set `DISABLE_SOCKJS_CORS=1` if you want to prevent SockJS from setting CORS headers. Do not set this option if you will have DDP clients from other origins connecting to the DDP server. [PR](https://github.com/meteor/meteor/pull/12789)
+
+* Added guide on [how to prepare for Meteor 3.0 migration](https://guide.meteor.com/prepare-meteor-3.0).
+
+* New DDP merge strategy `NO_MERGE_MULTI`, which is similar to `NO_MERGE`, but it does track whether a document is used by multiple publications. [PR](https://github.com/meteor/meteor/pull/12742)
+
+* Appcache has been further deprecated and moved to the deprecated packages folder.
+
+* Added `Accounts.createUserAsync` into the client.
+
+* Many packages had their underscore dependency removed.
+
+* Cordova has been updated to v12.0.1 for Android and v7.0.1 for iOS, being able to build to SDK 33.
+
+* `meteor create` command is now interactive!
+
+* Added `firstRunPromise` property to `Tracker` autorun blocks, that forces autorun blocks to be executed in synchronous-looking order by storing the value autorun promise thus making it awaitable.
+
+#### Migration Steps
+
+##### Android splash screen
+If you have been using `splash-screen` for Cordova, you need to update your code as Android changed their splash screen API,
+the `cordova-plugin-splashscreen` is now on `cordova-android` core, so we have removed the dependency from the `splash-screen`
+package. As a result we are dropping the support for dark mode splash screen on Android.
+
+To create this now you need to create two themes on your `config.xml` file.
+
+>  Note that it's still possible to have it by adding the according themes with App.appendToConfig and App.addResourceFile - but this is not something Meteor will do automatically right now.
+
+For more information you can check our [Migration Guide](https://guide.meteor.com/2.14-migration.html)
+
+## Breaking Changes
+
+* `splash-screen` package has removed the `cordova-plugin-splashscreen` dependency. See migration steps for more info.
+
+## Docs
+
+- Added guide on [how to prepare for Meteor 3.0 migration](https://guide.meteor.com/prepare-meteor-3.0).
+- Added guide on [performance improvements](https://guide.meteor.com/performance-improvement).
+- Added FAQ about [Meteor 3](https://guide.meteor.com/3.0-migration).
+
+##  Internal API changes
+
+* Tool
+    - Rename `EACCESS` to `EACCES` to follow the Windows spelling
+    - Fixed links in skeletons
+    - Fixed build issue in Vue skeleton
+    - Updated `source-map-support`
+    - Fixed bugs in negated “in” and “instanceof” expressions
+    - Updated `semver` to v7.5.4
+    - Updated `@meteorjs/babel` to v7.18.4
+    - Cordova has been updated to v12.0.1 for Android and v7.0.1 for iOS, being able to build to SDK 33.
+    - `meteor create` command was re-made to be more interactive
+
+## Meteor Version Release
+
+* `accounts-base@2.2.10`
+    - Ensure that `onLogin` callback fires properly
+    - Indexes are now created asynchronously
+
+* `accounts-oauth@1.4.3`
+    - Indexes are now created asynchronously
+
+* `accounts-password@2.4.0`
+    - Add `Accounts.createUserAsync` to the client, a promise-based version of `Accounts.createUser`
+    - Indexes are now created asynchronously
+
+* `accounts-passwordless@2.1.4`
+    - Fix #12401, ensure that user is found with ID
+    - Indexes are now created asynchronously
+
+* `babel-compiler@7.10.5`
+    - Updated `@meteorjs/babel` to v7.18.4
+
+* `boilerplate-generator@1.7.2`
+    - Removed Underscore dependency
+
+* `browser-policy-content@1.1.3`
+    - Removed Underscore dependency
+
+* `constraint-solver@1.2.1`
+    - Removed Underscore dependency
+
+* `crosswalk@1.7.2`
+    - Updated `cordova-plugin-crosswalk-webview` to v2.4.0
+    - Deprecated the package
+
+* `ddp-rate-limiter@1.2.1`
+    - Removed Underscore dependency
+* `ddp-server@2.7.0`:
+    - Allow setting `DISABLE_SOCKJS_CORS` to prevent SockJS from setting CORS headers
+    - Added new publication strategy `NO_MERGE_MULTI`
+
+* `ecmascript@0.16.8`:
+    - Bumped to get latest version of `@babel/compiler`
+
+* `facebook-oauth@1.11.3`:
+    - Updated default version of Facebook GraphAPI to v17
+
+* `launch-screen@2.0.0`
+    - Removed `cordova-plugin-splashscreen` dependency
+
+* `fetch@0.1.4`:
+    - Update `node-fetch` to version 1.6.12
+    - Update `whatwg-fetch` to version 3.6.17
+
+* `logging@1.3.3`:
+    - Added TS types
+    - Updated `chalk` to v4.1.2
+
+* `logic-solver@2.0.9`
+    - Removed Underscore dependency
+
+* `meteor@1.11.5`:
+    - Improve TS types
+
+* `mobile-experience@1.1.1`:
+    - Bumped to get latests version of `cordova` dependencies
+
+* `modern-browsers@0.1.10`
+    - Added `appleMail` user agent to allow modern bundle on iPads
+
+* `modules@0.20.0`
+    - Updated version of reify to v0.24.1
+
+* `mongo@1.16.8`
+    - Added deprecation messages into type definitions
+    - Fix ObjectIDs handling in oplogV2V1Converter
+
+* `npm-mongo@4.17.2`:
+    - Bumped MongoDB driver to version 4.17.2
+
+* `oauth@2.2.1`
+    - Indexes are now created asynchronously
+    - `remove` DB calls migrated to `removeAsync`
+
+* `package-version-parser@3.2.2`
+    - Updated `semver` to v7.5.4
+
+* `react-fast-refresh@0.2.8`:
+    - Updated `semver` to version 7.5.4
+
+* `service-configuration@1.3.3`
+    - Indexes are now created asynchronously
+    - Add types for ConfigError
+
+* `socket-stream-client@0.5.2`
+    - Removed Underscore dependency
+
+* `standard-minifier-css@1.9.2`
+    - Updated `@babel/runtime` to v7.23.5
+    - Updated `minifier-css` to v1.6.4
+    - Updated `logging` package to v1.3.2
+
+* `test-server-tests-in-console-once@1.0.12`
+    - Removed Underscore dependency
+
+* `tinytest@1.2.3`
+    - Removed Underscore dependency
+
+* `tracker@1.3.3`
+    - Added `firstRunPromise` property, that forces autorun blocks to be executed
+      in synchronous-looking order by storing the value autorun promise
+      thus making it awaitable
+
+* `typescript@4.9.5`:
+    - Updated to 4.9.5
+
+* `webapp@1.13.8`
+    - Updated `cordova-plugin-meteor-webapp` to v2.0.3
+    - Updated `cookie-parser` to v1.4.6
+    - Updated `send` to v0.18.0
+    - Updated `stream-to-string` to v1.2.1
+    - Updated `qs` to v6.11.2
+    - Updated `@types/connect` to v3.4.38
+
+
+## Independent releases
+
+* `google-oauth@1.4.4`:
+    - Remove logging request/response in google_server
+
+* NPM `@meteorjs/babel@7.18.4`
+    - Updated `@meteorjs/reify` to v0.24.1
+
+* NPM `@meteorjs/babel-preset-meteor@7.10.1`
+    - Add Facebook in-app browser
+
+* NPM `cordova-plugin-meteor-webapp@2.0.2`
+    - Fixed Android hot code push failing
+
+* NPM `cordova-plugin-meteor-webapp@2.0.3`
+    - Fix pull manifest from correct url if parameter are used in baseurl
+
+* NPM `meteor-node-stubs@1.2.6`
+    - Update dependencies
+    - Deep update dependencies that were highlighted by `npm audit`
+
+## Contributors
+
+- [@StorytellerCZ](https://github.com/sponsors/StorytellerCZ)
+- [@Grubba27](https://github.com/sponsors/Grubba27)
+- [@vit0rr](https://github.com/vit0rr)
+- [@realyze](https://github.com/realyze)
+- [@jamauro](https://github.com/jamauro)
+- [@Torgen](https://github.com/Torgen)
+- [@brucejo75](https://github.com/brucejo75)
+- [@zodern](https://github.com/sponsors/zodern)
+- [@alisnic](https://github.com/alisnic)
+- [@ebroder](https://github.com/ebroder)
+- [@BANSAL-NISHU](https://github.com/BANSAL-NISHU)
+- [@salmanhasni](https://github.com/salmanhasni)
+- [@jdgjsag67251](https://github.com/jdgjsag67251)
+- [@guncebektas](https://github.com/guncebektas)
+- [@harryadel](https://github.com/harryadel)
+- [@dd137](https://github.com/dd137)
+- [@matheusccastroo](https://github.com/matheusccastroo)
+- [@mr-loop-1](https://github.com/mr-loop-1)
+
+For making this great framework even better!
+
+
+## v2.13.3, 2023-09-08
+
+### Highlights
+
+* Solves the issue [#12771: Version 2.13.1 suddenly requires a newer glibc version](https://github.com/meteor/meteor/issues/12771).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.3
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.3 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4). The previous version was generated using a different unix distribution (Ubuntu) while we should use CentOS.
+
+
+#### Special thanks to
+
+- [@aquinoit](https://github.com/aquinoit).
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes).
+- [@Grubba27](https://github.com/Grubba27).
+
+For making this great framework even better!
+
+
+## v2.13.1, 2023-09-04
+
+### Highlights
+
+* Solved zlib issue with Meteor.js and ESM Node.js 14.21.4 [PR](https://github.com/meteor/meteor/pull/12765) by (GH Grubba27).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.1
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.1 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4).
+
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27).
+
+
+For making this great framework even better!
+
+
 ## v2.13.0, 2023-07-26
 
 ### Highlights
@@ -1603,7 +1981,7 @@ N/A
 
 * `mongo@1.15.0`
     - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created.
-    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured. [PR](https://github.com/meteor/meteor/pull/11995).
+    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occurred. [PR](https://github.com/meteor/meteor/pull/11995).
 * `modern-browsers@0.1.8`
     - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
 * `socket-stream-client@0.5.0`
@@ -1818,7 +2196,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
     - useUnifiedTopology is not an option anymore, it defaults to true.
     - native parser is not an option anymore, it defaults to false in the mongo connection.
     - poolSize not an option anymore, we are using max/minPoolSize for the same behavior on mongo connection.
-    - fields option is deprecated, we are maintaining a translation layer to "projection" field (now prefered) until the next minor version, where we will start showing alerts.
+    - fields option is deprecated, we are maintaining a translation layer to "projection" field (now preferred) until the next minor version, where we will start showing alerts.
     - _ensureIndex is now showing a deprecation message
     - we are maintaining a translation layer for the new oplog format, so if you read or rely on any behavior of it please read our oplog_v2_converter.js code
     - update/insert/remove behavior is maintained in the Meteor way, documented in our docs, but we are now using replaceOne/updateOne/updateMany internally. This is subject to changes in the API rewrite of MongoDB without Fibers AND if you are using rawCollection directly you have to review your methods otherwise you will see deprecation messages if you are still using the old mongodb style directly.

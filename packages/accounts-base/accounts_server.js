@@ -181,7 +181,7 @@ export class AccountsServer extends AccountsCommon {
     }
 
     this._onCreateLoginTokenHook = func;
-  };
+  }
 
   /**
    * @summary Customize new user creation.
@@ -322,7 +322,7 @@ export class AccountsServer extends AccountsCommon {
       // If user is not found, try a case insensitive lookup
       if (!user) {
         selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-        const candidateUsers = await Meteor.users.find(selector, { ...options, limit: 2 }).fetch();
+        const candidateUsers = await Meteor.users.find(selector, { ...options, limit: 2 }).fetchAsync();
         // No match if multiple candidates are found
         if (candidateUsers.length === 1) {
           user = candidateUsers[0];
@@ -1389,15 +1389,23 @@ export class AccountsServer extends AccountsCommon {
     }
   };
 
-  // Removes default rate limiting rule
+  /**
+   * @summary Removes default rate limiting rule
+   * @locus Server
+   * @importFromPackage accounts-base
+   */
   removeDefaultRateLimit() {
     const resp = DDPRateLimiter.removeRule(this.defaultRateLimiterRuleId);
     this.defaultRateLimiterRuleId = null;
     return resp;
   };
 
-  // Add a default rule of limiting logins, creating new users and password reset
-  // to 5 times every 10 seconds per connection.
+  /**
+   * @summary Add a default rule of limiting logins, creating new users and password reset
+   * to 5 times every 10 seconds per connection.
+   * @locus Server
+   * @importFromPackage accounts-base
+   */
   addDefaultRateLimit() {
     if (!this.defaultRateLimiterRuleId) {
       this.defaultRateLimiterRuleId = DDPRateLimiter.addRule({
@@ -1422,21 +1430,21 @@ export class AccountsServer extends AccountsCommon {
    * @returns {Object} Options which can be passed to `Email.send`.
    * @importFromPackage accounts-base
    */
-  generateOptionsForEmail(email, user, url, reason, extra = {}){
+  async generateOptionsForEmail(email, user, url, reason, extra = {}){
     const options = {
       to: email,
       from: this.emailTemplates[reason].from
-        ? this.emailTemplates[reason].from(user)
+        ? await this.emailTemplates[reason].from(user)
         : this.emailTemplates.from,
-      subject: this.emailTemplates[reason].subject(user, url, extra),
+      subject: await this.emailTemplates[reason].subject(user, url, extra),
     };
 
     if (typeof this.emailTemplates[reason].text === 'function') {
-      options.text = this.emailTemplates[reason].text(user, url, extra);
+      options.text = await this.emailTemplates[reason].text(user, url, extra);
     }
 
     if (typeof this.emailTemplates[reason].html === 'function') {
-      options.html = this.emailTemplates[reason].html(user, url, extra);
+      options.html = await this.emailTemplates[reason].html(user, url, extra);
     }
 
     if (typeof this.emailTemplates.headers === 'object') {
@@ -1469,7 +1477,7 @@ export class AccountsServer extends AccountsCommon {
             limit: 2,
           }
         )
-        .fetch();
+        .fetchAsync();
 
       if (
         matchedUsers.length > 0 &&
@@ -1510,9 +1518,10 @@ export class AccountsServer extends AccountsCommon {
   }
 
   _handleError = (msg, throwError = true, errorCode = 403) => {
+    const isErrorAmbiguous = this._options.ambiguousErrorMessages ?? Meteor.isProduction;
     const error = new Meteor.Error(
       errorCode,
-      this._options.ambiguousErrorMessages
+      isErrorAmbiguous
         ? "Something went wrong. Please check your credentials."
         : msg
     );

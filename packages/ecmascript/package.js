@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.16.8-alpha300.17',
+  version: '0.16.8-beta300.6',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md',
 });
@@ -18,7 +18,6 @@ Package.registerBuildPlugin({
 
 Package.onUse(function(api) {
   api.use('isobuild:compiler-plugin@1.0.0');
-  api.use('babel-compiler');
   api.use('react-fast-refresh');
 
   // The following api.imply calls should match those in

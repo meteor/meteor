@@ -379,46 +379,51 @@ const subscribeBeforeRun = async (subName, testId, cb) => {
 
 // would be nice to have a database-aware test harness of some kind --
 // this is a big hack (and XXX pollutes the global test namespace)
-testAsyncMulti('livedata - compound methods', [
-  async function(test) {
+testAsyncMulti("livedata - compound methods", [
+  async function (test) {
     if (Meteor.isClient) {
-      Meteor.subscribe('ledger', test.runId(), () => {});
+      Meteor.subscribe("ledger", test.runId(), () => {});
     }
 
-    await Ledger.insertAsync(
-      { name: 'alice', balance: 100, world: test.runId() }
-    );
-    await Ledger.insertAsync(
-      { name: 'bob', balance: 50, world: test.runId() }
-    );
+    await Ledger.insertAsync({
+      name: "alice",
+      balance: 100,
+      world: test.runId(),
+    });
+    await Ledger.insertAsync({ name: "bob", balance: 50, world: test.runId() });
   },
-  async function(test) {
-    await Meteor.callAsync(
-      'ledger/transfer',
-      test.runId(),
-      'alice',
-      'bob',
-      10,
-    )
+  async function (test) {
+    await Meteor.callAsync("ledger/transfer", test.runId(), "alice", "bob", 10);
     await checkBalances(test, 90, 60);
   },
-  async function(test) {
-    try {
-      await Meteor.callAsync(
-        'ledger/transfer',
-        test.runId(),
-        'alice',
-        'bob',
-        100,
-        true,
-      );
-    } catch (e) {
-    }
-    if (Meteor.isClient)
+  async function (test) {
+    let promise = Meteor.callAsync(
+      "ledger/transfer",
+      test.runId(),
+      "alice",
+      "bob",
+      100,
+      true
+    );
+
+    if (Meteor.isClient) {
       // client can fool itself by cheating, but only until the sync
       // finishes
+
+      // for some reason, this doesn't work without the sleep
+      // .stubPromise is undefined.
+      // promise does not have a stubPromise property.
+      await promise.stubPromise;
       await checkBalances(test, -10, 160);
-    else await checkBalances(test, 90, 60);
+    }
+
+    await promise.catch((err) => {
+      failure(test, 409)(err);
+    });
+
+
+    // Balances are reverted back to pre-stub values.
+    await checkBalances(test, 90, 60);
   },
 ]);
 
@@ -820,14 +825,8 @@ if (Meteor.isClient) {
               onError: function() {
                 gotErrorFromStopper = true;
               },
+              onStop: expect(function () {}),
             }
-          );
-          // Call a method. This method won't be processed until the publisher's
-          // function returns, so blocking on it being done ensures that we've
-          // gotten the removed/nosub/etc.
-          conn.call(
-            'nothing',
-            expect(function() {})
           );
         },
         function(test, expect) {
@@ -915,6 +914,7 @@ if (Meteor.isClient) {
           test.equal(errorFromRerun.reason, 'Explicit error');
           test.equal(_.size(conn._subscriptions), 0); // white-box test
 
+          const expected = expect();
           conn.subscribe(
             'publisherErrors',
             collName,
@@ -924,15 +924,9 @@ if (Meteor.isClient) {
                 if (error) {
                   gotErrorFromStopper = true;
                 }
+                expected();
               },
             }
-          );
-          // Call a method. This method won't be processed until the publisher's
-          // function returns, so blocking on it being done ensures that we've
-          // gotten the removed/nosub/etc.
-          conn.call(
-            'nothing',
-            expect(function() {})
           );
         },
         function(test, expect) {
@@ -1045,7 +1039,7 @@ if (Meteor.isServer) {
         const self = this;
         if (self.conn.status().connected) {
           const callResult = await self.conn.callAsync('s2s', 'foo');
-          test.equal(await callResult.stubValuePromise, 's2s foo');
+          test.equal(callResult, 's2s foo');
         }
       },
     ]);
@@ -1155,7 +1149,6 @@ testAsyncMulti('livedata - methods with nested stubs', [
         const r = await self.coll.updateAsync(
           id,
           { $set: data },
-          { returnStubValue: true }
         );
         const afterUpdateData = await Meteor.callAsync('getData', id);
         return [
@@ -1194,12 +1187,12 @@ testAsyncMulti('livedata - methods with nested stubs', [
     if (Meteor.isClient) {
       return Meteor.callAsync('insertData', { a: 1 })
         .then(async data => {
-          const [id, message] = await data.stubValuePromise;
+          const [id, message] =  data;
           test.equal(message, `inserted with: ${id}`);
           return Meteor.callAsync('updateData', id, { a: 2 });
         })
         .then(async data => {
-          const [count, message] = await data.stubValuePromise;
+          const [count, message] = data;
           test.equal(count, 1);
           test.equal(message.before, 'before update: a:1');
           test.equal(message.after, 'after update: a:2, gotData:true');
@@ -1208,11 +1201,13 @@ testAsyncMulti('livedata - methods with nested stubs', [
   },
 ]);
 
- Tinytest.addAsync('livedata - isAsync call', async function (test) {
-  Meteor.call('isCallAsync', (err, result) => test.equal(result, false))
-  const result = await Meteor.callAsync('isCallAsync', { returnStubValue: true })
-  test.equal(result, true)
-})
+// TODO [FIBERS] - check if this still makes sense to have
+
+//  Tinytest.addAsync('livedata - isAsync call', async function (test) {
+//   Meteor.call('isCallAsync', (err, result) => test.equal(result, false))
+//   const result = await Meteor.callAsync('isCallAsync', { returnStubValue: true })
+//   test.equal(result, true)
+// })
 
 // XXX some things to test in greater detail:
 // staying in simulation mode

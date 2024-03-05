@@ -35,7 +35,7 @@ You can find our official Docker images at the following links:
 - [meteor/node](https://hub.docker.com/r/meteor/node/tags)
 - [meteor/galaxy-app](https://hub.docker.com/r/meteor/galaxy-app/tags)
 - [meteor/galaxy-puppeteer](https://hub.docker.com/r/meteor/galaxy-puppeteer/tags)
-- [meteor/base](https://hub.docker.com/r/meteor/meteor-base/tags) (It will be updated soon)
+- [meteor/base](https://hub.docker.com/r/meteor/meteor-base/tags)
 
 <h2 id="installing-node-in-linux"> Installing Node.js in Linux</h2>
 

@@ -229,13 +229,14 @@ export class AccountsClient extends AccountsCommon {
     const loginCallbacks = ({ error, loginDetails }) => {
       if (!called) {
         called = true;
-        this._loginCallbacksCalled = true;
         if (!error) {
           this._onLoginHook.forEach(callback => {
             callback(loginDetails);
             return true;
           });
+          this._loginCallbacksCalled = true;
         } else {
+          this._loginCallbacksCalled = false;
           this._onLoginFailureHook.forEach(callback => {
             callback({ error });
             return true;
@@ -364,12 +365,18 @@ export class AccountsClient extends AccountsCommon {
 
       // Make the client logged in. (The user data should already be loaded!)
       this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
-      // TODO [FIBERS]: this is a big workaround. The Tracker is now receiving promises,
-        // so it's finishing before time. Hopefully this PR will fix this behavior
-        // https://github.com/meteor/meteor/pull/12294
-      Meteor.setTimeout(() => {
-        loginCallbacks({ loginDetails: result });
-      }, 100);
+
+      // use Tracker to make we sure have a user before calling the callbacks
+      Tracker.autorun(async function (computation) {
+        const user = await Tracker.withComputation(computation, () =>
+          Meteor.userAsync(),
+        );
+
+        if (user) {
+          loginCallbacks({ loginDetails: result })
+        }
+      });
+
     };
 
     if (!options._suppressLoggingIn) {

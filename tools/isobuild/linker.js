@@ -139,6 +139,7 @@ Object.assign(Module.prototype, {
 
         if (APP_PRELINK_CACHE.has(cacheKey)) {
           ret.push(APP_PRELINK_CACHE.get(cacheKey));
+          continue;
         }
 
         const node = await file.getPrelinkedOutput({ preserveLineNumbers: true });
@@ -167,14 +168,7 @@ Object.assign(Module.prototype, {
         ret.push(prelinked);
       }
 
-      // TODO[fibers]: This is a temporary hack to make sure that we don't return the same
-        // file twice. I'm not sure why, but self.files sometimes contains the same file twice.
-        // these tool tests fail without this hack:
-        // - assets - unicode asset names are allowed
-        // - javascript hot code push
-        // and probably others
-      const uniqueHashes = [...new Set(ret.map((f) => f.hash))];
-      return uniqueHashes.map((h) => ret.find((f) => f.hash === h));
+      return ret;
     }
 
     // Otherwise..

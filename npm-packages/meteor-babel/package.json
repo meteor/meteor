@@ -1,8 +1,9 @@
 {
   "name": "@meteorjs/babel",
   "author": "Meteor <dev@meteor.com>",
-  "version": "7.19.0-beta.3",
+  "version": "7.19.0-beta.4",
   "license": "MIT",
+  "type": "commonjs",
   "description": "Babel wrapper package for use with Meteor",
   "keywords": [
     "meteor",
@@ -41,13 +42,13 @@
     "@babel/template": "^7.16.7",
     "@babel/traverse": "^7.17.0",
     "@babel/types": "^7.17.0",
-    "@meteorjs/reify": "https://github.com/meteor/reify/tarball/cf61c57c6c4fefcbf164bf63d3c12fda1924b3d2",
+    "@meteorjs/reify": "0.25.1",
     "babel-preset-meteor": "^7.10.0",
     "babel-preset-minify": "^0.5.1",
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.21",
     "meteor-babel-helpers": "0.0.3",
-    "typescript": "~4.9.4"
+    "typescript": "~5.3.3"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "7.14.5",

@@ -30,14 +30,14 @@ Tinytest.add("absolute-url - basics", function(test) {
         rootUrl: prefix + "localhost",
         secure: true,
       }),
-      "http://127.0.0.1/foo"
+      "http://localhost/foo"
     );
     test.equal(
       Meteor.absoluteUrl("foo", {
         rootUrl: prefix + "localhost:3000",
         secure: true,
       }),
-      "http://127.0.0.1:3000/foo"
+      "http://localhost:3000/foo"
     );
     test.equal(
       Meteor.absoluteUrl("foo", {

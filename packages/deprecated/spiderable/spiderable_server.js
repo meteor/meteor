@@ -58,7 +58,7 @@ Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
 
 var PHANTOM_SCRIPT = Assets.getText("phantom_script.js");
 
-WebApp.expressHandlers.use(function (req, res, next) {
+WebApp.handlers.use(function (req, res, next) {
   // _escaped_fragment_ comes from Google's AJAX crawling spec:
   // https://developers.google.com/webmasters/ajax-crawling/docs/specification
   if (/\?.*_escaped_fragment_=/.test(req.url) ||

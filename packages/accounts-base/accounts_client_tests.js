@@ -53,7 +53,7 @@ const removeTestUser = done => {
 };
 
 const forceEnableUser2fa = done => {
-  Meteor.callAsync('forceEnableUser2fa', {returnServerPromise:true}, { username }, secret2fa).then((token) => {
+  Meteor.callAsync('forceEnableUser2fa', { username }, secret2fa).then((token) => {
     done(token);
   });
 };

@@ -1,0 +1,30 @@
+name: NPM meteor-promise
+on:
+  push:
+    paths:
+      - "npm-packages/meteor-promise/**"
+  pull_request:
+    paths:
+      - "npm-packages/meteor-promise/**"
+
+permissions:
+  contents: read  #  to fetch code (actions/checkout)
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: npm-packages/meteor-promise
+    strategy:
+      matrix:
+        node-version: [12.x, 14.x]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test
