@@ -850,17 +850,7 @@ export class Connection {
     }
 
     // If we added it to the first block, send it out now.
-    if (self._outstandingMethodBlocks.length === 1) {
-      if (callback && future) {
-        // Ensure the method message after the result of the method ran in the client.
-        future = new Promise((resolve) => {
-          methodInvoker.sendMessage();
-          resolve();
-        });
-      } else {
-        methodInvoker.sendMessage();
-      }
-    }
+    if (self._outstandingMethodBlocks.length === 1) methodInvoker.sendMessage();
 
     // If we're using the default callback on the server,
     // block waiting for the result.
