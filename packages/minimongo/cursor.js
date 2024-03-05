@@ -217,6 +217,16 @@ export default class Cursor {
   }
 
   /**
+   * @summary observe async version
+   * @locus Anywhere
+   * @memberOf Promise<Mongo.Cursor>
+   * @instance
+   */
+  observeAsync(options) {
+    return new Promise(resolve => resolve(this.observe(options)));
+  }
+
+  /**
    * @summary Watch a query. Receive callbacks as the result set changes. Only
    *          the differences between the old and new documents are passed to
    *          the callbacks.
@@ -371,6 +381,19 @@ export default class Cursor {
     }
 
     return handle;
+  }
+
+  /**
+   * @summary observeChanges async version
+   * @locus Anywhere
+   * @memberOf Promise<Mongo.Cursor>
+   * @instance
+   */
+  observeChangesAsync(options) {
+    return new Promise((resolve) => {
+      const handle = this.observeChanges(options);
+      handle.isReadyPromise.then(() => resolve(handle));
+    });
   }
 
   // XXX Maybe we need a version of observe that just calls a callback if
