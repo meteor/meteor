@@ -1,3 +1,19 @@
+if (Meteor.isServer) {
+  if (typeof __meteor_runtime_config__ === 'object') {
+    __meteor_runtime_config__.debug =
+      !!process.env.NODE_INSPECTOR_IPC ||
+      !!process.env.VSCODE_INSPECTOR_OPTIONS ||
+      process.execArgv.some(_arg =>
+        /^--(inspect|debug)(-brk)?(=\d+)?$/i.test(_arg),
+      );
+  }
+}
+
+Meteor.isDebug = Meteor.isClient
+  ? typeof window === 'object' && !!window.__meteor_runtime_config__.debug
+  : typeof __meteor_runtime_config__ === 'object' &&
+  !!__meteor_runtime_config__.debug;
+
 var suppress = 0;
 
 // replacement for console.log. This is a temporary API. We should
@@ -61,4 +77,3 @@ Meteor._suppress_log = function (count) {
 Meteor._suppressed_log_expected = function () {
   return suppress !== 0;
 };
-
