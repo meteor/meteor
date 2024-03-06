@@ -1201,6 +1201,32 @@ testAsyncMulti('livedata - methods with nested stubs', [
   },
 ]);
 
+Tinytest.addAsync('livedata - method interaction with unblocking mechanism', async function(test) {
+  let serverEvents = [];
+
+  // server-only methods
+  if (Meteor.isServer) {
+    Meteor.methods({
+      [`unblockedMethod${test.runId()}`]:  async function() {
+        serverEvents.push('unblock start');
+        this.unblock();
+        await Meteor._sleepForMs(2000);
+        serverEvents.push('unblock end')
+      },
+      [`blockingMethod${test.runId()}`]: async function() {
+        serverEvents.push('blockingMethod');
+      }
+    });
+  }
+
+  Meteor.callAsync(`unblockedMethod${test.runId()}`);
+  Meteor.callAsync(`blockingMethod${test.runId()}`);
+
+  if (Meteor.isServer) {
+    test.equal(serverEvents, ['unblock start', 'blockingMethod']);
+  }
+});
+
 // TODO [FIBERS] - check if this still makes sense to have
 
 //  Tinytest.addAsync('livedata - isAsync call', async function (test) {
