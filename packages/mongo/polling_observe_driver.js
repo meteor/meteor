@@ -2,7 +2,8 @@ var POLLING_THROTTLE_MS = +process.env.METEOR_POLLING_THROTTLE_MS || 50;
 var POLLING_INTERVAL_MS = +process.env.METEOR_POLLING_INTERVAL_MS || 10 * 1000;
 
 PollingObserveDriver = function (options) {
-  var self = this;
+  const self = this;
+  self._options = options;
 
   self._cursorDescription = options.cursorDescription;
   self._mongoHandle = options.mongoHandle;
@@ -42,12 +43,14 @@ PollingObserveDriver = function (options) {
 
 _.extend(PollingObserveDriver.prototype, {
   _init: async function () {
+    const self = this;
+    const options = self._options;
     const listenersHandle = await listenAll(
       self._cursorDescription, function (notification) {
         // When someone does a transaction that might affect us, schedule a poll
         // of the database. If that transaction happens inside of a write fence,
         // block the fence until we've polled and notified observers.
-        var fence = DDPServer._getCurrentFence();
+        const fence = DDPServer._getCurrentFence();
         if (fence)
           self._pendingWrites.push(fence.beginWrite());
         // Ensure a poll is scheduled... but if we already know that one is,
@@ -69,11 +72,11 @@ _.extend(PollingObserveDriver.prototype, {
     if (options._testOnlyPollCallback) {
       self._testOnlyPollCallback = options._testOnlyPollCallback;
     } else {
-      var pollingInterval =
+      const pollingInterval =
             self._cursorDescription.options.pollingIntervalMs ||
             self._cursorDescription.options._pollingInterval || // COMPAT with 1.2
             POLLING_INTERVAL_MS;
-      var intervalHandle = Meteor.setInterval(
+      const intervalHandle = Meteor.setInterval(
         _.bind(self._ensurePollIsScheduled, self), pollingInterval);
       self._stopCallbacks.push(function () {
         Meteor.clearInterval(intervalHandle);
