@@ -95,13 +95,14 @@ export const loadAsyncStubHelpers = () => {
           const applyAsyncPromise = oldApplyAsync.apply(this, args);
           stubPromiseResolver(applyAsyncPromise.stubPromise);
           serverPromiseResolver(applyAsyncPromise.serverPromise);
+          applyAsyncPromise.stubPromise.finally(() => {
+            finished = true;
+          });
           applyAsyncPromise
             .then((result) => {
-              finished = true;
               resolve(result);
             })
             .catch((err) => {
-              finished = true;
               reject(err);
             });
         });
