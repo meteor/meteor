@@ -3,9 +3,9 @@ if (Meteor.isServer) {
     __meteor_runtime_config__.debug =
       !!process.env.NODE_INSPECTOR_IPC ||
       !!process.env.VSCODE_INSPECTOR_OPTIONS ||
-      process.execArgv.some(_arg =>
-        /^--(inspect|debug)(-brk)?(=\d+)?$/i.test(_arg),
-      );
+      process.execArgv.some(function(_arg) {
+        return /^--(inspect|debug)(-brk)?(=\d+)?$/i.test(_arg);
+      });
   }
 }
 
