@@ -107,7 +107,7 @@ export const loadAsyncStubHelpers = () => {
         });
 
         Meteor._setImmediate(() => {
-          if (!finished) {
+          if (!finished && Meteor.isDebug) {
             console.warn(
               `Method stub (${name}) took too long and could cause unexpected problems. Learn more at https://github.com/zodern/fix-async-stubs/#limitations`
             );
