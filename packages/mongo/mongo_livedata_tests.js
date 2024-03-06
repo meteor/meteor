@@ -3497,6 +3497,116 @@ if (Meteor.isServer) {
   });
 }
 
+testAsyncMulti('mongo-livedata - collection sync operations data persistence', [
+  function (test) { // Using remote collection
+    const Collection = new Mongo.Collection(
+      `remotesyncop_persistence${test.runId()}`,
+    );
+
+    Collection.insert({ _id: 'a' });
+    Collection.update({ _id: 'a' }, { $set: { num: 1 } });
+    const insertedId = Collection.insert({ num: 2 });
+
+    let items = Collection.find().fetch();
+    let itemIds = items.map(_item => _item._id);
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible (optimistic-ui)
+
+    const aItem = items[0];
+    const insertedItem = items[1];
+    test.equal(aItem?.num, 1);
+    test.equal(insertedItem?.num, 2);
+
+    Collection.remove({ _id: insertedId });
+
+    items = Collection.find().fetch();
+    itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(async () => {
+          items = Collection.find().fetch();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, []); // data IS NOT persisted
+          resolve();
+        }, 10);
+      });
+    }
+
+    return Promise.resolve();
+  },
+  async function (test) { // Using local collection
+    const Collection = new Mongo.Collection(
+      `localsyncop_persistence${test.runId()}`,
+    );
+
+    Collection._collection.insert({ _id: 'a' });
+    Collection._collection.update({ _id: 'a' }, { $set: { num: 1 } });
+    const insertedId = Collection._collection.insert({ num: 2 });
+
+    let items = Collection.find().fetch();
+    let itemIds = items.map(_item => _item._id);
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible (optimistic-ui)
+
+    const aItem = items[0];
+    const insertedItem = items[1];
+    test.equal(aItem?.num, 1);
+    test.equal(insertedItem?.num, 2);
+
+    Collection._collection.remove({ _id: insertedId });
+
+    items = Collection.find().fetch();
+    itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(() => {
+          items = Collection.find().fetch();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, ['a']); // data is persisted
+          resolve();
+        }, 10);
+      });
+    }
+
+    return Promise.resolve();
+  },
+  function (test) { // Using methods
+    const Collection = new Mongo.Collection(
+      `methodsyncop_persistence${test.runId()}`,
+    );
+
+    Meteor.methods({
+      [`insertSyncMethodPersistence${test.runId()}`]: async () => {
+        Collection.insert({ _id: 'a' });
+      },
+    });
+
+    Meteor.call(`insertSyncMethodPersistence${test.runId()}`);
+
+    let items = Collection.find().fetch();
+    let itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(() => {
+          items = Collection.find().fetch();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, []); // data IS NOT persisted
+          resolve();
+        }, 10);
+      });
+    }
+
+    return Promise.resolve();
+  },
+]);
+
 testAsyncMulti('mongo-livedata - collection async operations data persistence', [
   async function (test) { // Using remote collection
     const Collection = new Mongo.Collection(
@@ -3509,7 +3619,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
 
     let items = await Collection.find().fetchAsync();
     let itemIds = items.map(_item => _item._id);
-    test.equal(itemIds, ['a', insertedId]); // temporary data accessible
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible (optimistic-ui)
 
     const aItem = items[0];
     const insertedItem = items[1];
@@ -3521,7 +3631,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
     items = await Collection.find().fetchAsync();
     itemIds = items.map(_item => _item._id);
 
-    test.equal(itemIds, ['a']); // temporary data accessible
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
 
     if (Meteor.isClient) {
       return new Promise(resolve => {
@@ -3530,7 +3640,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, []); // data IS NOT persisted
           resolve();
-        }, 100);
+        }, 10);
       });
     }
 
@@ -3547,7 +3657,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
 
     let items = await Collection.find().fetchAsync();
     let itemIds = items.map(_item => _item._id);
-    test.equal(itemIds, ['a', insertedId]); // temporary data accessible
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible (optimistic-ui)
 
     const aItem = items[0];
     const insertedItem = items[1];
@@ -3559,7 +3669,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
     items = await Collection.find().fetchAsync();
     itemIds = items.map(_item => _item._id);
 
-    test.equal(itemIds, ['a']); // temporary data accessible
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
 
     if (Meteor.isClient) {
       return new Promise(resolve => {
@@ -3568,7 +3678,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, ['a']); // data is persisted
           resolve();
-        }, 100);
+        }, 10);
       });
     }
 
@@ -3590,7 +3700,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
     let items = await Collection.find().fetchAsync();
     let itemIds = items.map(_item => _item._id);
 
-    test.equal(itemIds, ['a']); // temporary data accessible
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
 
     if (Meteor.isClient) {
       return new Promise(resolve => {
@@ -3599,7 +3709,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, []); // data IS NOT persisted
           resolve();
-        }, 100);
+        }, 10);
       });
     }
 
