@@ -320,3 +320,34 @@ Tinytest.addAsync(
     test.equal(serverEvents, ["server-only-sync", "publication"]);
   }
 );
+
+Tinytest.addAsync(
+  "method interaction with unblocking mechanism",
+  async function (test) {
+    await Meteor.callAsync("getAndResetEvents");
+
+    Meteor.callAsync("unblockedMethod", { delay: 200 }); // unblock + sleep for 20 milliseconds
+    Meteor.callAsync("blockingMethod"); // run straight + block
+
+    let serverEvents = await Meteor.callAsync("getAndResetEvents");
+
+    test.equal(
+      serverEvents,
+      ["unblock start", "blockingMethod"],
+      "should have started the unblock method and the block method straight"
+    );
+
+    return new Promise((resolve) =>
+      setTimeout(async () => {
+        serverEvents = await Meteor.callAsync("getAndResetEvents");
+        test.equal(
+          serverEvents,
+          ["unblock end"],
+          "should have ended the unblock method as sleep finished"
+        );
+
+        resolve();
+      }, 400)
+    );
+  }
+);
