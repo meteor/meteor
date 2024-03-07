@@ -326,7 +326,7 @@ Tinytest.addAsync(
   async function (test) {
     await Meteor.callAsync("getAndResetEvents");
 
-    Meteor.callAsync("unblockedMethod", { delay: 200 }); // unblock + sleep for 20 milliseconds
+    Meteor.callAsync("unblockedMethod", { delay: 200 }); // unblock + sleep for 200 milliseconds
     Meteor.callAsync("blockingMethod"); // run straight + block
 
     let serverEvents = await Meteor.callAsync("getAndResetEvents");
@@ -345,7 +345,6 @@ Tinytest.addAsync(
           ["unblock end"],
           "should have ended the unblock method as sleep finished"
         );
-
         resolve();
       }, 400)
     );
