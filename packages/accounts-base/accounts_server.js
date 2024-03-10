@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Meteor } from 'meteor/meteor'
+import { check, Match } from 'meteor/check';
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
@@ -7,12 +8,6 @@ import {
 import { URL } from 'meteor/url';
 
 const hasOwn = Object.prototype.hasOwnProperty;
-
-// XXX maybe this belongs in the check package
-const NonEmptyString = Match.Where(x => {
-  check(x, String);
-  return x.length > 0;
-});
 
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
@@ -1507,9 +1502,9 @@ export class AccountsServer extends AccountsCommon {
 
   _userQueryValidator = Match.Where(user => {
     check(user, {
-      id: Match.Optional(NonEmptyString),
-      username: Match.Optional(NonEmptyString),
-      email: Match.Optional(NonEmptyString)
+      id: Match.Optional(Match.NonEmptyString),
+      username: Match.Optional(Match.NonEmptyString),
+      email: Match.Optional(Match.NonEmptyString)
     });
     if (Object.keys(user).length !== 1)
       throw new Match.Error("User property must have exactly one field");
