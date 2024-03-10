@@ -1866,10 +1866,19 @@ main.registerCommand({
     if (options["all-packages"]) {
       Console.error("You cannot both specify a list of packages to"
        + " update and pass --all-packages.");
-       exit(1)
+       process.exit(1)
     }
 
     upgradePackageNames = options.args;
+
+    if (upgradePackageNames.some(name => name.includes("@"))) {
+      Console.error(
+        "Package names can not contain \"@\". If you are trying to",
+        "update a package to a specific version, instead use",
+        Console.command('"meteor add"')
+      );
+      process.exit(1);
+    }
   }
   // We want to use the project's release for constraints even if we are
   // currently running a newer release (eg if we ran 'meteor update --patch' and
