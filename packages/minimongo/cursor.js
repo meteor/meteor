@@ -219,7 +219,7 @@ export default class Cursor {
   /**
    * @summary Watch a query.  Receive callbacks as the result set changes.
    * @locus Anywhere
-   * @memberOf Promise<Mongo.Cursor>
+   * @memberOf Mongo.Cursor
    * @instance
    * @param {Object} callbacks Functions to call to deliver the result set as it
    *                           changes
@@ -390,7 +390,7 @@ export default class Cursor {
    *          the differences between the old and new documents are passed to
    *          the callbacks.
    * @locus Anywhere
-   * @memberOf Promise<Mongo.Cursor>
+   * @memberOf Mongo.Cursor
    * @instance
    * @param {Object} callbacks Functions to call to deliver the result set as it
    *                           changes
