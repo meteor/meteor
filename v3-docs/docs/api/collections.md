@@ -191,8 +191,8 @@ Read more about collections and how to use them in the [Collections](http://guid
 
 `find` returns a cursor. It does not immediately access the database or return
 documents. Cursors provide `fetch` to return all matching documents, `map` and
-`forEach` to iterate over all matching documents, and `observe` and
-`observeChanges` to register callbacks when the set of matching documents
+`forEach` to iterate over all matching documents, and `observeAsync` and
+`observeChangesAsync` to register callbacks when the set of matching documents
 changes. Cursors also implement ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols).
 
 ::: warning
@@ -212,7 +212,7 @@ disable this behavior, pass `{reactive: false}` as an option to
 `find`.
 
 Note that when `fields` are specified, only changes to the included
-fields will trigger callbacks in `observe`, `observeChanges` and
+fields will trigger callbacks in `observeAsync`, `observeChangesAsync` and
 invalidations in reactive computations using this cursor. Careful use
 of `fields` allows for more fine-grained reactivity for computations
 that don't depend on an entire document.
@@ -756,13 +756,13 @@ For server/isomorphic usage see [countAsync](#Mongo-Cursor-countAsync).
 
 Async version of [`count`](#Mongo-Cursor-count) that return a `Promise`.
 
-<ApiBox name="Mongo.Cursor#observe" instanceName="Cursor"/>
+<ApiBox name="Mongo.Cursor#observeAsync" instanceName="Cursor"/>
 
 Establishes a _live query_ that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
 document that was affected, as well as its old contents, if
 applicable. If you only need to receive the fields that changed, see
-[`observeChanges`](#Mongo-Cursor-observeChanges).
+[`observeChangesAsync`](#Mongo-Cursor-observeChangesAsync).
 
 `callbacks` may have the following functions as properties:
 
@@ -792,21 +792,20 @@ Use `added`, `changed`, and `removed` when you don't care about the
 order of the documents in the result set. They are more efficient than
 `addedAt`, `changedAt`, and `removedAt`.
 
-Before `observe` returns, `added` (or `addedAt`) will be called zero
+Before `observeAsync` returns, `added` (or `addedAt`) will be called zero
 or more times to deliver the initial results of the query.
 
 
-`observe` returns a live query handle, which is an object with a `stop` method.
+`observeAsync` returns a promise of the live query handle, which is an object with a `stop` method.
 Call `stop` with no arguments to stop calling the callback functions and tear
 down the query. **The query will run forever until you call this.** If
-`observe` is called from a `Tracker.autorun` computation, it is automatically
+`observeAsync` is called from a `Tracker.autorun` computation, it is automatically
 stopped when the computation is rerun or stopped.
 
-Live query handles have also `isReady` and `isReadyPromise` properties that
-indicate if the cursor is ready to be observed.
+::: tip
+`observeAsync` is recommended to keep code isomorphism in the client and server.
 
-::: warning
-`observe` in server returns a promise.
+`observe` stays sync for easier client-side handler management.
 :::
 
 (If the cursor was created with the option `reactive` set to false, it will
@@ -814,11 +813,11 @@ only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
 
 
-<ApiBox name="Mongo.Cursor#observeChanges" instanceName="Cursor"/>
+<ApiBox name="Mongo.Cursor#observeChangesAsync" instanceName="Cursor"/>
 
 Establishes a _live query_ that invokes callbacks when the result of
-the query changes. In contrast to [`observe`](#Mongo-Cursor-observe),
-`observeChanges` provides only the difference between the old and new
+the query changes. In contrast to [`observeAsync`](#Mongo-Cursor-observeAsync),
+`observeChangesAsync` provides only the difference between the old and new
 result set, not the entire contents of the document that changed.
 
 `callbacks` may have the following functions as properties:
@@ -845,31 +844,30 @@ result set, not the entire contents of the document that changed.
   The document identified by `id` changed its position in the result
   set, and now appears before the document identified by `before`.
 
-`observeChanges` is significantly more efficient if you do not use
+`observeChangesAsync` is significantly more efficient if you do not use
 `addedBefore` or `movedBefore`.
 
-Before `observeChanges` returns, `added` (or `addedBefore`) will be called
+Before `observeChangesAsync` returns, `added` (or `addedBefore`) will be called
 zero or more times to deliver the initial results of the query.
 
-`observeChanges` returns a live query handle, which is an object with a `stop`
+`observeChangesAsync` returns a promise of the live query handle, which is an object with a `stop`
 method. Call `stop` with no arguments to stop calling the callback functions
 and tear down the query. **The query will run forever until you call this.**
 If
-`observeChanges` is called from a `Tracker.autorun` computation, it is automatically
+`observeChangesAsync` is called from a `Tracker.autorun` computation, it is automatically
 stopped when the computation is rerun or stopped.
 
-Live query handles have also `isReady` and `isReadyPromise` properties that
-indicate if the cursor is ready to be observed.
+::: tip
+`observeChangesAsync` is recommended to keep code isomorphism in the client and server.
 
-::: warning
-`observe` in server returns a promise.
+`observeChanges` stays sync for easier client-side handler management.
 :::
 
 (If the cursor was created with the option `reactive` set to false, it will
 only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
 
-> Unlike `observe`, `observeChanges` does not provide absolute position
+> Unlike `observeAsync`, `observeChangesAsync` does not provide absolute position
 > information (that is, `atIndex` positions rather than `before`
 > positions.) This is for efficiency.
 
@@ -880,7 +878,7 @@ Example:
 let count = 0;
 const cursor = Users.find({ admin: true, onlineNow: true });
 
-const handle = cursor.observeChanges({
+const handle = await cursor.observeChangesAsync({
   added(id, user) {
     count += 1;
     console.log(`${user.name} brings the total to ${count} admins.`);
@@ -1035,7 +1033,7 @@ With one exception, it is not possible to mix inclusion and exclusion styles:
 the keys must either be all 1 or all 0. The exception is that you may specify
 `_id: 0` in an inclusion specifier, which will leave `_id` out of the result
 object as well. However, such field specifiers can not be used with
-[`observeChanges`](#Mongo-Cursor-observeChanges), [`observe`](#Mongo-Cursor-observe), cursors returned
+[`observeChangesAsync`](#Mongo-Cursor-observeChangesAsync), [`observeAsync`](#Mongo-Cursor-observeAsync), cursors returned
 from a [publish function](./meteor.md#Meteor-publish). They may be used with [`fetch`](#Mongo-Cursor-fetch),
 [`findOne`](#Mongo-Collection-findOne), [`forEach`](#Mongo-Cursor-forEach), and [`map`](#Mongo-Cursor-map).
 
