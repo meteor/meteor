@@ -1,0 +1,1 @@
+# Renamed functions

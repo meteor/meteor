@@ -13,7 +13,7 @@ export default defineConfig({
         text: "Guide",
         items: [
           {text: "Overview", link: "/"},
-          {text: "Breaking Changes", link: "/guide/breaking-changes"},
+          {text: "Breaking Changes", link: "/breaking-changes/"},
         ]
       },
       {
