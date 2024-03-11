@@ -803,9 +803,9 @@ down the query. **The query will run forever until you call this.** If
 stopped when the computation is rerun or stopped.
 
 ::: tip
-`observeAsync` is recommended to use to maintain code isomorphism between the client and server.
+`observeAsync` is recommended to keep code isomorphism in the client and server.
 
-`observe` keep behaving sync exclusively to facilitate the handling of the returned handler on the client.
+`observe` stays sync for easier client-side handler management.
 :::
 
 (If the cursor was created with the option `reactive` set to false, it will
@@ -858,9 +858,9 @@ If
 stopped when the computation is rerun or stopped.
 
 ::: tip
-`observeAsync` is recommended to use to maintain code isomorphism between the client and server.
+`observeChangesAsync` is recommended to keep code isomorphism in the client and server.
 
-`observe` keep behaving sync exclusively to facilitate the handling of the returned handler on the client.
+`observeChanges` stays sync for easier client-side handler management.
 :::
 
 (If the cursor was created with the option `reactive` set to false, it will
