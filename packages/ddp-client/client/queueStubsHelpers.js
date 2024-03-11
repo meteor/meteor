@@ -89,15 +89,19 @@ export const loadAsyncStubHelpers = () => {
 
     return queueFunction(
       (resolve, reject) => {
+        let hasStub = false;
         let finished = false;
 
         Meteor._setImmediate(() => {
           const applyAsyncPromise = oldApplyAsync.apply(this, args);
           stubPromiseResolver(applyAsyncPromise.stubPromise);
           serverPromiseResolver(applyAsyncPromise.serverPromise);
-          applyAsyncPromise.stubPromise.finally(() => {
-            finished = true;
-          });
+          hasStub = !!applyAsyncPromise.stubPromise;
+          if (hasStub) {
+            applyAsyncPromise.stubPromise.finally(() => {
+              finished = true;
+            });
+          }
           applyAsyncPromise
             .then((result) => {
               resolve(result);
@@ -108,7 +112,7 @@ export const loadAsyncStubHelpers = () => {
         });
 
         Meteor._setImmediate(() => {
-          if (!finished) {
+          if (hasStub && !finished) {
             console.warn(
               `Method stub (${name}) took too long and could cause unexpected problems. Learn more at https://github.com/zodern/fix-async-stubs/#limitations`
             );
