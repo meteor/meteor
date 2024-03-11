@@ -217,10 +217,12 @@ export default class Cursor {
   }
 
   /**
-   * @summary observe async version
+   * @summary Watch a query.  Receive callbacks as the result set changes.
    * @locus Anywhere
    * @memberOf Promise<Mongo.Cursor>
    * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
    */
   observeAsync(options) {
     return new Promise(resolve => resolve(this.observe(options)));
@@ -384,10 +386,14 @@ export default class Cursor {
   }
 
   /**
-   * @summary observeChanges async version
+   * @summary Watch a query. Receive callbacks as the result set changes. Only
+   *          the differences between the old and new documents are passed to
+   *          the callbacks.
    * @locus Anywhere
    * @memberOf Promise<Mongo.Cursor>
    * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
    */
   observeChangesAsync(options) {
     return new Promise((resolve) => {
