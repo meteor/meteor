@@ -1,20 +1,15 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 4,
   "dependencies": {
     "@sinonjs/commons": {
-      "version": "1.8.3",
-      "resolved": "https://registry.npmjs.org/@sinonjs/commons/-/commons-1.8.3.tgz",
-      "integrity": "sha512-xkNcLAn/wZaX14RPlwizcKicDk9G3F8m2nU3L7Ukm5zBgTwiT0wsoFAHx9Jq56fJA1z/7uKGtCRu16sOUCLIHQ=="
+      "version": "1.8.6",
+      "resolved": "https://registry.npmjs.org/@sinonjs/commons/-/commons-1.8.6.tgz",
+      "integrity": "sha512-Ky+XkAkqPZSm3NLBeUng77EBQl3cmeJhITaGHdYH8kjVB+aun3S4XBRti2zt17mtt0mIUDiNxYeoJm6drVvBJQ=="
     },
     "@sinonjs/fake-timers": {
       "version": "7.0.5",
       "resolved": "https://registry.npmjs.org/@sinonjs/fake-timers/-/fake-timers-7.0.5.tgz",
       "integrity": "sha512-fUt6b15bjV/VW93UP5opNXJxdwZSbK1EdiwnhN7XrQrcpaOhMJpZ/CjwFpM3THpxwA+YviBUJKSuEqKlCK5alw=="
-    },
-    "es6-promise": {
-      "version": "4.2.8",
-      "resolved": "https://registry.npmjs.org/es6-promise/-/es6-promise-4.2.8.tgz",
-      "integrity": "sha512-HJDGx5daxeIvxdBxvG2cb9g4tEvwIk3i8+nhX0yGrYmZUzbkdg8QbDevheDB8gd0//uPj4c1EQua8Q+MViT0/w=="
     },
     "type-detect": {
       "version": "4.0.8",

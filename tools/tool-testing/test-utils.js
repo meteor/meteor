@@ -25,53 +25,27 @@ export function randomUserEmail() {
   return 'selftest-user-' + randomString(15) + '@guerrillamail.com';
 }
 
-export function login(s, username, password) {
+export async function login(s, username, password) {
   var run = s.run('login');
   run.waitSecs(15);
-  run.matchErr('Username:');
+  await run.matchErr('Username:');
   run.write(username + '\n');
-  run.matchErr('Password:');
+  await run.matchErr('Password:');
   run.write(password + '\n');
   run.waitSecs(15);
-  run.matchErr('Logged in as ' + username + ".");
-  run.expectExit(0);
+  await run.matchErr('Logged in as ' + username + ".");
+  await run.expectExit(0);
 }
 
-export function logout(s) {
+export async function logout(s) {
   var run = s.run('logout');
   run.waitSecs(15);
-  run.matchErr('Logged out');
-  run.expectExit(0);
+  await run.matchErr('Logged out');
+  await run.expectExit(0);
 }
 
 export const registrationUrlRegexp =
   /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
-
-export function ddpConnect(url) {
-  return loadIsopackage('ddp-client').DDP.connect(url);
-}
-
-// Given a registration token created by doing a deferred registration
-// with `email`, makes a DDP connection to the accounts server and
-// finishes the registration process.
-export function registerWithToken(token, username, password, email) {
-  // XXX It might make more sense to hard-code the DDP url to
-  // https://www.meteor.com, since that's who the sandboxes are talking
-  // to.
-  var accountsConn = ddpConnect(getAuthDDPUrl());
-  var registrationTokenInfo = accountsConn.call('registrationTokenInfo',
-                                                token);
-  var registrationCode = registrationTokenInfo.code;
-  accountsConn.call('register', {
-    username: username,
-    password: password,
-    emails: [email],
-    token: token,
-    code: registrationCode
-  });
-  accountsConn.close();
-}
-
 export function randomOrgName() {
   return "selftestorg" + exports.randomString(10);
 }
@@ -112,14 +86,14 @@ export function getMeteorRuntimeConfigFromHTML(html) {
 
 // Poll the given app looking for the correct settings. Throws an error
 // if the settings aren't found after a timeout.
-export const checkForSettings = markStack(function (appName, settings, timeoutSecs) {
+export const checkForSettings = markStack(async function (appName, settings, timeoutSecs) {
   var timeoutDate = new Date(new Date().valueOf() + timeoutSecs * 1000);
   while (true) {
     if (new Date() >= timeoutDate) {
       fail('Expected settings not found on app ' + appName);
     }
 
-    var result = request('http://' + appName);
+    var result = await request('http://' + appName);
 
     // XXX This is brittle; the test will break if we start formatting the
     // __meteor_runtime_config__ JS differently. Ideally we'd do something

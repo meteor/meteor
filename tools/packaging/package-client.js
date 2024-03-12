@@ -39,27 +39,27 @@ var generateBlankReadme = function () {
 };
 
 // Save a readme file to a temporary path.
-var saveReadmeToTmp = function (readmeInfo) {
+var saveReadmeToTmp = async function (readmeInfo) {
   var tempReadmeDir = files.mkdtemp('readme');
   var readmePath = files.pathJoin(tempReadmeDir, "Readme.md");
-  files.writeFileAtomically(readmePath, readmeInfo.contents);
+  await files.writeFileAtomically(readmePath, readmeInfo.contents);
   return readmePath;
 };
 
 // Given a connection, makes a call to the package server.  (Checks to see if
 // the connection is connected, and reconnects if needed -- a workaround for
 // the fact that connections in the tool do not reconnect)
-exports.callPackageServer = function (conn, ...args) {
+exports.callPackageServer = async function (conn, ...args) {
   // XXX This is broken since it doesn't actually replace the conn in the
   // caller, so it'll happen on every subsequent call
   if (!conn.connected) {
     conn.close();
-    conn = exports.loggedInPackagesConnection();
+    conn = await exports.loggedInPackagesConnection();
   }
   return conn.call(...args);
 };
 
-var callPackageServerBM = exports.callPackageServerBM = function (...args) {
+var callPackageServerBM = exports.callPackageServerBM = async function (...args) {
   buildmessage.assertInJob();
   try {
     return exports.callPackageServer.apply(null, args);
@@ -84,7 +84,7 @@ var callPackageServerBM = exports.callPackageServerBM = function (...args) {
 //  - syncToken: a new syncToken object, that we can pass to the server in the future.
 //  - collections: an object keyed by the name of server collections, with the
 //    records as an array of javascript objects.
-var loadRemotePackageData = function (conn, syncToken, options) {
+var loadRemotePackageData = async function (conn, syncToken, options) {
   options = options || {};
 
   // Did we get disconnected between retries somehow? Then we should open a new
@@ -92,7 +92,7 @@ var loadRemotePackageData = function (conn, syncToken, options) {
   // since we don't need to authenticate.
   if (!conn.connected) {
     conn.close();
-    conn =  openPackageServerConnection();
+    conn = await openPackageServerConnection();
   }
 
   var syncOpts = {};
@@ -102,7 +102,7 @@ var loadRemotePackageData = function (conn, syncToken, options) {
   if (options && options.compressCollections) {
     syncOpts.compressCollections = options.compressCollections;
   }
-  return conn.call('syncNewPackageData', syncToken, syncOpts);
+  return await conn.call('syncNewPackageData', syncToken, syncOpts);
 };
 
 // Contacts the package server to get the latest diff and writes changes to
@@ -124,13 +124,13 @@ var loadRemotePackageData = function (conn, syncToken, options) {
 //    `config.getPackageServerUrl()`)
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
-exports.updateServerPackageData = function (dataStore, options) {
-  return buildmessage.enterJob('updating package catalog', function () {
-    return _updateServerPackageData(dataStore, options);
+exports.updateServerPackageData = async function (dataStore, options) {
+  return await buildmessage.enterJob('updating package catalog', async function () {
+    return await _updateServerPackageData(dataStore, options);
   });
 };
 
-var _updateServerPackageData = function (dataStore, options) {
+var _updateServerPackageData = async function (dataStore, options) {
   var self = this;
   options = options || {};
   if (dataStore === null) {
@@ -148,15 +148,14 @@ var _updateServerPackageData = function (dataStore, options) {
   var state = { current: 0, end: 60 * 60 * 1000, done: false};
   useProgressbar && buildmessage.reportProgress(state);
 
-  var conn = openPackageServerConnection(options.packageServerUrl);
-
+  var conn = await openPackageServerConnection(options.packageServerUrl);
   // Provide some progress indication for connection
   // XXX though it is just a hack
   state.current = 1;
   useProgressbar && buildmessage.reportProgress(state);
 
-  var getSomeData = function () {
-    var syncToken = dataStore.getSyncToken() || {format: "1.1"};
+  var getSomeData = async function () {
+    var syncToken = (await dataStore.getSyncToken()) || {format: "1.1"};
 
     if (!start) {
       start = {};
@@ -173,10 +172,11 @@ var _updateServerPackageData = function (dataStore, options) {
     var compress = !!process.env.METEOR_CATALOG_COMPRESS_RPCS;
 
     // (loadRemotePackageData may throw)
-    var remoteData = loadRemotePackageData(conn, syncToken, {
+    var remoteData = await loadRemotePackageData(conn, syncToken, {
       useShortPages: options.useShortPages,
       compressCollections: compress
     });
+
 
     // Is the remote server telling us to ignore everything we've heard before?
     // OK, we can do that.
@@ -191,11 +191,11 @@ var _updateServerPackageData = function (dataStore, options) {
       var zlib = require('zlib');
       var colsGzippedBuffer = Buffer.from(
         remoteData.collectionsCompressed, 'base64');
-      var colsJSON = new Promise((resolve, reject) => {
+      var colsJSON = await new Promise((resolve, reject) => {
         zlib.gunzip(colsGzippedBuffer, (err, res) => {
           err ? reject(err) : resolve(res);
         });
-      }).await();
+      });
       remoteData.collections = JSON.parse(colsJSON);
       delete remoteData.collectionsCompressed;
     }
@@ -204,7 +204,7 @@ var _updateServerPackageData = function (dataStore, options) {
     // data!  e.g. the last-refresh timestamp
     var syncComplete =
           _.isEqual(remoteData.collections, {}) || remoteData.upToDate;
-    dataStore.insertData(remoteData, syncComplete);
+    await dataStore.insertData(remoteData, syncComplete);
 
     // If there is no new data from the server, don't bother writing things to
     // disk (unless we were just told to reset everything).
@@ -220,7 +220,7 @@ var _updateServerPackageData = function (dataStore, options) {
 
   try {
     while (!done) {
-      getSomeData();
+      await getSomeData();
       requestGarbageCollection();
     }
   } finally {
@@ -230,15 +230,19 @@ var _updateServerPackageData = function (dataStore, options) {
   return ret;
 };
 
-_updateServerPackageData = Profile('package-client _updateServerPackageData',
-                                   _updateServerPackageData);
+_updateServerPackageData =
+  Profile('package-client _updateServerPackageData', _updateServerPackageData);
 
 // Returns a logged-in DDP connection to the package server, or null if
 // we cannot log in. If an error unrelated to login occurs
 // (e.g. connection to package server times out), then it will be
 // thrown.
-exports.loggedInPackagesConnection = function () {
-  return authClient.loggedInConnection(
+/**
+ *
+ * @return {Promise<*>}
+ */
+exports.loggedInPackagesConnection = async function () {
+  return await authClient.loggedInConnection(
     config.getPackageServerUrl(),
     config.getPackageServerDomain(),
     "package-server"
@@ -248,7 +252,7 @@ exports.loggedInPackagesConnection = function () {
 // XXX this is missing a few things. In retrospect a better approach here might
 //     be to actually make "save source somewhere else" or perhaps "add source
 //     to tarball" be part of the package build itself...
-var bundleSource = function (isopack, includeSources, packageDir) {
+var bundleSource = async function (isopack, includeSources, packageDir) {
   buildmessage.assertInJob();
 
   var name = isopack.name;
@@ -299,14 +303,14 @@ var bundleSource = function (isopack, includeSources, packageDir) {
   var packageMapFile = new projectContextModule.PackageMapFile({
     filename: packageMapFilename
   });
-  packageMapFile.write(pluginProviderPackageMap);
+  await packageMapFile.write(pluginProviderPackageMap);
 
   // We put this inside the temp dir because mkdtemp makes sure that the
   // temp dir gets cleaned up on process exit, so we don't have to worry
   // about cleaning up our tarball (or our copied source files)
   // ourselves.
   var sourceTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
-  files.createTarball(dirToTar, sourceTarball);
+  await files.createTarball(dirToTar, sourceTarball);
 
   var tarballHash = files.fileHash(sourceTarball);
   var treeHash = files.treeHash(dirToTar);
@@ -321,13 +325,13 @@ var bundleSource = function (isopack, includeSources, packageDir) {
 // Uploads a file at a filepath to the HTTP put URL.
 //
 // Returns true on success and false on failure.
-var uploadFile = function (putUrl, filepath) {
+var uploadFile = async function (putUrl, filepath) {
   buildmessage.assertInJob();
   var size = files.stat(filepath).size;
   var rs = files.createReadStream(filepath);
   try {
     // Use getUrl instead of request, to throw on 4xx/5xx.
-    httpHelpers.getUrl({
+    await httpHelpers.getUrl({
       method: 'PUT',
       url: putUrl,
       headers: {
@@ -350,7 +354,7 @@ var uploadFile = function (putUrl, filepath) {
 
 exports.uploadFile = uploadFile;
 
-export function bundleBuild(isopack, isopackCache) {
+export async function bundleBuild(isopack, isopackCache) {
   buildmessage.assertInJob();
 
   var tempDir = files.mkdtemp('bp-');
@@ -361,7 +365,7 @@ export function bundleBuild(isopack, isopackCache) {
   // disk in an IsopackCache, because we don't want to include
   // isopack-buildinfo.json. (We don't include it because we're not passing
   // includeIsopackBuildInfo to saveToPath here.)
-  isopack.saveToPath(tarInputDir, {
+  await isopack.saveToPath(tarInputDir, {
     // When publishing packages that don't use new registerCompiler plugins,
     // make sure that old Meteors can use it too
     includePreCompilerPluginIsopackVersions: true,
@@ -369,11 +373,10 @@ export function bundleBuild(isopack, isopackCache) {
   });
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
+  await files.createTarball(tarInputDir, buildTarball);
 
-  files.createTarball(tarInputDir, buildTarball);
-
-  var tarballHash = files.fileHash(buildTarball);
-  var treeHash = files.treeHash(tarInputDir, {
+  var tarballHash =  files.fileHash(buildTarball);
+  var treeHash =  files.treeHash(tarInputDir, {
     // We don't include any package.json from an npm module in the tree hash,
     // because npm isn't super consistent about what it puts in there (eg, does
     // it include the "readme" field)? This ends up leading to spurious
@@ -393,15 +396,15 @@ export function bundleBuild(isopack, isopackCache) {
   };
 }
 
-function createBuiltPackage(isopack, isopackCache) {
+async function createBuiltPackage(isopack, isopackCache) {
   buildmessage.assertInJob();
   var name = isopack.name;
 
   // Note: we really want to do this before createPackageBuild, because the URL
   // we get from createPackageBuild will expire!
   var bundleResult;
-  buildmessage.enterJob("bundling build for " + name, function () {
-    bundleResult = bundleBuild(isopack, isopackCache);
+  await buildmessage.enterJob("bundling build for " + name, async function () {
+    bundleResult = await bundleBuild(isopack, isopackCache);
   });
   if (buildmessage.jobHasMessages()) {
     return;
@@ -410,13 +413,13 @@ function createBuiltPackage(isopack, isopackCache) {
   return bundleResult;
 }
 
-var publishBuiltPackage = function (conn, isopack, bundleResult) {
+var publishBuiltPackage = async function (conn, isopack, bundleResult) {
   buildmessage.assertInJob();
   var name = isopack.name;
 
   var uploadInfo;
-  buildmessage.enterJob('creating package build for ' + name, function () {
-    uploadInfo = callPackageServerBM(conn, 'createPackageBuild', {
+  await buildmessage.enterJob('creating package build for ' + name, async function () {
+    uploadInfo = await callPackageServerBM(conn, 'createPackageBuild', {
       packageName: isopack.name,
       version: isopack.version,
       buildArchitectures: isopack.buildArchitectures()
@@ -426,30 +429,34 @@ var publishBuiltPackage = function (conn, isopack, bundleResult) {
     return;
   }
 
-  buildmessage.enterJob("uploading build", function () {
-    uploadFile(uploadInfo.uploadUrl,
-               bundleResult.buildTarball);
+  await buildmessage.enterJob("uploading build", async function () {
+    await uploadFile(uploadInfo.uploadUrl,
+      bundleResult.buildTarball);
   });
   if (buildmessage.jobHasMessages()) {
     return;
   }
 
-  buildmessage.enterJob('publishing package build for ' + name, function () {
-    callPackageServerBM(conn, 'publishPackageBuild',
-                        uploadInfo.uploadToken,
-                        bundleResult.tarballHash,
-                        bundleResult.treeHash);
+  await buildmessage.enterJob('publishing package build for ' + name, async function () {
+    try {
+      await callPackageServerBM(conn, 'publishPackageBuild',
+        uploadInfo.uploadToken,
+        bundleResult.tarballHash,
+        bundleResult.treeHash);
+    } catch (e) {
+      buildmessage.error(e.message);
+    }
   });
   if (buildmessage.jobHasMessages()) {
     return;
   }
 };
 
-export function createAndPublishBuiltPackage(conn, isopack, isopackCache) {
-  publishBuiltPackage(
+export async function createAndPublishBuiltPackage(conn, isopack, isopackCache) {
+  await publishBuiltPackage(
     conn,
     isopack,
-    createBuiltPackage(isopack, isopackCache),
+    await createBuiltPackage(isopack, isopackCache),
   );
 }
 
@@ -469,7 +476,7 @@ exports.handlePackageServerConnectionError = function (error) {
 //   package server. DO NOT CLOSE this connection here.
 //
 // Return true on success and an error code otherwise.
-exports.updatePackageMetadata = function (options) {
+exports.updatePackageMetadata = async function (options) {
   buildmessage.assertInJob();
 
   var packageSource = options.packageSource;
@@ -520,8 +527,8 @@ exports.updatePackageMetadata = function (options) {
 
   // Update the general metadata.
   var versionIdentifier = { packageName: name, version: version };
-  buildmessage.enterJob('updating metadata', function () {
-    callPackageServerBM(
+  await buildmessage.enterJob('updating metadata', async function () {
+    await callPackageServerBM(
       conn, "changeVersionMetadata", versionIdentifier, dataToUpdate);
   });
   if (buildmessage.jobHasMessages()) {
@@ -529,17 +536,17 @@ exports.updatePackageMetadata = function (options) {
   }
 
   // Upload the new Readme.
-  buildmessage.enterJob('uploading documentation', function () {
+  await buildmessage.enterJob('uploading documentation', async function () {
     var readmePath = saveReadmeToTmp(readmeInfo);
     var uploadInfo =
-          callPackageServerBM(conn, "createReadme", versionIdentifier);
-    if (! uploadInfo) {
+      await callPackageServerBM(conn, "createReadme", versionIdentifier);
+    if (!uploadInfo) {
       return;
     }
-    if (! uploadFile(uploadInfo.url, readmePath)) {
+    if (!await uploadFile(uploadInfo.url, readmePath)) {
       return;
     }
-    callPackageServerBM(
+    await callPackageServerBM(
       conn, "publishReadme", uploadInfo.uploadToken, { hash: readmeInfo.hash });
   });
   if (buildmessage.jobHasMessages()) {
@@ -566,7 +573,7 @@ exports.updatePackageMetadata = function (options) {
 // - doNotPublishBuild: do not publish the build of this package.
 //
 // Return true on success and an error code otherwise.
-exports.publishPackage = function (options) {
+exports.publishPackage = async function (options) {
   buildmessage.assertInJob();
   var packageSource = options.packageSource;
   var conn = options.connection;
@@ -609,15 +616,14 @@ exports.publishPackage = function (options) {
 
   // Check that we are an authorized maintainer of this package.
   if (!options['new']) {
-    var packRecord = catalog.official.getPackage(name);
+    var packRecord = await catalog.official.getPackage(name);
     if (! packRecord) {
       buildmessage.error(
         'There is no package named ' + name +
           '. If you are creating a new package, use the --create flag.');
       return;
     }
-
-    if (!exports.amIAuthorized(name, conn, false)) {
+    if (!await exports.amIAuthorized(name, conn, false)) {
       buildmessage.error(
         'You are not an authorized maintainer of ' + name + '.  Only ' +
           'authorized maintainers may publish new versions.');
@@ -626,7 +632,7 @@ exports.publishPackage = function (options) {
 
   // Check that our documentation exists (or we know that it doesn't) and has
   // been filled out.
-  var readmeInfo = buildmessage.enterJob(
+  var readmeInfo = await buildmessage.enterJob(
     "processing documentation",
     function () {
       return packageSource.processReadme();
@@ -657,10 +663,9 @@ exports.publishPackage = function (options) {
   if (! readmeInfo) {
     readmeInfo = generateBlankReadme();
   }
-  var readmePath = saveReadmeToTmp(readmeInfo);
+  var readmePath = await saveReadmeToTmp(readmeInfo);
 
   var packageDeps = packageSource.getDependencyMetadata();
-
   // Check that the package does not have any unconstrained references.
   _.each(packageDeps, function(refs, label) {
     if (refs.constraint == null) {
@@ -696,6 +701,7 @@ exports.publishPackage = function (options) {
   }
 
   var isopack = projectContext.isopackCache.getIsopack(name);
+
   if (! isopack) {
     throw Error("no isopack " + name);
   }
@@ -737,18 +743,18 @@ exports.publishPackage = function (options) {
   }
 
   var sourceBundleResult;
-  buildmessage.enterJob("bundling source for " + name, function () {
-    sourceBundleResult = bundleSource(
+  await buildmessage.enterJob("bundling source for " + name, async function () {
+    sourceBundleResult = await bundleSource(
       isopack, sourceFiles, packageSource.sourceRoot);
   });
+
   if (buildmessage.jobHasMessages()) {
     return;
   }
-
   // Create the package. Check that the metadata exists.
   if (options.new) {
-    buildmessage.enterJob("creating package " + name, function () {
-      callPackageServerBM(conn, 'createPackage', {
+    await buildmessage.enterJob("creating package " + name, async function () {
+      await callPackageServerBM(conn, 'createPackage', {
         name: packageSource.name
       });
     });
@@ -758,7 +764,7 @@ exports.publishPackage = function (options) {
   }
 
   if (options.existingVersion) {
-    var existingRecord = catalog.official.getVersion(name, version);
+    var existingRecord = await catalog.official.getVersion(name, version);
     if (! existingRecord) {
       buildmessage.error("Version does not exist.");
       return;
@@ -769,7 +775,7 @@ exports.publishPackage = function (options) {
     }
 
     if (! options.doNotPublishBuild) {
-      createAndPublishBuiltPackage(
+      await createAndPublishBuiltPackage(
         conn, isopack, projectContext.isopackCache);
 
       if (buildmessage.jobHasMessages()) {
@@ -780,7 +786,7 @@ exports.publishPackage = function (options) {
     // XXX check that we're actually providing something new?
   } else {
     var uploadInfo;
-    buildmessage.enterJob("pre-publishing package " + name, function () {
+    await buildmessage.enterJob("pre-publishing package " + name, async function () {
       var uploadRec = {
         packageName: packageSource.name,
         version: version,
@@ -800,7 +806,7 @@ exports.publishPackage = function (options) {
         releaseName: release.current.name,
         dependencies: packageDeps
       };
-      uploadInfo = callPackageServerBM(conn, 'createPackageVersion', uploadRec);
+      uploadInfo = await callPackageServerBM(conn, 'createPackageVersion', uploadRec);
     });
     if (buildmessage.jobHasMessages()) {
       return;
@@ -811,26 +817,28 @@ exports.publishPackage = function (options) {
     // publish a new build.
     // Documentation is smaller than the source. Upload it first, to minimize
     // the chances of PUT URLs expiring. (XXX: in the far future, parallelize this)
-    buildmessage.enterJob("uploading documentation", function () {
-      uploadFile(uploadInfo.readmeUrl, readmePath);
+    await buildmessage.enterJob("uploading documentation", async function () {
+      await uploadFile(uploadInfo.readmeUrl, readmePath);
     });
+
     if (buildmessage.jobHasMessages()) {
       return;
     }
 
-    buildmessage.enterJob("uploading source", function () {
-      uploadFile(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
+    await buildmessage.enterJob("uploading source", async function () {
+      await uploadFile(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
     });
+
     if (buildmessage.jobHasMessages()) {
       return;
     }
 
     if (! options.doNotPublishBuild) {
-      var bundleResult = createBuiltPackage(
+
+      var bundleResult = await createBuiltPackage(
         isopack,
         projectContext.isopackCache,
       );
-
       if (buildmessage.jobHasMessages()) {
         return;
       }
@@ -841,8 +849,8 @@ exports.publishPackage = function (options) {
       treeHash: sourceBundleResult.treeHash,
       readmeHash: readmeInfo.hash
     };
-    buildmessage.enterJob("publishing package version", function () {
-      callPackageServerBM(
+    await buildmessage.enterJob("publishing package version", async function () {
+      await callPackageServerBM(
         conn, 'publishPackageVersion', uploadInfo.uploadToken, hashes);
     });
     if (buildmessage.jobHasMessages()) {
@@ -850,7 +858,7 @@ exports.publishPackage = function (options) {
     }
 
     if (! options.doNotPublishBuild) {
-      publishBuiltPackage(conn, isopack, bundleResult);
+      await publishBuiltPackage(conn, isopack, bundleResult);
       if (buildmessage.jobHasMessages()) {
         return;
       }
@@ -867,12 +875,12 @@ exports.publishPackage = function (options) {
 //
 // If this returns FALSE, then we are NOT authorized.
 // Otherwise, return true.
-exports.amIAuthorized = function (name, conn, isRelease) {
+exports.amIAuthorized = async function (name, conn, isRelease) {
   var methodName = "amIAuthorized" +
     (isRelease ? "Release" : "Package");
 
   try {
-    exports.callPackageServer(conn, methodName, name);
+    await exports.callPackageServer(conn, methodName, name);
   } catch (err) {
     if (err.error === 401) {
       return false;

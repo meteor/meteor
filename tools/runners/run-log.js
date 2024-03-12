@@ -16,11 +16,10 @@ var fiberHelpers = require('../utils/fiber-helpers.js');
 // anywhere that may overlap with use of runLog.
 
 let _Log;
-function getLoggingPackage() {
+async function getLoggingPackage() {
   if (! _Log) {
-    _Log = require("../tool-env/isopackets.js")
-      .loadIsopackage('logging')
-      .Log;
+    const { loadIsopackage } = require("../tool-env/isopackets.js");
+    _Log = (await loadIsopackage('logging')).Log;
   }
 
   // Since no other process will be listening to stdout and parsing it,
@@ -84,10 +83,10 @@ Object.assign(RunLog.prototype, {
     this.rawLogs = !!rawLogs;
   },
 
-  logAppOutput: function (line, isStderr) {
+  logAppOutput: async function (line, isStderr) {
     var self = this;
 
-    var Log = getLoggingPackage();
+    var Log = await getLoggingPackage();
 
     var obj = (isStderr ?
                Log.objFromText(line, { level: 'warn', stderr: true }) :

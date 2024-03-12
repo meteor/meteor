@@ -1,4 +1,4 @@
-import { Meteor } from 'meteor/meteor';
+import Util from 'util';
 import { fetch, Request } from 'meteor/fetch';
 import { URL, URLSearchParams } from 'meteor/url';
 import { HTTP, makeErrorByStatus, populateData } from './httpcall_common.js';
@@ -161,4 +161,10 @@ function _call (method, url, options, callback) {
     .catch(err => callback(err));
 }
 
-HTTP.call = Meteor.wrapAsync(_call);
+HTTP.call = function(...args) {
+  const cb = args.pop();
+  if (typeof cb === 'function') {
+    return _call(...args, cb);
+  }
+  return Util.promisify(_call)(...args, cb);
+}

@@ -6,7 +6,7 @@ const testPendingCredential = async function (test, method) {
   const credentialToken = Random.id();
   const serviceName = Random.id();
 
-  ServiceConfiguration.configurations.insert({service: serviceName});
+  await ServiceConfiguration.configurations.insertAsync({service: serviceName});
 
   try {
     // register a fake login service
@@ -55,7 +55,7 @@ const testPendingCredential = async function (test, method) {
     const credentialSecret = respData;
 
     // Test that the result for the token is available
-    let result = OAuth._retrievePendingCredential(credentialToken,
+    let result = await OAuth._retrievePendingCredential(credentialToken,
                                                   credentialSecret);
     const serviceData = OAuth.openSecrets(result.serviceData);
     test.equal(result.serviceName, serviceName);
@@ -64,7 +64,7 @@ const testPendingCredential = async function (test, method) {
     test.equal(result.options.option1, foobookOption1);
 
     // Test that pending credential is removed after being retrieved
-    result = OAuth._retrievePendingCredential(credentialToken);
+    result = await OAuth._retrievePendingCredential(credentialToken);
     test.isUndefined(result);
 
   } finally {

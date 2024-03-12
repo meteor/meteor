@@ -65,13 +65,13 @@ _.extend(ExpectationManager.prototype, {
       throw new Error("Too late to add more expectations to the test");
     self.outstanding++;
 
-    return function (/* arguments */) {
+    return async function (/* arguments */) {
       if (self.dead)
         return;
 
       if (typeof expected === "function") {
         try {
-          expected.apply({}, arguments);
+          await expected.apply({}, arguments);
         } catch (e) {
           if (self.cancel())
             self.test.exception(e);
@@ -127,11 +127,11 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
       }
       else {
         var em = new ExpectationManager(test, function () {
-          Meteor.clearTimeout(timer);
+          clearTimeout(timer);
           runNext();
         });
 
-        var timer = Meteor.setTimeout(function () {
+        var timer = setTimeout(function () {
           if (em.cancel()) {
             test.fail({type: "timeout", message: "Async batch timed out"});
             onComplete();
@@ -155,7 +155,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
             test.exception(exception);
             // Because we called test.exception, we're not to call onComplete.
           }
-          Meteor.clearTimeout(timer);
+          clearTimeout(timer);
         });
       }
     };
@@ -170,16 +170,19 @@ simplePoll = function (fn, success, failed, timeout, step) {
   timeout = timeout || 10000;
   step = step || 100;
   var start = (new Date()).valueOf();
+  let timeOutId;
   var helper = function () {
     if (fn()) {
       success();
+      Meteor.clearTimeout(timeOutId);
       return;
     }
     if (start + timeout < (new Date()).valueOf()) {
       failed();
+      Meteor.clearTimeout(timeOutId);
       return;
     }
-    Meteor.setTimeout(helper, step);
+    timeOutId = Meteor.setTimeout(helper, step);
   };
   helper();
 };

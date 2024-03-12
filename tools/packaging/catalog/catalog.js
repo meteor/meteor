@@ -16,9 +16,9 @@ catalog.Refresh.OnceAtStart = function (options) {
   self.options = Object.assign({}, options);
 };
 
-catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
+catalog.Refresh.OnceAtStart.prototype.beforeCommand = async function () {
   var self = this;
-  if (!catalog.refreshOrWarn(self.options)) {
+  if (!await catalog.refreshOrWarn(self.options)) {
     if (self.options.ignoreErrors) {
       Console.debug("Failed to update package catalog, but will continue.");
     } else {
@@ -42,10 +42,10 @@ catalog.Refresh.Never = function (options) {
 //
 // THIS IS A HIGH-LEVEL UI COMMAND. DO NOT CALL IT FROM LOW-LEVEL CODE (ie, call
 // it only from main.js or command implementations).
-catalog.refreshOrWarn = function (options) {
+catalog.refreshOrWarn = async function (options) {
   catalog.triedToRefreshRecently = true;
   try {
-    catalog.official.refresh(options);
+    await catalog.official.refresh(options);
     catalog.refreshFailed = false;
     return true;
   } catch (err) {
@@ -89,15 +89,15 @@ catalog.refreshOrWarn = function (options) {
 
 // Runs 'attempt'; if it fails in a way that can be fixed by refreshing the
 // official catalog, does that and tries again.
-catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
+catalog.runAndRetryWithRefreshIfHelpful = async function (attempt) {
   buildmessage.assertInJob();
 
   var canRetry = ! (catalog.triedToRefreshRecently ||
                     catalog.official.offline);
 
   // Run `attempt` in a nested buildmessage context.
-  var messages = buildmessage.capture(function () {
-    attempt(canRetry);
+  var messages = await buildmessage.capture(async function () {
+    await attempt(canRetry);
   });
 
   // Did it work? Great.
@@ -120,7 +120,7 @@ catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
   // log.
   catalog.triedToRefreshRecently = true;
   try {
-    catalog.official.refresh();
+    await catalog.official.refresh();
     catalog.refreshFailed = false;
   } catch (err) {
     if (err.errorType !== 'DDP.ConnectionError')
@@ -128,17 +128,17 @@ catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
     // First place the previous errors in the capture.
     buildmessage.mergeMessagesIntoCurrentJob(messages);
     // Then put an error representing this DDP error.
-    buildmessage.enterJob(
+    await buildmessage.enterJob(
       "refreshing package catalog to resolve previous errors",
       function () {
-        buildmessage.error(err.message);
+        return buildmessage.error(err.message);
       }
     );
     return;
   }
 
   // Try again, this time directly in the current buildmessage job.
-  attempt(false); // canRetry = false
+  await attempt(false); // canRetry = false
 };
 
 // As a work-around for [] !== [], we use a function to check whether values are acceptable
@@ -203,14 +203,14 @@ Object.assign(LayeredCatalog.prototype, {
       "getSortedVersionRecords", args, ACCEPT_NON_EMPTY);
   },
 
-  getVersion: function (name, version) {
+  getVersion: async function (name, version) {
     var self = this;
     var result = self.localCatalog.getVersion(name, version);
     if (!result) {
       if (/\+/.test(version)) {
         return null;
       }
-      result = self.otherCatalog.getVersion(name, version);
+      result = await self.otherCatalog.getVersion(name, version);
     }
     return result;
   },
@@ -218,17 +218,17 @@ Object.assign(LayeredCatalog.prototype, {
   // As getVersion, but returns info on the latest version of the
   // package, or null if the package doesn't exist or has no versions.
   // It does not include prereleases (with dashes in the version);
-  getLatestMainlineVersion: function (name) {
+  getLatestMainlineVersion: async function (name) {
     var self = this;
 
-    var versions = self.getSortedVersions(name);
+    var versions = await self.getSortedVersions(name);
     versions.reverse();
     var latest = versions.find(function (version) {
       return !/-/.test(version);
     });
     if (!latest)
       return null;
-    return self.getVersion(name, latest);
+    return await self.getVersion(name, latest);
   }
 });
 

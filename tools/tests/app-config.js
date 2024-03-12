@@ -1,9 +1,11 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("mainModule", function () {
+selftest.define("mainModule", async function () {
   const s = new Sandbox();
-  s.createApp("app-config-mainModule", "app-config");
+  await s.init();
+
+  await s.createApp("app-config-mainModule", "app-config");
   s.cd("app-config-mainModule");
 
   // For meteortesting:mocha to work we must set test broswer driver
@@ -17,106 +19,106 @@ selftest.define("mainModule", function () {
   );
 
   run.waitSecs(60);
-  run.match("App running at");
+  await run.match("App running at");
 
   function check(mainModule, errorPattern) {
-    writeConfig(s, run, mainModule, errorPattern);
+    return writeConfig(s, run, mainModule, errorPattern);
   }
 
-  check();
+  await check();
 
-  check(null);
+  await check(null);
 
-  check("oyez", /Could not resolve meteor.mainModule/);
+  await check("oyez", /Could not resolve meteor.mainModule/);
 
-  check({});
+  await check({});
 
-  check(false);
+  await check(false);
 
-  check({
+  await check({
     client: false,
     server: "abc",
   });
 
-  check({
+  await check({
     client: "abc",
     server: false,
   });
 
-  check({
+  await check({
     web: false,
   });
 
-  check({
+  await check({
     os: false,
   });
 
-  check({
+  await check({
     client: "a",
     os: "bc",
   });
 
-  check({
+  await check({
     client: "b.js",
     server: "abc",
   });
 
-  check({
+  await check({
     client: "./c",
     server: "/ac",
   });
 
-  check({
+  await check({
     server: "./a",
     web: "ab",
   });
 
-  check({
+  await check({
     client: "ac.js",
     os: "a",
   });
 
-  check({
+  await check({
     web: "bc",
     server: "a",
   });
 
-  check({
+  await check({
     server: "b.js",
     client: "abc",
   });
 
-  check({
+  await check({
     client: "abc",
   });
 
-  check({
+  await check({
     server: "b.js",
   });
 
-  check({
+  await check({
     client: "/ac",
     server: "./c",
   });
 
-  check({
+  await check({
     os: "ab",
     client: "./a",
   });
 
-  check({
+  await check({
     server: "ac.js",
     web: "a",
   });
 
-  check(null);
+  await check(null);
 
-  check();
+  await check();
 
-  run.stop();
+  await run.stop();
 });
 
-function writeConfig(s, run, mainModule, errorPattern) {
+async function writeConfig(s, run, mainModule, errorPattern) {
   const json = JSON.parse(s.read("package.json"));
 
   json.meteor = {
@@ -135,18 +137,20 @@ function writeConfig(s, run, mainModule, errorPattern) {
   run.waitSecs(10);
 
   if (errorPattern instanceof RegExp) {
-    run.match(errorPattern);
+    await run.match(errorPattern);
   } else {
     run.forbid(" 0 passing ");
-    run.match("SERVER FAILURES: 0");
-    run.match("CLIENT FAILURES: 0");
+    await run.match("SERVER FAILURES: 0");
+    await run.match("CLIENT FAILURES: 0");
   }
 }
 
-selftest.define("testModule", function () {
+selftest.define("testModule", async function () {
   const s = new Sandbox();
-  s.createApp("app-config-mainModule", "app-config");
-  s.cd("app-config-mainModule");
+  await s.init();
+
+  await s.createApp("app-config-mainModule", "app-config");
+  await s.cd("app-config-mainModule");
 
   // For meteortesting:mocha to work we must set test broswer driver
   // See https://github.com/meteortesting/meteor-mocha
@@ -160,38 +164,38 @@ selftest.define("testModule", function () {
   );
 
   run.waitSecs(60);
-  run.match("App running at");
+  await run.match("App running at");
 
   function check(mainModule) {
-    writeConfig(s, run, mainModule);
+    return writeConfig(s, run, mainModule);
   }
 
-  check();
+  await check();
 
-  check(false);
+  await check(false);
 
-  check({
+  await check({
     client: "abc"
   });
 
-  check({
+  await check({
     server: "abc"
   });
 
-  check({
+  await check({
     client: "abc",
     server: "abc"
   });
 
-  check({
+  await check({
     client: "abc",
     server: false
   });
 
-  check({
+  await check({
     client: false,
     server: "abc"
   });
 
-  run.stop();
+  await run.stop();
 });

@@ -1,6 +1,3 @@
-if (Meteor.isServer)
-  var Future = Npm.require('fibers/future');
-
 if (typeof __meteor_runtime_config__ === 'object' &&
     __meteor_runtime_config__.meteorRelease) {
   /**
@@ -148,38 +145,17 @@ Meteor.wrapAsync = function (fn, context) {
     }
 
     if (! callback) {
-      if (Meteor.isClient) {
-        callback = logErr;
-      } else {
-        var fut = new Future();
-        callback = fut.resolver();
-      }
+      callback = logErr;
       ++i; // Insert the callback just after arg.
     }
 
     newArgs[i] = Meteor.bindEnvironment(callback);
-    var result = fn.apply(self, newArgs);
-    return fut ? fut.wait() : result;
+    return fn.apply(self, newArgs);
   };
 };
 
 Meteor.wrapFn = function (fn) {
-  if (!fn || typeof fn !== 'function') {
-    throw new Meteor.Error("Expected to receive function to wrap");
-  }
-
-  if (Meteor.isClient) {
-    return fn;
-  }
-
-  return function() {
-    var ret = fn.apply(this, arguments);
-    if (ret && typeof ret.then === 'function') {
-      return Promise.await(ret);
-    }
-
-    return ret;
-  }
+  return fn;
 };
 
 // Sets child's prototype to a new object whose prototype is parent's

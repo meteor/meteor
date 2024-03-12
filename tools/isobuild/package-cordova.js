@@ -1,13 +1,13 @@
 import { ensureOnlyValidVersions } from "../utils/utils.js";
 import buildmessage from "../utils/buildmessage.js";
 
-export class PackageCordova {
   /**
    * @summary Class of the 'Cordova' object visible in package.js
    * @locus package.js
    * @instanceName Cordova
    * @showInstanceName true
    */
+export class PackageCordova {
   constructor() {
     this._dependencies = null;
   }

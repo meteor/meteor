@@ -1,24 +1,27 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("meteor npm run some-script-name - error returns exit status to shell", function () {
+selftest.define("meteor npm run some-script-name - error returns exit status to shell", async function () {
   var s = new Sandbox();
+  await s.init();
   var run;
 
-  s.createApp("myapp", "dev-bundle-bin-commands");
+  await s.createApp("myapp", "dev-bundle-bin-commands");
   s.cd("myapp");
   run = s.run("npm", "run", "exit-with-status");
-  run.matchErr("This script has an exit status");
-  run.expectExit(1);
+  await run.matchErr("This script has an exit status");
+  await run.expectExit(1);
 });
 
-selftest.define("meteor npm some-script-name - normal exit returns normal to shell", function () {
+selftest.define("meteor npm some-script-name - normal exit returns normal to shell", async function () {
   var s = new Sandbox();
+  await s.init();
+
   var run;
 
-  s.createApp("myapp", "dev-bundle-bin-commands");
+  await s.createApp("myapp", "dev-bundle-bin-commands");
   s.cd("myapp");
   run = s.run("npm", "run", "exit-normally");
-  run.match("This script will exit normally");
-  run.expectExit(0);
+  await run.match("This script will exit normally");
+  await run.expectExit(0);
 });

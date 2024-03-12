@@ -1,5 +1,3 @@
-require("./tool-env/install-promise.js");
-
 require("./cli/dev-bundle-bin-commands.js").then(function (child) {
   if (! child) {
     // Use process.nextTick here to prevent the Promise from swallowing

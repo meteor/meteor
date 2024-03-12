@@ -3,7 +3,7 @@ title: Core
 description: Documentation of core Meteor functions.
 ---
 
-If you prefer to watch the video, click below. 
+If you prefer to watch the video, click below.
 
 {% youtube 6RRVU0-Vvm8 %}
 
@@ -64,3 +64,5 @@ if (Meteor.isServer) {
 {% apibox "Meteor.isAppTest" %}
 
 {% apibox "Meteor.isPackageTest" %}
+
+{% apibox "Meteor.isFibersDisabled" %}

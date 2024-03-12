@@ -23,6 +23,8 @@ DDP._CurrentPublicationInvocation = new Meteor.EnvironmentVariable();
 // XXX: Keep DDP._CurrentInvocation for backwards-compatibility.
 DDP._CurrentInvocation = DDP._CurrentMethodInvocation;
 
+DDP._CurrentCallAsyncInvocation = new Meteor.EnvironmentVariable();
+
 // This is passed into a weird `makeErrorType` function that expects its thing
 // to be a constructor
 function connectionErrorConstructor(message) {

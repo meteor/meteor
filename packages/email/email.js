@@ -52,10 +52,7 @@ const makeTransport = function (mailUrlString) {
     mailUrl.query.pool = 'true';
   }
 
-  const transport = nodemailer.createTransport(url.format(mailUrl));
-
-  transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
-  return transport;
+  return nodemailer.createTransport(url.format(mailUrl));
 };
 
 // More info: https://nodemailer.com/smtp/well-known/
@@ -96,16 +93,13 @@ const knownHostsTransport = function (settings = undefined, url = undefined) {
     );
   }
 
-  const transport = nodemailer.createTransport({
+  return nodemailer.createTransport({
     service: settings?.service || service,
     auth: {
       user: settings?.user || user,
       pass: settings?.password || password,
     },
   });
-
-  transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
-  return transport;
 };
 EmailTest.knowHostsTransport = knownHostsTransport;
 
@@ -116,24 +110,24 @@ const getTransport = function () {
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
   if (
-    this.cacheKey === undefined ||
-    this.cacheKey !== url ||
-    this.cacheKey !== packageSettings.service ||
-    this.cacheKey !== 'settings'
+    globalThis.cacheKey === undefined ||
+    globalThis.cacheKey !== url ||
+    globalThis.cacheKey !== packageSettings.service ||
+    globalThis.cacheKey !== 'settings'
   ) {
     if (
       (packageSettings.service && wellKnow(packageSettings.service)) ||
       (url && wellKnow(new URL(url).hostname)) ||
       wellKnow(url?.split(':')[0] || '')
     ) {
-      this.cacheKey = packageSettings.service || 'settings';
-      this.cache = knownHostsTransport(packageSettings, url);
+      globalThis.cacheKey = packageSettings.service || 'settings';
+      globalThis.cache = knownHostsTransport(packageSettings, url);
     } else {
-      this.cacheKey = url;
-      this.cache = url ? makeTransport(url, packageSettings) : null;
+      globalThis.cacheKey = url;
+      globalThis.cache = url ? makeTransport(url, packageSettings) : null;
     }
   }
-  return this.cache;
+  return globalThis.cache;
 };
 
 let nextDevModeMailId = 0;
@@ -170,10 +164,6 @@ const devModeSendAsync = function (mail, options) {
   });
 };
 
-const smtpSend = function (transport, mail) {
-  transport._syncSendMail(mail);
-};
-
 const sendHooks = new Hook();
 
 /**
@@ -199,58 +189,6 @@ Email.hookSend = function (f) {
 Email.customTransport = undefined;
 
 /**
- * @summary Send an email. Throws an `Error` on failure to contact mail server
- * or if mail server returns an error. All fields should match
- * [RFC5322](http://tools.ietf.org/html/rfc5322) specification.
- *
- * If the `MAIL_URL` environment variable is set, actually sends the email.
- * Otherwise, prints the contents of the email to standard out.
- *
- * Note that this package is based on **nodemailer**, so make sure to refer to
- * [the documentation](http://nodemailer.com/)
- * when using the `attachments` or `mailComposer` options.
- *
- * @locus Server
- * @param {Object} options
- * @param {String} [options.from] "From:" address (required)
- * @param {String|String[]} options.to,cc,bcc,replyTo
- *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
- * @param {String} [options.inReplyTo] Message-ID this message is replying to
- * @param {String|String[]} [options.references] Array (or space-separated string) of Message-IDs to refer to
- * @param {String} [options.messageId] Message-ID for this message; otherwise, will be set to a random value
- * @param {String} [options.subject]  "Subject:" line
- * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
- * @param {String} [options.watchHtml] Mail body in HTML specific for Apple Watch
- * @param {String} [options.icalEvent] iCalendar event attachment
- * @param {Object} [options.headers] Dictionary of custom headers - e.g. `{ "header name": "header value" }`. To set an object under a header name, use `JSON.stringify` - e.g. `{ "header name": JSON.stringify({ tracking: { level: 'full' } }) }`.
- * @param {Object[]} [options.attachments] Array of attachment objects, as
- * described in the [nodemailer documentation](https://nodemailer.com/message/attachments/).
- * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
- * object representing the message to be sent.  Overrides all other options.
- * You can create a `MailComposer` object via
- * `new EmailInternals.NpmModules.mailcomposer.module`.
- */
-Email.send = function (options) {
-  if (Email.customTransport) {
-    // Preserve current behavior
-    const email = options.mailComposer ? options.mailComposer.mail : options;
-    let send = true;
-    sendHooks.forEach((hook) => {
-      send = hook(email);
-      return send;
-    });
-    if (!send) {
-      return;
-    }
-    const packageSettings = Meteor.settings.packages?.email || {};
-    Email.customTransport({ packageSettings, ...email });
-    return;
-  }
-  // Using Fibers Promise.await
-  return Promise.await(Email.sendAsync(options));
-};
-
-/**
  * @summary Send an email with asyncronous method. Capture  Throws an `Error` on failure to contact mail server
  * or if mail server returns an error. All fields should match
  * [RFC5322](http://tools.ietf.org/html/rfc5322) specification.
@@ -265,7 +203,7 @@ Email.send = function (options) {
  * @locus Server
  * @return {Promise}
  * @param {Object} options
- * @param {String} [options.from] "From:" address (required)
+ * @param {String} options.from "From:" address (required)
  * @param {String|String[]} options.to,cc,bcc,replyTo
  *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
  * @param {String} [options.inReplyTo] Message-ID this message is replying to
@@ -284,12 +222,11 @@ Email.send = function (options) {
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.sendAsync = async function (options) {
-
   const email = options.mailComposer ? options.mailComposer.mail : options;
 
   let send = true;
-  sendHooks.forEach((hook) => {
-    send = hook(email);
+  await sendHooks.forEachAsync(async (sendHook) => {
+    send = await sendHook(email);
     return send;
   });
   if (!send) {
@@ -313,9 +250,57 @@ Email.sendAsync = async function (options) {
   }
 
   if (mailUrlEnv || mailUrlSettings) {
-    const transport = getTransport();
-    smtpSend(transport, email);
-    return;
+    return getTransport().sendMail(email);
   }
+
   return devModeSendAsync(email, options);
+};
+
+/**
+ * @deprecated
+ * @summary Send an email with asyncronous method. Capture  Throws an `Error` on failure to contact mail server
+ * or if mail server returns an error. All fields should match
+ * [RFC5322](http://tools.ietf.org/html/rfc5322) specification.
+ *
+ * If the `MAIL_URL` environment variable is set, actually sends the email.
+ * Otherwise, prints the contents of the email to standard out.
+ *
+ * Note that this package is based on **nodemailer**, so make sure to refer to
+ * [the documentation](http://nodemailer.com/)
+ * when using the `attachments` or `mailComposer` options.
+ *
+ * @locus Server
+ * @return {Promise}
+ * @param {Object} options
+ * @param {String} options.from "From:" address (required)
+ * @param {String|String[]} options.to,cc,bcc,replyTo
+ *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
+ * @param {String} [options.inReplyTo] Message-ID this message is replying to
+ * @param {String|String[]} [options.references] Array (or space-separated string) of Message-IDs to refer to
+ * @param {String} [options.messageId] Message-ID for this message; otherwise, will be set to a random value
+ * @param {String} [options.subject]  "Subject:" line
+ * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
+ * @param {String} [options.watchHtml] Mail body in HTML specific for Apple Watch
+ * @param {String} [options.icalEvent] iCalendar event attachment
+ * @param {Object} [options.headers] Dictionary of custom headers - e.g. `{ "header name": "header value" }`. To set an object under a header name, use `JSON.stringify` - e.g. `{ "header name": JSON.stringify({ tracking: { level: 'full' } }) }`.
+ * @param {Object[]} [options.attachments] Array of attachment objects, as
+ * described in the [nodemailer documentation](https://nodemailer.com/message/attachments/).
+ * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
+ * object representing the message to be sent.  Overrides all other options.
+ * You can create a `MailComposer` object via
+ * `new EmailInternals.NpmModules.mailcomposer.module`.
+ */
+Email.send = function(options) {
+  Email.sendAsync(options)
+    .then(() =>
+      console.warn(
+        `Email.send is no longer recommended, you should use Email.sendAsync`
+      )
+    )
+    .catch(e =>
+      console.error(
+        `Email.send is no longer recommended and an error happened`,
+        e
+      )
+    );
 };

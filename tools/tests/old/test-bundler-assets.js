@@ -2,13 +2,13 @@ require('../../tool-env/install-babel.js');
 
 var _ = require('underscore');
 var assert = require('assert');
-var Future = require('fibers/future');
 var files = require('../../fs/files');
 var bundler = require('../../isobuild/bundler.js');
 var isopackets = require('../../tool-env/isopackets.js');
 var release = require('../../packaging/release.js');
 var catalog = require('../../packaging/catalog/catalog.js');
 var buildmessage = require('../../utils/buildmessage.js');
+const { makeGlobalAsyncLocalStorage } = require("../../utils/fiber-helpers");
 var projectContextModule = require('../../project-context.js');
 var safeWatcher = require("../../fs/safe-watcher");
 
@@ -17,33 +17,33 @@ var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
-var makeProjectContext = function (appName) {
+var makeProjectContext = async function (appName) {
   var testAppDir = files.pathJoin(
     files.convertToStandardPath(__dirname), appName);
 
   var projectDir = files.mkdtemp("test-bundler-assets");
 
-  files.cp_r(testAppDir, projectDir, {
+  await files.cp_r(testAppDir, projectDir, {
     preserveSymlinks: true,
   });
 
-  require("../../cli/default-npm-deps.js").install(projectDir);
+  await require("../../cli/default-npm-deps.js").install(projectDir);
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });
 
-  doOrThrow(function () {
-    projectContext.prepareProjectForBuild();
+  await doOrThrow(async function () {
+    await projectContext.prepareProjectForBuild();
   });
 
   return projectContext;
 };
 
-var doOrThrow = function (f) {
+var doOrThrow = async function (f) {
   var ret;
-  var messages = buildmessage.capture(function () {
-    ret = f();
+  var messages = await buildmessage.capture(async function () {
+    ret = await f();
   });
   if (messages.hasMessages()) {
     throw Error(messages.formatMessages());
@@ -54,17 +54,16 @@ var doOrThrow = function (f) {
 // These tests make some assumptions about the structure of stars: that there
 // are client and server programs inside programs/.
 
-var runTest = function () {
+var runTest = async function () {
   // As preparation, we need to initialize the official catalog, which serves
   // as our sql data store.
-  catalog.official.initialize();
+  await catalog.official.initialize();
 
   console.log("Bundle app with public/ directory");
 
-  var projectContext = makeProjectContext("app-with-public");
+  var projectContext = await makeProjectContext("app-with-public");
   var tmpOutputDir = tmpDir();
-
-  var result = bundler.bundle({
+  var result = await bundler.bundle({
     projectContext: projectContext,
     outputPath: tmpOutputDir
   });
@@ -90,10 +89,10 @@ var runTest = function () {
 
   console.log("Bundle app with private/ directory and package asset");
 
-  var projectContext = makeProjectContext("app-with-private");
+  var projectContext = await makeProjectContext("app-with-private");
   var tmpOutputDir = tmpDir();
 
-  var result = bundler.bundle({
+  var result = await bundler.bundle({
     projectContext: projectContext,
     outputPath: tmpOutputDir
   });
@@ -137,7 +136,9 @@ var runTest = function () {
 
   // Run the app to check that Assets.getText/Binary do the right things.
   var meteorToolPath = files.convertToOSPath(process.env.METEOR_TOOL_PATH);
-  var fut = new Future();
+  let resolver;
+  const promise = new Promise(resolve => resolver = resolve);
+
   require('child_process').execFile(
     meteorToolPath,
     // use a non-default port so we don't fail if someone is running an app
@@ -146,28 +147,31 @@ var runTest = function () {
       cwd: files.convertToOSPath(projectContext.projectDir),
       stdio: 'inherit'
     },
-    fut.resolver()
+    resolver,
   );
-  fut.wait();  // would throw if command failed
+  await promise;
 };
 
-var Fiber = require('fibers');
-Fiber(function () {
-  if (! files.inCheckout()) {
-    throw Error("This old test doesn't support non-checkout");
-  }
 
-  try {
-    release.setCurrent(release.load(null));
-    isopackets.ensureIsopacketsLoadable();
-    runTest();
-  } catch (err) {
-    console.log(err.stack);
-    console.log('\nBundle can be found at ' + lastTmpDir);
-    process.exit(1);
-  }
+makeGlobalAsyncLocalStorage().run(
+  { name: "test-bundler-assets.js" },
+  async function () {
+    if (!files.inCheckout()) {
+      throw Error("This old test doesn't support non-checkout");
+    }
 
-  // Allow the process to exit normally, since optimistic file watchers
-  // may be keeping the event loop busy.
-  safeWatcher.closeAllWatchers();
-}).run();
+    try {
+      release.setCurrent(await release.load(null));
+      await isopackets.ensureIsopacketsLoadable();
+      await runTest();
+    } catch (err) {
+      console.log(err.stack);
+      console.log("\nBundle can be found at " + lastTmpDir);
+      process.exit(1);
+    }
+
+    // Allow the process to exit normally, since optimistic file watchers
+    // may be keeping the event loop busy.
+    safeWatcher.closeAllWatchers();
+  }
+);

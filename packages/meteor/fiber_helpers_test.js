@@ -1,7 +1,5 @@
-var Fiber = Npm.require('fibers');
-
-Tinytest.add("fibers - synchronous queue", function (test) {
-  var q = new Meteor._SynchronousQueue;
+Tinytest.addAsync("asl-sync - synchronous queue", async function (test) {
+  var q = new Meteor._AsynchronousQueue();
   var output = [];
   var pusher = function (n) {
     return function () {
@@ -20,14 +18,12 @@ Tinytest.add("fibers - synchronous queue", function (test) {
   q.queueTask(pusher(1));
   outputIsUpTo(0);
 
-  // Run another task. After queueing it, the fiber constructed here will yield
-  // back to this outer function. No task can have run yet since the main test
-  // fiber still will not have yielded.
+  // Run another task async to be solved in the future.
   var runTask2Done = false;
-  Fiber(function () {
-    q.runTask(pusher(2));
+  Meteor._runAsync(async function () {
+    await q.runTask(pusher(2));
     runTask2Done = true;
-  }).run();
+  });
   outputIsUpTo(0);
   test.isFalse(runTask2Done);
 
@@ -43,12 +39,12 @@ Tinytest.add("fibers - synchronous queue", function (test) {
 
   // Run a task and block for it to be done. All queued tasks up to this one
   // will now be run.
-  q.runTask(pusher(4));
+  await q.runTask(pusher(4));
   outputIsUpTo(4);
   test.isTrue(runTask2Done);
 
   // Task #5 is still in the queue. Run another task synchronously.
-  q.runTask(pusher(6));
+  await q.runTask(pusher(6));
   outputIsUpTo(6);
 
   // Queue a task that throws. It'll write some debug output, but that's it.
@@ -57,13 +53,13 @@ Tinytest.add("fibers - synchronous queue", function (test) {
     throw new Error("bla");
   });
   // let it run.
-  q.runTask(pusher(7));
+  await q.runTask(pusher(7));
   outputIsUpTo(7);
 
   // Run a task that throws. It should throw from runTask.
   Meteor._suppress_log(1);
-  test.throws(function () {
-    q.runTask(function () {
+  await test.throwsAsync(async function () {
+    await q.runTask(function () {
       throw new Error("this is thrown");
     });
   });

@@ -485,7 +485,7 @@ Object.assign(PackageSource.prototype, {
 
   // Initialize a PackageSource from a package.js-style package directory. Uses
   // the name field provided and the name/test fields in the package.js file to
-  // figre out if this is a test package (load from onTest) or a use package
+  // figure out if this is a test package (load from onTest) or a use package
   // (load from onUse).
   //
   // name: name of the package.
@@ -498,7 +498,7 @@ Object.assign(PackageSource.prototype, {
     return `PackageSource#initFromPackageDir for ${
       options?.name || dir.split(files.pathSep).pop()
     }`;
-  }, function (dir, options) {
+  }, async function (dir, options) {
     var self = this;
     buildmessage.assertInCapture();
     var isPortable = true;
@@ -588,7 +588,7 @@ Object.assign(PackageSource.prototype, {
     const Cordova = new PackageCordova();
 
     try {
-      files.runJavaScript(packageJsCode.toString('utf8'), {
+      await files.runJavaScript(packageJsCode.toString('utf8'), {
         filename: 'package.js',
         symbols: { Package, Npm, Cordova }
       });
@@ -663,7 +663,9 @@ Object.assign(PackageSource.prototype, {
 
     if (Package._fileAndDepLoader) {
       try {
-        buildmessage.markBoundary(Package._fileAndDepLoader)(api);
+        const marked = buildmessage.markBoundary(Package._fileAndDepLoader)
+        await marked(api);
+        await api._waitForAsyncWork();
       } catch (e) {
         console.log(e.stack); // XXX should we keep this here -- or do we want broken
                               // packages to fail silently?
@@ -962,7 +964,7 @@ Object.assign(PackageSource.prototype, {
           // then sources will not be the same files used to bundle the app.
           let missingMainModule = !! mainModule &&
             !sourceProcessorSet.isConflictsAllowed();
-          
+
           // Similar to the main module, when conflicts are allowed
           // these sources won't be used to build the app so the order
           // isn't important, and is difficult to accurately create when

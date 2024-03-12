@@ -64,6 +64,7 @@ sidebar_categories:
     - api/packagejs
     - api/mobile-config
     - api/environment
+    - api/top-level-await
   Packages:
     - packages/accounts-ui
     - packages/accounts-passwordless

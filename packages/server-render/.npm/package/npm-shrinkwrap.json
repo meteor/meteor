@@ -1,15 +1,15 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 4,
   "dependencies": {
     "bluebird": {
       "version": "2.11.0",
       "resolved": "https://registry.npmjs.org/bluebird/-/bluebird-2.11.0.tgz",
-      "integrity": "sha1-U0uQM8AiyVecVro7Plpcqvu2UOE="
+      "integrity": "sha512-UfFSr22dmHPQqPP9XWHRhq+gWnHCYguQGkXQlbyPtW5qTnhFWA8/iXg765tH0cAjy7l/zPJ1aBTO0g5XgA7kvQ=="
     },
     "combined-stream2": {
       "version": "1.1.2",
       "resolved": "https://registry.npmjs.org/combined-stream2/-/combined-stream2-1.1.2.tgz",
-      "integrity": "sha1-9uFLegFWZvjHsKH6xQYkAWSsNXA="
+      "integrity": "sha512-sVqUHJmbdVm+HZWy4l34BPLczxI4fltN4Bm2vcvASsqBIXW4xFb4TRkwM8bw/UUXK9/OdHdAwi2cRYVEKrxzbg=="
     },
     "debug": {
       "version": "2.6.9",
@@ -24,7 +24,7 @@
     "ms": {
       "version": "2.0.0",
       "resolved": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz",
-      "integrity": "sha1-VgiurfwAvmwpAd9fmGF4jeDVl8g="
+      "integrity": "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A=="
     },
     "parse5": {
       "version": "4.0.0",
@@ -34,7 +34,7 @@
     "promise-polyfill": {
       "version": "1.1.6",
       "resolved": "https://registry.npmjs.org/promise-polyfill/-/promise-polyfill-1.1.6.tgz",
-      "integrity": "sha1-zQTv9G9clcOn0EVZHXm14+AfEtc="
+      "integrity": "sha512-7rrONfyLkDEc7OJ5QBkqa4KI4EBhCd340xRuIUPGCfu13znS+vx+VDdrT9ODAJHlXm7w4lbxN3DRjyv58EuzDg=="
     },
     "sourcemap-codec": {
       "version": "1.4.8",
@@ -44,7 +44,7 @@
     "stream-length": {
       "version": "1.0.2",
       "resolved": "https://registry.npmjs.org/stream-length/-/stream-length-1.0.2.tgz",
-      "integrity": "sha1-gnfzy+5JpNqrz9tOL0qbXp8snwA="
+      "integrity": "sha512-aI+qKFiwoDV4rsXiS7WRoCt+v2RX1nUj17+KJC5r2gfh5xoSJIfP6Y3Do/HtvesFcTSWthIuJ3l1cvKQY/+nZg=="
     },
     "stream-to-string": {
       "version": "1.2.0",

@@ -61,10 +61,10 @@ const CssTools = {
    * Minify the passed in CSS string.
    *
    * @param {string} cssText CSS string to minify.
-   * @return {String[]} Array containing the minified CSS.
+   * @return {Promise<String[]>} Array containing the minified CSS.
    */
   minifyCss(cssText) {
-    return Promise.await(CssTools.minifyCssAsync(cssText));
+    return CssTools.minifyCssAsync(cssText);
   },
 
   /**

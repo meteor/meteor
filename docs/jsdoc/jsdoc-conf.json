@@ -1,8 +1,4 @@
 {
-  "plugins": ["plugins/markdown"],
-  "markdown": {
-    "parser": "gfm"
-  },
   "source": {
     "exclude": [
       "packages/ddp/sockjs-0.3.4.js",
@@ -18,5 +14,9 @@
       "**/node_modules",
       "npm-packages"
     ]
+  },
+  "plugins": [ "plugins/markdown"],
+  "markdown": {
+    "parser": "gfm"
   }
 }

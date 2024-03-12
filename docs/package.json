@@ -16,7 +16,7 @@
     "hexo-renderer-marked": "2.0.0",
     "hexo-server": "1.0.0",
     "hexo-versioned-netlify-redirects": "1.1.0",
-    "jsdoc": "3.5.5",
+    "jsdoc": "^4.0.2",
     "@meteorjs/meteor-hexo-config": "1.0.14",
     "@meteorjs/meteor-theme-hexo": "2.0.8",
     "showdown": "1.9.1",

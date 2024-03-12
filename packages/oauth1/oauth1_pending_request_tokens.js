@@ -25,17 +25,17 @@ OAuth._pendingRequestTokens = new Mongo.Collection(
     _preventAutopublish: true
   });
 
-OAuth._pendingRequestTokens.createIndex('key', { unique: true });
-OAuth._pendingRequestTokens.createIndex('createdAt');
+await OAuth._pendingRequestTokens.createIndexAsync('key', { unique: true });
+await OAuth._pendingRequestTokens.createIndexAsync('createdAt');
 
 
 
 // Periodically clear old entries that never got completed
-const _cleanStaleResults = () => {
+const _cleanStaleResults = async () => {
   // Remove request tokens older than 5 minute
   const timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 5);
-  OAuth._pendingRequestTokens.remove({ createdAt: { $lt: timeCutoff } });
+  await OAuth._pendingRequestTokens.removeAsync({ createdAt: { $lt: timeCutoff } });
 };
 const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
@@ -47,13 +47,13 @@ const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 // @param requestToken {string}
 // @param requestTokenSecret {string}
 //
-OAuth._storeRequestToken = (key, requestToken, requestTokenSecret) => {
+OAuth._storeRequestToken = async (key, requestToken, requestTokenSecret) => {
   check(key, String);
 
   // We do an upsert here instead of an insert in case the user happens
   // to somehow send the same `state` parameter twice during an OAuth
   // login; we don't want a duplicate key error.
-  OAuth._pendingRequestTokens.upsert({
+  await OAuth._pendingRequestTokens.upsertAsync({
     key,
   }, {
     key,
@@ -69,12 +69,12 @@ OAuth._storeRequestToken = (key, requestToken, requestTokenSecret) => {
 //
 // @param key {string}
 //
-OAuth._retrieveRequestToken = key => {
+OAuth._retrieveRequestToken = async key => {
   check(key, String);
 
-  const pendingRequestToken = OAuth._pendingRequestTokens.findOne({ key: key });
+  const pendingRequestToken =  await OAuth._pendingRequestTokens.findOneAsync({ key: key });
   if (pendingRequestToken) {
-    OAuth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
+    await OAuth._pendingRequestTokens.removeAsync({ _id: pendingRequestToken._id });
     return {
       requestToken: OAuth.openSecret(pendingRequestToken.requestToken),
       requestTokenSecret: OAuth.openSecret(
