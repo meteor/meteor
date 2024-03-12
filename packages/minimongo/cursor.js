@@ -217,6 +217,18 @@ export default class Cursor {
   }
 
   /**
+   * @summary Watch a query.  Receive callbacks as the result set changes.
+   * @locus Anywhere
+   * @memberOf Mongo.Cursor
+   * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
+   */
+  observeAsync(options) {
+    return new Promise(resolve => resolve(this.observe(options)));
+  }
+
+  /**
    * @summary Watch a query. Receive callbacks as the result set changes. Only
    *          the differences between the old and new documents are passed to
    *          the callbacks.
@@ -371,6 +383,23 @@ export default class Cursor {
     }
 
     return handle;
+  }
+
+  /**
+   * @summary Watch a query. Receive callbacks as the result set changes. Only
+   *          the differences between the old and new documents are passed to
+   *          the callbacks.
+   * @locus Anywhere
+   * @memberOf Mongo.Cursor
+   * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
+   */
+  observeChangesAsync(options) {
+    return new Promise((resolve) => {
+      const handle = this.observeChanges(options);
+      handle.isReadyPromise.then(() => resolve(handle));
+    });
   }
 
   // XXX Maybe we need a version of observe that just calls a callback if
