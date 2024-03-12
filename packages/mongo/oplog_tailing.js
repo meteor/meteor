@@ -189,7 +189,7 @@ Object.assign(OplogHandle.prototype, {
   // currently visible.
   // XXX become convinced that this is actually safe even if oplogConnection
   // is some kind of pool
-  waitUntilCaughtUp: function () {
+  waitUntilCaughtUp: async function () {
     return this._waitUntilCaughtUp();
   },
 
