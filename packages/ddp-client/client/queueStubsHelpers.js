@@ -8,32 +8,17 @@ let queueSize = 0;
 let queue = Promise.resolve();
 
 export const loadAsyncStubHelpers = () => {
-  function queueFunction(fn, promiseProps = {}) {
+  function queueFunction(fn) {
     queueSize += 1;
-
-    let resolve;
-    let reject;
-    const promise = new Promise((_resolve, _reject) => {
-      resolve = _resolve;
-      reject = _reject;
-    });
-
-    queue = queue.finally(() => {
-      fn(resolve, reject);
-      return promise.stubPromise;
-    });
-
-    promise.finally(() => {
-      queueSize -= 1;
-      if (queueSize === 0) {
-        Meteor.connection._maybeMigrate();
-      }
-    });
-
-    promise.stubPromise = promiseProps.stubPromise;
-    promise.serverPromise = promiseProps.serverPromise;
-
-    return promise;
+      fn(() => {
+        queue = queue.finally(() => {
+          queueSize -= 1;
+          console.log("-> queueSize", queueSize);
+          if (queueSize === 0) {
+            Meteor.connection._maybeMigrate();
+          }
+        });
+      });
   }
 
   let oldReadyToMigrate = Connection.prototype._readyToMigrate;
@@ -82,32 +67,44 @@ export const loadAsyncStubHelpers = () => {
       return oldApplyAsync.apply(this, args);
     }
 
+    let applyAsyncResolve;
+    let applyAsyncReject;
     let stubPromiseResolver;
     let serverPromiseResolver;
+
+    const applyAsyncPromise = new Promise((resolve, reject) => {
+      applyAsyncResolve = resolve;
+      applyAsyncReject = reject;
+    });
     const stubPromise = new Promise((r) => (stubPromiseResolver = r));
     const serverPromise = new Promise((r) => (serverPromiseResolver = r));
 
-    return queueFunction(
-      (resolve, reject) => {
+    queueFunction(
+      (next) => {
         let hasStub = false;
         let finished = false;
 
         Meteor._setImmediate(() => {
-          const applyAsyncPromise = oldApplyAsync.apply(this, args);
-          stubPromiseResolver(applyAsyncPromise.stubPromise);
-          serverPromiseResolver(applyAsyncPromise.serverPromise);
-          hasStub = !!applyAsyncPromise.stubPromise;
+          const promise = oldApplyAsync.apply(this, args);
+          stubPromiseResolver(promise.stubPromise);
+          serverPromiseResolver(promise.serverPromise);
+          hasStub = !!promise.stubPromise;
+          console.log("-> hasStub", hasStub);
           if (hasStub) {
-            applyAsyncPromise.stubPromise.finally(() => {
+            promise.stubPromise.finally(() => {
               finished = true;
+              console.log("-> finished", finished);
+              // next();
             });
+          } else {
+            // next();
           }
-          applyAsyncPromise
+          promise
             .then((result) => {
-              resolve(result);
+              applyAsyncResolve(result);
             })
             .catch((err) => {
-              reject(err);
+              applyAsyncReject(err);
             });
         });
 
@@ -118,12 +115,13 @@ export const loadAsyncStubHelpers = () => {
             );
           }
         });
-      },
-      {
-        stubPromise,
-        serverPromise,
       }
     );
+
+    applyAsyncPromise.stubPromise = stubPromise;
+    applyAsyncPromise.serverPromise = serverPromise;
+
+    return applyAsyncPromise;
   };
 
   let oldApply = Connection.prototype.apply;
