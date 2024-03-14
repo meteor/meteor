@@ -246,7 +246,7 @@ You can check more information on the [react page](./front-end/react.md).
 
 ## When will Blaze be ready for version 3.0?
 
-The team considered Blaze adjustments to version 3.0 almost done.
+The team considered Blaze adjustments to version 3.0 done, version 2.9 and upper are with all features regarding async APIs.
 
 You can check more information on the [Blaze page](./front-end/blaze.md).
 

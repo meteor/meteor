@@ -1,5 +1,12 @@
 # Blaze changes
 
+:::tip
+
+It is important to note that migrating your front-end code to async is unnecessary.
+You can still use the sync MongoDB methods on the client side,
+for example: `Collection.fetch`/`Collection.findOne`.
+
+:::
 
 It is important to note that migrating your front-end code to async is unnecessary.
 You can still use the sync methods on the client side.
