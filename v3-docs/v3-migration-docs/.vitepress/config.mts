@@ -3,7 +3,7 @@ import { defineConfig } from "vitepress";
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "Meteor V3 Migration Guide",
-  description: "Meteor.js API docs",
+  description: "Meteor.js Migration Guide to v3",
   head: [["link", { rel: "icon", href: "/logo.png" }]],
   lastUpdated: true,
   themeConfig: {
