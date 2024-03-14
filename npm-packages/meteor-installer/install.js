@@ -316,7 +316,7 @@ function showGettingStarted() {
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
 
   const runCommand = isWindows()
-    ? `set path "${meteorPath}/;%path%`
+    ? `set path "${meteorPath}/;%path%"`
     : exportCommand;
   const message = `
 ***************************************
