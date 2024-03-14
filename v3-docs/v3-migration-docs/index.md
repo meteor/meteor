@@ -237,7 +237,7 @@ of migrating to Meteor 3.0:
 -   [`react-meteor-accounts`](https://github.com/meteor/react-packages/commit/96313a1afcc41ef9a23c7496470b375e7d357793)
 -   [`mdg:seo`](https://github.com/meteor/galaxy-seo-package/commit/8a30b32688df40e62ce434475dd3ee931dedf2b3)
 
-You can follow a more in depth guide on how to migrate your package to be compatible with Meteor 3.0 [here](/prepare-meteor-3.0#Changes-for-packages).
+You can follow a more in depth guide on how to migrate your package to be compatible with Meteor 3.0 [here](https://guide.meteor.com/prepare-meteor-3.0#Changes-for-packages).
 
 ## When will React packages for Meteor be ready for version 3.0?
 
