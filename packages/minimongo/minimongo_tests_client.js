@@ -212,6 +212,21 @@ Tinytest.addAsync('minimongo - basics', async test => {
   test.equal(after.d, undefined);
 });
 
+
+Tinytest.addAsync('minimongo - upsert', async test => {
+  const c = new LocalCollection();
+
+  await c.upsertAsync({ name: 'doc' }, { name: 'doc' });
+  
+  test.equal(c.find({}).count(), 1);
+
+  await c.removeAsync({});
+
+  c.upsert({ name: 'doc' }, { name: 'doc' });
+  test.equal(c.find({}).count(), 1);
+});
+
+
 Tinytest.add('minimongo - error - no options', test => {
   try {
     throw MinimongoError('Not fun to have errors');
