@@ -14,7 +14,7 @@ Meteor 3.0 is in alpha and not recommended for production. You can check the "[R
 
 ## How to prepare for version 3.0?
 
-You can follow the guide "[How to migrate to Meteor Async in Meteor 2.x](/prepare-meteor-3.0.html)" to help you prepare your application for the new version by starting to use async methods.
+You can follow the guide "[How to migrate to Meteor Async in Meteor 2.x](https://guide.meteor.com/prepare-meteor-3.0)" to help you prepare your application for the new version by starting to use async methods.
 
 ## What this guide will cover
 

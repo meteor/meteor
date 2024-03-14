@@ -14,6 +14,7 @@ export default defineConfig({
         items: [
           {text: "Overview", link: "/"},
           {text: "Breaking Changes", link: "/breaking-changes/"},
+          {text: "Meteor.call x Meteor.callAsync", link: "/breaking-changes/call-x-callAsync"},
         ]
       },
       {
