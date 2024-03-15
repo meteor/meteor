@@ -1,7 +1,7 @@
 type LogJSONInput = {
   message: string;
   app?: string;
-  [index: string]: string | object | number;
+  [index: string]: string | object | number | undefined;
 };
 
 type LogInput = string | LogJSONInput;
