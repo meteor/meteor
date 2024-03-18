@@ -45,7 +45,9 @@ if (!semver.satisfies(process.version, nodeVersion)) {
   );
 }
 
-const isInstalledGlobally = process.env.npm_config_global === 'true';
+const isInstalledGlobally =
+  process.env.npm_config_global === 'true' ||
+  process.env.npm_lifecycle_event === 'npx';
 
 if (!isInstalledGlobally) {
   console.error('******************************************');
