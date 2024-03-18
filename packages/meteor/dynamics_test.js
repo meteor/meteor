@@ -16,6 +16,27 @@ Tinytest.add("environment - dynamic variables", function (test) {
   test.equal(CurrentFoo.get(), undefined);
 });
 
+Tinytest.addAsync(
+  "environment - dynamic variables with two context",
+  async function (test) {
+    const context1 = new Meteor.EnvironmentVariable();
+    const context2 = new Meteor.EnvironmentVariable();
+
+    await context1.withValue(42, async () => {
+      test.equal(context2.get(), undefined);
+      await context2.withValue(1, async () => {
+        await context2.withValue(2, async () => {
+          test.equal(context2.get(), 2);
+        });
+        test.equal(context1.get(), 42);
+        test.equal(context2.get(), 1);
+      });
+      test.equal(context1.get(), 42);
+      test.equal(context2.get(), undefined);
+    });
+  }
+);
+
 Tinytest.addAsync("environment - bindEnvironment", async function (test) {
   var raised_f;
 
