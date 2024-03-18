@@ -14,10 +14,9 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
-  api.use('isobuild:dynamic-import@1.5.0');
+  api.use('dynamic-import', ['server', 'client'], { weak: true });
   api.use([
     'ecmascript',
-    'dynamic-import',
     'fetch',
     'webapp',
   ]);

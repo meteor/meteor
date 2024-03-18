@@ -289,6 +289,7 @@ be removed if there is no need for the Blaze configuration interface.`,
   },
 
   "1.5-add-dynamic-import-package": function (projectContext) {
+    // FIXME: we need to make this a weak dependency here
     const packagesFile = projectContext.projectConstraintsFile;
     packagesFile.addPackages(["dynamic-import"]);
     packagesFile.writeIfModified();

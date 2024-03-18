@@ -16,7 +16,7 @@ Package.onUse(function (api) {
     'mongo',
     'check'
   ]);
-
+  api.imply('dynamic-import');
   api.mainModule('tinytest_client.js', 'client');
   api.mainModule('tinytest_server.js', 'server');
 

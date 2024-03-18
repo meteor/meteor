@@ -39,7 +39,7 @@ Package.onUse(function (api) {
   api.imply('ecmascript-runtime');
   api.imply('babel-runtime');
   api.imply('promise');
-  api.imply('dynamic-import');
+  api.use('dynamic-import', ['server', 'client'], { weak: true });
 });
 
 Package.onTest(function (api) {
