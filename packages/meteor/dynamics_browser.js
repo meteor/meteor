@@ -40,16 +40,9 @@ EVp.withValue = function (value, func) {
     currentValues[this.slot] = value;
     var ret = func();
   } finally {
-    // Don't use catch here, we want to propagate the error if there is one
+    currentValues[this.slot] = saved;
   }
 
-  if (Meteor._isPromise(ret)) {
-    ret.finally(() => {
-      currentValues[this.slot] = saved;
-    });
-    return ret;
-  }
-  currentValues[this.slot] = saved;
   return ret;
 };
 
