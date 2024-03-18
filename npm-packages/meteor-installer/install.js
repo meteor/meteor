@@ -57,7 +57,7 @@ if (!isInstalledGlobally) {
   console.error('Make sure you pass -g to npm install.');
   console.error('Aborting...');
   console.error('******************************************');
-  process.exit(1);
+  process.exit(0);
 }
 process.on('unhandledRejection', err => {
   throw err;
