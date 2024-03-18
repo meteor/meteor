@@ -492,6 +492,14 @@ var runMain = Profile("Run main()", async function () {
   }
 });
 
+
+// As our main process runs now inside a Promise, we need to make that if the user has an unhandled promise
+// in their app, ths unhandledRejection doesn't crash the server
+process.on("unhandledRejection", (e) =>
+  console.error("Unhandled promise rejection:", e.stack || e)
+);
+
+
 (async function startServerProcess() {
   if (!global.asyncLocalStorage) {
     const { AsyncLocalStorage } = require('async_hooks');
