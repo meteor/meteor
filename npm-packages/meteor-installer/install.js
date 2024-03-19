@@ -123,8 +123,8 @@ if (fs.existsSync(startedPath)) {
   console.log(
     `If you want to reinstall it, run:
 
-  $ meteor-installer uninstall
-  $ meteor-installer install
+  $ npx meteor uninstall
+  $ npx meteor@<version> install
 `,
   );
   process.exit();

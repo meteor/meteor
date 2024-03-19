@@ -4,7 +4,7 @@ const command = process.argv[2];
 
 if (!command) {
   console.log(`
-  Usage: meteor-installer <command>
+  Usage: npx meteor@<version> <command>
 
   Commands:
     install
