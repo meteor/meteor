@@ -13,6 +13,11 @@ You need to install the Meteor command line tool to create, run, and manage your
 - Node.js version >= 10 and <= 14 is required.
 - We recommend you using [nvm](https://github.com/nvm-sh/nvm) or [Volta](https://volta.sh/) for managing Node.js versions.
 
+If you want to test Meteor v3 that runs on the latest Node.js version, you can use the following command to install it:
+
+```bash
+npx meteor@beta
+```
 
 ### Operating System (OS) {#prereqs-os}
 

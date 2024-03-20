@@ -24,7 +24,7 @@ export const EmailInternals = {
 
 const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
-const makeTransport = async function (mailUrlString) {
+const makeTransport = function (mailUrlString) {
   const mailUrl = new URL(mailUrlString);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
@@ -103,31 +103,31 @@ const knownHostsTransport = function (settings = undefined, url = undefined) {
 };
 EmailTest.knowHostsTransport = knownHostsTransport;
 
-const getTransport = async function () {
+const getTransport = function () {
   const packageSettings = Meteor.settings.packages?.email || {};
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
   if (
-    this.cacheKey === undefined ||
-    this.cacheKey !== url ||
-    this.cacheKey !== packageSettings.service ||
-    this.cacheKey !== 'settings'
+    globalThis.cacheKey === undefined ||
+    globalThis.cacheKey !== url ||
+    globalThis.cacheKey !== packageSettings.service ||
+    globalThis.cacheKey !== 'settings'
   ) {
     if (
       (packageSettings.service && wellKnow(packageSettings.service)) ||
       (url && wellKnow(new URL(url).hostname)) ||
       wellKnow(url?.split(':')[0] || '')
     ) {
-      this.cacheKey = packageSettings.service || 'settings';
-      this.cache = knownHostsTransport(packageSettings, url);
+      globalThis.cacheKey = packageSettings.service || 'settings';
+      globalThis.cache = knownHostsTransport(packageSettings, url);
     } else {
-      this.cacheKey = url;
-      this.cache = url ? await makeTransport(url, packageSettings) : null;
+      globalThis.cacheKey = url;
+      globalThis.cache = url ? makeTransport(url, packageSettings) : null;
     }
   }
-  return this.cache;
+  return globalThis.cache;
 };
 
 let nextDevModeMailId = 0;
@@ -250,10 +250,9 @@ Email.sendAsync = async function (options) {
   }
 
   if (mailUrlEnv || mailUrlSettings) {
-    const transport = await getTransport();
-    await transport.sendMail(email);
-    return;
+    return getTransport().sendMail(email);
   }
+
   return devModeSendAsync(email, options);
 };
 

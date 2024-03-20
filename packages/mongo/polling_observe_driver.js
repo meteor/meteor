@@ -2,7 +2,8 @@ var POLLING_THROTTLE_MS = +process.env.METEOR_POLLING_THROTTLE_MS || 50;
 var POLLING_INTERVAL_MS = +process.env.METEOR_POLLING_INTERVAL_MS || 10 * 1000;
 
 PollingObserveDriver = function (options) {
-  var self = this;
+  const self = this;
+  self._options = options;
 
   self._cursorDescription = options.cursorDescription;
   self._mongoHandle = options.mongoHandle;
@@ -37,47 +38,51 @@ PollingObserveDriver = function (options) {
   // XXX figure out if we still need a queue
   self._taskQueue = new Meteor._AsynchronousQueue();
 
-  var listenersHandle = listenAll(
-    self._cursorDescription, function (notification) {
-      // When someone does a transaction that might affect us, schedule a poll
-      // of the database. If that transaction happens inside of a write fence,
-      // block the fence until we've polled and notified observers.
-      var fence = DDPServer._getCurrentFence();
-      if (fence)
-        self._pendingWrites.push(fence.beginWrite());
-      // Ensure a poll is scheduled... but if we already know that one is,
-      // don't hit the throttled _ensurePollIsScheduled function (which might
-      // lead to us calling it unnecessarily in <pollingThrottleMs> ms).
-      if (self._pollsScheduledButNotStarted === 0)
-        self._ensurePollIsScheduled();
-    }
-  );
-  self._stopCallbacks.push(async function () { await listenersHandle.stop(); });
-
-  // every once and a while, poll even if we don't think we're dirty, for
-  // eventual consistency with database writes from outside the Meteor
-  // universe.
-  //
-  // For testing, there's an undocumented callback argument to observeChanges
-  // which disables time-based polling and gets called at the beginning of each
-  // poll.
-  if (options._testOnlyPollCallback) {
-    self._testOnlyPollCallback = options._testOnlyPollCallback;
-  } else {
-    var pollingInterval =
-          self._cursorDescription.options.pollingIntervalMs ||
-          self._cursorDescription.options._pollingInterval || // COMPAT with 1.2
-          POLLING_INTERVAL_MS;
-    var intervalHandle = Meteor.setInterval(
-      _.bind(self._ensurePollIsScheduled, self), pollingInterval);
-    self._stopCallbacks.push(function () {
-      Meteor.clearInterval(intervalHandle);
-    });
-  }
+  
 };
 
 _.extend(PollingObserveDriver.prototype, {
   _init: async function () {
+    const self = this;
+    const options = self._options;
+    const listenersHandle = await listenAll(
+      self._cursorDescription, function (notification) {
+        // When someone does a transaction that might affect us, schedule a poll
+        // of the database. If that transaction happens inside of a write fence,
+        // block the fence until we've polled and notified observers.
+        const fence = DDPServer._getCurrentFence();
+        if (fence)
+          self._pendingWrites.push(fence.beginWrite());
+        // Ensure a poll is scheduled... but if we already know that one is,
+        // don't hit the throttled _ensurePollIsScheduled function (which might
+        // lead to us calling it unnecessarily in <pollingThrottleMs> ms).
+        if (self._pollsScheduledButNotStarted === 0)
+          self._ensurePollIsScheduled();
+      }
+    );
+    self._stopCallbacks.push(async function () { await listenersHandle.stop(); });
+  
+    // every once and a while, poll even if we don't think we're dirty, for
+    // eventual consistency with database writes from outside the Meteor
+    // universe.
+    //
+    // For testing, there's an undocumented callback argument to observeChanges
+    // which disables time-based polling and gets called at the beginning of each
+    // poll.
+    if (options._testOnlyPollCallback) {
+      self._testOnlyPollCallback = options._testOnlyPollCallback;
+    } else {
+      const pollingInterval =
+            self._cursorDescription.options.pollingIntervalMs ||
+            self._cursorDescription.options._pollingInterval || // COMPAT with 1.2
+            POLLING_INTERVAL_MS;
+      const intervalHandle = Meteor.setInterval(
+        _.bind(self._ensurePollIsScheduled, self), pollingInterval);
+      self._stopCallbacks.push(function () {
+        Meteor.clearInterval(intervalHandle);
+      });
+    }
+    
     // Make sure we actually poll soon!
     await this._unthrottledEnsurePollIsScheduled();
 
