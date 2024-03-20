@@ -390,7 +390,7 @@ jobs:
             ./meteor self-test \
               "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
-              --exclude "${SELF_TEST_EXCLUDE}|--svelte|--vue|--solid|--full" \
+              --exclude "${SELF_TEST_EXCLUDE}|--svelte|--vue" \
               --headless \
               --junit ./tmp/results/junit/3.xml \
               --without-tag "custom-warehouse"
