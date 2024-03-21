@@ -172,6 +172,9 @@ MongoConnection = function (url, options) {
     // set it for replSet, it will be ignored if we're not using a replSet.
     mongoOptions.maxPoolSize = options.maxPoolSize;
   }
+  if (_.has(options, 'minPoolSize')) {
+    mongoOptions.minPoolSize = options.minPoolSize;
+  }
 
   // Transform options like "tlsCAFileAsset": "filename.pem" into
   // "tlsCAFile": "/<fullpath>/filename.pem"
@@ -788,7 +791,7 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
   var self = this;
 
 
-  
+
   if (typeof options === "function" && ! callback) {
     callback = options;
     options = {};
@@ -844,7 +847,7 @@ MongoConnection.prototype.createIndexAsync = function (collectionName, index,
 MongoConnection.prototype.createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
-  
+
 
   return Future.fromPromise(self.createIndexAsync(collectionName, index, options));
 };
@@ -866,7 +869,7 @@ MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 
-  
+
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
