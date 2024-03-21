@@ -32,14 +32,14 @@
       "integrity": "sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w=="
     },
     "@types/node": {
-      "version": "20.11.28",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.11.28.tgz",
-      "integrity": "sha512-M/GPWVS2wLkSkNHVeLkrF2fD5Lx5UC4PxA0uZcKc6QqbIQUJyW1jVjueJYi1z8n0I5PxYrtpnPnWglE+y9A0KA=="
+      "version": "20.11.30",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.11.30.tgz",
+      "integrity": "sha512-dHM6ZxwlmuZaRmUPfv1p+KrdD1Dci04FbdEm/9wEMouFqxYoFl5aMkt0VMAUtYRQDyYvD41WJLukhq/ha3YuTw=="
     },
     "@types/qs": {
-      "version": "6.9.12",
-      "resolved": "https://registry.npmjs.org/@types/qs/-/qs-6.9.12.tgz",
-      "integrity": "sha512-bZcOkJ6uWrL0Qb2NAWKa7TBU+mJHPzhx9jjLL1KHF+XpzEcR7EXHvjbHlGtR/IsP1vyPrehuS6XqkmaePy//mg=="
+      "version": "6.9.14",
+      "resolved": "https://registry.npmjs.org/@types/qs/-/qs-6.9.14.tgz",
+      "integrity": "sha512-5khscbd3SwWMhFqylJBLQ0zIu7c1K6Vz0uBIt915BI3zV0q1nfjRQD3RqSBcPaO6PHEF4ov/t9y89fSiyThlPA=="
     },
     "@types/range-parser": {
       "version": "1.2.7",

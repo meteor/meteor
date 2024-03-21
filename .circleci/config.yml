@@ -474,7 +474,7 @@ jobs:
             ./meteor self-test \
               "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
-              --exclude "${SELF_TEST_EXCLUDE}|modules - test app" \
+              --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit ./tmp/results/junit/5.xml \
               --without-tag "custom-warehouse"

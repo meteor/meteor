@@ -409,9 +409,9 @@
       "integrity": "sha512-R8Rdn8Hy72KKcebgLiv8jQcQkXoLMOGGv5uI1/k0l+snqkOzQ1R0ChUBCxWMlBsFMekWjq0wRudIweFs7sKT5A=="
     },
     "@types/node": {
-      "version": "20.11.28",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.11.28.tgz",
-      "integrity": "sha512-M/GPWVS2wLkSkNHVeLkrF2fD5Lx5UC4PxA0uZcKc6QqbIQUJyW1jVjueJYi1z8n0I5PxYrtpnPnWglE+y9A0KA=="
+      "version": "20.11.30",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.11.30.tgz",
+      "integrity": "sha512-dHM6ZxwlmuZaRmUPfv1p+KrdD1Dci04FbdEm/9wEMouFqxYoFl5aMkt0VMAUtYRQDyYvD41WJLukhq/ha3YuTw=="
     },
     "@types/webidl-conversions": {
       "version": "7.0.3",
