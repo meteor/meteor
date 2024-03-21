@@ -19,4 +19,4 @@ hot-module-replacement  # Update client in development without reloading the pag
 
 ~prototype~
 static-html             # Define static page content in .html files
-vite:bundler
+jorgenvatle:vite-bundler@2.0.0-beta.12
