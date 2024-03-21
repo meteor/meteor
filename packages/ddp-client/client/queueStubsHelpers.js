@@ -20,10 +20,11 @@ export const loadAsyncStubHelpers = () => {
 
     queue = queue.finally(() => {
       fn(resolve, reject);
-      return promise.stubPromise;
+
+      return promise.stubPromise?.catch(() => {});
     });
 
-    promise.finally(() => {
+    promise.catch(() => {}).finally(() => {
       queueSize -= 1;
       if (queueSize === 0) {
         Meteor.connection._maybeMigrate();
@@ -98,9 +99,11 @@ export const loadAsyncStubHelpers = () => {
           serverPromiseResolver(applyAsyncPromise.serverPromise);
           hasStub = !!applyAsyncPromise.stubPromise;
           if (hasStub) {
-            applyAsyncPromise.stubPromise.finally(() => {
-              finished = true;
-            });
+            applyAsyncPromise.stubPromise
+              .catch(() => {})
+              .finally(() => {
+                finished = true;
+              });
           }
           applyAsyncPromise
             .then((result) => {

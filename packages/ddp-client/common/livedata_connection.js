@@ -651,7 +651,7 @@ export class Connection {
         if (o.exception) {
           throw o.exception;
         }
-        return o.stubReturnValue
+        return o.stubReturnValue;
       });
       // this avoids attribute recursion
       promise.serverPromise = new Promise((resolve, reject) =>
