@@ -1561,9 +1561,9 @@ Object.assign(MongoConnection.prototype, {
 // listenCallback is the same kind of (notification, complete) callback passed
 // to InvalidationCrossbar.listen.
 
-listenAll = function (cursorDescription, listenCallback) {
-  var listeners = [];
-  forEachTrigger(cursorDescription, function (trigger) {
+listenAll = async function (cursorDescription, listenCallback) {
+  const listeners = [];
+  await forEachTrigger(cursorDescription, function (trigger) {
     listeners.push(DDPServer._InvalidationCrossbar.listen(
       trigger, listenCallback));
   });
@@ -1577,20 +1577,20 @@ listenAll = function (cursorDescription, listenCallback) {
   };
 };
 
-forEachTrigger = function (cursorDescription, triggerCallback) {
-  var key = {collection: cursorDescription.collectionName};
-  var specificIds = LocalCollection._idsMatchedBySelector(
+forEachTrigger = async function (cursorDescription, triggerCallback) {
+  const key = {collection: cursorDescription.collectionName};
+  const specificIds = LocalCollection._idsMatchedBySelector(
     cursorDescription.selector);
   if (specificIds) {
-    _.each(specificIds, function (id) {
-      triggerCallback(_.extend({id: id}, key));
-    });
-    triggerCallback(_.extend({dropCollection: true, id: null}, key));
+    for (const id of specificIds) {
+      await triggerCallback(_.extend({id: id}, key));
+    }
+    await triggerCallback(_.extend({dropCollection: true, id: null}, key));
   } else {
-    triggerCallback(key);
+    await triggerCallback(key);
   }
   // Everyone cares about the database being dropped.
-  triggerCallback({ dropDatabase: true });
+  await triggerCallback({ dropDatabase: true });
 };
 
 // observeChanges for tailable cursors on capped collections.
