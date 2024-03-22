@@ -71,6 +71,8 @@ By default, the Meteor installer adds its install path (by default, `~/.meteor/`
 npm install -g meteor --ignore-meteor-setup-exec-path --foreground-script
 ```
 
+
+
 (or by setting the environment variable `npm_config_ignore_meteor_setup_exec_path=true`)
 
 
