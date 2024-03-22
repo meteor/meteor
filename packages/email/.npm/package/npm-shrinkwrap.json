@@ -2,24 +2,64 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@types/node": {
-      "version": "18.13.0",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-18.13.0.tgz",
-      "integrity": "sha512-gC3TazRzGoOnoKAhUx+Q0t8S9Tzs74z7m0ipwGpSqQrleP14hKxP4/JUeEQcD3W1/aIpnWl8pHowI7WokuZpXg=="
+      "version": "20.11.10",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.11.10.tgz",
+      "integrity": "sha512-rZEfe/hJSGYmdfX9tvcPMYeYPW2sNl50nsw4jZmRcaG0HIAb0WYEpsB05GOb53vjqpyE9GUhlDQ4jLSoB5q9kg=="
     },
     "@types/nodemailer": {
       "version": "6.4.7",
       "resolved": "https://registry.npmjs.org/@types/nodemailer/-/nodemailer-6.4.7.tgz",
       "integrity": "sha512-f5qCBGAn/f0qtRcd4SEn88c8Fp3Swct1731X4ryPKqS61/A3LmmzN8zaEz7hneJvpjFbUUgY7lru/B/7ODTazg=="
     },
+    "asn1.js": {
+      "version": "5.4.1",
+      "resolved": "https://registry.npmjs.org/asn1.js/-/asn1.js-5.4.1.tgz",
+      "integrity": "sha512-+I//4cYPccV8LdmBLiX8CYvf9Sp3vQsrqu2QNXRcrbiWvcx/UdlFiqUJJzxRQxgsZmvhXhn4cSKeSmoFjVdupA=="
+    },
+    "bn.js": {
+      "version": "4.12.0",
+      "resolved": "https://registry.npmjs.org/bn.js/-/bn.js-4.12.0.tgz",
+      "integrity": "sha512-c98Bf3tPniI+scsdk237ku1Dc3ujXQTSgyiPUDEOe7tRkhrqridvh8klBv0HCEso1OLOYcHuCv/cS6DNxKH+ZA=="
+    },
+    "inherits": {
+      "version": "2.0.4",
+      "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz",
+      "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ=="
+    },
+    "minimalistic-assert": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/minimalistic-assert/-/minimalistic-assert-1.0.1.tgz",
+      "integrity": "sha512-UtJcAD4yEaGtjPezWuO9wC4nwUnVH/8/Im3yEHQP4b67cXlD/Qr9hdITCU1xDbSEXg2XKNaP8jsReV7vQd00/A=="
+    },
     "nodemailer": {
       "version": "6.6.3",
       "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-6.6.3.tgz",
       "integrity": "sha512-faZFufgTMrphYoDjvyVpbpJcYzwyFnbAMmQtj1lVBYAUSm3SOy2fIdd9+Mr4UxPosBa0JRw9bJoIwQn+nswiew=="
     },
+    "nodemailer-openpgp": {
+      "version": "2.2.0",
+      "resolved": "https://registry.npmjs.org/nodemailer-openpgp/-/nodemailer-openpgp-2.2.0.tgz",
+      "integrity": "sha512-e6+pgGVpMEZ2ywHcAtTdKhUCU5HwZI23RFoNUA/mJPytUW369mQqEcHFLUoxEITOLrzeoLjn5wOYFYzSpef+Tg=="
+    },
+    "openpgp": {
+      "version": "5.9.0",
+      "resolved": "https://registry.npmjs.org/openpgp/-/openpgp-5.9.0.tgz",
+      "integrity": "sha512-wEI6TAinCAq8ZLZA4oZ3ZtJ2BhhHj+CiPCd8TzE7zCicr0V8tvG5UF76OtddLLOJcK63w3Aj3KiRd+VLMScirQ=="
+    },
+    "safer-buffer": {
+      "version": "2.1.2",
+      "resolved": "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz",
+      "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg=="
+    },
     "stream-buffers": {
       "version": "3.0.2",
       "resolved": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-3.0.2.tgz",
       "integrity": "sha512-DQi1h8VEBA/lURbSwFtEHnSTb9s2/pwLEaFuNhXwy1Dx3Sa0lOuYT2yNUr4/j2fs8oCAMANtrZ5OrPZtyVs3MQ=="
+    },
+    "undici-types": {
+      "version": "5.26.5",
+      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-5.26.5.tgz",
+      "integrity": "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA=="
     }
   }
 }

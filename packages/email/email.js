@@ -5,6 +5,7 @@ import { Hook } from 'meteor/callback-hook';
 import url from 'url';
 import nodemailer from 'nodemailer';
 import wellKnow from 'nodemailer/lib/well-known';
+import { openpgpEncrypt } from 'nodemailer-openpgp';
 
 export const Email = {};
 export const EmailTest = {};
@@ -24,7 +25,7 @@ export const EmailInternals = {
 
 const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
-const makeTransport = function (mailUrlString) {
+const makeTransport = function (mailUrlString, options) {
   const mailUrl = new URL(mailUrlString);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
@@ -53,13 +54,15 @@ const makeTransport = function (mailUrlString) {
   }
 
   const transport = nodemailer.createTransport(url.format(mailUrl));
-
+  if (options?.encryptionKeys || options?.shouldSign) {
+    transport.use('stream', openpgpEncrypt(options));
+  }
   transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
   return transport;
 };
 
 // More info: https://nodemailer.com/smtp/well-known/
-const knownHostsTransport = function (settings = undefined, url = undefined) {
+const knownHostsTransport = function (settings = undefined, url = undefined, options) {
   let service, user, password;
 
   const hasSettings = settings && Object.keys(settings).length;
@@ -104,12 +107,15 @@ const knownHostsTransport = function (settings = undefined, url = undefined) {
     },
   });
 
+  if (options?.encryptionKeys || options?.shouldSign) {
+    transport.use('stream', openpgpEncrypt(options));
+  }
   transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
   return transport;
 };
 EmailTest.knowHostsTransport = knownHostsTransport;
 
-const getTransport = function () {
+const getTransport = function (options) {
   const packageSettings = Meteor.settings.packages?.email || {};
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
@@ -127,10 +133,10 @@ const getTransport = function () {
       wellKnow(url?.split(':')[0] || '')
     ) {
       this.cacheKey = packageSettings.service || 'settings';
-      this.cache = knownHostsTransport(packageSettings, url);
+      this.cache = knownHostsTransport(packageSettings, url, options);
     } else {
       this.cacheKey = url;
-      this.cache = url ? makeTransport(url, packageSettings) : null;
+      this.cache = url ? makeTransport(url, options) : null;
     }
   }
   return this.cache;
@@ -282,7 +288,9 @@ Email.send = function (options) {
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
- */
+ * @param {String} [options.encryptionKeys] An array that holds the public keys used to encrypt.
+ * @param {String} [options.shouldSign] Enables you to allow or disallow email signing. 
+*/
 Email.sendAsync = async function (options) {
 
   const email = options.mailComposer ? options.mailComposer.mail : options;
@@ -313,7 +321,7 @@ Email.sendAsync = async function (options) {
   }
 
   if (mailUrlEnv || mailUrlSettings) {
-    const transport = getTransport();
+    const transport = getTransport(options);
     smtpSend(transport, email);
     return;
   }
