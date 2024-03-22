@@ -37,9 +37,9 @@
       "integrity": "sha512-dHM6ZxwlmuZaRmUPfv1p+KrdD1Dci04FbdEm/9wEMouFqxYoFl5aMkt0VMAUtYRQDyYvD41WJLukhq/ha3YuTw=="
     },
     "@types/qs": {
-      "version": "6.9.13",
-      "resolved": "https://registry.npmjs.org/@types/qs/-/qs-6.9.13.tgz",
-      "integrity": "sha512-iLR+1vTTJ3p0QaOUq6ACbY1mzKTODFDT/XedZI8BksOotFmL4ForwDfRQ/DZeuTHR7/2i4lI1D203gdfxuqTlA=="
+      "version": "6.9.14",
+      "resolved": "https://registry.npmjs.org/@types/qs/-/qs-6.9.14.tgz",
+      "integrity": "sha512-5khscbd3SwWMhFqylJBLQ0zIu7c1K6Vz0uBIt915BI3zV0q1nfjRQD3RqSBcPaO6PHEF4ov/t9y89fSiyThlPA=="
     },
     "@types/range-parser": {
       "version": "1.2.7",
