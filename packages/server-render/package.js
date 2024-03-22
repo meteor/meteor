@@ -1,6 +1,6 @@
 Package.describe({
   name: "server-render",
-  version: "0.4.2-beta300.6",
+  version: "0.4.2-beta300.7",
   summary: "Generic support for server-side rendering in Meteor apps",
   documentation: "README.md"
 });
