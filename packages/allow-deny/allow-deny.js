@@ -260,7 +260,7 @@ CollectionPrototype._validatedInsert = function (userId, doc,
   if (generatedId !== null)
     doc._id = generatedId;
 
-  self._collection.insert.call(self._collection, doc);
+  return self._collection.insert.call(self._collection, doc);
 };
 
 // Simulate a mongo `update` operation while validating that the access
