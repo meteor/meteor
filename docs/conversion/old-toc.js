@@ -290,13 +290,6 @@ module.exports = [
     ],
 
 
-    "HTTP", [
-      "HTTP.call",
-      {name: "HTTP.get"},
-      {name: "HTTP.post"},
-      {name: "HTTP.put"},
-      {name: "HTTP.del"}
-    ],
     "Email", [
       "Email.send"
     ],
