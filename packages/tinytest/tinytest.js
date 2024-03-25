@@ -1,3 +1,5 @@
+import isEqual from "lodash.isequal";
+
 /******************************************************************************/
 /* TestCaseResults                                                            */
 /******************************************************************************/
@@ -330,7 +332,7 @@ export class TestCaseResults {
   include(s, v, message, not) {
     var pass = false;
     if (s instanceof Array) {
-      pass = s.some(it => _.isEqual(v, it));
+      pass = s.some(it => isEqual(v, it));
     } else if (s && typeof s === "object") {
       pass = v in s;
     } else if (typeof s === "string") {

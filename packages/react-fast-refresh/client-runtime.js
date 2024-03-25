@@ -32,7 +32,7 @@ function registerExportsForReactRefresh(moduleId, moduleExports) {
     var typeID = moduleId + ' %exports% ' + key;
     runtime.register(exportValue, typeID);
   }
-};
+}
 
 // Modules that only export components become React Refresh boundaries.
 function isReactRefreshBoundary(moduleExports) {
@@ -79,7 +79,7 @@ function isReactRefreshBoundary(moduleExports) {
   }
 
   return hasExports && onlyExportComponents;
-};
+}
 
 runtime.injectIntoGlobalHook(window);
 
@@ -131,11 +131,11 @@ module.exports = function setupModule (module) {
   window.$RefreshReg$ = function (type, _id) {
     var fullId = module.id + ' ' + _id;
     RefreshRuntime.register(type, fullId);
-  }
+  };
   window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
 
   beforeStates.push({
     prevRefreshReg: prevRefreshReg,
     prevRefreshSig: prevRefreshSig
   });
-}
+};

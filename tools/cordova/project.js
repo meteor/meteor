@@ -67,7 +67,6 @@ const pinnedPluginVersions = {
   "cordova-plugin-media": "3.0.1",
   "cordova-plugin-media-capture": "1.4.3",
   "cordova-plugin-network-information": "1.3.3",
-  "cordova-plugin-splashscreen": "4.1.0",
   "cordova-plugin-statusbar": "2.3.0",
   "cordova-plugin-test-framework": "1.1.5",
   "cordova-plugin-vibration": "2.1.5",
