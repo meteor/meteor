@@ -73,8 +73,6 @@ makeInstaller = function (options) {
     this.childrenById = {};
   }
 
-  var requireHooks = [];
-
   // Used to keep module.prefetch promise resolutions well-ordered.
   var lastPrefetchPromise;
 
@@ -91,7 +89,7 @@ makeInstaller = function (options) {
 
     function walk(module) {
       var file = getOwn(filesByModuleId, module.id);
-      if (fileIsDynamic(file) && !file.pending) {
+      if (fileIsDynamic(file) && ! file.pending) {
         file.pending = true;
         missing = missing || {};
 
@@ -207,48 +205,20 @@ makeInstaller = function (options) {
     return new Error("Cannot find module '" + id + "'");
   }
 
-  Module.prototype.onRequire = function (callbacks) {
-    console.warn('module.onRequire is depreciated. Use module.hot.onRequire instead.');
-    this._onRequire(callbacks);
-  };
-
-  Module.prototype._onRequire = function (callbacks) {
-    requireHooks.push(callbacks);
-  };
-
   Module.prototype.resolve = function (id) {
     var file = fileResolve(filesByModuleId[this.id], id);
     if (file) return file.module.id;
     var error = makeMissingError(id);
-    if (fallback && isFunction(fallback)) {
-      return fallback(id, this.id, error);
+    if (fallback && isFunction(fallback.resolve)) {
+      return fallback.resolve(id, this.id, error);
     }
     throw error;
   };
 
   Module.prototype.require = function require(id) {
     var result = fileResolve(filesByModuleId[this.id], id);
-
     if (result) {
-      // Skip any hooks added while requiring this module
-      var hookCount = requireHooks.length;
-      var hookData = []
-
-      for (var i = 0; i < hookCount; i++) {
-        if (requireHooks[i].before) {
-          hookData[i] = requireHooks[i].before(result.module, this.id);
-        }
-      }
-
-      var moduleExports = fileEvaluate(result, this);
-
-      for (var i = 0; i < hookCount; i++) {
-        if (requireHooks[i].after) {
-          requireHooks[i].after(result.module, hookData[i]);
-        }
-      }
-
-      return moduleExports;
+      return fileEvaluate(result, this);
     }
 
     var error = makeMissingError(id);
@@ -263,18 +233,6 @@ makeInstaller = function (options) {
 
     throw error;
   };
-
-  Module.prototype._getRoot = function () {
-    return root;
-  }
-
-  Module.prototype._getModuleById = function (id) {
-    var result = fileResolve(filesByModuleId[this.id], id);
-    if (result) {
-      return result.module;
-    }
-    return null;
-  }
 
   function makeRequire(file) {
     var module = file.module;
@@ -333,9 +291,9 @@ makeInstaller = function (options) {
 
   function fileEvaluate(file, parentModule) {
     var module = file.module;
-    if (!strictHasOwn(module, "exports")) {
+    if (! strictHasOwn(module, "exports")) {
       var contents = file.contents;
-      if (!contents) {
+      if (! contents) {
         // If this file was installed with array notation, and the array
         // contained one or more objects but no functions, then the combined
         // properties of the objects are treated as a temporary stub for
@@ -411,14 +369,14 @@ makeInstaller = function (options) {
         }
       });
 
-      if (!isFunction(contents)) {
+      if (! isFunction(contents)) {
         // If the array did not contain a function, merge nothing.
         contents = null;
       }
 
-    } else if (!isFunction(contents) &&
-      !isString(contents) &&
-      !isObject(contents)) {
+    } else if (! isFunction(contents) &&
+               ! isString(contents) &&
+               ! isObject(contents)) {
       // If contents is neither an array nor a function nor a string nor
       // an object, just give up and merge nothing.
       contents = null;
@@ -434,7 +392,7 @@ makeInstaller = function (options) {
           } else {
             var child = getOwn(file.contents, key);
 
-            if (!child) {
+            if (! child) {
               child = file.contents[key] = new File(
                 file.module.id.replace(/\/*$/, "/") + key,
                 file
@@ -469,11 +427,11 @@ makeInstaller = function (options) {
     }
 
     // Always append relative to a directory.
-    while (file && !fileIsDirectory(file)) {
+    while (file && ! fileIsDirectory(file)) {
       file = file.parent;
     }
 
-    if (!file || !part || part === ".") {
+    if (! file || ! part || part === ".") {
       return file;
     }
 
@@ -486,12 +444,12 @@ makeInstaller = function (options) {
     // Only consider multiple file extensions if this part is the last
     // part of a module identifier and not equal to `.` or `..`, and there
     // was no exact match or the exact match was a directory.
-    if (extensions && (!exactChild || fileIsDirectoryOrSymlinkToDirectory(exactChild))) {
+    if (extensions && (! exactChild || fileIsDirectoryOrSymlinkToDirectory(exactChild))) {
       for (var e = 0; e < extensions.length; ++e) {
         var child = getOwn(file.contents, part + extensions[e]);
         // Basically, this means that no-directory match is preferred over directory
         // but if exact match does not exist, then directory is fine too.
-        if (child && (!exactChild || !fileIsDirectoryOrSymlinkToDirectory(child))) {
+        if (child && (!exactChild || ! fileIsDirectoryOrSymlinkToDirectory(child))) {
           return child;
         }
       }
@@ -531,12 +489,12 @@ makeInstaller = function (options) {
       // is a slight deviation from Node, which has access to the entire
       // file system.
       id.charAt(0) === "/" ? fileAppendId(root, id, extensions) :
-        // Relative module identifiers are interpreted relative to the
-        // current file, naturally.
-        id.charAt(0) === "." ? fileAppendId(file, id, extensions) :
-          // Top-level module identifiers are interpreted as referring to
-          // packages in `node_modules` directories.
-          nodeModulesLookup(file, id, extensions);
+      // Relative module identifiers are interpreted relative to the
+      // current file, naturally.
+      id.charAt(0) === "." ? fileAppendId(file, id, extensions) :
+      // Top-level module identifiers are interpreted as referring to
+      // packages in `node_modules` directories.
+      nodeModulesLookup(file, id, extensions);
 
     // If the identifier resolves to a directory, we use the same logic as
     // Node to find an `index.js` or `package.json` file to evaluate.
@@ -598,7 +556,7 @@ makeInstaller = function (options) {
   };
 
   function nodeModulesLookup(file, id, extensions) {
-    for (var resolved; file && !resolved; file = file.parent) {
+    for (var resolved; file && ! resolved; file = file.parent) {
       resolved = fileIsDirectoryOrSymlinkToDirectory(file) &&
         fileAppendId(file, "node_modules/" + id, extensions);
     }

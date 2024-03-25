@@ -6,12 +6,13 @@ Package.describe({
   documentation: "README.md"
 });
 
-Npm.depends({
-  install: "0.13.0"
-});
+// TODO: Upgrade install version once pull request is accepted.
+// Npm.depends({
+//   install: "0.13.0"
+// });
 
 Package.onUse(function(api) {
-  api.addFiles(".npm/package/node_modules/install/install.js", [
+  api.addFiles("install-fork.js", [
     "client",
     "server"
   ], {
