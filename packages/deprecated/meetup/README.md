@@ -1,5 +1,5 @@
 # meetup
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/meetup) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/meetup)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/deprecated/meetup) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/deprecated/meetup)
 ***
 
 **Deprecated, use meetup-oauth instead.**
