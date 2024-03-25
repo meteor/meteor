@@ -1,3 +1,6 @@
+const has = Npm.require('lodash.has');
+const memoize = Npm.require('lodash.memoize');
+
 var CS = ConstraintSolver;
 var PV = PackageVersion;
 
@@ -18,7 +21,7 @@ CS.CatalogCache = function () {
 };
 
 CS.CatalogCache.prototype.hasPackageVersion = function (pkg, version) {
-  return _.has(this._dependencies, pvkey(pkg, version));
+  return has(this._dependencies, pvkey(pkg, version));
 };
 
 CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
@@ -28,11 +31,11 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
   check(deps, [CS.Dependency]);
 
   var key = pvkey(p, v);
-  if (_.has(this._dependencies, key)) {
+  if (has(this._dependencies, key)) {
     throw new Error("Already have an entry for " + key);
   }
 
-  if (! _.has(this._versions, p)) {
+  if (!has(this._versions, p)) {
     this._versions[p] = [];
   }
   this._versions[p].push(v);
@@ -40,9 +43,9 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
 
   var depsByPackage = {};
   this._dependencies[key] = depsByPackage;
-  _.each(deps, function (d) {
+  deps.forEach(function (d) {
     var p2 = d.packageConstraint.package;
-    if (_.has(depsByPackage, p2)) {
+    if (has(depsByPackage, p2)) {
       throw new Error("Can't have two dependencies on " + p2 +
                       " in " + key);
     }
@@ -55,7 +58,7 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
 // `d.packageConstraint.package`.  (Don't mutate the map.)
 CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
   var key = pvkey(p, v);
-  if (! _.has(this._dependencies, key)) {
+  if (!has(this._dependencies, key)) {
     throw new Error("No entry for " + key);
   }
   return this._dependencies[key];
@@ -64,14 +67,14 @@ CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
 // Returns an array of version strings, sorted, possibly empty.
 // (Don't mutate the result.)
 CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
-  var result = (_.has(this._versions, pkg) ?
+  var result = (has(this._versions, pkg) ?
                 this._versions[pkg] : []);
   if ((!result.length) || result.sorted) {
     return result;
   } else {
     // sort in place, and record so that we don't sort redundantly
     // (we'll sort again if more versions are pushed onto the array)
-    var pvParse = _.memoize(PV.parse);
+    var pvParse = memoize(PV.parse);
     result.sort(function (a, b) {
       return PV.compare(pvParse(a), pvParse(b));
     });
@@ -81,16 +84,16 @@ CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
 };
 
 CS.CatalogCache.prototype.hasPackage = function (pkg) {
-  return _.has(this._versions, pkg);
+  return has(this._versions, pkg);
 };
 
 CS.CatalogCache.prototype.toJSONable = function () {
   var self = this;
   var data = {};
-  _.each(self._dependencies, function (depsByPackage, key) {
+  Object.entries(self._dependencies).forEach(function ([key, depsByPackage]) {
     // depsByPackage is a map of String -> Dependency.
     // Map over the values to get an array of String.
-    data[key] = _.map(depsByPackage, function (dep) {
+    data[key] = Object.values(depsByPackage).map(function (dep) {
       return dep.toString();
     });
   });
@@ -101,12 +104,12 @@ CS.CatalogCache.fromJSONable = function (obj) {
   check(obj, { data: Object });
 
   var cache = new CS.CatalogCache();
-  _.each(obj.data, function (depsArray, pv) {
+  Object.entries(obj.data).forEach(function ([pv, depsArray]) {
     check(depsArray, [String]);
     pv = CS.PackageAndVersion.fromString(pv);
     cache.addPackageVersion(
       pv.package, pv.version,
-      _.map(depsArray, function (str) {
+      depsArray.map(function (str) {
         return CS.Dependency.fromString(str);
       }));
   });
@@ -118,8 +121,8 @@ CS.CatalogCache.fromJSONable = function (obj) {
 // iteration is stopped.  There's no particular order to the iteration.
 CS.CatalogCache.prototype.eachPackageVersion = function (iter) {
   var self = this;
-  _.find(self._dependencies, function (value, key) {
-    var stop = iter(CS.PackageAndVersion.fromString(key), value);
+  Object.keys(self._dependencies).find(function (key) {
+    var stop = iter(CS.PackageAndVersion.fromString(key), self._dependencies[key]);
     return stop;
   });
 };
@@ -129,7 +132,7 @@ CS.CatalogCache.prototype.eachPackageVersion = function (iter) {
 // If `iter` returns true, iteration is stopped.
 ConstraintSolver.CatalogCache.prototype.eachPackage = function (iter) {
   var self = this;
-  _.find(_.keys(self._versions), function (key) {
+  Object.keys(self._versions).find(function (key) {
     var stop = iter(key, self.getPackageVersions(key));
     return stop;
   });

@@ -1143,12 +1143,12 @@ function runWebAppServer() {
    * @summary callback handler for `WebApp.connectHandlers`
    * @param {Object} req
    * a Node.js
-   * [IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
+   * [IncomingMessage](https://nodejs.org/api/http.html#class-httpincomingmessage)
    * object with some extra properties. This argument can be used
    *  to get information about the incoming request.
    * @param {Object} res
    * a Node.js
-   * [ServerResponse](http://nodejs.org/api/http.html#http_class_http_serverresponse)
+   * [ServerResponse](https://nodejs.org/api/http.html#class-httpserverresponse)
    * object. Use this to write data that should be sent in response to the
    * request, and call `res.end()` when you are done.
    * @param {Function} next

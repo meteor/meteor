@@ -1,5 +1,5 @@
 # appcache
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/appcache) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/appcache)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/deprecated/appcache) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/deprecated/appcache)
 ***
 
 The `appcache` package, part of
