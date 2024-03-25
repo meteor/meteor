@@ -186,8 +186,15 @@ CollectionPrototype._defineMutationMethods = function(options) {
               );
             }
 
-            const validatedMethodName =
+            let validatedMethodName =
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
+
+
+            // force to use the async version of the method
+            if(Meteor.isServer && !validatedMethodName?.endsWith('Async')){
+                validatedMethodName += 'Async';
+            }
+
             args.unshift(this.userId);
             isInsert(method) && args.push(generatedId);
             return self[validatedMethodName].apply(self, args);
