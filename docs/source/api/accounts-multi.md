@@ -346,3 +346,7 @@ of legitimate users by attempting all possible passwords.
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the
 [`DDPRateLimiter`](#ddpratelimiter) docs for more information.
+
+{% apibox "AccountsServer#addDefaultRateLimit" %}
+
+{% apibox "AccountsServer#removeDefaultRateLimit" %}

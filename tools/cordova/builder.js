@@ -64,16 +64,7 @@ const splashIosKeys = {
 };
 
 const splashAndroidKeys = {
-  'android_mdpi_portrait': 'port-mdpi',
-  'android_mdpi_landscape': 'land-mdpi',
-  'android_hdpi_portrait': 'port-hdpi',
-  'android_hdpi_landscape': 'land-hdpi',
-  'android_xhdpi_portrait': 'port-xhdpi',
-  'android_xhdpi_landscape': 'land-xhdpi',
-  'android_xxhdpi_portrait': 'port-xxhdpi',
-  'android_xxhdpi_landscape': 'land-xxhdpi',
-  'android_xxxhdpi_portrait': 'port-xxxhdpi',
-  'android_xxxhdpi_landscape': 'land-xxxhdpi'
+  'android_universal': 'AndroidWindowSplashScreenAnimatedIcon',
 };
 
 export class CordovaBuilder {
@@ -150,14 +141,6 @@ export class CordovaBuilder {
 
     const packageMap = this.projectContext.packageMap;
 
-    if (packageMap && packageMap.getInfo('launch-screen')) {
-      this.additionalConfiguration.global.AutoHideSplashScreen = false;
-      this.additionalConfiguration.global.SplashScreen = 'screen';
-      this.additionalConfiguration.global.SplashScreenDelay = 5000;
-      this.additionalConfiguration.global.FadeSplashScreenDuration = 250;
-      this.additionalConfiguration.global.ShowSplashScreenSpinner = false;
-    }
-
     if (packageMap && packageMap.getInfo('mobile-status-bar')) {
       this.additionalConfiguration.global.StatusBarOverlaysWebView = false;
       this.additionalConfiguration.global.StatusBarStyle = 'default';
@@ -232,7 +215,7 @@ export class CordovaBuilder {
     _.each(iconsAndroidSizes, setDefaultIcon);
 
     setDefaultLaunchScreen('ios_universal');
-    setDefaultLaunchScreen('android_mdpi_portrait');
+    setDefaultLaunchScreen('android_universal');
 
     this.pluginsConfiguration = {};
   }
@@ -373,7 +356,7 @@ export class CordovaBuilder {
         files.pathJoin(this.resourcesPath, newFilename));
 
     // Set it to the xml tree
-    xmlElement.ele(tag, { src, ...attributes });
+    xmlElement.ele(tag, { ...(tag === "preference" ? { value: src } : { src }), ...attributes });
   }
 
   _resolveFilenameForImages = (suppliedPath, key, tag) => {
@@ -426,8 +409,12 @@ export class CordovaBuilder {
       let suppliedPath = suppliedValue;
       let suppliedPathDarkMode = null;
       if (typeof suppliedValue === 'object') {
-        suppliedPath = suppliedValue.src;
-        suppliedPathDarkMode = suppliedValue.srcDarkMode;
+        if (isIos) {
+          suppliedPath = suppliedValue.src;
+          suppliedPathDarkMode = suppliedValue.srcDarkMode;
+        } else {
+         throw new Error("Dark mode through Meteor's launch screen helper is only allowed for iOS. For android, please follow the instructions: https://developer.android.com/develop/ui/views/theming/darktheme.");
+        }
       }
 
       if (isIos) {
@@ -445,19 +432,12 @@ export class CordovaBuilder {
       }
 
       const filename = this._resolveFilenameForImages(suppliedPath, key, 'splash');
-      if (suppliedPathDarkMode) {
-        this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPathDarkMode,
-            appendDarkMode(filename, { withChar: '_' }),
-            xmlElement, 'splash',
-            { density: appendDarkMode(value, { separator: '-', withChar: '-' })}
-        );
-      }
       this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath,
           filename,
           xmlElement,
-          'splash',
-          { density: value });
-    })
+          'preference',
+          { name: value });
+    });
   }
 
   configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
@@ -754,11 +734,11 @@ configuration. The key may be deprecated.`);
      * @summary Set the launch screen images for your mobile app.
      * @param {Object} launchScreens A dictionary where keys are different
      * devices, screen sizes, and orientations, and the values are image paths
-     * relative to the project root directory or an object containing a dark mode image path too ({src, srcDarkMode}).
+     * relative to the project root directory or an object containing a dark mode image path too `{ src, srcDarkMode }` (iOS only).
+     * Note: If you want to have a dark theme splash screen on Android, please follow the instructions described [here](https://developer.android.com/develop/ui/views/theming/darktheme).
      *
-     * For Android, launch screen images should
-     * be special "Nine-patch" image files that specify how they should be
-     * stretched. See the [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
+     * For Android specific information, check the [Cordova docs](https://cordova.apache.org/docs/en/latest/core/features/splashscreen/index.html#android-specific-information) and [Android docs](https://developer.android.com/develop/ui/views/launch/splash-screen#splash_screen_dimensions).
+     * Also note that for android the asset can either be an XML Vector Drawable or PNG.
      *
      * For best practices when developing a splash image, see the [Apple Guidelines](https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/launch-screen/).
      * To learn more about size classes for iOS, check out the [documentation](https://cordova.apache.org/docs/en/10.x/reference/cordova-plugin-splashscreen/#size-classes) from Cordova.
@@ -766,32 +746,23 @@ configuration. The key may be deprecated.`);
      * Valid key values:
      *
      * iOS:
-     *  - `ios_universal` (Default@2xuniversalanyany.png - 2732x2732) - All @2x devices, if device/mode specific is not declared
-     *  - `ios_universal_3x` (Default@3xuniversalanyany.png - 2208x2208) - All @3x devices, if device/mode specific is not declared
-     *  - `Default@2x~universal~comany` (1278x2732) - All @2x devices in portrait mode
-     *  - `Default@2x~universal~comcom` (1334x750) - All @2x devices in landscape (narrow) mode
-     *  - `Default@3x~universal~anycom` (2208x1242) - All @3x devices in landscape (wide) mode
-     *  - `Default@3x~universal~comany` (1242x2208) - All @3x devices in portrait mode
-     *  - `Default@2x~iphone~anyany` (1334x1334) - iPhone SE/6s/7/8/XR
-     *  - `Default@2x~iphone~comany` (750x1334) - iPhone SE/6s/7/8/XR - portrait mode
-     *  - `Default@2x~iphone~comcom` (1334x750) - iPhone SE/6s/7/8/XR - landscape (narrow) mode
-     *  - `Default@3x~iphone~anyany` (2208x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
-     *  - `Default@3x~iphone~anycom` (2208x1242) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max - landscape (wide) mode
-     *  - `Default@3x~iphone~comany` (1242x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max - portrait mode
-     *  - `Default@2x~ipad~anyany` (2732x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9"
-     *  - `Default@2x~ipad~comany` (1278x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9" - portrait mode
+     *  - `ios_universal` (Default@2xuniversalanyany.png - 2732x2732 px) - All @2x devices, if device/mode specific is not declared
+     *  - `ios_universal_3x` (Default@3xuniversalanyany.png - 2208x2208 px) - All @3x devices, if device/mode specific is not declared
+     *  - `Default@2x~universal~comany` (1278x2732 px) - All @2x devices in portrait mode
+     *  - `Default@2x~universal~comcom` (1334x750 px) - All @2x devices in landscape (narrow) mode
+     *  - `Default@3x~universal~anycom` (2208x1242 px) - All @3x devices in landscape (wide) mode
+     *  - `Default@3x~universal~comany` (1242x2208 px) - All @3x devices in portrait mode
+     *  - `Default@2x~iphone~anyany` (1334x1334 px) - iPhone SE/6s/7/8/XR
+     *  - `Default@2x~iphone~comany` (750x1334 px) - iPhone SE/6s/7/8/XR - portrait mode
+     *  - `Default@2x~iphone~comcom` (1334x750 px) - iPhone SE/6s/7/8/XR - landscape (narrow) mode
+     *  - `Default@3x~iphone~anyany` (2208x2208 px) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
+     *  - `Default@3x~iphone~anycom` (2208x1242 px) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max - landscape (wide) mode
+     *  - `Default@3x~iphone~comany` (1242x2208 px) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max - portrait mode
+     *  - `Default@2x~ipad~anyany` (2732x2732 px) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9"
+     *  - `Default@2x~ipad~comany` (1278x2732 px) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9" - portrait mode
      *
      * Android:
-     *  - `android_mdpi_portrait` (320x480)
-     *  - `android_mdpi_landscape` (480x320)
-     *  - `android_hdpi_portrait` (480x800)
-     *  - `android_hdpi_landscape` (800x480)
-     *  - `android_xhdpi_portrait` (720x1280)
-     *  - `android_xhdpi_landscape` (1280x720)
-     *  - `android_xxhdpi_portrait` (960x1600)
-     *  - `android_xxhdpi_landscape` (1600x960)
-     *  - `android_xxxhdpi_portrait` (1280x1920)
-     *  - `android_xxxhdpi_landscape` (1920x1280)
+     *  - `android_universal` (288x288 dp)
      *
      * @memberOf App
      */
@@ -800,11 +771,16 @@ configuration. The key may be deprecated.`);
         Object.keys(splashIosKeys).concat(Object.keys(splashAndroidKeys));
 
       Object.keys(launchScreens).forEach((key) => {
-        if (!(key in validDevices)) {
+        if (!validDevices.includes(key)) {
           Console.labelWarn(`${key}: unknown key in App.launchScreens \
 configuration. The key may be deprecated.`);
         }
-      })
+
+        const value = launchScreens[key];
+        if (typeof value !== "string" && key.includes("android")) {
+          throw new Error("Android splash screen path must be a string. To enable dark splash screens for your app, check out the android developer guide: https://developer.android.com/develop/ui/views/theming/darktheme.");
+        }
+      });
       Object.assign(builder.imagePaths.splash, launchScreens);
     },
 
