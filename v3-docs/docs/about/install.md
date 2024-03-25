@@ -44,6 +44,8 @@ if the error persists, please try to install Meteor using `npm`:
 npm install -g meteor --foreground-script
 ```
 
+Make sure you have Node.js v20 or higher installed.
+
 :::
 
 An alternative for Linux and OS X, is to install Meteor by using curl:
