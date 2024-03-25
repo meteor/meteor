@@ -270,7 +270,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
                     callbackContext.error("checkForUpdates requires a rootURL to be configured");
                     return;
                 }
-                HttpUrl baseUrl = rootUrl.resolve("__cordova/");
+                HttpUrl baseUrl = rootUrl.newBuilder().addPathSegment("__cordova").build();
                 assetBundleManager.checkForUpdates(baseUrl);
                 callbackContext.success();
             }

@@ -17,6 +17,10 @@ export namespace Tracker {
      */
     firstRun: boolean;
     /**
+     * Forces autorun blocks to be executed in synchronous-looking order by storing the value autorun promise thus making it awaitable.
+     */
+    firstRunPromise: Promise<unknown>
+    /**
      * Invalidates this computation so that it will be rerun.
      */
     invalidate(): void;
