@@ -16,9 +16,9 @@ export const CORDOVA_PLATFORMS = ['ios', 'android'];
 const CORDOVA_ANDROID_VERSION = "12.0.1";
 
 export const CORDOVA_DEV_BUNDLE_VERSIONS = {
-  'cordova-lib': '10.0.0',
-  'cordova-common': '4.0.2',
-  'cordova-create': '2.0.0',
+  'cordova-lib': '12.0.1',
+  'cordova-common': '5.0.0',
+  'cordova-create': '5.0.0',
   'cordova-registry-mapper': '1.1.15',
   'cordova-android': CORDOVA_ANDROID_VERSION,
 };
@@ -70,7 +70,7 @@ export function ensureDevBundleDependencies() {
 
 export function displayNameForPlatform(platform) {
   return PLATFORM_TO_DISPLAY_NAME_MAP[platform] || platform;
-};
+}
 
 export function displayNamesForPlatforms(platforms) {
   return platforms.map((platform) =>
