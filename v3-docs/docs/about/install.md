@@ -32,6 +32,20 @@ For Windows, Linux and OS X, you can run the following command:
 npx meteor
 ```
 
+::: tip
+
+If you get an error with the installation `npx` you can try running `npx clear-npx-cache`
+
+or `rm -rf ~/.npm/_npx`
+
+if the error persists, please try to install Meteor using `npm`:
+
+```bash
+npm install -g meteor --foreground-script
+```
+
+:::
+
 An alternative for Linux and OS X, is to install Meteor by using curl:
 
 ```bash
