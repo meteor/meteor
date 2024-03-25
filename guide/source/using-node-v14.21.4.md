@@ -35,7 +35,35 @@ You can find our official Docker images at the following links:
 - [meteor/node](https://hub.docker.com/r/meteor/node/tags)
 - [meteor/galaxy-app](https://hub.docker.com/r/meteor/galaxy-app/tags)
 - [meteor/galaxy-puppeteer](https://hub.docker.com/r/meteor/galaxy-puppeteer/tags)
-- [meteor/base](https://hub.docker.com/r/meteor/meteor-base/tags) (It will be updated soon)
+- [meteor/base](https://hub.docker.com/r/meteor/meteor-base/tags)
+
+<h2 id="installing-node-in-linux"> Installing Node.js in Linux</h2>
+
+In case you are using a Linux x64 OS and you installed Node.js using the package manager or NVM, you
+will need this [bash script](https://gist.github.com/Grubba27/890609247e020de23659570ddeb326b2)
+to ensure that the Node.js version installed on the machine is the same as provided by Meteor.
+
+```bash
+
+#!/bin/bash
+
+# Set environment variables
+NODE_VERSION="14.21.4"
+NODE_URL="https://static.meteor.com/dev-bundle-node-os/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz"
+DIR_NODE="/usr/local"
+
+# Download and install Node.js using wget
+wget -qO- "$NODE_URL" | tar -xz -C "$DIR_NODE"/ && mv "$DIR_NODE"/node-v${NODE_VERSION}-linux-x64 "$DIR_NODE"/v$NODE_VERSION
+
+# Add node and npm to the PATH so the commands are available
+export NODE_PATH="$DIR_NODE/v$NODE_VERSION/lib/node_modules"
+export PATH="$DIR_NODE/v$NODE_VERSION/bin:$PATH"
+
+# Confirm the installation
+node -v
+npm -v
+
+```
 
 <h2 id="versions">Node.js ESM Versions and Repository</h2>
 

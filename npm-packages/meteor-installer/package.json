@@ -1,6 +1,6 @@
 {
   "name": "meteor",
-  "version": "2.13.0",
+  "version": "2.15.0",
   "description": "Install Meteor",
   "main": "install.js",
   "scripts": {
@@ -8,6 +8,7 @@
   },
   "author": "zodern",
   "license": "MIT",
+  "type": "commonjs",
   "dependencies": {
     "7zip-bin": "^5.2.0",
     "cli-progress": "^3.11.1",
