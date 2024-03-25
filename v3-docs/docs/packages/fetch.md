@@ -38,7 +38,6 @@ import { fetch, Headers, Request, Response } from "meteor/fetch";
 For the most part though, you will only need to import `fetch` and `Headers`.
 
 ```js
-import { Meteor } from 'meteor/meteor';
 import { fetch, Headers } from 'meteor/fetch';
 
 async function postData (url, data) {
@@ -63,7 +62,6 @@ async function postData (url, data) {
     }
 }
 
-const postDataCall = Meteor.wrapAsync(postData);
-const results = postDataCall('https://www.example.org/statsSubmission', { totalUsers: 55 }));
+const result = await postData('https://www.example.org/statsSubmission', { totalUsers: 55 });
 
 ```

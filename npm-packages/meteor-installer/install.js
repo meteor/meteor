@@ -45,7 +45,9 @@ if (!semver.satisfies(process.version, nodeVersion)) {
   );
 }
 
-const isInstalledGlobally = process.env.npm_config_global === 'true';
+const isInstalledGlobally =
+  process.env.npm_config_global === 'true' ||
+  process.env.npm_lifecycle_event === 'npx';
 
 if (!isInstalledGlobally) {
   console.error('******************************************');
@@ -55,7 +57,7 @@ if (!isInstalledGlobally) {
   console.error('Make sure you pass -g to npm install.');
   console.error('Aborting...');
   console.error('******************************************');
-  process.exit(1);
+  process.exit(0);
 }
 process.on('unhandledRejection', err => {
   throw err;
@@ -121,8 +123,8 @@ if (fs.existsSync(startedPath)) {
   console.log(
     `If you want to reinstall it, run:
 
-  $ meteor-installer uninstall
-  $ meteor-installer install
+  $ npx meteor uninstall
+  $ npx meteor@<version> install
 `,
   );
   process.exit();
@@ -316,7 +318,7 @@ function showGettingStarted() {
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
 
   const runCommand = isWindows()
-    ? `set path "${meteorPath}/;%path%`
+    ? `set path "${meteorPath}/;%path%"`
     : exportCommand;
   const message = `
 ***************************************

@@ -315,7 +315,7 @@ methods are available:
  - `addAsset` - Add a file to serve as-is to the browser or to include on the
    browser, depending on the target. On the web, it will be served at the exact
    path requested. For server targets, it can be retrieved using
-   `Assets.getText` or `Assets.getBinary`.
+   `Assets.getTextAsync` or `Assets.getBinaryAsync`.
  - `addHtml` - Works in web targets only. Add markup to the `head` or `body`
    section of the document.
  - `hmrAvailable` - Returns true if the file can be updated with HMR. Among other things,

@@ -6,13 +6,6 @@ You need to install the Meteor command line tool to create, run, and manage your
 
 ## Prerequisites {#prereqs}
 
-### Node.js version {#prereqs-node}
-
-> Meteor 2.x runs on a deprecated Node.js version (14). Meteor 3.0 is in progress, and it will run on the latest Node.js version. For more information, please consult our [migration guide](https://guide.meteor.com/3.0-migration.html).
-
-- Node.js version >= 10 and <= 14 is required.
-- We recommend you using [nvm](https://github.com/nvm-sh/nvm) or [Volta](https://volta.sh/) for managing Node.js versions.
-
 
 ### Operating System (OS) {#prereqs-os}
 
@@ -33,12 +26,10 @@ You need to install the Meteor command line tool to create, run, and manage your
 
 Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://docs.meteor.com/changelog.html) for the release notes.
 
-> Run `node -v` to ensure you are using Node.js 14. Meteor 3.0 is in progress, and it will run on the latest Node.js version.
-
 For Windows, Linux and OS X, you can run the following command:
 
 ```bash
-npm install -g meteor
+npx meteor
 ```
 
 An alternative for Linux and OS X, is to install Meteor by using curl:
@@ -77,8 +68,10 @@ In some cases you can get this error `npm WARN checkPermissions Missing write ac
 By default, the Meteor installer adds its install path (by default, `~/.meteor/`) to your PATH by updating either your `.bashrc`, `.bash_profile`, or `.zshrc` as appropriate. To disable this behavior, install Meteor by running:
 
 ```bash
-npm install -g meteor --ignore-meteor-setup-exec-path
+npm install -g meteor --ignore-meteor-setup-exec-path --foreground-script
 ```
+
+
 
 (or by setting the environment variable `npm_config_ignore_meteor_setup_exec_path=true`)
 

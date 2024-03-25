@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Parses Meteor Smart Package version strings",
-  version: "3.2.2-beta300.6"
+  version: "3.2.2-beta300.7"
 });
 
 Npm.depends({
