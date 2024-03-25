@@ -48,6 +48,16 @@ export namespace Accounts {
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<string>;
 
+  function createUserVerifyingEmail(
+    options: {
+      username?: string | undefined;
+      email?: string | undefined;
+      password?: string | undefined;
+      profile?: Meteor.UserProfile | undefined;
+    },
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ): Promise<string>;
+
   function config(options: {
     sendVerificationEmail?: boolean | undefined;
     forbidClientAccountCreation?: boolean | undefined;
@@ -331,9 +341,9 @@ export namespace Accounts {
   type Password =
     | string
     | {
-        digest: string;
-        algorithm: 'sha-256';
-      };
+      digest: string;
+      algorithm: 'sha-256';
+    };
 
   /**
    *

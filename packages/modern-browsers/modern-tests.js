@@ -29,4 +29,11 @@ Tinytest.add('modern-browsers - versions - basic', function (test) {
     minor: 5,
     patch: 2,
   }));
+
+  test.isTrue(isModern({
+    name: "appleMail", 
+    major: 605, 
+    minor: 1,
+    patch: 15,
+  }));
 });

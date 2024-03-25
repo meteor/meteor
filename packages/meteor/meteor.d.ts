@@ -19,6 +19,15 @@ export namespace Meteor {
    * of Meteor.
    */
   var release: string;
+
+  var meteorRelease: string;
+  
+  interface ErrorConstructor {
+    new (...args: any[]): Error;
+    errorType: string;
+  }
+
+  function makeErrorType(name: string, constructor: Function): ErrorConstructor;
   /** Global props **/
 
   /** Settings **/
@@ -60,6 +69,9 @@ export namespace Meteor {
   function user(options?: {
     fields?: Mongo.FieldSpecifier | undefined;
   }): User | null;
+  function userAsync(options?: {
+    fields?: Mongo.FieldSpecifier | undefined;
+  }): Promise<Meteor.User | null>;
 
   function userId(): string | null;
   var users: Mongo.Collection<User>;
@@ -159,7 +171,13 @@ export namespace Meteor {
    */
   function callAsync(name: string, ...args: any[]): Promise<any>;
 
-  interface MethodApplyOptions {
+  interface MethodApplyOptions<
+    Result extends
+      | EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  > {
     /**
      * (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
      */
@@ -203,7 +221,7 @@ export namespace Meteor {
   >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
-    options?: MethodApplyOptions,
+    options?: MethodApplyOptions<Result>,
     asyncCallback?: (
       error: global_Error | Meteor.Error | undefined,
       result?: Result
@@ -226,7 +244,7 @@ export namespace Meteor {
   >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
-    options?: MethodApplyOptions,
+    options?: MethodApplyOptions<Result>,
     asyncCallback?: (
       error: global_Error | Meteor.Error | undefined,
       result?: Result
