@@ -1,6 +1,6 @@
 {
   "track": "METEOR",
-  "version": "2.14-beta.4",
+  "version": "2.15-rc.1",
   "recommended": false,
   "official": false,
   "description": "Meteor experimental release"

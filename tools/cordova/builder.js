@@ -784,7 +784,7 @@ configuration. The key may be deprecated.`);
         Object.keys(splashIosKeys).concat(Object.keys(splashAndroidKeys));
 
       Object.keys(launchScreens).forEach((key) => {
-        if (!(key in validDevices)) {
+        if (!validDevices.includes(key)) {
           Console.labelWarn(`${key}: unknown key in App.launchScreens \
 configuration. The key may be deprecated.`);
         }
@@ -793,7 +793,7 @@ configuration. The key may be deprecated.`);
         if (typeof value !== "string" && key.includes("android")) {
           throw new Error("Android splash screen path must be a string. To enable dark splash screens for your app, check out the android developer guide: https://developer.android.com/develop/ui/views/theming/darktheme.");
         }
-      })
+      });
       Object.assign(builder.imagePaths.splash, launchScreens);
     },
 

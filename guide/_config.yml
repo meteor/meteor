@@ -5,6 +5,8 @@ edit_branch: 'devel'
 edit_path: 'guide'
 content_root: 'source'
 versions:
+  - '2.15'
+  - '2.14'
   - '2.13'
   - '2.12'
   - '2.11'
@@ -42,7 +44,7 @@ sidebar_categories:
     - index
     - code-style
     - structure
-    - 2.13-migration
+    - 2.14-migration
     - 3.0-migration
     - prepare-meteor-3.0
   Data:
