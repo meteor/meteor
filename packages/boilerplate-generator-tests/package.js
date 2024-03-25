@@ -13,7 +13,6 @@ Npm.depends({
 Package.onTest(function (api) {
   api.use('ecmascript');
   api.use([
-    'underscore',
     'tinytest',
     'boilerplate-generator'
   ], 'server');
