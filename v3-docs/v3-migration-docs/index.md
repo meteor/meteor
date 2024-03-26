@@ -7,10 +7,9 @@ This guide will be updated as we progress through the development of Meteor v3.
 
 ## What's the status of version 3.0?
 
-**Latest version:** `3.0-beta.6` <br/>
+**Latest version:** `3.0-beta.7` <br/>
 **Node.js version:** `20.9.0 LTS`
 
-Meteor 3.0 is in alpha and not recommended for production. You can check the "[Release 3.0 Pull Request](https://github.com/meteor/meteor/pull/12359)" to see what is being changed.
 
 ## How to prepare for version 3.0?
 
@@ -195,7 +194,7 @@ findOne is not available on the server. Please use findOneAsync instead.
 You can create a new Meteor 3.0 project by running the command below:
 
 ```bash
-meteor create my-new-project --release 3.0-beta.6
+meteor create my-new-project --release 3.0-beta.7
 ```
 
 ## How to update from version 2?
@@ -203,7 +202,7 @@ meteor create my-new-project --release 3.0-beta.6
 You can update your Meteor 2.x project by running the command below inside your project folder:
 
 ```bash
-meteor update --release 3.0-beta.6
+meteor update --release 3.0-beta.7
 ```
 
 

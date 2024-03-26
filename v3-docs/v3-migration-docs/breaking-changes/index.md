@@ -9,15 +9,13 @@ You should migrate to use their `Async` counterparts.
 
 
 ```js
-
 const docs = MyCollection.find({ _id: '123' }).fetch(); // [!code error] This will not work in the server
-
-
-const docs = await MyCollection.find({ _id: '123' }).fetchAsync(); // [!code highlight] This will work in the server
-
-
 const doc = MyCollection.findOne({ _id: '123' }); // [!code error] This will not work in the server
 
+
+// in Meteor 3.x you should use the Async methods
+
+const docs = await MyCollection.find({ _id: '123' }).fetchAsync(); // [!code highlight] This will work in the server
 const doc = await MyCollection.findOneAsync({ _id: '123' }); // [!code highlight] This will work in the server
 
 ```
@@ -48,4 +46,128 @@ or
 npx meteor@<version>
 ```
 
-You should be using a node version >= 20.0.0
+You should be using a node version >= 20.0.0, if you use in your CI/CD you should update it to use the latest version of Node.
+
+
+## Call x CallAsync
+
+::: tip TL;DR
+
+You can check [call x callAsync](./call-x-callAsync.md) page for a full overview.
+
+:::
+
+Due to how meteor now works with `async/await`, you should use `callAsync` instead of `call` in your methods.
+
+In Meteor 2x this was a common pattern:
+
+```js
+import { Meteor } from 'meteor/meteor'
+
+Meteor.methods({
+  async getAllData() {
+    return await MyCollection.find().fetch(); //  [!code error]
+  },
+  async otherMethod() {
+    return await MyCollection.find().fetch(); //  [!code error]
+  }
+});
+
+
+Meteor.call('getAllData') // [!code error]
+Meteor.call('otherMethod') // [!code error]
+
+
+```
+
+Now in Meteor 3.x it should become:
+
+```js
+import { Meteor } from 'meteor/meteor'
+
+Meteor.methods({
+  async getAllData() {
+    return await MyCollection.find().fetchAsync(); //  [!code highlight]
+  },
+  async otherMethod() {
+    return await MyCollection.find().fetchAsync(); //  [!code highlight]
+  }
+});
+
+await Meteor.callAsync('getAllData') // [!code highlight]
+await Meteor.callAsync('otherMethod') // [!code highlight]
+
+```
+
+## Changes in Webapp
+
+::: tip TL;DR
+
+Webapp now uses Express under the hood. This means that you can use all the express features in your Meteor app.
+
+But if you did any customizations in the `WebApp` package, you should check if they are compatible with Express.
+
+:::
+
+
+The `webapp` package now exports this new properties:
+
+```ts
+
+type ExpressModule = {
+  (): express.Application;
+  json: typeof express.json;
+  raw: typeof express.raw;
+  Router: typeof express.Router;
+  static: typeof express.static;
+  text: typeof express.text;
+  urlencoded: typeof express.urlencoded;
+};
+
+export declare module WebApp {
+  // ...
+  /**
+   * @deprecated use handlers instead
+   */
+  var connectHandlers: express.Application;
+  var handlers: express.Application; // [!code highlight]
+  /**
+   * @deprecated use rawHandlers instead
+   */
+  var rawConnectHandlers: express.Application;
+  var rawHandlers: express.Application;
+  var httpServer: http.Server;
+  var expressApp: express.Application;
+  var express: ExpressModule; // [!code highlight]
+  // ...
+}
+
+// import { WebApp } from 'meteor/webapp';
+```
+
+If you want to use express in your app, you can do it like this:
+
+```js
+import { WebApp } from 'meteor/webapp';
+
+const app = WebApp.express(); // [!code highlight] you can use as a normal express app
+
+app.get('/hello', (req, res) => {
+  res.send('Hello World');
+});
+
+WebApp.handlers.use(express);
+
+```
+
+The code below is an example of how you can use the `handlers` property to create a route in your app:
+
+```js
+
+import { WebApp } from 'meteor/webapp';
+
+WebApp.handlers.get('/hello', (req, res) => {
+  res.send('Hello World');
+});
+
+```

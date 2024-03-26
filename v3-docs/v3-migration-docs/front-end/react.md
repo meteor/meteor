@@ -14,7 +14,7 @@ In those cases, we have implemented `suspense` version of hooks so that you can 
 
 For example:
 
-```js
+```jsx
 
 // you can write like this:
 
@@ -27,15 +27,18 @@ function Tasks() {
   );
 
 
-if (isLoading()) {
-  return <Loading />
-}
+  if (isLoading()) {
+    return <Loading />
+  }
 
   // render the tasks
 }
 
+```
 
-// or like this:
+In Meteor 3.x you can write like this:
+
+```jsx
 
 import { useTracker, useSubscribe } from 'meteor/react-meteor-data/suspense'
 function Tasks() { // this component will suspend

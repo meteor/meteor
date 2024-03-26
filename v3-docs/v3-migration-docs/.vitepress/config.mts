@@ -29,7 +29,6 @@ export default defineConfig({
       {
         text: "Front end",
         items: [
-          {text: "Isomorphic code", link: "/front-end/isomorphic-code"},
           {text: "React", link: "/front-end/react"},
           {text: "Blaze", link: "/front-end/blaze"},
         ]
