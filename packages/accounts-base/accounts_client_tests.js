@@ -304,7 +304,7 @@ Tinytest.addAsync(
   }
 );
 
-testAsyncMulti('accounts - Session storage', [
+testAsyncMulti('accounts - storage', [
   function (test, expect) {
     Accounts.config({ useSessionStorage: true })
     test.isTrue(Accounts._options.useSessionStorage)
