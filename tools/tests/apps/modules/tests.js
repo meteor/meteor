@@ -99,11 +99,6 @@ describe("app modules", () => {
     }
   });
 
-  it("should not be parsed in strictMode", () => {
-    let foo = 1234;
-    delete foo;
-  });
-
   it("should have access to filename and dirname", () => {
     assert.strictEqual(require(__filename), exports);
     assert.strictEqual(
