@@ -149,7 +149,7 @@ const docs = await MyCollection.find({ _id: '123' }).fetchAsync();
 
 ```
 
-## Will MongoDB Collection Methods be removed from the server?
+## Will MongoDB Collection Methods be removed from the server? {#mongo-methods-server}
 
 _Yes_, we will remove those MongoDB collection methods that do not end with `*Async`.
 
