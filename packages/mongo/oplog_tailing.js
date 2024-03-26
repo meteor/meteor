@@ -33,6 +33,7 @@ OplogHandle = function (oplogUrl, dbName) {
 
   self._oplogLastEntryConnection = null;
   self._oplogTailConnection = null;
+  self._oplogOptions = null;
   self._stopped = false;
   self._tailHandle = null;
   self._readyFuture = new Future();
@@ -84,6 +85,8 @@ OplogHandle = function (oplogUrl, dbName) {
 
   self._startTailing();
 };
+
+MongoInternals.OplogHandle = OplogHandle;
 
 Object.assign(OplogHandle.prototype, {
   stop: function () {
@@ -239,6 +242,40 @@ Object.assign(OplogHandle.prototype, {
       // oplog entries show up, allow callWhenProcessedLatest to call its
       // callback immediately.
       self._lastProcessedTS = lastOplogEntry.ts;
+    }
+
+    // These 2 settings allow you to either only watch certain collections (oplogIncludeCollections), or exclude some collections you don't want to watch for oplog updates (oplogExcludeCollections)
+    // Usage:
+    // settings.json = {
+    //   "packages": {
+    //     "mongo": {
+    //       "oplogExcludeCollections": ["products", "prices"] // This would exclude both collections "products" and "prices" from any oplog tailing. 
+    //                                                            Beware! This means, that no subscriptions on these 2 collections will update anymore!
+    //     }
+    //   }
+    // }
+    const includeCollections = Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
+    const excludeCollections = Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
+    if (includeCollections?.length && excludeCollections?.length) {
+      throw new Error("Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time.");
+    }
+    if (excludeCollections?.length) {
+      oplogSelector.ns = {
+        $regex: oplogSelector.ns,
+        $nin: excludeCollections.map((collName) => `${self._dbName}.${collName}`)
+      }
+      self._oplogOptions = { excludeCollections };
+    }
+    else if (includeCollections?.length) {
+      oplogSelector = { $and: [
+        { $or: [
+          { ns: /^admin\.\$cmd/ },
+          { ns: { $in: includeCollections.map((collName) => `${self._dbName}.${collName}`) } }
+        ] },
+        { $or: oplogSelector.$or }, // the initial $or to select only certain operations (op)
+        { ts: oplogSelector.ts }
+      ] };
+      self._oplogOptions = { includeCollections };
     }
 
     var cursorDescription = new CursorDescription(

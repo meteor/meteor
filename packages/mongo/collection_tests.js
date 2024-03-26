@@ -210,7 +210,7 @@ Tinytest.add('collection - calling find with an invalid readPreference',
 Tinytest.add('collection - inserting a document with a binary should return a document with a binary',
   function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary1');
+      const collection = new Mongo.Collection('testBinary1' + test.id);
       const _id = Random.id();
       collection.insert({
         _id,
@@ -232,7 +232,7 @@ Tinytest.add('collection - inserting a document with a binary should return a do
 Tinytest.add('collection - inserting a document with a binary (sub type 0) should return a document with a uint8array',
   function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary8');
+      const collection = new Mongo.Collection('testBinary8' + test.id);
       const _id = Random.id();
       collection.insert({
         _id,
@@ -254,7 +254,7 @@ Tinytest.add('collection - inserting a document with a binary (sub type 0) shoul
 Tinytest.add('collection - updating a document with a binary should return a document with a binary',
   function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary2');
+      const collection = new Mongo.Collection('testBinary2' + test.id);
       const _id = Random.id();
       collection.insert({
         _id
@@ -277,7 +277,7 @@ Tinytest.add('collection - updating a document with a binary should return a doc
 Tinytest.add('collection - updating a document with a binary (sub type 0) should return a document with a uint8array',
   function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary7');
+      const collection = new Mongo.Collection('testBinary7' + test.id);
       const _id = Random.id();
       collection.insert({
         _id
@@ -300,7 +300,7 @@ Tinytest.add('collection - updating a document with a binary (sub type 0) should
 Tinytest.add('collection - inserting a document with a uint8array should return a document with a uint8array',
   function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary3');
+      const collection = new Mongo.Collection('testBinary3' + test.id);
       const _id = Random.id();
       collection.insert({
         _id,
@@ -322,7 +322,7 @@ Tinytest.add('collection - inserting a document with a uint8array should return 
 Tinytest.add('collection - updating a document with a uint8array should return a document with a uint8array',
   function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary4');
+      const collection = new Mongo.Collection('testBinary4' + test.id);
       const _id = Random.id();
       collection.insert({
         _id
@@ -348,7 +348,7 @@ Tinytest.add('collection - updating a document with a uint8array should return a
 Tinytest.add('collection - finding with a query with a uint8array field should return the correct document',
   function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary5');
+      const collection = new Mongo.Collection('testBinary5' + test.id);
       const _id = Random.id();
       collection.insert({
         _id,
@@ -368,7 +368,7 @@ Tinytest.add('collection - finding with a query with a uint8array field should r
 Tinytest.add('collection - finding with a query with a binary field should return the correct document',
   function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary6');
+      const collection = new Mongo.Collection('testBinary6' + test.id);
       const _id = Random.id();
       collection.insert({
         _id,
@@ -455,6 +455,4 @@ Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(t
   id = await collection.insertAsync({a: 2});
   test.equal((await collection.findOneAsync(id)).a, 2);
   await collection.removeAsync({});
-  
-})
-
+});
