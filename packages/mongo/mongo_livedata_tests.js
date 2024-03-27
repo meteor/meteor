@@ -4459,39 +4459,76 @@ testAsyncMulti(
   ],
 );
 
-testAsyncMulti("mongo-livedata - support observeChangesAsync and observeAsync to keep isomorphism on client and server", [
-  async (test) => {
-    const Collection = new Mongo.Collection(`observe_changes_async${test.runId()}`, { resolverType: 'stub' });
-    const id = 'a';
-    await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+testAsyncMulti(
+  "mongo-livedata - support observeChangesAsync and observeAsync to keep isomorphism on client and server",
+  [
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_async${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+      const id = 'a';
+      await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
 
-    return new Promise(async resolve => {
-      const obs = await Collection.find(id).observeChangesAsync({
-        async changed(_id, fields) {
-          await obs.stop();
-          resolve();
-          test.equal(_id, id);
-          test.equal(fields?.foo?.bar, 456);
-        },
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find(id).observeChangesAsync({
+          async changed(_id, fields) {
+            await obs.stop();
+            resolve();
+            test.equal(_id, id);
+            test.equal(fields?.foo?.bar, 456);
+          },
+        });
+        await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
       });
-      await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
-    });
+    },
+    async (test) => {
+      const Collection = new Mongo.Collection(`observe_async${test.runId()}`, {
+        resolverType: 'stub',
+      });
+      const id = 'a';
+      await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find(id).observeAsync({
+          async changed(newDocument) {
+            await obs.stop();
+            test.equal(newDocument._id, id);
+            test.equal(newDocument?.foo?.bar, 456);
+            resolve();
+          },
+        });
+        await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+      });
+    },
+  ]
+);
+
+
+Meteor.methods({
+  [`methodThrowException`]: async () => {
+    if (Meteor.isClient) {
+      throw new Meteor.Error('Throw on client');
+    }
   },
-  async (test) => {
-    const Collection = new Mongo.Collection(`observe_async${test.runId()}`, { resolverType: 'stub' });
-    const id = 'a';
-    await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+});
 
-    return new Promise(async resolve => {
-      const obs = await Collection.find(id).observeAsync({
-        async changed(newDocument) {
-          await obs.stop();
-          test.equal(newDocument._id, id);
-          test.equal(newDocument?.foo?.bar, 456);
-          resolve();
-        },
-      });
-      await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
-    });
-  }
-]);
+Tinytest.addAsync(
+  'mongo-livedata - both stub and server promise throw exceptions when client errors',
+  async function (test) {
+    const promise = Meteor.callAsync('methodThrowException');
+    if (Meteor.isClient) {
+      try {
+        await promise.stubPromise;
+      } catch (err) {
+        test.equal(err.error, 'Throw on client');
+      }
+
+      try {
+        await promise.serverPromise;
+      } catch (err) {
+        test.equal(err.error, 'Throw on client');
+      }
+    }
+  },
+);

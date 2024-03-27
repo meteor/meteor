@@ -20,15 +20,18 @@ export const loadAsyncStubHelpers = () => {
 
     queue = queue.finally(() => {
       fn(resolve, reject);
-      return promise.stubPromise;
+
+      return promise.stubPromise?.catch(() => {}); // silent uncaught promise
     });
 
-    promise.finally(() => {
-      queueSize -= 1;
-      if (queueSize === 0) {
-        Meteor.connection._maybeMigrate();
-      }
-    });
+    promise
+      .catch(() => {}) // silent uncaught promise
+      .finally(() => {
+        queueSize -= 1;
+        if (queueSize === 0) {
+          Meteor.connection._maybeMigrate();
+        }
+      });
 
     promise.stubPromise = promiseProps.stubPromise;
     promise.serverPromise = promiseProps.serverPromise;
@@ -98,10 +101,13 @@ export const loadAsyncStubHelpers = () => {
           serverPromiseResolver(applyAsyncPromise.serverPromise);
           hasStub = !!applyAsyncPromise.stubPromise;
           if (hasStub) {
-            applyAsyncPromise.stubPromise.finally(() => {
-              finished = true;
-            });
+            applyAsyncPromise.stubPromise
+              .catch(() => {}) // silent uncaught promise
+              .finally(() => {
+                finished = true;
+              });
           }
+
           applyAsyncPromise
             .then((result) => {
               resolve(result);
@@ -109,6 +115,7 @@ export const loadAsyncStubHelpers = () => {
             .catch((err) => {
               reject(err);
             });
+          serverPromise.catch(() => {}); // silent uncaught promise
         });
 
         Meteor._setImmediate(() => {
