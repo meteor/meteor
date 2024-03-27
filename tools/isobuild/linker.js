@@ -956,9 +956,8 @@ var getHeader = function (options) {
   });
 
   chunks.push(
-      `Package["core-runtime"].queue("${options.name}", [`,
-      orderedDeps.join(', '),
-      '], function () {'
+      `Package["core-runtime"].queue("${options.name}",`,
+      'function () {'
   );
 
   if (isApp) {
