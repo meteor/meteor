@@ -5,36 +5,10 @@
 // Ensures packages and eager requires run in the correct order
 // when there is code that uses top level await
 
-var pending = Object.create(null);
 var hasOwn = Object.prototype.hasOwnProperty;
 
-function queue(name, deps, runImage) {
-  pending[name] = [];
-
-  var pendingDepsCount = 0;
-
-  function onDepLoaded() {
-    pendingDepsCount -= 1;
-
-    if (pendingDepsCount === 0) {
-      load(name, runImage);
-    }
-  }
-
-  deps.forEach(function (dep) {
-    if (hasOwn.call(pending, dep)) {
-      pendingDepsCount += 1;
-      pending[dep].push(onDepLoaded);
-    } else {
-      // load must always be called for a package's dependencies first.
-      // If the package is not pending, then it must have already loaded
-      // or is a weak dependency, and the dependency is not being used.
-    }
-  });
-
-  if (pendingDepsCount === 0) {
-    load(name, runImage);
-  }
+function queue(name, runImage) {
+  load(name, runImage);
 }
 
 function load(name, runImage) {
@@ -48,12 +22,6 @@ function load(name, runImage) {
     } else {
       Package._define(name, exports);
     }
-
-    var pendingCallbacks = pending[name] || [];
-    delete pending[name];
-    pendingCallbacks.forEach(function (callback) {
-      callback();
-    });
   });
 }
 
@@ -138,26 +106,8 @@ function checkAsyncModule (exports) {
 // For this to be accurate, all linked files must be queued before calling this
 // If all are loaded, returns null. Otherwise, returns a promise
 function waitUntilAllLoaded() {
-  var pendingNames = Object.keys(pending);
-
-  if (pendingNames.length === 0) {
-    // All packages are loaded
-    // If there were no async packages, then there might not be a promise
-    // polyfill loaded either, so we don't create a promise to return
-    return null;
-  }
-
-  return new Promise(function (resolve) {
-    var pendingCount = pendingNames.length;
-    pendingNames.forEach(function (name) {
-      pending[name].push(function () {
-        pendingCount -= 1;
-        if (pendingCount === 0) {
-          resolve();
-        }
-      });
-    });
-  })
+  // TODO it looks like this function doesn't need to exist anymore
+  return null;
 }
 
 // Since the package.js doesn't export load or waitUntilReady
