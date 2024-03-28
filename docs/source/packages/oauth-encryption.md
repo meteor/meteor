@@ -31,10 +31,16 @@ the top level of your source file), not called from inside of a
 `Meteor.startup` block.
 
 To avoid storing the secret key in your application's source code, you
-can use [`Meteor.settings`](http://docs.meteor.com/#meteor_settings):
+can provide the same value under [`Meteor.settings.packages.accounts-base.oauthSecretKey`](http://docs.meteor.com/#meteor_settings):
 
-```js
-Accounts.config({ oauthSecretKey: Meteor.settings.oauthSecretKey });
+```json
+{
+  "packages": {
+    "accounts-base": {
+      "oauthSecretKey": "onsqJ+1e4iGFlV0nhZYobg=="
+    }
+  }
+}
 ```
 
 

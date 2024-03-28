@@ -62,12 +62,19 @@ export namespace Accounts {
     sendVerificationEmail?: boolean | undefined;
     forbidClientAccountCreation?: boolean | undefined;
     restrictCreationByEmailDomain?: string | Function | undefined;
+    loginExpiration?: number | undefined;
     loginExpirationInDays?: number | undefined;
     oauthSecretKey?: string | undefined;
+    passwordResetTokenExpiration?: number | undefined;
     passwordResetTokenExpirationInDays?: number | undefined;
+    passwordEnrollTokenExpiration?: number | undefined;
     passwordEnrollTokenExpirationInDays?: number | undefined;
     ambiguousErrorMessages?: boolean | undefined;
+    bcryptRounds?: number | undefined;
     defaultFieldSelector?: { [key: string]: 0 | 1 } | undefined;
+    collection?: string | undefined;
+    loginTokenExpirationHours?: number | undefined;
+    tokenSequenceLength?: number | undefined;
   }): void;
 
   function onLogin(
