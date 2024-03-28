@@ -15,6 +15,7 @@ Npm.depends({
   qs: '6.11.2',
   useragent: '2.3.0',
   '@vlasky/whomst': '0.1.7',
+  'lodash.has': '4.5.2',
   '@types/connect': '3.4.38',
 });
 
@@ -33,7 +34,6 @@ Package.onUse(function(api) {
   api.use(
     [
       'logging',
-      'underscore',
       'routepolicy',
       'modern-browsers',
       'boilerplate-generator',
@@ -62,7 +62,7 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore']);
+  api.use(['tinytest', 'ecmascript', 'webapp', 'http']);
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
   api.addFiles('socket_file_tests.js', 'server');
