@@ -113,3 +113,67 @@ Meteor.callAsync('myMethod', 'arg1', 'arg2')
   .then(result => console.log('Method result:', result))
   .catch(error => console.error('Method error:', error));
 ```
+
+## Async context
+
+To use await, you need to be inside an `async` function.
+
+```javascript
+
+const myFunction = async () => { // [!code highlight]
+  console.log('Waiting...');
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  console.log('Done waiting');
+};
+
+```
+
+Without the `async` keyword, you will get a syntax error.
+
+```javascript
+
+const myFunction = () => { // [!code error] syntax error!
+  console.log('Waiting...');
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  console.log('Done waiting');
+};
+
+```
+
+You context must be `async` to use the `await` keyword.
+
+for example in meteor 2 this code would work:
+
+```javascript
+import { Meteor } from 'meteor/meteor';
+
+const someFunction = () => { // [!code ++]
+  Meteor.call('myMethod', 'arg1', 'arg2', (error, result) => { // [!code ++]
+    if (error) {
+      console.error('Method error:', error);
+    } else {
+      console.log('Method result:', result);
+      // do something with the result
+    }
+  });
+};
+
+```
+
+Now you need to make it `async` to use the `await` keyword.
+
+```javascript
+import { Meteor } from 'meteor/meteor';
+
+const someFunction = async () => { // [!code ++]
+  try {
+    const result = await Meteor.callAsync('myMethod', 'arg1', 'arg2'); // [!code ++]
+    console.log('Method result:', result);
+    // do something with the result
+  } catch (error) {
+    console.error('Method error:', error);
+  }
+};
+
+```
+
