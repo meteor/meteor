@@ -5,7 +5,7 @@ StubStream = function() {
   self.callbacks = Object.create(null);
 };
 
-_.extend(StubStream.prototype, {
+Object.assign(StubStream.prototype, {
   // Methods from Stream
   on: function(name, callback) {
     const self = this;
@@ -39,14 +39,14 @@ _.extend(StubStream.prototype, {
       data = EJSON.stringify(data);
     }
 
-    _.each(self.callbacks['message'], function(cb) {
+    self.callbacks['message'].forEach(function(cb) {
       cb(data);
     });
   },
 
   reset: function() {
     const self = this;
-    _.each(self.callbacks['reset'], function(cb) {
+    self.callbacks['reset'].forEach(function(cb) {
       cb();
     });
   },
