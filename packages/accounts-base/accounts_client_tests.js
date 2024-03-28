@@ -306,7 +306,7 @@ Tinytest.addAsync(
 
 testAsyncMulti('accounts - storage', [
   function (test, expect) {
-    Accounts.config({ useSessionStorage: true })
+    Accounts.config({ clientStorage: 'session' })
     test.isTrue(Accounts._options.useSessionStorage)
     test.isNotUndefined(sessionStorage.getItem('Meteor.loginToken'))
     test.isUndefined(localStorage.getItem('Meteor.loginToken'))
@@ -314,7 +314,7 @@ testAsyncMulti('accounts - storage', [
     removeTestUser()
   },
   function (test, expect) {
-    Accounts.config({ useSessionStorage: false })
+    Accounts.config({ clientStorage: 'local' })
     test.isFalse(Accounts._options.useSessionStorage)
     test.isUndefined(sessionStorage.getItem('Meteor.loginToken'))
     test.isNotUndefined(localStorage.getItem('Meteor.loginToken'))

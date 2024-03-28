@@ -9,7 +9,7 @@ import {AccountsCommon} from "./accounts_common.js";
  * @param {Object} options an object with fields:
  * @param {Object} options.connection Optional DDP connection to reuse.
  * @param {String} options.ddpUrl Optional URL for creating a new DDP connection.
- * @param {Boolean} options.useSessionStorage Optional Use session storage to store tokens and related data. Defaults to false, which means that local storage is used.
+ * @param {'session' | 'local'} options.clientStorage Optional Define what kind of storage you want for credentials on the client. Default is 'local' to use `localStorage`. Set to 'session' to use session storage.
  */
 export class AccountsClient extends AccountsCommon {
   constructor(options) {
@@ -28,7 +28,7 @@ export class AccountsClient extends AccountsCommon {
     this._initUrlMatching();
 
     // Determine whether to use local or session storage to storage credentials and anything else.
-    this.storageLocation = (options?.useSessionStorage || Meteor.settings?.public?.packages?.accounts?.useSessionStorage) ? window.sessionStorage : Meteor._localStorage;
+    this.storageLocation = (options?.clientStorage === 'session' || Meteor.settings?.public?.packages?.accounts?.clientStorage === 'session') ? window.sessionStorage : Meteor._localStorage;
 
     // Defined in localstorage_token.js.
     this._initLocalStorage();
