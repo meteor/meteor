@@ -1,5 +1,5 @@
 # spiderable
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/spiderable) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/spiderable)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/deprecated/spiderable) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/deprecated/spiderable)
 ***
 
 `spiderable` is part of [Webapp](https://github.com/meteor/meteor/tree/master/packages/webapp). It's one possible way to allow web search engines to index a Meteor application. It uses the [AJAX Crawling specification](https://developers.google.com/webmasters/ajax-crawling/) published by Google to serve HTML to compatible spiders (Google, Bing, Yandex, and more).
