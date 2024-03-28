@@ -1,6 +1,6 @@
 Package.describe({
   name: 'hot-module-replacement',
-  version: '0.5.4-beta300.6',
+  version: '0.5.4-beta300.7',
   summary: 'Update code in development without reloading the page',
   documentation: 'README.md',
   debugOnly: true,

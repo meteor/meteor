@@ -52,7 +52,7 @@ Meteor.startup(() => {
 
 :::
 
-<ApiBox name="Meteor.wrapAsync" />
+<ApiBox name="Meteor.promisify" />
 <ApiBox name="Meteor.defer" />
 <ApiBox name="Meteor.absoluteUrl" />
 <ApiBox name="Meteor.settings" />

@@ -660,6 +660,22 @@ export default class LocalCollection {
 
     this._observeQueue.drain();
 
+
+    // If we are doing an upsert, and we didn't modify any documents yet, then
+    // it's time to do an insert. Figure out what document we are inserting, and
+    // generate an id for it.
+    let insertedId;
+    if (updateCount === 0 && options.upsert) {
+      const doc = LocalCollection._createUpsertDocument(selector, mod);
+      if (!doc._id && options.insertedId) {
+        doc._id = options.insertedId;
+      }
+
+      insertedId = this.insert(doc);
+      updateCount = 1;
+    }
+
+
     return this.finishUpdate({
       options,
       updateCount,

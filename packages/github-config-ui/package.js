@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Blaze configuration templates for GitHub OAuth.',
-  version: '1.0.3-beta300.6',
+  version: '1.0.3-beta300.7',
 });
 
 Package.onUse(api => {

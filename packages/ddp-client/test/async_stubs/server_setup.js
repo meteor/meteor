@@ -40,7 +40,16 @@ Meteor.methods({
     events.push('callAsyncStubFromAsyncStub');
 
     return 'server result';
-  }
+  },
+  async 'unblockedMethod'({ delay }) {
+    events.push('unblock start');
+    this.unblock();
+    await Meteor._sleepForMs(delay);
+    events.push('unblock end');
+  },
+  'blockingMethod'() {
+    events.push('blockingMethod');
+  },
 });
 
 Meteor.publish("simple-publication", function () {

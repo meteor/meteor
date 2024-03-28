@@ -1,5 +1,4 @@
 export const EXAMPLE_REPOSITORIES = {
-  "vue-2": { "repo": "https://github.com/meteor/skel-vue-2" },
   "vue": { "repo": "https://github.com/meteor/skel-vue" },
   "react": { "repo": "https://github.com/meteor/skel-react" },
   "full": { "repo": "https://github.com/meteor/skel-full" },

@@ -13,7 +13,7 @@ standard-minifier-css@1.9.3-alpha300.11    # CSS minifier run for production mod
 standard-minifier-js@3.0.0-alpha300.10    # JS minifier run for production mode
 es5-shim@4.8.0               # ECMAScript 5 compatibility for older browsers
 ecmascript@0.16.8-alpha300.11             # Enable ECMAScript2015+ syntax in app code
-typescript@5.3.3-beta300.6       # Enable TypeScript syntax in .ts and .tsx modules
+typescript@5.3.3-beta300.7       # Enable TypeScript syntax in .ts and .tsx modules
 shell-server@0.6.0-alpha300.11           # Server-side component of the `meteor shell` command
 hot-module-replacement@0.5.4-alpha300.11  # Update client in development without reloading the page
 
