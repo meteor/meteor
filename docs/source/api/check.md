@@ -46,6 +46,11 @@ this error gets sent over the wire to the client, it will appear only as
 `Meteor.Error(400, 'Match Failed')`. The failure details will be written to the
 server logs but not revealed to the client.
 
+By default, `check` will throw immediately at the first error encountered. Pass in `{ throwAllErrors: true }` to throw an array of all errors. For example:
+```js
+check(message, {/* ... */}, {throwAllErrors: true})
+```
+
 {% apibox "Match.test" %}
 
 `Match.test` can be used to identify if a variable has a certain structure.
