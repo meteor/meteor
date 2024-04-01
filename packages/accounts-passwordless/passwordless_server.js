@@ -93,13 +93,13 @@ Accounts.registerLoginHandler('passwordless', options => {
 
 // Utility for plucking addresses from emails
 const pluckAddresses = (emails = []) => emails.map(email => email.address);
-const createUser = userData => {
+const createUser = async userData => {
   const { username, email } = userData;
   if (!username && !email) {
     throw new Meteor.Error(400, 'Need to set a username or email');
   }
   const user = { services: {} };
-  return Accounts._createUserCheckingDuplicates({
+  return await Accounts._createUserCheckingDuplicates({
     user,
     username,
     email,
@@ -114,7 +114,7 @@ function generateSequence() {
 }
 
 Meteor.methods({
-  requestLoginTokenForUser: ({ selector, userData, options = {} }) => {
+  async requestLoginTokenForUser({ selector, userData, options = {} }) {
     let user = Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
@@ -131,7 +131,7 @@ Meteor.methods({
     const isNewUser = !user;
 
     if (!user) {
-      const userId = createUser(userData);
+      const userId = await createUser(userData);
       user = Accounts._findUserByQuery(
         { id: userId },
         {
