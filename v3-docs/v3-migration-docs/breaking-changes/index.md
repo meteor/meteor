@@ -171,3 +171,43 @@ WebApp.handlers.get('/hello', (req, res) => {
 });
 
 ```
+Changed engine from connect to express and changed api naming to match express. See below:
+  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.handlers.use(middleware)`
+  - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawHandlers.use(middleware)`
+  - `WebApp.connectApp` is now `WebApp.expressApp`
+
+
+A few methods from WebApp internals are now async:
+
+    - `WebAppInternals.reloadClientPrograms()`
+    - `WebAppInternals.pauseClient()`
+    - `WebAppInternals.generateClientProgram()`
+    - `WebAppInternals.generateBoilerplate()`
+    - `WebAppInternals.setInlineScriptsAllowed()`
+    - `WebAppInternals.enableSubresourceIntegrity()`
+    - `WebAppInternals.setBundledJsCssUrlRewriteHook()`
+    - `WebAppInternals.setBundledJsCssPrefix()`
+    - `WebAppInternals.getBoilerplate`
+
+## Meteor.userAsync
+
+You should use `Meteor.userAsync` instead of `Meteor.user` in your code, especially if you
+want isomorphism or want to get your user in the server.
+
+```js
+
+// Before
+
+const user = Meteor.user(); // [!code error]
+
+// After
+
+const user = await Meteor.userAsync(); // [!code highlight]
+
+```
+
+
+## Community migration guides
+
+Currently we are aware of the following community migration guides:
+ - [Meteor 3.0 Migration Guide, from Daniel](https://docs.google.com/document/d/1XxHE5MQaS0-85HQ-bkiXxmGlYi41ggkX3F-9Rjb9HhE/edit#heading=h.65xi3waq9bb)
