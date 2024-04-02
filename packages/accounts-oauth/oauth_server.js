@@ -90,8 +90,8 @@ Meteor.startup(() => {
     }, {
       "secret.algorithm": { $exists: false }
     }]
-  }).forEach(config => {
-    ServiceConfiguration.configurations.update(config._id, {
+  }).forEachAsync(async (config) => {
+    await ServiceConfiguration.configurations.updateAsync(config._id, {
       $set: {
         secret: OAuthEncryption.seal(config.secret)
       }
