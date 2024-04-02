@@ -113,7 +113,6 @@ But if you did any customizations in the `WebApp` package, you should check if t
 The `webapp` package now exports this new properties:
 
 ```ts
-
 type ExpressModule = {
   (): express.Application;
   json: typeof express.json;
@@ -163,7 +162,6 @@ WebApp.handlers.use(express);
 The code below is an example of how you can use the `handlers` property to create a route in your app:
 
 ```js
-
 import { WebApp } from 'meteor/webapp';
 
 WebApp.handlers.get('/hello', (req, res) => {
@@ -179,15 +177,15 @@ Changed engine from connect to express and changed api naming to match express. 
 
 A few methods from WebApp internals are now async:
 
-    - `WebAppInternals.reloadClientPrograms()`
-    - `WebAppInternals.pauseClient()`
-    - `WebAppInternals.generateClientProgram()`
-    - `WebAppInternals.generateBoilerplate()`
-    - `WebAppInternals.setInlineScriptsAllowed()`
-    - `WebAppInternals.enableSubresourceIntegrity()`
-    - `WebAppInternals.setBundledJsCssUrlRewriteHook()`
-    - `WebAppInternals.setBundledJsCssPrefix()`
-    - `WebAppInternals.getBoilerplate`
+  - `WebAppInternals.reloadClientPrograms()`
+  - `WebAppInternals.pauseClient()`
+  - `WebAppInternals.generateClientProgram()`
+  - `WebAppInternals.generateBoilerplate()`
+  - `WebAppInternals.setInlineScriptsAllowed()`
+  - `WebAppInternals.enableSubresourceIntegrity()`
+  - `WebAppInternals.setBundledJsCssUrlRewriteHook()`
+  - `WebAppInternals.setBundledJsCssPrefix()`
+  - `WebAppInternals.getBoilerplate`
 
 ## Meteor.userAsync
 
@@ -195,13 +193,9 @@ You should use `Meteor.userAsync` instead of `Meteor.user` in your code, especia
 want isomorphism or want to get your user in the server.
 
 ```js
-
 // Before
-
 const user = Meteor.user(); // [!code error]
-
 // After
-
 const user = await Meteor.userAsync(); // [!code highlight]
 
 ```

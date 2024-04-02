@@ -19,7 +19,16 @@ You can follow the guide "[How to migrate to Meteor Async in Meteor 2.x](https:/
 
 This guide will try to cover the topics needed to migrate your application to Meteor v3. We will cover the following topics:
 
-- TODO: Add topics
+- [Breaking Changes](./breaking-changes/index.md), an overview of the changes that will affect your application.
+  - [Meteor.call x Meteor.callAsync](./breaking-changes/call-x-callAsync.md), why should you change your methods to use `Async` methods.
+  - [Upgrading packages](./breaking-changes/upgrading-packages.md), how to upgrade your packages to the be compatible with Meteor v3.
+
+- [How async functions work and how to use them](./api/async-functions.md), a how-to guide in how to use async functions and helpers for Meteor.
+- [Renamed Functions](./api/renamed-functions.md), a list of functions that were renamed in Meteor v3.
+- [Removed Functions](./api/removed-functions.md), a list of functions that were removed in Meteor v3.
+
+- [React in Meteor v3](./front-end/react.md), how to migrate your react code to Meteor v3
+- [Blaze in Meteor v3](./front-end/blaze.md), how to migrate your blaze code to Meteor v3
 
 ## What is Fibers?
 

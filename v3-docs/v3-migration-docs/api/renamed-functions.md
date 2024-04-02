@@ -72,3 +72,4 @@ async function someFunction() {
 ```
 
 
+For a full list of changes check the [changelog](https://v3-docs.meteor.com/history.html#changelog) for Meteor v3
