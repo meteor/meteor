@@ -91,11 +91,8 @@ function getDownloadArch() {
   return 'x86_64';
 }
 
-const url = `https://packages.meteor.com/bootstrap-link?arch=os.${
-  downloadPlatform[os.platform()]
-}.${getDownloadArch()}&release=${release}`;
-
-console.log(url);
+const arch = `os.${downloadPlatform[os.platform()]}.${getDownloadArch()}`;
+const url = `https://packages.meteor.com/bootstrap-link?arch=${arch}&release=${release}`;
 
 let tempDirObject;
 try {
@@ -162,6 +159,9 @@ try {
     console.log('Assuming unable to create symlinks');
   }
 }
+
+console.log(`=> Arch: ${arch}`);
+console.log(`=> Meteor Release: ${release}`);
 
 download();
 
