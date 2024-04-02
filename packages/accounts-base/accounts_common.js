@@ -18,7 +18,7 @@ const VALID_CONFIG_KEYS = [
   'collection',
   'loginTokenExpirationHours',
   'tokenSequenceLength',
-  'useSessionStorage',
+  'clientStorage',
 ];
 
 /**
