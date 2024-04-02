@@ -20,7 +20,7 @@ const {
   rootPath,
   sudoUser,
   isSudo,
-  isMac,
+  isLinux,
   METEOR_LATEST_VERSION,
   shouldSetupExecPath,
 } = require('./config');
@@ -62,12 +62,13 @@ if (!isInstalledGlobally) {
 process.on('unhandledRejection', err => {
   throw err;
 });
+
 if (os.arch() !== 'x64') {
   const isValidM1Version = semver.gte(
     semver.coerce(METEOR_LATEST_VERSION),
     '2.5.1-beta.3',
   );
-  if (os.arch() !== 'arm64' || !isMac() || !isValidM1Version) {
+  if (os.arch() !== 'arm64' || !isValidM1Version) {
     console.error(
       'The current architecture is not supported in this version: ',
       os.arch(),
@@ -83,9 +84,18 @@ const downloadPlatform = {
   linux: 'linux',
 };
 
+function getDownloadArch() {
+  const osArch = os.arch();
+  if (isLinux() && osArch === 'arm64') return 'aarch64';
+  if (osArch === 'arm64') return 'arm64';
+  return 'x86_64';
+}
+
 const url = `https://packages.meteor.com/bootstrap-link?arch=os.${
   downloadPlatform[os.platform()]
-}.${os.arch() === 'arm64' ? 'arm64' : 'x86_64'}&release=${release}`;
+}.${getDownloadArch()}&release=${release}`;
+
+console.log(url);
 
 let tempDirObject;
 try {
