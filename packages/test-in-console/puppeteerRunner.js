@@ -10,11 +10,10 @@ async function runNextUrl(browser) {
     // if the test is running for too long without any output to the console (10 minutes)
     if (msg._text !== undefined) console.log(msg._text);
     else {
-      // sometimes if the test is running in the client we have id: current-client-test with
-      // the name of the test
-      const element = await page.$('#current-client-test');
-      if (element) {
-        const currentClientTest = await page.evaluate(element => element.textContent, element);
+      testNumber++;
+      const currentClientTest =
+       await page.evaluate(() =>  __Tinytest._getCurrentRunningTestOnClient());
+      if (currentClientTest !== '') {
         console.log(`Currently running on the client test: ${ currentClientTest }`)
         return;
       }
@@ -29,7 +28,6 @@ async function runNextUrl(browser) {
       // we were not able to find the name of the test, this is a way to make sure the test is still running
       console.log(`Test number: ${ testNumber }`);
     }
-    testNumber++;
   });
 
   if (!process.env.URL) {
@@ -42,10 +40,6 @@ async function runNextUrl(browser) {
   async function poll() {
     if (await isDone(page)) {
       let failCount = await getFailCount(page);
-      console.log(`
-      The number of tests from Test number may be different because
-      of the way the test is written. causing the test to fail or
-      to run more than once. in the console. Test number total: ${ testNumber }`);
       console.log(`Tests complete with ${ failCount } failures`);
       console.log(`Tests complete with ${ await getPassCount(page) } passes`);
       if (failCount > 0) {

@@ -531,9 +531,7 @@ export class TestRun {
 
   _runTest(test, onComplete, stop_at_offset) {
     var startTime = (+new Date);
-    if (Meteor.isServer){
-      Tinytest._currentRunningTestNameOnServer = test.name;
-    }
+    Tinytest._currentRunningTestName = test.name;
 
     return test.run(event => {
       /* onEvent */
@@ -705,19 +703,21 @@ Tinytest._runTests = function (onReport, onComplete, pathPrefix) {
   testRun.run(onComplete);
 };
 
-Tinytest._currentRunningTestNameOnServer = ""
+Tinytest._currentRunningTestName = ""
 
 Meteor.methods({
   'tinytest/getCurrentRunningTestName'() {
-    return Tinytest._currentRunningTestNameOnServer;
+    return Tinytest._currentRunningTestName;
   }
 })
 
-// Get current running test from server;
 Tinytest._getCurrentRunningTestOnServer = function () {
   return Meteor.callAsync('tinytest/getCurrentRunningTestName');
 }
 
+Tinytest._getCurrentRunningTestOnClient = function () {
+  return Tinytest._currentRunningTestName;
+}
 
 // Run just one test case, and stop the debugger at a particular
 // error, all as indicated by 'cookie', which will have come from a
