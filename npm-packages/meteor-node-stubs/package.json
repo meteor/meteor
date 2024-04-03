@@ -2,7 +2,7 @@
   "name": "meteor-node-stubs",
   "author": "Ben Newman <ben@meteor.com>",
   "description": "Stub implementations of Node built-in modules, a la Browserify",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "main": "index.js",
   "license": "MIT",
   "homepage": "https://github.com/meteor/meteor/blob/devel/npm-packages/meteor-node-stubs/README.md",
