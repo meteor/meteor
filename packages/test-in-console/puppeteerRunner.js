@@ -5,11 +5,30 @@ let testNumber = 0;
 async function runNextUrl(browser) {
   const page = await browser.newPage();
 
-  page.on('console', msg => {
+  page.on('console', async msg => {
     // this is a way to make sure the travis does not timeout
     // if the test is running for too long without any output to the console (10 minutes)
     if (msg._text !== undefined) console.log(msg._text);
-    else console.log(`Test number: ${ testNumber }`);
+    else {
+      // sometimes if the test is running in the client we have id: current-client-test with
+      // the name of the test
+      const element = await page.$('#current-client-test');
+      if (element) {
+        const currentClientTest = await page.evaluate(element => element.textContent, element);
+        console.log(`Currently running on the client test: ${ currentClientTest }`)
+        return;
+      }
+      // If we get here is because we have not yet started the test on the client
+      const currentServerTest =
+       await page.evaluate(async () => await __Tinytest._getCurrentRunningTestOnServer());
+
+      if (currentServerTest !== '') {
+        console.log(`Currently running on the server test: ${ currentServerTest }`);
+        return;
+      }
+      // we were not able to find the name of the test, this is a way to make sure the test is still running
+      console.log(`Test number: ${ testNumber }`);
+    }
     testNumber++;
   });
 
