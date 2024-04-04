@@ -97,7 +97,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     features.topLevelAwait = inputFile.supportsTopLevelAwait &&
        (arch.startsWith('os.') || enableClientTLA);
 
-    features.useNativeAsyncAwait = Meteor.isFibersDisabled;
+    features.useNativeAsyncAwait = true;
 
     if (! features.hasOwnProperty("jscript")) {
       // Perform some additional transformations to improve compatibility

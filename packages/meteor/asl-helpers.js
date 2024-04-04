@@ -1,14 +1,4 @@
-// In Meteor versions with fibers, __meteor_bootstrap__.isFibersDisabled
-// is always undefined.
-Meteor.isFibersDisabled = typeof __meteor_bootstrap__ === 'object' &&
-  __meteor_bootstrap__.isFibersDisabled !== undefined;
-Meteor._isFibersEnabled = !Meteor.isFibersDisabled;
-
 function getAsl() {
-  if (!Meteor.isFibersDisabled) {
-    throw new Error('Can not use async hooks when fibers are enabled');
-  }
-
   if (!global.asyncLocalStorage) {
     // lazily create asyncLocalStorage since this might run in older Meteor
     // versions that are incompatible with async hooks

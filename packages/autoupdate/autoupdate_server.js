@@ -161,29 +161,6 @@ const setupListeners = () => {
   }, "handling SIGHUP signal for refresh"));
 };
 
-if (Meteor._isFibersEnabled) {
-  var Future = Npm.require("fibers/future");
-
-  var fut = new Future();
-
-  // We only want 'refresh' to trigger 'updateVersions' AFTER onListen,
-  // so we add a queued task that waits for onListen before 'refresh' can queue
-  // tasks. Note that the `onListening` callbacks do not fire until after
-  // Meteor.startup, so there is no concern that the 'updateVersions' calls from
-  // 'refresh' will overlap with the `updateVersions` call from Meteor.startup.
-
-  syncQueue.queueTask(function () {
-    fut.wait();
-  });
-
-  WebApp.onListening(function () {
-    fut.return();
-  });
-
-  setupListeners();
-
-} else {
-  WebApp.onListening(function () {
-    Promise.resolve(setupListeners());
-  });
-}
+WebApp.onListening(function () {
+  Promise.resolve(setupListeners());
+});
