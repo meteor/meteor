@@ -59,7 +59,7 @@ You can check [call x callAsync](./call-x-callAsync.md) page for a full overview
 
 Due to how meteor now works with `async/await`, you should use `callAsync` instead of `call` in your methods.
 
-In Meteor 2x this was a common pattern:
+In Meteor 2.x this was a common pattern:
 
 ```js
 import { Meteor } from 'meteor/meteor'
