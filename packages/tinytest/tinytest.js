@@ -672,6 +672,7 @@ export class TestRun {
 
 export const Tinytest = {};
 globalThis.__Tinytest = Tinytest;
+
 Tinytest.addAsync = function (name, func, options) {
   TestManager.addCase(new TestCase(name, func), options);
 };
