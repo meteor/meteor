@@ -2,7 +2,7 @@
 
 
 
-::: tip TL;DR
+::: tip
 
 It is recommened to use `Meteor.callAsync` instead of `Meteor.call` because of how our
 async API works. `Meteor.call` is still available but it is not recommended to use it, it
@@ -80,7 +80,7 @@ Meteor.methods({
 
 ## Rules of using `Meteor.callAsync` & `Meteor.call`
 
-::: tip TL;DR
+::: tip 
 It is not recommended to use concurrent calls.
 Use `await` for your `Meteor.callAsync`.
 :::

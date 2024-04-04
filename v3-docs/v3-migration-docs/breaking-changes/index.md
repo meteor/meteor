@@ -51,7 +51,7 @@ You should be using a node version >= 20.0.0, if you use in your CI/CD you shoul
 
 ## Call x CallAsync
 
-::: tip TL;DR
+::: tip 
 
 You can check [call x callAsync](./call-x-callAsync.md) page for a full overview.
 
@@ -101,7 +101,7 @@ await Meteor.callAsync('otherMethod') // [!code highlight]
 
 ## Changes in Webapp
 
-::: tip TL;DR
+::: tip
 
 Webapp now uses Express under the hood. This means that you can use all the express features in your Meteor app.
 
