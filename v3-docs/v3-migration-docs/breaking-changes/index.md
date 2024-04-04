@@ -23,7 +23,12 @@ const doc = await MyCollection.findOneAsync({ _id: '123' }); // [!code highlight
 ## CLI
 
 The `--vue2` flag is no longer available. We droped support for vue2.
-You can see more information in this [PR](https://github.com/meteor/meteor/pull/13065)
+You can see more information in this [PR](https://github.com/meteor/meteor/pull/13065).
+
+#### Why?
+
+This was decided because vue2 reached its [end of life](https://v2.vuejs.org/lts/#:~:text=Vue%202%20will%20reach%20End%20of%20Life%20(EOL)%20on%20December%2031st%2C%202023.%20After%20that%20date%2C%20Vue%202%20will%20continue%20to%20be%20available%20in%20all%20existing%20distribution%20channels%20(CDNs%20and%20package%20managers)%2C%20but%20will%20no%20longer%20receive%20updates%2C%20including%20security%20and%20browser%20compatibility%20fixes.)
+on 2023-12-31, the team decided to drop support for it.
 
 
 ## Node v20
@@ -51,7 +56,7 @@ You should be using a node version >= 20.0.0, if you use in your CI/CD you shoul
 
 ## Call x CallAsync
 
-::: tip 
+::: tip
 
 You can check [call x callAsync](./call-x-callAsync.md) page for a full overview.
 
