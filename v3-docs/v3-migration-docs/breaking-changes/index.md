@@ -205,8 +205,3 @@ const user = await Meteor.userAsync(); // [!code highlight]
 
 ```
 
-
-## Community migration guides
-
-Currently we are aware of the following community migration guides:
- - [Meteor 3.0 Migration Guide, from Daniel](https://docs.google.com/document/d/1XxHE5MQaS0-85HQ-bkiXxmGlYi41ggkX3F-9Rjb9HhE/edit#heading=h.65xi3waq9bb)

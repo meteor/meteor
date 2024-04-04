@@ -167,3 +167,23 @@ We will bring these three new packages to the core and migrate them to Meteor 3.
 For those packages that are not in the core but are maintained by the [community](https://github.com/Meteor-Community-Packages),
 we hope that the community can work on them, but if for some reason that is not possible,
 you can always ping us on [Slack](https://join.slack.com/t/meteor-community/shared_invite/zt-28aru814j-AwswQGt2D1xIXurvmtJvug) or in the [Forums](https://forums.meteor.com/).
+
+
+## External links
+
+Currently we are aware of the following community migration guides:
+ - [Meteor 3.0 Migration Guide, from Daniel](https://docs.google.com/document/d/1XxHE5MQaS0-85HQ-bkiXxmGlYi41ggkX3F-9Rjb9HhE/edit#heading=h.65xi3waq9bb)
+
+### Videos
+
+Migrating apps to Meteor 3.0:
+- TicTacToe & others - [YouTube](https://www.youtube.com/watch?v=MtStd0aeyQA)
+- Complex Svelte todo list & others - [YouTube](https://www.youtube.com/watch?v=-XW8xwSk-zU)
+- Meteor university in 3.0:
+  - part 1 - [YouTube](https://www.youtube.com/watch?v=WbwHv-aoGlU)
+  - part 2 - [YouTube](https://www.youtube.com/watch?v=PB2M16fmloM)
+  - part 3 - [YouTube](https://www.youtube.com/watch?v=79ytCgZQfSU)
+  - part 4 - [YouTube](https://www.youtube.com/watch?v=InNCy0duKak)
+
+If you have a migration guide, it can be video or text, please let us know so we can add it here.
+
