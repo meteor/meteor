@@ -1729,6 +1729,18 @@ Object.assign(PackageSource.prototype, {
     var allConstraints = {}; // for error reporting. package name to array
     var failed = false;
 
+    const splitConstraints = (c) => c.split("||").map((i) => i.trim());
+    // Checks if there is any available versions, based on the pinned version by versionsFrom:
+    // api.versionsFrom(['METEOR@2.15','METEOR@3.0-beta.7']);
+    // api.use('ecmascript@0.16.7||0.16.8-beta300.7'),
+    const isConstraintsAvailable = (
+      packageConstraints,
+      availableConstraintsFromVersion
+    ) =>
+      splitConstraints(packageConstraints).some((c) =>
+        splitConstraints(availableConstraintsFromVersion).includes(c)
+      );
+
     _.each(self.architectures, function (arch) {
       // We need to iterate over both uses and implies, since implied packages
       // also constitute dependencies.
@@ -1754,7 +1766,7 @@ Object.assign(PackageSource.prototype, {
 
           if (d.constraint === null) {
             d.constraint = use.constraint;
-          } else if (d.constraint !== use.constraint) {
+          } else if (!isConstraintsAvailable(d.constraint, use.constraint)) {
             failed = true;
           }
         }
@@ -1793,7 +1805,7 @@ Object.assign(PackageSource.prototype, {
           allConstraints[parsedSpec.package].push(parsedSpec.constraint);
           if (d.constraint === null) {
             d.constraint = parsedSpec.constraint;
-          } else if (d.constraint !== parsedSpec.constraint) {
+          } else if (!isConstraintsAvailable(d.constraint, parsedSpec.constraint)) {
             failed = true;
           }
         }
