@@ -12,14 +12,38 @@ The migration will look like this:
 ```js
 // in you package.js
 Package.onUse((api) => {
-  api.versionsFrom(['1.10', '2.3', '3.0-beta.6']);
+  api.versionsFrom(['1.10', '2.3', '3.0-beta.7']);
   //                               ^^^^^^^ for testing your package with meteor 3.0
 
   api.versionsFrom(['1.10', '2.3', '3.0']);
   //                              ^^^^^^^ for meteor 3.0
-
+});
 ```
 Then you can publish your package and test it with Meteor 3.0, by running `meteor publish`.
+
+
+## Changes for packages that do not use Meteor packages that had breaking change
+
+Similar to what happens with client-only packages,
+if your package is not using Meteor packages that had breaking changes,
+you can update your package to be compatible with Meteor 3.0
+by adding the following line to your `package.js`:
+
+```js
+// in you package.js
+Package.onUse((api) => {
+  api.versionsFrom(['1.10', '2.3', '3.0-beta.7']);
+  //                               ^^^^^^^ for testing your package with meteor 3.0
+
+  api.versionsFrom(['1.10', '2.3', '3.0']);
+  //                     ^^^^^^^ for meteor 3.0
+});
+```
+
+For example, we have `mdg:seo` where we just needed to add the line above to make it
+compatible with Meteor 3.0.
+You can see the [commit](https://github.com/meteor/galaxy-seo-package/commit/8a30b32688df40e62ce434475dd3ee931dedf2b3).
+
 
 ## Testing packages in Meteor 3.0
 
@@ -42,3 +66,22 @@ of migrating to Meteor 3.0:
 -   [`mdg:seo`](https://github.com/meteor/galaxy-seo-package/commit/8a30b32688df40e62ce434475dd3ee931dedf2b3)
 
 You can follow a more in depth guide on how to migrate your package to be compatible with Meteor 3.0 [here](https://guide.meteor.com/prepare-meteor-3.0#Changes-for-packages).
+
+## Maintaining compatibility with Meteor 2.x
+
+You can use the [`Meteor.isFibersDisabled`](https://github.com/meteor/meteor/blob/6ac474627a4d2536090484eb95e7c021370aaefe/packages/meteor/asl-helpers-client.js#L1-L8) property to check if the current Meteor version
+is using Fibers or not. In all releases before Meteor 3.0 this property will be `falsy`(`undefined`).
+In Meteor 3.0 this property will be return `true`.
+
+Which means that you can have a code like this, in your package:
+
+```js
+
+if (Meteor.isFibersDisabled) {
+  // Meteor 3.0
+} else {
+  // Meteor 2.x
+}
+
+```
+

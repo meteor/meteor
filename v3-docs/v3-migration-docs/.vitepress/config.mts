@@ -33,6 +33,10 @@ export default defineConfig({
           {text: "Blaze", link: "/front-end/blaze"},
         ]
       },
+      {
+        text: "Migrating in 2.x",
+        link: "/how-to-migrate/index"
+      }
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/meteor/meteor" }],
 

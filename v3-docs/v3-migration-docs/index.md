@@ -30,6 +30,8 @@ This guide will try to cover the topics needed to migrate your application to Me
 - [React in Meteor v3](./front-end/react.md), how to migrate your react code to Meteor v3
 - [Blaze in Meteor v3](./front-end/blaze.md), how to migrate your blaze code to Meteor v3
 
+- [How to migrate to Meteor 3.x in 2.x](./how-to-migrate/index.md), how can you migrate your application to Meteor v3 while in 2.x.
+
 ## What is Fibers?
 
 Meteor was designed at a time when callback hell was a development issue, so the team decided it at the time
