@@ -3,13 +3,14 @@ import { Meteor } from 'meteor/meteor'
 const indexFnAssignment = Meteor.roleAssignment.createIndexAsync.bind(Meteor.roleAssignment)
 const indexFnRoles = Meteor.roles.createIndexAsync.bind(Meteor.roles)
 
-[
+const indexes = [
   { 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 },
   { 'user._id': 1, 'role._id': 1, scope: 1 },
   { 'role._id': 1 },
   { scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }, // Adding userId and roleId might speed up other queries depending on the first index
   { 'inheritedRoles._id': 1 }
-].forEach(index => indexFnAssignment(index))
+]
+indexes.forEach(index => indexFnAssignment(index))
 indexFnRoles({ 'children._id': 1 })
 
 /*

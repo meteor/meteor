@@ -1,4 +1,4 @@
-/* global Meteor, Roles */
+/* global Roles */
 import { Meteor } from 'meteor/meteor'
 
 /**
