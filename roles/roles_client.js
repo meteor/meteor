@@ -1,9 +1,10 @@
-/* global Meteor, Roles, Mongo */
+/* global Meteor, Roles */
+import { Meteor } from 'meteor/meteor'
 
 /**
  * Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.
  *
- * Roles are accessible throgh `Meteor.roles` collection and documents consist of:
+ * Roles are accessible through `Meteor.roles` collection and documents consist of:
  *  - `_id`: role name
  *  - `children`: list of subdocuments:
  *    - `_id`
@@ -24,13 +25,6 @@
  *
  * @module Roles
  */
-if (!Meteor.roles) {
-  Meteor.roles = new Mongo.Collection('roles')
-}
-
-if (!Meteor.roleAssignment) {
-  Meteor.roleAssignment = new Mongo.Collection('role-assignment')
-}
 
 /**
  * @class Roles

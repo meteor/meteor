@@ -6,8 +6,7 @@ import chai, { assert } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 
 // To ensure that the files are loaded for coverage
-import '../roles_server'
-import '../roles_common'
+import '../roles_common_async'
 
 chai.use(chaiAsPromised)
 

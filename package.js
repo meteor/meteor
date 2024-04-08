@@ -8,7 +8,7 @@ Package.describe({
 })
 
 Package.onUse(function (api) {
-  api.versionsFrom(['2.8.1', '3.0-alpha.11'])
+  api.versionsFrom(['2.8.1', '3.0-beta.7'])
 
   const both = ['client', 'server']
 
@@ -20,13 +20,13 @@ Package.onUse(function (api) {
     'check'
   ], both)
 
-  api.use('zodern:types@1.0.11')
+  api.use('zodern:types@1.0.13')
 
-  api.use(['blaze@2.7.1'], 'client', { weak: true })
+  api.use(['blaze@2.9.0'], 'client', { weak: true })
 
   api.export('Roles')
 
-  api.addFiles('roles/roles_common.js', both)
+  api.addFiles('roles/roles_client.js', 'client')
   api.addFiles('roles/roles_common_async.js', both)
   api.addFiles('roles/roles_server.js', 'server')
   api.addFiles([

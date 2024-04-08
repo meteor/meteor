@@ -5,7 +5,7 @@ import { Meteor } from 'meteor/meteor'
 import { assert } from 'chai'
 
 // To ensure that the files are loaded for coverage
-import '../roles_common'
+import '../roles_client'
 
 const safeInsert = (collection, data) => {
   try {

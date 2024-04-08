@@ -1,5 +1,12 @@
 # Changelog
 
+## v4.0.0
+
+* BREAKING: Synchronous functions are now available only on client side
+* * BREAKING: Migration functions for past versions are no longer available
+* UI Helpers now use `console.debug` for debugging messages
+* `RolesCollection` and `RoleAssignmentsCollection` can now be exported in addition to being accessed via `Meteor.roles` and `Meteor.roleAssignment`
+
 ## v3.6.2
 
 * Fixed TypeScript definition to play nice with Meteor definition [#389](https://github.com/Meteor-Community-Packages/meteor-roles/pull/389) [@bruceborrett](https://github.com/sponsors/bruceborrett)
