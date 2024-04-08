@@ -306,7 +306,7 @@ Tinytest.addAsync(
 
 testAsyncMulti('accounts - storage', [
   function (test, expect) {
-    // Accounts.config({ clientStorage: 'session' }) // No need to set the default value
+    Accounts.config({ clientStorage: 'session' }) // No need to set the default value
     test.isTrue(Accounts._options.clientStorage)
     test.isNotUndefined(sessionStorage.getItem('Meteor.loginToken'))
     test.isUndefined(localStorage.getItem('Meteor.loginToken'))
