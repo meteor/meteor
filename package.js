@@ -56,7 +56,6 @@ Package.onTest(function (api) {
     'mongo'
   ], both)
 
-  api.addFiles('roles/tests/server.js', 'server')
   api.addFiles('roles/tests/serverAsync.js', 'server')
   api.addFiles('roles/tests/client.js', 'client')
   api.addFiles('roles/tests/clientAsync.js', 'client')
