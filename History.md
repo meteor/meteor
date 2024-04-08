@@ -3,7 +3,7 @@
 ## v4.0.0
 
 * BREAKING: Synchronous functions are now available only on client side
-* * BREAKING: Migration functions for past versions are no longer available
+* BREAKING: Migration functions for past versions are no longer available
 * UI Helpers now use `console.debug` for debugging messages
 * `RolesCollection` and `RoleAssignmentsCollection` can now be exported in addition to being accessed via `Meteor.roles` and `Meteor.roleAssignment`
 

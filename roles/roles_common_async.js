@@ -138,7 +138,7 @@ Object.assign(Roles, {
 
     do {
       // For all roles who have it as a dependency ...
-      roles = Roles._getParentRoleNames(
+      roles = await Roles._getParentRoleNamesAsync(
         await Meteor.roles.findOneAsync({ _id: roleName })
       )
 
@@ -652,9 +652,9 @@ Object.assign(Roles, {
    * Returns an array of role names the given role name is a child of.
    *
    * @example
-   *     Roles._getParentRoleNames({ _id: 'admin', children; [] })
+   *     Roles._getParentRoleNamesAsync({ _id: 'admin', children; [] })
    *
-   * @method _getParentRoleNames
+   * @method _getParentRoleNamesAsync
    * @param {object} role The role object
    * @returns {Promise}
    * @private
