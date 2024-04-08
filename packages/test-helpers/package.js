@@ -24,13 +24,27 @@ Package.onUse(function (api) {
 
 
   api.export([
-    'pollUntil', 'try_all_permutations',
-    'SeededRandom', 'clickElement', 'blurElement',
-    'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
-    'renderToDiv', 'clickIt',
-    'withCallbackLogger', 'testAsyncMulti',
-    'simplePoll', 'runAndThrowIfNeeded',
-    'makeTestConnection', 'DomUtils', 'mockBehaviours', 'waitUntil']);
+    'blurElement',
+    'canonicalizeHtml',
+    'clickElement',
+    'clickIt',
+    'DomUtils',
+    'focusElement',
+    'getStyleProperty',
+    'makeTestConnection',
+    'mockBehaviours',
+    'MockFunction',
+    'pollUntil',
+    'renderToDiv',
+    'runAndThrowIfNeeded',
+    'makeTestConnection', 'DomUtils']);
+    'simplePoll',
+    'simulateEvent',
+    'testAsyncMulti',
+    'try_all_permutations',
+    'waitUntil',
+    'withCallbackLogger',
+  ]);
 
   api.addFiles('try_all_permutations.js');
   api.addFiles('async_multi.js');
@@ -41,6 +55,7 @@ Package.onUse(function (api) {
   api.addFiles('current_style.js');
   api.addFiles('callback_logger.js');
   api.addFiles('mock.js');
+  api.addFiles('mock_function.js');
   api.addFiles('wait.js');
   api.addFiles('domutils.js', 'client');
   api.addFiles('connection.js', 'server');

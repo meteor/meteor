@@ -466,6 +466,9 @@ export class AccountsServer extends AccountsCommon {
     if (result.error) {
       attempt.error = result.error;
     }
+    if (result.options) {
+      attempt.options = result.options;
+    }
     if (user) {
       attempt.user = user;
     }
@@ -1861,4 +1864,3 @@ const generateCasePermutationsForString = string => {
   }
   return permutations;
 }
-
