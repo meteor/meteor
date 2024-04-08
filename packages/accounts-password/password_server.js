@@ -228,7 +228,7 @@ Accounts.registerLoginHandler("password", async options => {
  * @param {String} newUsername A new username for the user.
  * @importFromPackage accounts-base
  */
-Accounts.setUsername = (userId, newUsername) => {
+Accounts.setUsername = async (userId, newUsername) => {
   check(userId, NonEmptyString);
   check(newUsername, NonEmptyString);
 
@@ -242,19 +242,19 @@ Accounts.setUsername = (userId, newUsername) => {
   const oldUsername = user.username;
 
   // Perform a case insensitive check for duplicates before update
-  Accounts._checkForCaseInsensitiveDuplicates('username',
+  await Accounts._checkForCaseInsensitiveDuplicates('username',
     'Username', newUsername, user._id);
 
-  Meteor.users.update({_id: user._id}, {$set: {username: newUsername}});
+  await Meteor.users.updateAsync({_id: user._id}, {$set: {username: newUsername}});
 
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    Accounts._checkForCaseInsensitiveDuplicates('username',
+    await Accounts._checkForCaseInsensitiveDuplicates('username',
       'Username', newUsername, user._id);
   } catch (ex) {
     // Undo update if the check fails
-    Meteor.users.update({_id: user._id}, {$set: {username: oldUsername}});
+    await Meteor.users.updateAsync({_id: user._id}, {$set: {username: oldUsername}});
     throw ex;
   }
 };
@@ -817,7 +817,7 @@ Meteor.methods({verifyEmail: async function (...args) {
  * be marked as verified. Defaults to false.
  * @importFromPackage accounts-base
  */
-Accounts.addEmail = (userId, newEmail, verified) => {
+Accounts.addEmail = async (userId, newEmail, verified) => {
   check(userId, NonEmptyString);
   check(newEmail, NonEmptyString);
   check(verified, Match.Optional(Boolean));
@@ -871,10 +871,10 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   }
 
   // Perform a case insensitive check for duplicates before update
-  Accounts._checkForCaseInsensitiveDuplicates('emails.address',
+  await Accounts._checkForCaseInsensitiveDuplicates('emails.address',
     'Email', newEmail, user._id);
 
-  Meteor.users.update({
+  await Meteor.users.updateAsync({
     _id: user._id
   }, {
     $addToSet: {
@@ -888,11 +888,11 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    Accounts._checkForCaseInsensitiveDuplicates('emails.address',
+    await Accounts._checkForCaseInsensitiveDuplicates('emails.address',
       'Email', newEmail, user._id);
   } catch (ex) {
     // Undo update if the check fails
-    Meteor.users.update({_id: user._id},
+    await Meteor.users.updateAsync({_id: user._id},
       {$pull: {emails: {address: newEmail}}});
     throw ex;
   }
@@ -952,7 +952,7 @@ const createUser = async options => {
 // method for create user. Requests come from the client.
 Meteor.methods({createUser: async function (...args) {
   const options = args[0];
-  return await Accounts._loginMethod(
+  return Accounts._loginMethod(
     this,
     "createUser",
     args,
