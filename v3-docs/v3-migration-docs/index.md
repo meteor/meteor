@@ -175,7 +175,8 @@ you can always ping us on [Slack](https://join.slack.com/t/meteor-community/shar
 
 Currently we are aware of the following community migration guides:
  - [Meteor 3.0 Migration Guide, from Daniel](https://docs.google.com/document/d/1XxHE5MQaS0-85HQ-bkiXxmGlYi41ggkX3F-9Rjb9HhE/edit#heading=h.65xi3waq9bb)
-
+ - [Illustreets Migration Guide, large SaaS migrated to 3.0](https://forums.meteor.com/t/large-saas-migrated-to-3-0/61113) & their how-to [post](https://forums.meteor.com/t/meteor-3-0-beta-6-is-out/61277/12)
+ 
 ### Videos
 
 Migrating apps to Meteor 3.0:
@@ -186,6 +187,8 @@ Migrating apps to Meteor 3.0:
   - part 2 - [YouTube](https://www.youtube.com/watch?v=PB2M16fmloM)
   - part 3 - [YouTube](https://www.youtube.com/watch?v=79ytCgZQfSU)
   - part 4 - [YouTube](https://www.youtube.com/watch?v=InNCy0duKak)
+
+---
 
 If you have a migration guide, it can be video or text, please let us know so we can add it here.
 
