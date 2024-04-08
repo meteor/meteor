@@ -42,7 +42,6 @@ EVp.withValue = function (value, func) {
   } finally {
     currentValues[this.slot] = saved;
   }
-
   return ret;
 };
 
