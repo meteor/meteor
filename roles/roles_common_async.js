@@ -547,7 +547,7 @@ Object.assign(Roles, {
 
       // and then add all
       for (const role of roles) {
-        await Roles._addUserToRole(id, role, options)
+        await Roles._addUserToRoleAsync(id, role, options)
       }
     }
   },
@@ -555,7 +555,7 @@ Object.assign(Roles, {
   /**
    * Add one user to one role.
    *
-   * @method _addUserToRole
+   * @method _addUserToRoleAsync
    * @param {String} userId The user ID.
    * @param {String} roleName Name of the role to add the user to. The role have to exist.
    * @param {Object} options Options:
