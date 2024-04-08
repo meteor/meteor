@@ -1484,7 +1484,7 @@ describe('roles async', async function () {
       inheritedRoles: [{ _id: 'admin' }]
     }])
 
-    Roles._removeUserFromRole(users.eve, 'admin', { scope: null })
+    await Roles._removeUserFromRoleAsync(users.eve, 'admin', { scope: null })
 
     const rolesForUser2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
     assert.sameDeepMembers(rolesForUser2.map(obj => { delete obj._id; return obj }), [])

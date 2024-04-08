@@ -763,7 +763,7 @@ Object.assign(Roles, {
   /**
    * Remove one user from one role.
    *
-   * @method _removeUserFromRole
+   * @method _removeUserFromRoleAsync
    * @param {String} userId The user ID.
    * @param {String} roleName Name of the role to add the user to. The role have to exist.
    * @param {Object} options Options:
