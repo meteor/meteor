@@ -283,7 +283,10 @@ export default defineConfig({
       options: {
         appId: '2RBX3PR26I',
         apiKey: '7fcba92008b84946f04369df2afa1744',
-        indexName: 'meteor_docs_v3'
+        indexName: 'meteor_docs_v3',
+        searchParameters: {
+          facetFilters: ["lang:en"],
+        },
       }
     },
 

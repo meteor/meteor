@@ -24,15 +24,21 @@ new Crawler({
         return helpers.docsearch({
           recordProps: {
             lvl0: {
-              selectors: '',
-              defaultValue: 'Documentation',
+              selectors: "",
+              defaultValue: "Documentation",
             },
-            lvl1: '.content h1',
-            lvl2: '.content h2',
-            lvl3: '.content h3',
-            lvl4: '.content h4',
-            lvl5: '.content h5',
-            content: '.content p, .content li',
+            lvl1: ".content h1",
+            lvl2: ".content h2",
+            lvl3: ".content h3",
+            lvl4: ".content h4",
+            lvl5: ".content h5",
+            content: ".content p, .content li",
+            lang: {
+              defaultValue: ['en','en-US'],
+            },
+            language: {
+              defaultValue: ['en','en-US'],
+            },
           },
           indexHeadings: true,
           aggregateContent: true,
