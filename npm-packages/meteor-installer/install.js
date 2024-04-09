@@ -20,7 +20,7 @@ const {
   rootPath,
   sudoUser,
   isSudo,
-  isMac,
+  isLinux,
   METEOR_LATEST_VERSION,
   shouldSetupExecPath,
 } = require('./config');
@@ -45,7 +45,9 @@ if (!semver.satisfies(process.version, nodeVersion)) {
   );
 }
 
-const isInstalledGlobally = process.env.npm_config_global === 'true';
+const isInstalledGlobally =
+  process.env.npm_config_global === 'true' ||
+  process.env.npm_lifecycle_event === 'npx';
 
 if (!isInstalledGlobally) {
   console.error('******************************************');
@@ -55,17 +57,18 @@ if (!isInstalledGlobally) {
   console.error('Make sure you pass -g to npm install.');
   console.error('Aborting...');
   console.error('******************************************');
-  process.exit(1);
+  process.exit(0);
 }
 process.on('unhandledRejection', err => {
   throw err;
 });
+
 if (os.arch() !== 'x64') {
   const isValidM1Version = semver.gte(
     semver.coerce(METEOR_LATEST_VERSION),
     '2.5.1-beta.3',
   );
-  if (os.arch() !== 'arm64' || !isMac() || !isValidM1Version) {
+  if (os.arch() !== 'arm64' || !isValidM1Version) {
     console.error(
       'The current architecture is not supported in this version: ',
       os.arch(),
@@ -81,9 +84,15 @@ const downloadPlatform = {
   linux: 'linux',
 };
 
-const url = `https://packages.meteor.com/bootstrap-link?arch=os.${
-  downloadPlatform[os.platform()]
-}.${os.arch() === 'arm64' ? 'arm64' : 'x86_64'}&release=${release}`;
+function getDownloadArch() {
+  const osArch = os.arch();
+  if (isLinux() && osArch === 'arm64') return 'aarch64';
+  if (osArch === 'arm64') return 'arm64';
+  return 'x86_64';
+}
+
+const arch = `os.${downloadPlatform[os.platform()]}.${getDownloadArch()}`;
+const url = `https://packages.meteor.com/bootstrap-link?arch=${arch}&release=${release}`;
 
 let tempDirObject;
 try {
@@ -121,8 +130,8 @@ if (fs.existsSync(startedPath)) {
   console.log(
     `If you want to reinstall it, run:
 
-  $ meteor-installer uninstall
-  $ meteor-installer install
+  $ npx meteor uninstall
+  $ npx meteor@<version> install
 `,
   );
   process.exit();
@@ -150,6 +159,9 @@ try {
     console.log('Assuming unable to create symlinks');
   }
 }
+
+console.log(`=> Arch: ${arch}`);
+console.log(`=> Meteor Release: ${release}`);
 
 download();
 
@@ -316,7 +328,7 @@ function showGettingStarted() {
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
 
   const runCommand = isWindows()
-    ? `set path "${meteorPath}/;%path%`
+    ? `set path "${meteorPath}/;%path%"`
     : exportCommand;
   const message = `
 ***************************************

@@ -2,7 +2,6 @@
 title: Docs
 ---
 
-> Meteor 2.x runs on a deprecated Node.js version (14). Meteor 3.0 is in progress, and it will run on the latest Node.js version. For more information, please consult our [migration guide](https://guide.meteor.com/3.0-migration.html).
 
 <!--  XXX: note that this content is somewhat duplicated on the guide, and should be updated in parallel -->
 <h2 id="what-is-meteor">What is Meteor?</h2>
@@ -24,11 +23,11 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 1. The place to get started with Meteor is the [tutorials page](https://www.meteor.com/developers/tutorials).
 
 1. [Meteor Examples](https://github.com/meteor/examples) is a list of examples using Meteor. You can also include your example with Meteor.
-   
+
 1. Once you are familiar with the basics, the [Meteor Guide](http://guide.meteor.com) covers intermediate material on how to use Meteor in a larger scale app.
 
 1. Visit the [Meteor discussion forums](https://forums.meteor.com) to announce projects, get help, talk about the community, or discuss changes to core.
-   
+
 1. [Meteor Slack Community](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc) is the best place to ask (and answer!) technical questions and also meet Meteor developers.
 
 1. [Atmosphere](https://atmospherejs.com) is the repository of community packages designed especially for Meteor.
