@@ -6,6 +6,9 @@ export default defineConfig({
   description: "Meteor.js API docs",
   head: [["link", { rel: "icon", href: "/logo.png" }]],
   lastUpdated: true,
+  sitemap: {
+    hostname: "https://v3-docs.meteor.com",
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -283,6 +286,7 @@ export default defineConfig({
         indexName: 'meteor_docs_v3'
       }
     },
+
     footer: {
       message:
         'Released under the <a href="https://github.com/meteor/meteor?tab=License-1-ov-file#readme">MIT License</a>.',

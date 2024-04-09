@@ -3,14 +3,15 @@
 // this is maintained here so that we can have a backup of the crawler configuration and
 // git history of the changes made to the crawler configuration
 
-// This was based on https://vitepress.dev/reference/default-theme-search#crawler-config
+// This was based onhttps://v3-docs.meteor.com/
 new Crawler({
   appId: "....",
   apiKey: "....",
   rateLimit: 8,
+  maxDepth: 10,
   startUrls: ["https://v3-docs.meteor.com/"],
   renderJavaScript: false,
-  sitemaps: [],
+  sitemaps: ["https://v3-docs.meteor.com/sitemap.xml"],
   exclusionPatterns: [],
   ignoreCanonicalTo: false,
   discoveryPatterns: ["https://v3-docs.meteor.com/**"],
@@ -22,18 +23,20 @@ new Crawler({
       recordExtractor: ({ $, helpers }) => {
         return helpers.docsearch({
           recordProps: {
-            lvl1: ".content h1",
-            content: ".content p, .content li",
             lvl0: {
-              selectors: "",
-              defaultValue: "Documentation",
+              selectors: '',
+              defaultValue: 'Documentation',
             },
-            lvl2: ".content h2",
-            lvl3: ".content h3",
-            lvl4: ".content h4",
-            lvl5: ".content h5",
+            lvl1: '.content h1',
+            lvl2: '.content h2',
+            lvl3: '.content h3',
+            lvl4: '.content h4',
+            lvl5: '.content h5',
+            content: '.content p, .content li',
           },
           indexHeadings: true,
+          aggregateContent: true,
+          recordVersion: 'v3',
         });
       },
     },
