@@ -40,6 +40,9 @@ If ($LASTEXITCODE -ne 0) {
 }
 
 # https://github.com/marcbachmann/node-html-pdf/issues/358#issue-271430548
+Write-Host "Downloading dev_bundle..." -ForegroundColor Magenta
+& "$meteorBat"
+
 $devBundleLib = Join-Path $dirCheckout 'dev_bundle\lib'
 Write-Host "Installing test npm dependencies..." -ForegroundColor Magenta
 Write-Host "DevBundleLib: $devBundleLib" -ForegroundColor Magenta
