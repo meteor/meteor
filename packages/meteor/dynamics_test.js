@@ -20,8 +20,10 @@ if (Meteor.isServer) {
   Tinytest.addAsync(
     "environment - dynamic variables with two context (server)",
     async function (test) {
+      // Ensure "0" as the dynamic context spread properly
+      // https://github.com/meteor/meteor/pull/13089
       const context0 = new Meteor.EnvironmentVariable();
-      context0.slot = 0; // Ensure "0" as the dynamic context spread properly
+      context0.slot = 0;
 
       const context1 = new Meteor.EnvironmentVariable();
       const context2 = new Meteor.EnvironmentVariable();
@@ -54,8 +56,10 @@ if (Meteor.isServer) {
   Tinytest.add(
     "environment - dynamic variables with two context (client)",
     function (test) {
+      // Ensure "0" as the dynamic context spread properly
+      // https://github.com/meteor/meteor/pull/13089
       const context0 = new Meteor.EnvironmentVariable();
-      context0.slot = 0; // Ensure "0" as the dynamic context spread properly
+      context0.slot = 0;
 
       const context1 = new Meteor.EnvironmentVariable();
       const context2 = new Meteor.EnvironmentVariable();
