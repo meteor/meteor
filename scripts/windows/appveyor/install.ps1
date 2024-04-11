@@ -40,9 +40,8 @@ If ($LASTEXITCODE -ne 0) {
 }
 
 # https://github.com/marcbachmann/node-html-pdf/issues/358#issue-271430548
-Write-Host "Installing test npm dependencies..." `
-  -ForegroundColor Magenta
-& "$meteorBat" npm install --prefix "${dirCheckout}\dev_bundle\lib" phantomjs-prebuilt browserstack-webdriver
+Write-Host "Installing test npm dependencies..." -ForegroundColor Magenta
+"$meteorBat" npm install --prefix "${dirCheckout}\dev_bundle\lib" phantomjs-prebuilt browserstack-webdriver
 
 If ($LASTEXITCODE -ne 0) {
   throw "Installing npm dependencies required for testing has failed."
