@@ -46,7 +46,7 @@ Write-Host "Downloading dev_bundle..." -ForegroundColor Magenta
 $devBundleLib = Join-Path $dirCheckout 'dev_bundle\lib'
 Write-Host "Installing test npm dependencies..." -ForegroundColor Magenta
 Write-Host "DevBundleLib: $devBundleLib" -ForegroundColor Magenta
-& "$meteorBat" npm install --prefix "${devBundleLib}" phantomjs-prebuilt browserstack-webdriver
+& npm install --prefix "${devBundleLib}" phantomjs-prebuilt browserstack-webdriver
 
 If ($LASTEXITCODE -ne 0) {
   throw "Installing npm dependencies required for testing has failed."
