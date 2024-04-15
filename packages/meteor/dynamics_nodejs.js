@@ -55,7 +55,7 @@ class EnvironmentVariableAsync {
       Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {}
     );
 
-    if (slotCall) {
+    if (slotCall != null) {
       dynamics[slotCall] = value;
     }
 
