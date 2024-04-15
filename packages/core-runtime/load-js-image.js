@@ -57,6 +57,8 @@ function load(name, runImage) {
   });
 }
 
+let runEagerModulesQueue = Promise.resolve();
+
 function runEagerModules(config, callback) {
   if (!config.eagerModulePaths) {
     return callback();
@@ -89,39 +91,40 @@ function runEagerModules(config, callback) {
       }
 
       // Is an async module
-      exports.then(function (exports) {
+      return exports.then(function (exports) {
         if (path === config.mainModulePath) {
           mainExports = exports;
         }
-        evaluateNextModule();
-      })
-      // This also handles errors in modules and packages loaded sync
-      // afterwards since they are run within the .then.
-      .catch(function (error) {
-        if (
-          typeof process === 'object' &&
-          typeof process.nextTick === 'function'
-        ) {
-          // Is node.js
-          process.nextTick(function () {
-            throw error;
-          });
-        } else {
-          // TODO: is there a faster way to throw the error?
-          setTimeout(function () {
-            throw error;
-          }, 0);
-        }
+        return evaluateNextModule();
       });
     } else {
       if (path === config.mainModulePath) {
         mainExports = exports;
       }
-      evaluateNextModule();
+      return evaluateNextModule();
     }
   }
 
-  evaluateNextModule();
+  runEagerModulesQueue = runEagerModulesQueue
+    .then(evaluateNextModule)
+    // This also handles errors in modules and packages loaded sync
+    // afterwards since they are run within the `.then`.
+    .catch(function (error) {
+      if (
+        typeof process === 'object' &&
+        typeof process.nextTick === 'function'
+      ) {
+        // Is node.js
+        process.nextTick(function () {
+          throw error;
+        });
+      } else {
+        // TODO: is there a faster way to throw the error?
+        setTimeout(function () {
+          throw error;
+        }, 0);
+      }
+    });
 }
 
 function checkAsyncModule (exports) {
