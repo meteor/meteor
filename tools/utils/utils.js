@@ -548,7 +548,6 @@ exports.execFile = async function (file, args, opts) {
   var { eachline } = require('./eachline');
 
   opts = opts || {};
-  opts = process.platform === 'win32' ? { ...opts, shell: true } : opts;
   if (! _.has(opts, 'maxBuffer')) {
     opts.maxBuffer = 1024 * 1024 * 10;
   }
@@ -586,7 +585,6 @@ exports.execFile = async function (file, args, opts) {
 
 exports.execFileAsync = function (file, args, opts) {
   opts = opts || {};
-  opts = process.platform === 'win32' ? { ...opts, shell: true } : opts;
   var child_process = require('child_process');
   var { eachline } = require('./eachline');
   var p = child_process.spawn(file, args, opts);

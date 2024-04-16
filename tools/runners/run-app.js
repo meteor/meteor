@@ -260,7 +260,6 @@ Object.assign(AppProcess.prototype, {
     var child = child_process.spawn(process.execPath, opts, {
       env: self._computeEnvironment(),
       stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-      ...process.platform === 'win32' && { shell: true },
     });
 
     // Add a child.sendMessage(topic, payload) method to this child

@@ -41,8 +41,7 @@ function rebuild(i) {
   if (! dir) {
     // Print Node/V8/etc. versions for diagnostic purposes.
     spawn(npmCmd, ["version", "--json"], {
-      stdio: "inherit",
-      ...process.platform === 'win32' && { shell: true },
+      stdio: "inherit"
     });
 
     return;
@@ -50,8 +49,7 @@ function rebuild(i) {
 
   spawn(npmCmd, rebuildArgs, {
     cwd: path.join(__dirname, dir),
-    stdio: "inherit",
-    ...process.platform === 'win32' && { shell: true },
+    stdio: "inherit"
   }).on("exit", function (code) {
     if (code !== 0) {
       process.exit(code);

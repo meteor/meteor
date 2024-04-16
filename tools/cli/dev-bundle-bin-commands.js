@@ -27,8 +27,7 @@ function getChildProcess() {
     var env = devBundleAndEnv[1];
     var child = require("child_process").spawn(cmd, args, {
       stdio: "inherit",
-      env: env,
-      ...process.platform === 'win32' && { shell: true },
+      env: env
     });
 
     require("./flush-buffers-on-exit-in-windows.js");

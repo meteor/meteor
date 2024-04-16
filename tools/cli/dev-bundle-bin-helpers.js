@@ -155,8 +155,7 @@ function addWindowsVariables(devBundleDir, env) {
       "  print 2015"
     ].join("\n")], {
       cwd: nodeGypPylibDir,
-      stdio: "pipe",
-      ...process.platform === 'win32' && { shell: true },
+      stdio: "pipe"
     });
 
     var chunks = [];
