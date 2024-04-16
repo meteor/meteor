@@ -70,6 +70,7 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
       },
       process.env
     ),
+    ...process.platform === 'win32' && { shell: true },
   });
 }
 
