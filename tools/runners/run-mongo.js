@@ -17,6 +17,7 @@ var runMongoShell = function (url, err) {
   var mongoUrl = require('url').parse(url);
   const ls = child_process.spawn('mongosh', [mongoUrl.href], {
     stdio: 'inherit',
+    ...process.platform === 'win32' && { shell: true },
   });
   ls.on('error', err);
 };
@@ -70,6 +71,7 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
       },
       process.env
     ),
+    ...process.platform === 'win32' && { shell: true },
   });
 }
 
