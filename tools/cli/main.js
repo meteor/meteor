@@ -599,7 +599,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   if (isEmacs()) {
     process.stdin;
     var child_process = require('child_process');
-    child_process.spawn('true', [], {stdio: 'inherit', ...process.platform === 'win32' && { shell: true }});
+    child_process.spawn('true', [], {stdio: 'inherit'});
   }
 
   // Check required Node version.
