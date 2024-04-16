@@ -156,7 +156,7 @@ const middleware = async (req, res, next) => {
       throw new Error(`Unexpected OAuth service ${serviceName}`);
 
     // Make sure we're configured
-    ensureConfigured(serviceName);
+    await ensureConfigured(serviceName);
 
     const handler = OAuth._requestHandlers[service.version];
     if (!handler)
@@ -237,8 +237,8 @@ const oauthServiceName = req => {
 };
 
 // Make sure we're configured
-const ensureConfigured = serviceName => {
-  if (!ServiceConfiguration.configurations.findOne({service: serviceName})) {
+const ensureConfigured = async serviceName => {
+  if (!(await ServiceConfiguration.configurations.findOneAsync({service: serviceName}))) {
     throw new ServiceConfiguration.ConfigError();
   }
 };
