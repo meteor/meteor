@@ -1,52 +1,57 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  description: "Guide for Meteor 3.0",
-  head: [
-    ['link', { rel: 'icon', href: '../images/meteor-logo.webp' }],
-  ],
+  title: "Meteor V3 Migration Guide",
+  description: "Meteor.js Migration Guide to v3",
+  head: [["link", { rel: "icon", href: "/logo.png" }]],
+  lastUpdated: true,
   themeConfig: {
-    siteTitle: 'Meteor 3.0',
-    logo: {
-      dark: 'meteor-logo.webp',
-      light: 'meteor-logo.webp',
-      alt: 'Meteor 3.0 Logo',
-    },
-    search: {
-      provider: 'local'
-    },
-
     // https://vitepress.dev/reference/default-theme-config
-    nav: [
-      { text: 'Home', link: '/',  },
-    ],
-
     sidebar: [
       {
-        text: 'Introduction',
+        text: "Guide",
         items: [
-          { text: 'What is Meteor 3.0', link: '/index' },
-          { text: 'How to install', link: '/docs/introduction/how-to-install' },
+          {text: "Overview", link: "/"},
+          {text: "Breaking Changes", link: "/breaking-changes/"},
+          {text: "Meteor.call x Meteor.callAsync", link: "/breaking-changes/call-x-callAsync"},
+          {text: "Upgrading packages", link: "/breaking-changes/upgrading-packages"},
         ]
       },
       {
-        text: 'Collection and Schemas',
+        text: "APIs changes",
         items: [
-          { text: 'MongoDB collections in Meteor', link: '/docs/collections-schemas/mongo-db-collection-meteor' },
+          {text: "Using Async Functions", link: "/api/async-functions"},
+          {text: "Renamed Functions", link: "/api/renamed-functions"},
+          {text: "Removed Functions", link: "/api/removed-functions"},
         ]
       },
       {
-        text: 'Publications and Data Loading',
+        text: "Front end",
         items: [
-          { text: 'Publications and subscriptions', link: '/docs/collections-schemas/undefined' },
+          {text: "React", link: "/front-end/react"},
+          {text: "Blaze", link: "/front-end/blaze"},
         ]
+      },
+      {
+        text: "Migrating in 2.x",
+        link: "/how-to-migrate/index"
       }
     ],
+    socialLinks: [{ icon: "github", link: "https://github.com/meteor/meteor" }],
 
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/meteor/meteor' },
-      { icon: 'twitter', link: 'https://twitter.com/meteorjs' }
-    ]
-  }
-})
+    search: {
+      provider: "local",
+    },
+    footer: {
+      message:
+        'Released under the <a href="https://github.com/meteor/meteor?tab=License-1-ov-file#readme">MIT License</a>.',
+      copyright:
+        'Copyright (c) 2011 - present <a href="https://www.meteor.com/">Meteor Software</a>.',
+    },
+    editLink: {
+      pattern: "https://github.com/meteor/meteor/edit/release-3.0/v3-docs/v3-migration-docs/:path",
+      text: "Edit this page on GitHub",
+    },
+  },
+});

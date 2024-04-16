@@ -6,6 +6,9 @@ export default defineConfig({
   description: "Meteor.js API docs",
   head: [["link", { rel: "icon", href: "/logo.png" }]],
   lastUpdated: true,
+  sitemap: {
+    hostname: "https://v3-docs.meteor.com",
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -276,8 +279,17 @@ export default defineConfig({
     logo: { dark: "/meteor-logo.png", light: "/meteor-blue.png" },
 
     search: {
-      provider: "local",
+      provider: 'algolia',
+      options: {
+        appId: '2RBX3PR26I',
+        apiKey: '7fcba92008b84946f04369df2afa1744',
+        indexName: 'meteor_docs_v3',
+        searchParameters: {
+          facetFilters: ["lang:en"],
+        },
+      }
     },
+
     footer: {
       message:
         'Released under the <a href="https://github.com/meteor/meteor?tab=License-1-ov-file#readme">MIT License</a>.',

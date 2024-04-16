@@ -175,6 +175,9 @@ MongoConnection = function (url, options) {
     // set it for replSet, it will be ignored if we're not using a replSet.
     mongoOptions.maxPoolSize = options.maxPoolSize;
   }
+  if (_.has(options, 'minPoolSize')) {
+    mongoOptions.minPoolSize = options.minPoolSize;
+  }
 
   // Transform options like "tlsCAFileAsset": "filename.pem" into
   // "tlsCAFile": "/<fullpath>/filename.pem"
@@ -722,6 +725,13 @@ var simulateUpsertWithInsertedId = async function (collection, selector, mod, op
 MongoConnection.prototype.upsertAsync = async function (collectionName, selector, mod, options) {
   var self = this;
 
+
+
+  if (typeof options === "function" && ! callback) {
+    callback = options;
+    options = {};
+  }
+
   return self.updateAsync(collectionName, selector, mod,
                      _.extend({}, options, {
                        upsert: true,
@@ -1047,7 +1057,7 @@ class AsynchronousCursor {
 
     this._visitedIds = new LocalCollection._IdMap;
   }
-  
+
   [Symbol.asyncIterator]() {
     var cursor = this;
     return {
