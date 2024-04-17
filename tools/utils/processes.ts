@@ -107,7 +107,7 @@ export function execFileAsync(
       spawnArgs.forEach(arg => {
         command += ' ' + arg;
       });
-      child = child_process.exec(command, { cwd, env });
+      child = child_process.exec(command, { cwd, env, shell: true });
     }
 
     let capturedStdout = '';
