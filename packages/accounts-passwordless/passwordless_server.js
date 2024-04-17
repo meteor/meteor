@@ -1,12 +1,12 @@
 import { Accounts } from 'meteor/accounts-base';
+import { Random } from 'meteor/random';
+import { check, Match } from 'meteor/check';
 import {
   DEFAULT_TOKEN_SEQUENCE_LENGTH,
   getUserById,
-  NonEmptyString,
   tokenValidator,
   checkToken,
 } from './server_utils';
-import { Random } from 'meteor/random';
 
 const findUserWithOptions = ({ selector }) => {
   if (!selector) {
@@ -33,7 +33,7 @@ Accounts.registerLoginHandler('passwordless', options => {
 
   check(options, {
     token: tokenValidator(),
-    code: Match.Optional(NonEmptyString),
+    code: Match.Optional(Match.NonEmptyString),
     selector: Accounts._userQueryValidator,
   });
 
