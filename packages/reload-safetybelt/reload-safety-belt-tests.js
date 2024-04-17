@@ -3,7 +3,7 @@ await (async () => {
 
   Tinytest.add("reload-safetybelt - safety belt is added", function (test) {
     test.isTrue(
-      _.some(WebAppInternals.additionalStaticJs, function (js, pathname) {
+      Object.values(WebAppInternals.additionalStaticJs).some( function (js, pathname) {
         return js === script;
       })
     );

@@ -338,3 +338,41 @@ Accounts.ui.config({
 
 
 Since Meteor 2.7 you can configure these in your Meteor settings under `Meteor.settings.public.packages.accounts-ui-unstyled`.
+
+<h3 id="initialize-with-custom-settings">Initialize with custom settings</h3>
+
+This feature allows users to specify custom configuration parameters for both client-side and server-side initialization.
+
+* Client
+
+{% apibox "AccountsClient" %}
+
+On the client-side, AccountsClient can be initialized with custom parameters provided through Meteor settings configuration. Below is an example of how to use this functionality:
+
+```json
+{
+  "public": {
+    "packages": {
+      "accounts": {
+        ...configParams
+      }
+    }
+  }
+}
+```
+
+* Server
+
+{% apibox "AccountsServer" %}
+
+On the server-side, AccountsServer can also be initialized with custom parameters. Server-specific configuration may differ from the client and can also be specified through Meteor settings. Below is an example of how to do it:
+
+```json
+{
+  "packages": {
+    "accounts": {
+      ...configParams
+    }
+  }
+}
+```

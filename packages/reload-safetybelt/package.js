@@ -13,6 +13,6 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use("ecmascript");
   api.addAssets("safetybelt.js", "server");
-  api.use(["reload-safetybelt", "tinytest", "http", "webapp", "underscore"]);
+  api.use(["reload-safetybelt", "tinytest", "http", "webapp"]);
   api.addFiles("reload-safety-belt-tests.js", "server");
 });

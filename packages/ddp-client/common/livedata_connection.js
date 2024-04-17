@@ -924,6 +924,7 @@ export class Connection {
     };
 
     const invocation = new DDPCommon.MethodInvocation({
+      name,
       isSimulation: true,
       userId: self.userId(),
       isFromCallAsync: options?.isFromCallAsync,

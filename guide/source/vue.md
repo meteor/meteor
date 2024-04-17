@@ -41,6 +41,12 @@ Meteor's build tool and Pub/Sub API (or Apollo) provides Vue with this API that 
 
 <h3 id="integrating-vue-with-meteor">Integrating Vue With Meteor</h3>
 
+Creating vue3 app
+
+```
+meteor create --vue
+```
+
 To start a new project:  
 
 ```sh
