@@ -66,7 +66,6 @@ function runEagerModules(config, callback) {
     }
 
     var path = config.eagerModulePaths[index];
-    debugger;
     var exports = config.require(path);
     if (checkAsyncModule(exports)) {
       if (path === config.mainModulePath) {

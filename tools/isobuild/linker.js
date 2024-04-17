@@ -945,22 +945,9 @@ var getHeader = function (options) {
     return '(function() {\n\n';
   }
 
+  var chunks = [`Package["core-runtime"].queue("${options.name}",function () {`];
+
   var isApp = options.name === null;
-  var chunks = [];
-   let orderedDeps = [];
-
-  options.deps.forEach(dep => {
-    if (!dep.unordered) {
-      orderedDeps.push(JSON.stringify(dep.package))
-    }
-  });
-
-  chunks.push(
-      `Package["core-runtime"].queue("${options.name}", [`,
-      orderedDeps.join(', '),
-      '], function () {'
-  );
-
   if (isApp) {
     chunks.push(
       getImportCode(options.imports, "/* Imports for global scope */\n\n", true),
@@ -978,8 +965,7 @@ var getHeader = function (options) {
 
   if (!_.isEmpty(packageVariables)) {
     chunks.push(
-      "/* Package-scope variables */\n",
-      "var ",
+      "/* Package-scope variables */\nvar ",
       packageVariables.join(', '),
       ";\n\n",
     );
