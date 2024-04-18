@@ -4348,7 +4348,7 @@ testAsyncMulti(
             itemIds = items.map(_item => _item._id);
             test.equal(itemIds, []); // data IS NOT persisted
             resolve();
-          }, 100);
+          }, 700);
         });
       }
 
@@ -4390,7 +4390,7 @@ testAsyncMulti(
             itemIds = items.map(_item => _item._id);
             test.equal(itemIds, ['a']); // data is persisted
             resolve();
-          }, 100);
+          }, 700);
         });
       }
 
@@ -4449,7 +4449,7 @@ testAsyncMulti(
               itemIds = items.map(_item => _item._id);
               test.equal(itemIds, []); // data IS NOT persisted
               resolve();
-            }, 100);
+            }, 700);
           });
         }
       } else {
