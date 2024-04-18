@@ -530,6 +530,9 @@ var launchMongo = async function(options) {
       if (proc) {
         proc.removeListener('exit', procExitHandler);
         proc.kill('SIGINT');
+        if (process.platform === "win32") {
+          utils.execFileAsync("taskkill", ["/pid", proc.pid, '/f', '/t']);
+        }
         proc = null;
       }
     }
