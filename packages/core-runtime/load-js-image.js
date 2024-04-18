@@ -130,7 +130,7 @@ function waitUntilAllLoaded() {
   }
 
   return new Promise(function (resolve) {
-    queue(null, [], function () {
+    queue(null, function () {
       resolve();
       return {};
     });
