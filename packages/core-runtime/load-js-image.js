@@ -8,7 +8,7 @@
 var hasOwn = Object.prototype.hasOwnProperty;
 
 var pending = [];
-function queue(name, deps, runImage) {
+function queue(name, runImage) {
   pending.push({name: name, runImage: runImage});
   processNext();
 }
