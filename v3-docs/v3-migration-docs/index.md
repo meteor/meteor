@@ -8,7 +8,7 @@ This guide will be updated as we progress through the development of Meteor v3.
 ## What's the status of version 3.0?
 
 **Latest version:** `3.0-rc.0` <br/>
-**Node.js version:** `20.11.1 LTS`
+**Node.js version:** `20.11.1 LTS` <br/>
 **NPM version:** `10.2.4`
 
 
