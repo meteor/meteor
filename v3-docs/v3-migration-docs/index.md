@@ -7,7 +7,7 @@ This guide will be updated as we progress through the development of Meteor v3.
 
 ## What's the status of version 3.0?
 
-**Latest version:** `3.0-beta.7` <br/>
+**Latest version:** `3.0-rc.0` <br/>
 **Node.js version:** `20.9.0 LTS`
 
 
@@ -130,7 +130,7 @@ findOne is not available on the server. Please use findOneAsync instead.
 You can create a new Meteor 3.0 project by running the command below:
 
 ```bash
-meteor create my-new-project --release 3.0-beta.7
+meteor create my-new-project --release 3.0-rc.0
 ```
 
 ## How to update from version 2?
@@ -138,7 +138,8 @@ meteor create my-new-project --release 3.0-beta.7
 You can update your Meteor 2.x project by running the command below inside your project folder:
 
 ```bash
-meteor update --release 3.0-beta.7
+meteor update --release 3.0-rc.0
+meteor reset #resets local DB and project to a fresh state
 ```
 
 
@@ -160,16 +161,11 @@ If you encounter issues with any of them, let us know, please [open an issue](ht
 
 This is the [list of all core packages](https://docs.meteor.com/packages/packages-listing.html).
 
-We will bring these three new packages to the core and migrate them to Meteor 3.0:
-  - `percolate:migrations` - [GitHub](https://github.com/percolatestudio/meteor-migrations);
-  - `littledata:synced-cron` - [GitHub](https://github.com/percolatestudio/meteor-synced-cron);
-  - `matb33:collection-hooks` - [GitHub](https://github.com/Meteor-Community-Packages/meteor-collection-hooks);
-
-
 For those packages that are not in the core but are maintained by the [community](https://github.com/Meteor-Community-Packages),
 we hope that the community can work on them, but if for some reason that is not possible,
 you can always ping us on [Slack](https://join.slack.com/t/meteor-community/shared_invite/zt-28aru814j-AwswQGt2D1xIXurvmtJvug) or in the [Forums](https://forums.meteor.com/).
 
+Following the official release of Meteor 3.0, we plan to add new packages to the core and migrating them to Meteor 3.0.
 
 ## External links
 
