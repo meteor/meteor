@@ -1,4 +1,4 @@
-# React changes
+# React Changes
 
 :::tip
 

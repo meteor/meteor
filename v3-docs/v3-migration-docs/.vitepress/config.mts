@@ -2,17 +2,22 @@ import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Meteor V3 Migration Guide",
-  description: "Meteor.js Migration Guide to v3",
+  title: "Meteor 3.0 Migration Guide",
+  description: "Guide on migrating from Meteor 2.x to Meteor 3.0",
+  lang: 'en-US',
   head: [["link", { rel: "icon", href: "/logo.png" }]],
   lastUpdated: true,
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
+    nav: [
+      { text: 'Meteor 3.0 Docs', link: 'https://v3-docs.meteor.com' },
+    ],
     sidebar: [
       {
         text: "Guide",
         items: [
           {text: "Overview", link: "/"},
+          {text: "Frequently Asked Questions", link: "/frequently-asked-questions/"},
           {text: "Breaking Changes", link: "/breaking-changes/"},
           {text: "Meteor.call x Meteor.callAsync", link: "/breaking-changes/call-x-callAsync"},
           {text: "Upgrading packages", link: "/breaking-changes/upgrading-packages"},
@@ -29,12 +34,12 @@ export default defineConfig({
       {
         text: "Front end",
         items: [
-          {text: "React", link: "/front-end/react"},
-          {text: "Blaze", link: "/front-end/blaze"},
+          {text: "React Changes", link: "/front-end/react"},
+          {text: "Blaze Changes", link: "/front-end/blaze"},
         ]
       },
       {
-        text: "Migrating in 2.x",
+        text: "Migrating to Async in v2",
         link: "/how-to-migrate/index"
       }
     ],
