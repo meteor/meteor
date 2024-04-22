@@ -42,8 +42,8 @@ This guide covers the necessary topics for migrating your application from Meteo
 - [Renamed Functions](./api/renamed-functions.md), a list of functions that were renamed in Meteor v3.
 - [Removed Functions](./api/removed-functions.md), a list of functions that were removed in Meteor v3.
 
-- [React in Meteor v3](./front-end/react.md), how to migrate your react code to Meteor v3
-- [Blaze in Meteor v3](./front-end/blaze.md), how to migrate your blaze code to Meteor v3
+- [React in Meteor v3](./front-end/react.md), how to migrate your React code to Meteor v3.
+- [Blaze in Meteor v3](./front-end/blaze.md), how to migrate your Blaze code to Meteor v3.
 
 - [Migrating to Async in Meteor 2.x](migrating-to-async-in-v2/index.md), how can you migrate your application to Meteor v3 while in 2.x.
 
