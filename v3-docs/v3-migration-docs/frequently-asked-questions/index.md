@@ -94,13 +94,13 @@ findOne is not available on the server. Please use findOneAsync instead.
 ## When will React packages for Meteor be ready for version 3.0?
 
 We consider React packages to be ready.
-You can check more information on the [react page](./front-end/react.md).
+You can check more information on the [react page](../front-end/react.md).
 
 ## When will Blaze be ready for version 3.0?
 
 The team considered Blaze adjustments to version 3.0 done, version 2.9 and upper are with all features regarding async APIs.
 
-You can check more information on the [Blaze page](./front-end/blaze.md).
+You can check more information on the [Blaze page](../front-end/blaze.md).
 
 ## When will XYZ package be ready for version 3.0?
 
