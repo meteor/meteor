@@ -7,7 +7,7 @@ branches:
 skip_branch_with_pr: true
 
 clone_folder: C:\projects\meteor
-image: Visual Studio 2022
+image: Visual Studio 2019
 
 environment:
   METEOR_PRETTY_OUTPUT: 0
