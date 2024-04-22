@@ -24,7 +24,7 @@ export default defineConfig({
         ]
       },
       {
-        text: "APIs changes",
+        text: "API Changes",
         items: [
           {text: "Using Async Functions", link: "/api/async-functions"},
           {text: "Renamed Functions", link: "/api/renamed-functions"},

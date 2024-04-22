@@ -29,9 +29,9 @@ meteor update --release 3.0-rc.0
 meteor reset #resets local DB and project to a fresh state
 ```
 
-## What this guide will cover
+## What this guide will cover?
 
-This guide will try to cover the topics needed to migrate your application to Meteor v3. We will cover the following topics:
+This guide covers the necessary topics for migrating your application from Meteor 2.x to Meteor 3.0, including:
 
 - [Frequently Asked Questions](./frequently-asked-questions/index.md), answers to common questions.
 - [Breaking Changes](./breaking-changes/index.md), an overview of the changes that will affect your application.
@@ -45,11 +45,14 @@ This guide will try to cover the topics needed to migrate your application to Me
 - [React in Meteor v3](./front-end/react.md), how to migrate your react code to Meteor v3
 - [Blaze in Meteor v3](./front-end/blaze.md), how to migrate your blaze code to Meteor v3
 
-- [How to migrate to Meteor 3.x in 2.x](migrating-to-async-in-v2/index.md), how can you migrate your application to Meteor v3 while in 2.x.
+- [Migrating to Async in Meteor 2.x](migrating-to-async-in-v2/index.md), how can you migrate your application to Meteor v3 while in 2.x.
 
-## External links
+## External Resources
 
-Currently we are aware of the following community migration guides:
+We are aware of these articles and guides to assist with your migration:
+
+ - [Prepare your Meteor.js project for the big 3.0 release](https://dev.to/jankapunkt/prepare-your-meteorjs-project-for-the-big-30-release-14bf)
+ - [Gradually upgrading a Meteor.js project to 3.0](https://dev.to/meteor/gradually-upgrading-a-meteorjs-project-to-30-5aj0)
  - [Meteor 3.0 Migration Guide, from Daniel](https://docs.google.com/document/d/1XxHE5MQaS0-85HQ-bkiXxmGlYi41ggkX3F-9Rjb9HhE/edit#heading=h.65xi3waq9bb)
  - [Illustreets Migration Guide, large SaaS migrated to 3.0](https://forums.meteor.com/t/large-saas-migrated-to-3-0/61113) & their how-to [post](https://forums.meteor.com/t/meteor-3-0-beta-6-is-out/61277/12)
  
