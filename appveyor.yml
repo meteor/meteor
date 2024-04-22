@@ -24,6 +24,9 @@ matrix:
   allow_failures:
     - platform: x64
 
+init:
+  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
 # We don't need the actual "build", just the tests.
 build: off
 
