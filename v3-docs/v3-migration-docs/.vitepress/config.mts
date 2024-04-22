@@ -40,7 +40,7 @@ export default defineConfig({
       },
       {
         text: "Migrating to Async in v2",
-        link: "/how-to-migrate/index"
+        link: "/migrating-to-async-in-v2/index"
       }
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/meteor/meteor" }],
