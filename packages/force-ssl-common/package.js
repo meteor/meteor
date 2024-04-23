@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Internal force-ssl common code.',
-  version: '1.1.1-beta300.7'
+  version: '1.1.1-rc300.0',
 });
 
 Npm.depends({
