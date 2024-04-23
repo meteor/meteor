@@ -75,7 +75,7 @@ This is a complete history of changes for Meteor releases.
   - `Accounts.generateVerificationToken`
   - `Accounts.generateResetToken`
   - `Accounts.forgotPassword`
-  - `Accounts.setPassword`
+  - `Accounts.setPassword` -- no longer exists, you should use Accounts.setPasswordAsync [PR](https://github.com/meteor/meteor/pull/13030)
   - `Accounts.changePassword`
   - `Accounts.setUsername`
   - `Accounts.findUserByEmail`
@@ -137,6 +137,10 @@ This is a complete history of changes for Meteor releases.
 - `binary-heap@2.0.0`:
 
   - Package was bumped due to a dependency update. No code changes were made.
+
+- Build system:
+  - removed `Assets.getText`
+  - removed `Assets.getBinary`
 
 - `blaze@3.0.0`:
   - Todo
@@ -662,6 +666,9 @@ This is a complete history of changes for Meteor releases.
 #### New Public API
 
 
+- `Build system` [PR](https://github.com/meteor/meteor/pull/13030):
+  - Assets.getTextAsync
+  - Assets.getBinaryAsync
 
 - `accounts-base`: (2.9+)
 

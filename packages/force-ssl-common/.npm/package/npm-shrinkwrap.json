@@ -157,9 +157,9 @@
       "integrity": "sha512-NqADB8VjPFLM2V0VvHUewwwsw0ZWBaIdgo+ieHtK3hasLz4qeCRjYcqfB6AQrBggRKppKF8L52/VqdVsO47Dlw=="
     },
     "hasown": {
-      "version": "2.0.1",
-      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.1.tgz",
-      "integrity": "sha512-1/th4MHjnwncwXsIW6QMzlvYL9kG5e/CpVvLRZe4XPa8TOUNbCELqmvhDmnkNsAjwaG4+I8gJJL0JBvTTLO9qA=="
+      "version": "2.0.2",
+      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.2.tgz",
+      "integrity": "sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ=="
     },
     "ip": {
       "version": "0.3.3",
@@ -299,9 +299,9 @@
       "integrity": "sha512-3pKJwH184Xo/lnH6oyP1q2pMd7HcypqqmRs91/6/i2CGtWwIKGCkOOMTm/zXbgTEWHw1uNpNi/igc3ePOYHb6w=="
     },
     "object-is": {
-      "version": "1.1.5",
-      "resolved": "https://registry.npmjs.org/object-is/-/object-is-1.1.5.tgz",
-      "integrity": "sha512-3cyDsyHgtmi7I7DfSSI2LDp6SK2lwvtbg0p0R1e0RvTqF5ceGx+K2dfSjm1bKDMVCFEDAQvy+o8c6a7VujOddw=="
+      "version": "1.1.6",
+      "resolved": "https://registry.npmjs.org/object-is/-/object-is-1.1.6.tgz",
+      "integrity": "sha512-F8cZ+KfGlSGi09lJT7/Nd6KJZ9ygtvYC0/UYYLI9nmQKLMnydpB9yvbv9K1uSkEu7FU9vYPmVwLg328tX+ot3Q=="
     },
     "object-keys": {
       "version": "1.1.1",
@@ -366,9 +366,9 @@
       "integrity": "sha512-PV0dzCYDNfRi1jCDbJzpW7jNNDRuCOG/jI5ctQcGKt/clZD+YcPS3yIlWuTJMmESC8aevCFmWJy5wjAFgNqN6w=="
     },
     "set-function-length": {
-      "version": "1.2.1",
-      "resolved": "https://registry.npmjs.org/set-function-length/-/set-function-length-1.2.1.tgz",
-      "integrity": "sha512-j4t6ccc+VsKwYHso+kElc5neZpjtq9EnRICFZtWyBsLojhmeF/ZBd/elqm22WJh/BziDe/SBiOeAt0m2mfLD0g=="
+      "version": "1.2.2",
+      "resolved": "https://registry.npmjs.org/set-function-length/-/set-function-length-1.2.2.tgz",
+      "integrity": "sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg=="
     },
     "set-function-name": {
       "version": "2.0.2",

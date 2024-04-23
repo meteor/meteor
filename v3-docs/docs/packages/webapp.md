@@ -68,8 +68,8 @@ import express from "express";
 
 const router = express.Router();
 
-router.get("/", function (req, res, next) {
-  const buf = Assets.getText("index.html");
+router.get("/", async function (req, res, next) {
+  const buf = await Assets.getTextAsync("index.html");
 
   if (buf.length > 0) {
     const eTag = crypto.createHash("md5").update(buf).digest("hex");

@@ -4276,29 +4276,259 @@ if (Meteor.isServer) {
   });
 }
 
-Tinytest.addAsync('mongo-livedata - maintained isomorphism using resolverType config for both client and server', async function(test, expect) {
-  const Collection = new Mongo.Collection(`resolver_type${test.runId()}`, { resolverType: 'stub' });
+Tinytest.addAsync(
+  'mongo-livedata - maintained isomorphism on collection operations for both client and server',
+  async function (test) {
+    const Collection = new Mongo.Collection(
+      `maintained_col_op_iso${test.runId()}`,
+      { resolverType: 'stub' }
+    );
 
-  await Collection.insertAsync({ _id: 'a' });
-  await Collection.insertAsync({ _id: 'b' });
+    await Collection.insertAsync({ _id: 'a' });
+    await Collection.insertAsync({ _id: 'b' });
 
-  let items = await Collection.find().fetchAsync();
-  let itemIds = items.map(_item => _item._id);
+    let items = await Collection.find().fetchAsync();
+    let itemIds = items.map(_item => _item._id);
 
-  test.equal(itemIds, ['a', 'b']);
+    test.equal(itemIds, ['a', 'b']);
 
-  await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
-  await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
+    await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+    await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
 
-  items = await Collection.find().fetchAsync();
-  itemIds = items.map(_item => _item.num);
+    items = await Collection.find().fetchAsync();
+    itemIds = items.map(_item => _item.num);
 
-  test.equal(itemIds, [1, 2]);
+    test.equal(itemIds, [1, 2]);
 
-  await Collection.removeAsync({ _id: 'a' });
-  await Collection.removeAsync({ _id: 'b' });
+    await Collection.removeAsync({ _id: 'a' });
+    await Collection.removeAsync({ _id: 'b' });
 
-  items = await Collection.find().fetchAsync();
+    items = await Collection.find().fetchAsync();
 
-  test.equal(items, []);
+    test.equal(items, []);
+  },
+);
+
+testAsyncMulti(
+  'mongo-livedata - collection async operations data persistence',
+  [
+    async function (test) {
+      // Using remote collection
+      const Collection = new Mongo.Collection(
+        `remoteop_persistence${test.runId()}`,
+        {
+          resolverType: Meteor.isClient ? 'stub' : 'server',
+        },
+      );
+
+      await Collection.insertAsync({ _id: 'a' });
+      await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+      const insertedId = await Collection.insertAsync({ num: 2 });
+
+      let items = await Collection.find().fetchAsync();
+      let itemIds = items.map(_item => _item._id);
+      test.equal(itemIds, ['a', insertedId]); // temporary data accessible
+
+      const aItem = items[0];
+      const insertedItem = items[1];
+      test.equal(aItem?.num, 1);
+      test.equal(insertedItem?.num, 2);
+
+      await Collection.removeAsync({ _id: insertedId });
+
+      items = await Collection.find().fetchAsync();
+      itemIds = items.map(_item => _item._id);
+
+      test.equal(itemIds, ['a']); // temporary data accessible
+
+      if (Meteor.isClient) {
+        return new Promise(resolve => {
+          Meteor.setTimeout(async () => {
+            items = await Collection.find().fetchAsync();
+            itemIds = items.map(_item => _item._id);
+            test.equal(itemIds, []); // data IS NOT persisted
+            resolve();
+          }, 700);
+        });
+      }
+
+      return Promise.resolve();
+    },
+    async function (test) {
+      // Using local collection
+      const Collection = new Mongo.Collection(
+        `localop_persistence${test.runId()}`,
+      );
+
+      await Collection._collection.insertAsync({ _id: 'a' });
+      await Collection._collection.updateAsync(
+        { _id: 'a' },
+        { $set: { num: 1 } },
+      );
+      const insertedId = await Collection._collection.insertAsync({ num: 2 });
+
+      let items = await Collection.find().fetchAsync();
+      let itemIds = items.map(_item => _item._id);
+      test.equal(itemIds, ['a', insertedId]); // temporary data accessible
+
+      const aItem = items[0];
+      const insertedItem = items[1];
+      test.equal(aItem?.num, 1);
+      test.equal(insertedItem?.num, 2);
+
+      await Collection._collection.removeAsync({ _id: insertedId });
+
+      items = await Collection.find().fetchAsync();
+      itemIds = items.map(_item => _item._id);
+
+      test.equal(itemIds, ['a']); // temporary data accessible
+
+      if (Meteor.isClient) {
+        return new Promise(resolve => {
+          Meteor.setTimeout(async () => {
+            items = await Collection.find().fetchAsync();
+            itemIds = items.map(_item => _item._id);
+            test.equal(itemIds, ['a']); // data is persisted
+            resolve();
+          }, 700);
+        });
+      }
+
+      return Promise.resolve();
+    },
+    async function (test) {
+      // Using methods
+      const Collection = new Mongo.Collection(
+        `methodop_persistence${test.runId()}`,
+      );
+      Collection.allow({
+        insertAsync() {
+          return true;
+        },
+        insert() {
+          return true;
+        },
+      });
+
+      Meteor.methods({
+        [`insertMethodPersistence${test.runId()}`]: async () => {
+          await Collection.insertAsync({ _id: 'a' });
+        },
+      });
+
+      const promise = Meteor.callAsync(
+        `insertMethodPersistence${test.runId()}`,
+      );
+
+      let items;
+      let itemIds;
+      if (Meteor.isServer) {
+        await promise;
+
+        items = await Collection.find().fetchAsync();
+        itemIds = items.map(_item => _item._id);
+
+        test.equal(itemIds, ['a']); // temporary data accessible
+      }
+
+      if (Meteor.isClient) {
+        await promise.stubPromise;
+
+        items = await Collection.find().fetchAsync();
+        itemIds = items.map(_item => _item._id);
+
+        test.equal(itemIds, ['a']); // temporary data accessible
+
+        try {
+          await promise.serverPromise;
+        } catch (e) {
+          // error as no insert method enabled on server
+          return new Promise(resolve => {
+            Meteor.setTimeout(async () => {
+              items = await Collection.find().fetchAsync();
+              itemIds = items.map(_item => _item._id);
+              test.equal(itemIds, []); // data IS NOT persisted
+              resolve();
+            }, 700);
+          });
+        }
+      } else {
+        return Promise.resolve();
+      }
+    },
+  ],
+);
+
+testAsyncMulti(
+  "mongo-livedata - support observeChangesAsync and observeAsync to keep isomorphism on client and server",
+  [
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_async${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+      const id = 'a';
+      await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find(id).observeChangesAsync({
+          async changed(_id, fields) {
+            await obs.stop();
+            resolve();
+            test.equal(_id, id);
+            test.equal(fields?.foo?.bar, 456);
+          },
+        });
+        await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+      });
+    },
+    async (test) => {
+      const Collection = new Mongo.Collection(`observe_async${test.runId()}`, {
+        resolverType: 'stub',
+      });
+      const id = 'a';
+      await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find(id).observeAsync({
+          async changed(newDocument) {
+            await obs.stop();
+            test.equal(newDocument._id, id);
+            test.equal(newDocument?.foo?.bar, 456);
+            resolve();
+          },
+        });
+        await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+      });
+    },
+  ]
+);
+
+
+Meteor.methods({
+  [`methodThrowException`]: async () => {
+    if (Meteor.isClient) {
+      throw new Meteor.Error('Throw on client');
+    }
+  },
 });
+
+Tinytest.addAsync(
+  'mongo-livedata - both stub and server promise throw exceptions when client errors',
+  async function (test) {
+    const promise = Meteor.callAsync('methodThrowException');
+    if (Meteor.isClient) {
+      try {
+        await promise.stubPromise;
+      } catch (err) {
+        test.equal(err.error, 'Throw on client');
+      }
+
+      try {
+        await promise.serverPromise;
+      } catch (err) {
+        test.equal(err.error, 'Throw on client');
+      }
+    }
+  },
+);

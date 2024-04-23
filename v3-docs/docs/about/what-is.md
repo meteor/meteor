@@ -1,6 +1,5 @@
 
 
-> Meteor 2.x runs on a deprecated Node.js version (14). Meteor 3.0 is in progress, and it will run on the latest Node.js version. For more information, please consult our [migration guide](https://guide.meteor.com/3.0-migration.html).
 
 
 # What is Meteor? {#what-is-meteor}

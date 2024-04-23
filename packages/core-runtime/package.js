@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Core runtime to load packages and the app",
-  version: '1.0.0-beta300.6',
+  version: '1.0.0-rc300.0',
   documentation: null
 });
 
