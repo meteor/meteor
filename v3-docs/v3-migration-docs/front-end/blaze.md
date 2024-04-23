@@ -1,4 +1,4 @@
-# Blaze changes
+# Blaze Changes
 
 :::tip
 

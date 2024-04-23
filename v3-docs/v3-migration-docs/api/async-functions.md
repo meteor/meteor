@@ -1,5 +1,5 @@
 
-# Async Functions
+# Using Async Functions
 
 Meteor now uses the `Promise` [API](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) for all asynchronous operations.
 
