@@ -1,0 +1,48 @@
+name: Meteor Selftest Windows
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - release-3.0
+  push:
+    branches:
+      - release-3.0
+
+jobs:
+  test:
+    runs-on: windows-2019
+
+    strategy:
+      matrix:
+        platform:
+          - x64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 20.x
+
+      - name: Install dependencies
+        run: |
+          .\scripts\windows\appveyor\install.ps1
+
+      - name: Run tests
+        run: |
+          .\scripts\windows\appveyor\test.ps1
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            .\dev_bundle
+            .\.babel-cache
+            .\.meteor
+          key: ${{ runner.os }}-meteor-${{ hashFiles('**/package-lock.json') }}
