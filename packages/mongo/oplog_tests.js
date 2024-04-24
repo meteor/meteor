@@ -193,6 +193,7 @@ async function oplogOptionsTest({
     Meteor.settings.packages.mongo = mongoPackageSettings;
 
     const myOplogHandle = new MongoInternals.OplogHandle(process.env.MONGO_OPLOG_URL, 'meteor');
+    await myOplogHandle._startTrailingPromise;
     MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(myOplogHandle);
 
     const IncludeCollection = new Mongo.Collection(includeCollectionName);

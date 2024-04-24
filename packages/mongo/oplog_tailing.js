@@ -78,7 +78,7 @@ OplogHandle = function (oplogUrl, dbName) {
   self._entryQueue = new Meteor._DoubleEndedQueue();
   self._workerActive = false;
 
-  const shouldAwait = self._startTailing();
+  self._startTrailingPromise = self._startTailing();
   //TODO[fibers] Why wait?
 };
 
