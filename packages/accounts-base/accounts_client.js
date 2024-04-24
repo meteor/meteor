@@ -27,8 +27,7 @@ export class AccountsClient extends AccountsCommon {
     this.savedHash = window.location.hash;
     this._initUrlMatching();
 
-    // Determine whether to use local or session storage to storage credentials and anything else.
-    this.storageLocation = (options?.clientStorage === 'session' || Meteor.settings?.public?.packages?.accounts?.clientStorage === 'session') ? window.sessionStorage : Meteor._localStorage;
+    this.initStorageLocation();
 
     // Defined in localstorage_token.js.
     this._initLocalStorage();
@@ -39,6 +38,17 @@ export class AccountsClient extends AccountsCommon {
     // This tracks whether callbacks registered with
     // Accounts.onLogin have been called
     this._loginCallbacksCalled = false;
+  }
+
+  initStorageLocation(options) {
+    // Determine whether to use local or session storage to storage credentials and anything else.
+    this.storageLocation = (options?.clientStorage === 'session' || Meteor.settings?.public?.packages?.accounts?.clientStorage === 'session') ? window.sessionStorage : Meteor._localStorage;
+  }
+
+  config(options) {
+    super.config(options);
+
+    this.initStorageLocation(options);
   }
 
   ///
