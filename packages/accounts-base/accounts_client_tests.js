@@ -304,26 +304,21 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync('accounts - Session storage', async (test, done) => {
-
-  Accounts.config({ useSessionStorage: true })
-  test.isTrue(Accounts._options.useSessionStorage)
-
-  // Login a user with AccountClientSession and test that tokens are in sessionStorage
-  logoutAndCreateUser(test, done, () => {
+testAsyncMulti('accounts - storage', [
+  function (test, expect) {
+    Accounts.config({ clientStorage: 'session' }) // No need to set the default value
+    test.isTrue(Accounts._options.clientStorage)
     test.isNotUndefined(sessionStorage.getItem('Meteor.loginToken'))
     test.isUndefined(localStorage.getItem('Meteor.loginToken'))
     Accounts.logout()
     removeTestUser()
-  })
-
-  // Login a user with AccountClientStorage and test that tokens are in localStorage
-  logoutAndCreateUser(test, done, () => {
-    Accounts.config({ useSessionStorage: false })
-    test.isFalse(Accounts._options.useSessionStorage)
+  },
+  function (test, expect) {
+    Accounts.config({ clientStorage: 'local' })
+    test.isFalse(Accounts._options.clientStorage)
     test.isUndefined(sessionStorage.getItem('Meteor.loginToken'))
     test.isNotUndefined(localStorage.getItem('Meteor.loginToken'))
     Accounts.logout()
     removeTestUser()
-  })
-})
+  }
+])
