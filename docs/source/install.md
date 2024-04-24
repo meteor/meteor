@@ -29,7 +29,7 @@ You need to install the Meteor command line tool to create, run, and manage your
 
 Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://docs.meteor.com/changelog.html) for the release notes.
 
-> Run `node -v` to ensure you are using Node.js 14. Meteor 3.0 is in progress, and it will run on the latest Node.js version.
+> Run `node -v` to ensure you are using Node.js 14. Meteor 3.0, currently in its Release Candidate version, runs on Node.js v20.
 
 For Windows, Linux and OS X, you can run the following command:
 
@@ -118,4 +118,3 @@ If you installed Meteor using npm, you can remove it by running:
 If you installed Meteor using curl, you can remove it by running:
 `rm -rf ~/.meteor`
 `sudo rm /usr/local/bin/meteor` 
-
