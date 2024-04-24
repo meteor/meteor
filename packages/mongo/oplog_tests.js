@@ -1,4 +1,5 @@
-var OplogCollection = new Mongo.Collection("oplog-" + Random.id());
+var randomId = Random.id();
+var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
 Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
   test
@@ -176,6 +177,115 @@ process.env.MONGO_OPLOG_URL &&
       await self.collection.removeAsync({});
     },
   ]);
+
+const defaultOplogHandle = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+let previousMongoPackageSettings = {};
+
+async function oplogOptionsTest({
+  test,
+  includeCollectionName,
+  excludeCollectionName,
+  mongoPackageSettings = {}
+}) {
+  try {
+    previousMongoPackageSettings = { ...(Meteor.settings?.packages?.mongo || {}) };
+    if (!Meteor.settings.packages) Meteor.settings.packages = {};
+    Meteor.settings.packages.mongo = mongoPackageSettings;
+
+    const myOplogHandle = new MongoInternals.OplogHandle(process.env.MONGO_OPLOG_URL, 'meteor');
+    MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(myOplogHandle);
+
+    const IncludeCollection = new Mongo.Collection(includeCollectionName);
+    const ExcludeCollection = new Mongo.Collection(excludeCollectionName);
+
+    const shouldBeTracked = new Promise((resolve) => {
+      IncludeCollection.find({ include: 'yes' }).observeChanges({
+        added(id, fields) { resolve(true) }
+      });
+    });
+    const shouldBeIgnored = new Promise((resolve, reject) => {
+      ExcludeCollection.find({ include: 'no' }).observeChanges({
+        added(id, fields) {
+          // should NOT fire, because this is an excluded collection:
+          reject(false);
+        }
+      });
+      // we give it just 2 seconds until we resolve this promise:
+      setTimeout(() => {
+        resolve(true);
+      }, 2000);
+    });
+
+    // do the inserts:
+    await IncludeCollection.rawCollection().insertOne({ include: 'yes', foo: 'bar' });
+    await ExcludeCollection.rawCollection().insertOne({ include: 'no', foo: 'bar' });
+
+    test.equal(await shouldBeTracked, true);
+    test.equal(await shouldBeIgnored, true);
+  } finally {
+    // Reset:
+    Meteor.settings.packages.mongo = { ...previousMongoPackageSettings };
+    MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
+  }
+}
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - oplogSettings - oplogExcludeCollections',
+  async test => {
+    const collectionNameA = "oplog-a-" + Random.id();
+    const collectionNameB = "oplog-b-" + Random.id();
+    const mongoPackageSettings = {
+      oplogExcludeCollections: [collectionNameB]
+    };
+    await oplogOptionsTest({
+      test,
+      includeCollectionName: collectionNameA,
+      excludeCollectionName: collectionNameB,
+      mongoPackageSettings
+    });
+  }
+);
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - oplogSettings - oplogIncludeCollections',
+  async test => {
+    const collectionNameA = "oplog-a-" + Random.id();
+    const collectionNameB = "oplog-b-" + Random.id();
+    const mongoPackageSettings = {
+      oplogIncludeCollections: [collectionNameB]
+    };
+    await oplogOptionsTest({
+      test,
+      includeCollectionName: collectionNameB,
+      excludeCollectionName: collectionNameA,
+      mongoPackageSettings
+    });
+  }
+);
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - oplogSettings - oplogExcludeCollections & oplogIncludeCollections',
+  async test => {
+    // should fail, because we don't allow including and excluding at the same time!
+    const collectionNameA = "oplog-a-" + Random.id();
+    const collectionNameB = "oplog-b-" + Random.id();
+    const mongoPackageSettings = {
+      oplogIncludeCollections: [collectionNameA],
+      oplogExcludeCollections: [collectionNameB]
+    };
+    try {
+      await oplogOptionsTest({
+        test,
+        includeCollectionName: collectionNameA,
+        excludeCollectionName: collectionNameB,
+        mongoPackageSettings
+      });
+      test.fail();
+    } catch (err) {
+      test.expect_fail();
+    }
+  }
+);
 
 // TODO this is commented for now, but we need to find out the cause
 // PR: https://github.com/meteor/meteor/pull/12057

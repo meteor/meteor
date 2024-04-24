@@ -241,6 +241,11 @@ MongoConnection.prototype.close = function () {
   return this._close();
 };
 
+MongoConnection.prototype._setOplogHandle = function(oplogHandle) {
+  this._oplogHandle = oplogHandle;
+  return this;
+};
+
 // Returns the Mongo Collection object; may yield.
 MongoConnection.prototype.rawCollection = function (collectionName) {
   var self = this;
@@ -930,7 +935,6 @@ Cursor.prototype.getTransform = function () {
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
-
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
@@ -1453,10 +1457,13 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   };
 };
 
+const oplogCollectionWarnings = [];
+
 Object.assign(MongoConnection.prototype, {
   _observeChanges: async function (
       cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
     var self = this;
+    const collectionName = cursorDescription.collectionName;
 
     if (cursorDescription.options.tailable) {
       return self._observeChangesTailable(cursorDescription, ordered, callbacks);
@@ -1499,7 +1506,8 @@ Object.assign(MongoConnection.prototype, {
         nonMutatingCallbacks,
     );
 
-    if (firstHandle) {
+    const oplogOptions = self?._oplogHandle?._oplogOptions || {};
+  const { includeCollections, excludeCollections } = oplogOptions;if (firstHandle) {
       var matcher, sorter;
       var canUseOplog = _.all([
         function () {
@@ -1507,7 +1515,24 @@ Object.assign(MongoConnection.prototype, {
           // want unordered callbacks, and to not want a callback on the polls
           // that won't happen.
           return self._oplogHandle && !ordered &&
-              !callbacks._testOnlyPollCallback;
+              !callbacks._testOnlyPollCallback;}, function () {
+        // We also need to check, if the collection of this Cursor is actually being "watched" by the Oplog handle
+        // if not, we have to fallback to long polling
+        if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        if (includeCollections?.length && !includeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        return true;
         }, function () {
           // We need to be able to compile the selector. Fall back to polling for
           // some newfangled $selector that minimongo doesn't support yet.
