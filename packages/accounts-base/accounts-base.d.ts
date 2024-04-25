@@ -75,6 +75,7 @@ export namespace Accounts {
     collection?: string | undefined;
     loginTokenExpirationHours?: number | undefined;
     tokenSequenceLength?: number | undefined;
+    clientStorage?: 'session' | 'local';
   }): void;
 
   function onLogin(
