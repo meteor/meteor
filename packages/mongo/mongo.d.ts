@@ -431,6 +431,11 @@ export namespace Mongo {
      */
     observe(callbacks: ObserveCallbacks<U>): Meteor.LiveQueryHandle;
     /**
+     * Watch a query. Receive callbacks as the result set changes.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     */
+    observeAsync(callbacks: ObserveCallbacks<U>): Promise<Meteor.LiveQueryHandle>;
+    /**
      * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
      * @param callbacks Functions to call to deliver the result set as it changes
      */
@@ -440,6 +445,15 @@ export namespace Mongo {
     ): Meteor.LiveQueryHandle;
     [Symbol.iterator](): Iterator<T>;
     [Symbol.asyncIterator](): AsyncIterator<T>;
+    /**
+     * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     * @param options { nonMutatingCallbacks: boolean }
+     */
+    observeChangesAsync(
+      callbacks: ObserveChangesCallbacks<T>,
+      options?: { nonMutatingCallbacks?: boolean | undefined }
+    ): Promise<Meteor.LiveQueryHandle>;
   }
 
   var ObjectID: ObjectIDStatic;
