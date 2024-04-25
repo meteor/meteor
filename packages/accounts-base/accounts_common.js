@@ -18,6 +18,7 @@ const VALID_CONFIG_KEYS = [
   'collection',
   'loginTokenExpirationHours',
   'tokenSequenceLength',
+  'clientStorage',
 ];
 
 /**
@@ -228,6 +229,7 @@ export class AccountsCommon {
    * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
+   * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
    */
   config(options) {
     // We don't want users to accidentally only call Accounts.config on the
@@ -279,7 +281,7 @@ export class AccountsCommon {
     VALID_CONFIG_KEYS.forEach(key => {
       if (key in options) {
         if (key in this._options) {
-          if (key !== 'collection') {
+          if (key !== 'collection' && (Meteor.isTest && key !== 'clientStorage')) {
             throw new Meteor.Error(`Can't set \`${key}\` more than once`);
           }
         }
