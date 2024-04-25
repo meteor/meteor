@@ -5,55 +5,39 @@
 // Ensures packages and eager requires run in the correct order
 // when there is code that uses top level await
 
-var pending = Object.create(null);
 var hasOwn = Object.prototype.hasOwnProperty;
 
-function queue(name, deps, runImage) {
-  pending[name] = [];
-
-  var pendingDepsCount = 0;
-
-  function onDepLoaded() {
-    pendingDepsCount -= 1;
-
-    if (pendingDepsCount === 0) {
-      load(name, runImage);
-    }
-  }
-
-  deps.forEach(function (dep) {
-    if (hasOwn.call(pending, dep)) {
-      pendingDepsCount += 1;
-      pending[dep].push(onDepLoaded);
-    } else {
-      // load must always be called for a package's dependencies first.
-      // If the package is not pending, then it must have already loaded
-      // or is a weak dependency, and the dependency is not being used.
-    }
-  });
-
-  if (pendingDepsCount === 0) {
-    load(name, runImage);
-  }
+var pending = [];
+function queue(name, runImage) {
+  pending.push({name: name, runImage: runImage});
+  processNext();
 }
 
-function load(name, runImage) {
-  var config = runImage();
+var isProcessing = false;
+function processNext() {
+  if (isProcessing) {
+    return;
+  }
 
+  var next = pending.shift();
+  if (!next) {
+    return;
+  }
+
+  isProcessing = true;
+
+  var config = next.runImage.call(this);
   runEagerModules(config, function (mainModuleExports) {
     // Get the exports after the eager code has been run
     var exports = config.export ? config.export() : {};
     if (config.mainModulePath) {
-      Package._define(name, mainModuleExports, exports);
+      Package._define(next.name, mainModuleExports, exports);
     } else {
-      Package._define(name, exports);
+      Package._define(next.name, exports);
     }
 
-    var pendingCallbacks = pending[name] || [];
-    delete pending[name];
-    pendingCallbacks.forEach(function (callback) {
-      callback();
-    });
+    isProcessing = false;
+    processNext();
   });
 }
 
@@ -96,7 +80,7 @@ function runEagerModules(config, callback) {
         evaluateNextModule();
       })
       // This also handles errors in modules and packages loaded sync
-      // afterwards since they are run within the .then.
+      // afterwards since they are run within the `.then`.
       .catch(function (error) {
         if (
           typeof process === 'object' &&
@@ -138,9 +122,7 @@ function checkAsyncModule (exports) {
 // For this to be accurate, all linked files must be queued before calling this
 // If all are loaded, returns null. Otherwise, returns a promise
 function waitUntilAllLoaded() {
-  var pendingNames = Object.keys(pending);
-
-  if (pendingNames.length === 0) {
+  if (pending.length === 0) {
     // All packages are loaded
     // If there were no async packages, then there might not be a promise
     // polyfill loaded either, so we don't create a promise to return
@@ -148,16 +130,11 @@ function waitUntilAllLoaded() {
   }
 
   return new Promise(function (resolve) {
-    var pendingCount = pendingNames.length;
-    pendingNames.forEach(function (name) {
-      pending[name].push(function () {
-        pendingCount -= 1;
-        if (pendingCount === 0) {
-          resolve();
-        }
-      });
+    queue(null, function () {
+      resolve();
+      return {};
     });
-  })
+  });
 }
 
 // Since the package.js doesn't export load or waitUntilReady

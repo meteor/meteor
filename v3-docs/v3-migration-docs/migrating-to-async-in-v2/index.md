@@ -1,4 +1,6 @@
-# How to migrate to Meteor 3.0 in 2.x
+# Migrating to Async in Meteor 2.x
+
+In Meteor 3.0, we're transitioning from using Fibers to asynchronous methods and operations, aligning with community standards. While Fibers, our promise solution, was used in version 2.x, it's not supported from Node 16 onwards. We are now adopting `async` and `await` for better compatibility.
 
 ## Prerequisites
 
