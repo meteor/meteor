@@ -162,7 +162,6 @@ async function main() {
           const version =
             semver.inc(currentVersion, 'prerelease', release);
           if (name === 'meteor-tool') return version;
-          console.log('incrementNewVersion', name, release, releaseNumber);
           return version.replace(release, `${ release }${ releaseNumber }`);
         }
         return semver.inc(currentVersion, release);
