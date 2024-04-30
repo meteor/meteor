@@ -138,7 +138,7 @@ export class AndroidRunTarget extends CordovaRunTarget {
         `CordovaLog:${logLevel}`, `chromium:${logLevel}`,
         `SystemWebViewClient:${logLevel}`, '*:F'];
 
-      const { Log } = loadIsopackage('logging');
+      const { Log } = await loadIsopackage('logging');
 
       const logStream = transform(line => {
         const logEntry = logFromAndroidLogcatLine(Log, line);
