@@ -39,17 +39,13 @@ jobs:
           node-version: 20.x
 
       - name: Install dependencies
+        shell: pwsh
         run: |
           .\scripts\windows\appveyor\install.ps1
 
       - name: Run tests
+        shell: pwsh
         run: |
-          $env:METEOR_PRETTY_OUTPUT=0
-          $env:SELF_TEST_TOOL_NODE_FLAGS=" " 
-          $env:TOOL_NODE_FLAGS="--expose-gc"
-          $env:TIMEOUT_SCALE_FACTOR=20
-          $env:SELF_TEST_EXCLUDE="^NULL-LEAVE-THIS-HERE-NULL$"
-          $env:METEOR_HEADLESS="true"
           .\scripts\windows\appveyor\test.ps1
 
       - name: Cache dependencies
