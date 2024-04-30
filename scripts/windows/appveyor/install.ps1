@@ -38,3 +38,16 @@ while ($attempt -gt 0 -and -not $success) {
 If ($LASTEXITCODE -ne 0) {
   throw "Running .\meteor --get-ready failed three times."
 }
+
+# https://github.com/marcbachmann/node-html-pdf/issues/358#issue-271430548
+Write-Host "Downloading dev_bundle..." -ForegroundColor Magenta
+& "$meteorBat"
+
+$devBundleLib = Join-Path $dirCheckout 'dev_bundle\lib'
+Write-Host "Installing test npm dependencies..." -ForegroundColor Magenta
+Write-Host "DevBundleLib: $devBundleLib" -ForegroundColor Magenta
+& npm install --prefix "${devBundleLib}" phantomjs-prebuilt browserstack-webdriver
+
+If ($LASTEXITCODE -ne 0) {
+  throw "Installing npm dependencies required for testing has failed."
+}
