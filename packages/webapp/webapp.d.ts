@@ -1,5 +1,5 @@
-import * as http from 'http';
-import express from 'express';
+import * as http from "http";
+import * as express from "express";
 
 export interface StaticFiles {
   [key: string]: {
@@ -11,6 +11,16 @@ export interface StaticFiles {
     type: string;
   };
 }
+
+type ExpressModule = {
+  (): express.Application;
+  json: typeof express.json;
+  raw: typeof express.raw;
+  Router: typeof express.Router;
+  static: typeof express.static;
+  text: typeof express.text;
+  urlencoded: typeof express.urlencoded;
+};
 
 export declare module WebApp {
   var defaultArch: string;
@@ -35,6 +45,7 @@ export declare module WebApp {
   var rawHandlers: express.Application;
   var httpServer: http.Server;
   var expressApp: express.Application;
+  var express: ExpressModule;
   /**
    * Should be used only for testing
    * @deprecated use _suppressExpressErrors instead
@@ -47,7 +58,7 @@ export declare module WebApp {
   function onListening(callback: Function): void;
 
   type RuntimeConfigHookCallback = (options: {
-    arch: 'web.browser' | 'web.browser.legacy' | 'web.cordova';
+    arch: "web.browser" | "web.browser.legacy" | "web.cordova";
     request: http.IncomingMessage;
     encodedCurrentConfig: string;
     updated: boolean;
@@ -65,9 +76,7 @@ export declare module WebAppInternals {
       module: any;
     };
   };
-  function identifyBrowser(
-    userAgentString: string
-  ): {
+  function identifyBrowser(userAgentString: string): {
     name: string;
     major: string;
     minor: string;

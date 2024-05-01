@@ -212,6 +212,21 @@ Tinytest.addAsync('minimongo - basics', async test => {
   test.equal(after.d, undefined);
 });
 
+
+Tinytest.addAsync('minimongo - upsert', async test => {
+  const c = new LocalCollection();
+
+  await c.upsertAsync({ name: 'doc' }, { name: 'doc' });
+  
+  test.equal(c.find({}).count(), 1);
+
+  await c.removeAsync({});
+
+  c.upsert({ name: 'doc' }, { name: 'doc' });
+  test.equal(c.find({}).count(), 1);
+});
+
+
 Tinytest.add('minimongo - error - no options', test => {
   try {
     throw MinimongoError('Not fun to have errors');
@@ -3982,4 +3997,18 @@ Tinytest.add('minimongo - cannot $rename with null bytes', test => {
   test.throws(() => {
     collection.update({ _id: id }, { $rename: { a: '\0a', c: 'c\0' } });
   }, "The 'to' field for $rename cannot contain an embedded null byte");
+});
+
+Tinytest.addAsync('minimongo - asyncIterator', async (test) => {
+  const collection = new LocalCollection();
+
+  collection.insert({ _id: 'a' });
+  collection.insert({ _id: 'b' });
+
+  let itemIds = [];
+  for await (const item of collection.find()) {
+    itemIds.push(item._id);
+  }
+  test.equal(itemIds.length, 2);
+  test.equal(itemIds, ['a', 'b']);
 });

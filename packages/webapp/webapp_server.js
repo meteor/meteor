@@ -44,6 +44,9 @@ WebAppInternals.NpmModules = {
   }
 };
 
+// More of a convenience for the end user
+WebApp.express = express;
+
 // Though we might prefer to use web.browser (modern) as the default
 // architecture, safety requires a more compatible defaultArch.
 WebApp.defaultArch = 'web.browser.legacy';
