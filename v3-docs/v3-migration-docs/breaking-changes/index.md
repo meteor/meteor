@@ -2,7 +2,7 @@
 
 ## MongoDB Methods in the server
 
-As mentioned in the [overview](../index.md#mongo-methods-server) `insert`, `update`,
+As mentioned in the [Frequently Asked Questions](../frequently-asked-questions/index.md#mongo-methods-server), `insert`, `update`,
  `remove`, `find`, `findOne`, `upsert` methods no longer work in the server.
 
 You should migrate to use their `Async` counterparts.
@@ -39,7 +39,7 @@ of Node v14, you will need to update them to be compatible with Node v20.
 
 ## NPM Installer
 
-The npm installer has changed a bit. Now you can install Meteor using the following command:
+The npm installer has been updated. Use the following command to install Meteor:
 
 ```bash
 npx meteor

@@ -2,8 +2,8 @@ import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Meteor API Docs",
-  description: "Meteor.js API docs",
+  title: "Meteor Docs",
+  description: "Meteor.js API Docs",
   head: [["link", { rel: "icon", href: "/logo.png" }]],
   lastUpdated: true,
   sitemap: {
@@ -12,13 +12,11 @@ export default defineConfig({
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: "Galaxy", link: "https://www.meteor.com/cloud" },
+      { text: "Deploy", link: "https://www.meteor.com/cloud" },
       {
         text: "Tutorials",
         link: "https://www.meteor.com/developers/tutorials",
       },
-      { text: "Guide", link: "https://guide.meteor.com/" },
-      { text: "API Docs", link: "/about/what-is" },
       { text: "Forums", link: "https://forums.meteor.com/" },
     ],
     sidebar: [
