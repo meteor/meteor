@@ -2,20 +2,21 @@ import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Meteor API Docs",
-  description: "Meteor.js API docs",
+  title: "Meteor Docs",
+  description: "Meteor.js API Docs",
   head: [["link", { rel: "icon", href: "/logo.png" }]],
   lastUpdated: true,
+  sitemap: {
+    hostname: "https://v3-docs.meteor.com",
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: "Galaxy", link: "https://www.meteor.com/cloud" },
+      { text: "Deploy", link: "https://www.meteor.com/cloud" },
       {
         text: "Tutorials",
         link: "https://www.meteor.com/developers/tutorials",
       },
-      { text: "Guide", link: "https://guide.meteor.com/" },
-      { text: "API Docs", link: "/about/what-is" },
       { text: "Forums", link: "https://forums.meteor.com/" },
     ],
     sidebar: [
@@ -276,8 +277,17 @@ export default defineConfig({
     logo: { dark: "/meteor-logo.png", light: "/meteor-blue.png" },
 
     search: {
-      provider: "local",
+      provider: 'algolia',
+      options: {
+        appId: '2RBX3PR26I',
+        apiKey: '7fcba92008b84946f04369df2afa1744',
+        indexName: 'meteor_docs_v3',
+        searchParameters: {
+          facetFilters: ["lang:en"],
+        },
+      }
     },
+
     footer: {
       message:
         'Released under the <a href="https://github.com/meteor/meteor?tab=License-1-ov-file#readme">MIT License</a>.',

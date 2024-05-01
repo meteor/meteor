@@ -554,4 +554,6 @@
     background: var(--vp-c-brand-soft);
 }
 
-
+:root {
+  --vp-z-index-nav: 100;
+}

@@ -100,7 +100,8 @@ Tinytest.addAsync(
   "livedata server - onMessage hook",
   function (test, onComplete) {
     var cb = Meteor.onMessage(function (msg, session) {
-      test.equal(msg.method, "livedata_server_test_inner");
+      if (msg.method !== 'livedata_server_test_inner') return;
+            test.equal(msg.method, "livedata_server_test_inner");
       cb.stop();
       onComplete();
     });

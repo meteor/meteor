@@ -20,20 +20,32 @@ if (Meteor.isServer) {
   Tinytest.addAsync(
     "environment - dynamic variables with two context (server)",
     async function (test) {
+      // Ensure "0" as the dynamic context spread properly
+      // https://github.com/meteor/meteor/pull/13089
+      const context0 = new Meteor.EnvironmentVariable();
+      context0.slot = 0;
+
       const context1 = new Meteor.EnvironmentVariable();
       const context2 = new Meteor.EnvironmentVariable();
 
-      return context1.withValue(42, async () => {
-        test.equal(context2.get(), undefined);
-        await context2.withValue(1, async () => {
-          await context2.withValue(2, async () => {
-            test.equal(context2.get(), 2);
+      return context0.withValue(0, async () => {
+        test.equal(context1.get(), undefined);
+        await context1.withValue(42, async () => {
+          test.equal(context2.get(), undefined);
+          await context2.withValue(1, async () => {
+            await context2.withValue(2, async () => {
+              test.equal(context2.get(), 2);
+              test.equal(context0.get(), 0);
+            });
+            test.equal(context1.get(), 42);
+            test.equal(context2.get(), 1);
+            test.equal(context0.get(), 0);
           });
           test.equal(context1.get(), 42);
-          test.equal(context2.get(), 1);
+          test.equal(context2.get(), undefined);
+          test.equal(context0.get(), 0);
         });
-        test.equal(context1.get(), 42);
-        test.equal(context2.get(), undefined);
+        test.equal(context0.get(), 0);
       });
     }
   );
@@ -44,20 +56,31 @@ if (Meteor.isServer) {
   Tinytest.add(
     "environment - dynamic variables with two context (client)",
     function (test) {
+      // Ensure "0" as the dynamic context spread properly
+      // https://github.com/meteor/meteor/pull/13089
+      const context0 = new Meteor.EnvironmentVariable();
+      context0.slot = 0;
+
       const context1 = new Meteor.EnvironmentVariable();
       const context2 = new Meteor.EnvironmentVariable();
-
-      context1.withValue(42, () => {
-        test.equal(context2.get(), undefined);
-        context2.withValue(1, () => {
-          context2.withValue(2, () => {
-            test.equal(context2.get(), 2);
+      context0.withValue(0, async () => {
+        test.equal(context1.get(), undefined);
+        context1.withValue(42, () => {
+          test.equal(context2.get(), undefined);
+          context2.withValue(1, () => {
+            context2.withValue(2, () => {
+              test.equal(context2.get(), 2);
+              test.equal(context0.get(), 0);
+            });
+            test.equal(context1.get(), 42);
+            test.equal(context2.get(), 1);
+            test.equal(context0.get(), 0);
           });
           test.equal(context1.get(), 42);
-          test.equal(context2.get(), 1);
+          test.equal(context2.get(), undefined);
+          test.equal(context0.get(), 0);
         });
-        test.equal(context1.get(), 42);
-        test.equal(context2.get(), undefined);
+        test.equal(context0.get(), 0);
       });
     }
   );
