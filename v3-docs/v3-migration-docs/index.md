@@ -1,6 +1,9 @@
 # Meteor 3.0 Migration Guide
 
-> This guide is a live document outlining the migration to Meteor v3, which will be updated as development progresses.
+:::info You are reading the migration guide for Meteor 3!
+
+This is a live document which will be updated as development progresses.
+:::
 
 This guide is for users with Meteor 2.x projects understand the changes between Meteor 2.x and Meteor 3.0. It's not required to read this guide before starting with Meteor 3.0. To learn Meteor 3.0, we recommend reading the [new documentation](https://v3-docs.meteor.com).
 
