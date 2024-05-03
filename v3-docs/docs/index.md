@@ -10,11 +10,11 @@ hero:
     alt: Meteor
   actions:
     - theme: brand
-      text: View API Docs
+      text: Get Started
       link: /about/what-is
     - theme: alt
-      text: View on GitHub
-      link: https://github.com/meteor/meteor
+      text: Install
+      link: /about/install
 
 # TODO: Update with Docs features and links as they are added
 features:
