@@ -24,11 +24,6 @@ jobs:
   test:
     runs-on: windows-2019-meteor
 
-    strategy:
-      matrix:
-        platform:
-          - x64
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
