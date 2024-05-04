@@ -13,7 +13,7 @@ Roles.debug = false
 
 try {
   if (localStorage) {
-    var temp = localStorage.getItem('Roles.debug')
+    const temp = localStorage.getItem('Roles.debug')
 
     if (typeof temp !== 'undefined') {
       Roles.debug = !!temp

@@ -69,6 +69,11 @@ declare namespace Roles {
     roles: string | string[],
     options?: string | { scope?: string; ifExists?: boolean }
   ): void
+  function addUsersToRolesAsync(
+    users: string | string[] | Meteor.User | Meteor.User[],
+    roles: string | string[],
+    options?: string | { scope?: string; ifExists?: boolean }
+  ): Promise<void>
 
   /**
    * Create a new role.
@@ -80,6 +85,7 @@ declare namespace Roles {
    * @return {String} ID of the new role or null.
    */
   function createRole(roleName: string, options?: { unlessExists: boolean }): string
+  function createRoleAsync(roleName: string, options?: { unlessExists: boolean }): Promise<string>
 
   /**
    * Delete an existing role.
@@ -90,6 +96,7 @@ declare namespace Roles {
    * @param {String} roleName Name of role.
    */
   function deleteRole(roleName: string): void
+  function deleteRoleAsync(roleName: string): Promise<void>
 
   /**
    * Rename an existing role.
@@ -99,6 +106,7 @@ declare namespace Roles {
    * @param {String} newName New name of a role.
    */
   function renameRole(oldName: string, newName: string): void
+  function renameRoleAsync(oldName: string, newName: string): Promise<void>
 
   /**
    * Add role parent to roles.
@@ -111,6 +119,7 @@ declare namespace Roles {
    * @param {String} parentName Name of parent role.
    */
   function addRolesToParent(rolesNames: string | string[], parentName: string): void
+  function addRolesToParentAsync(rolesNames: string | string[], parentName: string): Promise<void>
 
   /**
    * Remove role parent from roles.
@@ -123,6 +132,7 @@ declare namespace Roles {
    * @param {String} parentName Name of parent role.
    */
   function removeRolesFromParent(rolesNames: string | string[], parentName: string): void
+  function removeRolesFromParentAsync(rolesNames: string | string[], parentName: string): Promise<void>
 
   /**
    * Retrieve cursor of all existing roles.
@@ -144,6 +154,7 @@ declare namespace Roles {
    * @return {Array} Array of user's groups, unsorted. Roles.GLOBAL_GROUP will be omitted
    */
   function getGroupsForUser(user: string | Meteor.User, role?: string): string[]
+  function getGroupsForUserAsync(user: string | Meteor.User, role?: string): Promise<string[]>
 
   /**
    * Retrieve users scopes, if any.
@@ -155,6 +166,7 @@ declare namespace Roles {
    * @return {Array} Array of user's scopes, unsorted.
    */
   function getScopesForUser(user: string | Meteor.User, roles?: string | string[]): string[]
+  function getScopesForUserAsync(user: string | Meteor.User, roles?: string | string[]): Promise<string[]>
 
   /**
    * Rename a scope.
@@ -166,6 +178,7 @@ declare namespace Roles {
    * @param {String} newName New name of a scope.
    */
   function renameScope(oldName: string, newName: string): void
+  function renameScopeAsync(oldName: string, newName: string): Promise<void>
 
   /**
    * Remove a scope.
@@ -177,6 +190,7 @@ declare namespace Roles {
    *
    */
   function removeScope(name: String): void
+  function removeScopeAsync(name: String): Promise<void>
 
   /**
    * Find out if a role is an ancestor of another role.
@@ -189,6 +203,7 @@ declare namespace Roles {
    * @return {Boolean}
    */
   function isParentOf(parentRoleName: string, childRoleName: string): boolean
+  function isParentOfAsync(parentRoleName: string, childRoleName: string): Promise<boolean>
 
   /**
    * Retrieve user's roles.
@@ -214,6 +229,13 @@ declare namespace Roles {
     onlyAssigned?: boolean;
     fullObjects?: boolean
   }): string[]
+  function getRolesForUserAsync(user: string | Meteor.User, options?: string | {
+    scope?: string;
+    anyScope?: boolean;
+    onlyScoped?: boolean;
+    onlyAssigned?: boolean;
+    fullObjects?: boolean
+  }): Promise<string[]>
 
   /**
    * Retrieve all assignments of a user which are for the target role.
@@ -269,6 +291,11 @@ declare namespace Roles {
     options?: string | { scope?: string; anyScope?: boolean; onlyScoped?: boolean; queryOptions?: QueryOptions },
     queryOptions?: QueryOptions
   ): Mongo.Cursor<Meteor.User>
+  function getUsersInRoleAsync(
+    roles: string | string[],
+    options?: string | { scope?: string; anyScope?: boolean; onlyScoped?: boolean; queryOptions?: QueryOptions },
+    queryOptions?: QueryOptions
+  ): Promise<Mongo.Cursor<Meteor.User>>
 
   /**
    * Remove users from assigned roles.
@@ -292,6 +319,11 @@ declare namespace Roles {
     roles?: string | string[],
     options?: string | { scope?: string; anyScope?: boolean }
   ): void
+  function removeUsersFromRolesAsync(
+    users: string | string[] | Meteor.User | Meteor.User[],
+    roles?: string | string[],
+    options?: string | { scope?: string; anyScope?: boolean }
+  ): Promise<void>
 
   /**
    * Set users' roles.
@@ -319,6 +351,11 @@ declare namespace Roles {
     roles: string | string[],
     options?: string | { scope?: string; anyScope?: boolean; ifExists?: boolean }
   ): void
+  function setUserRolesAsync(
+    users: string | string[] | Meteor.User | Meteor.User[],
+    roles: string | string[],
+    options?: string | { scope?: string; anyScope?: boolean; ifExists?: boolean }
+  ): Promise<void>
 
   /**
    * Check if user has specified roles.
@@ -353,12 +390,20 @@ declare namespace Roles {
     roles: string | string[],
     options?: string | { scope?: string; anyScope?: boolean }
   ): boolean
+  function userIsInRoleAsync(
+    user: string | string[] | Meteor.User | Meteor.User[],
+    roles: string | string[],
+    options?: string | { scope?: string; anyScope?: boolean }
+  ): Promise<boolean>
 
+  // The schema for the roles collection
   interface Role {
     _id: string
     name: string
+    children: { _id: string }[]
   }
 
+  // The schema for the role-assignment collection
   interface RoleAssignment {
     _id: string
     user: {
@@ -385,6 +430,14 @@ declare namespace Roles {
 
 } // module
 
-declare namespace Meteor {
-  var roles: Mongo.Collection<Roles.Role>
+// Exported collections
+declare type RolesCollection = Mongo.Collection<Roles.Role>
+declare type RoleAssignmentsCollection = Mongo.Collection<Roles.RoleAssignment>
+
+// Additions to the Meteor object
+declare module 'meteor/meteor' {
+  namespace Meteor {
+    const roles: Mongo.Collection<Roles.Role>
+    const roleAssignment: Mongo.Collection<Roles.RoleAssignment>
+  }
 }

@@ -2,7 +2,26 @@
 
 ## v4.0.0
 
-* Collections are now directly exported from the package [#344](https://github.com/Meteor-Community-Packages/meteor-roles/pull/344) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* BREAKING: Synchronous functions are now available only on client side
+* BREAKING: Migration functions for past versions are no longer available
+* UI Helpers now use `console.debug` for debugging messages
+* `RolesCollection` and `RoleAssignmentsCollection` can now be exported in addition to being accessed via `Meteor.roles` and `Meteor.roleAssignment`
+
+## v3.6.2
+
+* Fixed TypeScript definition to play nice with Meteor definition [#389](https://github.com/Meteor-Community-Packages/meteor-roles/pull/389) [@bruceborrett](https://github.com/sponsors/bruceborrett)
+
+## v3.6.1
+
+* Added types for async functions [#386](https://github.com/Meteor-Community-Packages/meteor-roles/pull/386) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Updated docs with async functions [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Updated `zodern:types` to v1.0.11
+
+## v3.6.0
+
+* Added async versions of functions [#361](https://github.com/Meteor-Community-Packages/meteor-roles/pull/361) [#378](https://github.com/Meteor-Community-Packages/meteor-roles/pull/378) [@bratelefant](https://github.com/bratelefant) [@storytellercz](https://github.com/sponsors/StorytellerCZ) [@jankapunkt](https://github.com/sponsors/jankapunkt)
+* Added missing types [#383](https://github.com/Meteor-Community-Packages/meteor-roles/pull/383) [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Add complete test suite [#375](https://github.com/Meteor-Community-Packages/meteor-roles/pull/375) [@jankapunkt](https://github.com/sponsors/jankapunkt) [#380](https://github.com/Meteor-Community-Packages/meteor-roles/pull/380) [@bratelefant](https://github.com/bratelefant)
 
 ## v3.5.1
 

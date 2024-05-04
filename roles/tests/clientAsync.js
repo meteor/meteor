@@ -2,18 +2,22 @@
 /* global Roles */
 
 import { Meteor } from 'meteor/meteor'
-import { assert } from 'chai'
+import chai, { assert } from 'chai'
+import chaiAsPromised from 'chai-as-promised'
 
 // To ensure that the files are loaded for coverage
 import '../roles_client'
+import '../roles_common_async'
 
-const safeInsert = (collection, data) => {
+chai.use(chaiAsPromised)
+
+const safeInsert = async (collection, data) => {
   try {
-    collection.insert(data)
+    await collection.insertAsync(data)
   } catch (e) {}
 }
 
-describe('roles', function () {
+describe('roles async', function () {
   const roles = ['admin', 'editor', 'user']
   const users = {
     eve: {
@@ -27,21 +31,21 @@ describe('roles', function () {
     }
   }
 
-  function testUser (username, expectedRoles, scope) {
+  async function testUser (username, expectedRoles, scope) {
     const user = users[username]
 
     // test using user object rather than userId to avoid mocking
-    roles.forEach(function (role) {
+    for (const role of roles) {
       const expected = expectedRoles.includes(role)
       const msg = username + ' expected to have \'' + role + '\' permission but does not'
       const nmsg = username + ' had un-expected permission ' + role
 
       if (expected) {
-        assert.isTrue(Roles.userIsInRole(user, role, scope), msg)
+        assert.isTrue(await Roles.userIsInRoleAsync(user, role, scope), msg)
       } else {
-        assert.isFalse(Roles.userIsInRole(user, role, scope), nmsg)
+        assert.isFalse(await Roles.userIsInRoleAsync(user, role, scope), nmsg)
       }
-    })
+    }
   }
 
   let meteorUserMethod
@@ -57,37 +61,37 @@ describe('roles', function () {
     Meteor.user = meteorUserMethod
   })
 
-  beforeEach(() => {
-    safeInsert(Meteor.roleAssignment, {
+  beforeEach(async () => {
+    await safeInsert(Meteor.roleAssignment, {
       user: users.eve,
       role: { _id: 'admin' },
       inheritedRoles: [{ _id: 'admin' }]
     })
-    safeInsert(Meteor.roleAssignment, {
+    await safeInsert(Meteor.roleAssignment, {
       user: users.eve,
       role: { _id: 'editor' },
       inheritedRoles: [{ _id: 'editor' }]
     })
 
-    safeInsert(Meteor.roleAssignment, {
+    await safeInsert(Meteor.roleAssignment, {
       user: users.bob,
       role: { _id: 'user' },
       inheritedRoles: [{ _id: 'user' }],
       scope: 'group1'
     })
-    safeInsert(Meteor.roleAssignment, {
+    await safeInsert(Meteor.roleAssignment, {
       user: users.bob,
       role: { _id: 'editor' },
       inheritedRoles: [{ _id: 'editor' }],
       scope: 'group2'
     })
 
-    safeInsert(Meteor.roleAssignment, {
+    await safeInsert(Meteor.roleAssignment, {
       user: users.joe,
       role: { _id: 'admin' },
       inheritedRoles: [{ _id: 'admin' }]
     })
-    safeInsert(Meteor.roleAssignment, {
+    await safeInsert(Meteor.roleAssignment, {
       user: users.joe,
       role: { _id: 'editor' },
       inheritedRoles: [{ _id: 'editor' }],
@@ -121,18 +125,18 @@ describe('roles', function () {
     assert.equal(actual, expected)
   })
 
-  it('can check if user is in role', function () {
-    testUser('eve', ['admin', 'editor'])
+  it('can check if user is in role', async function () {
+    await testUser('eve', ['admin', 'editor'])
   })
 
-  it('can check if user is in role by group', function () {
-    testUser('bob', ['user'], 'group1')
-    testUser('bob', ['editor'], 'group2')
+  it('can check if user is in role by group', async function () {
+    await testUser('bob', ['user'], 'group1')
+    await testUser('bob', ['editor'], 'group2')
   })
 
-  it('can check if user is in role with Roles.GLOBAL_GROUP', function () {
-    testUser('joe', ['admin'])
-    testUser('joe', ['admin'], Roles.GLOBAL_GROUP)
-    testUser('joe', ['admin', 'editor'], 'group1')
+  it('can check if user is in role with Roles.GLOBAL_GROUP', async function () {
+    await testUser('joe', ['admin'])
+    await testUser('joe', ['admin'], Roles.GLOBAL_GROUP)
+    await testUser('joe', ['admin', 'editor'], 'group1')
   })
 })
