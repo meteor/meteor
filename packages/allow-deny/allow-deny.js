@@ -193,14 +193,19 @@ CollectionPrototype._defineMutationMethods = function(options) {
           }
         } catch (e) {
           if (
-            e.name === 'MongoError' ||
+            e.name === 'MongoError'  && e.code === 11000 || 
             // for old versions of MongoDB (probably not necessary but it's here just in case)
             e.name === 'BulkWriteError' ||
             // for newer versions of MongoDB (https://docs.mongodb.com/drivers/node/current/whats-new/#bulkwriteerror---mongobulkwriteerror)
             e.name === 'MongoBulkWriteError' ||
             e.name === 'MinimongoError'
           ) {
-            throw new Meteor.Error(409, e.toString());
+            // Extract the index name from the error message
+           const match = e.errmsg.match(/index: (.+?) dup key/);
+            const indexName = match ? match[1] : 'unknown';
+
+           // Throw a specific Meteor.Error with the index name
+        throw new Meteor.Error(409, `Duplicate key error on index: ${indexName}`);
           } else {
             throw e;
           }
