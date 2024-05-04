@@ -17,7 +17,8 @@ Package.onUse(function (api) {
     'accounts-base',
     'tracker',
     'mongo',
-    'check'
+    'check',
+    'ddp'
   ], both)
 
   api.use('zodern:types@1.0.13')
