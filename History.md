@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.3
+
+* Added missing dependency on the `ddp` package [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Updated Blaze weak dependency to v2.9 [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+
 ## v3.6.2
 
 * Fixed TypeScript definition to play nice with Meteor definition [#389](https://github.com/Meteor-Community-Packages/meteor-roles/pull/389) [@bruceborrett](https://github.com/sponsors/bruceborrett)
