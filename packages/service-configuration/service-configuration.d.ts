@@ -5,7 +5,7 @@ export interface Configuration {
   secret: string;
 }
 
-class ConfigError extends Error {
+declare class ConfigError extends Error {
   constructor(serviceName?: string);
   message: string;
 }

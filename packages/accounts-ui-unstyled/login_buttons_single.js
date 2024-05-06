@@ -78,6 +78,9 @@ Template._loginButtonsLoggedOutSingleLoginButton.helpers({
     return !!ServiceConfiguration.configurations.findOne({service: this.name});
   },
   capitalizedName: function () {
+    if (this.name === 'twitter') {
+      return 'X/Twitter';
+    }
     if (this.name === 'github')
       // XXX we should allow service packages to set their capitalized name
       return 'GitHub';
