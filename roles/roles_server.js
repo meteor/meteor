@@ -1,7 +1,8 @@
 import { Meteor } from 'meteor/meteor'
+import { RolesCollection, RoleAssignmentCollection } from './roles_common_async'
 
-const indexFnAssignment = Meteor.roleAssignment.createIndexAsync.bind(Meteor.roleAssignment)
-const indexFnRoles = Meteor.roles.createIndexAsync.bind(Meteor.roles)
+const indexFnAssignment = RoleAssignmentCollection.createIndexAsync.bind(RoleAssignmentCollection)
+const indexFnRoles = RolesCollection.createIndexAsync.bind(RolesCollection)
 
 const indexes = [
   { 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 },
