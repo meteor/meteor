@@ -11,7 +11,7 @@ This guide is for users with Meteor 2.x projects understand the changes between 
 
 Meteor 3.0 is currently in its Release Candidate (RC) phase, a nearly final version ready for final testing ahead of the official launch.
 
-**Latest version:** `3.0-rc.0` <br/>
+**Latest version:** `3.0-rc.1` <br/>
 **Node.js version:** `20.11.1 LTS` <br/>
 **NPM version:** `10.2.4`
 
@@ -20,7 +20,7 @@ Meteor 3.0 is currently in its Release Candidate (RC) phase, a nearly final vers
 You can create a new Meteor 3.0 project by running the command below:
 
 ```bash
-meteor create my-new-project --release 3.0-rc.0
+meteor create my-new-project --release 3.0-rc.1
 ```
 
 ## How to update from version 2?
@@ -28,7 +28,7 @@ meteor create my-new-project --release 3.0-rc.0
 You can update your Meteor 2.x project by running the command below inside your project folder:
 
 ```bash
-meteor update --release 3.0-rc.0
+meteor update --release 3.0-rc.1
 meteor reset #resets local DB and project to a fresh state
 ```
 
@@ -73,4 +73,3 @@ Migrating apps to Meteor 3.0:
 ---
 
 If you have a migration guide, either in video or text format, please share it with us to include here.
-

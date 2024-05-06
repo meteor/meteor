@@ -418,6 +418,7 @@
 - `modules@1.0.0`:
 
   - Updated `reify` version.
+  - All modules are described as strict mode
 
 - `mongo-decimal@`:
 
