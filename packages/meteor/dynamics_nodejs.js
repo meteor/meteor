@@ -49,20 +49,22 @@ class EnvironmentVariableAsync {
    */
   withValue(value, func, options = {}) {
     const self = this;
-    const slotCall = Meteor._getValueFromAslStore(SLOT_CALL_KEY);
-    const dynamics =
-      Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {};
-    dynamics[slotCall] = Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
-    self.upperCallDynamics = dynamics;
+    const slotCall = self.slot;
+    const dynamics = Object.assign(
+      {},
+      Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {}
+    );
+
+    if (slotCall != null) {
+      dynamics[slotCall] = value;
+    }
+
     return Meteor._runAsync(
       async function () {
         let ret;
         try {
-          Meteor._updateAslStore(
-            UPPER_CALL_DYNAMICS_KEY_NAME,
-            this.upperCallDynamics,
-          );
           Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
+          Meteor._updateAslStore(UPPER_CALL_DYNAMICS_KEY_NAME, dynamics);
           ret = await func();
         } finally {
           Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, undefined);
@@ -80,7 +82,7 @@ class EnvironmentVariableAsync {
           [SLOT_CALL_KEY]: this.slot,
         },
         options,
-      )
+      ),
     );
   }
 

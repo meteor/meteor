@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload safety belt for multi-server deployments",
-  version: '2.0.0-beta300.6',
+  version: '2.0.0-rc300.1',
 });
 
 Package.onUse(function (api) {
@@ -13,6 +13,6 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use("ecmascript");
   api.addAssets("safetybelt.js", "server");
-  api.use(["reload-safetybelt", "tinytest", "http", "webapp", "underscore"]);
+  api.use(["reload-safetybelt", "tinytest", "http", "webapp"]);
   api.addFiles("reload-safety-belt-tests.js", "server");
 });

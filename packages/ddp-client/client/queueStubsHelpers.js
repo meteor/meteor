@@ -20,15 +20,18 @@ export const loadAsyncStubHelpers = () => {
 
     queue = queue.finally(() => {
       fn(resolve, reject);
-      return promise;
+
+      return promise.stubPromise?.catch(() => {}); // silent uncaught promise
     });
 
-    promise.finally(() => {
-      queueSize -= 1;
-      if (queueSize === 0) {
-        Meteor.connection._maybeMigrate();
-      }
-    });
+    promise
+      .catch(() => {}) // silent uncaught promise
+      .finally(() => {
+        queueSize -= 1;
+        if (queueSize === 0) {
+          Meteor.connection._maybeMigrate();
+        }
+      });
 
     promise.stubPromise = promiseProps.stubPromise;
     promise.serverPromise = promiseProps.serverPromise;
@@ -89,25 +92,34 @@ export const loadAsyncStubHelpers = () => {
 
     return queueFunction(
       (resolve, reject) => {
+        let hasStub = false;
         let finished = false;
 
         Meteor._setImmediate(() => {
           const applyAsyncPromise = oldApplyAsync.apply(this, args);
           stubPromiseResolver(applyAsyncPromise.stubPromise);
           serverPromiseResolver(applyAsyncPromise.serverPromise);
+          hasStub = !!applyAsyncPromise.stubPromise;
+          if (hasStub) {
+            applyAsyncPromise.stubPromise
+              .catch(() => {}) // silent uncaught promise
+              .finally(() => {
+                finished = true;
+              });
+          }
+
           applyAsyncPromise
             .then((result) => {
-              finished = true;
               resolve(result);
             })
             .catch((err) => {
-              finished = true;
               reject(err);
             });
+          serverPromise.catch(() => {}); // silent uncaught promise
         });
 
         Meteor._setImmediate(() => {
-          if (!finished) {
+          if (hasStub && !finished) {
             console.warn(
               `Method stub (${name}) took too long and could cause unexpected problems. Learn more at https://github.com/zodern/fix-async-stubs/#limitations`
             );

@@ -175,6 +175,9 @@ MongoConnection = function (url, options) {
     // set it for replSet, it will be ignored if we're not using a replSet.
     mongoOptions.maxPoolSize = options.maxPoolSize;
   }
+  if (_.has(options, 'minPoolSize')) {
+    mongoOptions.minPoolSize = options.minPoolSize;
+  }
 
   // Transform options like "tlsCAFileAsset": "filename.pem" into
   // "tlsCAFile": "/<fullpath>/filename.pem"
@@ -236,6 +239,11 @@ MongoConnection.prototype._close = async function() {
 
 MongoConnection.prototype.close = function () {
   return this._close();
+};
+
+MongoConnection.prototype._setOplogHandle = function(oplogHandle) {
+  this._oplogHandle = oplogHandle;
+  return this;
 };
 
 // Returns the Mongo Collection object; may yield.
@@ -722,6 +730,13 @@ var simulateUpsertWithInsertedId = async function (collection, selector, mod, op
 MongoConnection.prototype.upsertAsync = async function (collectionName, selector, mod, options) {
   var self = this;
 
+
+
+  if (typeof options === "function" && ! callback) {
+    callback = options;
+    options = {};
+  }
+
   return self.updateAsync(collectionName, selector, mod,
                      _.extend({}, options, {
                        upsert: true,
@@ -920,7 +935,6 @@ Cursor.prototype.getTransform = function () {
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
-
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
@@ -1047,7 +1061,7 @@ class AsynchronousCursor {
 
     this._visitedIds = new LocalCollection._IdMap;
   }
-  
+
   [Symbol.asyncIterator]() {
     var cursor = this;
     return {
@@ -1443,10 +1457,13 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   };
 };
 
+const oplogCollectionWarnings = [];
+
 Object.assign(MongoConnection.prototype, {
   _observeChanges: async function (
       cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
     var self = this;
+    const collectionName = cursorDescription.collectionName;
 
     if (cursorDescription.options.tailable) {
       return self._observeChangesTailable(cursorDescription, ordered, callbacks);
@@ -1489,7 +1506,8 @@ Object.assign(MongoConnection.prototype, {
         nonMutatingCallbacks,
     );
 
-    if (firstHandle) {
+    const oplogOptions = self?._oplogHandle?._oplogOptions || {};
+  const { includeCollections, excludeCollections } = oplogOptions;if (firstHandle) {
       var matcher, sorter;
       var canUseOplog = _.all([
         function () {
@@ -1497,7 +1515,24 @@ Object.assign(MongoConnection.prototype, {
           // want unordered callbacks, and to not want a callback on the polls
           // that won't happen.
           return self._oplogHandle && !ordered &&
-              !callbacks._testOnlyPollCallback;
+              !callbacks._testOnlyPollCallback;}, function () {
+        // We also need to check, if the collection of this Cursor is actually being "watched" by the Oplog handle
+        // if not, we have to fallback to long polling
+        if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        if (includeCollections?.length && !includeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        return true;
         }, function () {
           // We need to be able to compile the selector. Fall back to polling for
           // some newfangled $selector that minimongo doesn't support yet.
@@ -1561,9 +1596,9 @@ Object.assign(MongoConnection.prototype, {
 // listenCallback is the same kind of (notification, complete) callback passed
 // to InvalidationCrossbar.listen.
 
-listenAll = function (cursorDescription, listenCallback) {
-  var listeners = [];
-  forEachTrigger(cursorDescription, function (trigger) {
+listenAll = async function (cursorDescription, listenCallback) {
+  const listeners = [];
+  await forEachTrigger(cursorDescription, function (trigger) {
     listeners.push(DDPServer._InvalidationCrossbar.listen(
       trigger, listenCallback));
   });
@@ -1577,20 +1612,20 @@ listenAll = function (cursorDescription, listenCallback) {
   };
 };
 
-forEachTrigger = function (cursorDescription, triggerCallback) {
-  var key = {collection: cursorDescription.collectionName};
-  var specificIds = LocalCollection._idsMatchedBySelector(
+forEachTrigger = async function (cursorDescription, triggerCallback) {
+  const key = {collection: cursorDescription.collectionName};
+  const specificIds = LocalCollection._idsMatchedBySelector(
     cursorDescription.selector);
   if (specificIds) {
-    _.each(specificIds, function (id) {
-      triggerCallback(_.extend({id: id}, key));
-    });
-    triggerCallback(_.extend({dropCollection: true, id: null}, key));
+    for (const id of specificIds) {
+      await triggerCallback(_.extend({id: id}, key));
+    }
+    await triggerCallback(_.extend({dropCollection: true, id: null}, key));
   } else {
-    triggerCallback(key);
+    await triggerCallback(key);
   }
   // Everyone cares about the database being dropped.
-  triggerCallback({ dropDatabase: true });
+  await triggerCallback({ dropDatabase: true });
 };
 
 // observeChanges for tailable cursors on capped collections.

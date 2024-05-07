@@ -9,8 +9,8 @@ const express = WebAppInternals.NpmModules.express.module;
 
 const resolvers = {
   Query: {
-    getLink: async (obj, { id }) => LinksCollection.findOne(id),
-    getLinks: async () => LinksCollection.find().fetch()
+    getLink: async (obj, { id }) => LinksCollection.findOneAsync(id),
+    getLinks: async () => LinksCollection.find().fetchAsync()
   }
 };
 

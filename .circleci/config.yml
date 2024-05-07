@@ -178,7 +178,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             cd dev_bundle/lib
-            ../../meteor npm install @types/node@20.9.0 --save-dev
+            ../../meteor npm install @types/node@20.10.5 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
             ../../meteor npm install -g typescript
             cd ../../
@@ -390,7 +390,7 @@ jobs:
             ./meteor self-test \
               "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
-              --exclude "${SELF_TEST_EXCLUDE}|--svelte|--vue|--typescript|--apollo|--solid|--full" \
+              --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit ./tmp/results/junit/3.xml \
               --without-tag "custom-warehouse"
@@ -474,7 +474,7 @@ jobs:
             ./meteor self-test \
               "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
-              --exclude "${SELF_TEST_EXCLUDE}|modules - test app" \
+              --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit ./tmp/results/junit/5.xml \
               --without-tag "custom-warehouse"
