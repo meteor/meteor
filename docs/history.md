@@ -9,6 +9,7 @@
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
 
+
 ## v2.16.0, 2024-03-26
 
 ### Highlights
@@ -38,6 +39,7 @@
 * `accounts-base@2.2.11`
   - Supported session storage to store accounts login token [PR](https://github.com/meteor/meteor/pull/13046)
   - Update config checking
+  - Added new types [PR](https://github.com/meteor/meteor/pull/13042)
 
 * `accounts-oauth@1.4.4`
   - Remove config checking as it is done in `accounts-base`
@@ -71,6 +73,9 @@
 * `minimongo@1.9.4`
   - Support observeChangesAsync and observeAsync [PR](https://github.com/meteor/meteor/pull/13025)
   - Report and extend test cases for the old async behaviors
+
+* `minifier-js@2.8.0`
+  - Update terser to v5.31.0
 
 * `mongo@1.16.10`
   - Support a new option to include/exclude certain collections for oplog tailing [PR](https://github.com/meteor/meteor/pull/13009)
