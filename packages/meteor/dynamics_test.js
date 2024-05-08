@@ -200,4 +200,27 @@ if (Meteor.isServer) {
       val1 = ev1.get();
     });
   })
+
+  Tinytest.addAsync('environment - preserve ev value async/await', async function (test) {
+    let val1 = null;
+    let val2 = null;
+
+    let ev1 = new Meteor.EnvironmentVariable();
+
+    async function runAsyncFunction() {
+      await test.sleep(20)
+      val2 = ev1.get();
+    }
+
+    ev1.withValue({ name: 'test' }, async () => {
+      runAsyncFunction();
+
+      val1 = ev1.get();
+    });
+
+    await test.sleep(20)
+
+    test.equal(val1, { name: 'test' });
+    test.equal(val2, { name: 'test' });
+  })
 }
