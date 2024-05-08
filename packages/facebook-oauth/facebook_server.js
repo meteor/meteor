@@ -73,7 +73,7 @@ function getAbsoluteUrlOptions(query) {
  * @returns {Promise<UserAccessToken>} - Promise with an Object containing the accessToken and expiresIn (lifetime of token in seconds)
  */
 const getTokenResponse = async (query) => {
-  const config = ServiceConfiguration.configurations.findOne({
+  const config = await ServiceConfiguration.configurations.findOneAsync({
     service: 'facebook',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
@@ -117,7 +117,7 @@ const getTokenResponse = async (query) => {
 };
 
 const getIdentity = async (accessToken, fields) => {
-  const config = ServiceConfiguration.configurations.findOne({
+  const config = await ServiceConfiguration.configurations.findOneAsync({
     service: 'facebook',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
@@ -145,4 +145,3 @@ const getIdentity = async (accessToken, fields) => {
 
 Facebook.retrieveCredential = (credentialToken, credentialSecret) =>
   OAuth.retrieveCredential(credentialToken, credentialSecret);
-
