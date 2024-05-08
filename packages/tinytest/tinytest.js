@@ -16,6 +16,10 @@ export class TestCaseResults {
     this.extraDetails = {};
   }
 
+  sleep(ms = 0) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   ok(doc) {
     var ok = {type: "ok"};
     if (doc)
@@ -667,6 +671,20 @@ export class TestRun {
   }
 }
 
+function asyncTest(fn) {
+  return asyncTestRunner;
+
+  async function asyncTestRunner(test, done) {
+    await fn(test, done);
+
+    done();
+  }
+}
+
+function isAsyncFunction(fn) {
+  return fn?.constructor?.name === "AsyncFunction";
+}
+
 /******************************************************************************/
 /* Public API                                                                 */
 /******************************************************************************/
@@ -675,6 +693,10 @@ export const Tinytest = {};
 globalThis.__Tinytest = Tinytest;
 
 Tinytest.addAsync = function (name, func, options) {
+  if (isAsyncFunction(func)) {
+    func = asyncTest(func);
+  }
+
   TestManager.addCase(new TestCase(name, func), options);
 };
 
