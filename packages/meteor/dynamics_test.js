@@ -187,7 +187,7 @@ if (Meteor.isServer) {
     let ev1 = new Meteor.EnvironmentVariable();
 
     async function runAsyncFunction() {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await test.sleep(10);
       val2 = ev1.get();
 
       test.equal(val1, { name: 'test' });
