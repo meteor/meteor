@@ -30,7 +30,7 @@ Package.onUse(function (api) {
     'renderToDiv', 'clickIt',
     'withCallbackLogger', 'testAsyncMulti',
     'simplePoll', 'runAndThrowIfNeeded',
-    'makeTestConnection', 'DomUtils', 'disableBehaviours', 'waitUntil']);
+    'makeTestConnection', 'DomUtils', 'mockBehaviours', 'waitUntil']);
 
   api.addFiles('try_all_permutations.js');
   api.addFiles('async_multi.js');

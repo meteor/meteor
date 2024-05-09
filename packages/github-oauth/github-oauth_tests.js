@@ -1,7 +1,7 @@
 Tinytest.addAsync(
   'github-oauth - run service oauth with mocked flow as expected',
   async function (test) {
-    const oauthMock = disableBehaviours(OAuth, {
+    const oauthMock = mockBehaviours(OAuth, {
       _fetch: () => Promise.resolve({ json: () => ([{ access_token: 'testToken', email: { primary: 'email' } }])}),
     });
 

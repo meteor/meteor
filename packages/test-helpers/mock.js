@@ -1,4 +1,4 @@
-disableBehaviours = function _disableBehaviours(obj, mockBehaviors = {}) {
+mockBehaviours = function _mockBehaviours(obj, mockBehaviors = {}) {
   const originalFunctions = {};
   const disabledRuns = [];
 

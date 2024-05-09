@@ -1,7 +1,7 @@
 Tinytest.addAsync(
   'google-oauth - run service oauth with mocked flow as expected',
   async function (test) {
-    const oauthMock = disableBehaviours(OAuth, {
+    const oauthMock = mockBehaviours(OAuth, {
       _fetch: () => Promise.resolve({ json: () => ({ access_token: 'testToken', scope: '1 2 3' })}),
     });
 
