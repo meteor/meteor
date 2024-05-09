@@ -1,11 +1,11 @@
 Tinytest.addAsync(
-  'facebook-oauth - run service oauth with mocked flow as expected',
+  'github-oauth - run service oauth with mocked flow as expected',
   async function (test) {
     const oauthMock = disableBehaviours(OAuth, {
-      _fetch: () => Promise.resolve({ json: () => ({ access_token: 'testToken' })}),
+      _fetch: () => Promise.resolve({ json: () => ([{ access_token: 'testToken', email: { primary: 'email' } }])}),
     });
 
-    const service = 'facebook';
+    const service = 'github';
     const serviceMockConfig = { service };
     const mockConfig = { clientId: "test", secret: "test", loginStyle: "popup" };
     if (Meteor.isServer) {
@@ -14,12 +14,12 @@ Tinytest.addAsync(
       test.isTrue(!!result?.serviceData, 'should return mocked result');
       test.equal(
         oauthMock.disabledRuns.map(({ name }) => name),
-        ['_redirectUri','openSecret','_fetch','openSecret','_fetch'],
+        ['_redirectUri','_fetch','_fetch','_fetch','sealSecret'],
         'should run mock oauth behaviors',
       );
     } else if (Meteor.isClient) {
       ServiceConfiguration.configurations.insert({ ...serviceMockConfig, ...mockConfig });
-      Facebook.requestCredential({});
+      Github.requestCredential({});
       test.equal(
         oauthMock.disabledRuns.map(({ name }) => name),
         ['_loginStyle', '_redirectUri', '_stateParam', 'launchLogin'],

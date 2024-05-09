@@ -23,3 +23,9 @@ Package.onUse(api => {
 
   api.export('Google');
 });
+
+Package.onTest(function(api) {
+  api.use('google-oauth');
+  api.use(['tinytest', 'ecmascript', 'test-helpers', 'oauth', 'oauth2', 'service-configuration']);
+  api.addFiles('google-oauth_tests.js');
+});

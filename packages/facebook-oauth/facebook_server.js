@@ -96,6 +96,7 @@ const getTokenResponse = async (query) => {
     .then((res) => res.json())
     .then(data => {
       const fbAccessToken = data.access_token;
+      console.log("-> fbAccessToken", fbAccessToken);
       const fbExpires = data.expires_in;
       if (!fbAccessToken) {
         throw new Error("Failed to complete OAuth handshake with facebook " +
