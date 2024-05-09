@@ -392,9 +392,9 @@
       "integrity": "sha512-R8Rdn8Hy72KKcebgLiv8jQcQkXoLMOGGv5uI1/k0l+snqkOzQ1R0ChUBCxWMlBsFMekWjq0wRudIweFs7sKT5A=="
     },
     "@types/node": {
-      "version": "20.12.9",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.12.9.tgz",
-      "integrity": "sha512-o93r47yu04MHumPBCFg0bMPBMNgtMg3jzbhl7e68z50+BMHmRMGDJv13eBlUgOdc9i/uoJXGMGYLtJV4ReTXEg=="
+      "version": "20.12.10",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.12.10.tgz",
+      "integrity": "sha512-Eem5pH9pmWBHoGAT8Dr5fdc5rYA+4NAovdM4EktRPVAAiJhmWWfQrA0cFhAbOsQdSfIHjAud6YdkbL69+zSKjw=="
     },
     "@types/webidl-conversions": {
       "version": "7.0.3",

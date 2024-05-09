@@ -44,8 +44,9 @@ EVp.withValue = function (value, func) {
     var isPromise = Meteor._isPromise(ret);
 
     if (isPromise) {
-      return ret.finally(() => {
-        currentValues[this.slot] = saved;
+      var self = this;
+      return ret.finally(function () {
+        currentValues[self.slot] = saved;
       });
     }
   } finally {
