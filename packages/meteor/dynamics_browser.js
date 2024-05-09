@@ -35,16 +35,13 @@ EVp.getOrNullIfOutsideFiber = function () {
  * @returns {any} The return value of the function
  */
 EVp.withValue = function (value, func) {
-  let ret
-  let isPromise
-  const saved = currentValues[this.slot];
+  var saved = currentValues[this.slot];
 
   try {
     currentValues[this.slot] = value;
 
-    ret = func();
-
-    isPromise = Meteor._isPromise(ret);
+    var ret = func();
+    var isPromise = Meteor._isPromise(ret);
 
     if (isPromise) {
       return ret.finally(() => {
