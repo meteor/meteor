@@ -1,6 +1,6 @@
 mockBehaviours = function _mockBehaviours(obj, mockBehaviors = {}) {
   const originalFunctions = {};
-  const disabledRuns = [];
+  const mockedRuns = [];
 
   // Store original functions
   for (const key in obj) {
@@ -13,7 +13,7 @@ mockBehaviours = function _mockBehaviours(obj, mockBehaviors = {}) {
   for (const key in obj) {
     if (typeof obj[key] === 'function') {
       obj[key] = function(...params) {
-        disabledRuns.push({ name: key, params });
+        mockedRuns.push({ name: key, params });
         if (typeof mockBehaviors?.[key] === 'function') {
           return mockBehaviors[key](...params);
         }
@@ -29,5 +29,5 @@ mockBehaviours = function _mockBehaviours(obj, mockBehaviors = {}) {
     }
   };
 
-  return { stop, disabledRuns };
+  return { stop, mockedRuns };
 };

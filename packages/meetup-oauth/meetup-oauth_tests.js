@@ -13,7 +13,7 @@ Tinytest.addAsync(
       const result = await OAuthTest.registeredServices[service].handleOauthRequest({});
       test.isTrue(!!result?.serviceData, 'should return mocked result');
       test.equal(
-        oauthMock.disabledRuns.map(({ name }) => name),
+        oauthMock.mockedRuns.map(({ name }) => name),
         ['openSecret','_redirectUri','_addValuesToQueryParams','_fetch','_addValuesToQueryParams','_fetch'],
         'should run mock oauth behaviors',
       );
@@ -21,7 +21,7 @@ Tinytest.addAsync(
       ServiceConfiguration.configurations.insert({ ...serviceMockConfig, ...mockConfig });
       Meetup.requestCredential({});
       test.equal(
-        oauthMock.disabledRuns.map(({ name }) => name),
+        oauthMock.mockedRuns.map(({ name }) => name),
         ['_loginStyle', '_redirectUri', '_stateParam', 'launchLogin'],
         'should run mock oauth behaviors',
       );
