@@ -107,7 +107,7 @@ Tinytest.addAsync("environment - bindEnvironment", async function (test) {
     test.equal(raised_f, null);
 
     test.equal(await f(true), undefined);
-    test.equal(raised_f, "test");
+    test.equal(raised_f, "test", 'raised_f should be "test"');
   };
 
   // At top level
@@ -117,9 +117,9 @@ Tinytest.addAsync("environment - bindEnvironment", async function (test) {
 
   // Inside a withValue
 
-  await CurrentFoo.withValue(22, function () {
+  await CurrentFoo.withValue(22, async function () {
     test.equal(CurrentFoo.get(), 22);
-    test_f();
+    await test_f();
     test.equal(CurrentFoo.get(), 22);
   });
 
@@ -224,3 +224,9 @@ if (Meteor.isServer) {
     test.equal(val2, { name: 'test' });
   })
 }
+
+Tinytest.add('environment - consistent ev value', function (test) {
+  let ev1 = new Meteor.EnvironmentVariable();
+  const ret = ev1.withValue(10, () => 5);
+  test.equal(ret, 5);
+})
