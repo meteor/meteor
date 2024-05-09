@@ -671,20 +671,6 @@ export class TestRun {
   }
 }
 
-function asyncTest(fn) {
-  return asyncTestRunner;
-
-  async function asyncTestRunner(test, done) {
-    await fn(test, done);
-
-    done();
-  }
-}
-
-function isAsyncFunction(fn) {
-  return fn?.constructor?.name === "AsyncFunction";
-}
-
 /******************************************************************************/
 /* Public API                                                                 */
 /******************************************************************************/
@@ -693,10 +679,6 @@ export const Tinytest = {};
 globalThis.__Tinytest = Tinytest;
 
 Tinytest.addAsync = function (name, func, options) {
-  if (isAsyncFunction(func)) {
-    func = asyncTest(func);
-  }
-
   TestManager.addCase(new TestCase(name, func), options);
 };
 
