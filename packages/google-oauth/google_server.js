@@ -125,7 +125,7 @@ Accounts.registerLoginHandler(async (request) => {
 // - expiresIn: lifetime of token in seconds
 // - refreshToken, if this is the first authorization request
 const getTokens = async (query, callback) => {
-  const config = ServiceConfiguration.configurations.findOne({
+  const config = await ServiceConfiguration.configurations.findOneAsync({
     service: 'google',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
