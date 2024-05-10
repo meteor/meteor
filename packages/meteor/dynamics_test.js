@@ -179,28 +179,10 @@ Tinytest.addAsync("environment - bare bindEnvironment",
   });
 });
 
+/**
+ * This won't work on the client due to the absence of ALS/AH
+ */
 if (Meteor.isServer) {
-  Tinytest.addAsync('environment - preserve ev value', function (test, onComplete) {
-    let val1 = null;
-    let val2 = null;
-
-    let ev1 = new Meteor.EnvironmentVariable();
-
-    async function runAsyncFunction() {
-      await test.sleep(10);
-      val2 = ev1.get();
-
-      test.equal(val1, { name: 'test' });
-      test.equal(val2, { name: 'test' });
-      onComplete();
-    }
-
-    ev1.withValue({ name: 'test' }, () => {
-      runAsyncFunction();
-      val1 = ev1.get();
-    });
-  })
-
   Tinytest.addAsync('environment - preserve ev value async/await', async function (test) {
     let val1 = null;
     let val2 = null;
@@ -208,7 +190,7 @@ if (Meteor.isServer) {
     let ev1 = new Meteor.EnvironmentVariable();
 
     async function runAsyncFunction() {
-      await test.sleep(20)
+      await test.sleep(10)
       val2 = ev1.get();
     }
 
