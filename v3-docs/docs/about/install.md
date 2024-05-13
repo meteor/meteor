@@ -24,12 +24,12 @@ You need to install the Meteor command line tool to create, run, and manage your
 
 ## Installation
 
-Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://docs.meteor.com/changelog.html) for the release notes.
+Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://v3-docs.meteor.com/history.html) for the release notes.
 
 For Windows, Linux and OS X, you can run the following command:
 
 ```bash
-npx meteor
+npx meteor@rc
 ```
 
 ::: tip
@@ -139,4 +139,3 @@ If you installed Meteor using npm, you can remove it by running:
 If you installed Meteor using curl, you can remove it by running:
 `rm -rf ~/.meteor`
 `sudo rm /usr/local/bin/meteor` 
-
