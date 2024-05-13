@@ -45,8 +45,9 @@ EVp.withValue = function (value, func) {
 
     if (isPromise) {
       var self = this;
-      return ret.finally(function () {
+      return ret.then(function (res) {
         currentValues[self.slot] = saved;
+        return res
       });
     }
   } finally {
