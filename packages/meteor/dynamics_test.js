@@ -202,8 +202,25 @@ if (Meteor.isServer) {
 
     await test.sleep(20)
 
-    test.equal(val1, { name: 'test' });
-    test.equal(val2, { name: 'test' });
+    test.equal(val1, { name: 'test' }, 'val1 should be equal to { name: "test" }');
+    test.equal(val2, { name: 'test' }, 'val2 should be equal to val1');
+  })
+
+  Tinytest.addAsync('environment - should not access ev after it finishes', async function (test) {
+    const context1 = new Meteor.EnvironmentVariable();
+    const context2 = new Meteor.EnvironmentVariable();
+
+    await context1.withValue({ idd: 123 }, async () => {
+      await context2.withValue({ idd: 456 }, async () => {
+        await context2.withValue({ idd: 789 }, async () => {
+          test.equal(context2.get(), { idd: 789 }, 'context2 should be 789');
+        })
+        test.equal(context2.get(), { idd: 456 }, 'context2 should be 456');
+      })
+
+      test.equal(context1.get(), { idd: 123 }, 'context1 should be 123');
+      test.equal(context2.get(), undefined, 'context2 should be undefined');
+    });
   })
 }
 
