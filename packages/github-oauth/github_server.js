@@ -29,7 +29,7 @@ let userAgent = 'Meteor';
 if (Meteor.release) userAgent += `/${Meteor.release}`;
 
 const getAccessToken = async (query) => {
-  const config = ServiceConfiguration.configurations.findOne({
+  const config = await ServiceConfiguration.configurations.findOneAsync({
     service: 'github'
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
@@ -45,7 +45,7 @@ const getAccessToken = async (query) => {
         config
       )
     });
-    const request = await fetch(
+    const request = await OAuth._fetch(
       `https://github.com/login/oauth/access_token?${content.toString()}`,
       {
         method: 'POST',
@@ -76,7 +76,7 @@ const getAccessToken = async (query) => {
 
 const getIdentity = async (accessToken) => {
   try {
-    const request = await fetch('https://api.github.com/user', {
+    const request = await OAuth._fetch('https://api.github.com/user', {
       method: 'GET',
       headers: {
         Accept: 'application/json',
@@ -95,7 +95,7 @@ const getIdentity = async (accessToken) => {
 
 const getEmails = async (accessToken) => {
   try {
-    const request = await fetch('https://api.github.com/user/emails', {
+    const request = await OAuth._fetch('https://api.github.com/user/emails', {
       method: 'GET',
       headers: {
         'User-Agent': userAgent,

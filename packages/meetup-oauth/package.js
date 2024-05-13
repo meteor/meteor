@@ -15,3 +15,9 @@ Package.onUse(api => {
 
   api.export('Meetup');
 });
+
+Package.onTest(function(api) {
+  api.use('meetup-oauth');
+  api.use(['tinytest', 'ecmascript', 'test-helpers', 'oauth', 'oauth2', 'service-configuration']);
+  api.addFiles('meetup-oauth_tests.js');
+});

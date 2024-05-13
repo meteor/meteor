@@ -15,3 +15,9 @@ Package.onUse(api => {
 
   api.export('Facebook');
 });
+
+Package.onTest(function(api) {
+  api.use('facebook-oauth');
+  api.use(['tinytest', 'ecmascript', 'test-helpers', 'oauth', 'oauth2', 'service-configuration']);
+  api.addFiles('facebook-oauth_tests.js');
+});

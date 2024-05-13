@@ -211,6 +211,8 @@ WebApp.handlers.use(middleware);
 
 OAuthTest.middleware = middleware;
 
+OAuthTest.registeredServices = registeredServices;
+
 // Handle /_oauth/* paths and extract the service name.
 //
 // @returns {String|null} e.g. "facebook", or null if this isn't an
