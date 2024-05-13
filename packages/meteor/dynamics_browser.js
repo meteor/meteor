@@ -50,6 +50,8 @@ EVp.withValue = function (value, func) {
         return res
       });
     }
+  } catch (e) {
+    throw e;
   } finally {
     if (!isPromise) {
       currentValues[this.slot] = saved;
