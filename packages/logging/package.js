@@ -1,7 +1,7 @@
 Package.describe({
   summary: 'Logging facility.',
   documentation: 'README.md',
-  version: '1.3.4-rc216.0',
+  version: '1.3.4',
 });
 
 Npm.depends({
