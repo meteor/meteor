@@ -14,3 +14,9 @@ Package.onUse(api => {
 
   api.export('Weibo');
 });
+
+Package.onTest(function(api) {
+  api.use('weibo-oauth');
+  api.use(['tinytest', 'ecmascript', 'test-helpers', 'oauth', 'oauth2', 'service-configuration']);
+  api.addFiles('weibo-oauth_tests.js');
+});
