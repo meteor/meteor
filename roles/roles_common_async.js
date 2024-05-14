@@ -92,16 +92,16 @@ Object.assign(Roles, {
 
     let insertedId = null
 
-    const existingRole = await Meteor.roles.findOneAsync({ _id: roleName })
+    const existingRole = await RolesCollection.findOneAsync({ _id: roleName })
 
     if (existingRole) {
-      await Meteor.roles.updateAsync(
+      await RolesCollection.updateAsync(
         { _id: roleName },
         { $setOnInsert: { children: [] } }
       )
       return null
     } else {
-      insertedId = await Meteor.roles.insertAsync({
+      insertedId = await RolesCollection.insertAsync({
         _id: roleName,
         children: []
       })
@@ -132,20 +132,20 @@ Object.assign(Roles, {
     Roles._checkRoleName(roleName)
 
     // Remove all assignments
-    await Meteor.roleAssignment.removeAsync({
+    await RoleAssignmentCollection.removeAsync({
       'role._id': roleName
     })
 
     do {
       // For all roles who have it as a dependency ...
       roles = await Roles._getParentRoleNamesAsync(
-        await Meteor.roles.findOneAsync({ _id: roleName })
+        await RolesCollection.findOneAsync({ _id: roleName })
       )
 
-      for (const r of await Meteor.roles
+      for (const r of await RolesCollection
         .find({ _id: { $in: roles } })
         .fetchAsync()) {
-        await Meteor.roles.updateAsync(
+        await RolesCollection.updateAsync(
           {
             _id: r._id
           },
@@ -159,9 +159,9 @@ Object.assign(Roles, {
         )
 
         inheritedRoles = await Roles._getInheritedRoleNamesAsync(
-          await Meteor.roles.findOneAsync({ _id: r._id })
+          await RolesCollection.findOneAsync({ _id: r._id })
         )
-        await Meteor.roleAssignment.updateAsync(
+        await RoleAssignmentCollection.updateAsync(
           {
             'role._id': r._id
           },
@@ -178,7 +178,7 @@ Object.assign(Roles, {
     } while (roles.length > 0)
 
     // And finally remove the role itself
-    await Meteor.roles.removeAsync({ _id: roleName })
+    await RolesCollection.removeAsync({ _id: roleName })
   },
 
   /**
@@ -198,7 +198,7 @@ Object.assign(Roles, {
 
     if (oldName === newName) return
 
-    const role = await Meteor.roles.findOneAsync({ _id: oldName })
+    const role = await RolesCollection.findOneAsync({ _id: oldName })
 
     if (!role) {
       throw new Error("Role '" + oldName + "' does not exist.")
@@ -206,10 +206,10 @@ Object.assign(Roles, {
 
     role._id = newName
 
-    await Meteor.roles.insertAsync(role)
+    await RolesCollection.insertAsync(role)
 
     do {
-      count = await Meteor.roleAssignment.updateAsync(
+      count = await RoleAssignmentCollection.updateAsync(
         {
           'role._id': oldName
         },
@@ -223,7 +223,7 @@ Object.assign(Roles, {
     } while (count > 0)
 
     do {
-      count = await Meteor.roleAssignment.updateAsync(
+      count = await RoleAssignmentCollection.updateAsync(
         {
           'inheritedRoles._id': oldName
         },
@@ -237,7 +237,7 @@ Object.assign(Roles, {
     } while (count > 0)
 
     do {
-      count = await Meteor.roles.updateAsync(
+      count = await RolesCollection.updateAsync(
         {
           'children._id': oldName
         },
@@ -250,7 +250,7 @@ Object.assign(Roles, {
       )
     } while (count > 0)
 
-    await Meteor.roles.removeAsync({ _id: oldName })
+    await RolesCollection.removeAsync({ _id: oldName })
   },
 
   /**
@@ -287,7 +287,7 @@ Object.assign(Roles, {
     Roles._checkRoleName(parentName)
 
     // query to get role's children
-    const role = await Meteor.roles.findOneAsync({ _id: roleName })
+    const role = await RolesCollection.findOneAsync({ _id: roleName })
 
     if (!role) {
       throw new Error("Role '" + roleName + "' does not exist.")
@@ -300,7 +300,7 @@ Object.assign(Roles, {
       )
     }
 
-    const count = await Meteor.roles.updateAsync(
+    const count = await RolesCollection.updateAsync(
       {
         _id: parentName,
         'children._id': {
@@ -320,7 +320,7 @@ Object.assign(Roles, {
     // already a sub-role; in any case we do not have anything more to do
     if (!count) return
 
-    await Meteor.roleAssignment.updateAsync(
+    await RoleAssignmentCollection.updateAsync(
       {
         'inheritedRoles._id': parentName
       },
@@ -373,7 +373,7 @@ Object.assign(Roles, {
 
     // check for role existence
     // this would not really be needed, but we are trying to match addRolesToParent
-    const role = await Meteor.roles.findOneAsync(
+    const role = await RolesCollection.findOneAsync(
       { _id: roleName },
       { fields: { _id: 1 } }
     )
@@ -382,7 +382,7 @@ Object.assign(Roles, {
       throw new Error("Role '" + roleName + "' does not exist.")
     }
 
-    const count = await Meteor.roles.updateAsync(
+    const count = await RolesCollection.updateAsync(
       {
         _id: parentName
       },
@@ -402,18 +402,18 @@ Object.assign(Roles, {
     // For all roles who have had it as a dependency ...
     const roles = [
       ...(await Roles._getParentRoleNamesAsync(
-        await Meteor.roles.findOneAsync({ _id: parentName })
+        await RolesCollection.findOneAsync({ _id: parentName })
       )),
       parentName
     ]
 
-    for (const r of await Meteor.roles
+    for (const r of await RolesCollection
       .find({ _id: { $in: roles } })
       .fetchAsync()) {
       const inheritedRoles = await Roles._getInheritedRoleNamesAsync(
-        await Meteor.roles.findOneAsync({ _id: r._id })
+        await RolesCollection.findOneAsync({ _id: r._id })
       )
-      await Meteor.roleAssignment.updateAsync(
+      await RoleAssignmentCollection.updateAsync(
         {
           'role._id': r._id,
           'inheritedRoles._id': role._id
@@ -543,7 +543,7 @@ Object.assign(Roles, {
         selector.scope = options.scope
       }
 
-      await Meteor.roleAssignment.removeAsync(selector)
+      await RoleAssignmentCollection.removeAsync(selector)
 
       // and then add all
       for (const role of roles) {
@@ -573,7 +573,7 @@ Object.assign(Roles, {
       return
     }
 
-    const role = await Meteor.roles.findOneAsync(
+    const role = await RolesCollection.findOneAsync(
       { _id: roleName },
       { fields: { children: 1 } }
     )
@@ -588,7 +588,7 @@ Object.assign(Roles, {
 
     // This might create duplicates, because we don't have a unique index, but that's all right. In case there are two, withdrawing the role will effectively kill them both.
     // TODO revisit this
-    /* const res = await Meteor.roleAssignment.upsertAsync(
+    /* const res = await RoleAssignmentCollection.upsertAsync(
       {
         "user._id": userId,
         "role._id": roleName,
@@ -602,7 +602,7 @@ Object.assign(Roles, {
         },
       }
     ); */
-    const existingAssignment = await Meteor.roleAssignment.findOneAsync({
+    const existingAssignment = await RoleAssignmentCollection.findOneAsync({
       'user._id': userId,
       'role._id': roleName,
       scope: options.scope
@@ -611,7 +611,7 @@ Object.assign(Roles, {
     let insertedId
     let res
     if (existingAssignment) {
-      await Meteor.roleAssignment.updateAsync(existingAssignment._id, {
+      await RoleAssignmentCollection.updateAsync(existingAssignment._id, {
         $set: {
           user: { _id: userId },
           role: { _id: roleName },
@@ -619,9 +619,9 @@ Object.assign(Roles, {
         }
       })
 
-      res = await Meteor.roleAssignment.findOneAsync(existingAssignment._id)
+      res = await RoleAssignmentCollection.findOneAsync(existingAssignment._id)
     } else {
-      insertedId = await Meteor.roleAssignment.insertAsync({
+      insertedId = await RoleAssignmentCollection.insertAsync({
         user: { _id: userId },
         role: { _id: roleName },
         scope: options.scope
@@ -629,7 +629,7 @@ Object.assign(Roles, {
     }
 
     if (insertedId) {
-      await Meteor.roleAssignment.updateAsync(
+      await RoleAssignmentCollection.updateAsync(
         { _id: insertedId },
         {
           $set: {
@@ -641,7 +641,7 @@ Object.assign(Roles, {
         }
       )
 
-      res = await Meteor.roleAssignment.findOneAsync({ _id: insertedId })
+      res = await RoleAssignmentCollection.findOneAsync({ _id: insertedId })
     }
     res.insertedId = insertedId // For backward compatibility
 
@@ -668,7 +668,7 @@ Object.assign(Roles, {
     const parentRoles = new Set([role._id])
 
     for (const roleName of parentRoles) {
-      for (const parentRole of await Meteor.roles
+      for (const parentRole of await RolesCollection
         .find({ 'children._id': roleName })
         .fetchAsync()) {
         parentRoles.add(parentRole._id)
@@ -697,7 +697,7 @@ Object.assign(Roles, {
     const nestedRoles = new Set([role])
 
     for (const r of nestedRoles) {
-      const roles = await Meteor.roles
+      const roles = await RolesCollection
         .find(
           { _id: { $in: r.children.map((r) => r._id) } },
           { fields: { children: 1 } }
@@ -788,7 +788,7 @@ Object.assign(Roles, {
       selector.scope = options.scope
     }
 
-    await Meteor.roleAssignment.removeAsync(selector)
+    await RoleAssignmentCollection.removeAsync(selector)
   },
 
   /**
@@ -861,7 +861,7 @@ Object.assign(Roles, {
     const res = await asyncSome(roles, async (roleName) => {
       selector['inheritedRoles._id'] = roleName
       const out =
-        (await Meteor.roleAssignment
+        (await RoleAssignmentCollection
           .find(selector, { limit: 1 })
           .countAsync()) > 0
       return out
@@ -935,7 +935,7 @@ Object.assign(Roles, {
       delete filter.fields
     }
 
-    const roles = await Meteor.roleAssignment.find(selector, filter).fetchAsync()
+    const roles = await RoleAssignmentCollection.find(selector, filter).fetchAsync()
 
     if (options.fullObjects) {
       return roles
@@ -960,14 +960,14 @@ Object.assign(Roles, {
    *
    * @method getAllRoles
    * @param {Object} [queryOptions] Options which are passed directly
-   *                                through to `Meteor.roles.find(query, options)`.
+   *                                through to `RolesCollection.find(query, options)`.
    * @return {Cursor} Cursor of existing roles.
    * @static
    */
   getAllRoles: function (queryOptions) {
     queryOptions = queryOptions || { sort: { _id: 1 } }
 
-    return Meteor.roles.find({}, queryOptions)
+    return RolesCollection.find({}, queryOptions)
   },
 
   /**
@@ -1020,7 +1020,7 @@ Object.assign(Roles, {
    *     roles will also be checked
    *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
    *   - `queryOptions`: options which are passed directly
-   *     through to `Meteor.roleAssignment.find(query, options)`
+   *     through to `RoleAssignmentCollection.find(query, options)`
 
    * Alternatively, it can be a scope name string.
    * @return {Cursor} Cursor of user assignments for roles.
@@ -1053,7 +1053,7 @@ Object.assign(Roles, {
    *
    * Alternatively, it can be a scope name string.
    * @param {Object} [filter] Options which are passed directly
-   *                                through to `Meteor.roleAssignment.find(query, options)`
+   *                                through to `RoleAssignmentCollection.find(query, options)`
    * @return {Object} Cursor to the assignment documents
    * @private
    * @static
@@ -1093,7 +1093,7 @@ Object.assign(Roles, {
       }
     }
 
-    return Meteor.roleAssignment.find(selector, filter)
+    return RoleAssignmentCollection.find(selector, filter)
   },
 
   /**
@@ -1149,7 +1149,7 @@ Object.assign(Roles, {
     }
 
     const scopes = (
-      await Meteor.roleAssignment
+      await RoleAssignmentCollection
         .find(selector, { fields: { scope: 1 } })
         .fetchAsync()
     ).map((obi) => obi.scope)
@@ -1177,7 +1177,7 @@ Object.assign(Roles, {
     if (oldName === newName) return
 
     do {
-      count = await Meteor.roleAssignment.updateAsync(
+      count = await RoleAssignmentCollection.updateAsync(
         {
           scope: oldName
         },
@@ -1204,7 +1204,7 @@ Object.assign(Roles, {
   removeScopeAsync: async function (name) {
     Roles._checkScopeName(name)
 
-    await Meteor.roleAssignment.removeAsync({ scope: name })
+    await RoleAssignmentCollection.removeAsync({ scope: name })
   },
 
   /**
@@ -1256,7 +1256,7 @@ Object.assign(Roles, {
         return true
       }
 
-      const role = await Meteor.roles.findOneAsync({ _id: roleName })
+      const role = await RolesCollection.findOneAsync({ _id: roleName })
 
       // This should not happen, but this is a problem to address at some other time.
       if (!role) continue
@@ -1309,7 +1309,7 @@ Object.assign(Roles, {
   /**
    * Throw an exception if `scopeName` is an invalid scope name.
    *
-   * @method _checkRoleName
+   * @method _checkScopeName
    * @param {String} scopeName A scope name to match against.
    * @private
    * @static

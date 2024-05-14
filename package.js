@@ -25,7 +25,7 @@ Package.onUse(function (api) {
 
   api.use(['blaze@2.9.0'], 'client', { weak: true })
 
-  api.export('Roles')
+  api.export(['Roles', 'RolesCollection', 'RoleAssignmentCollection'])
 
   api.addFiles('roles/roles_client.js', 'client')
   api.addFiles('roles/roles_common_async.js', both)
