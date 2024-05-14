@@ -10,6 +10,100 @@
 
 
 
+## v2.16.0, 2024-05-14
+
+### Highlights
+
+
+#### Migration Steps
+
+## Breaking Changes
+
+## Docs
+
+## Internal API changes
+
+* Add method name to MethodInvocation in DDP messages
+
+## Meteor Version Release
+
+* Meteor tool
+  - Updated Svelte skeleton
+  - Update tsconfig.json for Svelte skeleton
+  - Updated Solid skeleton NPM dependencies
+
+* Blaze
+  - Support of async dynamic attributes [PR](https://github.com/meteor/blaze/pull/460)
+  - Fix Blaze._expandAttributes returns empty object, if null. [PR](https://github.com/meteor/blaze/pull/458)
+
+* `accounts-base@2.2.11`
+  - Supported session storage to store accounts login token [PR](https://github.com/meteor/meteor/pull/13046)
+  - Update config checking
+  - Added new types [PR](https://github.com/meteor/meteor/pull/13042)
+
+* `accounts-oauth@1.4.4`
+  - Remove config checking as it is done in `accounts-base`
+
+* `accounts-ui-unstyled@1.7.1`
+  - `Connect with Twitter` is now `Connect with X/Twitter`
+
+* `check@1.4.1`:
+  - Added an optional flag to immediately throw error when all checks failed. [PR](https://github.com/meteor/meteor/pull/12970)
+
+* `ddp-common@1.4.1`
+  - Add method name to MethodInvocation
+
+* `ddp-client@2.6.2`
+  - Add method name to MethodInvocation
+
+* `ddp-server@2.7.1`
+  - Add method name to MethodInvocation
+
+* `twitter-config-ui@1.0.2`
+  - Update setup instructions
+
+* `email@2.2.6`
+  - Nodemailer update to v6.9.10
+  - `@types/nodemailer` updated to v6.4.14
+  - Adds the ability to encrypt your emails using PGP [PR](https://github.com/meteor/meteor/pull/12991)
+
+* `logging@1.3.4`
+  - Type update
+
+* `minimongo@1.9.4`
+  - Support observeChangesAsync and observeAsync [PR](https://github.com/meteor/meteor/pull/13025)
+  - Report and extend test cases for the old async behaviors
+
+* `minifier-js@2.8.0`
+  - Update terser to v5.31.0
+
+* `mongo@1.16.10`
+  - Support a new option to include/exclude certain collections for oplog tailing [PR](https://github.com/meteor/meteor/pull/13009)
+
+* `reload-safetybelt@1.0.13`
+  - Remove underscore dependency
+
+* `service-configuration@1.3.4`
+  - Type update
+
+## Independent releases
+
+* `mongo@1.16.9`:
+  - Set `minPoolSize` for oplog
+
+* `underscore@1.6.1`
+  - Fix bug in `_.intersection`
+
+## Contributors
+
+- [nachocodoner](https://github.com/nachocodoner)
+- [StorytellerCZ](https://github.com/StorytellerCZ)
+- [jamauro](https://github.com/jamauro)
+- [Twisterking](https://github.com/Twisterking)
+- [harryadel](https://github.com/harryadel)
+
+For making this great framework even better!
+
 ## v2.15.0, 2024-02-05
 
 ### Highlights
