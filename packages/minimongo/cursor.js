@@ -221,8 +221,6 @@ export default class Cursor {
    * @locus Anywhere
    * @memberOf Mongo.Cursor
    * @instance
-   * @param {Object} callbacks Functions to call to deliver the result set as it
-   *                           changes
    */
   observeAsync(options) {
     return new Promise(resolve => resolve(this.observe(options)));

@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 4,
   "dependencies": {
     "amdefine": {
       "version": "1.0.1",
@@ -32,9 +32,9 @@
       "integrity": "sha512-fKSWtyNQTclfi1A+s2KU91/r1mfANG1ZibxTdCwJGfV1J9UwcV22plFOm0wkaq4WzqW87zxiAkyp2Ho1Wn1NnA=="
     },
     "caniuse-db": {
-      "version": "1.0.30001509",
-      "resolved": "https://registry.npmjs.org/caniuse-db/-/caniuse-db-1.0.30001509.tgz",
-      "integrity": "sha512-Gf3pFp97loixG5w83NVb09DMI+WzkVXLn4H2abxv7DXxHUyKYbZc5qpEqAQy/mDFO6bAnNQh4hZ8lLeGlPTZQg=="
+      "version": "1.0.30001618",
+      "resolved": "https://registry.npmjs.org/caniuse-db/-/caniuse-db-1.0.30001618.tgz",
+      "integrity": "sha512-MyTrvYsLdpWahu82xDGDdaUIHAq/VsDbi28BRLdaVpm0VFfILsukHMqaf0cxy10OTFdp7DixnJIclc5/IU6OXQ=="
     },
     "concat-map": {
       "version": "0.0.1",
