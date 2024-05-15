@@ -1213,13 +1213,11 @@ if (Meteor.isServer) (() => {
   // This test properly belongs in accounts-base/accounts_tests.js, but
   // this is where the tests that actually log in are.
   Tinytest.addAsync('accounts - user() out of context', async test => {
-    await Meteor._runFresh(async () => {
-      await test.throwsAsync(
-        async () =>
-          await Meteor.user()
-      );
-      await Meteor.users.removeAsync({});
-    })
+    await test.throwsAsync(
+      async () =>
+        await Meteor.user()
+    );
+    await Meteor.users.removeAsync({});
   });
 
   // XXX would be nice to test
