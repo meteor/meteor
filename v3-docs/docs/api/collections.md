@@ -1145,7 +1145,7 @@ You can pass any MongoDB valid option, these are just examples using
 certificates configurations.
 
 
-### Mongo Oplog Options
+### Mongo Oplog Options {#mongo-oplog-options}
 
 > Oplog options were introduced in Meteor 2.15.1
 If you set the [`MONGO_OPLOG_URL`](https://docs.meteor.com/environment-variables.html#MONGO-OPLOG-URL) env var, Meteor will use MongoDB's Oplog to show efficient, real time updates to your users via your subscriptions.
