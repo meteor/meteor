@@ -36,6 +36,7 @@ jobs:
       - name: Install dependencies
         shell: pwsh
         run: |
+          echo $env:PATH
           .\scripts\windows\appveyor\install.ps1
 
       - name: Run tests
