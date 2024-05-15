@@ -1,4 +1,6 @@
-﻿# Appveyor already sets $PLATFORM to exactly what we don't want, so
+﻿set PATH=^%PATH^%;"C:\Program Files\7-Zip"
+
+# Appveyor already sets $PLATFORM to exactly what we don't want, so
 # we'll prepend it with 'windows_' if that seems to be the case.
 If ($env:PLATFORM -Match '^x86|x64$') {
   $env:PLATFORM = "windows_${env:PLATFORM}"
