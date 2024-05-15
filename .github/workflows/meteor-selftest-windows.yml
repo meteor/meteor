@@ -36,11 +36,13 @@ jobs:
       - name: Install dependencies
         shell: pwsh
         run: |
+          set PATH=^%PATH^%;"C:\Program Files\7-Zip" 
           .\scripts\windows\appveyor\install.ps1
 
       - name: Run tests
         shell: pwsh
         run: |
+          set PATH=^%PATH^%;"C:\Program Files\7-Zip" 
           .\scripts\windows\appveyor\test.ps1
 
       - name: Cache dependencies
