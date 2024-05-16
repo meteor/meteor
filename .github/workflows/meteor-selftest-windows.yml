@@ -37,15 +37,13 @@ jobs:
         shell: pwsh
         run: |
           $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
-          echo $env:PATH
-          .\scripts\windows\appveyor\install.ps1
+          .\scripts\windows\ci\install.ps1
 
       - name: Run tests
         shell: pwsh
         run: |
           $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
-          echo $env:PATH
-          .\scripts\windows\appveyor\test.ps1
+          .\scripts\windows\ci\test.ps1
 
       - name: Cache dependencies
         uses: actions/cache@v2
