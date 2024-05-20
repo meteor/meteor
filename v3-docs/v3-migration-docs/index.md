@@ -25,7 +25,7 @@ meteor create my-new-project --release 3.0-rc.1
 
 ## How to upgrade from Meteor 2.x?
 
-You can update your Meteor 2.x project by running the command below inside your project folder:
+You can upgrade your Meteor 2.x project by running the command below inside your project folder:
 
 ```bash
 meteor update --release 3.0-rc.1
