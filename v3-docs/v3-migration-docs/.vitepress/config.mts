@@ -32,9 +32,10 @@ export default defineConfig({
       {
         text: "API Changes",
         items: [
-          {text: "Using Async Functions", link: "/api/async-functions"},
+          {text: "Global Variables", link: "/api/global-variables"},
           {text: "Renamed Functions", link: "/api/renamed-functions"},
           {text: "Removed Functions", link: "/api/removed-functions"},
+          {text: "Using Async Functions", link: "/api/async-functions"},
         ]
       },
       {
