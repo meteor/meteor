@@ -6,15 +6,11 @@
   const addToCounter = () => {
     counter += 1;
   }
-  
-  let subIsReady = false;
-  $m: {
-    const handle = Meteor.subscribe("links.all");
-    subIsReady = handle.ready();
-  }
 
   // more information about $m at https://atmospherejs.com/zodern/melte#tracker-statements
-  let links;
+  $m: handle = Meteor.subscribe("links.all");
+  $m: subIsReady = handle.ready();
+
   $m: links = LinksCollection.find().fetch();
 </script>
 
