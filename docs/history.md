@@ -726,18 +726,27 @@ For making this great framework even better!
 
 ### Highlights
 
+- Support observeChangesAsync and observeAsync. [PR](https://github.com/meteor/meteor/pull/13025)
+- New mongo package options to optimize Oplog tailing performance to include/exclude certain collections [PR](https://github.com/meteor/meteor/pull/13009)
 
 #### Migration Steps
 
-## Breaking Changes
+To update from 2.15 to this one, you can run:
 
-## Docs
+```
+meteor update --release 2.16
+```
 
-## Internal API changes
+If you're coming from an older version, please check our [Migration Guides](https://guide.meteor.com/2.14-migration).
+
+#### Breaking Changes
+N/A
+
+#### Internal API changes
 
 * Add method name to MethodInvocation in DDP messages
 
-## Meteor Version Release
+#### Meteor Version Release
 
 * Meteor tool
   - Updated Svelte skeleton
@@ -798,7 +807,7 @@ For making this great framework even better!
 * `service-configuration@1.3.4`
   - Type update
 
-## Independent releases
+#### Independent releases
 
 * `mongo@1.16.9`:
   - Set `minPoolSize` for oplog
@@ -806,7 +815,7 @@ For making this great framework even better!
 * `underscore@1.6.1`
   - Fix bug in `_.intersection`
 
-## Contributors
+#### Contributors
 
 - [nachocodoner](https://github.com/nachocodoner)
 - [StorytellerCZ](https://github.com/StorytellerCZ)
@@ -814,8 +823,7 @@ For making this great framework even better!
 - [Twisterking](https://github.com/Twisterking)
 - [harryadel](https://github.com/harryadel)
 
-For making this great framework even better!
-
+Thanks for making this great framework even better!
 
 ## v2.15.0, 2024-02-05
 
