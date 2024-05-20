@@ -17,6 +17,24 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 
 Read more about customizing user accounts in the [Accounts](http://guide.meteor.com/accounts.html) article in the Meteor Guide.
 
+### Accounts with Session Storage {#accounts-session-storage}
+
+By default, Meteor uses Local Storage to store, among other things, login tokens in your browser session. But, for some applications, it makes sense to use Session Storage instead. You can achieve this by adding this to your settings:
+
+```json
+{
+  // ... all other settings,
+  "public": {
+    // ... all your public settings
+    "packages": {
+      "accounts": {
+        "clientStorage": "session"
+      }
+    }
+  }
+}
+```
+
 <ApiBox name="Meteor.user" hasCustomExample/>
 
 Retrieves the user record for the current user from
