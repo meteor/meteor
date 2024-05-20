@@ -10,11 +10,11 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "10.1.0",
+    npm: "10.5.0",
     pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
     "node-gyp": "9.4.0",
     "@mapbox/node-pre-gyp": "1.0.11",
-    typescript: "4.9.5",
+    typescript: "5.4.5",
     "@meteorjs/babel": "7.19.0-beta.3",
     "@meteorjs/reify": "0.24.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
