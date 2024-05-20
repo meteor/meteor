@@ -21,4 +21,4 @@ Also, to get types for Meteor core packages working in your IDE, you need to hav
 }
 ```
 
-You can find out more [here](https://github.com/zodern/meteor-types).
+You can learn more about the `zodern:types` package [here](https://github.com/zodern/meteor-types).
