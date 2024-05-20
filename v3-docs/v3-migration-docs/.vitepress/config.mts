@@ -24,6 +24,12 @@ export default defineConfig({
         ]
       },
       {
+        text: "TypeScript",
+        items: [
+          {text: "Types for Meteor 3", link: "/typescript/meteor-types"},
+        ]
+      },
+      {
         text: "API Changes",
         items: [
           {text: "Using Async Functions", link: "/api/async-functions"},
