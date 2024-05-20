@@ -15,3 +15,9 @@ Package.onUse(api => {
 
   api.export('MeteorDeveloperAccounts');
 });
+
+Package.onTest(function(api) {
+  api.use('meteor-developer-oauth');
+  api.use(['tinytest', 'ecmascript', 'test-helpers', 'oauth', 'oauth2', 'service-configuration']);
+  api.addFiles('meteor-developer-oauth_tests.js');
+});
