@@ -1143,7 +1143,7 @@ main.registerCommand({
   } catch (e) {
 
     if (
-      e.message !== "Using prototype option" ||
+      e.message !== "Using prototype option" &&
       e.message !== "Using release option"
     ) {
       // something has happened while creating the app using git clone
