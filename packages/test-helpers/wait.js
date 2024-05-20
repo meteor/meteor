@@ -2,7 +2,7 @@ function isPromise(obj) {
   return obj && typeof obj.then === 'function';
 }
 
-waitUntil = function _waitUntil(checkFunction, { timeout = 15_000, interval = 200, leading = false, description = '' } = {}) {
+waitUntil = function _waitUntil(checkFunction, { timeout = 15_000, interval = 200, leading = true, description = '' } = {}) {
   let waitTime = interval;
   return new Promise((resolve, reject) => {
     if (leading && checkFunction()) {
