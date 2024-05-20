@@ -6,7 +6,7 @@ In order to get types working in your Meteor 3 project, you will need to add the
 meteor add zodern:types
 ```
 
-Also, in order to get types for Meteor core packages working in your IDE you need to have a valid `tsconfig.json` file in your project root including the following:
+Also, to get types for Meteor core packages working in your IDE, you need to have a valid `tsconfig.json` file in your project root, including the following:
 
 ```json
 {
