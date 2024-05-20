@@ -32,9 +32,9 @@
       "integrity": "sha512-fKSWtyNQTclfi1A+s2KU91/r1mfANG1ZibxTdCwJGfV1J9UwcV22plFOm0wkaq4WzqW87zxiAkyp2Ho1Wn1NnA=="
     },
     "caniuse-db": {
-      "version": "1.0.30001618",
-      "resolved": "https://registry.npmjs.org/caniuse-db/-/caniuse-db-1.0.30001618.tgz",
-      "integrity": "sha512-MyTrvYsLdpWahu82xDGDdaUIHAq/VsDbi28BRLdaVpm0VFfILsukHMqaf0cxy10OTFdp7DixnJIclc5/IU6OXQ=="
+      "version": "1.0.30001620",
+      "resolved": "https://registry.npmjs.org/caniuse-db/-/caniuse-db-1.0.30001620.tgz",
+      "integrity": "sha512-dYQIgCcUpy2l/IfiEA6xgNHCgr5jmDWF4i89MRv6DqCiEt4MNJguYsVeVZSxyqWfb8GfhWEZEMkjI3vhIYRrvw=="
     },
     "concat-map": {
       "version": "0.0.1",
