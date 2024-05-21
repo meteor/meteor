@@ -36,10 +36,16 @@ function updateAslStore(key, value) {
   return getAslStore()[key] = value;
 }
 
+function runFresh(fn) {
+  var asyncLocalStorage = getAsl();
+  return asyncLocalStorage.run({}, fn);
+}
+
 Meteor._getAsl = getAsl;
 Meteor._getAslStore = getAslStore;
 Meteor._getValueFromAslStore = getValueFromAslStore;
 Meteor._updateAslStore = updateAslStore;
+Meteor._runFresh = runFresh;
 
 Meteor._runAsync = function (fn, ctx, store) {
   if (store === undefined) {

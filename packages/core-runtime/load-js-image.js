@@ -122,7 +122,7 @@ function checkAsyncModule (exports) {
 // For this to be accurate, all linked files must be queued before calling this
 // If all are loaded, returns null. Otherwise, returns a promise
 function waitUntilAllLoaded() {
-  if (pending.length === 0) {
+  if (pending.length === 0 && !isProcessing) {
     // All packages are loaded
     // If there were no async packages, then there might not be a promise
     // polyfill loaded either, so we don't create a promise to return

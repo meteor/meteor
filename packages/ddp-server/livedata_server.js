@@ -787,6 +787,7 @@ Object.assign(Session.prototype, {
       };
 
       var invocation = new DDPCommon.MethodInvocation({
+        name: msg.method,
         isSimulation: false,
         userId: self.userId,
         setUserId: setUserId,

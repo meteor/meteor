@@ -475,4 +475,4 @@ Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(t
   id = await collection.insertAsync({a: 2});
   test.equal((await collection.findOneAsync(id)).a, 2);
   await collection.removeAsync({});
-})
+});

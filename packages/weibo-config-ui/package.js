@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Blaze configuration templates for Weibo OAuth.",
-  version: '1.0.3-rc300.0',
+  version: '1.0.3-rc300.1',
 });
 
 Package.onUse(api => {
