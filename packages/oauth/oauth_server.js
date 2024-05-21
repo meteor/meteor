@@ -291,7 +291,7 @@ OAuth._renderOauthResults = async (res, query, credentialSecret) => {
 };
 
 const getAsset = (name) => {
-  return new Promise((resolve, reject) => Assets.getText(
+  return new Promise((resolve, reject) => Assets.getTextAsync(
     `${name}.html`,
     (err, data) => err ? reject(err) : resolve(data)))
 }
