@@ -2,8 +2,6 @@
 
 In Meteor 3, there are important changes regarding the definition of global variables in applications. This document provides guidelines on how to properly define globals in Meteor 3 and explains the implications of strict mode enforcement.
 
-## Defining Global Variables in Applications
-
 ### Previous Approach
 
 In previous versions of Meteor, you might have defined a global variable in your application using the following syntax:
@@ -26,13 +24,9 @@ This change is necessary because strict mode, which is automatically enforced in
 
 For packages, the process of defining global variables remains unchanged from Meteor 2. You can continue to define globals as you have previously without any modifications.
 
-### Explanation
-
 In Meteor packages, Meteor automatically adds a variable declaration within the package scope. This behavior prevents the need for using the `global` object and avoids the strict mode restrictions.
 
 However, in applications, there is no equivalent "app scope," so globals defined in applications must be true globals, requiring the use of the `global` object.
-
-## Strict Mode and Its Implications
 
 Meteor 3 enforces strict mode for modules that use top-level await (TLA) or the `import` syntax. This enforcement aligns with JavaScript specifications and improves the overall consistency and compliance of your code.
 
