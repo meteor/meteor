@@ -16,6 +16,10 @@ export class TestCaseResults {
     this.extraDetails = {};
   }
 
+  sleep(ms = 0) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   ok(doc) {
     var ok = {type: "ok"};
     if (doc)
