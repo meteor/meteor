@@ -354,10 +354,10 @@ const loadServerBundles = Profile("Load server bundles", async function () {
     };
 
     const Assets = {
-      getText: function (assetPath, callback) {
+      getTextAsync: function (assetPath, callback) {
         return getAsset(assetPath, "utf8", callback);
       },
-      getBinary: function (assetPath, callback) {
+      getBinaryAsync: function (assetPath, callback) {
         return getAsset(assetPath, undefined, callback);
       },
       /**
