@@ -41,5 +41,3 @@ For more detailed information on strict mode and its implications, refer to the 
 ## Conclusion
 
 By following these guidelines, you can ensure that your global variable definitions are compatible with Meteor 3 and its strict mode enforcement. This will help maintain the stability and compliance of your application as you transition to the latest version of Meteor.
-
-For further assistance, please refer to the official Meteor documentation or reach out to the Meteor community.

@@ -21,5 +21,3 @@ A decision was made to retain this behavior to ensure Meteor's compliance with t
 While this change aims to bring Meteor more in line with the JavaScript specification, developers might notice some inconsistencies or changes in the user experience. It is important to review your code to ensure compatibility with strict mode, especially if your modules rely on defining globals or other behaviors not permitted in strict mode.
 
 The enforcement of strict mode in certain scenarios in Meteor 3 represents a step towards greater specification compliance and modernization. Developers should adapt their code to accommodate these changes, ensuring a smooth transition to Meteor 3.
-
-For further details and support, please refer to the official Meteor documentation or reach out to the Meteor community.
