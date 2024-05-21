@@ -21,6 +21,7 @@ export default defineConfig({
           {text: "Breaking Changes", link: "/breaking-changes/"},
           {text: "Meteor.call x Meteor.callAsync", link: "/breaking-changes/call-x-callAsync"},
           {text: "Upgrading packages", link: "/breaking-changes/upgrading-packages"},
+          {text: "Publishing Packages", link: "/guide/publishing-packages"},
         ]
       },
       {

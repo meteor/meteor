@@ -19,7 +19,8 @@ Package.onUse((api) => {
   //                              ^^^^^^^ for meteor 3.0
 });
 ```
-Then you can publish your package and test it with Meteor 3.0, by running `meteor publish`.
+
+Then you can publish your package and test it with Meteor 3.0, by running `meteor publish --release=3.0-rc.2`.
 
 
 ## Changes for packages that do not use Meteor packages that had breaking change
