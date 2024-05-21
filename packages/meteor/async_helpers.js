@@ -71,7 +71,7 @@ Object.assign(AsynchronousQueue.prototype, {
     const promise = new Promise(r => resolve = r);
     const runImmediateHandle = (fn) => {
       if (Meteor.isServer) {
-        setImmediate(fn);
+        Meteor._runFresh(() => setImmediate(fn))
         return;
       }
       setTimeout(fn, 0);
