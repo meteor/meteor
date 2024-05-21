@@ -428,21 +428,23 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
-function getBoilerplateAsync(request, arch) {
+async function getBoilerplateAsync(request, arch) {
   let boilerplate = boilerplateByArch[arch];
-  runtimeConfig.hooks.forEach(hook => {
-    const meteorRuntimeConfig = hook({
-      arch,
-      request,
-      encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
-      updated: runtimeConfig.isUpdatedByArch[arch],
-    });
-    if (!meteorRuntimeConfig) return true;
-    boilerplate.baseData = Object.assign({}, boilerplate.baseData, {
-      meteorRuntimeConfig,
-    });
-    return true;
-  });
+  if (Array.isArray(runtimeConfig.hooks)) {
+    for (const hook of runtimeConfig.hooks) {
+      // Await the hook call since it is now async
+      const meteorRuntimeConfig = await hook({
+        arch,
+        request,
+        encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
+        updated: runtimeConfig.isUpdatedByArch[arch],
+      });
+      if (!meteorRuntimeConfig) continue;
+      boilerplate.baseData = Object.assign({}, boilerplate.baseData, {
+        meteorRuntimeConfig,
+      });
+    }
+  }
   runtimeConfig.isUpdatedByArch[arch] = false;
   const data = Object.assign(
     {},
@@ -1516,4 +1518,3 @@ WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
 await runWebAppServer();
-
