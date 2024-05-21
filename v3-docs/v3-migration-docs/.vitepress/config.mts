@@ -24,11 +24,19 @@ export default defineConfig({
         ]
       },
       {
+        text: "TypeScript",
+        items: [
+          {text: "Types for Meteor 3", link: "/typescript/meteor-types"},
+        ]
+      },
+      {
         text: "API Changes",
         items: [
-          {text: "Using Async Functions", link: "/api/async-functions"},
+          {text: "Strict Mode", link: "/api/strict-mode"},
+          {text: "Global Variables", link: "/api/global-variables"},
           {text: "Renamed Functions", link: "/api/renamed-functions"},
           {text: "Removed Functions", link: "/api/removed-functions"},
+          {text: "Using Async Functions", link: "/api/async-functions"},
         ]
       },
       {
