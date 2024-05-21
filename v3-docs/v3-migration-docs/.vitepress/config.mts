@@ -32,6 +32,7 @@ export default defineConfig({
       {
         text: "API Changes",
         items: [
+          {text: "Strict Mode", link: "/api/strict-mode"},
           {text: "Global Variables", link: "/api/global-variables"},
           {text: "Renamed Functions", link: "/api/renamed-functions"},
           {text: "Removed Functions", link: "/api/removed-functions"},
