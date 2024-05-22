@@ -354,9 +354,7 @@ Tinytest.addAsync(
         ...WebApp.decodeRuntimeConfig(config.encodedCurrentConfig),
         customKey: 'customValue',
       };
-      return JSON.stringify(
-        encodeURIComponent(JSON.stringify(nextConfig))
-      );
+      return WebApp.encodeRuntimeConfig(nextConfig);
     });
 
     const req = new http.IncomingMessage();
@@ -364,7 +362,6 @@ Tinytest.addAsync(
     req.browser = { name: 'headless' };
     const boilerplate = await WebAppInternals.getBoilerplate(req, 'web.browser');
     const html = await streamToString(boilerplate.stream);
-    console.log("-> html", html);
     test.isTrue(/__meteor_runtime_config__ = (.*customKey[^"].*customValue.*)/.test(html));
   }
 );
