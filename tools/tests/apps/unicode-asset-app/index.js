@@ -13,7 +13,7 @@
 
     let index = 0;
     for (const filename of filenames) {
-      console.log(`${++index} - getText: ${await Assets.getText(filename)}`);
+      console.log(`${++index} - getText: ${await Assets.getTextAsync(filename)}`);
     }
 
     filenames.forEach((filename, index) => {

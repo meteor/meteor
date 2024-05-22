@@ -60,20 +60,10 @@ class EnvironmentVariableAsync {
     }
 
     return Meteor._runAsync(
-      async function () {
-        let ret;
-        try {
-          Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
-          Meteor._updateAslStore(UPPER_CALL_DYNAMICS_KEY_NAME, dynamics);
-          ret = await func();
-        } finally {
-          Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, undefined);
-          Meteor._updateAslStore(
-            UPPER_CALL_DYNAMICS_KEY_NAME,
-            undefined,
-          );
-        }
-        return ret;
+      function () {
+        Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
+        Meteor._updateAslStore(UPPER_CALL_DYNAMICS_KEY_NAME, dynamics);
+        return func();
       },
       self,
       Object.assign(
@@ -142,10 +132,10 @@ Meteor.EnvironmentVariable = EnvironmentVariableAsync;
 /**
  * @summary Stores the current Meteor environment variables, and wraps the
  * function to run with the environment variables restored. On the server, the
- * function is wrapped within a fiber.
+ * function is wrapped within Async Local Storage.
  *
  *  This function has two reasons:
- *  1. Return the function to be executed on the MeteorJS context, having it assinged in the async localstorage.
+ *  1. Return the function to be executed on the MeteorJS context, having it assigned in Async Local Storage.
  *  2. Better error handling, the error message will be more clear.
  * @locus Anywhere
  * @memberOf Meteor

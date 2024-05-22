@@ -107,7 +107,7 @@ Tinytest.addAsync("environment - bindEnvironment", async function (test) {
     test.equal(raised_f, null);
 
     test.equal(await f(true), undefined);
-    test.equal(raised_f, "test");
+    test.equal(raised_f, "test", 'raised_f should be "test"');
   };
 
   // At top level
@@ -117,9 +117,9 @@ Tinytest.addAsync("environment - bindEnvironment", async function (test) {
 
   // Inside a withValue
 
-  await CurrentFoo.withValue(22, function () {
+  await CurrentFoo.withValue(22, async function () {
     test.equal(CurrentFoo.get(), 22);
-    test_f();
+    await test_f();
     test.equal(CurrentFoo.get(), 22);
   });
 
@@ -178,3 +178,54 @@ Tinytest.addAsync("environment - bare bindEnvironment",
     setTimeout(f, 0);
   });
 });
+
+/**
+ * This won't work on the client due to the absence of ALS/AH
+ */
+if (Meteor.isServer) {
+  Tinytest.addAsync('environment - preserve ev value async/await', async function (test) {
+    let val1 = null;
+    let val2 = null;
+
+    let ev1 = new Meteor.EnvironmentVariable();
+
+    async function runAsyncFunction() {
+      await test.sleep(10)
+      val2 = ev1.get();
+    }
+
+    ev1.withValue({ name: 'test' }, async () => {
+      runAsyncFunction();
+
+      val1 = ev1.get();
+    });
+
+    await test.sleep(20)
+
+    test.equal(val1, { name: 'test' }, 'val1 should be equal to { name: "test" }');
+    test.equal(val2, { name: 'test' }, 'val2 should be equal to val1');
+  })
+
+  Tinytest.addAsync('environment - should not access ev after it finishes', async function (test) {
+    const context1 = new Meteor.EnvironmentVariable();
+    const context2 = new Meteor.EnvironmentVariable();
+
+    await context1.withValue({ idd: 123 }, async () => {
+      await context2.withValue({ idd: 456 }, async () => {
+        await context2.withValue({ idd: 789 }, async () => {
+          test.equal(context2.get(), { idd: 789 }, 'context2 should be 789');
+        })
+        test.equal(context2.get(), { idd: 456 }, 'context2 should be 456');
+      })
+
+      test.equal(context1.get(), { idd: 123 }, 'context1 should be 123');
+      test.equal(context2.get(), undefined, 'context2 should be undefined');
+    });
+  })
+}
+
+Tinytest.add('environment - consistent ev value', function (test) {
+  let ev1 = new Meteor.EnvironmentVariable();
+  const ret = ev1.withValue(10, () => 5);
+  test.equal(ret, 5);
+})
