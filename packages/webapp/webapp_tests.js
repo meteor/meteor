@@ -1,3 +1,5 @@
+import { WebApp, WebAppInternals } from './webapp_server';
+
 const url = require("url");
 const crypto = require("crypto");
 const http = require("http");
@@ -343,3 +345,26 @@ Tinytest.add("webapp - npm modules", function (test) {
   test.matches(WebAppInternals.NpmModules.express.version, /^4\.(\d+)\.(\d+)/);
   test.equal(typeof(WebAppInternals.NpmModules.express.module), 'function');
 });
+
+Tinytest.addAsync(
+  "webapp - addRuntimeConfigHook usage",
+  async function (test, done) {
+    WebApp.addRuntimeConfigHook(async (config) => {
+      const nextConfig = {
+        ...WebApp.decodeRuntimeConfig(config.encodedCurrentConfig),
+        customKey: 'customValue',
+      };
+      return JSON.stringify(
+        encodeURIComponent(JSON.stringify(nextConfig))
+      );
+    });
+
+    const req = new http.IncomingMessage();
+    req.url = 'http://example.com';
+    req.browser = { name: 'headless' };
+    const boilerplate = await WebAppInternals.getBoilerplate(req, 'web.browser');
+    const html = await streamToString(boilerplate.stream);
+    console.log("-> html", html);
+    test.isTrue(/__meteor_runtime_config__ = (.*customKey[^"].*customValue.*)/.test(html));
+  }
+);
