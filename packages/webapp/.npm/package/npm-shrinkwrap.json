@@ -367,11 +367,6 @@
       "resolved": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz",
       "integrity": "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A=="
     },
-    "nan": {
-      "version": "2.19.0",
-      "resolved": "https://registry.npmjs.org/nan/-/nan-2.19.0.tgz",
-      "integrity": "sha512-nO1xXxfh/RWNxfd/XPfbIfFk5vgLsAxUR9y5O0cHMJu/AW9U95JLXqthYHjEp+8gQ5p96K9jUp8nbVOxCdRbtw=="
-    },
     "negotiator": {
       "version": "0.6.3",
       "resolved": "https://registry.npmjs.org/negotiator/-/negotiator-0.6.3.tgz",
@@ -421,11 +416,6 @@
       "version": "0.1.7",
       "resolved": "https://registry.npmjs.org/path-to-regexp/-/path-to-regexp-0.1.7.tgz",
       "integrity": "sha512-5DFkuoqlv1uYQKxy8omFBeJPQcdoE07Kv2sferDCrAq1ohOU+MSDswDIbnx3YAM60qIOnYa53wBhXW0EbMonrQ=="
-    },
-    "posix": {
-      "version": "4.2.0",
-      "resolved": "https://registry.npmjs.org/posix/-/posix-4.2.0.tgz",
-      "integrity": "sha512-JbxfT0Fxy/SG10LSkKX1C75iULYfAJqYCwwmM6J0+zh2vl/bE51CqaqvSpdZWg7YAwiuDIoBI6j7in+n3GgXSw=="
     },
     "promise-polyfill": {
       "version": "1.1.6",
