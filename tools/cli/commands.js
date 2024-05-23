@@ -1731,11 +1731,14 @@ main.registerCommand({
   // Doesn't actually take an argument, but we want to print an custom
   // error message if they try to pass one.
   maxArgs: 1,
+  options: {
+    db: { type: Boolean },
+  },
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
   if (options.args.length !== 0) {
-    Console.error("meteor reset only affects the locally stored database.");
+    Console.error("meteor reset might delete the local database using the --db option.");
     Console.error();
     Console.error("To reset a deployed application use");
     Console.error(
@@ -1752,22 +1755,40 @@ main.registerCommand({
                  "MONGO_URL will NOT be reset.");
   }
 
-  // XXX detect the case where Meteor is running the app, but
-  // MONGO_URL was set, so we don't see a Mongo process
-  var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-  var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
-  if (isRunning) {
-    Console.error("reset: Meteor is running.");
-    Console.error();
-    Console.error(
-      "This command does not work while Meteor is running your application.",
-      "Exit the running Meteor development server.");
-    return 1;
+  if (options.db) {
+    // XXX detect the case where Meteor is running the app, but
+    // MONGO_URL was set, so we don't see a Mongo process
+    var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
+    var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
+    if (isRunning) {
+      Console.error("reset: Meteor is running.");
+      Console.error();
+      Console.error(
+        "This command does not work while Meteor is running your application.",
+        "Exit the running Meteor development server.");
+      return 1;
+    }
+
+    return files.rm_recursive_async(
+      files.pathJoin(options.appDir, '.meteor', 'local')
+    ).then(() => {
+      Console.info("Project reset.");
+    });
   }
 
-  return files.rm_recursive_async(
-    files.pathJoin(options.appDir, '.meteor', 'local')
-  ).then(() => {
+  var allExceptDb = files.getPathsInDir(files.pathJoin('.meteor', 'local'), {
+    cwd: options.appDir,
+    maxDepth: 1,
+  }).filter(function (path) {
+    return !path.includes('.meteor/local/db');
+  });
+
+  var allRemovePromises = allExceptDb.map(_path => files.rm_recursive_async(
+    files.pathJoin(options.appDir, _path)
+  ));
+  console.log("-> allRemovePromises", allRemovePromises);
+
+  Promise.all(allRemovePromises).then(() => {
     Console.info("Project reset.");
   });
 });
