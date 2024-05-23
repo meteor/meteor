@@ -11,7 +11,7 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: 'compile-coffeescript',
-  use: ['caching-compiler@1.2.1', 'ecmascript@0.12.7', 'coffeescript-compiler@2.4.1'],
+  use: ['caching-compiler@2.0.0-alpha300.17', 'ecmascript@0.12.7', 'coffeescript-compiler@2.4.1'],
   sources: ['compile-coffeescript.js'],
   npmDependencies: {
     // A breaking change was introduced in @babel/runtime@7.0.0-beta.56
@@ -27,7 +27,6 @@ Package.registerBuildPlugin({
 });
 
 Package.onUse(function (api) {
-  api.versionsFrom("1.8.1");
   api.use('isobuild:compiler-plugin@1.0.0');
 
   // Because the CoffeeScript plugin now calls

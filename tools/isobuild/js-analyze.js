@@ -290,7 +290,7 @@ export function findAssignedGlobals(source, hash) {
   // But it can't pull references outward, so for our purposes it is safe to
   // ignore.
   const scopeManager = analyzeScope(ast, {
-    ecmaVersion: 6,
+    ecmaVersion: 9,
     sourceType: "module",
     ignoreEval: true,
     // Ensures we don't treat top-level var declarations as globals.

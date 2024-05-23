@@ -149,15 +149,19 @@ export class AccountsCommon {
   }
 
   /**
-   * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+   * @summary Get the current user record, or `null` if no user is logged in. A reactive data source. In the server this fuction returns a promise.
    * @locus Anywhere
    * @param {Object} [options]
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    */
   user(options) {
-    const userId = this.userId();
+    const self = this;
+    const userId = self.userId();
+    const findOne = (...args) => Meteor.isClient
+      ? self.users.findOne(...args)
+      : self.users.findOneAsync(...args);
     return userId
-      ? this.users.findOne(userId, this._addDefaultFieldSelector(options))
+      ? findOne(userId, this._addDefaultFieldSelector(options))
       : null;
   }
 
@@ -201,7 +205,7 @@ export class AccountsCommon {
   //     A collection name or a Mongo.Collection object to hold the users.
   // - passwordResetTokenExpirationInDays {Number}
   //     Number of days since password reset token creation until the
-  //     token cannt be used any longer (password reset token expires).
+  //     token can't be used any longer (password reset token expires).
   // - ambiguousErrorMessages {Boolean}
   //     Return ambiguous error messages from login failures to prevent
   //     user enumeration.
@@ -223,7 +227,7 @@ export class AccountsCommon {
    * @param {Number} options.passwordResetTokenExpiration The number of milliseconds from when a link to reset password is sent until token expires and user can't reset password with the link anymore. If `passwordResetTokenExpirationInDays` is set, it takes precedent.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set initial password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
-   * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
+   * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to `false`, but in production environments it is recommended it defaults to `true`.
    * @param {Number} options.bcryptRounds Allows override of number of bcrypt rounds (aka work factor) used to store passwords. The default is 10.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`. Beware when using this. If, for instance, you do not include `email` when excluding the fields, you can have problems with functions like `forgotPassword` that will break because they won't have the required data available. It's recommend that you always keep the fields `_id`, `username`, and `email`.
    * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
@@ -419,14 +423,14 @@ export class AccountsCommon {
 
 /**
  * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
+ * @locus Anywhere
  * @importFromPackage meteor
  */
 Meteor.userId = () => Accounts.userId();
 
 /**
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
+ * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
@@ -435,7 +439,7 @@ Meteor.user = options => Accounts.user(options);
 
 /**
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
+ * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
