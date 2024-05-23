@@ -31,6 +31,12 @@ export default defineConfig({
         ]
       },
       {
+        text: 'Vite Bundler',
+        items: [
+          {text: "Vite Bundler with Meteor 3", link: "/vite-bundler/setup"},
+        ]
+      },
+      {
         text: "API Changes",
         items: [
           {text: "Strict Mode", link: "/api/strict-mode"},
