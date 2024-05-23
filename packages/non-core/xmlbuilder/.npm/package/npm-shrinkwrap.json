@@ -1,0 +1,17 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "xmlbuilder": {
+      "version": "2.4.4",
+      "resolved": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-2.4.4.tgz",
+      "integrity": "sha1-biqE2l33nhGrsKBbrS8KzBLjOJM=",
+      "dependencies": {
+        "lodash-node": {
+          "version": "2.4.1",
+          "resolved": "https://registry.npmjs.org/lodash-node/-/lodash-node-2.4.1.tgz",
+          "integrity": "sha1-6oL3sQDHM9GkKvdoAeUGEF4qgOw="
+        }
+      }
+    }
+  }
+}

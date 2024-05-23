@@ -43,15 +43,8 @@ MockResponse.prototype.end = function (data, encoding) {
 MockResponse.prototype.getBody = function () {
   return this.buffer;
 };
-const asyncGet =
-  (url, opt) =>
-    new Promise((resolve, reject) =>
-      HTTP.get(url, opt, (err, res) =>
-        err
-          ? reject(err)
-          : resolve(res)
-      ));
-Tinytest.addAsync("webapp - content-type header", async function (test) {
+
+Tinytest.add("webapp - content-type header", function (test) {
   const staticFiles = WebAppInternals.staticFilesByArch["web.browser"];
 
   const cssResource = _.find(
@@ -67,10 +60,11 @@ Tinytest.addAsync("webapp - content-type header", async function (test) {
       return staticFiles[url].type === "js";
     }
   );
-  let resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), cssResource));
+
+  let resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), cssResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "text/css; charset=utf-8");
-  resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), jsResource));
+  resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), jsResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "application/javascript; charset=utf-8");
 });
@@ -164,10 +158,10 @@ Tinytest.addAsync(
 
     // It's okay to set this global state because we're not going to yield
     // before setting it back to what it was originally.
-    await WebAppInternals.setInlineScriptsAllowed(true);
+    WebAppInternals.setInlineScriptsAllowed(true);
 
     {
-      const { stream } = await WebAppInternals.getBoilerplate({
+      const { stream } = WebAppInternals.getBoilerplate({
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
       }, "web.browser");
@@ -196,11 +190,11 @@ Tinytest.addAsync(
       // When inline scripts are disallowed, the script body should not be
       // inlined, and the script should be included in a <script src="..">
       // tag.
-      await WebAppInternals.setInlineScriptsAllowed(false);
+      WebAppInternals.setInlineScriptsAllowed(false);
     }
 
     {
-      const { stream }  = await WebAppInternals.getBoilerplate({
+      const { stream } = WebAppInternals.getBoilerplate({
         browser: "doesn't-matter",
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
@@ -227,7 +221,7 @@ Tinytest.addAsync(
     test.isTrue(resBody.indexOf(additionalScript) !== -1);
     test.equal(res.statusCode, 200);
 
-    await WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
+    WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
   }
 );
 
@@ -281,7 +275,7 @@ Tinytest.addAsync(
     req.browser = { name: "headless" };
     req.dynamicHead = "so dynamic";
 
-    const { stream } = await WebAppInternals.getBoilerplate(req, "web.browser");
+    const { stream } = WebAppInternals.getBoilerplate(req, "web.browser");
     const html = await streamToString(stream);
 
     test.equal(callCount, 1);
@@ -340,6 +334,8 @@ __meteor_runtime_config__.WEBAPP_TEST_B = '</script>';
 
 Tinytest.add("webapp - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(WebAppInternals.NpmModules.express.version, /^4\.(\d+)\.(\d+)/);
-  test.equal(typeof(WebAppInternals.NpmModules.express.module), 'function');
+  test.matches(WebAppInternals.NpmModules.connect.version, /^3\.(\d+)\.(\d+)/);
+  test.equal(typeof(WebAppInternals.NpmModules.connect.module), 'function');
+  test.equal(typeof(WebAppInternals.NpmModules.connect.module.basicAuth),
+             'function');
 });

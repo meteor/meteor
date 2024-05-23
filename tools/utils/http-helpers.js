@@ -363,7 +363,13 @@ Object.assign(exports, {
     }
 
     if (promise) {
-      return promise.finally(() => progress && progress.reportProgressDone());
+      try {
+        return promise.await();
+      } finally {
+        if (progress) {
+          progress.reportProgressDone();
+        }
+      }
     } else {
       return req;
     }
@@ -404,9 +410,9 @@ Object.assign(exports, {
   //
   // (This has gone through a few refactors and it might be possible
   // to fully roll it into httpHelpers.request() at this point.)
-  getUrl: async function (urlOrOptions) {
+  getUrl: function (urlOrOptions) {
     try {
-      var result = await httpHelpers.request(urlOrOptions);
+      var result = httpHelpers.request(urlOrOptions);
     } catch (e) {
       throw new files.OfflineError(e);
     }
@@ -430,7 +436,7 @@ Object.assign(exports, {
   // We only use this for package downloads. In theory we could use it for
   // all requests but that seems like overkill and it isn't well tested in
   // other scenarioes.
-  async getUrlWithResuming(urlOrOptions) {
+  getUrlWithResuming(urlOrOptions) {
     const options = _.isObject(urlOrOptions) ? _.clone(urlOrOptions) : {
       url: urlOrOptions,
     };
@@ -489,8 +495,8 @@ Object.assign(exports, {
       }
     }
 
-    const result = await attempt();
-    const response = result.response;
+    const result = attempt().await();
+    const response = result.response
     if (response.statusCode >= 400 && response.statusCode < 600) {
       const href = response.request.href;
       throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);

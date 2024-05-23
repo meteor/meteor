@@ -13,7 +13,7 @@ var getNonZeroWeightedTerms = function (costTerms, costWeights) {
 };
 
 // See comments on minimizeWeightedSum and maximizeWeightedSum.
-var minMaxWS = async function (solver, solution, costTerms, costWeights, options,
+var minMaxWS = function (solver, solution, costTerms, costWeights, options,
                          isMin) {
   var curSolution = solution;
   var curCost = curSolution.getWeightedSum(costTerms, costWeights);
@@ -31,7 +31,7 @@ var minMaxWS = async function (solver, solution, costTerms, costWeights, options
     // try to skip straight to 0 cost, because if it works, it could
     // save us some time
     if (progress) {
-      await progress('trying', 0);
+      progress('trying', 0);
     }
     var zeroSolution = null;
     nonZeroTerms = getNonZeroWeightedTerms(costTerms, costWeights);
@@ -45,7 +45,7 @@ var minMaxWS = async function (solver, solution, costTerms, costWeights, options
   if (isMin && strategy === 'bottom-up') {
     for (var trialCost = 1; trialCost < curCost; trialCost++) {
       if (progress) {
-        await progress('trying', trialCost);
+        progress('trying', trialCost);
       }
       var costIsTrialCost = Logic.equalBits(
         weightedSum, Logic.constantBits(trialCost));
@@ -67,7 +67,7 @@ var minMaxWS = async function (solver, solution, costTerms, costWeights, options
     // count up.
     while (isMin ? curCost > 0 : true) {
       if (progress) {
-        await progress('improving', curCost);
+        progress('improving', curCost);
       }
       var improvement = (isMin ? Logic.lessThan : Logic.greaterThan)(
         weightedSum, Logic.constantBits(curCost));
@@ -93,7 +93,7 @@ var minMaxWS = async function (solver, solution, costTerms, costWeights, options
   }
 
   if (progress) {
-    await progress('finished', curCost);
+    progress('finished', curCost);
   }
 
   return curSolution;

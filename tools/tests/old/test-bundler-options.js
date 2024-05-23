@@ -10,16 +10,15 @@ var buildmessage = require('../../utils/buildmessage.js');
 var isopackets = require('../../tool-env/isopackets.js');
 var projectContextModule = require('../../project-context.js');
 var safeWatcher = require("../../fs/safe-watcher");
-const { makeGlobalAsyncLocalStorage } = require("../../utils/fiber-helpers");
 
 var lastTmpDir = null;
 var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
-var makeProjectContext = async function (appName) {
+var makeProjectContext = function (appName) {
   var projectDir = files.mkdtemp("test-bundler-options");
-  await files.cp_r(
+  files.cp_r(
     files.pathJoin(files.convertToStandardPath(__dirname), appName),
     projectDir,
     { preserveSymlinks: true },
@@ -27,17 +26,17 @@ var makeProjectContext = async function (appName) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });
-  await doOrThrow(async function () {
-    await projectContext.prepareProjectForBuild();
+  doOrThrow(function () {
+    projectContext.prepareProjectForBuild();
   });
 
   return projectContext;
 };
 
-var doOrThrow = async function (f) {
+var doOrThrow = function (f) {
   var ret;
-  var messages = await buildmessage.capture(async function () {
-    ret = await f();
+  var messages = buildmessage.capture(function () {
+    ret = f();
   });
   if (messages.hasMessages()) {
     throw Error(messages.formatMessages());
@@ -45,10 +44,10 @@ var doOrThrow = async function (f) {
   return ret;
 };
 
-var runTest = async function () {
+var runTest = function () {
   // As preparation, let's initialize the official catalog. It servers as our
   // data store, so we will probably need it.
-  await catalog.official.initialize();
+  catalog.official.initialize();
 
   var readManifest = function (tmpOutputDir) {
     return JSON.parse(files.readFile(
@@ -57,12 +56,12 @@ var runTest = async function () {
   };
 
   // an empty app. notably this app has no .meteor/release file.
-  var projectContext = await makeProjectContext('empty-app');
+  var projectContext = makeProjectContext('empty-app');
 
   console.log("basic version");
-  try {
+  assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
-    var result = await bundler.bundle({
+    var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
       buildOptions: { minifyMode: 'production' }
@@ -89,15 +88,12 @@ var runTest = async function () {
       // Just a hash, and no "packages/".
       assert(/^[0-9a-f]{40,40}\.js$/.test(item.path), item.path);
     });
-    assert.ok(true);
-  } catch (e) {
-    assert.fail("basic version test fails", e);
-  }
+  });
 
   console.log("no minify");
-  try {
+  assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
-    var result = await bundler.bundle({
+    var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
       buildOptions: { minifyMode: 'development' }
@@ -126,16 +122,13 @@ var runTest = async function () {
     });
     assert(foundMeteor);
     assert(foundTracker);
-    assert.ok(true);
-  } catch (e) {
-    assert.fail("no minify test fails", e);
-  }
+  });
 
   if (process.platform !== "win32") { // Windows doesn't have symlinks
     console.log("includeNodeModules");
 
     var tmpOutputDir = tmpDir();
-    var result = await bundler.bundle({
+    var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
       includeNodeModules: 'symlink'
@@ -160,6 +153,12 @@ var runTest = async function () {
       tmpOutputDir, "programs", "server", "node_modules"
     )).isSymbolicLink());
 
+    console.log("before programs/server/node_modules/fibers check");
+
+    // node_modules contains fibers as a symlink
+    assert(files.lstat(files.pathJoin(
+      tmpOutputDir, "programs", "server", "node_modules", "fibers"
+    )).isDirectory());
 
     console.log("before ddp-server/node_modules check")
 
@@ -180,26 +179,24 @@ var runTest = async function () {
 };
 
 
-makeGlobalAsyncLocalStorage().run(
-  { name: "test-bundler-options.js" },
-  async function () {
-    if (!files.inCheckout()) {
-      throw Error("This old test doesn't support non-checkout");
-    }
-
-    release.setCurrent(await release.load(null));
-    await isopackets.ensureIsopacketsLoadable();
-
-    try {
-      await runTest();
-    } catch (err) {
-      console.log(err.stack);
-      console.log("\nBundle can be found at " + lastTmpDir);
-      process.exit(1);
-    }
-
-    // Allow the process to exit normally, since optimistic file watchers
-    // may be keeping the event loop busy.
-    safeWatcher.closeAllWatchers();
+var Fiber = require('fibers');
+Fiber(function () {
+  if (! files.inCheckout()) {
+    throw Error("This old test doesn't support non-checkout");
   }
-);
+
+  release.setCurrent(release.load(null));
+  isopackets.ensureIsopacketsLoadable();
+
+  try {
+    runTest();
+  } catch (err) {
+    console.log(err.stack);
+    console.log('\nBundle can be found at ' + lastTmpDir);
+    process.exit(1);
+  }
+
+  // Allow the process to exit normally, since optimistic file watchers
+  // may be keeping the event loop busy.
+  safeWatcher.closeAllWatchers();
+}).run();

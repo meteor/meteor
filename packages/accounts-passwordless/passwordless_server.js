@@ -8,12 +8,12 @@ import {
 } from './server_utils';
 import { Random } from 'meteor/random';
 
-const findUserWithOptions = async ({ selector }) => {
+const findUserWithOptions = ({ selector }) => {
   if (!selector) {
     Accounts._handleError('A selector is necessary');
   }
   const { email, id, ...rest } = selector;
-  return Meteor.users.findOneAsync(
+  return Meteor.users.findOne(
     {
       ...rest,
       ...(id && { _id: id }),
@@ -28,7 +28,7 @@ const findUserWithOptions = async ({ selector }) => {
   );
 };
 // Handler to login with an ott.
-Accounts.registerLoginHandler('passwordless', async options => {
+Accounts.registerLoginHandler('passwordless', options => {
   if (!options.token) return undefined; // don't handle
 
   check(options, {
@@ -40,7 +40,7 @@ Accounts.registerLoginHandler('passwordless', async options => {
   const sequence = options.token.toUpperCase();
   const { selector } = options;
 
-  const user = await findUserWithOptions(options);
+  const user = findUserWithOptions(options);
 
   if (!user) {
     Accounts._handleError('User not found');
@@ -77,7 +77,7 @@ Accounts.registerLoginHandler('passwordless', async options => {
     // It's necessary to make sure we don't remove the token if the user has 2fa enabled
     // otherwise, it would be necessary to generate a new one if this method is called without
     // a 2fa code
-    await Meteor.users.updateAsync(
+    Meteor.users.update(
       { _id: user._id, 'emails.address': verifiedEmail },
       {
         $set: {
@@ -93,7 +93,7 @@ Accounts.registerLoginHandler('passwordless', async options => {
 
 // Utility for plucking addresses from emails
 const pluckAddresses = (emails = []) => emails.map(email => email.address);
-const createUser = async userData => {
+const createUser = userData => {
   const { username, email } = userData;
   if (!username && !email) {
     throw new Meteor.Error(400, 'Need to set a username or email');
@@ -114,8 +114,8 @@ function generateSequence() {
 }
 
 Meteor.methods({
-  requestLoginTokenForUser: async ({ selector, userData, options = {} }) => {
-    let user = await Accounts._findUserByQuery(selector, {
+  requestLoginTokenForUser: ({ selector, userData, options = {} }) => {
+    let user = Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
 
@@ -131,8 +131,8 @@ Meteor.methods({
     const isNewUser = !user;
 
     if (!user) {
-      const userId = await createUser(userData);
-      user = await Accounts._findUserByQuery(
+      const userId = createUser(userData);
+      user = Accounts._findUserByQuery(
         { id: userId },
         {
           fields: { emails: 1 },
@@ -171,7 +171,7 @@ Meteor.methods({
       Accounts._handleError(`Login tokens could not be generated`);
     }
 
-    await Meteor.users.updateAsync(user._id, {
+    Meteor.users.update(user._id, {
       $set: {
         'services.passwordless': {
           createdAt: new Date(),
@@ -186,22 +186,21 @@ Meteor.methods({
     });
 
     const shouldSendLoginTokenEmail = Accounts._onCreateLoginTokenHook
-      ? await Accounts._onCreateLoginTokenHook({
+      ? Accounts._onCreateLoginTokenHook({
           token: userSequence,
           userId: user._id,
         })
       : true;
 
     if (shouldSendLoginTokenEmail) {
-      const sendLogins = tokens.map(({ email, sequence }) =>
+      tokens.forEach(({ email, sequence }) => {
         Accounts.sendLoginTokenEmail({
           userId: user._id,
           sequence,
           email,
           ...(options.extra ? { extra: options.extra } : {}),
-        })
-      );
-      await Promise.all(sendLogins);
+        });
+      });
     }
 
     return result;
@@ -218,17 +217,17 @@ Meteor.methods({
  * @param {Object} options.extra Optional. Extra properties
  * @returns {Object} Object with {email, user, token, url, options} values.
  */
-Accounts.sendLoginTokenEmail = async ({ userId, sequence, email, extra = {} }) => {
-  const user = await getUserById(userId);
+Accounts.sendLoginTokenEmail = ({ userId, sequence, email, extra = {} }) => {
+  const user = getUserById(userId);
   const url = Accounts.urls.loginToken(email, sequence);
-  const options = await Accounts.generateOptionsForEmail(
+  const options = Accounts.generateOptionsForEmail(
     email,
     user,
     url,
     'sendLoginToken',
     { ...extra, sequence }
   );
-  await Email.sendAsync({ ...options, extra });
+  Email.send({ ...options, extra });
   if (Meteor.isDevelopment) {
     console.log(`\nLogin Token url: ${url}`);
   }

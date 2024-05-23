@@ -5,7 +5,7 @@
 // keep separate collections separate.) Other than that, there's no
 // deep meaning to the matching function, and it could be changed later
 // as long as it preserves that property.
-Tinytest.addAsync('livedata - crossbar', async function (test) {
+Tinytest.add('livedata - crossbar', function (test) {
   var crossbar = new DDPServer._Crossbar;
   test.isTrue(crossbar._matches({collection: "C"},
                                 {collection: "C"}));
@@ -43,7 +43,7 @@ Tinytest.addAsync('livedata - crossbar', async function (test) {
     // listener!
     calledSecond = true;
   });
-  await crossbar.fire(trigger);
+  crossbar.fire(trigger);
   test.isTrue(calledFirst);
   test.isFalse(calledSecond);
 });

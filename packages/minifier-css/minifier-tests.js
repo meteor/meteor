@@ -28,61 +28,59 @@ Tinytest.add(
   }
 );
 
-Tinytest.addAsync('minifier-css - simple CSS minification', async (test) => {
-  const checkMinified =
-    async (css, expected, desc) => {
-      const minified = await CssTools.minifyCss(css);
-      test.equal(minified[0], expected, desc);
-    };
+Tinytest.add('minifier-css - simple CSS minification', (test) => {
+  const checkMinified = (css, expected, desc) => {
+    test.equal(CssTools.minifyCss(css)[0], expected, desc);
+  };
 
-  await checkMinified(
+  checkMinified(
     'a \t\n{ color: red } \n',
     'a{color:red}',
     'whitespace check',
   );
-  await checkMinified(
+  checkMinified(
     'a \t\n{ color: red; margin: 1; } \n',
     'a{color:red;margin:1}',
     'only last one loses semicolon',
   );
-  await checkMinified(
+  checkMinified(
     'a \t\n{ color: red;;; margin: 1;;; } \n',
     'a{color:red;margin:1}',
     'more semicolons than needed',
   );
-  await checkMinified(
+  checkMinified(
     'a , p \t\n{ color: red; } \n',
     'a,p{color:red}',
     'multiple selectors',
   );
-  await checkMinified(
+  checkMinified(
     'body {}',
     '',
     'removing empty rules',
   );
-  await checkMinified(
+  checkMinified(
     '*.my-class { color: #fff; }',
     '.my-class{color:#fff}',
     'removing universal selector',
   );
-  await checkMinified(
+  checkMinified(
     'p > *.my-class { color: #fff; }',
     'p>.my-class{color:#fff}',
     'removing optional whitespace around ">" in selector',
   );
-  await checkMinified(
+  checkMinified(
     'p +  *.my-class { color: #fff; }',
     'p+.my-class{color:#fff}',
     'removing optional whitespace around "+" in selector',
   );
-  await checkMinified(
+  checkMinified(
     'a {\n\
     font:12px \'Helvetica\',"Arial",\'Nautica\';\n\
     background:url("/some/nice/picture.png");\n}',
     'a{background:url(/some/nice/picture.png);font:12px Helvetica,Arial,Nautica}',
     'removing quotes in font and url (if possible)',
   );
-  await checkMinified(
+  checkMinified(
     '/* no comments */ a { color: red; }',
     'a{color:red}',
     'remove comments',

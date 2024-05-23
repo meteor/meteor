@@ -7,8 +7,8 @@ export function getAsyncMethodName(method) {
 
 export const ASYNC_COLLECTION_METHODS = [
   '_createCappedCollection',
-  'dropCollection',
-  'dropIndex',
+  '_dropCollection',
+  '_dropIndex',
   /**
    * @summary Creates the specified index on the collection.
    * @locus server
@@ -145,5 +145,3 @@ export const ASYNC_CURSOR_METHODS = [
    */
   'map',
 ];
-
-export const CLIENT_ONLY_METHODS = ["findOne", "insert", "remove", "update", "upsert"];

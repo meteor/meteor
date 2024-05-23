@@ -1,12 +1,12 @@
 Package.describe({
   summary: 'Serves a Meteor app over HTTP',
-  version: '2.0.0-rc300.2',
+  version: '1.13.8',
 });
 
 Npm.depends({
+  'basic-auth-connect': '1.0.0',
   'cookie-parser': '1.4.6',
-  express: '4.18.2',
-  '@types/express': '4.17.15',
+  connect: '3.7.0',
   compression: '1.7.4',
   errorhandler: '1.5.1',
   parseurl: '1.3.3',
@@ -62,7 +62,7 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore','fetch']);
+  api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore']);
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
   api.addFiles('socket_file_tests.js', 'server');

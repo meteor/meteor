@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 4,
+  "lockfileVersion": 1,
   "dependencies": {
     "es5-shim": {
       "version": "4.5.10",

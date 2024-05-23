@@ -74,16 +74,14 @@ export default class Sandbox {
     this.cwd = this.home;
     this.env = {};
     this.fakeMongo = this.options.fakeMongo;
-  }
 
-  async init() {
     if (hasOwn.call(this.options, 'warehouse')) {
       if (!files.inCheckout()) {
         throw Error(
-            "Fake warehouses are only possible when running from a checkout");
+          "Fake warehouses are only possible when running from a checkout");
       }
       this.warehouse = files.pathJoin(this.root, 'tropohouse');
-      await this._makeWarehouse(this.options.warehouse);
+      this._makeWarehouse(this.options.warehouse);
     }
 
     const meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
@@ -115,7 +113,7 @@ export default class Sandbox {
   //   run.connectClient();
   //   // post-connection checks
   // });
-  async testWithAllClients(f, options) {
+  testWithAllClients(f, options) {
     const { testName, testFile, args: argsParam } = options || {};
 
     const args = (argsParam || []).filter(arg => arg);
@@ -127,7 +125,7 @@ export default class Sandbox {
       const clientOptions = this.options.clients || {};
 
       const appConfig = {
-        host: "localhost",
+        host: 'localhost',
         port: clientOptions.port || 3000,
       };
 
@@ -136,13 +134,10 @@ export default class Sandbox {
       }
 
       if (clientOptions.puppeteer) {
-        await PuppeteerClient.pushClients(this.clients, appConfig);
+        PuppeteerClient.pushClients(this.clients, appConfig);
       }
 
-      if (
-        clientOptions.browserstack &&
-        (await BrowserStackClient.prerequisitesMet())
-      ) {
+      if (clientOptions.browserstack && BrowserStackClient.prerequisitesMet()) {
         BrowserStackClient.pushClients(this.clients, appConfig);
       }
     }
@@ -151,11 +146,10 @@ export default class Sandbox {
 
     console.log(`Running test ${testNameAndFile}with ${this.clients.length} client(s)...`);
 
-    const array = Object.keys(this.clients);
-    for (const [index, clientKey] of array.entries()) {
+    Object.keys(this.clients).forEach((clientKey, index, array) => {
       const client = this.clients[clientKey];
       console.log(
-          `(${index+1}/${array.length}) Testing ${testNameAndFile}with ${client.name}...`);
+        `(${index+1}/${array.length}) Testing ${testNameAndFile}with ${client.name}...`);
       const run = new Run(this.execPath, {
         sandbox: this,
         args,
@@ -165,8 +159,8 @@ export default class Sandbox {
         client,
       });
       run.baseTimeout = client.timeout;
-      await f(run);
-    }
+      f(run);
+    });
   }
 
   // Copy an app from a template into the current directory in the
@@ -179,14 +173,14 @@ export default class Sandbox {
   // For example:
   //   s.createApp('myapp', 'empty');
   //   s.cd('myapp');
-  async createApp(to, template, options) {
+  createApp(to, template, options) {
     options = options || {};
     const absoluteTo = files.pathJoin(this.cwd, to);
     const absoluteFrom = files.pathJoin(
       files.convertToStandardPath(__dirname),
       '..', 'tests', 'apps', template
     );
-    await files.cp_r(absoluteFrom, absoluteTo, {
+    files.cp_r(absoluteFrom, absoluteTo, {
       ignore: [/^local$/],
       preserveSymlinks: true,
     });
@@ -206,7 +200,7 @@ export default class Sandbox {
       upgradersFile.appendUpgraders(allUpgraders());
     }
 
-    await require("../cli/default-npm-deps.js").install(absoluteTo);
+    require("../cli/default-npm-deps.js").install(absoluteTo);
 
     if (options.dontPrepareApp) {
       return;
@@ -215,14 +209,14 @@ export default class Sandbox {
     // Prepare the app (ie, build or download packages). We give this a nice
     // long timeout, which allows the next command to not need a bloated
     // timeout. (meteor create does this anyway.)
-    await this.cd(to, async () => {
+    this.cd(to, () => {
       const run = this.run("--prepare-app");
       // XXX Can we cache the output of running this once somewhere, so that
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
       // paths.
-      run.waitSecs(150);
-      await run.expectExit(0);
+      run.waitSecs(120);
+      run.expectExit(0);
     });
   }
 
@@ -238,11 +232,11 @@ export default class Sandbox {
   // For example:
   //   s.createPackage('me_mypack', me:mypack', 'empty');
   //   s.cd('me_mypack');
-  async createPackage(packageDir, packageName, template) {
+  createPackage(packageDir, packageName, template) {
     const packagePath = files.pathJoin(this.cwd, packageDir);
     const templatePackagePath = files.pathJoin(
       files.convertToStandardPath(__dirname), '..', 'tests', 'packages', template);
-    await files.cp_r(templatePackagePath, packagePath, {
+    files.cp_r(templatePackagePath, packagePath, {
       preserveSymlinks: true,
     });
 
@@ -273,12 +267,8 @@ export default class Sandbox {
     const previous = this.cwd;
     this.cwd = files.pathResolve(this.cwd, relativePath);
     if (callback) {
-      const ret = callback();
-      if (ret && typeof ret.then === "function") {
-        return ret.then(() => (this.cwd = previous));
-      } else {
-        this.cwd = previous;
-      }
+      callback();
+      this.cwd = previous;
     }
   }
 
@@ -396,21 +386,20 @@ export default class Sandbox {
   // the default, if we do not pass this in; you should pass it in any case that
   // you will be specifying $METEOR_PACKAGE_SERVER_URL in the environment of a
   // command you are running in this sandbox.
-  async _makeWarehouse(releases) {
+  _makeWarehouse(releases) {
     // Ensure we have a tropohouse to copy stuff out of.
-    await setUpBuiltPackageTropohouse();
+    setUpBuiltPackageTropohouse();
 
     const serverUrl = this.env.METEOR_PACKAGE_SERVER_URL;
     const packagesDirectoryName = getPackagesDirectoryName(serverUrl);
 
     const builder = new Builder({outputPath: this.warehouse});
-    await builder.init();
-    await builder.copyDirectory({
+    builder.copyDirectory({
       from: files.pathJoin(builtPackageTropohouseDir, 'packages'),
       to: packagesDirectoryName,
       symlink: true
     });
-    await builder.complete();
+    builder.complete();
 
     const stubCatalog = {
       syncToken: {},
@@ -427,14 +416,14 @@ export default class Sandbox {
     const packageVersions = {};
     let toolPackageVersion = null;
 
-    await tropohouseIsopackCache.eachBuiltIsopack(async (packageName, isopack) => {
+    tropohouseIsopackCache.eachBuiltIsopack((packageName, isopack) => {
       const packageRec = tropohouseLocalCatalog.getPackage(packageName);
       if (! packageRec) {
         throw Error("no package record for " + packageName);
       }
       stubCatalog.collections.packages.push(packageRec);
 
-      const versionRec = await tropohouseLocalCatalog.getLatestVersion(packageName);
+      const versionRec = tropohouseLocalCatalog.getLatestVersion(packageName);
       if (! versionRec) {
         throw Error("no version record for " + packageName);
       }
@@ -483,24 +472,24 @@ export default class Sandbox {
       serverUrl: serverUrl
     });
     this.warehouseOfficialCatalog = new RemoteCatalog();
-    await this.warehouseOfficialCatalog.initialize({
+    this.warehouseOfficialCatalog.initialize({
       packageStorage: dataFile
     });
     this.warehouseOfficialCatalog.insertData(stubCatalog);
 
     // And a cherry on top
     // XXX this is hacky
-    await files.linkToMeteorScript(
+    files.linkToMeteorScript(
       files.pathJoin(this.warehouse, packagesDirectoryName, "meteor-tool", toolPackageVersion,
         'mt-' + archInfoHost(), 'meteor'),
       files.pathJoin(this.warehouse, 'meteor'));
   }
 }
 
-async function doOrThrow(f) {
+function doOrThrow(f) {
   let ret;
-  const messages = await capture(async function () {
-    ret = await f();
+  const messages = capture(function () {
+    ret = f();
   });
   if (messages.hasMessages()) {
     throw Error(messages.formatMessages());
@@ -508,7 +497,7 @@ async function doOrThrow(f) {
   return ret;
 }
 
-async function setUpBuiltPackageTropohouse() {
+function setUpBuiltPackageTropohouse() {
   if (builtPackageTropohouseDir) {
     return;
   }
@@ -519,12 +508,12 @@ async function setUpBuiltPackageTropohouse() {
   }
 
   const tropohouse = new Tropohouse(builtPackageTropohouseDir);
-  tropohouseLocalCatalog = await newSelfTestCatalog();
+  tropohouseLocalCatalog = newSelfTestCatalog();
   const versions = {};
-  for (const packageName of tropohouseLocalCatalog.getAllNonTestPackageNames()) {
+  tropohouseLocalCatalog.getAllNonTestPackageNames().forEach((packageName) => {
     versions[packageName] =
-        await tropohouseLocalCatalog.getLatestVersion(packageName).version;
-  }
+      tropohouseLocalCatalog.getLatestVersion(packageName).version;
+  });
   const packageMap = new PackageMap(versions, {
     localCatalog: tropohouseLocalCatalog
   });
@@ -534,10 +523,10 @@ async function setUpBuiltPackageTropohouse() {
     packageMap: packageMap,
     includeCordovaUnibuild: true
   });
-  await doOrThrow(function () {
-    return enterJob("building self-test packages", () => {
+  doOrThrow(function () {
+    enterJob("building self-test packages", () => {
       // Build the packages into the in-memory IsopackCache.
-      return tropohouseIsopackCache.buildLocalPackages(
+      tropohouseIsopackCache.buildLocalPackages(
         ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
     });
   });
@@ -547,8 +536,8 @@ async function setUpBuiltPackageTropohouse() {
   // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself) even
   // though some tests will want them to be under
   // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
-  await tropohouseIsopackCache.eachBuiltIsopack((name, isopack) => {
-    return tropohouse._saveIsopack(isopack, name);
+  tropohouseIsopackCache.eachBuiltIsopack((name, isopack) => {
+    tropohouse._saveIsopack(isopack, name);
   });
 }
 
@@ -586,19 +575,18 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "modern-browsers",
   "ecmascript",
   "typescript",
-  "facts-base",
 ];
 
-async function newSelfTestCatalog() {
+function newSelfTestCatalog() {
   if (! files.inCheckout()) {
     throw Error("Only can build packages from a checkout");
   }
 
   const catalogLocal = require('../packaging/catalog/catalog-local.js');
   const selfTestCatalog = new catalogLocal.LocalCatalog;
-  const messages = await capture(
+  const messages = capture(
     { title: "scanning local core packages" },
-    async () => {
+    () => {
       const packagesDir =
         files.pathJoin(files.getCurrentToolsDir(), 'packages');
 
@@ -607,7 +595,7 @@ async function newSelfTestCatalog() {
       // packages.  One side effect of this: we really really expect them to all
       // build, and we're fine with dying if they don't (there's no worries
       // about needing to springboard).
-      await selfTestCatalog.initialize({
+      selfTestCatalog.initialize({
         localPackageSearchDirs: [
           packagesDir,
           files.pathJoin(packagesDir, "non-core"),

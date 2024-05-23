@@ -121,10 +121,10 @@ CachingCompilerBase = class CachingCompilerBase {
 
   // Called by the compiler plugins system after all linking and lazy
   // compilation has finished.
-  async afterLink() {
-    for (const callback of this._afterLinkCallbacks.splice(0)) {
-      await callback();
-    }
+  afterLink() {
+    this._afterLinkCallbacks.splice(0).forEach(callback => {
+      callback();
+    });
   }
 
   // Borrowed from another MIT-licensed project that benjamn wrote:
@@ -284,12 +284,12 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
     const cacheMisses = [];
     const arches = this._cacheDebugEnabled && Object.create(null);
 
-    for (const inputFile of inputFiles) {
+    inputFiles.forEach(inputFile => {
       if (arches) {
         arches[inputFile.getArch()] = 1;
       }
 
-      const getResult = async () => {
+      const getResult = () => {
         const cacheKey = this._deepHash(this.getCacheKey(inputFile));
         let compileResult = this._cache.get(cacheKey);
 
@@ -302,7 +302,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
         if (! compileResult) {
           cacheMisses.push(inputFile.getDisplayPath());
-          compileResult = await this.compileOneFile(inputFile);
+          compileResult = Promise.await(this.compileOneFile(inputFile));
 
           if (! compileResult) {
             // compileOneFile should have called inputFile.error.
@@ -320,14 +320,14 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
       if (this.compileOneFileLater &&
           inputFile.supportsLazyCompilation) {
-        await this.compileOneFileLater(inputFile, getResult);
+        this.compileOneFileLater(inputFile, getResult);
       } else {
-        const result = await getResult();
+        const result = getResult();
         if (result) {
-          await this.addCompileResult(inputFile, result);
+          this.addCompileResult(inputFile, result);
         }
       }
-    }
+    });
 
     if (this._cacheDebugEnabled) {
       this._afterLinkCallbacks.push(() => {

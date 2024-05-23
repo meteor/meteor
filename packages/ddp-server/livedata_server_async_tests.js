@@ -1,3 +1,4 @@
+var Fiber = Npm.require('fibers');
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -22,8 +23,6 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   var methodInvocation = DDP._CurrentMethodInvocation.get();
   var publicationInvocation = DDP._CurrentPublicationInvocation.get();
 
-// console.log('methodInvocation', methodInvocation);
-// console.log('publicationInvocation', !!publicationInvocation);
   // Check the publish function's environment variables and context.
   if (callback) {
     callback.call(this, methodInvocation, publicationInvocation);
@@ -34,7 +33,6 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   this.onStop(function() {
     var onStopMethodInvocation = DDP._CurrentMethodInvocation.get();
     var onStopPublicationInvocation = DDP._CurrentPublicationInvocation.get();
-
     callback.call(
       this,
       onStopMethodInvocation,
@@ -47,7 +45,7 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
     this.stop();
   } else {
     this.ready();
-    await Meteor.callAsync('livedata_server_test_setuserid', userId);
+    Meteor.call('livedata_server_test_setuserid', userId);
   }
 });
 
@@ -152,7 +150,7 @@ async function getAllNames(shouldThrow = false) {
     throw new Meteor.Error('Expected error');
   }
   if (count <= 0) {
-    await collection.insertAsync({ name: 'async' });
+    collection.insert({ name: 'async' });
   }
 }
 Meteor.publish('asyncPublishCursor', async function() {
@@ -168,8 +166,8 @@ Tinytest.addAsync('livedata server - async publish cursor', function(
     const remoteCollection = new Mongo.Collection('names', {
       connection: clientConn,
     });
-    clientConn.subscribe('asyncPublishCursor', async () => {
-      const actual = await remoteCollection.find().fetch();
+    clientConn.subscribe('asyncPublishCursor', () => {
+      const actual = remoteCollection.find().fetch();
       test.equal(actual[0].name, 'async');
       onComplete();
     });

@@ -145,7 +145,7 @@ function resolve(id) {
   if (res === null) {
     var idParts = id.split("/");
     var meteorAddTip = "";
-    // If it looks like `meteor/xxx`, the user may forgot to add the
+    // If it looks like `meteor/xxx`, the user may forgot to add the 
     // package before importing it.
     if (idParts.length === 2 &&
         idParts[0] === "meteor") {

@@ -1,4 +1,4 @@
-var has = require('lodash.has');
+var has = Npm.require('lodash.has');
 
 Logic._MiniSat = MiniSat; // Expose for testing and poking around
 
@@ -40,11 +40,11 @@ Logic._assertIfEnabled = function (value, tester, description) {
 // Disabling runtime assertions speeds up clause generation.  Assertions
 // are disabled when the local variable `assert` is null instead of
 // `Logic._assert`.
-Logic.disablingAssertions = async function (f) {
+Logic.disablingAssertions = function (f) {
   var oldAssert = assert;
   try {
     assert = null;
-    return await f();
+    return f();
   } finally {
     assert = oldAssert;
   }
@@ -1209,7 +1209,7 @@ var binaryWeightedSum = function (varsByWeight) {
   var buckets = varsByWeight.map(function(vars) {
     return Array.from(vars).flat()
   });
-
+  
   var lowestWeight = 0; // index of the first non-empty array
   var output = [];
   while (lowestWeight < buckets.length) {

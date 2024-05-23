@@ -66,7 +66,7 @@ Meteor.methods({
     console.log('Current list of rules :', DDPRateLimiter.printRules());
   },
   removeUserByUsername(username) {
-    return Meteor.users.removeAsync({ username });
+    Meteor.users.remove({ username });
   },
   dummyMethod() {
     return 'yup';

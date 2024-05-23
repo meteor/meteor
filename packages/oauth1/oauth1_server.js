@@ -26,7 +26,7 @@ OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitel
 
 // connect middleware
 OAuth._requestHandlers['1'] = async (service, query, res) => {
-  const config = await ServiceConfiguration.configurations.findOneAsync({service: service.serviceName});
+  const config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (! config) {
     throw new ServiceConfiguration.ConfigError(service.serviceName);
   }
@@ -48,7 +48,7 @@ OAuth._requestHandlers['1'] = async (service, query, res) => {
     await oauthBinding.prepareRequestToken(callbackUrl);
 
     // Keep track of request token so we can verify it on the next step
-    await OAuth._storeRequestToken(
+    OAuth._storeRequestToken(
       OAuth._credentialTokenFromQuery(query),
       oauthBinding.requestToken,
       oauthBinding.requestTokenSecret);
@@ -76,7 +76,7 @@ OAuth._requestHandlers['1'] = async (service, query, res) => {
     // and close the window to allow the login handler to proceed
 
     // Get the user's request token so we can verify it and clear it
-    const requestTokenInfo = await OAuth._retrieveRequestToken(
+    const requestTokenInfo = OAuth._retrieveRequestToken(
       OAuth._credentialTokenFromQuery(query));
 
     if (! requestTokenInfo) {
@@ -102,7 +102,7 @@ OAuth._requestHandlers['1'] = async (service, query, res) => {
 
       // Store the login result so it can be retrieved in another
       // browser tab by the result handler
-      await OAuth._storePendingCredential(credentialToken, {
+      OAuth._storePendingCredential(credentialToken, {
         serviceName: service.serviceName,
         serviceData: oauthResult.serviceData,
         options: oauthResult.options
@@ -111,6 +111,6 @@ OAuth._requestHandlers['1'] = async (service, query, res) => {
 
     // Either close the window, redirect, or render nothing
     // if all else fails
-    await OAuth._renderOauthResults(res, query, credentialSecret);
+    OAuth._renderOauthResults(res, query, credentialSecret);
   }
 };

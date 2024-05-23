@@ -1,10 +1,9 @@
-const sevenBin = require('7zip-bin');
-const child_process = require('child_process');
-const fs = require('fs');
-const Seven = require('node-7z');
-const { resolve, dirname } = require('path');
 const tar = require('tar');
-
+const sevenBin = require('7zip-bin');
+const Seven = require('node-7z');
+const fs = require('fs');
+const { resolve, dirname } = require('path');
+const child_process = require('child_process');
 const { isMac } = require('./config.js');
 
 function extractWith7Zip(tarPath, destination, onProgress) {
@@ -13,15 +12,15 @@ function extractWith7Zip(tarPath, destination, onProgress) {
       $progress: true,
       $bin: sevenBin.path7za,
     });
-    stream.on('progress', function (progress) {
+    stream.on('progress', function(progress) {
       onProgress(progress);
     });
 
-    stream.on('error', function (err) {
+    stream.on('error', function(err) {
       return reject(err);
     });
 
-    stream.on('end', function () {
+    stream.on('end', function() {
       return resolve();
     });
   });
@@ -56,7 +55,7 @@ function extractWithNativeTar(tarPath, destination) {
       env: process.env,
       stdio: [process.stdin, process.stdout, process.stderr],
       encoding: 'utf-8',
-    },
+    }
   );
 }
 
@@ -117,7 +116,7 @@ function extractWithTar(tarPath, destination, onProgress) {
         }
         createSymlinks(symlinks, destination);
         resolve();
-      },
+      }
     );
   });
 }

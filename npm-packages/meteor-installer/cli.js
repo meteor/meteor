@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const command = process.argv[2] || 'install';
+const command = process.argv[2];
 
 if (!command) {
   console.log(`
-  Usage: npx meteor@<version> <command>
+  Usage: meteor-installer <command>
 
   Commands:
     install

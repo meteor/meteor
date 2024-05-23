@@ -13,7 +13,7 @@ var makeResolver = function (data) {
     var version = versionDescription.shift();
     var deps = versionDescription.shift();
     var constructedDeps = {};
-    if (!isEmpty(deps)) {
+    if (!isEmpty(deps)) { 
     Object.entries(deps).forEach(function ([name, constraint]) {
       constructedDeps[name] = {
         constraint: constraint,
@@ -91,34 +91,34 @@ splitArgs = function (deps) {
   return {dependencies: dependencies, constraints: constraints};
 };
 
-var testWithResolver = async function (test, resolver, f) {
+var testWithResolver = function (test, resolver, f) {
   var answerToString = function (answer) {
     var pvs = Object.keys(answer).map(function (p) { return p + ' ' + answer[p]; });
     return pvs.sort().join('\n');
   };
-  var t = async function (deps, expected, options) {
+  var t = function (deps, expected, options) {
     var dependencies = splitArgs(deps).dependencies;
     var constraints = splitArgs(deps).constraints;
 
-    var resolvedDeps = await resolver.resolve(dependencies, constraints, options);
+    var resolvedDeps = resolver.resolve(dependencies, constraints, options);
     test.equal(answerToString(resolvedDeps.answer),
                answerToString(expected));
   };
 
-  var FAIL = async function (deps, regexp, s) {
-    await test.throwsAsync(async function () {
+  var FAIL = function (deps, regexp) {
+    test.throws(function () {
       var dependencies = splitArgs(deps).dependencies;
       var constraints = splitArgs(deps).constraints;
 
-      var resolvedDeps = await resolver.resolve(dependencies, constraints);
+      var resolvedDeps = resolver.resolve(dependencies, constraints);
     }, regexp);
   };
-  await f(t, FAIL);
+  f(t, FAIL);
 };
 
-Tinytest.addAsync("constraint solver - simple exact + regular deps", async function (test) {
-  await testWithResolver(test, defaultResolver, async function (t) {
-    await t({ "sparky-forms": "=1.1.2" }, {
+Tinytest.add("constraint solver - simple exact + regular deps", function (test) {
+  testWithResolver(test, defaultResolver, function (t) {
+    t({ "sparky-forms": "=1.1.2" }, {
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
@@ -126,7 +126,7 @@ Tinytest.addAsync("constraint solver - simple exact + regular deps", async funct
       "jquery": "1.8.2"
     });
 
-    await t({ "sparky-forms": "=1.1.2", "awesome-dropdown": "=1.5.0" }, {
+    t({ "sparky-forms": "=1.1.2", "awesome-dropdown": "=1.5.0" }, {
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
@@ -139,12 +139,12 @@ Tinytest.addAsync("constraint solver - simple exact + regular deps", async funct
 });
 
 
-Tinytest.addAsync("constraint solver - non-exact direct dependency", async function (test) {
-  await testWithResolver(test, defaultResolver, async function (t) {
+Tinytest.add("constraint solver - non-exact direct dependency", function (test) {
+  testWithResolver(test, defaultResolver, function (t) {
     // sparky-forms 1.0.0 won't be chosen because it depends on a very old
     // jquery, which is not compatible with the jquery that
     // awesome-dropdown uses.
-    await t({ "sparky-forms": "1.0.0", "awesome-dropdown": "=1.5.0" }, {
+    t({ "sparky-forms": "1.0.0", "awesome-dropdown": "=1.5.0" }, {
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
@@ -156,7 +156,7 @@ Tinytest.addAsync("constraint solver - non-exact direct dependency", async funct
   });
 });
 
-Tinytest.addAsync("constraint solver - no results", async function (test) {
+Tinytest.add("constraint solver - no results", function (test) {
   var resolver = makeResolver([
     ["bad-1", "1.0.0", {indirect: "1.0.0"}],
     ["bad-2", "1.0.0", {indirect: "2.0.0"}],
@@ -164,8 +164,8 @@ Tinytest.addAsync("constraint solver - no results", async function (test) {
     ["indirect", "2.0.0"],
     ["mytoplevel", "1.0.0", {"bad-1": "1.0.0", "bad-2": ""}]
   ]);
-  await testWithResolver(test, resolver, async function (t, FAIL) {
-    await FAIL({ "mytoplevel": "" }, function (error) {
+  testWithResolver(test, resolver, function (t, FAIL) {
+    FAIL({ "mytoplevel": "" }, function (error) {
       return error.message.match(/indirect@2\.0\.0 is not satisfied by indirect 1\.0\.0/)
         && error.message.match(/^\* indirect@1\.0\.0 <- bad-1 1\.0\.0 <- mytoplevel 1.0.0$/m)
         && error.message.match(/^\* indirect@2\.0\.0 <- bad-2 1\.0\.0 <- mytoplevel 1.0.0$/m)
@@ -183,29 +183,29 @@ Tinytest.addAsync("constraint solver - no results", async function (test) {
     ["foo", "2.1.0"],
     ["bar", "1.0.0", {foo: "1.0.0"}]
   ]);
-  await testWithResolver(test, resolver, async function (t, FAIL) {
-    await FAIL({foo: "2.0.0", bar: "1.0.0"}, function (error) {
+  testWithResolver(test, resolver, function (t, FAIL) {
+    FAIL({foo: "2.0.0", bar: "1.0.0"}, function (error) {
       return error.message.match(/Constraints on package "foo":[^]+top level/) &&
         error.message.match(/Constraints on package "foo":[^]+bar 1.0.0/);
     });
   });
 
-  await testWithResolver(test, makeResolver([]), async function (t, FAIL) {
-    await FAIL({foo: "1.0.0"}, /unknown package in top-level dependencies: foo/);
+  testWithResolver(test, makeResolver([]), function (t, FAIL) {
+    FAIL({foo: "1.0.0"}, /unknown package in top-level dependencies: foo/);
   });
 
   resolver = makeResolver([
     ["foo", "2.0.0"],
     ["bar", "1.0.0", {foo: ""}]
   ]);
-  await testWithResolver(test, resolver, async function (t, FAIL) {
-    await FAIL({foo: "w1.0.0", bar: "1.0.0"},
-         /No version of foo satisfies all constraints: @1.0.0/, true);
+  testWithResolver(test, resolver, function (t, FAIL) {
+    FAIL({foo: "w1.0.0", bar: "1.0.0"},
+         /No version of foo satisfies all constraints: @1.0.0/);
   });
 });
 
 
-Tinytest.addAsync("constraint solver - any-of constraint", async function (test) {
+Tinytest.add("constraint solver - any-of constraint", function (test) {
   var resolver = makeResolver([
     ["one-of", "1.0.0", {indirect: "1.0.0 || 2.0.0"}],
     ["important", "1.0.0", {indirect: "2.0.0"}],
@@ -213,8 +213,8 @@ Tinytest.addAsync("constraint solver - any-of constraint", async function (test)
     ["indirect", "2.0.0"]
   ]);
 
-  await testWithResolver(test, resolver, async function (t, FAIL) {
-    await t({ "one-of": "=1.0.0", "important": "1.0.0" }, {
+  testWithResolver(test, resolver, function (t, FAIL) {
+    t({ "one-of": "=1.0.0", "important": "1.0.0" }, {
       "one-of": "1.0.0",
       "important": "1.0.0",
       "indirect": "2.0.0"
@@ -230,25 +230,25 @@ Tinytest.addAsync("constraint solver - any-of constraint", async function (test)
     ["indirect", "2.0.1"]
   ]);
 
-  await testWithResolver(test, resolver, async function (t, FAIL) {
-    await t({ "one-of": "=1.0.0", "important": "1.0.0" }, {
+  testWithResolver(test, resolver, function (t, FAIL) {
+    t({ "one-of": "=1.0.0", "important": "1.0.0" }, {
       "one-of": "1.0.0",
       "important": "1.0.0",
       "indirect": "1.0.0"
     });
 
-    await t({ "one-of-equal": "1.0.0", "indirect": "2.0.0" }, {
+    t({ "one-of-equal": "1.0.0", "indirect": "2.0.0" }, {
       "one-of-equal": "1.0.0",
       "indirect": "2.0.1"
     });
 
-    await t({ "one-of-equal": "1.0.0", "one-of": "1.0.0" }, {
+    t({ "one-of-equal": "1.0.0", "one-of": "1.0.0" }, {
       "one-of-equal": "1.0.0",
       "one-of": "1.0.0",
       "indirect": "1.0.0"
     });
 
-    await FAIL({"one-of-equal": "1.0.0",
+    FAIL({"one-of-equal": "1.0.0",
           "one-of": "1.0.0",
           "indirect" : "=2.0.0"}, function (error) {
             return error.message.match(/Constraints on package "indirect":[^]+top level/) &&
@@ -257,10 +257,10 @@ Tinytest.addAsync("constraint solver - any-of constraint", async function (test)
   });
 });
 
-Tinytest.addAsync("constraint solver - previousSolution", async function (test) {
-  await testWithResolver(test, defaultResolver, async function (t, FAIL) {
+Tinytest.add("constraint solver - previousSolution", function (test) {
+  testWithResolver(test, defaultResolver, function (t, FAIL) {
     // This is what you get if you lock sparky-forms to 1.0.0.
-    await t({ "sparky-forms": "=1.0.0" }, {
+    t({ "sparky-forms": "=1.0.0" }, {
       "sparky-forms": "1.0.0",
       "awesome-dropdown": "1.4.0",
       "dropdown": "1.2.2",
@@ -271,7 +271,7 @@ Tinytest.addAsync("constraint solver - previousSolution", async function (test) 
 
     // If you just requires something compatible with 1.0.0, we end up choosing
     // 1.1.2.
-    await t({ "sparky-forms": "1.0.0" }, {
+    t({ "sparky-forms": "1.0.0" }, {
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
@@ -281,7 +281,7 @@ Tinytest.addAsync("constraint solver - previousSolution", async function (test) 
 
     // But if you ask for something compatible with 1.0.0 and have a previous
     // solution with 1.0.0, the previous solution works (since it is achievable).
-    await t({ "sparky-forms": "1.0.0" }, {
+    t({ "sparky-forms": "1.0.0" }, {
       "sparky-forms": "1.0.0",
       "awesome-dropdown": "1.4.0",
       "dropdown": "1.2.2",
@@ -295,7 +295,7 @@ Tinytest.addAsync("constraint solver - previousSolution", async function (test) 
     // On the other hand, if the previous solution is incompatible with the
     // constraints, it's not an error: we can try something that isn't the
     // previous solution in this case!
-    await t({ "sparky-forms": "1.1.2" }, {
+    t({ "sparky-forms": "1.1.2" }, {
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
@@ -308,16 +308,16 @@ Tinytest.addAsync("constraint solver - previousSolution", async function (test) 
 });
 
 
-Tinytest.addAsync("constraint solver - no constraint dependency - anything", async function (test) {
-  var versions = (await defaultResolver.resolve(["sparkle"], [])).answer;
+Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
+  var versions = defaultResolver.resolve(["sparkle"], []).answer;
   test.isTrue(isString(versions.sparkle));
 });
 
 
-Tinytest.addAsync("constraint solver - no constraint dependency - transitive dep still picked right", async function (test) {
-  var versions = (await defaultResolver.resolve(
+Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
+  var versions = defaultResolver.resolve(
     ["sparkle", "sparky-forms"],
-    [PV.parsePackageConstraint("sparky-forms@1.1.2")])).answer;
+    [PV.parsePackageConstraint("sparky-forms@1.1.2")]).answer;
   test.equal(versions.sparkle, "2.1.1");
 });
 
@@ -372,12 +372,12 @@ Tinytest.add("constraint solver - input serialization", function (test) {
   });
 });
 
-Tinytest.addAsync("constraint solver - non-existent indirect package", async function (test) {
+Tinytest.add("constraint solver - non-existent indirect package", function (test) {
   var resolver = makeResolver([
     ["foo", "1.0.0", {bar: "1.0.0"}]
   ]);
-  await testWithResolver(test, resolver, async function (t, FAIL) {
-    await FAIL({ "foo": "1.0.0" }, function (error) {
+  testWithResolver(test, resolver, function (t, FAIL) {
+    FAIL({ "foo": "1.0.0" }, function (error) {
       return error.message.match(/unknown package: bar/);
     });
   });

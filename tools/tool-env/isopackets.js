@@ -93,14 +93,14 @@ var loadedIsopackets = {};
 // dependency, complaining if the package does not exist. Note that
 // ensureIsopacketsLoadable must be called first, as this function does
 // not trigger any building.
-export async function loadIsopackage(packageName, isopacketName = "combined") {
+export function loadIsopackage(packageName, isopacketName = "combined") {
   // Small but necessary hack: because archinfo.host() calls execFileSync,
   // it yields the first time we call it, which is a problem for the
   // fiberHelpers.noYieldsAllowed block below. Calling it here ensures the
   // result is cached, so no yielding occurs later.
-  assert.strictEqual((archinfo.host()).split(".", 1)[0], "os");
+  assert.strictEqual(archinfo.host().split(".", 1)[0], "os");
 
-  async function load() {
+  const isopacket = function () {
     if (_.has(loadedIsopackets, isopacketName)) {
       if (loadedIsopackets[isopacketName]) {
         return loadedIsopackets[isopacketName];
@@ -108,10 +108,8 @@ export async function loadIsopackage(packageName, isopacketName = "combined") {
 
       // This is the case where the isopacket is up to date on disk but not
       // loaded.
-      const loaded = await loadIsopacketFromDisk(isopacketName);
-      loadedIsopackets[isopacketName] = loaded;
-
-      return loaded;
+      return loadedIsopackets[isopacketName] =
+        loadIsopacketFromDisk(isopacketName);
     }
 
     if (_.has(ISOPACKETS, isopacketName)) {
@@ -120,9 +118,8 @@ export async function loadIsopackage(packageName, isopacketName = "combined") {
     }
 
     throw Error("Unknown isopacket: " + isopacketName);
-  }
+  }();
 
-  const isopacket = await load();
   if (!_.has(isopacket, packageName)) {
     throw new Error("Unknown isopacket dependency: " + packageName);
   }
@@ -137,7 +134,7 @@ var isopacketPath = function (isopacketName) {
 // ensureIsopacketsLoadable is called at startup and ensures that all isopackets
 // exist on disk as up-to-date loadable programs.
 var calledEnsure = false;
-export async function ensureIsopacketsLoadable() {
+export function ensureIsopacketsLoadable() {
   if (calledEnsure) {
     throw Error("can't ensureIsopacketsLoadable twice!");
   }
@@ -158,16 +155,16 @@ export async function ensureIsopacketsLoadable() {
   var failedPackageBuild = false;
   // Look at each isopacket. Check to see if it's on disk and up to date. If
   // not, build it. We rebuild them in the order listed in ISOPACKETS.
-  var messages = await Console.withProgressDisplayVisible(function () {
-    return buildmessage.capture(async function () {
-      for (const [isopacketName, packages] of Object.entries(ISOPACKETS)) {
+  var messages = Console.withProgressDisplayVisible(function () {
+    return buildmessage.capture(function () {
+      _.each(ISOPACKETS, function (packages, isopacketName) {
         if (failedPackageBuild) {
-          continue;
+          return;
         }
 
         var isopacketRoot = isopacketPath(isopacketName);
         var existingBuildinfo = files.readJSONOrNull(
-            files.pathJoin(isopacketRoot, 'isopacket-buildinfo.json'));
+          files.pathJoin(isopacketRoot, 'isopacket-buildinfo.json'));
         var needRebuild = !existingBuildinfo;
         if (!needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
           needRebuild = true;
@@ -181,53 +178,46 @@ export async function ensureIsopacketsLoadable() {
         if (!needRebuild) {
           // Great, it's loadable without a rebuild.
           loadedIsopackets[isopacketName] = null;
-          continue;
+          return;
         }
 
         // We're going to need to build! Make a catalog and loader if we haven't
         // yet.
         if (!isopacketBuildContext) {
-          isopacketBuildContext = await makeIsopacketBuildContext();
+          isopacketBuildContext = makeIsopacketBuildContext();
         }
 
-        await buildmessage.enterJob({
+        buildmessage.enterJob({
           title: "bundling " + isopacketName + " packages for the tool"
-        }, async function () {
+        }, function () {
           // Build the packages into the in-memory IsopackCache.
-          await isopacketBuildContext.isopackCache.buildLocalPackages(packages);
+          isopacketBuildContext.isopackCache.buildLocalPackages(packages);
           if (buildmessage.jobHasMessages()) {
             return;
           }
 
           // Now bundle them into a program.
-          var built;
-          try {
-            built = await bundler.buildJsImage({
-              name: "isopacket-" + isopacketName,
-              packageMap: isopacketBuildContext.packageMap,
-              isopackCache: isopacketBuildContext.isopackCache,
-              use: packages
-            });
-          } catch (e) {
-            console.error("Error trying to buildJsImage", e);
-            throw e;
-          }
+          var built = bundler.buildJsImage({
+            name: "isopacket-" + isopacketName,
+            packageMap: isopacketBuildContext.packageMap,
+            isopackCache: isopacketBuildContext.isopackCache,
+            use: packages
+          });
           if (buildmessage.jobHasMessages()) {
             return;
           }
 
           var builder = new Builder({ outputPath: isopacketRoot });
-          await builder.init();
-          await builder.writeJson('isopacket-buildinfo.json', {
+          builder.writeJson('isopacket-buildinfo.json', {
             builtBy: compiler.BUILT_BY,
             watchSet: built.watchSet.toJSON()
           });
-          await built.image.write(builder);
-          await builder.complete();
+          built.image.write(builder);
+          builder.complete();
           // It's loadable now.
           loadedIsopackets[isopacketName] = null;
         });
-      }
+      });
     });
   });
 
@@ -241,16 +231,16 @@ export async function ensureIsopacketsLoadable() {
 }
 
 // Returns a new all-local-packages catalog to be used for building isopackets.
-var newIsopacketBuildingCatalog = async function () {
+var newIsopacketBuildingCatalog = function () {
   if (!files.inCheckout()) {
     throw Error("No need to build isopackets unless in checkout!");
   }
 
   var catalogLocal = require('../packaging/catalog/catalog-local.js');
   var isopacketCatalog = new catalogLocal.LocalCatalog;
-  var messages = await buildmessage.capture(
+  var messages = buildmessage.capture(
     { title: "scanning local core packages" },
-    async function () {
+    function () {
       const packagesDir =
         files.pathJoin(files.getCurrentToolsDir(), 'packages');
 
@@ -259,7 +249,7 @@ var newIsopacketBuildingCatalog = async function () {
       // $PACKAGE_DIRS packages.  One side effect of this: we really really
       // expect them to all build, and we're fine with dying if they don't
       // (there's no worries about needing to springboard).
-      await isopacketCatalog.initialize({
+      isopacketCatalog.initialize({
         localPackageSearchDirs: [
           packagesDir,
           files.pathJoin(packagesDir, "non-core", "*", "packages"),
@@ -275,9 +265,9 @@ var newIsopacketBuildingCatalog = async function () {
   return isopacketCatalog;
 };
 
-export async function makeIsopacketBuildContext() {
+export function makeIsopacketBuildContext() {
   var context = {};
-  var catalog = await newIsopacketBuildingCatalog();
+  var catalog = newIsopacketBuildingCatalog();
   var versions = {};
   _.each(catalog.getAllPackageNames(), function (packageName) {
     versions[packageName] = catalog.getLatestVersion(packageName).version;
@@ -295,33 +285,30 @@ export async function makeIsopacketBuildContext() {
     // 'meteor' tool command invocations, we care more about startup time than
     // legibility, and the difference is actually observable (eg 25% speedup
     // loading constraint-solver).
-    noLineNumbers: true,
+    noLineNumbers: true
   });
   return context;
 }
 
 // Loads a built isopacket from disk. Always loads (the cache is in 'load', not
 // this function). Does not run a build process; it must already be built.
-var loadIsopacketFromDisk = async function (isopacketName) {
-  var image = await bundler.readJsImage(
+var loadIsopacketFromDisk = function (isopacketName) {
+  var image = bundler.readJsImage(
     files.pathJoin(isopacketPath(isopacketName), 'program.json'));
 
   // An incredibly minimalist version of the environment from
   // tools/server/boot.js.  Kind of a hack.
   var env = {
-    __meteor_bootstrap__: {
-      startupHooks: [],
-      isFibersDisabled: true
-    },
+    __meteor_bootstrap__: { startupHooks: [] },
     __meteor_runtime_config__: { meteorRelease: "ISOPACKET" }
   };
   env.Profile = Profile;
 
   var ret;
-  var messages = await buildmessage.capture({
+  var messages = buildmessage.capture({
     title: "loading isopacket `" + isopacketName + "`"
-  }, async function () {
-    ret = await image.load(env);
+  }, function () {
+    ret = image.load(env);
   });
 
   // This is a build step ... but it's one that only happens in development, so
@@ -335,7 +322,7 @@ var loadIsopacketFromDisk = async function (isopacketName) {
   // Run any user startup hooks.
   while (env.__meteor_bootstrap__.startupHooks.length) {
     var hook = env.__meteor_bootstrap__.startupHooks.shift();
-    await hook();
+    hook();
   }
   // Setting this to null tells Meteor.startup to call hooks immediately.
   env.__meteor_bootstrap__.startupHooks = null;

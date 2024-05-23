@@ -1,6 +1,5 @@
-const rimraf = require('rimraf');
-
 const { meteorPath } = require('./config');
+const rimraf = require('rimraf');
 
 function uninstall() {
   console.log(`Uninstalling Meteor from ${meteorPath}`);

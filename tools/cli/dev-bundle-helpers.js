@@ -1,7 +1,7 @@
 import { pathJoin, getDevBundle, statOrNull } from '../fs/files';
 import { installNpmModule } from '../isobuild/meteor-npm.js';
 
-export async function ensureDependencies(deps) {
+export function ensureDependencies(deps) {
   const devBundleLib = pathJoin(getDevBundle(), 'lib');
   const devBundleNodeModules = pathJoin(devBundleLib, 'node_modules');
 
@@ -19,7 +19,7 @@ export async function ensureDependencies(deps) {
   });
 
   // Install each of the requested modules.
-  for (const dep of Object.keys(needToInstall)) {
-    await installNpmModule(dep, needToInstall[dep], devBundleLib);
-  }
+  Object.keys(needToInstall).forEach(dep => {
+    installNpmModule(dep, needToInstall[dep], devBundleLib);
+  });
 }

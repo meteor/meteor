@@ -20,8 +20,8 @@ const url_prefix = function () {
 }
 
 testAsyncMulti('httpcall - basic', [
-  async function (test, expect) {
-    const basic_get = async function (url, options, expected_url) {
+  function (test, expect) {
+    const basic_get = function (url, options, expected_url) {
       const callback = function (error, result) {
         test.isFalse(error);
         if (!error) {
@@ -46,7 +46,7 @@ testAsyncMulti('httpcall - basic', [
       if (Meteor.isServer) {
         // test sync version
         try {
-          const result = await HTTP.call('GET', url_prefix() + url, options);
+          const result = HTTP.call('GET', url_prefix() + url, options);
           callback(undefined, result);
         } catch (e) {
           callback(e, e.response);
@@ -54,49 +54,49 @@ testAsyncMulti('httpcall - basic', [
       }
     };
 
-    await basic_get('/foo', null, '/foo');
-    await basic_get('/foo?', null, '/foo?');
-    await basic_get('/foo?a=b', null, '/foo?a=b');
-    await basic_get('/foo', { params: { fruit: 'apple' } }, '/foo?fruit=apple');
-    await basic_get('/foo', {
+    basic_get('/foo', null, '/foo');
+    basic_get('/foo?', null, '/foo?');
+    basic_get('/foo?a=b', null, '/foo?a=b');
+    basic_get('/foo', { params: { fruit: 'apple' } }, '/foo?fruit=apple');
+    basic_get('/foo', {
       params: {
         fruit: 'apple',
         dog: 'Spot the dog'
       }
     }, '/foo?fruit=apple&dog=Spot+the+dog');
-    await basic_get('/foo?', {
+    basic_get('/foo?', {
       params: {
         fruit: 'apple',
         dog: 'Spot the dog'
       }
     }, '/foo?fruit=apple&dog=Spot+the+dog');
-    await basic_get('/foo?bar', {
+    basic_get('/foo?bar', {
       params: {
         fruit: 'apple',
         dog: 'Spot the dog'
       }
     }, '/foo?bar&fruit=apple&dog=Spot+the+dog');
-    await basic_get('/foo?bar', {
+    basic_get('/foo?bar', {
       params: { fruit: 'apple', dog: 'Spot the dog' },
       query: 'baz'
     }, '/foo?baz&fruit=apple&dog=Spot+the+dog');
-    await basic_get('/foo', {
+    basic_get('/foo', {
       params: { fruit: 'apple', dog: 'Spot the dog' },
       query: 'baz'
     }, '/foo?baz&fruit=apple&dog=Spot+the+dog');
-    await basic_get('/foo?', {
+    basic_get('/foo?', {
       params: { fruit: 'apple', dog: 'Spot the dog' },
       query: 'baz'
     }, '/foo?baz&fruit=apple&dog=Spot+the+dog');
-    await basic_get('/foo?bar', { query: '' }, '/foo?');
-    await basic_get('/foo?bar', {
+    basic_get('/foo?bar', { query: '' }, '/foo?');
+    basic_get('/foo?bar', {
       params: { fruit: 'apple', dog: 'Spot the dog' },
       query: ''
     }, '/foo?fruit=apple&dog=Spot+the+dog');
   }]);
 
 testAsyncMulti('httpcall - errors', [
-  async function (test, expect) {
+  function (test, expect) {
     // Accessing unknown server (should fail to make any connection)
     const unknownServerCallback = function (error, result) {
       test.equal(!!error, true,'expected error');
@@ -113,7 +113,7 @@ testAsyncMulti('httpcall - errors', [
     if (Meteor.isServer) {
       // test sync version
       try {
-        const unknownServerResult = await HTTP.call('GET', `http://${invalidIp}/`);
+        const unknownServerResult = HTTP.call('GET', `http://${invalidIp}/`);
         unknownServerCallback(undefined, unknownServerResult);
       } catch (e) {
         unknownServerCallback(e, e.response);
@@ -143,7 +143,7 @@ testAsyncMulti('httpcall - errors', [
     if (Meteor.isServer) {
       // test sync version
       try {
-        const error500Result = await HTTP.call('GET', url_prefix() + '/fail');
+        const error500Result = HTTP.call('GET', url_prefix() + '/fail');
         error500Callback(undefined, error500Result);
       } catch (e) {
         error500Callback(e, e.response);
@@ -154,7 +154,7 @@ testAsyncMulti('httpcall - errors', [
 
 
 testAsyncMulti('httpcall - timeout', [
-  async function (test, expect) {
+  function (test, expect) {
 
     // Should time out
     const timeoutCallback = function (error, result) {
@@ -171,7 +171,7 @@ testAsyncMulti('httpcall - timeout', [
     if (Meteor.isServer) {
       // test sync version
       try {
-        const timeoutResult = await HTTP.call('GET', timeoutUrl, { timeout: 500 });
+        const timeoutResult = HTTP.call('GET', timeoutUrl, { timeout: 500 });
         timeoutCallback(undefined, timeoutResult);
       } catch (e) {
         timeoutCallback(e, e.response);
@@ -194,7 +194,7 @@ testAsyncMulti('httpcall - timeout', [
     if (Meteor.isServer) {
       // test sync version
       try {
-        const noTimeoutResult = await HTTP.call('GET', noTimeoutUrl, { timeout: 2000 });
+        const noTimeoutResult = HTTP.call('GET', noTimeoutUrl, { timeout: 2000 });
         noTimeoutCallback(undefined, noTimeoutResult);
       } catch (e) {
         noTimeoutCallback(e, e.response);
@@ -467,7 +467,7 @@ if (Meteor.isServer) {
     function (test, expect) {
       // Suppress error printing for this test (and for any other code that sets
       // the x-suppress-error header).
-      WebApp._suppressExpressErrors();
+      WebApp.suppressConnectErrors();
 
       function do_test (path, code, match) {
         const prefix = Meteor.isModern

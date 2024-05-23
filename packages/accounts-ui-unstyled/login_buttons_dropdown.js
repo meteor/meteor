@@ -226,7 +226,7 @@ const isInPasswordSignupFields = (fieldOrFields) => {
     return signupFields.reduce(
       (prev, field) => prev && fieldOrFields.includes(field),
       true,
-    );
+    )
   }
 
   return signupFields.includes(fieldOrFields);
@@ -488,7 +488,7 @@ Template._loginButtonsLoggedOutPasswordlessService.helpers({
   inSignupFlow: () => loginButtonsSession.get('inSignupFlow'),
 
   showCreateAccountLink: () => !Accounts._options.forbidClientAccountCreation,
-});
+})
 
 Template._loginButtonsLoggedOutPasswordService.helpers({
   fields: () => {
@@ -565,7 +565,7 @@ Template._loginButtonsLoggedOutPasswordService.helpers({
 
 Template._loginButtonsFormField.helpers({
   inputType: function () {
-    return this.inputType || "text";
+    return this.inputType || "text"
   }
 });
 
@@ -584,7 +584,7 @@ Template._loginButtonsChangePassword.events({
 
 Template._loginButtonsChangePassword.helpers({
   fields: () => {
-    const { username, emails } = Meteor.user();
+    const { username, emails } = Meteor.user()
     let email;
     if (emails) {
       email = emails[0].address;

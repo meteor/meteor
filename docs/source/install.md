@@ -118,4 +118,5 @@ If you installed Meteor using npm, you can remove it by running:
 
 If you installed Meteor using curl, you can remove it by running:
 `rm -rf ~/.meteor`
-`sudo rm /usr/local/bin/meteor`
+`sudo rm /usr/local/bin/meteor` 
+

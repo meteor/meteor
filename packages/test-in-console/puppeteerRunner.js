@@ -121,20 +121,12 @@ async function getFailed(page) {
 }
 
 async function runTests() {
-  console.log(`Running test with Puppeteer at ${process.env.URL}`);
+  console.log(`Running test with Puppeteer at ${ process.env.URL }`);
 
   // --no-sandbox and --disable-setuid-sandbox must be disabled for CI compatibility
-  const browser = await puppeteer.launch({
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-web-security',
-    ],
-  });
-  console.log(`Using version: ${await browser.version()}`);
+  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  console.log(`Using version: ${ await browser.version() }`);
   runNextUrl(browser);
 }
 
-runTests().catch((e) =>
-  console.log(`something broke while running puppeter: `, e)
-);
+runTests();

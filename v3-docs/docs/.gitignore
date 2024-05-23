@@ -1,6 +1,0 @@
-/node_modules
-/.vitepress/cache
-/.vitepress/dist
-
-/data/data.js
-/data/names.json

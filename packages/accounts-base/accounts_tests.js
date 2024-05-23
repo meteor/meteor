@@ -5,7 +5,7 @@ import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 
 Meteor.methods({
-  getCurrentLoginToken: async function () {
+  getCurrentLoginToken: function () {
     return Accounts._getLoginToken(this.connection.id);
   }
 });
@@ -14,18 +14,18 @@ Meteor.methods({
 // *are* validated, but Accounts._options is global state which makes this hard
 // (impossible?)
 Tinytest.add(
-  'accounts - config - validates keys',
-  test => test.throws(() => Accounts.config({ foo: "bar" }))
+  'accounts - config validates keys',
+  test => test.throws(() => Accounts.config({foo: "bar"}))
 );
 
-Tinytest.addAsync('accounts - config - token lifetime', async test => {
+Tinytest.add('accounts - config - token lifetime', test => {
   const { loginExpirationInDays } = Accounts._options;
   Accounts._options.loginExpirationInDays = 2;
   test.equal(Accounts._getTokenLifetimeMs(), 2 * 24 * 60 * 60 * 1000);
   Accounts._options.loginExpirationInDays = loginExpirationInDays;
 });
 
-Tinytest.addAsync('accounts - config - unexpiring tokens', async test => {
+Tinytest.add('accounts - config - unexpiring tokens', test => {
   const { loginExpirationInDays } = Accounts._options;
 
   // When setting loginExpirationInDays to null in the global Accounts
@@ -53,7 +53,7 @@ Tinytest.addAsync('accounts - config - unexpiring tokens', async test => {
   Accounts._options.loginExpirationInDays = loginExpirationInDays;
 });
 
-Tinytest.addAsync('accounts - config - default token lifetime', async test => {
+Tinytest.add('accounts - config - default token lifetime', test => {
   const options = Accounts._options;
   Accounts._options = {};
   test.equal(
@@ -63,11 +63,11 @@ Tinytest.addAsync('accounts - config - default token lifetime', async test => {
   Accounts._options = options;
 });
 
-Tinytest.addAsync('accounts - config - defaultFieldSelector', async test => {
+Tinytest.add('accounts - config - defaultFieldSelector', test => {
   const options = Accounts._options;
   Accounts._options = {};
-  const setValue = { bigArray: 0 };
-  Accounts.config({ defaultFieldSelector: setValue });
+  const setValue = {bigArray: 0};
+  Accounts.config({defaultFieldSelector: setValue});
   test.equal(Accounts._options.defaultFieldSelector, setValue);
   Accounts._options = options;
 });
@@ -78,51 +78,154 @@ Accounts.validateNewUser(user => {
   return true;
 });
 
-Tinytest.addAsync('accounts - validateNewUser gets passed user with _id', async test => {
-  const { userId } = await Accounts.updateOrCreateUserFromExternalService('foobook', { id: Random.id() });
-  test.isTrue(userId in idsInValidateNewUser);
+Tinytest.add('accounts - validateNewUser gets passed user with _id', test => {
+  const newUserId = Accounts.updateOrCreateUserFromExternalService('foobook', {id: Random.id()}).userId;
+  test.isTrue(newUserId in idsInValidateNewUser);
 });
 
-Tinytest.addAsync('accounts - insertUserDoc username', async test => {
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', test => {
+  const facebookId = Random.id();
+
+  // create an account with facebook
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    'facebook', {id: facebookId, monkey: 42}, {profile: {foo: 1}}).id;
+  const users1 = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.foo, 1);
+  test.equal(users1[0].services.facebook.monkey, 42);
+
+  // create again with the same id, see that we get the same user.
+  // it should update services.facebook but not profile.
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    'facebook', {id: facebookId, llama: 50},
+    {profile: {foo: 1000, bar: 2}}).id;
+  test.equal(uid1, uid2);
+  const users2 = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
+  test.length(users2, 1);
+  test.equal(users2[0].profile.foo, 1);
+  test.equal(users2[0].profile.bar, undefined);
+  test.equal(users2[0].services.facebook.llama, 50);
+  // make sure we *don't* lose values not passed this call to
+  // updateOrCreateUserFromExternalService
+  test.equal(users2[0].services.facebook.monkey, 42);
+
+  // cleanup
+  Meteor.users.remove(uid1);
+});
+
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Meteor Developer', test => {
+  const developerId = Random.id();
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    'meteor-developer',
+    { id: developerId, username: 'meteor-developer' },
+    { profile: { name: 'meteor-developer' } }
+  ).id;
+  const users1 = Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.name, 'meteor-developer');
+
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    'meteor-developer',
+    { id: developerId, username: 'meteor-developer' },
+    { profile: { name: 'meteor-developer', username: 'developer' } }
+  ).id;
+  test.equal(uid1, uid2);
+  const users2 = Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
+  test.length(users2, 1);
+  test.equal(users1[0].profile.name, 'meteor-developer');
+  test.equal(users1[0].profile.username, undefined);
+
+  // cleanup
+  Meteor.users.remove(uid1);
+});
+
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', test => {
+  const weiboId1 = Random.id();
+  const weiboId2 = Random.id();
+
+  // users that have different service ids get different users
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    'weibo', {id: weiboId1}, {profile: {foo: 1}}).id;
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    'weibo', {id: weiboId2}, {profile: {bar: 2}}).id;
+  test.equal(Meteor.users.find({"services.weibo.id": {$in: [weiboId1, weiboId2]}}).count(), 2);
+  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).profile.foo, 1);
+  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).emails, undefined);
+  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId2}).profile.bar, 2);
+  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId2}).emails, undefined);
+
+  // cleanup
+  Meteor.users.remove(uid1);
+  Meteor.users.remove(uid2);
+});
+
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', test => {
+  const twitterIdOld = parseInt(Random.hexString(4), 16);
+  const twitterIdNew = ''+twitterIdOld;
+
+  // create an account with twitter using the old ID format of integer
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    'twitter', {id: twitterIdOld, monkey: 42}, {profile: {foo: 1}}).id;
+  const users1 = Meteor.users.find({"services.twitter.id": twitterIdOld}).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.foo, 1);
+  test.equal(users1[0].services.twitter.monkey, 42);
+
+  // Update the account with the new ID format of string
+  // test that the existing user is found, and that the ID
+  // gets updated to a string value
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    'twitter', {id: twitterIdNew, monkey: 42}, {profile: {foo: 1}}).id;
+  test.equal(uid1, uid2);
+  const users2 = Meteor.users.find({"services.twitter.id": twitterIdNew}).fetch();
+  test.length(users2, 1);
+
+  // cleanup
+  Meteor.users.remove(uid1);
+});
+
+
+Tinytest.add('accounts - insertUserDoc username', test => {
   const userIn = {
     username: Random.id()
   };
 
   // user does not already exist. create a user object with fields set.
-  const userId = await Accounts.insertUserDoc(
-    { profile: { name: 'Foo Bar' } },
+  const userId = Accounts.insertUserDoc(
+    {profile: {name: 'Foo Bar'}},
     userIn
   );
-  const userOut = await Meteor.users.findOneAsync(userId);
+  const userOut = Meteor.users.findOne(userId);
+
   test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
   test.equal(userOut.username, userIn.username);
 
   // run the hook again. now the user exists, so it throws an error.
-  await test.throwsAsync(
-    async () => await Accounts.insertUserDoc({ profile: { name: 'Foo Bar' } }, userIn),
+  test.throws(
+    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
     'Username already exists.'
   );
 
   // cleanup
-  await Meteor.users.removeAsync(userId);
+  Meteor.users.remove(userId);
 });
 
-Tinytest.addAsync('accounts - insertUserDoc email', async test => {
+Tinytest.add('accounts - insertUserDoc email', test => {
   const email1 = Random.id();
   const email2 = Random.id();
   const email3 = Random.id();
   const userIn = {
-    emails: [{ address: email1, verified: false },
-      { address: email2, verified: true }]
+    emails: [{address: email1, verified: false},
+             {address: email2, verified: true}]
   };
 
   // user does not already exist. create a user object with fields set.
-  const userId = await Accounts.insertUserDoc(
-    { profile: { name: 'Foo Bar' } },
+  const userId = Accounts.insertUserDoc(
+    {profile: {name: 'Foo Bar'}},
     userIn
   );
-  const userOut = await Meteor.users.findOneAsync(userId);
+  const userOut = Meteor.users.findOne(userId);
 
   test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
@@ -130,47 +233,43 @@ Tinytest.addAsync('accounts - insertUserDoc email', async test => {
 
   // run the hook again with the exact same emails.
   // run the hook again. now the user exists, so it throws an error.
-  await test.throwsAsync(
-    async () => await Accounts.insertUserDoc({ profile: { name: 'Foo Bar' } }, userIn),
+  test.throws(
+    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
     'Email already exists.'
   );
 
   // now with only one of them.
-  await test.throwsAsync(
-    async () =>
-      await Accounts.insertUserDoc({}, { emails: [{ address: email1 }] }),
+  test.throws(() =>
+    Accounts.insertUserDoc({}, {emails: [{address: email1}]}),
     'Email already exists.'
   );
 
-  await test.throwsAsync(
-    async () =>
-      await Accounts.insertUserDoc({}, { emails: [{ address: email2 }] }),
+  test.throws(() =>
+    Accounts.insertUserDoc({}, {emails: [{address: email2}]}),
     'Email already exists.'
   );
 
 
   // a third email works.
-  const userId3 = await Accounts.insertUserDoc(
-    {}, { emails: [{ address: email3 }] }
+  const userId3 = Accounts.insertUserDoc(
+      {}, {emails: [{address: email3}]}
   );
-  const user3 = await Meteor.users.findOneAsync(userId3);
+  const user3 = Meteor.users.findOne(userId3);
   test.equal(typeof user3.createdAt, 'object');
 
   // cleanup
-  await Meteor.users.removeAsync(userId);
-  await Meteor.users.removeAsync(userId3);
+  Meteor.users.remove(userId);
+  Meteor.users.remove(userId3);
 });
 
 // More token expiration tests are in accounts-password
-Tinytest.addAsync('accounts - expire numeric token', async (test, onComplete) => {
+Tinytest.addAsync('accounts - expire numeric token', (test, onComplete) => {
   const userIn = { username: Random.id() };
-  const userId = await Accounts.insertUserDoc({
-    profile: {
-      name: 'Foo Bar'
-    }
-  }, userIn);
+  const userId = Accounts.insertUserDoc({ profile: {
+    name: 'Foo Bar'
+  } }, userIn);
   const date = new Date(new Date() - 5000);
-  await Meteor.users.updateAsync(userId, {
+  Meteor.users.update(userId, {
     $set: {
       "services.resume.loginTokens": [{
         hashedToken: Random.id(),
@@ -181,64 +280,59 @@ Tinytest.addAsync('accounts - expire numeric token', async (test, onComplete) =>
       }]
     }
   });
-  const observe = await Meteor.users.find(userId).observe({
+  const observe = Meteor.users.find(userId).observe({
     changed: newUser => {
       if (newUser.services && newUser.services.resume &&
-        (!newUser.services.resume.loginTokens ||
+          (!newUser.services.resume.loginTokens ||
           newUser.services.resume.loginTokens.length === 0)) {
         observe.stop();
         onComplete();
       }
     }
   });
-  await Accounts._expireTokens(new Date(), userId);
+  Accounts._expireTokens(new Date(), userId);
 });
 
 
 // Login tokens used to be stored unhashed in the database.  We want
 // to make sure users can still login after upgrading.
-const insertUnhashedLoginToken = async (userId, stampedToken) => {
-  await Meteor.users.updateAsync(
+const insertUnhashedLoginToken = (userId, stampedToken) => {
+  Meteor.users.update(
     userId,
-    { $push: { 'services.resume.loginTokens': stampedToken } }
+    {$push: {'services.resume.loginTokens': stampedToken}}
   );
 };
 
-Tinytest.addAsync('accounts - login token', async (test) => {
+Tinytest.addAsync('accounts - login token', (test, onComplete) => {
   // Test that we can login when the database contains a leftover
   // old style unhashed login token.
-  const userId1 =
-    await Accounts.insertUserDoc({}, { username: Random.id() });
+  const userId1 = Accounts.insertUserDoc({}, {username: Random.id()});
   const stampedToken1 = Accounts._generateStampedLoginToken();
-  await insertUnhashedLoginToken(userId1, stampedToken1);
+  insertUnhashedLoginToken(userId1, stampedToken1);
   let connection = DDP.connect(Meteor.absoluteUrl());
-  await connection.callAsync('login', { resume: stampedToken1.token });
+  connection.call('login', {resume: stampedToken1.token});
   connection.disconnect();
 
   // Steal the unhashed token from the database and use it to login.
   // This is a sanity check so that when we *can't* login with a
   // stolen *hashed* token, we know it's not a problem with the test.
-  const userId2 =
-    await Accounts.insertUserDoc({}, { username: Random.id() });
-  await insertUnhashedLoginToken(userId2, Accounts._generateStampedLoginToken());
-  const user2 = await Meteor.users.findOneAsync(userId2);
-  const stolenToken1 = user2.services.resume.loginTokens[0].token;
+  const userId2 = Accounts.insertUserDoc({}, {username: Random.id()});
+  insertUnhashedLoginToken(userId2, Accounts._generateStampedLoginToken());
+  const stolenToken1 = Meteor.users.findOne(userId2).services.resume.loginTokens[0].token;
   test.isTrue(stolenToken1);
   connection = DDP.connect(Meteor.absoluteUrl());
-  await connection.callAsync('login', { resume: stolenToken1 });
+  connection.call('login', {resume: stolenToken1});
   connection.disconnect();
 
   // Now do the same thing, this time with a stolen hashed token.
-  const userId3 =
-    await Accounts.insertUserDoc({}, { username: Random.id() });
-  await Accounts._insertLoginToken(userId3, Accounts._generateStampedLoginToken());
-  const user3 = await Meteor.users.findOneAsync(userId3);
-  const stolenToken2 = user3.services.resume.loginTokens[0].hashedToken;
+  const userId3 = Accounts.insertUserDoc({}, {username: Random.id()});
+  Accounts._insertLoginToken(userId3, Accounts._generateStampedLoginToken());
+  const stolenToken2 = Meteor.users.findOne(userId3).services.resume.loginTokens[0].hashedToken;
   test.isTrue(stolenToken2);
   connection = DDP.connect(Meteor.absoluteUrl());
   // evil plan foiled
-  await test.throwsAsync(
-    async () => await connection.callAsync('login', { resume: stolenToken2 }),
+  test.throws(
+    () => connection.call('login', {resume: stolenToken2}),
     /You\'ve been logged out by the server/
   );
   connection.disconnect();
@@ -246,25 +340,24 @@ Tinytest.addAsync('accounts - login token', async (test) => {
   // Old style unhashed tokens are replaced by hashed tokens when
   // encountered.  This means that after someone logins once, the
   // old unhashed token is no longer available to be stolen.
-  const userId4 =
-    await Accounts.insertUserDoc({}, { username: Random.id() });
+  const userId4 = Accounts.insertUserDoc({}, {username: Random.id()});
   const stampedToken2 = Accounts._generateStampedLoginToken();
-  await insertUnhashedLoginToken(userId4, stampedToken2);
+  insertUnhashedLoginToken(userId4, stampedToken2);
   connection = DDP.connect(Meteor.absoluteUrl());
-  await connection.callAsync('login', { resume: stampedToken2.token });
+  connection.call('login', {resume: stampedToken2.token});
   connection.disconnect();
 
   // The token is no longer available to be stolen.
-  const user4 = await Meteor.users.findOneAsync(userId4);
-  const stolenToken3 = user4.services.resume.loginTokens[0].token;
+  const stolenToken3 = Meteor.users.findOne(userId4).services.resume.loginTokens[0].token;
   test.isFalse(stolenToken3);
 
   // After the upgrade, the client can still login with their original
   // unhashed login token.
   connection = DDP.connect(Meteor.absoluteUrl());
-  await connection.callAsync('login', { resume: stampedToken2.token });
+  connection.call('login', {resume: stampedToken2.token});
   connection.disconnect();
 
+  onComplete();
 });
 
 Tinytest.addAsync(
@@ -288,64 +381,59 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync('accounts - get new token', async test => {
+Tinytest.add('accounts - get new token', test => {
     // Test that the `getNewToken` method returns us a valid token, with
     // the same expiration as our original token.
-    const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
+    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedToken = Accounts._generateStampedLoginToken();
-    await Accounts._insertLoginToken(userId, stampedToken);
-
+    Accounts._insertLoginToken(userId, stampedToken);
     const conn = DDP.connect(Meteor.absoluteUrl());
-    await conn.callAsync('login', { resume: stampedToken.token });
-    test.equal(await conn.callAsync('getCurrentLoginToken'),
-      Accounts._hashLoginToken(stampedToken.token));
+    conn.call('login', { resume: stampedToken.token });
+    test.equal(conn.call('getCurrentLoginToken'),
+               Accounts._hashLoginToken(stampedToken.token));
 
-    const newTokenResult = await conn.callAsync('getNewToken');
+    const newTokenResult = conn.call('getNewToken');
     test.equal(newTokenResult.tokenExpires,
-      Accounts._tokenExpiration(stampedToken.when));
-    const token = await conn.callAsync('getCurrentLoginToken');
-    test.equal(await conn.callAsync('getCurrentLoginToken'),
-      Accounts._hashLoginToken(newTokenResult.token));
+               Accounts._tokenExpiration(stampedToken.when));
+    test.equal(conn.call('getCurrentLoginToken'),
+               Accounts._hashLoginToken(newTokenResult.token));
     conn.disconnect();
 
     // A second connection should be able to log in with the new token
     // we got.
     const secondConn = DDP.connect(Meteor.absoluteUrl());
-    await secondConn.callAsync('login', { resume: newTokenResult.token });
+    secondConn.call('login', { resume: newTokenResult.token });
     secondConn.disconnect();
   }
 );
 
-Tinytest.addAsync('accounts - remove other tokens', async (test) => {
+Tinytest.addAsync('accounts - remove other tokens', (test, onComplete) => {
     // Test that the `removeOtherTokens` method removes all tokens other
     // than the caller's token, thereby logging out and closing other
     // connections.
-    const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
+    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedTokens = [];
     const conns = [];
 
-    for (let i = 0; i < 2; i++) {
+    for(let i = 0; i < 2; i++) {
       stampedTokens.push(Accounts._generateStampedLoginToken());
-      await Accounts._insertLoginToken(userId, stampedTokens[i]);
+      Accounts._insertLoginToken(userId, stampedTokens[i]);
       const conn = DDP.connect(Meteor.absoluteUrl());
-      await conn.callAsync('login', { resume: stampedTokens[i].token });
-      test.equal(await conn.callAsync('getCurrentLoginToken'),
-        Accounts._hashLoginToken(stampedTokens[i].token));
+      conn.call('login', { resume: stampedTokens[i].token });
+      test.equal(conn.call('getCurrentLoginToken'),
+                 Accounts._hashLoginToken(stampedTokens[i].token));
       conns.push(conn);
-    }
-    ;
+    };
 
-    await conns[0].callAsync('removeOtherTokens');
-    simplePoll(async () => {
-        let tokens = [];
-        for (const conn of conns) {
-          tokens.push(await conn.callAsync('getCurrentLoginToken'));
-        }
-        return !tokens[1] &&
+    conns[0].call('removeOtherTokens');
+    simplePoll(() => {
+        const tokens = conns.map(conn => conn.call('getCurrentLoginToken'));
+        return ! tokens[1] &&
           tokens[0] === Accounts._hashLoginToken(stampedTokens[0].token);
       },
       () => { // success
         conns.forEach(conn => conn.disconnect());
+        onComplete();
       },
       () => { // timed out
         throw new Error("accounts - remove other tokens timed out");
@@ -354,12 +442,12 @@ Tinytest.addAsync('accounts - remove other tokens', async (test) => {
   }
 );
 
-Tinytest.addAsync(
+Tinytest.add(
   'accounts - hook callbacks can access Meteor.userId()',
-  async test => {
-    const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
+  test => {
+    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedToken = Accounts._generateStampedLoginToken();
-    await Accounts._insertLoginToken(userId, stampedToken);
+    Accounts._insertLoginToken(userId, stampedToken);
 
     const validateStopper = Accounts.validateLoginAttempt(attempt => {
       test.equal(Meteor.userId(), validateAttemptExpectedUserId, "validateLoginAttempt");
@@ -381,22 +469,20 @@ Tinytest.addAsync(
     // On a new connection, Meteor.userId() should be null until logged in.
     let validateAttemptExpectedUserId = null;
     const onLoginExpectedUserId = userId;
-    await conn.callAsync('login', { resume: stampedToken.token });
+    conn.call('login', { resume: stampedToken.token });
 
     // Now that the user is logged in on the connection, Meteor.userId() should
     // return that user.
     validateAttemptExpectedUserId = userId;
-    await conn.callAsync('login', { resume: stampedToken.token });
+    conn.call('login', { resume: stampedToken.token });
 
     // Trigger onLoginFailure callbacks
     const onLoginFailureExpectedUserId = userId;
-    await test.throwsAsync(
-      async () =>
-        await conn.callAsync('login', { resume: "bogus" }), '403');
+    test.throws(() => conn.call('login', { resume: "bogus" }), '403');
 
     // Trigger onLogout callbacks
     const onLogoutExpectedUserId = userId;
-    await conn.callAsync('logout');
+    conn.call('logout');
 
     conn.disconnect();
     validateStopper.stop();
@@ -406,18 +492,17 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync(
+Tinytest.add(
   'accounts - hook callbacks obey options.defaultFieldSelector',
-  async test => {
+  test => {
     const ignoreFieldName = "bigArray";
-    const userId =
-      await Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
     const stampedToken = Accounts._generateStampedLoginToken();
-    await Accounts._insertLoginToken(userId, stampedToken);
+    Accounts._insertLoginToken(userId, stampedToken);
     const options = Accounts._options;
     Accounts._options = {};
-    Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
-    test.equal(Accounts._options.defaultFieldSelector, { [ignoreFieldName]: 0 }, 'defaultFieldSelector');
+    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    test.equal(Accounts._options.defaultFieldSelector, {[ignoreFieldName]: 0}, 'defaultFieldSelector');
 
     const validateStopper = Accounts.validateLoginAttempt(attempt => {
       test.isUndefined(allowLogin != 'bogus' ? attempt.user[ignoreFieldName] : attempt.user, "validateLoginAttempt")
@@ -437,27 +522,23 @@ Tinytest.addAsync(
 
     // test a new connection
     let allowLogin = true;
-    await conn.callAsync('login', { resume: stampedToken.token });
+    conn.call('login', { resume: stampedToken.token });
 
     // Now that the user is logged in on the connection, Meteor.userId() should
     // return that user.
-    await conn.callAsync('login', { resume: stampedToken.token });
+    conn.call('login', { resume: stampedToken.token });
 
     // Trigger onLoginFailure callbacks, this will not include the user object
     allowLogin = 'bogus';
-    await test.throwsAsync(
-      async () =>
-        await conn.callAsync('login', { resume: "bogus" }), '403');
+    test.throws(() => conn.call('login', { resume: "bogus" }), '403');
 
     // test a forced login fail which WILL include the user object
     allowLogin = false;
-    await test.throwsAsync(
-      async () =>
-        await conn.callAsync('login', { resume: stampedToken.token }), '403');
+    test.throws(() => conn.call('login', { resume: stampedToken.token }), '403');
 
     // Trigger onLogout callbacks
     const onLogoutExpectedUserId = userId;
-    await conn.callAsync('logout');
+    conn.call('logout');
 
     Accounts._options = options;
     conn.disconnect();
@@ -468,55 +549,53 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync(
+Tinytest.add(
   'accounts - Meteor.user() obeys options.defaultFieldSelector',
-  async test => {
+  test => {
     const ignoreFieldName = "bigArray";
     const customField = "customField";
-    const userId =
-      await Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
     const stampedToken = Accounts._generateStampedLoginToken();
-    await Accounts._insertLoginToken(userId, stampedToken);
+    Accounts._insertLoginToken(userId, stampedToken);
     const options = Accounts._options;
 
     // stub Meteor.userId() so it works outside methods and returns the correct user:
     const origAccountsUserId = Accounts.userId;
-    Accounts.userId =
-      () => userId;
+    Accounts.userId = () => userId;
 
     Accounts._options = {};
 
     // test the field is included by default
-    let user = await Meteor.user();
+    let user = Meteor.user();
     test.isNotUndefined(user[ignoreFieldName], 'included by default');
 
     // test the field is excluded
-    Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
-    user = await Meteor.user();
+    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    user = Meteor.user();
     test.isUndefined(user[ignoreFieldName], 'excluded');
-    user = await Meteor.user({});
+    user = Meteor.user({});
     test.isUndefined(user[ignoreFieldName], 'excluded {}');
 
     // test the field can still be retrieved if required
-    user = await Meteor.user({ fields: { [ignoreFieldName]: 1 } });
+    user = Meteor.user({fields: {[ignoreFieldName]: 1}});
     test.isNotUndefined(user[ignoreFieldName], 'field can be retrieved');
     test.isUndefined(user.username, 'field can be retrieved username');
 
     // test a combined negative field specifier
-    user = await Meteor.user({ fields: { username: 0 } });
+    user = Meteor.user({fields: {username: 0}});
     test.isUndefined(user[ignoreFieldName], 'combined field selector');
     test.isUndefined(user.username, 'combined field selector username');
 
     // test an explicit request for the full user object
-    user = await Meteor.user({ fields: {} });
+    user = Meteor.user({fields: {}});
     test.isNotUndefined(user[ignoreFieldName], 'full selector');
     test.isNotUndefined(user.username, 'full selector username');
 
     Accounts._options = {};
 
     // Test that a custom field gets retrieved properly
-    Accounts.config({ defaultFieldSelector: { [customField]: 1 } });
-    user = await Meteor.user()
+    Accounts.config({defaultFieldSelector: {[customField]: 1}});
+    user = Meteor.user()
     test.isNotUndefined(user[customField]);
     test.isUndefined(user.username);
     test.isUndefined(user[ignoreFieldName]);
@@ -532,16 +611,14 @@ Tinytest.addAsync(
   async test => {
     const ignoreFieldName = "bigArray";
     const customField = "customField";
-    const userId =
-      await Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
     const stampedToken = Accounts._generateStampedLoginToken();
-    await Accounts._insertLoginToken(userId, stampedToken);
+    Accounts._insertLoginToken(userId, stampedToken);
     const options = Accounts._options;
 
     // stub Meteor.userId() so it works outside methods and returns the correct user:
     const origAccountsUserId = Accounts.userId;
-    Accounts.userId =
-      () => userId;
+    Accounts.userId = () => userId;
 
     Accounts._options = {};
 
@@ -584,25 +661,21 @@ Tinytest.addAsync(
     Accounts.userId = origAccountsUserId;
   }
 );
-Tinytest.addAsync(
+Tinytest.add(
   'accounts - verify onExternalLogin hook can update oauth user profiles',
-  async test => {
+  test => {
     // Verify user profile data is saved properly when not using the
     // onExternalLogin hook.
     let facebookId = Random.id();
-    const u1 = await Accounts.updateOrCreateUserFromExternalService(
+    const uid1 = Accounts.updateOrCreateUserFromExternalService(
       'facebook',
       { id: facebookId },
       { profile: { foo: 1 } },
-    );
+    ).userId;
     const ignoreFieldName = "bigArray";
-
-    const c =
-      await Meteor.users.updateAsync(u1.userId, { $set: { [ignoreFieldName]: [1] } });
-
+    const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
     let users =
-      await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
-
+      Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 1);
     test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
@@ -612,19 +685,19 @@ Tinytest.addAsync(
     // Also verify that the user object is filtered by _options.defaultFieldSelector
     const accountsOptions = Accounts._options;
     Accounts._options = {};
-    Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
+    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
     Accounts.onExternalLogin((options, user) => {
       options.profile.foo = 2;
       test.isUndefined(users[ignoreFieldName], 'ignoreField - after limit fields');
       return options;
     });
-    await Accounts.updateOrCreateUserFromExternalService(
+    Accounts.updateOrCreateUserFromExternalService(
       'facebook',
       { id: facebookId },
       { profile: { foo: 1 } },
     );
     // test.isUndefined(users[0][ignoreFieldName], 'ignoreField - fields limited');
-    users = await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+    users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 2);
     test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - still there');
@@ -632,108 +705,98 @@ Tinytest.addAsync(
     // Verify user profile data can be modified using the onExternalLogin
     // hook, for new users.
     facebookId = Random.id();
-    const u2 = await Accounts.updateOrCreateUserFromExternalService(
+    const uid2 = Accounts.updateOrCreateUserFromExternalService(
       'facebook',
       { id: facebookId },
       { profile: { foo: 3 } },
-    );
-    users = await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+    ).userId;
+    users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 2);
 
     // Cleanup
-    await Meteor.users.removeAsync(u1);
-    await Meteor.users.removeAsync(u2.userId);
+    Meteor.users.remove(uid1);
+    Meteor.users.remove(uid2);
     Accounts._onExternalLoginHook = null;
     Accounts._options = accountsOptions;
   }
 );
 
-Tinytest.addAsync(
-  'accounts - verify beforeExternalLogin hook can stop user login',
-  async test => {
-    // Verify user data is saved properly when not using the
-    // beforeExternalLogin hook.
-    let facebookId = Random.id();
+Tinytest.add(
+    'accounts - verify beforeExternalLogin hook can stop user login',
+    test => {
+        // Verify user data is saved properly when not using the
+        // beforeExternalLogin hook.
+        let facebookId = Random.id();
+        const uid1 = Accounts.updateOrCreateUserFromExternalService(
+            'facebook',
+            { id: facebookId },
+            { profile: { foo: 1 } },
+        ).userId;
+        const ignoreFieldName = "bigArray";
+        const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
+        let users =
+            Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+        test.length(users, 1);
+        test.equal(users[0].profile.foo, 1);
+        test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
 
-    const u =
-      await Accounts.updateOrCreateUserFromExternalService(
-        'facebook',
-        { id: facebookId },
-        { profile: { foo: 1 } },
-      );
+        // Verify that when beforeExternalLogin returns false
+        // that an error throws and user is not saved
+        Accounts.beforeExternalLogin((serviceName, serviceData, user) => {
+            // Check that we get the correct data
+            test.equal(serviceName, 'facebook');
+            test.equal(serviceData, { id: facebookId });
+            test.equal(user._id, uid1);
+            return false
+        });
 
-    const ignoreFieldName = "bigArray";
-
-    const c =
-      await Meteor.users.updateAsync(u.userId, { $set: { [ignoreFieldName]: [1] } });
-
-    let users =
-      await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
-
-    test.length(users, 1);
-    test.equal(users[0].profile.foo, 1);
-    test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
-
-    // Verify that when beforeExternalLogin returns false
-    // that an error throws and user is not saved
-    Accounts.beforeExternalLogin((serviceName, serviceData, user) => {
-      // Check that we get the correct data
-      test.equal(serviceName, 'facebook');
-      test.equal(serviceData, { id: facebookId });
-      test.equal(user._id, u.userId);
-      return false
-    });
-
-    await test.throwsAsync(
-      async () =>
-        await Accounts.updateOrCreateUserFromExternalService(
-          'facebook',
-          { id: facebookId },
-          { profile: { foo: 1 } },
+        test.throws(() => Accounts.updateOrCreateUserFromExternalService(
+            'facebook',
+            { id: facebookId },
+            { profile: { foo: 1 } },
         ));
 
-    // Cleanup
-    await Meteor.users.removeAsync(u.userId);
-    Accounts._beforeExternalLoginHook = null;
-  }
-);
-
-Tinytest.addAsync(
-  'accounts - verify setAdditionalFindUserOnExternalLogin hook can provide user',
-  async test => {
-    // create test user, without a google service
-    const testEmail = "test@testdomain.com"
-    // being sure that the user is not already in the database
-    await Meteor.users.removeAsync({ "emails.address": testEmail });
-    const uid0 = await Accounts.createUser({ email: testEmail })
-
-    // Verify that user is found from email and service merged
-    Accounts.setAdditionalFindUserOnExternalLogin(async ({ serviceName, serviceData }) => {
-      if (serviceName === "google") {
-        return await Accounts.findUserByEmail(serviceData.email)
-      }
-    })
-
-    let googleId = Random.id();
-    const u1 = await Accounts.updateOrCreateUserFromExternalService(
-      'google',
-      { id: googleId, email: testEmail },
-      { profile: { foo: 1 } },
-    );
-    test.equal(uid0, u1.userId)
-
-    // Cleanup
-    if (u1.userId !== uid0) {
-      await Meteor.users.removeAsync(uid0)
+        // Cleanup
+        Meteor.users.remove(uid1);
+        Accounts._beforeExternalLoginHook = null;
     }
-    await Meteor.users.removeAsync(u1.userId);
-    Accounts.selectCustomUserOnExternalLogin = null;
+);
+
+Tinytest.add(
+  'accounts - verify setAdditionalFindUserOnExternalLogin hook can provide user',
+  test => {
+      // create test user, without a google service
+      const testEmail = "test@testdomain.com"
+      const uid0 = Accounts.createUser({email: testEmail})
+
+      // Verify that user is found from email and service merged
+      Accounts.setAdditionalFindUserOnExternalLogin(({serviceName, serviceData}) => {
+        if (serviceName === "google") {
+          return Accounts.findUserByEmail(serviceData.email)
+        }
+      })
+
+      let googleId = Random.id();
+      const uid1 = Accounts.updateOrCreateUserFromExternalService(
+          'google',
+          { id: googleId, email: testEmail },
+          { profile: { foo: 1 } },
+      ).userId;
+
+      test.equal(uid0, uid1)
+
+      // Cleanup
+      if (uid1 !== uid0) {
+        Meteor.users.remove(uid0)
+      }
+      Meteor.users.remove(uid1);
+      Accounts.selectCustomUserOnExternalLogin = null;
   }
 );
 
-if (Meteor.isServer) {
-  Tinytest.addAsync('accounts - config - collection - mongo.collection', async test => {
+if(Meteor.isServer) {
+  Tinytest.add('accounts - config - collection - mongo.collection', test => {
     const origCollection = Accounts.users;
     // create same user in two different collections - should pass
     const email = "test-collection@testdomain.com"
@@ -743,23 +806,23 @@ if (Meteor.isServer) {
     Accounts.config({
       collection: collection0,
     })
-    const uid0 = await Accounts.createUser({email})
-    await Meteor.users.removeAsync(uid0);
+    const uid0 = Accounts.createUser({email})
+    Meteor.users.remove(uid0);
 
     const collection1 = new Mongo.Collection('test2');
     Accounts.config({
       collection: collection1,
     })
-    const uid1 = await Accounts.createUser({email})
+    const uid1 = Accounts.createUser({email})
+    Meteor.users.remove(uid1);
 
-    await Meteor.users.removeAsync(uid1);
     test.notEqual(uid0, uid1);
 
     Accounts.config({
       collection: origCollection,
     });
   });
-  Tinytest.addAsync('accounts - config - collection - name', async test => {
+  Tinytest.add('accounts - config - collection - name', test => {
     const origCollection = Accounts.users;
     // create same user in two different collections - should pass
     const email = "test-collection@testdomain.com"
@@ -767,14 +830,14 @@ if (Meteor.isServer) {
     Accounts.config({
       collection: 'collection0',
     })
-    const uid0 = await Accounts.createUser({email})
-    await Meteor.users.removeAsync(uid0);
+    const uid0 = Accounts.createUser({email})
+    Meteor.users.remove(uid0);
 
     Accounts.config({
       collection: 'collection1',
     })
-    const uid1 = await Accounts.createUser({email})
-    await Meteor.users.removeAsync(uid1);
+    const uid1 = Accounts.createUser({email})
+    Meteor.users.remove(uid1);
 
     test.notEqual(uid0, uid1);
 
@@ -785,13 +848,13 @@ if (Meteor.isServer) {
 
   Tinytest.add(
     'accounts - make sure that extra params to accounts urls are added',
-    async test => {
+    test => {
       // No extra params
       const verifyEmailURL = new URL(Accounts.urls.verifyEmail('test'));
       test.equal(verifyEmailURL.searchParams.toString(), "");
 
       // Extra params
-      const extraParams = { test: 'success' };
+      const extraParams = { test: 'success'};
       const resetPasswordURL = new URL(Accounts.urls.resetPassword('test', extraParams));
       test.equal(resetPasswordURL.searchParams.get('test'), extraParams.test);
       const enrollAccountURL = new URL(Accounts.urls.enrollAccount('test', extraParams));
@@ -799,127 +862,3 @@ if (Meteor.isServer) {
     }
   );
 }
-
-Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook', async test => {
-  const facebookId = Random.id();
-
-  // create an account with facebook
-  const u1 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'facebook', { id: facebookId, monkey: 42 }, { profile: { foo: 1 } });
-  const users1 =
-    await Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
-  test.length(users1, 1);
-  test.equal(users1[0].profile.foo, 1);
-  test.equal(users1[0].services.facebook.monkey, 42);
-
-  // create again with the same id, see that we get the same user.
-  // it should update services.facebook but not profile.
-  const u2 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'facebook', { id: facebookId, llama: 50 },
-      { profile: { foo: 1000, bar: 2 } });
-  test.equal(u1.id, u2.id);
-  const users2 =
-    await Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
-  test.length(users2, 1);
-  test.equal(users2[0].profile.foo, 1);
-  test.equal(users2[0].profile.bar, undefined);
-  test.equal(users2[0].services.facebook.llama, 50);
-  // make sure we *don't* lose values not passed this call to
-  // updateOrCreateUserFromExternalService
-  test.equal(users2[0].services.facebook.monkey, 42);
-
-  // cleanup
-  await Meteor.users.removeAsync(u1.id);
-});
-
-Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Meteor Developer', async test => {
-  const developerId =
-    Random.id();
-  const u1 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'meteor-developer',
-      { id: developerId, username: 'meteor-developer' },
-      { profile: { name: 'meteor-developer' } }
-    );
-  const users1 =
-    await Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
-  test.length(users1, 1);
-  test.equal(users1[0].profile.name, 'meteor-developer');
-
-  const u2 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'meteor-developer',
-      { id: developerId, username: 'meteor-developer' },
-      { profile: { name: 'meteor-developer', username: 'developer' } }
-    );
-  test.equal(u1.id, u2.id);
-  const users2 =
-    await Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
-  test.length(users2, 1);
-  test.equal(users1[0].profile.name, 'meteor-developer');
-  test.equal(users1[0].profile.username, undefined);
-
-  // cleanup
-  await Meteor.users.removeAsync(u1);
-});
-
-Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Weibo', async test => {
-  const weiboId1 =
-    Random.id();
-  const weiboId2 =
-    Random.id();
-
-  // users that have different service ids get different users
-  const u1 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'weibo', { id: weiboId1 }, { profile: { foo: 1 } });
-  const u2 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'weibo', { id: weiboId2 }, { profile: { bar: 2 } });
-  test.equal(await Meteor.users.find({ "services.weibo.id": { $in: [weiboId1, weiboId2] } }).countAsync(), 2);
-
-  const user1 =
-    await Meteor.users.findOneAsync({ "services.weibo.id": weiboId1 });
-  const user2 =
-    await Meteor.users.findOneAsync({ "services.weibo.id": weiboId2 });
-  test.equal(user1.profile.foo, 1);
-  test.equal(user1.emails, undefined);
-  test.equal(user2.profile.bar, 2);
-  test.equal(user2.emails, undefined);
-
-  // cleanup
-  Meteor.users.removeAsync(u1.id);
-  Meteor.users.removeAsync(u2.id);
-});
-
-Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', async test => {
-  const twitterIdOld = parseInt(Random.hexString(4), 16);
-  const twitterIdNew = '' + twitterIdOld;
-
-  // create an account with twitter using the old ID format of integer
-  const u1 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'twitter', { id: twitterIdOld, monkey: 42 }, { profile: { foo: 1 } });
-  const users1 =
-    await Meteor.users.find({ "services.twitter.id": twitterIdOld }).fetch();
-  test.length(users1, 1);
-  test.equal(users1[0].profile.foo, 1);
-  test.equal(users1[0].services.twitter.monkey, 42);
-
-  // Update the account with the new ID format of string
-  // test that the existing user is found, and that the ID
-  // gets updated to a string value
-  const u2 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'twitter', { id: twitterIdNew, monkey: 42 }, { profile: { foo: 1 } });
-  test.equal(u1.id, u2.id);
-  const users2 =
-    await Meteor.users.find({ "services.twitter.id": twitterIdNew }).fetch();
-  test.length(users2, 1);
-
-  // cleanup
-  await Meteor.users.removeAsync(u1.id);
-});
-

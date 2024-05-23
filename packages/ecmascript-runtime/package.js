@@ -1,13 +1,9 @@
 Package.describe({
   name: "ecmascript-runtime",
-  version: '0.8.2-rc300.2',
+  version: '0.8.1',
   summary: "Polyfills for new ECMAScript 2015 APIs like Map and Set",
   git: "https://github.com/meteor/ecmascript-runtime",
   documentation: "README.md"
-});
-
-Npm.depends({
-  '@babel/runtime': '7.20.7'
 });
 
 Package.onUse(function(api) {

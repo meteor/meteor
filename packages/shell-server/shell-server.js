@@ -235,9 +235,9 @@ class Server {
     const defaultEval = repl.eval;
 
     function wrappedDefaultEval(code, context, file, callback) {
-      if (Package['babel-compiler']) {
+      if (Package.ecmascript) {
         try {
-          code = Package['babel-compiler'].Babel.compileForShell(code, {
+          code = Package.ecmascript.ECMAScript.compileForShell(code, {
             cacheDirectory: getCacheDirectory(shellDir)
           });
         } catch (err) {
@@ -249,25 +249,7 @@ class Server {
       }
 
       evalCommandPromise
-        .then(() => defaultEval(code, context, file, (error, result) => {
-          if (error) {
-            callback(error);
-          } else {
-            // Check if the result is a Promise
-            if (result && typeof result.then === 'function') {
-              // Handle the Promise resolution and rejection
-              result
-                .then(resolvedResult => {
-                  callback(null, resolvedResult);
-                })
-                .catch(rejectedError => {
-                  callback(rejectedError);
-                });
-            } else {
-              callback(null, result);
-            }
-          }
-        }))
+        .then(() => defaultEval(code, context, file, callback))
         .catch(callback);
     }
 

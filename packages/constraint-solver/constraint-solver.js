@@ -1,4 +1,4 @@
-const isEqual = require('lodash.isequal');
+const isEqual = Npm.require('lodash.isequal');
 
 var PV = PackageVersion;
 var CS = ConstraintSolver;
@@ -15,7 +15,6 @@ CS.PackagesResolver = function (catalog, options) {
 
   self._options = {
     nudge: options && options.nudge,
-    yield: options && options.yield,
     Profile: options && options.Profile,
     // For resultCache, pass in an empty object `{}`, and PackagesResolver
     // will put data on it.  Pass in the same object again to allow reusing
@@ -45,19 +44,20 @@ CS.PackagesResolver = function (catalog, options) {
 //  - supportedIsobuildFeaturePackages - map from package name to list of
 //    version strings of isobuild feature packages that are available in the
 //    catalog
-CS.PackagesResolver.prototype.resolve = async function (dependencies, constraints,
+CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                                   options) {
   var self = this;
   options = options || {};
   var Profile = (self._options.Profile || CS.DummyProfile);
 
-  var input = await Profile.time("new CS.Input", function () {
+  var input;
+  Profile.time("new CS.Input", function () {
     const { upgrade,
     anticipatedPrereleases,
     previousSolution,
     allowIncompatibleUpdate,
     upgradeIndirectDepPatchVersions } = options;
-    return new CS.Input(dependencies, constraints, self.catalogCache,
+    input = new CS.Input(dependencies, constraints, self.catalogCache,
       { upgrade,
         anticipatedPrereleases,
         previousSolution,
@@ -97,15 +97,15 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
     });
   }
 
-  await Profile.time(
+  Profile.time(
     "Input#loadOnlyPreviousSolution",
     function () {
-      return input.loadOnlyPreviousSolution(self.catalogLoader);
+      input.loadOnlyPreviousSolution(self.catalogLoader);
     });
 
   if (options.previousSolution && options.missingPreviousVersionIsError) {
     // see comment where missingPreviousVersionIsError is passed in
-    await Profile.time("check for previous versions in catalog", function () {
+    Profile.time("check for previous versions in catalog", function () {
       Object.entries(options.previousSolution).forEach(function ([pkg, version]) {
         if (! input.catalogCache.hasPackageVersion(pkg, version)) {
           CS.throwConstraintSolverError(
@@ -117,7 +117,6 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
 
   var resolveOptions = {
     nudge: self._options.nudge,
-    yield: self._options.yield,
     Profile: self._options.Profile
   };
 
@@ -129,7 +128,7 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
     // packages, because that would always result in just using the current
     // version, hence disabling upgrades.
     try {
-      output = await CS.PackagesResolver._resolveWithInput(input, resolveOptions);
+      output = CS.PackagesResolver._resolveWithInput(input, resolveOptions);
     } catch (e) {
       if (e.constraintSolverError) {
         output = null;
@@ -141,14 +140,14 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
 
   if (! output) {
     // do a solve with all package versions available in the catalog.
-    await Profile.time(
+    Profile.time(
       "Input#loadFromCatalog",
       function () {
-        return input.loadFromCatalog(self.catalogLoader);
+        input.loadFromCatalog(self.catalogLoader);
       });
 
     // if we fail to find a solution this time, this will throw.
-    output = await CS.PackagesResolver._resolveWithInput(input, resolveOptions);
+    output = CS.PackagesResolver._resolveWithInput(input, resolveOptions);
   }
 
   if (resultCache) {
@@ -166,7 +165,7 @@ CS.PackagesResolver.prototype.resolve = async function (dependencies, constraint
 // - allAnswers (for testing, calculate all possible answers and put an extra
 //   property named "allAnswers" on the result)
 // - Profile (the profiler interface in `tools/profile.js`)
-CS.PackagesResolver._resolveWithInput = async function (input, options) {
+CS.PackagesResolver._resolveWithInput = function (input, options) {
   options = options || {};
 
   if (Meteor.isServer &&
@@ -175,24 +174,22 @@ CS.PackagesResolver._resolveWithInput = async function (input, options) {
     console.log(JSON.stringify(input.toJSONable(), null, 2));
   }
 
-  var solver = await (options.Profile || CS.DummyProfile).time("new CS.Solver", async function () {
-    const _solver = new CS.Solver(input, {
+  var solver;
+  (options.Profile || CS.DummyProfile).time("new CS.Solver", function () {
+    solver = new CS.Solver(input, {
       nudge: options.nudge,
-      yield: options.yield,
       Profile: options.Profile
     });
-    await _solver.init();
-
-    return _solver;
   });
 
   // Disable runtime type checks (they slow things down a bunch)
-  return await Logic.disablingAssertions(function () {
-    // if we're here, no conflicts were found (or an error would have
-    // been thrown)
-    return solver.getAnswer({
+  return Logic.disablingAssertions(function () {
+    var result = solver.getAnswer({
       allAnswers: options.allAnswers
     });
+    // if we're here, no conflicts were found (or an error would have
+    // been thrown)
+    return result;
   });
 };
 

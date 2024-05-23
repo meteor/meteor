@@ -17,6 +17,6 @@
     "puppeteer": "^2.1.1",
     "react": "^17.0.2",
     "regenerator-runtime": "^0.13.5",
-    "uuid": "^7.0.3"
+    "uuid": "^7.0.2"
   }
 }

@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "start": "meteor run",
-    "exit-with-status": "node exitWithStatus.js",
+    "exit-with-status": "echo \"This script has an exit status\" && exit 1",
     "exit-normally": "echo \"This script will exit normally\" && exit 0"
   },
   "dependencies": {

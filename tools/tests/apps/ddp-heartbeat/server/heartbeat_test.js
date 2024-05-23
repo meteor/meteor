@@ -1,45 +1,66 @@
-const waitReactive = (fn) => {
-  return new Promise((resolve, reject) => {
-    let timeoutHandle = setTimeout(() => {
-      reject(new Error("timeout"));
-    }, 60000);
-    let computation = Tracker.autorun((c) => {
-      let ret = fn();
-      if (ret) {
-        c.stop();
-        clearTimeout(timeoutHandle);
-        Meteor.defer(() => {
-          resolve(ret);
-        });
-      }
-    });
+var Fiber = Npm.require("fibers");
+var Future = Npm.require("fibers/future");
+
+// XXX Deps isn't supported on the server... but we need a way to
+// capture client connection status transitions.
+
+var waitReactive = function (fn) {
+  var future = new Future();
+  var timeoutHandle = Meteor.setTimeout(
+    function () {
+      future.throw(new Error("timeout"));
+    },
+    60000
+  );
+  Tracker.autorun(function (c) {
+    var ret = fn();
+    if (ret) {
+      c.stop();
+      Meteor.clearTimeout(timeoutHandle);
+
+      // We need to run in a fiber for `defer`.
+      Fiber(function () {
+        // Use `defer` because yields are blocked inside of autorun.
+        Meteor.defer(function () {
+          future.return(ret);
+        })
+      }).run();
+    }
+  });
+  return future.wait();
+};
+
+var waitForClientConnectionStatus = function (connection, status) {
+  waitReactive(function () {
+    return connection.status().status === status;
   });
 };
 
-const waitForClientConnectionStatus = (connection, status) => {
-  return waitReactive(() => connection.status().status === status);
-};
 
-const expectConnectAndReconnect = async (clientConnection) => {
+// Expect to connect, and then to reconnect (presumably because of a
+// timeout).
+
+var expectConnectAndReconnect = function (clientConnection) {
   console.log("client is connecting");
-  await waitForClientConnectionStatus(clientConnection, "connected");
+  waitForClientConnectionStatus(clientConnection, "connected");
 
   console.log("client is connected, expecting ping timeout and reconnect");
-  await waitForClientConnectionStatus(clientConnection, "connecting");
+  waitForClientConnectionStatus(clientConnection, "connecting");
 
   console.log("client is reconnecting");
 };
 
-const testClientTimeout = async () => {
+
+var testClientTimeout = function () {
   console.log("Test client timeout");
 
-  let savedServerOptions = { ...Meteor.server.options };
+  var savedServerOptions = { ...Meteor.server.options };
   Meteor.server.options.heartbeatInterval = 0;
   Meteor.server.options.respondToPings = false;
 
-  let clientConnection = DDP.connect(Meteor.absoluteUrl());
+  var clientConnection = DDP.connect(Meteor.absoluteUrl());
 
-  await expectConnectAndReconnect(clientConnection);
+  expectConnectAndReconnect(clientConnection);
 
   clientConnection.close();
 
@@ -48,28 +69,28 @@ const testClientTimeout = async () => {
   console.log("test successful\n");
 };
 
-const testServerTimeout = async () => {
+
+var testServerTimeout = function () {
   console.log("Test server timeout");
 
-  let clientConnection = DDP.connect(Meteor.absoluteUrl(), {
-    heartbeatInterval: 0,
-    respondToPings: false,
-  });
+  var clientConnection = DDP.connect(
+    Meteor.absoluteUrl(),
+    {
+      heartbeatInterval: 0,
+      respondToPings: false
+    }
+  );
 
-  await expectConnectAndReconnect(clientConnection);
+  expectConnectAndReconnect(clientConnection);
 
   clientConnection.close();
   console.log("test successful\n");
 };
 
-(async function () {
+Fiber(function () {
   Meteor._printReceivedDDP = true;
   Meteor._printSentDDP = true;
-  await testClientTimeout().catch((e) =>
-    console.error("Error in testClientTimeout", e)
-  );
-  await testServerTimeout().catch((e) =>
-    console.error("Error in testServerTimeout", e)
-  );
+  testClientTimeout();
+  testServerTimeout();
   process.exit(0);
-})();
+}).run();

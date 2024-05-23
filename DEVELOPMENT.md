@@ -43,18 +43,12 @@ can run Meteor directly from a Git checkout using these steps:
     $ /path/to/meteor-checkout/meteor run
     ```
 
-    > _Tip 1:_ Consider making an easy-to-run alias for frequent use:
+    > _Tip:_ Consider making an easy-to-run alias for frequent use:
     >
     >     alias mymeteor=/path/to-meteor-checkout/meteor
     >
     > This allows the use of `mymeteor` in place of `meteor`.  To persist this
     > across shell logouts, simply add it to `~/.bashrc` or `.zshrc`.
-
-    > _Tip 2:_ When working with meteor tool, it may be helpful to use the debugger to check what's happening. You can do this using the following flag:
-    >
-    >        TOOL_NODE_FLAGS="--inspect-brk" mymeteor
-    > 
-    > Then you can use the chrome debugger inside `chrome://inspect`.
 
 ### Notes when running from a checkout
 

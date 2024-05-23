@@ -1,3 +1,4 @@
+var Fiber = require('fibers');
 var files = require('../fs/files');
 var runLog = require('./run-log.js');
 var utils = require('../utils/utils.js');
@@ -35,7 +36,7 @@ Object.assign(Selenium.prototype, {
   // Start the selenium server, block (yield) until it is ready to go
   // (actively listening on outer and proxying to inner), and then
   // return.
-  start: async function () {
+  start: function () {
     var self = this;
 
     if (self.server) {
@@ -65,38 +66,42 @@ Object.assign(Selenium.prototype, {
     var builder = new webdriver.Builder().withCapabilities(capabilities);
     self.driver = builder.build();
 
-    await self.driver.getSession();
-    await self.driver.get(self.url);
+    Promise.await(self.driver.getSession());
+    Promise.await(self.driver.get(self.url));
 
-    try {
-      await self._pollLogs();
-    } catch (err) {
-      runLog.log("Log polling exited unexpectedly: " + err);
-    }
+    Fiber(function () {
+      try {
+        self._pollLogs();
+      } catch (err) {
+        runLog.log("Log polling exited unexpectedly: " + err);
+      }
+    }).run();
   },
 
-  stop: async function () {
+  stop: function () {
     var self = this;
 
     if (! self.driver) {
       return;
     }
 
-    await self.driver.close();
-    await self.driver.quit();
+    Promise.await(self.driver.close());
+    Promise.await(self.driver.quit());
 
     self.driver = null;
   },
 
-  _flushLogs: async function () {
+  _flushLogs: function () {
     var self = this;
-    await self.driver.executeScript("console.log('" + DUMMY_FLUSH + "');", []);
+    Promise.await(
+      self.driver.executeScript("console.log('" + DUMMY_FLUSH + "');", [])
+    );
   },
 
-  _getLogs: async function () {
+  _getLogs: function () {
     var self = this;
 
-    await self.driver.manage().logs().get('browser');
+    Promise.await(self.driver.manage().logs().get('browser'));
   },
 
   _gotStateDone: function () {
@@ -138,11 +143,11 @@ Object.assign(Selenium.prototype, {
     }
   },
 
-  _pollLogsOnce: async function () {
+  _pollLogsOnce: function () {
     var self = this;
 
-    await self._flushLogs();
-    var logs = await self._getLogs() || [];
+    self._flushLogs();
+    var logs = self._getLogs() || [];
     logs.forEach(function (log) {
       var msg = log.message;
       var regex = /([^\s]*)\s*([^\s]*)\s*(.*)/i;
@@ -171,16 +176,16 @@ Object.assign(Selenium.prototype, {
     });
   },
 
-  _pollLogs: async function () {
+  _pollLogs: function () {
     var self = this;
 
     while (self.driver) {
       try {
-        await self._pollLogsOnce();
+        self._pollLogsOnce();
       } catch (err) {
         runLog.log("Error reading console log: " + err);
       }
-      await utils.sleepMs(1000);
+      utils.sleepMs(1000);
     }
   },
 });

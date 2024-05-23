@@ -220,7 +220,7 @@ export class CordovaBuilder {
     this.pluginsConfiguration = {};
   }
 
-  async processControlFile() {
+  processControlFile() {
     const controlFilePath =
       files.pathJoin(this.projectContext.projectDir, 'mobile-config.js');
 
@@ -228,11 +228,11 @@ export class CordovaBuilder {
     if (files.exists(controlFilePath)) {
       Console.debug('Processing mobile-config.js');
 
-      await buildmessage.enterJob({ title: `processing mobile-config.js` }, async () => {
+      buildmessage.enterJob({ title: `processing mobile-config.js` }, () => {
         const code = files.readFile(controlFilePath, 'utf8');
 
         try {
-          await files.runJavaScript(code, {
+          files.runJavaScript(code, {
             filename: 'mobile-config.js',
             symbols: { App: createAppConfiguration(this) }
           });
@@ -243,7 +243,7 @@ export class CordovaBuilder {
     }
   }
 
-  async writeConfigXmlAndCopyResources(shouldCopyResources = true) {
+  writeConfigXmlAndCopyResources(shouldCopyResources = true) {
     let config = XmlBuilder.create({ version: '1.0' }).ele('widget');
 
     // Set the root attributes
@@ -324,7 +324,7 @@ export class CordovaBuilder {
     }
     if (shouldCopyResources) {
       // Prepare the resources folder
-      await files.rm_recursive(this.resourcesPath);
+      files.rm_recursive(this.resourcesPath);
       files.mkdir_p(this.resourcesPath);
 
       Console.debug('Copying resources for mobile apps');
@@ -465,11 +465,11 @@ export class CordovaBuilder {
     });
   }
 
-  async copyWWW(bundlePath) {
+  copyWWW(bundlePath) {
     const wwwPath = files.pathJoin(this.projectRoot, 'www');
 
     // Remove existing www
-    await files.rm_recursive(wwwPath);
+    files.rm_recursive(wwwPath);
 
     // Create www and www/application directories
     const applicationPath = files.pathJoin(wwwPath, 'application');
@@ -477,7 +477,7 @@ export class CordovaBuilder {
 
     // Copy Cordova arch program from bundle to www/application
     const programPath = files.pathJoin(bundlePath, 'programs', CORDOVA_ARCH);
-    await files.cp_r(programPath, applicationPath);
+    files.cp_r(programPath, applicationPath);
 
     // Load program.json
     const programJsonPath = files.convertToOSPath(
@@ -491,20 +491,20 @@ export class CordovaBuilder {
     const publicSettings = settings['public'];
 
     // Calculate client hash and append to program
-    await this.appendVersion(program, publicSettings);
+    this.appendVersion(program, publicSettings);
 
     // Write program.json
     files.writeFile(programJsonPath, JSON.stringify(program), 'utf8');
 
-    const bootstrapPage = await this.generateBootstrapPage(
+    const bootstrapPage = this.generateBootstrapPage(
       applicationPath, program, publicSettings
-    );
+    ).await();
 
     files.writeFile(files.pathJoin(applicationPath, 'index.html'),
       bootstrapPage, 'utf8');
   }
 
-  async appendVersion(program, publicSettings) {
+  appendVersion(program, publicSettings) {
     // Note: these version calculations must be kept in agreement with
     // generateClientProgram in packages/webapp/webapp_server.js, or hot
     // code push will reload the app unnecessarily.
@@ -512,7 +512,7 @@ export class CordovaBuilder {
     let configDummy = {};
     configDummy.PUBLIC_SETTINGS = publicSettings || {};
 
-    const { WebAppHashing } = await loadIsopackage('webapp-hashing');
+    const { WebAppHashing } = loadIsopackage('webapp-hashing');
     const { AUTOUPDATE_VERSION } = process.env;
 
     program.version = AUTOUPDATE_VERSION ||
@@ -538,7 +538,7 @@ export class CordovaBuilder {
       );
   }
 
-  async generateBootstrapPage(applicationPath, program, publicSettings) {
+  generateBootstrapPage(applicationPath, program, publicSettings) {
     const meteorRelease =
       release.current.isCheckout() ? "none" : release.current.name;
     const hmrVersion =
@@ -579,7 +579,7 @@ export class CordovaBuilder {
       runtimeConfig.PUBLIC_SETTINGS = publicSettings;
     }
 
-    const { Boilerplate } = await loadIsopackage('boilerplate-generator');
+    const { Boilerplate } = loadIsopackage('boilerplate-generator');
 
     const boilerplate = new Boilerplate(CORDOVA_ARCH, manifest, {
       urlMapper: _.identity,
@@ -594,14 +594,14 @@ export class CordovaBuilder {
     return boilerplate.toHTMLAsync();
   }
 
-  async copyBuildOverride() {
+  copyBuildOverride() {
     const buildOverridePath =
       files.pathJoin(this.projectContext.projectDir, 'cordova-build-override');
 
     if (files.exists(buildOverridePath) &&
       files.stat(buildOverridePath).isDirectory()) {
       Console.debug('Copying over the cordova-build-override directory');
-      await files.cp_r(buildOverridePath, this.projectRoot);
+      files.cp_r(buildOverridePath, this.projectRoot);
     }
   }
 }

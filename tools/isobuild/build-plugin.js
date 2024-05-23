@@ -25,23 +25,23 @@ Object.assign(exports.SourceProcessor.prototype, {
   // this immediately on evaluating Plugin.registerCompiler; we instead wait
   // until the whole plugin file has been evaluated (so that it can use things
   // defined later in the file).
-  instantiatePlugin: async function () {
+  instantiatePlugin: function () {
     var self = this;
     buildmessage.assertInCapture();
     if (self.userPlugin) {
       throw Error("Called instantiatePlugin twice?");
     }
-    await buildmessage.enterJob(
+    buildmessage.enterJob(
       `running ${self.methodName} callback in package ` +
         self.isopack.displayName(),
-      async () => {
+      () => {
         try {
-          const markedFactoryFunction = buildmessage.markBoundary(self.factoryFunction);
-          self.userPlugin = await markedFactoryFunction.call(null);
+          self.userPlugin = buildmessage.markBoundary(self.factoryFunction)
+            .call(null);
           // If we have a disk cache directory and the plugin wants it, use it.
           if (self.isopack.pluginCacheDir &&
               self.userPlugin.setDiskCacheDirectory) {
-            await buildmessage.markBoundary(function () {
+            buildmessage.markBoundary(function () {
               self.userPlugin.setDiskCacheDirectory(
                 files.convertToOSPath(self.isopack.pluginCacheDir)
               );

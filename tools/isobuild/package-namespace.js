@@ -3,13 +3,13 @@ import { inCheckout } from "../fs/files";
 import buildmessage from "../utils/buildmessage.js";
 import packageVersionParser from "../packaging/package-version-parser.js";
 
+export class PackageNamespace {
   /**
    * @summary Class of the 'Package' object visible in package.js
    * @locus package.js
    * @instanceName Package
    * @showInstanceName true
    */
-export class PackageNamespace {
   constructor(packageSource) {
     this._packageSource = packageSource;
     this._fileAndDepLoader = null;

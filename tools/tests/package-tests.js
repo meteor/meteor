@@ -1,9 +1,9 @@
-var _ = require("underscore");
+var _= require('underscore');
 
-var selftest = require("../tool-testing/selftest.js");
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require("../fs/files");
-var utils = require("../utils/utils.js");
+var files = require('../fs/files');
+var utils = require('../utils/utils.js');
 
 var username = "test";
 
@@ -13,7 +13,7 @@ var randomizedPackageName = function (username, start) {
   // be a consistent length is very useful.
   var startStr = start ? start + "-" : "";
   return username + ":" + startStr + utils.randomToken().substring(0, 6);
-};
+}
 
 // Given a sandbox, that has the app as its currend cwd, read the packages file
 // and check that it contains exactly the packages specified, in order.
@@ -27,24 +27,24 @@ var randomizedPackageName = function (username, start) {
 //    awesome-pack@1.0.0 (ie: name@version) to match that name at that
 //    version explicitly. This is for packages that we included at a specific
 //    version.
-var checkPackages = selftest.markStack(async function (sand, packages) {
+var checkPackages = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/packages").split("\n");
   var i = 0;
-  for (const line of lines) {
+  _.each(lines, function(line) {
     if (!line) {
       return;
     }
     // If the specified package contains an @ sign, then it has a version
     // number, so we should match everything.
-    if (packages[i].split("@").length > 1) {
-      await selftest.expectEqual(line, packages[i]);
+    if (packages[i].split('@').length > 1) {
+      selftest.expectEqual(line, packages[i]);
     } else {
-      var pack = line.split("@")[0];
-      await selftest.expectEqual(pack, packages[i]);
+      var pack = line.split('@')[0];
+      selftest.expectEqual(pack, packages[i]);
     }
     i++;
-  }
-  await selftest.expectEqual(packages.length, i);
+  });
+  selftest.expectEqual(packages.length, i);
 });
 
 // Given a sandbox, that has the app as its currend cwd, read the versions file
@@ -64,125 +64,123 @@ var checkPackages = selftest.markStack(async function (sand, packages) {
 //    version explicitly. This is for packages that only exist for the purpose
 //    of this test (for example, packages local to this app), so we know exactly
 //    what version we expect.
-var checkVersions = selftest.markStack(async function (sand, packages) {
+var checkVersions = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/versions").split("\n");
   var depend = {};
-  _.each(lines, function (line) {
+  _.each(lines, function(line) {
     if (!line) {
       return;
     }
     // Packages are stored of the form foo@1.0.0, so this should give us an
     // array [foo, 1.0.0].
-    var split = line.split("@");
+    var split = line.split('@');
     var pack = split[0];
     depend[pack] = split[1];
   });
   var i = 0;
-  for (const pack of packages) {
-    var split = pack.split("@");
+  _.each(packages, function (pack) {
+    var split = pack.split('@');
     if (split.length > 1) {
-      await selftest.expectEqual(depend[split[0]], split[1]);
+      selftest.expectEqual(depend[split[0]], split[1]);
     } else {
       var exists = _.has(depend, split[0]);
-      await selftest.expectEqual(exists, true);
+      selftest.expectEqual(exists, true);
     }
     i++;
-  }
-  await selftest.expectEqual(packages.length, i);
+  });
+  selftest.expectEqual(packages.length, i);
 });
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("change packages during hot code push", [], async function () {
+selftest.define("change packages during hot code push", [], function () {
   var s = new Sandbox();
-  await s.init();
   var run;
 
   // Starting a run
-  await s.createApp("myapp", "package-tests");
+  s.createApp("myapp", "package-tests");
   s.cd("myapp");
   run = s.run();
   run.waitSecs(5);
-  await run.match("myapp");
-  await run.match("proxy");
+  run.match("myapp");
+  run.match("proxy");
   run.waitSecs(5);
-  await run.match("your app");
+  run.match("your app");
   run.waitSecs(5);
-  await run.match("running at");
-  await run.match("localhost");
+  run.match("running at");
+  run.match("localhost");
   // Add the local package 'say-something'. It should print a message.
   s.write(".meteor/packages", "meteor-base \n say-something");
   run.waitSecs(3);
-  await run.match("initial");
+  run.match("initial");
 
   // Modify the local package 'say-something'.
   s.cd("packages/say-something", function () {
-    s.write("foo.js", 'console.log("another");');
+    s.write("foo.js", "console.log(\"another\");");
   });
   run.waitSecs(12);
-  await run.match("another");
+  run.match("another");
 
   // Add a local package depends-on-plugin.
   s.write(".meteor/packages", "meteor-base \n depends-on-plugin");
   run.waitSecs(2);
-  await run.match("foobar");
+  run.match("foobar");
 
   // Change something in the plugin.
   s.cd("packages/contains-plugin/plugin", function () {
-    s.write("plugin.js", 'console.log("edit");');
+    s.write("plugin.js", "console.log(\"edit\");");
   });
   run.waitSecs(2);
-  await run.match("edit");
-  await run.match("foobar!");
+  run.match("edit");
+  run.match("foobar!");
 
   // Check that we are watching the versions file, as well as the packages file.
-  s.unlink(".meteor/versions");
+  s.unlink('.meteor/versions');
   run.waitSecs(10);
-  await run.match("restarted");
+  run.match("restarted");
 
   // Switch back to say-something for a moment.
   s.write(".meteor/packages", "meteor-base \n say-something");
   run.waitSecs(3);
-  await run.match("another");
-  await run.stop();
+  run.match("another");
+  run.stop();
 
-  s.rename("packages/say-something", "packages/shout-something");
+  s.rename('packages/say-something', 'packages/shout-something');
   s.write(".meteor/packages", "meteor-base \n shout-something");
   s.cd("packages/shout-something", function () {
-    s.write("foo.js", 'console.log("louder");');
+    s.write("foo.js", "console.log(\"louder\");");
   });
 
   run = s.run();
   run.waitSecs(5);
-  await run.match("myapp");
-  await run.match("proxy");
+  run.match("myapp");
+  run.match("proxy");
   run.waitSecs(5);
-  await run.match("louder"); // the package actually loaded
+  run.match("louder");  // the package actually loaded
 
   // How about breaking and fixing a package.js?
-  await s.cd("packages/shout-something", async function () {
+  s.cd("packages/shout-something", function () {
     var packageJs = s.read("package.js");
     s.write("package.js", "]");
     run.waitSecs(3);
-    await run.match("=> Errors prevented startup");
-    await run.match("package.js:1: Unexpected token");
-    await run.match("Waiting for file change");
+    run.match("=> Errors prevented startup");
+    run.match("package.js:1: Unexpected token");
+    run.match("Waiting for file change");
 
     s.write("package.js", packageJs);
     run.waitSecs(3);
-    await run.match("restarting");
-    await run.match("restarted");
+    run.match("restarting");
+    run.match("restarted");
   });
-  await run.stop();
+  run.stop();
 });
 
-selftest.define("add debugOnly and prodOnly packages", [], async function () {
+selftest.define("add debugOnly and prodOnly packages", [], function () {
   var s = new Sandbox();
-  await s.init();
   var run;
 
   // Starting a run
-  await s.createApp("myapp", "package-tests");
+  s.createApp("myapp", "package-tests");
   s.cd("myapp");
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
@@ -190,327 +188,304 @@ selftest.define("add debugOnly and prodOnly packages", [], async function () {
   // nothing in production mode.
   run = s.run("add", "debug-only");
   run.waitSecs(30);
-  await run.match("debug-only");
-  await run.expectExit(0);
+  run.match("debug-only");
+  run.expectExit(0);
 
   function onStartup(property) {
     s.mkdir("server");
-    s.write(
-      "server/exit-test.js",
-      [
-        "Meteor.startup(() => {",
-        "  console.log('Meteor.isDevelopment', Meteor.isDevelopment);",
-        "  console.log('Meteor.isProduction', Meteor.isProduction);",
-        `  console.log('${property}', global.${property});`,
-        `  process.exit(global.${property} ? 234 : 235);`,
-        "});",
-        "",
-      ].join("\n")
-    );
+    s.write("server/exit-test.js", [
+      "Meteor.startup(() => {",
+      "  console.log('Meteor.isDevelopment', Meteor.isDevelopment);",
+      "  console.log('Meteor.isProduction', Meteor.isProduction);",
+      `  console.log('${property}', global.${property});`,
+      `  process.exit(global.${property} ? 234 : 235);`,
+      "});",
+      ""
+    ].join("\n"));
   }
 
   onStartup("DEBUG_ONLY_LOADED");
 
   run = s.run("--once");
   run.waitSecs(30);
-  await run.expectExit(234);
+  run.expectExit(234);
 
   run = s.run("--once", "--production");
   run.waitSecs(30);
-  await run.expectExit(235);
+  run.expectExit(235);
 
   // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
   run = s.run("add", "prod-only");
-  await run.match("prod-only");
-  await run.expectExit(0);
+  run.match("prod-only");
+  run.expectExit(0);
 
   onStartup("PROD_ONLY_LOADED");
 
   run = s.run("--once");
   run.waitSecs(30);
-  await run.expectExit(235);
+  run.expectExit(235);
 
   run = s.run("--once", "--production");
   run.waitSecs(30);
-  await run.expectExit(234);
+  run.expectExit(234);
 });
 
 // Add packages through the command line. Make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list.
-selftest.define("add packages to app", [], async function () {
+selftest.define("add packages to app", [], function () {
   var s = new Sandbox();
-  await s.init();
-
   var run;
 
   // Starting a run
-  await s.createApp("myapp", "package-tests");
+  s.createApp("myapp", "package-tests");
   s.cd("myapp");
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
   // This has legit version syntax, but accounts-base started with 1.0.0 and is
   // unlikely to backtrack.
   run = s.run("add", "accounts-base@0.123.123");
-  await run.matchErr("no such version");
-  await run.expectExit(1);
+  run.matchErr("no such version");
+  run.expectExit(1);
 
   // Adding a nonexistent package at a nonexistent version should print
   // only one error message, not two. (We used to print "no such
   // package" and "no such version".)
   run = s.run("add", "not-a-real-package-and-never-will-be@1.0.0");
-  await run.matchErr("no such package");
-  await run.expectExit(1);
+  run.matchErr("no such package");
+  run.expectExit(1);
   run.forbidAll("no such version");
 
   run = s.run("add", "accounts-base");
 
-  await run.match("accounts-base: A user account system");
-  await run.expectExit(0);
+  run.match("accounts-base: A user account system");
+  run.expectExit(0);
 
-  await checkPackages(s, ["meteor-base", "accounts-base"]);
+  checkPackages(s,
+                ["meteor-base", "accounts-base"]);
 
   // Adding the nonexistent version now should still say "no such
   // version". Regression test for
   // https://github.com/meteor/meteor/issues/2898.
   run = s.run("add", "accounts-base@0.123.123");
-  await run.matchErr("no such version");
-  await run.expectExit(1);
+  run.matchErr("no such version");
+  run.expectExit(1);
   run.forbidAll("Currently using accounts-base");
   run.forbidAll("will be changed to");
 
   run = s.run("--once");
 
   run = s.run("add", "say-something@1.0.0");
-  await run.match("say-something: print to console");
-  await run.expectExit(0);
+  run.match("say-something: print to console");
+  run.expectExit(0);
 
-  await checkPackages(s, [
-    "meteor-base",
-    "accounts-base",
-    "say-something@1.0.0",
-  ]);
+  checkPackages(s,
+                ["meteor-base", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
-  await run.match(/depends-on-plugin.*added,/);
-  await run.expectExit(0);
+  run.match(/depends-on-plugin.*added,/);
+  run.expectExit(0);
 
-  await checkPackages(s, [
-    "meteor-base",
-    "accounts-base",
-    "say-something@1.0.0",
-    "depends-on-plugin",
-  ]);
+  checkPackages(s,
+                ["meteor-base", "accounts-base",
+                 "say-something@1.0.0", "depends-on-plugin"]);
 
-  await checkVersions(s, [
-    "accounts-base",
-    "depends-on-plugin",
-    "say-something",
-    "meteor-base",
-    "contains-plugin@1.1.0",
-  ]);
+  checkVersions(s,
+                ["accounts-base",  "depends-on-plugin",
+                 "say-something",  "meteor-base",
+                 "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
-  await run.match("say-something: removed dependency");
-  await checkVersions(s, [
-    "accounts-base",
-    "depends-on-plugin",
-    "meteor-base",
-    "contains-plugin",
-  ]);
+  run.match("say-something: removed dependency");
+  checkVersions(s,
+                ["accounts-base",  "depends-on-plugin",
+                 "meteor-base",
+                 "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
-  await run.match(/contains-plugin.*removed from your project/);
-  await run.match(/depends-on-plugin.*removed from your project/);
-  await run.match("depends-on-plugin: removed dependency");
+  run.match(/contains-plugin.*removed from your project/);
+  run.match(/depends-on-plugin.*removed from your project/);
+  run.match("depends-on-plugin: removed dependency");
 
-  await checkVersions(s, ["accounts-base", "meteor-base"]);
+  checkVersions(s,
+                ["accounts-base",
+                 "meteor-base"]);
   run = s.run("list");
-  await run.match("accounts-base");
-  await run.match("meteor-base");
+  run.match("accounts-base");
+  run.match("meteor-base");
 
   // Add a description-less package. Check that no weird things get
   // printed (like "added no-description: undefined").
   run = s.run("add", "no-description");
-  await run.match("no-description\n");
-  await run.expectEnd();
-  await run.expectExit(0);
+  run.match("no-description\n");
+  run.expectEnd();
+  run.expectExit(0);
 });
 
-selftest.define(
-  "add package with both debugOnly and prodOnly",
-  [],
-  async function () {
-    var s = new Sandbox();
-    await s.init();
-    var run;
+selftest.define("add package with both debugOnly and prodOnly", [], function () {
+  var s = new Sandbox();
+  var run;
 
-    // Add an app with a package with prodOnly and debugOnly set (an error)
-    await s.createApp("myapp", "debug-only-test", { dontPrepareApp: true });
-    s.cd("myapp");
-    run = s.run("--prepare-app");
-    run.waitSecs(20);
-    await run.matchErr(
-      "can't have more than one of: debugOnly, prodOnly, testOnly"
-    );
-    await run.expectExit(1);
-  }
-);
+  // Add an app with a package with prodOnly and debugOnly set (an error)
+  s.createApp("myapp", "debug-only-test", {dontPrepareApp: true});
+  s.cd("myapp");
+  run = s.run("--prepare-app");
+  run.waitSecs(20);
+  run.matchErr("can't have more than one of: debugOnly, prodOnly, testOnly");
+  run.expectExit(1);
+});
+
 
 // Add a package that adds files to specific client architectures.
-selftest.define("add packages client archs", async function (options) {
-  var runTestWithArgs = async function (clientType, args, port) {
+selftest.define("add packages client archs", function (options) {
+  var runTestWithArgs = function (clientType, args, port) {
     var s = new Sandbox({
-      clients: Object.assign(options.clients, { port: port }),
+      clients: Object.assign(options.clients, { port: port })
     });
-    await s.init();
 
     // Starting a run
-    await s.createApp("myapp", "package-tests");
+    s.createApp("myapp", "package-tests");
     s.cd("myapp");
-    s.set("METEOR_OFFLINE_CATALOG", "t");
+      s.set("METEOR_OFFLINE_CATALOG", "t");
 
     var outerRun = s.run("add", "say-something-client-targets");
-    await outerRun.match(/say-something-client-targets.*added,/);
-    await outerRun.expectExit(0);
-    await checkPackages(s, ["meteor-base", "say-something-client-targets"]);
+    outerRun.match(/say-something-client-targets.*added,/);
+    outerRun.expectExit(0);
+    checkPackages(s, ["meteor-base", "say-something-client-targets"]);
 
-    await s.testWithAllClients(
-      async function (run) {
-        var expectedLogNum = 0;
-        run.waitSecs(10);
-        await run.match("myapp");
-        await run.match("proxy");
-        run.waitSecs(10);
-        await run.match("running at");
-        await run.match("localhost");
+    s.testWithAllClients(function (run) {
+      var expectedLogNum = 0;
+      run.waitSecs(10);
+      run.match("myapp");
+      run.match("proxy");
+      run.waitSecs(10);
+      run.match("running at");
+      run.match("localhost");
 
-        run.connectClient();
-        run.waitSecs(40);
-        await run.match("all clients " + expectedLogNum++);
-        await run.match(clientType + " client " + expectedLogNum++);
-        await run.stop();
-      },
-      {
-        args,
-        testName: "add packages client archs",
-        testFile: "package-tests.js",
-      }
-    );
+      run.connectClient();
+      run.waitSecs(40);
+      run.match("all clients " + (expectedLogNum++));
+      run.match(clientType + " client " + (expectedLogNum++));
+      run.stop();
+    }, { args,
+      testName: 'add packages client archs',
+      testFile: 'package-tests.js' });
   };
 
-  await runTestWithArgs("browser", [], 3000);
+  runTestWithArgs("browser", [], 3000);
 });
 
-selftest.define("add package with no builds", ["net"], async function () {
-  var s = new Sandbox();
-  await s.init();
+// `packageName` should be a full package name (i.e. <username>:<package
+// name>), and the sandbox should be logged in as that username.
+var createAndPublishPackage = selftest.markStack(function (s, packageName) {
+  var packageDirName = "package-of-two-versions";
+  s.createPackage(packageDirName, packageName, "package-of-two-versions");
+  s.cd(packageDirName, function (){
+    var run = s.run("publish", "--create");
+    run.waitSecs(25);
+    run.expectExit(0);
+  });
+  return packageDirName;
+});
 
+selftest.define("add package with no builds", ["net"], function () {
+  var s = new Sandbox();
   // This depends on glasser:binary-package-with-no-builds@1.0.0 existing with
   // no published builds.
 
-  await s.createApp("myapp", "empty");
+  s.createApp("myapp", "empty");
   s.cd("myapp");
 
   var run = s.run("add", "glasser:binary-package-with-no-builds");
   run.waitSecs(10);
-  await run.matchErr("glasser:binary-package-with-no-builds@1.0.0");
-  await run.matchErr("No compatible binary build found");
-  await run.expectExit(1);
+  run.matchErr("glasser:binary-package-with-no-builds@1.0.0");
+  run.matchErr("No compatible binary build found");
+  run.expectExit(1);
 });
 
-selftest.define(
-  "package skeleton creates correct versionsFrom",
-  ["custom-warehouse"],
-  async function () {
-    var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
-    await s.init();
+selftest.define("package skeleton creates correct versionsFrom", ['custom-warehouse'], function () {
+  var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
+  var token = utils.randomToken();
+  var fullPackageName = "test:" + token;
+  var fsPackageName = token;
 
-    var token = utils.randomToken();
-    var fullPackageName = "test:" + token;
-    var fsPackageName = token;
+  var run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.match(fullPackageName);
+  run.expectExit(0);
 
-    var run = s.run("create", "--package", fullPackageName);
-    run.waitSecs(15);
-    await run.match(fullPackageName);
-    await run.expectExit(0);
-
-    s.cd(fsPackageName);
-    var packageJs = s.read("package.js");
-    if (!packageJs.match(/api.versionsFrom\('v1'\);/)) {
-      selftest.fail(
-        "package.js missing correct 'api.versionsFrom':\n" + packageJs
-      );
-    }
+  s.cd(fsPackageName);
+  var packageJs = s.read("package.js");
+  if (! packageJs.match(/api.versionsFrom\('v1'\);/)) {
+    selftest.fail("package.js missing correct 'api.versionsFrom':\n" +
+                  packageJs);
   }
-);
+});
 
-selftest.define("show unknown version of package", async function () {
+selftest.define("show unknown version of package", function () {
   var s = new Sandbox();
-  await s.init();
 
   // This version doesn't exist and is unlikely to exist.
   var run = s.run("show", "meteor-base@0.123.456");
   run.waitSecs(5);
-  await run.matchErr("meteor-base@0.123.456: not found");
-  await run.expectExit(1);
+  run.matchErr("meteor-base@0.123.456: not found");
+  run.expectExit(1);
 });
 
-selftest.define("circular dependency errors", async function () {
+selftest.define("circular dependency errors", function () {
   var s = new Sandbox();
-  await s.init();
-
   // meteor add refreshes, but we don't need anything from the official catalog
   // here.
-  s.set("METEOR_OFFLINE_CATALOG", "t");
+  s.set('METEOR_OFFLINE_CATALOG', 't');
   var run;
 
   // This app contains some pairs of packages with circular dependencies The app
   // currently *uses* no packages, so it can be created successfully.
-  await s.createApp("myapp", "circular-deps");
+  s.createApp("myapp", "circular-deps");
   s.cd("myapp");
 
   // Try to add one of a pair of circularly-depending packages. See an error.
-  run = s.run("add", "first");
-  await run.matchErr("error: circular dependency");
-  await run.expectExit(1);
+  run = s.run('add', 'first');
+  run.matchErr('error: circular dependency');
+  run.expectExit(1);
 
   // Note that the app still builds fine because 'first' didn't actually get
   // added.
-  run = s.run("--prepare-app");
-  await run.expectExit(0);
+  run = s.run('--prepare-app');
+  run.expectExit(0);
+
 
   // This pair has first-imply uses second-imply, second-imply implies
   // first-imply.
-  run = s.run("add", "first-imply");
-  await run.matchErr("error: circular dependency");
-  await run.expectExit(1);
+  run = s.run('add', 'first-imply');
+  run.matchErr('error: circular dependency');
+  run.expectExit(1);
 
   // This pair has first-weak uses second-weak, second-weak uses first-weak
   // weakly.  Currently, it's possible to add a weak cycle to an app (ie, the
   // prepare-app step passes), but not to run the bundler. We don't want to
   // write a test that prevents us from making the weak cycle an error at
   // prepare-time, so let's skip straight to bundling.
-  s.write(".meteor/packages", "first-weak");
-  run = s.run("--once");
-  await run.matchErr("error: circular dependency");
-  await run.expectExit(254);
+  s.write('.meteor/packages', 'first-weak');
+  run = s.run('--once');
+  run.matchErr('error: circular dependency');
+  run.expectExit(254);
 
   // ... but we can add second-weak, which just doesn't pull in first-weak at
   // all.
-  s.write(".meteor/packages", "second-weak");
-  run = s.run("--once");
-  await run.match(/first-weak.*removed from your project/);
-  await run.expectExit(123); // the app immediately calls process.exit(123)
+  s.write('.meteor/packages', 'second-weak');
+  run = s.run('--once');
+  run.match(/first-weak.*removed from your project/);
+  run.expectExit(123);  // the app immediately calls process.exit(123)
 
   // This pair has first-unordered uses second-unordered, second-unordered uses
   // first-unordered unorderedly.  This should work just fine: that's why
   // unordered exists!
-  s.write(".meteor/packages", "first-unordered");
-  run = s.run("--once");
-  await run.match(/first-unordered.*added/);
-  await run.match(/second-unordered.*added/);
-  await run.match(/second-weak.*removed from your project/);
-  await run.expectExit(123); // the app immediately calls process.exit(123)
+  s.write('.meteor/packages', 'first-unordered');
+  run = s.run('--once');
+  run.match(/first-unordered.*added/);
+  run.match(/second-unordered.*added/);
+  run.match(/second-weak.*removed from your project/);
+  run.expectExit(123);  // the app immediately calls process.exit(123)
 });
 
 // Runs 'meteor show <fullPackageName>' without a specified version and checks
@@ -534,67 +509,62 @@ selftest.define("circular dependency errors", async function () {
 //     - label: string that we expect to see as the label. (ex: "installed")
 //   - addendum: a message to display at the bottom.
 //   - all: run 'meteor show' with the 'show-all' option.
-var testShowPackage = selftest.markStack(async function (
-  s,
-  fullPackageName,
-  options
-) {
+var testShowPackage =  selftest.markStack(function (s, fullPackageName, options) {
   var run;
   if (options.all) {
     run = s.run("show", "--show-all", fullPackageName);
   } else {
     run = s.run("show", fullPackageName);
   }
-  var packageName = options.defaultVersion
-    ? fullPackageName + "@" + options.defaultVersion
-    : fullPackageName;
-  await run.match("Package: " + packageName + "\n");
+  var packageName = options.defaultVersion ?
+    fullPackageName + "@" + options.defaultVersion : fullPackageName;
+  run.match("Package: " + packageName + "\n");
   if (options.homepage) {
-    await run.read("Homepage: " + options.homepage + "\n");
+    run.read("Homepage: " + options.homepage + "\n");
   }
   if (options.maintainers) {
-    await run.read("Maintainers: " + options.maintainers + "\n");
+    run.read("Maintainers: " + options.maintainers + "\n");
   }
   if (options.git) {
-    await run.read("Git: " + options.git + "\n");
+    run.read("Git: " + options.git + "\n");
   }
   if (options.exports) {
-    await run.read("Exports: " + options.exports + "\n");
+    run.read("Exports: " + options.exports + "\n");
   }
   if (options.implies) {
-    await run.read("Implies: " + options.implies + "\n");
+    run.read("Implies: " + options.implies + "\n");
   }
-  await run.read("\n");
+  run.read("\n");
   if (_.has(options, "description")) {
-    await run.read(options.description + "\n");
+    run.read(options.description + "\n");
   } else if (_.has(options, "summary")) {
-    await run.read(options.summary + "\n");
+    run.read(options.summary + "\n");
   }
   if (options.versions) {
     if (options.all) {
-      await run.match("Versions:");
+      run.match("Versions:");
     } else {
-      await run.match("Recent versions:");
+      run.match("Recent versions:");
     }
-    for (const version of options.versions) {
-      await run.match(version.version);
+    _.each(options.versions, function (version) {
+      run.match(version.version);
       if (version.directory) {
-        await run.match(version.directory + "\n");
+        run.match(version.directory + "\n");
       } else {
-        await run.match(version.date);
+        run.match(version.date);
         if (version.label) {
-          await run.match(version.label + "\n");
+          run.match(version.label + "\n");
         } else {
-          await run.match("\n");
+          run.match("\n");
         }
-      }
-    }
-    await run.read("\n");
+     }
+    });
+    run.read("\n");
   }
   if (options.addendum) {
-    await run.read(options.addendum);
+    run.read(options.addendum);
   }
-  await run.expectExit(0);
+  run.expectExit(0);
 });
 
 // Runs 'meteor show <name>@<version> and checks that the output is correct.
@@ -613,35 +583,35 @@ var testShowPackage = selftest.markStack(async function (
 //    - constraint: constraint, such as "1.0.0" or "=1.0.0" or null.
 //    - weak: true if this is a weak dependency.
 //  - addendum: a message that we expect to display at the very bottom.
-var testShowPackageVersion = selftest.markStack(async function (s, options) {
+var testShowPackageVersion =  selftest.markStack(function (s, options) {
   var name = options.packageName;
   var version = options.version;
   var run = s.run("show", name + "@" + version);
-  await run.match("Package: " + name + "@" + version + "\n");
+  run.match("Package: " + name + "@" + version + "\n");
   if (options.directory) {
-    await run.match("Directory: " + options.directory + "\n");
+    run.match("Directory: " + options.directory + "\n");
   }
   if (options.exports) {
-    await run.read("Exports: " + options.exports + "\n");
+    run.read("Exports: " + options.exports + "\n");
   }
   if (options.implies) {
-    await run.read("Implies: " + options.implies + "\n");
+    run.read("Implies: " + options.implies + "\n");
   }
   if (options.git) {
-    await run.match("Git: " + options.git + "\n");
+    run.match("Git: " + options.git + "\n");
   }
   if (_.has(options, "description")) {
-    await run.read("\n");
-    await run.read(options.description + "\n");
+    run.read("\n");
+    run.read(options.description + "\n");
   } else if (_.has(options, "summary")) {
-    await run.read("\n");
-    await run.read(options.summary + "\n");
+    run.read("\n");
+    run.read(options.summary + "\n");
   }
   if (options.dependencies) {
-    await run.read("\n");
-    await run.read("Depends on:\n");
+    run.read("\n");
+    run.read("Depends on:\n");
     // Use 'read' to ensure that these are the only dependencies listed.
-    for (const dep of options.dependencies) {
+    _.each(options.dependencies, function (dep) {
       var depStr = dep.name;
       if (dep.constraint) {
         depStr += "@" + dep.constraint;
@@ -649,81 +619,74 @@ var testShowPackageVersion = selftest.markStack(async function (s, options) {
       if (dep.weak) {
         depStr += " (weak dependency)";
       }
-      await run.read("  " + depStr + "\n");
-    }
+      run.read("  " + depStr + "\n");
+    });
   }
   if (options.publishedBy) {
-    await run.match("\n");
-    await run.match(
-      "Published by " +
-        options.publishedBy +
-        " on " +
-        options.publishedOn +
-        ".\n"
-    );
+    run.match("\n");
+    run.match(
+      "Published by " + options.publishedBy +
+      " on " + options.publishedOn + ".\n");
   }
   if (options.addendum) {
-    await run.read("\n" + options.addendum + "\n");
+    run.read("\n" + options.addendum + "\n");
   }
   // Make sure that we exit without printing anything else.
-  await run.expectEnd(0);
+  run.expectEnd(0);
 });
+
 
 // For local packages without a version, we want to replace version information
 // with the string "local". We also want to make sure that querying for
 // 'name@local' gives that local version.
-selftest.define("show local package w/o version", async function () {
+selftest.define("show local package w/o version",  function () {
   var s = new Sandbox();
-  await s.init();
-
   var name = "my-local-package" + utils.randomToken();
 
   // Create a package without version or summary; check that we can show its
   // information without crashing.
-  await s.createPackage(name, name, "package-for-show");
+  s.createPackage(name, name, "package-for-show");
   var packageDir = files.pathJoin(s.root, "home", name);
 
-  await s.cd(name, async function () {
+  s.cd(name, function () {
     s.cp("package-completely-empty.js", "package.js");
-    await testShowPackage(s, name, {
+    testShowPackage(s, name, {
       defaultVersion: "local",
-      versions: [{ version: "local", directory: packageDir }],
+      versions: [{ version: "local", directory: packageDir }]
     });
 
-    await testShowPackageVersion(s, {
+    testShowPackageVersion(s, {
       packageName: name,
       version: "local",
-      directory: packageDir,
+      directory: packageDir
     });
 
     // Test that running without any arguments also shows this package.
     var run = s.run("show");
-    await run.match("Package: " + name + "@local\n");
-    await run.match("Directory: " + packageDir + "\n");
-    await run.expectExit(0);
+    run.match("Package: " + name + "@local\n");
+    run.match("Directory: " + packageDir + "\n");
+    run.expectExit(0);
   });
 
   // Test that running without any arguments outside of a package does not
   // work.
   var run = s.run("show");
-  await run.matchErr("specify a package or release name");
-  await run.expectExit(1);
+  run.matchErr("specify a package or release name");
+  run.expectExit(1);
 });
 
 // Make sure that a local-only package shows up correctly in show and search
 // results.
-selftest.define("show and search local package", async function () {
+selftest.define("show and search local package",  function () {
   // Setup: create an app, containing a package. This local package should show
   // up in the results of `meteor show` and `meteor search`.
   var s = new Sandbox();
-  await s.init();
-
   var name = "my-local-package" + utils.randomToken();
-  await s.createApp("myapp", "empty");
+  s.createApp("myapp", "empty");
   s.cd("myapp");
   s.mkdir("packages");
-  await s.cd("packages", function () {
-    return s.createPackage(name, name, "package-for-show");
+  s.cd("packages", function () {
+    s.createPackage(name, name, "package-for-show");
   });
 
   var packageDir = files.pathJoin(s.root, "home", "myapp", "packages", name);
@@ -731,41 +694,41 @@ selftest.define("show and search local package", async function () {
     s.cp("package-with-git.js", "package.js");
   });
 
-  var summary = "This is a test package";
+  var summary = 'This is a test package';
   // Run `meteor show`, but don't add the package to the app yet. We should know
   // that the package exists, even though it hasn't been added to the app.
-  await testShowPackage(s, name, {
+  testShowPackage(s, name, {
     summary: summary,
     defaultVersion: "local",
-    git: "www.github.com/meteor/meteor",
-    versions: [{ version: "1.0.0", directory: packageDir }],
+    git: 'www.github.com/meteor/meteor',
+    versions: [{ version: "1.0.0", directory: packageDir }]
   });
 
   // Add the package to the app.
   var run = s.run("add", name);
   run.waitSecs(5);
-  await run.expectExit(0);
-  await testShowPackage(s, name, {
+  run.expectExit(0);
+  testShowPackage(s, name, {
     summary: summary,
-    git: "www.github.com/meteor/meteor",
+    git: 'www.github.com/meteor/meteor',
     defaultVersion: "local",
-    versions: [{ version: "1.0.0", directory: packageDir }],
+    versions: [{ version: "1.0.0", directory: packageDir }]
   });
 
   // When we run `meteor search`, we should be able to see the results for this
   // package, even though it does not exist on the server.
   run = s.run("search", name);
   run.waitSecs(15);
-  await run.match(name);
-  await run.match("You can use");
-  await run.expectExit(0);
+  run.match(name);
+  run.match("You can use");
+  run.expectExit(0);
 
   // We can see exports on local packages.
   s.cd("packages");
   summary = "This is a test package";
   name = "my-local-exports";
   packageDir = files.pathJoin(s.root, "home", "myapp", "packages", name);
-  await s.createPackage(name, name, "package-for-show");
+  s.createPackage(name, name, "package-for-show");
   s.cd(name, function () {
     s.cp("package-with-exports.js", "package.js");
   });
@@ -776,45 +739,40 @@ selftest.define("show and search local package", async function () {
     C: "web.browser, web.browser.legacy, web.cordova",
     D: "web.browser, web.browser.legacy",
     E: "web.cordova",
-    G: "server, web.cordova",
+    G: "server, web.cordova"
   };
 
-  const exportStr = Object.keys(impRaw)
-    .map((key) => {
-      const value = impRaw[key];
-      return key + (value ? " (" + value + ")" : "");
-    })
-    .join(", ");
+  const exportStr = Object.keys(impRaw).map(key => {
+    const value = impRaw[key];
+    return key + (value ? " (" + value + ")" : "");
+  }).join(", ");
 
   var description = "Test package.";
 
-  await testShowPackage(s, name, {
+  testShowPackage(s, name, {
     summary: summary,
     git: "www.github.com/meteor/meteor",
     exports: exportStr,
     description: description,
     defaultVersion: "local",
-    versions: [{ version: "1.0.1", directory: packageDir }],
+    versions: [{ version: "1.0.1", directory: packageDir }]
   });
-  await testShowPackageVersion(s, {
+  testShowPackageVersion(s, {
     packageName: name,
     version: "1.0.1",
     directory: packageDir,
     git: "www.github.com/meteor/meteor",
     summary: summary,
     exports: exportStr,
-    description: description,
+    description: description
   });
 
   // Test showing implies. Since we are not going to build the package, we don't
   // have to publish any of the things that we imply.
-  var impliesData = _.sortBy(
-    _.map(impRaw, function (label, placeholder) {
-      var name = randomizedPackageName(username, placeholder.toLowerCase());
-      return { placeholder: placeholder, name: name, label: label };
-    }),
-    "name"
-  );
+  var impliesData = _.sortBy(_.map(impRaw, function (label, placeholder) {
+    var name =  randomizedPackageName(username, placeholder.toLowerCase());
+    return { placeholder: placeholder, name: name, label: label};
+  }), 'name');
   s.cd(name, function () {
     s.cp("package-with-implies.js", "package.js");
     var packOpen = s.read("package.js");
@@ -831,33 +789,25 @@ selftest.define("show and search local package", async function () {
     return d.label ? d.name + " (" + d.label + ")" : d.name;
   });
   var impStr =
-    impArr[0] +
-    ", " +
-    impArr[1] +
-    ", " +
-    impArr[2] +
-    ", " +
-    impArr[3] +
-    ", " +
-    impArr[4] +
-    ", " +
-    impArr[5];
+    impArr[0] + ", " + impArr[1] + ", " +
+    impArr[2] + ", " + impArr[3] + ", " +
+    impArr[4] + ", " + impArr[5];
 
-  await testShowPackage(s, name, {
+  testShowPackage(s, name, {
     summary: summary,
     description: description,
     implies: impStr,
     directory: packageDir,
     defaultVersion: "local",
     git: "www.github.com/meteor/meteor",
-    versions: [{ version: "1.2.1", directory: packageDir }],
+    versions: [{ version: "1.2.1", directory: packageDir }]
   });
 
   // Implies are also dependencies.
   var deps = _.map(impliesData, function (d) {
     return { name: d.name, constraint: "1.0.0" };
   });
-  await testShowPackageVersion(s, {
+  testShowPackageVersion(s, {
     packageName: name,
     version: "1.2.1",
     directory: packageDir,
@@ -865,22 +815,20 @@ selftest.define("show and search local package", async function () {
     summary: summary,
     git: "www.github.com/meteor/meteor",
     implies: impStr,
-    dependencies: deps,
+    dependencies: deps
   });
 });
 
 // This tests that we get the right excerpt out of the Readme.md in different
 // combinations. It doesn't test publication, because publishing is slow --
 // that's covered in a different test.
-selftest.define("show readme excerpt", async function () {
+selftest.define("show readme excerpt",  function () {
   var s = new Sandbox();
-  await s.init();
-
   var name = "my-local-package" + utils.randomToken();
 
   // Create a package without version or summary; check that we can show its
   // information without crashing.
-  await s.createPackage(name, name, "package-for-show");
+  s.createPackage(name, name, "package-for-show");
   var packageDir = files.pathJoin(s.root, "home", name);
 
   // We are just going to change the description in the Readme. Some things
@@ -889,13 +837,13 @@ selftest.define("show readme excerpt", async function () {
   var basePackageInfo = {
     summary: "This is a test package",
     defaultVersion: "local",
-    versions: [{ version: "0.9.9", directory: packageDir }],
+    versions: [{ version: "0.9.9", directory: packageDir }]
   };
   var baseVersionInfo = {
     summary: "This is a test package",
     packageName: name,
     version: "0.9.9",
-    directory: packageDir,
+    directory: packageDir
   };
 
   s.cd(name);
@@ -903,113 +851,69 @@ selftest.define("show readme excerpt", async function () {
   // By default, we will use the README.md file for documentation.
   // Start with a blank file. Nothing should show up!
   s.write("README.md", "");
-  await testShowPackage(s, name, basePackageInfo);
-  await testShowPackageVersion(s, baseVersionInfo);
+  testShowPackage(s, name, basePackageInfo);
+  testShowPackageVersion(s, baseVersionInfo);
 
   // An example of a standard readme.
   var readme =
-    "Heading" +
-    "\n" +
-    "========" +
-    "\n" +
-    "foobar1" +
-    "\n" +
-    "\n" +
-    "## Subheading" +
-    "\n" +
-    "You should not see this line!";
+        "Heading" + "\n" +
+        "========" + "\n" +
+        "foobar1" + "\n" +
+        "\n" +
+        "## Subheading" + "\n" +
+        "You should not see this line!";
   s.write("README.md", readme);
-  await testShowPackage(
-    s,
-    name,
-    Object.assign({ description: "foobar1" }, basePackageInfo)
-  );
-  await testShowPackageVersion(
-    s,
-    Object.assign({ description: "foobar1" }, baseVersionInfo)
-  );
+  testShowPackage(
+    s, name, Object.assign({ description: "foobar1" }, basePackageInfo));
+  testShowPackageVersion(
+    s, Object.assign({ description: "foobar1" }, baseVersionInfo));
 
   // Another example -- we have hidden the excerpt under a different subheading.
   readme =
-    "Heading" +
-    "\n" +
-    "========" +
-    "\n" +
-    "## Subheading" +
-    "\n" +
-    "foobar2" +
-    "\n" +
-    "## Another subheading" +
-    "\n" +
+    "Heading" + "\n" +
+    "========" + "\n" +
+    "## Subheading" + "\n" +
+    "foobar2" + "\n" +
+    "## Another subheading" + "\n" +
     "You should not see this line!";
   s.write("README.md", readme);
-  await testShowPackage(
-    s,
-    name,
-    Object.assign({ description: "foobar2" }, basePackageInfo)
-  );
-  await testShowPackageVersion(
-    s,
-    Object.assign({ description: "foobar2" }, baseVersionInfo)
-  );
+  testShowPackage(
+    s, name, Object.assign({ description: "foobar2" }, basePackageInfo));
+  testShowPackageVersion(
+    s, Object.assign({ description: "foobar2" }, baseVersionInfo));
 
   // Generally, people skip a line between the header and the text, and
   // sometimes, even between headers. (It is part of markdown, in fact.) Let's
   // make sure that we handle that correctly.
   readme =
-    "Heading" +
-    "\n" +
-    "========" +
-    "\n" +
-    "\n" +
-    "## Subheading" +
-    "\n" +
-    "\n" +
-    "foobaz" +
-    "\n" +
-    "\n" +
-    "## Another subheading" +
-    "\n" +
-    "\n" +
+    "Heading" + "\n" +
+    "========" + "\n" + "\n" +
+    "## Subheading" + "\n" + "\n" +
+    "foobaz" + "\n" + "\n" +
+    "## Another subheading" + "\n" + "\n" +
     "You should not see this line!";
   s.write("README.md", readme);
-  await testShowPackage(
-    s,
-    name,
-    Object.assign({ description: "foobaz" }, basePackageInfo)
-  );
-  await testShowPackageVersion(
-    s,
-    Object.assign({ description: "foobaz" }, baseVersionInfo)
-  );
+  testShowPackage(
+    s, name, Object.assign({ description: "foobaz" }, basePackageInfo));
+  testShowPackageVersion(
+    s, Object.assign({ description: "foobaz" }, baseVersionInfo));
 
   // Some formatting in the text.
-  var excerpt = "Here is a code sample:" + "\n\n" + "```foobar and foobar```";
+  var excerpt =
+        "Here is a code sample:" + "\n\n" +
+        "```foobar and foobar```";
   readme =
-    "Heading" +
-    "\n" +
-    "========" +
-    "\n" +
-    "\n" +
-    excerpt +
-    "\n\n" +
-    "# Subheading" +
-    "\n" +
-    "\n" +
-    "## Another subheading" +
-    "\n" +
-    "\n" +
+    "Heading" + "\n" +
+    "========" + "\n" + "\n" +
+    excerpt + "\n\n" +
+    "# Subheading" + "\n" + "\n" +
+    "## Another subheading" + "\n" + "\n" +
     "You should not see this line!";
   s.write("README.md", readme);
-  await testShowPackage(
-    s,
-    name,
-    Object.assign({ description: excerpt }, basePackageInfo)
-  );
-  await testShowPackageVersion(
-    s,
-    Object.assign({ description: excerpt }, baseVersionInfo)
-  );
+  testShowPackage(
+    s, name, Object.assign({ description: excerpt }, basePackageInfo));
+  testShowPackageVersion(
+    s, Object.assign({ description: excerpt }, baseVersionInfo));
 
   // Now, let's try different file specifications for the documentation.
   var git = "https:ilovegit.git";
@@ -1026,137 +930,126 @@ selftest.define("show readme excerpt", async function () {
     git: git,
     packageName: name,
     version: "1.0.0",
-    directory: packageDir,
+    directory: packageDir
   };
   basePackageInfo = {
     git: git,
     summary: summary,
     defaultVersion: "local",
-    versions: [{ version: "1.0.0", directory: packageDir }],
+    versions: [{ version: "1.0.0", directory: packageDir }]
   };
-  await testShowPackageVersion(s, baseVersionInfo);
-  await testShowPackage(s, name, basePackageInfo);
+  testShowPackageVersion(s, baseVersionInfo);
+  testShowPackage(s, name, basePackageInfo);
 
   // If we specify a different file, read that file.
-  s.write(
-    "package.js",
-    staging.replace(/~documentation~/g, "'Meteor-Readme.md'")
-  );
+  s.write("package.js",
+          staging.replace(/~documentation~/g, "'Meteor-Readme.md'"));
   readme = "A special Readme, just for Meteor.";
   s.write("Meteor-Readme.md", "Title\n==\n" + readme);
-  await testShowPackageVersion(
-    s,
-    Object.assign({ description: readme }, baseVersionInfo)
-  );
-  await testShowPackage(
-    s,
-    name,
-    Object.assign({ description: readme }, basePackageInfo)
-  );
+  testShowPackageVersion(s,
+    Object.assign({ description: readme }, baseVersionInfo));
+  testShowPackage(s, name,
+    Object.assign({ description: readme }, basePackageInfo));
 
   // If we specify a non-existent file, tell us.
-  s.write("package.js", staging.replace(/~documentation~/g, "'NOTHING'"));
+  s.write("package.js",
+          staging.replace(/~documentation~/g, "'NOTHING'"));
   var run = s.run("show", name);
-  await run.matchErr("Documentation not found");
-  await run.expectExit(1);
+  run.matchErr("Documentation not found");
+  run.expectExit(1);
   run = s.run("show", name + "@1.0.0");
-  await run.matchErr("Documentation not found");
-  await run.expectExit(1);
+  run.matchErr("Documentation not found");
+  run.expectExit(1);
 });
 
-selftest.define("tilde version constraints", [], async function () {
+selftest.define("tilde version constraints", [], function () {
   var s = new Sandbox();
-  await s.init();
 
   s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
 
-  await s.createApp("tilde-app", "package-tests");
+  s.createApp("tilde-app", "package-tests");
   s.cd("tilde-app");
 
   var run = s.run();
 
-  await run.match("tilde-app");
-  await run.match("proxy");
+  run.match("tilde-app");
+  run.match("proxy");
   run.waitSecs(10);
-  await run.match("your app");
+  run.match("your app");
   run.waitSecs(10);
-  await run.match("running at");
+  run.match("running at");
   run.waitSecs(60);
 
-  var packages = s.read(".meteor/packages").replace(/\n*$/m, "\n");
+  var packages = s.read(".meteor/packages")
+    .replace(/\n*$/m, "\n");
 
   function setTopLevelConstraint(constraint) {
     s.write(
       ".meteor/packages",
-      packages +
-        "tilde-constraints" +
-        (constraint ? "@" + constraint : "") +
-        "\n"
+      packages + "tilde-constraints" + (
+        constraint ? "@" + constraint : ""
+      ) + "\n"
     );
   }
 
   setTopLevelConstraint("");
-  await run.match(/tilde-constraints.*added, version 0\.4\.2/);
-  await run.match("tilde-constraints.js");
+  run.match(/tilde-constraints.*added, version 0\.4\.2/);
+  run.match("tilde-constraints.js");
   run.waitSecs(10);
 
   setTopLevelConstraint("0.4.0");
-  await run.match("tilde-constraints.js");
-  await run.match("server restarted");
+  run.match("tilde-constraints.js");
+  run.match("server restarted");
   run.waitSecs(10);
 
   setTopLevelConstraint("~0.4.0");
-  await run.match("tilde-constraints.js");
-  await run.match("server restarted");
+  run.match("tilde-constraints.js");
+  run.match("server restarted");
   run.waitSecs(10);
 
   setTopLevelConstraint("0.4.3");
-  await run.match(
-    "error: No version of tilde-constraints satisfies all constraints"
-  );
+  run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setTopLevelConstraint("~0.4.3");
-  await run.match(
-    "error: No version of tilde-constraints satisfies all constraints"
-  );
+  run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setTopLevelConstraint("0.3.0");
-  await run.match("tilde-constraints.js");
-  await run.match("server restarted");
+  run.match("tilde-constraints.js");
+  run.match("server restarted");
   run.waitSecs(10);
 
   setTopLevelConstraint("~0.3.0");
-  await run.match(
-    "error: No version of tilde-constraints satisfies all constraints"
-  );
+  run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setTopLevelConstraint("0.5.0");
-  await run.match(
-    "error: No version of tilde-constraints satisfies all constraints"
-  );
+  run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setTopLevelConstraint("~0.5.0");
-  await run.match(
-    "error: No version of tilde-constraints satisfies all constraints"
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  s.write(
+    ".meteor/packages",
+    packages
   );
+  run.match(/tilde-constraints.*removed/);
   run.waitSecs(10);
 
-  s.write(".meteor/packages", packages);
-  await run.match(/tilde-constraints.*removed/);
+  s.write(
+    ".meteor/packages",
+    packages + "tilde-dependent\n"
+  );
+  run.match(/tilde-constraints.*added, version 0\.4\.2/);
+  run.match(/tilde-dependent.*added, version 0\.1\.0/);
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
   run.waitSecs(10);
 
-  s.write(".meteor/packages", packages + "tilde-dependent\n");
-  await run.match(/tilde-constraints.*added, version 0\.4\.2/);
-  await run.match(/tilde-dependent.*added, version 0\.1\.0/);
-  await run.match("tilde-constraints.js");
-  await run.match("tilde-dependent.js");
-  run.waitSecs(10);
-
-  var depPackageJsPath = "packages/tilde-dependent/package.js";
+  var depPackageJsPath = "packages/tilde-dependent/package.js"
   var depPackageJs = s.read(depPackageJsPath);
 
   function setDepConstraint(constraint) {
@@ -1164,27 +1057,29 @@ selftest.define("tilde version constraints", [], async function () {
       depPackageJsPath,
       depPackageJs.replace(
         /tilde-constraints[^"]*/g, // Syntax highlighting hack: "
-        "tilde-constraints" + (constraint ? "@" + constraint : "")
+        "tilde-constraints" + (
+          constraint ? "@" + constraint : ""
+        )
       )
     );
   }
 
   setDepConstraint("0.4.0");
-  await run.match("tilde-constraints.js");
-  await run.match("tilde-dependent.js");
-  await run.match("server restarted");
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.match("server restarted");
   run.waitSecs(10);
 
   setDepConstraint("~0.4.0");
-  await run.match("tilde-constraints.js");
-  await run.match("tilde-dependent.js");
-  await run.match("server restarted");
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.match("server restarted");
   run.waitSecs(10);
 
   setDepConstraint("0.3.0");
-  await run.match("tilde-constraints.js");
-  await run.match("tilde-dependent.js");
-  await run.match("server restarted");
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.match("server restarted");
   run.waitSecs(10);
 
   // TODO The rest of these tests should cause version conflicts, but it
@@ -1192,28 +1087,27 @@ selftest.define("tilde version constraints", [], async function () {
   // which is a larger (preexisting) problem we should investigate.
   /*
   setDepConstraint("=0.4.0");
-  await run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setDepConstraint("~0.3.0");
-  await run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setDepConstraint("0.4.3");
-  await run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
 
   setDepConstraint("~0.4.3");
-  await run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
   run.waitSecs(10);
   */
 
-  await run.stop();
+  run.stop();
 });
 
-selftest.define("override version constraints", [], async function () {
+selftest.define("override version constraints", [], function () {
   var s = new Sandbox();
-  await s.init();
 
   // The constraint solver avoids re-solving everything from scratch on
   // rebuilds if the current input of top-level constraints matches the
@@ -1227,128 +1121,127 @@ selftest.define("override version constraints", [], async function () {
   // environment variable to disable the caching completely.
   s.set("METEOR_DISABLE_CONSTRAINT_SOLVER_CACHING", "true");
 
-  await s.createApp("override-app", "package-tests");
+  s.createApp("override-app", "package-tests");
   s.cd("override-app");
 
   var run = s.run();
 
-  await run.match("override-app");
-  await run.match("proxy");
+  run.match("override-app");
+  run.match("proxy");
   run.waitSecs(10);
-  await run.match("your app");
+  run.match("your app");
   run.waitSecs(10);
-  await run.match("running at");
+  run.match("running at");
   run.waitSecs(60);
 
-  let packages = s.read(".meteor/packages").replace(/\n*$/m, "\n");
+  let packages = s.read(".meteor/packages")
+    .replace(/\n*$/m, "\n");
 
   function setTopLevelConstraint(constraint) {
     s.write(
       ".meteor/packages",
-      packages +
-        "override-constraints" +
-        (constraint ? "@" + constraint : "") +
-        "\n"
+      packages + "override-constraints" + (
+        constraint ? "@" + constraint : ""
+      ) + "\n"
     );
   }
 
-  async function checkRestarted() {
-    await run.match("override-constraints.js");
-    await run.match("server restarted");
+  function checkRestarted() {
+    run.match("override-constraints.js");
+    run.match("server restarted");
     run.waitSecs(10);
   }
 
   setTopLevelConstraint("");
-  await run.match(/override-constraints.*added, version 1\.5\.3/);
-  await checkRestarted();
+  run.match(/override-constraints.*added, version 1\.5\.3/);
+  checkRestarted();
 
   setTopLevelConstraint("1.4.0");
-  await checkRestarted();
+  checkRestarted();
 
   setTopLevelConstraint("1.4.0!");
-  await checkRestarted();
+  checkRestarted();
 
   setTopLevelConstraint("=1.5.3");
-  await checkRestarted();
+  checkRestarted();
 
   setTopLevelConstraint("=1.5.3!");
-  await checkRestarted();
+  checkRestarted();
 
-  async function checkNoSatisfyingVersion() {
-    await run.match(
-      "error: No version of override-constraints satisfies all constraints"
-    );
+  function checkNoSatisfyingVersion() {
+    run.match("error: No version of override-constraints satisfies all constraints");
     run.waitSecs(10);
   }
 
   setTopLevelConstraint("~1.4.0");
-  await checkNoSatisfyingVersion();
+  checkNoSatisfyingVersion();
 
   setTopLevelConstraint("~1.4.0!");
-  await checkNoSatisfyingVersion();
+  checkNoSatisfyingVersion();
 
   setTopLevelConstraint("1.6.0");
-  await checkNoSatisfyingVersion();
+  checkNoSatisfyingVersion();
 
   setTopLevelConstraint("1.6.0!");
-  await checkNoSatisfyingVersion();
+  checkNoSatisfyingVersion();
 
   setTopLevelConstraint("1.5.4");
-  await checkNoSatisfyingVersion();
+  checkNoSatisfyingVersion();
 
   setTopLevelConstraint("1.5.4!");
-  await checkNoSatisfyingVersion();
+  checkNoSatisfyingVersion();
 
   setTopLevelConstraint("~1.4.0||=1.5.3");
-  await checkRestarted();
+  checkRestarted();
 
   setTopLevelConstraint("~1.4.0||=1.5.3!");
-  await checkRestarted();
+  checkRestarted();
 
   // The ! applies to the whole || disjunction, not just the rightmost
   // individual constraint (~1.4.0). This would fail if ~1.4.0 won.
   setTopLevelConstraint("1.5.0||~1.4.0!");
-  await checkRestarted();
+  checkRestarted();
 
   // Different major versions, but at least one of them works.
   setTopLevelConstraint("1.5.0||0.4.0!");
-  await checkRestarted();
+  checkRestarted();
 
-  async function checkInvalidConstraint() {
-    await run.match(".meteor/packages: Invalid constraint string");
+  function checkInvalidConstraint() {
+    run.match(".meteor/packages: Invalid constraint string");
     run.waitSecs(10);
   }
 
   setTopLevelConstraint("!");
-  await checkInvalidConstraint();
+  checkInvalidConstraint();
 
   // Reset to something that works in between invalid tests.
   setTopLevelConstraint("1.5.3");
-  await checkRestarted();
+  checkRestarted();
 
-  async function checkInvalidSemver() {
-    await run.match(".meteor/packages: Version string must look like semver");
+  function checkInvalidSemver() {
+    run.match(".meteor/packages: Version string must look like semver");
     run.waitSecs(10);
   }
 
   setTopLevelConstraint("5!");
-  await checkInvalidSemver();
+  checkInvalidSemver();
 
   // Reset to something that works in between invalid tests.
   setTopLevelConstraint("1.5.3");
-  await checkRestarted();
+  checkRestarted();
 
   setTopLevelConstraint("1.5!");
-  await checkInvalidSemver();
+  checkInvalidSemver();
 
   // Add the conflicting package.
   packages += "override-conflicts@1.0.0\n";
   setTopLevelConstraint("1.5.3");
-  await run.match(/override-conflicts.*added, version 1\.0\.1/);
-  await run.match("override-conflicts.js");
-  await checkRestarted();
+  run.match(/override-conflicts.*added, version 1\.0\.1/);
+  run.match("override-conflicts.js");
+  checkRestarted();
 
-  const conflictingPackageJs = s.read("packages/override-conflicts/package.js");
+  const conflictingPackageJs =
+    s.read("packages/override-conflicts/package.js");
 
   function setConflictingConstraint(statement) {
     s.write(
@@ -1358,78 +1251,66 @@ selftest.define("override version constraints", [], async function () {
   }
 
   setConflictingConstraint('api.use("override-constraints");');
-  await checkRestarted();
+  checkRestarted();
 
   setConflictingConstraint('api.use("override-constraints@1.5.0");');
-  await checkRestarted();
+  checkRestarted();
 
   setConflictingConstraint('api.imply("override-constraints@1.5.0");');
-  await checkRestarted();
+  checkRestarted();
 
   setConflictingConstraint('api.use("override-constraints@=1.4.0");');
-  await run.match(
-    "Constraint override-constraints@=1.4.0 is not satisfied by " +
-      "override-constraints 1.5.3"
-  );
+  run.match("Constraint override-constraints@=1.4.0 is not satisfied by " +
+            "override-constraints 1.5.3");
   run.waitSecs(10);
 
   setTopLevelConstraint("1.5.0!");
-  await checkRestarted();
+  checkRestarted();
 
   // Constraints imposed elsewhere are still enforced as minimums, so the
   // @1.5.0! override syntax can't do anything about this constraint:
   setConflictingConstraint('api.use("override-constraints@1.6.0");');
-  await run.match(
-    "Constraint override-constraints@1.6.0 is not satisfied by " +
-      "override-constraints 1.5.3"
-  );
+  run.match("Constraint override-constraints@1.6.0 is not satisfied by " +
+            "override-constraints 1.5.3");
   run.waitSecs(10);
 
   setConflictingConstraint('api.use("override-constraints@1.5.0");');
-  await checkRestarted();
+  checkRestarted();
 
   setTopLevelConstraint("1.5.3");
-  await checkRestarted();
+  checkRestarted();
 
   setConflictingConstraint('api.use("override-constraints@0.9.0");');
-  await run.match(
-    "Constraint override-constraints@0.9.0 is not satisfied by " +
-      "override-constraints 1.5.3"
-  );
+  run.match("Constraint override-constraints@0.9.0 is not satisfied by " +
+            "override-constraints 1.5.3");
   run.waitSecs(10);
 
   setTopLevelConstraint("0.9.0||1.5.3");
-  await run.match(
-    "Constraint override-constraints@0.9.0 is not satisfied by " +
-      "override-constraints 1.5.3"
-  );
+  run.match("Constraint override-constraints@0.9.0 is not satisfied by " +
+            "override-constraints 1.5.3");
   run.waitSecs(10);
 
   setTopLevelConstraint("1.4.0!");
-  await checkRestarted();
+  checkRestarted();
 
   setTopLevelConstraint("~1.5.0!");
-  await checkRestarted();
+  checkRestarted();
 
   setTopLevelConstraint("=1.5.3!");
-  await checkRestarted();
+  checkRestarted();
 
   setTopLevelConstraint("1.5.3");
-  await run.match(
-    "Constraint override-constraints@0.9.0 is not satisfied by " +
-      "override-constraints 1.5.3"
-  );
+  run.match("Constraint override-constraints@0.9.0 is not satisfied by " +
+            "override-constraints 1.5.3");
   run.waitSecs(10);
 
   setTopLevelConstraint("");
-  await run.match(
-    "Constraint override-constraints@0.9.0 is not satisfied by " +
-      "override-constraints 1.5.3"
-  );
+  run.match("Constraint override-constraints@0.9.0 is not satisfied by " +
+            "override-constraints 1.5.3");
   run.waitSecs(10);
 
-  setConflictingConstraint("// PLACEHOLDER");
-  await checkRestarted();
+  setConflictingConstraint('// PLACEHOLDER');
+  checkRestarted();
 
-  await run.stop();
+  run.stop();
 });

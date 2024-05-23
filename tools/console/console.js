@@ -442,16 +442,16 @@ class StatusPoller {
     this._stop = false;
   }
 
-  async _startPoller() {
+  _startPoller() {
     if (this._pollPromise) {
       throw new Error("Already started");
     }
 
     this._pollPromise = (async() => {
-      await sleepMs(STATUS_INTERVAL_MS);
+      sleepMs(STATUS_INTERVAL_MS);
       while (! this._stop) {
         this.statusPoll();
-        await sleepMs(STATUS_INTERVAL_MS);
+        sleepMs(STATUS_INTERVAL_MS);
       }
     })();
   }
@@ -623,7 +623,7 @@ class Console extends ConsoleBase {
 
   // Runs f with the progress display visible (ie, with progress display enabled
   // and pretty). Resets both flags to their original values after f runs.
-  async withProgressDisplayVisible(f) {
+  withProgressDisplayVisible(f) {
     var originalPretty = this._pretty;
     var originalProgressDisplayEnabled = this._progressDisplayEnabled;
 
@@ -636,7 +636,7 @@ class Console extends ConsoleBase {
     }
 
     try {
-      return await f();
+      return f();
     } finally {
       // Reset the flags.
       this._pretty = originalPretty;
@@ -683,19 +683,19 @@ class Console extends ConsoleBase {
   // consuming lots of CPU without yielding is especially bad.
   // Other IO/network tasks will stall, and you can't even kill the process!
   //
-  // Within any code that may burn CPU for too long, call `Console.yield()`.
+  // Within any code that may burn CPU for too long, call `Console.nudge()`.
+  // If it's been a while since your last yield, your Fiber will sleep momentarily.
   // It will also update the spinner if there is one and it's been a while.
-  // The caller should be OK with yielding --- it can't be
-  // anything that depends for correctness on not yielding.  You can also call Console.nudge()
+  // The caller should be OK with yielding --- it has to be in a Fiber and it can't be
+  // anything that depends for correctness on not yielding.  You can also call nudge(false)
   // if you just want to update the spinner and not yield, but you should avoid this.
-  nudge() {
+  nudge(canYield) {
     if (this._statusPoller) {
       this._statusPoller.statusPoll();
     }
-  }
-  async yield() {
-    this.nudge();
-    await this._throttledYield.yield();
+    if (canYield === undefined || canYield === true) {
+      this._throttledYield.yield();
+    }
   }
 
   // Initializes and returns a new ConsoleOptions object. Takes in the following
@@ -1316,7 +1316,7 @@ class Console extends ConsoleBase {
         this._setProgressDisplay(previousProgressDisplay);
         resolve(line);
       });
-    });
+    }).await();
   }
 }
 

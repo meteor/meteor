@@ -1,11 +1,9 @@
-await (async () => {
-  var script = await Assets.getTextAsync("safetybelt.js");
+var script = Assets.getText("safetybelt.js");
 
-  Tinytest.add("reload-safetybelt - safety belt is added", function (test) {
-    test.isTrue(
-      Object.values(WebAppInternals.additionalStaticJs).some( function (js, pathname) {
-        return js === script;
-      })
-    );
-  });
-})();
+Tinytest.add("reload-safetybelt - safety belt is added", function (test) {
+  test.isTrue(Object.values(WebAppInternals.additionalStaticJs).some(
+    function (js, pathname) {
+      return js === script;
+    }
+  ));
+});

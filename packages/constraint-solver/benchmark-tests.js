@@ -118,7 +118,7 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
   r.resolve(args.dependencies, args.constraints);
 });
 
-runBenchmarks && Tinytest.addAsync("constraint solver - benchmark on gems - rails, gitlabhq, additions to the existing smaller solution", async function (test) {
+runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq, additions to the existing smaller solution", function (test) {
   var r = new ConstraintSolver.PackagesResolver(railsCatalog);
 
   var args = splitArgs({
@@ -270,8 +270,7 @@ runBenchmarks && Tinytest.addAsync("constraint solver - benchmark on gems - rail
     "warden": "1.2.3"
   };
 
-  const resolved = await r.resolve(args.dependencies, args.constraints, { previousSolution: previousSolution });
-  var solution = resolved.answer;
+  var solution = r.resolve(args.dependencies, args.constraints, { previousSolution: previousSolution }).answer;
 
   // check that root deps are the same
   args.dependencies.forEach(function (dep) {

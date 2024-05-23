@@ -33,29 +33,24 @@ Email.hookSend(options => {
   }
 });
 
-Meteor.methods(
-  {
-    getInterceptedEmails:
-      email => {
-        check(email, String);
-        return interceptedEmails[email];
-      },
+Meteor.methods({
+  getInterceptedEmails: email => {
+    check(email, String);
+    return interceptedEmails[email];
+  },
 
-    addEmailForTestAndVerify:
-      async email => {
-        check(email, String);
-        await Meteor.users.updateAsync(
-          { _id: Accounts.userId() },
-          { $push: { emails: { address: email, verified: false } } });
-        await Accounts.sendVerificationEmail(Accounts.userId(), email);
-      },
+  addEmailForTestAndVerify: email => {
+    check(email, String);
+    Meteor.users.update(
+      {_id: Accounts.userId()},
+      {$push: {emails: {address: email, verified: false}}});
+    Accounts.sendVerificationEmail(Accounts.userId(), email);
+  },
 
-    createUserOnServer:
-      async email => {
-        check(email, String);
-        const userId = await Accounts.createUser({ email });
-        await Accounts.sendEnrollmentEmail(userId);
-        return await Meteor.users.findOneAsync(userId);
-      }
+  createUserOnServer: email => {
+    check(email, String);
+    const userId = Accounts.createUser({ email });
+    Accounts.sendEnrollmentEmail(userId);
+    return Meteor.users.findOne(userId);
   }
-);
+});

@@ -1,6 +1,6 @@
-const has = require('lodash.has');
-const isEmpty = require('lodash.isempty');
-const isEqual = require('lodash.isequal');
+const has = Npm.require('lodash.has');
+const isEqual = Npm.require('lodash.isequal');
+const isEmpty = Npm.require('lodash.isempty');
 
 var PV = PackageVersion;
 var CS = ConstraintSolver;
@@ -140,19 +140,19 @@ function getMentionedPackages(input) {
   return Object.keys(packages);
 }
 
-CS.Input.prototype.loadFromCatalog = async function (catalogLoader) {
+CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
   // Load packages into the cache (if they aren't loaded already).
-  await catalogLoader.loadAllVersionsRecursive(getMentionedPackages(this));
+  catalogLoader.loadAllVersionsRecursive(getMentionedPackages(this));
 };
 
-CS.Input.prototype.loadOnlyPreviousSolution = async function (catalogLoader) {
+CS.Input.prototype.loadOnlyPreviousSolution = function (catalogLoader) {
   var self = this;
 
   // load just the exact versions from the previousSolution
   if (self.previousSolution) {
-    for (const [pkg, version] of Object.entries(self.previousSolution)) {
-      await catalogLoader.loadSingleVersion(pkg, version);
-    }
+    Object.entries(self.previousSolution).forEach(function ([pkg, version]) {
+      catalogLoader.loadSingleVersion(pkg, version);
+    });
   }
 };
 

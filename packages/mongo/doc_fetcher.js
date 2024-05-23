@@ -1,8 +1,10 @@
+var Fiber = Npm.require('fibers');
+
 export class DocFetcher {
   constructor(mongoConnection) {
     this._mongoConnection = mongoConnection;
     // Map from op -> [callback]
-    this._callbacksForOp = new Map();
+    this._callbacksForOp = new Map;
   }
 
   // Fetches document "id" from collectionName, returning it or null if not
@@ -14,7 +16,7 @@ export class DocFetcher {
   //
   // You may assume that callback is never called synchronously (and in fact
   // OplogObserveDriver does so).
-  async fetch(collectionName, id, op, callback) {
+  fetch(collectionName, id, op, callback) {
     const self = this;
 
     
@@ -32,28 +34,28 @@ export class DocFetcher {
     const callbacks = [callback];
     self._callbacksForOp.set(op, callbacks);
 
-    try {
-      var doc =
-        (await self._mongoConnection.findOneAsync(collectionName, {
-          _id: id,
-        })) || null;
-      // Return doc to all relevant callbacks. Note that this array can
-      // continue to grow during callback excecution.
-      while (callbacks.length > 0) {
-        // Clone the document so that the various calls to fetch don't return
-        // objects that are intertwingled with each other. Clone before
-        // popping the future, so that if clone throws, the error gets passed
-        // to the next callback.
-        callbacks.pop()(null, EJSON.clone(doc));
+    Fiber(function () {
+      try {
+        var doc = self._mongoConnection.findOne(
+          collectionName, {_id: id}) || null;
+        // Return doc to all relevant callbacks. Note that this array can
+        // continue to grow during callback excecution.
+        while (callbacks.length > 0) {
+          // Clone the document so that the various calls to fetch don't return
+          // objects that are intertwingled with each other. Clone before
+          // popping the future, so that if clone throws, the error gets passed
+          // to the next callback.
+          callbacks.pop()(null, EJSON.clone(doc));
+        }
+      } catch (e) {
+        while (callbacks.length > 0) {
+          callbacks.pop()(e);
+        }
+      } finally {
+        // XXX consider keeping the doc around for a period of time before
+        // removing from the cache
+        self._callbacksForOp.delete(op);
       }
-    } catch (e) {
-      while (callbacks.length > 0) {
-        callbacks.pop()(e);
-      }
-    } finally {
-      // XXX consider keeping the doc around for a period of time before
-      // removing from the cache
-      self._callbacksForOp.delete(op);
-    }
+    }).run();
   }
 }

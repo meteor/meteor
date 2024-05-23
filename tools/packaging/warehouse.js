@@ -191,7 +191,7 @@ Object.assign(warehouse, {
   // fetches the manifest file for the given release version. also fetches
   // all of the missing versioned packages referenced from the release manifest
   // @param releaseVersion {String} eg "0.1"
-  _populateWarehouseForRelease: async function (releaseVersion, showInstalling) {
+  _populateWarehouseForRelease: function (releaseVersion, showInstalling) {
     var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0o755);
     var releaseManifestPath = files.pathJoin(releasesDir,
@@ -221,7 +221,7 @@ Object.assign(warehouse, {
       }
 
       try {
-        var result = await httpHelpers.request(
+        var result = httpHelpers.request(
           WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");
       } catch (e) {
         throw new files.OfflineError(e);

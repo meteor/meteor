@@ -3,38 +3,36 @@ import { isTestFilePath } from '../isobuild/test-files';
 const expectEqual = selftest.expectEqual;
 var Sandbox = selftest.Sandbox;
 
-selftest.define("'meteor test --port' accepts/rejects proper values", async function () {
+selftest.define("'meteor test --port' accepts/rejects proper values", function () {
   var s = new Sandbox();
-  await s.init();
-
   var run;
 
-  await s.createApp("myapp", "standard-app");
+  s.createApp("myapp", "standard-app");
   s.cd("myapp");
-  s.set("");
+  s.set("")
 
   var runAddPackage = s.run("add", "tmeasday:acceptance-test-driver");
   runAddPackage.waitSecs(30);
-  await runAddPackage.match(/tmeasday:acceptance-test-driver\b.*?added/)
-  await runAddPackage.expectExit(0);
+  runAddPackage.match(/tmeasday:acceptance-test-driver\b.*?added/)
+  runAddPackage.expectExit(0);
 
   run = s.run("test", "--port", "3700", "--driver-package", "tmeasday:acceptance-test-driver");
   run.waitSecs(30);
-  await run.match('App running at: http://localhost:3700/');
-  await run.stop();
+  run.match('App running at: http://localhost:3700/');
+  run.stop();
 
   run = s.run("test", "--port", "127.0.0.1:3700", "--driver-package", "tmeasday:acceptance-test-driver");
   run.waitSecs(30);
-  await run.match('App running at: http://127.0.0.1:3700/');
-  await run.stop();
+  run.match('App running at: http://127.0.0.1:3700/');
+  run.stop();
 
   run = s.run("test", "--port", "[::]:3700", "--driver-package", "tmeasday:acceptance-test-driver");
   run.waitSecs(30);
-  await run.match('App running at: http://[::]:3700/');
-  await run.stop();
+  run.match('App running at: http://[::]:3700/');
+  run.stop();
 });
 
-selftest.define("'meteor test' eagerly loads correct files", async () => {
+selftest.define("'meteor test' eagerly loads correct files", () => {
   // Unit tests for test file match regexps
   expectEqual(isTestFilePath('/foo.test.js'), true);
   expectEqual(isTestFilePath('/foo.tests.js'), true);
@@ -71,29 +69,28 @@ selftest.define("'meteor test' eagerly loads correct files", async () => {
   expectEqual(isTestFilePath('/foo.app-spectacular.bar.js'), false);
   expectEqual(isTestFilePath('/foo.reapp-spec.bar.js'), false);
 
-  // Integration tests for test file eager loading with `meteor test` and
+  // Integration tests for test file eager loading with `meteor test` and 
   // `meteor test --full-app`
   const s = new Sandbox();
-  await s.init();
   let run;
 
-  await s.createApp('myapp', 'test-eagerly-load');
+  s.createApp('myapp', 'test-eagerly-load');
   s.cd('myapp');
   s.set('');
 
   // `meteor` should load app files, but not test files or app-test files
   run = s.run();
   run.waitSecs(30);
-  await run.match('index.js');
-  await run.stop();
+  run.match('index.js');
+  run.stop();
   run.forbid('foo.test.js');
   run.forbid('foo.app-test.js');
 
   // `meteor test` should load test files, but not app files or app-test files
   run = s.run('test', '--driver-package', 'tmeasday:acceptance-test-driver');
   run.waitSecs(30);
-  await run.match('foo.test.js');
-  await run.stop();
+  run.match('foo.test.js');
+  run.stop();
   run.forbid('index.js');
   run.forbid('foo.app-test.js');
 
@@ -106,8 +103,8 @@ selftest.define("'meteor test' eagerly loads correct files", async () => {
     '--full-app',
   );
   run.waitSecs(30);
-  await run.match('foo.app-test.js');
-  await run.match('index.js');
-  await run.stop();
-  run.forbid('foo.test.js');
+  run.match('foo.app-test.js');
+  run.match('index.js');
+  run.stop();
+  run.forbid('foo.test.js');  
 });

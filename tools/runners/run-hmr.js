@@ -12,17 +12,17 @@ export class HMRServer {
     this.projectContext = projectContext;
 
     this.hmrPath = hmrPath;
-    this.secretBuffer = Buffer.from(secret);
+    this.secret = secret;
 
     this.wsServer = null;
-    this.connByArch = new Map();
+    this.connByArch = Object.create(null);
     this.started = false;
 
-    this.changeSetsByArch = new Map();
+    this.changeSetsByArch = Object.create(null);
 
     this.maxChangeSets = 300;
-    this.cacheKeys = new Map();
-    this.trimmedArchUntil = new Map();
+    this.cacheKeys = Object.create(null);
+    this.trimmedArchUntil = Object.create(null);
     this.firstBuild = null;
 
     if (!cordovaServerPort) {
@@ -55,7 +55,7 @@ export class HMRServer {
 
   stop() {
     this.wsServer.close();
-    this.connByArch = new Map();
+    this.connByArch = Object.create(null);
   }
 
   _handleWsConn(conn, req) {
@@ -78,9 +78,8 @@ export class HMRServer {
             }));
           }
 
-          let secretsMatch =
-            secret.length === Buffer.byteLength(this.secretBuffer) &&
-            crypto.timingSafeEqual(Buffer.from(secret), this.secretBuffer);
+          let secretsMatch = secret.length === this.secret.length &&
+            crypto.timingSafeEqual(Buffer.from(secret), Buffer.from(this.secret));
 
           if (
             !fromCordova &&
@@ -94,11 +93,8 @@ export class HMRServer {
             return;
           }
 
-          if (!this.connByArch.has(arch)) {
-            this.connByArch.set(arch, new Set());
-          }
-          const archConnsSet = this.connByArch.get(arch);
-          archConnsSet.add(conn);
+          this.connByArch[arch] = this.connByArch[arch] || [];
+          this.connByArch[arch].push(conn);
           connArch = arch;
           registered = true;
           break;
@@ -147,18 +143,28 @@ export class HMRServer {
 
     // TODO: should use pings to detect disconnected sockets
     conn.on('close', () => {
-      if (!connArch) return;
-      const archConnsSet = this.connByArch.get(connArch);
-      if (archConnsSet) archConnsSet.delete(conn);
+      if (!connArch) {
+        return;
+      }
+
+      const archConns = this.connByArch[connArch] || [];
+      const index = archConns.indexOf(conn);
+      if (index > -1) {
+        archConns.splice(
+          index,
+          1
+        );
+      }
     });
   }
 
   _sendAll(message) {
-    const messageStr = JSON.stringify(message);
-    for (const connsSet of Object.values(this.connByArch)) {
-      for (const conn of connsSet) conn.send(messageStr);
-    }
- }
+    Object.values(this.connByArch).forEach(conns => {
+      conns.forEach(conn => {
+        conn.send(JSON.stringify(message));
+      });
+    });
+  }
 
   setAppState(state) {
     if (state === 'error') {
@@ -178,7 +184,7 @@ export class HMRServer {
     }
   }
 
-  async compare({ name, arch, hmrAvailable, files, cacheKey }, getFileOutput) {
+  compare({ name, arch, hmrAvailable, files, cacheKey }, getFileOutput) {
     if (this.firstBuild = null) {
       this.firstBuild = Date.now();
     }
@@ -242,33 +248,20 @@ export class HMRServer {
       onlyReplaceableChanges &&
       removedFilePaths.length === 0;
 
-    async function saveFileDetails(file) {
-      const content = await getFileOutput(file);
-      return { 
-          content: content.toStringWithSourceMap({}),
-          path: file.absModuleId,
-          meteorInstallOptions: file.meteorInstallOptions
+    function saveFileDetails(file) {
+      return {
+        content: getFileOutput(file).toStringWithSourceMap({}),
+        path: file.absModuleId,
+        meteorInstallOptions: file.meteorInstallOptions
       };
-    }
-
-    const iterWithFn = async (iter, fn) => {
-      const results = await Promise.allSettled(iter.map(fn));
-      return results
-        .filter(result => {
-          if (result.status === 'rejected') {
-            console.error('HMR iterWithFn:', result.reason);
-          }
-          return result.status === 'fulfilled';
-        })
-        .map(result => result.value);
     }
 
     const result = {
       fileHashes,
       unreloadableHashes: unreloadable,
       reloadable,
-      addedFiles: reloadable ? await iterWithFn(addedFiles, saveFileDetails) : [],
-      changedFiles: reloadable ? await iterWithFn(changedFiles, saveFileDetails) : [],
+      addedFiles: reloadable ? addedFiles.map(saveFileDetails) : [],
+      changedFiles: reloadable ? changedFiles.map(saveFileDetails) : [],
       linkedAt: Date.now(),
       id: this._createId(),
       name

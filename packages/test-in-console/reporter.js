@@ -15,7 +15,7 @@ if (Meteor.settings &&
 }
 
 Meteor.methods({
-  report: async function (reports) {
+  report: function (reports) {
     // XXX Could do a more precise validation here; reports are complex!
     check(reports, [Object]);
     if (url) {

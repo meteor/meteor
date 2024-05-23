@@ -5,7 +5,7 @@ var utils = require('../utils/utils.js');
 var archinfo = require('../utils/archinfo');
 var _ = require('underscore');
 
-selftest.define("wipe all packages", ['slow', 'custom-warehouse'], async function () {
+selftest.define("wipe all packages", ['slow', 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { tool: "meteor-tool@33.0.1", recommended: true },
@@ -13,8 +13,6 @@ selftest.define("wipe all packages", ['slow', 'custom-warehouse'], async functio
       v3: { tool: "meteor-tool@33.0.3", recommended: true }
     }
   });
-  await s.init();
-
   var meteorToolVersion = function (v) {
     return {
       _id: 'VID' + v.replace(/\./g, ''),
@@ -44,7 +42,7 @@ selftest.define("wipe all packages", ['slow', 'custom-warehouse'], async functio
   };
 
   // insert the new tool versions into the catalog
-  await s.warehouseOfficialCatalog.insertData({
+  s.warehouseOfficialCatalog.insertData({
     syncToken: {},
     formatVersion: "1.0",
     collections: {
@@ -63,10 +61,10 @@ selftest.define("wipe all packages", ['slow', 'custom-warehouse'], async functio
   latestMeteorToolVersion = latestMeteorToolVersion[latestMeteorToolVersion.length - 3];
 
   var prefix = files.pathJoin(s.warehouse, 'packages', 'meteor-tool');
-  var copyTool = async function (srcVersion, dstVersion) {
+  var copyTool = function (srcVersion, dstVersion) {
     if (process.platform === 'win32') {
       // just copy the files
-      await files.cp_r(
+      files.cp_r(
         files.pathJoin(prefix, srcVersion),
         files.pathJoin(prefix, dstVersion), {
           preserveSymlinks: true
@@ -78,7 +76,7 @@ selftest.define("wipe all packages", ['slow', 'custom-warehouse'], async functio
       var dstFullVersion = srcFullVersion.replace(srcVersion, dstVersion);
 
       // copy the hidden folder
-      await files.cp_r(
+      files.cp_r(
         files.pathJoin(prefix, srcFullVersion),
         files.pathJoin(prefix, dstFullVersion), {
           preserveSymlinks: true
@@ -103,13 +101,13 @@ selftest.define("wipe all packages", ['slow', 'custom-warehouse'], async functio
     replaceVersionInFile('unipackage.json');
   };
 
-  await copyTool(latestMeteorToolVersion, '33.0.3');
-  await copyTool(latestMeteorToolVersion, '33.0.2');
-  await copyTool(latestMeteorToolVersion, '33.0.1');
+  copyTool(latestMeteorToolVersion, '33.0.3');
+  copyTool(latestMeteorToolVersion, '33.0.2');
+  copyTool(latestMeteorToolVersion, '33.0.1');
 
   // since the warehouse faking system is weak and under-developed, add more
   // faking, such as making the v3 the latest version
-  await files.linkToMeteorScript(
+  files.linkToMeteorScript(
     files.pathJoin('packages', 'meteor-tool', '33.0.3', 'mt-' + archinfo.host(), 'meteor'),
     files.pathJoin(s.warehouse, 'meteor'));
 
@@ -118,7 +116,7 @@ selftest.define("wipe all packages", ['slow', 'custom-warehouse'], async functio
 
   run = s.run('--release', 'v1', 'admin', 'wipe-all-packages');
   run.waitSecs(15);
-  await run.expectExit(0);
+  run.expectExit(0);
 
   // OK, wiped all packages, now let's go and check that everything is removed
   // except for the tool we are running right now and the latest tool. i.e. v1

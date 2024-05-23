@@ -15,6 +15,9 @@
   "main": "promise_server.js",
   "browser": "promise_client.js",
   "typings": "promise.d.ts",
+  "scripts": {
+    "test": "test/run.sh"
+  },
   "homepage": "https://github.com/meteor/promise",
   "repository": {
     "type": "git",

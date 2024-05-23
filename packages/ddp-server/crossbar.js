@@ -83,7 +83,7 @@ _.extend(DDPServer._Crossbar.prototype, {
   // listener callbacks will be called inside the write fence as well.
   //
   // The listeners may be invoked in parallel, rather than serially.
-  fire: async function (notification) {
+  fire: function (notification) {
     var self = this;
 
     var collection = self._collectionForMessage(notification);
@@ -109,11 +109,11 @@ _.extend(DDPServer._Crossbar.prototype, {
     // because the only way that stops being true is if listenersForCollection
     // first gets reduced down to the empty object (and then never gets
     // increased again).
-    for (const id of callbackIds) {
+    _.each(callbackIds, function (id) {
       if (_.has(listenersForCollection, id)) {
-        await listenersForCollection[id].callback(notification);
+        listenersForCollection[id].callback(notification);
       }
-    }
+    });
   },
 
   // A notification matches a trigger if all keys that exist in both are equal.

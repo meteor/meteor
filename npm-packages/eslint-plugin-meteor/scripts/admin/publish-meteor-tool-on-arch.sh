@@ -18,7 +18,7 @@ main () {
     echo "usage: $0 <git sha> <platform> <path to meteor session>" 1>&2
     echo "The passed sha1 is checked out and published from the machines." 1>&2
     echo "Options for platform:" 1>&2
-    echo "  os.osx.x86_64 os.linux.x86_64 os.linux.x86_32 os.linux.aarch64" 1>&2
+    echo "  os.osx.x86_64 os.linux.x86_64 os.linux.x86_32" 1>&2
     echo "  os.windows.x86_32 os.windows.x86_64" 1>&2
     exit 1
   fi
@@ -33,7 +33,7 @@ main () {
 
   METEOR="$CHECKOUT_DIR/meteor"
 
-  UNIX_PLATFORMS=( os.osx.x86_64 os.linux.x86_64 os.linux.x86_32 os.linux.aarch64 )
+  UNIX_PLATFORMS=( os.osx.x86_64 os.linux.x86_64 os.linux.x86_32 )
   WINDOWS_PLATFORMS=( os.windows.x86_32 os.windows.x86_64 )
 
   if [[ $PLATFORM =~ ^(os\.linux|os\.osx) ]] ; then

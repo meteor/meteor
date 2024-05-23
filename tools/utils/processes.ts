@@ -42,14 +42,13 @@ type ExecFileOptions = {
 }
 
  /**
-  * @deprecated
   * @summary Executes a command synchronously, returning either the captured
   * stdout output or throwing an error containing the stderr output as part of
   * the message. In addition, the error will contain fields pid, stderr, stdout,
   * status and signal.
   * @param command The command to run
   * @param args List of string arguments
-  * @param options
+  * @param options 
   * @returns The stdout from the command
   */
 export function execFileSync(
@@ -57,7 +56,8 @@ export function execFileSync(
   args?: ReadonlyArray<string> | ExecFileOptions,
   options?: ExecFileOptions
 ) {
-  return execFileAsync(command, args, options);
+  const meteorPromise: any = Promise; // TypeScript doesn't recognize "Promise.await"
+  return meteorPromise.await(execFileAsync(command, args, options));
 }
 
  /**
@@ -67,7 +67,7 @@ export function execFileSync(
   * the error will contain fields pid, stderr, stdout, status and signal.
   * @param command The command to run
   * @param args List of string arguments
-  * @param options
+  * @param options 
   */
 export function execFileAsync(
   command: string,
@@ -96,7 +96,7 @@ export function execFileAsync(
   const exitEvent = options.waitForClose ? 'close' : 'exit';
 
   return new Promise((resolve, reject) => {
-    let child: ReturnType<typeof child_process.exec>;
+    let child: ReturnType<typeof child_process.exec>; 
     const spawnArgs: ReadonlyArray<string> = Array.isArray(args) ? args : [];
     const { cwd, env, stdio } = options;
 
@@ -107,7 +107,7 @@ export function execFileAsync(
       spawnArgs.forEach(arg => {
         command += ' ' + arg;
       });
-      child = child_process.spawn(command, { cwd, env, shell: true });
+      child = child_process.exec(command, { cwd, env });
     }
 
     let capturedStdout = '';

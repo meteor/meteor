@@ -16,10 +16,10 @@ export default class Matcher {
     });
   }
 
-  async write(data) {
+  write(data) {
     this.buf += data;
     this.fullBuffer += data;
-    await this._tryMatch();
+    this._tryMatch();
   }
 
   getFullBuffer() {
@@ -60,11 +60,11 @@ export default class Matcher {
   }
 
   match(pattern, timeout, strict) {
-    return this.matchAsync(pattern, { timeout, strict });
+    return this.matchAsync(pattern, { timeout, strict }).await();
   }
 
   // Like match, but returns a Promise without calling .await().
-  async matchAsync(pattern, {
+  matchAsync(pattern, {
     timeout = null,
     strict = false,
     matchFullBuffer = false,
@@ -76,7 +76,7 @@ export default class Matcher {
     this.matchStrict = strict;
     this.matchFullBuffer = matchFullBuffer;
     const mp = this.matchPromise = makeFulfillablePromise();
-    await this._tryMatch(); // could clear this.matchPromise
+    this._tryMatch(); // could clear this.matchPromise
 
     let timer = null;
     if (timeout) {
@@ -92,16 +92,13 @@ export default class Matcher {
       return mp;
     }
 
-    return mp.then(
-      (result) => {
-        clearTimeout(timer);
-        return result;
-      },
-      (error) => {
-        clearTimeout(timer);
-        throw error;
-      }
-    );
+    return mp.then((result) => {
+      clearTimeout(timer);
+      return result;
+    }, (error) => {
+      clearTimeout(timer);
+      throw error;
+    });
   }
 
   matchBeforeEnd(pattern, timeout) {
@@ -117,12 +114,12 @@ export default class Matcher {
   }
 
   end() {
-    return this.endAsync();
+    return this.endAsync().await();
   }
 
   endAsync() {
     this.resolveEndPromise();
-    return this._beforeEnd(async () => {
+    return this._beforeEnd(() => {
       this.ended = true;
       this._tryMatch();
       return this.matchPromise;
@@ -136,7 +133,7 @@ export default class Matcher {
     }
   }
 
-  async _tryMatch() {
+  _tryMatch() {
     const mp = this.matchPromise;
     if (! mp) {
       return;

@@ -5,8 +5,7 @@ import { AccountsServer } from "./accounts_server.js";
  * @summary The namespace for all server-side accounts-related methods.
  */
 Accounts = new AccountsServer(Meteor.server, Meteor.settings.packages?.accounts || {});
-// TODO[FIBERS]: I need TLA
-Accounts.init().then()
+
 // Users table. Don't use the normal autopublish, since we want to hide
 // some fields. Code to autopublish this is in accounts_server.js.
 // XXX Allow users to configure this collection name.
@@ -16,7 +15,7 @@ Accounts.init().then()
  * @locus Anywhere
  * @type {Mongo.Collection}
  * @importFromPackage meteor
- */
+*/
 Meteor.users = Accounts.users;
 
 export {

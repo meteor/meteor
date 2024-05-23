@@ -34,12 +34,12 @@ try {
 Meteor.startup(() => {
   const settings = Meteor.settings?.packages?.['service-configuration'];
   if (!settings) return;
-  for (const key of Object.keys(settings)) {
-    ServiceConfiguration.configurations.upsertAsync(
+  Object.keys(settings).forEach(key => {
+    ServiceConfiguration.configurations.upsert(
       { service: key },
       {
         $set: settings[key],
       }
     );
-  }
+  });
 });

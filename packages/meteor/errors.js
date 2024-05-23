@@ -42,7 +42,23 @@ Meteor.makeErrorType = function (name, constructor) {
  * @param {String} error A string code uniquely identifying this kind of error.
  * This string should be used by callers of the method to determine the
  * appropriate action to take, instead of attempting to parse the reason
- * or details fields.
+ * or details fields. For example:
+ *
+ * ```
+ * // on the server, pick a code unique to this error
+ * // the reason field should be a useful debug message
+ * throw new Meteor.Error("logged-out",
+ *   "The user must be logged in to post a comment.");
+ *
+ * // on the client
+ * Meteor.call("methodName", function (error) {
+ *   // identify the error
+ *   if (error && error.error === "logged-out") {
+ *     // show a nice error message
+ *     Session.set("errorMessage", "Please log in to post a comment.");
+ *   }
+ * });
+ * ```
  *
  * For legacy reasons, some built-in Meteor functions such as `check` throw
  * errors with a number in this field.

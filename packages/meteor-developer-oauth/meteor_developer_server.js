@@ -29,7 +29,7 @@ OAuth.registerService("meteor-developer", 2, null, async query => {
 // - refreshToken, if this is the first authorization request and we got a
 //   refresh token from the server
 const getTokens = async (query) => {
-  const config = await ServiceConfiguration.configurations.findOneAsync({
+  const config = ServiceConfiguration.configurations.findOne({
     service: 'meteor-developer',
   });
   if (!config) {

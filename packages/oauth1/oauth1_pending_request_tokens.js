@@ -25,17 +25,17 @@ OAuth._pendingRequestTokens = new Mongo.Collection(
     _preventAutopublish: true
   });
 
-await OAuth._pendingRequestTokens.createIndexAsync('key', { unique: true });
-await OAuth._pendingRequestTokens.createIndexAsync('createdAt');
+OAuth._pendingRequestTokens.createIndex('key', { unique: true });
+OAuth._pendingRequestTokens.createIndex('createdAt');
 
 
 
 // Periodically clear old entries that never got completed
-const _cleanStaleResults = async () => {
+const _cleanStaleResults = () => {
   // Remove request tokens older than 5 minute
   const timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 5);
-  await OAuth._pendingRequestTokens.removeAsync({ createdAt: { $lt: timeCutoff } });
+  OAuth._pendingRequestTokens.remove({ createdAt: { $lt: timeCutoff } });
 };
 const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
@@ -47,13 +47,13 @@ const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 // @param requestToken {string}
 // @param requestTokenSecret {string}
 //
-OAuth._storeRequestToken = async (key, requestToken, requestTokenSecret) => {
+OAuth._storeRequestToken = (key, requestToken, requestTokenSecret) => {
   check(key, String);
 
   // We do an upsert here instead of an insert in case the user happens
   // to somehow send the same `state` parameter twice during an OAuth
   // login; we don't want a duplicate key error.
-  await OAuth._pendingRequestTokens.upsertAsync({
+  OAuth._pendingRequestTokens.upsert({
     key,
   }, {
     key,
@@ -69,12 +69,12 @@ OAuth._storeRequestToken = async (key, requestToken, requestTokenSecret) => {
 //
 // @param key {string}
 //
-OAuth._retrieveRequestToken = async key => {
+OAuth._retrieveRequestToken = key => {
   check(key, String);
 
-  const pendingRequestToken =  await OAuth._pendingRequestTokens.findOneAsync({ key: key });
+  const pendingRequestToken = OAuth._pendingRequestTokens.findOne({ key: key });
   if (pendingRequestToken) {
-    await OAuth._pendingRequestTokens.removeAsync({ _id: pendingRequestToken._id });
+    OAuth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
     return {
       requestToken: OAuth.openSecret(pendingRequestToken.requestToken),
       requestTokenSecret: OAuth.openSecret(

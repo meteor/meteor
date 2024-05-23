@@ -77,8 +77,6 @@ DDPCommon.MethodInvocation = class MethodInvocation {
 
     // This is set by RandomStream.get; and holds the random stream state
     this.randomStream = null;
-
-    this.fence = options.fence;
   }
 
   /**

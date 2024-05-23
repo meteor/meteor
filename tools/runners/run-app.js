@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var Fiber = require('fibers');
 var files = require('../fs/files');
 var watch = require('../fs/watch');
 var bundler = require('../isobuild/bundler.js');
@@ -13,7 +14,7 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
 import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
-import { once , EventEmitter, on }  from "events"
+
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
   if (s.search("\"") !== -1 || s.search("'") !== -1) {
@@ -76,7 +77,7 @@ var AppProcess = function (options) {
 
 Object.assign(AppProcess.prototype, {
   // Call to start the process.
-  start: async function () {
+  start: function () {
     var self = this;
 
     if (self.proc) {
@@ -84,27 +85,28 @@ Object.assign(AppProcess.prototype, {
     }
 
     // Start the app!
-    self.proc = await self._spawn();
+    self.proc = self._spawn();
 
-    eachline(self.proc.stdout, async function (line) {
+    eachline(self.proc.stdout, function (line) {
       if (line.match(/^LISTENING\s*$/)) {
         // This is the child process telling us that it's ready to receive
         // connections.  (It does this because we told it to with
         // $METEOR_PRINT_ON_LISTEN.)
-        self.onListen && await self.onListen();
+        self.onListen && self.onListen();
+
       } else {
-        await runLog.logAppOutput(line);
+        runLog.logAppOutput(line);
       }
     });
 
-    eachline(self.proc.stderr, async function (line) {
-      await runLog.logAppOutput(line, true);
+    eachline(self.proc.stderr, function (line) {
+      runLog.logAppOutput(line, true);
     });
 
     // Watch for exit and for stdio to be fully closed (so that we don't miss
     // log lines).
     self.proc.on('close', async function (code, signal) {
-      await self._maybeCallOnExit(code, signal);
+      self._maybeCallOnExit(code, signal);
     });
 
     self.proc.on('error', async function (err) {
@@ -113,7 +115,7 @@ Object.assign(AppProcess.prototype, {
       // node docs say that it might make both an 'error' and a
       // 'close' callback, so we use a guard to make sure we only call
       // onExit once.
-      await self._maybeCallOnExit();
+      self._maybeCallOnExit();
     });
 
     // This happens sometimes when we write a keepalive after the app
@@ -123,13 +125,13 @@ Object.assign(AppProcess.prototype, {
     self.proc.stdin.on('error', function () {});
   },
 
-  _maybeCallOnExit: async function (code, signal) {
+  _maybeCallOnExit: function (code, signal) {
     var self = this;
     if (self.madeExitCallback) {
       return;
     }
     self.madeExitCallback = true;
-    self.onExit && await self.onExit(code, signal);
+    self.onExit && self.onExit(code, signal);
   },
 
   // Idempotent. Once stop() returns it is guaranteed that you will
@@ -230,7 +232,7 @@ Object.assign(AppProcess.prototype, {
   },
 
   // Spawn the server process and return the handle from child_process.spawn.
-  _spawn: async function () {
+  _spawn: function () {
     var self = this;
 
     // Path conversions
@@ -264,8 +266,7 @@ Object.assign(AppProcess.prototype, {
 
     // Add a child.sendMessage(topic, payload) method to this child
     // process object.
-    const interProcessMessaging = await loadIsopackage("inter-process-messaging");
-    interProcessMessaging.enable(child);
+    loadIsopackage("inter-process-messaging").enable(child);
 
     return child;
   }
@@ -372,7 +373,7 @@ var AppRunner = function (options) {
   self.omitPackageMapDeltaDisplayOnFirstRun =
     options.omitPackageMapDeltaDisplayOnFirstRun;
 
-  self.isRunning = null;
+  self.fiber = null;
   self.startPromise = null;
   self.runPromise = null;
   self.exitPromise = null;
@@ -394,58 +395,43 @@ var AppRunner = function (options) {
 Object.assign(AppRunner.prototype, {
   // Start the app running, and restart it as necessary. Returns
   // immediately.
-  start: async function () {
+  start: function () {
     var self = this;
 
-    if (self.isRunning) {
+    if (self.fiber) {
       throw new Error("already started?");
     }
 
     self.startPromise = self._makePromise("start");
 
-    self.isRunning = true;
-    global.asyncLocalStorage.run({}, () =>
-        self._runApp().catch((e) => self._resolvePromise("start", e))
-    );
-    await self.startPromise;
+    self.fiber = Fiber(function () {
+      self._fiber();
+    });
+    self.fiber.run();
+
+    self.startPromise.await();
     self.startPromise = null;
   },
 
-  _findCachedEE: function (name) {
-    if (!this._promiseResolvers[name]) {
-      this._promiseResolvers[name] = new EventEmitter();
-    }
-    return this._promiseResolvers[name];
-  },
-
-  /**
-   * @param name
-   * @return {Promise<[any]>}
-   * @private
-   */
   _makePromise: function (name) {
     var self = this;
-    const ee = self._findCachedEE(name);
-    return once(ee, name);
+    return new Promise(function (resolve) {
+      self._promiseResolvers[name] = resolve;
+    });
   },
 
   _resolvePromise: function (name, value) {
-    const ee = this._promiseResolvers[name];
-    if (ee) {
-      ee.emit(name, value);
+    var resolve = this._promiseResolvers[name];
+    if (resolve) {
       this._promiseResolvers[name] = null;
-    }
-    if (value instanceof Error) {
-      throw value;
+      resolve(value);
     }
   },
 
   _cleanUpPromises: function () {
     if (this._promiseResolvers) {
-      _.each(this._promiseResolvers, (ee,name) => {
-        if (ee) {
-          ee.emit(name, null);
-        }
+      _.each(this._promiseResolvers, function (resolve) {
+        resolve && resolve();
       });
       this._promiseResolvers = null;
     }
@@ -455,10 +441,10 @@ Object.assign(AppRunner.prototype, {
   // down. This may involve waiting for bundling to
   // finish. Idempotent, however only one thread may be in stop() at a
   // time.
-  stop: async function () {
+  stop: function () {
     var self = this;
 
-    if (! self.isRunning) {
+    if (! self.fiber) {
       // nothing to do
       return;
     }
@@ -469,15 +455,17 @@ Object.assign(AppRunner.prototype, {
 
     // The existence of this promise makes the fiber break out of its loop.
     self.exitPromise = self._makePromise("exit");
+
     self._resolvePromise("run", { outcome: 'stopped' });
     self._resolvePromise("watch");
+
     if (self._beforeStartPromise) {
       // If we stopped before mongod started (eg, due to mongod startup
       // failure), unblock the runner fiber from waiting for mongod to start.
       self._resolvePromise("beforeStart", true);
     }
 
-    await self.exitPromise;
+    self.exitPromise.await();
     self.exitPromise = null;
   },
 
@@ -487,12 +475,12 @@ Object.assign(AppRunner.prototype, {
       throw new Error("makeBeforeStartPromise called twice?");
     }
     this._beforeStartPromise = this._makePromise("beforeStart");
-    return () => this._resolvePromise("beforeStart");
+    return this._promiseResolvers["beforeStart"];
   },
 
   // Run the program once, wait for it to exit, and then return. The
   // return value is same as onRunEnd.
-  _runOnce: async function (options) {
+  _runOnce: function (options) {
     var self = this;
     options = options || {};
     var firstRun = options.firstRun;
@@ -509,12 +497,13 @@ Object.assign(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
 
-    var bundleApp = async function () {
+    var bundleApp = function () {
       if (! firstRun) {
         // If the build fails in a way that could be fixed by a refresh, allow
         // it even if we refreshed previously, since that might have been a
         // little while ago.
         catalog.triedToRefreshRecently = false;
+
         // If this isn't the first time we've run, we need to reset the project
         // context since everything we have cached may have changed.
         // XXX We can try to be a little less conservative here:
@@ -535,7 +524,9 @@ Object.assign(AppRunner.prototype, {
           // shown from the previous solution.
           preservePackageMap: true
         });
-        var messages = await buildmessage.capture(() => self.projectContext.readProjectMetadata());
+        var messages = buildmessage.capture(function () {
+          self.projectContext.readProjectMetadata();
+        });
         if (messages.hasMessages()) {
           return {
             runResult: {
@@ -559,7 +550,9 @@ Object.assign(AppRunner.prototype, {
         };
       }
 
-      messages = await buildmessage.capture(() => self.projectContext.prepareProjectForBuild());
+      messages = buildmessage.capture(function () {
+        self.projectContext.prepareProjectForBuild();
+      });
       if (messages.hasMessages()) {
         return {
           runResult: {
@@ -576,15 +569,14 @@ Object.assign(AppRunner.prototype, {
       }
 
       if (self.recordPackageUsage) {
-        // Maybe this doesn't need to be awaited for?
-        await stats.recordPackages({
+        stats.recordPackages({
           what: "sdk.run",
           projectContext: self.projectContext
         });
       }
 
-      var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async () =>
-        bundler.bundle({
+      var bundleResult = Profile.run((firstRun?"B":"Reb")+"uild App", () => {
+        return bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
           includeNodeModules: "symlink",
@@ -599,7 +591,8 @@ Object.assign(AppRunner.prototype, {
           // None of the targets are used during full rebuilds
           // so we can safely build in place on Windows
           forceInPlaceBuild: !cachedServerWatchSet
-        }));
+        });
+      });
 
       // Keep the server watch set from the initial bundle, because subsequent
       // bundles will not contain a server target.
@@ -627,8 +620,9 @@ Object.assign(AppRunner.prototype, {
       watchSet.merge(br.clientWatchSet);
       return watchSet;
     };
+
     var bundleResult;
-    var bundleResultOrRunResult = await bundleApp();
+    var bundleResultOrRunResult = bundleApp();
     if (bundleResultOrRunResult.runResult) {
       return bundleResultOrRunResult.runResult;
     }
@@ -639,10 +633,10 @@ Object.assign(AppRunner.prototype, {
     // Read the settings file, if any
     var settings = null;
     var settingsWatchSet = new watch.WatchSet;
-    var settingsMessages = await buildmessage.capture({
+    var settingsMessages = buildmessage.capture({
       title: "preparing to run",
       rootPath: process.cwd()
-    }, async function () {
+    }, function () {
       if (self.settingsFile) {
         settings = files.getSettings(self.settingsFile, settingsWatchSet);
       }
@@ -675,8 +669,8 @@ Object.assign(AppRunner.prototype, {
 
       if (!cordovaRunner.started) {
         const { settingsFile, mobileServerUrl } = self;
-        const messages = await buildmessage.capture(async () => {
-          await cordovaRunner.prepareProject(bundlePath, pluginVersions,
+        const messages = buildmessage.capture(() => {
+          cordovaRunner.prepareProject(bundlePath, pluginVersions,
             { settingsFile, mobileServerUrl });
         });
 
@@ -712,13 +706,13 @@ Object.assign(AppRunner.prototype, {
 
     // We should have reset self.runPromise to null by now, but await it
     // just in case it's still defined.
-    await self.runPromise;
-    self.runPromise = self._makePromise("run");
-    var runPromise = self.runPromise;
+    Promise.await(self.runPromise);
+
+    var runPromise = self.runPromise = self._makePromise("run");
     var listenPromise = self._makePromise("listen");
 
     // Run the program
-    options.beforeRun && await options.beforeRun();
+    options.beforeRun && options.beforeRun();
     var appProcess = new AppProcess({
       projectContext: self.projectContext,
       bundlePath: bundlePath,
@@ -754,13 +748,13 @@ Object.assign(AppRunner.prototype, {
     });
 
     if (options.firstRun && self._beforeStartPromise) {
-        var [stopped] = await self._beforeStartPromise;
-        if (stopped) {
-          return true;
-        }
+      var stopped = self._beforeStartPromise.await();
+      if (stopped) {
+        return true;
+      }
     }
-    await appProcess.start();
 
+    appProcess.start();
     function maybePrintLintWarnings(bundleResult) {
       if (! (self.projectContext.lintAppAndLocalPackages &&
              bundleResult.warnings)) {
@@ -779,7 +773,7 @@ Object.assign(AppRunner.prototype, {
     maybePrintLintWarnings(bundleResult);
 
     if (cordovaRunner && !cordovaRunner.started) {
-      await cordovaRunner.startRunTargets();
+      cordovaRunner.startRunTargets();
     }
 
     // Start watching for changes for files if requested. There's no
@@ -811,7 +805,7 @@ Object.assign(AppRunner.prototype, {
     }
 
     var setupClientWatcher = function () {
-      clientWatcher &&  clientWatcher.stop();
+      clientWatcher && clientWatcher.stop();
       clientWatcher = new watch.Watcher({
         watchSet: bundleResult.clientWatchSet,
         onChange: function () {
@@ -848,22 +842,22 @@ Object.assign(AppRunner.prototype, {
       await appProcess.proc.sendMessage("client-refresh");
     }
 
-    async function runPostStartupCallbacks(bundleResult) {
+    function runPostStartupCallbacks(bundleResult) {
       const callbacks = bundleResult.postStartupCallbacks;
       if (! callbacks) return;
 
-      const messages = await buildmessage.capture({
+      const messages = buildmessage.capture({
         title: "running post-startup callbacks"
-      }, async () => {
+      }, () => {
         while (callbacks.length > 0) {
           const fn = callbacks.shift();
           try {
-            await fn({
+            Promise.await(fn({
               // Miscellany that the callback might find useful.
               pauseClient,
               refreshClient,
               runLog,
-            });
+            }));
           } catch (error) {
             buildmessage.error(error.message);
           }
@@ -881,17 +875,19 @@ Object.assign(AppRunner.prototype, {
 
     Console.enableProgressDisplay(false);
 
-    const promList = [runPromise, listenPromise];
-    await Promise.race(promList)
-
-    const postStartupResult =
-      await runPostStartupCallbacks(bundleResult)
+    const postStartupResult = Promise.race([
+      listenPromise,
+      runPromise
+    ]).then(() => {
+      return runPostStartupCallbacks(bundleResult);
+    }).await();
 
     if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
-    var [ret] = await runPromise;
+    var ret = runPromise.await();
+
     try {
       while (ret.outcome === 'changed-refreshable') {
         if (! canRefreshClient) {
@@ -900,8 +896,7 @@ Object.assign(AppRunner.prototype, {
 
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
-        bundleResultOrRunResult = await bundleApp();
-
+        bundleResultOrRunResult = bundleApp();
         if (bundleResultOrRunResult.runResult) {
           return bundleResultOrRunResult.runResult;
         }
@@ -913,16 +908,16 @@ Object.assign(AppRunner.prototype, {
 
         var oldPromise = self.runPromise = self._makePromise("run");
 
-        await refreshClient();
+        refreshClient();
 
         // Establish a watcher on the new files.
         setupClientWatcher();
 
-        const postStartupResult = await runPostStartupCallbacks(bundleResult);
+        const postStartupResult = runPostStartupCallbacks(bundleResult);
         if (postStartupResult) return postStartupResult;
 
         // Wait until another file changes.
-        [ret] = await oldPromise;
+        ret = oldPromise.await();
       }
     } finally {
       self.runPromise = null;
@@ -935,21 +930,21 @@ Object.assign(AppRunner.prototype, {
       if (self.hmrServer) {
         self.hmrServer.setAppState("okay");
       }
-      await appProcess.stop();
+      appProcess.stop();
 
-      serverWatcher &&  serverWatcher.stop();
-      clientWatcher &&  clientWatcher.stop();
+      serverWatcher && serverWatcher.stop();
+      clientWatcher && clientWatcher.stop();
     }
 
     return ret;
   },
 
-  _runApp: async function () {
+  _fiber: function () {
     var self = this;
     var firstRun = true;
 
     while (true) {
-      var runResult = await self._runOnce({
+      var runResult = self._runOnce({
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun) {
             runLog.logRestart(self);
@@ -960,7 +955,7 @@ Object.assign(AppRunner.prototype, {
       });
       firstRun = false;
 
-      var wantExit = self.onRunEnd ? !(await self.onRunEnd(runResult)) : false;
+      var wantExit = self.onRunEnd ? !self.onRunEnd(runResult) : false;
       if (wantExit || self.exitPromise || runResult.outcome === "stopped") {
         break;
       }
@@ -1009,7 +1004,7 @@ Object.assign(AppRunner.prototype, {
       }
 
       if (self.watchForChanges) {
-        self.watchPromise =  self._makePromise("watch");
+        self.watchPromise = self._makePromise("watch");
 
         if (!runResult.watchSet) {
           throw Error("watching for changes with no watchSet?");
@@ -1027,7 +1022,7 @@ Object.assign(AppRunner.prototype, {
         }
         // If onChange wasn't called synchronously (clearing watchPromise), wait
         // on it.
-        self.watchPromise && await self.watchPromise;
+        self.watchPromise && self.watchPromise.await();
         // While we were waiting, did somebody stop() us?
         if (self.exitPromise) {
           break;
@@ -1047,7 +1042,7 @@ Object.assign(AppRunner.prototype, {
     // Giving up for good.
     self._cleanUpPromises();
 
-    self.isRunning = null;
+    self.fiber = null;
   }
 });
 

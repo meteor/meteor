@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 4,
+  "lockfileVersion": 1,
   "dependencies": {
     "decimal.js": {
       "version": "10.3.1",

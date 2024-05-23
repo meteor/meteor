@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Display internal app statistics",
-  version: '1.0.2-rc300.2',
+  version: '1.0.1'
 });
 
 Package.onUse(function (api) {
@@ -8,7 +8,7 @@ Package.onUse(function (api) {
     'ecmascript',
     'facts-base',
     'mongo',
-    'templating@1.4.2'
+    'templating@1.2.13'
   ], 'client');
 
   api.imply('facts-base');

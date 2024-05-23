@@ -4,28 +4,27 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
-meteor-base@1.5.2-beta300.6             # Packages every Meteor app needs to have
-mobile-experience@1.1.1-beta300.6       # Packages for a great mobile UX
-mongo@2.0.0-beta300.6                   # The database Meteor supports right now
+meteor-base@1.4.0             # Packages every Meteor app needs to have
+mobile-experience@1.1.0       # Packages for a great mobile UX
+mongo@1.9.0                   # The database Meteor supports right now
 blaze-html-templates    # Compile .html files into Meteor Blaze views
-session@1.2.2-beta300.6               # Client-side reactive dictionary for your app
+session@1.2.1               # Client-side reactive dictionary for your app
 jquery                        # Helpful client-side library
-tracker@1.3.3-beta300.6             # Meteor's client-side reactive programming library
+tracker@1.2.1             # Meteor's client-side reactive programming library
 
-es5-shim@4.8.1-beta300.6                # ECMAScript 5 compatibility for older browsers.
-ecmascript@0.16.8-beta300.6              # Enable ECMAScript2015+ syntax in app code
+es5-shim@4.8.0                # ECMAScript 5 compatibility for older browsers.
+ecmascript@0.14.2              # Enable ECMAScript2015+ syntax in app code
 
 coffeescript
 modules-test-package
-standard-minifier-css@1.9.3-beta300.6
-standard-minifier-js@3.0.0-beta300.6
+standard-minifier-css@1.6.0
+standard-minifier-js@2.6.0
 client-only-ecmascript
 modules-test-plugin
-shell-server@0.6.0-beta300.6
-dynamic-import@0.7.4-beta300.6
-underscore@1.0.14-beta300.6
+shell-server@0.5.0
+dynamic-import@0.5.1
+underscore@1.0.11
 import-local-json-module
+akryum:vue-component
 dummy-compiler
-typescript@5.3.3-beta300.6
-meteortesting:mocha@3.1.0-beta300.0
-meteortesting:mocha-core@8.3.1-beta300.0
+typescript

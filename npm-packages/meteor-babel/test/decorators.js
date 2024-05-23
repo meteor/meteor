@@ -25,11 +25,12 @@ describe("@decorators", function () {
               .includes("decorators-legacy"));
 
     assert.ok(legacyResult.options.plugins.some(function (plugin) {
-      return plugin.key === "transform-regenerator";
+      return plugin.key === "regenerator-transform";
     }));
 
     assert.strictEqual(legacyResult.code.trim(), [
       "var _class;",
+      "",
       "var A = dec(_class = function A() {}) || _class;",
     ].join("\n"));
   });
@@ -56,11 +57,12 @@ describe("@decorators", function () {
               .includes("decorators-legacy"));
 
     assert.ok(legacyResult.options.plugins.every(function (plugin) {
-      return plugin.key !== "transform-regenerator";
+      return plugin.key !== "regenerator-transform";
     }));
 
     assert.strictEqual(legacyResult.code.trim(), [
       "var _class;",
+      "",
       "let A = dec(_class = class A {}) || _class;",
     ].join("\n"));
   });
@@ -87,11 +89,16 @@ describe("@decorators", function () {
               .includes("decorators-legacy"));
 
     assert.ok(legacyResult.options.plugins.every(function (plugin) {
-      return plugin.key !== "transform-regenerator";
+      return plugin.key !== "regenerator-transform";
+    }));
+
+    assert.ok(legacyResult.options.plugins.some(function (plugin) {
+      return plugin.key === "transform-meteor-async-await";
     }));
 
     assert.strictEqual(legacyResult.code.trim(), [
       "var _class;",
+      "",
       "let A = dec(_class = class A {}) || _class;",
     ].join("\n"));
   });

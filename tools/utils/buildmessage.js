@@ -239,8 +239,9 @@ var addChildTracker = function (title) {
 // begin capturing errors. Alternately you may pass `options`
 // (otherwise optional) and a job will be created for you based on
 // `options`.
-async function capture(options, f) {
-  var messageSet = new MessageSet();
+function capture(options, f) {
+  var messageSet = new MessageSet;
+  var parentMessageSet = currentMessageSet.get();
 
   var title;
   if (typeof options === "object" && options.title) {
@@ -279,7 +280,7 @@ async function capture(options, f) {
   }
 
   try {
-    await f();
+    f();
   } finally {
     progress.reportProgressDone();
 
@@ -312,7 +313,7 @@ async function capture(options, f) {
 // - rootPath: the absolute path relative to which paths in messages
 //   in this job should be interpreted (omit if there is no way to map
 //   files that this job talks about back to files on disk)
-async function enterJob(options, f) {
+function enterJob(options, f) {
   if (typeof options === "function") {
     f = options;
     options = {};
@@ -352,12 +353,12 @@ async function enterJob(options, f) {
     resetFns.push(currentNestingLevel.set(nestingLevel + 1));
 
     try {
-      return await f();
+      return f();
     } finally {
       progress.reportProgressDone();
 
       while (resetFns.length) {
-        await resetFns.pop()();
+        resetFns.pop()();
       }
 
       if (debugBuild) {
@@ -384,12 +385,12 @@ async function enterJob(options, f) {
   }
 
   try {
-    return await f();
+    return f();
   } finally {
     progress.reportProgressDone();
 
     while (resetFns.length) {
-      await resetFns.pop()();
+      resetFns.pop()();
     }
 
     if (debugBuild) {
@@ -560,7 +561,7 @@ var assertInJob = function () {
 };
 
 var assertInCapture = function () {
-  if (!currentMessageSet.get()) {
+  if (! currentMessageSet.get()) {
     throw new Error("Expected to be in a buildmessage capture");
   }
 };
@@ -581,7 +582,7 @@ var mergeMessagesIntoCurrentJob = function (innerMessages) {
 };
 
 // Like _.each, but runs each operation in a separate job
-var forkJoin = async function (options, iterable, fn) {
+var forkJoin = function (options, iterable, fn) {
   if (!_.isFunction(fn)) {
     fn = iterable;
     iterable = options;
@@ -600,38 +601,44 @@ var forkJoin = async function (options, iterable, fn) {
 
   const parallel = (options.parallel !== undefined) ? options.parallel : true;
 
-  await enterJobAsync(options);
-
-  const errors = [];
-  let results = [];
-  const mappedPromises = iterable.map(async (...args) => {
-    try {
-      await enterJobAsync({
+  return enterJobAsync(options).then(() => {
+    const errors = [];
+    let results = _.map(iterable, (...args) => {
+      const promise = enterJobAsync({
         title: (options.title || "") + " child"
-      });
-      await fn(...args);
-    } catch (e) {
-      errors.push(e);
+      }).then(() => fn(...args))
+        // Collect any errors thrown (and later re-throw the first one),
+        // but don't stop processing remaining jobs.
+        .catch(error => (errors.push(error), null));
+
+      if (parallel) {
+        // If the jobs are intended to run in parallel, return each
+        // promise without awaiting it, so that Promise.all can wait for
+        // them all to be fulfilled.
+        return promise;
+      }
+
+      // By awaiting the promise during each iteration, we effectively
+      // serialize the execution of the jobs.
+      return promise.await();
+    });
+
+    if (parallel) {
+      // If the jobs ran in parallel, then results is an array of Promise
+      // objects that still need to be resolved.
+      results = Promise.all(results).await();
     }
-  });
 
-  if (parallel) {
-    results = await Promise.all(mappedPromises);
-  } else {
-    for (const mappedPromise of mappedPromises) {
-      results.push(await mappedPromise);
+    if (errors.length > 0) {
+      // If any errors were thrown, re-throw the first one. Note that this
+      // allows jobs to complete successfully (and have whatever
+      // side-effects they should have) after the first error is thrown,
+      // though the final results will not be returned below.
+      throw errors[0];
     }
-  }
 
-  if (errors.length > 0) {
-    // If any errors were thrown, re-throw the first one. Note that this
-    // allows jobs to complete successfully (and have whatever
-    // side-effects they should have) after the first error is thrown,
-    // though the final results will not be returned below.
-    throw errors[0];
-  }
-
-  return results;
+    return results;
+  }).await();
 };
 
 

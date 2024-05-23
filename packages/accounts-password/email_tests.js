@@ -49,9 +49,9 @@ testAsyncMulti("accounts emails - reset password flow", [
     }));
   },
   function (test, expect) {
-    Meteor.logout(expect(async (error) => {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
-      test.equal(await Meteor.user(), null);
+      test.equal(Meteor.user(), null);
     }));
   },
   function (test, expect) {
@@ -62,9 +62,9 @@ testAsyncMulti("accounts emails - reset password flow", [
       }));
   },
   function (test, expect) {
-    Meteor.logout(expect(async (error) => {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
-      test.equal(await Meteor.user(), null);
+      test.equal(Meteor.user(), null);
     }));
   }
 ]);
@@ -168,45 +168,40 @@ testAsyncMulti("accounts emails - verify email flow", [
       {email: this.email, password: 'foobar'},
       loggedIn(test, expect));
   },
-  async function (test, expect) {
-    const u = await Meteor.user();
-    test.equal(u.emails.length, 1);
-    test.equal(u.emails[0].address, this.email);
-    test.isFalse(u.emails[0].verified);
+  function (test, expect) {
+    test.equal(Meteor.user().emails.length, 1);
+    test.equal(Meteor.user().emails[0].address, this.email);
+    test.isFalse(Meteor.user().emails[0].verified);
     // We should NOT be publishing things like verification tokens!
-    test.isFalse(Object.prototype.hasOwnProperty.call(u, 'services'));
+    test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user(), 'services'));
   },
   function (test, expect) {
     getVerifyEmailToken(this.email, test, expect);
   },
   function (test, expect) {
     // Log out, to test that verifyEmail logs us back in.
-    Meteor.logout(expect(async (error) => {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
-      test.equal(await Meteor.user(), null);
+      test.equal(Meteor.user(), null);
     }));
   },
   function (test, expect) {
     Accounts.verifyEmail(verifyEmailToken,
                          loggedIn(test, expect));
   },
-  async function (test, expect) {
-    const u = await Meteor.user();
-
-    test.equal(u.emails.length, 1);
-    test.equal(u.emails[0].address, this.email);
-    test.isTrue(u.emails[0].verified);
+  function (test, expect) {
+    test.equal(Meteor.user().emails.length, 1);
+    test.equal(Meteor.user().emails[0].address, this.email);
+    test.isTrue(Meteor.user().emails[0].verified);
   },
   function (test, expect) {
     Accounts.connection.call(
       "addEmailForTestAndVerify", this.anotherEmail,
-      expect(async (error, result) => {
-        const u = await Meteor.user();
-
+      expect((error, result) => {
         test.isFalse(error);
-        test.equal(u.emails.length, 2);
-        test.equal(u.emails[1].address, this.anotherEmail);
-        test.isFalse(u.emails[1].verified);
+        test.equal(Meteor.user().emails.length, 2);
+        test.equal(Meteor.user().emails[1].address, this.anotherEmail);
+        test.isFalse(Meteor.user().emails[1].verified);
       }));
   },
   function (test, expect) {
@@ -215,9 +210,9 @@ testAsyncMulti("accounts emails - verify email flow", [
   function (test, expect) {
     // Log out, to test that verifyEmail logs us back in. (And if we don't
     // do that, waitUntilLoggedIn won't be able to prevent race conditions.)
-    Meteor.logout(expect(async (error) => {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
-      test.equal(await Meteor.user(), null);
+      test.equal(Meteor.user(), null);
     }));
   },
   function (test, expect) {
@@ -231,12 +226,11 @@ testAsyncMulti("accounts emails - verify email flow", [
   function (test, expect) {
     Accounts.connection.call(
       "addEmailForTestAndVerify", this.anotherEmailCaps,
-      expect(async (error, result) => {
-        const u = await Meteor.user();
+      expect((error, result) => {
         test.isFalse(error);
-        test.equal(u.emails.length, 3);
-        test.equal(u.emails[2].address, this.anotherEmailCaps);
-        test.isFalse(u.emails[2].verified);
+        test.equal(Meteor.user().emails.length, 3);
+        test.equal(Meteor.user().emails[2].address, this.anotherEmailCaps);
+        test.isFalse(Meteor.user().emails[2].verified);
       }));
   },
   function (test, expect) {
@@ -245,25 +239,23 @@ testAsyncMulti("accounts emails - verify email flow", [
   function (test, expect) {
     // Log out, to test that verifyEmail logs us back in. (And if we don't
     // do that, waitUntilLoggedIn won't be able to prevent race conditions.)
-    Meteor.logout(expect(async (error) => {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
-      test.equal(await Meteor.user(), null);
+      test.equal(Meteor.user(), null);
     }));
   },
   function (test, expect) {
     Accounts.verifyEmail(verifyEmailToken,
                          loggedIn(test, expect));
   },
-  async function (test, expect) {
-    const u = await Meteor.user();
-
-    test.equal(u.emails[2].address, this.anotherEmailCaps);
-    test.isTrue(u.emails[2].verified);
+  function (test, expect) {
+    test.equal(Meteor.user().emails[2].address, this.anotherEmailCaps);
+    test.isTrue(Meteor.user().emails[2].verified);
   },
   function (test, expect) {
-    Meteor.logout(expect(async (error) => {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
-      test.equal(await Meteor.user(), null);
+      test.equal(Meteor.user(), null);
     }));
   }
 ]);

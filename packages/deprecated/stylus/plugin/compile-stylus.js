@@ -1,6 +1,7 @@
 const stylus = Npm.require('stylus');
 const nib = Npm.require('nib');
 const autoprefixer = Npm.require('autoprefixer-stylus');
+const Future = Npm.require('fibers/future');
 const fs = Plugin.fs;
 const path = Plugin.path;
 
@@ -45,7 +46,7 @@ class StylusCompiler extends MultiFileCachingCompiler {
     return ! /\.import\.styl$/.test(pathInPackage);
   }
 
-  async compileOneFile(inputFile, allFiles) {
+  compileOneFile(inputFile, allFiles) {
     const referencedImportPaths = [];
 
     function parseImportPath(filePath, importerDir) {
@@ -153,6 +154,8 @@ class StylusCompiler extends MultiFileCachingCompiler {
 
     const fileOptions = inputFile.getFileOptions();
 
+    const f = new Future;
+
     let style = stylus(inputFile.getContentsAsString()).use(nib())
 
     if (fileOptions.autoprefixer) {
@@ -164,16 +167,10 @@ class StylusCompiler extends MultiFileCachingCompiler {
                  .set('cache', false)
                  .set('importer', importer);
 
-    const prom = new Promise((resolve, reject) => {
-      style.render((err, data) => {
-        if (err) return reject(err);
-        resolve(data);
-      });
-    });
-
+    style.render(f.resolver());
     let css;
     try {
-      css = await prom;
+      css = f.wait();
     } catch (e) {
       inputFile.error({
         message: 'Stylus compiler error: ' + e.message

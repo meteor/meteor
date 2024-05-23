@@ -77,7 +77,7 @@ Tinytest.add('check - check', test => {
           }
         }));
       }
-
+      
       if ( type !== null ) {
 
         // Optional doesn't allow null, but does match on null type
@@ -193,7 +193,7 @@ Tinytest.add('check - check', test => {
       {x: 43, k: true, p: ['yay']},
     ],
   }, {
-    a: String,
+    a: String, 
     b: [
       Match.ObjectIncluding({
         x: Number,
@@ -768,9 +768,40 @@ Tinytest.add('check - Match error message', test => {
 
 });
 
+// Regression test for https://github.com/meteor/meteor/issues/2136
+Meteor.isServer && Tinytest.addAsync('check - non-fiber check works', (test, onComplete) => {
+  const Fiber = Npm.require('fibers');
+
+  // We can only call test.isTrue inside normal Meteor Fibery code, so give us a
+  // bindEnvironment way to get back.
+  const report = Meteor.bindEnvironment(success => {
+    test.isTrue(success);
+    onComplete();
+  });
+
+  // Get out of a fiber with process.nextTick and ensure that we can still use
+  // check.
+  process.nextTick(() => {
+    let success = true;
+    if (Fiber.current) {
+      success = false;
+    }
+
+    if (success) {
+      try {
+        check(true, Boolean);
+      } catch (e) {
+        success = false;
+      }
+    }
+
+    report(success);
+  });
+});
+
 Tinytest.add(
-  'check - Match methods that return class instances can be called as ' +
-  'constructors',
+  'check - Match methods that return class instances can be called as ' + 
+  'constructors', 
   test => {
 
     // Existing code sometimes uses these properties as constructors, so we can't

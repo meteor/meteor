@@ -39,7 +39,7 @@ var Mutex = function () {
 };
 
 Object.assign(Mutex.prototype, {
-  lock: async function () {
+  lock: function () {
     var self = this;
 
     while (true) {
@@ -48,13 +48,13 @@ Object.assign(Mutex.prototype, {
         return;
       }
 
-      await new Promise(function (resolve) {
+      new Promise(function (resolve) {
         self._resolvers.push(resolve);
-      });
+      }).await();
     }
   },
 
-  unlock: async function () {
+  unlock: function () {
     var self = this;
 
     if (!self._locked) {
@@ -64,7 +64,7 @@ Object.assign(Mutex.prototype, {
     self._locked = false;
     var resolve = self._resolvers.shift();
     if (resolve) {
-      await resolve();
+      resolve();
     }
   }
 });
@@ -91,7 +91,7 @@ Object.assign(Txn.prototype, {
   },
 
   // Start a transaction
-  begin: async function (mode) {
+  begin: function (mode) {
     var self = this;
 
     // XXX: Use DEFERRED mode?
@@ -101,12 +101,12 @@ Object.assign(Txn.prototype, {
       throw new Error("Transaction already started");
     }
 
-    await self.db._execute("BEGIN " + mode + " TRANSACTION");
+    self.db._execute("BEGIN " + mode + " TRANSACTION");
     self.started = true;
   },
 
   // Releases resources from the transaction; Rollback if commit not already called.
-  close: async function () {
+  close: function () {
     var self = this;
 
     if (self.closed) {
@@ -117,16 +117,16 @@ Object.assign(Txn.prototype, {
       return;
     }
 
-    await self.db._execute("ROLLBACK TRANSACTION");
+    self.db._execute("ROLLBACK TRANSACTION");
     self.committed = false;
     self.closed = true;
   },
 
   // Commits the transaction.  close() will then be a no-op
-  commit: async function () {
+  commit: function () {
     var self = this;
 
-    await self.db._execute("END TRANSACTION");
+    self.db._execute("END TRANSACTION");
     self.committed = true;
     self.closed = true;
   }
@@ -141,26 +141,25 @@ var Db = function (dbFile, options) {
   self._prepared = {};
 
   self._transactionMutex = new Mutex();
+
+  self._db = self._retry(function () {
+    return self.open(dbFile);
+  });
+
+  self._retry(function () {
+    self._execute(`PRAGMA journal_mode=${JOURNAL_MODE}`);
+  });
 };
 
 Object.assign(Db.prototype, {
-  init: async function() {
-    const self = this;
-    self._db = await self._retry(function () {
-      return self.open(self._dbFile);
-    });
 
-    await self._retry(function () {
-      return self._execute(`PRAGMA journal_mode=${JOURNAL_MODE}`);
-    });
-  },
   // TODO: Move to utils?
-  _retry: async function (f, options) {
+  _retry: function (f, options) {
     options = Object.assign({ maxAttempts: 3, delay: 500}, options || {});
 
     for (var attempt = 1; attempt <= options.maxAttempts; attempt++) {
       try {
-        return await f();
+        return f();
       } catch (err) {
         if (attempt < options.maxAttempts) {
           Console.warn("Retrying after error", err);
@@ -170,40 +169,40 @@ Object.assign(Db.prototype, {
       }
 
       if (options.delay) {
-        await utils.sleepMs(options.delay);
+        utils.sleepMs(options.delay);
       }
     }
   },
 
   // Runs functions serially, in a mutex
-  _serialize: async function (f) {
+  _serialize: function (f) {
     var self = this;
 
     try {
-      await self._transactionMutex.lock();
-      return await f();
+      self._transactionMutex.lock();
+      return f();
     } finally {
-      await self._transactionMutex.unlock();
+      self._transactionMutex.unlock();
     }
   },
 
   // Do not call any other methods on this object after calling this one.
   // This yields.
-  closePermanently: async function () {
+  closePermanently: function () {
     var self = this;
-    await self._closePreparedStatements();
+    self._closePreparedStatements();
     var db = self._db;
     self._db = null;
-    await new Promise((resolve, reject) => {
+    new Promise((resolve, reject) => {
       db.close(err => err ? reject(err) : resolve());
-    });
+    }).await();
   },
 
   // Runs the function inside a transaction block
-  runInTransaction: async function (action) {
+  runInTransaction: function (action) {
     var self = this;
 
-    var runOnce = Profile("sqlite query", async function () {
+    var runOnce = Profile("sqlite query", function () {
       var txn = new Txn(self);
 
       var t1 = Date.now();
@@ -212,15 +211,15 @@ Object.assign(Db.prototype, {
       var result = null;
       var resultError = null;
 
-      await txn.begin();
+      txn.begin();
       try {
-        result = await action(txn);
-        await txn.commit();
+        result = action(txn);
+        txn.commit();
       } catch (err) {
         resultError = err;
       } finally {
         try {
-          await txn.close();
+          txn.close();
         } catch (e) {
           // We don't have a lot of options here...
           Console.warn("Error closing transaction", e);
@@ -244,7 +243,7 @@ Object.assign(Db.prototype, {
 
     for (var attempt = 0; ; attempt++) {
       try {
-        return await self._serialize(runOnce);
+        return self._serialize(runOnce);
       } catch (err) {
         var retry = false;
         // Grr... doesn't expose error code; must string-match
@@ -262,7 +261,7 @@ Object.assign(Db.prototype, {
 
       // Wait on average BUSY_RETRY_INTERVAL, but randomize to avoid thundering herd
       var t = (Math.random() + 0.5) * BUSY_RETRY_INTERVAL;
-      await utils.sleepMs(t);
+      utils.sleepMs(t);
     }
   },
 
@@ -283,13 +282,13 @@ Object.assign(Db.prototype, {
 
   // Runs a query synchronously, returning all rows
   // Hidden to enforce transaction usage
-  _query: async function (sql, params) {
+  _query: function (sql, params) {
     var self = this;
 
     var prepared = null;
     var prepare = self._autoPrepare && !_.isEmpty(params);
     if (prepare) {
-      prepared = await self._prepareWithCache(sql);
+      prepared = self._prepareWithCache(sql);
     }
 
     if (DEBUG_SQL) {
@@ -298,7 +297,7 @@ Object.assign(Db.prototype, {
 
     //Console.debug("Executing SQL ", sql, params);
 
-    var rows = await new Promise((resolve, reject) => {
+    var rows = new Promise((resolve, reject) => {
       function callback(err, rows) {
         err ? reject(err) : resolve(rows);
       }
@@ -308,7 +307,7 @@ Object.assign(Db.prototype, {
       } else {
         self._db.all(sql, params, callback);
       }
-    });
+    }).await();
 
     if (DEBUG_SQL) {
       var t2 = Date.now();
@@ -321,9 +320,9 @@ Object.assign(Db.prototype, {
     return rows;
   },
 
-  // Runs a query, returning no rows
+  // Runs a query synchronously, returning no rows
   // Hidden to enforce transaction usage
-  _execute: async function (sql, params) {
+  _execute: function (sql, params) {
     var self = this;
 
     var prepared = null;
@@ -336,7 +335,7 @@ Object.assign(Db.prototype, {
     // entirely.)
     var prepare = self._autoPrepare && !_.isEmpty(params);
     if (prepare) {
-      prepared = await self._prepareWithCache(sql);
+      prepared = self._prepareWithCache(sql);
     }
 
     if (DEBUG_SQL) {
@@ -345,7 +344,7 @@ Object.assign(Db.prototype, {
 
     //Console.debug("Executing SQL ", sql, params);
 
-    var ret = await new Promise(function (resolve, reject) {
+    var ret = new Promise(function (resolve, reject) {
       function callback(err) {
         err ? reject(err) : resolve({
           // Yes, lastID & changes are on this(!)
@@ -359,7 +358,7 @@ Object.assign(Db.prototype, {
       } else {
         self._db.run(sql, params, callback);
       }
-    });
+    }).await();
 
     if (DEBUG_SQL) {
       var t2 = Date.now();
@@ -372,17 +371,17 @@ Object.assign(Db.prototype, {
   },
 
   // Prepares the statement, caching the result
-  _prepareWithCache: async function (sql) {
+  _prepareWithCache: function (sql) {
     var self = this;
 
     var prepared = self._prepared[sql];
     if (!prepared) {
       //Console.debug("Preparing statement: ", sql);
-      await new Promise(function (resolve, reject) {
+      new Promise(function (resolve, reject) {
         prepared = self._db.prepare(sql, function (err) {
           err ? reject(err) : resolve();
         });
-      });
+      }).await();
 
       self._prepared[sql] = prepared;
     }
@@ -392,24 +391,25 @@ Object.assign(Db.prototype, {
 
 
   // Close any cached prepared statements
-  _closePreparedStatements: async function () {
+  _closePreparedStatements: function () {
     var self = this;
 
     var prepared = self._prepared;
     self._prepared = {};
 
-    for (const statement of Object.values(prepared)) {
-      var err = await new Promise(function (resolve) {
+    _.each(prepared, function (statement) {
+      var err = new Promise(function (resolve) {
         // We resolve the promise with an error instead of rejecting it,
         // because we don't want to throw.
         statement.finalize(resolve);
-      });
+      }).await();
 
       if (err) {
         Console.warn("Error finalizing statement ", err);
       }
-    }
+    });
   }
+
 });
 
 
@@ -441,9 +441,9 @@ Object.assign(Table.prototype, {
     return "(" + _.times(n, function () { return "?" }).join(",") + ")";
   },
 
-  find: async function (txn, id) {
+  find: function (txn, id) {
     var self = this;
-    var rows = await txn.query(self._selectQuery, [ id ]);
+    var rows = txn.query(self._selectQuery, [ id ]);
     if (rows.length !== 0) {
       if (rows.length !== 1) {
         throw new Error("Corrupt database (PK violation)");
@@ -453,17 +453,17 @@ Object.assign(Table.prototype, {
     return undefined;
   },
 
-  upsert: async function (txn, objects) {
+  upsert: function (txn, objects) {
     var self = this;
 
     // XXX: Use sqlite upsert
     // XXX: Speculative insert
     // XXX: Fix transaction logic so we always roll back
-    for (const o of objects) {
+    _.each(objects, function (o) {
       var id = o._id;
-      var rows = await txn.query(self._selectQuery, [ id ]);
+      var rows = txn.query(self._selectQuery, [ id ]);
       if (rows.length !== 0) {
-        var deleteResults = await txn.execute(self._deleteQuery, [ id ]);
+        var deleteResults = txn.execute(self._deleteQuery, [ id ]);
         if (deleteResults.changes !== 1) {
           throw new Error("Unable to delete row: " + id);
         }
@@ -475,11 +475,11 @@ Object.assign(Table.prototype, {
       if (! self.noContentColumn) {
         row.push(JSON.stringify(o));
       }
-      await txn.execute(self._insertQuery, row);
-    }
+      txn.execute(self._insertQuery, row);
+    });
   },
 
-  createTable: async function (txn) {
+  createTable: function (txn) {
     var self = this;
 
     var sql = 'CREATE TABLE IF NOT EXISTS ' + self.name + '(';
@@ -496,7 +496,7 @@ Object.assign(Table.prototype, {
       sql += ", content STRING";
     }
     sql += ")";
-    await txn.execute(sql);
+    txn.execute(sql);
 
     //sql = "CREATE INDEX IF NOT EXISTS idx_" + self.name + "_id ON " + self.name + "(_id)";
     //txn.execute(sql);
@@ -530,14 +530,14 @@ Object.assign(RemoteCatalog.prototype, {
   // are closed (eg to ensure that all writes have been flushed from the '-wal'
   // file to the main DB file). Most methods on this class will stop working
   // after you call this method. Note that this yields.
-  closePermanently: async function () {
+  closePermanently: function () {
     var self = this;
-    await self.db.closePermanently();
+    self.db.closePermanently();
     self.db = null;
   },
 
-  getVersion: async function (packageName, version) {
-    var result = await this._contentQuery(
+  getVersion: function (packageName, version) {
+    var result = this._contentQuery(
       "SELECT content FROM versions WHERE packageName=? AND version=?",
       [packageName, version]);
     return filterExactRows(result, { packageName, version });
@@ -545,16 +545,16 @@ Object.assign(RemoteCatalog.prototype, {
 
   // As getVersion, but returns info on the latest version of the
   // package, or null if the package doesn't exist or has no versions.
-  getLatestVersion: async function (name) {
+  getLatestVersion: function (name) {
     var self = this;
 
-    var versions = await self.getSortedVersions(name);
-    return await self.getVersion(name, _.last(versions));
+    var versions = self.getSortedVersions(name);
+    return self.getVersion(name, _.last(versions));
   },
 
-  getSortedVersions: async function (name) {
+  getSortedVersions: function (name) {
     var self = this;
-    var match = await this._columnsQuery(
+    var match = this._columnsQuery(
       "SELECT version FROM versions WHERE packageName=?", name);
     if (match === null)
       return [];
@@ -566,9 +566,9 @@ Object.assign(RemoteCatalog.prototype, {
 
   // Just getVersion mapped over getSortedVersions, but only makes one round
   // trip to sqlite.
-  getSortedVersionRecords: async function (name) {
+  getSortedVersionRecords: function (name) {
     var self = this;
-    var versionRecords = await this._contentQuery(
+    var versionRecords = this._contentQuery(
       "SELECT content FROM versions WHERE packageName=?", [name]);
     if (! versionRecords)
       return [];
@@ -581,20 +581,20 @@ Object.assign(RemoteCatalog.prototype, {
     return versionRecords;
   },
 
-  getLatestMainlineVersion: async function (name) {
+  getLatestMainlineVersion: function (name) {
     var self = this;
-    var versions = await self.getSortedVersions(name);
+    var versions = self.getSortedVersions(name);
     versions.reverse();
     var latest = _.find(versions, function (version) {
       return !/-/.test(version);
     });
     if (!latest)
       return null;
-    return await self.getVersion(name, latest);
+    return self.getVersion(name, latest);
   },
 
-  getPackage: async function (name) {
-    var result = await this._contentQuery(
+  getPackage: function (name, options) {
+    var result = this._contentQuery(
       "SELECT content FROM packages WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
@@ -604,8 +604,8 @@ Object.assign(RemoteCatalog.prototype, {
     return result[0];
   },
 
-  getAllBuilds: async function (name, version) {
-    var result = await this._contentQuery(
+  getAllBuilds: function (name, version) {
+    var result = this._contentQuery(
       "SELECT content FROM builds WHERE builds.versionId = " +
         "(SELECT _id FROM versions WHERE versions.packageName=? AND " +
         "versions.version=?)",
@@ -619,11 +619,11 @@ Object.assign(RemoteCatalog.prototype, {
   // which cover all of the required arches, or null if it is impossible to
   // cover them all (or if the version does not exist).
   // Note that this method is specific to RemoteCatalog.
-  getBuildsForArches: async function (name, version, arches) {
+  getBuildsForArches: function (name, version, arches) {
     var self = this;
 
     var solution = null;
-    var allBuilds = await self.getAllBuilds(name, version) || [];
+    var allBuilds = self.getAllBuilds(name, version) || [];
 
     utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
       // This build subset works if for all the arches we need, at least one
@@ -643,29 +643,24 @@ Object.assign(RemoteCatalog.prototype, {
     return solution;  // might be null!
   },
 
-  filterArchesWithBuilds: async function (name, version, arches) {
-    const buildArches = [];
-
-    for (const arch of arches) {
-      if (await this.getBuildsForArches(name, version, [arch])) {
-        buildArches.push(arch);
-      }
-    }
-    return buildArches;
+  filterArchesWithBuilds: function (name, version, arches) {
+    return arches.filter(arch => {
+      return !! this.getBuildsForArches(name, version, [arch]);
+    });
   },
 
   // Returns general (non-version-specific) information about a
   // release track, or null if there is no such release track.
-  getReleaseTrack: async function (name) {
+  getReleaseTrack: function (name) {
     var self = this;
-    var result = await self._contentQuery(
+    var result = self._contentQuery(
       "SELECT content FROM releaseTracks WHERE name=?", name);
     return filterExactRows(result, { name });
   },
 
-  getReleaseVersion: async function (track, version) {
+  getReleaseVersion: function (track, version) {
     var self = this;
-    var result = await self._contentQuery(
+    var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=? AND version=?",
       [track, version]);
     return filterExactRows(result, { track, version });
@@ -673,30 +668,27 @@ Object.assign(RemoteCatalog.prototype, {
 
   // Used by make-bootstrap-tarballs. Only should be used on catalogs that are
   // specially constructed for bootstrap tarballs.
-  forceRecommendRelease: async function (track, version) {
+  forceRecommendRelease: function (track, version) {
     var self = this;
-    var releaseVersionData = await self.getReleaseVersion(track, version);
+    var releaseVersionData = self.getReleaseVersion(track, version);
     if (!releaseVersionData) {
       throw Error("Can't force-recommend unknown release " + track + "@"
                   + version);
     }
     releaseVersionData.recommended = true;
-    await self._insertReleaseVersions([releaseVersionData]);
+    self._insertReleaseVersions([releaseVersionData]);
   },
 
-  getAllReleaseTracks: async function () {
-    const result = await this._columnsQuery("SELECT name FROM releaseTracks");
-
-    return result.map(({name}) => name);
+  getAllReleaseTracks: function () {
+    return _.pluck(this._columnsQuery("SELECT name FROM releaseTracks"),
+                   'name');
   },
 
-  getAllPackageNames: async function () {
-    const results = await this._columnsQuery("SELECT name FROM packages");
-
-    return results.map(({name}) => name);
+  getAllPackageNames: function () {
+    return _.pluck(this._columnsQuery("SELECT name FROM packages"), 'name');
   },
 
-  initialize: async function (options) {
+  initialize: function (options) {
     var self = this;
 
     options = options || {};
@@ -705,8 +697,6 @@ Object.assign(RemoteCatalog.prototype, {
 
     var dbFile = options.packageStorage || config.getPackageStorage();
     self.db = new Db(dbFile);
-
-    await self.db.init();
 
     self.tableVersions = new Table('versions', ['packageName', 'version', '_id']);
     self.tableBuilds = new Table('builds', ['versionId', '_id']);
@@ -728,24 +718,24 @@ Object.assign(RemoteCatalog.prototype, {
       self.tableMetadata,
       self.tableBannersShown
     ];
-    return self.db.runInTransaction(async function(txn) {
-      for (const table of self.allTables) {
-        await table.createTable(txn);
-      }
+    return self.db.runInTransaction(function(txn) {
+      _.each(self.allTables, function (table) {
+        table.createTable(txn);
+      });
 
       // Extra indexes for the most expensive queries
       // These are non-unique indexes
       // XXX We used to have a versionsNamesIdx here on versions(packageName);
       //     we no longer create it but we don't waste time dropping it either.
-      await txn.execute("CREATE INDEX IF NOT EXISTS versionsIdx ON " +
+      txn.execute("CREATE INDEX IF NOT EXISTS versionsIdx ON " +
                   "versions(packageName, version)");
-      await txn.execute("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON " +
+      txn.execute("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON " +
                   "builds(versionId)");
-      await txn.execute("CREATE INDEX IF NOT EXISTS packagesIdx ON " +
+      txn.execute("CREATE INDEX IF NOT EXISTS packagesIdx ON " +
                   "packages(name)");
-      await txn.execute("CREATE INDEX IF NOT EXISTS releaseTracksIdx ON " +
+      txn.execute("CREATE INDEX IF NOT EXISTS releaseTracksIdx ON " +
                   "releaseTracks(name)");
-      await txn.execute("CREATE INDEX IF NOT EXISTS releaseVersionsIdx ON " +
+      txn.execute("CREATE INDEX IF NOT EXISTS releaseVersionsIdx ON " +
                   "releaseVersions(track, version)");
     });
   },
@@ -760,7 +750,7 @@ Object.assign(RemoteCatalog.prototype, {
     });
   },
 
-  refresh: async function (options) {
+  refresh: function (options) {
     var self = this;
     options = options || {};
 
@@ -776,7 +766,7 @@ Object.assign(RemoteCatalog.prototype, {
       return false;
 
     if (options.maxAge) {
-      var lastSync = await self.getMetadata(METADATA_LAST_SYNC);
+      var lastSync = self.getMetadata(METADATA_LAST_SYNC);
       Console.debug("lastSync = ", lastSync);
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
@@ -788,12 +778,12 @@ Object.assign(RemoteCatalog.prototype, {
 
     var updateResult = {};
     // XXX This buildmessage.enterJob only exists for showing progress.
-    await buildmessage.enterJob({ title: 'updating package catalog' }, async function () {
-      updateResult = await packageClient.updateServerPackageData(self);
+    buildmessage.enterJob({ title: 'updating package catalog' }, function () {
+      updateResult = packageClient.updateServerPackageData(self);
     });
 
     if (updateResult.resetData) {
-      await tropohouse.default.wipeAllPackages();
+      tropohouse.default.wipeAllPackages();
     }
 
     return true;
@@ -802,21 +792,21 @@ Object.assign(RemoteCatalog.prototype, {
   // Given a release track, returns all recommended versions for this track,
   // sorted by their orderKey. Returns the empty array if the release track does
   // not exist or does not have any recommended versions.
-  getSortedRecommendedReleaseVersions: async function (track, laterThanOrderKey) {
+  getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
     var self = this;
     var versions =
-          await self.getSortedRecommendedReleaseRecords(track, laterThanOrderKey);
+          self.getSortedRecommendedReleaseRecords(track, laterThanOrderKey);
     return _.pluck(versions, "version");
   },
 
   // Given a release track, returns all recommended version *records* for this
   // track, sorted by their orderKey. Returns the empty array if the release
   // track does not exist or does not have any recommended versions.
-  getSortedRecommendedReleaseRecords: async function (track, laterThanOrderKey) {
+  getSortedRecommendedReleaseRecords: function (track, laterThanOrderKey) {
     var self = this;
     // XXX releaseVersions content objects are kinda big; if we put
     // 'recommended' and 'orderKey' in their own columns this could be faster
-    var result = await self._contentQuery(
+    var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
 
     var recommended = _.filter(result, function (v) {
@@ -833,27 +823,27 @@ Object.assign(RemoteCatalog.prototype, {
   },
 
   // Given a release track, returns all version records for this track.
-  getReleaseVersionRecords: async function (track) {
+  getReleaseVersionRecords: function (track) {
     var self = this;
-    var result = await self._contentQuery(
+    var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
     return result;
   },
 
   // For a given track, returns the total number of release versions on that
   // track.
-  getNumReleaseVersions: async function (track) {
+  getNumReleaseVersions: function (track) {
     var self = this;
-    var result = await self._columnsQuery(
+    var result = self._columnsQuery(
       "SELECT count(*) FROM releaseVersions WHERE track=?", track);
     return result[0]["count(*)"];
   },
 
   // Returns the default release version on the DEFAULT_TRACK, or for a
   // given release track.
-  getDefaultReleaseVersion: async function (track) {
+  getDefaultReleaseVersion: function (track) {
     var self = this;
-    var versionRecord = await self.getDefaultReleaseVersionRecord(track);
+    var versionRecord = self.getDefaultReleaseVersionRecord(track);
     if (! versionRecord)
       throw new Error("Can't get default release version for track " + track);
     return _.pick(versionRecord, ["track", "version" ]);
@@ -861,29 +851,29 @@ Object.assign(RemoteCatalog.prototype, {
 
   // Returns the default release version record for the DEFAULT_TRACK, or for a
   // given release track.
-  getDefaultReleaseVersionRecord: async function (track) {
+  getDefaultReleaseVersionRecord: function (track) {
     var self = this;
 
     if (!track)
       track = exports.DEFAULT_TRACK;
 
-    var versions = await self.getSortedRecommendedReleaseRecords(track);
+    var versions = self.getSortedRecommendedReleaseRecords(track);
     if (!versions.length)
       return null;
     return  versions[0];
   },
 
-  getBuildWithPreciseBuildArchitectures: async function (versionRecord, buildArchitectures) {
+  getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
     var self = this;
-    var matchingBuilds = await this._contentQuery(
+    var matchingBuilds = this._contentQuery(
       "SELECT content FROM builds WHERE versionId=?", versionRecord._id);
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
 
   // Executes a query, returning an array of each content column parsed as JSON
-  _contentQuery: async function (query, params) {
+  _contentQuery: function (query, params) {
     var self = this;
-    var rows = await self._columnsQuery(query, params);
+    var rows = self._columnsQuery(query, params);
     return _.map(rows, function(entity) {
       return JSON.parse(entity.content);
     });
@@ -891,9 +881,9 @@ Object.assign(RemoteCatalog.prototype, {
 
   // Executes a query, returning an array of maps from column name to data.
   // No JSON parsing is performed.
-  _columnsQuery: async function (query, params) {
+  _columnsQuery: function (query, params) {
     var self = this;
-    var rows = await self.db.runInTransaction(function (txn) {
+    var rows = self.db.runInTransaction(function (txn) {
       return txn.query(query, params);
     });
     return rows;
@@ -902,35 +892,35 @@ Object.assign(RemoteCatalog.prototype, {
   _insertReleaseVersions: function(releaseVersions) {
     var self = this;
     return self.db.runInTransaction(function (txn) {
-      return self.tableReleaseVersions.upsert(txn, releaseVersions);
+      self.tableReleaseVersions.upsert(txn, releaseVersions);
     });
   },
 
   //Given data from troposphere, add it into the local store
   insertData: function(serverData, syncComplete) {
     var self = this;
-    return self.db.runInTransaction(async function (txn) {
-      await self.tablePackages.upsert(txn, serverData.collections.packages);
-      await self.tableBuilds.upsert(txn, serverData.collections.builds);
-      await self.tableVersions.upsert(txn, serverData.collections.versions);
-      await self.tableReleaseTracks.upsert(txn, serverData.collections.releaseTracks);
-      await self.tableReleaseVersions.upsert(txn, serverData.collections.releaseVersions);
+    return self.db.runInTransaction(function (txn) {
+      self.tablePackages.upsert(txn, serverData.collections.packages);
+      self.tableBuilds.upsert(txn, serverData.collections.builds);
+      self.tableVersions.upsert(txn, serverData.collections.versions);
+      self.tableReleaseTracks.upsert(txn, serverData.collections.releaseTracks);
+      self.tableReleaseVersions.upsert(txn, serverData.collections.releaseVersions);
 
       var syncToken = serverData.syncToken;
       Console.debug("Adding syncToken: ", JSON.stringify(syncToken));
       syncToken._id = SYNCTOKEN_ID; //Add fake _id so it fits the pattern
-      await self.tableSyncToken.upsert(txn, [syncToken]);
+      self.tableSyncToken.upsert(txn, [syncToken]);
 
       if (syncComplete) {
         var lastSync = {timestamp: Date.now()};
-        await self._setMetadata(txn, METADATA_LAST_SYNC, lastSync);
+        self._setMetadata(txn, METADATA_LAST_SYNC, lastSync);
       }
     });
   },
 
-  getSyncToken: async function() {
+  getSyncToken: function() {
     var self = this;
-    var result = await self._contentQuery("SELECT content FROM syncToken WHERE _id=?",
+    var result = self._contentQuery("SELECT content FROM syncToken WHERE _id=?",
                                     [ SYNCTOKEN_ID ]);
     if (!result || result.length === 0) {
       Console.debug("No sync token found");
@@ -944,9 +934,9 @@ Object.assign(RemoteCatalog.prototype, {
     return result[0];
   },
 
-  getMetadata: async function(key) {
+  getMetadata: function(key) {
     var self = this;
-    var row = await self.db.runInTransaction(function (txn) {
+    var row = self.db.runInTransaction(function (txn) {
       return self.tableMetadata.find(txn, key);
     });
     if (row) {
@@ -955,22 +945,22 @@ Object.assign(RemoteCatalog.prototype, {
     return undefined;
   },
 
-  setMetadata: async function(key, value) {
+  setMetadata: function(key, value) {
     var self = this;
-    await self.db.runInTransaction(function (txn) {
-      return self._setMetadata(txn, key, value);
+    self.db.runInTransaction(function (txn) {
+      self._setMetadata(txn, key, value);
     });
   },
 
-  _setMetadata: async function(txn, key, value) {
+  _setMetadata: function(txn, key, value) {
     var self = this;
     value._id = key;
-    await self.tableMetadata.upsert(txn, [value]);
+    self.tableMetadata.upsert(txn, [value]);
   },
 
-  shouldShowBanner: async function (releaseName, bannerDate) {
+  shouldShowBanner: function (releaseName, bannerDate) {
     var self = this;
-    var row = await self.db.runInTransaction(function (txn) {
+    var row = self.db.runInTransaction(function (txn) {
       return self.tableBannersShown.find(txn, releaseName);
     });
     // We've never printed a banner for this release.
@@ -985,10 +975,10 @@ Object.assign(RemoteCatalog.prototype, {
     }
   },
 
-  setBannerShownDate: async function (releaseName, bannerShownDate) {
+  setBannerShownDate: function (releaseName, bannerShownDate) {
     var self = this;
-    return self.db.runInTransaction(function (txn) {
-      return self.tableBannersShown.upsert(txn, [{
+    self.db.runInTransaction(function (txn) {
+      self.tableBannersShown.upsert(txn, [{
         _id: releaseName,
         // XXX For now, there's no way to tell this file to make a non-string
         // column in a sqlite table, but this should probably change to a

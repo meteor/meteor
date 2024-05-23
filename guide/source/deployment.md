@@ -99,7 +99,7 @@ If you are hosting a webfont as part of your application and serving it via a CD
 ```js
 import { WebApp } from 'meteor/webapp';
 
-WebApp.rawHandlers.use(function(req, res, next) {
+WebApp.rawConnectHandlers.use(function(req, res, next) {
   if (req._parsedUrl.pathname.match(/\.(ttf|ttc|otf|eot|woff|woff2|font\.css|css)$/)) {
     res.setHeader('Access-Control-Allow-Origin', /* your hostname, or just '*' */);
   }

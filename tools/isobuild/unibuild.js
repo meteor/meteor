@@ -93,7 +93,7 @@ export class Unibuild {
     });
   }
 
-  static async fromJSON(unibuildJson, {
+  static fromJSON(unibuildJson, {
     isopack,
     // At some point we stopped writing 'kind's to the metadata file, so
     // default to main.
@@ -209,7 +209,7 @@ export class Unibuild {
     }
 
     const nodeModulesDirectories =
-      await NodeModulesDirectory.readDirsFromJSON(unibuildJson.node_modules, {
+      NodeModulesDirectory.readDirsFromJSON(unibuildJson.node_modules, {
         packageName: isopack.name,
         sourceRoot: unibuildBasePath,
         // Rebuild binary npm packages if unibuild arch matches host arch.
@@ -228,7 +228,7 @@ export class Unibuild {
     });
   }
 
-  async toJSON({
+  toJSON({
     builder,
     unibuildDir,
     usesModules,
@@ -252,14 +252,14 @@ export class Unibuild {
 
     // Figure out where the npm dependencies go.
     let node_modules = {};
-    for (const nmd of Object.values(unibuild.nodeModulesDirectories)) {
+    _.each(unibuild.nodeModulesDirectories, nmd => {
       const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
-          // We already have this npm directory from another unibuild.
-          ? npmDirsToCopy[nmd.sourcePath]
-          : npmDirsToCopy[nmd.sourcePath] =
-              nmd.getPreferredBundlePath("isopack");
-      node_modules[bundlePath] = await nmd.toJSON();
-    }
+      // We already have this npm directory from another unibuild.
+        ? npmDirsToCopy[nmd.sourcePath]
+        : npmDirsToCopy[nmd.sourcePath] =
+            nmd.getPreferredBundlePath("isopack");
+      node_modules[bundlePath] = nmd.toJSON();
+    });
 
     const preferredPaths = Object.keys(node_modules);
     if (preferredPaths.length === 1) {
@@ -307,19 +307,19 @@ export class Unibuild {
       }
     });
 
-    for (const [type, parts] of Object.entries(concat)) {
+    _.each(concat, function (parts, type) {
       if (parts.length) {
-        await builder.write(files.pathJoin(unibuildDir, type), {
+        builder.write(files.pathJoin(unibuildDir, type), {
           data: Buffer.concat(concat[type], offset[type])
         });
       }
-    }
+    });
 
     // Output other resources each to their own file
-    for (const resource of unibuild.resources) {
+    _.each(unibuild.resources, function (resource) {
       if (["head", "body"].includes(resource.type)) {
         // already did this one
-        continue;
+        return;
       }
 
       let data;
@@ -330,20 +330,20 @@ export class Unibuild {
       }
 
       const generatedFilename =
-          await builder.writeToGeneratedFilename(
-              files.pathJoin(
-                  unibuildDir,
-                  resource.servePath || resource.path,
-              ),
-              { data }
-          );
+        builder.writeToGeneratedFilename(
+          files.pathJoin(
+            unibuildDir,
+            resource.servePath || resource.path,
+          ),
+          { data }
+        );
 
       if (! usesModules &&
           resource.fileOptions &&
           resource.fileOptions.lazy) {
         // Omit lazy resources from the unibuild JSON file, but only after
         // they are copied into the bundle (immediately above).
-        continue;
+        return;
       }
 
       unibuildJson.resources.push({
@@ -353,13 +353,13 @@ export class Unibuild {
         length: data.length,
         offset: 0,
         usesDefaultSourceProcessor:
-            resource.usesDefaultSourceProcessor || undefined,
+          resource.usesDefaultSourceProcessor || undefined,
         servePath: resource.servePath || undefined,
         path: resource.path || undefined,
         hash: resource._hash || resource.hash || undefined,
         fileOptions: resource.fileOptions || undefined
       });
-    }
+    });
 
     return unibuildJson;
   }

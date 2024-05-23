@@ -128,17 +128,6 @@ export class OrderedDict {
     }
   }
 
-  async forEachAsync(asyncIter, context = null) {
-    let i = 0;
-    let elt = this._first;
-    while (elt !== null) {
-      const b = await asyncIter.call(context, elt.value, elt.key, i);
-      if (b === OrderedDict.BREAK) return;
-      elt = elt.next;
-      i++;
-    }
-  }
-
   first() {
     if (this.empty()) {
       return;

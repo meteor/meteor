@@ -15,7 +15,7 @@ type ProgressState = {
 
 /**
  * Utility class for computing the progress of complex tasks.
- *
+ * 
  * Watchers are invoked with a ProgressState object.
  */
 export class Progress {
@@ -144,9 +144,7 @@ export class Progress {
     this.updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
-    const { Console } = require("./console.js");
-
-    Console.nudge();
+    require('./console.js').Console.nudge(false);
 
     this.notifyState();
   }

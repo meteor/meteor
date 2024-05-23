@@ -1,7 +1,6 @@
 import {
   ASYNC_COLLECTION_METHODS,
-  getAsyncMethodName,
-  CLIENT_ONLY_METHODS
+  getAsyncMethodName
 } from "meteor/minimongo/constants";
 
 MongoInternals.RemoteCollectionDriver = function (
@@ -11,53 +10,42 @@ MongoInternals.RemoteCollectionDriver = function (
 };
 
 const REMOTE_COLLECTION_METHODS = [
-  'createCappedCollectionAsync',
-  'dropIndexAsync',
-  'ensureIndexAsync',
-  'createIndexAsync',
+  '_createCappedCollection',
+  '_dropIndex',
+  '_ensureIndex',
+  'createIndex',
   'countDocuments',
-  'dropCollectionAsync',
+  'dropCollection',
   'estimatedDocumentCount',
   'find',
-  'findOneAsync',
-  'insertAsync',
+  'findOne',
+  'insert',
   'rawCollection',
-  'removeAsync',
-  'updateAsync',
-  'upsertAsync',
+  'remove',
+  'update',
+  'upsert',
 ];
 
 Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
-    REMOTE_COLLECTION_METHODS.forEach(function (m) {
-      ret[m] = _.bind(self.mongo[m], self.mongo, name);
+    REMOTE_COLLECTION_METHODS.forEach(
+      function (m) {
+        ret[m] = _.bind(self.mongo[m], self.mongo, name);
 
-      if (!ASYNC_COLLECTION_METHODS.includes(m)) return;
-      const asyncMethodName = getAsyncMethodName(m);
-      ret[asyncMethodName] = function (...args) {
-        try {
-          return Promise.resolve(ret[m](...args));
-        } catch (error) {
-          return Promise.reject(error);
+        if (!ASYNC_COLLECTION_METHODS.includes(m)) return;
+        const asyncMethodName = getAsyncMethodName(m);
+        ret[asyncMethodName] = function (...args) {
+          try {
+            return Promise.resolve(ret[m](...args));
+          } catch (error) {
+            return Promise.reject(error);
+          }
         }
-      };
-    });
-
-    CLIENT_ONLY_METHODS.forEach(function (m) {
-      ret[m] = _.bind(self.mongo[m], self.mongo, name);
-
-      ret[m] = function (...args) {
-        throw new Error(
-          `${m} +  is not available on the server. Please use ${getAsyncMethodName(
-            m
-          )}() instead.`
-        );
-      };
-    });
+      });
     return ret;
-  },
+  }
 });
 
 // Create the singleton RemoteCollectionDriver only on demand, so we
@@ -82,8 +70,8 @@ MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
   // to know about a database connection problem before the app starts. Doing so
   // in a `Meteor.startup` is fine, as the `WebApp` handles requests only after
   // all are finished.
-  Meteor.startup(async () => {
-    await driver.mongo.client.connect();
+  Meteor.startup(() => {
+    Promise.await(driver.mongo.client.connect());
   });
 
   return driver;

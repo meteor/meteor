@@ -315,6 +315,7 @@ describe("@meteorjs/babel", () => {
       "  }",
       "});",
       "var Test;",
+      "",
       "(function (Test) {",
       "  Test.enabled = true;",
       "})(Test || module.runSetters(Test = {}, [\"Test\"]));",
@@ -772,6 +773,40 @@ val = "zxcv";`;
     }
 
     assert.strictEqual(sum, limit * (limit + 1) / 2);
+  });
+
+  it("Promise.await", () => {
+    var markers = [];
+
+    async function f() {
+      markers.push("before");
+      if (require("fibers").current) {
+        assert.strictEqual(
+          Promise.await(Promise.resolve(1234)),
+          1234
+        );
+      } else {
+        assert.strictEqual(
+          await Promise.resolve(1234),
+          1234
+        );
+      }
+      markers.push("after");
+      return "done";
+    }
+
+    assert.deepEqual(markers, []);
+
+    var promise = f();
+
+    // The async function should execute synchronously up to the first
+    // Promise.await or await expression, but no further.
+    assert.deepEqual(markers, ["before"]);
+
+    return promise.then(result => {
+      assert.strictEqual(result, "done");
+      assert.deepEqual(markers, ["before", "after"]);
+    });
   });
 
   it("async arrow functions", async function () {

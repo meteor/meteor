@@ -6,19 +6,18 @@ var MONGO_LISTENING = {
   stdout: ' [initandlisten] waiting for connections on port',
 };
 
-async function startRun(sandbox) {
+function startRun(sandbox) {
   var run = sandbox.run();
-  await run.match('myapp');
-  await run.match('proxy');
-  await run.tellMongo(MONGO_LISTENING);
+  run.match('myapp');
+  run.match('proxy');
+  run.tellMongo(MONGO_LISTENING);
   run.waitSecs(20);
-  await run.match('MongoDB');
+  run.match('MongoDB');
   return run;
 }
 
-selftest.define('modules - test app', async function() {
+selftest.define('modules - test app', function() {
   const s = new Sandbox();
-  await s.init();
 
   // Make sure we use the right "env" section of .babelrc.
   s.set('NODE_ENV', 'development');
@@ -27,35 +26,31 @@ selftest.define('modules - test app', async function() {
   // See https://github.com/meteortesting/meteor-mocha
   s.set('TEST_BROWSER_DRIVER', 'puppeteer');
 
-  await s.createApp('modules-test-app', 'modules');
-  await s.cd('modules-test-app', async function() {
+  s.createApp('modules-test-app', 'modules');
+  s.cd('modules-test-app', function() {
     const run = s.run(
       'test',
       '--once',
       '--full-app',
       '--driver-package',
-      // Not running with the --full-app option here, in order to exercise
-      // the normal `meteor test` behavior.
-      "meteortesting:mocha"
+      'meteortesting:mocha'
     );
 
     run.waitSecs(60);
-    await run.match('App running at');
-    await run.match('SERVER FAILURES: 0');
-    await run.match('CLIENT FAILURES: 0');
-    await run.expectExit(0);
+    run.match('App running at');
+    run.match('SERVER FAILURES: 0');
+    run.match('CLIENT FAILURES: 0');
+    run.expectExit(0);
   });
 });
 
-selftest.define('modules - unimported lazy files', async function() {
+selftest.define('modules - unimported lazy files', function() {
   const s = new Sandbox();
-  await s.init();
-
-  await s.createApp('myapp', 'app-with-unimported-lazy-file');
-  await s.cd('myapp', async function() {
+  s.createApp('myapp', 'app-with-unimported-lazy-file');
+  s.cd('myapp', function() {
     const run = s.run('--once');
     run.waitSecs(30);
-    await run.expectExit(1);
+    run.expectExit(1);
     run.forbid("This file shouldn't be loaded");
   });
 });
@@ -63,11 +58,10 @@ selftest.define('modules - unimported lazy files', async function() {
 // Checks that `import X from 'meteor/package'` will import (and re-export) the
 // mainModule if one exists, otherwise will simply export Package['package'].
 // Overlaps with compiler-plugin.js's "install-packages.js" code.
-selftest.define('modules - import chain for packages', async () => {
+selftest.define('modules - import chain for packages', () => {
   const s = new Sandbox({ fakeMongo: true });
-  await s.init();
 
-  await s.createApp('myapp', 'package-tests');
+  s.createApp('myapp', 'package-tests');
   s.cd('myapp');
 
   s.write(
@@ -89,16 +83,16 @@ selftest.define('modules - import chain for packages', async () => {
     ].join('\n')
   );
 
-  const run = await startRun(s);
+  const run = startRun(s);
 
   run.waitSecs(30);
 
   // On the server, we just check that importing *works*, not *how* it works
-  await run.match('with-add-files: with-add-files');
-  await run.match('with-main-module: with-main-module');
+  run.match('with-add-files: with-add-files');
+  run.match('with-main-module: with-main-module');
 
   // On the client, we just check that install() is called correctly
-  await checkModernAndLegacyUrls('/packages/modules.js', body => {
+  checkModernAndLegacyUrls('/packages/modules.js', body => {
     selftest.expectTrue(body.includes('\ninstall("with-add-files");'));
     selftest.expectTrue(
       body.includes(
@@ -108,13 +102,13 @@ selftest.define('modules - import chain for packages', async () => {
     );
   });
 
-  await run.stop();
+  run.stop();
 });
 
-async function checkModernAndLegacyUrls(path, test) {
+function checkModernAndLegacyUrls(path, test) {
   if (!path.startsWith('/')) {
     path = '/' + path;
   }
-  test(await getUrl('http://localhost:3000' + path));
-  test(await getUrl('http://localhost:3000/__browser.legacy' + path));
+  test(getUrl('http://localhost:3000' + path));
+  test(getUrl('http://localhost:3000/__browser.legacy' + path));
 }

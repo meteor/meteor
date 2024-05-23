@@ -10,33 +10,21 @@ export default class PuppeteerClient extends Client {
   constructor(options) {
     super(options);
 
-    this.name = 'Puppeteer';
-    this.initialized = false;
-  }
-
-  async init () {
-    await enterJob(
+    enterJob(
       {
         title: 'Installing Puppeteer in Meteor tool'
       },
       () => {
-        return ensureDependencies(NPM_DEPENDENCIES);
+        ensureDependencies(NPM_DEPENDENCIES);
       }
     );
 
     this.npmPackageExports = require('puppeteer');
-    this.initialized = true;
-  }
 
-  _checkInitialized() {
-    if (!this.initialized) {
-      throw new Error('PuppeteerClient not initialized');
-    }
+    this.name = 'Puppeteer';
   }
 
   async connect() {
-    this._checkInitialized();
-
     // Note for Travis and CircleCI to run sandbox must be turned off.
     // From a security perspective this is not ideal, in the future would be worthwhile
     // to configure to include only for CI based setups
@@ -53,10 +41,7 @@ export default class PuppeteerClient extends Client {
     this.browser = null;
   }
 
-  static async pushClients(clients, appConfig) {
-    let client = new PuppeteerClient(appConfig);
-    await client.init();
-
-    clients.push(client);
+  static pushClients(clients, appConfig) {
+    clients.push(new PuppeteerClient(appConfig));
   }
 }

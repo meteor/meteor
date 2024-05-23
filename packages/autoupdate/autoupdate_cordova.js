@@ -13,9 +13,7 @@ const clientVersions = new ClientVersions();
 // Used by hot-module-replacement
 Autoupdate._clientVersions = clientVersions;
 
-
-// TODO[fibers]: make it's fine to call registerStoreClient here
-Meteor.connection.registerStoreClient(
+Meteor.connection.registerStore(
   "meteor_autoupdate_clientVersions",
   clientVersions.createStore()
 );

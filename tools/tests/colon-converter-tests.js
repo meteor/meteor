@@ -58,23 +58,22 @@ var randomizedPackageName = function (username, start) {
 // on a module that has filenames with colons -- the module gets added, but
 // without the colon filenames.
 if (process.platform !== "win32") {
-  selftest.define("can't build local packages with colons", async function () {
+  selftest.define("can't build local packages with colons", function () {
     var s = new Sandbox();
-    await s.init();
 
     var appName = "test";
     var packageName = "package-with-colons";
 
-    await s.createApp(appName, "standard-app");
+    s.createApp(appName, "standard-app");
 
-    await s.cd(appName, async function () {
+    s.cd(appName, function () {
       s.mkdir("packages");
-      await s.cd("packages", async function () {
-        await s.createPackage("package-with-colons", packageName, "package-with-colons");
+      s.cd("packages", function () {
+        s.createPackage("package-with-colons", packageName, "package-with-colons");
       });
 
       var run = s.run("add", packageName);
-      await run.matchErr("colons");
+      run.matchErrBeforeExit("colons");
     });
   });
 }
@@ -83,7 +82,7 @@ if (process.platform !== "win32") {
 
 // This test is only for unixy platforms
 if (process.platform !== "win32") {
-  selftest.define("package with colons is unpacked as-is on unix", async function () {
+  selftest.define("package with colons is unpacked as-is on unix", function () {
     // We have a built package tarball in the git repo
     var tarballPath = files.pathJoin(files.convertToStandardPath(__dirname),
       "built-packages", "has-colons.tgz");
@@ -95,21 +94,21 @@ if (process.platform !== "win32") {
 
     // Next, unpack it using our tropohouse code
     var tarball = files.readFile(tarballPath);
-    var targetDirectory = await tropohouse._extractAndConvert(tarball);
+    var targetDirectory = tropohouse._extractAndConvert(tarball);
 
     // Now, compare all of the filepaths and file contents
-    var startingTreeHash =  files.treeHash(extractPath);
-    var finalTreeHash =  files.treeHash(targetDirectory);
+    var startingTreeHash = files.treeHash(extractPath);
+    var finalTreeHash = files.treeHash(targetDirectory);
 
     // Nothing should be different
-    await selftest.expectEqual(finalTreeHash, startingTreeHash);
+    selftest.expectEqual(finalTreeHash, startingTreeHash);
   });
 }
 
 // Tests step 3: check if old packages are converted properly to have no weird
 // paths for Windows
 
-selftest.define("package with colons is converted on Windows", async function () {
+selftest.define("package with colons is converted on Windows", function () {
   // We have a built package tarball in the git repo
   var tarballPath = files.pathJoin(files.convertToStandardPath(__dirname),
     "built-packages", "has-colons.tgz");
@@ -118,7 +117,7 @@ selftest.define("package with colons is converted on Windows", async function ()
   var tarball = files.readFile(tarballPath);
 
   // Force conversion of file paths with second argument
-  var targetDirectory = await tropohouse._extractAndConvert(tarball, true);
+  var targetDirectory = tropohouse._extractAndConvert(tarball, true);
 
   // Uncomment below to check results
   // console.log(files.getPathsInDir(targetDirectory, {
@@ -129,9 +128,9 @@ selftest.define("package with colons is converted on Windows", async function ()
   if (process.platform === "win32") {
     expectedHash = "Ayya11T8Zef16+F7C/sZSwRxIiGiBbBFIwUC88Weaqs=";
   } else {
-    expectedHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
+    expectedHash = "AQX/7h0fXwHT9rNQvlBTvIZAE2g8krlnkEQMc9lTuMI=";
   }
 
   // Saved tree hash of the correct result
-  await selftest.expectEqual(files.treeHash(targetDirectory), expectedHash);
+  selftest.expectEqual(files.treeHash(targetDirectory), expectedHash);
 });

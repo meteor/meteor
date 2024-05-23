@@ -6,34 +6,33 @@ var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
 // XXX tests for missing args for all commands
 
-selftest.define("organizations - logged out", async function () {
+selftest.define("organizations - logged out", function () {
   var s = new Sandbox;
-  await s.init();
 
   var orgName = testUtils.randomOrgName();
 
   var run = s.run("admin", "members", orgName, "--add", "testtest");
   run.waitSecs(commandTimeoutSecs);
-  await run.matchErr("You must be logged in");
-  await run.matchErr("Username:");
-  await run.stop();
+  run.matchErr("You must be logged in");
+  run.matchErr("Username:");
+  run.stop();
 
   run = s.run("admin", "members", orgName, "--remove", "testtest");
   run.waitSecs(commandTimeoutSecs);
-  await run.matchErr("You must be logged in");
-  await run.matchErr("Username:");
-  await run.stop();
+  run.matchErr("You must be logged in");
+  run.matchErr("Username:");
+  run.stop();
 
   run = s.run("admin", "members", orgName);
   run.waitSecs(commandTimeoutSecs);
-  await run.matchErr("You must be logged in");
-  await run.matchErr("Username:");
-  await run.stop();
+  run.matchErr("You must be logged in");
+  run.matchErr("Username:");
+  run.stop();
 
   run = s.run("admin", "list-organizations");
   run.waitSecs(commandTimeoutSecs);
-  await run.matchErr("You must be logged in");
-  await run.matchErr("Username:");
-  await run.stop();
+  run.matchErr("You must be logged in");
+  run.matchErr("Username:");
+  run.stop();
 
 });

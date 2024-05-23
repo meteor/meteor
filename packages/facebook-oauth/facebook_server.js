@@ -73,7 +73,7 @@ function getAbsoluteUrlOptions(query) {
  * @returns {Promise<UserAccessToken>} - Promise with an Object containing the accessToken and expiresIn (lifetime of token in seconds)
  */
 const getTokenResponse = async (query) => {
-  const config = await ServiceConfiguration.configurations.findOneAsync({
+  const config = ServiceConfiguration.configurations.findOne({
     service: 'facebook',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
@@ -96,7 +96,6 @@ const getTokenResponse = async (query) => {
     .then((res) => res.json())
     .then(data => {
       const fbAccessToken = data.access_token;
-      console.log("-> fbAccessToken", fbAccessToken);
       const fbExpires = data.expires_in;
       if (!fbAccessToken) {
         throw new Error("Failed to complete OAuth handshake with facebook " +
@@ -118,7 +117,7 @@ const getTokenResponse = async (query) => {
 };
 
 const getIdentity = async (accessToken, fields) => {
-  const config = await ServiceConfiguration.configurations.findOneAsync({
+  const config = ServiceConfiguration.configurations.findOne({
     service: 'facebook',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
@@ -146,3 +145,4 @@ const getIdentity = async (accessToken, fields) => {
 
 Facebook.retrieveCredential = (credentialToken, credentialSecret) =>
   OAuth.retrieveCredential(credentialToken, credentialSecret);
+

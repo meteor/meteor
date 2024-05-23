@@ -137,13 +137,13 @@ var addSourceForDirective = function (directive, src) {
   }
 };
 
-var setDefaultPolicy = async function () {
+var setDefaultPolicy = function () {
   // By default, unsafe inline scripts and styles are allowed, since we expect
   // many apps will use them for analytics, etc. Unsafe eval is disallowed, and
   // the only allowable content source is the same origin or data, except for
   // connect which allows anything (since meteor.com apps make websocket
   // connections to a lot of different origins).
-  await BrowserPolicy.content.setPolicy("default-src 'self'; " +
+  BrowserPolicy.content.setPolicy("default-src 'self'; " +
                                   "script-src 'self' 'unsafe-inline'; " +
                                   "connect-src *; " +
                                   "img-src data: 'self'; " +
@@ -151,9 +151,9 @@ var setDefaultPolicy = async function () {
   contentSniffingAllowed = false;
 };
 
-var setWebAppInlineScripts = async function (value) {
+var setWebAppInlineScripts = function (value) {
   if (! BrowserPolicy._runningTest())
-    await WebAppInternals.setInlineScriptsAllowed(value);
+    WebAppInternals.setInlineScriptsAllowed(value);
 };
 
 Object.assign(BrowserPolicy.content, {
@@ -182,15 +182,15 @@ Object.assign(BrowserPolicy.content, {
     cachedCsp = header;
     return header;
   },
-  _reset: async function () {
+  _reset: function () {
     cachedCsp = null;
-    await setDefaultPolicy();
+    setDefaultPolicy();
   },
 
-  setPolicy: async function (csp) {
+  setPolicy: function (csp) {
     cachedCsp = null;
     parseCsp(csp);
-    await setWebAppInlineScripts(
+    setWebAppInlineScripts(
       BrowserPolicy.content._keywordAllowed("script-src", keywords.unsafeInline)
     );
   },
@@ -202,15 +202,15 @@ Object.assign(BrowserPolicy.content, {
 
   // Helpers for creating content security policies
 
-  allowInlineScripts: async function () {
+  allowInlineScripts: function () {
     prepareForCspDirective("script-src");
     cspSrcs["script-src"].push(keywords.unsafeInline);
-    await setWebAppInlineScripts(true);
+    setWebAppInlineScripts(true);
   },
-  disallowInlineScripts: async function () {
+  disallowInlineScripts: function () {
     prepareForCspDirective("script-src");
     removeCspSrc("script-src", keywords.unsafeInline);
-    await setWebAppInlineScripts(false);
+    setWebAppInlineScripts(false);
   },
   allowEval: function () {
     prepareForCspDirective("script-src");
@@ -242,12 +242,12 @@ Object.assign(BrowserPolicy.content, {
       addSourceForDirective(directive, origin);
     });
   },
-  disallowAll: async function () {
+  disallowAll: function () {
     cachedCsp = null;
     cspSrcs = {
       "default-src": []
     };
-    await setWebAppInlineScripts(false);
+    setWebAppInlineScripts(false);
   },
 
   _xContentTypeOptions: function () {
@@ -289,9 +289,9 @@ resources.forEach(function (resource) {
     addSourceForDirective(directive, src);
   };
   if (resource === "script") {
-    BrowserPolicy.content[disallowMethodName] = async function () {
+    BrowserPolicy.content[disallowMethodName] = function () {
       disallow();
-      await setWebAppInlineScripts(false);
+      setWebAppInlineScripts(false);
     };
   } else {
     BrowserPolicy.content[disallowMethodName] = disallow;
@@ -310,6 +310,6 @@ resources.forEach(function (resource) {
   };
 });
 
-await setDefaultPolicy();
+setDefaultPolicy();
 
 exports.BrowserPolicy = BrowserPolicy;

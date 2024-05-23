@@ -54,19 +54,6 @@ export class IdMap {
     }
   }
 
-  async forEachAsync(iterator) {
-    for (let [key, value] of this._map){
-      const breakIfFalse = await iterator.call(
-          null,
-          value,
-          this._idParse(key)
-      );
-      if (breakIfFalse === false) {
-        return;
-      }
-    }
-  }
-
   size() {
     return this._map.size;
   }

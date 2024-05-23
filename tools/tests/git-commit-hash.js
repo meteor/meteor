@@ -3,7 +3,7 @@ import Run from "../tool-testing/run.js";
 import selftest from "../tool-testing/selftest.js";
 const Sandbox = selftest.Sandbox;
 
-async function gitHelper(...args) {
+function gitHelper(...args) {
   assert(this instanceof Sandbox);
   const run = new Run("git", {
     sandbox: this,
@@ -11,12 +11,12 @@ async function gitHelper(...args) {
     cwd: this.cwd,
     env: this._makeEnv(),
   });
-  await run.expectExit(0);
+  run.expectExit(0);
   return run;
 }
 
-async function initGitApp(sandbox) {
-  const git = await gitHelper.bind(sandbox);
+function initGitApp(sandbox) {
+  const git = gitHelper.bind(sandbox);
 
   git("init");
   git("config", "user.name", "Ben Newman");
@@ -37,28 +37,27 @@ async function initGitApp(sandbox) {
   return commitHash;
 }
 
-selftest.define("Meteor.gitCommitHash", async function () {
+selftest.define("Meteor.gitCommitHash", function () {
   const s = new Sandbox();
-  await s.init();
 
-  await s.createApp("app-using-git", "git-commit-hash");
+  s.createApp("app-using-git", "git-commit-hash");
   s.cd("app-using-git");
 
-  const commitHash = await initGitApp(s);
+  const commitHash = initGitApp(s);
 
   const build = s.run("build", "--directory", "../app-using-git-build");
   build.waitSecs(30);
-  await build.expectExit(0);
+  build.expectExit(0);
 
   const star = JSON.parse(s.read("../app-using-git-build/bundle/star.json"));
   assert.strictEqual(star.gitCommitHash, commitHash);
 
   const test = s.run("npm", "test");
   test.waitSecs(30);
-  await test.match("__meteor_runtime_config__.gitCommitHash: " + commitHash);
-  await test.match("App running at");
-  await test.match("SERVER FAILURES: 0");
-  await test.match("CLIENT FAILURES: 0");
+  test.match("__meteor_runtime_config__.gitCommitHash: " + commitHash);
+  test.match("App running at");
+  test.match("SERVER FAILURES: 0");
+  test.match("CLIENT FAILURES: 0");
   test.waitSecs(30);
-  await test.expectExit(0);
+  test.expectExit(0);
 });

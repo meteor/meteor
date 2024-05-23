@@ -186,7 +186,7 @@ release.usingRightReleaseForApp = function (projectContext) {
 // Return the name of the latest release that is downloaded and ready
 // for use. May not be called when running from a checkout.
 // 'track' is optional (it defaults to the default track).
-release.latestKnown = async function (track) {
+release.latestKnown = function (track) {
   if (! files.usesWarehouse()) {
     throw new Error("called from checkout?");
   }
@@ -196,7 +196,7 @@ release.latestKnown = async function (track) {
   }
 
 
-  var defaultRelease = await catalog.official.getDefaultReleaseVersion(track);
+  var defaultRelease = catalog.official.getDefaultReleaseVersion(track);
 
   if (!defaultRelease) {
     return null;
@@ -222,7 +222,7 @@ release.latestKnown = async function (track) {
 //   release because it's not locally cached and we're not online.
 // - warehouse.NoSuchReleaseError if no release called 'name' exists
 //   in the world (confirmed with server).
-release.load = async function (name, options) {
+release.load = function (name, options) {
   options = options || {};
 
   if (! name) {
@@ -244,7 +244,7 @@ release.load = async function (name, options) {
     name = track + '@' + version;
   }
 
-  var releaseVersion = await catalog.official.getReleaseVersion(track, version);
+  var releaseVersion = catalog.official.getReleaseVersion(track, version);
   if (releaseVersion === null) {
     throw new release.NoSuchReleaseError;
   }

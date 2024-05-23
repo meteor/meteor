@@ -2,7 +2,7 @@ import { Meteor } from 'meteor/meteor';
 
 // Listen to calls to `login` with an oauth option set. This is where
 // users actually get logged in to meteor via oauth.
-Accounts.registerLoginHandler(async options => {
+Accounts.registerLoginHandler(options => {
   if (!options.oauth)
     return undefined; // don't handle
 
@@ -15,7 +15,7 @@ Accounts.registerLoginHandler(async options => {
     credentialSecret: Match.OneOf(null, String)
   });
 
-  const result = await OAuth.retrieveCredential(options.oauth.credentialToken,
+  const result = OAuth.retrieveCredential(options.oauth.credentialToken,
                                         options.oauth.credentialSecret);
 
   if (!result) {
@@ -90,8 +90,8 @@ Meteor.startup(() => {
     }, {
       "secret.algorithm": { $exists: false }
     }]
-  }).forEachAsync(async (config) => {
-    await ServiceConfiguration.configurations.updateAsync(config._id, {
+  }).forEach(config => {
+    ServiceConfiguration.configurations.update(config._id, {
       $set: {
         secret: OAuthEncryption.seal(config.secret)
       }

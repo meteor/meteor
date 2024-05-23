@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 4,
+  "lockfileVersion": 1,
   "dependencies": {
     "bluebird": {
       "version": "2.11.0",

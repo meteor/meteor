@@ -1,11 +1,11 @@
-import {readFileSync} from 'fs';
+import { readFile } from 'fs';
 import { create as createStream } from "combined-stream2";
 
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
 
 // Copied from webapp_server
-const readUtf8FileSync = filename => readFileSync(filename, 'utf8');
+const readUtf8FileSync = filename => Meteor.wrapAsync(readFile)(filename, 'utf8');
 
 const identity = value => value;
 
@@ -17,6 +17,8 @@ function appendToStream(chunk, stream) {
     stream.append(chunk);
   }
 }
+
+let shouldWarnAboutToHTMLDeprecation = ! Meteor.isProduction;
 
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
@@ -32,10 +34,17 @@ export class Boilerplate {
   }
 
   toHTML(extraData) {
-    throw new Error(
-      "The Boilerplate#toHTML method has been removed. " +
-        "Please use Boilerplate#toHTMLStream instead."
-    );
+    if (shouldWarnAboutToHTMLDeprecation) {
+      shouldWarnAboutToHTMLDeprecation = false;
+      console.error(
+        "The Boilerplate#toHTML method has been deprecated. " +
+          "Please use Boilerplate#toHTMLStream instead."
+      );
+      console.trace();
+    }
+
+    // Calling .await() requires a Fiber.
+    return this.toHTMLAsync(extraData).await();
   }
 
   // Returns a Promise that resolves to a string of HTML.

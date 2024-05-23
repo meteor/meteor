@@ -5,11 +5,12 @@ import { userInfo } from 'os';
 import { join as pathJoin, dirname as pathDirname } from 'path';
 import { parse as parseUrl } from 'url';
 import { createHash } from 'crypto';
-import express from 'express';
+import { connect } from './connect.js';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
 import parseRequest from 'parseurl';
+import basicAuth from 'basic-auth-connect';
 import { lookup as lookupUserAgent } from 'useragent';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
@@ -23,29 +24,20 @@ import whomst from '@vlasky/whomst';
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
 
-const createExpressApp = () => {
-  const app = express();
-  // Security and performace headers
-  // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
-  app.set('x-powered-by', false);
-  app.set('etag', false);
-  return app;
-}
 export const WebApp = {};
 export const WebAppInternals = {};
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
+// backwards compat to 2.0 of connect
+connect.basicAuth = basicAuth;
 
 WebAppInternals.NpmModules = {
-  express : {
-    version: Npm.require('express/package.json').version,
-    module: express,
-  }
+  connect: {
+    version: Npm.require('connect/package.json').version,
+    module: connect,
+  },
 };
-
-// More of a convenience for the end user
-WebApp.express = express;
 
 // Though we might prefer to use web.browser (modern) as the default
 // architecture, safety requires a more compatible defaultArch.
@@ -95,13 +87,13 @@ function shouldCompress(req, res) {
 //
 // Also here is an early version of a Meteor `request` object, intended
 // to be a high-level description of the request without exposing
-// details of Express's low-level `req`.  Currently it contains:
+// details of connect's low-level `req`.  Currently it contains:
 //
 // * `browser`: browser identification object described above
 // * `url`: parsed url, including parsed query params
 //
 // As a temporary hack there is a `categorizeRequest` function on WebApp which
-// converts a Express `req` to a Meteor `request`. This can go away once smart
+// converts a connect `req` to a Meteor `request`. This can go away once smart
 // packages such as appcache are being passed a `request` object directly when
 // they serve content.
 //
@@ -328,13 +320,13 @@ WebAppInternals.registerBoilerplateDataCallback = function(key, callback) {
 // Given a request (as returned from `categorizeRequest`), return the
 // boilerplate HTML to serve for that request.
 //
-// If a previous Express middleware has rendered content for the head or body,
+// If a previous connect middleware has rendered content for the head or body,
 // returns the boilerplate with that content patched in otherwise
 // memoizes on HTML attributes (used by, eg, appcache) and whether inline
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
 function getBoilerplate(request, arch) {
-  return getBoilerplateAsync(request, arch);
+  return getBoilerplateAsync(request, arch).await();
 }
 
 /**
@@ -789,23 +781,23 @@ WebAppInternals.parsePort = port => {
 import { onMessage } from 'meteor/inter-process-messaging';
 
 onMessage('webapp-pause-client', async ({ arch }) => {
-  await WebAppInternals.pauseClient(arch);
+  WebAppInternals.pauseClient(arch);
 });
 
 onMessage('webapp-reload-client', async ({ arch }) => {
-  await WebAppInternals.generateClientProgram(arch);
+  WebAppInternals.generateClientProgram(arch);
 });
 
-async function runWebAppServer() {
+function runWebAppServer() {
   var shuttingDown = false;
-  var syncQueue = new Meteor._AsynchronousQueue();
+  var syncQueue = new Meteor._SynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
     return decodeURIComponent(parseUrl(itemUrl).pathname);
   };
 
-  WebAppInternals.reloadClientPrograms = async function() {
-    await syncQueue.runTask(function() {
+  WebAppInternals.reloadClientPrograms = function() {
+    syncQueue.runTask(function() {
       const staticFilesByArch = Object.create(null);
 
       const { configJson } = __meteor_bootstrap__;
@@ -826,8 +818,8 @@ async function runWebAppServer() {
 
   // Pause any incoming requests and make them wait for the program to be
   // unpaused the next time generateClientProgram(arch) is called.
-  WebAppInternals.pauseClient = async function(arch) {
-    await syncQueue.runTask(() => {
+  WebAppInternals.pauseClient = function(arch) {
+    syncQueue.runTask(() => {
       const program = WebApp.clientPrograms[arch];
       const { unpause } = program;
       program.paused = new Promise(resolve => {
@@ -845,8 +837,8 @@ async function runWebAppServer() {
     });
   };
 
-  WebAppInternals.generateClientProgram = async function(arch) {
-    await syncQueue.runTask(() => generateClientProgram(arch));
+  WebAppInternals.generateClientProgram = function(arch) {
+    syncQueue.runTask(() => generateClientProgram(arch));
   };
 
   function generateClientProgram(
@@ -1015,12 +1007,12 @@ async function runWebAppServer() {
     },
   };
 
-  WebAppInternals.generateBoilerplate = async function() {
+  WebAppInternals.generateBoilerplate = function() {
     // This boilerplate will be served to the mobile devices when used with
     // Meteor/Cordova for the Hot-Code Push and since the file will be served by
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
-    await syncQueue.runTask(function() {
+    syncQueue.runTask(function() {
       Object.keys(WebApp.clientPrograms).forEach(generateBoilerplateForArch);
     });
   };
@@ -1045,15 +1037,15 @@ async function runWebAppServer() {
     }));
   }
 
-  await WebAppInternals.reloadClientPrograms();
+  WebAppInternals.reloadClientPrograms();
 
   // webserver
-  var app = createExpressApp()
+  var app = connect();
 
   // Packages and apps can add handlers that run before any other Meteor
-  // handlers via WebApp.rawExpressHandlers.
-  var rawExpressHandlers = createExpressApp()
-  app.use(rawExpressHandlers);
+  // handlers via WebApp.rawConnectHandlers.
+  var rawConnectHandlers = connect();
+  app.use(rawConnectHandlers);
 
   // Auto-compress any json, javascript, or text.
   app.use(compress({ filter: shouldCompress }));
@@ -1131,7 +1123,6 @@ async function runWebAppServer() {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function(req, res, next) {
-    // console.log(String(arguments.callee));
     WebAppInternals.staticFilesMiddleware(
       WebAppInternals.staticFilesByArch,
       req,
@@ -1142,13 +1133,13 @@ async function runWebAppServer() {
 
   // Core Meteor packages like dynamic-import can add handlers before
   // other handlers added by package and application code.
-  app.use((WebAppInternals.meteorInternalHandlers = createExpressApp()));
+  app.use((WebAppInternals.meteorInternalHandlers = connect()));
 
   /**
-   * @name expressHandlersCallback(req, res, next)
+   * @name connectHandlersCallback(req, res, next)
    * @locus Server
    * @isprototype true
-   * @summary callback handler for `WebApp.expressHandlers`
+   * @summary callback handler for `WebApp.connectHandlers`
    * @param {Object} req
    * a Node.js
    * [IncomingMessage](https://nodejs.org/api/http.html#class-httpincomingmessage)
@@ -1166,7 +1157,7 @@ async function runWebAppServer() {
    */
 
   /**
-   * @method handlers
+   * @method connectHandlers
    * @memberof WebApp
    * @locus Server
    * @summary Register a handler for all HTTP requests.
@@ -1176,22 +1167,22 @@ async function runWebAppServer() {
    *
    * For example, `/hello` will match `/hello/world` and
    * `/hello.world`, but not `/hello_world`.
-   * @param {expressHandlersCallback} handler
+   * @param {connectHandlersCallback} handler
    * A handler function that will be called on HTTP requests.
-   * See `expressHandlersCallback`
+   * See `connectHandlersCallback`
    *
    */
-  // Packages and apps can add handlers to this via WebApp.expressHandlers.
+  // Packages and apps can add handlers to this via WebApp.connectHandlers.
   // They are inserted before our default handler.
-  var packageAndAppHandlers = createExpressApp()
+  var packageAndAppHandlers = connect();
   app.use(packageAndAppHandlers);
 
-  let suppressExpressErrors = false;
-  // Express knows it is an error handler because it has 4 arguments instead of
+  var suppressConnectErrors = false;
+  // connect knows it is an error handler because it has 4 arguments instead of
   // 3. go figure.  (It is not smart enough to find such a thing if it's hidden
   // inside packageAndAppHandlers.)
   app.use(function(err, req, res, next) {
-    if (!err || !suppressExpressErrors || !req.headers['x-suppress-error']) {
+    if (!err || !suppressConnectErrors || !req.headers['x-suppress-error']) {
       next(err);
       return;
     }
@@ -1348,29 +1339,16 @@ async function runWebAppServer() {
     }
   });
 
-  const suppressErrors = function() {
-    suppressExpressErrors = true;
-  };
-
-  let warnedAboutConnectUsage = false;
-
   // start up app
   _.extend(WebApp, {
     connectHandlers: packageAndAppHandlers,
-    handlers: packageAndAppHandlers,
-    rawConnectHandlers: rawExpressHandlers,
-    rawHandlers: rawExpressHandlers,
+    rawConnectHandlers: rawConnectHandlers,
     httpServer: httpServer,
-    expressApp: app,
+    connectApp: app,
     // For testing.
-    suppressConnectErrors: () => {
-      if (! warnedAboutConnectUsage) {
-        Meteor._debug("WebApp.suppressConnectErrors has been renamed to Meteor._suppressExpressErrors and it should be used only in tests.");
-        warnedAboutConnectUsage = true;
-      }
-      suppressErrors();
+    suppressConnectErrors: function() {
+      suppressConnectErrors = true;
     },
-    _suppressExpressErrors: suppressErrors,
     onListening: function(f) {
       if (onListeningCallbacks) onListeningCallbacks.push(f);
       else f();
@@ -1387,13 +1365,13 @@ async function runWebAppServer() {
    * @locus Server
    * @summary Starts the HTTP server.
    *  If `UNIX_SOCKET_PATH` is present Meteor's HTTP server will use that socket file for inter-process communication, instead of TCP.
-   * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work.
+   * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work. 
    */
-  // Let the rest of the packages (and Meteor.startup hooks) insert Express
+  // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
-  exports.main = async argv => {
-    await WebAppInternals.generateBoilerplate();
+  exports.main = argv => {
+    WebAppInternals.generateBoilerplate();
 
     const startHttpServer = listenOptions => {
       WebApp.startListening(
@@ -1478,26 +1456,26 @@ WebAppInternals.inlineScriptsAllowed = function() {
   return inlineScriptsAllowed;
 };
 
-WebAppInternals.setInlineScriptsAllowed = async function(value) {
+WebAppInternals.setInlineScriptsAllowed = function(value) {
   inlineScriptsAllowed = value;
-  await WebAppInternals.generateBoilerplate();
+  WebAppInternals.generateBoilerplate();
 };
 
 var sriMode;
 
-WebAppInternals.enableSubresourceIntegrity = async function(use_credentials = false) {
+WebAppInternals.enableSubresourceIntegrity = function(use_credentials = false) {
   sriMode = use_credentials ? 'use-credentials' : 'anonymous';
-  await WebAppInternals.generateBoilerplate();
+  WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssUrlRewriteHook = async function(hookFn) {
+WebAppInternals.setBundledJsCssUrlRewriteHook = function(hookFn) {
   bundledJsCssUrlRewriteHook = hookFn;
-  await WebAppInternals.generateBoilerplate();
+  WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssPrefix = async function(prefix) {
+WebAppInternals.setBundledJsCssPrefix = function(prefix) {
   var self = this;
-  await self.setBundledJsCssUrlRewriteHook(function(url) {
+  self.setBundledJsCssUrlRewriteHook(function(url) {
     return prefix + url;
   });
 };
@@ -1515,5 +1493,5 @@ WebAppInternals.addStaticJs = function(contents) {
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
-await runWebAppServer();
-
+// Start the server!
+runWebAppServer();

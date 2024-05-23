@@ -6,33 +6,29 @@ import { execSync } from 'child_process';
 // Default maxBuffer for execSync is 1024 * 1024 bytes, so this is 10x that.
 const maxBuffer = 10 * 1024 * 1024;
 
-selftest.define("bundle", async function () {
+selftest.define("bundle", function () {
   var s = new Sandbox();
-  await s.init();
-
   var run;
 
-  await s.createApp("myapp", "standard-app");
+  s.createApp("myapp", "standard-app");
   s.cd("myapp");
   run = s.run("bundle", "../myapp.tgz");
   run.waitSecs(60);
-  await run.expectExit(0);
+  run.expectExit(0);
 
   var tarball = files.pathJoin(s.cwd, "../myapp.tgz");
-  await selftest.expectEqual(files.exists(tarball), true);
+  selftest.expectEqual(files.exists(tarball), true);
 });
 
-selftest.define("bundle - verify sanitized asset names", async function () {
+selftest.define("bundle - verify sanitized asset names", function () {
   const s = new Sandbox();
-  await s.init();
-
   let run;
 
-  await s.createApp("sanitized-app", "sanitized-app");
+  s.createApp("sanitized-app", "sanitized-app");
   s.cd("sanitized-app");
   run = s.run("bundle", "../sanitized-app.tgz");
   run.waitSecs(60);
-  await run.expectExit(0);
+  run.expectExit(0);
 
   const tarball = files.pathJoin(s.cwd, "../sanitized-app.tgz");
   const sanitizedFilename = 'Meteor_-@2x.png';
@@ -43,9 +39,8 @@ selftest.define("bundle - verify sanitized asset names", async function () {
   );
 });
 
-selftest.define("build - linked external npm package (#10177)", async function () {
+selftest.define("build - linked external npm package (#10177)", function () {
   const s = new Sandbox();
-  await s.init();
 
   s.mkdir("external-package");
   s.cd("external-package");
@@ -67,17 +62,17 @@ selftest.define("build - linked external npm package (#10177)", async function (
 
   s.cd(s.home);
 
-  await s.createApp("app", "linked-external-npm-package");
+  s.createApp("app", "linked-external-npm-package");
   s.cd("app");
 
   const run = s.run();
   run.waitSecs(30);
-  await run.match("external-package/index.js");
-  await run.stop();
+  run.match("external-package/index.js");
+  run.stop();
 
   const build = s.run("build", "../build");
   build.waitSecs(60);
-  await build.expectExit(0);
+  build.expectExit(0);
 
   selftest.expectTrue(execSync(
     "tar -tf " + files.pathJoin(s.home, "build", "app.tar.gz"),
@@ -87,9 +82,8 @@ selftest.define("build - linked external npm package (#10177)", async function (
   ));
 });
 
-selftest.define("build - link npm package named 'config' (#10892)", async function () {
+selftest.define("build - link npm package named 'config' (#10892)", function () {
   const s = new Sandbox();
-  await s.init();
 
   s.mkdir("config-package");
   s.cd("config-package");
@@ -111,17 +105,17 @@ selftest.define("build - link npm package named 'config' (#10892)", async functi
 
   s.cd(s.home);
 
-  await s.createApp("app", "link-config-npm-package");
+  s.createApp("app", "link-config-npm-package");
   s.cd("app");
 
   const run = s.run();
   run.waitSecs(30);
-  await run.match("config-package/index.js");
-  await run.stop();
+  run.match("config-package/index.js");
+  run.stop();
 
   const build = s.run("build", "../build");
   build.waitSecs(60);
-  await build.expectExit(0);
+  build.expectExit(0);
 
   const command = "cd " + files.pathJoin(s.home, "build") + " && tar -xzf app.tar.gz bundle/programs/server/packages/modules.js && grep -c \"meteorInstall({\\\"node_modules\\\":{\\\"config\\\":\" bundle/programs/server/packages/modules.js";
   const commandResult = execSync(command,{ maxBuffer }).toString("utf8");
@@ -129,11 +123,10 @@ selftest.define("build - link npm package named 'config' (#10892)", async functi
   selftest.expectTrue(commandResult === "1\n");
 });
 
-selftest.define("bundle - isobuild crashes with ERR_INVALID_ARG_TYPE when encountering broken symlinks (#11241)", async function () {
+selftest.define("bundle - isobuild crashes with ERR_INVALID_ARG_TYPE when encountering broken symlinks (#11241)", function () {
   const s = new Sandbox({ fakeMongo: true });
-  await s.init();
 
-  await s.createApp("myapp", "standard-app");
+  s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
   //Add bad symlink
@@ -147,9 +140,9 @@ selftest.define("bundle - isobuild crashes with ERR_INVALID_ARG_TYPE when encoun
   files.symlink("nonexistent", symlink);
 
   const run = s.run();
-  await run.match("myapp");
-  await run.match("proxy");
+  run.match("myapp");
+  run.match("proxy");
 
   //make sure we get the useful error, not the cryptic one
-  await run.matchErr("Broken symbolic link encountered at");
+  run.matchErr("Broken symbolic link encountered at");
 });

@@ -161,6 +161,7 @@
 //
 // In both reports the grand total is 600ms.
 
+const Fiber = require('fibers');
 
 const filter = parseFloat(process.env.METEOR_PROFILE || "100"); // ms
 
@@ -253,12 +254,9 @@ export function Profile<
       ? bucketName.apply(this, arguments as any)
       : bucketName;
 
-    // TODO Test with Profile / use asyncLocalStorage
-    //const currentStore = asyncLo
-    // const currentEntry = Fiber.current
-    //   ? Fiber.current.profilerEntry || (Fiber.current.profilerEntry = [])
-    //   : globalEntry;
-    const currentEntry = globalEntry;
+    const currentEntry = Fiber.current
+      ? Fiber.current.profilerEntry || (Fiber.current.profilerEntry = [])
+      : globalEntry;
 
     currentEntry.push(name);
     const key = encodeEntryKey(currentEntry);
@@ -282,30 +280,6 @@ export function Profile<
 export namespace Profile {
   export let enabled = !! process.env.METEOR_PROFILE;
 
-  async function _runAsync<TResult>(bucket: string, f: () => TResult) {
-    runningName = bucket;
-    print(`(#${reportNum}) Profiling: ${runningName}`);
-    start();
-    try {
-      return await time(bucket, f);
-    } finally {
-      report();
-      reportNum++;
-    }
-  }
-
-  function _runSync<TResult>(bucket: string, f: () => TResult) {
-    runningName = bucket;
-    print(`(#${reportNum}) Profiling: ${runningName}`);
-    start();
-    try {
-      return time(bucket, f);
-    } finally {
-      report();
-      reportNum++;
-    }
-  }
-
   export function time<TResult>(bucket: string, f: () => TResult) {
     return Profile(bucket, f)();
   }
@@ -322,12 +296,15 @@ export namespace Profile {
       return time(bucket, f);
     }
 
-    const isAsyncFn = f.constructor.name === "AsyncFunction";
-    if (!isAsyncFn) {
-      return _runSync(bucket, f);
+    runningName = bucket;
+    print(`(#${reportNum}) Profiling: ${runningName}`);
+    start();
+    try {
+      return time(bucket, f);
+    } finally {
+      report();
+      reportNum++;
     }
-
-    return _runAsync(bucket, f);
   }
 
   function start() {

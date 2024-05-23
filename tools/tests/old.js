@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var Future = require('fibers/future');
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
@@ -19,9 +20,8 @@ var maybeFixRelease = function (env) {
 // they are very chatty about logging their progress to stdout/stderr.
 //
 // filename is interpreted relative to tools/selftests/old.
-var runOldTest = async function (filename, extraEnv) {
+var runOldTest = function (filename, extraEnv) {
   var s = new Sandbox;
-  await s.init();
 
   // 'Run' assumes that the first argument is a standard path,
   var run = new Run(files.convertToStandardPath(process.execPath), {
@@ -34,7 +34,7 @@ var runOldTest = async function (filename, extraEnv) {
     }, extraEnv))
   });
   run.waitSecs(120);
-  await run.expectExit(0);
+  run.expectExit(0);
 };
 
 // XXX Why are these tests from checkout?
@@ -51,8 +51,7 @@ var runOldTest = async function (filename, extraEnv) {
 // will take another look at them later, but it is not worth that much more time
 // before 0.9.0.
 //
-// TODO [FIBERS] -> Check this one
-selftest.define("watch", ["slow"], async function () {
+selftest.define("watch", ["slow"], function () {
   var runFuture = runOldTest.future();
   var futures = [
     // Run with pathwatcher (if possible)
@@ -70,15 +69,15 @@ selftest.define("watch", ["slow"], async function () {
 });
 
 selftest.define("bundler-assets", ["checkout"], function () {
-  return runOldTest('test-bundler-assets.js');
+  runOldTest('test-bundler-assets.js');
 });
 
 selftest.define("bundler-options", ["checkout"], function () {
-  return runOldTest('test-bundler-options.js');
+  runOldTest('test-bundler-options.js');
 });
 
 selftest.define("bundler-npm", ["slow", "net", "checkout"], function () {
-  return runOldTest('test-bundler-npm.js');
+  runOldTest('test-bundler-npm.js');
 });
 
 // This last one's is a shell script!
@@ -88,10 +87,8 @@ selftest.define("bundler-npm", ["slow", "net", "checkout"], function () {
 // in release mode. If we're not running from a checkout, just run it
 // against the installed copy.
 
-selftest.skip.define("old cli tests (bash)", ["slow", "net", "yet-unsolved-windows-failure"], async function () {
+selftest.skip.define("old cli tests (bash)", ["slow", "net", "yet-unsolved-windows-failure"], function () {
   var s = new Sandbox;
-  await s.init();
-
   var scriptToRun = files.pathJoin(files.convertToStandardPath(__dirname),
     'old', 'cli-test.sh');
   var run = new Run(scriptToRun, {
@@ -101,6 +98,6 @@ selftest.skip.define("old cli tests (bash)", ["slow", "net", "yet-unsolved-windo
     })
   });
   run.waitSecs(1000);
-  await run.match("PASSED\n");
-  await run.expectExit(0);
+  run.match("PASSED\n");
+  run.expectExit(0);
 });

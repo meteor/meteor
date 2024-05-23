@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '2.0.0-rc300.2',
+  version: '1.3.1'
 });
 
 Package.onUse(function (api) {
@@ -30,7 +30,7 @@ Package.onUse(function (api) {
     'renderToDiv', 'clickIt',
     'withCallbackLogger', 'testAsyncMulti',
     'simplePoll', 'runAndThrowIfNeeded',
-    'makeTestConnection', 'DomUtils', 'mockBehaviours', 'waitUntil']);
+    'makeTestConnection', 'DomUtils']);
 
   api.addFiles('try_all_permutations.js');
   api.addFiles('async_multi.js');
@@ -40,8 +40,6 @@ Package.onUse(function (api) {
   api.addFiles('render_div.js');
   api.addFiles('current_style.js');
   api.addFiles('callback_logger.js');
-  api.addFiles('mock.js');
-  api.addFiles('wait.js');
   api.addFiles('domutils.js', 'client');
   api.addFiles('connection.js', 'server');
 });

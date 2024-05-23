@@ -10,16 +10,16 @@ var Console = require('../console/console.js').Console;
 
 var auth = exports;
 
-async function loadDDP() {
-  const isopackage = require("../tool-env/isopackets.js");
-  const { DDP } = await isopackage.loadIsopackage("ddp-client");
-  return DDP;
+function loadDDP() {
+  return require("../tool-env/isopackets.js")
+    .loadIsopackage("ddp-client")
+    .DDP;
 }
 
 // Opens and returns a DDP connection to the accounts server. Remember
 // to close it when you're done with it!
-var openAccountsConnection = async function () {
-  return (await loadDDP()).connect(config.getAuthDDPUrl(), {
+var openAccountsConnection = function () {
+  return loadDDP().connect(config.getAuthDDPUrl(), {
     headers: { 'User-Agent': httpHelpers.getUserAgent() }
   });
 };
@@ -28,12 +28,12 @@ var openAccountsConnection = async function () {
 // that is a connection to the accounts server, which gets closed when
 // `f` returns or throws.
 var withAccountsConnection = function (f) {
-  return async function (...args) {
+  return function (...args) {
     var self = this;
-    var conn = await openAccountsConnection();
+    var conn = openAccountsConnection();
     args.push(conn);
     try {
-      var result = await f.apply(self, args);
+      var result = f.apply(self, args);
     } finally {
       conn.close();
     }
@@ -46,17 +46,12 @@ var withAccountsConnection = function (f) {
 //
 // XXX if we reconnect we won't reauthenticate. Fix that before using
 // this for long-lived connections.
-/**
- *
- * @param token
- * @return {Promise<*>}
- */
-var loggedInAccountsConnection = async function (token) {
-  var connection = (await loadDDP()).connect(
+var loggedInAccountsConnection = function (token) {
+  var connection = loadDDP().connect(
     config.getAuthDDPUrl()
   );
 
-  return await new Promise(function (resolve, reject) {
+  return new Promise(function (resolve, reject) {
     connection.apply(
       'login',
       [{ resume: token }],
@@ -79,7 +74,7 @@ var loggedInAccountsConnection = async function (token) {
     // Something else went wrong
     throw err;
 
-  });
+  }).await();
 };
 
 // The accounts server has some wrapped methods that take and return
@@ -96,13 +91,13 @@ var loggedInAccountsConnection = async function (token) {
 //    provided, one will be opened and then closed before returning.
 var sessionMethodCaller = function (methodName, options) {
   options = options || {};
-  return async function (...args) {
+  return function (...args) {
     args.push({
       session: auth.getSessionId(config.getAccountsDomain()) || null
     });
 
     var timer;
-    var conn = options.connection || await openAccountsConnection();
+    var conn = options.connection || openAccountsConnection();
 
     function cleanUp() {
       timer && clearTimeout(timer);
@@ -138,7 +133,7 @@ var sessionMethodCaller = function (methodName, options) {
       cleanUp();
       throw err;
 
-    });
+    }).await();
   };
 };
 
@@ -183,7 +178,8 @@ var writeSessionData = function (data) {
 
     // Atomically remove the old file (if any) and replace it with
     // the temporary file we just created.
-    return files.rename(tempPath, sessionPath);
+    files.rename(tempPath, sessionPath);
+    return;
   }
 };
 
@@ -220,7 +216,7 @@ var writeMeteorAccountsUsername = function (username) {
   var data = readSessionData();
   var session = getSession(data, config.getAccountsDomain());
   session.username = username;
-  return writeSessionData(data);
+  writeSessionData(data);
 };
 
 // Given an object 'data' in the format returned by readSessionData,
@@ -278,7 +274,7 @@ var removePendingRevoke = function (domain, tokenIds) {
   if (! session.pendingRevoke.length) {
     delete session.pendingRevoke;
   }
-  return writeSessionData(data);
+  writeSessionData(data);
 };
 
 // If there are any logged out (pendingRevoke) tokens that haven't
@@ -293,7 +289,7 @@ var removePendingRevoke = function (domain, tokenIds) {
 //    session. just changes the error message.
 //  - connection: an open connection to the accounts server. If not
 //    provided, this function will open one itself.
-var tryRevokeOldTokens = async function (options) {
+var tryRevokeOldTokens = function (options) {
   options = Object.assign({
     timeout: 5000
   }, options || {});
@@ -317,7 +313,8 @@ var tryRevokeOldTokens = async function (options) {
       warned = true;
     }
   };
-  for (const domain in domainsWithRevokedTokens) {
+
+  _.each(domainsWithRevokedTokens, function (domain) {
     var data = readSessionData();
     var session = data.sessions[domain] || {};
     var tokenIds = session.pendingRevoke || [];
@@ -330,11 +327,11 @@ var tryRevokeOldTokens = async function (options) {
 
     if (session.type === "meteor-account") {
       try {
-        await sessionMethodCaller('revoke', {
+        sessionMethodCaller('revoke', {
           timeout: options.timeout,
           connection: options.connection
         })(tokenIds);
-        await removePendingRevoke(domain, tokenIds);
+        removePendingRevoke(domain, tokenIds);
       } catch (err) {
         logoutFailWarning(domain);
       }
@@ -343,16 +340,16 @@ var tryRevokeOldTokens = async function (options) {
       // These are tokens from a legacy Galaxy prototype, which cannot be
       // revoked (because the prototype no longer exists), but we can at least
       // remove them from the file.
-      await removePendingRevoke(domain, tokenIds);
+      removePendingRevoke(domain, tokenIds);
     } else {
       // don't know how to revoke tokens of this type
       logoutFailWarning(domain);
       return;
     }
-  }
+  });
 };
 
-var sendAuthorizeRequest = async function (clientId, redirectUri, state) {
+var sendAuthorizeRequest = function (clientId, redirectUri, state) {
   var authCodeUrl = config.getOauthUrl() + "/authorize?" +
         querystring.stringify({
           state: state,
@@ -365,7 +362,7 @@ var sendAuthorizeRequest = async function (clientId, redirectUri, state) {
   // redirect for us, but instead issue the second request ourselves,
   // since request would pass our credentials along to the redirected
   // URL. See comments in http-helpers.js.
-  var codeResult = await httpHelpers.request({
+  var codeResult = httpHelpers.request({
     url: authCodeUrl,
     method: 'POST',
     strictSSL: true,
@@ -401,11 +398,11 @@ var sendAuthorizeRequest = async function (clientId, redirectUri, state) {
 // All options are required.
 //
 // Throws an error if the login is not successful.
-var oauthFlow = async function (conn, options) {
+var oauthFlow = function (conn, options) {
   var crypto = require('crypto');
   var credentialToken = crypto.randomBytes(16).toString('hex');
 
-  var authorizeResult = await sendAuthorizeRequest(
+  var authorizeResult = sendAuthorizeRequest(
     options.clientId,
     options.redirectUri,
     credentialToken
@@ -415,7 +412,7 @@ var oauthFlow = async function (conn, options) {
   // credential secret (instead of a bunch of code that communicates the
   // credential secret somewhere else); this should be temporary until
   // we give this a nicer name and make it not just test only.
-  var redirectResult = await httpHelpers.request({
+  var redirectResult = httpHelpers.request({
     url: authorizeResult.location + '&only_credential_secret_for_test=1',
     method: 'GET',
     strictSSL: true
@@ -430,7 +427,7 @@ var oauthFlow = async function (conn, options) {
   }
 
   // XXX tokenId???
-  var loginResult = await conn.apply('login', [{
+  var loginResult = conn.apply('login', [{
     oauth: {
       credentialToken: credentialToken,
       credentialSecret: response.body
@@ -442,7 +439,7 @@ var oauthFlow = async function (conn, options) {
     var session = getSession(data, options.domain);
     ensureSessionType(session, options.sessionType);
     session.token = loginResult.token;
-    await writeSessionData(data);
+    writeSessionData(data);
     return true;
   } else {
     throw new Error('login-failed');
@@ -460,7 +457,7 @@ var oauthFlow = async function (conn, options) {
 //   error message to stderr if the login fails
 // - connection: an open connection to the accounts server. If not
 //   provided, this function will open its own connection.
-var doInteractivePasswordLogin = async function (options) {
+var doInteractivePasswordLogin = function (options) {
   var loginData = {};
 
   if (_.has(options, 'username')) {
@@ -481,7 +478,7 @@ var doInteractivePasswordLogin = async function (options) {
     }
   };
 
-  var conn = options.connection || await openAccountsConnection();
+  var conn = options.connection || openAccountsConnection();
 
   var maybeCloseConnection = function () {
     if (! options.connection) {
@@ -491,7 +488,7 @@ var doInteractivePasswordLogin = async function (options) {
 
   while (true) {
     if (! _.has(loginData, 'password')) {
-      loginData.password = await Console.readLine({
+      loginData.password = Console.readLine({
         echo: false,
         prompt: "Password: ",
         stream: process.stderr
@@ -499,14 +496,11 @@ var doInteractivePasswordLogin = async function (options) {
     }
 
     try {
-      var result = await conn.callAsync(
-        "login",
-        {
-          session: auth.getSessionId(config.getAccountsDomain()),
-          meteorAccountsLoginInfo: loginData,
-          clientInfo: await utils.getAgentInfo(),
-        }
-      );
+      var result = conn.call('login', {
+        session: auth.getSessionId(config.getAccountsDomain()),
+        meteorAccountsLoginInfo: loginData,
+        clientInfo: utils.getAgentInfo()
+      });
     } catch (err) {
     }
     if (result && result.token) {
@@ -536,21 +530,21 @@ var doInteractivePasswordLogin = async function (options) {
   session.userId = result.id;
   session.token = result.token;
   session.tokenId = result.tokenId;
-  await writeSessionData(data);
+  writeSessionData(data);
   maybeCloseConnection();
   return true;
 };
 
 // options are the same as for doInteractivePasswordLogin, except without
 // username and email.
-exports.doUsernamePasswordLogin = async function (options) {
+exports.doUsernamePasswordLogin = function (options) {
   var username;
 
   do {
-    username = (await Console.readLine({
+    username = Console.readLine({
       prompt: "Username: ",
       stream: process.stderr
-    })).trim();
+    }).trim();
   } while (username.length === 0);
 
   return doInteractivePasswordLogin(Object.assign({}, options, {
@@ -560,7 +554,7 @@ exports.doUsernamePasswordLogin = async function (options) {
 
 exports.doInteractivePasswordLogin = doInteractivePasswordLogin;
 
-exports.loginCommand = withAccountsConnection(async function (options,
+exports.loginCommand = withAccountsConnection(function (options,
                                                         connection) {
   var data = readSessionData();
 
@@ -569,12 +563,12 @@ exports.loginCommand = withAccountsConnection(async function (options,
     var loginOptions = {};
 
     if (options.email) {
-      loginOptions.email = await Console.readLine({
+      loginOptions.email = Console.readLine({
         prompt: "Email: ",
         stream: process.stderr
       });
     } else {
-      loginOptions.username = await Console.readLine({
+      loginOptions.username = Console.readLine({
         prompt: "Username: ",
         stream: process.stderr
       });
@@ -582,12 +576,12 @@ exports.loginCommand = withAccountsConnection(async function (options,
 
     loginOptions.connection = connection;
 
-    if (! await doInteractivePasswordLogin(loginOptions)) {
+    if (! doInteractivePasswordLogin(loginOptions)) {
       return 1;
     }
   }
 
-  await tryRevokeOldTokens({ firstTry: true, connection: connection });
+  tryRevokeOldTokens({ firstTry: true, connection: connection });
 
   data = readSessionData();
   Console.error();
@@ -597,13 +591,13 @@ exports.loginCommand = withAccountsConnection(async function (options,
   return 0;
 });
 
-exports.logoutCommand = async function (options) {
+exports.logoutCommand = function (options) {
   var data = readSessionData();
   var wasLoggedIn = !! loggedIn(data);
   logOutAllSessions(data);
-  await writeSessionData(data);
+  writeSessionData(data);
 
-  await tryRevokeOldTokens({ firstTry: true });
+  tryRevokeOldTokens({ firstTry: true });
 
   if (wasLoggedIn) {
     Console.error("Logged out.");
@@ -624,7 +618,7 @@ exports.logoutCommand = async function (options) {
 //    if a caller wants to do its own error handling for invalid
 //    credentials). Defaults to false.
 var alreadyPolledForRegistration = false;
-exports.pollForRegistrationCompletion = async function (options) {
+exports.pollForRegistrationCompletion = function (options) {
   if (alreadyPolledForRegistration) {
     return;
   }
@@ -641,7 +635,7 @@ exports.pollForRegistrationCompletion = async function (options) {
   // We are logged in but we don't yet have a username. Ask the server
   // if a username was chosen since we last checked.
   var username = null;
-  var connection = await loggedInAccountsConnection(session.token);
+  var connection = loggedInAccountsConnection(session.token);
   var timer;
 
   if (! connection) {
@@ -651,12 +645,12 @@ exports.pollForRegistrationCompletion = async function (options) {
     // will try to explicitly revoke the credential ourselves).
     if (! options.noLogout) {
       logOutSession(session);
-      await writeSessionData(data);
+      writeSessionData(data);
     }
     return;
   }
 
-  return new Promise(function (resolve) {
+  new Promise(function (resolve) {
     connection.call('getUsername', function (err, username) {
       // If anything went wrong, return null just as we would have if we
       // hadn't bothered to ask the server.
@@ -669,17 +663,17 @@ exports.pollForRegistrationCompletion = async function (options) {
 
   // Intentionally calling bindEnvironment on the .then callback rather
   // than the function that calls resolve.
-  }).then(fiberHelpers.bindEnvironment(async function (username) {
+  }).then(fiberHelpers.bindEnvironment(function (username) {
     connection.close();
     clearTimeout(timer);
 
     if (username) {
-      await writeMeteorAccountsUsername(username);
+      writeMeteorAccountsUsername(username);
     }
 
   // We don't actually care about the result, just that the side-effects
   // of writeMeteorAccountsUsername happen.
-  }));
+  })).await();
 };
 
 exports.registrationUrl = function () {
@@ -688,8 +682,8 @@ exports.registrationUrl = function () {
   return url;
 };
 
-exports.whoAmICommand = async function (options) {
-  await auth.pollForRegistrationCompletion();
+exports.whoAmICommand = function (options) {
+  auth.pollForRegistrationCompletion();
 
   var data = readSessionData();
   if (! loggedIn(data)) {
@@ -722,11 +716,11 @@ exports.whoAmICommand = async function (options) {
 // try to log the user into it. Returns true on success (user is now
 // logged in) or false on failure (user gave up, can't talk to
 // network..)
-exports.registerOrLogIn = withAccountsConnection(async function (connection) {
+exports.registerOrLogIn = withAccountsConnection(function (connection) {
   var result;
   // Get their email
   while (true) {
-    var email = await Console.readLine({
+    var email = Console.readLine({
       prompt: "Email: ",
       stream: process.stderr
     });
@@ -737,7 +731,7 @@ exports.registerOrLogIn = withAccountsConnection(async function (connection) {
         'tryRegister',
         { connection: connection }
       );
-      result = await methodCaller(email, await utils.getAgentInfo());
+      result = methodCaller(email, utils.getAgentInfo());
       break;
     } catch (err) {
       if (err.error === 400 && ! utils.validEmail(email)) {
@@ -764,7 +758,7 @@ exports.registerOrLogIn = withAccountsConnection(async function (connection) {
     session.tokenId = result.tokenId;
     session.userId = result.userId;
     session.registrationUrl = result.registrationUrl;
-    await writeSessionData(data);
+    writeSessionData(data);
     return true;
   } else if (result.alreadyExisted && result.sentRegistrationEmail) {
     Console.error();
@@ -806,7 +800,7 @@ exports.registerOrLogIn = withAccountsConnection(async function (connection) {
 
     stopSpinner();
     Console.error("Username: " + waitForRegistrationResult.username);
-    loginResult = await doInteractivePasswordLogin({
+    loginResult = doInteractivePasswordLogin({
       username: waitForRegistrationResult.username,
       retry: true,
       connection: connection
@@ -815,7 +809,7 @@ exports.registerOrLogIn = withAccountsConnection(async function (connection) {
   } else if (result.alreadyExisted && result.username) {
     Console.error("\nLogging in as " + Console.command(result.username) + ".");
 
-    loginResult = await doInteractivePasswordLogin({
+    loginResult = doInteractivePasswordLogin({
       username: result.username,
       retry: true,
       connection: connection
@@ -832,10 +826,10 @@ exports.registerOrLogIn = withAccountsConnection(async function (connection) {
 
 // options: firstTime, leadingNewline
 // returns true if it printed something
-exports.maybePrintRegistrationLink = async function (options) {
+exports.maybePrintRegistrationLink = function (options) {
   options = options || {};
 
-  await auth.pollForRegistrationCompletion();
+  auth.pollForRegistrationCompletion();
 
   var data = readSessionData();
   var session = getSession(data, config.getAccountsDomain());
@@ -901,7 +895,7 @@ exports.loggedInUsername = function () {
   return loggedIn(data) ? currentUsername(data) : false;
 };
 
-exports.getAccountsConfiguration = async function (conn) {
+exports.getAccountsConfiguration = function (conn) {
   // Subscribe to the package server's service configurations so that we
   // can get the OAuth client ID to kick off the OAuth flow.
   var accountsConfiguration = null;
@@ -909,7 +903,7 @@ exports.getAccountsConfiguration = async function (conn) {
   // We avoid the overhead of creating a 'ddp-and-mongo' isopacket (or
   // always loading mongo whenever we load ddp) by just using the low-level
   // DDP client API here.
-  await conn.connection.registerStoreServer('meteor_accounts_loginServiceConfiguration', {
+  conn.connection.registerStore('meteor_accounts_loginServiceConfiguration', {
     update: function (msg) {
       if (msg.msg === 'added' && msg.fields &&
           msg.fields.service === 'meteor-developer') {
@@ -920,7 +914,7 @@ exports.getAccountsConfiguration = async function (conn) {
     }
   });
 
-  var serviceConfigurationsSub = await conn.subscribeAndWait(
+  var serviceConfigurationsSub = conn.subscribeAndWait(
     'meteor.loginServiceConfiguration');
   if (! accountsConfiguration || ! accountsConfiguration.clientId) {
     throw new Error('no-accounts-configuration');
@@ -932,11 +926,11 @@ exports.getAccountsConfiguration = async function (conn) {
 // Given a ServiceConnection, log in with OAuth using Meteor developer
 // accounts. Assumes the user is already logged in to the developer
 // accounts server.
-exports.loginWithTokenOrOAuth = async function (conn, accountsConfiguration,
+exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
                                           url, domain, sessionType) {
   var setUpOnReconnect = function () {
     conn.onReconnect = function () {
-      return conn.apply('login', [{
+      conn.apply('login', [{
         resume: auth.getSessionToken(domain)
       }], { wait: true }, function () { });
     };
@@ -949,7 +943,7 @@ exports.loginWithTokenOrOAuth = async function (conn, accountsConfiguration,
   var existingToken = auth.getSessionToken(domain);
   if (existingToken) {
     try {
-      loginResult = await conn.apply('login', [{
+      loginResult = conn.apply('login', [{
         resume: existingToken
       }], { wait: true });
     } catch (err) {
@@ -963,7 +957,7 @@ exports.loginWithTokenOrOAuth = async function (conn, accountsConfiguration,
 
     if (loginResult && loginResult.token && loginResult.id) {
       // Success!
-      await setUpOnReconnect();
+      setUpOnReconnect();
       return;
     }
   }
@@ -984,14 +978,14 @@ exports.loginWithTokenOrOAuth = async function (conn, accountsConfiguration,
   if (! accountsConfiguration.loginStyle) {
     redirectUri = redirectUri + "?close";
   }
-  loginResult = await oauthFlow(conn, {
+  loginResult = oauthFlow(conn, {
     clientId: clientId,
     redirectUri: redirectUri,
     domain: domain,
     sessionType: sessionType
   });
 
-  await setUpOnReconnect();
+  setUpOnReconnect();
 };
 
 exports.loggedInAccountsConnection = loggedInAccountsConnection;

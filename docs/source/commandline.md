@@ -285,6 +285,20 @@ You can also use Vue 3 with Vite by using the [jorgenvatle:meteor-vite](https://
 package. You can see an example on the [meteor-vite](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/vue)
 repository.
 
+
+<h3 id="vue-2">--vue-2</h3>
+
+The command `meteor create --vue-2 app-name` creates a Meteor app with [Vue 2](https://v2.vuejs.org/) and
+[MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
+[Vue 2 tutorial](https://vue-tutorial.meteor.com/).
+
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `vue`, `vue-meteor-tracker`.
+
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `tracker`, `static-html`, `akryum:vue-component`,
+`meteortesting:mocha`, `johanbrook:publication-collector`.
+
+
 <h2 id="meteorgenerate"> meteor generate </h2>
 
 ``meteor generate`` is a command for generating scaffolds for your current project. When ran without arguments, it will ask

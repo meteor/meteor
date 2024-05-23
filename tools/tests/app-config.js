@@ -1,11 +1,9 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("mainModule", async function () {
+selftest.define("mainModule", function () {
   const s = new Sandbox();
-  await s.init();
-
-  await s.createApp("app-config-mainModule", "app-config");
+  s.createApp("app-config-mainModule", "app-config");
   s.cd("app-config-mainModule");
 
   // For meteortesting:mocha to work we must set test broswer driver
@@ -19,106 +17,106 @@ selftest.define("mainModule", async function () {
   );
 
   run.waitSecs(60);
-  await run.match("App running at");
+  run.match("App running at");
 
   function check(mainModule, errorPattern) {
-    return writeConfig(s, run, mainModule, errorPattern);
+    writeConfig(s, run, mainModule, errorPattern);
   }
 
-  await check();
+  check();
 
-  await check(null);
+  check(null);
 
-  await check("oyez", /Could not resolve meteor.mainModule/);
+  check("oyez", /Could not resolve meteor.mainModule/);
 
-  await check({});
+  check({});
 
-  await check(false);
+  check(false);
 
-  await check({
+  check({
     client: false,
     server: "abc",
   });
 
-  await check({
+  check({
     client: "abc",
     server: false,
   });
 
-  await check({
+  check({
     web: false,
   });
 
-  await check({
+  check({
     os: false,
   });
 
-  await check({
+  check({
     client: "a",
     os: "bc",
   });
 
-  await check({
+  check({
     client: "b.js",
     server: "abc",
   });
 
-  await check({
+  check({
     client: "./c",
     server: "/ac",
   });
 
-  await check({
+  check({
     server: "./a",
     web: "ab",
   });
 
-  await check({
+  check({
     client: "ac.js",
     os: "a",
   });
 
-  await check({
+  check({
     web: "bc",
     server: "a",
   });
 
-  await check({
+  check({
     server: "b.js",
     client: "abc",
   });
 
-  await check({
+  check({
     client: "abc",
   });
 
-  await check({
+  check({
     server: "b.js",
   });
 
-  await check({
+  check({
     client: "/ac",
     server: "./c",
   });
 
-  await check({
+  check({
     os: "ab",
     client: "./a",
   });
 
-  await check({
+  check({
     server: "ac.js",
     web: "a",
   });
 
-  await check(null);
+  check(null);
 
-  await check();
+  check();
 
-  await run.stop();
+  run.stop();
 });
 
-async function writeConfig(s, run, mainModule, errorPattern) {
+function writeConfig(s, run, mainModule, errorPattern) {
   const json = JSON.parse(s.read("package.json"));
 
   json.meteor = {
@@ -137,20 +135,18 @@ async function writeConfig(s, run, mainModule, errorPattern) {
   run.waitSecs(10);
 
   if (errorPattern instanceof RegExp) {
-    await run.match(errorPattern);
+    run.match(errorPattern);
   } else {
     run.forbid(" 0 passing ");
-    await run.match("SERVER FAILURES: 0");
-    await run.match("CLIENT FAILURES: 0");
+    run.match("SERVER FAILURES: 0");
+    run.match("CLIENT FAILURES: 0");
   }
 }
 
-selftest.define("testModule", async function () {
+selftest.define("testModule", function () {
   const s = new Sandbox();
-  await s.init();
-
-  await s.createApp("app-config-mainModule", "app-config");
-  await s.cd("app-config-mainModule");
+  s.createApp("app-config-mainModule", "app-config");
+  s.cd("app-config-mainModule");
 
   // For meteortesting:mocha to work we must set test broswer driver
   // See https://github.com/meteortesting/meteor-mocha
@@ -164,38 +160,38 @@ selftest.define("testModule", async function () {
   );
 
   run.waitSecs(60);
-  await run.match("App running at");
+  run.match("App running at");
 
   function check(mainModule) {
-    return writeConfig(s, run, mainModule);
+    writeConfig(s, run, mainModule);
   }
 
-  await check();
+  check();
 
-  await check(false);
+  check(false);
 
-  await check({
+  check({
     client: "abc"
   });
 
-  await check({
+  check({
     server: "abc"
   });
 
-  await check({
+  check({
     client: "abc",
     server: "abc"
   });
 
-  await check({
+  check({
     client: "abc",
     server: false
   });
 
-  await check({
+  check({
     client: false,
     server: "abc"
   });
 
-  await run.stop();
+  run.stop();
 });

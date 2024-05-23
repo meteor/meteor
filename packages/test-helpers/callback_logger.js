@@ -6,6 +6,8 @@
 // timeout for the callback.  Because we're using Node Fibers to yield & start
 // ourselves, the asynchronous version is only available on the server.
 
+var Fiber = Meteor.isServer ? Npm.require('fibers') : null;
+
 var TIMEOUT = 1000;
 
 // Run the given function, passing it a correctly-set-up callback logger as an
@@ -14,24 +16,46 @@ var TIMEOUT = 1000;
 
 withCallbackLogger = function (test, callbackNames, async, fun) {
   var logger = new CallbackLogger(test, callbackNames);
-  return fun(logger);
+  if (async) {
+    if (!Fiber)
+      throw new Error("Fiber is not available");
+    logger.fiber = Fiber(_.bind(fun, null, logger));
+    logger.fiber.run();
+  } else {
+    fun(logger);
+  }
 };
 
 var CallbackLogger = function (test, callbackNames) {
   var self = this;
   self._log = [];
   self._test = test;
+  self._yielded = false;
   _.each(callbackNames, function (callbackName) {
     self[callbackName] = function () {
       var args = _.toArray(arguments);
       self._log.push({callback: callbackName, args: args});
+      if (self.fiber) {
+        setTimeout(function () {
+          if (self._yielded)
+            self.fiber.run(callbackName);
+        }, 0);
+      }
     };
   });
 };
 
-CallbackLogger.prototype.expectResult = async function (callbackName, args) {
+CallbackLogger.prototype._yield = function (arg) {
   var self = this;
-  await self._waitForLengthOrTimeout(1);
+  self._yielded = true;
+  var y = Fiber.yield(arg);
+  self._yielded = false;
+  return y;
+};
+
+CallbackLogger.prototype.expectResult = function (callbackName, args) {
+  var self = this;
+  self._waitForLengthOrTimeout(1);
   if (_.isEmpty(self._log)) {
     self._test.fail(["Expected callback " + callbackName + " got none"]);
     return;
@@ -41,38 +65,33 @@ CallbackLogger.prototype.expectResult = async function (callbackName, args) {
   self._test.equal(result.args, args);
 };
 
-CallbackLogger.prototype.expectResultOnly = async function (callbackName, args) {
+CallbackLogger.prototype.expectResultOnly = function (callbackName, args) {
   var self = this;
-  await self.expectResult(callbackName, args);
+  self.expectResult(callbackName, args);
   self._expectNoResultImpl();
-};
-
-// CallbackLogger.prototype._waitForLengthOrTimeout = async function (len) {
-//   return new Promise(resolve => {
-//     setTimeout(() => resolve(), len);
-//   });
-// };
+}
 
 CallbackLogger.prototype._waitForLengthOrTimeout = function (len) {
   var self = this;
-  const timeoutControl = { executionTime:  0 };
-  return new Promise(resolve => {
-    const waitFunc = () => {
-      if (timeoutControl.executionTime < TIMEOUT && self._log.length < len) {
-        timeoutControl.executionTime += 100;
-        setTimeout(waitFunc, 100);
-      } else {
-        resolve();
+  if (self.fiber) {
+    var timeLeft = TIMEOUT;
+    var startTime = new Date();
+    var handle = setTimeout(function () {
+      self.fiber.run(handle);
+    }, TIMEOUT);
+    while (self._log.length < len) {
+      if (self._yield() === handle) {
+        break;
       }
-    };
-    waitFunc();
-  });
+    }
+    clearTimeout(handle);
+  }
 };
 
-CallbackLogger.prototype.expectResultUnordered = async function (list) {
+CallbackLogger.prototype.expectResultUnordered = function (list) {
   var self = this;
 
-  await self._waitForLengthOrTimeout(list.length);
+  self._waitForLengthOrTimeout(list.length);
 
   list = _.clone(list); // shallow copy.
   var i = list.length;
@@ -97,17 +116,26 @@ CallbackLogger.prototype._expectNoResultImpl = function () {
   self._test.length(self._log, 0);
 };
 
-CallbackLogger.prototype.expectNoResult = async function (fn) {
+CallbackLogger.prototype.expectNoResult = function (fn) {
   var self = this;
 
   if (typeof fn === "function") {
     // If a function is provided, empty self._log and then call the
     // function, so that we don't accidentally carry over log items.
     self._log.length = 0;
-    await fn();
+    fn();
   }
 
-  await self._waitForLengthOrTimeout(0);
+  if (self.fiber) {
+    var handle = setTimeout(function () {
+      self.fiber.run(handle);
+    }, TIMEOUT);
+    var foo = self._yield();
+    while (_.isEmpty(self._log) && foo !== handle) {
+      foo = self._yield();
+    }
+    clearTimeout(handle);
+  }
 
   self._expectNoResultImpl();
 };

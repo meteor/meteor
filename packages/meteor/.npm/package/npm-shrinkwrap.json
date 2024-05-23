@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 4,
+  "lockfileVersion": 1,
   "dependencies": {
     "denque": {
       "version": "2.1.0",

@@ -45,97 +45,95 @@ selftest.define("client refresh for non-npm node_modules", () => testHelper({
   },
 }));
 
-async function testHelper(pathsAndIds) {
+function testHelper(pathsAndIds) {
   const s = new selftest.Sandbox();
-  await s.init();
-
-  await s.createApp("myapp", "client-refresh");
+  s.createApp("myapp", "client-refresh");
   s.cd("myapp");
 
   let run = s.run();
-  await run.match("Started proxy");
+  run.match("Started proxy");
   run.waitSecs(15);
 
-  await run.match(pathsAndIds.both.id + " 0");
-  await run.match(pathsAndIds.server.id + " 0");
+  run.match(pathsAndIds.both.id + " 0");
+  run.match(pathsAndIds.server.id + " 0");
 
   function checkClientRefresh() {
-    return run.match("Client modified -- refreshing");
+    run.match("Client modified -- refreshing");
   }
 
-  async function checkServerRestart(counts) {
-    await run.match("Server modified -- restarting");
+  function checkServerRestart(counts) {
+    run.match("Server modified -- restarting");
     if (typeof counts.both === "number") {
-      await run.match(pathsAndIds.both.id + " " + counts.both);
+      run.match(pathsAndIds.both.id + " " + counts.both);
     }
     if (typeof counts.server === "number") {
-      await run.match(pathsAndIds.server.id + " " + counts.server);
+      run.match(pathsAndIds.server.id + " " + counts.server);
     }
-    await run.match("Meteor server restarted");
+    run.match("Meteor server restarted");
   }
 
   increment(s, pathsAndIds.client.path);
-  await checkClientRefresh();
+  checkClientRefresh();
 
   increment(s, pathsAndIds.server.path);
-  await checkServerRestart({
+  checkServerRestart({
     both: 0,
     server: 1,
   });
 
   increment(s, pathsAndIds.both.path);
-  await checkServerRestart({
+  checkServerRestart({
     both: 1,
     server: 1,
   });
 
   increment(s, pathsAndIds.client.path);
-  await checkClientRefresh();
+  checkClientRefresh();
 
   s.write(
     pathsAndIds.server.path,
     // Comment out the import of ./both in the server file:
     s.read(pathsAndIds.server.path).replace(/\bimport\b/, '//import'),
   );
-  await checkServerRestart({
+  checkServerRestart({
     server: 1,
   });
 
   increment(s, pathsAndIds.server.path);
-  await checkServerRestart({
+  checkServerRestart({
     server: 2,
   });
 
   increment(s, pathsAndIds.both.path);
-  await checkClientRefresh();
+  checkClientRefresh();
 
   increment(s, pathsAndIds.client.path);
-  await checkClientRefresh();
+  checkClientRefresh();
 
   s.write(
     pathsAndIds.server.path,
     // Uncomment the import of ./both in the server file:
     s.read(pathsAndIds.server.path).replace(/\/\/import\b/, 'import'),
   );
-  await checkServerRestart({
+  checkServerRestart({
     both: 2,
     server: 2,
   });
 
   increment(s, pathsAndIds.both.path);
-  await checkServerRestart({
+  checkServerRestart({
     both: 3,
     server: 2,
   });
 
   increment(s, pathsAndIds.server.path);
-  await checkServerRestart({
+  checkServerRestart({
     both: 3,
     server: 3,
   });
 
   increment(s, pathsAndIds.client.path);
-  await checkClientRefresh();
+  checkClientRefresh();
 }
 
 function increment(s, path) {

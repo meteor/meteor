@@ -27,7 +27,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!(dev-bundle-.+--'${arg}'.+mac-m1)/!')
+DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!(dev-bundle-.+--'${arg}'--.+mac-m1)/!')
 
 if [ -z "$DIRNAME" ]; then
     echo "build not found" 1>&2

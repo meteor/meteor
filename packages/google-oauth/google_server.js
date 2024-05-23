@@ -125,7 +125,7 @@ Accounts.registerLoginHandler(async (request) => {
 // - expiresIn: lifetime of token in seconds
 // - refreshToken, if this is the first authorization request
 const getTokens = async (query, callback) => {
-  const config = await ServiceConfiguration.configurations.findOneAsync({
+  const config = ServiceConfiguration.configurations.findOne({
     service: 'google',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
@@ -137,7 +137,7 @@ const getTokens = async (query, callback) => {
     redirect_uri: OAuth._redirectUri('google', config),
     grant_type: 'authorization_code',
   });
-  const request = await OAuth._fetch('https://accounts.google.com/o/oauth2/token', {
+  const request = await fetch('https://accounts.google.com/o/oauth2/token', {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -174,7 +174,7 @@ const getIdentity = async (accessToken, callback) => {
   const content = new URLSearchParams({ access_token: accessToken });
   let response;
   try {
-    const request = await OAuth._fetch(
+    const request = await fetch(
       `https://www.googleapis.com/oauth2/v1/userinfo?${content.toString()}`,
       {
         method: 'GET',
@@ -194,7 +194,7 @@ const getScopes = async (accessToken, callback) => {
   const content = new URLSearchParams({ access_token: accessToken });
   let response;
   try {
-    const request = await OAuth._fetch(
+    const request = await fetch(
       `https://www.googleapis.com/oauth2/v1/tokeninfo?${content.toString()}`,
       {
         method: 'GET',

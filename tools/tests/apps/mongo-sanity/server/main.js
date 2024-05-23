@@ -2,17 +2,17 @@ import { Mongo } from 'meteor/mongo';
 
 const collection = new Mongo.Collection("sanity");
 
-Meteor.startup(async () => {
-  let doc = await collection.findOneAsync();
+Meteor.startup(() => {
+  let doc = collection.findOne();
 
   if (! doc) {
-    await collection.insertAsync({ count: 0 });
-    doc = await collection.findOneAsync();
+    collection.insert({ count: 0 });
+    doc = collection.findOne();
   }
 
-  await collection.updateAsync(doc._id, {
+  collection.update(doc._id, {
     $inc: { count: 1 }
   });
 
-  console.log("count: " + (await collection.findOneAsync()).count);
+  console.log("count: " + collection.findOne().count);
 });

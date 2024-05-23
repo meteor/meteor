@@ -1,3 +1,1 @@
-(async () => {
-  console.log("Asset says", await Assets.getTextAsync("foo.printme"));
-})();
+console.log("Asset says", Assets.getText("foo.printme"));

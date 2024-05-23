@@ -1,66 +1,28 @@
-// In Meteor versions with fibers, __meteor_bootstrap__.isFibersDisabled
-// is always undefined.
-Meteor.isFibersDisabled = typeof __meteor_bootstrap__ === 'object' &&
-  __meteor_bootstrap__.isFibersDisabled !== undefined;
-Meteor._isFibersEnabled = !Meteor.isFibersDisabled;
+const getAslStore = () => {
+    if (Meteor.isServer && global.asyncLocalStorage) {
+        return global.asyncLocalStorage.getStore();
+    }
 
-function getAsl() {
-  if (!Meteor.isFibersDisabled) {
-    throw new Error('Can not use async hooks when fibers are enabled');
-  }
-
-  if (!global.asyncLocalStorage) {
-    // lazily create asyncLocalStorage since this might run in older Meteor
-    // versions that are incompatible with async hooks
-    var AsyncLocalStorage = Npm.require('async_hooks').AsyncLocalStorage;
-    global.asyncLocalStorage = new AsyncLocalStorage();
-  }
-
-  return global.asyncLocalStorage;
-}
-
-function getAslStore() {
-  if (!Meteor.isServer) {
     return {};
-  }
+};
+const getValueFromAslStore = key => getAslStore()[key];
+const updateAslStore = (key, value) => getAslStore()[key] = value;
 
-  var asyncLocalStorage = getAsl();
-  return asyncLocalStorage.getStore() || {};
-}
-
-function getValueFromAslStore(key) {
-  return getAslStore()[key];
-}
-
-function updateAslStore(key, value) {
-  return getAslStore()[key] = value;
-}
-
-function runFresh(fn) {
-  var asyncLocalStorage = getAsl();
-  return asyncLocalStorage.run({}, fn);
-}
-
-Meteor._getAsl = getAsl;
+Meteor._isFibersEnabled = !process.env.DISABLE_FIBERS && Meteor.isServer;
 Meteor._getAslStore = getAslStore;
 Meteor._getValueFromAslStore = getValueFromAslStore;
 Meteor._updateAslStore = updateAslStore;
-Meteor._runFresh = runFresh;
 
-Meteor._runAsync = function (fn, ctx, store) {
-  if (store === undefined) {
-    store = {};
-  }
-  var asyncLocalStorage = getAsl();
+Meteor._runAsync = (fn, ctx) => {
+    if (Meteor._isFibersEnabled) {
+        const Fiber = Npm.require('fibers');
 
-  return asyncLocalStorage.run(
-    store || Meteor._getAslStore(),
-    function () {
-      return fn.call(ctx);
+        return Fiber(() => {
+            fn.call(ctx);
+        }).run();
     }
-  );
-};
 
-Meteor._isPromise = function (r) {
-  return r && typeof r.then === 'function';
+    global.asyncLocalStorage.run(Meteor._getAslStore(), () => {
+        fn.call(ctx);
+    });
 };

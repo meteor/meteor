@@ -19,4 +19,4 @@ hot-module-replacement  # Update client in development without reloading the pag
 ~prototype~
 static-html             # Define static page content in .html files
 apollo                  # Basic Apollo integration for Meteor apps
-compat:graphql           # Import .graphql files
+swydo:graphql           # Import .graphql files

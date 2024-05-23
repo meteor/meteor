@@ -14,7 +14,7 @@ OAuth._requestHandlers['2'] = async (service, query, res) => {
 
     // Store the login result so it can be retrieved in another
     // browser tab by the result handler
-    await OAuth._storePendingCredential(credentialToken, {
+    OAuth._storePendingCredential(credentialToken, {
       serviceName: service.serviceName,
       serviceData: oauthResult.serviceData,
       options: oauthResult.options
@@ -23,5 +23,5 @@ OAuth._requestHandlers['2'] = async (service, query, res) => {
 
   // Either close the window, redirect, or render nothing
   // if all else fails
-  await OAuth._renderOauthResults(res, query, credentialSecret);
+  OAuth._renderOauthResults(res, query, credentialSecret);
 };

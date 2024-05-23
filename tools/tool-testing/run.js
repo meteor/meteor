@@ -21,7 +21,7 @@ import Matcher from './matcher.js';
 import OutputLog from './output-log.js';
 import { randomPort, timeoutScaleFactor, sleepMs } from '../utils/utils.js';
 import TestFailure from './test-failure.js';
-import { execFileAsync } from '../utils/processes';
+import { execFileSync } from '../utils/processes';
 
 let runningTest = null;
 
@@ -143,7 +143,6 @@ export default class Run {
       this._args, {
         cwd: files.convertToOSPath(this.cwd),
         env,
-        ...process.platform === 'win32' && { shell: true },
       });
 
     this.proc.on('close', (code, signal) => {
@@ -251,13 +250,13 @@ export default class Run {
 
   // Expect the program to exit without anything further being
   // printed on either stdout or stderr.
-  async expectEnd() {
+  expectEnd() {
     this._ensureStarted();
 
     let timeout = this.baseTimeout + this.extraTime;
     timeout *= timeoutScaleFactor;
     this.extraTime = 0;
-    await this.expectExit();
+    this.expectExit();
 
     this.stdoutMatcher.matchEmpty();
     this.stderrMatcher.matchEmpty();
@@ -267,10 +266,10 @@ export default class Run {
   // status. Fail if the process exits with a different code, or if
   // the process does not exit after a timeout. You can also omit the
   // argument to simply wait for the program to exit.
-  async expectExit(code) {
+  expectExit(code) {
     this._ensureStarted();
 
-    await this._endMatchers();
+    this._endMatchers().await();
 
     if (this.exitStatus === undefined) {
       let timeout = this.baseTimeout + this.extraTime;
@@ -289,7 +288,7 @@ export default class Run {
       });
 
       try {
-        await promise;
+        promise.await();
       } finally {
         clearTimeout(timer);
       }
@@ -319,14 +318,14 @@ export default class Run {
   }
 
   // Kill the program and then wait for it to actually exit.
-  async stop() {
+  stop() {
     if (this.exitStatus === undefined) {
       this._ensureStarted();
       if (this.client) {
         this.client.stop();
       }
-      await this._killProcess();
-      await this.expectExit();
+      this._killProcess();
+      this.expectExit();
     }
   }
 
@@ -341,7 +340,7 @@ export default class Run {
   }
 
   // Kills the running process and it's child processes
-  async _killProcess() {
+  _killProcess() {
     if (!this.proc) {
       throw new Error("Unexpected: `this.proc` undefined when calling _killProcess");
     }
@@ -349,7 +348,7 @@ export default class Run {
     if (process.platform === "win32") {
       // looks like in Windows `this.proc.kill()` doesn't kill child
       // processes.
-      await execFileAsync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
+      execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
     } else {
       this.proc.kill();
     }
@@ -364,7 +363,7 @@ export default class Run {
   //
   // Blocks until a connection to fake-mongod can be
   // established. Throws a TestFailure if it cannot be established.
-  async tellMongo(command) {
+  tellMongo(command) {
     if (! this.fakeMongoPort) {
       throw new Error("fakeMongo option on sandbox must be set");
     }
@@ -390,10 +389,10 @@ export default class Run {
         attempts++
       ) {
         // Throttle attempts to one every 100ms
-        await sleepMs((lastStartTime + 100) - (+ new Date()));
+        sleepMs((lastStartTime + 100) - (+ new Date()));
         lastStartTime = +(new Date());
 
-        await new Promise((resolve) => {
+        new Promise((resolve) => {
           // This is all arranged so that if a previous attempt
           // belatedly succeeds, somehow, we ignore it.
           const conn = net.connect(this.fakeMongoPort, () => {
@@ -412,7 +411,7 @@ export default class Run {
           }
           conn.on('error', fail);
           setTimeout(fail, 100); // 100ms connection timeout
-        });
+        }).await();
       }
 
       if (!this.fakeMongoConnection) {
@@ -429,7 +428,7 @@ export default class Run {
     }
   }
 
-  static async runTest(testList, test, testRunner, options = {}) {
+  static runTest(testList, test, testRunner, options = {}) {
     options.retries = options.retries || 0;
 
     let failure = null;
@@ -438,12 +437,12 @@ export default class Run {
       runningTest = test;
       startTime = +(new Date);
       // ensure we mark the bottom of the stack each time we start a new test
-      await testRunner();
+      testRunner();
     } catch (e) {
       failure = e;
     } finally {
       runningTest = null;
-      await test.cleanup();
+      test.cleanup();
     }
 
     test.durationMs = +(new Date) - startTime;

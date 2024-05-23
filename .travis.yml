@@ -1,10 +1,8 @@
 language: node_js
 os: linux
 dist: jammy
-sudo: required
-services: xvfb
 node_js:
-  - "20.10.0"
+  - "14.21.3"
 cache:
   directories:
     - ".meteor"
@@ -13,20 +11,17 @@ script:
   - travis_retry ./packages/test-in-console/run.sh
 env:
   global:
-    - CXX=g++-12
+    - CXX=g++11
     - phantom=false
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
+  jobs:
+    # We don't want to run the tests without fibers anymore.
+    # - DISABLE_FIBERS=1
+    # Use a different flag, since node would use false as a string.
+    - FIBERS_ENABLED=1
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - g++-12
-      - libnss3
-
-before_install:
-  - cat /etc/apt/sources.list
-  - python3 --version
-  - echo "deb http://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee -a /etc/apt/sources.list
-  - sudo apt-get update
-  - sudo apt-get install -y libnss3
+      - g++-11

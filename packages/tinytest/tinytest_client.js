@@ -51,7 +51,7 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
 
   var handle;
 
-  Meteor.connection.registerStoreClient(ServerTestResultsCollection, {
+  Meteor.connection.registerStore(ServerTestResultsCollection, {
     update(msg) {
       // We only should call _runTestsEverywhere once per client-page-load, so
       // we really only should see one runId here.

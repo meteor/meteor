@@ -9,7 +9,7 @@ Plugin.registerMinifier({
 
 class MeteorMinifier {
 
-  async processFilesForBundle (files, options) {
+  processFilesForBundle (files, options) {
     const mode = options.minifyMode;
 
     // don't minify anything for development
@@ -63,7 +63,7 @@ class MeteorMinifier {
       stats: Object.create(null)
     };
 
-    for await (file of files) {
+    files.forEach(file => {
       // Don't reminify *.min.js.
       if (/\.min\.js$/.test(file.getPathInBundle())) {
         toBeAdded.data += file.getContentsAsString();
@@ -71,7 +71,7 @@ class MeteorMinifier {
       else {
         let minified;
         try {
-          minified = await meteorJsMinify(file.getContentsAsString());
+          minified = meteorJsMinify(file.getContentsAsString());
         }
         catch (err) {
           maybeThrowMinifyErrorBySourceFile(err, file);
@@ -94,7 +94,7 @@ class MeteorMinifier {
       toBeAdded.data += '\n\n';
 
       Plugin.nudge();
-    }
+    });
 
     // this is where the minified code gets added to one
     // JS file that is delivered to the client

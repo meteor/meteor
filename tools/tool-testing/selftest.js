@@ -29,21 +29,11 @@ export const fail = parseStackMarkTop(function (reason) {
 // Call from a test to assert that 'actual' is equal to 'expected',
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
-export const expectEqual = parseStackMarkTop(async function (actual, expected) {
-  try {
-    const ejson = await loadIsopackage("ejson");
-    if (!ejson.EJSON.equals(actual, expected)) {
-      throw new TestFailure("not-equal", {
-        expected,
-        actual,
-      });
-    }
-  } catch (e) {
-    if (e.reason === 'not-equal') {
-      throw e;
-    };
-    throw new TestFailure("Can't load ejson isopackage" , {
-      stack: e.stack,
+export const expectEqual = parseStackMarkTop(function (actual, expected) {
+  if (! loadIsopackage('ejson').EJSON.equals(actual, expected)) {
+    throw new TestFailure("not-equal", {
+      expected,
+      actual,
     });
   }
 });
@@ -90,10 +80,10 @@ class Test {
     this.cleanupHandlers.push(cleanupHandler);
   }
 
-  async cleanup() {
-    for (const cleanupHandler of this.cleanupHandlers) {
-      await cleanupHandler();
-    }
+  cleanup() {
+    this.cleanupHandlers.forEach((cleanupHandler) => {
+      cleanupHandler();
+    });
     this.cleanupHandlers = [];
   }
 }
@@ -102,7 +92,7 @@ let allTests = null;
 let fileBeingLoaded = null;
 let fileBeingLoadedHash = null;
 
-const getAllTests = async () => {
+const getAllTests = () => {
   if (allTests) {
     return allTests;
   }
@@ -196,9 +186,9 @@ const tagDescriptions = {
 // and runTests.
 //
 // Options: testRegexp, fileRegexp, onlyChanged, offline, includeSlowTests, galaxyOnly
-async function getFilteredTests(options) {
+function getFilteredTests(options) {
   options = options || {};
-  let allTests = await getAllTests();
+  let allTests = getAllTests();
   let testState;
 
   if (allTests.length) {
@@ -542,8 +532,8 @@ function writeTestState(testState) {
 }
 
 // Same options as getFilteredTests.  Writes to stdout and stderr.
-export async function listTests(options) {
-  const testList = await getFilteredTests(options);
+export function listTests(options) {
+  const testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
     Console.error("No tests defined.\n");
@@ -590,8 +580,8 @@ const shouldSkipCurrentTest = ({currentTestIndex, options: {skip, limit} = {}}) 
 //          fileRegexp,
 //          clients:
 //             - browserstack (need s3cmd credentials)
-export async function runTests(options) {
-  const testList = await getFilteredTests(options);
+export function runTests(options) {
+  const testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
     Console.error("No tests defined.");
@@ -602,7 +592,7 @@ export async function runTests(options) {
 
   let totalRun = 0;
 
-  for (const [index, test] of testList.filteredTests.entries()) {
+  testList.filteredTests.forEach((test, index) => {
     totalRun++;
     const shouldSkip = shouldSkipCurrentTest({
       currentTestIndex: index,
@@ -623,17 +613,17 @@ export async function runTests(options) {
       return;
     }
 
-    await Run.runTest(
-        testList,
-        test,
-        parseStackMarkBottom(() => {
-          return test.f(options);
-        }),
-        {
-          retries: options.retries,
-        }
+    Run.runTest(
+      testList,
+      test,
+      parseStackMarkBottom(() => {
+        test.f(options);
+      }),
+      {
+        retries: options.retries,
+      }
     );
-  }
+  });
 
   testList.endTime = new Date;
   testList.durationMs = testList.endTime - testList.startTime;

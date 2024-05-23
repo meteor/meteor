@@ -1,5 +1,7 @@
+var Fiber = require("fibers");
 var fs = require("fs");
 var path = require("path");
+var Future = require("fibers/future");
 var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
@@ -8,9 +10,17 @@ var npmRequire = require('./npm-require.js').require;
 var Profile = require('./profile').Profile;
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v18.16.0';
+var MIN_NODE_VERSION = 'v14.0.0';
 
 var hasOwn = Object.prototype.hasOwnProperty;
+
+//  For now it's a function to ensure we don't get a falsy value.
+//  Once we figure out the best place to create this EV (maybe it's here),
+//  it won't need to be a function anymore.
+
+global._isFibersEnabled = function () {
+  return !process.env.DISABLE_FIBERS;
+};
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -33,8 +43,7 @@ var starJson = JSON.parse(fs.readFileSync(path.join(buildDir, "star.json")));
 __meteor_bootstrap__ = {
   startupHooks: [],
   serverDir: serverDir,
-  configJson: configJson,
-  isFibersDisabled: true
+  configJson: configJson
 };
 
 __meteor_runtime_config__ = {
@@ -49,11 +58,11 @@ if (!process.env.APP_ID) {
 // Map from load path to its source map.
 var parsedSourceMaps = {};
 
-let meteorDebugPromiseResolver = null;
-const meteorDebugPromise = process.env.METEOR_INSPECT_BRK ? new Promise(resolve => meteorDebugPromiseResolver = resolve) : null;
+const meteorDebugFuture =
+  process.env.METEOR_INSPECT_BRK ? new Future : null;
 
-async function maybeWaitForDebuggerToAttach() {
-  if (meteorDebugPromise && meteorDebugPromiseResolver) {
+function maybeWaitForDebuggerToAttach() {
+  if (meteorDebugFuture) {
     const { pause } = require("./debug");
     const pauseThresholdMs = 50;
     const pollIntervalMs = 500;
@@ -64,7 +73,7 @@ async function maybeWaitForDebuggerToAttach() {
     // This setTimeout not only waits for the debugger to attach, but also
     // keeps the process alive by preventing the event loop from running
     // empty while the main Fiber yields.
-    setTimeout(async function poll() {
+    setTimeout(function poll() {
       const pauseStartTimeMs = +new Date;
 
       if (pauseStartTimeMs - waitStartTimeMs > waitLimitMs) {
@@ -72,7 +81,7 @@ async function maybeWaitForDebuggerToAttach() {
           `Debugger did not attach after ${waitLimitMinutes} minutes; continuing.`
         );
 
-        meteorDebugPromiseResolver();
+        meteorDebugFuture.return();
 
       } else {
         // This pause function contains a debugger keyword that will only
@@ -92,7 +101,7 @@ async function maybeWaitForDebuggerToAttach() {
           // time, we can conclude the debugger keyword must be active,
           // which means a debugging client must be connected, which means
           // we should stop polling and let the main Fiber continue.
-          meteorDebugPromiseResolver();
+          meteorDebugFuture.return();
 
         } else {
           // If the pause() function call didn't take a meaningful amount
@@ -105,7 +114,7 @@ async function maybeWaitForDebuggerToAttach() {
     }, pollIntervalMs);
 
     // The polling will continue while we wait here.
-    await meteorDebugPromise;
+    meteorDebugFuture.wait();
   }
 }
 
@@ -221,12 +230,12 @@ var specialArgPaths = {
   }
 };
 
-const loadServerBundles = Profile("Load server bundles", async function () {
-  const infos = [];
+var loadServerBundles = Profile("Load server bundles", function () {
+  var infos = [];
 
-  for (const fileInfo of serverJson.load) {
-    const code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
-    const nonLocalNodeModulesPaths = [];
+  serverJson.load.forEach(function (fileInfo) {
+    var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
+    var nonLocalNodeModulesPaths = [];
 
     function addNodeModulesPath(path) {
       nonLocalNodeModulesPaths.push(
@@ -256,7 +265,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       }
     }
 
-    const Npm = {
+    var Npm = {
       /**
        * @summary Require a package that was specified using
        * `Npm.depends()`.
@@ -268,14 +277,14 @@ const loadServerBundles = Profile("Load server bundles", async function () {
         return "Npm.require(" + JSON.stringify(name) + ")";
       }, function (name, error) {
         if (nonLocalNodeModulesPaths.length > 0) {
-          let fullPath;
+          var fullPath;
 
           // Replace all backslashes with forward slashes, just in case
           // someone passes a Windows-y module identifier.
           name = name.split("\\").join("/");
 
           nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
-            const packageBase = files.convertToOSPath(files.pathResolve(
+            var packageBase = files.convertToOSPath(files.pathResolve(
               nodeModuleBase,
               name.split("/", 1)[0]
             ));
@@ -292,7 +301,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
           }
         }
 
-        const resolved = require.resolve(name);
+        var resolved = require.resolve(name);
         if (resolved === name && ! path.isAbsolute(resolved)) {
           // If require.resolve(id) === id and id is not an absolute
           // identifier, it must be a built-in module like fs or http.
@@ -300,36 +309,30 @@ const loadServerBundles = Profile("Load server bundles", async function () {
         }
 
         throw error || new Error(
-            "Cannot find module " + JSON.stringify(name)
+          "Cannot find module " + JSON.stringify(name)
         );
       })
     };
 
-    function getAsset (assetPath, encoding, callback) {
-      var promiseResolver, promiseReject, promise;
+    var getAsset = function (assetPath, encoding, callback) {
+      var promiseResolver, promise;
       if (! callback) {
-        promise = new Promise((r, reject) => {
-          promiseResolver = r;
-          promiseReject = reject;
+        promise = new Promise((resolve, reject) => {
+          promiseResolver = function (error, result) {
+            error ? reject(error) : resolve(result);
+          }
         });
+        callback = promiseResolver;
       }
       // This assumes that we've already loaded the meteor package, so meteor
       // itself can't call Assets.get*. (We could change this function so that
       // it doesn't call bindEnvironment if you don't pass a callback if we need
       // to.)
-      const _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
+      var _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
         if (result && ! encoding)
-            // Sadly, this copies in Node 0.10.
+          // Sadly, this copies in Node 0.10.
           result = new Uint8Array(result);
-        if (promiseResolver) {
-          if (err) {
-            promiseReject(err);
-            return;
-          }
-          promiseResolver(result);
-        } else {
-          callback(err, result);
-        }
+        callback(err, result);
       }, function (e) {
         console.log("Exception in callback of getAsset", e.stack);
       });
@@ -345,7 +348,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       if (! fileInfo.assets || ! hasOwn.call(fileInfo.assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
-        const filePath = path.join(serverDir, fileInfo.assets[assetPath]);
+        var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
         fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
       }
 
@@ -353,12 +356,24 @@ const loadServerBundles = Profile("Load server bundles", async function () {
         return promise;
     };
 
-    const Assets = {
-      getTextAsync: function (assetPath, callback) {
-        return getAsset(assetPath, "utf8", callback);
+    var Assets = {
+      getText: function (assetPath, callback) {
+        const result = getAsset(assetPath, "utf8", callback);
+        if (!callback) {
+          return Future.fromPromise(result).wait();
+        }
       },
-      getBinaryAsync: function (assetPath, callback) {
-        return getAsset(assetPath, undefined, callback);
+      getTextAsync: function (assetPath) {
+        return getAsset(assetPath, "utf8");
+      },
+      getBinary: function (assetPath, callback) {
+        const result = getAsset(assetPath, undefined, callback);
+        if (!callback) {
+          return Future.fromPromise(result).wait();
+        }
+      },
+      getBinaryAsync: function (assetPath) {
+        return getAsset(assetPath, undefined);
       },
       /**
        * @summary Get the absolute path to the static server asset. Note that assets are read-only.
@@ -384,20 +399,20 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       }
     };
 
-    const wrapParts = ["(function(Npm,Assets"];
+    var wrapParts = ["(function(Npm,Assets"];
 
-    const specialArgs =
-        hasOwn.call(specialArgPaths, fileInfo.path) &&
-        specialArgPaths[fileInfo.path](fileInfo);
+    var specialArgs =
+      hasOwn.call(specialArgPaths, fileInfo.path) &&
+      specialArgPaths[fileInfo.path](fileInfo);
 
-    const specialKeys = Object.keys(specialArgs || {});
+    var specialKeys = Object.keys(specialArgs || {});
     specialKeys.forEach(function (key) {
       wrapParts.push("," + key);
     });
 
     // \n is necessary in case final line is a //-comment
     wrapParts.push("){", code, "\n})");
-    const wrapped = wrapParts.join("");
+    var wrapped = wrapParts.join("");
 
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
@@ -405,24 +420,24 @@ const loadServerBundles = Profile("Load server bundles", async function () {
 
     // fileInfo.path is a standard path, convert it to OS path to join with
     // __dirname
-    const fileInfoOSPath = files.convertToOSPath(fileInfo.path);
-    const absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
+    var fileInfoOSPath = files.convertToOSPath(fileInfo.path);
+    var absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
 
-    const scriptPath =
-        parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
+    var scriptPath =
+      parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
-    const func = require('vm').runInThisContext(wrapped, {
+    var func = require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
       displayErrors: true
     });
 
-    const args = [Npm, Assets];
+    var args = [Npm, Assets];
 
     specialKeys.forEach(function (key) {
       args.push(specialArgs[key]);
     });
 
-    if (meteorDebugPromise) {
+    if (meteorDebugFuture) {
       infos.push({
         fn: Profile(fileInfo.path, func),
         args
@@ -431,32 +446,27 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       // Allows us to use code-coverage if the debugger is not enabled
       Profile(fileInfo.path, func).apply(global, args);
     }
-  }
+  });
 
-  await maybeWaitForDebuggerToAttach();
+  maybeWaitForDebuggerToAttach();
 
-  for (const info of infos) {
+  infos.forEach(info => {
     info.fn.apply(global, info.args);
-  }
-  if (global.Package && global.Package['core-runtime']) {
-    return global.Package['core-runtime'].waitUntilAllLoaded();
-  }
-
-  return null;
+  });
 });
 
-var callStartupHooks = Profile("Call Meteor.startup hooks", async function () {
+var callStartupHooks = Profile("Call Meteor.startup hooks", function () {
   // run the user startup hooks.  other calls to startup() during this can still
   // add hooks to the end.
   while (__meteor_bootstrap__.startupHooks.length) {
     var hook = __meteor_bootstrap__.startupHooks.shift();
-    await Profile.time(hook.stack || "(unknown)", hook);
+    Profile.time(hook.stack || "(unknown)", hook);
   }
   // Setting this to null tells Meteor.startup to call hooks immediately.
   __meteor_bootstrap__.startupHooks = null;
 });
 
-var runMain = Profile("Run main()", async function () {
+var runMain = Profile("Run main()", function () {
   // find and run main()
   // XXX hack. we should know the package that contains main.
   var mains = [];
@@ -482,7 +492,7 @@ var runMain = Profile("Run main()", async function () {
     process.stderr.write("Program has more than one main() function?\n");
     process.exit(1);
   }
-  var exitCode = await mains[0].call({}, process.argv.slice(3));
+  var exitCode = mains[0].call({}, process.argv.slice(3));
   // XXX hack, needs a better way to keep alive
   if (exitCode !== 'DAEMON')
     process.exit(exitCode);
@@ -492,21 +502,10 @@ var runMain = Profile("Run main()", async function () {
   }
 });
 
-(async function startServerProcess() {
-  if (!global.asyncLocalStorage) {
-    const { AsyncLocalStorage } = require('async_hooks');
-    global.asyncLocalStorage = new AsyncLocalStorage();
-  }
-
-  await Profile.run('Server startup', function() {
-    return global.asyncLocalStorage.run({}, async () => {
-      await loadServerBundles();
-      await callStartupHooks();
-      await runMain();
-    });
+Fiber(function () {
+  Profile.run("Server startup", function () {
+    loadServerBundles();
+    callStartupHooks();
+    runMain();
   });
-})().catch(e => {
-  console.log('error on boot.js',  e )
-  console.log(e.stack);
-  process.exit(1)
-});
+}).run();

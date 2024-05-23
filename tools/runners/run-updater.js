@@ -19,7 +19,7 @@ export class Updater {
     // Check every 3 hours. (Should not share buildmessage state with
     // the main fiber.)
     async function check() {
-      await self._check();
+      self._check();
     }
 
     this.timer = setInterval(check, CHECK_UPDATE_INTERVAL);
@@ -29,10 +29,10 @@ export class Updater {
     check();
   }
 
-  async _check() {
+  _check() {
     const updater = require('../packaging/updater');
     try {
-      await updater.tryToDownloadUpdate({ showBanner: true });
+      updater.tryToDownloadUpdate({ showBanner: true });
     } catch (e) {
       // oh well, this was the background. Only show errors if we are in debug
       // mode.

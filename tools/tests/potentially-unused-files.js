@@ -1,23 +1,21 @@
 import * as selftest from '../tool-testing/selftest.js';
 
-selftest.define('watch-used-files', async () => {
+selftest.define('watch-used-files', () => {
   const s = new selftest.Sandbox();
-  await s.init();
-
-  await s.createApp('myapp', 'watch-used-files');
+  s.createApp('myapp', 'watch-used-files');
   s.cd('myapp');
 
   let run = s.run();
   run.waitSecs(30);
-  await run.match('App running at');
+  run.match('App running at');
 
   function checkClientRefresh() {
-    return run.match('Client modified -- refreshing');
+    run.match('Client modified -- refreshing');
   }
 
-  async function checkServerRestart() {
-    await run.match('Server modified -- restarting');
-    await run.match('Meteor server restarted');
+  function checkServerRestart() {
+    run.match('Server modified -- restarting');
+    run.match('Meteor server restarted');
   }
 
   s.write(
@@ -25,21 +23,21 @@ selftest.define('watch-used-files', async () => {
     '// updated'
   );
   run.waitSecs(5);
-  await checkClientRefresh();
+  checkClientRefresh();
 
   s.write(
     '/server-only.js',
     '// updated'
   );
   run.waitSecs(5);
-  await checkServerRestart();
+  checkServerRestart();
 
   s.write(
     '/shared.js',
     '// updated'
   );
   run.waitSecs(5);
-  await checkServerRestart();
+  checkServerRestart();
 
   s.write(
     '/unused.js',
@@ -48,7 +46,7 @@ selftest.define('watch-used-files', async () => {
   run.waitSecs(5);
   let rebuild = true;
   try {
-    await checkServerRestart();
+    checkServerRestart();
   } catch (e) {
     rebuild = false;
   }
@@ -58,24 +56,22 @@ selftest.define('watch-used-files', async () => {
   }
 });
 
-selftest.define('watch-used-files-packages', async () => {
+selftest.define('watch-used-files-packages', () => {
   const s = new selftest.Sandbox();
-  await s.init();
-
-  await s.createApp('myapp', 'watch-used-files');
+  s.createApp('myapp', 'watch-used-files');
   s.cd('myapp');
 
   let run = s.run();
   run.waitSecs(30);
-  await run.match('App running at');
+  run.match('App running at');
 
   function checkClientRefresh() {
-    return run.match('Client modified -- refreshing');
+    run.match('Client modified -- refreshing');
   }
 
-  async function checkServerRestart() {
-    await run.match('Server modified -- restarting');
-    await run.match('Meteor server restarted');
+  function checkServerRestart() {
+    run.match('Server modified -- restarting');
+    run.match('Meteor server restarted');
   }
 
   s.write(
@@ -83,28 +79,28 @@ selftest.define('watch-used-files-packages', async () => {
     '// updated'
   );
   run.waitSecs(5);
-  await checkClientRefresh();
+  checkClientRefresh();
 
   s.write(
     '/packages/partially-used-package/direct-import.js',
     '// updated'
   );
   run.waitSecs(5);
-  await checkClientRefresh();
+  checkClientRefresh();
 
   s.write(
     '/packages/partially-used-package/server-only.js',
     '// updated'
   );
   run.waitSecs(5);
-  await checkServerRestart();
+  checkServerRestart();
 
   s.write(
     '/packages/partially-used-package/shared.js',
     '// updated'
   );
   run.waitSecs(5);
-  await checkServerRestart();
+  checkServerRestart();
 
   s.write(
     '/packages/partially-used-package/unused.js',
@@ -113,7 +109,7 @@ selftest.define('watch-used-files-packages', async () => {
   run.waitSecs(5);
   let rebuild = true;
   try {
-    await checkServerRestart();
+    checkServerRestart();
   } catch (e) {
     rebuild = false;
   }
@@ -123,24 +119,22 @@ selftest.define('watch-used-files-packages', async () => {
   }
 });
 
-selftest.define('watch-used-files-plugins', async () => {
+selftest.define('watch-used-files-plugins', () => {
   const s = new selftest.Sandbox();
-  await s.init();
-
-  await s.createApp('myapp', 'watch-used-files');
+  s.createApp('myapp', 'watch-used-files');
   s.cd('myapp');
 
   let run = s.run();
   run.waitSecs(30);
-  await run.match('App running at');
+  run.match('App running at');
 
   function checkClientRefresh() {
-    return run.match('Client modified -- refreshing');
+    run.match('Client modified -- refreshing');
   }
 
-  async function checkServerRestart() {
-    await run.match('Server modified -- restarting');
-    await run.match('Meteor server restarted');
+  function checkServerRestart() {
+    run.match('Server modified -- restarting');
+    run.match('Meteor server restarted');
   }
 
   s.write(
@@ -148,14 +142,14 @@ selftest.define('watch-used-files-plugins', async () => {
     '// updated'
   );
   run.waitSecs(90);
-  await checkServerRestart();
+  checkServerRestart();
 
   s.write(
     '/unused.no-lazy-finalyzer',
     '// updated'
   );
   run.waitSecs(5);
-  await checkServerRestart();
+  checkServerRestart();
 
   s.write(
     '/a.time',
@@ -164,7 +158,7 @@ selftest.define('watch-used-files-plugins', async () => {
   run.waitSecs(5);
   let rebuild = true;
   try {
-    await checkClientRefresh();
+    checkClientRefresh();
   } catch (e) {
     rebuild = false;
   }
