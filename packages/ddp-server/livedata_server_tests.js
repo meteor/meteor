@@ -100,7 +100,8 @@ Tinytest.addAsync(
   "livedata server - onMessage hook",
   function (test, onComplete) {
     var cb = Meteor.onMessage(function (msg, session) {
-      test.equal(msg.method, "livedata_server_test_inner");
+      if (msg.method !== 'livedata_server_test_inner') return;
+            test.equal(msg.method, "livedata_server_test_inner");
       cb.stop();
       onComplete();
     });
@@ -350,16 +351,35 @@ Meteor.methods({
   },
 });
 
+Meteor.publish("livedata_server_test_sub_chain", async function () {
+  await new Promise((r) => setTimeout(r, 2000));
+  this.ready();
+  return null;
+});
+
+Tinytest.addAsync(
+  "livedata server - waiting for subscription chain",
+  (test, onComplete) =>
+    makeTestConnection(test, async (clientConn, serverConn) => {
+      const handlers = [];
+      for (let i = 0; i < 10; i++) {
+        handlers.push(clientConn.subscribe("livedata_server_test_sub_chain"));
+      }
+      await new Promise((r) => setTimeout(r, 3000));
+      test.equal(
+        handlers.map((sub) => sub.ready()).filter((o) => o).length === 1,
+        true
+      );
+      onComplete();
+    })
+);
 Tinytest.addAsync("livedata server - waiting for Promise", (test, onComplete) =>
   makeTestConnection(test, async (clientConn, serverConn) => {
     const testResolvedPromiseResult = await clientConn.callAsync(
       "testResolvedPromise",
       "clientConn.call"
     );
-    test.equal(
-      testResolvedPromiseResult,
-      "clientConn.call after waiting"
-    );
+    test.equal(testResolvedPromiseResult, "clientConn.call after waiting");
 
     const clientCallPromise = new Promise((resolve, reject) =>
       clientConn.call(

@@ -8,9 +8,6 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
-
-
-
 ## v3.0, TBD
 
 ### Highlights
@@ -418,6 +415,7 @@
 - `modules@1.0.0`:
 
   - Updated `reify` version.
+  - All modules are described as strict mode
 
 - `mongo-decimal@`:
 
@@ -723,6 +721,167 @@
 
 For making this great framework even better!
 
+
+## v2.16.0, 2024-05-14
+
+### Highlights
+
+- Support observeChangesAsync and observeAsync. [PR](https://github.com/meteor/meteor/pull/13025)
+- New mongo package options to optimize Oplog tailing performance to include/exclude certain collections [PR](https://github.com/meteor/meteor/pull/13009)
+
+#### Migration Steps
+
+To update from 2.15 to this one, you can run:
+
+```
+meteor update --release 2.16
+```
+
+If you're coming from an older version, please check our [Migration Guides](https://guide.meteor.com/2.14-migration).
+
+#### Breaking Changes
+N/A
+
+#### Internal API changes
+
+* Add method name to MethodInvocation in DDP messages
+
+#### Meteor Version Release
+
+* Meteor tool
+  - Updated Svelte skeleton
+  - Update tsconfig.json for Svelte skeleton
+  - Updated Solid skeleton NPM dependencies
+
+* Blaze
+  - Support of async dynamic attributes [PR](https://github.com/meteor/blaze/pull/460)
+  - Fix Blaze._expandAttributes returns empty object, if null. [PR](https://github.com/meteor/blaze/pull/458)
+
+* `accounts-base@2.2.11`
+  - Supported session storage to store accounts login token [PR](https://github.com/meteor/meteor/pull/13046)
+  - Update config checking
+  - Added new types [PR](https://github.com/meteor/meteor/pull/13042)
+
+* `accounts-oauth@1.4.4`
+  - Remove config checking as it is done in `accounts-base`
+
+* `accounts-ui-unstyled@1.7.1`
+  - `Connect with Twitter` is now `Connect with X/Twitter`
+
+* `check@1.4.1`:
+  - Added an optional flag to immediately throw error when all checks failed. [PR](https://github.com/meteor/meteor/pull/12970)
+
+* `ddp-common@1.4.1`
+  - Add method name to MethodInvocation
+
+* `ddp-client@2.6.2`
+  - Add method name to MethodInvocation
+
+* `ddp-server@2.7.1`
+  - Add method name to MethodInvocation
+
+* `twitter-config-ui@1.0.2`
+  - Update setup instructions
+
+* `email@2.2.6`
+  - Nodemailer update to v6.9.10
+  - `@types/nodemailer` updated to v6.4.14
+  - Adds the ability to encrypt your emails using PGP [PR](https://github.com/meteor/meteor/pull/12991)
+
+* `logging@1.3.4`
+  - Type update
+
+* `minimongo@1.9.4`
+  - Support observeChangesAsync and observeAsync [PR](https://github.com/meteor/meteor/pull/13025)
+  - Report and extend test cases for the old async behaviors
+
+* `minifier-js@2.8.0`
+  - Update terser to v5.31.0
+
+* `mongo@1.16.10`
+  - Support a new option to include/exclude certain collections for oplog tailing [PR](https://github.com/meteor/meteor/pull/13009)
+
+* `reload-safetybelt@1.0.13`
+  - Remove underscore dependency
+
+* `service-configuration@1.3.4`
+  - Type update
+
+#### Independent releases
+
+* `mongo@1.16.9`:
+  - Set `minPoolSize` for oplog
+
+* `underscore@1.6.1`
+  - Fix bug in `_.intersection`
+
+#### Contributors
+
+- [nachocodoner](https://github.com/nachocodoner)
+- [StorytellerCZ](https://github.com/StorytellerCZ)
+- [jamauro](https://github.com/jamauro)
+- [Twisterking](https://github.com/Twisterking)
+- [harryadel](https://github.com/harryadel)
+
+Thanks for making this great framework even better!
+
+## v2.15.0, 2024-02-05
+
+### Highlights
+
+* Bumps embedded MongoDB to 7.0.5.
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+In development, if you're using Linux, you might get an error like `version GLIBCXX_3.4.26 not found` or something related to g++.
+
+This is related to your g++ version. With MongoDB 7, you need to have g++ 11 or higher. So make sure to have this updated.
+
+This will happen only if you are trying to run your Meteor application with a MongoDB 7 version. If you run your app with a MONGO_URL pointing to a different MongoDB version, you won't have this issue. 
+
+```bash
+
+meteor update --release 2.15
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to include embedded MongoDB to 7.0.5.
+  - Fix cordova launch screen warnings on 2.15 [PR](https://github.com/meteor/meteor/pull/12971)
+* `underscore@1.6.0`:
+  - A test related to [PR](https://github.com/meteor/meteor/pull/12798) to see if the tests can manage the first update step. [PR](https://github.com/meteor/meteor/pull/12912)
+* `service-configuration@1.3.3`:
+  - added new types* [PR](https://github.com/meteor/meteor/pull/12922)
+* `meteor@1.11.5`:
+  - added new types [PR](https://github.com/meteor/meteor/pull/12922)
+* `accounts-base@2.2.10`:
+  - Added missing type for createUserVerifyingEmail [PR](https://github.com/meteor/meteor/pull/12919)
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27).
+- [@denihs](https://github.com/denihs).
+- [@mcorbelli](https://github.com/mcorbelli).
+- [@matheusccastroo](https://github.com/matheusccastroo).
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
+- [@ebroder](https://github.com/ebroder).
+- [@nachocodoner](https://github.com/nachocodoner).
+
+For making this great framework even better!
+
+
 ## v2.14.0, 2023-12-12
 
 
@@ -788,7 +947,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
 
 ## Meteor Version Release
 
-* `accounts-base@2.2.9`
+* `accounts-base@2.2.10`
     - Ensure that `onLogin` callback fires properly
     - Indexes are now created asynchronously
 
@@ -845,7 +1004,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
 * `logic-solver@2.0.9`
     - Removed Underscore dependency
 
-* `meteor@1.11.4`:
+* `meteor@1.11.5`:
     - Improve TS types
 
 * `mobile-experience@1.1.1`:
@@ -874,7 +1033,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
 * `react-fast-refresh@0.2.8`:
     - Updated `semver` to version 7.5.4
 
-* `service-configuration@1.3.2`
+* `service-configuration@1.3.3`
     - Indexes are now created asynchronously
     - Add types for ConfigError
 
@@ -900,7 +1059,7 @@ For more information you can check our [Migration Guide](https://guide.meteor.co
 * `typescript@4.9.5`:
     - Updated to 4.9.5
 
-* `webapp@1.13.6`
+* `webapp@1.13.8`
     - Updated `cordova-plugin-meteor-webapp` to v2.0.3
     - Updated `cookie-parser` to v1.4.6
     - Updated `send` to v0.18.0

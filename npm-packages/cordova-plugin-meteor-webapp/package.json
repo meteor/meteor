@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-meteor-webapp",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Cordova plugin that serves a Meteor web app through a local server and implements hot code push",
   "cordova": {
     "id": "cordova-plugin-meteor-webapp",

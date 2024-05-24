@@ -714,16 +714,7 @@ if (Meteor.isClient) (() => {
       // Test that even with no published fields, we still have a document.
       await Accounts.connection.callAsync('clearUsernameAndProfile');
       test.isTrue(Meteor.userId());
-      // TODO [FIBERS]: this is a big workaround. The Tracker is now receiving promises,
-        // so it's finishing before time. Hopefully this PR will fix this behavior
-        // https://github.com/meteor/meteor/pull/12294
-      let resolve;
-      const promise = new Promise(res => resolve = res);
-      Meteor.setTimeout(() => {
-        test.equal(Meteor.user(), { _id: Meteor.userId() });
-        resolve();
-      }, 100);
-      return promise;
+      test.equal(await Meteor.userAsync(), { _id: Meteor.userId() });
     },
     logoutStep,
     function (test, expect) {
@@ -1222,7 +1213,6 @@ if (Meteor.isServer) (() => {
   // This test properly belongs in accounts-base/accounts_tests.js, but
   // this is where the tests that actually log in are.
   Tinytest.addAsync('accounts - user() out of context', async test => {
-    // basic server context, no method.
     await test.throwsAsync(
       async () =>
         await Meteor.user()
@@ -1419,17 +1409,17 @@ if (Meteor.isServer) (() => {
         },
       );
 
-      Accounts._options.ambiguousErrorMessages = true
+      Accounts._options.ambiguousErrorMessages = true;
       await test.throwsAsync(
         async () => await Meteor.callAsync('forgotPassword', wrongOptions),
         'Something went wrong. Please check your credentials'
-      )
+      );
 
-      Accounts._options.ambiguousErrorMessages = false
+      Accounts._options.ambiguousErrorMessages = false;
       await test.throwsAsync(
         async () => await Meteor.callAsync('forgotPassword', wrongOptions),
         /User not found/
-      )
+      );
       // return accounts as it were
       Accounts._options = options
     });

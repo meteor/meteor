@@ -5,17 +5,17 @@ set -u
 
 UNAME=$(uname)
 ARCH=$(uname -m)
-NODE_VERSION=20.9.0
-MONGO_VERSION_64BIT=6.0.3
+NODE_VERSION=20.12.2
+MONGO_VERSION_64BIT=7.0.5
 MONGO_VERSION_32BIT=3.2.22
-NPM_VERSION=10.1.0
+NPM_VERSION=10.5.0
 
 
 if [ "$UNAME" == "Linux" ] ; then
     NODE_BUILD_NUMBER=
-    if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
+    if [[ "$ARCH" != "i686" && "$ARCH" != "x86_64" && "$ARCH" != "aarch64"  ]] ; then
         echo "Unsupported architecture: $ARCH"
-        echo "Meteor only supports i686 and x86_64 for now."
+        echo "Meteor only supports i686, x86_64 and aarch64 for now."
         exit 1
     fi
 
@@ -67,6 +67,9 @@ then
     elif [ "$ARCH" == "x86_64" ]
     then
         NODE_TGZ="node-v${NODE_VERSION}-linux-x64.tar.gz"
+    elif [ "$ARCH" == "aarch64" ]
+    then
+        NODE_TGZ="node-v${NODE_VERSION}-linux-arm64.tar.gz"
     else
         echo "Unknown architecture: $UNAME $ARCH"
         exit 1

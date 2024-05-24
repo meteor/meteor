@@ -552,7 +552,8 @@ var springboard = async function (rel, options) {
       var execPath = files.convertToOSPath(executable);
       var child = require("child_process").spawn(execPath, newArgv, {
         env: process.env,
-        stdio: 'inherit'
+        stdio: 'inherit',
+        shell: true,
       }).on('exit', resolve);
     }));
   }

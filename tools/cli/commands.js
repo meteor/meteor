@@ -607,7 +607,6 @@ export const AVAILABLE_SKELETONS = [
   DEFAULT_SKELETON,
   "typescript",
   "vue",
-  'vue-2',
   "svelte",
   "tailwind",
   "chakra-ui",
@@ -623,7 +622,6 @@ const SKELETON_INFO = {
   "react": "To create a basic React-based app",
   "typescript": "To create an app using TypeScript and React",
   "vue": "To create a basic Vue3-based app",
-  "vue-2": "To create a basic Vue2-based app",
   "svelte": "To create a basic Svelte app",
   "tailwind": "To create an app using React and Tailwind",
   "chakra-ui": "To create an app Chakra UI and React",
@@ -644,7 +642,6 @@ main.registerCommand({
     blaze: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
-    'vue-2': { type: Boolean },
     typescript: { type: Boolean },
     apollo: { type: Boolean },
     svelte: { type: Boolean },
@@ -1146,7 +1143,7 @@ main.registerCommand({
   } catch (e) {
 
     if (
-      e.message !== "Using prototype option" ||
+      e.message !== "Using prototype option" &&
       e.message !== "Using release option"
     ) {
       // something has happened while creating the app using git clone
@@ -2071,7 +2068,7 @@ main.registerCommand(Object.assign(
 async function doTestCommand(options) {
   // This "metadata" is accessed in a few places. Using a global
   // variable here was more expedient than navigating the many layers
-  // of abstraction across the the build process.
+  // of abstraction across the build process.
   //
   // As long as the Meteor CLI runs a single command as part of each
   // process, this should be safe.

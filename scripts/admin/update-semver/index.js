@@ -79,7 +79,7 @@ async function main() {
    */
   let args = process.argv.slice(2);
   // if gets bigger turn into a function
-  const dir = args[1].includes("blaze")
+  const dir = args[1]?.includes("blaze")
     ? "packages/non-core/blaze/packages"
     : "packages";
   const releaseNumber = await getReleaseNumber();
@@ -173,13 +173,13 @@ async function main() {
           const version =
             semver.inc(currentVersion, 'prerelease', release);
           if (name === 'meteor-tool') return version;
-          return version.replace(release, `${ release }${ releaseNumber }`);
+          return version?.replace(release, `${ release }${ releaseNumber }`);
         }
         return semver.inc(currentVersion, release);
       }
 
       const n = incrementNewVersion(release);
-      const newVersion = n?.replace(n, `${n}-alpha300.3`)
+      const newVersion = n?.replace(n, `${n}`)
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
       const newCode = code.replace(rawVersion, ` '${ newVersion }',`);
       await fs.promises.writeFile(filePath, newCode);

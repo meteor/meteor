@@ -211,6 +211,8 @@ WebApp.handlers.use(middleware);
 
 OAuthTest.middleware = middleware;
 
+OAuthTest.registeredServices = registeredServices;
+
 // Handle /_oauth/* paths and extract the service name.
 //
 // @returns {String|null} e.g. "facebook", or null if this isn't an
@@ -289,7 +291,7 @@ OAuth._renderOauthResults = async (res, query, credentialSecret) => {
 };
 
 const getAsset = (name) => {
-  return new Promise((resolve, reject) => Assets.getText(
+  return new Promise((resolve, reject) => Assets.getTextAsync(
     `${name}.html`,
     (err, data) => err ? reject(err) : resolve(data)))
 }

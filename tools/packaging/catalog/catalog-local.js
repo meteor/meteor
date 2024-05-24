@@ -421,6 +421,12 @@ Object.assign(LocalCatalog.prototype, {
         if (_.has(self.packages, name))
           return;
 
+        const dependencies = packageSource.getDependencyMetadata({ logError: true });
+
+        if (buildmessage.jobHasMessages()) {
+          return; // recover by ignoring
+        }
+
         self.packages[name] = {
           packageSource: packageSource,
           packageRecord: {
@@ -437,7 +443,7 @@ Object.assign(LocalCatalog.prototype, {
             publishedBy: null,
             description: packageSource.metadata.summary,
             git: packageSource.metadata.git,
-            dependencies: packageSource.getDependencyMetadata(),
+            dependencies,
             source: null,
             lastUpdated: null,
             published: null,

@@ -416,7 +416,7 @@ export class Connection {
         // onReady callback provided, if any.)
         // If the sub is already ready, run the ready callback right away.
         // It seems that users would expect an onReady callback inside an
-        // autorun to trigger once the the sub first becomes ready and also
+        // autorun to trigger once the sub first becomes ready and also
         // when re-subs happens.
         if (existing.ready) {
           callbacks.onReady();
@@ -647,7 +647,12 @@ export class Connection {
     });
     if (Meteor.isClient) {
       // only return the stubReturnValue
-      promise.stubPromise = stubPromise.then(o => o.stubReturnValue);
+      promise.stubPromise = stubPromise.then(o => {
+        if (o.exception) {
+          throw o.exception;
+        }
+        return o.stubReturnValue;
+      });
       // this avoids attribute recursion
       promise.serverPromise = new Promise((resolve, reject) =>
         promise.then(resolve).catch(reject),
@@ -919,6 +924,7 @@ export class Connection {
     };
 
     const invocation = new DDPCommon.MethodInvocation({
+      name,
       isSimulation: true,
       userId: self.userId(),
       isFromCallAsync: options?.isFromCallAsync,

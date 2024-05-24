@@ -5,6 +5,7 @@ import { Hook } from 'meteor/callback-hook';
 import url from 'url';
 import nodemailer from 'nodemailer';
 import wellKnow from 'nodemailer/lib/well-known';
+import { openpgpEncrypt } from 'nodemailer-openpgp';
 
 export const Email = {};
 export const EmailTest = {};
@@ -24,7 +25,7 @@ export const EmailInternals = {
 
 const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
-const makeTransport = async function (mailUrlString) {
+const makeTransport = function (mailUrlString, options) {
   const mailUrl = new URL(mailUrlString);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
@@ -52,11 +53,15 @@ const makeTransport = async function (mailUrlString) {
     mailUrl.query.pool = 'true';
   }
 
-  return nodemailer.createTransport(url.format(mailUrl));
+  const transport = nodemailer.createTransport(url.format(mailUrl));
+  if (options?.encryptionKeys || options?.shouldSign) {
+    transport.use('stream', openpgpEncrypt(options));
+  }
+  return transport;
 };
 
 // More info: https://nodemailer.com/smtp/well-known/
-const knownHostsTransport = function (settings = undefined, url = undefined) {
+const knownHostsTransport = function (settings = undefined, url = undefined, options) {
   let service, user, password;
 
   const hasSettings = settings && Object.keys(settings).length;
@@ -93,41 +98,46 @@ const knownHostsTransport = function (settings = undefined, url = undefined) {
     );
   }
 
-  return nodemailer.createTransport({
+  const transport = nodemailer.createTransport({
     service: settings?.service || service,
     auth: {
       user: settings?.user || user,
       pass: settings?.password || password,
     },
   });
+
+  if (options?.encryptionKeys || options?.shouldSign) {
+    transport.use('stream', openpgpEncrypt(options));
+  }
+  return transport;
 };
 EmailTest.knowHostsTransport = knownHostsTransport;
 
-const getTransport = async function () {
+const getTransport = function (options) {
   const packageSettings = Meteor.settings.packages?.email || {};
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
   if (
-    this.cacheKey === undefined ||
-    this.cacheKey !== url ||
-    this.cacheKey !== packageSettings.service ||
-    this.cacheKey !== 'settings'
+    globalThis.cacheKey === undefined ||
+    globalThis.cacheKey !== url ||
+    globalThis.cacheKey !== packageSettings.service ||
+    globalThis.cacheKey !== 'settings'
   ) {
     if (
       (packageSettings.service && wellKnow(packageSettings.service)) ||
       (url && wellKnow(new URL(url).hostname)) ||
       wellKnow(url?.split(':')[0] || '')
     ) {
-      this.cacheKey = packageSettings.service || 'settings';
-      this.cache = knownHostsTransport(packageSettings, url);
+      globalThis.cacheKey = packageSettings.service || 'settings';
+      globalThis.cache = knownHostsTransport(packageSettings, url, options);
     } else {
-      this.cacheKey = url;
-      this.cache = url ? await makeTransport(url, packageSettings) : null;
+      globalThis.cacheKey = url;
+      globalThis.cache = url ? makeTransport(url, options) : null;
     }
   }
-  return this.cache;
+  return globalThis.cache;
 };
 
 let nextDevModeMailId = 0;
@@ -203,7 +213,7 @@ Email.customTransport = undefined;
  * @locus Server
  * @return {Promise}
  * @param {Object} options
- * @param {String} [options.from] "From:" address (required)
+ * @param {String} options.from "From:" address (required)
  * @param {String|String[]} options.to,cc,bcc,replyTo
  *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
  * @param {String} [options.inReplyTo] Message-ID this message is replying to
@@ -250,10 +260,9 @@ Email.sendAsync = async function (options) {
   }
 
   if (mailUrlEnv || mailUrlSettings) {
-    const transport = await getTransport();
-    await transport.sendMail(email);
-    return;
+    return getTransport().sendMail(email);
   }
+
   return devModeSendAsync(email, options);
 };
 
@@ -273,7 +282,7 @@ Email.sendAsync = async function (options) {
  * @locus Server
  * @return {Promise}
  * @param {Object} options
- * @param {String} [options.from] "From:" address (required)
+ * @param {String} options.from "From:" address (required)
  * @param {String|String[]} options.to,cc,bcc,replyTo
  *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
  * @param {String} [options.inReplyTo] Message-ID this message is replying to
@@ -290,7 +299,9 @@ Email.sendAsync = async function (options) {
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
- */
+ * @param {String} [options.encryptionKeys] An array that holds the public keys used to encrypt.
+ * @param {String} [options.shouldSign] Enables you to allow or disallow email signing.
+*/
 Email.send = function(options) {
   Email.sendAsync(options)
     .then(() =>

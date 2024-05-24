@@ -1528,7 +1528,7 @@ var maybeUpdateRelease = async function (options) {
     if (release.current && ! release.current.isRecommended() &&
         options.appDir && ! options.patch) {
       var releaseVersion = await release.current.getReleaseVersion();
-      var newerRecommendedReleases = getLaterReleaseVersions(
+      var newerRecommendedReleases = await getLaterReleaseVersions(
         releaseTrack, releaseVersion);
       if (!newerRecommendedReleases.length) {
         // When running 'meteor update' without --release in an app,
@@ -2645,7 +2645,7 @@ main.registerCommand({
     // check if the passed arch is in the list
     var arch = options['target-arch'];
     if (! osArches.includes(arch)) {
-      throw new Error(
+	      throw new Error(
         arch + ": the arch is not available for the release. Available arches: "
         + osArches.join(', '));
     }
