@@ -899,6 +899,18 @@ Accounts.addEmailAsync = async (userId, newEmail, verified) => {
   }
 }
 
+/**
+ * @summary Add an email address for a user. Use this instead of directly
+ * updating the database. The operation will fail if there is a different user
+ * with an email only differing in case. If the specified user has an existing
+ * email only differing in case however, we replace it.
+ * @locus Server
+ * @param {String} userId The ID of the user to update.
+ * @param {String} newEmail A new email address for the user.
+ * @param {Boolean} [verified] Optional - whether the new email address should
+ * be marked as verified. Defaults to false.
+ * @importFromPackage accounts-base
+ */
 Accounts.addEmail = function (...args) {
   return Future.fromPromise(this.addEmailAsync(...args)).wait();
 }
