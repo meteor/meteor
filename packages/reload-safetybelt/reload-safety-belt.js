@@ -4,5 +4,5 @@
 // CSS.  This prevents you from displaying the page in that case, and instead
 // reloads it, presumably all on the new version now.
 await (async () => {
-  WebAppInternals.addStaticJs(await Assets.getText("safetybelt.js"));
+  WebAppInternals.addStaticJs(await Assets.getTextAsync("safetybelt.js"));
 })();

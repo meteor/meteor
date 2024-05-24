@@ -53,7 +53,7 @@ const removeTestUser = done => {
 };
 
 const forceEnableUser2fa = done => {
-  Meteor.callAsync('forceEnableUser2fa', {returnServerPromise:true}, { username }, secret2fa).then((token) => {
+  Meteor.callAsync('forceEnableUser2fa', { username }, secret2fa).then((token) => {
     done(token);
   });
 };
@@ -304,3 +304,42 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync('accounts - storage',
+  async function(test) {
+    const expectWhenSessionStorage = () => {
+      test.isNotUndefined(sessionStorage.getItem('Meteor.loginToken'));
+      test.isNull(localStorage.getItem('Meteor.loginToken'));
+    };
+    const expectWhenLocalStorage = () => {
+      test.isNotUndefined(localStorage.getItem('Meteor.loginToken'));
+      test.isNull(sessionStorage.getItem('Meteor.loginToken'));
+    };
+
+    const testCases = [{
+      clientStorage: undefined,
+      expectStorage: expectWhenLocalStorage,
+    }, {
+      clientStorage: 'local',
+      expectStorage: expectWhenLocalStorage,
+    }, {
+      clientStorage: 'session',
+      expectStorage: expectWhenSessionStorage,
+    }];
+    for await (const testCase of testCases) {
+      await new Promise(resolve => {
+        sessionStorage.clear();
+        localStorage.clear();
+
+        const { clientStorage, expectStorage } = testCase;
+        Accounts.config({ clientStorage });
+        test.equal(Accounts._options.clientStorage, clientStorage);
+
+        // Login a user and test that tokens are in expected storage
+        logoutAndCreateUser(test, resolve, () => {
+          Accounts.logout();
+          expectStorage();
+          removeTestUser(resolve);
+        });
+      });
+    }
+  });

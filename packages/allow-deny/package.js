@@ -1,6 +1,6 @@
 Package.describe({
   name: 'allow-deny',
-  version: '2.0.0-alpha300.19',
+  version: '2.0.0-rc300.2',
   // Brief, one-line summary of the package.
   summary: 'Implements functionality for allow/deny and client-side db operations',
   // URL to the Git repository containing the source code for this package.

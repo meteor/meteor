@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '2.0.0-alpha300.19',
+  version: '2.0.0-rc300.2',
 });
 
 Npm.depends({

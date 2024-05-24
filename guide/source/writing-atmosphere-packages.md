@@ -264,13 +264,19 @@ Read more about using Cordova in the [mobile guide](mobile.html).
 
 <h2 id="testing">Testing packages</h2>
 
-Meteor has a test mode for packages called `meteor test-packages`. If you are in a package's directory, you can run
+Meteor has a test mode for packages invoked with the `meteor test-packages` command. Navigate to your package's directory and then use the command to run a special app containing only a "test" version of your package.
+
+If you are using [Tinytest](https://github.com/meteor/meteor/tree/devel/packages/tinytest) for your package's tests, you can run:
+
+```bash
+meteor test-packages ./
+```
+
+If you are using a different testing framework for your package's tests, you'll need to specify a `driver-package`. For example, if you are using Mocha, run the following to start the Mocha [test driver package](testing.html#driver-packages):
 
 ```bash
 meteor test-packages ./ --driver-package meteortesting:mocha
 ```
-
-This will run a special app containing only a "test" version of your package and start a Mocha [test driver package](testing.html#driver-packages).
 
 When your package starts in test mode, rather than loading the `onUse` block, Meteor loads the `onTest` block:
 
@@ -289,6 +295,14 @@ Package.onTest(function(api) {
 ```
 
 From within your test entry point, you can import other files as you would in the package proper.
+
+You can also use [`mtest`](https://github.com/zodern/mtest) to test your packages like so:
+
+```bash
+mtest --package ./ --once 2.14
+```
+
+Which helps immensely if you'd like to test your package in CI/CD setup. You can see an example [here](https://github.com/monti-apm/monti-apm-agent/blob/master/.github/workflows/test.yml).
 
 You can read more about testing in Meteor in the [Testing article](testing.html).
 

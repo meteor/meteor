@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Logging facility.',
-  version: '1.3.3-alpha300.19',
+  version: '1.3.5-rc300.2',
 });
 
 Npm.depends({
@@ -18,11 +18,12 @@ Package.onUse(function (api) {
   // here due to this package's dependency on
   // `String.prototype.padRight` which is polyfilled only in
   // `ecmascript-runtime-client@0.6.2` or newer.
-  api.use(['ejson', 'ecmascript', 'ecmascript-runtime-client']);
+  api.use(['ejson', 'ecmascript', 'typescript', 'ecmascript-runtime-client']);
   api.mainModule('logging.js');
   api.addFiles('logging_server.js', 'server');
   api.addFiles('logging_browser.js', 'client');
   api.mainModule('logging_cordova.js', 'web.cordova');
+  api.addAssets('logging.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

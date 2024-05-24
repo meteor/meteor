@@ -1,6 +1,8 @@
 title: Meteor API Docs
 subtitle: API Docs
 versions:
+  - '2.16'
+  - '2.14'
   - '2.13'
   - '2.12'
   - '2.11'
@@ -89,6 +91,7 @@ sidebar_categories:
     - packages/underscore
     - packages/url
     - packages/webapp
+    - packages/packages-listing
   Command Line:
     - commandline
     - environment-variables

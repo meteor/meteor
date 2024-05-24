@@ -9,6 +9,7 @@ const publicationStrategies = {
   // When using this strategy, the server maintains a copy of all data a connection is subscribed to.
   // This allows us to only send deltas over multiple publications.
   SERVER_MERGE: {
+    useDummyDocumentView: false,
     useCollectionView: true,
     doAccountingForCollection: true,
   },
@@ -17,6 +18,7 @@ const publicationStrategies = {
   // to it will not trigger removed messages when a subscription is stopped.
   // This should only be chosen for special use cases like send-and-forget queues.
   NO_MERGE_NO_HISTORY: {
+    useDummyDocumentView: false,
     useCollectionView: false,
     doAccountingForCollection: false,
   },
@@ -24,8 +26,17 @@ const publicationStrategies = {
   // sent to the client so it can remove them when a subscription is stopped.
   // This strategy can be used when a collection is only used in a single publication.
   NO_MERGE: {
+    useDummyDocumentView: false,
     useCollectionView: false,
     doAccountingForCollection: true,
+  },
+  // NO_MERGE_MULTI is similar to `NO_MERGE`, but it does track whether a document is
+  // used by multiple publications. This has some memory overhead, but it still does not do
+  // diffing so it's faster and slimmer than SERVER_MERGE.
+  NO_MERGE_MULTI: {
+    useDummyDocumentView: true,
+    useCollectionView: true,
+    doAccountingForCollection: true
   }
 };
 
@@ -39,6 +50,26 @@ DDPServer.publicationStrategies = publicationStrategies;
 // Session and Subscription are file scope. For now, until we freeze
 // the interface, Server is package scope (in the future it should be
 // exported).
+var DummyDocumentView = function () {
+  var self = this;
+  self.existsIn = new Set(); // set of subscriptionHandle
+  self.dataByKey = new Map(); // key-> [ {subscriptionHandle, value} by precedence]
+};
+
+Object.assign(DummyDocumentView.prototype, {
+  getFields: function () {
+    return {}
+  },
+
+  clearField: function (subscriptionHandle, key, changeCollector) {
+    changeCollector[key] = undefined
+  },
+
+  changeField: function (subscriptionHandle, key, value,
+                         changeCollector, isAdd) {
+    changeCollector[key] = value
+  }
+});
 
 // Represents a single document in a SessionCollectionView
 var SessionDocumentView = function () {
@@ -202,7 +233,12 @@ Object.assign(SessionCollectionView.prototype, {
     var added = false;
     if (!docView) {
       added = true;
-      docView = new SessionDocumentView();
+      if (Meteor.server.getPublicationStrategy(this.collectionName).useDummyDocumentView) {
+        docView = new DummyDocumentView();
+      } else {
+        docView = new SessionDocumentView();
+      }
+
       self.documents.set(id, docView);
     }
     docView.existsIn.add(subscriptionHandle);
@@ -635,7 +671,7 @@ Object.assign(Session.prototype, {
   },
 
   protocol_handlers: {
-    sub: function (msg, unblock) {
+    sub: async function (msg, unblock) {
       var self = this;
 
       // cacheUnblock temporarly, so we can capture it later
@@ -694,7 +730,7 @@ Object.assign(Session.prototype, {
 
       var handler = self.server.publish_handlers[msg.name];
 
-      self._startSubscription(handler, msg.id, msg.params, msg.name);
+      await self._startSubscription(handler, msg.id, msg.params, msg.name);
 
       // cleaning cached unblock
       self.cachedUnblock = null;
@@ -751,6 +787,7 @@ Object.assign(Session.prototype, {
       };
 
       var invocation = new DDPCommon.MethodInvocation({
+        name: msg.method,
         isSimulation: false,
         userId: self.userId,
         setUserId: setUserId,
@@ -952,7 +989,7 @@ Object.assign(Session.prototype, {
     else
       self._universalSubs.push(sub);
 
-    sub._runHandler();
+    return sub._runHandler();
   },
 
   // Tear down specified subscription
@@ -1126,7 +1163,7 @@ var Subscription = function (
 };
 
 Object.assign(Subscription.prototype, {
-  _runHandler: function() {
+  _runHandler: async function() {
     // XXX should we unblock() here? Either before running the publish
     // function, or before running _publishCursor.
     //
@@ -1166,17 +1203,17 @@ Object.assign(Subscription.prototype, {
     // Both conventional and async publish handler functions are supported.
     // If an object is returned with a then() function, it is either a promise
     // or thenable and will be resolved asynchronously.
-    const isThenable =
+    const isThenable =  
       resultOrThenable && typeof resultOrThenable.then === 'function';
     if (isThenable) {
-      Promise.resolve(resultOrThenable).then(
-        (...args) => self._publishHandlerResult.bind(self)(...args),
-        e => self.error(e)
-      );
+      try {
+        self._publishHandlerResult(await resultOrThenable);
+      } catch(e) {
+        self.error(e)
+      }
     } else {
       self._publishHandlerResult(resultOrThenable);
     }
-
   },
 
   _publishHandlerResult: function (res) {

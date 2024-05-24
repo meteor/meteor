@@ -25,7 +25,7 @@ var compiler = exports;
 // this version number. The idea is that the "format" field of the isopack
 // JSON file only changes when the actual specified structure of the
 // isopack/unibuild changes, but this version (which is build-tool-specific)
-// can change when the the contents (not structure) of the built output
+// can change when the contents (not structure) of the built output
 // changes. So eg, if we improve the linker's static analysis, this should be
 // bumped.
 //

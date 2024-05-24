@@ -72,7 +72,7 @@ selftest.define("'meteor update' updates indirect dependencies with patches", as
   var update = s.run("update");
   // we have direct-dependency@=1.0.0, which depends on indirect@1.0.0
   // we should update to 1.0.1 (only take patches to indirect dependencies)
-  update.match(/indirect-dependency.*1.0.1/);
+  await update.match(/indirect-dependency.*1.0.1/);
   await update.expectExit(0);
 });
 
