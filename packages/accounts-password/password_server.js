@@ -852,6 +852,8 @@ Accounts.addEmailAsync = async (userId, newEmail, verified) => {
   // same as before, but only different because of capitalization. Read the
   // big comment above to understand why.
 
+  let didUpdateOwnEmail = false
+
   for (const email of (user.emails || [])) {
     if (caseInsensitiveRegExp.test(email.address)) {
       await Meteor.users.updateAsync({
@@ -861,8 +863,12 @@ Accounts.addEmailAsync = async (userId, newEmail, verified) => {
         'emails.$.address': newEmail,
         'emails.$.verified': verified
       }});
-      return;
+      didUpdateOwnEmail = true
     }
+  }
+
+  if (didUpdateOwnEmail) {
+    return
   }
 
   // Perform a case insensitive check for duplicates before update
