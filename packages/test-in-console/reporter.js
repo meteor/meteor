@@ -19,9 +19,13 @@ Meteor.methods({
     // XXX Could do a more precise validation here; reports are complex!
     check(reports, [Object]);
     if (url) {
-      await HTTP.post(url, {
-        data: reports
-      });
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reports),
+       });
     }
     return null;
   }

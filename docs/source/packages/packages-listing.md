@@ -14,7 +14,6 @@ description: list of all Meteor core packages.
 
 # Core Packages
 
-This is a list of all Meteor core packages and their repos.
 
 - [blaze](https://github.com/meteor/blaze)
 - [react-packages](https://github.com/meteor/react-packages)
@@ -33,7 +32,6 @@ This is a list of all Meteor core packages and their repos.
 - [accounts-ui-unstyled](https://github.com/meteor/meteor/tree/devel/packages/accounts-ui-unstyled)
 - [accounts-weibo](https://github.com/meteor/meteor/tree/devel/packages/accounts-weibo)
 - [allow-deny](https://github.com/meteor/meteor/tree/devel/packages/allow-deny)
-- [appcache](https://github.com/meteor/meteor/tree/devel/packages/appcache)
 - [audit-argument-checks](https://github.com/meteor/meteor/tree/devel/packages/audit-argument-checks)
 - [autopublish](https://github.com/meteor/meteor/tree/devel/packages/autopublish)
 - [autoupdate](https://github.com/meteor/meteor/tree/devel/packages/autoupdate)

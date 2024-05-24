@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ddp-rate-limiter',
-  version: '1.2.1-alpha300.19',
+  version: '1.2.1-rc300.2',
   // Brief, one-line summary of the package.
   summary: 'The DDPRateLimiter allows users to add rate limits to DDP' +
   ' methods and subscriptions.',
@@ -20,9 +20,8 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use('underscore');
   api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
-           'accounts-base', 'random', 'email', 'underscore', 'check',
+           'accounts-base', 'random', 'email', 'check',
            'ddp', 'ecmascript', 'es5-shim']);
   api.use('ddp-rate-limiter');
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=20.9.0.2
+BUNDLE_VERSION=20.12.2.0
 
 
 # OS Check. Put here because here is where we download the precompiled
@@ -32,9 +32,9 @@ if [ "$UNAME" = "Darwin" ] ; then
     fi
 elif [ "$UNAME" = "Linux" ] ; then
     : "${ARCH:=$(uname -m)}"
-    if [ "$ARCH" != "x86_64" ] ; then
+    if [[ "$ARCH" != "x86_64" && "$ARCH" != "aarch64" ]] ; then
         echo "Unsupported architecture: $ARCH"
-        echo "Meteor only supports x86_64"
+        echo "Meteor only supports x86_64 and aarch64"
         exit 1
     fi
 fi

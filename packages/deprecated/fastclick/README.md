@@ -1,5 +1,5 @@
 # fastclick
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/fastclick) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/fastclick)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/deprecated/fastclick) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/deprecated/fastclick)
 ***
 
 > **Warning:** As of late 2015 most mobile browsers - notably Chrome and Safari - no longer have a 300ms touch delay, so fastclick offers no benefit on newer browsers, and risks introducing [bugs](https://github.com/ftlabs/fastclick/issues) into your application. Consider carefully whether you really need to use it.

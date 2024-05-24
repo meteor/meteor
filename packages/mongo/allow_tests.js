@@ -240,9 +240,7 @@ if (Meteor.isClient) {
         fullName, {idGeneration: idGeneration, transform: transform});
 
       collection.callClearMethod = async function () {
-        await Meteor.callAsync('clear-collection-' + fullName, {
-          returnStubValue: true,
-        });
+        await Meteor.callAsync('clear-collection-' + fullName);
       };
       collection.unnoncedName = name + idGeneration;
       return collection;
@@ -688,7 +686,6 @@ if (Meteor.isClient) {
           // ... but if we did, the server would reject it too.
           await Meteor.callAsync(
             '/' + collection._name + '/updateAsync',
-            { returnStubValue: true },
             { updated: { $exists: false } },
             { $set: { updated: true } }
           ).catch(async function(err, res) {
@@ -718,7 +715,6 @@ if (Meteor.isClient) {
           // ... but if we did, the server would reject it too.
           await Meteor.callAsync(
             '/' + collection._name + '/removeAsync',
-            { returnStubValue: true },
             {
               updated: true,
             }

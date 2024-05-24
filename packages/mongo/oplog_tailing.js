@@ -27,6 +27,7 @@ OplogHandle = function (oplogUrl, dbName) {
 
   self._oplogLastEntryConnection = null;
   self._oplogTailConnection = null;
+  self._oplogOptions = null;
   self._stopped = false;
   self._tailHandle = null;
   self._readyPromiseResolver = null;
@@ -77,9 +78,11 @@ OplogHandle = function (oplogUrl, dbName) {
   self._entryQueue = new Meteor._DoubleEndedQueue();
   self._workerActive = false;
 
-  const shouldAwait = self._startTailing();
+  self._startTrailingPromise = self._startTailing();
   //TODO[fibers] Why wait?
 };
+
+MongoInternals.OplogHandle = OplogHandle;
 
 Object.assign(OplogHandle.prototype, {
   stop: async function () {
@@ -189,7 +192,7 @@ Object.assign(OplogHandle.prototype, {
   // currently visible.
   // XXX become convinced that this is actually safe even if oplogConnection
   // is some kind of pool
-  waitUntilCaughtUp: function () {
+  waitUntilCaughtUp: async function () {
     return this._waitUntilCaughtUp();
   },
 
@@ -214,12 +217,12 @@ Object.assign(OplogHandle.prototype, {
     // The tail connection will only ever be running a single tail command, so
     // it only needs to make one underlying TCP connection.
     self._oplogTailConnection = new MongoConnection(
-        self._oplogUrl, {maxPoolSize: 1});
+        self._oplogUrl, {maxPoolSize: 1, minPoolSize: 1});
     // XXX better docs, but: it's to get monotonic results
     // XXX is it safe to say "if there's an in flight query, just use its
     //     results"? I don't think so but should consider that
     self._oplogLastEntryConnection = new MongoConnection(
-        self._oplogUrl, {maxPoolSize: 1});
+        self._oplogUrl, {maxPoolSize: 1, minPoolSize: 1});
 
 
     // Now, make sure that there actually is a repl set here. If not, oplog
@@ -255,6 +258,40 @@ Object.assign(OplogHandle.prototype, {
       // oplog entries show up, allow callWhenProcessedLatest to call its
       // callback immediately.
       self._lastProcessedTS = lastOplogEntry.ts;
+    }
+
+    // These 2 settings allow you to either only watch certain collections (oplogIncludeCollections), or exclude some collections you don't want to watch for oplog updates (oplogExcludeCollections)
+    // Usage:
+    // settings.json = {
+    //   "packages": {
+    //     "mongo": {
+    //       "oplogExcludeCollections": ["products", "prices"] // This would exclude both collections "products" and "prices" from any oplog tailing. 
+    //                                                            Beware! This means, that no subscriptions on these 2 collections will update anymore!
+    //     }
+    //   }
+    // }
+    const includeCollections = Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
+    const excludeCollections = Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
+    if (includeCollections?.length && excludeCollections?.length) {
+      throw new Error("Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time.");
+    }
+    if (excludeCollections?.length) {
+      oplogSelector.ns = {
+        $regex: oplogSelector.ns,
+        $nin: excludeCollections.map((collName) => `${self._dbName}.${collName}`)
+      }
+      self._oplogOptions = { excludeCollections };
+    }
+    else if (includeCollections?.length) {
+      oplogSelector = { $and: [
+        { $or: [
+          { ns: /^admin\.\$cmd/ },
+          { ns: { $in: includeCollections.map((collName) => `${self._dbName}.${collName}`) } }
+        ] },
+        { $or: oplogSelector.$or }, // the initial $or to select only certain operations (op)
+        { ts: oplogSelector.ts }
+      ] };
+      self._oplogOptions = { includeCollections };
     }
 
     var cursorDescription = new CursorDescription(

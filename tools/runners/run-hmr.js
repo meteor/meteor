@@ -280,7 +280,7 @@ export class HMRServer {
     this.changeSetsByArch[arch].push(result);
     this._trimChangeSets(arch);
 
-    if (!arch in this.trimmedArchUntil) {
+    if (!(arch in this.trimmedArchUntil)) {
       this.trimmedArchUntil[arch] = this.firstBuild - 1;
     }
 
