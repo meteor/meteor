@@ -5,8 +5,8 @@
 // and when used in build plugins can run in old Meteor versions
 
 const clientEcmascriptVersion = 5;
-// Node 8 (Meteor 1.6+) fully supports 2016
-const serverEcmascriptVersion = "2016";
+// Node 8 (Meteor 1.6+) fully supports 2016, and supports most of 2017
+const serverEcmascriptVersion = "2017";
 
 // Latest version - (has TLA)
 const latestEcmascriptVersion = "2022";
@@ -26,15 +26,14 @@ const packages = {
   meteor: {
     serverFiles: [
       "server_environment.js",
+      "dynamics_nodejs.js",
+      "emitter-promise.js"
     ],
 
     // TODO: Fibers
     // Ignored server files that has a features > 2016
     ignoredFiles: [
-      "emitter-promise.js",
-      "dynamics_nodejs.js",
       "async_helpers.js",
-      "asl-helpers.js",
     ]
   },
   "accounts-ui": {},
@@ -54,9 +53,9 @@ const packages = {
   "browser-policy-framing": {},
   // 'constraint-solver': {},
   crosswalk: {},
-  context: {
-    serverFiles: ["context.js"],
-  },
+  // context: { Removed/moved to depracated, we don't need it anymore because of fibers
+  //   serverFiles: ["context.js"],
+  // },
   ddp: {},
   "disable-oplog": {},
   "dynamic-import": {

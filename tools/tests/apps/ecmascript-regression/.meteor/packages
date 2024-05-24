@@ -4,21 +4,21 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
-meteor-base@2.0.0-alpha300.10            # Packages every Meteor app needs to have
-mobile-experience@2.0.0-alpha300.10        # Packages for a great mobile UX
+meteor-base            # Packages every Meteor app needs to have
+mobile-experience@1.1.0       # Packages for a great mobile UX
 mongo@2.0.0-alpha300.10                  # The database Meteor supports right now
-reactive-var@2.0.0-alpha300.10          # Reactive variable for tracker
+reactive-var@1.0.12          # Reactive variable for tracker
 
-standard-minifier-css@2.0.0-alpha300.10    # CSS minifier run for production mode
+standard-minifier-css@1.9.3-alpha300.11    # CSS minifier run for production mode
 standard-minifier-js@3.0.0-alpha300.10    # JS minifier run for production mode
-es5-shim@5.0.0-alpha300.10               # ECMAScript 5 compatibility for older browsers
-ecmascript@1.0.0-alpha300.10             # Enable ECMAScript2015+ syntax in app code
-typescript@5.0.0-alpha300.10            # Enable TypeScript syntax in .ts and .tsx modules
-shell-server@1.0.0-alpha300.10           # Server-side component of the `meteor shell` command
-hot-module-replacement@1.0.0-alpha300.10  # Update client in development without reloading the page
+es5-shim@4.8.0               # ECMAScript 5 compatibility for older browsers
+ecmascript@0.16.8-alpha300.11             # Enable ECMAScript2015+ syntax in app code
+typescript@5.3.3-beta300.7       # Enable TypeScript syntax in .ts and .tsx modules
+shell-server@0.6.0-alpha300.11           # Server-side component of the `meteor shell` command
+hot-module-replacement@0.5.4-alpha300.11  # Update client in development without reloading the page
 
-autopublish@2.0.0-alpha300.10           # Publish all data to the clients (for prototyping)
-insecure@2.0.0-alpha300.10               # Allow all DB writes from clients (for prototyping)
-static-html@2.0.0-alpha300.10            # Define static page content in .html files
-react-meteor-data@3.0.0-alpha300.6       # React higher-order component for reactively tracking Meteor data
-grubba:mocha@3.0.2-alpha300.9
+autopublish@1.0.7           # Publish all data to the clients (for prototyping)
+insecure@1.0.7               # Allow all DB writes from clients (for prototyping)
+static-html@1.3.3-alpha300.11            # Define static page content in .html files
+react-meteor-data@3.0.0-beta300.1   # React higher-order component for reactively tracking Meteor data
+meteortesting:mocha@3.0.3-alpha300.11

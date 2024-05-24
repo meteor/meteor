@@ -1,6 +1,6 @@
 {
   "name": "meteor",
-  "version": "2.12.1",
+  "version": "3.0.0-rc.2",
   "description": "Install Meteor",
   "main": "install.js",
   "scripts": {
@@ -8,12 +8,13 @@
   },
   "author": "zodern",
   "license": "MIT",
+  "type": "commonjs",
   "dependencies": {
     "7zip-bin": "^5.2.0",
     "cli-progress": "^3.11.1",
     "https-proxy-agent": "^5.0.1",
     "node-7z": "^2.1.2",
-    "node-downloader-helper": "^1.0.19",
+    "node-downloader-helper": "^2.1.9",
     "rimraf": "^3.0.2",
     "semver": "^7.3.7",
     "tar": "^6.1.11",
@@ -23,7 +24,7 @@
     "meteor-installer": "cli.js"
   },
   "engines": {
-    "node": "<=14.x",
-    "npm": "<=6.x"
+    "node": ">=20.x",
+    "npm": ">=10.x"
   }
 }

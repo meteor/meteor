@@ -67,7 +67,6 @@ const pinnedPluginVersions = {
   "cordova-plugin-media": "3.0.1",
   "cordova-plugin-media-capture": "1.4.3",
   "cordova-plugin-network-information": "1.3.3",
-  "cordova-plugin-splashscreen": "4.1.0",
   "cordova-plugin-statusbar": "2.3.0",
   "cordova-plugin-test-framework": "1.1.5",
   "cordova-plugin-vibration": "2.1.5",
@@ -452,11 +451,37 @@ ${displayNamesForPlatforms(platforms)}`, async () => {
   }
 
   async addPlatform(platform) {
-    return this.runCommands(`adding platform ${displayNameForPlatform(platform)} \
+    const self = this;
+    return self.runCommands(`adding platform ${displayNameForPlatform(platform)} \
 to Cordova project`, async () => {
       let version = pinnedPlatformVersions[platform];
       let platformSpec = version ? `${platform}@${version}` : platform;
       await cordova_lib.platform('add', platformSpec, this.defaultOptions);
+
+      // As per Npm 8, we need now do inject a package.json file
+      // with the dependencies so that when running any npm command
+      // it keeps the dependencies installed.
+      const packageLock = JSON.parse(files.readFile(
+        files.pathJoin(self.projectRoot, 'node_modules/.package-lock.json')
+      ));
+      const getPackageName = (pkgPath) => {
+        const split = pkgPath.split("node_modules/");
+        return split[split.length - 1];
+      };
+
+      const packageJsonObj = Object.entries(packageLock.packages).reduce((acc, [key, value]) => {
+        const name = getPackageName(key);
+        return ({
+          dependencies: {
+            ...acc.dependencies,
+            [name]: value.version,
+          }
+        });
+      }, { dependencies: {} });
+      files.writeFile(
+        files.pathJoin(self.projectRoot, "package.json"),
+        JSON.stringify(packageJsonObj, null, 2) + "\n"
+      );
     });
   }
 

@@ -128,7 +128,7 @@ Meteor.methods(
         if (!this.userId) throw new Error("Not logged in!");
         await Meteor
           .users
-          .update(this.userId, { $unset: { profile: 1, username: 1 } });
+          .updateAsync(this.userId, { $unset: { profile: 1, username: 1 } });
       },
 
     expireTokens:
@@ -137,6 +137,6 @@ Meteor.methods(
       },
 
     removeUser:
-      async username => await Meteor.users.remove({ "username": username }),
+      async username => await Meteor.users.removeAsync({ "username": username }),
   }
 );

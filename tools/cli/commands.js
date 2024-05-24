@@ -19,10 +19,56 @@ const {
   red,
   yellow
 } = require('../console/console.js').colors;
+const inquirer = require('inquirer');
+
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
 const { Profile } = require("../tool-env/profile");
+const open = require('open')
+
+const { exec } = require("child_process");
+/**
+ * Run a command in the shell.
+ * @param command
+ * @return {Promise<string>}
+ */
+const runCommand = async (command) => {
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.log(red`error: ${ error.message }`);
+        reject(error);
+        return;
+      }
+      if (stderr) {
+        if (stderr.includes("Cloning into")) console.log(green`${ stderr }`);
+        else console.log(red`stderr: ${ stderr }`);
+        reject(stderr);
+        return;
+      }
+      resolve(stdout);
+    });
+  })
+}
+/**
+ *
+ * @param {Promise<<T>() => T>} fn
+ * @returns {Promise<[T, null]> | Promise<[null, Error]>}
+ */
+const tryRun = async (fn) => {
+  try { return [await fn(), null] } catch (e) { return [null, e] }
+}
+
+/**
+ *
+ * @param {string} bash command
+ * @param  {[string, null] | [null, Error]}} Result or Error
+ * @returns
+ */
+const bash =
+  (text, ...values) =>
+    tryRun(() => runCommand(String.raw({ raw: text }, ...values)));
 
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
@@ -311,6 +357,7 @@ var runCommandOptions = {
   maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
+    open: { type: Boolean, short: "o", default: false },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
     'app-port': { type: String },
@@ -332,7 +379,7 @@ var runCommandOptions = {
     // of top-level dependencies.
     'allow-incompatible-update': { type: Boolean },
     'extra-packages': { type: String },
-    'exclude-archs': { type: String }
+    'exclude-archs': { type: String },
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -406,6 +453,7 @@ async function doRunCommand(options) {
     runLog.setRawLogs(true);
   }
 
+
   let webArchs = projectContext.platformList.getWebArchs();
   if (! _.isEmpty(runTargets) ||
       options['mobile-server']) {
@@ -463,7 +511,18 @@ async function doRunCommand(options) {
     cordovaServerPort: parsedCordovaServerPort,
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
-    cordovaRunner: cordovaRunner
+    cordovaRunner: cordovaRunner,
+    onBuilt: function () {
+      // Opens a browser window when it finishes building
+      if (options.open) {
+        console.log("=> Opening your app in a browser...");
+        if (process.env.ROOT_URL) {
+          open(process.env.ROOT_URL)
+        } else {
+          open(`http://localhost:${options.port}`)
+        }
+      }
+    }
   });
 }
 
@@ -513,6 +572,31 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 // create
 ///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * list of all the available skeletons similar to the property below
+ * {
+ * clock: { repo: 'https://github.com/meteor/clock' },
+ * leaderboard: { repo: 'https://github.com/meteor/leaderboard' },
+ * }
+ * @typedef {Object.<string, {repo: string}>} Skeletons
+ */
+/**
+ * Resolves into json with
+ * @returns {Promise<[Skeletons, null]> | Promise<[null, Error]>}
+ */
+function getExamplesJSON(){
+  return tryRun(async () => {
+    const response = await httpHelpers.request({
+      url: "https://cdn.meteor.com/static/meteor.json",
+      method: "GET",
+      useSessionHeader: true,
+      useAuthHeader: true,
+    });
+    return JSON.parse(response.body);
+  });
+}
+
 const DEFAULT_SKELETON = "react";
 export const AVAILABLE_SKELETONS = [
   "apollo",
@@ -523,16 +607,31 @@ export const AVAILABLE_SKELETONS = [
   DEFAULT_SKELETON,
   "typescript",
   "vue",
-  'vue-2',
   "svelte",
   "tailwind",
   "chakra-ui",
   "solid",
 ];
 
+const SKELETON_INFO = {
+  "apollo": "To create a basic Apollo + React app",
+  "bare": "To create an empty app",
+  "blaze": "To create an app using Blaze",
+  "full": "To create a more complete scaffolded app",
+  "minimal": "To create an app with as few Meteor packages as possible",
+  "react": "To create a basic React-based app",
+  "typescript": "To create an app using TypeScript and React",
+  "vue": "To create a basic Vue3-based app",
+  "svelte": "To create a basic Svelte app",
+  "tailwind": "To create an app using React and Tailwind",
+  "chakra-ui": "To create an app Chakra UI and React",
+  "solid": "To create a basic Solid app"
+}
+
 main.registerCommand({
   name: 'create',
   maxArgs: 1,
+  minArgs: 0,
   options: {
     list: { type: Boolean },
     example: { type: String },
@@ -543,15 +642,16 @@ main.registerCommand({
     blaze: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
-    'vue-2': { type: Boolean },
     typescript: { type: Boolean },
     apollo: { type: Boolean },
     svelte: { type: Boolean },
     tailwind: { type: Boolean },
     'chakra-ui': { type: Boolean },
     solid: { type: Boolean },
-    prototype: { type: Boolean }
+    prototype: { type: Boolean },
+    from: { type: String },
   },
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
   // Creating a package is much easier than creating an app, so if that's what
@@ -561,10 +661,12 @@ main.registerCommand({
     var packageName = options.args[0];
     if (options.prototype) {
       Console.error(
-        `The ${Console.command('--prototype')} option is no longer supported for packages.`
+        `The ${Console.command(
+          "--prototype"
+        )} option is no longer supported for packages.`
       );
       Console.error();
-      throw new main.ShowUsage;
+      throw new main.ShowUsage();
     }
     if (options.list || options.example) {
       Console.error("No package examples exist at this time.");
@@ -577,8 +679,9 @@ main.registerCommand({
       throw new main.ShowUsage();
     }
 
-    utils.validatePackageNameOrExit(
-      packageName, {detailedColonExplanation: true});
+    utils.validatePackageNameOrExit(packageName, {
+      detailedColonExplanation: true,
+    });
 
     // When we create a package, avoid introducing a colon into the file system
     // by naming the directory after the package name without the prefix.
@@ -593,8 +696,9 @@ main.registerCommand({
         // with at least two colons. Therefore we will at least try to
         // discourage people from putting a ton of colons in their package names
         // here.
-        Console.error(packageName +
-          ": Package names may not have more than one colon.");
+        Console.error(
+          packageName + ": Package names may not have more than one colon."
+        );
         return 1;
       }
 
@@ -603,7 +707,7 @@ main.registerCommand({
 
     var packageDir;
     if (options.appDir) {
-      packageDir = files.pathResolve(options.appDir, 'packages', fsName);
+      packageDir = files.pathResolve(options.appDir, "packages", fsName);
     } else {
       packageDir = files.pathResolve(fsName);
     }
@@ -616,8 +720,7 @@ main.registerCommand({
     }
 
     var transform = async function (x) {
-      var xn =
-        x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
+      var xn = x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
 
       // If we are running from checkout, comment out the line sourcing packages
       // from a release, with the latest release filled in (in case they do want
@@ -631,7 +734,7 @@ main.registerCommand({
         relString = rel ? rel.version : "no-release";
       } else {
         xn = xn.replace(/~cc~/g, "");
-        relString = release.current.getDisplayName({noPrefix: true});
+        relString = release.current.getDisplayName({ noPrefix: true });
       }
 
       // If we are not in checkout, write the current release here.
@@ -639,35 +742,37 @@ main.registerCommand({
     };
 
     try {
-      await files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel-pack'), packageDir, {
-        transformFilename: function (f) {
-          return transform(f);
-        },
-        transformContents: async function (contents, f) {
-          if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
-            return Buffer.from(await transform(contents.toString()));
-          } else {
-            return contents;
-          }
-        },
-        ignore: [/^local$/],
-        preserveSymlinks: true,
-      });
+      await files.cp_r(
+        files.pathJoin(__dirnameConverted, "..", "static-assets", "skel-pack"),
+        packageDir,
+        {
+          transformFilename: function (f) {
+            return transform(f);
+          },
+          transformContents: async function (contents, f) {
+            if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+              return Buffer.from(await transform(contents.toString()));
+            } else {
+              return contents;
+            }
+          },
+          ignore: [/^local$/],
+          preserveSymlinks: true,
+        }
+      );
     } catch (err) {
       Console.error("Could not create package: " + err.message);
       return 1;
     }
 
-    var displayPackageDir =
-      files.convertToOSPath(files.pathRelative(files.cwd(), packageDir));
+    var displayPackageDir = files.convertToOSPath(
+      files.pathRelative(files.cwd(), packageDir)
+    );
 
     // Since the directory can't have colons, the directory name will often not
     // match the name of the package exactly, therefore we should tell people
     // where it was created.
-    Console.info(
-      packageName + ": created in",
-      Console.path(displayPackageDir)
-    );
+    Console.info(packageName + ": created in", Console.path(displayPackageDir));
 
     return 0;
   }
@@ -682,61 +787,100 @@ main.registerCommand({
   // (In particular, it's not sufficient to create the new app with
   // this version of the tools, and then stamp on the correct release
   // at the end.)
-  if (! release.current.isCheckout() && !release.forced) {
-    if (release.current.name !== await release.latestKnown()) {
+  if (!release.current.isCheckout() && !release.forced) {
+    if (release.current.name !== (await release.latestKnown())) {
       throw new main.SpringboardToLatestRelease();
     }
   }
 
   if (options.list) {
     Console.info("Available examples:");
-    _.each(EXAMPLE_REPOSITORIES, function (repoInfo, name) {
-      const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : '';
+    const [json, err] = await getExamplesJSON()
+    if (err) {
+      Console.error("Failed to fetch examples:", err.message);
+      Console.info("Using cached examples.json");
+    }
+    const examples = err ? EXAMPLE_REPOSITORIES : json;
+    _.each(examples, function (repoInfo, name) {
+      const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : "";
       Console.info(
         Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
-        Console.options({ indent: 2 }));
+        Console.options({ indent: 2 })
+      );
     });
 
     Console.info();
-    Console.info("To create an example, simply", Console.command("git clone"),
-      "the relevant repository and branch (run",
-      Console.command("'meteor create --example <name>'"),
-      " to see the full command).");
-    return 0;
-  };
-
-  if (options.example) {
-    const repoInfo = EXAMPLE_REPOSITORIES[options.example];
-    if (!repoInfo) {
-      Console.error(`${options.example}: no such example.`);
-      Console.error(
-        "List available applications with",
-        Console.command("'meteor create --list'") + ".");
-      return 1;
-    }
-
-    const branchOption = repoInfo.branch ? ` -b ${repoInfo.branch}` : '';
-    const path = options.args.length === 1 ? ` ${options.args[0]}` : '';
-
-    Console.info(`To create the ${options.example} example, please run:`);
     Console.info(
-      Console.command(`git clone ${repoInfo.repo}${branchOption}${path}`),
-      Console.options({ indent: 2 }));
-
+      "To create an example, simply",
+      Console.command("'meteor create <app-name> --example <name>'")
+    );
     return 0;
   }
 
-  var appPathAsEntered;
-  if (options.args.length === 1) {
-    appPathAsEntered = options.args[0];
-  } else {
-    throw new main.ShowUsage();
+  /**
+   *
+   * @returns {{appPathAsEntered: string, skeleton: string }}
+   */
+  const setup = async () => {
+    // meteor create app-name
+    if (options.args.length === 1) {
+      const appPathAsEntered = options.args[0];
+      const skeletonExplicitOption =
+        AVAILABLE_SKELETONS.find(skeleton => !!options[skeleton]);
+
+      const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
+
+      console.log(`Using ${green`${skeleton}`} skeleton`);
+      return {
+        appPathAsEntered,
+        skeleton
+      }
+    }
+    function capitalizeFirstLetter(string) {
+      return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+    const prompt = inquirer.createPromptModule();
+    // meteor create
+    // need to ask app name and skeleton
+    const r = await prompt([
+      {
+        type: 'input',
+        name: 'appPathAsEntered',
+        message: `What is the name/path of your ${yellow`app`}? `,
+        default(){
+          return 'my-app';
+        }
+      },
+      {
+        type: 'list',
+        name: 'skeleton',
+        message: `Which ${yellow`skeleton`} do you want to use?`,
+        choices: AVAILABLE_SKELETONS.map(skeleton => {return `${capitalizeFirstLetter(skeleton)} # ${SKELETON_INFO[skeleton]}`}),
+        default(){
+          return `${capitalizeFirstLetter(DEFAULT_SKELETON)} # ${SKELETON_INFO[DEFAULT_SKELETON]}`;
+        },
+        filter(val) {
+          const skel = val.split(' ')[0];
+          console.log(`Using ${green`${skel}`} skeleton`);
+          return skel.toLowerCase();
+        }
+      }
+    ])
+    return r;
   }
+
+  var {
+    appPathAsEntered,
+    skeleton
+  } = await setup();
+  Console.setPretty(true) // to not lose the console
+
   var appPath = files.pathResolve(appPathAsEntered);
 
   if (files.findAppDir(appPath)) {
     Console.error(
-      "You can't create a Meteor project inside another Meteor project.");
+      "You can't create a Meteor project inside another Meteor project."
+    );
     return 1;
   }
 
@@ -748,60 +892,58 @@ main.registerCommand({
     appName = files.pathBasename(appPath);
   }
 
-
   var transform = function (x) {
     return x.replace(/~name~/g, appName);
   };
 
   // These file extensions are usually metadata, not app code
-  var nonCodeFileExts = ['.txt', '.md', '.json', '.sh'];
+  var nonCodeFileExts = [".txt", ".md", ".json", ".sh"];
 
   var destinationHasCodeFiles = false;
 
   // If the directory doesn't exist, it clearly doesn't have any source code
   // inside itself
   if (files.exists(appPath)) {
-    destinationHasCodeFiles = _.any(files.readdir(appPath),
-        function thisPathCountsAsAFile(filePath) {
-      // We don't mind if there are hidden files or directories (this includes
-      // .git) and we don't need to check for .meteor here because the command
-      // will fail earlier
-      var isHidden = /^\./.test(filePath);
-      if (isHidden) {
-        // Not code
-        return false;
-      }
+    destinationHasCodeFiles = _.any(
+      files.readdir(appPath),
+      function thisPathCountsAsAFile(filePath) {
+        // We don't mind if there are hidden files or directories (this includes
+        // .git) and we don't need to check for .meteor here because the command
+        // will fail earlier
+        var isHidden = /^\./.test(filePath);
+        if (isHidden) {
+          // Not code
+          return false;
+        }
 
-      // We do mind if there are non-hidden directories, because we don't want
-      // to recursively check everything to do some crazy heuristic to see if
-      // we should try to create an app.
-      var stats = files.stat(files.pathJoin(appPath, filePath));
-      if (stats.isDirectory()) {
-        // Could contain code
+        // We do mind if there are non-hidden directories, because we don't want
+        // to recursively check everything to do some crazy heuristic to see if
+        // we should try to create an app.
+        var stats = files.stat(files.pathJoin(appPath, filePath));
+        if (stats.isDirectory()) {
+          // Could contain code
+          return true;
+        }
+
+        // Check against our file extension white list
+        var ext = files.pathExtname(filePath);
+        if (ext == "" || nonCodeFileExts.includes(ext)) {
+          return false;
+        }
+
+        // Everything not matched above is considered to be possible source code
         return true;
       }
-
-      // Check against our file extension white list
-      var ext = files.pathExtname(filePath);
-      if (ext == '' || nonCodeFileExts.includes(ext)) {
-        return false;
-      }
-
-      // Everything not matched above is considered to be possible source code
-      return true;
-    });
+    );
   }
-
-  var toIgnore = [/^local$/, /^\.id$/];
-  if (destinationHasCodeFiles) {
-    // If there is already source code in the directory, don't copy our
-    // skeleton app code over it. Just create the .meteor folder and metadata
-    toIgnore.push(/(\.html|\.js|\.css)/);
+  function cmd(text) {
+    Console.info(
+      Console.command(text),
+      Console.options({
+        indent: 2,
+      })
+    );
   }
-
-  const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
-    !!options[skeleton]);
-  const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
   await files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
     `skel-${skeleton}`), appPath, {
     transformFilename: function (f) {
@@ -834,120 +976,225 @@ main.registerCommand({
     preserveSymlinks: true,
   });
 
-  // We are actually working with a new meteor project at this point, so
-  // set up its context.
-  var projectContext = new projectContextModule.ProjectContext({
-    projectDir: appPath,
-    // Write .meteor/versions even if --release is specified.
-    alwaysWritePackageMap: true,
-    // examples come with a .meteor/versions file, but we shouldn't take it
-    // too seriously
-    allowIncompatibleUpdate: true
-  });
+  // Setup fn, which is called after the app is created, to print a message
+  // about how to run the app.
+  async function setupMessages() {
+    // We are actually working with a new meteor project at this point, so
+    // set up its context.
+    var projectContext = new projectContextModule.ProjectContext({
+      projectDir: appPath,
+      // Write .meteor/versions even if --release is specified.
+      alwaysWritePackageMap: true,
+      // examples come with a .meteor/versions file, but we shouldn't take it
+      // too seriously
+      allowIncompatibleUpdate: true,
+    });
+    await main.captureAndExit(
+      "=> Errors while creating your project",
+      async function () {
+        await projectContext.readProjectMetadata();
+        if (buildmessage.jobHasMessages()) {
+          return;
+        }
 
-  await main.captureAndExit("=> Errors while creating your project", async function () {
-    await projectContext.readProjectMetadata();
-    if (buildmessage.jobHasMessages()) {
-      return;
+        await projectContext.releaseFile.write(
+          release.current.isCheckout() ? "none" : release.current.name
+        );
+        if (buildmessage.jobHasMessages()) {
+          return;
+        }
+
+        // Also, write package version constraints from the current release
+        // If we are on a checkout, we don't need to do this as running from
+        // checkout still pins all package versions and if the user updates
+        // to a real release, the packages file will subsequently get updated
+        if (!release.current.isCheckout()) {
+          projectContext.projectConstraintsFile.updateReleaseConstraints(
+            release.current._manifest
+          );
+        }
+
+        // Any upgrader that is in this version of Meteor doesn't need to be run on
+        // this project.
+        var upgraders = require("../upgraders.js");
+        projectContext.finishedUpgraders.appendUpgraders(
+          upgraders.allUpgraders()
+        );
+
+        await projectContext.prepareProjectForBuild();
+      }
+    );
+    // No need to display the PackageMapDelta here, since it would include all of
+    // the packages (or maybe an unpredictable subset based on what happens to be
+    // in the template's versions file).
+
+    // Since some of the project skeletons include npm `devDependencies`, we need
+    // to make sure they're included when running `npm install`.
+    await require("./default-npm-deps.js").install(appPath, {
+      includeDevDependencies: true,
+    });
+
+    var appNameToDisplay =
+      appPathAsEntered === "." ? "current directory" : `'${appPathAsEntered}'`;
+
+    var message = `Created a new Meteor app in ${appNameToDisplay}`;
+
+    message += ".";
+
+    Console.info(message + "\n");
+
+    // Print a nice message telling people we created their new app, and what to
+    // do next.
+    Console.info("To run your new app:");
+
+
+
+    if (appPathAsEntered !== ".") {
+      // Wrap the app path in quotes if it contains spaces
+      const appPathWithQuotesIfSpaces =
+        appPathAsEntered.indexOf(" ") === -1
+          ? appPathAsEntered
+          : `'${appPathAsEntered}'`;
+
+      // Don't tell people to 'cd .'
+      cmd("cd " + appPathWithQuotesIfSpaces);
     }
 
-    await projectContext.releaseFile.write(
-      release.current.isCheckout() ? "none" : release.current.name);
-    if (buildmessage.jobHasMessages()) {
-      return;
-    }
+    cmd("meteor");
 
-    // Also, write package version constraints from the current release
-    // If we are on a checkout, we don't need to do this as running from
-    // checkout still pins all package versions and if the user updates
-    // to a real release, the packages file will subsequently get updated
-    if (!release.current.isCheckout()) {
-      projectContext.projectConstraintsFile
-        .updateReleaseConstraints(release.current._manifest);
-    }
+    Console.info("");
+    Console.info(
+      "If you are new to Meteor, try some of the learning resources here:"
+    );
+    Console.info(
+      Console.url("https://www.meteor.com/tutorials"),
+      Console.options({ indent: 2 })
+    );
 
-    // Any upgrader that is in this version of Meteor doesn't need to be run on
-    // this project.
-    var upgraders = require('../upgraders.js');
-    projectContext.finishedUpgraders.appendUpgraders(upgraders.allUpgraders());
+    Console.info("");
+    Console.info(
+      "When you’re ready to deploy and host your new Meteor application, check out Cloud:"
+    );
+    Console.info(
+      Console.url("https://www.meteor.com/cloud"),
+      Console.options({ indent: 2 })
+    );
 
-    await projectContext.prepareProjectForBuild();
-  });
-  // No need to display the PackageMapDelta here, since it would include all of
-  // the packages (or maybe an unpredictable subset based on what happens to be
-  // in the template's versions file).
-
-  // Since some of the project skeletons include npm `devDependencies`, we need
-  // to make sure they're included when running `npm install`.
-  await require("./default-npm-deps.js").install(
-    appPath,
-    { includeDevDependencies: true }
-  );
-
-  var appNameToDisplay = appPathAsEntered === "." ?
-    "current directory" : `'${appPathAsEntered}'`;
-
-  var message = `Created a new Meteor app in ${appNameToDisplay}`;
-
-  message += ".";
-
-  Console.info(message + "\n");
-
-  // Print a nice message telling people we created their new app, and what to
-  // do next.
-  Console.info("To run your new app:");
-
-  function cmd(text) {
-    Console.info(Console.command(text), Console.options({
-      indent: 2
-    }));
   }
 
-  if (appPathAsEntered !== ".") {
-    // Wrap the app path in quotes if it contains spaces
-    const appPathWithQuotesIfSpaces = appPathAsEntered.indexOf(' ') === -1 ?
-      appPathAsEntered :
-      `'${appPathAsEntered}'`;
+  /**
+   *
+   * @param {string} url
+   */
+  const setupExampleByURL = async (url) => {
+    const [ok, err] = await bash`git -v`;
+    if (err) throw new Error("git is not installed");
+    await bash`git clone --progress ${url} ${appPath} `;
+    // remove .git folder from the example
+    await files.rm_recursive_async(files.pathJoin(appPath, ".git"));
+    await setupMessages();
+  };
 
-    // Don't tell people to 'cd .'
-    cmd("cd " + appPathWithQuotesIfSpaces);
+  if (options.example) {
+    const [json, err] = await getExamplesJSON();
+
+    if (err) {
+      Console.error("Failed to fetch examples:", err.message);
+      Console.info("Using cached examples.json");
+    }
+
+    const examples = err ? EXAMPLE_REPOSITORIES : json;
+    const repoInfo = examples[options.example];
+    if (!repoInfo) {
+      Console.error(`${options.example}: no such example.`);
+      Console.error(
+        "List available applications with",
+        Console.command("'meteor create --list'") + "."
+      );
+      return 1;
+    }
+    // repoInfo.repo is the URL of the repo, and repoInfo.branch is the branch
+    await setupExampleByURL(repoInfo.repo);
+    return 0;
   }
 
-  cmd("meteor");
 
-  Console.info("");
-  Console.info("If you are new to Meteor, try some of the learning resources here:");
-  Console.info(
-    Console.url("https://www.meteor.com/tutorials"),
-      Console.options({ indent: 2 }));
+  if (options.from) {
+    await setupExampleByURL(options.from);
+    return 0;
+  }
 
-  Console.info("");
-  Console.info("When you’re ready to deploy and host your new Meteor application, check out Cloud:");
-  Console.info(
-    Console.url("https://www.meteor.com/cloud"),
-      Console.options({ indent: 2 }));
+  var toIgnore = [/^local$/, /^\.id$/];
+  if (destinationHasCodeFiles) {
+    // If there is already source code in the directory, don't copy our
+    // skeleton app code over it. Just create the .meteor folder and metadata
+    toIgnore.push(/(\.html|\.js|\.css)/);
+  }
 
-  if (!!skeletonExplicitOption) {
-    // Notify people about the skeleton options
-    Console.info([
-      "",
-      "To start with a different app template, try one of the following:",
-      "",
-    ].join("\n"));
+  try {
+    // Prototype option should use local skeleton.
+    // Maybe we should use a different skeleton for prototype
+    if (options.prototype) throw new Error("Using prototype option");
+    // if using the release option we should use the default skeleton
+    // using it as it was before 2.x
+    if (release.explicit) throw new Error("Using release option");
 
-    cmd("meteor create --bare       # to create an empty app");
-    cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
-    cmd("meteor create --full       # to create a more complete scaffolded app");
-    cmd("meteor create --react      # to create a basic React-based app");
-    cmd("meteor create --vue        # to create a basic Vue3-based app");
-    cmd("meteor create --vue-2      # to create a basic Vue2-based app");
-    cmd("meteor create --apollo     # to create a basic Apollo + React app");
-    cmd("meteor create --svelte     # to create a basic Svelte app");
-    cmd("meteor create --typescript # to create an app using TypeScript and React");
-    cmd("meteor create --blaze      # to create an app using Blaze");
-    cmd("meteor create --tailwind   # to create an app using React and Tailwind");
-    cmd("meteor create --chakra-ui  # to create an app Chakra UI and React");
-    cmd("meteor create --solid      # to create a basic Solid app");
+    await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`);
+  } catch (e) {
+
+    if (
+      e.message !== "Using prototype option" &&
+      e.message !== "Using release option"
+    ) {
+      // something has happened while creating the app using git clone
+      Console.error(
+        `Something has happened while creating your app using git clone.
+         Will use cached version of skeletons.
+         Error message: `,
+        e.message
+      );
+    }
+
+       // TODO: decide if this should stay here or not.
+       await files.cp_r(
+        files.pathJoin(
+          __dirnameConverted,
+          "..",
+          "static-assets",
+          `skel-${skeleton}`
+        ),
+        appPath,
+        {
+          transformFilename: function (f) {
+            return transform(f);
+          },
+          transformContents: function (contents, f) {
+            // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
+            if (/packages/.test(f)) {
+              const prototypePackages = () =>
+                "autopublish             # Publish all data to the clients (for prototyping)\n" +
+                "insecure                # Allow all DB writes from clients (for prototyping)";
+
+              // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
+              if (options.prototype) {
+                return Buffer.from(
+                  contents.toString().replace(/~prototype~/g, prototypePackages())
+                );
+              } else {
+                return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
+              }
+            }
+            if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+              return Buffer.from(transform(contents.toString()));
+            } else {
+              return contents;
+            }
+          },
+          ignore: toIgnore,
+          preserveSymlinks: true,
+        }
+      );
+      await setupMessages();
   }
 
   Console.info("");
@@ -1734,6 +1981,7 @@ testCommandOptions = {
   catalogRefresh: new catalog.Refresh.Never(),
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
+    open: { type: Boolean, short: "o", default: false },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
     'debug-port': { type: String },
@@ -1820,7 +2068,7 @@ main.registerCommand(Object.assign(
 async function doTestCommand(options) {
   // This "metadata" is accessed in a few places. Using a global
   // variable here was more expedient than navigating the many layers
-  // of abstraction across the the build process.
+  // of abstraction across the build process.
   //
   // As long as the Meteor CLI runs a single command as part of each
   // process, this should be safe.
@@ -2192,7 +2440,18 @@ var runTestAppForPackages = async function (projectContext, options) {
       // On the first run, we shouldn't display the delta between "no packages
       // in the temp app" and "all the packages we're testing". If we make
       // changes and reload, though, it's fine to display them.
-      omitPackageMapDeltaDisplayOnFirstRun: true
+      omitPackageMapDeltaDisplayOnFirstRun: true,
+      onBuilt: function () {
+        // Opens a browser window when it finishes building
+        if (options.open) {
+          console.log("=> Opening your app in a browser...");
+          if (process.env.ROOT_URL) {
+            open(process.env.ROOT_URL)
+          } else {
+            open(`http://localhost:${options.port}`)
+          }
+        }
+      }
     });
   }
 };

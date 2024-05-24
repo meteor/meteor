@@ -239,14 +239,10 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
 
           const callOp = async function(callback) {
             try {
-              let result;
               if (op === 'updateAsync') {
-                result = await ftc[op](arg, arg2);
+                await ftc[op](arg, arg2);
               } else {
-                result = await ftc[op](arg);
-              }
-              if (result?.stubValuePromise) {
-                await result.stubValuePromise;
+                await ftc[op](arg);
               }
             } catch (e) {
               callback(e);
@@ -266,7 +262,6 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
 
             // This would log to console in normal operation.
             Meteor._suppress_log(1);
-            await callOp();
           }
         }
       } catch (e) {}
@@ -1667,7 +1662,7 @@ _.each( [ 'MONGO', 'STRING'], function(idGeneration) {
         const testWidget = {
           name: 'Widget name',
         };
-        const insertDetails = await coll.upsertAsync(testWidget._id, testWidget, { returnStubValue: true });
+        const insertDetails = await coll.upsertAsync(testWidget._id, testWidget);
         test.equal(
           await coll.findOneAsync(insertDetails.insertedId),
           Object.assign({ _id: insertDetails.insertedId }, testWidget)
@@ -2825,7 +2820,7 @@ testAsyncMulti("mongo-livedata - specified _id", [
 // Consistent id generation tests
 async function collectionInsert (test, expect, coll, index) {
   const id = await coll.insertAsync({name: "foo"});
-  const o = await coll.findOneAsync(id);
+  const o = await coll.findOneAsync(id) || {};
   test.isTrue(_.isObject(o));
   test.equal(o.name, 'foo');
 }
@@ -2860,7 +2855,6 @@ async function collectionUpsertExisting(test, expect, coll, index) {
 async function functionCallsInsert(test, expect, coll, index) {
   const ids = await Meteor.callAsync(
     'insertObjects',
-    { returnStubValue: Meteor.isClient },
     coll._name,
     { name: 'foo' },
     1,
@@ -2881,7 +2875,6 @@ async function functionCallsUpsert(test, expect, coll, index) {
   const upsertId = '123456' + index;
   const result = await Meteor.callAsync(
     'upsertObject',
-    { returnStubValue: Meteor.isClient },
     coll._name,
     upsertId,
     {
@@ -2905,7 +2898,6 @@ async function functionCallsUpsertExisting(test, expect, coll, index) {
 
   const result = await Meteor.callAsync(
     'upsertObject',
-    { returnStubValue: Meteor.isClient },
     coll._name,
     id,
     {
@@ -2923,7 +2915,6 @@ async function functionCallsUpsertExisting(test, expect, coll, index) {
 async function functionCalls3Inserts(test, expect, coll, index) {
   const ids = await Meteor.callAsync(
     'insertObjects',
-    { returnStubValue: Meteor.isClient },
     coll._name,
     { name: 'foo' },
     3
@@ -2944,7 +2935,6 @@ async function functionCalls3Inserts(test, expect, coll, index) {
 async function functionChainInsert(test, expect, coll, index) {
   const ids = await Meteor.callAsync(
     'doMeteorCall',
-    { returnStubValue: Meteor.isClient },
     'insertObjects',
     coll._name,
     { name: 'foo' },
@@ -2966,7 +2956,6 @@ async function functionChainInsert(test, expect, coll, index) {
 async function functionChain2Insert(test, expect, coll, index) {
   const ids = await Meteor.callAsync(
     'doMeteorCall',
-    { returnStubValue: Meteor.isClient },
     'doMeteorCall',
     'insertObjects',
     coll._name,
@@ -2990,7 +2979,6 @@ async function functionChain2Upsert(test, expect, coll, index) {
   const upsertId = '123456' + index;
   const result = await Meteor.callAsync(
     'doMeteorCall',
-    { returnStubValue: Meteor.isClient },
     'doMeteorCall',
     'upsertObject',
     coll._name,
@@ -3031,7 +3019,7 @@ _.each(
               ' collections, idGeneration=' +
               idGeneration,
             [
-              function(test) {
+              function(test, expect) {
                 var collectionOptions = { idGeneration: idGeneration };
 
                 var cleanups = (this.cleanups = []);
@@ -3043,7 +3031,7 @@ _.each(
                       collectionName,
                       collectionOptions
                     );
-                    Meteor.subscribe('c-' + collectionName);
+                    Meteor.subscribe('c-' + collectionName, expect());
                     cleanups.push(async function(expect) {
                       await Meteor.callAsync(
                         'dropInsecureCollection',
@@ -3706,12 +3694,12 @@ EJSON.addType('someCustomType', function (json) {
 });
 
 testAsyncMulti('mongo-livedata - oplog - update EJSON', [
-  async function(test) {
+  async function(test, expect) {
     var self = this;
     var collectionName = 'ejson' + Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName);
-      Meteor.subscribe('c-' + collectionName);
+      await Meteor.callAsync('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName, expect());
     }
 
     self.collection = new Mongo.Collection(collectionName);
@@ -3724,7 +3712,6 @@ testAsyncMulti('mongo-livedata - oplog - update EJSON', [
         oi: self.objId,
         custom: new TestCustomType('a', 'b'),
       },
-      { returnServerResultPromise: true }
     );
   },
   async function(test, expect) {
@@ -4046,12 +4033,12 @@ if (Meteor.isClient) {
       var self = this;
       self.nonce = Random.id();
       const r = await Meteor.callAsync('fenceOnBeforeFireError1', self.nonce);
-      test.isTrue(await r.stubValuePromise);
+      test.isTrue(r);
     },
     async function(test, expect) {
       var self = this;
       const r = await Meteor.callAsync('fenceOnBeforeFireError2', self.nonce);
-      test.isTrue(await r.stubValuePromise);
+      test.isTrue(r);
     },
   ]);
 } else {
@@ -4272,3 +4259,267 @@ if (Meteor.isServer) {
     });
   });
 }
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('mongo-livedata - asyncIterator', async function(test) {
+    const Collection = new Mongo.Collection(`asynciterator_test_${test.runId()}`);
+
+    await Collection.insertAsync({ _id: 'a' });
+    await Collection.insertAsync({ _id: 'b' });
+
+    let itemIds = [];
+    for await (const item of Collection.find()) {
+      itemIds.push(item._id);
+    }
+    test.equal(itemIds.length, 2);
+    test.equal(itemIds, ['a', 'b']);
+  });
+}
+
+Tinytest.addAsync(
+  'mongo-livedata - maintained isomorphism on collection operations for both client and server',
+  async function (test) {
+    const Collection = new Mongo.Collection(
+      `maintained_col_op_iso${test.runId()}`,
+      { resolverType: 'stub' }
+    );
+
+    await Collection.insertAsync({ _id: 'a' });
+    await Collection.insertAsync({ _id: 'b' });
+
+    let items = await Collection.find().fetchAsync();
+    let itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a', 'b']);
+
+    await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+    await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
+
+    items = await Collection.find().fetchAsync();
+    itemIds = items.map(_item => _item.num);
+
+    test.equal(itemIds, [1, 2]);
+
+    await Collection.removeAsync({ _id: 'a' });
+    await Collection.removeAsync({ _id: 'b' });
+
+    items = await Collection.find().fetchAsync();
+
+    test.equal(items, []);
+  },
+);
+
+testAsyncMulti(
+  'mongo-livedata - collection async operations data persistence',
+  [
+    async function (test) {
+      // Using remote collection
+      const Collection = new Mongo.Collection(
+        `remoteop_persistence${test.runId()}`,
+        {
+          resolverType: Meteor.isClient ? 'stub' : 'server',
+        },
+      );
+
+      await Collection.insertAsync({ _id: 'a' });
+      await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+      const insertedId = await Collection.insertAsync({ num: 2 });
+
+      let items = await Collection.find().fetchAsync();
+      let itemIds = items.map(_item => _item._id);
+      test.equal(itemIds, ['a', insertedId]); // temporary data accessible
+
+      const aItem = items[0];
+      const insertedItem = items[1];
+      test.equal(aItem?.num, 1);
+      test.equal(insertedItem?.num, 2);
+
+      await Collection.removeAsync({ _id: insertedId });
+
+      items = await Collection.find().fetchAsync();
+      itemIds = items.map(_item => _item._id);
+
+      test.equal(itemIds, ['a']); // temporary data accessible
+
+      if (Meteor.isClient) {
+        return waitUntil(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item._id);
+          return itemIds?.length === []?.length; // data IS NOT persisted
+        }, { description: 'data IS NOT persisted'});
+      }
+
+      return Promise.resolve();
+    },
+    async function (test) {
+      // Using local collection
+      const Collection = new Mongo.Collection(
+        `localop_persistence${test.runId()}`,
+      );
+
+      await Collection._collection.insertAsync({ _id: 'a' });
+      await Collection._collection.updateAsync(
+        { _id: 'a' },
+        { $set: { num: 1 } },
+      );
+      const insertedId = await Collection._collection.insertAsync({ num: 2 });
+
+      let items = await Collection.find().fetchAsync();
+      let itemIds = items.map(_item => _item._id);
+      test.equal(itemIds, ['a', insertedId]); // temporary data accessible
+
+      const aItem = items[0];
+      const insertedItem = items[1];
+      test.equal(aItem?.num, 1);
+      test.equal(insertedItem?.num, 2);
+
+      await Collection._collection.removeAsync({ _id: insertedId });
+
+      items = await Collection.find().fetchAsync();
+      itemIds = items.map(_item => _item._id);
+
+      test.equal(itemIds, ['a']); // temporary data accessible
+
+      if (Meteor.isClient) {
+        return waitUntil(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item._id);
+          return itemIds?.length === 1 && itemIds[0] === 'a'; // data is persisted
+        }, { description: 'data is persisted'});
+      }
+
+      return Promise.resolve();
+    },
+    async function (test) {
+      // Using methods
+      const Collection = new Mongo.Collection(
+        `methodop_persistence${test.runId()}`,
+      );
+      Collection.allow({
+        insertAsync() {
+          return true;
+        },
+        insert() {
+          return true;
+        },
+      });
+
+      Meteor.methods({
+        [`insertMethodPersistence${test.runId()}`]: async () => {
+          await Collection.insertAsync({ _id: 'a' });
+        },
+      });
+
+      const promise = Meteor.callAsync(
+        `insertMethodPersistence${test.runId()}`,
+      );
+
+      let items;
+      let itemIds;
+      if (Meteor.isServer) {
+        await promise;
+
+        items = await Collection.find().fetchAsync();
+        itemIds = items.map(_item => _item._id);
+
+        test.equal(itemIds, ['a']); // temporary data accessible
+      }
+
+      if (Meteor.isClient) {
+        await promise.stubPromise;
+
+        items = await Collection.find().fetchAsync();
+        itemIds = items.map(_item => _item._id);
+
+        test.equal(itemIds, ['a']); // temporary data accessible
+
+        try {
+          await promise.serverPromise;
+        } catch (e) {
+          // error as no insert method enabled on server
+          return waitUntil(async () => {
+            items = await Collection.find().fetchAsync();
+            itemIds = items.map(_item => _item._id);
+            return itemIds?.length === []?.length ; // data IS NOT persisted
+          }, { description: 'data IS NOT persisted'});
+        }
+      } else {
+        return Promise.resolve();
+      }
+    },
+  ],
+);
+
+testAsyncMulti(
+  "mongo-livedata - support observeChangesAsync and observeAsync to keep isomorphism on client and server",
+  [
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_async${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+      const id = 'a';
+      await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find(id).observeChangesAsync({
+          async changed(_id, fields) {
+            await obs.stop();
+            resolve();
+            test.equal(_id, id);
+            test.equal(fields?.foo?.bar, 456);
+          },
+        });
+        await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+      });
+    },
+    async (test) => {
+      const Collection = new Mongo.Collection(`observe_async${test.runId()}`, {
+        resolverType: 'stub',
+      });
+      const id = 'a';
+      await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find(id).observeAsync({
+          async changed(newDocument) {
+            await obs.stop();
+            test.equal(newDocument._id, id);
+            test.equal(newDocument?.foo?.bar, 456);
+            resolve();
+          },
+        });
+        await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+      });
+    },
+  ]
+);
+
+
+Meteor.methods({
+  [`methodThrowException`]: async () => {
+    if (Meteor.isClient) {
+      throw new Meteor.Error('Throw on client');
+    }
+  },
+});
+
+Tinytest.addAsync(
+  'mongo-livedata - both stub and server promise throw exceptions when client errors',
+  async function (test) {
+    const promise = Meteor.callAsync('methodThrowException');
+    if (Meteor.isClient) {
+      try {
+        await promise.stubPromise;
+      } catch (err) {
+        test.equal(err.error, 'Throw on client');
+      }
+
+      try {
+        await promise.serverPromise;
+      } catch (err) {
+        test.equal(err.error, 'Throw on client');
+      }
+    }
+  },
+);

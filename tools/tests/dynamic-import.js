@@ -34,8 +34,7 @@ async function run(isProduction) {
     "test",
     "--once",
     "--full-app",
-    // TODO: Fibers revert this to meteortesting:mocha when 3.0.0 is released
-    "--driver-package", "grubba:mocha"
+    "--driver-package", "meteortesting:mocha"
   ];
 
   // For meteortesting:mocha to work we must set test broswer driver

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Moved to the 'mongo' package",
-  version: '2.0.0-alpha300.10',
+  version: '1.0.13-rc300.2',
 });
 
 Package.onUse(function (api) {

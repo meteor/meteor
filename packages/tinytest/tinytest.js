@@ -1,3 +1,5 @@
+import isEqual from "lodash.isequal";
+
 /******************************************************************************/
 /* TestCaseResults                                                            */
 /******************************************************************************/
@@ -12,6 +14,10 @@ export class TestCaseResults {
     this.onException = onException;
     this.id = Random.id();
     this.extraDetails = {};
+  }
+
+  sleep(ms = 0) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   ok(doc) {
@@ -329,7 +335,7 @@ export class TestCaseResults {
   include(s, v, message, not) {
     var pass = false;
     if (s instanceof Array) {
-      pass = s.some(it => _.isEqual(v, it));
+      pass = s.some(it => isEqual(v, it));
     } else if (s && typeof s === "object") {
       pass = v in s;
     } else if (typeof s === "string") {
@@ -529,6 +535,7 @@ export class TestRun {
 
   _runTest(test, onComplete, stop_at_offset) {
     var startTime = (+new Date);
+    Tinytest._currentRunningTestName = test.name;
 
     return test.run(event => {
       /* onEvent */
@@ -669,6 +676,7 @@ export class TestRun {
 /******************************************************************************/
 
 export const Tinytest = {};
+globalThis.__Tinytest = Tinytest;
 
 Tinytest.addAsync = function (name, func, options) {
   TestManager.addCase(new TestCase(name, func), options);
@@ -698,6 +706,22 @@ Tinytest._runTests = function (onReport, onComplete, pathPrefix) {
   var testRun = TestManager.createRun(onReport, pathPrefix);
   testRun.run(onComplete);
 };
+
+Tinytest._currentRunningTestName = ""
+
+Meteor.methods({
+  'tinytest/getCurrentRunningTestName'() {
+    return Tinytest._currentRunningTestName;
+  }
+})
+
+Tinytest._getCurrentRunningTestOnServer = function () {
+  return Meteor.callAsync('tinytest/getCurrentRunningTestName');
+}
+
+Tinytest._getCurrentRunningTestOnClient = function () {
+  return Tinytest._currentRunningTestName;
+}
 
 // Run just one test case, and stop the debugger at a particular
 // error, all as indicated by 'cookie', which will have come from a

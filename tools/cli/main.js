@@ -552,7 +552,8 @@ var springboard = async function (rel, options) {
       var execPath = files.convertToOSPath(executable);
       var child = require("child_process").spawn(execPath, newArgv, {
         env: process.env,
-        stdio: 'inherit'
+        stdio: 'inherit',
+        shell: true,
       }).on('exit', resolve);
     }));
   }
@@ -603,7 +604,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v14.0.0';
+  var MIN_NODE_VERSION = 'v18.16.0';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     Console.error(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');

@@ -101,7 +101,7 @@ Meteor.publish({
   async publicationObjectAsync() {
     await sleep(50);
     let callback = onSubscriptions;
-    if (callback) callback();
+    if (callback) callback("publicationObjectAsync");
     this.stop();
   },
 });
@@ -110,7 +110,7 @@ Meteor.publish({
   publication_object_async: async function() {
     await sleep(50);
     let callback = onSubscriptions;
-    if (callback) callback();
+    if (callback) callback("publication_object_async");
     this.stop();
   },
 });
@@ -118,7 +118,7 @@ Meteor.publish({
 Meteor.publish('publication_compatibility_async', async function() {
   await sleep(50);
   let callback = onSubscriptions;
-  if (callback) callback();
+  if (callback) callback("publication_compatibility_async");
   this.stop();
 });
 
@@ -130,10 +130,12 @@ Tinytest.addAsync('livedata server - async publish object', function(
     let testsLength = 0;
 
     onSubscriptions = function(subscription) {
-      delete onSubscriptions;
-      clientConn.disconnect();
+      // for debugging
+      // console.log('subscription is ok:', subscription) 
       testsLength++;
-      if (testsLength == 3) {
+      delete onSubscriptions;
+      if (testsLength === 3) {
+        clientConn.disconnect();
         onComplete();
       }
     };

@@ -1,11 +1,11 @@
 
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '2.0.0-alpha300.10',
+  version: '1.6.2-rc300.2',
 });
 
 Npm.depends({
-  '@types/underscore': '1.11.4',
+  '@types/underscore': '1.11.9',
 });
 Package.onUse(function (api) {
   api.export('_');

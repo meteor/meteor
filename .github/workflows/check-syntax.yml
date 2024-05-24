@@ -6,10 +6,10 @@ jobs:
   check-code-style:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: 20.x
       - run: cd scripts/admin/check-legacy-syntax && npm ci
       - name: Check syntax
-        run: cd scripts/admin/check-legacy-syntax && node check-syntax.js 
+        run: cd scripts/admin/check-legacy-syntax && node check-syntax.js

@@ -73,6 +73,7 @@ Options:
                    uses port N+1 and a port specified by --app-port.
                    Specify as --port=host:port to bind to a specific
                    interface.
+  --open, -o       Opens a browser window when the app starts.
   --inspect[-brk][=<port>]
                    Enable server-side debugging via debugging clients like
                    the Node.js command-line debugger, Chrome DevTools, or
@@ -106,6 +107,7 @@ Options:
   --exclude-archs  Don't create bundles for certain web architectures
                   (comma separated, for example:
                    --exclude-archs "web.browser.legacy, web.cordova")
+  --open           Opens a browser window when it finishes building
 
 >>> debug
 Run the project with server-side debugging enabled.
@@ -150,8 +152,9 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--vue-2|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
+Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
+       meteor create [--release <release>] --from <git_url> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
 
@@ -178,13 +181,13 @@ currently no package examples.
 Options:
   --package     Create a new meteor package instead of an app.
   --example     Example template to use.
+  --from        Clones a meteor project from a url.
   --list        Show list of available examples.
   --bare        Create an empty app.
   --minimal     Create an app with as few Meteor packages as possible.
   --full        Create a fully scaffolded app.
   --react       Create a basic react-based app, same as default.
   --vue         Create a basic vue3-based app.
-  --vue-2       Create a basic vue2-based app.
   --apollo      Create a basic apollo-based app.
   --svelte      Create a basic svelte-based app.
   --typescript  Create a basic Typescript React-based app.
@@ -192,7 +195,7 @@ Options:
   --tailwind    Create a basic react-based app, with tailwind configured.
   --chakra-ui   Create a basic react-based app, with chakra-ui configured.
   --solid       Create a basic solid-based app.
-  --prototype   Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
+  --prototype Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
 
 
 >>> update
@@ -635,6 +638,7 @@ with --port.
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
+  --open, -o        Opens a browser window when the app starts.
   --inspect[-brk][=<port>]
                     Enable server-side debugging via debugging clients like
                     the Node.js command-line debugger, Chrome DevTools, or
@@ -724,6 +728,7 @@ Meteor Guide - https://guide.meteor.com/testing.html
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
+  --open, -o        Opens a browser window when the app starts.
   --inspect[-brk][=<port>]
                     Enable server-side debugging via debugging clients like
                     the Node.js command-line debugger, Chrome DevTools, or
@@ -760,6 +765,7 @@ Options:
   --exclude-archs   Don't create test bundles for certain web architectures
                     (comma separated, for example:
                     --exclude-archs "web.browser.legacy, web.cordova")
+  --open            Opens a browser window when it finishes building
 
 >>> self-test
 Run tests of the 'meteor' tool.

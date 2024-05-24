@@ -212,6 +212,21 @@ Tinytest.addAsync('minimongo - basics', async test => {
   test.equal(after.d, undefined);
 });
 
+
+Tinytest.addAsync('minimongo - upsert', async test => {
+  const c = new LocalCollection();
+
+  await c.upsertAsync({ name: 'doc' }, { name: 'doc' });
+  
+  test.equal(c.find({}).count(), 1);
+
+  await c.removeAsync({});
+
+  c.upsert({ name: 'doc' }, { name: 'doc' });
+  test.equal(c.find({}).count(), 1);
+});
+
+
 Tinytest.add('minimongo - error - no options', test => {
   try {
     throw MinimongoError('Not fun to have errors');
@@ -2211,7 +2226,7 @@ Tinytest.add('minimongo - array sort', test => {
   c.insert({up: 3, down: 3, selected: 2, a: {x: 2.5}});
   c.insert({up: 4, down: 0, selected: 3, a: {x: 5}});
 
-  // Test that the the documents in "cursor" contain values with the name
+  // Test that the documents in "cursor" contain values with the name
   // "field" running from 0 to the max value of that name in the collection.
   const testCursorMatchesField = (cursor, field) => {
     const fieldValues = [];
@@ -2243,7 +2258,7 @@ Tinytest.add('minimongo - nested array sort', test => {
   c.insert({ ab0x: 7, ab0x_g: 7, g_ab0x: 7, cdx: 4, cdx_cdy: 4, cdy_cdx: 6, n: 7 , a: { b: [{ x: 5 }] }, c: { d: [{ y: 2}, { y: 3}] }, g: 5 });
   c.insert({ ab0x: 8, ab0x_g: 8, g_ab0x: 8, cdx: 5, cdx_cdy: 5, cdy_cdx: 7, n: 8 , a: { b: [{ x: 6 }, { x: 7 }] }, c: { d: [{ y: 2}, { x: 1.5, y: 2}] }, g: 6 });
 
-  // Test that the the documents in "cursor" contain values with the name
+  // Test that the documents in "cursor" contain values with the name
   // "field" running from 0 to the max value of that name in the collection.
   const testCursorMatchesField = (cursor, field) => {
     const fieldValues = [];
@@ -3982,4 +3997,18 @@ Tinytest.add('minimongo - cannot $rename with null bytes', test => {
   test.throws(() => {
     collection.update({ _id: id }, { $rename: { a: '\0a', c: 'c\0' } });
   }, "The 'to' field for $rename cannot contain an embedded null byte");
+});
+
+Tinytest.addAsync('minimongo - asyncIterator', async (test) => {
+  const collection = new LocalCollection();
+
+  collection.insert({ _id: 'a' });
+  collection.insert({ _id: 'b' });
+
+  let itemIds = [];
+  for await (const item of collection.find()) {
+    itemIds.push(item._id);
+  }
+  test.equal(itemIds.length, 2);
+  test.equal(itemIds, ['a', 'b']);
 });

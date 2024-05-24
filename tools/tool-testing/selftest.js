@@ -39,6 +39,9 @@ export const expectEqual = parseStackMarkTop(async function (actual, expected) {
       });
     }
   } catch (e) {
+    if (e.reason === 'not-equal') {
+      throw e;
+    };
     throw new TestFailure("Can't load ejson isopackage" , {
       stack: e.stack,
     });

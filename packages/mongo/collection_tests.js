@@ -224,7 +224,7 @@ Tinytest.addAsync('collection - calling find with an invalid readPreference',
 Tinytest.addAsync('collection - inserting a document with a binary should return a document with a binary',
   async function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary1');
+      const collection = new Mongo.Collection('testBinary1' + test.id);
       const _id = Random.id();
       await collection.insertAsync({
         _id,
@@ -246,7 +246,7 @@ Tinytest.addAsync('collection - inserting a document with a binary should return
 Tinytest.addAsync('collection - inserting a document with a binary (sub type 0) should return a document with a uint8array',
   async function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary8');
+      const collection = new Mongo.Collection('testBinary8' + test.id);
       const _id = Random.id();
       await collection.insertAsync({
         _id,
@@ -268,7 +268,7 @@ Tinytest.addAsync('collection - inserting a document with a binary (sub type 0) 
 Tinytest.addAsync('collection - updating a document with a binary should return a document with a binary',
   async function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary2');
+      const collection = new Mongo.Collection('testBinary2' + test.id);
       const _id = Random.id();
       await collection.insertAsync({
         _id
@@ -291,7 +291,7 @@ Tinytest.addAsync('collection - updating a document with a binary should return 
 Tinytest.addAsync('collection - updating a document with a binary (sub type 0) should return a document with a uint8array',
   async function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary7');
+      const collection = new Mongo.Collection('testBinary7' + test.id);
       const _id = Random.id();
       await collection.insertAsync({
         _id
@@ -314,7 +314,7 @@ Tinytest.addAsync('collection - updating a document with a binary (sub type 0) s
 Tinytest.addAsync('collection - inserting a document with a uint8array should return a document with a uint8array',
   async function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary3');
+      const collection = new Mongo.Collection('testBinary3' + test.id);
       const _id = Random.id();
       await collection.insertAsync({
         _id,
@@ -336,7 +336,7 @@ Tinytest.addAsync('collection - inserting a document with a uint8array should re
 Tinytest.addAsync('collection - updating a document with a uint8array should return a document with a uint8array',
   async function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary4');
+      const collection = new Mongo.Collection('testBinary4' + test.id);
       const _id = Random.id();
       await collection.insertAsync({
         _id
@@ -362,7 +362,7 @@ Tinytest.addAsync('collection - updating a document with a uint8array should ret
 Tinytest.addAsync('collection - finding with a query with a uint8array field should return the correct document',
   async function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary5');
+      const collection = new Mongo.Collection('testBinary5' + test.id);
       const _id = Random.id();
       await collection.insertAsync({
         _id,
@@ -382,7 +382,7 @@ Tinytest.addAsync('collection - finding with a query with a uint8array field sho
 Tinytest.addAsync('collection - finding with a query with a binary field should return the correct document',
   async function(test) {
     if (Meteor.isServer) {
-      const collection = new Mongo.Collection('testBinary6');
+      const collection = new Mongo.Collection('testBinary6' + test.id);
       const _id = Random.id();
       await collection.insertAsync({
         _id,
@@ -471,8 +471,8 @@ Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(t
   var collection = new Mongo.Collection(collectionName);
   var id = await collection.insertAsync({a: 1});
   test.equal((await collection.findOneAsync(id)).a, 1);
+  await collection.upsertAsync(id, {$set: {a: 2}});
   id = await collection.insertAsync({a: 2});
   test.equal((await collection.findOneAsync(id)).a, 2);
   await collection.removeAsync({});
-})
-
+});

@@ -10,25 +10,24 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.14.17",
-    pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
-    "node-gyp": "8.0.0",
-    "node-pre-gyp": "0.15.0",
-    typescript: "4.9.4",
-    "@meteorjs/babel": "7.19.0-beta.3",
+    npm: "10.5.0",
+    "node-gyp": "9.4.0",
+    "@mapbox/node-pre-gyp": "1.0.11",
+    typescript: "5.4.5",
+    "@meteorjs/babel": "7.19.0-beta.4",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
-    "@meteorjs/reify": "0.24.0",
+    "@meteorjs/reify": "0.25.1",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.15.3",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
     "@types/underscore": "1.11.2",
-    underscore: "1.13.1",
+    underscore: "1.13.6",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
-    "@types/semver": "5.4.0",
-    semver: "5.4.1",
+    "@types/semver": "5.5.0",
+    semver: "7.5.4",
     request: "2.88.2",
     uuid: "3.4.0",
     "graceful-fs": "4.2.6",
@@ -39,9 +38,11 @@ var packageJson = {
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
-    "source-map": "0.7.3",
-    chalk: "4.1.1",
+    "source-map": "0.7.4",
+    chalk: "4.1.2",
+    // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
     sqlite3: "5.0.2",
+    inquirer: "8.2.6",
     "http-proxy": "1.18.1",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
@@ -65,7 +66,8 @@ var packageJson = {
     'lru-cache': '4.1.5',
     "anser": "2.0.1",
     'xmlbuilder2': '1.8.1',
-    "ws": "7.4.5"
+    "ws": "7.4.5",
+    "open":"8.4.2"
   }
 };
 

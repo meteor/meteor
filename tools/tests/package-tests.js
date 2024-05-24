@@ -641,7 +641,7 @@ var testShowPackageVersion = selftest.markStack(async function (s, options) {
     await run.read("\n");
     await run.read("Depends on:\n");
     // Use 'read' to ensure that these are the only dependencies listed.
-    _.each(options.dependencies, async function (dep) {
+    for (const dep of options.dependencies) {
       var depStr = dep.name;
       if (dep.constraint) {
         depStr += "@" + dep.constraint;
@@ -650,7 +650,7 @@ var testShowPackageVersion = selftest.markStack(async function (s, options) {
         depStr += " (weak dependency)";
       }
       await run.read("  " + depStr + "\n");
-    });
+    }
   }
   if (options.publishedBy) {
     await run.match("\n");

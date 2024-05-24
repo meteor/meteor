@@ -407,6 +407,23 @@ In your app's JavaScript code, these settings can be accessed from the variable 
 
 In most normal situations, API keys from your settings file will only be used by the server, and by default the data passed in through `--settings` is only available on the server. However, if you put data under a special key called `public`, it will be available on the client. You might want to do this if, for example, you need to make an API call from the client and are OK with users knowing that key. Public settings will be available on the client under `Meteor.settings.public`.
 
+<h3 id="meteor-settings">Never store valuable information in public property in settings file</h3>
+
+It's ok if you want to make some properties of your settings file accessible to the client but never put any valuable information inside the `public` property. Either explicity store it under `private` property or in its own `property`. Any property that's not under `public` is treated as private by default in Meteor. 
+
+```javascript
+{
+"public": {"publicKey": "xxxxx"},
+"private": {"privateKey": "xxxxx"}
+}
+```
+or
+```javascript
+{
+"public": {"publicKey": "xxxxx"},
+"privateKey": "xxxxx"
+}
+```
 <h3 id="api-keys-oauth">API keys for OAuth</h3>
 
 For the `accounts-facebook` package to pick up these keys, you need to add them to the service configuration collection in the database. Here's how you do that:
@@ -453,7 +470,7 @@ Generally speaking, all production HTTP requests should go over HTTPS, and all W
 It's best to handle the redirection from HTTP to HTTPS on the platform which handles the SSL certificates and termination.
 
 * On [Galaxy](deployment.html#galaxy), enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
-* Other deployments *may* have control panel options or may need to be manually configured on the the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
+* Other deployments *may* have control panel options or may need to be manually configured on the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
 
 In the event that a platform does not offer the ability to configure this, the `force-ssl` package can be added to the project and Meteor will attempt to intelligently redirect based on the presence of the `x-forwarded-for` header.
 
@@ -480,7 +497,7 @@ By default, Helmet can be used to set various HTTP headers (see link above). The
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.expressHandlers.use(helmet())
+WebApp.handlers.use(helmet())
 ```
 
 At a minimum, Meteor recommends users to set the following headers. Note that code examples shown below are specific to Helmet.
@@ -500,7 +517,7 @@ By default, Meteor recommends unsafe inline scripts and styles are allowed, sinc
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.expressHandlers.use(
+WebApp.handlers.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
@@ -679,7 +696,7 @@ With Helmet, Frameguard sets the X-Frame-Options header.
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.expressHandlers.use(helmet.frameguard());  // defaults to sameorigin
+WebApp.handlers.use(helmet.frameguard());  // defaults to sameorigin
 ```
 For more detail please read the following guide: [Frameguard](https://helmetjs.github.io/docs/frameguard/).
 
@@ -695,6 +712,7 @@ This is a collection of points to check about your app that might catch common e
 1. Use specific selectors and [filter fields](http://guide.meteor.com/security.html#fields) in publications.
 1. Don't use [raw HTML inclusion in Blaze](http://blazejs.org/guide/spacebars.html#Rendering-raw-HTML) unless you really know what you are doing.
 1. [Make sure secret API keys and passwords aren't in your source code.](security.html#api-keys)
+1. [Never store valuable information in `public` property of Meteor settings file.](security.html#meteor-settings) 
 1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's a nice UX feature.
 1. [Don't ever trust user IDs passed from the client.](http://guide.meteor.com/security.html#user-id-client) Use `this.userId` inside Methods and publications.
 1. Set up secure [HTTP headers](https://guide.meteor.com/security.html#httpheaders) using [Helmet](https://www.npmjs.com/package/helmet), but know that not all browsers support it so it provides an extra layer of security to users with modern browsers.

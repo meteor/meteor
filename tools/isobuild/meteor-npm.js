@@ -13,7 +13,6 @@ var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile').Profile;
 import { parse } from "semver";
-import { version as npmVersion } from 'npm';
 import {
   get as getRebuildArgs
 } from "../static-assets/server/npm-rebuild-args.js";
@@ -32,8 +31,12 @@ import {
 
 var meteorNpm = exports;
 
+// change this will recreate the npm-shrinkwrap.json file
+// and install all dependencies from scratch
+const LOCK_FILE_VERSION = 4;
+
 // Expose the version of npm in use from the dev bundle.
-meteorNpm.npmVersion = npmVersion;
+meteorNpm.npmVersion = "10.1.0";
 
 // if a user exits meteor while we're trying to create a .npm
 // directory, we will have temporary directories that we clean up
@@ -100,6 +103,20 @@ meteorNpm.updateDependencies = async function (packageName,
     if (files.exists(packageNpmDir) &&
         ! files.exists(files.pathJoin(packageNpmDir, 'npm-shrinkwrap.json'))) {
       await files.rm_recursive(packageNpmDir);
+    }
+
+    // with the changes on npm 8, where there were changes to how the packages metadata is given
+    // we need to reinstall all packages from scratch
+    // and to do that we need to rewrite all the shrinkwrap files
+    if (files.exists(packageNpmDir)) {
+      try {
+        const shrinkwrap = JSON.parse(files.readFile(
+          files.pathJoin(packageNpmDir, 'npm-shrinkwrap.json')
+        ));
+        if (shrinkwrap.lockfileVersion !== LOCK_FILE_VERSION) {
+          await files.rm_recursive(packageNpmDir);
+        }
+      } catch (e) {}
     }
 
     if (files.exists(packageNpmDir)) {
@@ -649,8 +666,16 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     npmTree.dependencies[name] = { version };
   });
 
-  const minInstalledTree =
-    minimizeDependencyTree(installedDependenciesTree);
+  let minInstalledTree;
+  try {
+    minInstalledTree = minimizeDependencyTree(installedDependenciesTree);
+  } catch (e) {
+    console.error(
+      "Failed to minimize installed dependencies tree for ",
+      packageNpmDir
+    );
+    throw e;
+  }
   const minShrinkwrapTree =
     minimizeDependencyTree(shrinkwrappedDependenciesTree);
 
@@ -699,10 +724,28 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
       'npm-shrinkwrap.json'
     );
 
+    // Starting from Npm 8, it's expected to have
+    // node_modules/<package> for the package name
+    const mappedDependencies = Object.entries(
+      preservedShrinkwrap.dependencies
+    ).reduce((acc, [name, info]) => {
+      return {
+        ...acc,
+        [`node_modules/${name}`]: info,
+      };
+    }, {});
+
     // There are some unchanged packages here. Install from shrinkwrap.
     files.writeFile(
       newShrinkwrapFile,
-      JSON.stringify(preservedShrinkwrap, null, 2)
+      JSON.stringify(
+        {
+          ...preservedShrinkwrap,
+          dependencies: mappedDependencies,
+        },
+        null,
+        2
+      )
     );
 
     const newPackageJsonFile = files.pathJoin(
@@ -911,6 +954,66 @@ Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
   });
 });
 
+function pathMatches(path, test) {
+  // Normalize path and test to avoid trailing slash discrepancies
+  path = path.replace(/\/+$/, "");
+  test = test.replace(/\/+$/, "");
+
+  // pathMatches('node_modules/', 'node_modules/@babel/core/'); // Expected: true
+  // pathMatches('node_modules/', 'node_modules/@babel/core/node_modules/json5'); // Expected: false
+  // pathMatches('node_modules/@babel/core', 'node_modules/@babel/core/node_modules/json5'); // Expected: true
+  // pathMatches('node_modules/@babel/core', 'node_modules/@babel/core/'); // Expected: false
+  const regex = new RegExp(`^${path}(\/[^/]+)+$`);
+
+  if (!regex.test(test)) return false;
+
+  // Check if the path occurs again after the initial match
+  return test.indexOf(path, path.length) === -1;
+}
+
+const getPackageName = (pkgPath) => {
+  const split = pkgPath.split("node_modules/");
+  return split[split.length - 1];
+};
+
+function getInstalledDependenciesTreeFromPackageLock({
+  packages,
+  dependencies,
+  prefix,
+  mappedDependencies = {},
+}) {
+  const result = {};
+
+  Object.keys(dependencies || packages).forEach((pkgName) => {
+    if (prefix && !pathMatches(prefix, pkgName)) {
+      return;
+    }
+    const pkg = packages[pkgName];
+
+    const name = getPackageName(pkgName);
+
+    if (!pkg || mappedDependencies[name]) return;
+
+    const deps =
+      pkg.dependencies &&
+      getInstalledDependenciesTreeFromPackageLock({
+        packages,
+        prefix: pkgName,
+        mappedDependencies,
+      });
+
+    const hasDependencies = deps && Object.keys(deps).length > 0;
+
+    result[name] = {
+      version: pkg.version,
+      resolved: pkg.resolved,
+      integrity: pkg.integrity,
+      ...(hasDependencies ? { dependencies: deps } : {}),
+    };
+  });
+  return result;
+}
+
 // Gets a JSON object from `npm ls --json` (getInstalledDependenciesTree) or
 // `npm-shrinkwrap.json` (getShrinkwrappedDependenciesTree).
 //
@@ -928,80 +1031,58 @@ Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
 //     }
 //   }
 // }
+
+function getPackageLockFromPath(dir, path) {
+  // As per Npm 8, now the metadata is no longer inside .npm/package/node_modules/PACKAGE_NAME/package.json
+  // now you have every metadata of every package inside .npm/package/node_modules/ at .npm/package/node_modules/.package-lock.json
+  let packageLock = {};
+  try {
+    const nodeModulesPath = files.pathJoin(dir, "node_modules");
+    const packageLockPath = files.pathJoin(nodeModulesPath, path);
+    packageLock = JSON.parse(files.readFile(packageLockPath));
+  } catch (e) {}
+  return packageLock;
+}
+
 function getInstalledDependenciesTree(dir) {
-  function ls(nodeModulesDir) {
-    let contents;
-    try {
-      contents = files.readdir(nodeModulesDir).sort();
-    } finally {
-      if (! contents) return;
-    }
+  const defaultReturn = {
+    lockfileVersion: LOCK_FILE_VERSION,
+  };
+  const pkgs = getPackageLockFromPath(dir, ".package-lock.json").packages;
 
-    const result = {};
+  if (!pkgs) return defaultReturn;
 
-    contents.forEach(item => {
-      if (item.startsWith(".")) {
-        return;
-      }
+  let dependencies =
+    getInstalledDependenciesTreeFromPackageLock({
+      packages: pkgs,
+      prefix: "node_modules",
+    }) || {};
 
-      const pkgDir = files.pathJoin(nodeModulesDir, item);
-      const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
+  Object.keys(dependencies).forEach((packageName) => {
+    if (!packageName.startsWith("@")) return;
+    const deps = getPackageLockFromPath(
+      dir,
+      `${packageName}/package.json`
+    ).dependencies;
+    const packages = getPackageLockFromPath(
+      dir,
+      `${packageName}/package-lock.json`
+    ).dependencies;
+    if (!deps || !packages) return;
 
-      if (item.startsWith("@")) {
-        Object.assign(result, ls(pkgDir));
-        return;
-      }
-
-      let pkg;
-      try {
-        pkg = JSON.parse(files.readFile(pkgJsonPath));
-      } finally {
-        if (! pkg) return;
-      }
-
-      const name = pkg.name || item;
-
-      const info = result[name] = {
-        version: pkg.version
-      };
-
-      const from = pkg._from || pkg.from;
-      if (from) {
-        // Fix for https://github.com/meteor/meteor/issues/9477:
-        const prefix = name + "@";
-        let fromUrl = from;
-        if (fromUrl.startsWith(prefix)) {
-          fromUrl = fromUrl.slice(prefix.length);
-        }
-
-        if (utils.isNpmUrl(fromUrl) &&
-            ! utils.isNpmUrl(info.version)) {
-          info.version = fromUrl;
-        }
-      }
-
-      const resolved = pkg._resolved || pkg.resolved;
-      if (resolved && resolved !== info.version) {
-        info.resolved = resolved;
-      }
-
-      const integrity = pkg._integrity || pkg.integrity;
-      if (integrity) {
-        info.integrity = integrity;
-      }
-
-      const deps = ls(files.pathJoin(pkgDir, "node_modules"));
-      if (deps && ! _.isEmpty(deps)) {
-        info.dependencies = deps;
-      }
-    });
-
-    return result;
-  }
+    dependencies = {
+      ...dependencies,
+      ...getInstalledDependenciesTreeFromPackageLock({
+        packages,
+        dependencies: deps,
+        mappedDependencies: dependencies,
+      }),
+    };
+  });
 
   return {
-    lockfileVersion: 1,
-    dependencies: ls(files.pathJoin(dir, "node_modules"))
+    ...defaultReturn,
+    dependencies,
   };
 }
 
@@ -1009,7 +1090,7 @@ function getShrinkwrappedDependenciesTree(dir) {
   const shrinkwrap = JSON.parse(files.readFile(
     files.pathJoin(dir, 'npm-shrinkwrap.json')
   ));
-  shrinkwrap.lockfileVersion = 1;
+  shrinkwrap.lockfileVersion = LOCK_FILE_VERSION;
   return shrinkwrap;
 };
 

@@ -2,7 +2,7 @@
 #
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
-meteor-base@2.0.0-alpha300.10
+meteor-base
 static-html
 standard-minifier-css
 standard-minifier-js

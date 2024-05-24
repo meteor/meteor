@@ -53,15 +53,19 @@ var contentSniffingAllowed = false;
 var BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
 BrowserPolicy.content = {};
 
+var mergeUnique = function (firstArray, secondArray) {
+  return firstArray.concat(secondArray.filter(function (item) {return firstArray.indexOf(item) < 0}));
+}
+
 var parseCsp = function (csp) {
   var policies = csp.split("; ");
   cspSrcs = {};
-  _.each(policies, function (policy) {
+  policies.forEach(function (policy) {
     if (policy[policy.length - 1] === ";")
       policy = policy.substring(0, policy.length - 1);
     var srcs = policy.split(" ");
     var directive = srcs[0];
-    if (_.indexOf(srcs, keywords.none) !== -1)
+    if (srcs.indexOf(keywords.none) !== -1)
       cspSrcs[directive] = null;
     else
       cspSrcs[directive] = srcs.slice(1);
@@ -72,13 +76,17 @@ var parseCsp = function (csp) {
                     "browser-policy must specify a default-src.");
 
   // Copy default-src sources to other directives.
-  _.each(cspSrcs, function (sources, directive) {
-    cspSrcs[directive] = _.union(sources || [], cspSrcs["default-src"] || []);
+  Object.entries(cspSrcs).forEach(function (entry) {
+    var directive = entry[0];
+    var sources = entry[1];
+    cspSrcs[directive] = mergeUnique(sources || [], cspSrcs["default-src"] || []);
   });
 };
 
 var removeCspSrc = function (directive, src) {
-  cspSrcs[directive] = _.without(cspSrcs[directive] || [], src);
+  cspSrcs[directive] = (cspSrcs[directive] || []).filter(function(value) {
+    return value !== src;
+  });
 };
 
 // Prepare for a change to cspSrcs. Ensure that we have a key in the dictionary
@@ -86,8 +94,8 @@ var removeCspSrc = function (directive, src) {
 var prepareForCspDirective = function (directive) {
   cspSrcs = cspSrcs || {};
   cachedCsp = null;
-  if (! _.has(cspSrcs, directive))
-    cspSrcs[directive] = _.clone(cspSrcs["default-src"]);
+  if (!(directive in cspSrcs))
+    cspSrcs[directive] = [].concat(cspSrcs["default-src"]);
 };
 
 // Add `src` to the list of allowed sources for `directive`, with the
@@ -100,7 +108,7 @@ var prepareForCspDirective = function (directive) {
 // - Trim trailing slashes from `src`, since some browsers interpret
 //   "foo.com/" as "foo.com" and some don't.
 var addSourceForDirective = function (directive, src) {
-  if (_.contains(_.values(keywords), src)) {
+  if (Object.values(keywords).includes(src)) {
     cspSrcs[directive].push(src);
   } else {
     var toAdd = [];
@@ -123,7 +131,7 @@ var addSourceForDirective = function (directive, src) {
       }
     }
 
-    _.each(toAdd, function (s) {
+    toAdd.forEach(function (s) {
       cspSrcs[directive].push(s);
     });
   }
@@ -148,25 +156,27 @@ var setWebAppInlineScripts = async function (value) {
     await WebAppInternals.setInlineScriptsAllowed(value);
 };
 
-_.extend(BrowserPolicy.content, {
+Object.assign(BrowserPolicy.content, {
   allowContentTypeSniffing: function () {
     contentSniffingAllowed = true;
   },
   // Exported for tests and browser-policy-common.
   _constructCsp: function () {
-    if (! cspSrcs || _.isEmpty(cspSrcs))
+    if (! cspSrcs || (Object.keys(cspSrcs).length === 0 && cspSrcs.constructor === Object))
       return null;
 
     if (cachedCsp)
       return cachedCsp;
 
-    var header = _.map(cspSrcs, function (srcs, directive) {
-      srcs = srcs || [];
-      if (_.isEmpty(srcs))
-        srcs = [keywords.none];
-      var directiveCsp = _.uniq(srcs).join(" ");
-      return directive + " " + directiveCsp + ";";
-    });
+      var header = Object.entries(cspSrcs).map(function (entry) {
+        var directive = entry[0];
+        var srcs = entry[1];
+        srcs = srcs || [];
+        if ((!Array.isArray(srcs) || !srcs.length))
+          srcs = [keywords.none];
+        var directiveCsp = srcs.filter(function(value, index, array) {return array.indexOf(value) === index}).join(" ");
+        return directive + " " + directiveCsp + ";";
+      });
 
     header = header.join(" ");
     cachedCsp = header;
@@ -187,7 +197,7 @@ _.extend(BrowserPolicy.content, {
 
   _keywordAllowed: function (directive, keyword) {
     return (cspSrcs[directive] &&
-            _.indexOf(cspSrcs[directive], keyword) !== -1);
+      cspSrcs[directive].indexOf(keyword) !== -1)
   },
 
   // Helpers for creating content security policies
@@ -228,7 +238,7 @@ _.extend(BrowserPolicy.content, {
   },
   allowOriginForAll: function (origin) {
     prepareForCspDirective("default-src");
-    _.each(_.keys(cspSrcs), function (directive) {
+    Object.keys(cspSrcs).forEach(function (directive) {
       addSourceForDirective(directive, origin);
     });
   },
@@ -260,7 +270,7 @@ var resources = [
   { methodResource: "Frame", directive: "frame-src" },
   { methodResource: "FrameAncestors", directive: "frame-ancestors" }
 ];
-_.each(resources, function (resource) {
+resources.forEach(function (resource) {
   var directive = resource.directive;
   var methodResource = resource.methodResource;
   var allowMethodName = "allow" + methodResource + "Origin";
@@ -300,8 +310,6 @@ _.each(resources, function (resource) {
   };
 });
 
-// TODO[fibers]: change this when we have TLA
 await setDefaultPolicy();
-
 
 exports.BrowserPolicy = BrowserPolicy;

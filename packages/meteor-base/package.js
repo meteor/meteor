@@ -1,6 +1,6 @@
 Package.describe({
   name: 'meteor-base',
-  version: '2.0.0-alpha300.10',
+  version: '1.5.2-rc300.2',
   // Brief, one-line summary of the package.
   summary: 'Packages that every Meteor app needs',
   // By default, Meteor will default to using README.md for documentation.

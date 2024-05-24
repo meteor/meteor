@@ -27,7 +27,7 @@ inter-process-messaging@0.1.0
 livedata@1.0.18
 logging@1.1.20
 meteor@1.9.2
-meteor-base@2.0.0-alpha300.10
+meteor-base@1.5.1
 minifier-css@1.4.1
 minifier-js@2.4.0
 minimongo@1.4.5

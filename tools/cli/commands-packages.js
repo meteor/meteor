@@ -1528,7 +1528,7 @@ var maybeUpdateRelease = async function (options) {
     if (release.current && ! release.current.isRecommended() &&
         options.appDir && ! options.patch) {
       var releaseVersion = await release.current.getReleaseVersion();
-      var newerRecommendedReleases = getLaterReleaseVersions(
+      var newerRecommendedReleases = await getLaterReleaseVersions(
         releaseTrack, releaseVersion);
       if (!newerRecommendedReleases.length) {
         // When running 'meteor update' without --release in an app,
@@ -1884,7 +1884,8 @@ main.registerCommand({
       projectContext.releaseFile.releaseTrack,
       projectContext.releaseFile.releaseVersion);
     if (! releaseRecordForConstraints) {
-      throw Error("unknown release " +
+      console.log(projectContext.releaseFile, releaseRecordForConstraints)
+      throw Error("unknown release: " +
                   projectContext.releaseFile.displayReleaseName);
     }
   }
@@ -1972,10 +1973,10 @@ main.registerCommand({
     var nonlatestDirectDeps = [];
     var nonlatestIndirectDeps = [];
     var deprecatedDeps = [];
-    projectContext.packageMap.eachPackage(function (name, info) {
+    await projectContext.packageMap.eachPackage(async function(name, info) {
       var selectedVersion = info.version;
       var catalog = projectContext.projectCatalog;
-      var latestVersion = getNewerVersion(name, selectedVersion, catalog);
+      var latestVersion = await getNewerVersion(name, selectedVersion, catalog);
       if (latestVersion) {
         var rec = { name: name, selectedVersion: selectedVersion,
                     latestVersion: latestVersion };
@@ -2644,7 +2645,7 @@ main.registerCommand({
     // check if the passed arch is in the list
     var arch = options['target-arch'];
     if (! osArches.includes(arch)) {
-      throw new Error(
+	      throw new Error(
         arch + ": the arch is not available for the release. Available arches: "
         + osArches.join(', '));
     }

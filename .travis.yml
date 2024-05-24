@@ -1,8 +1,10 @@
 language: node_js
 os: linux
-dist: xenial
+dist: jammy
+sudo: required
+services: xvfb
 node_js:
-  - "14.21.2"
+  - "20.10.0"
 cache:
   directories:
     - ".meteor"
@@ -11,7 +13,7 @@ script:
   - travis_retry ./packages/test-in-console/run.sh
 env:
   global:
-    - CXX=g++-4.8
+    - CXX=g++-12
     - phantom=false
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
 addons:
@@ -19,10 +21,12 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - g++-4.8
+      - g++-12
       - libnss3
 
 before_install:
-  - sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu bionic main universe"
+  - cat /etc/apt/sources.list
+  - python3 --version
+  - echo "deb http://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee -a /etc/apt/sources.list
   - sudo apt-get update
   - sudo apt-get install -y libnss3

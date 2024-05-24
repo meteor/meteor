@@ -8,8 +8,6 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
-
-
 ## v3.0, TBD
 
 ### Highlights
@@ -33,6 +31,31 @@
   - `Accounts.updateOrCreateUserFromExternalService` is now async
   - `Accounts.expirePasswordToken` is now async
   - `Accounts.setupUsersCollection` is now async
+  - `Meteor.user` is now async in server
+
+- `accounts-facebook@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `accounts-github@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `accounts-google@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `accounts-meetup@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `accounts-meteor-developer@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `accounts-oauth@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `accounts-password@3.0.0`:
 
@@ -58,13 +81,37 @@
 
   - `Accounts.sendLoginTokenEmail` is now async.
 
+- `accounts-twitter@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `accounts-ui-unstyled@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `accounts-ui@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `accounts-weibo@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `allow-deny@2.0.0`:
 
   - Updated to accept async functions.
 
 - `appcache@2.0.0`:
 
-  - Updated internal api to use `expressHandlers`
+  - Updated internal api to use `handlers`
+
+- `audit-argument-checks@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `autopublish@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `autoupdate@2.0.0`:
 
@@ -75,14 +122,33 @@
   - Removed `Promise.await` default transform.
   - Added top-level-await to packages.
 
+- `babel-runtime@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `base64@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `binary-heap@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `blaze@3.0.0`:
+  - Todo
+
+- `boilerplate-generator-tests@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `boilerplate-generator@2.0.0`:
 
   - `toHTML` is no longer available (it was already deprecated). Use `toHTMLStream` instead.
-  - Updated to use `expressHandlers`
+  - Updated to use `handlers`
 
 - `browser-policy-common@2.0.0`:
 
-  - Updated to use `expressHandlers`
+  - Updated to use `handlers`
 
 - `browser-policy-content@2.0.0`:
 
@@ -92,6 +158,9 @@
     - `BrowserPolicy.content.disallowInlineScripts`
     - `BrowserPolicy.content.disallowAll`
     - `BrowserPolicy.setDefaultPolicy`
+
+- `browser-policy-framing@2.0.0`:
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `browser-policy@2.0.0`:
   Updated to use async methods from `browser-policy-common` and `browser-policy-content`.
@@ -130,6 +199,10 @@
   - Created package to load packages and the app.
   - This is the pakcages that sets up the Runtime.
 
+- `crosswalk@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `ddp-client@3.0.0`:
 
   - Added `isAsyncCall` method to know if call is being made by a async method.
@@ -140,6 +213,10 @@
 
   - Added `.fence` option.
 
+- `ddp-rate-limiter@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `ddp-server@3.0.0`:
 
   - Updated to use async methods.
@@ -147,14 +224,25 @@
   - Updated tests to use async methods.
   - Turned server implementation to async.
 
-`deprecated`:
+- `ddp@2.0.0`:
 
-- `http`:
-  - Updated handlers to use `expressHandlers`
-- `spiderable`:
+  - Package was bumped due to a dependency update. No code changes were made.
 
-  - Updated handlers to use `expressHandlers`
-  - removed `fibers` usage if flag is set to `true`
+- `diff-sequence@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `disable-oplog@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `ecmascript-runtime-client@1.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `ecmascript-runtime-server@1.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `ecmascript-runtime@1.0.0`:
 
@@ -165,18 +253,92 @@
   - Added dependency to `@babel/runtime`.
   - Moved runtime tests.
 
+- `ejson@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `email@3.0.0`:
 
   - `Email.send` is no longer available. Use `Email.sendAsync` instead.
   - Updated types to reflext async methods and `Email.send` depracation.
 
+- `es5-shim@5.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `facebook-config-ui@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `facebook-oauth@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `facts-base@2.0.0`:
 
   - turned unorderd deps on `ddp` to false.
 
+- `facts-ui@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `fetch@1.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `force-ssl-common@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `force-ssl@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `geojson-utils@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `github-config-ui@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `github-oauth@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `google-config-ui@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `google-oauth@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `hot-code-push@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `http@`:
+  - Updated handlers to use `handlers`
 - `id-map@2.0.0`:
 
   - Added `forEachAsync` method.
+
+- `insecure@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `inter-process-messaging@1.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `launch-screen@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `localstorage@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `logging@2.0.0`:
 
@@ -186,11 +348,36 @@
   `Logic.disablingAssertions` is now async.
   `minMaxWS` is now async.
 
+- `meetup-config-ui@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `meetup-oauth@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `meteor-base@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `meteor-developer-config-ui@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `meteor-developer-oauth@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `meteor-tool@3.0.0`:
+
+  - Changes to how meteor apps are being created [PR](https://github.com/meteor/meteor/pull/12697)
+
 - `meteor@2.0.0`:
 
   - Async local storage was added to help deal with async methods.
   - Added `promiseEmmiter` to help with async methods.
   - Removed `fibers` from package.
+  - `Meteor.absoluteUrl` in localhost uses `127.0.1` by default.
 
 - `minifier-css@2.0.0`:
 
@@ -209,9 +396,42 @@
     If you only use it in the `Client` or as a `LocalCollection` things have not
     changed.
 
+- `mobile-experience@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `mobile-status-bar@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `modern-browsers@1.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `modules-runtime@1.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `modules@1.0.0`:
 
   - Updated `reify` version.
+  - All modules are described as strict mode
+
+- `mongo-decimal@`:
+
+  - Updated to use `async` methods.
+
+- `mongo-dev-server@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `mongo-id@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `mongo-livedata@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `mongo@2.0.0`:
 
@@ -219,14 +439,15 @@
     the same as their `*Async` counterpart.
   - `ensureIndex` and `createIndex` are now async.
 
-- `blaze@3.0.0`:
-- TODO
+- `npm-mongo@5.0.0`:
 
-- `mongo-decimal@`:
+  - Package was bumped due to a dependency update. No code changes were made.
 
-  - Updated to use `async` methods.
+- `oauth-encryption@2.0.0`:
 
-- `oauth`:
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `oauth@`:
 
   - `_endOfPopupResponseTemplate` and `_endOfRedirectResponseTemplate` are no longer a property but now a function that returns a promise of the same value as before
   - the following server methods are now async:
@@ -238,27 +459,75 @@
   - `ensureConfigured`
   - `_cleanStaleResults`
 
-- `oauth1`:
+- `oauth@3.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `oauth1@`:
 
   - the following server methods are now async:
   - `OAuth._storeRequestToken`
   - `OAuth._retrieveRequestToken`
 
-- `oauth2`:
+- `oauth1@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `oauth2@`:
 
   - `OAuth._requestHandlers['2']` is now async.
+
+- `oauth2@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `ordered-dict@2.0.0`:
 
   - Added `forEachAsync` method.
 
+- `package-stats-opt-out@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `package-version-parser@4.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `promise@1.0.0`:
 
   - Removed `fibers` usage
 
+- `random@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `rate-limit@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `reactive-dict@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `reactive-var@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `reload-safetybelt@2.0.0`:
 
   - Added `ecmascript` package to `package.js`
+
+- `reload@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `retry@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `routepolicy@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `server-render@1.0.0`:
 
@@ -268,6 +537,14 @@
 
   - Updated to use `createIndexAsync`.
 
+- `session@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `sha@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `shell-server@1.0.0`:
 
   - Updated to handle promises results.
@@ -276,9 +553,26 @@
 
   - Updated tests to handle `async` code.
 
+- `spiderable@`:
+
+  - Updated handlers to use `handlers` that are now using express
+  - removed `fibers` usage if flag is set to `true`
+
+- `standard-minifier-css@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `standard-minifier-js@3.0.0`:
 
   - `processFilesForBundle` is now `async`.
+
+- `standard-minifiers@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `static-html@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `test-helpers@2.0.0`:
 
@@ -294,14 +588,46 @@
 
   - Updated log identation.
 
+- `test-server-tests-in-console-once@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `tinytest-harness@1.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `tinytest@2.0.0`:
 
   - Added `test name` to logs.
   - Removed `fibers` usage.
 
+- `twitter-config-ui@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `twitter-oauth@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `typescript@5.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `underscore-tests@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
 - `underscore@2.0.0`:
 
   - Removed dependency in meteor package.
+
+- `url@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
+
+- `webapp-hashing@2.0.0`:
+
+  - Package was bumped due to a dependency update. No code changes were made.
 
 - `webapp@2.0.0`:
 
@@ -318,429 +644,21 @@
     - `WebAppInternals.getBoilerplate`
 
   - Changed engine from connect to express and changed api naming to match express. See below:
-  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.expressHandlers.use(middleware)`
-  - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawExpressHandlers.use(middleware)`
+  - `WebApp.connectHandlers.use(middleware)` is now `WebApp.handlers.use(middleware)`
+  - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawHandlers.use(middleware)`
   - `WebApp.connectApp` is now `WebApp.expressApp`
 
+- `weibo-config-ui@2.0.0`:
 
- - `accounts-facebook@2.0.0`:
+  - Package was bumped due to a dependency update. No code changes were made.
 
-Package was bumped due to a dependency update. No code changes were made.
+- `weibo-oauth@2.0.0`:
 
-
- - `accounts-github@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `accounts-google@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `accounts-meetup@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `accounts-meteor-developer@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `accounts-oauth@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `accounts-twitter@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `accounts-ui@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `accounts-ui-unstyled@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `accounts-weibo@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `audit-argument-checks@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `autopublish@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `babel-runtime@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `base64@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `binary-heap@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `boilerplate-generator-tests@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `crosswalk@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `ddp@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `ddp-rate-limiter@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
-
- - `diff-sequence@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `disable-oplog@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `ecmascript-runtime-client@1.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `ecmascript-runtime-server@1.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `ejson@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `es5-shim@5.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `facebook-config-ui@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `facebook-oauth@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `facts-ui@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `fetch@1.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `force-ssl@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `force-ssl-common@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `geojson-utils@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `github-config-ui@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `github-oauth@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `google-config-ui@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `google-oauth@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `hot-code-push@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `insecure@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `inter-process-messaging@1.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `launch-screen@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `localstorage@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `meetup-config-ui@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `meetup-oauth@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `meteor-base@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `meteor-developer-config-ui@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `meteor-developer-oauth@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `meteor-tool@3.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `mobile-experience@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `mobile-status-bar@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `modern-browsers@1.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `modules-runtime@1.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `mongo-dev-server@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `mongo-id@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `mongo-livedata@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
-
- - `npm-mongo@5.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `oauth@3.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `oauth-encryption@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `oauth1@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `oauth2@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `package-stats-opt-out@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `package-version-parser@4.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `random@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `rate-limit@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `reactive-dict@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `reactive-var@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `reload@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `retry@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `routepolicy@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `session@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `sha@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `standard-minifier-css@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `standard-minifiers@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `static-html@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `test-server-tests-in-console-once@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `tinytest-harness@1.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `twitter-config-ui@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `twitter-oauth@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `typescript@5.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `underscore-tests@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `url@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `webapp-hashing@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `weibo-config-ui@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
-
- - `weibo-oauth@2.0.0`:
-
-Package was bumped due to a dependency update. No code changes were made.
-
+  - Package was bumped due to a dependency update. No code changes were made.
 
 #### New Public API
+
+
 
 - `accounts-base`: (2.9+)
 
@@ -788,17 +706,569 @@ Package was bumped due to a dependency update. No code changes were made.
 - `_loginMethod`
 - `_runLoginHandlers`
 
+* Upgraded `node-gyp` to v9.4.0
+* Upgraded `node-pre-gyp` to `@mapbox/node-pre-gyp` v1.0.11
+
 #### New Internal API
 
 `accounts-password`:
 
 - `Accounts._checkPasswordAsync`
 
+#### Special thanks to
+
+- [@StorytellerCZ](https://github.com/sponsors/StorytellerCZ/)
+
+For making this great framework even better!
+
+
+## v2.16.0, 2024-05-14
+
+### Highlights
+
+- Support observeChangesAsync and observeAsync. [PR](https://github.com/meteor/meteor/pull/13025)
+- New mongo package options to optimize Oplog tailing performance to include/exclude certain collections [PR](https://github.com/meteor/meteor/pull/13009)
+
+#### Migration Steps
+
+To update from 2.15 to this one, you can run:
+
+```
+meteor update --release 2.16
+```
+
+If you're coming from an older version, please check our [Migration Guides](https://guide.meteor.com/2.14-migration).
+
+#### Breaking Changes
+N/A
+
+#### Internal API changes
+
+* Add method name to MethodInvocation in DDP messages
+
+#### Meteor Version Release
+
+* Meteor tool
+  - Updated Svelte skeleton
+  - Update tsconfig.json for Svelte skeleton
+  - Updated Solid skeleton NPM dependencies
+
+* Blaze
+  - Support of async dynamic attributes [PR](https://github.com/meteor/blaze/pull/460)
+  - Fix Blaze._expandAttributes returns empty object, if null. [PR](https://github.com/meteor/blaze/pull/458)
+
+* `accounts-base@2.2.11`
+  - Supported session storage to store accounts login token [PR](https://github.com/meteor/meteor/pull/13046)
+  - Update config checking
+  - Added new types [PR](https://github.com/meteor/meteor/pull/13042)
+
+* `accounts-oauth@1.4.4`
+  - Remove config checking as it is done in `accounts-base`
+
+* `accounts-ui-unstyled@1.7.1`
+  - `Connect with Twitter` is now `Connect with X/Twitter`
+
+* `check@1.4.1`:
+  - Added an optional flag to immediately throw error when all checks failed. [PR](https://github.com/meteor/meteor/pull/12970)
+
+* `ddp-common@1.4.1`
+  - Add method name to MethodInvocation
+
+* `ddp-client@2.6.2`
+  - Add method name to MethodInvocation
+
+* `ddp-server@2.7.1`
+  - Add method name to MethodInvocation
+
+* `twitter-config-ui@1.0.2`
+  - Update setup instructions
+
+* `email@2.2.6`
+  - Nodemailer update to v6.9.10
+  - `@types/nodemailer` updated to v6.4.14
+  - Adds the ability to encrypt your emails using PGP [PR](https://github.com/meteor/meteor/pull/12991)
+
+* `logging@1.3.4`
+  - Type update
+
+* `minimongo@1.9.4`
+  - Support observeChangesAsync and observeAsync [PR](https://github.com/meteor/meteor/pull/13025)
+  - Report and extend test cases for the old async behaviors
+
+* `minifier-js@2.8.0`
+  - Update terser to v5.31.0
+
+* `mongo@1.16.10`
+  - Support a new option to include/exclude certain collections for oplog tailing [PR](https://github.com/meteor/meteor/pull/13009)
+
+* `reload-safetybelt@1.0.13`
+  - Remove underscore dependency
+
+* `service-configuration@1.3.4`
+  - Type update
+
+#### Independent releases
+
+* `mongo@1.16.9`:
+  - Set `minPoolSize` for oplog
+
+* `underscore@1.6.1`
+  - Fix bug in `_.intersection`
+
+#### Contributors
+
+- [nachocodoner](https://github.com/nachocodoner)
+- [StorytellerCZ](https://github.com/StorytellerCZ)
+- [jamauro](https://github.com/jamauro)
+- [Twisterking](https://github.com/Twisterking)
+- [harryadel](https://github.com/harryadel)
+
+Thanks for making this great framework even better!
+
+## v2.15.0, 2024-02-05
+
+### Highlights
+
+* Bumps embedded MongoDB to 7.0.5.
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+In development, if you're using Linux, you might get an error like `version GLIBCXX_3.4.26 not found` or something related to g++.
+
+This is related to your g++ version. With MongoDB 7, you need to have g++ 11 or higher. So make sure to have this updated.
+
+This will happen only if you are trying to run your Meteor application with a MongoDB 7 version. If you run your app with a MONGO_URL pointing to a different MongoDB version, you won't have this issue. 
+
+```bash
+
+meteor update --release 2.15
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to include embedded MongoDB to 7.0.5.
+  - Fix cordova launch screen warnings on 2.15 [PR](https://github.com/meteor/meteor/pull/12971)
+* `underscore@1.6.0`:
+  - A test related to [PR](https://github.com/meteor/meteor/pull/12798) to see if the tests can manage the first update step. [PR](https://github.com/meteor/meteor/pull/12912)
+* `service-configuration@1.3.3`:
+  - added new types* [PR](https://github.com/meteor/meteor/pull/12922)
+* `meteor@1.11.5`:
+  - added new types [PR](https://github.com/meteor/meteor/pull/12922)
+* `accounts-base@2.2.10`:
+  - Added missing type for createUserVerifyingEmail [PR](https://github.com/meteor/meteor/pull/12919)
 
 #### Special thanks to
 
+- [@Grubba27](https://github.com/Grubba27).
+- [@denihs](https://github.com/denihs).
+- [@mcorbelli](https://github.com/mcorbelli).
+- [@matheusccastroo](https://github.com/matheusccastroo).
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
+- [@ebroder](https://github.com/ebroder).
+- [@nachocodoner](https://github.com/nachocodoner).
+
+For making this great framework even better!
 
 
+## v2.14.0, 2023-12-12
+
+
+### Highlights
+
+Hacktoberfest release! 🎉
+
+* MongoDB driver has been updated to v4.17.2.
+
+* You can now set `DISABLE_SOCKJS_CORS=1` if you want to prevent SockJS from setting CORS headers. Do not set this option if you will have DDP clients from other origins connecting to the DDP server. [PR](https://github.com/meteor/meteor/pull/12789)
+
+* Added guide on [how to prepare for Meteor 3.0 migration](https://guide.meteor.com/prepare-meteor-3.0).
+
+* New DDP merge strategy `NO_MERGE_MULTI`, which is similar to `NO_MERGE`, but it does track whether a document is used by multiple publications. [PR](https://github.com/meteor/meteor/pull/12742)
+
+* Appcache has been further deprecated and moved to the deprecated packages folder.
+
+* Added `Accounts.createUserAsync` into the client.
+
+* Many packages had their underscore dependency removed.
+
+* Cordova has been updated to v12.0.1 for Android and v7.0.1 for iOS, being able to build to SDK 33.
+
+* `meteor create` command is now interactive!
+
+* Added `firstRunPromise` property to `Tracker` autorun blocks, that forces autorun blocks to be executed in synchronous-looking order by storing the value autorun promise thus making it awaitable.
+
+#### Migration Steps
+
+##### Android splash screen
+If you have been using `splash-screen` for Cordova, you need to update your code as Android changed their splash screen API,
+the `cordova-plugin-splashscreen` is now on `cordova-android` core, so we have removed the dependency from the `splash-screen`
+package. As a result we are dropping the support for dark mode splash screen on Android.
+
+To create this now you need to create two themes on your `config.xml` file.
+
+>  Note that it's still possible to have it by adding the according themes with App.appendToConfig and App.addResourceFile - but this is not something Meteor will do automatically right now.
+
+For more information you can check our [Migration Guide](https://guide.meteor.com/2.14-migration.html)
+
+## Breaking Changes
+
+* `splash-screen` package has removed the `cordova-plugin-splashscreen` dependency. See migration steps for more info.
+
+## Docs
+
+- Added guide on [how to prepare for Meteor 3.0 migration](https://guide.meteor.com/prepare-meteor-3.0).
+- Added guide on [performance improvements](https://guide.meteor.com/performance-improvement).
+- Added FAQ about [Meteor 3](https://guide.meteor.com/3.0-migration).
+
+##  Internal API changes
+
+* Tool
+    - Rename `EACCESS` to `EACCES` to follow the Windows spelling
+    - Fixed links in skeletons
+    - Fixed build issue in Vue skeleton
+    - Updated `source-map-support`
+    - Fixed bugs in negated “in” and “instanceof” expressions
+    - Updated `semver` to v7.5.4
+    - Updated `@meteorjs/babel` to v7.18.4
+    - Cordova has been updated to v12.0.1 for Android and v7.0.1 for iOS, being able to build to SDK 33.
+    - `meteor create` command was re-made to be more interactive
+
+## Meteor Version Release
+
+* `accounts-base@2.2.10`
+    - Ensure that `onLogin` callback fires properly
+    - Indexes are now created asynchronously
+
+* `accounts-oauth@1.4.3`
+    - Indexes are now created asynchronously
+
+* `accounts-password@2.4.0`
+    - Add `Accounts.createUserAsync` to the client, a promise-based version of `Accounts.createUser`
+    - Indexes are now created asynchronously
+
+* `accounts-passwordless@2.1.4`
+    - Fix #12401, ensure that user is found with ID
+    - Indexes are now created asynchronously
+
+* `babel-compiler@7.10.5`
+    - Updated `@meteorjs/babel` to v7.18.4
+
+* `boilerplate-generator@1.7.2`
+    - Removed Underscore dependency
+
+* `browser-policy-content@1.1.3`
+    - Removed Underscore dependency
+
+* `constraint-solver@1.2.1`
+    - Removed Underscore dependency
+
+* `crosswalk@1.7.2`
+    - Updated `cordova-plugin-crosswalk-webview` to v2.4.0
+    - Deprecated the package
+
+* `ddp-rate-limiter@1.2.1`
+    - Removed Underscore dependency
+* `ddp-server@2.7.0`:
+    - Allow setting `DISABLE_SOCKJS_CORS` to prevent SockJS from setting CORS headers
+    - Added new publication strategy `NO_MERGE_MULTI`
+
+* `ecmascript@0.16.8`:
+    - Bumped to get latest version of `@babel/compiler`
+
+* `facebook-oauth@1.11.3`:
+    - Updated default version of Facebook GraphAPI to v17
+
+* `launch-screen@2.0.0`
+    - Removed `cordova-plugin-splashscreen` dependency
+
+* `fetch@0.1.4`:
+    - Update `node-fetch` to version 1.6.12
+    - Update `whatwg-fetch` to version 3.6.17
+
+* `logging@1.3.3`:
+    - Added TS types
+    - Updated `chalk` to v4.1.2
+
+* `logic-solver@2.0.9`
+    - Removed Underscore dependency
+
+* `meteor@1.11.5`:
+    - Improve TS types
+
+* `mobile-experience@1.1.1`:
+    - Bumped to get latests version of `cordova` dependencies
+
+* `modern-browsers@0.1.10`
+    - Added `appleMail` user agent to allow modern bundle on iPads
+
+* `modules@0.20.0`
+    - Updated version of reify to v0.24.1
+
+* `mongo@1.16.8`
+    - Added deprecation messages into type definitions
+    - Fix ObjectIDs handling in oplogV2V1Converter
+
+* `npm-mongo@4.17.2`:
+    - Bumped MongoDB driver to version 4.17.2
+
+* `oauth@2.2.1`
+    - Indexes are now created asynchronously
+    - `remove` DB calls migrated to `removeAsync`
+
+* `package-version-parser@3.2.2`
+    - Updated `semver` to v7.5.4
+
+* `react-fast-refresh@0.2.8`:
+    - Updated `semver` to version 7.5.4
+
+* `service-configuration@1.3.3`
+    - Indexes are now created asynchronously
+    - Add types for ConfigError
+
+* `socket-stream-client@0.5.2`
+    - Removed Underscore dependency
+
+* `standard-minifier-css@1.9.2`
+    - Updated `@babel/runtime` to v7.23.5
+    - Updated `minifier-css` to v1.6.4
+    - Updated `logging` package to v1.3.2
+
+* `test-server-tests-in-console-once@1.0.12`
+    - Removed Underscore dependency
+
+* `tinytest@1.2.3`
+    - Removed Underscore dependency
+
+* `tracker@1.3.3`
+    - Added `firstRunPromise` property, that forces autorun blocks to be executed
+      in synchronous-looking order by storing the value autorun promise
+      thus making it awaitable
+
+* `typescript@4.9.5`:
+    - Updated to 4.9.5
+
+* `webapp@1.13.8`
+    - Updated `cordova-plugin-meteor-webapp` to v2.0.3
+    - Updated `cookie-parser` to v1.4.6
+    - Updated `send` to v0.18.0
+    - Updated `stream-to-string` to v1.2.1
+    - Updated `qs` to v6.11.2
+    - Updated `@types/connect` to v3.4.38
+
+
+## Independent releases
+
+* `google-oauth@1.4.4`:
+    - Remove logging request/response in google_server
+
+* NPM `@meteorjs/babel@7.18.4`
+    - Updated `@meteorjs/reify` to v0.24.1
+
+* NPM `@meteorjs/babel-preset-meteor@7.10.1`
+    - Add Facebook in-app browser
+
+* NPM `cordova-plugin-meteor-webapp@2.0.2`
+    - Fixed Android hot code push failing
+
+* NPM `cordova-plugin-meteor-webapp@2.0.3`
+    - Fix pull manifest from correct url if parameter are used in baseurl
+
+* NPM `meteor-node-stubs@1.2.6`
+    - Update dependencies
+    - Deep update dependencies that were highlighted by `npm audit`
+
+## Contributors
+
+- [@StorytellerCZ](https://github.com/sponsors/StorytellerCZ)
+- [@Grubba27](https://github.com/sponsors/Grubba27)
+- [@vit0rr](https://github.com/vit0rr)
+- [@realyze](https://github.com/realyze)
+- [@jamauro](https://github.com/jamauro)
+- [@Torgen](https://github.com/Torgen)
+- [@brucejo75](https://github.com/brucejo75)
+- [@zodern](https://github.com/sponsors/zodern)
+- [@alisnic](https://github.com/alisnic)
+- [@ebroder](https://github.com/ebroder)
+- [@BANSAL-NISHU](https://github.com/BANSAL-NISHU)
+- [@salmanhasni](https://github.com/salmanhasni)
+- [@jdgjsag67251](https://github.com/jdgjsag67251)
+- [@guncebektas](https://github.com/guncebektas)
+- [@harryadel](https://github.com/harryadel)
+- [@dd137](https://github.com/dd137)
+- [@matheusccastroo](https://github.com/matheusccastroo)
+- [@mr-loop-1](https://github.com/mr-loop-1)
+
+For making this great framework even better!
+
+
+## v2.13.3, 2023-09-08
+
+### Highlights
+
+* Solves the issue [#12771: Version 2.13.1 suddenly requires a newer glibc version](https://github.com/meteor/meteor/issues/12771).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.3
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.3 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4). The previous version was generated using a different unix distribution (Ubuntu) while we should use CentOS.
+
+
+#### Special thanks to
+
+- [@aquinoit](https://github.com/aquinoit).
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes).
+- [@Grubba27](https://github.com/Grubba27).
+
+For making this great framework even better!
+
+
+## v2.13.1, 2023-09-04
+
+### Highlights
+
+* Solved zlib issue with Meteor.js and ESM Node.js 14.21.4 [PR](https://github.com/meteor/meteor/pull/12765) by (GH Grubba27).
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 2.13.1
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Command line`:
+  - The bundle version was changed to 14.21.4.1 to use another compiled version of the [ESM Node.js](https://guide.meteor.com/using-node-v14.21.4).
+
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27).
+
+
+For making this great framework even better!
+
+
+## v2.13.0, 2023-07-26
+
+### Highlights
+
+* Handled implicit collection creation oplog message by [radekmie](https://github.com/radekmie) [PR](https://github.com/meteor/meteor/pull/12643).
+* Fix upsert logs when using WARN_WHEN_USING_OLD_API flag by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12640).
+* Updating mongo types by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12639).
+* Fix solid skeleton by [fredmaiaarantes](https://github.com/fredmaiaarantes) [PR](https://github.com/meteor/meteor/pull/12637).
+* Setting The Viewport meta tag on skeletons [fredmaiaarantes](https://github.com/fredmaiaarantes) [PR](https://github.com/meteor/meteor/pull/12636).
+* Update mongo.d.ts with projection [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12635).
+* Update guide code for GraphQL [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12619).
+* Twitter Whitelist issue resolved [Atharshoyeb](https://github.com/Atharshoyeb) [PR](https://github.com/meteor/meteor/pull/12369).
+* Node security patch (14.21.4) [PR](https://github.com/meteor/node-v14-esm/pull/1). Thanks a lot [denihs](https://github.com/denihs) for your contribuiton.
+* Updated deprecated reference in mongo package by [StorytellerCZ](https://github.com/StorytellerCZ) [PR](https://github.com/meteor/meteor/pull/12653/files).
+* Updated BlazeJS git ref in core meteor to 2.7.1 by [Grubba27](https://github.com/Grubba27) [PR](https://github.com/meteor/meteor/pull/12651).
+* Added `Meteor.applyAsync` types by [Julusian](https://github.com/Julusian) [PR](https://github.com/meteor/meteor/pull/12645).
+
+
+#### Breaking Changes
+
+If you are running Meteor with docker you will
+need to update your docker file to use our [new docker image](https://hub.docker.com/r/meteor/node)
+that contains Nodejs v14.21.4.
+
+#### Known issues
+
+Please, [check our known issues page](https://docs.meteor.com/known-issues)
+for more information about the problems and issues you might find while migrating.
+
+####  Internal changes
+
+* `ddp-server@3.0.0`:
+    - Updated livedata server test to be more easily debbuged.
+
+* `mongo@2.0.0`:
+    - Updated deprecated reference in Mongo package.
+
+#### Migration Steps
+
+
+Please, follow our [migration guide](https://guide.meteor.com/2.13-migration) to understand what's needed to upgrade to Meteor 2.13.
+
+#### Meteor Version Release
+
+
+* `Command line`:
+    - Updated metatags for skeletons.
+    - Updated solidjs skeleton to be more idiomatic.
+
+* `meteor@1.11.3`:
+    - Added types for applyAsync and added more documentation for applyAsync options.
+
+* `mongo@1.16.7`:
+    - Updated types with projection.
+    - Fixed wrong upsert logs when using WARN_WHEN_USING_OLD_API flag.
+    - Handled implicit collection creation oplog message.
+
+* `test-in-console@1.2.5`:
+    - Adjusted log indentation.
+    - All errors will be logged to console.
+    - Will always use puppeteer@20.4.0
+
+* `twitter-oauth@1.3.3`:
+    - Fixed twitter whitelist issue.
+
+
+#### Special thanks to
+
+- [@radekmie](https://github.com/radekmie).
+- [@Grubba27](https://github.com/Grubba27).
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes).
+- [@StorytellerCZ](https://github.com/StorytellerCZ).
+- [@Atharshoyeb](https://github.com/Atharshoyeb).
+- [@Julusian](https://github.com/Julusian).
+- [@denihs](https://github.com/denihs).
 ## v2.12.0, 2023-04-28
 
 ### Highlights
@@ -1613,7 +2083,7 @@ N/A
 
 * `mongo@1.15.0`
     - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created.
-    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured. [PR](https://github.com/meteor/meteor/pull/11995).
+    - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occurred. [PR](https://github.com/meteor/meteor/pull/11995).
 * `modern-browsers@0.1.8`
     - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
 * `socket-stream-client@0.5.0`
@@ -1828,7 +2298,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
     - useUnifiedTopology is not an option anymore, it defaults to true.
     - native parser is not an option anymore, it defaults to false in the mongo connection.
     - poolSize not an option anymore, we are using max/minPoolSize for the same behavior on mongo connection.
-    - fields option is deprecated, we are maintaining a translation layer to "projection" field (now prefered) until the next minor version, where we will start showing alerts.
+    - fields option is deprecated, we are maintaining a translation layer to "projection" field (now preferred) until the next minor version, where we will start showing alerts.
     - _ensureIndex is now showing a deprecation message
     - we are maintaining a translation layer for the new oplog format, so if you read or rely on any behavior of it please read our oplog_v2_converter.js code
     - update/insert/remove behavior is maintained in the Meteor way, documented in our docs, but we are now using replaceOne/updateOne/updateMany internally. This is subject to changes in the API rewrite of MongoDB without Fibers AND if you are using rawCollection directly you have to review your methods otherwise you will see deprecation messages if you are still using the old mongodb style directly.

@@ -8,7 +8,7 @@ var npmRequire = require('./npm-require.js').require;
 var Profile = require('./profile').Profile;
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v14.0.0';
+var MIN_NODE_VERSION = 'v18.16.0';
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
@@ -354,10 +354,10 @@ const loadServerBundles = Profile("Load server bundles", async function () {
     };
 
     const Assets = {
-      getText: function (assetPath, callback) {
+      getTextAsync: function (assetPath, callback) {
         return getAsset(assetPath, "utf8", callback);
       },
-      getBinary: function (assetPath, callback) {
+      getBinaryAsync: function (assetPath, callback) {
         return getAsset(assetPath, undefined, callback);
       },
       /**

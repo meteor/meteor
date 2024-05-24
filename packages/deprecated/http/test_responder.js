@@ -77,7 +77,7 @@ var respond = function(req, res) {
 };
 
 var run_responder = function() {
-  WebApp.expressHandlers.use(TEST_RESPONDER_ROUTE, respond);
+  WebApp.handlers.use(TEST_RESPONDER_ROUTE, respond);
 };
 
 run_responder();

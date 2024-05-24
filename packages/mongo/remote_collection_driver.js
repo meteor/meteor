@@ -1,6 +1,7 @@
 import {
   ASYNC_COLLECTION_METHODS,
-  getAsyncMethodName
+  getAsyncMethodName,
+  CLIENT_ONLY_METHODS
 } from "meteor/minimongo/constants";
 
 MongoInternals.RemoteCollectionDriver = function (
@@ -30,22 +31,33 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
-    REMOTE_COLLECTION_METHODS.forEach(
-      function (m) {
-        ret[m] = _.bind(self.mongo[m], self.mongo, name);
+    REMOTE_COLLECTION_METHODS.forEach(function (m) {
+      ret[m] = _.bind(self.mongo[m], self.mongo, name);
 
-        if (!ASYNC_COLLECTION_METHODS.includes(m)) return;
-        const asyncMethodName = getAsyncMethodName(m);
-        ret[asyncMethodName] = function (...args) {
-          try {
-            return Promise.resolve(ret[m](...args));
-          } catch (error) {
-            return Promise.reject(error);
-          }
+      if (!ASYNC_COLLECTION_METHODS.includes(m)) return;
+      const asyncMethodName = getAsyncMethodName(m);
+      ret[asyncMethodName] = function (...args) {
+        try {
+          return Promise.resolve(ret[m](...args));
+        } catch (error) {
+          return Promise.reject(error);
         }
-      });
+      };
+    });
+
+    CLIENT_ONLY_METHODS.forEach(function (m) {
+      ret[m] = _.bind(self.mongo[m], self.mongo, name);
+
+      ret[m] = function (...args) {
+        throw new Error(
+          `${m} +  is not available on the server. Please use ${getAsyncMethodName(
+            m
+          )}() instead.`
+        );
+      };
+    });
     return ret;
-  }
+  },
 });
 
 // Create the singleton RemoteCollectionDriver only on demand, so we

@@ -2133,6 +2133,18 @@ class JsImage {
         continue;
       }
 
+      let moduleStubs = Object.create(null);
+      if (item.targetPath === 'packages/meteor.js') {
+        // Old versions of the Meteor package would require
+        // fibers but only use it in certain api's.
+        // Adds a stub so build plugins with old versions of the Meteor package
+        // can still work as long as they don't directly or indirectly use
+        // fibers.
+        let stubs = require('./fiber-stubs.js');
+        moduleStubs.fibers = stubs.Fiber;
+        moduleStubs['fibers/future'] = stubs.Future;
+      }
+
       var env = Object.assign({
         Package: ret,
         Npm: {
@@ -2144,6 +2156,10 @@ class JsImage {
             // Replace all backslashes with forward slashes, just in case
             // someone passes a Windows-y module identifier.
             name = name.split("\\").join("/");
+
+            if (name in moduleStubs) {
+              return moduleStubs[name];
+            }
 
             let resolved;
             try {
@@ -2242,19 +2258,6 @@ class JsImage {
            * @param {String} assetPath The path of the asset, relative to the application's `private` subdirectory.
            * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
            */
-          getText: function (assetPath, callback) {
-            const result = getAsset(item.assets, assetPath, "utf8", callback);
-
-            if (!callback) {
-              if (!Fiber.current) {
-                throw new Error("The synchronous Assets API can " +
-                    "only be called from within a Fiber.");
-              }
-
-              return Promise.await(result);
-            }
-          },
-
           getTextAsync: function (assetPath) {
             return getAsset(item.assets, assetPath, "utf8");
           },
@@ -2266,19 +2269,6 @@ class JsImage {
            * @param {String} assetPath The path of the asset, relative to the application's `private` subdirectory.
            * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
            */
-          getBinary: function (assetPath, callback) {
-            const result = getAsset(item.assets, assetPath, undefined, callback);
-
-            if (!callback) {
-              if (!Fiber.current) {
-                throw new Error("The synchronous Assets API can " +
-                    "only be called from within a Fiber.");
-              }
-
-              return Promise.await(result);
-            }
-          },
-
           getBinaryAsync: function (assetPath) {
             return getAsset(item.assets, assetPath, undefined);
           }
@@ -2776,8 +2766,8 @@ class ServerTarget extends JsImageTarget {
     serverPkgJson.dependencies["node-gyp"] =
       require("node-gyp/package.json").version;
 
-    serverPkgJson.dependencies["node-pre-gyp"] =
-      require("node-pre-gyp/package.json").version;
+    serverPkgJson.dependencies["@mapbox/node-pre-gyp"] =
+      require("@mapbox/node-pre-gyp/package.json").version;
 
     await builder.write('package.json', {
       data: Buffer.from(

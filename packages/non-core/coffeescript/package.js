@@ -11,7 +11,7 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: 'compile-coffeescript',
-  use: ['caching-compiler', 'ecmascript@1.0.0-alpha300.5', 'coffeescript-compiler@2.4.1'],
+  use: ['caching-compiler@2.0.0-alpha300.17', 'ecmascript@0.12.7', 'coffeescript-compiler@2.4.1'],
   sources: ['compile-coffeescript.js'],
   npmDependencies: {
     // A breaking change was introduced in @babel/runtime@7.0.0-beta.56

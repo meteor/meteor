@@ -1,7 +1,7 @@
-const { EventEmitter } = Npm.require('node:events');
+const { EventEmitter } = Npm.require('events');
 
 const DEFAULT_TIMEOUT =
-  Meteor.settings?.EMITTER_PROMISE_DEFAULT_TIMEOUT || 3000;
+  Meteor.settings && Meteor.settings.EMITTER_PROMISE_DEFAULT_TIMEOUT || 3000;
 
 /**
  *

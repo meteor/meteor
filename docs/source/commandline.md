@@ -33,7 +33,7 @@ required.
 This is the default command. Simply running `meteor` is the
 same as `meteor run`.
 
-To pass additional options to Node.js use the `SERVER_NODE_OPTIONS` environment variable. E.g. for Windows PowerShell: 
+To pass additional options to Node.js use the `SERVER_NODE_OPTIONS` environment variable. E.g. for Windows PowerShell:
 `$env:SERVER_NODE_OPTIONS = '--inspect' | meteor run`. Or for Linux: `SERVER_NODE_OPTIONS=--inspect-brk meteor run`.
 
 To specify a port to listen on (instead of the default 3000), use `--port [PORT]`.
@@ -42,6 +42,9 @@ To specify a port to listen on (instead of the default 3000), use `--port [PORT]
 For example: `meteor run --port 4000`
 will run the development server on `http://localhost:4000`
 and the development MongoDB instance on `mongodb://localhost:4001`.
+
+To open your default browser you can pass the `--open` flag.
+For example: `meteor run --open`
 
 Run `meteor help run` to see the full list of options.
 
@@ -81,131 +84,206 @@ option to other `meteor` tool commands, such as `meteor run` and `meteor test-pa
 > **Note:** Due to a [bug in `node-inspector`](https://github.com/node-inspector/node-inspector/issues/903), pushing "Enter" after a command on the Node Inspector Console will not successfully send the command to the server.  If you require this functionality, please consider using Safari or `meteor shell` in order to interact with the server console until the `node-inspector` project [fixes the bug](https://github.com/node-inspector/node-inspector/pull/955).  Alternatively, there is a hot-patch available [in this comment](https://github.com/meteor/meteor/issues/7991#issuecomment-266709459) on [#7991](https://github.com/meteor/meteor/issues/7991).
 
 
-<h2 id="meteorcreate">meteor create <i>name</i></h2>
+<h2 id="meteorcreate">meteor create <i>app-name</i></h2>
 
-Create a new Meteor project. By default, it uses [React](https://guide.meteor.com/react) 
-and makes a subdirectory named *name* and copies in the template app.
-You can pass an absolute or relative path.
+The command `meteor create app-name` is the default command for creating a new Meteor project. It creates a subdirectory
+named `app-name` and copies a template app into it. You can pass an absolute or relative path. If you pass a relative
+path, it will be resolved relative to the current working directory. By default, it generates a React project.
 
-<h3 id="meteorcreate-flags">Flags</h3>
+See the flags below to learn how you can generate different types of apps.
 
-**Flags for default packages**
-
-`--prototype`
-
-Creates a package with the prototype purpose packages(`autopublish` and `insecure`) 
-if you use them you can change your collections quickly, 
-but it is not supposed to be used in production.
-For more information about security you can check
-it [here](https://guide.meteor.com/security.html#checklist)
-It can be used together with other flags that create apps such as `--react` or `--typescript`.
+Using only `meteor create` will create a promt to help you choose the type of app you want to create,
+giving you the options with the flags below.
 
 
-`--bare`
+<h3 id="apollo">--apollo</h3>
 
-Creates a basic, blaze project.
+The command `meteor create --apollo app-name` creates a Meteor app with [React](https://react.dev/),
+[Apollo](https://www.apollographql.com/) (GraphQL), and [MongoDB](https://www.mongodb.com/). To create a complete app,
+including testing and deployment, follow the [React tutorial](https://react-tutorial.meteor.com/). To learn how to use
+Apollo, refer to the [GraphQL section](https://react-tutorial.meteor.com/simple-todos-graphql/).
 
-`--full`
+Npm packages included: `@apollo/client`, `@apollo/server`, `@babel/runtime`, `body-parser`, `express`,
+`graphql` `meteor-node-stubs`, `react`, `react-dom`.
 
-Creates a more complete, imports-based project which
-closely matches the [file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the
-[Meteor Guide](https://guide.meteor.com/)
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`react-meteor-data`, `apollo`, `swydo:graphql`.
 
-`--minimal`
 
-Creates a project with as few Meteor Packages as possible.
+<h3 id="bare">--bare</h3>
 
- `--package`
+The command `meteor create --bare app-name` creates an empty Meteor app with [Blaze](https://blazejs.org) and
+[MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
+[Blaze tutorial](https://blaze-tutorial.meteor.com/).
 
-Creates a new package. If used in an
-existing app, this command will create a package in the packages
-directory.
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `jquery`.
 
-`--typescript`
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `tracker`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`.
 
-Create a basic [Typescript](https://guide.meteor.com/build-tool.html#typescript) 
-React-based app. Can be combined with other flags to use a different UI than 
-React.
 
-`--apollo`
+<h3 id="blaze-app">--blaze</h3>
 
-Create a basic [Apollo + React](https://www.apollographql.com/) app.
+The command `meteor create --blaze app-name` creates a Meteor app with [Blaze](https://blazejs.org) and
+[MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
+[Blaze tutorial](https://blaze-tutorial.meteor.com/).
 
-**Flags for default UI libraries / frameworks**
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `jquery`.
 
-`--blaze`
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`,
+`tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`,
+`hot-module-replacement`, `blaze-hot`.
 
-Create a basic [Blaze](https://blazejs.org/) app.
 
-`--vue`
+<h3 id="chakra-ui">--chakra-ui</h3>
 
-Create a basic [Vue 3](https://vuejs.org/) app.
+The command `meteor create --chakra-ui app-name` creates a Meteor app with [React](https://react.dev/),
+[Chakra-UI](https://chakra-ui.com/), and [MongoDB](https://www.mongodb.com/). To create a complete app, including
+testing and deployment, follow the [React tutorial](https://react-tutorial.meteor.com/). To learn how to use Chakra-UI,
+refer to the [Simple Tasks](https://github.com/fredmaiaarantes/simpletasks) example.
 
-`--react`
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`, `@chakra-ui/icons`, `@chakra-ui/react`, `@emotion/react`
+`@emotion/styled`, `@react-icons/all-files`, `framer-motion`.
 
-Create a basic react app. See the section on [React tutorial](https://guide.meteor.com/react.html#react-tutorial)  
-for more information. This is the default.
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`react-meteor-data`.
 
-`--angular`
-for more information.
 
-`--vue-2`
+<h3 id="full">--full</h3>
 
-Create a basic vue2-based app. See the [Vue guide](https://vue-tutorial.meteor.com/) 
-for more information.
+The command `meteor create --full app-name` creates a Meteor app with [Blaze](https://blazejs.org) and
+[MongoDB](https://www.mongodb.com/). It creates a more complete, imports-based project that closely matches the
+[file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the
+[Meteor Guide](https://guide.meteor.com/). To create a complete app, including testing and deployment, follow the
+[Blaze tutorial](https://blaze-tutorial.meteor.com/).
 
-`--svelte`
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `jquery`, `chai`.
 
-Create a basic [Svelte](https://svelte.dev/) app.
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`,
+`tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`,
+`ostrio:flow-router-extra`, `less`, `meteortesting:mocha`, `johanbrook:publication-collector`.
 
-`--tailwind`
 
-Create a basic [React](https://reactjs.org) + [Tailwind CSS](https://tailwindcss.com) app.
+<h3 id="minimal">--minimal</h3>
 
-`--chakra-ui`
+The command `meteor create --minimal app-name` creates a project with as few Meteor packages as possible.
 
-Create a basic [React](https://reactjs.org) + [Chakra-UI](https://chakra-ui.com/) app.
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`.
 
-`--solid`
+Meteor packages included: `meteor`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`,
+`static-html`, `webapp`, `server-render`, `hot-module-replacement`.
 
-Create a basic [Solid](https://www.solidjs.com/) app.
 
-**Packages**
+<h3 id="package">--package</h3>
 
-|                                                                                                      | Default (`--react`) | `--bare` | `--full` | `--minimal` | `--blaze` | `--apollo` | `--vue-2` | `--svelte` | `--tailwind` | `--chakra-ui` | `--solid` | `--vue` |
-|------------------------------------------------------------------------------------------------------|:-------------------:|:--------:|:--------:|:-----------:|:---------:|:----------:|:---------:|:----------:|:------------:|:-------------:|:---------:|:-------:|
-| [autopublish](https://atmospherejs.com/meteor/autopublish)                                           |          X          |          |          |             |     X     |            |           |            |      X       |       X       |     X     |         |
-| [akryum:vue-component](https://atmospherejs.com/akryum/vue-component)                                |                     |          |          |             |           |            |     X     |            |              |               |           |         |
-| [apollo](https://atmospherejs.com/meteor/apollo)                                                     |                     |          |          |             |           |     X      |           |            |              |               |           |         |
-| [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)                         |                     |          |    X     |             |     X     |            |           |            |              |               |           |         |
-| [ecmascript](https://atmospherejs.com/meteor/ecmascript)                                             |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
-| [es5-shim](https://atmospherejs.com/meteor/es5-shim)                                                 |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
-| [hot-module-replacement](https://atmospherejs.com/meteor/hot-module-replacement)                     |          X          |          |          |             |     X     |     X      |           |     X      |      X       |       X       |     X     |    X    |
-| [insecure](https://atmospherejs.com/meteor/insecure)                                                 |          X          |          |          |             |     X     |            |           |            |      X       |       X       |     X     |    X    |
-| [johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook/publication-collector) |                     |          |    X     |             |           |     X      |           |            |              |               |           |         |
-| [jquery](https://atmospherejs.com/meteor/jquery)                                                     |                     |          |    X     |             |     X     |            |           |            |              |               |           |         |
-| [less](https://atmospherejs.com/meteor/less)                                                         |                     |          |    X     |             |           |            |           |            |              |               |           |         |
-| [meteor](https://atmospherejs.com/meteor/meteor)                                                     |                     |          |          |      X      |           |            |           |            |              |               |           |         |
-| [meteor-base](https://atmospherejs.com/meteor/meteor-base)                                           |          X          |    X     |    X     |             |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
-| [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)                               |          X          |    X     |    X     |             |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
-| [mongo](https://atmospherejs.com/meteor/mongo)                                                       |          X          |    X     |    X     |             |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
-| [meteortesting:mocha](https://atmospherejs.com/meteortesting/mocha)                                  |                     |          |    X     |             |           |            |     X     |            |              |               |           |         |
-| [ostrio:flow-router-extra](https://atmospherejs.com/meteor/ostrio/flow-router-extra)                 |                     |          |    X     |             |           |            |           |            |              |               |           |         |
-| [react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data)                               |          X          |          |          |             |           |            |           |            |      X       |       X       |           |         |
-| [reactive-var](https://atmospherejs.com/meteor/reactive-var)                                         |          X          |    X     |    X     |             |     X     |     X      |     X     |            |      X       |       X       |     X     |    X    |
-| [server-render](https://atmospherejs.com/meteor/server-render)                                       |                     |          |          |      X      |           |     X      |     X     |            |              |               |           |         |
-| [shell-server](https://atmospherejs.com/meteor/shell-server)                                         |                     |    X     |          |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
-| [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)                       |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
-| [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)                         |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
-| [static-html](https://atmospherejs.com/meteor/static-html)                                           |                     |    X     |          |      X      |           |     X      |     X     |     X      |              |               |           |         |
-| [swydo:graphql](https://atmospherejs.com/swydo/graphql)                                              |                     |          |          |             |           |     X      |           |            |              |               |           |         |
-| [tailwindcss](https://tailwindcss.com)                                                               |                     |    X     |    X     |             |     X     |            |     X     |            |      X       |               |           |         |
-| [tracker](https://atmospherejs.com/meteor/tracker)                                                   |                     |    X     |    X     |             |     X     |            |     X     |            |              |               |           |         |
-| [typescript](https://atmospherejs.com/meteor/typescript)                                             |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |         |
-| [vite:bundler](https://atmospherejs.com/vite/bundler)                                                |                     |          |          |             |           |            |           |            |              |               |     X     |    X    |
-| [webapp](https://atmospherejs.com/meteor/webapp)                                                     |                     |          |          |      X      |           |            |           |            |              |               |           |         |
-| [zodern:melte](https://atmospherejs.com/zodern/melte)                                                |                     |          |          |             |           |            |           |     X      |              |               |           |         |
-| [zodern:types](https://atmospherejs.com/zodern/types)                                                |                     |          |          |             |           |            |           |     X      |              |               |           |         |
+The command `meteor create --package package-name` creates a new package. If used in an existing app, it will create a
+package in the `packages` directory. Check the [Meteor Guide](https://guide.meteor.com/writing-atmosphere-packages.html)
+for more information on how to get started writing packages.
+
+
+<h3 id="prototype">--prototype</h3>
+
+The command `meteor create --prototype app-name` creates a project with the prototype purpose packages (`autopublish`
+and `insecure`). If you use them, you can change your collections quickly and create prototype apps very quickly.
+However, these packages are not supposed to be used in production.
+
+For more information about security, you can read our [security checklist](https://guide.meteor.com/security.html#checklist).
+It can be used with other flags that create apps, such as `--react`, `blaze`, or `--typescript`.
+
+
+<h3 id="react">--react</h3>
+
+The command `meteor create --react app-name` creates a Meteor app with [React](https://react.dev/) and
+[MongoDB](https://www.mongodb.com/). It functions in the same way as if you don't use any flags. To create a complete
+app, including testing and deployment, follow the [React tutorial](https://react-tutorial.meteor.com/).
+
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`.
+
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`react-meteor-data`.
+
+
+<h3 id="release">--release</h3>
+
+The command `meteor create app-name --release {meteor-version}` creates a Meteor app with the release specified in the
+command. For instance, you can create a Meteor app with the `2.8` release using `meteor create app-name --release 2.8`.
+By default, it generates a React app, but you can use it with other flags that create apps such as `--blaze`,
+`--svelte`, `--vue`, or `--typescript`.
+
+
+<h3 id="solid">--solid</h3>
+
+The command `meteor create --solid app-name` creates a Meteor app with [Solid](https://www.solidjs.com/),
+[Vite](https://vitejs.dev/), and [MongoDB](https://www.mongodb.com/). You can see an example on the
+[meteor-solid-app](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) repository.
+
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `solid-js`, `babel-preset-solid`, `vite`, `vite-plugin-solid`, `vite-plugin-solid-svg`.
+
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`vite:bundler`.
+
+
+<h3 id="svelte">--svelte</h3>
+
+The command `meteor create --svelte app-name` creates a Meteor app with [Svelte](https://svelte.dev/) and
+[MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
+[Svelte tutorial](https://svelte-tutorial.meteor.com/).
+
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `svelte`, `svelte-preprocess`.
+
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`zodern:melte`, `zodern:types`.
+
+You can also use [Svelte](https://svelte.dev/) with [Vite](https://vitejs.dev/) by using the [jorgenvatle:meteor-vite](https://github.com/JorgenVatle/meteor-vite) package.
+You can see an example on the [meteor-vite](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/svelte) repository.
+
+
+<h3 id="tailwind">--tailwind</h3>
+
+The command `meteor create --tailwind app-name` creates a Meteor app with [React](https://react.dev/),
+[Tailwind CSS](https://tailwindcss.com), and [MongoDB](https://www.mongodb.com/).
+
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`, `autoprefixer`, `postcss`, `postcss-load-config`, `tailwindcss`.
+
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`react-meteor-data`.
+
+
+<h3 id="typescript">--typescript</h3>
+
+The command `meteor create --typescript app-name` creates a Meteor app with [React](https://react.dev/),
+[TypeScript](https://www.typescriptlang.org/), and [MongoDB](https://www.mongodb.com/). Check the
+[Meteor Guide](https://guide.meteor.com/build-tool.html#typescript) for more information about TypeScript and how to
+use it with other UI frameworks.
+
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `react`, `react-dom`, `@types/mocha`, `@types/node`, `@types/react`, `@types/react-dom`, `typescript`.
+
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`react-meteor-data`, `zodern:types`.
+
+
+<h3 id="vue">--vue</h3>
+
+The command `meteor create --vue app-name` creates a Meteor app with [Vue 3](https://vuejs.org/),
+[Tailwind CSS](https://tailwindcss.com), [Vite](https://vitejs.dev/), and [MongoDB](https://www.mongodb.com/). To
+create a complete app, including testing and deployment, follow the [Vue 3 tutorial](https://vue3-tutorial.meteor.com/).
+
+Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `vue`, `vue-meteor-tracker`, `vue-router`, `@types/meteor`, `@vitejs/plugin-vue`, `autoprefixer`, `postcss`, `tailwindcss`, `vite`.
+
+Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
+`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
+`vite:bundler`.
+
+You can also use Vue 3 with Vite by using the [jorgenvatle:meteor-vite](https://github.com/JorgenVatle/meteor-vite)
+package. You can see an example on the [meteor-vite](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/vue)
+repository.
 
 <h2 id="meteorgenerate"> meteor generate </h2>
 
@@ -217,7 +295,7 @@ used as a command line only operation as well.
 > By default, the generator will use JavaScript but if it detects that you have a
 ``tsconfig.json`` file in your project, it will use TypeScript instead.
 
-running 
+running
 ```bash
 meteor generate customer
 
@@ -425,7 +503,7 @@ It will prompt the following questions.
 
 
 
---- 
+---
 
 <h3 id="meteorgenerate-templating"> Using your own template </h3>
 
@@ -447,7 +525,7 @@ You can use your own templates for scaffolding your specific workloads. To do th
 Out of the box is provided a few functions such as replacing ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$``
 
 these replacements come from this function:
- 
+
 _Note that scaffoldName is the name that you have passed as argument_
 
 ```js
@@ -575,7 +653,7 @@ If you want to connect to your free MongoDB shared cluster using your on setting
 ```
 packages: {
   mongo: {
-    options: { 
+    options: {
         tlsAllowInvalidCertificates: true,
     },
   },
@@ -599,7 +677,7 @@ Your project should be a git repository as the commit hash is going to be used t
 The `cache-build` option is available since Meteor 1.11.
 {% endpullquote %}
 
-With the argument `--container-size` you can change your app's container size using the deploy command. The valid arguments are: `tiny`, `compact`, `standard`, `double`, `quad`, `octa`, and `dozen`. One more thing to note here is that the `--container-size` flag can only be used when the `--plan` option is already specified, otherwise using the `--container-size` option will throw an error with the message : `Error deploying application: Internal error`. To see more about the difference and prices of each one you can check [here](https://www.meteor.com/cloud#pricing-section). 
+With the argument `--container-size` you can change your app's container size using the deploy command. The valid arguments are: `tiny`, `compact`, `standard`, `double`, `quad`, `octa`, and `dozen`. One more thing to note here is that the `--container-size` flag can only be used when the `--plan` option is already specified, otherwise using the `--container-size` option will throw an error with the message : `Error deploying application: Internal error`. To see more about the difference and prices of each one you can check [here](https://www.meteor.com/cloud#pricing-section).
 
 {% pullquote warning %}
 The `--container-size` option is available since Meteor 2.4.1.
@@ -826,7 +904,7 @@ upload the build to the architecture that you were using to publish it. You can
 use `publish-for-arch` to upload a build to a different architecture from a
 different machine.
 
-If you have already published a package but need to update it's metadata 
+If you have already published a package but need to update it's metadata
 (the content of `Package.describe`) or the README you can actually achieve this
 via `meteor publish --update`.
 

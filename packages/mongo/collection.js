@@ -2,28 +2,11 @@
 // XXX presently there is no way to destroy/clean up a Collection
 import {
   ASYNC_COLLECTION_METHODS,
-  getAsyncMethodName
-} from "meteor/minimongo/constants";
+  getAsyncMethodName,
+} from 'meteor/minimongo/constants';
 
 import { normalizeProjection } from "./mongo_utils";
-export function warnUsingOldApi (
-    methodName,
-    collectionName,
-    isCalledFromAsync
-   ){
-  if (
-    process.env.WARN_WHEN_USING_OLD_API && // also ensures it is on the server
-    !isCalledFromAsync // must be true otherwise we should log
-  ) {
-   if (collectionName === undefined || collectionName.includes('oplog')) return
-   console.warn(`
-   
-   Calling method ${collectionName}.${methodName} from old API on server.
-   This method will be removed, from the server, in version 3.
-   Trace is below:`)
-   console.trace()
- };
-}
+
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
@@ -37,7 +20,7 @@ Mongo = {};
  * @class
  * @param {String} name The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection.
  * @param {Object} [options]
- * @param {Object} options.connection The server connection that will manage this collection. Uses the default connection if not specified.  Pass the return value of calling [`DDP.connect`](#ddp_connect) to specify a different server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection.
+ * @param {Object} options.connection The server connection that will manage this collection. Uses the default connection if not specified.  Pass the return value of calling [`DDP.connect`](#DDP-connect) to specify a different server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection.
  * @param {String} options.idGeneration The method of generating the `_id` fields of new documents in this collection.  Possible values:
 
  - **`'STRING'`**: random strings
@@ -105,6 +88,8 @@ Mongo.Collection = function Collection(name, options) {
   }
 
   this._transform = LocalCollection.wrapTransform(options.transform);
+
+  this.resolverType = options.resolverType;
 
   if (!name || options.connection === null)
     // note: nameless collections never have a connection
@@ -493,7 +478,6 @@ Object.assign(Mongo.Collection.prototype, {
         )
       );
 
-
       return {
         transform: self._transform,
         ...newOptions,
@@ -671,14 +655,6 @@ Object.assign(Mongo.Collection.prototype, {
       throw new Error('insert requires an argument');
     }
 
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "insert",
-      this._name,
-      this.insert.isCalledFromAsync
-    );
-    this.insert.isCalledFromAsync = false;
 
     // Make a shallow clone of the document, preserving its prototype.
     doc = Object.create(
@@ -779,7 +755,7 @@ Object.assign(Mongo.Collection.prototype, {
     return this._insert(doc, callback);
   },
 
-  async _insertAsync(doc, options = {}) {
+  _insertAsync(doc, options = {}) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -836,19 +812,17 @@ Object.assign(Mongo.Collection.prototype, {
     };
 
     if (this._isRemoteCollection()) {
-      const result = await this._callMutatorMethodAsync('insertAsync', [doc], options);
-
-      return chooseReturnValueFromCollectionResult(result);
+      const promise = this._callMutatorMethodAsync('insertAsync', [doc], options);
+      promise.then(chooseReturnValueFromCollectionResult);
+      promise.stubPromise = promise.stubPromise.then(chooseReturnValueFromCollectionResult);
+      promise.serverPromise = promise.serverPromise.then(chooseReturnValueFromCollectionResult);
+      return promise;
     }
 
     // it's my collection.  descend into the collection object
     // and propagate any exception.
-    try {
-      const result = await this._collection.insertAsync(doc);
-      return chooseReturnValueFromCollectionResult(result);
-    } catch (e) {
-      throw e;
-    }
+    return this._collection.insertAsync(doc)
+      .then(chooseReturnValueFromCollectionResult);
   },
 
   /**
@@ -876,7 +850,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
    * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
    */
-  async updateAsync(selector, modifier, ...optionsAndCallback) {
+  updateAsync(selector, modifier, ...optionsAndCallback) {
 
     // We've already popped off the callback, so we are left with an array
     // of one or zero items
@@ -915,7 +889,7 @@ Object.assign(Mongo.Collection.prototype, {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
-    //console.log({callback, options, selector, modifier, coll: this._collection});
+
     return this._collection.updateAsync(
       selector,
       modifier,
@@ -962,15 +936,6 @@ Object.assign(Mongo.Collection.prototype, {
       }
     }
 
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "update",
-      this._name,
-      this.update.isCalledFromAsync
-    );
-    this.update.isCalledFromAsync = false;
-
     selector = Mongo.Collection._rewriteSelector(selector, {
       fallbackId: insertedId,
     });
@@ -993,7 +958,7 @@ Object.assign(Mongo.Collection.prototype, {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
-      return this._collection.updateAsync(
+      return this._collection.update(
         selector,
         modifier,
         options,
@@ -1016,7 +981,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
    */
-  async removeAsync(selector, options = {}) {
+  removeAsync(selector, options = {}) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
     if (this._isRemoteCollection()) {
@@ -1043,14 +1008,7 @@ Object.assign(Mongo.Collection.prototype, {
       return this._callMutatorMethod('remove', [selector]);
     }
 
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "remove",
-      this._name,
-      this.remove.isCalledFromAsync
-    );
-    this.remove.isCalledFromAsync = false;
+
     // it's my collection.  descend into the collection1 object
     // and propagate any exception.
     return this._collection.remove(selector);
@@ -1075,19 +1033,20 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Object} [options]
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
    */
-  async upsertAsync(selector, modifier, options) {
-    return this.updateAsync(
-      selector,
-      modifier,
-      {
-        ...options,
-        _returnObject: true,
-        upsert: true,
-      });
-  },
+    async upsertAsync(selector, modifier, options) {
+      return this.updateAsync(
+        selector,
+        modifier,
+        {
+          ...options,
+          _returnObject: true,
+          upsert: true,
+        });
+    },
+
 
   /**
-   * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
+   * @summary Asynchronously modifies one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
    * @locus Anywhere
    * @method upsert
    * @memberof Mongo.Collection
@@ -1096,8 +1055,14 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {MongoModifier} modifier Specifies how to modify the documents
    * @param {Object} [options]
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
-  upsert(selector, modifier, options) {
+  upsert(selector, modifier, options, callback) {
+    if (!callback && typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+
     return this.update(
       selector,
       modifier,
@@ -1153,18 +1118,16 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection.createIndexAsync)
       throw new Error('Can only call createIndexAsync on server collections');
-    // [FIBERS]
-    // TODO: Remove this when 3.0 is released.
-    warnUsingOldApi(
-      "createIndex",
-      self._name,
-      self.createIndex.isCalledFromAsync
-    );
-    self.createIndex.isCalledFromAsync = false;
+
     try {
       await self._collection.createIndexAsync(index, options);
     } catch (e) {
-      if (e.message.includes('An equivalent index already exists with the same name but different options.') && Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch) {
+      if (
+        e.message.includes(
+          'An equivalent index already exists with the same name but different options.'
+        ) &&
+        Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch
+      ) {
         import { Log } from 'meteor/logging';
 
         Log.info(`Re-creating index ${ index } for ${ self._name } due to options mismatch.`);
@@ -1262,7 +1225,7 @@ function wrapCallback(callback, convertResult) {
 }
 
 /**
- * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).
+ * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will be generated randomly (not using MongoDB's ID construction rules).
  * @locus Anywhere
  * @class
  * @param {String} [hexString] Optional.  The 24-character hexadecimal contents of the ObjectID to create
@@ -1292,7 +1255,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
 Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
-Object.assign(Meteor.Collection.prototype, AllowDeny.CollectionPrototype);
+Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
 
 function popCallbackFromArgs(args) {
   // Pull off any callback (or perhaps a 'callback' variable that was passed
@@ -1305,19 +1268,3 @@ function popCallbackFromArgs(args) {
     return args.pop();
   }
 }
-
-
-// XXX: IN Meteor 3.x this code was not working....
-// It throws an error when trying to call a method on the collection.
-// the error normally is:
-// TypeError: this[methodName] is not a function
-// ASYNC_COLLECTION_METHODS.forEach(methodName => {
-//   const methodNameAsync = getAsyncMethodName(methodName);
-//   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
-//     try {
-//       return Promise.resolve(this[methodName](...args));
-//     } catch (error) {
-//       return Promise.reject(error);
-//     }
-//   };
-// });

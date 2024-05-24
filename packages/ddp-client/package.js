@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '3.0.0-alpha300.10',
+  version: '3.0.0-rc300.2',
   documentation: null
 });
 
@@ -60,4 +60,7 @@ Package.onTest((api) => {
   api.addFiles('test/livedata_tests.js');
   api.addFiles('test/livedata_test_service.js');
   api.addFiles('test/random_stream_tests.js');
+  api.addFiles('test/async_stubs/client.js', 'client');
+  api.addFiles('test/async_stubs/server_setup.js', 'server');
+  api.addFiles('test/livedata_callAsync_tests.js');
 });
