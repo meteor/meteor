@@ -25,19 +25,6 @@ If ($selfTestExitCode -eq 0) {
   Write-Host "FAILURE! (Exit: $selfTestExitCode)" -ForegroundColor Red
 }
 
-Write-Host "Uploading JUnit test results..." -ForegroundColor Magenta
-$wc = New-Object 'System.Net.WebClient'
-Get-ChildItem $env:TEMP 'self-test-junit-*.xml' | Foreach-Object {
-  Write-Host " - $($_.FullName)" -ForegroundColor Magenta
-  Write-Host "   - as Artifact..." -ForegroundColor Magenta
-  Push-AppveyorArtifact $_.FullName
-  Write-Host "   - as Test Results..." -ForegroundColor Magenta
-  $artifactPostUrl = `
-    "https://ci.appveyor.com/api/testresults/junit/",
-    $env:APPVEYOR_JOB_ID -Join ''
-  $wc.UploadFile($artifactPostUrl, ($_.FullName))
-}
-
 If ($selfTestExitCode -ne 0) {
   Exit $selfTestExitCode
 }

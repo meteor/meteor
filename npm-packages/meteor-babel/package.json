@@ -48,7 +48,7 @@
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.21",
     "meteor-babel-helpers": "0.0.3",
-    "typescript": "~5.4.3"
+    "typescript": "~5.4.5"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "7.14.5",

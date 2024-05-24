@@ -1,24 +1,5 @@
 import { Meteor } from 'meteor/meteor';
 
-// TODO get from account-base
-// config option keys
-const VALID_CONFIG_KEYS = [
-  'sendVerificationEmail',
-  'forbidClientAccountCreation',
-  'passwordEnrollTokenExpiration',
-  'passwordEnrollTokenExpirationInDays',
-  'restrictCreationByEmailDomain',
-  'loginExpirationInDays',
-  'loginExpiration',
-  'passwordResetTokenExpirationInDays',
-  'passwordResetTokenExpiration',
-  'ambiguousErrorMessages',
-  'bcryptRounds',
-  'defaultFieldSelector',
-  'loginTokenExpirationHours',
-  'tokenSequenceLength',
-];
-
 Accounts.oauth = {};
 
 const services = {};
@@ -72,17 +53,5 @@ Meteor.startup(() => {
       );
       delete settings.oauthSecretKey;
     }
-    // Validate config options keys
-    Object.keys(settings).forEach(key => {
-      if (!VALID_CONFIG_KEYS.includes(key)) {
-        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-        throw new Meteor.Error(
-          `Accounts configuration: Invalid key: ${key}`
-        );
-      } else {
-        // set values in Accounts._options
-        Accounts._options[key] = settings[key];
-      }
-    });
   }
 });

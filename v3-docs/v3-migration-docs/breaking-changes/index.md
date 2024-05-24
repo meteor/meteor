@@ -37,21 +37,27 @@ Meteor 3.0 is now using Node v20. This means that if you have any dependencies o
 of Node v14, you will need to update them to be compatible with Node v20.
 
 
-## NPM Installer
+## NPM Installer Update
 
-The npm installer has been updated. Use the following command to install Meteor:
+The npm installer for Meteor has been changed. For the official release, you can install Meteor with this command:
 
 ```bash
 npx meteor
 ```
 
-or
+While we’re in the Release Candidate phase, use:
+
+```bash
+npx meteor@rc
+```
+
+or specify a version directly:
 
 ```bash
 npx meteor@<version>
 ```
 
-You should be using a node version >= 20.0.0, if you use in your CI/CD you should update it to use the latest version of Node.
+Ensure you're using Node version 20.0.0 or higher, especially in your CI/CD workflows, to be compatible with the latest Meteor version.
 
 
 ## Call x CallAsync
@@ -104,18 +110,16 @@ await Meteor.callAsync('otherMethod') // [!code highlight]
 
 ```
 
-## Changes in Webapp
+## WebApp Switches to Express
 
 ::: tip
 
-Webapp now uses Express under the hood. This means that you can use all the express features in your Meteor app.
-
-But if you did any customizations in the `WebApp` package, you should check if they are compatible with Express.
+WebApp has switched to Express from Connect. This upgrade lets you use all the Express features in your Meteor app.
+If you've customized the WebApp package before, please verify if those customizations work with Express.
 
 :::
 
-
-The `webapp` package now exports this new properties:
+The `webapp` package now exports these new properties:
 
 ```ts
 type ExpressModule = {
@@ -149,7 +153,9 @@ export declare module WebApp {
 // import { WebApp } from 'meteor/webapp';
 ```
 
-If you want to use express in your app, you can do it like this:
+### Routes with WebApp and Express
+
+To add Express routes in your app, check out the [Express Guide](https://expressjs.com/en/guide/routing.html) and follow this example:
 
 ```js
 import { WebApp } from 'meteor/webapp';
@@ -172,9 +178,71 @@ import { WebApp } from 'meteor/webapp';
 WebApp.handlers.get('/hello', (req, res) => {
   res.send('Hello World');
 });
-
 ```
-Changed engine from connect to express and changed api naming to match express. See below:
+
+### Middlewares with WebApp and Express
+
+To include **Router-level** Express middleware in your app, check out the [Express Guide](https://expressjs.com/en/guide/using-middleware.html#middleware.router) and follow this example:
+
+```js
+import { WebApp } from 'meteor/webapp';
+
+const app = WebApp.express();
+const router = WebApp.express.Router();
+
+// This middleware is executed every time the app receives a request
+router.use((req, res, next) => {
+    console.log('Router-level - Time:', Date.now());
+    next();
+})
+
+// This middleware shows request info for any type of HTTP request to the /hello/:name path
+router.use('/hello/:name', (req, res, next) => {
+    console.log('Router-level - Request URL:', req.originalUrl);
+    next();
+}, (req, res, next) => {
+    console.log('Router-level - Request Type:', req.method);
+    next();
+})
+
+// mount the router on the app
+app.use('/', router);
+
+WebApp.handlers.use(app);
+```
+
+To include **Application-level** Express middleware in your app, check out the [Express Guide](https://expressjs.com/en/guide/using-middleware.html#middleware.application) and follow this example:
+
+```js
+import { WebApp } from 'meteor/webapp';
+
+const app = WebApp.express();
+const router = WebApp.express.Router()
+
+// This middleware is executed every time the app receives a request
+router.use((req, res, next) => {
+    console.log('Router-level - Time:', Date.now());
+    next();
+})
+
+// This middleware shows request info for any type of HTTP request to the /hello/:name path
+router.use('/hello/:name', (req, res, next) => {
+    console.log('Router-level - Request URL:', req.originalUrl);
+    next();
+}, (req, res, next) => {
+    console.log('Router-level - Request Type:', req.method);
+    next();
+})
+
+// mount the router on the app
+app.use('/', router);
+
+WebApp.handlers.use(app);
+```
+
+### New API Names
+
+Having switched from Connect to Express, we updated API names to align with Express. See the details below:
   - `WebApp.connectHandlers.use(middleware)` is now `WebApp.handlers.use(middleware)`
   - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawHandlers.use(middleware)`
   - `WebApp.connectApp` is now `WebApp.expressApp`

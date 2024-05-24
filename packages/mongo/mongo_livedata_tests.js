@@ -4342,14 +4342,11 @@ testAsyncMulti(
       test.equal(itemIds, ['a']); // temporary data accessible
 
       if (Meteor.isClient) {
-        return new Promise(resolve => {
-          Meteor.setTimeout(async () => {
-            items = await Collection.find().fetchAsync();
-            itemIds = items.map(_item => _item._id);
-            test.equal(itemIds, []); // data IS NOT persisted
-            resolve();
-          }, 700);
-        });
+        return waitUntil(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item._id);
+          return itemIds?.length === []?.length; // data IS NOT persisted
+        }, { description: 'data IS NOT persisted'});
       }
 
       return Promise.resolve();
@@ -4384,14 +4381,11 @@ testAsyncMulti(
       test.equal(itemIds, ['a']); // temporary data accessible
 
       if (Meteor.isClient) {
-        return new Promise(resolve => {
-          Meteor.setTimeout(async () => {
-            items = await Collection.find().fetchAsync();
-            itemIds = items.map(_item => _item._id);
-            test.equal(itemIds, ['a']); // data is persisted
-            resolve();
-          }, 700);
-        });
+        return waitUntil(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item._id);
+          return itemIds?.length === 1 && itemIds[0] === 'a'; // data is persisted
+        }, { description: 'data is persisted'});
       }
 
       return Promise.resolve();
@@ -4443,14 +4437,11 @@ testAsyncMulti(
           await promise.serverPromise;
         } catch (e) {
           // error as no insert method enabled on server
-          return new Promise(resolve => {
-            Meteor.setTimeout(async () => {
-              items = await Collection.find().fetchAsync();
-              itemIds = items.map(_item => _item._id);
-              test.equal(itemIds, []); // data IS NOT persisted
-              resolve();
-            }, 700);
-          });
+          return waitUntil(async () => {
+            items = await Collection.find().fetchAsync();
+            itemIds = items.map(_item => _item._id);
+            return itemIds?.length === []?.length ; // data IS NOT persisted
+          }, { description: 'data IS NOT persisted'});
         }
       } else {
         return Promise.resolve();
