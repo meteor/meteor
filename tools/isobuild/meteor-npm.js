@@ -7,16 +7,13 @@ var assert = require('assert');
 var cleanup = require('../tool-env/cleanup.js');
 var fs = require('fs');
 var files = require('../fs/files');
-var os = require('os');
 var _ = require('underscore');
-var httpHelpers = require('../utils/http-helpers.js');
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile').Profile;
 import { parse } from "semver";
 import { version as npmVersion } from 'npm';
-import { execFileAsync } from "../utils/processes";
 import {
   get as getRebuildArgs
 } from "../static-assets/server/npm-rebuild-args.js";

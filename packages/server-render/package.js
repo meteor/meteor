@@ -1,6 +1,6 @@
 Package.describe({
   name: "server-render",
-  version: "0.4.0",
+  version: "0.4.1",
   summary: "Generic support for server-side rendering in Meteor apps",
   documentation: "README.md"
 });
@@ -17,6 +17,7 @@ Package.onUse(function(api) {
   api.use("webapp");
   api.mainModule("client.js", "client", { lazy: true });
   api.mainModule("server.js", "server");
+  api.addAssets('server-render.d.ts', 'server');
 });
 
 Package.onTest(function(api) {

@@ -8,14 +8,15 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@apollo/client": "^3.5.10",
-    "@babel/runtime": "^7.17.9",
-    "apollo-server-express": "^3.6.7",
-    "express": "^4.17.3",
-    "graphql": "^15.8.0",
-    "meteor-node-stubs": "^1.2.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "@apollo/client": "^3.8.8",
+    "@apollo/server": "^4.9.5",
+    "@babel/runtime": "^7.23.5",
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "graphql": "^16.8.1",
+    "meteor-node-stubs": "^1.2.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "meteor": {
     "mainModule": {

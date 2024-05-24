@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { Meteor } from 'meteor/meteor'
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
@@ -25,8 +26,8 @@ export class AccountsServer extends AccountsCommon {
   // Note that this constructor is less likely to be instantiated multiple
   // times than the `AccountsClient` constructor, because a single server
   // can provide only one set of methods.
-  constructor(server) {
-    super();
+  constructor(server, options) {
+    super(options || {});
 
     this._server = server || Meteor.server;
     // Set up the server's methods, as if by calling Meteor.methods.
@@ -189,7 +190,7 @@ export class AccountsServer extends AccountsCommon {
       throw new Error("Can only call onCreateUser once");
     }
 
-    this._onCreateUserHook = func;
+    this._onCreateUserHook = Meteor.wrapFn(func);
   }
 
   /**
@@ -318,7 +319,7 @@ export class AccountsServer extends AccountsCommon {
       // If user is not found, try a case insensitive lookup
       if (!user) {
         selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-        const candidateUsers = Meteor.users.find(selector, options).fetch();
+        const candidateUsers = Meteor.users.find(selector, { ...options, limit: 2 }).fetch();
         // No match if multiple candidates are found
         if (candidateUsers.length === 1) {
           user = candidateUsers[0];
@@ -434,7 +435,7 @@ export class AccountsServer extends AccountsCommon {
   // If the login is allowed and isn't aborted by a validate login hook
   // callback, log in the user.
   //
-  _attemptLogin(
+  async _attemptLogin(
     methodInvocation,
     methodName,
     methodArgs,
@@ -494,18 +495,18 @@ export class AccountsServer extends AccountsCommon {
   // Ensure that thrown exceptions are caught and that login hook
   // callbacks are still called.
   //
-  _loginMethod(
+  async _loginMethod(
     methodInvocation,
     methodName,
     methodArgs,
     type,
     fn
   ) {
-    return this._attemptLogin(
+    return await this._attemptLogin(
       methodInvocation,
       methodName,
       methodArgs,
-      tryLoginMethod(type, fn)
+      await tryLoginMethod(type, fn)
     );
   };
 
@@ -547,19 +548,14 @@ export class AccountsServer extends AccountsCommon {
   /// LOGIN HANDLERS
   ///
 
-  // The main entry point for auth packages to hook in to login.
-  //
-  // A login handler is a login method which can return `undefined` to
-  // indicate that the login request is not handled by this handler.
-  //
-  // @param name {String} Optional.  The service name, used by default
-  // if a specific service name isn't returned in the result.
-  //
-  // @param handler {Function} A function that receives an options object
-  // (as passed as an argument to the `login` method) and returns one of:
-  // - `undefined`, meaning don't handle;
-  // - a login method result object
-
+  /**
+   * @summary Registers a new login handler.
+   * @locus Server
+   * @param {String} [name] The type of login method like oauth, password, etc.
+   * @param {Function} handler A function that receives an options object
+   * (as passed as an argument to the `login` method) and returns one of
+   * `undefined`, meaning don't handle or a login method result object.
+   */
   registerLoginHandler(name, handler) {
     if (! handler) {
       handler = name;
@@ -568,7 +564,7 @@ export class AccountsServer extends AccountsCommon {
 
     this._loginHandlers.push({
       name: name,
-      handler: handler
+      handler: Meteor.wrapFn(handler)
     });
   };
 
@@ -587,11 +583,10 @@ export class AccountsServer extends AccountsCommon {
   // Try all of the registered login handlers until one of them doesn't
   // return `undefined`, meaning it handled this call to `login`. Return
   // that return value.
-  _runLoginHandlers(methodInvocation, options) {
+  async _runLoginHandlers(methodInvocation, options) {
     for (let handler of this._loginHandlers) {
-      const result = tryLoginMethod(
-        handler.name,
-        () => handler.handler.call(methodInvocation, options)
+      const result = await tryLoginMethod(handler.name, async () =>
+        await handler.handler.call(methodInvocation, options)
       );
 
       if (result) {
@@ -599,7 +594,10 @@ export class AccountsServer extends AccountsCommon {
       }
 
       if (result !== undefined) {
-        throw new Meteor.Error(400, "A login handler should return a result or undefined");
+        throw new Meteor.Error(
+          400,
+          'A login handler should return a result or undefined'
+        );
       }
     }
 
@@ -644,14 +642,15 @@ export class AccountsServer extends AccountsCommon {
     //   If successful, returns {token: reconnectToken, id: userId}
     //   If unsuccessful (for example, if the user closed the oauth login popup),
     //     throws an error describing the reason
-    methods.login = function (options) {
+    methods.login = async function (options) {
       // Login handlers should really also check whatever field they look at in
       // options, but we don't enforce it.
       check(options, Object);
 
-      const result = accounts._runLoginHandlers(this, options);
+      const result = await accounts._runLoginHandlers(this, options);
+      //console.log({result});
 
-      return accounts._attemptLogin(this, "login", arguments, result);
+      return await accounts._attemptLogin(this, "login", arguments, result);
     };
 
     methods.logout = function () {
@@ -726,14 +725,19 @@ export class AccountsServer extends AccountsCommon {
         throw new Meteor.Error(403, "Service unknown");
       }
 
-      const { ServiceConfiguration } = Package['service-configuration'];
-      if (ServiceConfiguration.configurations.findOne({service: options.service}))
-        throw new Meteor.Error(403, `Service ${options.service} already configured`);
+      if (Package['service-configuration']) {
+        const { ServiceConfiguration } = Package['service-configuration'];
+        if (ServiceConfiguration.configurations.findOne({service: options.service}))
+          throw new Meteor.Error(403, `Service ${options.service} already configured`);
 
-      if (hasOwn.call(options, 'secret') && usingOAuthEncryption())
-        options.secret = OAuthEncryption.seal(options.secret);
+        if (Package["oauth-encryption"]) {
+          const { OAuthEncryption } = Package["oauth-encryption"]
+          if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
+            options.secret = OAuthEncryption.seal(options.secret);
+        }
 
-      ServiceConfiguration.configurations.insert(options);
+        ServiceConfiguration.configurations.insert(options);
+      }
     };
 
     accounts._server.methods(methods);
@@ -757,9 +761,12 @@ export class AccountsServer extends AccountsCommon {
     const { users, _autopublishFields, _defaultPublishFields } = this;
 
     // Publish all login service configuration fields other than secret.
-    this._server.publish("meteor.loginServiceConfiguration", () => {
-      const { ServiceConfiguration } = Package['service-configuration'];
-      return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
+    this._server.publish("meteor.loginServiceConfiguration", function() {
+      if (Package['service-configuration']) {
+        const { ServiceConfiguration } = Package['service-configuration'];
+        return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
+      }
+      this.ready();
     }, {is_auto: true}); // not technically autopublish, but stops the warning.
 
     // Use Meteor.startup to give other packages a chance to call
@@ -1357,15 +1364,23 @@ export class AccountsServer extends AccountsCommon {
     }
   };
 
-  // Removes default rate limiting rule
+  /**
+   * @summary Removes default rate limiting rule
+   * @locus Server
+   * @importFromPackage accounts-base
+   */
   removeDefaultRateLimit() {
     const resp = DDPRateLimiter.removeRule(this.defaultRateLimiterRuleId);
     this.defaultRateLimiterRuleId = null;
     return resp;
   };
 
-  // Add a default rule of limiting logins, creating new users and password reset
-  // to 5 times every 10 seconds per connection.
+  /**
+   * @summary Add a default rule of limiting logins, creating new users and password reset
+   * to 5 times every 10 seconds per connection.
+   * @locus Server
+   * @importFromPackage accounts-base
+   */
   addDefaultRateLimit() {
     if (!this.defaultRateLimiterRuleId) {
       this.defaultRateLimiterRuleId = DDPRateLimiter.addRule({
@@ -1512,10 +1527,10 @@ const cloneAttemptWithConnection = (connection, attempt) => {
   return clonedAttempt;
 };
 
-const tryLoginMethod = (type, fn) => {
+const tryLoginMethod = async (type, fn) => {
   let result;
   try {
-    result = fn();
+    result = await fn();
   }
   catch (e) {
     result = {error: e};
@@ -1684,17 +1699,7 @@ const setExpireTokensInterval = accounts => {
   }, EXPIRE_TOKENS_INTERVAL_MS);
 };
 
-///
-/// OAuth Encryption Support
-///
-
-const OAuthEncryption =
-  Package["oauth-encryption"] &&
-  Package["oauth-encryption"].OAuthEncryption;
-
-const usingOAuthEncryption = () => {
-  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
-};
+const OAuthEncryption = Package["oauth-encryption"]?.OAuthEncryption;
 
 // OAuth service data is temporarily stored in the pending credentials
 // collection during the oauth authentication process.  Sensitive data
@@ -1706,43 +1711,11 @@ const usingOAuthEncryption = () => {
 const pinEncryptedFieldsToUser = (serviceData, userId) => {
   Object.keys(serviceData).forEach(key => {
     let value = serviceData[key];
-    if (OAuthEncryption && OAuthEncryption.isSealed(value))
+    if (OAuthEncryption?.isSealed(value))
       value = OAuthEncryption.seal(OAuthEncryption.open(value), userId);
     serviceData[key] = value;
   });
 };
-
-
-// Encrypt unencrypted login service secrets when oauth-encryption is
-// added.
-//
-// XXX For the oauthSecretKey to be available here at startup, the
-// developer must call Accounts.config({oauthSecretKey: ...}) at load
-// time, instead of in a Meteor.startup block, because the startup
-// block in the app code will run after this accounts-base startup
-// block.  Perhaps we need a post-startup callback?
-
-Meteor.startup(() => {
-  if (! usingOAuthEncryption()) {
-    return;
-  }
-
-  const { ServiceConfiguration } = Package['service-configuration'];
-
-  ServiceConfiguration.configurations.find({
-    $and: [{
-      secret: { $exists: true }
-    }, {
-      "secret.algorithm": { $exists: false }
-    }]
-  }).forEach(config => {
-    ServiceConfiguration.configurations.update(config._id, {
-      $set: {
-        secret: OAuthEncryption.seal(config.secret)
-      }
-    });
-  });
-});
 
 // XXX see comment on Accounts.createUser in passwords_server about adding a
 // second "server options" argument.
@@ -1809,21 +1782,21 @@ const setupUsersCollection = users => {
   });
 
   /// DEFAULT INDEXES ON USERS
-  users.createIndex('username', { unique: true, sparse: true });
-  users.createIndex('emails.address', { unique: true, sparse: true });
-  users.createIndex('services.resume.loginTokens.hashedToken',
+  users.createIndexAsync('username', { unique: true, sparse: true });
+  users.createIndexAsync('emails.address', { unique: true, sparse: true });
+  users.createIndexAsync('services.resume.loginTokens.hashedToken',
     { unique: true, sparse: true });
-  users.createIndex('services.resume.loginTokens.token',
+  users.createIndexAsync('services.resume.loginTokens.token',
     { unique: true, sparse: true });
   // For taking care of logoutOtherClients calls that crashed before the
   // tokens were deleted.
-  users.createIndex('services.resume.haveLoginTokensToDelete',
+  users.createIndexAsync('services.resume.haveLoginTokensToDelete',
     { sparse: true });
   // For expiring login tokens
-  users.createIndex("services.resume.loginTokens.when", { sparse: true });
+  users.createIndexAsync("services.resume.loginTokens.when", { sparse: true });
   // For expiring password tokens
-  users.createIndex('services.password.reset.when', { sparse: true });
-  users.createIndex('services.password.enroll.when', { sparse: true });
+  users.createIndexAsync('services.password.reset.when', { sparse: true });
+  users.createIndexAsync('services.password.enroll.when', { sparse: true });
 };
 
 

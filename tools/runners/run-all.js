@@ -14,7 +14,7 @@ const Selenium = require('./run-selenium.js').Selenium;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
 const HMRServer = require('./run-hmr').HMRServer;
-const Updater = require('./run-updater.js').Updater;
+const Updater = require('./run-updater').Updater;
 
 class Runner {
   constructor({
@@ -123,7 +123,7 @@ class Runner {
         hmrPath: HMRPath,
         secret: hmrSecret,
         projectContext: self.projectContext,
-        cordovaServerPort 
+        cordovaServerPort
       });
     }
 
@@ -317,6 +317,7 @@ class Runner {
 // - buildOptions: 'buildOptions' argument to bundler.bundle()
 // - settingsFile: path to file containing deploy-time settings
 // - once: see above
+// - onBuilt: callback to call when the app bundle is built
 // - banner: replace the application path that is normally printed on
 //   startup with an arbitrary string (eg, 'Tests')
 // - rootUrl: tell the app that traffic at this URL will be routed to
@@ -334,6 +335,7 @@ class Runner {
 exports.run = function (options) {
   var runOptions = _.clone(options);
   var once = runOptions.once;
+  var onBuilt = runOptions.onBuilt;
 
   var promise = new Promise(function (resolve) {
     runOptions.onFailure = function () {
@@ -396,6 +398,7 @@ exports.run = function (options) {
 
   var runner = new Runner(runOptions);
   runner.start();
+  onBuilt && onBuilt();
   var result = promise.await();
   runner.stop();
 

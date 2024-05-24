@@ -1,22 +1,48 @@
-import { onceAsync } from './mongoAsyncUtils';
+import {
+  ASYNC_COLLECTION_METHODS,
+  getAsyncMethodName
+} from "meteor/minimongo/constants";
 
-let defaultRemoteCollectionDriver = null;
-MongoInternals.RemoteCollectionDriver = async function (
+MongoInternals.RemoteCollectionDriver = function (
   mongo_url, options) {
   var self = this;
-  self.mongo = await new MongoConnection(mongo_url, options);
-  return self;
+  self.mongo = new MongoConnection(mongo_url, options);
 };
+
+const REMOTE_COLLECTION_METHODS = [
+  '_createCappedCollection',
+  '_dropIndex',
+  '_ensureIndex',
+  'createIndex',
+  'countDocuments',
+  'dropCollection',
+  'estimatedDocumentCount',
+  'find',
+  'findOne',
+  'insert',
+  'rawCollection',
+  'remove',
+  'update',
+  'upsert',
+];
 
 Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
-    ['find', 'findOne', 'insert', 'update', 'upsert',
-      'remove', '_ensureIndex', 'createIndex', '_dropIndex', '_createCappedCollection',
-      'dropCollection', 'rawCollection'].forEach(
+    REMOTE_COLLECTION_METHODS.forEach(
       function (m) {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
+
+        if (!ASYNC_COLLECTION_METHODS.includes(m)) return;
+        const asyncMethodName = getAsyncMethodName(m);
+        ret[asyncMethodName] = function (...args) {
+          try {
+            return Promise.resolve(ret[m](...args));
+          } catch (error) {
+            return Promise.reject(error);
+          }
+        }
       });
     return ret;
   }
@@ -25,7 +51,7 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
 // Create the singleton RemoteCollectionDriver only on demand, so we
 // only require Mongo configuration if it's actually used (eg, not if
 // you're only trying to receive data from a remote DDP server.)
-MongoInternals.defaultRemoteCollectionDriver = onceAsync(async function () {
+MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
   var connectionOptions = {};
 
   var mongoUrl = process.env.MONGO_URL;
@@ -37,13 +63,16 @@ MongoInternals.defaultRemoteCollectionDriver = onceAsync(async function () {
   if (! mongoUrl)
     throw new Error("MONGO_URL must be set in environment");
 
-  defaultRemoteCollectionDriver = await new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
-  return defaultRemoteCollectionDriver;
-});
+  const driver = new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
 
-MongoInternals.getDefaultRemoteCollectionDriver = function() {
-  if (!defaultRemoteCollectionDriver) {
-    throw new Meteor.Error('getDefaultRemoteCollectionDriver should be called only after mongo package evaluation, make sure your package is declared after mongo in .meteor/packages file.');
-  }
-  return defaultRemoteCollectionDriver;
-}
+  // As many deployment tools, including Meteor Up, send requests to the app in
+  // order to confirm that the deployment finished successfully, it's required
+  // to know about a database connection problem before the app starts. Doing so
+  // in a `Meteor.startup` is fine, as the `WebApp` handles requests only after
+  // all are finished.
+  Meteor.startup(() => {
+    Promise.await(driver.mongo.client.connect());
+  });
+
+  return driver;
+});

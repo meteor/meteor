@@ -1,6 +1,6 @@
 Package.describe({
   summary: "An implementation of a diff algorithm on arrays and objects.",
-  version: '1.1.1',
+  version: '1.1.2',
   documentation: null
 });
 
@@ -14,7 +14,6 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use([
     'tinytest',
-    'underscore',
     'ejson'
   ]);
 

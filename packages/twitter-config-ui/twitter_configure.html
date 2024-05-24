@@ -1,26 +1,25 @@
 <template name="configureLoginServiceDialogForTwitter">
   <p>
-    First, you'll need to register your app on Twitter. Follow these steps:
+    First, you'll need to register your app on X/Twitter. Follow these steps:
   </p>
   <ol>
     <li>
-      Visit <a href="https://apps.twitter.com/app/new" target="_blank">https://apps.twitter.com/app/new</a>
+      Visit <a href="https://developer.twitter.com/en/portal/projects/new" target="_blank">https://developer.twitter.com/en/portal/projects/new</a>
+    </li>
+    <li>
+      Select "Add project".
+    </li>
+    <li>
+      Save the API keys.
+    </li>
+    <li>
+      Once you create your project, click "Set up" under "User authentication settings"
+    </li>
+    <li>
+      Set Callback URI to: <span class="url">{{siteUrl}}_oauth/twitter</span>
     </li>
     <li>
       Set Website to: <span class="url">{{siteUrl}}</span>
-    </li>
-    <li>
-      Set Callback URL to: <span class="url">{{siteUrl}}_oauth/twitter</span>
-    </li>
-    <li>
-      Select "Create your Twitter application".
-    </li>
-    <li>
-      On the Settings tab, enable "Allow this application to be used to Sign in with Twitter" and click
-      "Update settings".
-    </li>
-    <li>
-      Switch to the "Keys and Access Tokens" tab.
     </li>
   </ol>
 </template>

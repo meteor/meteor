@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 # A reusable "run" snippet which is ran before each test to setup the
 # environment for user-limits, core-dumps, etc.
@@ -61,7 +61,8 @@ run_save_node_bin: &run_save_node_bin
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
-    - image: meteor/circleci:android-30-node-14
+    - image: meteor/circleci:20231116-android-33-node-14
+  resource_class: large
   environment:
     # This multiplier scales the waitSecs for selftests.
     TIMEOUT_SCALE_FACTOR: 8
@@ -96,10 +97,36 @@ build_machine_environment: &build_machine_environment
     NUM_GROUPS: 12
     RUNNING_AVG_LENGTH: 6
 
+can_disable_fibers: &can_disable_fibers
+  parameters:
+    fibers:
+      type: boolean
+      default: true
+
+set_fibers_env: &set_fibers_env
+  name: "Disable Fibers"
+  command: |
+    if [ "<< parameters.fibers >>" == "false" ]; then
+      echo "Disabling Fibers"
+      echo 'export DISABLE_FIBERS=1' >> "$BASH_ENV"
+      source "$BASH_ENV"
+    fi
+
+
+# Run tests with Fibers and then without.
+matrix_for_fibers: &matrix_for_fibers
+  matrix:
+    parameters:
+      # If we want to run with Fibers and without, just append false here.
+      fibers: [true]
+
+
 jobs:
   Get Ready:
     <<: *build_machine_environment
     steps:
+      - run:
+          command: rm -fR /home/circleci/project/*
       - run:
           <<: *run_log_mem_use
       - run:
@@ -167,6 +194,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Isolated Tests:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -175,6 +203,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -209,6 +238,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 0:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -217,6 +247,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -233,7 +264,7 @@ jobs:
               --headless \
               --junit ./tmp/results/junit/0.xml \
               --without-tag "custom-warehouse"
-          no_output_timeout: 20m
+          no_output_timeout: 30m
       - run:
           <<: *run_save_node_bin
       - store_test_results:
@@ -249,6 +280,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 1:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -257,6 +289,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -289,6 +322,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 2:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -297,6 +331,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -329,6 +364,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 3:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -337,13 +373,14 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
       - run:
           name: "Running self-test (Test Group 3)"
           command: |
-            if [ -f ./tmp/test-groups/3.txt ]; then TEST_GROUP=$(<./tmp/test-groups/3.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^c[p-z]|^[d-g]|^h[a-e]'; fi
+            if [ -f ./tmp/test-groups/3.txt ]; then TEST_GROUP=$(<./tmp/test-groups/3.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^c[p-z]|^h[a-e]'; fi
             echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
@@ -353,7 +390,7 @@ jobs:
               --headless \
               --junit ./tmp/results/junit/3.xml \
               --without-tag "custom-warehouse"
-          no_output_timeout: 20m
+          no_output_timeout: 30m
       - run:
           <<: *run_save_node_bin
       - store_test_results:
@@ -369,6 +406,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 4:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -377,6 +415,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -409,6 +448,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 5:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -417,6 +457,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -449,6 +490,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 6:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -457,6 +499,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -489,6 +532,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 7:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -497,6 +541,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -529,6 +574,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 8:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -537,6 +583,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -569,6 +616,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 9:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -577,6 +625,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -609,6 +658,7 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 10:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -617,6 +667,7 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -648,6 +699,46 @@ jobs:
       - store_artifacts:
           path: /tmp/memuse.txt
 
+  Test Group 11:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
+          name: "Running self-test (Test Group 11)"
+          command: |
+            if [ -f ./tmp/test-groups/11.txt ]; then TEST_GROUP=$(<./tmp/test-groups/11.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^[d-g]'; fi
+            echo $TEST_GROUP;
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              "$TEST_GROUP" \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit ./tmp/results/junit/11.xml \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 30m
+      - run:
+          <<: *run_save_node_bin
+      - store_test_results:
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
+      - store_artifacts:
+          path: ./tmp/results
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
   # Test the JSDoc declarations which live within this codebase against the
   # Meteor Docs (https://github.com/meteor/docs) repository, where they'll
   # eventually be consumed.  This test aims to provide an early warning of
@@ -658,6 +749,7 @@ jobs:
     docker:
       # This Node version should match that in the meteor/docs CircleCI config.
       - image: meteor/circleci:android-28-node-12
+    resource_class: large
     environment:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs
     steps:
@@ -687,6 +779,7 @@ jobs:
             npm test
 
   Clean Up:
+    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - attach_workspace:
@@ -769,42 +862,58 @@ workflows:
       - Docs
       - Get Ready
       - Isolated Tests:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 0:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 1:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 2:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 3:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 4:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 5:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 6:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 7:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 8:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 9:
+          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 10:
+          <<: *matrix_for_fibers
+          requires:
+            - Get Ready
+      - Test Group 11:
           requires:
             - Get Ready
       - Clean Up:
+          <<: *matrix_for_fibers
           requires:
             - Isolated Tests
             - Test Group 0
@@ -818,3 +927,4 @@ workflows:
             - Test Group 8
             - Test Group 9
             - Test Group 10
+            - Test Group 11

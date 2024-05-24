@@ -10,7 +10,6 @@ var compiler = require('../isobuild/compiler.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var catalogRemote = require('../packaging/catalog/catalog-remote.js');
 var isopack = require('../isobuild/isopack.js');
-var updater = require('../packaging/updater.js');
 var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');
@@ -884,7 +883,7 @@ main.registerCommand({
 
     relConf.packages = {};
     var toPublish = [];
-
+    Console.info(`Will publish new version for MeteorJS: ${relConf.version}`);
     main.captureAndExit("=> Errors in release packages:", function () {
       _.each(allPackages, function (packageName) {
         buildmessage.enterJob("checking consistency of " + packageName, function () {
@@ -928,7 +927,7 @@ main.registerCommand({
               return;
             }
             toPublish.push(packageName);
-            Console.info("Will publish new version for " + packageName);
+            Console.info(`Will publish new version for ${ packageName }: ${ packageSource.version }`);
             return;
           } else {
             var isopk = projectContext.isopackCache.getIsopack(packageName);
@@ -1244,7 +1243,7 @@ main.registerCommand({
       if (showJson) {
         if (expandedAlready) {
           // on expanded packages we only want to add minimal information to
-          // keep the json file compact, so we make the value a stirng
+          // keep the json file compact, so we make the value a string
           if (topLevelSet.has(packageName)) {
             parent[packageName] = `${packageToPrint.version}-${suffixes.topLevel}`
           } else {
@@ -2426,7 +2425,7 @@ main.registerCommand({
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
-  // which is why we do this in addition to dislpaying the PackageMapDelta.
+  // which is why we do this in addition to displaying the PackageMapDelta.
   _.each(packagesToRemove, function (packageName) {
     Console.info(packageName + ": removed dependency");
   });

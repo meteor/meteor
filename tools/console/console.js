@@ -13,7 +13,7 @@
 ///
 /// Sometimes, there is a phrase that shouldn't be split up over multiple
 /// lines (for example, 'meteor update'). When applicable, please use the
-/// following functions (Some of them add aditional formatting, especially when
+/// following functions (Some of them add additional formatting, especially when
 /// pretty-print is turned on):
 ///
 ///    - Console.command: things to enter on the command-line, such as
@@ -49,7 +49,7 @@
 /// (They will change your output in ways that you probably do not want). These
 /// don't auto-linewrap, end in a newline, or take in Console.options.
 ///
-/// Here is are some examples:
+/// Here are some examples:
 ///     Console.rawInfo(JSON.stringify(myData, null, 2));
 ///     Console.rawError(err.stack + "\n");
 ///
@@ -714,7 +714,7 @@ class Console extends ConsoleBase {
   // Passing in both options will offset the bulletPoint by the indentation,
   // like so:
   //  "  this message is indented by two."
-  //  "  => this mesage indented by two and
+  //  "  => this message indented by two and
   //        and also starts with an arrow."
   //
   options(o) {
@@ -1320,4 +1320,29 @@ class Console extends ConsoleBase {
   }
 }
 
+const yellow  =
+  (text, ...values) =>
+     `\x1b[33m${ String.raw({ raw: text }, ...values) }\x1b[0m`
+const red =
+  (text, ...values) =>
+    `\x1b[31m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const purple =
+  (text, ...values) =>
+    `\x1b[35m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const green =
+  (text, ...values) =>
+    `\x1b[32m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const blue =
+  (text, ...values) =>
+    `\x1b[34m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+
+const colors = {
+  yellow,
+  red,
+  purple,
+  green,
+  blue,
+};
+
+exports.colors = colors;
 exports.Console = new Console;

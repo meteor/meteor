@@ -3,7 +3,6 @@
 var _ = require('underscore');
 var files = require('./fs/files');
 var Console = require('./console/console.js').Console;
-import main from './cli/main.js';
 import buildmessage from './utils/buildmessage.js';
 import { convertPluginVersions } from './cordova/index.js';
 

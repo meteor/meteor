@@ -264,7 +264,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
 
   checkUserPlugins(s, ["com.example.plugin"]);
 
-  // This should fail beacuse the plugin does not exists at the specified path
+  // This should fail because the plugin does not exists at the specified path.
   run = s.run("build", '../a', "--server", "localhost:3000");
   run.waitSecs(30);
   run.expectExit(1);

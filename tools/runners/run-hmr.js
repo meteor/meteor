@@ -1,7 +1,6 @@
 import WS from 'ws';
 import runLog from './run-log.js';
 import crypto from 'crypto';
-import { AssertionError } from 'assert';
 import Anser from "anser";
 import { CordovaBuilder } from '../cordova/builder.js';
 
@@ -274,7 +273,7 @@ export class HMRServer {
     this.changeSetsByArch[arch].push(result);
     this._trimChangeSets(arch);
 
-    if (!arch in this.trimmedArchUntil) {
+    if (!(arch in this.trimmedArchUntil)) {
       this.trimmedArchUntil[arch] = this.firstBuild - 1;
     }
 

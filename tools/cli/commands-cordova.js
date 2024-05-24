@@ -57,7 +57,7 @@ function doAddPlatform(options) {
       return;
     }
 
-    // Only write the new platform list when we have succesfully synchronized
+    // Only write the new platform list when we have successfully synchronized.
     projectContext.platformList.write(installedPlatforms);
 
     for (var platform of platformsToAdd) {

@@ -73,6 +73,7 @@ Options:
                    uses port N+1 and a port specified by --app-port.
                    Specify as --port=host:port to bind to a specific
                    interface.
+  --open, -o       Opens a browser window when the app starts.
   --inspect[-brk][=<port>]
                    Enable server-side debugging via debugging clients like
                    the Node.js command-line debugger, Chrome DevTools, or
@@ -106,6 +107,7 @@ Options:
   --exclude-archs  Don't create bundles for certain web architectures
                   (comma separated, for example:
                    --exclude-archs "web.browser.legacy, web.cordova")
+  --open           Opens a browser window when it finishes building
 
 >>> debug
 Run the project with server-side debugging enabled.
@@ -150,7 +152,7 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind] <path>
+Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--vue-2|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
@@ -183,12 +185,16 @@ Options:
   --minimal     Create an app with as few Meteor packages as possible.
   --full        Create a fully scaffolded app.
   --react       Create a basic react-based app, same as default.
-  --vue         Create a basic vue-based app.
+  --vue         Create a basic vue3-based app.
+  --vue-2       Create a basic vue2-based app.
   --apollo      Create a basic apollo-based app.
   --svelte      Create a basic svelte-based app.
   --typescript  Create a basic Typescript React-based app.
   --blaze       Create a basic blaze-based app.
   --tailwind    Create a basic react-based app, with tailwind configured.
+  --chakra-ui   Create a basic react-based app, with chakra-ui configured.
+  --solid       Create a basic solid-based app.
+  --prototype   Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
 
 
 >>> update
@@ -207,10 +213,10 @@ conflicts with other packages in the app.
 Passing the --patch argument will update to the latest patch, if such exists.
 Patch releases contain very minor changes, usually bug fixes. Updating to
 the latest patch is always recommended. This will try to not update non-core
-packages unless strictly nessessary.
+packages unless strictly necessary.
 
 Passing the --release argument will force update to a specific release of
-meteor.  This will not update non-core packages unless strictly nessessary. It
+meteor.  This will not update non-core packages unless strictly necessary. It
 is also possible that some packages cannot be updated to be compatible with the
 new release. If that happens, the app will not build until dependencies on those
 packages are removed.
@@ -474,14 +480,18 @@ commands can be accessed by pressing the up arrow.
 Connect to the local Mongo database
 Usage: meteor mongo [--url]
 
-Opens a Mongo shell to view or manipulate collections.
+Opens a Mongo shell(mongosh) to view or manipulate collections.
 
 Instead of opening a shell, specifying --url (-U) will return a URL
 suitable for an external program to connect to the database. For remote
 databases on deployed applications, the URL is valid for one hour.
 
+Note that you must have mongosh installed to use this option.
+
 Options:
   --url, -U return a Mongo database URL
+  --verbose, -v to show the errors that have occurred while connecting to the
+								database
 
 Currently, this feature can only be used when developing locally.
 The opened Mongo shell connects to the current project's local
@@ -627,6 +637,7 @@ with --port.
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
+  --open, -o        Opens a browser window when the app starts.
   --inspect[-brk][=<port>]
                     Enable server-side debugging via debugging clients like
                     the Node.js command-line debugger, Chrome DevTools, or
@@ -716,6 +727,7 @@ Meteor Guide - https://guide.meteor.com/testing.html
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
+  --open, -o        Opens a browser window when the app starts.
   --inspect[-brk][=<port>]
                     Enable server-side debugging via debugging clients like
                     the Node.js command-line debugger, Chrome DevTools, or
@@ -752,6 +764,7 @@ Options:
   --exclude-archs   Don't create test bundles for certain web architectures
                     (comma separated, for example:
                     --exclude-archs "web.browser.legacy, web.cordova")
+  --open            Opens a browser window when it finishes building
 
 >>> self-test
 Run tests of the 'meteor' tool.
@@ -838,6 +851,34 @@ for which other users have authorized you with the 'meteor authorized'
 command. To see sites in a region other than us-east-1, set the DEPLOY_HOSTNAME
 environment variable. For example,
 `DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor list-sites`
+
+>>> generate
+
+Generate boilerplate code for a MeteorJS RPC api.
+It generates a collection with the name you pass and its methods.
+Is JS and TS compatible. No collection name
+runs the wizard.
+
+Usage: meteor generate [<collectionName>] [options]
+
+By default, generates a collection.ts|js file with the name you pass,
+methods(insert, update, remove, find, findOne) in a methods.js|ts file
+and publications.js|ts. If you just use the command without collectionName,
+it will generate run the wizard, asking you what is necessary.
+
+We do have as well the templatePath, wich uses the template you pass to generate
+the boilerplate code. You can use the default template or create your own.
+for replacing the names, we offer $$PascalName$$, $$camelName$$, $$name$$.
+
+This is a MeteorJS project command.
+
+Options:
+	--help          	Show help.
+	--path          	The path to the folder where the files will be generated. Default is the current folder.
+	--templatePath  	Path to the template file check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
+	--replaceFn		 	  Replace function to replace the names in the template. Check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
+	--methods       	Generate methods.
+	--publications  	Generate publications.
 
 
 >>> publish-release
@@ -982,6 +1023,10 @@ Use <name>@<version> to get more information about a specific version of a
 package or release. Use '<name>@local' to see information from a
 local version. Running from a package source directory with no arguments will
 show information for that package version.
+
+The name for meteor release information is METEOR.
+
+  meteor show METEOR - will show all recommended meteor releases
 
 By default, Meteor will not show more than five versions, and will not
 show experimental release versions. Meteor will also hide packages that

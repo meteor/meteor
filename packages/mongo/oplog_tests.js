@@ -1,8 +1,9 @@
-var OplogCollection = new Mongo.Collection("oplog-" + Random.id());
+var randomId = Random.id();
+var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
-Tinytest.addAsync("mongo-livedata - oplog - cursorSupported", async function (test) {
+Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   var oplogEnabled =
-        !!(await MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle;
+        !!MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
 
   var supported = function (expected, selector, options) {
     var cursor = OplogCollection.find(selector, options);
@@ -55,7 +56,7 @@ Tinytest.addAsync("mongo-livedata - oplog - cursorSupported", async function (te
 
 process.env.MONGO_OPLOG_URL && testAsyncMulti(
   "mongo-livedata - oplog - entry skipping", [
-    async function (test, expect) {
+    function (test, expect) {
       var self = this;
       self.collectionName = Random.id();
       self.collection = new Mongo.Collection(self.collectionName);
@@ -68,7 +69,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       // possible to make this test fail with TOO_FAR_BEHIND = 2000.
       // The documents waiting to be processed would hardly go beyond 1000
       // using mongo 3.2 with WiredTiger
-      (await MongoInternals.defaultRemoteCollectionDriver())
+      MongoInternals.defaultRemoteCollectionDriver()
         .mongo._oplogHandle._defineTooFarBehind(500);
 
       self.IRRELEVANT_SIZE = 15000;
@@ -96,7 +97,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       })));
     },
 
-    async function (test, expect) {
+    function (test, expect) {
       var self = this;
 
       test.equal(self.collection.find().count(),
@@ -131,7 +132,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       test.isFalse(gotSpot);
 
       self.skipped = false;
-      self.skipHandle = (await MongoInternals.defaultRemoteCollectionDriver())
+      self.skipHandle = MongoInternals.defaultRemoteCollectionDriver()
         .mongo._oplogHandle.onSkippedEntries(function () {
           self.skipped = true;
         });
@@ -149,12 +150,12 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       return gotSpotPromise;
     },
 
-    async function (test, expect) {
+    function (test, expect) {
       var self = this;
       test.isTrue(self.skipped);
 
       //This gets the TOO_FAR_BEHIND back to its initial value
-      (await MongoInternals.defaultRemoteCollectionDriver())
+      MongoInternals.defaultRemoteCollectionDriver()
         .mongo._oplogHandle._resetTooFarBehind();
 
       self.skipHandle.stop();
@@ -163,3 +164,153 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
     }
   ]
 );
+
+import { Mongo, MongoInternals } from 'meteor/mongo';
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - x - implicit collection creation',
+  async test => {
+    const collection = new Mongo.Collection(`oplog-implicit-${test.runId()}`);
+    const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
+    test.equal(await collection.find().countAsync(), 0);
+    await client.withSession(async session => {
+      await session.withTransaction(async () => {
+        await collection.rawCollection().insertOne({}, { session });
+      });
+    });
+    test.equal(await collection.find().countAsync(), 1);
+  },
+);
+
+const defaultOplogHandle = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+let previousMongoPackageSettings = {};
+
+async function oplogOptionsTest({
+  test,
+  includeCollectionName,
+  excludeCollectionName,
+  mongoPackageSettings = {}
+}) {
+  try {
+    previousMongoPackageSettings = { ...(Meteor.settings?.packages?.mongo || {}) };
+    if (!Meteor.settings.packages) Meteor.settings.packages = {};
+    Meteor.settings.packages.mongo = mongoPackageSettings;
+
+    const myOplogHandle = new MongoInternals.OplogHandle(process.env.MONGO_OPLOG_URL, 'meteor');
+    MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(myOplogHandle);
+
+    const IncludeCollection = new Mongo.Collection(includeCollectionName);
+    const ExcludeCollection = new Mongo.Collection(excludeCollectionName);
+
+    const shouldBeTracked = new Promise((resolve) => {
+      IncludeCollection.find({ include: 'yes' }).observeChanges({
+        added(id, fields) { resolve(true) }
+      });
+    });
+    const shouldBeIgnored = new Promise((resolve, reject) => {
+      ExcludeCollection.find({ include: 'no' }).observeChanges({
+        added(id, fields) { 
+          // should NOT fire, because this is an excluded collection:
+          reject(false);
+        }
+      });
+      // we give it just 2 seconds until we resolve this promise:
+      setTimeout(() => {
+        resolve(true);
+      }, 2000);
+    });
+
+    // do the inserts:
+    await IncludeCollection.rawCollection().insertOne({ include: 'yes', foo: 'bar' });
+    await ExcludeCollection.rawCollection().insertOne({ include: 'no', foo: 'bar' });
+
+    test.equal(await shouldBeTracked, true);
+    test.equal(await shouldBeIgnored, true);
+  } finally {
+    // Reset:
+    Meteor.settings.packages.mongo = { ...previousMongoPackageSettings };
+    MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(defaultOplogHandle);
+  }
+}
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - oplogSettings - oplogExcludeCollections',
+  async test => {
+    const collectionNameA = "oplog-a-" + Random.id();
+    const collectionNameB = "oplog-b-" + Random.id();
+    const mongoPackageSettings = {
+      oplogExcludeCollections: [collectionNameB]
+    };
+    await oplogOptionsTest({
+      test,
+      includeCollectionName: collectionNameA,
+      excludeCollectionName: collectionNameB,
+      mongoPackageSettings
+    });
+  }
+);
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - oplogSettings - oplogIncludeCollections',
+  async test => {
+    const collectionNameA = "oplog-a-" + Random.id();
+    const collectionNameB = "oplog-b-" + Random.id();
+    const mongoPackageSettings = {
+      oplogIncludeCollections: [collectionNameB]
+    };
+    await oplogOptionsTest({
+      test,
+      includeCollectionName: collectionNameB,
+      excludeCollectionName: collectionNameA,
+      mongoPackageSettings
+    });
+  }
+);
+
+process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
+  'mongo-livedata - oplog - oplogSettings - oplogExcludeCollections & oplogIncludeCollections',
+  async test => {
+    // should fail, because we don't allow including and excluding at the same time!
+    const collectionNameA = "oplog-a-" + Random.id();
+    const collectionNameB = "oplog-b-" + Random.id();
+    const mongoPackageSettings = {
+      oplogIncludeCollections: [collectionNameA],
+      oplogExcludeCollections: [collectionNameB]
+    };
+    try {
+      await oplogOptionsTest({
+        test,
+        includeCollectionName: collectionNameA,
+        excludeCollectionName: collectionNameB,
+        mongoPackageSettings
+      });
+      test.fail();
+    } catch (err) {
+      test.expect_fail();
+    }
+  }
+);
+
+// Meteor.isServer && Tinytest.addAsync(
+//   "mongo-livedata - oplog - _onFailover",
+//   async function (test) {
+//     const driver = MongoInternals.defaultRemoteCollectionDriver();
+//     const failoverPromise = new Promise(resolve => {
+//       driver.mongo._onFailover(() => {
+//         resolve(true);
+//       });
+//     });
+//
+//
+//     await driver.mongo.db.admin().command({
+//       replSetStepDown: 1,
+//       force: true
+//     });
+//
+//     try {
+//       const result = await failoverPromise;
+//       test.isTrue(result);
+//     } catch (e) {
+//       test.fail({ message: "Error waiting on Promise", value: JSON.stringify(e) });
+//     }
+//   });

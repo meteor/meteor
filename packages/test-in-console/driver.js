@@ -1,11 +1,17 @@
 // Global flag for phantomjs (or other browser) to eval to see if we're done.
 DONE = false;
 // Failure count for phantomjs exit code
-FAILURES = null;
+FAILURES = 0;
+// Where are the failures
+WHERE_FAILED = [];
+// Passed count for phantomjs exit code
+PASSED = null;
 
 TEST_STATUS = {
   DONE: false,
-  FAILURES: null
+  FAILURES: 0,
+  PASSED: null,
+  WHERE_FAILED: []
 };
 
 // xUnit format uses XML output
@@ -55,6 +61,7 @@ var xunit = function (s) {
 
 var passed = 0;
 var failed = 0;
+var whereFailed = [];
 var expected = 0;
 var resultSet = {};
 var toReport = [];
@@ -82,7 +89,7 @@ var report = function (name, last) {
       fullName: name.substr(3)
     };
     if ((data.status === "FAIL" || data.status === "EXPECTED") &&
-        !_.isEmpty(resultSet[name].events)) {
+    !(Object.keys(resultSet[name].events).length === 0)) {
       // only send events when bad things happen
       data.events = resultSet[name].events;
     }
@@ -111,7 +118,7 @@ runTests = function () {
   Tinytest._runTestsEverywhere(
     function (results) {
       var name = getName(results);
-      if (!_.has(resultSet, name)) {
+      if (!(name in resultSet)) {
         var testPath = EJSON.clone(results.groupPath);
         testPath.push(results.test);
         resultSet[name] = {
@@ -126,7 +133,7 @@ runTests = function () {
       }
       // Loop through events, and record status for each test
       // Also log result if test has finished
-      _.each(results.events, function (event) {
+      results.events.forEach(function (event) {
         resultSet[name].events.push(event);
         switch (event.type) {
         case "ok":
@@ -142,6 +149,7 @@ runTests = function () {
           else
             log("Test failed with exception");
           failed++;
+          whereFailed.push({ name: name, info: JSON.stringify(event) });
           break;
         case "finish":
           switch (resultSet[name].status) {
@@ -163,6 +171,7 @@ runTests = function () {
             report(name, true);
             log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
             log(JSON.stringify(resultSet[name].info));
+            whereFailed.push({ name: name, info: JSON.stringify(resultSet[name].info) });
             break;
           default:
             log(name, ": unknown state for the test to be in");
@@ -181,28 +190,32 @@ runTests = function () {
       if (failed > 0) {
         log("~~~~~~~ THERE ARE FAILURES ~~~~~~~");
       }
-      log("passed/expected/failed/total", passed, "/", expected, "/", failed, "/", _.size(resultSet));
+      log("passed/expected/failed/total", passed, "/", expected, "/", failed, "/", Object.keys(resultSet).length);
       sendReports(function () {
         if (doReport) {
           log("Waiting 3s for any last reports to get sent out");
           setTimeout(function () {
             TEST_STATUS.FAILURES = FAILURES = failed;
+            TEST_STATUS.WHERE_FAILED = WHERE_FAILED = whereFailed;
+            TEST_STATUS.PASSED = PASSED = passed;
             TEST_STATUS.DONE = DONE = true;
           }, 3000);
         } else {
           TEST_STATUS.FAILURES = FAILURES = failed;
+          TEST_STATUS.WHERE_FAILED = WHERE_FAILED = whereFailed;
+          TEST_STATUS.PASSED = PASSED = passed;
           TEST_STATUS.DONE = DONE = true;
         }
       });
 
       // Also log xUnit output
       xunit('<testsuite errors="" failures="" name="meteor" skips="" tests="" time="">');
-      _.each(resultSet, function (result, name) {
+      resultSet.forEach(function (result, name) {
         var classname = result.testPath.join('.').replace(/ /g, '-') + (result.server ? "-server" : "-client");
         var name = result.test.replace(/ /g, '-') + (result.server ? "-server" : "-client");
         var time = "";
         var error = "";
-        _.each(result.events, function (event) {
+        result.events.forEach(function (event) {
           switch (event.type) {
             case "finish":
               var timeMs = event.timeMs;

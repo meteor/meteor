@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reactive variable",
-  version: '1.0.11'
+  version: '1.0.12'
 });
 
 Package.onUse(function (api) {
@@ -9,4 +9,5 @@ Package.onUse(function (api) {
   api.use('tracker');
 
   api.addFiles('reactive-var.js');
+  api.addAssets('reactive-var.d.ts', 'server');
 });

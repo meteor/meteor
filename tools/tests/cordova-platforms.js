@@ -1,6 +1,5 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../fs/files');
 
 selftest.define("add cordova platforms", ["cordova"], function () {
   var s = new Sandbox();

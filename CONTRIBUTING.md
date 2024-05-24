@@ -29,9 +29,9 @@ Are you new here? Please [check](https://github.com/meteor/meteor/labels/good%20
 
 We curate specific issues that would make great pull requests for community contributors by applying the `ready` label.
 
-Any issue which does not have the `ready` label still requires discussion on implementation details but input and positive commentary is welcome! Any pull request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `ready` issue.  
+Any issue that does not have the `ready` label still requires discussion on implementation details, but input and positive commentary are welcome! Any pull request opened on an issue that is not `confirmed` is still welcome. However, the pull request is more likely to be sent back for reworking than a `ready` issue.  
 
-If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach one of the [core committers](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#core-committer) and they will help you to find something interesting to work on.
+If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach one of the [core committers](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#core-committer), and they will help you to find something interesting to work on.
 
 ### Project roles
 
@@ -39,29 +39,36 @@ Here are descriptions of the existing project roles, along with the current cont
 
 #### Reviewer
 
-Reviwers are members of the community that help with Pull Requests reviews.
+Reviewers are members of the community who help with Pull Requests reviews.
 
 Current Reviewers:
 - [meteor](https://github.com/meteor/meteor)
   - [@denihs](https://github.com/denihs)
-  - [@filipenevola](https://github.com/filipenevola)
-  - [@henriquealbert](https://github.com/henriquealbert)
   - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+  - [@henriquealbert](https://github.com/henriquealbert)
+  - [@aquinoit](https://github.com/aquinoit)
   - [@Grubba27](https://github.com/Grubba27)
-  - [@StorytellerCZ](https://github.com/StorytellerCZ)
-  - [@zodern](https://github.com/zodern)
+- [@filipenevola](https://github.com/filipenevola)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@zodern](https://github.com/zodern)
+- [@CaptainN](https://github.com/CaptainN)
+- [@radekmie](https://github.com/radekmie)
 
 #### Core Committer
 
-The contributors with commit access to meteor/meteor are employees of Meteor Software Ltd or community members who have distinguished themselves in other contribution areas. If you want to become a core committer please start writing PRs.
+The contributors with commit access to meteor/meteor are employees of Meteor Software LP or community members who have distinguished themselves in other contribution areas or members of partner companies. If you want to become a core committer, please start writing PRs.
 
-Current Core Committers:
+Current Core Team:
 - [@denihs](https://github.com/denihs)
 - [@zodern](https://github.com/zodern)
 - [@filipenevola](https://github.com/filipenevola)
-- [@henriquealbert](https://github.com/henriquealbert)
 - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+- [@henriquealbert](https://github.com/henriquealbert)
 - [@Grubba27](https://github.com/Grubba27)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@CaptainN](https://github.com/CaptainN)
+- [@radekmie](https://github.com/radekmie)
+- [@matheusccastroo](https://github.com/matheusccastroo)
 
 ### Tracking project work
 

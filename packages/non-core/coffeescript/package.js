@@ -6,7 +6,7 @@ Package.describe({
   // so bumping the version of this package will be how they get newer versions
   // of `coffeescript-compiler`. If you change this, make sure to also update
   // ../coffeescript-compiler/package.js to match.
-  version: '2.4.1'
+  version: '2.7.0'
 });
 
 Package.registerBuildPlugin({

@@ -1,3 +1,5 @@
+import { Meteor } from 'meteor/meteor';
+
 Accounts.oauth = {};
 
 const services = {};
@@ -15,7 +17,7 @@ Accounts.oauth.registerService = name => {
     // so this should be a unique index. You might want to add indexes for other
     // fields returned by your service (eg services.github.login) but you can do
     // that in your app.
-    Meteor.users.createIndex(`services.${name}.id`, {unique: true, sparse: true});
+    Meteor.users.createIndexAsync(`services.${name}.id`, {unique: true, sparse: true});
   }
 };
 
@@ -31,3 +33,25 @@ Accounts.oauth.unregisterService = name => {
 };
 
 Accounts.oauth.serviceNames = () => Object.keys(services);
+
+// loginServiceConfiguration and ConfigError are maintained for backwards compatibility
+Meteor.startup(() => {
+  const { ServiceConfiguration } = Package['service-configuration'];
+  Accounts.loginServiceConfiguration = ServiceConfiguration.configurations;
+  Accounts.ConfigError = ServiceConfiguration.ConfigError;
+
+  const settings = Meteor.settings?.packages?.['accounts-base'];
+  if (settings) {
+    if (settings.oauthSecretKey) {
+      if (!Package['oauth-encryption']) {
+        throw new Error(
+          'The oauth-encryption package must be loaded to set oauthSecretKey'
+        );
+      }
+      Package['oauth-encryption'].OAuthEncryption.loadKey(
+        settings.oauthSecretKey
+      );
+      delete settings.oauthSecretKey;
+    }
+  }
+});

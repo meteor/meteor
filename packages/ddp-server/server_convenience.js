@@ -11,7 +11,18 @@ Meteor.refresh = function (notification) {
 
 // Proxy the public methods of Meteor.server so they can
 // be called directly on Meteor.
-_.each(['publish', 'methods', 'call', 'apply', 'onConnection', 'onMessage'],
-       function (name) {
-         Meteor[name] = _.bind(Meteor.server[name], Meteor.server);
-       });
+_.each(
+  [
+    'publish',
+    'methods',
+    'call',
+    'callAsync',
+    'apply',
+    'applyAsync',
+    'onConnection',
+    'onMessage',
+  ],
+  function(name) {
+    Meteor[name] = _.bind(Meteor.server[name], Meteor.server);
+  }
+);

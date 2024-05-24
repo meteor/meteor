@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Manage the configuration for third-party services',
-  version: '1.3.0',
+  version: '1.3.4',
 });
 
 Package.onUse(function(api) {
@@ -10,4 +10,5 @@ Package.onUse(function(api) {
   api.export('ServiceConfiguration');
   api.addFiles('service_configuration_common.js', ['client', 'server']);
   api.addFiles('service_configuration_server.js', 'server');
+  api.addAssets('service-configuration.d.ts', 'server');
 });

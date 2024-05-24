@@ -1,6 +1,6 @@
 Tinytest.add("diff-sequence - diff changes ordering", function (test) {
   var makeDocs = function (ids) {
-    return _.map(ids, function (id) { return {_id: id};});
+    return ids.map(function (id) { return {_id: id};});
   };
   var testMutation = function (a, b) {
     var aa = makeDocs(a);
@@ -10,12 +10,12 @@ Tinytest.add("diff-sequence - diff changes ordering", function (test) {
 
       addedBefore: function (id, doc, before) {
         if (before === null) {
-          aaCopy.push( _.extend({_id: id}, doc));
+          aaCopy.push( Object.assign({_id: id}, doc));
           return;
         }
         for (var i = 0; i < aaCopy.length; i++) {
           if (aaCopy[i]._id === before) {
-            aaCopy.splice(i, 0, _.extend({_id: id}, doc));
+            aaCopy.splice(i, 0, Object.assign({_id: id}, doc));
             return;
           }
         }
@@ -29,12 +29,12 @@ Tinytest.add("diff-sequence - diff changes ordering", function (test) {
           }
         }
         if (before === null) {
-          aaCopy.push( _.extend({_id: id}, found));
+          aaCopy.push( Object.assign({_id: id}, found));
           return;
         }
         for (i = 0; i < aaCopy.length; i++) {
           if (aaCopy[i]._id === before) {
-            aaCopy.splice(i, 0, _.extend({_id: id}, found));
+            aaCopy.splice(i, 0, Object.assign({_id: id}, found));
             return;
           }
         }
@@ -75,7 +75,7 @@ Tinytest.add("diff-sequence - diff", function (test) {
     for (var i = 1; i <= origLen; i++)
       oldResults[i-1] = {_id: i};
 
-    var newResults = _.map(newOldIdx, function(n) {
+    var newResults = newOldIdx.map(function(n) {
       var doc = {_id: Math.abs(n)};
       if (n < 0)
         doc.changed = true;
@@ -89,7 +89,7 @@ Tinytest.add("diff-sequence - diff", function (test) {
       return -1;
     };
 
-    var results = _.clone(oldResults);
+    var results = [...oldResults];
     var observer = {
       addedBefore: function(id, fields, before) {
         var before_idx;
@@ -97,7 +97,7 @@ Tinytest.add("diff-sequence - diff", function (test) {
           before_idx = results.length;
         else
           before_idx = find (results, before);
-        var doc = _.extend({_id: id}, fields);
+        var doc = Object.assign({_id: id}, fields);
         test.isFalse(before_idx < 0 || before_idx > results.length);
         results.splice(before_idx, 0, doc);
       },
@@ -157,4 +157,3 @@ Tinytest.add("diff-sequence - diff", function (test) {
   diffTest(3, [-3, -2, -1]);
   diffTest(10, [-2, 7, 4, 6, 11, -3, -8, 9]);
 });
-

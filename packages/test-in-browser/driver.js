@@ -1,7 +1,7 @@
 ////
 //// Setup
 ////
-
+import { diff_match_patch } from './diff_match_patch_uncompressed'
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // dependency for the count of tests running/passed/failed, etc. drives
@@ -88,7 +88,7 @@ var reportResults = function(results) {
   }
 
   // Now process the current report
-  if (_.isArray(results.events)) {
+  if (Array.isArray(results.events)) {
     // append events, if present
     Array.prototype.push.apply((test.events || (test.events = [])),
                                results.events);
@@ -97,7 +97,7 @@ var reportResults = function(results) {
       return a.sequence - b.sequence;
     });
     var out = [];
-    _.each(test.events, function (e) {
+    test.events.forEach(function (e) {
       if (out.length === 0 || out[out.length - 1].sequence !== e.sequence)
         out.push(e);
     });
@@ -110,7 +110,7 @@ var reportResults = function(results) {
     // test name yet).
     if (test.expanded === undefined)
       test.expanded = true;
-    if (!_.contains(failedTests, test.fullName))
+    if (!failedTests.includes(test.fullName))
       failedTests.push(test.fullName);
 
     countDep.changed();
@@ -147,16 +147,16 @@ var forgetEvents = function (results) {
 // possibly 'events'.
 var _findTestForResults = function (results) {
   var groupPath = results.groupPath; // array
-  if ((! _.isArray(groupPath)) || (groupPath.length < 1)) {
+  if ((! Array.isArray(groupPath)) || (groupPath.length < 1)) {
     throw new Error("Test must be part of a group");
   }
 
   var group;
   var i = 0;
-  _.each(groupPath, function(gname) {
+  groupPath.forEach(function(gname) {
     var array = (group ? (group.groups || (group.groups = []))
                  : resultTree);
-    var newGroup = _.find(array, function(g) { return g.name === gname; });
+    var newGroup = array.find(function(g) { return g.name === gname; });
     if (! newGroup) {
       newGroup = {
         name: gname,
@@ -177,12 +177,12 @@ var _findTestForResults = function (results) {
 
   var testName = results.test;
   var server = !!results.server;
-  var test = _.find(group.tests || (group.tests = []),
+  var test = (group.tests || (group.tests = [])).find(
                     function(t) { return t.name === testName &&
                                   t.server === server; });
   if (! test) {
     // create test
-    var nameParts = _.clone(groupPath);
+    var nameParts = [...groupPath];
     nameParts.push(testName);
     var fullName = nameParts.join(' - ');
     test = {
@@ -209,7 +209,7 @@ var _findTestForResults = function (results) {
 
 var _testTime = function(t) {
   if (t.events && t.events.length > 0) {
-    var lastEvent = _.last(t.events);
+    var lastEvent = t.events[t.events.length - 1];
     if (lastEvent.type === "finish") {
       if ((typeof lastEvent.timeMs) === "number") {
         return lastEvent.timeMs;
@@ -221,15 +221,15 @@ var _testTime = function(t) {
 
 var _testStatus = function(t) {
   var events = t.events || [];
-  if (_.find(events, function(x) { return x.type === "exception"; })) {
+  if (events.find(function(x) { return x.type === "exception"; })) {
     // "exception" should be last event, except race conditions on the
     // server can make this not the case.  Technically we can't tell
     // if the test is still running at this point, but it can only
     // result in FAIL.
     return "failed";
-  } else if (events.length == 0 || (_.last(events).type != "finish")) {
+  } else if (events.length == 0 || (events[events.length - 1].type != "finish")) {
     return "running";
-  } else if (_.any(events, function(e) {
+  } else if (events.some(function(e) {
     return e.type == "fail" || e.type == "exception"; })) {
     return "failed";
   } else {
@@ -261,8 +261,8 @@ Template.navBar.helpers({
     var walk = function (groups) {
       var total = 0;
 
-      _.each(groups || [], function (group) {
-        _.each(group.tests || [], function (t) {
+      (groups || []).forEach(function (group) {
+        (group.tests || []).forEach(function (t) {
           total += _testTime(t);
         });
 
@@ -450,14 +450,14 @@ Template.test.helpers({
   },
 
   eventsArray: function() {
-    var events = _.filter(this.events, function(e) {
+    var events = this.events.filter(function(e) {
       return e.type != "finish";
     });
 
     var partitionBy = function(seq, func) {
       var result = [];
       var lastValue = {};
-      _.each(seq, function(x) {
+      seq.forEach(function(x) {
         var newValue = func(x);
         if (newValue === lastValue) {
           result[result.length-1].push(x);
@@ -470,17 +470,17 @@ Template.test.helpers({
     };
 
     var dupLists = partitionBy(
-      _.map(events, function(e) {
+      events.map(function(e) {
         // XXX XXX We need something better than stringify!
         // stringify([undefined]) === "[null]"
-        e = _.clone(e);
+        e = Object.assign({}, e);
         delete e.sequence;
         return {obj: e, str: JSON.stringify(e)};
       }), function(x) { return x.str; });
 
-    return _.map(dupLists, function(L) {
+    return dupLists.map(function(L) {
       var obj = L[0].obj;
-      return (L.length > 1) ? _.extend({times: L.length}, obj) : obj;
+      return (L.length > 1) ? Object.assign({times: L.length}, obj) : obj;
     });
   }
 });
@@ -525,7 +525,7 @@ Template.event.helpers({
       var type = details.type;
       var stack = details.stack;
 
-      details = _.clone(details);
+      details = Array.isArray(details) && [...details] || Object.assign({}, details);
       delete details.type;
       delete details.stack;
 
@@ -535,14 +535,14 @@ Template.event.helpers({
                             details.expected);
         }
 
-        return _.compact(_.map(details, function(val, key) {
+        return Object.entries(details).map(function([key, val]) {
 
           // make test._stringEqual results print nicely,
           // in particular for multiline strings
           if (type === 'string_equal' &&
               (key === 'actual' || key === 'expected')) {
             var html = '<pre class="string_equal string_equal_'+key+'">';
-            _.each(diff, function (piece) {
+            diff.forEach(function (piece) {
               var which = piece[0];
               var text = piece[1];
               if (which === 0 ||
@@ -561,7 +561,7 @@ Template.event.helpers({
           // You can end up with a an undefined value, e.g. using
           // isNull without providing a message attribute: isNull(1).
           // No need to display those.
-          if (!_.isUndefined(val)) {
+          if (typeof val !== 'undefined') {
             return {
               key: key,
               val: val
@@ -569,7 +569,7 @@ Template.event.helpers({
           } else {
             return undefined;
           }
-        }));
+        }).filter(Boolean);
       };
 
       return {

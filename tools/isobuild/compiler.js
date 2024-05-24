@@ -25,7 +25,7 @@ var compiler = exports;
 // this version number. The idea is that the "format" field of the isopack
 // JSON file only changes when the actual specified structure of the
 // isopack/unibuild changes, but this version (which is build-tool-specific)
-// can change when the the contents (not structure) of the built output
+// can change when the contents (not structure) of the built output
 // changes. So eg, if we improve the linker's static analysis, this should be
 // bumped.
 //
@@ -516,7 +516,7 @@ var compileUnibuild = Profile(function (options) {
       // addAssets or putting it in the public/private directories in an app.
       //
       // This is a backwards-incompatible change, but it doesn't affect
-      // previously-published packages (because the check is occuring in the
+      // previously-published packages (because the check is occurring in the
       // compiler), and it doesn't affect apps (where random files outside of
       // private/public never end up in the source list anyway).
       //
@@ -786,10 +786,10 @@ function runLinters({inputSourceArch, isopackCache, sources,
         `Unexpected classification for ${ relPath }: ${ classification.type }`);
     }
 
-    // Read the file and add it to the WatchSet.
-    const {hash, contents} = watch.readAndWatchFileWithHash(
-      watchSet,
-      files.pathResolve(inputSourceArch.sourceRoot, relPath));
+    const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
+    const hash = optimisticHashOrNull(absPath);
+    const contents = optimisticReadFile(absPath);
+    watchSet.addFile(absPath, hash);
 
     if (classification.type === "meteor-ignore") {
       // Return after watching .meteorignore files but before adding them

@@ -1,7 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files');
-var testUtils = require('../tool-testing/test-utils.js');
 var utils = require('../utils/utils.js');
 var _ = require('underscore');
 var tropohouse = require('../packaging/tropohouse.js');

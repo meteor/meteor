@@ -4,12 +4,10 @@ import { createHash } from 'crypto';
 import {
   markBottom as parseStackMarkBottom,
   markTop as parseStackMarkTop,
-  parse as parseStackParse,
 } from '../utils/parse-stack';
 import { Console } from '../console/console.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import TestFailure from './test-failure.js';
-import { setRunningTest } from './run.js';
 import Run from './run.js';
 
 // These are accessed through selftest directly on many tests.

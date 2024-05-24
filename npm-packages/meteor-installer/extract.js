@@ -4,7 +4,7 @@ const Seven = require('node-7z');
 const fs = require('fs');
 const { resolve, dirname } = require('path');
 const child_process = require('child_process');
-const { isMac } = require('./config.js')
+const { isMac } = require('./config.js');
 
 function extractWith7Zip(tarPath, destination, onProgress) {
   return new Promise((resolve, reject) => {
@@ -29,7 +29,7 @@ function extractWith7Zip(tarPath, destination, onProgress) {
 function createSymlinks(symlinks, baseDir) {
   symlinks.forEach(({ path, linkPath }) => {
     try {
-      let resolveBase = resolve(baseDir, dirname(path));
+      const resolveBase = resolve(baseDir, dirname(path));
       const result = fs.statSync(resolve(resolveBase, linkPath));
 
       if (result.isDirectory()) {
@@ -45,7 +45,7 @@ function createSymlinks(symlinks, baseDir) {
   });
 }
 
-function extractWithNativeTar(tarPath, destination, onProgress) {
+function extractWithNativeTar(tarPath, destination) {
   child_process.execSync(
     `tar -xf "${tarPath}" ${
       !isMac() ? `--checkpoint-action=ttyout="#%u: %T \r"` : ``
@@ -60,7 +60,7 @@ function extractWithNativeTar(tarPath, destination, onProgress) {
 }
 
 function extractWithTar(tarPath, destination, onProgress) {
-  let symlinks = [];
+  const symlinks = [];
 
   let total = 0;
   // This takes a few seconds, but lets us show the progress

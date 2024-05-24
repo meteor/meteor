@@ -1,7 +1,7 @@
 const path = require('path');
 const os = require('os');
 
-const METEOR_LATEST_VERSION = '2.7.3';
+const METEOR_LATEST_VERSION = '2.15';
 const sudoUser = process.env.SUDO_USER || '';
 function isRoot() {
   return process.getuid && process.getuid() === 0;
@@ -31,9 +31,8 @@ if (isWindows() && !localAppData) {
   throw new Error('LOCALAPPDATA env var is not set.');
 }
 
-const shouldSetupExecPath = () => {
-  return !process.env.npm_config_ignore_meteor_setup_exec_path;
-}
+const shouldSetupExecPath = () =>
+  !process.env.npm_config_ignore_meteor_setup_exec_path;
 
 const meteorLocalFolder = '.meteor';
 const meteorPath = path.resolve(rootPath, meteorLocalFolder);

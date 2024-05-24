@@ -1,6 +1,6 @@
 {
   "name": "@meteorjs/eslint-config-meteor",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Eslint configuration for Meteor",
   "main": "index.js",
   "scripts": {
@@ -8,14 +8,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/meteor/eslint-config-meteor.git"
+    "url": "git+https://github.com/meteor/meteor.git"
   },
   "author": "David Burles",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/meteor/eslint-config-meteor/issues"
+    "url": "https://github.com/meteor/meteor/issues"
   },
-  "homepage": "https://github.com/meteor/eslint-config-meteor#readme",
+  "homepage": "https://github.com/meteor/meteor/tree/devel/npm-packages/eslint-config-meteor#readme",
+  "type": "commonjs",
   "peerDependencies": {
     "babel-eslint": ">= 7",
     "eslint": ">= 3",

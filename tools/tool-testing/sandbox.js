@@ -283,7 +283,7 @@ export default class Sandbox {
   }
 
   // Write to a file in the sandbox, overwriting its current contents
-  // if any. 'filename' is a path intepreted relative to the Sandbox's
+  // if any. 'filename' is a path interpreted relative to the Sandbox's
   // cwd. 'contents' is a string (utf8 is assumed).
   write(filename, contents) {
     files.writeFile(files.pathJoin(this.cwd, filename), contents, 'utf8');
@@ -295,7 +295,7 @@ export default class Sandbox {
   }
 
   // Reads a file in the sandbox as a utf8 string. 'filename' is a
-  // path intepreted relative to the Sandbox's cwd.  Returns null if
+  // path interpreted relative to the Sandbox's cwd.  Returns null if
   // file does not exist.
   read(filename) {
     const file = files.pathJoin(this.cwd, filename);

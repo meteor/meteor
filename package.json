@@ -13,12 +13,29 @@
   },
   "homepage": "https://github.com/meteor/meteor#readme",
   "devDependencies": {
-    "@quave/eslint-config-quave": "^1.0.3",
-    "@types/node": "^14.17.6"
+    "@quave/eslint-config-quave": "^1.0.7",
+    "@types/node": "^14.18.63"
   },
   "eslintConfig": {
     "extends": [
       "@quave/quave"
-    ]
+    ],
+    "rules": {
+      "global-require": "off",
+      "no-console": "off",
+      "camelcase": "warn",
+      "consistent-return": "off",
+      "quotes": "warn",
+      "no-shadow": [
+        "error",
+        {
+          "allow": [
+            "resolve"
+          ]
+        }
+      ],
+      "no-use-before-define": "warn",
+      "import/no-unresolved": "warn"
+    }
   }
 }

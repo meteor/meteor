@@ -54,3 +54,13 @@ if (Meteor.isServer) {
 {% apibox "Meteor.settings" %}
 
 {% apibox "Meteor.release" %}
+
+{% apibox "Meteor.isModern" %}
+
+{% apibox "Meteor.gitCommitHash" %}
+
+{% apibox "Meteor.isTest" %}
+
+{% apibox "Meteor.isAppTest" %}
+
+{% apibox "Meteor.isPackageTest" %}

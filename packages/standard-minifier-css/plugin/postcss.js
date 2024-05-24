@@ -16,7 +16,7 @@ const missingPostCssError = new Error([
     'directory. Please run the following command to install it:',
     '    meteor npm install postcss@8',
     'or disable postcss by removing the postcss config.',
-    ''
+    '',
   ].join('\n'));
 
 export async function loadPostCss() {
@@ -52,7 +52,7 @@ export async function loadPostCss() {
 
     e.message = `While loading postcss config: ${e.message}`;
     return {
-      error: e
+      error: e,
     };
   }
 
@@ -73,7 +73,7 @@ export async function loadPostCss() {
       'directory. standard-minifier-css is only compatible with',
       'version 8 of PostCSS. Please restart Meteor after installing',
       'a supported version of PostCSS',
-      ''
+      '',
     ].join('\n'));
 
     return { error };
@@ -95,7 +95,7 @@ export function usePostCss(file, postcssConfig) {
   const path = file.getPathInBundle();
 
   const excluded = excludedPackages.some(name => {
-    return path.includes(`packages/${name.replace(':', '_')}`)
+    return path.includes(`packages/${name.replace(':', '_')}`);
   });
 
   return !excluded;
@@ -109,7 +109,7 @@ export const watchAndHashDeps = Profile(
     let fileCount = 0;
     let folderCount = 0;
     let start = performance.now();
-  
+
     deps.forEach(dep => {
       if (dep.type === 'dependency') {
         fileCount += 1;
@@ -123,20 +123,20 @@ export const watchAndHashDeps = Profile(
         }
       }
     });
-  
-  
+
+
     Object.entries(globsByDir).forEach(([parentDir, globs]) => {
       const matchers = globs.map(glob => micromatch.matcher(glob));
-  
+
       function walk(relDir) {
         const absDir = path.join(parentDir, relDir);
         hash.update(absDir).update('\0');
         folderCount += 1;
-  
+
         const entries = fs.readdirWithTypesSync(absDir);
         for (const entry of entries) {
           const relPath = path.join(relDir, entry.name);
-  
+
           if (entry.isFile() && matchers.some(isMatch => isMatch(relPath))) {
             const absPath = path.join(absDir, entry.name);
             fileCount += 1;
@@ -148,12 +148,12 @@ export const watchAndHashDeps = Profile(
           }
         }
       }
-  
+
       walk('./');
     });
-  
+
     let digest = hash.digest('hex');
-  
+
     if (DEBUG_CACHE) {
       console.log('--- PostCSS Cache Info ---');
       console.log('Glob deps', JSON.stringify(globsByDir, null, 2));
@@ -162,6 +162,6 @@ export const watchAndHashDeps = Profile(
       console.log('Created dep cache key in', performance.now() - start, 'ms');
       console.log('--------------------------');
     }
-  
+
     return digest;
 });

@@ -216,7 +216,7 @@ Tinytest.add('ecmascript - runtime - block scope', test => {
       });
     }
 
-    _.each(thunks, f => f());
+    thunks.forEach(f => f());
     test.equal(buf, [0, 1, 2]);
   }
 });

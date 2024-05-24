@@ -77,7 +77,7 @@ Tinytest.add('minifier-css - simple CSS minification', (test) => {
     'a {\n\
     font:12px \'Helvetica\',"Arial",\'Nautica\';\n\
     background:url("/some/nice/picture.png");\n}',
-    'a{font:12px Helvetica,Arial,Nautica;background:url(/some/nice/picture.png)}',
+    'a{background:url(/some/nice/picture.png);font:12px Helvetica,Arial,Nautica}',
     'removing quotes in font and url (if possible)',
   );
   checkMinified(

@@ -26,13 +26,14 @@ idForOp = function (op) {
     throw Error("Unknown op: " + EJSON.stringify(op));
 };
 
-OplogHandle = async function (oplogUrl, dbName) {
+OplogHandle = function (oplogUrl, dbName) {
   var self = this;
   self._oplogUrl = oplogUrl;
   self._dbName = dbName;
 
   self._oplogLastEntryConnection = null;
   self._oplogTailConnection = null;
+  self._oplogOptions = null;
   self._stopped = false;
   self._tailHandle = null;
   self._readyFuture = new Future();
@@ -82,9 +83,10 @@ OplogHandle = async function (oplogUrl, dbName) {
   self._entryQueue = new Meteor._DoubleEndedQueue();
   self._workerActive = false;
 
-  await self._startTailing();
-  return self;
+  self._startTailing();
 };
+
+MongoInternals.OplogHandle = OplogHandle;
 
 Object.assign(OplogHandle.prototype, {
   stop: function () {
@@ -147,7 +149,7 @@ Object.assign(OplogHandle.prototype, {
       try {
         lastEntry = self._oplogLastEntryConnection.findOne(
           OPLOG_COLLECTION, self._baseOplogSelector,
-          {fields: {ts: 1}, sort: {$natural: -1}});
+          {projection: {ts: 1}, sort: {$natural: -1}});
         break;
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
@@ -186,7 +188,7 @@ Object.assign(OplogHandle.prototype, {
     self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
     f.wait();
   },
-  _startTailing: async function () {
+  _startTailing: function () {
     var self = this;
     // First, make sure that we're talking to the local database.
     var mongodbUri = Npm.require('mongodb-uri');
@@ -206,13 +208,13 @@ Object.assign(OplogHandle.prototype, {
     //
     // The tail connection will only ever be running a single tail command, so
     // it only needs to make one underlying TCP connection.
-    self._oplogTailConnection = await new MongoConnection(
-      self._oplogUrl, {maxPoolSize: 1});
+    self._oplogTailConnection = new MongoConnection(
+      self._oplogUrl, {maxPoolSize: 1, minPoolSize: 1});
     // XXX better docs, but: it's to get monotonic results
     // XXX is it safe to say "if there's an in flight query, just use its
     //     results"? I don't think so but should consider that
-    self._oplogLastEntryConnection = await new MongoConnection(
-      self._oplogUrl, {maxPoolSize: 1});
+    self._oplogLastEntryConnection = new MongoConnection(
+      self._oplogUrl, {maxPoolSize: 1, minPoolSize: 1});
 
     // Now, make sure that there actually is a repl set here. If not, oplog
     // tailing won't ever find anything!
@@ -230,7 +232,7 @@ Object.assign(OplogHandle.prototype, {
 
     // Find the last oplog entry.
     var lastOplogEntry = self._oplogLastEntryConnection.findOne(
-      OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
+      OPLOG_COLLECTION, {}, {sort: {$natural: -1}, projection: {ts: 1}});
 
     var oplogSelector = _.clone(self._baseOplogSelector);
     if (lastOplogEntry) {
@@ -240,6 +242,40 @@ Object.assign(OplogHandle.prototype, {
       // oplog entries show up, allow callWhenProcessedLatest to call its
       // callback immediately.
       self._lastProcessedTS = lastOplogEntry.ts;
+    }
+
+    // These 2 settings allow you to either only watch certain collections (oplogIncludeCollections), or exclude some collections you don't want to watch for oplog updates (oplogExcludeCollections)
+    // Usage:
+    // settings.json = {
+    //   "packages": {
+    //     "mongo": {
+    //       "oplogExcludeCollections": ["products", "prices"] // This would exclude both collections "products" and "prices" from any oplog tailing. 
+    //                                                            Beware! This means, that no subscriptions on these 2 collections will update anymore!
+    //     }
+    //   }
+    // }
+    const includeCollections = Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
+    const excludeCollections = Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
+    if (includeCollections?.length && excludeCollections?.length) {
+      throw new Error("Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time.");
+    }
+    if (excludeCollections?.length) {
+      oplogSelector.ns = {
+        $regex: oplogSelector.ns,
+        $nin: excludeCollections.map((collName) => `${self._dbName}.${collName}`)
+      }
+      self._oplogOptions = { excludeCollections };
+    }
+    else if (includeCollections?.length) {
+      oplogSelector = { $and: [
+        { $or: [
+          { ns: /^admin\.\$cmd/ },
+          { ns: { $in: includeCollections.map((collName) => `${self._dbName}.${collName}`) } }
+        ] },
+        { $or: oplogSelector.$or }, // the initial $or to select only certain operations (op)
+        { ts: oplogSelector.ts }
+      ] };
+      self._oplogOptions = { includeCollections };
     }
 
     var cursorDescription = new CursorDescription(
@@ -309,6 +345,9 @@ Object.assign(OplogHandle.prototype, {
             trigger.collection = doc.o.drop;
             trigger.dropCollection = true;
             trigger.id = null;
+          } else if ("create" in doc.o && "idIndex" in doc.o) {
+            // A collection got implicitly created within a transaction. There's
+            // no need to do anything about it.
           } else {
             throw Error("Unknown command " + EJSON.stringify(doc));
           }

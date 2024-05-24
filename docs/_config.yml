@@ -1,6 +1,14 @@
 title: Meteor API Docs
 subtitle: API Docs
 versions:
+  - '2.16'
+  - '2.14'
+  - '2.13'
+  - '2.12'
+  - '2.11'
+  - '2.10'
+  - '2.9'
+  - '2.8'
   - '2.7'
   - '2.6'
   - '2.5'
@@ -23,8 +31,8 @@ versioned-netlify-redirects:
   netlify_site_id: meteor-docs
 
 logo:
-  title:
-  subtitle: Docs
+  title: Meteor
+  subtitle: API Docs
 
 sidebar_categories:
   null:
@@ -82,12 +90,15 @@ sidebar_categories:
     - packages/underscore
     - packages/url
     - packages/webapp
+    - packages/packages-listing
   Command Line:
     - commandline
     - environment-variables
+    - using-core-types
   Troubleshooting:
     - expired-certificate
     - windows
+    - known-issues
 github_repo: 'meteor/meteor'
 edit_branch: 'devel'
 edit_path: 'docs'

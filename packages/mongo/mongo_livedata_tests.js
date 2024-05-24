@@ -873,7 +873,7 @@ if (Meteor.isServer) {
 
   // This test mainly checks the correctness of oplog code dealing with limited
   // queries. Compitablity with poll-diff is added as well.
-  Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, async function (test) {
+  Tinytest.add("mongo-livedata - observe sorted, limited " + idGeneration, function (test) {
     var run = test.runId();
     var coll = new Mongo.Collection("observeLimit-"+run, collectionOptions);
 
@@ -936,7 +936,7 @@ if (Meteor.isServer) {
 
     // Insert a doc and start observing.
     var docId1 = ins({foo: 22, bar: 5});
-    await waitUntilOplogCaughtUp();
+    waitUntilOplogCaughtUp();
 
     // State: [ 5:1 | ]!
     var o = observer();
@@ -1218,7 +1218,7 @@ if (Meteor.isServer) {
     onComplete();
   });
 
-  Tinytest.addAsync("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, async function (test) {
+  Tinytest.add("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, function (test) {
     var run = test.runId();
     var coll = new Mongo.Collection("observeLimit-"+run, collectionOptions);
 
@@ -1276,7 +1276,7 @@ if (Meteor.isServer) {
 
     // Ensure that we are past all the 'i' entries before we run the query, so
     // that we get the expected phase transitions.
-    await waitUntilOplogCaughtUp();
+    waitUntilOplogCaughtUp();
 
     var o = observer();
     var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
@@ -2802,10 +2802,10 @@ if (Meteor.isServer) {
 }
 
 // This is a VERY white-box test.
-Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - _disableOplog", async function (test) {
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", function (test) {
   var collName = Random.id();
   var coll = new Mongo.Collection(collName);
-  if ((await MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle) {
+  if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
     var observeWithOplog = coll.find({x: 5})
           .observeChanges({added: function () {}});
     test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
@@ -2817,7 +2817,7 @@ Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - _disableOplog", a
   observeWithoutOplog.stop();
 });
 
-Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - include selector fields", async function (test) {
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector fields", function (test) {
   var collName = "includeSelector" + Random.id();
   var coll = new Mongo.Collection(collName);
 
@@ -2828,7 +2828,7 @@ Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - include selector 
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  await waitUntilOplogCaughtUp();
+  waitUntilOplogCaughtUp();
 
   var output = [];
   var handle = coll.find({a: 1, b: 2}, {fields: {c: 1}}).observeChanges({
@@ -2859,7 +2859,7 @@ Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - include selector 
   handle.stop();
 });
 
-Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - transform", async function (test) {
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (test) {
   var collName = "oplogTransform" + Random.id();
   var coll = new Mongo.Collection(collName);
 
@@ -2870,7 +2870,7 @@ Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - transform", async
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  await waitUntilOplogCaughtUp();
+  waitUntilOplogCaughtUp();
 
   var cursor = coll.find({}, {transform: function (doc) {
     return doc.x;
@@ -2899,17 +2899,17 @@ Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - transform", async
 });
 
 
-Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - drop collection/db", async function (test) {
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", function (test) {
   // This test uses a random database, so it can be dropped without affecting
   // anything else.
   var mongodbUri = Npm.require('mongodb-uri');
   var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
   parsedUri.database = 'dropDB' + Random.id();
-  var driver = Promise.await(new MongoInternals.RemoteCollectionDriver(
+  var driver = new MongoInternals.RemoteCollectionDriver(
     mongodbUri.format(parsedUri), {
       oplogUrl: process.env.MONGO_OPLOG_URL
     }
-  ));
+  );
 
   var collName = "dropCollection" + Random.id();
   var coll = new Mongo.Collection(collName, { _driver: driver });
@@ -2943,7 +2943,7 @@ Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - drop collection/d
 
   // Wait until we've processed the insert oplog entry, so that we are in a
   // steady state (and we don't see the dropped docs because we are FETCHING).
-  await waitUntilOplogCaughtUp();
+  waitUntilOplogCaughtUp();
 
   // Drop the collection. Should remove all docs.
   runInFence(function () {
@@ -3105,9 +3105,9 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 ]);
 
 
-async function waitUntilOplogCaughtUp() {
+function waitUntilOplogCaughtUp() {
   var oplogHandle =
-    (await MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle;
+    MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
   if (oplogHandle)
     oplogHandle.waitUntilCaughtUp();
 }
@@ -3232,8 +3232,12 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidde
 Meteor.isServer && Tinytest.add(
   "mongo-livedata - connection failure throws",
   function (test) {
+    // Exception happens in 30s
     test.throws(function () {
-      Promise.await(new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf'));
+      const connection = new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
+
+      // Same as `MongoInternals.defaultRemoteCollectionDriver`.
+      Promise.await(connection.client.connect());
     });
   }
 );
@@ -3433,8 +3437,8 @@ if (Meteor.isServer) {
 }
 
 if (Meteor.isServer) {
-  Tinytest.addAsync("mongo-livedata - transaction", async function (test) {
-    const { client } = (await MongoInternals.defaultRemoteCollectionDriver()).mongo;
+  Tinytest.addAsync("mongo-livedata - transaction", function (test) {
+    const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
 
     const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
     const rawCollection = Collection.rawCollection();
@@ -3492,3 +3496,260 @@ if (Meteor.isServer) {
     });
   });
 }
+
+testAsyncMulti('mongo-livedata - collection sync operations data persistence', [
+  function (test) { // Using remote collection
+    const Collection = new Mongo.Collection(
+      `remotesyncop_persistence${test.runId()}`,
+    );
+
+    Collection.insert({ _id: 'a' });
+    Collection.update({ _id: 'a' }, { $set: { num: 1 } });
+    const insertedId = Collection.insert({ num: 2 });
+
+    let items = Collection.find().fetch();
+    let itemIds = items.map(_item => _item._id);
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible (optimistic-ui)
+
+    const aItem = items[0];
+    const insertedItem = items[1];
+    test.equal(aItem?.num, 1);
+    test.equal(insertedItem?.num, 2);
+
+    Collection.remove({ _id: insertedId });
+
+    items = Collection.find().fetch();
+    itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(async () => {
+          items = Collection.find().fetch();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, []); // data IS NOT persisted
+          resolve();
+        }, 250);
+      });
+    }
+
+    return Promise.resolve();
+  },
+  async function (test) { // Using local collection
+    const Collection = new Mongo.Collection(
+      `localsyncop_persistence${test.runId()}`,
+    );
+
+    Collection._collection.insert({ _id: 'a' });
+    Collection._collection.update({ _id: 'a' }, { $set: { num: 1 } });
+    const insertedId = Collection._collection.insert({ num: 2 });
+
+    let items = Collection.find().fetch();
+    let itemIds = items.map(_item => _item._id);
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible (optimistic-ui)
+
+    const aItem = items[0];
+    const insertedItem = items[1];
+    test.equal(aItem?.num, 1);
+    test.equal(insertedItem?.num, 2);
+
+    Collection._collection.remove({ _id: insertedId });
+
+    items = Collection.find().fetch();
+    itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(() => {
+          items = Collection.find().fetch();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, ['a']); // data is persisted
+          resolve();
+        }, 250);
+      });
+    }
+
+    return Promise.resolve();
+  },
+  function (test) { // Using methods
+    const Collection = new Mongo.Collection(
+      `methodsyncop_persistence${test.runId()}`,
+    );
+
+    Meteor.methods({
+      [`insertSyncMethodPersistence${test.runId()}`]: async () => {
+        Collection.insert({ _id: 'a' });
+      },
+    });
+
+    Meteor.call(`insertSyncMethodPersistence${test.runId()}`);
+
+    let items = Collection.find().fetch();
+    let itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(() => {
+          items = Collection.find().fetch();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, []); // data IS NOT persisted
+          resolve();
+        }, 250);
+      });
+    }
+
+    return Promise.resolve();
+  },
+]);
+
+testAsyncMulti('mongo-livedata - collection async operations data persistence', [
+  async function (test) { // Using remote collection
+    const Collection = new Mongo.Collection(
+      `remoteop_persistence${test.runId()}`,
+    );
+
+    await Collection.insertAsync({ _id: 'a' });
+    await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+    const insertedId = await Collection.insertAsync({ num: 2 });
+
+    let items = await Collection.find().fetchAsync();
+    let itemIds = items.map(_item => _item._id);
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible (optimistic-ui)
+
+    const aItem = items[0];
+    const insertedItem = items[1];
+    test.equal(aItem?.num, 1);
+    test.equal(insertedItem?.num, 2);
+
+    await Collection.removeAsync({ _id: insertedId });
+
+    items = await Collection.find().fetchAsync();
+    itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, []); // data IS NOT persisted
+          resolve();
+        }, 250);
+      });
+    }
+
+    return Promise.resolve();
+  },
+  async function (test) { // Using local collection
+    const Collection = new Mongo.Collection(
+      `localop_persistence${test.runId()}`,
+    );
+
+    await Collection._collection.insertAsync({ _id: 'a' });
+    await Collection._collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+    const insertedId = await Collection._collection.insertAsync({ num: 2 });
+
+    let items = await Collection.find().fetchAsync();
+    let itemIds = items.map(_item => _item._id);
+    test.equal(itemIds, ['a', insertedId]); // temporary data accessible (optimistic-ui)
+
+    const aItem = items[0];
+    const insertedItem = items[1];
+    test.equal(aItem?.num, 1);
+    test.equal(insertedItem?.num, 2);
+
+    await Collection._collection.removeAsync({ _id: insertedId });
+
+    items = await Collection.find().fetchAsync();
+    itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, ['a']); // data is persisted
+          resolve();
+        }, 250);
+      });
+    }
+
+    return Promise.resolve();
+  },
+  async function (test) { // Using methods
+    const Collection = new Mongo.Collection(
+      `methodop_persistence${test.runId()}`,
+    );
+
+    Meteor.methods({
+      [`insertMethodPersistence${test.runId()}`]: async () => {
+        await Collection.insertAsync({ _id: 'a' });
+      },
+    });
+
+    Meteor.callAsync(`insertMethodPersistence${test.runId()}`);
+
+    let items = await Collection.find().fetchAsync();
+    let itemIds = items.map(_item => _item._id);
+
+    test.equal(itemIds, ['a']); // temporary data accessible (optimistic-ui)
+
+    if (Meteor.isClient) {
+      return new Promise(resolve => {
+        Meteor.setTimeout(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item._id);
+          test.equal(itemIds, []); // data IS NOT persisted
+          resolve();
+        }, 250);
+      });
+    }
+
+    return Promise.resolve();
+  },
+]);
+
+testAsyncMulti("mongo-livedata - support observeChangesAsync and observeAsync to keep isomorphism on client and server", [
+  async (test) => {
+    const Collection = new Mongo.Collection(`observe_changes_async${test.runId()}`);
+    const id = 'a';
+    await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+    return new Promise(async resolve => {
+      const obs = await Collection.find(id).observeChangesAsync({
+        async changed(_id, fields) {
+          await obs.stop();
+          test.equal(_id, id);
+          test.equal(fields?.foo?.bar, 456);
+          resolve();
+        },
+      });
+      await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+    });
+  },
+  async (test) => {
+    const Collection = new Mongo.Collection(`observe_async${test.runId()}`);
+    const id = 'a';
+    await Collection.insertAsync({ _id: id, foo: { bar: 123 } });
+
+    return new Promise(async resolve => {
+      const obs = await Collection.find(id).observeAsync({
+        async changed(newDocument) {
+          await obs.stop();
+          test.equal(newDocument._id, id);
+          test.equal(newDocument?.foo?.bar, 456);
+          resolve();
+        },
+      });
+      await Collection.updateAsync(id, { $set: { 'foo.bar': 456 } });
+    });
+  }
+]);

@@ -1,7 +1,7 @@
 import { parse } from '@meteorjs/babel';
 import { analyze as analyzeScope } from 'escope';
 import LRU from "lru-cache";
-
+import { Profile } from '../tool-env/profile';
 import Visitor from "@meteorjs/reify/lib/visitor.js";
 import { findPossibleIndexes } from "@meteorjs/reify/lib/utils.js";
 
@@ -26,9 +26,23 @@ function tryToParse(source, hash) {
   }
 
   let ast;
-
   try {
-    ast = parse(source);
+    Profile.time('jsAnalyze.parse', () => {
+      ast = parse(source, {
+        strictMode: false,
+        sourceType: 'module',
+        allowImportExportEverywhere: true,
+        allowReturnOutsideFunction: true,
+        allowUndeclaredExports: true,
+        plugins: [
+          // Only plugins for stage 3 features are enabled
+          // Enabling some plugins significantly affects parser performance
+          'importAttributes',
+          'explicitResourceManagement',
+          'decorators'
+        ]
+      });
+    });
   } catch (e) {
     if (typeof e.loc === 'object') {
       e.$ParseError = true;
@@ -71,7 +85,10 @@ export function findImportedModuleIdentifiers(source, hash) {
   }
 
   const ast = tryToParse(source, hash);
-  importedIdentifierVisitor.visit(ast, source, possibleIndexes);
+  Profile.time('findImportedModuleIdentifiersVisitor', () => {
+    importedIdentifierVisitor.visit(ast, source, possibleIndexes);
+  });
+
   return importedIdentifierVisitor.identifiers;
 }
 
@@ -297,7 +314,7 @@ export function findAssignedGlobals(source, hash) {
   programScope.implicit.left.forEach(entry => {
     if (entry.identifier &&
         entry.identifier.type === "Identifier" &&
-        // Only consider identifers that are assigned a value.
+        // Only consider identifiers that are assigned a value.
         entry.writeExpr) {
       assignedGlobals[entry.identifier.name] = true;
     }

@@ -1,10 +1,14 @@
+
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.0.10'
+  version: '1.6.1',
 });
 
+Npm.depends({
+  '@types/underscore': '1.11.9',
+});
 Package.onUse(function (api) {
-  // Like all packages, we have an implicit depedency on the 'meteor'
+  // Like all packages, we have an implicit dependency on the 'meteor'
   // package, which provides such things as the *.js file handler. Use
   // an undocumented API to allow 'meteor' to alter us even though we
   // depend on it. This is necessary since 'meteor' depends on us. One
@@ -27,6 +31,8 @@ Package.onUse(function (api) {
   // numeric length field whose constructor === Object are still treated as
   // objects, not as arrays.  Search for looksLikeArray.
   api.addFiles(['pre.js', 'underscore.js', 'post.js']);
+
+  api.addAssets('underscore.d.ts', 'server');
 });
 
 

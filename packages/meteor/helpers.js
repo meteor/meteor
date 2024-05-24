@@ -71,6 +71,45 @@ Meteor._delete = function (obj /*, arguments */) {
   }
 };
 
+
+/**
+ * Takes a function that has a callback argument as the last one and promissify it.
+ * One option would be to use node utils.promisify, but it won't work on the browser.
+ * @param fn
+ * @param context
+ * @param errorFirst - If the callback follows the errorFirst style
+ * @returns {function(...[*]): Promise<unknown>}
+ */
+Meteor.promisify = function (fn, context, errorFirst) {
+  if (errorFirst === undefined) {
+    errorFirst = true;
+  }
+
+  return function () {
+    return new Promise(function (resolve, reject) {
+      var callback = Meteor.bindEnvironment(function (error, result) {
+        var _error = error, _result = result;
+        if (!errorFirst) {
+          _error = result;
+          _result = error;
+        }
+
+        if (_error) {
+          return reject(_error);
+        }
+
+        resolve(_result);
+      });
+
+      var filteredArgs = Array.prototype.slice.call(arguments)
+        .filter(function (i) { return i !== undefined; });
+      filteredArgs.push(callback);
+
+      return fn.apply(context || this, filteredArgs);
+    });
+  };
+};
+
 // wrapAsync can wrap any function that takes some number of arguments that
 // can't be undefined, followed by some optional arguments, where the callback
 // is the last optional argument.
@@ -122,6 +161,25 @@ Meteor.wrapAsync = function (fn, context) {
     var result = fn.apply(self, newArgs);
     return fut ? fut.wait() : result;
   };
+};
+
+Meteor.wrapFn = function (fn) {
+  if (!fn || typeof fn !== 'function') {
+    throw new Meteor.Error("Expected to receive function to wrap");
+  }
+
+  if (Meteor.isClient) {
+    return fn;
+  }
+
+  return function() {
+    var ret = fn.apply(this, arguments);
+    if (ret && typeof ret.then === 'function') {
+      return Promise.await(ret);
+    }
+
+    return ret;
+  }
 };
 
 // Sets child's prototype to a new object whose prototype is parent's

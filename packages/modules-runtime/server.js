@@ -28,7 +28,7 @@ makeInstallerOptions.fallback = function (id, parentId, error) {
       return Npm.require(id, error);
     }
   }
-
+  verifyErrors(id, parentId, error);
   throw error;
 };
 

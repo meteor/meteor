@@ -6,7 +6,7 @@ Template.serverFacts.helpers({
   factsByPackage: () => Facts.server.find(),
   facts: function () {
     const factArray = [];
-    _.each(this, function (value, name) {
+    Object.entries(this).forEach(function ([name, value]) {
       if (name !== '_id')
         factArray.push({name: name, value: value});
     });

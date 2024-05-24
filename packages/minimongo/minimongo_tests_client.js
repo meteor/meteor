@@ -439,8 +439,16 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // dates
   const date1 = new Date;
   const date2 = new Date(date1.getTime() + 1000);
+  const date3 = new Date('');
   match({a: date1}, {a: date1});
   nomatch({a: date1}, {a: date2});
+  match({a: date3}, {a: date3});
+  nomatch({a: date1}, {a: date3});
+  nomatch({a: date3}, {a: date1});
+  match({a: {$gt: date3}}, {a: date1});
+  match({a: {$gte: date3}}, {a: date1});
+  nomatch({a: {$lt: date3}}, {a: date1});
+  nomatch({a: {$lte: date3}}, {a: date1});
 
 
   // arrays
@@ -2203,7 +2211,7 @@ Tinytest.add('minimongo - array sort', test => {
   c.insert({up: 3, down: 3, selected: 2, a: {x: 2.5}});
   c.insert({up: 4, down: 0, selected: 3, a: {x: 5}});
 
-  // Test that the the documents in "cursor" contain values with the name
+  // Test that the documents in "cursor" contain values with the name
   // "field" running from 0 to the max value of that name in the collection.
   const testCursorMatchesField = (cursor, field) => {
     const fieldValues = [];
@@ -2235,7 +2243,7 @@ Tinytest.add('minimongo - nested array sort', test => {
   c.insert({ ab0x: 7, ab0x_g: 7, g_ab0x: 7, cdx: 4, cdx_cdy: 4, cdy_cdx: 6, n: 7 , a: { b: [{ x: 5 }] }, c: { d: [{ y: 2}, { y: 3}] }, g: 5 });
   c.insert({ ab0x: 8, ab0x_g: 8, g_ab0x: 8, cdx: 5, cdx_cdy: 5, cdy_cdx: 7, n: 8 , a: { b: [{ x: 6 }, { x: 7 }] }, c: { d: [{ y: 2}, { x: 1.5, y: 2}] }, g: 6 });
 
-  // Test that the the documents in "cursor" contain values with the name
+  // Test that the documents in "cursor" contain values with the name
   // "field" running from 0 to the max value of that name in the collection.
   const testCursorMatchesField = (cursor, field) => {
     const fieldValues = [];

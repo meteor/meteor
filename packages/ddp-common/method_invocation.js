@@ -18,6 +18,16 @@ DDPCommon.MethodInvocation = class MethodInvocation {
     // zero-latency connection to the user.
 
     /**
+     * @summary The name given to the method.
+     * @locus Anywhere
+     * @name  name
+     * @memberOf DDPCommon.MethodInvocation
+     * @instance
+     * @type {String}
+     */
+    this.name = options.name;
+
+    /**
      * @summary Access inside a method invocation.  Boolean value, true if this invocation is a stub.
      * @locus Anywhere
      * @name  isSimulation
@@ -32,6 +42,9 @@ DDPCommon.MethodInvocation = class MethodInvocation {
     // complete.
     this._unblock = options.unblock || function () {};
     this._calledUnblock = false;
+
+    // used to know when the function apply was called by callAsync
+    this._isFromCallAsync = options.isFromCallAsync;
 
     // current user id
 

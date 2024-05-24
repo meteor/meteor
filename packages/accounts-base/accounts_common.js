@@ -4,18 +4,21 @@ import { Meteor } from 'meteor/meteor';
 const VALID_CONFIG_KEYS = [
   'sendVerificationEmail',
   'forbidClientAccountCreation',
-  'passwordEnrollTokenExpiration',
-  'passwordEnrollTokenExpirationInDays',
   'restrictCreationByEmailDomain',
-  'loginExpirationInDays',
   'loginExpiration',
+  'loginExpirationInDays',
+  'oauthSecretKey',
   'passwordResetTokenExpirationInDays',
   'passwordResetTokenExpiration',
+  'passwordEnrollTokenExpirationInDays',
+  'passwordEnrollTokenExpiration',
   'ambiguousErrorMessages',
   'bcryptRounds',
   'defaultFieldSelector',
+  'collection',
   'loginTokenExpirationHours',
   'tokenSequenceLength',
+  'clientStorage',
 ];
 
 /**
@@ -26,6 +29,8 @@ const VALID_CONFIG_KEYS = [
  * @param options {Object} an object with fields:
  * - connection {Object} Optional DDP connection to reuse.
  * - ddpUrl {String} Optional URL for creating a new DDP connection.
+ * - collection {String|Mongo.Collection} The name of the Mongo.Collection
+ *     or the Mongo.Collection object to hold the users.
  */
 export class AccountsCommon {
   constructor(options) {
@@ -40,10 +45,7 @@ export class AccountsCommon {
 
     // There is an allow call in accounts_server.js that restricts writes to
     // this collection.
-    this.users = new Mongo.Collection('users', {
-      _preventAutopublish: true,
-      connection: this.connection,
-    });
+    this.users = this._initializeCollection(options || {});
 
     // Callback exceptions are printed with Meteor._debug and ignored.
     this._onLoginHook = new Hook({
@@ -79,40 +81,29 @@ export class AccountsCommon {
     // should come up with a more generic way to do this (eg, with some sort of
     // symbolic error code rather than a number).
     this.LoginCancelledError.numericError = 0x8acdc2f;
+  }
 
-    // loginServiceConfiguration and ConfigError are maintained for backwards compatibility
-    Meteor.startup(() => {
-      const { ServiceConfiguration } = Package['service-configuration'];
-      this.loginServiceConfiguration = ServiceConfiguration.configurations;
-      this.ConfigError = ServiceConfiguration.ConfigError;
+  _initializeCollection(options) {
+    if (options.collection && typeof options.collection !== 'string' && !(options.collection instanceof Mongo.Collection)) {
+      throw new Meteor.Error('Collection parameter can be only of type string or "Mongo.Collection"');
+    }
 
-      const settings = Meteor.settings?.packages?.['accounts-base'];
-      if (settings) {
-        if (settings.oauthSecretKey) {
-          if (!Package['oauth-encryption']) {
-            throw new Error(
-              'The oauth-encryption package must be loaded to set oauthSecretKey'
-            );
-          }
-          Package['oauth-encryption'].OAuthEncryption.loadKey(
-            settings.oauthSecretKey
-          );
-          delete settings.oauthSecretKey;
-        }
-        // Validate config options keys
-        Object.keys(settings).forEach(key => {
-          if (!VALID_CONFIG_KEYS.includes(key)) {
-            // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-            throw new Meteor.Error(
-              `Accounts configuration: Invalid key: ${key}`
-            );
-          } else {
-            // set values in Accounts._options
-            this._options[key] = settings[key];
-          }
-        });
-      }
-    });
+    let collectionName = 'users';
+    if (typeof options.collection === 'string') {
+      collectionName = options.collection;
+    }
+
+    let collection;
+    if (options.collection instanceof Mongo.Collection) {
+      collection = options.collection;
+    } else {
+      collection = new Mongo.Collection(collectionName, {
+        _preventAutopublish: true,
+        connection: this.connection,
+      });
+    }
+
+    return collection;
   }
 
   /**
@@ -170,6 +161,18 @@ export class AccountsCommon {
       : null;
   }
 
+  /**
+   * @summary Get the current user record, or `null` if no user is logged in.
+   * @locus Anywhere
+   * @param {Object} [options]
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   */
+  async userAsync(options) {
+    const userId = this.userId();
+    return userId
+      ? this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
+      : null;
+  }
   // Set up config for the accounts system. Call this on both the client
   // and the server.
   //
@@ -194,6 +197,8 @@ export class AccountsCommon {
   // - loginExpirationInDays {Number}
   //     Number of days since login until a user is logged out (login token
   //     expires).
+  // - collection {String|Mongo.Collection}
+  //     A collection name or a Mongo.Collection object to hold the users.
   // - passwordResetTokenExpirationInDays {Number}
   //     Number of days since password reset token creation until the
   //     token cannt be used any longer (password reset token expires).
@@ -211,17 +216,20 @@ export class AccountsCommon {
    * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.
    * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available.
    * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.
-   * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
    * @param {Number} options.loginExpiration The number of milliseconds from when a user logs in until their token expires and they are logged out, for a more granular control. If `loginExpirationInDays` is set, it takes precedent.
+   * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
    * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specified on the server.  See packages/oauth-encryption/README.md for details.
    * @param {Number} options.passwordResetTokenExpirationInDays The number of days from when a link to reset password is sent until token expires and user can't reset password with the link anymore. Defaults to 3.
    * @param {Number} options.passwordResetTokenExpiration The number of milliseconds from when a link to reset password is sent until token expires and user can't reset password with the link anymore. If `passwordResetTokenExpirationInDays` is set, it takes precedent.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set initial password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
+   * @param {Number} options.bcryptRounds Allows override of number of bcrypt rounds (aka work factor) used to store passwords. The default is 10.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`. Beware when using this. If, for instance, you do not include `email` when excluding the fields, you can have problems with functions like `forgotPassword` that will break because they won't have the required data available. It's recommend that you always keep the fields `_id`, `username`, and `email`.
+   * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
+   * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
    */
   config(options) {
     // We don't want users to accidentally only call Accounts.config on the
@@ -264,6 +272,7 @@ export class AccountsCommon {
     // Validate config options keys
     Object.keys(options).forEach(key => {
       if (!VALID_CONFIG_KEYS.includes(key)) {
+        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
         throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
       }
     });
@@ -272,11 +281,17 @@ export class AccountsCommon {
     VALID_CONFIG_KEYS.forEach(key => {
       if (key in options) {
         if (key in this._options) {
-          throw new Meteor.Error(`Can't set \`${key}\` more than once`);
+          if (key !== 'collection' && (Meteor.isTest && key !== 'clientStorage')) {
+            throw new Meteor.Error(`Can't set \`${key}\` more than once`);
+          }
         }
         this._options[key] = options[key];
       }
     });
+
+    if (options.collection && options.collection !== this.users._name && options.collection !== this.users) {
+      this.users = this._initializeCollection(options);
+    }
   }
 
   /**
@@ -418,6 +433,15 @@ Meteor.userId = () => Accounts.userId();
  */
 Meteor.user = options => Accounts.user(options);
 
+/**
+ * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @locus Anywhere but publish functions
+ * @importFromPackage meteor
+ * @param {Object} [options]
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+ */
+Meteor.userAsync = options => Accounts.userAsync(options);
+
 // how long (in days) until a login token expires
 const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
 // how long (in days) until reset password token expires
@@ -430,9 +454,6 @@ const DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS = 30;
 const MIN_TOKEN_LIFETIME_CAP_SECS = 3600; // one hour
 // how often (in milliseconds) we check for expired tokens
 export const EXPIRE_TOKENS_INTERVAL_MS = 600 * 1000; // 10 minutes
-// how long we wait before logging out clients when Meteor.logoutOtherClients is
-// called
-export const CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
 // A large number of expiration days (approximately 100 years worth) that is
 // used when creating unexpiring tokens.
 const LOGIN_UNEXPIRING_TOKEN_DAYS = 365 * 100;

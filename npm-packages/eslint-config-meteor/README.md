@@ -1,4 +1,4 @@
-# eslint-config-meteor
+# @meteorjs/eslint-config-meteor
 
 This is an [ESLint](https://eslint.org) configuration for [Meteor](https://www.meteor.com) apps which implements the recommendations from the [Meteor Guide](https://guide.meteor.com/)'s section on [Code style](https://guide.meteor.com/code-style.html#eslint).
 
@@ -24,7 +24,7 @@ The peer dependencies can be installed manually by following the `package.json` 
 $ # Install `install-peerdeps` within the current Meteor tool version.
 $ meteor npm install --global install-peerdeps
 $ # Run the newly installed `install-peerdeps` to install this package and its dependencies.
-$ meteor install-peerdeps --dev @meteorjs/eslint-config-meteor
+$ meteor npx install-peerdeps --dev @meteorjs/eslint-config-meteor
 ```
 
 ## Configure

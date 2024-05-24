@@ -19,6 +19,24 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 
 Read more about customizing user accounts in the [Accounts](http://guide.meteor.com/accounts.html) article in the Meteor Guide.
 
+<h3 id="accounts-session-storage" name="accounts-session-storage">Accounts with Session Storage</h3>
+
+By default, Meteor uses Local Storage to store, among other things, login tokens in your browser session. But, for some applications, it makes sense to use Session Storage instead. You can achieve this by adding this to your settings:
+
+```json
+{
+  // ... all other settings,
+  "public": {
+    // ... all your public settings
+    "packages": {
+      "accounts": {
+        "clientStorage": "session"
+      }
+    }
+  }
+}
+```
+
 {% apibox "Meteor.user" %}
 
 Retrieves the user record for the current user from
@@ -338,3 +356,41 @@ Accounts.ui.config({
 
 
 Since Meteor 2.7 you can configure these in your Meteor settings under `Meteor.settings.public.packages.accounts-ui-unstyled`.
+
+<h3 id="initialize-with-custom-settings">Initialize with custom settings</h3>
+
+This feature allows users to specify custom configuration parameters for both client-side and server-side initialization.
+
+* Client
+
+{% apibox "AccountsClient" %}
+
+On the client-side, AccountsClient can be initialized with custom parameters provided through Meteor settings configuration. Below is an example of how to use this functionality:
+
+```json
+{
+  "public": {
+    "packages": {
+      "accounts": {
+        ...configParams
+      }
+    }
+  }
+}
+```
+
+* Server
+
+{% apibox "AccountsServer" %}
+
+On the server-side, AccountsServer can also be initialized with custom parameters. Server-specific configuration may differ from the client and can also be specified through Meteor settings. Below is an example of how to do it:
+
+```json
+{
+  "packages": {
+    "accounts": {
+      ...configParams
+    }
+  }
+}
+```

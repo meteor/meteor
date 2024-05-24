@@ -1,35 +1,56 @@
 ---
-title: Install
+title: Install Meteor.js
 ---
-Meteor currently supports **OS X, Windows, and Linux**. Only 64-bit is supported.
-Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, you will need to run with a [rosetta terminal](https://osxdaily.com/2020/11/18/how-run-homebrew-x86-terminal-apple-silicon-mac/)).
 
-<h2 id="prereqs">Prerequisites and useful information</h2>
+You need to install the Meteor command line tool to create, run, and manage your Meteor.js projects. Check the prerequisites and follow the installation process below.
 
-- If you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/)
-- Meteor works with Node.js version >= 10 and <= 14, for Windows you need to have Node.js installed for running the npm installer (tip: you can use [nvm](https://github.com/nvm-sh/nvm) for managing node versions).
-- Meteor supports Windows 7/Windows Server 2008 R2 and up.
+<h2 id="prereqs">Prerequisites</h2>
+
+<h3 id="prereqs-node">Node.js version</h3>
+
+> Meteor 2.x runs on a deprecated Node.js version (14). Meteor 3.0, currently in its Release Candidate version, runs on Node.js v20. For more information, please consult our [migration guide](https://guide.meteor.com/3.0-migration.html).
+
+- Node.js version >= 10 and <= 14 is required.
+- We recommend you using [nvm](https://github.com/nvm-sh/nvm) or [Volta](https://volta.sh/) for managing Node.js versions.
+
+<h3 id="prereqs-os">Operating System (OS)</h3>
+
+- Meteor currently supports **OS X, Windows, and Linux**. Only 64-bit is supported.
+- Meteor supports Windows 7 / Windows Server 2008 R2 and up.
+- Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, rosetta terminal is required).
+- If you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/).
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
 - For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
+
+<h3 id="prereqs-mobile">Mobile Development</h3>
+
 - iOS development requires the latest Xcode.
-- **Do not install meteor npm in your project's package.json by any means, the npm library is only an installer.**
 
 <h2 id="installation">Installation</h2>
 
-Install the latest official Meteor release from your terminal running one of the commands below.
+Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://docs.meteor.com/changelog.html) for the release notes.
 
-For Linux and OS X:
+> Run `node -v` to ensure you are using Node.js 14. Meteor 3.0, currently in its Release Candidate version, runs on Node.js v20.
 
-```bash
-curl https://install.meteor.com/ | sh
-```
-
-For Windows (Node.js is required):
+For Windows, Linux and OS X, you can run the following command:
 
 ```bash
 npm install -g meteor
 ```
 
+An alternative for Linux and OS X, is to install Meteor by using curl:
+
+```bash
+curl https://install.meteor.com/ | sh
+```
+
+You can also install a specific Meteor.js version by using curl:
+
+```bash
+curl https://install.meteor.com/\?release\=2.8 | sh
+```
+
+> Do not install the npm Meteor Tool in your project's package.json. This library is just an installer.
 
 <h2 id="troubleshooting">Troubleshooting</h2>
 

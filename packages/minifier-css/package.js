@@ -1,11 +1,11 @@
 Package.describe({
   summary: 'CSS minifier',
-  version: '1.6.0'
+  version: '1.6.4',
 });
 
 Npm.depends({
-  postcss: '8.3.5',
-  cssnano: '4.1.11'
+  postcss: '8.4.21',
+  cssnano: '5.1.15'
 });
 
 Package.onUse(function (api) {
@@ -19,6 +19,7 @@ Package.onTest(function (api) {
   api.use('tinytest');
   api.addFiles([
     'minifier-tests.js',
+    'minifier-async-tests.js',
     'urlrewriting-tests.js'
   ], 'server');
 });

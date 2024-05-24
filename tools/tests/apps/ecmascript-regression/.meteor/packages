@@ -7,7 +7,7 @@
 meteor-base@1.5.1             # Packages every Meteor app needs to have
 mobile-experience@1.1.0       # Packages for a great mobile UX
 mongo@1.13.0                   # The database Meteor supports right now
-reactive-var@1.0.11            # Reactive variable for tracker
+reactive-var@1.0.12          # Reactive variable for tracker
 
 standard-minifier-css@1.7.4   # CSS minifier run for production mode
 standard-minifier-js@2.7.0    # JS minifier run for production mode

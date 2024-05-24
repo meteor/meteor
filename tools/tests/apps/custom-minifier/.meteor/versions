@@ -7,7 +7,7 @@ boilerplate-generator@1.6.0
 caching-compiler@1.2.1
 caching-html-compiler@1.1.3
 callback-hook@1.2.0
-check@1.3.1
+check@1.3.2
 custom-minifier@0.0.1
 ddp@1.4.0
 ddp-client@2.3.3
@@ -45,7 +45,7 @@ socket-stream-client@0.2.2
 spacebars-compiler@1.1.3
 static-html@1.2.2
 templating-tools@1.1.2
-tracker@1.2.0
-underscore@1.0.10
+tracker@1.2.1
+underscore@1.0.11
 webapp@1.7.5
 webapp-hashing@1.0.9

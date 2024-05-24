@@ -1,11 +1,13 @@
 Package.describe({
   summary: 'Check whether a value matches a pattern',
-  version: '1.3.1',
+  version: '1.4.1',
 });
 
 Package.onUse(api => {
   api.use('ecmascript');
   api.use('ejson');
+
+  api.addAssets('check.d.ts', 'server');
 
   api.mainModule('match.js');
 

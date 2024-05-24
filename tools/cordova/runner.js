@@ -4,8 +4,6 @@ import runLog from '../runners/run-log.js';
 import { Console } from '../console/console.js';
 import main from '../cli/main.js';
 
-import { displayNameForPlatform, prepareProjectForBuild } from './index.js';
-
 export class CordovaRunner {
   constructor(cordovaProject, runTargets) {
     this.cordovaProject = cordovaProject;

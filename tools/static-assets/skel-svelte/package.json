@@ -8,14 +8,24 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.17.9",
-    "meteor-node-stubs": "^1.2.1",
-    "svelte": "^3.46.4"
+    "@babel/runtime": "^7.23.5",
+    "meteor-node-stubs": "^1.2.7",
+    "svelte": "^3.59.2"
+  },
+  "devDependencies": {
+    "svelte-preprocess": "^5.0.0"
   },
   "meteor": {
     "mainModule": {
       "client": "client/main.js",
       "server": "server/main.js"
+    },
+    "nodeModules": {
+      "recompile": {
+        "svelte": [
+          "legacy"
+        ]
+      }
     },
     "testModule": "tests/main.js"
   }

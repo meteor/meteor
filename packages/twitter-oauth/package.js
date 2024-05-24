@@ -1,13 +1,12 @@
 Package.describe({
   summary: "Twitter OAuth flow",
-  version: "1.3.0"
+  version: '1.3.3'
 });
 
 Package.onUse(function(api) {
   api.use('oauth1', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('random', 'client');
-  api.use('underscore', 'server');
   api.use('service-configuration', ['client', 'server']);
 
   api.addFiles('twitter_common.js', ['server', 'client']);

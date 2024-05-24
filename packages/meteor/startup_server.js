@@ -1,4 +1,5 @@
 Meteor.startup = function startup(callback) {
+  callback = Meteor.wrapFn(callback);
   if (process.env.METEOR_PROFILE) {
     // Create a temporary error to capture the current stack trace.
     var error = new Error("Meteor.startup");

@@ -36,6 +36,13 @@ downloadNodeFromS3() {
     curl "${NODE_URL}" | tar zx --strip 1
 }
 
+# Nodejs 14 official download source has been discontinued, we are switching to our custom source https://static.meteor.com
+downloadOfficialNode14() {
+    METEOR_NODE_URL="https://static.meteor.com/dev-bundle-node-os/v${NODE_VERSION}/${NODE_TGZ}"
+    echo "Downloading Node from ${METEOR_NODE_URL}" >&2
+    curl "${METEOR_NODE_URL}" | tar zx --strip-components 1
+}
+
 downloadOfficialNode() {
     NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
     echo "Downloading Node from ${NODE_URL}" >&2
@@ -50,7 +57,7 @@ downloadReleaseCandidateNode() {
 
 # Try each strategy in the following order:
 extractNodeFromTarGz || downloadNodeFromS3 || \
-  downloadOfficialNode || downloadReleaseCandidateNode
+  downloadOfficialNode14 || downloadReleaseCandidateNode
 
 # On macOS, download MongoDB from mongodb.com. On Linux, download a custom build
 # that is compatible with current distributions. If a 32-bit Linux is used,
@@ -85,7 +92,7 @@ curl -L "${MONGO_URL}" | tar zx
 # Put Mongo binaries in the right spot (mongodb/bin)
 mkdir -p "mongodb/bin"
 mv "${MONGO_NAME}/bin/mongod" "mongodb/bin"
-mv "${MONGO_NAME}/bin/mongo" "mongodb/bin"
+mv "${MONGO_NAME}/bin/mongos" "mongodb/bin"
 rm -rf "${MONGO_NAME}"
 
 # export path so we use the downloaded node and npm

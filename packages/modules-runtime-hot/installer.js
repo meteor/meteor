@@ -220,8 +220,8 @@ makeInstaller = function (options) {
     var file = fileResolve(filesByModuleId[this.id], id);
     if (file) return file.module.id;
     var error = makeMissingError(id);
-    if (fallback && isFunction(fallback.resolve)) {
-      return fallback.resolve(id, this.id, error);
+    if (fallback && isFunction(fallback)) {
+      return fallback(id, this.id, error);
     }
     throw error;
   };

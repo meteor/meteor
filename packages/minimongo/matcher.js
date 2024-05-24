@@ -262,8 +262,8 @@ LocalCollection._f = {
     if (ta === 9) { // Date
       // Convert to millis.
       ta = tb = 1;
-      a = a.getTime();
-      b = b.getTime();
+      a = isNaN(a) ? 0 : a.getTime();
+      b = isNaN(b) ? 0 : b.getTime();
     }
 
     if (ta === 1) { // double

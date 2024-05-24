@@ -57,8 +57,8 @@ standard-minifier-css@1.4.1
 standard-minifier-js@2.3.2
 static-html@1.2.2
 templating-tools@1.1.2
-tracker@1.2.0
-underscore@1.0.10
+tracker@1.2.1
+underscore@1.0.11
 url@1.2.0
 webapp@1.5.0
 webapp-hashing@1.0.9

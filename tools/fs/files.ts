@@ -993,7 +993,7 @@ Profile("files.writeFileAtomically", function (filename: string, contents: strin
   rename(tmpFile, filename);
 });
 
-// Like fs.symlinkSync, but creates a temporay link and renames it over the
+// Like fs.symlinkSync, but creates a temporary link and renames it over the
 // file; this means it works even if the file already exists.
 // Do not use this function on Windows, it won't work.
 export function symlinkOverSync(linkText: string, file: string) {
@@ -1018,7 +1018,7 @@ export function symlinkOverSync(linkText: string, file: string) {
 // files.FancySyntaxError, from which you may read 'message', 'file',
 // 'line', and 'column' attributes ... v8 is normally reluctant to
 // reveal this information but will write it to stderr if you pass it
-// an undocumented flag. Unforunately though node doesn't have dup2 so
+// an undocumented flag. Unfortunately though node doesn't have dup2 so
 // we can't intercept the write. So instead we use a completely
 // different parser with a better error handling API. Ah well.  The
 // underlying V8 issue is:
@@ -1619,7 +1619,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
     attempt();
   }).catch((error: any) => {
     if (error.code === 'EPERM' ||
-        error.code === 'EACCESS') {
+        error.code === 'EACCES') {
       cp_r(from, to, { preserveSymlinks: true });
       rm_recursive(from);
     } else {
