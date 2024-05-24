@@ -1,5 +1,5 @@
 await (async () => {
-  var script = await Assets.getText("safetybelt.js");
+  var script = await Assets.getTextAsync("safetybelt.js");
 
   Tinytest.add("reload-safetybelt - safety belt is added", function (test) {
     test.isTrue(

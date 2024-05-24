@@ -146,6 +146,7 @@ export default class Run {
       this._args, {
         cwd: files.convertToOSPath(this.cwd),
         env,
+        ...process.platform === 'win32' && { shell: true },
       });
 
     this.proc.on('close', (code, signal) => {
