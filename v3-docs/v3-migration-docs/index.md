@@ -29,7 +29,7 @@ You can upgrade your Meteor 2.x project by running the command below inside your
 
 ```bash
 meteor update --release 3.0-rc.2
-meteor reset #resets local DB and project to a fresh state
+meteor reset #resets project to a fresh state
 ```
 
 Also, it's a good idea to completely remove `node_modules` and the `package-lock.json` before running `meteor npm install`:
