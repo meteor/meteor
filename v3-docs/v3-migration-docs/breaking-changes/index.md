@@ -22,6 +22,8 @@ const doc = await MyCollection.findOneAsync({ _id: '123' }); // [!code highlight
 
 ## CLI
 
+### vue2
+
 The `--vue2` flag is no longer available. We droped support for vue2.
 You can see more information in this [PR](https://github.com/meteor/meteor/pull/13065).
 
@@ -30,6 +32,13 @@ You can see more information in this [PR](https://github.com/meteor/meteor/pull/
 This was decided because vue2 reached its [end of life](https://v2.vuejs.org/lts/#:~:text=Vue%202%20will%20reach%20End%20of%20Life%20(EOL)%20on%20December%2031st%2C%202023.%20After%20that%20date%2C%20Vue%202%20will%20continue%20to%20be%20available%20in%20all%20existing%20distribution%20channels%20(CDNs%20and%20package%20managers)%2C%20but%20will%20no%20longer%20receive%20updates%2C%20including%20security%20and%20browser%20compatibility%20fixes.)
 on 2023-12-31, the team decided to drop support for it.
 
+### reset
+
+The `meteor reset` command clears only the local cache by default. Using the `--db` option will also delete the local Mongo database. Ensure your CI flows accommodate any changes by passing the `--db` option if needed.
+
+#### Why?
+
+This command is often recommended to fix your development project by clearing the cache. Previously, it also cleared the local MongoDB, which could accidentally delete important data.
 
 ## Node v20
 
@@ -272,4 +281,3 @@ const user = Meteor.user(); // [!code error]
 const user = await Meteor.userAsync(); // [!code highlight]
 
 ```
-
