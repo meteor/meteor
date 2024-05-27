@@ -137,8 +137,7 @@ const getTokens = async (query, callback) => {
     redirect_uri: OAuth._redirectUri('google', config),
     grant_type: 'authorization_code',
   });
-  const request = await OAuth._fetch('https://accounts.google.com/o/oauth2/token', {
-    method: 'POST',
+  const request = await OAuth._fetch('https://accounts.google.com/o/oauth2/token', 'POST', {
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -176,8 +175,8 @@ const getIdentity = async (accessToken, callback) => {
   try {
     const request = await OAuth._fetch(
       `https://www.googleapis.com/oauth2/v1/userinfo?${content.toString()}`,
+      'GET',
       {
-        method: 'GET',
         headers: { Accept: 'application/json' },
       }
     );
@@ -196,8 +195,8 @@ const getScopes = async (accessToken, callback) => {
   try {
     const request = await OAuth._fetch(
       `https://www.googleapis.com/oauth2/v1/tokeninfo?${content.toString()}`,
+      'GET',
       {
-        method: 'GET',
         headers: { Accept: 'application/json' },
       }
     );
