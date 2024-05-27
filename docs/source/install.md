@@ -34,6 +34,8 @@ Install the latest official version of Meteor.js from your terminal by running o
 
 For Windows, Linux and OS X, you can run the following command:
 
+> Preferably, do not use `sudo` to install Meteor. If you need to use `sudo`, please check the [troubleshooting section](#troubleshooting).
+
 ```bash
 npm install -g meteor
 ```
@@ -66,6 +68,8 @@ Only run the above command with sudo if you know what you are doing.
 If you only use sudo because of a distribution default permission system, [check this link for fixing it](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally).
 
 In some cases you can get this error `npm WARN checkPermissions Missing write access to /usr/local/lib/node_modules` because your Node.js installation was performed with wrong permissions. An easy way to fix this is to install Node.js using [nvm](https://github.com/nvm-sh/nvm) and forcing it to be used in your terminal. You can force it in the current session of your terminal by running `nvm use 14`.
+
+As a last resort you can delete the `.meteor` folder in your home directory and try to install Meteor again using the correct permissions.
 
 <h2 id="path-management">PATH management</h2>
 
