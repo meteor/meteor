@@ -1769,11 +1769,11 @@ main.registerCommand({
       return 1;
     }
 
-    return files.rm_recursive_async(
+    await files.rm_recursive_async(
       files.pathJoin(options.appDir, '.meteor', 'local')
-    ).then(() => {
-      Console.info("Project reset.");
-    });
+    );
+    Console.info("Project reset.");
+    return;
   }
 
   var allExceptDb = files.getPathsInDir(files.pathJoin('.meteor', 'local'), {
@@ -1786,11 +1786,8 @@ main.registerCommand({
   var allRemovePromises = allExceptDb.map(_path => files.rm_recursive_async(
     files.pathJoin(options.appDir, _path)
   ));
-  console.log("-> allRemovePromises", allRemovePromises);
-
-  Promise.all(allRemovePromises).then(() => {
-    Console.info("Project reset.");
-  });
+  await Promise.all(allRemovePromises);
+  Console.info("Project reset.");
 });
 
 ///////////////////////////////////////////////////////////////////////////////
