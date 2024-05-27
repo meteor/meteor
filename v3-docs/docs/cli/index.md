@@ -788,11 +788,12 @@ with `meteor run`. This will be easier in the future.
 
 ## meteor reset {meteorreset}
 
-Reset the current project to a fresh state. Removes the local
-mongo database.
+Reset the current project to a fresh state and clear the local cache.
+
+To remove also the local mongo database use `--db` flag.
 
 ::: warning
-This deletes your data! Make sure you do not have any information you
+Reset with `--db` flag deletes your data! Make sure you do not have any information you
 care about in your local mongo database by running `meteor mongo`.
 From the mongo shell, use `show collections`
 and <code>db.<i>collection</i>.find()</code> to inspect your data.

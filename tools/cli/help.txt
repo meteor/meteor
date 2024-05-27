@@ -503,7 +503,7 @@ project directory, and the Meteor application must already be running.
 Reset the project state.
 Usage: meteor reset [--db]
 
-Reset the current project to a fresh state and clears the local cache.
+Reset the current project to a fresh state and clear the local cache.
 
 The --db flag also removes the local database.
 
