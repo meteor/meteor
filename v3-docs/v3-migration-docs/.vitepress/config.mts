@@ -21,12 +21,19 @@ export default defineConfig({
           {text: "Breaking Changes", link: "/breaking-changes/"},
           {text: "Meteor.call x Meteor.callAsync", link: "/breaking-changes/call-x-callAsync"},
           {text: "Upgrading packages", link: "/breaking-changes/upgrading-packages"},
+          {text: "Publishing Packages", link: "/guide/publishing-packages"},
         ]
       },
       {
         text: "TypeScript",
         items: [
           {text: "Types for Meteor 3", link: "/typescript/meteor-types"},
+        ]
+      },
+      {
+        text: 'Vite Bundler',
+        items: [
+          {text: "Vite Bundler with Meteor 3", link: "/vite-bundler/setup"},
         ]
       },
       {
