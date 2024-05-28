@@ -1738,7 +1738,11 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
   if (options.args.length !== 0) {
-    Console.error("meteor reset might delete the local database using the --db option.");
+    Console.error("'meteor reset' command only affects the local project cache.");
+    Console.error();
+    Console.error("To remove also the local database use");
+    Console.error(
+      Console.command("meteor reset --db"), Console.options({ indent: 2 }));
     Console.error();
     Console.error("To reset a deployed application use");
     Console.error(
