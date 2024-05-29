@@ -1164,7 +1164,7 @@ if (Meteor.isServer) {
 var AllowAsyncValidateCollection;
 
 Tinytest.addAsync(
-  "collection - validate server operations when using allow-deny rules on the client.",
+  "collection - validate server operations when using allow-deny rules on the client",
   async function (test) {
     AllowAsyncValidateCollection =
       AllowAsyncValidateCollection ||

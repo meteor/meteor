@@ -186,8 +186,10 @@ CollectionPrototype._defineMutationMethods = function(options) {
               );
             }
 
+            const syncMethodName = method.replace('Async', '');
+            // it forces to use async validated method as part of the method
             const validatedMethodName =
-                  '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
+                  '_validated' + method.charAt(0).toUpperCase() + syncMethodName.slice(1) + 'Async';
             args.unshift(this.userId);
             isInsert(method) && args.push(generatedId);
             return self[validatedMethodName].apply(self, args);
