@@ -1160,3 +1160,63 @@ if (Meteor.isServer) {
       delete Package.insecure;
   });
 }
+
+var AllowAsyncValidateCollection;
+
+Tinytest.addAsync(
+  "collection - validate server operations when using allow-deny rules on the client.",
+  async function (test) {
+    AllowAsyncValidateCollection =
+      AllowAsyncValidateCollection ||
+      new Mongo.Collection(`allowdeny-async-validation`);
+    if (Meteor.isServer) {
+      await AllowAsyncValidateCollection.removeAsync();
+    }
+    AllowAsyncValidateCollection.allow({
+      insertAsync() {
+        return true;
+      },
+      insert() {
+        return true;
+      },
+      updateAsync() {
+        return true;
+      },
+      update() {
+        return true;
+      },
+      removeAsync() {
+        return true;
+      },
+      remove() {
+        return true;
+      },
+    });
+
+    if (Meteor.isClient) {
+      /* sync tests */
+      var id = await new Promise((resolve, reject) => {
+        AllowAsyncValidateCollection.insert({ num: 1 }, (error, result) =>
+          error ? reject(error) : resolve(result)
+        );
+      });
+      await new Promise((resolve, reject) => {
+        AllowAsyncValidateCollection.update(
+          id,
+          { $set: { num: 11 } },
+          (error, result) => (error ? reject(error) : resolve(result))
+        );
+      });
+      await new Promise((resolve, reject) => {
+        AllowAsyncValidateCollection.remove(id, (error, result) =>
+          error ? reject(error) : resolve(result)
+        );
+      });
+
+      /* async tests */
+      id = await AllowAsyncValidateCollection.insertAsync({ num: 2 });
+      await AllowAsyncValidateCollection.updateAsync(id, { $set: { num: 22 } });
+      await AllowAsyncValidateCollection.removeAsync(id);
+    }
+  }
+);
