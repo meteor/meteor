@@ -580,7 +580,7 @@ CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (await asyncEvery(self._validators.updateAsync.allow, async (validator) => {
+  if (await asyncEvery(self._validators.removeAsync.allow, async (validator) => {
     const result = validator(userId, transformDoc(validator, doc));
     return !(Meteor._isPromise(result) ? await result : result);
   })) {
