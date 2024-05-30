@@ -47,8 +47,8 @@ const getAccessToken = async (query) => {
     });
     const request = await OAuth._fetch(
       `https://github.com/login/oauth/access_token?${content.toString()}`,
+      'POST',
       {
-        method: 'POST',
         headers: {
           Accept: 'application/json',
           'User-Agent': userAgent
@@ -76,8 +76,7 @@ const getAccessToken = async (query) => {
 
 const getIdentity = async (accessToken) => {
   try {
-    const request = await OAuth._fetch('https://api.github.com/user', {
-      method: 'GET',
+    const request = await OAuth._fetch('https://api.github.com/user', 'GET', {
       headers: {
         Accept: 'application/json',
         'User-Agent': userAgent,
@@ -95,8 +94,7 @@ const getIdentity = async (accessToken) => {
 
 const getEmails = async (accessToken) => {
   try {
-    const request = await OAuth._fetch('https://api.github.com/user/emails', {
-      method: 'GET',
+    const request = await OAuth._fetch('https://api.github.com/user/emails', 'GET', {
       headers: {
         'User-Agent': userAgent,
         Accept: 'application/json',
