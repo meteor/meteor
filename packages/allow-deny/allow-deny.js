@@ -269,21 +269,40 @@ CollectionPrototype._isInsecure = function () {
   return self._insecure;
 };
 
-CollectionPrototype._validatedInsertAsync = function (userId, doc,
-                                                         generatedId) {
-  const self = this;
+async function asyncSome(array, predicate) {
+  for (let item of array) {
+    if (await predicate(item)) {
+      return true;
+    }
+  }
+  return false;
+}
 
+async function asyncEvery(array, predicate) {
+  for (let item of array) {
+    if (!await predicate(item)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+CollectionPrototype._validatedInsertAsync = async function(userId, doc,
+                                                           generatedId) {
+  const self = this;
   // call user validators.
   // Any deny returns true means denied.
-  if (self._validators.insertAsync.deny.some((validator) => {
-    return validator(userId, docToValidate(validator, doc, generatedId));
+  if (await asyncSome(self._validators.insertAsync.deny, async (validator) => {
+    const result = validator(userId, docToValidate(validator, doc, generatedId));
+    return Meteor._isPromise(result) ? await result : result;
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
 
-  if (self._validators.insertAsync.allow.every((validator) => {
-    return !validator(userId, docToValidate(validator, doc, generatedId));
+  if (await asyncEvery(self._validators.insertAsync.allow, async (validator) => {
+    const result = validator(userId, docToValidate(validator, doc, generatedId));
+    return !(Meteor._isPromise(result) ? await result : result);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
@@ -395,22 +414,24 @@ CollectionPrototype._validatedUpdateAsync = async function(
 
   // call user validators.
   // Any deny returns true means denied.
-  if (self._validators.updateAsync.deny.some((validator) => {
+  if (await asyncSome(self._validators.updateAsync.deny, async (validator) => {
     const factoriedDoc = transformDoc(validator, doc);
-    return validator(userId,
-                     factoriedDoc,
-                     fields,
-                     mutator);
+    const result = validator(userId,
+      factoriedDoc,
+      fields,
+      mutator);
+    return Meteor._isPromise(result) ? await result : result;
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (self._validators.updateAsync.allow.every((validator) => {
+  if (await asyncEvery(self._validators.updateAsync.allow, async (validator) => {
     const factoriedDoc = transformDoc(validator, doc);
-    return !validator(userId,
-                      factoriedDoc,
-                      fields,
-                      mutator);
+    const result = validator(userId,
+      factoriedDoc,
+      fields,
+      mutator);
+    return !(Meteor._isPromise(result) ? await result : result);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
@@ -552,14 +573,16 @@ CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
 
   // call user validators.
   // Any deny returns true means denied.
-  if (self._validators.removeAsync.deny.some((validator) => {
-    return validator(userId, transformDoc(validator, doc));
+  if (await asyncSome(self._validators.removeAsync.deny, async (validator) => {
+    const result = validator(userId, transformDoc(validator, doc));
+    return Meteor._isPromise(result) ? await result : result;
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (self._validators.removeAsync.allow.every((validator) => {
-    return !validator(userId, transformDoc(validator, doc));
+  if (await asyncEvery(self._validators.updateAsync.allow, async (validator) => {
+    const result = validator(userId, transformDoc(validator, doc));
+    return !(Meteor._isPromise(result) ? await result : result);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }

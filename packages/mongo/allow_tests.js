@@ -1220,3 +1220,89 @@ Tinytest.addAsync(
     }
   }
 );
+
+function configAllAsyncAllowDeny(collection, configType = 'allow', enabled) {
+  collection[configType]({
+    async insertAsync(selector, doc) {
+      if (doc.force) return true;
+      await Meteor._sleepForMs(100);
+      return enabled;
+    },
+    async updateAsync() {
+      await Meteor._sleepForMs(100);
+      return enabled;
+    },
+    async removeAsync() {
+      await Meteor._sleepForMs(100);
+      return enabled;
+    },
+  });
+}
+
+async function runAllAsyncExpect(test, collection, allow) {
+  let id;
+  /* async tests */
+  try {
+    id = await collection.insertAsync({ num: 2 });
+    test.isTrue(allow);
+  } catch (e) {
+    test.isTrue(!allow);
+  }
+  try {
+    id = await collection.insertAsync({ force: true });
+    await collection.updateAsync(id, { $set: { num: 22 } });
+    test.isTrue(allow);
+  } catch (e) {
+    test.isTrue(!allow);
+  }
+  try {
+    await collection.removeAsync(id);
+    test.isTrue(allow);
+  } catch (e) {
+    test.isTrue(!allow);
+  }
+}
+
+var AllowDenyAsyncRulesCollections = {};
+
+testAsyncMulti("collection - async definitions on allow/deny rules", [
+  async function (test) {
+    AllowDenyAsyncRulesCollections.allowed =
+      AllowDenyAsyncRulesCollections.allowed ||
+      new Mongo.Collection(`allowdeny-async-rules-allowed`);
+    if (Meteor.isServer) {
+      await AllowDenyAsyncRulesCollections.allowed.removeAsync();
+    }
+
+    configAllAsyncAllowDeny(AllowDenyAsyncRulesCollections.allowed, 'allow', true);
+    if (Meteor.isClient) {
+      await runAllAsyncExpect(test, AllowDenyAsyncRulesCollections.allowed, true);
+    }
+  },
+  async function (test) {
+    AllowDenyAsyncRulesCollections.notAllowed =
+      AllowDenyAsyncRulesCollections.notAllowed ||
+      new Mongo.Collection(`allowdeny-async-rules-notAllowed`);
+    if (Meteor.isServer) {
+      await AllowDenyAsyncRulesCollections.notAllowed.removeAsync();
+    }
+
+    configAllAsyncAllowDeny(AllowDenyAsyncRulesCollections.notAllowed, 'allow', false);
+    if (Meteor.isClient) {
+      await runAllAsyncExpect(test, AllowDenyAsyncRulesCollections.notAllowed, false);
+    }
+  },
+  async function (test) {
+    AllowDenyAsyncRulesCollections.denied =
+      AllowDenyAsyncRulesCollections.denied ||
+      new Mongo.Collection(`allowdeny-async-rules-denied`);
+    if (Meteor.isServer) {
+      await AllowDenyAsyncRulesCollections.denied.removeAsync();
+    }
+
+    configAllAsyncAllowDeny(AllowDenyAsyncRulesCollections.denied, 'deny', true);
+    if (Meteor.isClient) {
+      await runAllAsyncExpect(test, AllowDenyAsyncRulesCollections.denied, false);
+    }
+  },
+]);
