@@ -1,7 +1,6 @@
 [submodule "packages/non-core/blaze"]
     path = packages/non-core/blaze
     url = https://github.com/meteor/blaze.git
-    branch = meteor-3.0
 [submodule "npm-packages/cordova-plugin-meteor-webapp/src/ios/GCDWebServer"]
 	path = npm-packages/cordova-plugin-meteor-webapp/src/ios/GCDWebServer
 	url = https://github.com/meteor/GCDWebServer.git
