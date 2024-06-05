@@ -15,7 +15,7 @@ Package.registerBuildPlugin({
   npmDependencies: {
     "@babel/runtime": "7.23.5",
     "source-map": "0.7.4",
-    "lru-cache": "8.0.0",
+    "lru-cache": "6.0.0",
     "micromatch": "4.0.5",
   },
   sources: [
