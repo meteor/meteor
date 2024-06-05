@@ -351,21 +351,15 @@ const loadServerBundles = Profile("Load server bundles", async function () {
 
       if (promise)
         return promise;
-    }
-
-    const getTextAsync = function (assetPath, callback) {
-      return getAsset(assetPath, "utf8", callback);
-    };
-
-    const getBinaryAsync = function (assetPath, callback) {
-      return getAsset(assetPath, undefined, callback);
     };
 
     const Assets = {
-      getText: getTextAsync,
-      getBinary: getBinaryAsync,
-      getTextAsync,
-      getBinaryAsync,
+      getTextAsync: function (assetPath, callback) {
+        return getAsset(assetPath, "utf8", callback);
+      },
+      getBinaryAsync: function (assetPath, callback) {
+        return getAsset(assetPath, undefined, callback);
+      },
       /**
        * @summary Get the absolute path to the static server asset. Note that assets are read-only.
        * @locus Server [Not in build plugins]
