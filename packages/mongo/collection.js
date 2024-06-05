@@ -28,6 +28,12 @@ export function warnUsingOldApi(methodName, collectionName, isCalledFromAsync) {
 Mongo = {};
 
 /**
+ * @summary A record of all defined collections
+ * @type {Map<string, Mongo.Collection>}
+ */
+Mongo.Collections = new Map();
+
+/**
  * @summary Constructor for a Collection
  * @locus Anywhere
  * @instancename collection
@@ -163,6 +169,8 @@ Mongo.Collection = function Collection(name, options) {
       is_auto: true,
     });
   }
+
+  Mongo.Collections.set(this._name, this);
 };
 
 Object.assign(Mongo.Collection.prototype, {
