@@ -8,9 +8,9 @@ Package.describe({
 Package.registerBuildPlugin({
   name: "compileStaticHtmlBatch",
   use: [
-    'ecmascript@0.16.8-beta300.7',
-    'caching-html-compiler@2.0.0-alpha300.16',
-    'templating-tools@2.0.0-alpha300.16'
+    'ecmascript',
+    'caching-html-compiler',
+    'templating-tools'
   ],
   sources: [
     'static-html.js'
