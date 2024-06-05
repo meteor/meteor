@@ -48,6 +48,7 @@ const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
 const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
 import Resolver, { Resolution } from "./resolver";
+import { LRUCache } from 'lru-cache';
 
 const fakeFileStat = {
   isFile() {
@@ -289,10 +290,10 @@ function setImportedStatus(file: File, status: string | boolean) {
 // The cache can be global because findImportedModuleIdentifiers
 // is a pure function, and that way it applies across instances
 // of ImportScanner (which do not persist across builds).
-const LRU = require("lru-cache");
-const IMPORT_SCANNER_CACHE = new LRU({
-  max: Math.pow(2, 23),
-  length(ids: Record<string, ImportInfo>) {
+
+const IMPORT_SCANNER_CACHE = new LRUCache({
+  maxSize: Math.pow(2, 23),
+  sizeCalculation(ids: Record<string, ImportInfo>) {
     let total = 40; // size of key
     each(ids, (_info, id) => { total += id.length; });
     return total;
@@ -978,7 +979,7 @@ export default class ImportScanner {
   ): Promise<Record<string, ImportInfo>> {
     const fileHash = file.hash;
     if (IMPORT_SCANNER_CACHE.has(fileHash)) {
-      return IMPORT_SCANNER_CACHE.get(fileHash);
+      return IMPORT_SCANNER_CACHE.get(fileHash) as Record<string, ImportInfo>;
     }
 
     const result = findImportedModuleIdentifiers(
