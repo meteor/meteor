@@ -253,7 +253,10 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
     // Maps from a hashed cache key to a compileResult.
     this._cache = new LRUCache({
       maxSize: this._cacheSize,
-      sizeCalculation: (value) => this.compileResultSize(value),
+      sizeCalculation(value) {
+        const size = this.compileResultSize(value);
+        return size === 0 ? 1 : size;
+      },
     });
   }
 
