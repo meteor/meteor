@@ -11,7 +11,7 @@ var packageJson = {
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-tool-package.js.
     promise: "8.1.0",
-    "@meteorjs/reify": "0.25.1",
+    "@meteorjs/reify": "0.25.2",
     "@babel/parser": "7.17.0",
     "lru-cache": "10.2.2",
     underscore: "1.13.6",
