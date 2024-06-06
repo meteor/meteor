@@ -66,7 +66,7 @@ We need to discuss further to decide whether or not to proceed with these implem
 - New Async Tracker; ([Blog Post](https://blog.meteor.com/new-meteor-js-2-10-and-the-async-tracker-feature-ffdbe817c801))
 - New Suspense hooks for React + Meteor; ([Blog Post](https://blog.meteor.com/new-suspense-hooks-for-meteor-5391570b3007))
 - Release Blaze 2.7 supporting async calls; ([Changelog](https://www.blazejs.org/changelog.html))
-- New Scaffold API / generate command; ([Blog Post](https://blog.meteor.com/new-meteor-2-9-and-the-scaffold-api-8b5b2b2b2b2b))
+- New Scaffold API / generate command; ([Blog Post](https://blog.meteor.com/new-meteorjs-2-9-and-the-new-scaffold-api-5fcc0f3b1ce5))
 - Types added to the core; ([Blog Post](https://blog.meteor.com/new-meteor-2-8-1-and-adding-types-to-the-core-8a6ee56f0141))
 - Update Apollo skeleton NPM dependencies;
 - MongoDB 6.0 Support; ([Discussion](https://github.com/meteor/meteor/discussions/12092) / [Blog Post](https://blog.meteor.com/new-meteor-2-11-and-the-new-embedded-mongodb-19767076961b))
