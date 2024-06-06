@@ -166,7 +166,7 @@ app.get('/hello', (req, res) => {
   res.send('Hello World');
 });
 
-WebApp.handlers.use(express);
+WebApp.handlers.use(app);
 
 ```
 
