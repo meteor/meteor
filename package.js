@@ -2,13 +2,13 @@
 
 Package.describe({
   summary: 'Authorization package for Meteor',
-  version: '4.0.0-alpha.3',
+  version: '4.0.0-alpha.4',
   git: 'https://github.com/Meteor-Community-Packages/meteor-roles.git',
   name: 'alanning:roles'
 })
 
 Package.onUse(function (api) {
-  api.versionsFrom(['2.8.1', '3.0-rc.0'])
+  api.versionsFrom(['2.8.1', '3.0-rc.2'])
 
   const both = ['client', 'server']
 
@@ -23,7 +23,7 @@ Package.onUse(function (api) {
 
   api.use('zodern:types@1.0.13')
 
-  api.use(['blaze@2.9.0'], 'client', { weak: true })
+  api.use(['blaze@2.9.0 || 3.0.0-rc300.2'], 'client', { weak: true })
 
   api.export(['Roles', 'RolesCollection', 'RoleAssignmentCollection'])
 
@@ -45,7 +45,7 @@ Package.onTest(function (api) {
     'meteortesting:mocha@2.1.0'
   ])
 
-  api.versionsFrom('2.8.1')
+  api.versionsFrom(['2.8.1', '3.0-rc.2'])
 
   const both = ['client', 'server']
 
