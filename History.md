@@ -7,6 +7,11 @@
 * UI Helpers now use `console.debug` for debugging messages
 * `RolesCollection` and `RoleAssignmentsCollection` can now be exported in addition to being accessed via `Meteor.roles` and `Meteor.roleAssignment`
 
+## v3.6.3
+
+* Added missing dependency on the `ddp` package [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+* Updated Blaze weak dependency to v2.9 [@storytellercz](https://github.com/sponsors/StorytellerCZ)
+
 ## v3.6.2
 
 * Fixed TypeScript definition to play nice with Meteor definition [#389](https://github.com/Meteor-Community-Packages/meteor-roles/pull/389) [@bruceborrett](https://github.com/sponsors/bruceborrett)
