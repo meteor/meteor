@@ -428,10 +428,10 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
-function getBoilerplateAsync(request, arch) {
+async function getBoilerplateAsync(request, arch) {
   let boilerplate = boilerplateByArch[arch];
-  runtimeConfig.hooks.forEach(hook => {
-    const meteorRuntimeConfig = hook({
+  await runtimeConfig.hooks.forEachAsync(async hook => {
+    const meteorRuntimeConfig = await hook({
       arch,
       request,
       encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
@@ -1516,4 +1516,3 @@ WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
 await runWebAppServer();
-
