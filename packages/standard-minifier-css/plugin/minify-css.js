@@ -1,6 +1,6 @@
 import sourcemap from "source-map";
 import { createHash } from "crypto";
-import { LRUCache } from "lru-cache";
+import LRUCache from "lru-cache";
 import { loadPostCss, watchAndHashDeps, usePostCss } from './postcss.js';
 import { Log } from 'meteor/logging';
 

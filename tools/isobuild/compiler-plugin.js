@@ -9,7 +9,7 @@ var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
 import {readAndWatchFileWithHash, sha1, WatchSet,} from '../fs/watch';
-import { LRUCache } from 'lru-cache';
+import LRUCache from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner';
@@ -63,10 +63,10 @@ const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
 const LINKER_CACHE_SALT = 26; // Increment this number to force relinking.
 const LINKER_CACHE = new LRUCache({
-  maxSize: CACHE_SIZE,
+  max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
   // Key is JSONification of all options plus all hashes.
-  sizeCalculation (files) {
+  length (files) {
     return files.reduce((soFar, current) => {
       return soFar + current.data.length + sourceMapLength(current.sourceMap);
     }, 0);

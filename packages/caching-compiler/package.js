@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'lru-cache': '10.2.2'
+  'lru-cache': '6.0.0'
 })
 
 Package.onUse(function(api) {

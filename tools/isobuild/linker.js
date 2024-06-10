@@ -4,7 +4,7 @@ var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;
 import assert from 'assert';
-import { LRUCache } from 'lru-cache';
+import LRUCache from 'lru-cache';
 import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
@@ -16,8 +16,8 @@ const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024*1024*20;
 
 // Cache individual files prelinked
 const APP_PRELINK_CACHE = new LRUCache({
-  maxSize: CACHE_SIZE,
-  sizeCalculation (prelinked) {
+  max: CACHE_SIZE,
+  length (prelinked) {
     return prelinked.source.length + sourceMapLength(prelinked.sourceMap);
   }
 });

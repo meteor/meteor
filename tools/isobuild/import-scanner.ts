@@ -48,7 +48,7 @@ const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
 const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
 import Resolver, { Resolution } from "./resolver";
-import { LRUCache } from 'lru-cache';
+import LRUCache from 'lru-cache';
 
 const fakeFileStat = {
   isFile() {
@@ -292,8 +292,8 @@ function setImportedStatus(file: File, status: string | boolean) {
 // of ImportScanner (which do not persist across builds).
 
 const IMPORT_SCANNER_CACHE = new LRUCache({
-  maxSize: Math.pow(2, 23),
-  sizeCalculation(ids: Record<string, ImportInfo>) {
+  max: Math.pow(2, 23),
+  length(ids: Record<string, ImportInfo>) {
     let total = 40; // size of key
     each(ids, (_info, id) => { total += id.length; });
     return total;

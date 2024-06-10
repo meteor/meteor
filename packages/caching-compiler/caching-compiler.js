@@ -2,7 +2,7 @@ const fs = Plugin.fs;
 const path = Plugin.path;
 const createHash = Npm.require('crypto').createHash;
 const assert = Npm.require('assert');
-const { LRUCache } = Npm.require('lru-cache');
+const LRUCache = Npm.require('lru-cache');
 
 // Base class for CachingCompiler and MultiFileCachingCompiler.
 CachingCompilerBase = class CachingCompilerBase {
@@ -252,11 +252,8 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
     // Maps from a hashed cache key to a compileResult.
     this._cache = new LRUCache({
-      maxSize: this._cacheSize,
-      sizeCalculation: (value) => {
-        const size = this.compileResultSize(value);
-        return size === 0 ? 1 : size;
-      },
+      max: this._cacheSize,
+      length: (value) => this.compileResultSize(value),
     });
   }
 

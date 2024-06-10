@@ -24,9 +24,9 @@ extends CachingCompilerBase {
     // cacheKeys is an object mapping from absolute import path to hashed
     // cacheKey for each file referenced by this file (including itself).
     this._cache = new LRUCache({
-      maxSize: this._cacheSize,
+      max: this._cacheSize,
       // We ignore the size of cacheKeys here.
-      sizeCalculation: (value) => this.compileResultSize(value.compileResult),
+      length: (value) => this.compileResultSize(value.compileResult),
     });
   }
 
