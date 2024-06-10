@@ -45,6 +45,7 @@
 ### [callback-hook](https://github.com/meteor/meteor/tree/devel/packages/callback-hook) {#callback-hook}
 ### [check](https://github.com/meteor/meteor/tree/devel/packages/check) {#check}
 ### [constraint-solver](https://github.com/meteor/meteor/tree/devel/packages/constraint-solver) {#constraint-solver}
+### [context](https://github.com/meteor/meteor/tree/devel/packages/context) {#context}
 ### [core-runtime](https://github.com/meteor/meteor/tree/devel/packages/core-runtime) {#core-runtime}
 ### [crosswalk](https://github.com/meteor/meteor/tree/devel/packages/crosswalk) {#crosswalk}
 ### [ddp](https://github.com/meteor/meteor/tree/devel/packages/ddp) {#ddp}
@@ -91,6 +92,7 @@
 ### [meteor-base](https://github.com/meteor/meteor/tree/devel/packages/meteor-base) {#meteor-base}
 ### [meteor-developer-config-ui](https://github.com/meteor/meteor/tree/devel/packages/meteor-developer-config-ui) {#meteor-developer-config-ui}
 ### [meteor-developer-oauth](https://github.com/meteor/meteor/tree/devel/packages/meteor-developer-oauth) {#meteor-developer-oauth}
+### [meteor-synced-cron](https://github.com/meteor/meteor/tree/devel/packages/meteor-synced-cron) {#meteor-synced-cron}
 ### [meteor-tool](https://github.com/meteor/meteor/tree/devel/packages/meteor-tool) {#meteor-tool}
 ### [minifier-css](https://github.com/meteor/meteor/tree/devel/packages/minifier-css) {#minifier-css}
 ### [minifier-js](https://github.com/meteor/meteor/tree/devel/packages/minifier-js) {#minifier-js}
