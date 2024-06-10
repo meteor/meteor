@@ -232,6 +232,10 @@ export default defineConfig({
             link: "packages/packages-listing",
             text: "Maintained Packages",
           },
+          {
+            link: "packages/community-packages",
+            text: "Community Packages",
+          },
         ],
         collapsed: true,
       },
