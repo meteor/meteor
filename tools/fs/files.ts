@@ -600,6 +600,7 @@ Profile("files.symlinkWithOverwrite", async function symlinkWithOverwrite(
 export function getPathsInDir(dir: string, options: {
   cwd?: string;
   output?: string[];
+  maxDepth?: number;
 }) {
   // Don't let this function yield so that the file system doesn't get changed
   // underneath us
@@ -619,6 +620,7 @@ export function getPathsInDir(dir: string, options: {
     }
 
     const output = options.output || [];
+    const maxDepth = options.maxDepth;
 
     function pathIsDirectory(path: string) {
       var stat = lstat(path);
@@ -631,10 +633,12 @@ export function getPathsInDir(dir: string, options: {
 
       output.push(newPath);
 
-      if (pathIsDirectory(newAbsPath)) {
+      const nextMaxDepth = maxDepth != null ? maxDepth - 1 : maxDepth;
+      if (pathIsDirectory(newAbsPath) && (nextMaxDepth == null || nextMaxDepth > 0)) {
         getPathsInDir(newPath, {
           cwd: cwd,
-          output: output
+          output: output,
+          ...nextMaxDepth != null && { maxDepth: nextMaxDepth },
         });
       }
     });
