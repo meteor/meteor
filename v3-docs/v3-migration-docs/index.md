@@ -29,7 +29,13 @@ You can upgrade your Meteor 2.x project by running the command below inside your
 
 ```bash
 meteor update --release 3.0-rc.2
-meteor reset #resets local DB and project to a fresh state
+meteor reset # resets project to a fresh state
+```
+
+If you are upgrade from an older version of Meteor, you might have a different MongoDB driver version. If you encounter issues, consider clearing the local database.
+
+```bash
+meteor reset --db # resets local db
 ```
 
 Also, it's a good idea to completely remove `node_modules` and the `package-lock.json` before running `meteor npm install`:

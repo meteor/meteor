@@ -316,6 +316,18 @@ export default class Sandbox {
     }
   }
 
+  // Reads a dir in the sandbox. 'filepath' is a
+  // path interpreted relative to the Sandbox's cwd.  Returns null if
+  // dir does not exist.
+  readDir(filepath) {
+    const file = files.pathJoin(this.cwd, filepath);
+    if (!files.exists(file)) {
+      return null;
+    } else {
+      return files.readdir(files.pathJoin(this.cwd, filepath), 'utf8');
+    }
+  }
+
   // Copy the contents of one file to another.  In these series of tests, we often
   // want to switch contents of package.js files. It is more legible to copy in
   // the backup file rather than trying to write into it manually.
