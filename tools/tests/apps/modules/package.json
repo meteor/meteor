@@ -29,7 +29,7 @@
     "react-dom": "^16.8.6",
     "react-trello": "2.1.4",
     "regenerator-runtime": "^0.11.1",
-    "stripe": "^4.4.0",
+    "stripe": "^15.10.0",
     "styled-components": "^4.3.2",
     "uuid": "^3.4.0",
     "winston": "^2.3.1"
