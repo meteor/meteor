@@ -1,5 +1,5 @@
 const path = Plugin.path;
-const { LRUCache } = Npm.require('lru-cache');
+const LRUCache = Npm.require('lru-cache');
 
 // MultiFileCachingCompiler is like CachingCompiler, but for implementing
 // languages which allow files to reference each other, such as CSS
