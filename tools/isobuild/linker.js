@@ -1,12 +1,10 @@
-import {debug} from "util";
-
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;
 import assert from 'assert';
-import LRU from 'lru-cache';
+import LRUCache from 'lru-cache';
 import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
@@ -17,14 +15,14 @@ import { convert as convertColons } from '../utils/colon-converter.js';
 const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024*1024*20;
 
 // Cache individual files prelinked
-const APP_PRELINK_CACHE = new LRU({
+const APP_PRELINK_CACHE = new LRUCache({
   max: CACHE_SIZE,
-  length: function (prelinked) {
+  length (prelinked) {
     return prelinked.source.length + sourceMapLength(prelinked.sourceMap);
   }
 });
 // Caches code with source map for dynamic files
-const DYNAMIC_PRELINKED_OUTPUT_CACHE = new LRU({
+const DYNAMIC_PRELINKED_OUTPUT_CACHE = new LRUCache({
   max: Math.pow(2, 11)
 });
 
