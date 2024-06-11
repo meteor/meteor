@@ -21,7 +21,7 @@
     "markdown-to-jsx": "4.0.3",
     "meteor-node-stubs": "^1.2.7",
     "mobx": "5.8.0",
-    "moment": "^2.30.1",
+    "moment": "^2.22.2",
     "mssql": "^3.1.1",
     "mysql": "^2.15.0",
     "pify": "^4.0.1",
