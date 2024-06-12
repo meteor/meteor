@@ -13,7 +13,7 @@ function isRegExp(value) {
 }
 
 var AST_CACHE = new LRUCache({
-  max: Math.pow(2, 26),
+  max: Math.pow(2, 12),
   length(ast) {
     return ast.loc.end.line;
   }
