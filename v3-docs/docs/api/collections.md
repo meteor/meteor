@@ -584,18 +584,21 @@ Posts.allow({
   },
   
   async insertAsync(userId, doc) {
-    // Any async validation is supported
-    return allowAsync(userId, doc);
+    // Any custom async validation is supported
+    const allowed = await allowInsertAsync(userId, doc);
+    return userId && allowed;
   },
 
   async updateAsync(userId, doc, fields, modifier) {
-    // Any async validation is supported
-    return allowAsync(userId, doc, fields, modifier);
+    // Any custom async validation is supported
+    const allowed = await allowUpdateAsync(userId, doc);
+    return userId && allowed;
   },
 
   async removeAsync(userId, doc) {
-    // Any async validation is supported
-    return allowAsync(userId, doc);
+    // Any custom async validation is supported
+    const allowed = await allowRemoveAsync(userId, doc);
+    return userId && allowed;
   },
 
   fetch: ["owner"],
@@ -613,13 +616,15 @@ Posts.deny({
   },
   
   async updateAsync(userId, doc, fields, modifier) {
-    // Any async validation is supported
-    return denyAsync(userId, doc, fields, modifier);
+    // Any custom async validation is supported
+    const denied = await denyUpdateAsync(userId, doc);
+    return userId && denied;
   },
 
   async removeAsync(userId, doc) {
-    // Any async validation is supported
-    return denyAsync(userId, doc);
+    // Any custom async validation is supported
+    const denied = await denyRemoveAsync(userId, doc);
+    return userId && denied;
   },
 
   fetch: ["locked"], // No need to fetch `owner`
