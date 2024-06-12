@@ -172,6 +172,9 @@ MongoConnection = function (url, options) {
     // set it for replSet, it will be ignored if we're not using a replSet.
     mongoOptions.maxPoolSize = options.maxPoolSize;
   }
+  if (_.has(options, 'minPoolSize')) {
+    mongoOptions.minPoolSize = options.minPoolSize;
+  }
 
   // Transform options like "tlsCAFileAsset": "filename.pem" into
   // "tlsCAFile": "/<fullpath>/filename.pem"
@@ -229,6 +232,11 @@ MongoConnection.prototype.close = function() {
   // work even outside a fiber since the 'close' method is not
   // actually asynchronous.
   Future.wrap(_.bind(self.client.close, self.client))(true).wait();
+};
+
+MongoConnection.prototype._setOplogHandle = function(oplogHandle) {
+  this._oplogHandle = oplogHandle;
+  return this;
 };
 
 // Returns the Mongo Collection object; may yield.
@@ -788,7 +796,7 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
   var self = this;
 
 
-  
+
   if (typeof options === "function" && ! callback) {
     callback = options;
     options = {};
@@ -844,7 +852,7 @@ MongoConnection.prototype.createIndexAsync = function (collectionName, index,
 MongoConnection.prototype.createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
-  
+
 
   return Future.fromPromise(self.createIndexAsync(collectionName, index, options));
 };
@@ -866,7 +874,7 @@ MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 
-  
+
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
@@ -986,7 +994,6 @@ Cursor.prototype.getTransform = function () {
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
-
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
@@ -1004,6 +1011,10 @@ Cursor.prototype._getCollectionName = function () {
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
   return LocalCollection._observeFromObserveChanges(self, callbacks);
+};
+
+Cursor.prototype.observeAsync = function (callbacks) {
+  return new Promise(resolve => resolve(this.observe(callbacks)));
 };
 
 Cursor.prototype.observeChanges = function (callbacks, options = {}) {
@@ -1029,6 +1040,10 @@ Cursor.prototype.observeChanges = function (callbacks, options = {}) {
 
   return self._mongo._observeChanges(
     self._cursorDescription, ordered, callbacks, options.nonMutatingCallbacks);
+};
+
+Cursor.prototype.observeChangesAsync = async function (callbacks, options = {}) {
+  return new Promise(resolve => resolve(this.observeChanges(callbacks, options)));
 };
 
 MongoConnection.prototype._createSynchronousCursor = function(
@@ -1349,9 +1364,12 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   };
 };
 
+const oplogCollectionWarnings = [];
+
 MongoConnection.prototype._observeChanges = function (
     cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
   var self = this;
+  const collectionName = cursorDescription.collectionName;
 
   if (cursorDescription.options.tailable) {
     return self._observeChangesTailable(cursorDescription, ordered, callbacks);
@@ -1397,6 +1415,9 @@ MongoConnection.prototype._observeChanges = function (
     nonMutatingCallbacks,
   );
 
+  const oplogOptions = self?._oplogHandle?._oplogOptions || {};
+  const { includeCollections, excludeCollections } = oplogOptions;
+
   if (firstHandle) {
     var matcher, sorter;
     var canUseOplog = _.all([
@@ -1406,6 +1427,24 @@ MongoConnection.prototype._observeChanges = function (
         // that won't happen.
         return self._oplogHandle && !ordered &&
           !callbacks._testOnlyPollCallback;
+      }, function () {
+        // We also need to check, if the collection of this Cursor is actually being "watched" by the Oplog handle
+        // if not, we have to fallback to long polling
+        if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        if (includeCollections?.length && !includeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        return true;
       }, function () {
         // We need to be able to compile the selector. Fall back to polling for
         // some newfangled $selector that minimongo doesn't support yet.

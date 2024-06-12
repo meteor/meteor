@@ -160,6 +160,10 @@ export default class LocalCollection {
     return id;
   }
 
+  insertAsync(doc, callback) {
+    return new Promise(resolve => resolve(this.insert(doc, callback)));
+  }
+
   // Pause the observers. No callbacks from observers will fire until
   // 'resumeObservers' is called.
   pauseObservers() {
@@ -271,6 +275,10 @@ export default class LocalCollection {
     }
 
     return result;
+  }
+
+  removeAsync(selector, callback) {
+    return new Promise(resolve => resolve(this.remove(selector, callback)));
   }
 
   // Resume the observers. Observers immediately receive change
@@ -480,6 +488,10 @@ export default class LocalCollection {
     }
 
     return result;
+  }
+
+  updateAsync(selector, mod, options, callback) {
+    return new Promise(resolve => resolve(this.update(selector, mod, options, callback)));
   }
 
   // A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
