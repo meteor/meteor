@@ -497,31 +497,31 @@ once they are ready to remove `insecure` mode from their app. See
 for more details.
 :::
 
-When a client calls `insert`, `update`, or `remove` on a collection, the
-collection's `allow` and [`deny`](#Mongo-Collection-deny) callbacks are called
-on the server to determine if the write should be allowed. If at least
+When a client calls `insert`/`insertAsync`, `update`/`updateAsync`, `remove`/`removeAsync`
+on a collection, the collection's `allow` and [`deny`](#Mongo-Collection-deny) callbacks
+are called on the server to determine if the write should be allowed. If at least
 one `allow` callback allows the write, and no `deny` callbacks deny the
 write, then the write is allowed to proceed.
 
 These checks are run only when a client tries to write to the database
-directly, for example by calling `update` from inside an event
+directly, for example by calling `update`/`updateAsync` from inside an event
 handler. Server code is trusted and isn't subject to `allow` and `deny`
 restrictions. That includes methods that are called with `Meteor.call`
 &mdash; they are expected to do their own access checking rather than
 relying on `allow` and `deny`.
 
 You can call `allow` as many times as you like, and each call can
-include any combination of `insert`, `update`, and `remove`
-functions. The functions should return `true` if they think the
-operation should be allowed. Otherwise they should return `false`, or
-nothing at all (`undefined`). In that case Meteor will continue
-searching through any other `allow` rules on the collection.
+include any combination of `insert`/`insertAsync`, `update`/`updateAsync`,
+and `remove`/`removeAsync` functions. The functions should return `true`
+if they think the operation should be allowed. Otherwise they should
+return `false`, or nothing at all (`undefined`). In that case Meteor
+will continue searching through any other `allow` rules on the collection.
 
 The available callbacks are:
 
 ### Callbacks
 
-- `insert(userId, doc)` - The user `userId` wants to insert the
+- `insert(userId, doc)`/`insertAsync(userId, doc)` - The user `userId` wants to insert the
   document `doc` into the collection. Return `true` if this should be
   allowed.
 
@@ -529,7 +529,7 @@ The available callbacks are:
   if there is an active `transform`. You can use this to prevent users from
   specifying arbitrary `_id` fields.
 
-- `update(userId, doc, fieldNames, modifier)` - The user `userId`
+- `update(userId, doc, fieldNames, modifier)`/`updateAsync(userId, doc, fieldNames, modifier)` - The user `userId`
   wants to update a document `doc` in the database. (`doc` is the
   current version of the document from the database, without the
   proposed update.) Return `true` to permit the change.
@@ -547,11 +547,11 @@ The available callbacks are:
   \$-modifiers, the request will be denied without checking the `allow`
   functions.
 
-- `remove(userId, doc)` - the user `userId` wants to remove `doc` from the database. Return
+- `remove(userId, doc)`/`removeAsync(userId, doc)` - the user `userId` wants to remove `doc` from the database. Return
   `true` to permit this.
 
 
-When calling `update` or `remove` Meteor will by default fetch the
+When calling `update`/`updateAsync` or `remove`/`removeAsync` Meteor will by default fetch the
 entire document `doc` from the database. If you have large documents
 you may wish to fetch only the fields that are actually used by your
 functions. Accomplish this by setting `fetch` to an array of field
@@ -582,6 +582,21 @@ Posts.allow({
     // Can only remove your own documents.
     return doc.owner === userId;
   },
+  
+  async insertAsync(userId, doc) {
+    // Any async validation is supported
+    return allowAsync(userId, doc);
+  },
+
+  async updateAsync(userId, doc, fields, modifier) {
+    // Any async validation is supported
+    return allowAsync(userId, doc, fields, modifier);
+  },
+
+  async removeAsync(userId, doc) {
+    // Any async validation is supported
+    return allowAsync(userId, doc);
+  },
 
   fetch: ["owner"],
 });
@@ -596,6 +611,16 @@ Posts.deny({
     // Can't remove locked documents.
     return doc.locked;
   },
+  
+  async updateAsync(userId, doc, fields, modifier) {
+    // Any async validation is supported
+    return denyAsync(userId, doc, fields, modifier);
+  },
+
+  async removeAsync(userId, doc) {
+    // Any async validation is supported
+    return denyAsync(userId, doc);
+  },
 
   fetch: ["locked"], // No need to fetch `owner`
 });
@@ -606,7 +631,8 @@ writes to the collection will be denied, and it will only be possible to
 write to the collection from server-side code. In this case you will
 have to create a method for each possible write that clients are allowed
 to do. You'll then call these methods with `Meteor.call` rather than
-having the clients call `insert`, `update`, and `remove` directly on the
+having the clients call `insert`/`insertAsync`, `update`/`updateAsync`,
+and `remove`/`removeAsync` directly on the
 collection.
 
 
