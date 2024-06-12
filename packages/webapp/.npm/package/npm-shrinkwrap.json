@@ -368,9 +368,9 @@
       "integrity": "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A=="
     },
     "nan": {
-      "version": "2.19.0",
-      "resolved": "https://registry.npmjs.org/nan/-/nan-2.19.0.tgz",
-      "integrity": "sha512-nO1xXxfh/RWNxfd/XPfbIfFk5vgLsAxUR9y5O0cHMJu/AW9U95JLXqthYHjEp+8gQ5p96K9jUp8nbVOxCdRbtw=="
+      "version": "2.20.0",
+      "resolved": "https://registry.npmjs.org/nan/-/nan-2.20.0.tgz",
+      "integrity": "sha512-bk3gXBZDGILuuo/6sKtr0DQmSThYHLtNCdSdXk9YkxD/jK6X2vmCyyXBBxyqZ4XcnzTyYEAThfX3DCEnLf6igw=="
     },
     "negotiator": {
       "version": "0.6.3",
