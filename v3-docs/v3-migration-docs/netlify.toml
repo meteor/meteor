@@ -1,3 +1,0 @@
-[build]
-  publish = "public"
-  command = "git submodule update --init --recursive && npm cache clear --force && npm install --legacy-peer-deps && npm run docs:build"
