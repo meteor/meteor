@@ -1,6 +1,6 @@
 import { parse } from '@meteorjs/babel';
 import { analyze as analyzeScope } from 'escope';
-import LRU from "lru-cache";
+import LRUCache from "lru-cache";
 import { Profile } from '../tool-env/profile';
 import Visitor from "@meteorjs/reify/lib/visitor.js";
 import { findPossibleIndexes } from "@meteorjs/reify/lib/utils.js";
@@ -12,7 +12,7 @@ function isRegExp(value) {
   return value && objToStr.call(value) === "[object RegExp]";
 }
 
-var AST_CACHE = new LRU({
+var AST_CACHE = new LRUCache({
   max: Math.pow(2, 12),
   length(ast) {
     return ast.loc.end.line;
@@ -259,12 +259,12 @@ function isPropertyWithName(node, name) {
 //
 // It only cares about assignments to variables; an assignment to a field on an
 // object (`Foo.Bar = true`) neither causes `Foo` nor `Foo.Bar` to be returned.
-const globalsCache = new LRU({
+const globalsCache = new LRUCache({
   max: Math.pow(2, 12),
   length(globals) {
     let sum = 0;
     Object.keys(globals).forEach(name => sum += name.length);
-    return sum;
+    return sum === 0 ? 1 : sum;
   }
 });
 

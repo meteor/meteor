@@ -279,7 +279,7 @@ describe("local node_modules", () => {
 
   it('should expose "version" field of package.json', () => {
     const pkg = require("moment/package.json");
-    assert.strictEqual(pkg.version, "2.24.0");
+    assert.strictEqual(pkg.version, "2.30.1");
   });
 
   it('should support object-valued package.json "browser" fields', () => {
