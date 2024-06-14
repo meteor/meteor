@@ -11,16 +11,16 @@ This guide is for users with Meteor 2.x projects understand the changes between 
 
 Meteor 3.0 is currently in its Release Candidate (RC) phase, a nearly final version ready for final testing ahead of the official launch.
 
-**Latest version:** `3.0-rc.1` <br/>
-**Node.js version:** `20.11.1 LTS` <br/>
-**NPM version:** `10.2.4`
+**Latest version:** `3.0-rc.4` <br/>
+**Node.js version:** `20.12.2 LTS` <br/>
+**NPM version:** `10.5.0`
 
 ## How to try Meteor 3.0?
 
 You can create a new Meteor 3.0 project by running the command below:
 
 ```bash
-meteor create my-new-project --release 3.0-rc.1
+meteor create my-new-project --release 3.0-rc.4
 ```
 
 ## How to upgrade from Meteor 2.x?
@@ -28,8 +28,14 @@ meteor create my-new-project --release 3.0-rc.1
 You can upgrade your Meteor 2.x project by running the command below inside your project folder:
 
 ```bash
-meteor update --release 3.0-rc.1
-meteor reset #resets local DB and project to a fresh state
+meteor update --release 3.0-rc.4
+meteor reset # resets project to a fresh state
+```
+
+If you are upgrade from an older version of Meteor, you might have a different MongoDB driver version. If you encounter issues, consider clearing the local database.
+
+```bash
+meteor reset --db # resets local db
 ```
 
 Also, it's a good idea to completely remove `node_modules` and the `package-lock.json` before running `meteor npm install`:

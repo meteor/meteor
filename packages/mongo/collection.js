@@ -944,8 +944,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     if (this._isRemoteCollection()) {
       const args = [selector, modifier, options];
-
-      return this._callMutatorMethod('update', args);
+      return this._callMutatorMethod('update', args, callback);
     }
 
     // it's my collection.  descend into the collection object
@@ -1000,12 +999,13 @@ Object.assign(Mongo.Collection.prototype, {
    * @memberof Mongo.Collection
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
-  remove(selector) {
+  remove(selector, callback) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
     if (this._isRemoteCollection()) {
-      return this._callMutatorMethod('remove', [selector]);
+      return this._callMutatorMethod('remove', [selector], callback);
     }
 
 
