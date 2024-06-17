@@ -31,5 +31,8 @@
     "predeploy": "npm run build",
     "deploy": "hexo-s3-deploy",
     "start": "npm run build && chexo @meteorjs/meteor-hexo-config -- server"
+  },
+  "volta": {
+    "node": "14.21.3"
   }
 }
