@@ -13,7 +13,7 @@ module.exports = {
     require("@babel/plugin-transform-class-properties"),
 
     require("@babel/plugin-syntax-async-generators"),
-    require("@babel/plugin-transform-async-generator-functions"),
+    require("@babel/plugin-proposal-async-generator-functions"),
 
     require("@babel/plugin-syntax-object-rest-spread"),
     require("@babel/plugin-transform-object-rest-spread"),

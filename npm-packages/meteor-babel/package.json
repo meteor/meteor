@@ -1,7 +1,7 @@
 {
   "name": "@meteorjs/babel",
   "author": "Meteor <dev@meteor.com>",
-  "version": "7.21.0-beta.4",
+  "version": "7.21.0-beta.5",
   "license": "MIT",
   "type": "commonjs",
   "description": "Babel wrapper package for use with Meteor",
@@ -45,7 +45,7 @@
     "@babel/traverse": "^7.17.0",
     "@babel/types": "^7.17.0",
     "@meteorjs/reify": "0.25.2",
-    "babel-preset-meteor": "^8.0.2",
+    "babel-preset-meteor": "^8.0.3",
     "babel-preset-minify": "^0.5.1",
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.21",

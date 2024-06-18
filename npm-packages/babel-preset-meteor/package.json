@@ -1,6 +1,6 @@
 {
   "name": "babel-preset-meteor",
-  "version": "8.0.2",
+  "version": "8.0.3",
   "description": "Babel preset for ES2015+ features supported by Meteor",
   "author": "Ben Newman <ben@meteor.com>",
   "license": "MIT",
@@ -11,6 +11,7 @@
     "update-versions": "bash scripts/update-versions"
   },
   "dependencies": {
+    "@babel/plugin-proposal-async-generator-functions": "^7.13.15",
     "@babel/plugin-syntax-async-generators": "^7.8.4",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
     "@babel/plugin-syntax-nullish-coalescing-operator": "^7.8.3",
@@ -18,7 +19,6 @@
     "@babel/plugin-syntax-optional-catch-binding": "^7.8.3",
     "@babel/plugin-syntax-optional-chaining": "^7.8.3",
     "@babel/plugin-transform-arrow-functions": "^7.13.0",
-    "@babel/plugin-transform-async-generator-functions": "^7.24.6",
     "@babel/plugin-transform-async-to-generator": "^7.13.0",
     "@babel/plugin-transform-block-scoped-functions": "^7.12.13",
     "@babel/plugin-transform-block-scoping": "^7.13.16",

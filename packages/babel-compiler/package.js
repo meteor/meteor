@@ -5,9 +5,9 @@ Package.describe({
 });
 
 Npm.depends({
-  '@meteorjs/babel': '7.21.0-beta.2',
+  '@meteorjs/babel': '7.21.0-beta.5',
   'json5': '2.1.1',
-  'semver': '7.3.8'
+  'semver': '7.3.8',
 });
 
 Package.onUse(function (api) {
