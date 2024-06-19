@@ -12,7 +12,7 @@ var rootDir = path.resolve(__dirname, "..", "..");
 var defaultDevBundlePromise =
   Promise.resolve(path.join(rootDir, "dev_bundle"));
 
-function getDevBundleDir() {
+async function getDevBundleDir() {
   // Note that this code does not care if we are running meteor from a
   // checkout, because it's always better to respect the .meteor/release
   // file of the current app, if possible.
@@ -48,20 +48,22 @@ function getDevBundleDir() {
     releaseFile, "utf8"
   ).replace(/^\s+|\s+$/g, "");
 
+  console.log({ release, releaseFile })
+
   if (! /^METEOR@\d+/.test(release)) {
     return defaultDevBundlePromise;
   }
 
-  return Promise.resolve(
-    getDevBundleForRelease(release)
-  ).then(function (devBundleDir) {
-    if (devBundleDir) {
-      links.makeLink(devBundleDir, devBundleLink);
-      return devBundleDir;
-    }
+  const devBundleDir = await getDevBundleForRelease(release);
 
-    return defaultDevBundlePromise;
-  });
+  console.log({ devBundleDir, defaultDevBundlePromise })
+
+  if (devBundleDir) {
+    links.makeLink(devBundleDir, devBundleLink);
+    return devBundleDir;
+  }
+
+  return defaultDevBundlePromise;
 }
 
 function getDevBundleForRelease(release) {

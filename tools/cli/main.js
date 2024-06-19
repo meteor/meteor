@@ -422,6 +422,8 @@ var longHelp = exports.longHelp = function (commandName) {
 // - fromApp: this release was suggested because it is the app's
 //   release.  affects error messages.
 var springboard = async function (rel, options) {
+  console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
+
   options = options || {};
   if (process.env.METEOR_DEBUG_SPRINGBOARD) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
@@ -453,6 +455,8 @@ var springboard = async function (rel, options) {
   const packageMap = new packageMapModule.PackageMap({
     [toolsPkg]: toolsVersion,
   });
+
+  console.log({ packageMap, serverArchitectures })
 
   // XXX split better
   await Console.withProgressDisplayVisible(async function () {
@@ -869,6 +873,8 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
 
   await require('../tool-env/isopackets.js').ensureIsopacketsLoadable();
 
+  console.log('here')
+
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk
   // to the server and refresh it.
@@ -925,6 +931,9 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   }
 
   var releaseName, appReleaseFile;
+
+  console.log({ appDir })
+
   if (appDir) {
     appReleaseFile = new projectContextModule.ReleaseFile({
       projectDir: appDir
@@ -952,6 +961,8 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
       process.exit(1);
     }
   }
+
+  console.log('usesWarehouse', files.usesWarehouse())
 
   if (! files.usesWarehouse()) {
     // Running from a checkout
@@ -1002,6 +1013,8 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
       }
     }
   }
+
+  console.log({ releaseName })
 
   if (releaseName !== undefined) {
     // Yay, it's time to load releases!
@@ -1146,6 +1159,8 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
     release.setCurrent(rel, releaseForced, releaseExplicit);
   }
 
+  console.log(release.current)
+
   // If we're not running the correct version of the tools for this
   // release, fetch it and re-run.
   //
@@ -1153,8 +1168,8 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   // update, because the correct tools version will have been chosen
   // the first time around. It will also never happen if the current
   // release is a checkout, because that doesn't make any sense.
-  if (release.current &&
-      release.current.isProperRelease()) {
+  if (release.current || true) {
+    console.log(files.getToolsVersion(), release.current.getToolsPackageAtVersion())
     if (files.getToolsVersion() !==
         release.current.getToolsPackageAtVersion()) {
       await springboard(release.current, {

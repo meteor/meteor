@@ -1,3 +1,6 @@
+// Set up the Babel transpiler
+require('./tool-env/install-babel.js');
+
 require("./cli/dev-bundle-bin-commands.js").then(function (child) {
   if (! child) {
     // Use process.nextTick here to prevent the Promise from swallowing
@@ -13,9 +16,7 @@ require("./cli/dev-bundle-bin-commands.js").then(function (child) {
 });
 
 function continueSetup() {
-  // Set up the Babel transpiler
-  require('./tool-env/install-babel.js');
-
+  console.trace()
   // Run the Meteor command line tool
   require('./cli/main.js');
 }

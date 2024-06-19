@@ -200,7 +200,6 @@ export function usesWarehouse() {
 
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 export function getToolsVersion() {
-  if (! inCheckout()) {
     const isopackJsonPath = pathJoin(getCurrentToolsDir(),
       '..',  // get out of tool, back to package
       'isopack.json');
@@ -221,9 +220,6 @@ export function getToolsVersion() {
     );
     parsed = JSON.parse(readFile(unipackageJsonPath));
     return parsed.name + '@' + parsed.version;
-  } else {
-    throw new Error("Unexpected. Git checkouts don't have tools versions.");
-  }
 }
 
 // Return the root of dev_bundle (probably /usr/local/meteor in an

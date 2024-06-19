@@ -20,6 +20,9 @@ function getChildProcess() {
   ]).then(function (devBundleAndEnv) {
     var devBundleDir = devBundleAndEnv[0];
     var cmd = helpers.getCommand(devBundleBinCommand, devBundleDir);
+
+    console.log({ cmd, devBundleAndEnv })
+
     if (! cmd) {
       return null;
     }
