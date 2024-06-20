@@ -456,8 +456,6 @@ var springboard = async function (rel, options) {
     [toolsPkg]: toolsVersion,
   });
 
-  console.log({ packageMap, serverArchitectures })
-
   // XXX split better
   await Console.withProgressDisplayVisible(async function () {
     var messages = await buildmessage.capture({
@@ -873,8 +871,6 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
 
   await require('../tool-env/isopackets.js').ensureIsopacketsLoadable();
 
-  console.log('here')
-
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk
   // to the server and refresh it.
@@ -1159,8 +1155,6 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
     release.setCurrent(rel, releaseForced, releaseExplicit);
   }
 
-  console.log(release.current)
-
   // If we're not running the correct version of the tools for this
   // release, fetch it and re-run.
   //
@@ -1168,8 +1162,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   // update, because the correct tools version will have been chosen
   // the first time around. It will also never happen if the current
   // release is a checkout, because that doesn't make any sense.
-  if (release.current || true) {
-    console.log(files.getToolsVersion(), release.current.getToolsPackageAtVersion())
+  if (release.current) {
     if (files.getToolsVersion() !==
         release.current.getToolsPackageAtVersion()) {
       await springboard(release.current, {
