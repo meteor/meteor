@@ -422,8 +422,6 @@ var longHelp = exports.longHelp = function (commandName) {
 // - fromApp: this release was suggested because it is the app's
 //   release.  affects error messages.
 var springboard = async function (rel, options) {
-  console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
-
   options = options || {};
   if (process.env.METEOR_DEBUG_SPRINGBOARD) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
@@ -928,8 +926,6 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
 
   var releaseName, appReleaseFile;
 
-  console.log({ appDir })
-
   if (appDir) {
     appReleaseFile = new projectContextModule.ReleaseFile({
       projectDir: appDir
@@ -957,8 +953,6 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
       process.exit(1);
     }
   }
-
-  console.log('usesWarehouse', files.usesWarehouse())
 
   if (! files.usesWarehouse()) {
     // Running from a checkout
@@ -1009,8 +1003,6 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
       }
     }
   }
-
-  console.log({ releaseName })
 
   if (releaseName !== undefined) {
     // Yay, it's time to load releases!
