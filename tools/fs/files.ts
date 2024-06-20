@@ -26,6 +26,7 @@ import {
   pathResolve,
   pathSep,
 } from "../static-assets/server/mini-files";
+import { realpathSync } from './fsFixPath';
 
 const _ = require('underscore');
 
@@ -234,6 +235,10 @@ export function getCurrentNodeBinDir() {
 
 // Return the top-level directory for this meteor install or checkout
 export function getCurrentToolsDir() {
+  if (process.env.METEOR_WAREHOUSE_DIR) {
+    return pathDirname(realpathSync(pathJoin(process.env.METEOR_WAREHOUSE_DIR, 'meteor')));
+  }
+
   return pathDirname(pathDirname(convertToStandardPath(__dirname)));
 }
 
