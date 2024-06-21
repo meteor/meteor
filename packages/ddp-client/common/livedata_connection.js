@@ -613,6 +613,11 @@ export class Connection {
       try {
         stubOptions.stubReturnValue = DDP._CurrentMethodInvocation
           .withValue(invocation, stubInvocation);
+        if (Meteor._isPromise(stubOptions.stubReturnValue)) {
+          console.warn(
+            `Method ${name}: Calling an async method with call/apply can lead to unexpected behaviors. Use callAsync/applyAsync instead.`
+          );
+        }
       } catch (e) {
         stubOptions.exception = e;
       }
