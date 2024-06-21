@@ -35,7 +35,6 @@ EVp.getOrNullIfOutsideFiber = function () {
  * @returns {any} The return value of the function
  */
 EVp.withValue = function (value, func) {
-  let currentValues = this.getCurrentValues();
   var saved = currentValues[this.slot];
 
   try {
