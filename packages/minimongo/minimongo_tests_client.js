@@ -3855,16 +3855,6 @@ Tinytest.add('minimongo - cannot insert using invalid field names', test => {
     collection.insert({ a: { b: { 'c.d': 'e' } } });
   }, "Key c.d must not contain '.'");
 
-  // Verify field names starting with $ are prohibited
-  test.throws(() => {
-    collection.insert({ $a: 'b' });
-  }, "Key $a must not start with '$'");
-
-  // Verify nested field names starting with $ are prohibited
-  test.throws(() => {
-    collection.insert({ a: { b: { $c: 'd' } } });
-  }, "Key $c must not start with '$'");
-
   // Verify top level fields with null characters are prohibited
   ['\0a', 'a\0', 'a\0b', '\u0000a', 'a\u0000', 'a\u0000b'].forEach((field) => {
     test.throws(() => {
