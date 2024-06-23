@@ -199,8 +199,15 @@ function download() {
     }
 
     if (isWindows()) {
-      decompress();
-      return;
+      const isWindows10OrLater = fs.existsSync(path.resolve('C:/Windows/System32', 'tar.exe'));
+      if (isWindows10OrLater) {
+        // tar works exactly the same as it's bsdtar counterpart on UNIX so continue
+        console.log(`Native binary for tar is available on this version of Windows.`);
+        console.log(`Switching to the native tar.exe binary on Windows.`);
+      } else {
+        decompress();
+        return;
+      }
     }
 
     fs.writeFileSync(startedPath, 'Meteor install started');

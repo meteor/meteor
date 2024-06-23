@@ -1,7 +1,14 @@
 {
-  "name": "meteor",
+  "name": "@ayewo/meteor",
   "version": "2.15.0",
   "description": "Install Meteor",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ayewo/meteor.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "main": "install.js",
   "scripts": {
     "install": "node cli.js install"
