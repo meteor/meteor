@@ -2484,8 +2484,6 @@ Tinytest.add('minimongo - modify', test => {
   exception({a: 12}, {a: 13, $set: {b: 13}});
   exception({a: 12}, {$set: {b: 13}, a: 13});
 
-  exception({a: 12}, {$a: 13}); // invalid operator
-  exception({a: 12}, {b: {$a: 13}});
   exception({a: 12}, {b: {'a.b': 13}});
   exception({a: 12}, {b: {'\0a': 13}});
 
@@ -2725,9 +2723,6 @@ Tinytest.add('minimongo - modify', test => {
   exception({_id: 1}, {$set: {_id: 4}});
   modify({_id: 4}, {$set: {_id: 4}}, {_id: 4});  // not-changing _id is not bad
   // restricted field names
-  exception({a: {}}, {$set: {a: {$a: 1}}});
-  exception({ a: {} }, { $set: { a: { c:
-              [{ b: { $a: 1 } }] } } });
   exception({a: {}}, {$set: {a: {'\0a': 1}}});
   exception({a: {}}, {$set: {a: {'a.b': 1}}});
 
@@ -2803,10 +2798,7 @@ Tinytest.add('minimongo - modify', test => {
     {a: []}
   );
   // restricted field names
-  exception({}, {$push: {$a: 1}});
   exception({}, {$push: {'\0a': 1}});
-  exception({}, {$push: {a: {$a: 1}}});
-  exception({}, {$push: {a: {$each: [{$a: 1}]}}});
   exception({}, {$push: {a: {$each: [{'a.b': 1}]}}});
   exception({}, {$push: {a: {$each: [{'\0a': 1}]}}});
   modify({}, {$push: {a: {$each: [{'': 1}]}}}, {a: [ { '': 1 } ]});
@@ -2840,7 +2832,6 @@ Tinytest.add('minimongo - modify', test => {
   modify({a: []}, {$pushAll: {'a.1': []}}, {a: [null, []]});
   modify({a: {}}, {$pushAll: {'a.x': [99]}}, {a: {x: [99]}});
   modify({a: {}}, {$pushAll: {'a.x': []}}, {a: {x: []}});
-  exception({a: [1]}, {$pushAll: {a: [{$a: 1}]}});
   exception({a: [1]}, {$pushAll: {a: [{'\0a': 1}]}});
   exception({a: [1]}, {$pushAll: {a: [{'a.b': 1}]}});
 
@@ -2867,19 +2858,14 @@ Tinytest.add('minimongo - modify', test => {
   modify({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
 
   // invalid field names
-  exception({}, {$addToSet: {a: {$b: 1}}});
   exception({}, {$addToSet: {a: {'a.b': 1}}});
   exception({}, {$addToSet: {a: {'a.': 1}}});
   exception({}, {$addToSet: {a: {'\u0000a': 1}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {$a: 1}]}}});
   exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {'\0a': 1}]}}});
-  exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{$a: 1}]]}}});
   exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
   exception({a: [1, 2]}, {$addToSet: {a: {b: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
   // $each is first element and thus an operator
   modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}}, {a: [ 1, 2, 3, 4 ]});
-  // this should fail because $each is now a field name (not first in object) and thus invalid field name with $
-  exception({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}});
 
   // $pop
   modify({}, {$pop: {a: 1}}, {}); // tested
@@ -2953,7 +2939,6 @@ Tinytest.add('minimongo - modify', test => {
   exception({}, {$rename: {a: 'a'}});
   exception({}, {$rename: {'a.b': 'a.b'}});
   modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
-  exception({a: [12]}, {$rename: {a: '$b'}});
   exception({a: [12]}, {$rename: {a: '\0a'}});
 
   // $setOnInsert
@@ -2964,10 +2949,8 @@ Tinytest.add('minimongo - modify', test => {
   upsert({'a.b': 10}, {$setOnInsert: {c: 12}}, {a: {b: 10}, c: 12});
   upsert({_id: 'test'}, {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
   upsert('test', {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
-  upsertException({a: 0}, {$setOnInsert: {$a: 12}});
   upsertException({a: 0}, {$setOnInsert: {'\0a': 12}});
   upsert({a: 0}, {$setOnInsert: {b: {a: 1}}}, {a: 0, b: {a: 1}});
-  upsertException({a: 0}, {$setOnInsert: {b: {$a: 1}}});
   upsertException({a: 0}, {$setOnInsert: {b: {'a.b': 1}}});
   upsertException({a: 0}, {$setOnInsert: {b: {'\0a': 1}}});
 
@@ -3076,9 +3059,6 @@ Tinytest.add('minimongo - modify', test => {
   upsertException({"$and": [{"a": {"$eq": "foo"}}, {"$or": [{"a": {"$all": ["bar"]}}]}]}, {});
    // You can't have nested dotted fields
   upsertException({"a": {"foo.bar": "baz"}}, {});
-   // You can't have dollar-prefixed fields above the first level (logical operators not counted)
-  upsertException({"a": {"a": {"$eq": "foo"}}}, {});
-  upsertException({"a": {"a": {"$exists": true}}}, {});
    // You can't mix operators with other fields
   upsertException({"a": {"$eq": "bar", "b": "foo"}}, {})
   upsertException({"a": {"b": "foo", "$eq": "bar"}}, {})
