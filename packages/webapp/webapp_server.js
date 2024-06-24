@@ -1397,7 +1397,7 @@ async function runWebAppServer() {
 
     const startHttpServer = listenOptions => {
       WebApp.startListening(
-        httpServer,
+        argv?.httpServer || httpServer,
         listenOptions,
         Meteor.bindEnvironment(
           () => {
@@ -1406,7 +1406,7 @@ async function runWebAppServer() {
             }
             const callbacks = onListeningCallbacks;
             onListeningCallbacks = null;
-            callbacks.forEach(callback => {
+            callbacks?.forEach(callback => {
               callback();
             });
           },
