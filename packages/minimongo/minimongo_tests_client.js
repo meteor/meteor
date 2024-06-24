@@ -2489,6 +2489,9 @@ Tinytest.add('minimongo - modify', test => {
 
   // keys
   modify({}, {$set: {a: 12}}, {a: 12});
+  modify({}, {$set: {'$a': 12}}, {'$a': 12});
+  modify({}, {$set: {a$b: 12}}, {a$b: 12});
+  modify({}, {$set: {'a.$b': 12}}, {a: {$b: 12}});
   modify({}, {$set: {'a.b': 12}}, {a: {b: 12}});
   modify({}, {$set: {'a.b.c': 12}}, {a: {b: {c: 12}}});
   modify({a: {d: 99}}, {$set: {'a.b.c': 12}}, {a: {d: 99, b: {c: 12}}});
