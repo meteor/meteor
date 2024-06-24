@@ -36,10 +36,11 @@ export default defineConfig({
     sidebar: [
       {
         text: "About",
+        link: "/about/what-is",
         items: [
           {
             text: "What is Meteor?",
-            link: "/about/what-is#what-is-meteor",
+            link: "/about/what-is#introduction",
           },
           {
             text: "Meteor resources",
@@ -65,7 +66,7 @@ export default defineConfig({
       },
       {
         text: "API",
-        link: "/api/index",
+        link: "/api/",
         items: [
           {
             text: "Accounts",
@@ -243,7 +244,7 @@ export default defineConfig({
             link: "/packages/webapp",
           },
           {
-            link: "packages/packages-listing",
+            link: "/packages/packages-listing",
             text: "Maintained Packages",
           },
           {
@@ -271,9 +272,9 @@ export default defineConfig({
       {
         text: "Command Line",
         items: [
-          { link: "cli/index", text: "CLI" },
-          { link: "cli/using-core-types", text: "Using Core Types" },
-          { link: "cli/environment-variables", text: "Environment Variables" },
+          { link: "/cli/", text: "CLI" },
+          { link: "/cli/using-core-types", text: "Using Core Types" },
+          { link: "/cli/environment-variables", text: "Environment Variables" },
         ],
         collapsed: true,
       },
