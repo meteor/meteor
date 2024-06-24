@@ -1929,7 +1929,7 @@ function assertHasValidFieldNames(doc) {
 
 function assertIsValidFieldName(key) {
   let match;
-  if (typeof key === 'string' && (match = key.match(/^\.|\0/))) {
+  if (typeof key === 'string' && (match = key.match(/\.|\0/))) {
     throw MinimongoError(`Key ${key} must not ${invalidCharMsg[match[0]]}`);
   }
 }
