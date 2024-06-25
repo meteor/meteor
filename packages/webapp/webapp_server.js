@@ -1471,49 +1471,6 @@ async function runWebAppServer() {
   };
 }
 
-var inlineScriptsAllowed = true;
-
-WebAppInternals.inlineScriptsAllowed = function() {
-  return inlineScriptsAllowed;
-};
-
-WebAppInternals.setInlineScriptsAllowed = async function(value) {
-  inlineScriptsAllowed = value;
-  await WebAppInternals.generateBoilerplate();
-};
-
-var sriMode;
-
-WebAppInternals.enableSubresourceIntegrity = async function(use_credentials = false) {
-  sriMode = use_credentials ? 'use-credentials' : 'anonymous';
-  await WebAppInternals.generateBoilerplate();
-};
-
-WebAppInternals.setBundledJsCssUrlRewriteHook = async function(hookFn) {
-  bundledJsCssUrlRewriteHook = hookFn;
-  await WebAppInternals.generateBoilerplate();
-};
-
-WebAppInternals.setBundledJsCssPrefix = async function(prefix) {
-  var self = this;
-  await self.setBundledJsCssUrlRewriteHook(function(url) {
-    return prefix + url;
-  });
-};
-
-// Packages can call `WebAppInternals.addStaticJs` to specify static
-// JavaScript to be included in the app. This static JS will be inlined,
-// unless inline scripts have been disabled, in which case it will be
-// served under `/<sha1 of contents>`.
-var additionalStaticJs = {};
-WebAppInternals.addStaticJs = function(contents) {
-  additionalStaticJs['/' + sha1(contents) + '.js'] = contents;
-};
-
-// Exported for tests
-WebAppInternals.getBoilerplate = getBoilerplate;
-WebAppInternals.additionalStaticJs = additionalStaticJs;
-
 const isGetentAvailable = () => {
   try {
     execSync('which getent');
@@ -1557,5 +1514,48 @@ export const getGroupInfo = (groupName) => {
   }
   return groupInfo;
 };
+
+var inlineScriptsAllowed = true;
+
+WebAppInternals.inlineScriptsAllowed = function() {
+  return inlineScriptsAllowed;
+};
+
+WebAppInternals.setInlineScriptsAllowed = async function(value) {
+  inlineScriptsAllowed = value;
+  await WebAppInternals.generateBoilerplate();
+};
+
+var sriMode;
+
+WebAppInternals.enableSubresourceIntegrity = async function(use_credentials = false) {
+  sriMode = use_credentials ? 'use-credentials' : 'anonymous';
+  await WebAppInternals.generateBoilerplate();
+};
+
+WebAppInternals.setBundledJsCssUrlRewriteHook = async function(hookFn) {
+  bundledJsCssUrlRewriteHook = hookFn;
+  await WebAppInternals.generateBoilerplate();
+};
+
+WebAppInternals.setBundledJsCssPrefix = async function(prefix) {
+  var self = this;
+  await self.setBundledJsCssUrlRewriteHook(function(url) {
+    return prefix + url;
+  });
+};
+
+// Packages can call `WebAppInternals.addStaticJs` to specify static
+// JavaScript to be included in the app. This static JS will be inlined,
+// unless inline scripts have been disabled, in which case it will be
+// served under `/<sha1 of contents>`.
+var additionalStaticJs = {};
+WebAppInternals.addStaticJs = function(contents) {
+  additionalStaticJs['/' + sha1(contents) + '.js'] = contents;
+};
+
+// Exported for tests
+WebAppInternals.getBoilerplate = getBoilerplate;
+WebAppInternals.additionalStaticJs = additionalStaticJs;
 
 await runWebAppServer();
