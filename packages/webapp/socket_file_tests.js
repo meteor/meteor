@@ -6,7 +6,7 @@ import {
   registerSocketFileCleanup,
 } from './socket_file.js';
 import { EventEmitter } from 'events';
-import { tmpdir } from 'os';
+import { tmpdir, userInfo } from 'os';
 import { main } from './webapp_server';
 import express from 'express';
 
@@ -81,31 +81,56 @@ Tinytest.add('socket file - remove socket file on exit', test => {
   });
 });
 
-
-Tinytest.addAsync(
-  'socket usage - use socket file for inter-process communication',
-  async test => {
+function prepareHttpServer() {
   removeTestSocketFile();
   removeExistingSocketFile(testSocketFile);
+  const app = express();
+  return createServerHttp(app);
+}
 
-  var app = express();
-  const httpServer = createServerHttp(app);
-  process.env.UNIX_SOCKET_PATH = testSocketFile;
-  process.env.UNIX_SOCKET_GROUP = 'root'; // gid 0
-
-  const result = await main({ httpServer });
-
-  test.equal(result, 'DAEMON');
-  test.equal((await getChownInfo(testSocketFile))?.gid, 0);
-
-  return new Promise(resolve => {
-    httpServer.on('listening', Meteor.bindEnvironment(() => {
-      process.env.UNIX_SOCKET_PATH = '';
-      process.env.UNIX_SOCKET_GROUP = '';
-      removeExistingSocketFile(testSocketFile);
-      httpServer.close();
-
-      resolve();
-    }));
+function closeHttpServer({ httpServer }) {
+  return new Promise((resolve) => {
+    httpServer.on(
+      "listening",
+      Meteor.bindEnvironment(() => {
+        process.env.UNIX_SOCKET_PATH = "";
+        process.env.UNIX_SOCKET_GROUP = "";
+        removeExistingSocketFile(testSocketFile);
+        httpServer.close();
+        resolve();
+      })
+    );
   });
-});
+}
+
+testAsyncMulti(
+  "socket usage - use socket file for inter-process communication",
+  [
+    async (test) => {
+      // use UNIX_SOCKET_PATH
+      const httpServer = prepareHttpServer();
+
+      process.env.UNIX_SOCKET_PATH = testSocketFile;
+      const result = await main({ httpServer });
+
+      test.equal(result, "DAEMON");
+      const currentGid = userInfo({ encoding: "utf8" })?.gid;
+      test.equal((await getChownInfo(testSocketFile))?.gid, currentGid);
+
+      return closeHttpServer({ httpServer });
+    },
+    async (test) => {
+      // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
+      const httpServer = prepareHttpServer();
+
+      process.env.UNIX_SOCKET_PATH = testSocketFile;
+      process.env.UNIX_SOCKET_GROUP = "root"; // gid 0
+      const result = await main({ httpServer });
+
+      test.equal(result, "DAEMON");
+      test.equal((await getChownInfo(testSocketFile))?.gid, 0);
+
+      return closeHttpServer({ httpServer });
+    },
+  ]
+);
