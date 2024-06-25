@@ -1172,6 +1172,20 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
     }
   }
 
+  try {
+    const child = await import("./dev-bundle-bin-commands")
+    // If we spawned a process to handle a dev_bundle/bin command like
+    // `meteor npm` or `meteor node`, then don't run any other tool code.
+
+    if (child) {
+      return;
+    }
+  } catch (error) {
+    process.nextTick(function () {
+      throw error;
+    });
+  }
+
   // Check for the '--help' option.
   var showHelp = false;
   if (_.has(rawOptions, '--help')) {
