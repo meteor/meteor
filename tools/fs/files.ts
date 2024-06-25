@@ -201,26 +201,27 @@ export function usesWarehouse() {
 
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 export function getToolsVersion() {
+  if (! inCheckout()) {
     const isopackJsonPath = pathJoin(getCurrentToolsDir(),
-      '..',  // get out of tool, back to package
-      'isopack.json');
-
+        '..',  // get out of tool, back to package
+        'isopack.json');
     let parsed;
-
     if (exists(isopackJsonPath)) {
       // XXX "isopack-1" is duplicate of isopack.currentFormat
       parsed = JSON.parse(readFile(isopackJsonPath))["isopack-1"];
       return parsed.name + '@' + parsed.version;
     }
-
     // XXX COMPAT WITH 0.9.3
     const unipackageJsonPath = pathJoin(
-      getCurrentToolsDir(),
-      '..',  // get out of tool, back to package
-      'unipackage.json'
+        getCurrentToolsDir(),
+        '..',  // get out of tool, back to package
+        'unipackage.json'
     );
     parsed = JSON.parse(readFile(unipackageJsonPath));
     return parsed.name + '@' + parsed.version;
+  } else {
+    throw new Error("Unexpected. Git checkouts don't have tools versions.");
+  }
 }
 
 // Return the root of dev_bundle (probably /usr/local/meteor in an
