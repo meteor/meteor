@@ -1,4 +1,4 @@
-import { writeFileSync, unlinkSync, statSync } from 'fs';
+import { writeFileSync, unlinkSync, statSync, readFileSync } from 'fs';
 import { createServer } from 'net';
 import { createServer as createServerHttp } from 'http';
 import {
@@ -105,6 +105,13 @@ function closeHttpServer({ httpServer }) {
   });
 }
 
+const getFirstGroupFromFile = () => {
+  const data = readFileSync('/etc/group', 'utf8');
+  const firstLine = data.trim().split('\n')[0];
+  const [name, , gid] = firstLine.split(':');
+  return { groupName: name, gid: Number(gid) };
+};
+
 testAsyncMulti(
   "socket usage - use socket file for inter-process communication",
   [
@@ -124,9 +131,10 @@ testAsyncMulti(
     async (test) => {
       // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
       const httpServer = prepareHttpServer();
+      const firstGroup = getFirstGroupFromFile();
 
       process.env.UNIX_SOCKET_PATH = testSocketFile;
-      process.env.UNIX_SOCKET_GROUP = "root"; // gid 0
+      process.env.UNIX_SOCKET_GROUP = firstGroup.groupName; // gid 0
       const result = await main({ httpServer });
 
       test.equal(result, "DAEMON");

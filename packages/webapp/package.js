@@ -14,7 +14,6 @@ Npm.depends({
   'stream-to-string': '1.2.1',
   qs: '6.11.2',
   useragent: '2.3.0',
-  '@vlasky/whomst': '0.1.7',
   '@types/connect': '3.4.38',
 });
 
