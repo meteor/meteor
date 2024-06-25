@@ -1154,7 +1154,8 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   // update, because the correct tools version will have been chosen
   // the first time around. It will also never happen if the current
   // release is a checkout, because that doesn't make any sense.
-  if (release.current) {
+  if (release.current &&
+      release.current.isProperRelease()) {
     if (files.getToolsVersion() !==
         release.current.getToolsPackageAtVersion()) {
       await springboard(release.current, {
