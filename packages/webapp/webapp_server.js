@@ -1443,47 +1443,6 @@ async function runWebAppServer() {
 
       const unixSocketGroup = (process.env.UNIX_SOCKET_GROUP || '').trim();
       if (unixSocketGroup) {
-        const isGetentAvailable = () => {
-          try {
-            execSync('which getent');
-            return true;
-          } catch {
-            return false;
-          }
-        };
-        const getGroupInfoUsingGetent = (groupName) => {
-          try {
-            const stdout = execSync(`getent group ${groupName}`, { encoding: 'utf8' });
-            if (!stdout) return null;
-            const [name, , gid] = stdout.trim().split(':');
-            if (name == null || gid == null) return null;
-            return { name, gid: Number(gid) };
-          } catch (error) {
-            console.error(`Error fetching group info with getent: ${error.message}`);
-            return null;
-          }
-        };
-        const getGroupInfoFromFile = (groupName) => {
-          try {
-            const data = readFileSync('/etc/group', 'utf8');
-            const groupLine = data.trim().split('\n').find(line => line.startsWith(`${groupName}:`));
-            if (!groupLine) return null;
-            const [name, , gid] = groupLine.trim().split(':');
-            if (name == null || gid == null) return null;
-            return { name, gid: Number(gid) };
-          } catch (error) {
-            console.error(`Error fetching group info from file: ${error.message}`);
-            return null;
-          }
-        };
-        const getGroupInfo = (groupName) => {
-          let groupInfo = getGroupInfoFromFile(groupName);
-          if (!groupInfo && isGetentAvailable()) {
-            groupInfo = getGroupInfoUsingGetent(groupName);
-          }
-          return groupInfo;
-        };
-
         const unixSocketGroupInfo = getGroupInfo(unixSocketGroup);
         if (unixSocketGroupInfo === null) {
           throw new Error('Invalid UNIX_SOCKET_GROUP name specified');
@@ -1554,5 +1513,49 @@ WebAppInternals.addStaticJs = function(contents) {
 // Exported for tests
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
+
+const isGetentAvailable = () => {
+  try {
+    execSync('which getent');
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const getGroupInfoUsingGetent = (groupName) => {
+  try {
+    const stdout = execSync(`getent group ${groupName}`, { encoding: 'utf8' });
+    if (!stdout) return null;
+    const [name, , gid] = stdout.trim().split(':');
+    if (name == null || gid == null) return null;
+    return { name, gid: Number(gid) };
+  } catch (error) {
+    console.error(`Error fetching group info with getent: ${error.message}`);
+    return null;
+  }
+};
+
+const getGroupInfoFromFile = (groupName) => {
+  try {
+    const data = readFileSync('/etc/group', 'utf8');
+    const groupLine = data.trim().split('\n').find(line => line.startsWith(`${groupName}:`));
+    if (!groupLine) return null;
+    const [name, , gid] = groupLine.trim().split(':');
+    if (name == null || gid == null) return null;
+    return { name, gid: Number(gid) };
+  } catch (error) {
+    console.error(`Error fetching group info from file: ${error.message}`);
+    return null;
+  }
+};
+
+export const getGroupInfo = (groupName) => {
+  let groupInfo = getGroupInfoFromFile(groupName);
+  if (!groupInfo && isGetentAvailable()) {
+    groupInfo = getGroupInfoUsingGetent(groupName);
+  }
+  return groupInfo;
+};
 
 await runWebAppServer();

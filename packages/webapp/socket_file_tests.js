@@ -6,8 +6,8 @@ import {
   registerSocketFileCleanup,
 } from './socket_file.js';
 import { EventEmitter } from 'events';
-import { tmpdir, userInfo } from 'os';
-import { main } from './webapp_server';
+import { tmpdir, userInfo, platform } from 'os';
+import { main, getGroupInfo } from './webapp_server';
 import express from 'express';
 
 const testSocketFile = `${tmpdir()}/socket_file_tests`;
@@ -20,6 +20,10 @@ const getChownInfo = async (filePath) => {
     console.error(`Error fetching ownership info for ${filePath}:`, error.message);
     return null;
   }
+};
+
+const isMacOS = () => {
+  return platform() === 'darwin';
 };
 
 const removeTestSocketFile = () => {
@@ -105,13 +109,6 @@ function closeHttpServer({ httpServer }) {
   });
 }
 
-const getFirstGroupFromFile = () => {
-  const data = readFileSync('/etc/group', 'utf8');
-  const firstLine = data.trim().split('\n')[0];
-  const [name, , gid] = firstLine.split(':');
-  return { groupName: name, gid: Number(gid) };
-};
-
 testAsyncMulti(
   "socket usage - use socket file for inter-process communication",
   [
@@ -131,14 +128,13 @@ testAsyncMulti(
     async (test) => {
       // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
       const httpServer = prepareHttpServer();
-      const firstGroup = getFirstGroupFromFile();
 
       process.env.UNIX_SOCKET_PATH = testSocketFile;
-      process.env.UNIX_SOCKET_GROUP = firstGroup.groupName; // gid 0
+      process.env.UNIX_SOCKET_GROUP = isMacOS() ? 'staff' : 'root';
       const result = await main({ httpServer });
 
       test.equal(result, "DAEMON");
-      test.equal((await getChownInfo(testSocketFile))?.gid, 0);
+      test.equal((await getChownInfo(testSocketFile))?.gid, getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid);
 
       return closeHttpServer({ httpServer });
     },
