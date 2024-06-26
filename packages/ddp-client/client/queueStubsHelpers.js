@@ -121,7 +121,7 @@ export const loadAsyncStubHelpers = () => {
         Meteor._setImmediate(() => {
           if (hasStub && !finished) {
             console.warn(
-              `Method stub (${name}) took too long and could cause unexpected problems. Learn more at https://github.com/zodern/fix-async-stubs/#limitations`
+              `Method stub (${name}) took too long and could cause unexpected problems. Learn more at https://v3-migration-docs.meteor.com/breaking-changes/call-x-callAsync.html#what-are-the-limitations-of-call-meteor-callasync`
             );
           }
         });
