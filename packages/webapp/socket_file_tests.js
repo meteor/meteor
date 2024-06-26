@@ -88,6 +88,8 @@ Tinytest.add('socket file - remove socket file on exit', test => {
 function prepareHttpServer() {
   removeTestSocketFile();
   removeExistingSocketFile(testSocketFile);
+  const testEventEmitter = new EventEmitter();
+  registerSocketFileCleanup(testSocketFile, testEventEmitter);
   const server = createServer();
   server.listen(testSocketFile);
   const app = express();
