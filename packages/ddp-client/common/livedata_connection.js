@@ -614,7 +614,7 @@ export class Connection {
         stubOptions.stubReturnValue = DDP._CurrentMethodInvocation
           .withValue(invocation, stubInvocation);
         if (Meteor._isPromise(stubOptions.stubReturnValue)) {
-          console.warn(
+          Meteor._debug(
             `Method ${name}: Calling a method that has an async method stub with call/apply can lead to unexpected behaviors. Use callAsync/applyAsync instead.`
           );
         }
