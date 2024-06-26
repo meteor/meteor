@@ -615,7 +615,7 @@ export class Connection {
           .withValue(invocation, stubInvocation);
         if (Meteor._isPromise(stubOptions.stubReturnValue)) {
           console.warn(
-            `Method ${name}: Calling an async method with call/apply can lead to unexpected behaviors. Use callAsync/applyAsync instead.`
+            `Method ${name}: Calling a method that has an async method stub with call/apply can lead to unexpected behaviors. Use callAsync/applyAsync instead.`
           );
         }
       } catch (e) {
