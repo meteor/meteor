@@ -85,7 +85,7 @@ Tinytest.add('socket file - remove socket file on exit', test => {
   });
 });
 
-function prepareHttpServer() {
+function prepareServer() {
   removeTestSocketFile();
   removeExistingSocketFile(testSocketFile);
   const testEventEmitter = new EventEmitter();
@@ -93,10 +93,11 @@ function prepareHttpServer() {
   const server = createServer();
   server.listen(testSocketFile);
   const app = express();
-  return createServerHttp(app);
+  const httpServer = createServerHttp(app);
+  return { httpServer, server };
 }
 
-function closeHttpServer({ httpServer }) {
+function closeServer({ httpServer, server }) {
   return new Promise((resolve) => {
     httpServer.on(
       "listening",
@@ -104,6 +105,7 @@ function closeHttpServer({ httpServer }) {
         process.env.UNIX_SOCKET_PATH = "";
         process.env.UNIX_SOCKET_GROUP = "";
         removeExistingSocketFile(testSocketFile);
+        server.close();
         httpServer.close();
         resolve();
       })
@@ -116,7 +118,7 @@ testAsyncMulti(
   [
     async (test) => {
       // use UNIX_SOCKET_PATH
-      const httpServer = prepareHttpServer();
+      const { httpServer, server } = prepareServer();
 
       process.env.UNIX_SOCKET_PATH = testSocketFile;
       const result = await main({ httpServer });
@@ -125,11 +127,11 @@ testAsyncMulti(
       const currentGid = userInfo({ encoding: "utf8" })?.gid;
       test.equal((await getChownInfo(testSocketFile))?.gid, currentGid);
 
-      return closeHttpServer({ httpServer });
+      return closeServer({ httpServer, server });
     },
     async (test) => {
       // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
-      const httpServer = prepareHttpServer();
+      const { httpServer, server } = prepareServer();
 
       process.env.UNIX_SOCKET_PATH = testSocketFile;
       process.env.UNIX_SOCKET_GROUP = isMacOS() ? 'staff' : 'root';
@@ -138,7 +140,7 @@ testAsyncMulti(
       test.equal(result, "DAEMON");
       test.equal((await getChownInfo(testSocketFile))?.gid, getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid);
 
-      return closeHttpServer({ httpServer });
+      return closeServer({ httpServer, server });
     },
   ]
 );
