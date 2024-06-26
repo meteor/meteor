@@ -60,10 +60,14 @@ class EnvironmentVariableAsync {
     }
 
     return Meteor._runAsync(
-      function () {
+      async function () {
+        let ret;
         Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
         Meteor._updateAslStore(UPPER_CALL_DYNAMICS_KEY_NAME, dynamics);
-        return func();
+        // Here we should await the result of func() instead of
+        // return func(); because the ret may be another Promise.
+        ret = await func();
+        return ret;
       },
       self,
       Object.assign(

@@ -117,9 +117,9 @@ Tinytest.addAsync("environment - bindEnvironment", async function (test) {
 
   // Inside a withValue
 
-  await CurrentFoo.withValue(22, async function () {
+  await CurrentFoo.withValue(22, function () {
     test.equal(CurrentFoo.get(), 22);
-    await test_f();
+    test_f();
     test.equal(CurrentFoo.get(), 22);
   });
 
