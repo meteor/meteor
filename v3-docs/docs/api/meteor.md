@@ -395,7 +395,7 @@ even if the method's writes are not available yet, you can specify an
 `onResultReceived` callback to [`Meteor.apply`](#Meteor-apply).
 
 ::: warning
-Use `Meteor.call` only to invoke sync method. If you want to call invoke async methods, use `Meteor.callAsync`.
+Use `Meteor.call` only to call methods that do not have a stub, or have a sync stub. If you want to call methods with an async stub, `Meteor.callAsync` can be used with any method.
 :::
 
 
