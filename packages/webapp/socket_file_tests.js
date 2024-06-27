@@ -102,7 +102,6 @@ function closeServer({ httpServer, server }) {
     httpServer.on(
       "listening",
       Meteor.bindEnvironment(() => {
-        console.log('Port :' + httpServer.address().port);
         process.env.PORT = "";
         process.env.UNIX_SOCKET_PATH = "";
         process.env.UNIX_SOCKET_GROUP = "";
