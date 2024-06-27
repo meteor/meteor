@@ -85,7 +85,8 @@ To ensure other code will not run while an async stub is running, async stubs ca
 - indexedDB
 - web workers
 - any other async web api's that wait on macrotasks
-- Using these API's could allow other code to run before the async stub finishes.
+
+Using these API's could allow other code to run before the async stub finishes.
 
 If one of these API's are used, a warning will be shown in the console:
 
