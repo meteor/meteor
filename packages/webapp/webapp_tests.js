@@ -235,29 +235,29 @@ Tinytest.addAsync(
 
 // Regression test: `generateBoilerplateInstance` should not change
 // `__meteor_runtime_config__`.
-// Tinytest.addAsync(
-//   "webapp - generating boilerplate should not change runtime config",
-//   async function (test) {
-//     // Set a dummy key in the runtime config served in the
-//     // boilerplate. Test that the dummy key appears in the boilerplate,
-//     // but not in __meteor_runtime_config__ after generating the
-//     // boilerplate.
-//
-//     test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
-//
-//     const boilerplate = WebAppInternals.generateBoilerplateInstance(
-//       "web.browser",
-//       [], // empty manifest
-//       { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
-//     );
-//
-//     const stream = boilerplate.toHTMLStream();
-//     const boilerplateHtml = await streamToString(stream)
-//     test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
-//
-//     test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
-//   }
-// );
+Tinytest.addAsync(
+  "webapp - generating boilerplate should not change runtime config",
+  async function (test) {
+    // Set a dummy key in the runtime config served in the
+    // boilerplate. Test that the dummy key appears in the boilerplate,
+    // but not in __meteor_runtime_config__ after generating the
+    // boilerplate.
+
+    test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+
+    const boilerplate = WebAppInternals.generateBoilerplateInstance(
+      "web.browser",
+      [], // empty manifest
+      { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
+    );
+
+    const stream = boilerplate.toHTMLStream();
+    const boilerplateHtml = await streamToString(stream)
+    test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
+
+    test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+  }
+);
 
 Tinytest.addAsync(
   "webapp - WebAppInternals.registerBoilerplateDataCallback",
