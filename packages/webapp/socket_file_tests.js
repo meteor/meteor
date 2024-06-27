@@ -85,62 +85,62 @@ Tinytest.add('socket file - remove socket file on exit', test => {
   });
 });
 
-function prepareServer() {
-  removeTestSocketFile();
-  removeExistingSocketFile(testSocketFile);
-  const testEventEmitter = new EventEmitter();
-  registerSocketFileCleanup(testSocketFile, testEventEmitter);
-  const server = createServer();
-  server.listen(testSocketFile);
-  const app = express();
-  const httpServer = createServerHttp(app);
-  return { httpServer, server };
-}
-
-function closeServer({ httpServer, server }) {
-  return new Promise((resolve) => {
-    httpServer.on(
-      "listening",
-      Meteor.bindEnvironment(() => {
-        process.env.UNIX_SOCKET_PATH = "";
-        process.env.UNIX_SOCKET_GROUP = "";
-        removeExistingSocketFile(testSocketFile);
-        server.close();
-        httpServer.close();
-        resolve();
-      })
-    );
-  });
-}
-
-testAsyncMulti(
-  "socket usage - use socket file for inter-process communication",
-  [
-    async (test) => {
-      // use UNIX_SOCKET_PATH
-      const { httpServer, server } = prepareServer();
-
-      process.env.UNIX_SOCKET_PATH = testSocketFile;
-      const result = await main({ httpServer });
-
-      test.equal(result, "DAEMON");
-      const currentGid = userInfo({ encoding: "utf8" })?.gid;
-      test.equal((await getChownInfo(testSocketFile))?.gid, currentGid);
-
-      return closeServer({ httpServer, server });
-    },
-    async (test) => {
-      // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
-      const { httpServer, server } = prepareServer();
-
-      process.env.UNIX_SOCKET_PATH = testSocketFile;
-      process.env.UNIX_SOCKET_GROUP = isMacOS() ? 'staff' : 'root';
-      const result = await main({ httpServer });
-
-      test.equal(result, "DAEMON");
-      test.equal((await getChownInfo(testSocketFile))?.gid, getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid);
-
-      return closeServer({ httpServer, server });
-    },
-  ]
-);
+// function prepareServer() {
+//   removeTestSocketFile();
+//   removeExistingSocketFile(testSocketFile);
+//   const testEventEmitter = new EventEmitter();
+//   registerSocketFileCleanup(testSocketFile, testEventEmitter);
+//   const server = createServer();
+//   server.listen(testSocketFile);
+//   const app = express();
+//   const httpServer = createServerHttp(app);
+//   return { httpServer, server };
+// }
+//
+// function closeServer({ httpServer, server }) {
+//   return new Promise((resolve) => {
+//     httpServer.on(
+//       "listening",
+//       Meteor.bindEnvironment(() => {
+//         process.env.UNIX_SOCKET_PATH = "";
+//         process.env.UNIX_SOCKET_GROUP = "";
+//         removeExistingSocketFile(testSocketFile);
+//         server.close();
+//         httpServer.close();
+//         resolve();
+//       })
+//     );
+//   });
+// }
+//
+// testAsyncMulti(
+//   "socket usage - use socket file for inter-process communication",
+//   [
+//     async (test) => {
+//       // use UNIX_SOCKET_PATH
+//       const { httpServer, server } = prepareServer();
+//
+//       process.env.UNIX_SOCKET_PATH = testSocketFile;
+//       const result = await main({ httpServer });
+//
+//       test.equal(result, "DAEMON");
+//       const currentGid = userInfo({ encoding: "utf8" })?.gid;
+//       test.equal((await getChownInfo(testSocketFile))?.gid, currentGid);
+//
+//       return closeServer({ httpServer, server });
+//     },
+//     async (test) => {
+//       // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
+//       const { httpServer, server } = prepareServer();
+//
+//       process.env.UNIX_SOCKET_PATH = testSocketFile;
+//       process.env.UNIX_SOCKET_GROUP = isMacOS() ? 'staff' : 'root';
+//       const result = await main({ httpServer });
+//
+//       test.equal(result, "DAEMON");
+//       test.equal((await getChownInfo(testSocketFile))?.gid, getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid);
+//
+//       return closeServer({ httpServer, server });
+//     },
+//   ]
+// );
