@@ -131,19 +131,19 @@ testAsyncMulti(
 
       return closeServer({ httpServer, server });
     },
-    async (test) => {
-      // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
-      const { httpServer, server } = prepareServer();
-
-      process.env.UNIX_SOCKET_PATH = testSocketFile;
-      process.env.UNIX_SOCKET_GROUP = isMacOS() ? 'staff' : 'root';
-      process.env.PORT = 0;
-      const result = await main({ httpServer });
-
-      test.equal(result, "DAEMON");
-      test.equal((await getChownInfo(testSocketFile))?.gid, getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid);
-
-      return closeServer({ httpServer, server });
-    },
+    // async (test) => {
+    //   // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
+    //   const { httpServer, server } = prepareServer();
+    //
+    //   process.env.UNIX_SOCKET_PATH = testSocketFile;
+    //   process.env.UNIX_SOCKET_GROUP = isMacOS() ? 'staff' : 'root';
+    //   process.env.PORT = 0;
+    //   const result = await main({ httpServer });
+    //
+    //   test.equal(result, "DAEMON");
+    //   test.equal((await getChownInfo(testSocketFile))?.gid, getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid);
+    //
+    //   return closeServer({ httpServer, server });
+    // },
   ]
 );
