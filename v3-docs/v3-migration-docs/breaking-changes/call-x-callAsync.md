@@ -6,7 +6,7 @@ In fact, we log a warning message if you use `Meteor.call` to call a method with
 
 `Meteor.callAsync` is the standard for calling methods and supports any method, including those that have an async method stub.
 
-Here is also important to remember what a stub is. A stub is a client-side simulation of the server-side method that runs immediately when the method is invoked, allowing the client to update its state optimistically before receiving the server's response. So, basically any MongoDB function (insertAsync, updateAsync, etc...) that's called inside a method it's considered a stub.
+Here is also important to remember what a stub is. A stub is a client-side simulation of the server-side method that runs immediately when the method is invoked, allowing the client to update its state optimistically before receiving the server's response. So, basically any Meteor method that is defined on the client is considered a stub.
 
 # How to migrate from Meteor.call to Meteor.callAsync
 
