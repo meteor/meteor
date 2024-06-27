@@ -84,7 +84,7 @@ To ensure other code will not run while an async stub is running, async stubs ca
 - setTimeout or setImmediate
 - indexedDB
 - web workers
-- any other web api that schedules macrotasks
+- any other async web api's that wait on macrotasks
 - Using these API's could allow other code to run before the async stub finishes.
 
 If one of these API's are used, a warning will be shown in the console:
