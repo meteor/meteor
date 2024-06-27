@@ -117,33 +117,33 @@ function closeServer({ httpServer, server }) {
 testAsyncMulti(
   "socket usage - use socket file for inter-process communication",
   [
-    async (test) => {
-      // use UNIX_SOCKET_PATH
-      const { httpServer, server } = prepareServer();
-
-      process.env.UNIX_SOCKET_PATH = testSocketFile;
-      process.env.PORT = 0;
-      const result = await main({ httpServer });
-
-      test.equal(result, "DAEMON");
-      const currentGid = userInfo({ encoding: "utf8" })?.gid;
-      test.equal((await getChownInfo(testSocketFile))?.gid, currentGid);
-
-      return closeServer({ httpServer, server });
-    },
     // async (test) => {
-    //   // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
+    //   // use UNIX_SOCKET_PATH
     //   const { httpServer, server } = prepareServer();
     //
     //   process.env.UNIX_SOCKET_PATH = testSocketFile;
-    //   process.env.UNIX_SOCKET_GROUP = isMacOS() ? 'staff' : 'root';
     //   process.env.PORT = 0;
     //   const result = await main({ httpServer });
     //
     //   test.equal(result, "DAEMON");
-    //   test.equal((await getChownInfo(testSocketFile))?.gid, getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid);
+    //   const currentGid = userInfo({ encoding: "utf8" })?.gid;
+    //   test.equal((await getChownInfo(testSocketFile))?.gid, currentGid);
     //
     //   return closeServer({ httpServer, server });
     // },
+    async (test) => {
+      // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
+      const { httpServer, server } = prepareServer();
+
+      process.env.UNIX_SOCKET_PATH = testSocketFile;
+      process.env.UNIX_SOCKET_GROUP = isMacOS() ? 'staff' : 'root';
+      process.env.PORT = 0;
+      const result = await main({ httpServer });
+
+      test.equal(result, "DAEMON");
+      test.equal((await getChownInfo(testSocketFile))?.gid, getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid);
+
+      return closeServer({ httpServer, server });
+    },
   ]
 );
