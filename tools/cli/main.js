@@ -1174,7 +1174,10 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   }
 
   try {
-    const child = await import("./dev-bundle-bin-commands")
+    const { getChildProcess } =  require("./dev-bundle-bin-commands")
+
+    const child = await getChildProcess({ isFirstTry: false })
+
     // If we spawned a process to handle a dev_bundle/bin command like
     // `meteor npm` or `meteor node`, then don't run any other tool code.
 
