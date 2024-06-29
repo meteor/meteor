@@ -28,12 +28,6 @@ export function warnUsingOldApi(methodName, collectionName, isCalledFromAsync) {
 Mongo = {};
 
 /**
- * @summary A record of all defined collections
- * @type {Map<string, Mongo.Collection>}
- */
-Mongo._collections = new Map();
-
-/**
  * @summary Constructor for a Collection
  * @locus Anywhere
  * @instancename collection
@@ -529,6 +523,13 @@ Object.assign(Mongo.Collection, {
 
     return selector;
   },
+
+  /**
+   * @summary A record of all defined Mongo.Collection instances, indexed by collection name.
+   * @type {Map<string, Mongo.Collection>}
+   * @protected
+   */
+  _collections: new Map(),
 });
 
 Object.assign(Mongo.Collection.prototype, {
