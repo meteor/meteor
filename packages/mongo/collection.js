@@ -974,7 +974,7 @@ Mongo.Collection.Cursor = Mongo.Cursor;
 Mongo.Collection.ObjectID = Mongo.ObjectID;
 
 /**
- * @summary Retrieve a Meteor collection instance by name. Only collections defined with [`new Mongo.Collection(...)`](#collections) are available with this method. For plain MongoDB collections, you'll want to look at [`rawDatabase()`](#mongo_collection_raw_database).
+ * @summary Retrieve a Meteor collection instance by name. Only collections defined with [`new Mongo.Collection(...)`](#collections) are available with this method. For plain MongoDB collections, you'll want to look at [`rawDatabase()`](#Mongo-Collection-rawDatabase).
  * @locus Anywhere
  * @method get
  * @memberof Mongo.Collection
