@@ -979,7 +979,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
  * @method get
  * @memberof Mongo.Collection
  * @static
- * @param {string} name
+ * @param {string} name Name of your collection as it was defined with `new Mongo.Collection()`.
  * @returns {Mongo.Collection | undefined}
  */
 Mongo.Collection.get = function get(name) {
