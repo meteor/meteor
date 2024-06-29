@@ -468,7 +468,7 @@ Object.assign(Mongo.Collection, {
    * @returns {Mongo.Collection | undefined}
    */
   get(name) {
-    return Mongo._collections.get(name);
+    return this._collections.get(name);
   },
 
   _publishCursor(cursor, sub, collection) {
