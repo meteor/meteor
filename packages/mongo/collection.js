@@ -982,7 +982,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
  * @param {string} name Name of your collection as it was defined with `new Mongo.Collection()`.
  * @returns {Mongo.Collection | undefined}
  */
-Mongo.Collection.get = function get(name) {
+Mongo.Collection.get = function(name) {
   return Mongo._collections.get(name);
 }
 
