@@ -464,6 +464,19 @@ Object.assign(Mongo.Collection.prototype, {
 });
 
 Object.assign(Mongo.Collection, {
+  /**
+   * @summary Retrieve a Meteor collection instance by name. Only collections defined with [`new Mongo.Collection(...)`](#collections) are available with this method. For plain MongoDB collections, you'll want to look at [`rawDatabase()`](#Mongo-Collection-rawDatabase).
+   * @locus Anywhere
+   * @method get
+   * @memberof Mongo.Collection
+   * @static
+   * @param {string} name Name of your collection as it was defined with `new Mongo.Collection()`.
+   * @returns {Mongo.Collection | undefined}
+   */
+  get(name) {
+    return Mongo._collections.get(name);
+  },
+
   _publishCursor(cursor, sub, collection) {
     var observeHandle = cursor.observeChanges(
       {
@@ -972,19 +985,6 @@ Mongo.Collection.Cursor = Mongo.Cursor;
  * @deprecated in 0.9.1
  */
 Mongo.Collection.ObjectID = Mongo.ObjectID;
-
-/**
- * @summary Retrieve a Meteor collection instance by name. Only collections defined with [`new Mongo.Collection(...)`](#collections) are available with this method. For plain MongoDB collections, you'll want to look at [`rawDatabase()`](#Mongo-Collection-rawDatabase).
- * @locus Anywhere
- * @method get
- * @memberof Mongo.Collection
- * @static
- * @param {string} name Name of your collection as it was defined with `new Mongo.Collection()`.
- * @returns {Mongo.Collection | undefined}
- */
-Mongo.Collection.get = function(name) {
-  return Mongo._collections.get(name);
-}
 
 /**
  * @deprecated in 0.9.1
