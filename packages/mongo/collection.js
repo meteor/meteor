@@ -31,7 +31,7 @@ Mongo = {};
  * @summary A record of all defined collections
  * @type {Map<string, Mongo.Collection>}
  */
-Mongo.Collections = new Map();
+Mongo._collections = new Map();
 
 /**
  * @summary Constructor for a Collection
@@ -170,7 +170,7 @@ Mongo.Collection = function Collection(name, options) {
     });
   }
 
-  Mongo.Collections.set(this._name, this);
+  Mongo._collections.set(this._name, this);
 };
 
 Object.assign(Mongo.Collection.prototype, {
