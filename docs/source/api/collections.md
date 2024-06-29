@@ -630,6 +630,7 @@ if no `deny` rules return `true` and at least one `allow` rule returns
 The methods (like `update` or `insert`) you call on the resulting _raw_ collection return promises and can be used outside of a Fiber.
 
 {% apibox "Mongo.Collection#rawDatabase" %}
+{% apibox "Mongo.Collection.get" short:false %}
 
 <h2 id="mongo_cursor">Cursors</h2>
 
