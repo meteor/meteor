@@ -974,6 +974,15 @@ Mongo.Collection.Cursor = Mongo.Cursor;
 Mongo.Collection.ObjectID = Mongo.ObjectID;
 
 /**
+ * @summary Retrieve a Meteor collection instance by name.
+ * @param {string} name
+ * @returns {Mongo.Collection | undefined}
+ */
+Mongo.Collection.get = function get(name) {
+  return Mongo._collections.get(name);
+}
+
+/**
  * @deprecated in 0.9.1
  */
 Meteor.Collection = Mongo.Collection;
