@@ -974,7 +974,8 @@ Mongo.Collection.Cursor = Mongo.Cursor;
 Mongo.Collection.ObjectID = Mongo.ObjectID;
 
 /**
- * @summary Retrieve a Meteor collection instance by name.
+ * @summary Retrieve a Meteor collection instance by name. Only collections defined with Meteor's `new Mongo.Collection(<name>, ...)` are available.
+ * @locus Anywhere
  * @param {string} name
  * @returns {Mongo.Collection | undefined}
  */
