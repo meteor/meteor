@@ -164,7 +164,7 @@ Mongo.Collection = function Collection(name, options) {
     });
   }
 
-  Mongo._collections.set(this._name, this);
+  Mongo.Collection._collections.set(this._name, this);
 };
 
 Object.assign(Mongo.Collection.prototype, {
