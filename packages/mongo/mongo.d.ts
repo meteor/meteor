@@ -89,7 +89,7 @@ export namespace Mongo {
      * Plain MongoDB collections are not available by this method.
      * @param name The name of the collection instance.
      */
-    get<
+    collection<
         TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
     >(name: string): TCollection;
   }

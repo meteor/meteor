@@ -449,8 +449,8 @@ Tinytest.add('collection - get collection by name',
         const collectionName = 'get' + test.id;
         const collection = new Mongo.Collection(collectionName);
 
-        test.ok(Mongo.Collection.get(collectionName) instanceof Mongo.Collection);
-        test.equal(Mongo.Collection.get(collectionName), collection);
+        test.ok(Mongo.collection(collectionName) instanceof Mongo.Collection);
+        test.equal(Mongo.collection(collectionName), collection);
     }
 );
 

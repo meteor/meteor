@@ -164,7 +164,7 @@ Mongo.Collection = function Collection(name, options) {
     });
   }
 
-  Mongo.Collection._collections.set(this._name, this);
+  Mongo._collections.set(this._name, this);
 };
 
 Object.assign(Mongo.Collection.prototype, {
@@ -458,19 +458,6 @@ Object.assign(Mongo.Collection.prototype, {
 });
 
 Object.assign(Mongo.Collection, {
-  /**
-   * @summary Retrieve a Meteor collection instance by name. Only collections defined with [`new Mongo.Collection(...)`](#collections) are available with this method. For plain MongoDB collections, you'll want to look at [`rawDatabase()`](#Mongo-Collection-rawDatabase).
-   * @locus Anywhere
-   * @method get
-   * @memberof Mongo.Collection
-   * @static
-   * @param {string} name Name of your collection as it was defined with `new Mongo.Collection()`.
-   * @returns {Mongo.Collection | undefined}
-   */
-  get(name) {
-    return this._collections.get(name);
-  },
-
   _publishCursor(cursor, sub, collection) {
     var observeHandle = cursor.observeChanges(
       {
@@ -523,13 +510,6 @@ Object.assign(Mongo.Collection, {
 
     return selector;
   },
-
-  /**
-   * @summary A record of all defined Mongo.Collection instances, indexed by collection name.
-   * @type {Map<string, Mongo.Collection>}
-   * @protected
-   */
-  _collections: new Map(),
 });
 
 Object.assign(Mongo.Collection.prototype, {
@@ -945,6 +925,28 @@ Object.assign(Mongo.Collection.prototype, {
     return self._driver.mongo.db;
   },
 });
+
+Object.assign(Mongo, {
+  /**
+   * @summary Retrieve a Meteor collection instance by name. Only collections defined with [`new Mongo.Collection(...)`](#collections) are available with this method. For plain MongoDB collections, you'll want to look at [`rawDatabase()`](#Mongo-Collection-rawDatabase).
+   * @locus Anywhere
+   * @memberof Mongo
+   * @static
+   * @param {string} name Name of your collection as it was defined with `new Mongo.Collection()`.
+   * @returns {Mongo.Collection | undefined}
+   */
+  collection(name) {
+    return this._collections.get(name);
+  },
+
+  /**
+   * @summary A record of all defined Mongo.Collection instances, indexed by collection name.
+   * @type {Map<string, Mongo.Collection>}
+   * @memberof Mongo
+   * @protected
+   */
+  _collections: new Map(),
+})
 
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {
