@@ -70,7 +70,7 @@ Meteor.methods({
 
 :::
 
-# What are the limitations of Meteor.callAsync
+# Considerations for Effective Use of Meteor.callAsync
 
 When we introduced [async Method stubs](https://guide.meteor.com/2.8-migration.html#callasync) the implementation brought some [limitations](https://github.com/zodern/fix-async-stubs#:~:text=Specifically%2C%20while%20an,used%20in%20stubs).
 
