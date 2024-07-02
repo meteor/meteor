@@ -1274,6 +1274,11 @@ class Target {
           continue;
         }
 
+        if (await resource.hasPendingErrors?.()) {
+          await resource.reportPendingErrors();
+          break;
+        }
+
         if (['js', 'css'].includes(resource.type)) {
           if (resource.type === 'css' && ! isWeb) {
             // XXX might be nice to throw an error here, but then we'd
