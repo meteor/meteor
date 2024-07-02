@@ -60,14 +60,10 @@ class EnvironmentVariableAsync {
     }
 
     return Meteor._runAsync(
-      async function () {
-        let ret;
+      function () {
         Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
         Meteor._updateAslStore(UPPER_CALL_DYNAMICS_KEY_NAME, dynamics);
-        // Here we should await the result of func() instead of
-        // return func(); because the ret may be another Promise.
-        ret = await func();
-        return ret;
+        return func();
       },
       self,
       Object.assign(
@@ -168,15 +164,19 @@ Meteor.bindEnvironment = (func, onException, _this) => {
 
     var runWithEnvironment = function () {
       return Meteor._runAsync(
-        async () => {
+        () => {
           let ret;
           try {
             if (currentSlot) {
               Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, dynamics);
             }
-            ret = await func.apply(_this, args);
+            ret = func.apply(_this, args);
           } catch (e) {
             onException(e);
+          }
+          // Using this strategy to be consistent between client and server and stop always returning a promise from the server
+          if (Meteor._isPromise(ret)) {
+            ret.catch(onException);
           }
           return ret;
         },
