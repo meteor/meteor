@@ -1,29 +1,26 @@
-# Meteor.call x Meteor.callAsync
+# Can I still use Meteor.call?
 
+You can, but we recommend you use it only to call methods that do not have a method stub, or when the method stub is synchronous.
 
+In fact, we log a warning message if you use `Meteor.call` to call a method with an async method stub since it can lead to unexpected behavior.
 
-::: tip
+`Meteor.callAsync` is the standard for calling methods and supports any method, including those that have an async method stub.
 
-It is recommened to use `Meteor.callAsync` instead of `Meteor.call` because of how our
-async API works. `Meteor.call` is still available but it is not recommended to use it, it
-can lead to unexpected behavior.
+Here is also important to remember what a stub is. A stub is a client-side simulation of the server-side method that runs immediately when the method is invoked, allowing the client to update its state optimistically before receiving the server's response. So, basically any Meteor method that is defined on the client is considered a stub.
 
-Using `Meteor.callAsync` will make your code more predictable and easier to maintain.
-
-:::
+# How to migrate from Meteor.call to Meteor.callAsync
 
 Example of how to migrate from `Meteor.call` to `Meteor.callAsync`:
 
-
 ::: code-group
 
-
 ```js [v2-client.jsx]
-import { Meteor } from 'meteor/meteor'
+import { Meteor } from "meteor/meteor";
 
 let data, error;
 
-Meteor.call('getAllData', (err, res) => { // [!code highlight]
+Meteor.call("getAllData", (err, res) => {
+  // [!code highlight]
   if (err) {
     error = err;
   } else {
@@ -32,105 +29,67 @@ Meteor.call('getAllData', (err, res) => { // [!code highlight]
 });
 
 // render data or error
-
-
 ```
 
-
 ```js [v2-server.js]
-import { Meteor } from 'meteor/meteor'
-import { Mongo } from 'meteor/mongo'
+import { Meteor } from "meteor/meteor";
+import { Mongo } from "meteor/mongo";
 
-const MyCollection = new Mongo.Collection('myCollection');
+const MyCollection = new Mongo.Collection("myCollection");
 
 Meteor.methods({
   getAllData() {
     return MyCollection.find().fetch(); // [!code highlight]
-  }
+  },
 });
 ```
 
 ```js [v3-client.jsx]
-import { Meteor } from 'meteor/meteor'
+import { Meteor } from "meteor/meteor";
 
 try {
-  const data = await Meteor.callAsync('getAllData'); // [!code highlight]
+  const data = await Meteor.callAsync("getAllData"); // [!code highlight]
   // render data
 } catch (error) {
   // render error
 }
-
 ```
 
 ```js [v3-server.js]
-import { Meteor } from 'meteor/meteor'
-import { Mongo } from 'meteor/mongo'
+import { Meteor } from "meteor/meteor";
+import { Mongo } from "meteor/mongo";
 
-const MyCollection = new Mongo.Collection('myCollection');
+const MyCollection = new Mongo.Collection("myCollection");
 
 Meteor.methods({
   async getAllData() {
     return await MyCollection.find().fetchAsync(); // [!code highlight]
-  }
+  },
 });
-
 ```
 
 :::
 
-## Rules of using `Meteor.callAsync` & `Meteor.call`
+# Considerations for Effective Use of Meteor.callAsync
 
-::: tip 
-It is not recommended to use concurrent calls.
-Use `await` for your `Meteor.callAsync`.
-:::
+When we introduced [async Method stubs](https://guide.meteor.com/2.8-migration.html#callasync) the implementation brought some [limitations](https://github.com/zodern/fix-async-stubs#:~:text=Specifically%2C%20while%20an,used%20in%20stubs).
 
-here are a few examples of cases where you should use `Meteor.callAsync` instead of `Meteor.call`:
+Those limitations were addressed in this [package](https://github.com/zodern/fix-async-stubs/) created by [Zodern](https://github.com/zodern), and later, we moved the solution to the [core](https://github.com/meteor/meteor/blob/ecdfd3c610fbe5334eee024702fe0c354944f58b/packages/ddp-client/client/queueStubsHelpers.js). 
 
-```js
-import { Meteor } from 'meteor/meteor'
+But there is no perfect solution to the problems with async stubs.
 
-Meteor.call("someMethod", (err, res) => { // [!code error] This is not ok
-  if (err) {
-    console.log(err);
-  } else {
-    console.log(res);
-  }
-});
+To ensure other code will not run while an async stub is running, async stubs can not use these API's:
 
+- fetch/XMLHttpRequest
+- setTimeout or setImmediate
+- indexedDB
+- web workers
+- any other async web api's that wait on macrotasks
 
-Meteor.callAsync('someMethod') // [!code error] This is not ok
-  .then(data => console.log(data))
-  .catch(err => console.log(err));
+Using these API's could allow other code to run before the async stub finishes.
 
-// it is not recommended to use concurrent calls
+If one of these API's are used, a warning will be shown in the console:
 
-Promise.all([  // [!code error] This is not ok
-  Meteor.callAsync('someMethod'),
-  Meteor.callAsync('someMethod')
-]).then(([data1, data2]) => {
-  console.log(data1, data2);
-});
-
-// Ok section
-
-Meteor.call("someMethod", (err, res) => { // [!code ++]
-  if (err) {
-    console.log(err);
-  } else {
-    console.log(res);
-  }
-});
-
-await Meteor.callAsync('someMethod') // this is ok // [!code ++]
-
-// this is also ok
-Meteor.callAsync('someMethod').then(data => { // [!code ++]
-  console.log(data);
-  Meteor.callAsync('someMethod').then(data2 => {
-    console.log(data2);
-  });
-});
-
-
+```
+Method stub (<method name>) took too long and could cause unexpected problems. Learn more at https://v3-migration-docs.meteor.com/breaking-changes/call-x-callAsync.html#what-are-the-limitations-of-call-meteor-callasync
 ```
