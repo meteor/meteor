@@ -171,12 +171,13 @@ Meteor.bindEnvironment = (func, onException, _this) => {
               Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, dynamics);
             }
             ret = func.apply(_this, args);
+
+            // Using this strategy to be consistent between client and server and stop always returning a promise from the server
+            if (Meteor._isPromise(ret)) {
+              ret = ret.catch(onException);
+            }
           } catch (e) {
             onException(e);
-          }
-          // Using this strategy to be consistent between client and server and stop always returning a promise from the server
-          if (Meteor._isPromise(ret)) {
-            ret.catch(onException);
           }
           return ret;
         },

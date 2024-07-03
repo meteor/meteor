@@ -41,7 +41,6 @@ export default class PuppeteerClient extends Client {
     // From a security perspective this is not ideal, in the future would be worthwhile
     // to configure to include only for CI based setups
     this.browser = await this.npmPackageExports.launch({
-      protocolTimeout: 30000,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     this.page = await this.browser.newPage();
