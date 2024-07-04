@@ -1203,7 +1203,7 @@ Object.assign(Subscription.prototype, {
     // Both conventional and async publish handler functions are supported.
     // If an object is returned with a then() function, it is either a promise
     // or thenable and will be resolved asynchronously.
-    const isThenable =  
+    const isThenable =
       resultOrThenable && typeof resultOrThenable.then === 'function';
     if (isThenable) {
       try {
