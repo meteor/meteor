@@ -935,7 +935,7 @@ Object.assign(Mongo, {
    * @param {string} name Name of your collection as it was defined with `new Mongo.Collection()`.
    * @returns {Mongo.Collection | undefined}
    */
-  collection(name) {
+  getCollection(name) {
     return this._collections.get(name);
   },
 

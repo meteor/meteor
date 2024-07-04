@@ -837,7 +837,7 @@ const handle = cursor.observeChanges({
 setTimeout(() => handle.stop(), 5000);
 ```
 
-{% apibox "Mongo.collection" %}
+{% apibox "Mongo.getCollection" %}
 {% apibox "Mongo.ObjectID" %}
 
 `Mongo.ObjectID` follows the same API as the [Node MongoDB driver
