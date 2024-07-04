@@ -12,9 +12,9 @@
       "integrity": "sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw=="
     },
     "acorn": {
-      "version": "8.12.0",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.12.0.tgz",
-      "integrity": "sha512-RTvkC4w+KNXrM39/lWCUaG0IbRkWdCv7W/IOW9oU6SawyxulvkQy5HQPVTKxEjczcUvapcrw3cFx/60VN/NRNw=="
+      "version": "8.12.1",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.12.1.tgz",
+      "integrity": "sha512-tcpGyI9zbizT9JbV6oYE477V6mTlXvvi0T0G3SNIYE2apm/G5huBa1+K89VGeovbg+jycCrfhl3ADxErOuO6Jg=="
     },
     "estree-walker": {
       "version": "2.0.2",

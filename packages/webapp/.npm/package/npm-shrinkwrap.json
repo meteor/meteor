@@ -17,9 +17,9 @@
       "integrity": "sha512-Yv0k4bXGOH+8a+7bELd2PqHQsuiANB+A8a4gnQrkRWzrkKlb6KHaVvyXhqs04sVW/OWlbPyYxRgYlIXLfrufMQ=="
     },
     "@types/express-serve-static-core": {
-      "version": "4.19.4",
-      "resolved": "https://registry.npmjs.org/@types/express-serve-static-core/-/express-serve-static-core-4.19.4.tgz",
-      "integrity": "sha512-ZQSvOi1hrdICnPt6e2eiFGx4iPIqySC5pEWkWfofkyEi7A+ujNy+4W2lzM8n2B/8LBm4d54oZyIOUdCFpMCCAA=="
+      "version": "4.19.5",
+      "resolved": "https://registry.npmjs.org/@types/express-serve-static-core/-/express-serve-static-core-4.19.5.tgz",
+      "integrity": "sha512-y6W03tvrACO72aijJ5uF02FRq5cgDR9lUxddQ8vyF+GvmjJQqbzDcJngEjURc+ZsG31VI3hODNZJ2URj86pzmg=="
     },
     "@types/http-errors": {
       "version": "2.0.4",
@@ -32,9 +32,9 @@
       "integrity": "sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w=="
     },
     "@types/node": {
-      "version": "20.14.6",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.14.6.tgz",
-      "integrity": "sha512-JbA0XIJPL1IiNnU7PFxDXyfAwcwVVrOoqyzzyQTyMeVhBzkJVMSkC1LlVsRQ2lpqiY4n6Bb9oCS6lzDKVQxbZw=="
+      "version": "20.14.9",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.14.9.tgz",
+      "integrity": "sha512-06OCtnTXtWOZBJlRApleWndH4JsRVs1pDCc8dLSQp+7PpUpX3ePdHyeNSFTeSe7FtKyQkrlPvHwJOW3SLd8Oyg=="
     },
     "@types/qs": {
       "version": "6.9.15",
@@ -378,9 +378,9 @@
       "integrity": "sha512-S48WzZW777zhNIrn7gxOlISNAqi9ZC/uQFnRdbeIHhZhCA6UqpkOT8T1G7BvfdgP4Er8gF4sUbaS0i7QvIfCWw=="
     },
     "object-inspect": {
-      "version": "1.13.1",
-      "resolved": "https://registry.npmjs.org/object-inspect/-/object-inspect-1.13.1.tgz",
-      "integrity": "sha512-5qoj1RUiKOMsCCNLV1CBiPYE10sziTsnmNxkAI/rZhiD63CF7IqdFGC/XzjWjpSgLf0LxXX3bDFIh0E18f6UhQ=="
+      "version": "1.13.2",
+      "resolved": "https://registry.npmjs.org/object-inspect/-/object-inspect-1.13.2.tgz",
+      "integrity": "sha512-IRZSRuzJiynemAXPYtPe5BoI/RESNYR7TYm50MC5Mqbd3Jmw5y790sErYw3V6SryFJD64b74qQQs9wn5Bg/k3g=="
     },
     "on-finished": {
       "version": "2.4.1",
