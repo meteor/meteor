@@ -145,6 +145,10 @@ export default defineConfig({
             text: "Package.js",
             link: "/api/package",
           },
+          {
+            text: 'Top Level Await',
+            link: '/api/top-level-await'
+          }
         ],
         collapsed: false,
       },
@@ -314,7 +318,7 @@ export default defineConfig({
         'Copyright (c) 2011 - present <a href="https://www.meteor.com/">Meteor Software</a>.',
     },
     editLink: {
-      pattern: "https://github.com/meteor/meteor/edit/main/v3-docs/docs/:path",
+      pattern: "https://github.com/meteor/meteor/edit/release-3.0/v3-docs/docs/:path",
       text: "Edit this page on GitHub",
     },
   },
