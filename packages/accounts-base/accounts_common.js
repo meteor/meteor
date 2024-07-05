@@ -34,9 +34,17 @@ const VALID_CONFIG_KEYS = [
  */
 export class AccountsCommon {
   constructor(options) {
+    // Validate config options keys
+    for (const key of Object.keys(options)) {
+      if (!VALID_CONFIG_KEYS.includes(key)) {
+        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
+        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
+      }
+    }
+
     // Currently this is read directly by packages like accounts-password
     // and accounts-ui-unstyled.
-    this._options = {};
+    this._options = options || {};
 
     // Note that setting this.connection = null causes this.users to be a
     // LocalCollection, which is not what we want.
@@ -274,15 +282,15 @@ export class AccountsCommon {
     }
 
     // Validate config options keys
-    Object.keys(options).forEach(key => {
+    for (const key of Object.keys(options)) {
       if (!VALID_CONFIG_KEYS.includes(key)) {
         // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
         throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
       }
-    });
+    }
 
     // set values in Accounts._options
-    VALID_CONFIG_KEYS.forEach(key => {
+    for (const key of VALID_CONFIG_KEYS) {
       if (key in options) {
         if (key in this._options) {
           if (key !== 'collection' && (Meteor.isTest && key !== 'clientStorage')) {
@@ -291,7 +299,7 @@ export class AccountsCommon {
         }
         this._options[key] = options[key];
       }
-    });
+    }
 
     if (options.collection && options.collection !== this.users._name && options.collection !== this.users) {
       this.users = this._initializeCollection(options);
