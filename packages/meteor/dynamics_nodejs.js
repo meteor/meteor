@@ -164,13 +164,18 @@ Meteor.bindEnvironment = (func, onException, _this) => {
 
     var runWithEnvironment = function () {
       return Meteor._runAsync(
-        async () => {
+        () => {
           let ret;
           try {
             if (currentSlot) {
               Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, dynamics);
             }
-            ret = await func.apply(_this, args);
+            ret = func.apply(_this, args);
+
+            // Using this strategy to be consistent between client and server and stop always returning a promise from the server
+            if (Meteor._isPromise(ret)) {
+              ret = ret.catch(onException);
+            }
           } catch (e) {
             onException(e);
           }
