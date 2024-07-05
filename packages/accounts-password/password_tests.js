@@ -1690,10 +1690,10 @@ if (Meteor.isServer) (() => {
       });
 
       const newEmail = `${ Random.id() }@turing.com`;
-      await Accounts.addEmail(userId, newEmail);
+      await Accounts.addEmailAsync(userId, newEmail);
 
       const thirdEmail = `${ Random.id() }@turing.com`;
-      await Accounts.addEmail(userId, thirdEmail, true);
+      await Accounts.addEmailAsync(userId, thirdEmail, true);
       const u1 = await Accounts._findUserByQuery({ id: userId })
       test.equal(u1.emails, [
         { address: origEmail, verified: false },
@@ -1733,7 +1733,7 @@ if (Meteor.isServer) (() => {
     });
 
     const newEmail = `${ Random.id() }@turing.com`;
-    await Accounts.addEmail(userId, newEmail);
+    await Accounts.addEmailAsync(userId, newEmail);
     const u1 = await Accounts._findUserByQuery({ id: userId })
     test.equal(u1.emails, [
       { address: newEmail, verified: false },
@@ -1749,10 +1749,10 @@ if (Meteor.isServer) (() => {
     });
 
     const newEmail = `${ Random.id() }@turing.com`;
-    await Accounts.addEmail(userId, newEmail);
+    await Accounts.addEmailAsync(userId, newEmail);
 
     const thirdEmail = origEmail.toUpperCase();
-    await Accounts.addEmail(userId, thirdEmail, true);
+    await Accounts.addEmailAsync(userId, thirdEmail, true);
     const u1 = await Accounts._findUserByQuery({ id: userId })
     test.equal(u1.emails, [
       { address: thirdEmail, verified: true },
@@ -1775,7 +1775,7 @@ if (Meteor.isServer) (() => {
 
     const dupEmail = user1Email.toUpperCase();
     await test.throwsAsync(
-     async () => await Accounts.addEmail(userId2, dupEmail),
+     async () => await Accounts.addEmailAsync(userId2, dupEmail),
       /Email already exists/
     );
 
@@ -1797,10 +1797,10 @@ if (Meteor.isServer) (() => {
     });
 
     const newEmail = `${ Random.id() }@turing.com`;
-    await Accounts.addEmail(userId, newEmail);
+    await Accounts.addEmailAsync(userId, newEmail);
 
     const thirdEmail = `${ Random.id() }@turing.com`;
-    await Accounts.addEmail(userId, thirdEmail, true);
+    await Accounts.addEmailAsync(userId, thirdEmail, true);
     const u1 = await Accounts._findUserByQuery({ id: userId })
     test.equal(u1.emails, [
       { address: origEmail, verified: false },
