@@ -5,11 +5,11 @@ import {
   packageName,
 } from "./common.js";
 import * as classes from "./classNames.js";
-
-import("./style.css");
+import "./style.css";
 
 Meteor.startup(() => {
-  import("./sunburst.js").then(s => main(s.Sunburst));
+  import s from "./sunburst.js";
+  main(s.Sunburst);
 });
 
 async function main(builder) {
@@ -30,7 +30,7 @@ async function main(builder) {
 
   try {
     const data = await fetch(url, { method: "GET" });
-    new builder({ container }).loadJson(await data.json())
+    new builder({ container }).loadJson(await data.json());
   } catch (err) {
     console.error([
       packageName + ": Couldn't load stats for visualization.",

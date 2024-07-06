@@ -11,7 +11,6 @@ ddp-client@2.4.1
 ddp-common@1.4.0
 ddp-server@2.3.3
 diff-sequence@1.1.1
-dynamic-import@0.6.0
 ecmascript@0.15.1
 ecmascript-runtime@0.7.0
 ecmascript-runtime-client@0.11.1

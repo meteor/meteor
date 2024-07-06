@@ -24,7 +24,7 @@ Package.onUse(function(api) {
   api.imply('babel-runtime');
   api.imply('promise');
   // Runtime support for Meteor 1.5 dynamic import(...) syntax.
-  api.imply('dynamic-import');
+  api.use('dynamic-import', ['server', 'client'], { weak: true });
 });
 
 Package.onTest(function(api) {
