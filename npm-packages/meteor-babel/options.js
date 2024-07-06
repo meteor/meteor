@@ -86,7 +86,7 @@ function maybeAddReactPlugins(features, options) {
   if (features && features.react) {
     options.presets.push(require("@babel/preset-react"));
     options.plugins.push(
-      [require("@babel/plugin-proposal-class-properties"), {
+      [require("@babel/plugin-transform-class-properties"), {
         loose: true
       }]
     );
@@ -184,7 +184,7 @@ function getDefaultsForNode8(features) {
     // Not fully supported in Node 8 without the --harmony flag.
     combined.plugins.push(
       require("@babel/plugin-syntax-object-rest-spread"),
-      require("@babel/plugin-proposal-object-rest-spread")
+      require("@babel/plugin-transform-object-rest-spread")
     );
 
     if (features.useNativeAsyncAwait === false) {
@@ -199,6 +199,7 @@ function getDefaultsForNode8(features) {
     }
     // Enable async generator functions proposal.
     combined.plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
+    combined.plugins.push(require("@babel/plugin-transform-modules-commonjs"));
   }
 
   if (! compileModulesOnly) {

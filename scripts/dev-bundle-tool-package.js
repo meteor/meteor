@@ -10,11 +10,11 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "10.5.0",
+    npm: "10.7.0",
     "node-gyp": "9.4.0",
     "@mapbox/node-pre-gyp": "1.0.11",
     typescript: "5.4.5",
-    "@meteorjs/babel": "7.20.0-beta.5",
+    "@meteorjs/babel": "7.21.0-beta.2",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "@meteorjs/reify": "0.25.2",

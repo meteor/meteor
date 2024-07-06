@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=20.12.2.3
+BUNDLE_VERSION=20.14.0.2
 
 
 # OS Check. Put here because here is where we download the precompiled
