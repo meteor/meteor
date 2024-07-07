@@ -941,7 +941,7 @@ function wrapCallback(callback, convertResult) {
 }
 
 /**
- * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).
+ * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will be generated randomly (not using MongoDB's ID construction rules).
  * @locus Anywhere
  * @class
  * @param {String} [hexString] Optional.  The 24-character hexadecimal contents of the ObjectID to create
