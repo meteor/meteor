@@ -25,6 +25,8 @@ addons:
       - libnss3
 
 before_install:
+  - printenv
+  - id -g -n
   - cat /etc/group
   - cat /etc/apt/sources.list
   - python3 --version

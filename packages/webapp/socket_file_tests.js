@@ -134,7 +134,7 @@ testAsyncMulti(
       const { httpServer, server } = prepareServer();
 
       process.env.UNIX_SOCKET_PATH = testSocketFile;
-      process.env.UNIX_SOCKET_GROUP = isMacOS() ? 'staff' : 'root';
+      process.env.UNIX_SOCKET_GROUP = 'travis';
       process.env.UNIX_SOCKET_PERMISSIONS = '777';
       const result = await main({ httpServer });
 
