@@ -25,6 +25,7 @@ addons:
       - libnss3
 
 before_install:
+  - cat /etc/group
   - cat /etc/apt/sources.list
   - python3 --version
   - echo "deb http://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee -a /etc/apt/sources.list
