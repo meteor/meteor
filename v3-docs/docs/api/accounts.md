@@ -815,7 +815,7 @@ insensitive duplicates before updates.
 
 <ApiBox name="Accounts.setUsername" />
 
-<ApiBox name="Accounts.addEmail" />
+<ApiBox name="Accounts.addEmailAsync" />
 
 By default, an email address is added with `{ verified: false }`. Use
 [`Accounts.sendVerificationEmail`](#Accounts-sendVerificationEmail) to send an
