@@ -53,7 +53,7 @@ insensitive duplicates before updates.
 
 {% apibox "Accounts.setUsername" %}
 
-{% apibox "Accounts.addEmail" %}
+{% apibox "Accounts.addEmailAsync" %}
 
 By default, an email address is added with `{ verified: false }`. Use
 [`Accounts.sendVerificationEmail`](#Accounts-sendVerificationEmail) to send an

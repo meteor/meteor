@@ -88,7 +88,7 @@ if (Meteor.isServer) {
 Tinytest.addAsync("environment - bindEnvironment", async function (test) {
   var raised_f;
 
-  var f = await CurrentFoo.withValue(17, function () {
+  var f = CurrentFoo.withValue(17, function () {
     return Meteor.bindEnvironment(function (flag) {
       test.equal(CurrentFoo.get(), 17);
       if (flag)
@@ -100,13 +100,13 @@ Tinytest.addAsync("environment - bindEnvironment", async function (test) {
     });
   });
 
-  var test_f = async function () {
+  var test_f = function () {
     raised_f = null;
 
-    test.equal(await f(false), 12);
+    test.equal(f(false), 12);
     test.equal(raised_f, null);
 
-    test.equal(await f(true), undefined);
+    test.equal(f(true), undefined);
     test.equal(raised_f, "test", 'raised_f should be "test"');
   };
 
@@ -117,9 +117,9 @@ Tinytest.addAsync("environment - bindEnvironment", async function (test) {
 
   // Inside a withValue
 
-  await CurrentFoo.withValue(22, async function () {
+  CurrentFoo.withValue(22, function () {
     test.equal(CurrentFoo.get(), 22);
-    await test_f();
+    test_f();
     test.equal(CurrentFoo.get(), 22);
   });
 
