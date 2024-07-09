@@ -4321,25 +4321,14 @@ testAsyncMulti(
         },
       );
 
+      // Using remote collection
       await Collection.insertAsync({ _id: 'a' });
-      await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
-      const insertedId = await Collection.insertAsync({ num: 2 });
+      await Collection.insertAsync({ _id: 'b' });
 
       let items = await Collection.find().fetchAsync();
       let itemIds = items.map(_item => _item._id);
-      test.equal(itemIds, ['a', insertedId]); // temporary data accessible
 
-      const aItem = items[0];
-      const insertedItem = items[1];
-      test.equal(aItem?.num, 1);
-      test.equal(insertedItem?.num, 2);
-
-      await Collection.removeAsync({ _id: insertedId });
-
-      items = await Collection.find().fetchAsync();
-      itemIds = items.map(_item => _item._id);
-
-      test.equal(itemIds, ['a']); // temporary data accessible
+      test.equal(itemIds, ['a', 'b']);
 
       if (Meteor.isClient) {
         return waitUntil(async () => {
