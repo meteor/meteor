@@ -1488,7 +1488,6 @@ const getGroupInfoUsingGetent = (groupName) => {
     if (name == null || gid == null) return null;
     return { name, gid: Number(gid) };
   } catch (error) {
-    console.error(`Error fetching group info with getent: ${error.message}`);
     return null;
   }
 };
@@ -1502,7 +1501,6 @@ const getGroupInfoFromFile = (groupName) => {
     if (name == null || gid == null) return null;
     return { name, gid: Number(gid) };
   } catch (error) {
-    console.error(`Error fetching group info from file: ${error.message}`);
     return null;
   }
 };
