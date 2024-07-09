@@ -307,7 +307,7 @@ export class AccountsClient extends AccountsCommon {
           if (this._tokenExpiresSoon(result.tokenExpires)) {
             this.makeClientLoggedOut();
           } else {
-            this.callLoginMethod({
+            return this.callLoginMethod({
               methodArguments: [{resume: result.token}],
               // Reconnect quiescence ensures that the user doesn't see an
               // intermediate state before the login method finishes. So we don't
@@ -396,7 +396,7 @@ export class AccountsClient extends AccountsCommon {
     if (!options._suppressLoggingIn) {
       this._setLoggingIn(true);
     }
-    this.connection.apply(
+    return this.connection.applyAsync(
       options.methodName,
       options.methodArguments,
       { wait: true, onResultReceived: onResultReceived },

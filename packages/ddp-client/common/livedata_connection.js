@@ -1789,15 +1789,14 @@ export class Connection {
     if (msg.offendingMessage) Meteor._debug('For: ', msg.offendingMessage);
   }
 
-  _callOnReconnectAndSendAppropriateOutstandingMethods() {
+  async _callOnReconnectAndSendAppropriateOutstandingMethods() {
     const self = this;
     const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
     self._outstandingMethodBlocks = [];
 
     self.onReconnect && self.onReconnect();
-    DDP._reconnectHook.each(callback => {
-      callback(self);
-      return true;
+    await DDP._reconnectHook.forEachAsync(async callback => {
+      await callback(self);
     });
 
     if (isEmpty(oldOutstandingMethodBlocks)) return;
@@ -1904,7 +1903,7 @@ export class Connection {
     }
   }
 
-  onReset() {
+  async onReset() {
     // Send a connect message at the beginning of the stream.
     // NOTE: reset is called even on the first connection, so this is
     // the only place we send this message.
@@ -1977,7 +1976,7 @@ export class Connection {
     // `onReconnect` get executed _before_ ones that were originally
     // outstanding (since `onReconnect` is used to re-establish auth
     // certificates)
-    this._callOnReconnectAndSendAppropriateOutstandingMethods();
+    await this._callOnReconnectAndSendAppropriateOutstandingMethods();
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
