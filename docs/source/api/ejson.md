@@ -8,7 +8,7 @@ types, as well as:
 
  - **Date** (JavaScript `Date`)
  - **Binary** (JavaScript `Uint8Array` or the
-   result of [`EJSON.newBinary`](#ejson_new_binary))
+   result of [`binary.newBinary`](#ejson_new_binary))
  - **Special numbers** (JavaScript `NaN`, `Infinity`, and `-Infinity`)
  - **Regular expressions** (JavaScript `RegExp`)
  - **User-defined types** (see [`EJSON.addType`](#ejson_add_type).  For example,
@@ -39,7 +39,7 @@ and results, Mongo databases, and [`Session`](#session) variables.
 
 {% apibox "EJSON.clone" %}
 
-{% apibox "EJSON.newBinary" %}
+{% apibox "binary.newBinary" %}
 
 Buffers of binary data are represented by `Uint8Array` instances on JavaScript
 platforms that support them.  On implementations of JavaScript that do not
@@ -47,7 +47,7 @@ support `Uint8Array`, binary data buffers are represented by standard arrays
 containing numbers ranging from 0 to 255, and the `$Uint8ArrayPolyfill` key
 set to `true`.
 
-{% apibox "EJSON.isBinary" %}
+{% apibox "binary.isBinary" %}
 
 {% apibox "EJSON.addType" %}
 

@@ -278,8 +278,6 @@ module.exports = [
       {name: "EJSON.toJSONValue", id: "ejson_to_json_value"},
       {name: "EJSON.equals", id: "ejson_equals"},
       {name: "EJSON.clone", id: "ejson_clone"},
-      {name: "EJSON.newBinary", id: "ejson_new_binary"},
-      {name: "EJSON.isBinary", id: "ejson_is_binary"},
       {name: "EJSON.addType", id: "ejson_add_type"},
       [
         {instance: "customType", id: "ejson_type_typeName", name: "typeName"},
@@ -288,6 +286,11 @@ module.exports = [
         {instance: "customType", id: "ejson_type_equals", name: "equals"}
       ]
     ],
+
+  {name: "binary", id: "binary"}, [
+    {name: "binary.newBinary", id: "binary_new_binary"},
+    {name: "binary.isBinary", id: "binary_is_binary"},
+  ],
 
 
     "HTTP", [

@@ -739,7 +739,7 @@ function getOperandBitmask(operand, selector) {
 
   // bindata bitmask
   // You can also use an arbitrarily large BinData instance as a bitmask.
-  if (EJSON.isBinary(operand)) {
+  if (binary.isBinary(operand)) {
     return new Uint8Array(operand.buffer);
   }
 
@@ -796,7 +796,7 @@ function getValueBitmask(value, length) {
   }
 
   // bindata
-  if (EJSON.isBinary(value)) {
+  if (binary.isBinary(value)) {
     return new Uint8Array(value.buffer);
   }
 

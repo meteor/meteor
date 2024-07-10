@@ -1561,7 +1561,7 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
       var cursor = coll.find();
       test.equal(cursor.count(), 1);
       var inColl = coll.findOne();
-      test.isTrue(EJSON.isBinary(inColl.b));
+      test.isTrue(binary.isBinary(inColl.b));
       test.equal(inColl.b, bin);
     }));
   }

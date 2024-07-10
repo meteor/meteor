@@ -158,7 +158,7 @@ false, this fails. If *condition* throws any other error, that error is thrown
 from the call to `check` or `Match.test`. Examples:
 
 {% codeblock lang:js %}
-check(buffer, Match.Where(EJSON.isBinary));
+check(buffer, Match.Where(binary.isBinary));
 
 const NonEmptyString = Match.Where((x) => {
   check(x, String);

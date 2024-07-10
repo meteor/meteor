@@ -14,7 +14,7 @@ for (let i = 0; i < BASE_64_CHARS.length; i++) {
 const encode = array => {
   if (typeof array === "string") {
     const str = array;
-    array = newBinary(str.length);
+    array = binary.newBinary(str.length);
     for (let i = 0; i < str.length; i++) {
       const ch = str.charCodeAt(i);
       if (ch > 0xFF) {
@@ -74,26 +74,6 @@ const encode = array => {
   return answer.join("");
 };
 
-
-
-// XXX This is a weird place for this to live, but it's used both by
-// this package and 'ejson', and we can't put it in 'ejson' without
-// introducing a circular dependency. It should probably be in its own
-// package or as a helper in a package that both 'base64' and 'ejson'
-// use.
-const newBinary = len => {
-  if (typeof Uint8Array === 'undefined' || typeof ArrayBuffer === 'undefined') {
-    const ret = [];
-    for (let i = 0; i < len; i++) {
-      ret.push(0);
-    }
-
-    ret.$Uint8ArrayPolyfill = true;
-    return ret;
-  }
-  return new Uint8Array(new ArrayBuffer(len));
-};
-
 const decode = str => {
   let len = Math.floor((str.length * 3) / 4);
   if (str.charAt(str.length - 1) == '=') {
@@ -103,7 +83,7 @@ const decode = str => {
     }
   }
 
-  const arr = newBinary(len);
+  const arr = binary.newBinary(len);
 
   let one = null;
   let two = null;
@@ -151,4 +131,4 @@ const decode = str => {
   return arr;
 };
 
-export const Base64 = { encode, decode, newBinary };
+export const Base64 = { encode, decode };
