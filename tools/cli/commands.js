@@ -1506,6 +1506,11 @@ https://guide.meteor.com/cordova.html#submitting-android
   }
 
   await files.rm_recursive(buildDir);
+
+  const npmShrinkwrapFilePath = files.pathJoin(bundlePath, 'programs/server/npm-shrinkwrap.json');
+  if (files.exists(npmShrinkwrapFilePath)) {
+    files.chmod(npmShrinkwrapFilePath, 0o644);
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
