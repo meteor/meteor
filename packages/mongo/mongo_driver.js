@@ -191,6 +191,11 @@ MongoConnection = function (url, options) {
   self._oplogHandle = null;
   self._docFetcher = null;
 
+  mongoOptions.driverInfo = {
+    name: 'Meteor',
+    version: "METEOR_VERION" // TODO: however the package version needs to be included
+  }
+  
   self.client = new MongoDB.MongoClient(url, mongoOptions);
   self.db = self.client.db();
 
