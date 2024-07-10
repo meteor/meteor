@@ -236,7 +236,7 @@ export function getCurrentNodeBinDir() {
 
 // Return the top-level directory for this meteor install or checkout
 export function getCurrentToolsDir() {
-  if (process.env.METEOR_WAREHOUSE_DIR) {
+  if (!process.env.SANDBOX && process.env.METEOR_WAREHOUSE_DIR) {
     return pathDirname(realpathSync(pathJoin(process.env.METEOR_WAREHOUSE_DIR, 'meteor')));
   }
 
