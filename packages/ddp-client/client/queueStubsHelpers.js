@@ -224,15 +224,19 @@ export const loadAsyncStubHelpers = () => {
   };
 
   let oldSend = Connection.prototype._send;
-  Connection.prototype._send = function () {
-    if (!queueSend) {
+  Connection.prototype._send = function (params, shouldQueue) {
+    if (this._stream._neverQueued) {
       return oldSend.apply(this, arguments);
+    }
+
+    if (!queueSend && !shouldQueue) {
+      return oldSend.call(this, params);
     }
 
     queueSend = false;
     queueFunction((resolve) => {
       try {
-        oldSend.apply(this, arguments);
+        oldSend.call(this, params);
       } finally {
         resolve();
       }
