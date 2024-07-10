@@ -131,7 +131,7 @@ if (Meteor.isClient) {
       });
     }
   );
-  // Make this is issue is fixed: https://forums.meteor.com/t/back-from-offline-method-does-not-apply-on-server-side/61619
+  // Make sure this is issue is fixed: https://forums.meteor.com/t/back-from-offline-method-does-not-apply-on-server-side/61619
   // PR #13221
   Tinytest.addAsync(
     "accounts - user is in the server as soon as we reconnect",
