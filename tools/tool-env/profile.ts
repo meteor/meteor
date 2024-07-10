@@ -253,7 +253,7 @@ export function Profile<
       ? bucketName.apply(this, arguments as any)
       : bucketName;
 
-    // TODO Test with Profile / use asyncLocalStorage
+    // TODO Test with Profile / use __METEOR_ASYNC_LOCAL_STORAGE
     //const currentStore = asyncLo
     // const currentEntry = Fiber.current
     //   ? Fiber.current.profilerEntry || (Fiber.current.profilerEntry = [])
