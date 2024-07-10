@@ -238,4 +238,15 @@ export const loadAsyncStubHelpers = () => {
       }
     });
   };
+  let _oldSendOutstandingMethodBlocksMessages =
+    Connection.prototype._sendOutstandingMethodBlocksMessages;
+  Connection.prototype._sendOutstandingMethodBlocksMessages = function () {
+    queueFunction((resolve) => {
+      try {
+        _oldSendOutstandingMethodBlocksMessages.apply(this, arguments);
+      } finally {
+        resolve();
+      }
+    });
+  };
 };
