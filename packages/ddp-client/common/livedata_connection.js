@@ -456,7 +456,7 @@ export class Connection {
           this.ready && this.readyDeps.changed();
         },
         stop() {
-          this.connection._send({ msg: 'unsub', id: id });
+          this.connection._sendQueued({ msg: 'unsub', id: id });
           this.remove();
 
           if (callbacks.onStop) {
@@ -613,6 +613,11 @@ export class Connection {
       try {
         stubOptions.stubReturnValue = DDP._CurrentMethodInvocation
           .withValue(invocation, stubInvocation);
+        if (Meteor._isPromise(stubOptions.stubReturnValue)) {
+          Meteor._debug(
+            `Method ${name}: Calling a method that has an async method stub with call/apply can lead to unexpected behaviors. Use callAsync/applyAsync instead.`
+          );
+        }
       } catch (e) {
         stubOptions.exception = e;
       }
@@ -1024,6 +1029,13 @@ export class Connection {
   // Sends the DDP stringification of the given message object
   _send(obj) {
     this._stream.send(DDPCommon.stringifyDDP(obj));
+  }
+
+  // Always queues the call before sending the message
+  // Used, for example, on subscription.[id].stop() to make sure a "sub" message is always called before an "unsub" message
+  // https://github.com/meteor/meteor/issues/13212
+  _sendQueued(obj) {
+    this._send(obj, true);
   }
 
   // We detected via DDP-level heartbeats that we've lost the

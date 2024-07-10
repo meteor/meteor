@@ -13,7 +13,7 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
 import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
-import { once , EventEmitter, on }  from "events"
+
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
   if (s.search("\"") !== -1 || s.search("'") !== -1) {
@@ -405,47 +405,40 @@ Object.assign(AppRunner.prototype, {
 
     self.isRunning = true;
     global.__METEOR_ASYNC_LOCAL_STORAGE.run({}, () =>
-        self._runApp().catch((e) => self._resolvePromise("start", e))
+        self._runApp()
+          .catch((e) => {
+            // There was an unexpected error when building the app
+            // This is not recoverable, so we turn it into an unhandled exception
+            // and crash.
+            setTimeout(() => {
+              throw e;
+            });
+          })
     );
     await self.startPromise;
     self.startPromise = null;
   },
 
-  _findCachedEE: function (name) {
-    if (!this._promiseResolvers[name]) {
-      this._promiseResolvers[name] = new EventEmitter();
-    }
-    return this._promiseResolvers[name];
+  // Creates a promise that can be resolved later by calling _resolvePromise
+  _makePromise (name) {
+    return new Promise((resolve) => {
+      this._promiseResolvers[name] = resolve;
+    });
   },
 
-  /**
-   * @param name
-   * @return {Promise<[any]>}
-   * @private
-   */
-  _makePromise: function (name) {
-    var self = this;
-    const ee = self._findCachedEE(name);
-    return once(ee, name);
-  },
-
-  _resolvePromise: function (name, value) {
-    const ee = this._promiseResolvers[name];
-    if (ee) {
-      ee.emit(name, value);
+  // Resolves a promise already created by _makePromise
+  _resolvePromise (name, value) {
+    const resolve = this._promiseResolvers[name];
+    if (resolve) {
       this._promiseResolvers[name] = null;
-    }
-    if (value instanceof Error) {
-      throw value;
+      resolve(value);
     }
   },
 
   _cleanUpPromises: function () {
     if (this._promiseResolvers) {
-      _.each(this._promiseResolvers, (ee,name) => {
-        if (ee) {
-          ee.emit(name, null);
-        }
+      Object.values(this._promiseResolvers).forEach(resolve => {
+        resolve && resolve();
       });
       this._promiseResolvers = null;
     }
@@ -469,8 +462,10 @@ Object.assign(AppRunner.prototype, {
 
     // The existence of this promise makes the fiber break out of its loop.
     self.exitPromise = self._makePromise("exit");
+
     self._resolvePromise("run", { outcome: 'stopped' });
     self._resolvePromise("watch");
+
     if (self._beforeStartPromise) {
       // If we stopped before mongod started (eg, due to mongod startup
       // failure), unblock the runner fiber from waiting for mongod to start.
@@ -515,6 +510,7 @@ Object.assign(AppRunner.prototype, {
         // it even if we refreshed previously, since that might have been a
         // little while ago.
         catalog.triedToRefreshRecently = false;
+
         // If this isn't the first time we've run, we need to reset the project
         // context since everything we have cached may have changed.
         // XXX We can try to be a little less conservative here:
@@ -535,7 +531,9 @@ Object.assign(AppRunner.prototype, {
           // shown from the previous solution.
           preservePackageMap: true
         });
-        var messages = await buildmessage.capture(() => self.projectContext.readProjectMetadata());
+        var messages = await buildmessage.capture(() => {
+          return self.projectContext.readProjectMetadata()
+        });
         if (messages.hasMessages()) {
           return {
             runResult: {
@@ -754,11 +752,12 @@ Object.assign(AppRunner.prototype, {
     });
 
     if (options.firstRun && self._beforeStartPromise) {
-        var [stopped] = await self._beforeStartPromise;
-        if (stopped) {
-          return true;
-        }
+      var stopped = await self._beforeStartPromise;
+      if (stopped) {
+        return true;
+      }
     }
+
     await appProcess.start();
 
     function maybePrintLintWarnings(bundleResult) {
@@ -811,7 +810,7 @@ Object.assign(AppRunner.prototype, {
     }
 
     var setupClientWatcher = function () {
-      clientWatcher &&  clientWatcher.stop();
+      clientWatcher && clientWatcher.stop();
       clientWatcher = new watch.Watcher({
         watchSet: bundleResult.clientWatchSet,
         onChange: function () {
@@ -891,7 +890,7 @@ Object.assign(AppRunner.prototype, {
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
-    var [ret] = await runPromise;
+    var ret = await runPromise;
     try {
       while (ret.outcome === 'changed-refreshable') {
         if (! canRefreshClient) {
@@ -922,7 +921,7 @@ Object.assign(AppRunner.prototype, {
         if (postStartupResult) return postStartupResult;
 
         // Wait until another file changes.
-        [ret] = await oldPromise;
+        ret = await oldPromise;
       }
     } finally {
       self.runPromise = null;
@@ -937,8 +936,8 @@ Object.assign(AppRunner.prototype, {
       }
       await appProcess.stop();
 
-      serverWatcher &&  serverWatcher.stop();
-      clientWatcher &&  clientWatcher.stop();
+      serverWatcher && serverWatcher.stop();
+      clientWatcher && clientWatcher.stop();
     }
 
     return ret;
@@ -1009,7 +1008,7 @@ Object.assign(AppRunner.prototype, {
       }
 
       if (self.watchForChanges) {
-        self.watchPromise =  self._makePromise("watch");
+        self.watchPromise = self._makePromise("watch");
 
         if (!runResult.watchSet) {
           throw Error("watching for changes with no watchSet?");

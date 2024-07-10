@@ -121,7 +121,7 @@ export const loadAsyncStubHelpers = () => {
         Meteor._setImmediate(() => {
           if (hasStub && !finished) {
             console.warn(
-              `Method stub (${name}) took too long and could cause unexpected problems. Learn more at https://github.com/zodern/fix-async-stubs/#limitations`
+              `Method stub (${name}) took too long and could cause unexpected problems. Learn more at https://v3-migration-docs.meteor.com/breaking-changes/call-x-callAsync.html#considerations-for-effective-use-of-meteor-callasync`
             );
           }
         });
@@ -224,15 +224,19 @@ export const loadAsyncStubHelpers = () => {
   };
 
   let oldSend = Connection.prototype._send;
-  Connection.prototype._send = function () {
-    if (!queueSend) {
+  Connection.prototype._send = function (params, shouldQueue) {
+    if (this._stream._neverQueued) {
       return oldSend.apply(this, arguments);
+    }
+
+    if (!queueSend && !shouldQueue) {
+      return oldSend.call(this, params);
     }
 
     queueSend = false;
     queueFunction((resolve) => {
       try {
-        oldSend.apply(this, arguments);
+        oldSend.call(this, params);
       } finally {
         resolve();
       }
