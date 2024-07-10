@@ -225,6 +225,10 @@ export const loadAsyncStubHelpers = () => {
 
   let oldSend = Connection.prototype._send;
   Connection.prototype._send = function (params, shouldQueue) {
+    if (this._stream._neverQueued) {
+      return oldSend.apply(this, arguments);
+    }
+
     if (!queueSend && !shouldQueue) {
       return oldSend.call(this, params);
     }
