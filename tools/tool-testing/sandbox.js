@@ -382,6 +382,9 @@ export default class Sandbox {
 
       // Don't ever try to refresh the stub catalog we made.
       env.METEOR_OFFLINE_CATALOG = "t";
+
+      // Tell the env we are in SANDBOX.
+      env.SANDBOX = "true";
     }
 
     // By default (ie, with no mock warehouse and no --release arg) we should be
