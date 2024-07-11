@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run server tests noninteractively, with results going to the console.",
-  version: '1.0.13-rc300.6',
+  version: '1.0.13-rc300.7',
 });
 
 Npm.depends({
