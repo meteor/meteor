@@ -272,6 +272,7 @@
       }
       return true;
     });
+  };
 
   // Convenience version of a common use case of `find`: getting the first object
   // containing specific `key:value` pairs.
