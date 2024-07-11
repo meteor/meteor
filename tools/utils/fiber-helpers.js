@@ -1,20 +1,17 @@
 var _ = require("underscore");
 
-const {debug} = require("util");
-const makeGlobalAsyncLocalStorage = () => {
-  if (!global.asyncLocalStorage) {
-    const { AsyncLocalStorage } = require('async_hooks');
-    global.asyncLocalStorage = new AsyncLocalStorage();
-  }
-
-  return global.asyncLocalStorage;
-};
-
-const getAslStore = () => global.asyncLocalStorage.getStore();
+const getAslStore = () => global.__METEOR_ASYNC_LOCAL_STORAGE.getStore();
 const getValueFromAslStore = key => getAslStore()[key];
 const updateAslStore = (key, value) => getAslStore()[key] = value;
 
-exports.makeGlobalAsyncLocalStorage = makeGlobalAsyncLocalStorage;
+exports.makeGlobalAsyncLocalStorage = () => {
+  if (!global.__METEOR_ASYNC_LOCAL_STORAGE) {
+    const { AsyncLocalStorage } = require('async_hooks');
+    global.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
+  }
+
+  return global.__METEOR_ASYNC_LOCAL_STORAGE;
+};
 
 exports.parallelEach = async function (collection, callback, context) {
   const errors = [];
@@ -142,7 +139,7 @@ exports.bindEnvironment = function (func) {
       return runWithEnvironment();
     }
 
-    return global.asyncLocalStorage.run({}, runWithEnvironment);
+    return global.__METEOR_ASYNC_LOCAL_STORAGE.run({}, runWithEnvironment);
   };
 };
 
