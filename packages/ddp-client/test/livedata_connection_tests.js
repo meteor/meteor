@@ -747,7 +747,7 @@ if (Meteor.isClient) {
     o.stop();
   });
 }
-Tinytest.add('livedata stub - method call before connect', function(test) {
+Tinytest.addAsync('livedata stub - method call before connect', async function(test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -761,7 +761,7 @@ Tinytest.add('livedata stub - method call before connect', function(test) {
   stream.sent.length = 0;
 
   // Now connect.
-  stream.reset();
+  await stream.reset();
 
   testGotMessage(test, stream, makeConnectMessage());
   testGotMessage(test, stream, {
