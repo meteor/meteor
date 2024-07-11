@@ -1877,7 +1877,7 @@ main.registerCommand(Object.assign(
 function doTestCommand(options) {
   // This "metadata" is accessed in a few places. Using a global
   // variable here was more expedient than navigating the many layers
-  // of abstraction across the the build process.
+  // of abstraction across the build process.
   //
   // As long as the Meteor CLI runs a single command as part of each
   // process, this should be safe.

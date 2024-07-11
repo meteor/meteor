@@ -49,7 +49,7 @@
 /// (They will change your output in ways that you probably do not want). These
 /// don't auto-linewrap, end in a newline, or take in Console.options.
 ///
-/// Here is are some examples:
+/// Here are some examples:
 ///     Console.rawInfo(JSON.stringify(myData, null, 2));
 ///     Console.rawError(err.stack + "\n");
 ///
