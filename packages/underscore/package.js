@@ -1,7 +1,7 @@
 
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.6.2-rc300.7',
+  version: '1.6.3-rc300.7',
 });
 
 Npm.depends({
