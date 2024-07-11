@@ -1796,17 +1796,8 @@ export class Connection {
     if (msg.offendingMessage) Meteor._debug('For: ', msg.offendingMessage);
   }
 
-  _callOnReconnectAndSendAppropriateOutstandingMethods() {
+  _sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks) {
     const self = this;
-    const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
-    self._outstandingMethodBlocks = [];
-
-    self.onReconnect && self.onReconnect();
-    DDP._reconnectHook.each(callback => {
-      callback(self);
-      return true;
-    });
-
     if (isEmpty(oldOutstandingMethodBlocks)) return;
 
     // We have at least one block worth of old outstanding methods to try
@@ -1821,9 +1812,11 @@ export class Connection {
     // OK, there are blocks on both sides. Special case: merge the last block of
     // the reconnect methods with the first block of the original methods, if
     // neither of them are "wait" blocks.
-    if (! last(self._outstandingMethodBlocks).wait &&
-        ! oldOutstandingMethodBlocks[0].wait) {
-      oldOutstandingMethodBlocks[0].methods.forEach(m => {
+    if (
+      !last(self._outstandingMethodBlocks).wait &&
+      !oldOutstandingMethodBlocks[0].wait
+    ) {
+      oldOutstandingMethodBlocks[0].methods.forEach((m) => {
         last(self._outstandingMethodBlocks).methods.push(m);
 
         // If this "last block" is also the first block, send the message.
@@ -1837,6 +1830,19 @@ export class Connection {
 
     // Now add the rest of the original blocks on.
     self._outstandingMethodBlocks.push(...oldOutstandingMethodBlocks);
+  }
+  _callOnReconnectAndSendAppropriateOutstandingMethods() {
+    const self = this;
+    const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
+    self._outstandingMethodBlocks = [];
+
+    self.onReconnect && self.onReconnect();
+    DDP._reconnectHook.each((callback) => {
+      callback(self);
+      return true;
+    });
+
+    self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
   }
 
   // We can accept a hot code push if there are no methods in flight.
