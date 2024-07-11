@@ -154,6 +154,9 @@ export default class Sandbox {
     const array = Object.keys(this.clients);
     for (const [index, clientKey] of array.entries()) {
       const client = this.clients[clientKey];
+      if (client.init) {
+        await client.init();
+      }
       console.log(
           `(${index+1}/${array.length}) Testing ${testNameAndFile}with ${client.name}...`);
       const run = new Run(this.execPath, {
