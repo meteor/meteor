@@ -1063,7 +1063,7 @@ main.registerCommand({
       ? `set GIT_TERMINAL_PROMPT=0 && git clone --progress ${url} ${appPath}`
       : `GIT_TERMINAL_PROMPT=0 git clone --progress ${url} ${appPath}`;
     const [okClone, errClone] = await bash`${gitCommand}`;
-    if (errClone && !errClone.includes("Cloning into")) {
+    if (errClone && !errClone.message.includes("Cloning into")) {
       throw new Error("error cloning skeleton");
     }
     // remove .git folder from the example
