@@ -1057,9 +1057,12 @@ main.registerCommand({
   const setupExampleByURL = async (url) => {
     const [ok, err] = await bash`git -v`;
     if (err) throw new Error("git is not installed");
+    const isWindows = process.platform === "win32";
     // Set GIT_TERMINAL_PROMPT=0 to disable prompting
-    const [okClone, errClone] =
-      await bash`GIT_TERMINAL_PROMPT=0 git clone --progress ${url} ${appPath}`;
+    const gitCommand = isWindows
+      ? `set GIT_TERMINAL_PROMPT=0 && git clone --progress ${url} ${appPath}`
+      : `GIT_TERMINAL_PROMPT=0 git clone --progress ${url} ${appPath}`;
+    const [okClone, errClone] = await bash`${gitCommand}`;
     if (errClone && !errClone.includes("Cloning into")) {
       throw new Error("error cloning skeleton");
     }
