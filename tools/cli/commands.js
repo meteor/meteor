@@ -1060,7 +1060,7 @@ main.registerCommand({
     // Set GIT_TERMINAL_PROMPT=0 to disable prompting
     const [okClone, errClone] =
       await bash`GIT_TERMINAL_PROMPT=0 git clone --progress ${url} ${appPath}`;
-    if (errClone && !errClone.includes("Cloning into")) {
+    if (errClone && !errClone.message.includes("Cloning into")) {
       throw new Error("error cloning skeleton");
     }
     // remove .git folder from the example
