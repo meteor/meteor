@@ -35,16 +35,10 @@ const { exec } = require("child_process");
  */
 const runCommand = async (command) => {
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    exec(command, { env: process.env }, (error, stdout) => {
       if (error) {
         console.log(red`error: ${ error.message }`);
         reject(error);
-        return;
-      }
-      if (stderr) {
-        if (stderr.includes("Cloning into")) console.log(green`${ stderr }`);
-        else console.log(red`stderr: ${ stderr }`);
-        reject(stderr);
         return;
       }
       resolve(stdout);
@@ -944,38 +938,6 @@ main.registerCommand({
       })
     );
   }
-  await files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
-    `skel-${skeleton}`), appPath, {
-    transformFilename: function (f) {
-      return transform(f);
-    },
-    transformContents: function (contents, f) {
-
-      // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
-      if ((/packages/).test(f)) {
-
-        const prototypePackages =
-          () =>
-            'autopublish             # Publish all data to the clients (for prototyping)\n' +
-            'insecure                # Allow all DB writes from clients (for prototyping)';
-
-        // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
-        if (options.prototype) {
-          return Buffer.from(contents.toString().replace(/~prototype~/g, prototypePackages()))
-        } else {
-          return Buffer.from(contents.toString().replace(/~prototype~/g, ''))
-        }
-      }
-      if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
-        return Buffer.from(transform(contents.toString()));
-      } else {
-        return contents;
-      }
-    },
-    ignore: toIgnore,
-    preserveSymlinks: true,
-  });
-
   // Setup fn, which is called after the app is created, to print a message
   // about how to run the app.
   async function setupMessages() {
@@ -1087,9 +1049,21 @@ main.registerCommand({
    * @param {string} url
    */
   const setupExampleByURL = async (url) => {
-    const [ok, err] = await bash`git -v`;
+    const [ok, err] = await bash`git --version`;
     if (err) throw new Error("git is not installed");
-    await bash`git clone --progress ${url} ${appPath} `;
+    const isWindows = process.platform === "win32";
+
+    // Set GIT_TERMINAL_PROMPT=0 to disable prompting
+    process.env.GIT_TERMINAL_PROMPT = 0;
+
+    const gitCommand = isWindows
+      ? `git clone --progress ${url} ${files.convertToOSPath(appPath)}`
+      : `git clone --progress ${url} ${appPath}`;
+    const [okClone, errClone] = await bash`${gitCommand}`;
+    const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
+    if (errorMessage && errorMessage.includes("Cloning into")) {
+      throw new Error("error cloning skeleton");
+    }
     // remove .git folder from the example
     await files.rm_recursive_async(files.pathJoin(appPath, ".git"));
     await setupMessages();
@@ -1533,6 +1507,11 @@ https://guide.meteor.com/cordova.html#submitting-android
   }
 
   await files.rm_recursive(buildDir);
+
+  const npmShrinkwrapFilePath = files.pathJoin(bundlePath, 'programs/server/npm-shrinkwrap.json');
+  if (files.exists(npmShrinkwrapFilePath)) {
+    files.chmod(npmShrinkwrapFilePath, 0o644);
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////

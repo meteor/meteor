@@ -71,5 +71,29 @@ async function someFunction() {
 
 ```
 
+## Accounts.addEmail
+
+It is no longer available, you should use `Accounts.addEmailAsync`.
+
+```javascript
+import { Accounts } from "meteor/accounts-base";
+
+// Before
+
+Accounts.addEmail(
+  "userId",
+  "newEmail",
+  false,  // this param is optional 
+);
+// After
+
+await Accounts.addEmailAsync(
+  "userId",
+  "newEmail",
+  false,  // this param is optional 
+);
+
+```
+
 
 For a full list of changes check the [changelog](https://v3-docs.meteor.com/history.html#changelog) for Meteor v3

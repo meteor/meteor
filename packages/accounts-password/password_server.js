@@ -830,7 +830,7 @@ Meteor.methods(
   });
 
 /**
- * @summary Add an email asynchronously address for a user. Use this instead of directly
+ * @summary Asynchronously add an email address for a user. Use this instead of directly
  * updating the database. The operation will fail if there is a different user
  * with an email only differing in case. If the specified user has an existing
  * email only differing in case however, we replace it.
@@ -841,8 +841,7 @@ Meteor.methods(
  * be marked as verified. Defaults to false.
  * @importFromPackage accounts-base
  */
-Accounts.addEmail =
-  async (userId, newEmail, verified) => {
+Accounts.addEmailAsync = async (userId, newEmail, verified) => {
   check(userId, NonEmptyString);
   check(newEmail, NonEmptyString);
   check(verified, Match.Optional(Boolean));
@@ -851,9 +850,8 @@ Accounts.addEmail =
     verified = false;
   }
 
-  const user = await getUserById(userId, {fields: {emails: 1}});
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  const user = await getUserById(userId, { fields: { emails: 1 } });
+  if (!user) throw new Meteor.Error(403, "User not found");
 
   // Allow users to change their own email to a version with a different case
 
@@ -863,32 +861,35 @@ Accounts.addEmail =
   // then we are OK and (2) if this would create a conflict with other users
   // then there would already be a case-insensitive duplicate and we can't fix
   // that in this code anyway.
-  const caseInsensitiveRegExp =
-    new RegExp(`^${Meteor._escapeRegExp(newEmail)}$`, 'i');
+  const caseInsensitiveRegExp = new RegExp(
+    `^${Meteor._escapeRegExp(newEmail)}$`,
+    "i"
+  );
 
   // TODO: This is a linear search. If we have a lot of emails.
   //  we should consider using a different data structure.
-    const updatedEmail =
-      async (emails = [], _id) => {
-        let updated = false;
-        for (const email of emails) {
-          if (caseInsensitiveRegExp.test(email.address)) {
-            await Meteor.users.updateAsync({
-              _id: _id,
-              'emails.address': email.address
-            }, {
-              $set: {
-                'emails.$.address': newEmail,
-                'emails.$.verified': verified
-              }
-            });
-            updated = true;
+  const updatedEmail = async (emails = [], _id) => {
+    let updated = false;
+    for (const email of emails) {
+      if (caseInsensitiveRegExp.test(email.address)) {
+        await Meteor.users.updateAsync(
+          {
+            _id: _id,
+            "emails.address": email.address,
+          },
+          {
+            $set: {
+              "emails.$.address": newEmail,
+              "emails.$.verified": verified,
+            },
           }
-        }
-        return updated;
+        );
+        updated = true;
       }
-    const didUpdateOwnEmail =
-      await updatedEmail(user.emails, user._id);
+    }
+    return updated;
+  };
+  const didUpdateOwnEmail = await updatedEmail(user.emails, user._id);
 
   // In the other updates below, we have to do another call to
   // checkForCaseInsensitiveDuplicates to make sure that no conflicting values
@@ -902,32 +903,45 @@ Accounts.addEmail =
   }
 
   // Perform a case insensitive check for duplicates before update
-  await Accounts._checkForCaseInsensitiveDuplicates('emails.address',
-    'Email', newEmail, user._id);
+  await Accounts._checkForCaseInsensitiveDuplicates(
+    "emails.address",
+    "Email",
+    newEmail,
+    user._id
+  );
 
-  await Meteor.users.updateAsync({
-    _id: user._id
-  }, {
-    $addToSet: {
-      emails: {
-        address: newEmail,
-        verified: verified
-      }
+  await Meteor.users.updateAsync(
+    {
+      _id: user._id,
+    },
+    {
+      $addToSet: {
+        emails: {
+          address: newEmail,
+          verified: verified,
+        },
+      },
     }
-  });
+  );
 
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    await Accounts._checkForCaseInsensitiveDuplicates('emails.address',
-      'Email', newEmail, user._id);
+    await Accounts._checkForCaseInsensitiveDuplicates(
+      "emails.address",
+      "Email",
+      newEmail,
+      user._id
+    );
   } catch (ex) {
     // Undo update if the check fails
-    await Meteor.users.updateAsync({_id: user._id},
-      {$pull: {emails: {address: newEmail}}});
+    await Meteor.users.updateAsync(
+      { _id: user._id },
+      { $pull: { emails: { address: newEmail } } }
+    );
     throw ex;
   }
-}
+};
 
 /**
  * @summary Remove an email address asynchronously for a user. Use this instead of updating

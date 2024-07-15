@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Serves a Meteor app over HTTP',
-  version: '2.0.0-rc300.4',
+  version: '2.0.0-rc300.10',
 });
 
 Npm.depends({
@@ -14,7 +14,6 @@ Npm.depends({
   'stream-to-string': '1.2.1',
   qs: '6.11.2',
   useragent: '2.3.0',
-  '@vlasky/whomst': '0.1.7',
   '@types/connect': '3.4.38',
 });
 
@@ -62,7 +61,7 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore','fetch']);
+  api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore','fetch', 'test-helpers']);
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
   api.addFiles('socket_file_tests.js', 'server');

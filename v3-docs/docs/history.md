@@ -219,6 +219,7 @@ This is a complete history of changes for Meteor releases.
   - Added `isAsyncCall` method to know if call is being made by a async method.
   - Removed `fibers` from package.
   - Updated tests to use async methods.
+  - Replaced `Meteor.connection.registerStore` with `registerStoreClient` on the client side.
 
 - `ddp-common@2.0.0`:
 
@@ -234,6 +235,7 @@ This is a complete history of changes for Meteor releases.
   - Removed `fibers` from package.
   - Updated tests to use async methods.
   - Turned server implementation to async.
+  - Replaced `Meteor.connection.registerStore` with `registerStoreServer` for async compatibility on the server side.
 
 - `ddp@2.0.0`:
 
