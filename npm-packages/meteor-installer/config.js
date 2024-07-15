@@ -12,6 +12,7 @@ function isSudo() {
 const localAppData = process.env.LOCALAPPDATA;
 const isWindows = () => os.platform() === 'win32';
 const isMac = () => os.platform() === 'darwin';
+const isLinux = () => os.platform() === 'linux';
 
 let rootPath;
 if (isWindows()) {
@@ -47,6 +48,7 @@ module.exports = {
   startedPath: path.resolve(rootPath, '.meteor-install-started.txt'),
   isWindows,
   isMac,
+  isLinux,
   isRoot,
   isSudo,
   shouldSetupExecPath,
