@@ -1382,17 +1382,10 @@ export function regexpElementMatcher(regexp) {
 
 // Validates the key in a path.
 // Objects that are nested more then 1 level cannot have dotted fields
-// or fields starting with '$'
 function validateKeyInPath(key, path) {
   if (key.includes('.')) {
     throw new Error(
       `The dotted field '${key}' in '${path}.${key} is not valid for storage.`
-    );
-  }
-
-  if (key[0] === '$') {
-    throw new Error(
-      `The dollar ($) prefixed field  '${path}.${key} is not valid for storage.`
     );
   }
 }
