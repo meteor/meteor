@@ -35,16 +35,10 @@ const { exec } = require("child_process");
  */
 const runCommand = async (command) => {
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    exec(command, { env: process.env }, (error, stdout) => {
       if (error) {
         console.log(red`error: ${ error.message }`);
         reject(error);
-        return;
-      }
-      if (stderr) {
-        if (stderr.includes("Cloning into")) console.log(green`${ stderr }`);
-        else console.log(red`stderr: ${ stderr }`);
-        reject(stderr);
         return;
       }
       resolve(stdout);
@@ -1055,15 +1049,19 @@ main.registerCommand({
    * @param {string} url
    */
   const setupExampleByURL = async (url) => {
-    const [ok, err] = await bash`git -v`;
+    const [ok, err] = await bash`git --version`;
     if (err) throw new Error("git is not installed");
     const isWindows = process.platform === "win32";
+
     // Set GIT_TERMINAL_PROMPT=0 to disable prompting
+    process.env.GIT_TERMINAL_PROMPT = 0;
+
     const gitCommand = isWindows
-      ? `set GIT_TERMINAL_PROMPT=0 && git clone --progress ${url} ${appPath}`
-      : `GIT_TERMINAL_PROMPT=0 git clone --progress ${url} ${appPath}`;
+      ? `git clone --progress ${url} ${files.convertToOSPath(appPath)}`
+      : `git clone --progress ${url} ${appPath}`;
     const [okClone, errClone] = await bash`${gitCommand}`;
-    if (errClone && !errClone.message.includes("Cloning into")) {
+    const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
+    if (errorMessage && errorMessage.includes("Cloning into")) {
       throw new Error("error cloning skeleton");
     }
     // remove .git folder from the example
