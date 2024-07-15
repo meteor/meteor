@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Dependency tracker to allow reactive callbacks",
-  version: '1.3.4-rc300.9',
+  version: '1.3.4-rc300.10',
 });
 
 Package.onUse(function (api) {

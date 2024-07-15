@@ -11,7 +11,7 @@ This guide is for users with Meteor 2.x projects understand the changes between 
 
 Meteor 3.0 is currently in its Release Candidate (RC) phase, a nearly final version ready for final testing ahead of the official launch.
 
-**Latest version:** `3.0-rc.9` <br/>
+**Latest version:** `3.0-rc.10` <br/>
 **Node.js version:** `20.15.1 LTS` <br/>
 **NPM version:** `10.7.0`
 
