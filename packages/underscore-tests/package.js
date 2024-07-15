@@ -7,5 +7,5 @@ Package.describe({
 
 Package.onTest(function (api) {
   api.use(['tinytest', 'underscore']);
-  api.addFiles('each_test.js');
+  api.addFiles(['common_test.js', 'each_test.js']);
 });
