@@ -35,7 +35,7 @@ const { exec } = require("child_process");
  */
 const runCommand = async (command) => {
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    exec(command, { env: process.env }, (error, stdout) => {
       if (error) {
         console.log(red`error: ${ error.message }`);
         reject(error);
