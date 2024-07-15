@@ -14,6 +14,7 @@ import {
   lstat,
   readFile,
   readdir,
+  readlink,
   dependOnPath,
   findAppDir,
 } from "./files";
@@ -275,6 +276,7 @@ export const optimisticLStatOrNull = makeCheapPathFunction(
 
 export const optimisticReadFile = makeOptimistic("readFile", readFile);
 export const optimisticReaddir = makeOptimistic("readdir", readdir);
+export const optimisticReadlink = makeOptimistic("readlink", readlink);
 export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   path: string,
   options?: Parameters<typeof optimisticReadFile>[1],

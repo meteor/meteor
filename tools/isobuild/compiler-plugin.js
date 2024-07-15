@@ -13,6 +13,7 @@ import {
   sha1,
   readAndWatchFileWithHash,
 } from  '../fs/watch';
+import {pathResolve} from "../fs/files";
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
@@ -79,6 +80,10 @@ const LINKER_CACHE = new LRU({
     }, 0);
   }
 });
+
+const NODE_MODULES_PATH = process.env.METEOR_NODE_MODULES_PATH
+  ? pathResolve(process.env.METEOR_NODE_MODULES_PATH)
+  : null;
 
 const serverLibPackages = {
   // Make sure fibers is defined, if nothing else.
@@ -1234,6 +1239,10 @@ export class PackageSourceBatch {
       const nmds = this.unibuild.nodeModulesDirectories;
       this._nodeModulesPaths = [];
 
+      if (!this.unibuild.pkg.name && NODE_MODULES_PATH) {
+        nodeModulesPaths.push(NODE_MODULES_PATH);
+      }
+
       _.each(nmds, (nmd, path) => {
         if (! nmd.local) {
           this._nodeModulesPaths.push(
@@ -1353,6 +1362,11 @@ export class PackageSourceBatch {
       }
 
       const nodeModulesPaths = [];
+
+      if (!name && NODE_MODULES_PATH) {
+        nodeModulesPaths.push(NODE_MODULES_PATH);
+      }
+
       _.each(batch.unibuild.nodeModulesDirectories, (nmd, sourcePath) => {
         if (! nmd.local) {
           // Local node_modules directories will be found by the
@@ -1525,12 +1539,14 @@ export class PackageSourceBatch {
         }
 
         const {
+          alias,
           sourcePath,
           absPath = sourcePath &&
             files.pathJoin(entry.batch.sourceRoot, sourcePath),
         } = file;
         const { importScannerWatchSet } = entry;
         if (
+          !alias &&
           typeof absPath === "string" &&
           // Blindly calling importScannerWatchSet.addFile would be
           // logically correct here, but we can save the cost of calling

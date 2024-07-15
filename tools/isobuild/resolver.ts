@@ -1,6 +1,7 @@
 import {
   isString,
   isObject,
+  isEmpty,
   has,
 } from "underscore";
 
@@ -10,6 +11,8 @@ import {
   pathNormalize,
   pathDirname,
   pathBasename,
+  pathResolve,
+  pathRelative,
   convertToOSPath,
   convertToPosixPath,
   containsPath,
@@ -18,8 +21,14 @@ import { Stats, BigIntStats } from "fs";
 import { wrap } from "optimism";
 import {
   optimisticStatOrNull,
+  optimisticLStatOrNull,
+  optimisticReadlink,
   optimisticReadJsonOrNull,
 } from "../fs/optimistic";
+
+const MONOREPO_ROOT = process.env.METEOR_MONOREPO_ROOT
+  ? pathResolve(process.env.METEOR_MONOREPO_ROOT)
+  : null;
 
 const nativeModulesMap: Record<string, string> = Object.create(null);
 const nativeNames = require('module').builtinModules;
@@ -46,8 +55,81 @@ export type Resolution = {
   stat: Stats | BigIntStats;
   path: string;
   packageJsonMap?: Record<string, Record<string, any>>;
+  links?: Record<string, string>;
   id?: string;
 } | "missing" | null
+
+
+export function resolveSymbolicLink(path: string, links: Record<string, string>, linkRoots?: string[]) {
+  const visitedPaths: Record<string, boolean> = Object.create(null);
+  let currentPath = path;
+  let currentStat: 'symlink' | null | undefined | BigIntStats | Stats = links[path]
+    ? 'symlink'
+    : optimisticLStatOrNull(currentPath);
+  while (currentStat === 'symlink' || (currentStat && currentStat.isSymbolicLink())) {
+    if (visitedPaths[currentPath]) {
+      // It seems like we've fallen into a symbolic link cycle and there's
+      // nothing we can do about that. We are returning stat = null to indicate
+      // that the file does not exist.
+      return {
+        path: currentPath,
+        stat: null,
+      };
+    }
+    visitedPaths[currentPath] = true;
+    let linkTarget: string;
+    if (currentStat === 'symlink') {
+      linkTarget = links[currentPath];
+    } else {
+      // According the the while loop condition this means that currentStat.isSymbolicLink().
+      linkTarget = pathResolve(currentPath, '..', optimisticReadlink(currentPath));
+    }
+    if (linkRoots && linkRoots.every(root => pathRelative(root, linkTarget).startsWith('..'))) {
+      return {
+        path: currentPath,
+        stat: optimisticStatOrNull(currentPath),
+      };
+    }
+    if (!links[currentPath]) {
+      links[currentPath] = linkTarget;
+    }
+    currentPath = linkTarget;
+    currentStat = links[linkTarget] ? 'symlink' : optimisticLStatOrNull(linkTarget);
+  }
+  return { path: currentPath, stat: currentStat };
+}
+
+export function resolveRealPath(path: string, links: Record<string, string>, linkRoots?: string[]) {
+  let realPathParts = [];
+  while (true) {
+    // This loop will finally end because in each iteration realPathParts is larger,
+    // and there's a system level limit on the maximal length of file path.
+    if (linkRoots && linkRoots.every(root => pathRelative(root, path).startsWith('..'))) {
+      // Symbolic links outside linkRoots are treated as normal files.
+      realPathParts = [path];
+      break;
+    }
+    if (linkRoots && linkRoots.indexOf(path) >= 0) {
+      realPathParts.push(path);
+      break;
+    }
+    const resolved = resolveSymbolicLink(path, links, linkRoots);
+    if (!resolved.stat) {
+      // It's possible if the file does not exist.
+      return null;
+    }
+    ({ path } = resolved);
+    const dirPath = pathDirname(path);
+    if (dirPath === path) {
+      // Looks like we've reached the filesystem root.
+      realPathParts.push(path);
+      break;
+    }
+    realPathParts.push(pathBasename(path));
+    path = dirPath;
+  }
+  return pathJoin(...realPathParts.reverse());
+}
 
 export default class Resolver {
   static getOrCreate = wrap(function (options: ResolverOptions) {
@@ -146,6 +228,11 @@ export default class Resolver {
     }
 
     let packageJsonMap = null;
+    let links;
+
+    if (resolved) {
+      ({ links } = resolved);
+    }
 
     while (resolved && resolved.stat && resolved.stat.isDirectory()) {
       let dirPath = resolved.path;
@@ -235,6 +322,10 @@ export default class Resolver {
         convertToOSPath(resolved.path),
         true
       );
+
+      if (links) {
+        resolved.links = links;
+      }
     }
 
     return resolved;
@@ -320,17 +411,48 @@ export default class Resolver {
       }
     });
 
+    if (!sourceRoot && MONOREPO_ROOT && !pathRelative(MONOREPO_ROOT, absParentPath).startsWith("..")) {
+      sourceRoot = MONOREPO_ROOT;
+    }
+
     let resolved = null;
 
+    const links: Record<string, string> = Object.create(null);
+
+    let linkRoots;
+    if (sourceRoot && this.nodeModulesPaths.indexOf(sourceRoot) < 0) {
+      linkRoots = [
+        ...this.nodeModulesPaths,
+        sourceRoot,
+      ];
+    } else {
+      linkRoots = [...this.nodeModulesPaths];
+    }
+
+    if (MONOREPO_ROOT) {
+      linkRoots.push(MONOREPO_ROOT);
+    }
+
+    const followLinks = !archMatches(this.targetArch, "os");
     if (sourceRoot) {
-      let dir = absParentPath; // It's ok for absParentPath to be a directory!
-      let dirStat = this.statOrNull(dir);
+      // It's ok for absParentPath to be a directory!
+      let dir = absParentPath;
+      let dirStat = this.statOrNull(absParentPath);
+
+      if (followLinks) {
+        ({ path: dir, stat: dirStat } = resolveSymbolicLink(dir, links, linkRoots));
+      }
+
       if (! (dirStat && dirStat.isDirectory())) {
         dir = pathDirname(dir);
       }
 
       while (! (resolved = this.joinAndStat(dir, "node_modules", id))) {
-        if (dir === sourceRoot) {
+        if (followLinks) {
+          if (linkRoots.indexOf(dir) >= 0) {
+            break;
+          }
+        } else if (dir === sourceRoot) {
           break;
         }
 
@@ -340,7 +462,12 @@ export default class Resolver {
           break;
         }
 
-        dir = parentDir;
+        if (followLinks) {
+          ({ path: dir, stat: dirStat } = resolveSymbolicLink(parentDir, links, linkRoots));
+        } else {
+          dir = parentDir;
+          dirStat = this.statOrNull(parentDir);
+        }
       }
     }
 
@@ -350,6 +477,18 @@ export default class Resolver {
       this.nodeModulesPaths.some(path => {
         return resolved = this.joinAndStat(path, id);
       });
+    }
+
+    if (followLinks && resolved) {
+      const realPath = resolveRealPath(resolved.path, links, linkRoots);
+      if (!realPath) {
+        resolved = null;
+      } else {
+        resolved.path = realPath;
+        if (!isEmpty(links)) {
+          resolved.links = links;
+        }
+      }
     }
 
     // If the dependency is still not resolved, it might be handled by the

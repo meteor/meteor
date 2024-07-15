@@ -449,8 +449,7 @@ class NodeModulesDirectory {
     const complete = Symbol();
     let maxPartCount = 0;
 
-    Object.keys(prodPackageNames).forEach(name => {
-      const parts = name.split("/");
+    const addToTree = (parts) => {
       let tree = prodPackageTree;
 
       parts.forEach(part => {
@@ -459,6 +458,23 @@ class NodeModulesDirectory {
 
       tree[complete] = true;
       maxPartCount = Math.max(parts.length, maxPartCount);
+    }
+
+    Object.keys(prodPackageNames).forEach(name => {
+      const parts = name.split('/');
+      addToTree(parts);
+    });
+
+    Object.keys(prodPackageNames).forEach(name => {
+      const absPath = files.pathJoin(sourcePath, name);
+      const realPath = files.realpathOrNull(absPath);
+      if (realPath) {
+        const relativePath = files.pathRelative(sourcePath, realPath);
+        if (!relativePath.startsWith('..')) {
+          const parts = relativePath.split(files.pathSep);
+          addToTree(parts);
+        }
+      }
     });
 
     return this._prodPackagePredicate = function isWithinProdPackage(path) {
@@ -2538,7 +2554,10 @@ class JsImage {
           from: nmd.sourcePath,
           to: nmd.preferredBundlePath,
           npmDiscards: nmd.npmDiscards,
-          symlink: includeNodeModules === 'symlink'
+          symlink: includeNodeModules === 'symlink' || (
+            // App node_modules should be symlinked in MONOREPO mode.
+            process.env.METEOR_MONOREPO_ROOT && !nmd.packageName
+          )
         };
 
         const prodPackagePredicate =

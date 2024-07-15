@@ -16,6 +16,7 @@ import {Profile} from "../tool-env/profile";
 import {
   mkdir_p,
   pathJoin,
+  pathResolve,
   pathRelative,
   pathNormalize,
   pathExtname,
@@ -47,7 +48,11 @@ import { wrap } from "optimism";
 const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
 const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
-import Resolver, { Resolution } from "./resolver";
+import Resolver, { Resolution, resolveRealPath } from "./resolver";
+
+const MONOREPO_ROOT = process.env.METEOR_MONOREPO_ROOT
+  ? pathResolve(process.env.METEOR_MONOREPO_ROOT)
+  : null;
 
 const fakeFileStat = {
   isFile() {
@@ -474,15 +479,58 @@ export default class ImportScanner {
     return null;
   }
 
+  private addSymbolicLinks(links: Record<string, string>, imported: string | boolean) {
+    Object.keys(links).forEach((path) => {
+      const linkFile = this.getFile(path);
+      const linkTarget = links[path];
+      if (!linkFile && linkTarget) {
+        const absModuleId = this.getAbsModuleId(path);
+        this.addFile(path, {
+          type: "js",
+          alias: {
+            path,
+            absModuleId: this.getAbsModuleId(linkTarget),
+          },
+          absPath: path,
+          data: emptyData,
+          dataString: emptyDataString,
+          hash: emptyHash,
+          // sourcePath: null,
+          sourcePath: pathRelative(this.sourceRoot, path),
+          absModuleId,
+          servePath: stripLeadingSlash(absModuleId),
+          lazy: true,
+          imported,
+          implicit: false,
+        });
+      }
+    });
+  }
+
   addInputFiles(files: File[]) {
     files.forEach(file => {
       this.checkSourceAndTargetPaths(file);
+
+      const links: Record<string, string> = Object.create(null);
+      const linkRoots: string[] = [];
+      if (MONOREPO_ROOT) {
+        linkRoots.push(MONOREPO_ROOT);
+      }
 
       // Note: this absolute path may not necessarily exist on the file
       // system, but any import statements or require calls in file.data
       // will be interpreted relative to this path, so it needs to be
       // something plausible. #6411 #6383
       file.absPath = pathJoin(this.sourceRoot, file.sourcePath);
+
+      if (/^node_modules\//.test(file.sourcePath)) {
+        const realPath = resolveRealPath(file.absPath, links, linkRoots);
+        if (realPath) {
+          file.absPath = realPath;
+          file.absModuleId = this.getAbsModuleId(file.absPath);
+          file.sourcePath = pathRelative(this.sourceRoot, realPath);
+        }
+      }
 
       // This property can have values false, true, "dynamic" (which
       // indicates that the file has been imported, but only dynamically).
@@ -1039,7 +1087,10 @@ export default class ImportScanner {
       const file = this.getFile(resolved.path);
       if (file && file.alias) {
         setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
-        return file.alias;
+        return {
+          ...file.alias,
+          links: resolved.links,
+        };
       }
     }
 
@@ -1116,6 +1167,10 @@ export default class ImportScanner {
       if (! absImportedPath) {
         return;
       }
+
+      if (resolved && 'links' in resolved && resolved.links) {
+        this.addSymbolicLinks(resolved.links, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
+      }      
 
       let depFile = this.getFile(absImportedPath);
       if (depFile) {
@@ -1415,7 +1470,8 @@ export default class ImportScanner {
   private getAbsModuleId(absPath: string) {
     let path =
       this.getNodeModulesAbsModuleId(absPath) ||
-      this.getSourceRootAbsModuleId(absPath);
+      this.getSourceRootAbsModuleId(absPath) ||
+      this.getMonorepoRootAbsModuleId(absPath);
 
     if (! path) {
       return;
@@ -1518,6 +1574,36 @@ export default class ImportScanner {
 
     return ensureLeadingSlash(relPath);
   }
+
+  private getMonorepoRootAbsModuleId(absPath: string) {
+    let absModuleId: string | undefined;
+
+    if (!MONOREPO_ROOT) {
+      return;
+    }
+
+    const relPath = pathRelative(this.sourceRoot, absPath);
+    if (!relPath.startsWith("..")) {
+      return this.getSourceRootAbsModuleId(absPath);
+    }
+
+    const relPathWithinMonorepoRoot = pathRelative(MONOREPO_ROOT, absPath);
+    if (
+      relPathWithinMonorepoRoot.startsWith("..") ||
+      relPathWithinMonorepoRoot.startsWith('/')
+    ) {
+      return;
+    }
+
+    absModuleId = pathJoin(
+      "node_modules",
+      "$ROOT",
+      relPathWithinMonorepoRoot
+    );
+
+    return ensureLeadingSlash(absModuleId);
+  }
+
 
   // Called by this.resolver when a module identifier cannot be resolved.
   private onMissing(
@@ -1726,11 +1812,10 @@ export default class ImportScanner {
         file.alias = alias;
       } else {
         const relSourcePath = pathRelative(this.sourceRoot, source.path);
-
         this.addFile(source.path, {
           type: "js",
           alias,
-          absPath: absPkgJsonPath,
+          absPath: source.path,
           data: emptyData,
           dataString: emptyDataString,
           hash: emptyHash,
