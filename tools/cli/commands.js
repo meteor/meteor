@@ -1054,7 +1054,7 @@ main.registerCommand({
     const isWindows = process.platform === "win32";
     // Set GIT_TERMINAL_PROMPT=0 to disable prompting
     const gitCommand = isWindows
-      ? `$env:GIT_TERMINAL_PROMPT=0; git clone --progress ${url} ${appPath}`
+      ? `$env:GIT_TERMINAL_PROMPT=0; git clone --progress ${url} ${files.convertToOSPath(appPath)}`
       : `GIT_TERMINAL_PROMPT=0 git clone --progress ${url} ${appPath}`;
     const [okClone, errClone] = await bash`${gitCommand}`;
     const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
