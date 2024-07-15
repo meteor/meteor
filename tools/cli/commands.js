@@ -1052,10 +1052,12 @@ main.registerCommand({
     const [ok, err] = await bash`git --version`;
     if (err) throw new Error("git is not installed");
     const isWindows = process.platform === "win32";
+
+    process.env.GIT_TERMINAL_PROMPT = 0;
     // Set GIT_TERMINAL_PROMPT=0 to disable prompting
     const gitCommand = isWindows
-      ? `$env:GIT_TERMINAL_PROMPT=0; git clone --progress ${url} ${files.convertToOSPath(appPath)}`
-      : `GIT_TERMINAL_PROMPT=0 git clone --progress ${url} ${appPath}`;
+      ? `git clone --progress ${url} ${files.convertToOSPath(appPath)}`
+      : `git clone --progress ${url} ${appPath}`;
     const [okClone, errClone] = await bash`${gitCommand}`;
     const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
     if (errorMessage && errorMessage.includes("Cloning into")) {
