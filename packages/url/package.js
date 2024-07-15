@@ -1,6 +1,6 @@
 Package.describe({
   name: "url",
-  version: '1.3.3-rc300.8',
+  version: '1.3.3-rc300.9',
   summary: "Isomorphic modern/legacy/Node polyfill for WHATWG URL/URLSearchParams",
   documentation: "README.md"
 });

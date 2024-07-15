@@ -1,6 +1,6 @@
 Package.describe({
   name: 'standard-minifier-css',
-  version: '1.9.3-rc300.8',
+  version: '1.9.3-rc300.9',
   summary: 'Standard css minifier used with Meteor apps by default.',
   documentation: 'README.md',
 });

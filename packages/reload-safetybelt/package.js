@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload safety belt for multi-server deployments",
-  version: '2.0.0-rc300.8',
+  version: '2.0.0-rc300.9',
 });
 
 Package.onUse(function (api) {

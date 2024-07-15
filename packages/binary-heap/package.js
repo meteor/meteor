@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Binary Heap datastructure implementation",
-  version: '1.0.12-rc300.8',
+  version: '1.0.12-rc300.9',
 });
 
 Package.onUse(api => {

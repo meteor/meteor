@@ -1,7 +1,7 @@
 Package.describe({
   summary: "Makes your Cordova application use the Crosswalk WebView \
 instead of the System WebView on Android",
-  version: '1.7.2-rc300.8',
+  version: '1.7.2-rc300.9',
   documentation: null
 });
 
