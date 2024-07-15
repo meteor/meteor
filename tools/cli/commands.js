@@ -1053,8 +1053,9 @@ main.registerCommand({
     if (err) throw new Error("git is not installed");
     const isWindows = process.platform === "win32";
 
-    process.env.GIT_TERMINAL_PROMPT = 0;
     // Set GIT_TERMINAL_PROMPT=0 to disable prompting
+    process.env.GIT_TERMINAL_PROMPT = 0;
+
     const gitCommand = isWindows
       ? `git clone --progress ${url} ${files.convertToOSPath(appPath)}`
       : `git clone --progress ${url} ${appPath}`;
