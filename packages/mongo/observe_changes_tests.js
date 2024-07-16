@@ -6,9 +6,9 @@ var makeCollection = function () {
   }
 };
 
-_.each ([{added: 'added', forceOrdered: true},
+([{added: 'added', forceOrdered: true},
          {added: 'added', forceOrdered: false},
-         {added: 'addedBefore', forceOrdered: false}], function (options) {
+         {added: 'addedBefore', forceOrdered: false}]).forEach(function (options) {
   var added = options.added;
   var forceOrdered = options.forceOrdered;
 
@@ -82,7 +82,7 @@ Tinytest.addAsync("observeChanges - callback isolation", function (test, onCompl
 
     test.equal(c.findOne(fooid).apples, "not ok");
 
-    _.each(handles, function(handle) { handle.stop(); });
+    handles.forEach(function(handle) { handle.stop(); });
     onComplete();
   });
 
@@ -303,7 +303,7 @@ if (Meteor.isServer) {
       self.xs = [];
       self.expects = [];
       self.insert = function (fields) {
-        coll.insert(_.extend({ts: new MongoInternals.MongoTimestamp(0, 0)},
+        coll.insert(Object.assign({ts: new MongoInternals.MongoTimestamp(0, 0)},
                              fields));
       };
 

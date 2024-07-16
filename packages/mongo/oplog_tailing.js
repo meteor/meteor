@@ -1,3 +1,5 @@
+import isEmpty from 'lodash.isempty';
+import has from 'lodash.has';
 var Future = Npm.require('fibers/future');
 
 import { NpmModuleMongodb } from "meteor/npm-mongo";
@@ -234,7 +236,7 @@ Object.assign(OplogHandle.prototype, {
     var lastOplogEntry = self._oplogLastEntryConnection.findOne(
       OPLOG_COLLECTION, {}, {sort: {$natural: -1}, projection: {ts: 1}});
 
-    var oplogSelector = _.clone(self._baseOplogSelector);
+    var oplogSelector = Object.assign({}, self._baseOplogSelector);
     if (lastOplogEntry) {
       // Start after the last entry that currently exists.
       oplogSelector.ts = {$gt: lastOplogEntry.ts};
@@ -341,7 +343,7 @@ Object.assign(OplogHandle.prototype, {
           if (doc.o.dropDatabase) {
             delete trigger.collection;
             trigger.dropDatabase = true;
-          } else if (_.has(doc.o, "drop")) {
+          } else if (has(doc.o, "drop")) {
             trigger.collection = doc.o.drop;
             trigger.dropCollection = true;
             trigger.id = null;
@@ -402,7 +404,7 @@ Object.assign(OplogHandle.prototype, {
   _setLastProcessedTS: function (ts) {
     var self = this;
     self._lastProcessedTS = ts;
-    while (!_.isEmpty(self._catchingUpFutures) && self._catchingUpFutures[0].ts.lessThanOrEqual(self._lastProcessedTS)) {
+    while (!isEmpty(self._catchingUpFutures) && self._catchingUpFutures[0].ts.lessThanOrEqual(self._lastProcessedTS)) {
       var sequencer = self._catchingUpFutures.shift();
       sequencer.future.return();
     }
