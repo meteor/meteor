@@ -3,7 +3,11 @@ let terser;
 const terserMinify = async (source, options, callback) => {
   terser = terser || Npm.require("terser");
   try {
-    const result = await terser.minify(source, options);
+    // Replace Meteor.isServer, Meteor.isClient, Meteor.isDevelopment, Meteor.isProduction with true or false
+    // so that terser can remove the dead code in the appropriate scenario
+    const cleanSource = source.replace(/\b(Meteor\.isServer|Meteor\.isDevelopment|process\.env\.NODE_DEBUG)\b/g, 'UGLIFYJS_FALSE')
+      .replace(/\b(Meteor\.isClient|Meteor\.isProduction)\b/g, 'UGLIFYJS_TRUE');
+    const result = await terser.minify(cleanSource, options);
     callback(null, result);
     return result;
   } catch (e) {
@@ -24,7 +28,9 @@ export const meteorJsMinify = function (source) {
       dead_code: true,       // remove unreachable code
       typeofs: false,        // set to false due to known issues in IE10
       global_defs: {
-        "process.env.NODE_ENV": NODE_ENV
+        "process.env.NODE_ENV": NODE_ENV,
+        UGLIFYJS_FALSE: false,
+        UGLIFYJS_TRUE: true
       }
     },
     // Fix issue #9866, as explained in this comment:
