@@ -133,7 +133,7 @@ Meteor.methods({
     if (!user) {
       const userId = createUser(userData);
       user = Accounts._findUserByQuery(
-        { id: userId },
+        { _id: userId },
         {
           fields: { emails: 1 },
         }
