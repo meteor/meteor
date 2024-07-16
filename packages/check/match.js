@@ -71,6 +71,10 @@ export const Match = {
   OneOf: function(...args) {
     return new OneOf(args);
   },
+  
+  OnlyOneOf: function(...args) {
+    return new OnlyOneOf(args);
+  },
 
   Any: ['__any__'],
   Where: function(condition) {
@@ -152,6 +156,16 @@ class OneOf {
   constructor(choices) {
     if (!choices || choices.length === 0) {
       throw new Error('Must provide at least one choice to Match.OneOf');
+    }
+
+    this.choices = choices;
+  }
+}
+
+class OnlyOneOf {
+  constructor(choices) {
+    if (!choices || choices.length === 0) {
+      throw new Error('Must provide at least one choice to Match.OnlyOneOf');
     }
 
     this.choices = choices;
@@ -365,6 +379,24 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
     // XXX this error is terrible
     return {
       message: 'Failed Match.OneOf, Match.Maybe or Match.Optional validation',
+      path: '',
+    };
+  }
+  
+  if (pattern instanceof OnlyOneOf) {
+    const results = [];
+    for (let i = 0; i < pattern.choices.length; ++i) {
+      results.push(testSubtree(value, pattern.choices[i]));
+    }
+
+    if (results.filter(r => r === false).length === 1) {
+
+      // Only one succeeded? Yay, return.
+      return false;
+    }
+
+    return {
+      message: 'Failed Match.OnlyOneOf validation',
       path: '',
     };
   }
