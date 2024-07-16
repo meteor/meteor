@@ -8,7 +8,52 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
-## v3.0, TBD
+## v3.0.1, 2024-07-16
+
+### Highlights
+
+* Bump the patch for some packages, so we publish them using Meteor 3 tooling. [PR](https://github.com/meteor/meteor/pull/13231)
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 3.0.1
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Bumped packages`:
+  - accounts-ui-unstyled@1.7.2
+  - crosswalk@1.7.3
+  - facebook-oauth@1.11.4
+  - npm-mongo@4.17.3
+  - package-version-parser@3.2.3
+  - twitter-config-ui@1.0.2
+
+
+#### Special thanks to
+
+- [@denihs](https://github.com/denihs).
+
+
+For making this great framework even better!
+
+
+## v3.0, 2024-07-15
 
 ### Highlights
 
