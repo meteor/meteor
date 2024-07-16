@@ -12,7 +12,7 @@
 
 ### Highlights
 
-* Bump the patch for some packages, so we publish them using Meteor 3 tooling. [PR](https://github.com/meteor/meteor/pull/13223)
+* Bump the patch for some packages, so we publish them using Meteor 3 tooling. [PR](https://github.com/meteor/meteor/pull/13231)
 
 #### Breaking Changes
 
