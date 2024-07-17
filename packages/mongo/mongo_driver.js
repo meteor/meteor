@@ -193,7 +193,7 @@ MongoConnection = function (url, options) {
 
   mongoOptions.driverInfo = {
     name: 'Meteor',
-    version: "METEOR_VERION" // TODO: however the package version needs to be included
+    version: Meteor.release
   }
   
   self.client = new MongoDB.MongoClient(url, mongoOptions);
