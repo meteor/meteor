@@ -220,12 +220,6 @@ export namespace Accounts {
 
   function setUsername(userId: string, newUsername: string): void;
 
-  function setPassword(
-    userId: string,
-    newPassword: string,
-    options?: { logout?: boolean | undefined }
-  ): void;
-
   function setPasswordAsync(
     userId: string,
     newPassword: string,
@@ -365,10 +359,10 @@ export namespace Accounts {
    * properties `digest` and `algorithm` (in which case we bcrypt
    * `password.digest`).
    */
-  function _checkPassword(
+  function _checkPasswordAsync(
     user: Meteor.User,
     password: Password
-  ): { userId: string; error?: any };
+  ): Promise<{ userId: string; error?: any }>
 }
 
 export namespace Accounts {

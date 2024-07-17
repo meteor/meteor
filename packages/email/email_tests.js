@@ -10,22 +10,11 @@ const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-// Create dynamic sync tests
-TEST_CASES.forEach(({ title, options, testCalls }) => {
-  Tinytest.add(`[Sync] ${title}`, function (test) {
-    smokeEmailTest((stream) => {
-      Object.entries(options).forEach(([key, option]) => {
-        const testCall = testCalls[key];
-        Email.send({ ...option, stream });
-        testCall(test, stream);
-      });
-    });
-  });
-});
-
 // Create dynamic async tests
 TEST_CASES.forEach(({ title, options, testCalls }) => {
-  Tinytest.addAsync(`[Async] ${title}`, function (test, onComplete) {
+  Tinytest.addAsync(`${title}`, async function (test, onComplete) {
+    let resolver;
+    const promise = new Promise(r => resolver = r);
     smokeEmailTest((stream) => {
       const allPromises = Object.entries(options).map(([key, option]) => {
         const testCall = testCalls[key];
@@ -33,87 +22,16 @@ TEST_CASES.forEach(({ title, options, testCalls }) => {
           testCall(test, stream);
         });
       });
-      Promise.all(allPromises).then(() => onComplete());
+      Promise.all(allPromises).then(() => resolver());
     });
+    await promise;
   });
-});
-
-// Individual sync tests
-
-Tinytest.add(
-  '[Sync] email - alternate API is used for sending gets data',
-  function (test) {
-    smokeEmailTest(function (stream) {
-      Email.customTransport = (options) => {
-        test.equal(options.from, 'foo@example.com');
-      };
-      Email.send({
-        from: 'foo@example.com',
-        to: 'bar@example.com',
-        text: '*Cool*, man',
-        html: '<i>Cool</i>, man',
-        stream,
-      });
-      test.equal(stream.getContentsAsString('utf8'), false);
-    });
-
-    smokeEmailTest(function (stream) {
-      Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
-      Email.customTransport = (options) => {
-        test.equal(options.from, 'foo@example.com');
-        test.equal(options.packageSettings?.service, '1on1');
-      };
-
-      Email.send({
-        from: 'foo@example.com',
-        to: 'bar@example.com',
-        text: '*Cool*, man',
-        html: '<i>Cool</i>, man',
-        stream,
-      });
-
-      test.equal(stream.getContentsAsString('utf8'), false);
-    });
-    Email.customTransport = undefined;
-    Meteor.settings.packages = undefined;
-  }
-);
-
-Tinytest.add('[Sync] email - hooks stop the sending', function (test) {
-  // Register hooks
-  const hook1 = Email.hookSend((options) => {
-    // Test that we get options through
-    test.equal(options.from, 'foo@example.com');
-    console.log('EXECUTE');
-    return true;
-  });
-  const hook2 = Email.hookSend(() => {
-    console.log('STOP');
-    return false;
-  });
-  const hook3 = Email.hookSend(() => {
-    console.log('FAIL');
-  });
-  smokeEmailTest(function (stream) {
-    Email.send({
-      from: 'foo@example.com',
-      to: 'bar@example.com',
-      text: '*Cool*, man',
-      html: '<i>Cool</i>, man',
-      stream,
-    });
-
-    test.equal(stream.getContentsAsString('utf8'), false);
-  });
-  hook1.stop();
-  hook2.stop();
-  hook3.stop();
 });
 
 // Individual Async tests
 
 Tinytest.addAsync(
-  '[Async] email - alternate API is used for sending gets data',
+  'email - alternate API is used for sending gets data',
   function (test, onComplete) {
     const allPromises = [];
     smokeEmailTest((stream) => {
@@ -161,7 +79,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  '[Async] email - hooks stop the sending',
+  'email - hooks stop the sending',
   function (test, onComplete) {
     // Register hooks
     const hook1 = Email.hookSend((options) => {
@@ -197,7 +115,7 @@ Tinytest.addAsync(
 
 // Another tests
 
-Tinytest.add('[Sync] email - URL string for known hosts', function (test) {
+Tinytest.add('email - URL string for known hosts', function (test) {
   const oneTransport = EmailTest.knowHostsTransport({
     service: '1und1',
     user: 'test',
@@ -254,7 +172,7 @@ Tinytest.add('[Sync] email - URL string for known hosts', function (test) {
 });
 
 Tinytest.addAsync(
-  '[Async] email - with custom transport exception',
+  'email - with custom transport exception',
   async function (test) {
     Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
     Email.customTransport = (options) => {
@@ -300,7 +218,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  '[Async] email - with custom transport long time running',
+  'email - with custom transport long time running',
   async function (test) {
     Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
     Email.customTransport = async (options) => {
@@ -314,24 +232,5 @@ Tinytest.addAsync(
     });
     Meteor.settings.packages = undefined;
     Email.customTransport = undefined;
-  }
-);
-
-Tinytest.addAsync(
-  '[Sync] email - with custom transport long time running',
-  function (test, onComplete) {
-    Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
-    Email.customTransport = async (options) => {
-      await sleep(3000);
-      test.equal(options.from, 'foo@example.com');
-      test.equal(options.packageSettings?.service, '1on1');
-      Meteor.settings.packages = undefined;
-      Email.customTransport = undefined;
-      onComplete();
-    };
-    Email.send({
-      from: 'foo@example.com',
-      to: 'bar@example.com',
-    });
   }
 );
