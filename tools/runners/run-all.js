@@ -17,28 +17,34 @@ const HMRServer = require('./run-hmr').HMRServer;
 const Updater = require('./run-updater').Updater;
 
 class Runner {
-  constructor({
-    appHost,
-    appPort,
-    banner,
-    disableOplog,
-    cordovaRunner,
-    mongoUrl,
-    onFailure,
-    oplogUrl,
-    projectContext,
-    proxyHost,
-    proxyPort,
-    quiet,
-    rootUrl,
-    selenium,
-    seleniumBrowser,
-    noReleaseCheck,
-    cordovaServerPort,
-    ...optionsForAppRunner
-  }) {
+  constructor(options) {
     const self = this;
-    self.projectContext = projectContext;
+    self.options = options;
+    self.projectContext = options.projectContext;
+  }
+
+  async init() {
+    const self = this;
+    let {
+          appHost,
+          appPort,
+          banner,
+          disableOplog,
+          cordovaRunner,
+          mongoUrl,
+          onFailure,
+          oplogUrl,
+          projectContext,
+          proxyHost,
+          proxyPort,
+          quiet,
+          rootUrl,
+          selenium,
+          seleniumBrowser,
+          noReleaseCheck,
+          cordovaServerPort,
+    ...optionsForAppRunner
+    } = self.options;
 
     if (typeof proxyPort === 'undefined') {
       throw new Error('no proxyPort?');
@@ -53,7 +59,7 @@ class Runner {
     self.noReleaseCheck = noReleaseCheck;
     self.quiet = quiet;
     self.banner = banner || files.convertToOSPath(
-      files.prettyPath(self.projectContext.projectDir)
+        files.prettyPath(self.projectContext.projectDir)
     );
 
     if (rootUrl) {
@@ -78,13 +84,13 @@ class Runner {
       ignoredUrls: [HMRPath]
     });
 
-    buildmessage.capture(function () {
-      self.projectContext.resolveConstraints();
+    await buildmessage.capture(async function () {
+      await self.projectContext.resolveConstraints();
     });
 
     const packageMap = self.projectContext.packageMap;
     const hasMongoDevServerPackage =
-      packageMap && packageMap.getInfo('mongo-dev-server') != null;
+        packageMap && packageMap.getInfo('mongo-dev-server') != null;
     self.mongoRunner = null;
     if (mongoUrl) {
       oplogUrl = disableOplog ? null : oplogUrl;
@@ -113,7 +119,7 @@ class Runner {
     }
 
     const hasHotModuleReplacementPackage = packageMap &&
-      packageMap.getInfo('hot-module-replacement') != null;
+        packageMap.getInfo('hot-module-replacement') != null;
     self.hmrServer = null;
     let hmrSecret = null;
     if (hasHotModuleReplacementPackage) {
@@ -152,12 +158,11 @@ class Runner {
       });
     }
   }
-
   // XXX leave a pidfile and check if we are already running
-  start() {
+  async start() {
     const self = this;
 
-    self.proxy.start();
+    await self.proxy.start();
 
     // print the banner only once we've successfully bound the port
     if (! self.quiet && ! self.stopped) {
@@ -168,23 +173,20 @@ class Runner {
     var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
 
     function startMongo(tries = 3) {
-      self._startMongoAsync().then(
-        ok => unblockAppRunner(),
-        error => {
+      self
+        ._startMongoAsync()
+        .then(() => unblockAppRunner())
+        .catch(async (error) => {
           --tries;
           const left = tries + (tries === 1 ? " try" : " tries");
-          Console.error(
-            `Error starting Mongo (${left} left): ${error.message}`
-          );
-
+          Console.error(`Error starting Mongo (${left} left): ${error.message}`);
           if (tries > 0) {
             self.mongoRunner.stop();
             setTimeout(() => startMongo(tries), 1000);
           } else {
-            self.mongoRunner._fail();
+            await self.mongoRunner._fail();
           }
-        }
-      );
+        });
     }
 
     startMongo();
@@ -202,9 +204,7 @@ class Runner {
     }
 
     if (! self.stopped) {
-      buildmessage.enterJob({ title: "starting your app" }, function () {
-        self.appRunner.start();
-      });
+      await buildmessage.enterJob({ title: "starting your app" }, () => self.appRunner.start());
       if (! self.quiet && ! self.stopped) {
         runLog.log("Started your app.",  { arrow: true });
       }
@@ -228,8 +228,8 @@ class Runner {
     }
 
     if (self.selenium && ! self.stopped) {
-      buildmessage.enterJob({ title: "starting Selenium" }, function () {
-        self.selenium.start();
+      await buildmessage.enterJob({ title: "starting Selenium" }, async function () {
+        return await self.selenium.start();
       });
       if (! self.quiet && ! self.stopped) {
         runLog.log("Started Selenium.", { arrow: true });
@@ -244,7 +244,7 @@ class Runner {
 
   async _startMongoAsync() {
     if (! this.stopped && this.mongoRunner) {
-      this.mongoRunner.start();
+      await this.mongoRunner.start();
       if (! this.stopped && ! this.quiet) {
         runLog.log("Started MongoDB.", { arrow: true });
       }
@@ -252,18 +252,18 @@ class Runner {
   }
 
   // Idempotent
-  stop() {
+  async stop() {
     const self = this;
     if (self.stopped) {
       return;
     }
 
     self.stopped = true;
-    self.proxy.stop();
-    self.updater.stop();
-    self.mongoRunner && self.mongoRunner.stop();
-    self.appRunner.stop();
-    self.selenium && self.selenium.stop();
+    await self.proxy.stop();
+    await self.updater.stop();
+    await self.mongoRunner && self.mongoRunner.stop();
+    await self.appRunner.stop();
+    await (self.selenium && self.selenium.stop());
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?
     runLog.finish();
@@ -332,19 +332,19 @@ class Runner {
 // - recordPackageUsage: (default true) if set to false, don't send
 //   information about packages used by this app to the package stats
 //   server.
-exports.run = function (options) {
+exports.run = async function (options) {
   var runOptions = _.clone(options);
   var once = runOptions.once;
   var onBuilt = runOptions.onBuilt;
 
   var promise = new Promise(function (resolve) {
-    runOptions.onFailure = function () {
+    runOptions.onFailure = async function () {
       // Ensure that runner stops now. You might think this is unnecessary
       // because the runner is stopped immediately after promise.await(), but if
       // the failure happens while runner.start() is still running, we want the
       // rest of start to stop, and it's not like resolve() magically makes
       // us jump to a promise.await() that hasn't happened yet!.
-      runner.stop();
+      await runner.stop();
       resolve({ outcome: 'failure' });
     };
 
@@ -397,10 +397,12 @@ exports.run = function (options) {
   }
 
   var runner = new Runner(runOptions);
-  runner.start();
+  await runner.init();
+  // don't wait this on to finish
+  setTimeout(() => runner.start(), 0);
   onBuilt && onBuilt();
-  var result = promise.await();
-  runner.stop();
+  var result = await promise;
+  await runner.stop();
 
   if (result.outcome === "conflicting-versions") {
     Console.error(
