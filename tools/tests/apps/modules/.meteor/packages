@@ -27,5 +27,5 @@ underscore@1.0.14-beta300.6
 import-local-json-module
 dummy-compiler
 typescript@5.3.3-beta300.6
-meteortesting:mocha@3.0.3
+meteortesting:mocha@3.0.0
 meteortesting:mocha-core@8.2.0
