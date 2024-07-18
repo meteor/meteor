@@ -1,5 +1,5 @@
-const has = Npm.require('lodash.has');
-const memoize = Npm.require('lodash.memoize');
+const has = require('lodash.has');
+const memoize = require('lodash.memoize');
 
 var CS = ConstraintSolver;
 var PV = PackageVersion;

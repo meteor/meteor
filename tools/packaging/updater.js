@@ -20,7 +20,7 @@ var packageMapModule = require('./package-map.js');
  * options: showBanner
  */
 var checkInProgress = false;
-exports.tryToDownloadUpdate = function (options) {
+exports.tryToDownloadUpdate = async function (options) {
   options = options || {};
   // Don't run more than one check simultaneously. It should be
   // harmless but having two downloads happening simultaneously (and
@@ -29,16 +29,16 @@ exports.tryToDownloadUpdate = function (options) {
     return;
   }
   checkInProgress = true;
-  checkForUpdate(!! options.showBanner, !! options.printErrors);
+  await checkForUpdate(!! options.showBanner, !! options.printErrors);
   checkInProgress = false;
 };
 
 var firstCheck = true;
 
-var checkForUpdate = function (showBanner, printErrors) {
+var checkForUpdate = async function (showBanner, printErrors) {
   // While we're doing background stuff, try to revoke any old tokens in our
   // session file.
-  auth.tryRevokeOldTokens({ timeout: 15 * 1000 });
+  await auth.tryRevokeOldTokens({ timeout: 15 * 1000 });
 
   if (firstCheck) {
     // We want to avoid a potential race condition here, because we run an
@@ -50,7 +50,7 @@ var checkForUpdate = function (showBanner, printErrors) {
     firstCheck = false;
   } else {
     try {
-      catalog.official.refresh();
+      await catalog.official.refresh();
     } catch (err) {
       Console.debug("Failed to refresh catalog, ignoring error", err);
       return;
@@ -61,7 +61,7 @@ var checkForUpdate = function (showBanner, printErrors) {
     return;
   }
 
-  maybeShowBanners();
+  await maybeShowBanners();
 };
 
 var lastShowTimes = {};
@@ -85,19 +85,19 @@ var shouldShow = function (key, maxAge) {
   return true;
 };
 
-var maybeShowBanners = function () {
+var maybeShowBanners = async function () {
   var releaseData = release.current.getCatalogReleaseData();
 
   var banner = releaseData.banner;
   if (banner) {
     var bannerDate =
           banner.lastUpdated ? new Date(banner.lastUpdated) : new Date;
-    if (catalog.official.shouldShowBanner(release.current.name, bannerDate)) {
+    if (await catalog.official.shouldShowBanner(release.current.name, bannerDate)) {
       // This banner is new; print it!
       runLog.log("");
       runLog.log(banner.text);
       runLog.log("");
-      catalog.official.setBannerShownDate(release.current.name, bannerDate);
+      await catalog.official.setBannerShownDate(release.current.name, bannerDate);
       return;
     }
   }
@@ -112,10 +112,10 @@ var maybeShowBanners = function () {
   const catalogUtils = require('./catalog/catalog-utils.js');
 
   // Didn't print a banner? Maybe we have a patch release to recommend.
-  var track = release.current.getReleaseTrack();
+  var track = await release.current.getReleaseTrack();
   var patchReleaseVersion = releaseData.patchReleaseVersion;
   if (patchReleaseVersion) {
-    var patchRelease = catalog.official.getReleaseVersion(
+    var patchRelease = await catalog.official.getReleaseVersion(
       track, patchReleaseVersion);
     if (patchRelease && patchRelease.recommended) {
       var patchKey = "patchrelease-" + track + "-" + patchReleaseVersion;
@@ -135,7 +135,7 @@ var maybeShowBanners = function () {
   // XXX maybe run constraint solver to change the message depending on whether
   //     or not it will actually work?
   var currentReleaseOrderKey = releaseData.orderKey || null;
-  var futureReleases = catalog.official.getSortedRecommendedReleaseVersions(
+  var futureReleases = await catalog.official.getSortedRecommendedReleaseVersions(
     track, currentReleaseOrderKey);
   if (futureReleases.length) {
     var futureReleaseKey = "futurerelease-" + track + "-" + futureReleases[0];
@@ -150,17 +150,17 @@ var maybeShowBanners = function () {
 
 // Update ~/.meteor/meteor to point to the tool binary from the tools of the
 // latest recommended release on the default release track.
-export function updateMeteorToolSymlink(printErrors) {
+export async function updateMeteorToolSymlink(printErrors) {
   // Get the latest release version of METEOR. (*Always* of the default
   // track, not of whatever we happen to be running: we always want the tool
   // symlink to go to the default track.)
-  var latestReleaseVersion = catalog.official.getDefaultReleaseVersion();
+  var latestReleaseVersion = await catalog.official.getDefaultReleaseVersion();
   // Maybe you're on some random track with nothing recommended. That's OK.
   if (!latestReleaseVersion) {
     return;
   }
 
-  var latestRelease = catalog.official.getReleaseVersion(
+  var latestRelease = await catalog.official.getReleaseVersion(
     latestReleaseVersion.track, latestReleaseVersion.version);
   if (!latestRelease) {
     throw Error("latest release doesn't exist?");
@@ -183,8 +183,8 @@ export function updateMeteorToolSymlink(printErrors) {
     // and then update the symlink.
     var packageMap =
           packageMapModule.PackageMap.fromReleaseVersion(latestRelease);
-    var messages = buildmessage.capture(function () {
-      tropohouse.default.downloadPackagesMissingFromMap(packageMap);
+    var messages = await buildmessage.capture(async function () {
+      await tropohouse.default.downloadPackagesMissingFromMap(packageMap);
     });
     if (messages.hasMessages()) {
       // Ignore errors because we are running in the background, uness we
@@ -197,7 +197,7 @@ export function updateMeteorToolSymlink(printErrors) {
     }
 
     var toolIsopack = new isopack.Isopack;
-    toolIsopack.initFromPath(
+    await toolIsopack.initFromPath(
       latestReleaseToolPackage,
       tropohouse.default.packagePath(latestReleaseToolPackage,
                                      latestReleaseToolVersion));
@@ -213,7 +213,7 @@ export function updateMeteorToolSymlink(printErrors) {
       throw Error("latest release has no tool?");
     }
 
-    tropohouse.default.linkToLatestMeteor(files.pathJoin(
+    await tropohouse.default.linkToLatestMeteor(files.pathJoin(
       relativeToolPath, toolRecord.path, 'meteor'));
   }
 }

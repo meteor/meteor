@@ -217,9 +217,9 @@ export default class Cursor {
   }
 
   /**
-   * @summary observe async version
+   * @summary Watch a query.  Receive callbacks as the result set changes.
    * @locus Anywhere
-   * @memberOf Promise<Mongo.Cursor>
+   * @memberOf Mongo.Cursor
    * @instance
    */
   observeAsync(options) {
@@ -251,7 +251,7 @@ export default class Cursor {
     }
 
     if (this.fields && (this.fields._id === 0 || this.fields._id === false)) {
-      throw Error('You may not observe a cursor with {fields: {_id: 0}}');
+      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
     const distances =
@@ -293,13 +293,14 @@ export default class Cursor {
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    const wrapCallback = fn => {
+    const wrapCallback = (fn) => {
       if (!fn) {
         return () => {};
       }
 
       const self = this;
-      return function(/* args*/) {
+
+      return function (/* args*/) {
         if (self.collection.paused) {
           return;
         }
@@ -322,7 +323,7 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      query.results.forEach(doc => {
+      const handler = (doc) => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;
@@ -332,7 +333,17 @@ export default class Cursor {
         }
 
         query.added(doc._id, this._projectionFn(fields));
-      });
+      };
+      // it means it's just an array
+      if (query.results.length) {
+        for (const doc of query.results) {
+          handler(doc);
+        }
+      }
+      // it means it's an id map
+      if (query.results?.size?.()) {
+        query.results.forEach(handler);
+      }
     }
 
     const handle = Object.assign(new LocalCollection.ObserveHandle(), {
@@ -342,6 +353,8 @@ export default class Cursor {
           delete this.collection.queries[qid];
         }
       },
+      isReady: false,
+      isReadyPromise: null,
     });
 
     if (this.reactive && Tracker.active) {
@@ -357,19 +370,34 @@ export default class Cursor {
 
     // run the observe callbacks resulting from the initial contents
     // before we leave the observe.
-    this.collection._observeQueue.drain();
+    const drainResult = this.collection._observeQueue.drain();
+
+    if (drainResult instanceof Promise) {
+      handle.isReadyPromise = drainResult;
+      drainResult.then(() => (handle.isReady = true));
+    } else {
+      handle.isReady = true;
+      handle.isReadyPromise = Promise.resolve();
+    }
 
     return handle;
   }
 
   /**
-   * @summary observeChanges async version
+   * @summary Watch a query. Receive callbacks as the result set changes. Only
+   *          the differences between the old and new documents are passed to
+   *          the callbacks.
    * @locus Anywhere
-   * @memberOf Promise<Mongo.Cursor>
+   * @memberOf Mongo.Cursor
    * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
    */
   observeChangesAsync(options) {
-    return new Promise(resolve => resolve(this.observeChanges(options)));
+    return new Promise((resolve) => {
+      const handle = this.observeChanges(options);
+      handle.isReadyPromise.then(() => resolve(handle));
+    });
   }
 
   // XXX Maybe we need a version of observe that just calls a callback if
@@ -437,7 +465,6 @@ export default class Cursor {
       }
 
       const selectedDoc = this.collection._docs.get(this._selectorId);
-
       if (selectedDoc) {
         if (options.ordered) {
           results.push(selectedDoc);
@@ -445,7 +472,6 @@ export default class Cursor {
           results.set(this._selectorId, selectedDoc);
         }
       }
-
       return results;
     }
 
@@ -463,10 +489,8 @@ export default class Cursor {
         distances = new LocalCollection._IdMap();
       }
     }
-
     this.collection._docs.forEach((doc, id) => {
       const matchResult = this.matcher.documentMatches(doc);
-
       if (matchResult.result) {
         if (options.ordered) {
           results.push(doc);
@@ -538,7 +562,6 @@ ASYNC_CURSOR_METHODS.forEach(method => {
   const asyncName = getAsyncMethodName(method);
   Cursor.prototype[asyncName] = function(...args) {
     try {
-      this[method].isCalledFromAsync = true;
       return Promise.resolve(this[method].apply(this, args));
     } catch (error) {
       return Promise.reject(error);
