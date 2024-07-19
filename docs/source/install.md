@@ -8,7 +8,7 @@ You need to install the Meteor command line tool to create, run, and manage your
 
 <h3 id="prereqs-node">Node.js version</h3>
 
-> Meteor 2.x runs on a deprecated Node.js version (14). Meteor 3.0, currently in its Release Candidate version, runs on Node.js v20. For more information, please consult our [migration guide](https://guide.meteor.com/3.0-migration.html).
+> Meteor 2.x uses the deprecated Node.js 14. Meteor 3.0 has been released and runs on Node.js 20. Check out our [v3 docs](https://v3-docs.meteor.com) and [migration guide](https://v3-migration-docs.meteor.com/).
 
 - Node.js version >= 10 and <= 14 is required.
 - We recommend you using [nvm](https://github.com/nvm-sh/nvm) or [Volta](https://volta.sh/) for managing Node.js versions.
