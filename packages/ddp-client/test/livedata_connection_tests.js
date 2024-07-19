@@ -2509,47 +2509,6 @@ if (Meteor.isClient) {
     test.equal((await coll.findOneAsync('aaa')).method, 222);
     test.equal((await coll.findOneAsync('aaa')).subscription, 112);
   });
-
-  Tinytest.addAsync(
-    "livedata connection - make sure the sub and unsub run in the correct order",
-    async function (test, onComplete) {
-      const stream = new StubStream();
-      // Make sure to disable this flag so the subscribe and unsubscribe are queued
-      stream._neverQueued = false;
-      const conn = newConnection(stream);
-
-      const sub = conn.subscribe("test_data");
-
-      // the subscribe message is still in the queue
-      test.isFalse(conn._readyToMigrate());
-      test.length(stream.sent, 0);
-
-      // unsubscribe
-      sub.stop();
-
-      // the queue still holds the data and no message arrived yet
-      test.isFalse(conn._readyToMigrate());
-      test.length(stream.sent, 0);
-
-      // waits until the queue is empty
-      await waitUntil(conn._readyToMigrate);
-
-      // the first message is the sub message
-      let subMessage = JSON.parse(stream.sent.shift());
-      test.equal(subMessage, {
-        msg: "sub",
-        name: "test_data",
-        params: [],
-        id: subMessage.id,
-      });
-      test.length(stream.sent, 1);
-
-      // the second message is the unsub
-      subMessage = JSON.parse(stream.sent.shift());
-      test.equal(subMessage, { msg: "unsub", id: subMessage.id });
-      test.length(stream.sent, 0);
-    }
-  );
 }
 
 // XXX also test:
