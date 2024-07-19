@@ -13,7 +13,7 @@ export const CORDOVA_ARCH = "web.cordova";
 
 export const CORDOVA_PLATFORMS = ['ios', 'android'];
 
-const CORDOVA_ANDROID_VERSION = "12.0.1";
+const CORDOVA_ANDROID_VERSION = "13.0.0";
 
 export const CORDOVA_DEV_BUNDLE_VERSIONS = {
   'cordova-lib': '12.0.1',
@@ -25,7 +25,7 @@ export const CORDOVA_DEV_BUNDLE_VERSIONS = {
 
 export const CORDOVA_PLATFORM_VERSIONS = {
   'android': CORDOVA_ANDROID_VERSION,
-  'ios': '7.0.1',
+  'ios': '7.1.0',
 };
 
 export const SWIFT_VERSION = 5;
