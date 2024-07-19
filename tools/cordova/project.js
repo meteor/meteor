@@ -621,7 +621,6 @@ from Cordova project`, async () => {
       const commandOptions = Object.assign(this.defaultOptions,
         { cli_variables: config, link: utils.isUrlWithFileScheme(version) });
 
-      console.log('cordova_lib', cordova_lib);
       try {
         await this.runCommands(`adding plugin ${target} \
 to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target],
@@ -907,7 +906,6 @@ convenience, but you should adjust your dependencies.`);
     cwd = this.projectRoot) {
     // Capitalize title for debug output
     Console.debug(title[0].toUpperCase() + title.slice(1));
-    console.log('title', title, cwd);
 
     const oldCwd = process.cwd();
     if (cwd) {
