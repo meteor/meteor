@@ -471,16 +471,18 @@ Tinytest.addAsync('livedata server - publish cursor is properly awaited', async 
     await coll.insertAsync({ _id: `item_${i}`, title: `Item #${i}` });
   }
 
-  delete Meteor.server.publish_handlers['asyncPublishCursor'];
+  const publicationName = `publication_${Random.id()}`
 
-  Meteor.publish('asyncPublishCursor', async function (count) {
+  delete Meteor.server.publish_handlers[publicationName];
+
+  Meteor.publish(publicationName, async function (count) {
     return coll.find({}, { limit: count });
   });
 
   const reactiveVar = new ReactiveVar(1);
 
   const computation = Tracker.autorun(() => {
-    sub = clientConn.subscribe('asyncPublishCursor', reactiveVar.get());
+    sub = clientConn.subscribe(publicationName, reactiveVar.get());
   });
 
   await sleep(100)
