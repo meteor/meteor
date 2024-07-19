@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ecmascript-runtime-client',
-  version: '0.12.2-rc300.8',
+  version: '0.12.2',
   summary: 'Polyfills for new ECMAScript 2015 APIs like Map and Set',
   git:
     'https://github.com/meteor/meteor/tree/devel/packages/ecmascript-runtime-client',

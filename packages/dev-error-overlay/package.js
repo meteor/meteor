@@ -1,5 +1,5 @@
 Package.describe({
-  version: '0.1.3-rc300.8',
+  version: '0.1.3',
   summary: 'Show build errors in client when using HMR',
   documentation: 'README.md',
   devOnly: true

@@ -362,7 +362,7 @@ export namespace Accounts {
   function _checkPasswordAsync(
     user: Meteor.User,
     password: Password
-  ): { userId: string; error?: any };
+  ): Promise<{ userId: string; error?: any }>
 }
 
 export namespace Accounts {
