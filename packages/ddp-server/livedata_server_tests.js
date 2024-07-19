@@ -443,6 +443,9 @@ Tinytest.addAsync("livedata server - waiting for Promise", (test, onComplete) =>
   })
 );
 
+/**
+ * https://github.com/meteor/meteor/issues/13212
+ */
 Tinytest.addAsync('livedata server - publish cursor is properly awaited', async function (test) {
   const messages = []
 

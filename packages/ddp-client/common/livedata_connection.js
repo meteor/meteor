@@ -456,7 +456,7 @@ export class Connection {
           this.ready && this.readyDeps.changed();
         },
         stop() {
-          this.connection._sendQueued({ msg: 'unsub', id: id });
+          this.connection._send({ msg: 'unsub', id: id });
           this.remove();
 
           if (callbacks.onStop) {
@@ -1029,13 +1029,6 @@ export class Connection {
   // Sends the DDP stringification of the given message object
   _send(obj) {
     this._stream.send(DDPCommon.stringifyDDP(obj));
-  }
-
-  // Always queues the call before sending the message
-  // Used, for example, on subscription.[id].stop() to make sure a "sub" message is always called before an "unsub" message
-  // https://github.com/meteor/meteor/issues/13212
-  _sendQueued(obj) {
-    this._send(obj, true);
   }
 
   // We detected via DDP-level heartbeats that we've lost the
