@@ -1261,12 +1261,10 @@ Object.assign(Subscription.prototype, {
           return;
         }
         collectionNames[collectionName] = true;
-      };
+      }
 
       try {
-        for (const cur of res) {
-          await cur._publishCursor(self);
-        }
+        await Promise.all(res.map(cur => cur._publishCursor(self)));
       } catch (e) {
         self.error(e);
         return;
