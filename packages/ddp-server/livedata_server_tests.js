@@ -442,3 +442,70 @@ Tinytest.addAsync("livedata server - waiting for Promise", (test, onComplete) =>
       .then(onComplete);
   })
 );
+
+Tinytest.addAsync('livedata server - publish cursor is properly awaited', async function (test) {
+  const messages = []
+
+  let sub = null;
+
+  const { clientConn } = await getTestConnections(test)
+
+  const send = clientConn._stream.send
+
+  clientConn._stream.send = function (...args) {
+    send.apply(this, args)
+    messages.push(args[0])
+  }
+
+  clientConn._stream.on('message', message => messages.push(message));
+
+  const coll = new Mongo.Collection('items', {
+    defineMutationMethods: false,
+  });
+
+  for (let i = 0; i < 10; i++) {
+    await coll.removeAsync({ _id: `item_${i}` })
+    await coll.insertAsync({ _id: `item_${i}`, title: `Item #${i}` });
+  }
+
+  delete Meteor.server.publish_handlers['asyncPublishCursor'];
+
+  Meteor.publish('asyncPublishCursor', async function (count) {
+    return coll.find({}, { limit: count });
+  });
+
+  const reactiveVar = new ReactiveVar(1);
+
+  const computation = Tracker.autorun(() => {
+    sub = clientConn.subscribe('asyncPublishCursor', reactiveVar.get());
+  });
+
+  await sleep(100)
+
+  reactiveVar.set(2);
+
+  await sleep(100)
+
+  const expectedMessages = ['sub', 'added', 'ready', 'sub', 'unsub', 'added', 'ready', 'nosub']
+
+  /**
+   * There shouldn't ever be `removed` messages here, otherwise the UI will glitch
+   */
+  const parsedMessages = messages.map(m => EJSON.parse(m).msg)
+
+  test.equal(parsedMessages, expectedMessages)
+
+  computation.stop();
+});
+
+function getTestConnections(test) {
+  return new Promise((resolve, reject) => {
+    makeTestConnection(test, (clientConn, serverConn) => {
+      resolve({ clientConn, serverConn });
+    }, reject);
+  })
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
