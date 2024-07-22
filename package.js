@@ -23,7 +23,7 @@ Package.onUse(function (api) {
 
   api.use('zodern:types@1.0.13')
 
-  api.use(['blaze@2.9.0 || 3.0.0-rc300.2'], 'client', { weak: true })
+  api.use(['blaze@2.9.0 || 3.0.0'], 'client', { weak: true })
 
   api.export(['Roles', 'RolesCollection', 'RoleAssignmentCollection'])
 
