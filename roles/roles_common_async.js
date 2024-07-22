@@ -861,9 +861,7 @@ Object.assign(Roles, {
     const res = await asyncSome(roles, async (roleName) => {
       selector['inheritedRoles._id'] = roleName
       const out =
-        (await RoleAssignmentCollection
-          .find(selector, { limit: 1 })
-          .countAsync()) > 0
+        (await RoleAssignmentCollection.countDocuments(selector, { limit: 1 })) > 0
       return out
     })
 
