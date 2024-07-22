@@ -181,7 +181,7 @@ Object.assign(Roles, {
       }, { multi: true })
     } while (count > 0)
 
-      RolesCollection.remove({ _id: oldName })
+    RolesCollection.remove({ _id: oldName })
   },
 
   /**
