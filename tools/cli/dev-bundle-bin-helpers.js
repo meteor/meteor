@@ -1,18 +1,19 @@
 const fs = require("fs");
 const path = require("path");
 const { convertToOSPath } = require("./convert-to-os-path.js");
+const { getDevBundleDir } = require('./dev-bundle');
 
-var isWindows = process.platform === "win32";
-var extensions = isWindows ? [".cmd", ".exe"] : [""];
-var hasOwn = Object.prototype.hasOwnProperty;
+const isWindows = process.platform === "win32";
+const extensions = isWindows ? [".cmd", ".exe"] : [""];
+const hasOwn = Object.prototype.hasOwnProperty;
 
-function getDevBundle() {
-  return require("./dev-bundle.js");
+module.exports = {
+  getCommand,
+  getEnv,
 }
-exports.getDevBundle = getDevBundle;
 
-exports.getCommand = function (name, devBundleDir) {
-  var result = null;
+function getCommand (name, devBundleDir) {
+  let result = null;
 
   // Strip leading and/or trailing whitespace.
   name = name.replace(/^\s+|\s+$/g, "");
@@ -22,7 +23,7 @@ exports.getCommand = function (name, devBundleDir) {
   }
 
   extensions.some(function (ext) {
-    var cmd = path.join(devBundleDir, "bin", name + ext);
+    const cmd = path.join(devBundleDir, "bin", name + ext);
     try {
       if (fs.statSync(cmd).isFile()) {
         result = cmd;
@@ -48,7 +49,7 @@ function isValidCommand(name, devBundleDir) {
     return false;
   }
 
-  var meteorCommandsJsonPath =
+  const meteorCommandsJsonPath =
     path.join(devBundleDir, "bin", ".meteor-commands.json");
 
   try {
@@ -62,64 +63,61 @@ function isValidCommand(name, devBundleDir) {
   return ! hasOwn.call(meteorCommands, name);
 }
 
-exports.getEnv = function (options) {
-  var devBundle = options && options.devBundle;
-  var devBundlePromise = typeof devBundle === "string"
-    ? Promise.resolve(convertToOSPath(devBundle))
-    : getDevBundle();
+async function getEnv(options) {
+  const devBundle = options && options.devBundle;
 
-  return devBundlePromise.then(function (devBundleDir) {
-    var paths = [
-      // When npm looks for node, it must find dev_bundle/bin/node.
-      path.join(devBundleDir, "bin"),
+  /**
+   * @type string
+   */
+  const devBundleDir = typeof devBundle === "string"
+    ? await convertToOSPath(devBundle)
+    : await getDevBundleDir();
 
-      // When npm looks for meteor, it should find dev_bundle/../meteor.
-      path.dirname(devBundleDir),
+  const paths = [
+    // When npm looks for node, it must find dev_bundle/bin/node.
+    path.join(devBundleDir, "bin"),
 
-      // Also make available any scripts installed by packages in
-      // dev_bundle/lib/node_modules, such as node-gyp.
-      path.join(devBundleDir, "lib", "node_modules", ".bin")
-    ];
+    // When npm looks for meteor, it should find dev_bundle/../meteor.
+    path.dirname(devBundleDir),
 
-    var env = Object.create(process.env);
+    // Also make available any scripts installed by packages in
+    // dev_bundle/lib/node_modules, such as node-gyp.
+    path.join(devBundleDir, "lib", "node_modules", ".bin")
+  ];
 
-    // Make sure notifications to update npm aren't presented to the user.
-    env.NO_UPDATE_NOTIFIER = true;
+  const env = Object.create(process.env);
+  env.NO_UPDATE_NOTIFIER = true;
 
-    // Make sure `meteor npm install --global ...` installs into
-    // dev_bundle/lib/node_modules by default.
-    if (! env.NPM_CONFIG_PREFIX) {
-      env.NPM_CONFIG_PREFIX = devBundleDir;
-    }
+  if (!env.NPM_CONFIG_PREFIX) {
+    env.NPM_CONFIG_PREFIX = devBundleDir;
+  }
 
-    if (env.METEOR_ALLOW_SUPERUSER) {
-      // Note that env.METEOR_ALLOW_SUPERUSER could be "0" or "false", which
-      // should propagate falsy semantics to NPM_CONFIG_UNSAFE_PERM.
-      env.NPM_CONFIG_UNSAFE_PERM = env.METEOR_ALLOW_SUPERUSER;
-    }
+  if (env.METEOR_ALLOW_SUPERUSER) {
+    // Note that env.METEOR_ALLOW_SUPERUSER could be "0" or "false", which
+    // should propagate falsy semantics to NPM_CONFIG_UNSAFE_PERM.
+    env.NPM_CONFIG_UNSAFE_PERM = env.METEOR_ALLOW_SUPERUSER;
+  }
 
-    // This allows node-gyp to find Node headers and libraries in
-    // dev_bundle/include/node.
-    env.NPM_CONFIG_NODEDIR = devBundleDir;
+  env.NPM_CONFIG_NODEDIR = devBundleDir;
 
-    var PATH = env.PATH || env.Path;
-    if (PATH) {
-      paths.push(PATH);
-    }
+  const PATH = env.PATH || env.Path;
 
-    env.PATH = paths.join(path.delimiter);
+  if (PATH) {
+    paths.push(PATH);
+  }
 
-    if (process.platform === "win32") {
-      return addWindowsVariables(devBundleDir, env);
-    }
+  env.PATH = paths.join(path.delimiter);
 
-    return env;
-  });
-};
+  if (process.platform === "win32") {
+    return addWindowsVariables(devBundleDir, env);
+  }
+
+  return env;
+}
 
 // Caching env.GYP_MSVS_VERSION allows us to avoid invoking Python every
 // time Meteor runs an npm command. TODO Store this on disk?
-var cachedMSVSVersion;
+let cachedMSVSVersion;
 
 function addWindowsVariables(devBundleDir, env) {
   // On Windows we provide a reliable version of python.exe for use by
@@ -143,11 +141,11 @@ function addWindowsVariables(devBundleDir, env) {
   // If $GYP_MSVS_VERSION was not provided, use the gyp Python library to
   // infer it, or default to 2015 if that doesn't work.
   return new Promise(function (resolve) {
-    var nodeGypPylibDir = path.join(
+    const nodeGypPylibDir = path.join(
       devBundleDir, "lib", "node_modules", "node-gyp", "gyp", "pylib"
     );
 
-    var child = require("child_process").spawn(env.PYTHON, ["-c", [
+    const child = require("child_process").spawn(env.PYTHON, ["-c", [
       "from gyp.MSVSVersion import SelectVisualStudioVersion",
       "try:",
       "  print SelectVisualStudioVersion(allow_fallback=False).short_name",
@@ -158,7 +156,7 @@ function addWindowsVariables(devBundleDir, env) {
       stdio: "pipe"
     });
 
-    var chunks = [];
+    const chunks = [];
     child.stdout.on("data", function (chunk) {
       chunks.push(chunk);
     });

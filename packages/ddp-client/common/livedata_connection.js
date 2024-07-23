@@ -456,7 +456,7 @@ export class Connection {
           this.ready && this.readyDeps.changed();
         },
         stop() {
-          this.connection._send({ msg: 'unsub', id: id });
+          this.connection._sendQueued({ msg: 'unsub', id: id });
           this.remove();
 
           if (callbacks.onStop) {
@@ -613,6 +613,11 @@ export class Connection {
       try {
         stubOptions.stubReturnValue = DDP._CurrentMethodInvocation
           .withValue(invocation, stubInvocation);
+        if (Meteor._isPromise(stubOptions.stubReturnValue)) {
+          Meteor._debug(
+            `Method ${name}: Calling a method that has an async method stub with call/apply can lead to unexpected behaviors. Use callAsync/applyAsync instead.`
+          );
+        }
       } catch (e) {
         stubOptions.exception = e;
       }
@@ -1024,6 +1029,13 @@ export class Connection {
   // Sends the DDP stringification of the given message object
   _send(obj) {
     this._stream.send(DDPCommon.stringifyDDP(obj));
+  }
+
+  // Always queues the call before sending the message
+  // Used, for example, on subscription.[id].stop() to make sure a "sub" message is always called before an "unsub" message
+  // https://github.com/meteor/meteor/issues/13212
+  _sendQueued(obj) {
+    this._send(obj, true);
   }
 
   // We detected via DDP-level heartbeats that we've lost the
@@ -1784,17 +1796,8 @@ export class Connection {
     if (msg.offendingMessage) Meteor._debug('For: ', msg.offendingMessage);
   }
 
-  _callOnReconnectAndSendAppropriateOutstandingMethods() {
+  _sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks) {
     const self = this;
-    const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
-    self._outstandingMethodBlocks = [];
-
-    self.onReconnect && self.onReconnect();
-    DDP._reconnectHook.each(callback => {
-      callback(self);
-      return true;
-    });
-
     if (isEmpty(oldOutstandingMethodBlocks)) return;
 
     // We have at least one block worth of old outstanding methods to try
@@ -1809,9 +1812,11 @@ export class Connection {
     // OK, there are blocks on both sides. Special case: merge the last block of
     // the reconnect methods with the first block of the original methods, if
     // neither of them are "wait" blocks.
-    if (! last(self._outstandingMethodBlocks).wait &&
-        ! oldOutstandingMethodBlocks[0].wait) {
-      oldOutstandingMethodBlocks[0].methods.forEach(m => {
+    if (
+      !last(self._outstandingMethodBlocks).wait &&
+      !oldOutstandingMethodBlocks[0].wait
+    ) {
+      oldOutstandingMethodBlocks[0].methods.forEach((m) => {
         last(self._outstandingMethodBlocks).methods.push(m);
 
         // If this "last block" is also the first block, send the message.
@@ -1825,6 +1830,19 @@ export class Connection {
 
     // Now add the rest of the original blocks on.
     self._outstandingMethodBlocks.push(...oldOutstandingMethodBlocks);
+  }
+  _callOnReconnectAndSendAppropriateOutstandingMethods() {
+    const self = this;
+    const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
+    self._outstandingMethodBlocks = [];
+
+    self.onReconnect && self.onReconnect();
+    DDP._reconnectHook.each((callback) => {
+      callback(self);
+      return true;
+    });
+
+    self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
   }
 
   // We can accept a hot code push if there are no methods in flight.

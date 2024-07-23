@@ -22,16 +22,14 @@ let browserStackKey;
 export default class BrowserStackClient extends Client {
   constructor(options) {
     super(options);
-
-    enterJob(
+  }
+  async init() {
+    await enterJob(
       {
         title: "Installing BrowserStack WebDriver in Meteor tool",
       },
-      () => {
-        ensureDependencies(NPM_DEPENDENCIES);
-      }
+      () => ensureDependencies(NPM_DEPENDENCIES)
     );
-
     this.npmPackageExports = require("selenium-webdriver");
 
     // Capabilities which are allowed by selenium.
@@ -59,7 +57,7 @@ export default class BrowserStackClient extends Client {
   }
 
   connect() {
-    
+
     const triggerRequest = (key) => {
       const capabilities = {
         // Authentication
@@ -83,7 +81,7 @@ export default class BrowserStackClient extends Client {
         .withCapabilities(capabilities)
         .build();
 
-      this.driver.get(this.url);
+      return this.driver.get(this.url);
     };
 
     this._launchBrowserStackTunnel()
@@ -105,7 +103,7 @@ export default class BrowserStackClient extends Client {
   }
 
   /**
-   * 
+   *
    * @returns {Promise<string>} The BrowserStack key.
    */
   static async _getBrowserStackKey() {
@@ -138,7 +136,7 @@ export default class BrowserStackClient extends Client {
   }
 
   /**
-   * 
+   *
    * @returns {Promise<string>} The BrowserStack key.
    */
   _launchBrowserStackTunnel() {

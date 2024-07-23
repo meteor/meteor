@@ -9,14 +9,14 @@ function getAsl() {
     throw new Error('Can not use async hooks when fibers are enabled');
   }
 
-  if (!global.asyncLocalStorage) {
-    // lazily create asyncLocalStorage since this might run in older Meteor
+  if (!global.__METEOR_ASYNC_LOCAL_STORAGE) {
+    // lazily create __METEOR_ASYNC_LOCAL_STORAGE since this might run in older Meteor
     // versions that are incompatible with async hooks
     var AsyncLocalStorage = Npm.require('async_hooks').AsyncLocalStorage;
-    global.asyncLocalStorage = new AsyncLocalStorage();
+    global.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
   }
 
-  return global.asyncLocalStorage;
+  return global.__METEOR_ASYNC_LOCAL_STORAGE;
 }
 
 function getAslStore() {
@@ -24,8 +24,8 @@ function getAslStore() {
     return {};
   }
 
-  var asyncLocalStorage = getAsl();
-  return asyncLocalStorage.getStore() || {};
+  var als = getAsl();
+  return als.getStore() || {};
 }
 
 function getValueFromAslStore(key) {
@@ -37,8 +37,8 @@ function updateAslStore(key, value) {
 }
 
 function runFresh(fn) {
-  var asyncLocalStorage = getAsl();
-  return asyncLocalStorage.run({}, fn);
+  var als = getAsl();
+  return als.run({}, fn);
 }
 
 Meteor._getAsl = getAsl;
@@ -51,9 +51,9 @@ Meteor._runAsync = function (fn, ctx, store) {
   if (store === undefined) {
     store = {};
   }
-  var asyncLocalStorage = getAsl();
+  var als = getAsl();
 
-  return asyncLocalStorage.run(
+  return als.run(
     store || Meteor._getAslStore(),
     function () {
       return fn.call(ctx);

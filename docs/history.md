@@ -8,7 +8,52 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
-## v3.0, TBD
+## v3.0.1, 2024-07-16
+
+### Highlights
+
+* Bump the patch for some packages, so we publish them using Meteor 3 tooling. [PR](https://github.com/meteor/meteor/pull/13231)
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 3.0.1
+
+```
+
+
+#### Meteor Version Release
+
+
+* `Bumped packages`:
+  - accounts-ui-unstyled@1.7.2
+  - crosswalk@1.7.3
+  - facebook-oauth@1.11.4
+  - npm-mongo@4.17.3
+  - package-version-parser@3.2.3
+  - twitter-config-ui@1.0.2
+
+
+#### Special thanks to
+
+- [@denihs](https://github.com/denihs).
+
+
+For making this great framework even better!
+
+
+## v3.0, 2024-07-15
 
 ### Highlights
 
@@ -119,6 +164,7 @@
 
 - `babel-compiler@8.0.0`:
 
+  - Add `Babel.compileForShell`
   - Removed `Promise.await` default transform.
   - Added top-level-await to packages.
 
@@ -205,9 +251,10 @@
 
 - `ddp-client@3.0.0`:
 
-  - Added `isAsyncCall` method to know if call is being made by a async method.
+  - Added `isAsyncCall` method to know if call is being made by an async method.
   - Removed `fibers` from package.
   - Updated tests to use async methods.
+  - Now `stubPromise` is returned when calling `callAsync` or `applyAsync`.
 
 - `ddp-common@2.0.0`:
 
@@ -250,6 +297,8 @@
 
 - `ecmascript@1.0.0`:
 
+  - `ECMAScript.compileForShell` was removed. Use `Babel.compileForShell` from
+  `babel-compiler` instead. This change makes some build plugins and apps that do not use `babel-compiler` 90mb smaller.
   - Added dependency to `@babel/runtime`.
   - Moved runtime tests.
 
@@ -377,7 +426,6 @@
   - Async local storage was added to help deal with async methods.
   - Added `promiseEmmiter` to help with async methods.
   - Removed `fibers` from package.
-  - `Meteor.absoluteUrl` in localhost uses `127.0.1` by default.
 
 - `minifier-css@2.0.0`:
 
@@ -395,6 +443,7 @@
     if the cursor is ready and if the callbacks are have been called.
     If you only use it in the `Client` or as a `LocalCollection` things have not
     changed.
+  - `cursor.observeChangesAsync` and `cursor.observeAsync` are added and resolve as promises, returning results similar to their synchronous counterparts.
 
 - `mobile-experience@2.0.0`:
 
@@ -438,6 +487,7 @@
   - Updated to unify methods, `update`,`insert`,`remove`, `fetch` are now async, they are
     the same as their `*Async` counterpart.
   - `ensureIndex` and `createIndex` are now async.
+  - `observeChangesAsync` and `observeAsync` are added and resolve as promises, returning results similar to their synchronous counterparts.
 
 - `npm-mongo@5.0.0`:
 
@@ -672,6 +722,9 @@
 
   - `Meteor.callAsync()`
 
+- `meteor`:
+  - Added `Meteor.isDebug` to execute code in debug builds, activated with the --inspect mode.
+
 - `minifier-css`: (2.9+)
 
   - `CssTools.minifyCssAsync()`
@@ -717,11 +770,32 @@
 
 #### Special thanks to
 
-- [@StorytellerCZ](https://github.com/sponsors/StorytellerCZ/)
+- [@denihs](https://github.com/denihs)
+- [@Grubba27](https://github.com/Grubba27)
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+- [@vit0rr](https://github.com/vit0rr)
+- [@filipenevola](https://github.com/filipenevola)
+- [@zodern](https://github.com/zodern)
+- [@radekmie](https://github.com/radekmie)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@gunnartorfis](https://github.com/gunnartorfis)
+- [@xet7](https://github.com/xet7)
+- [@harryadel](https://github.com/harryadel)
+- [@simonwebs](https://github.com/simonwebs)
+- [@TylerThompson](https://github.com/TylerThompson)
+- [@rodrigok](https://github.com/rodrigok)
+- [@zarvox](https://github.com/zarvox)
+- [@srsgores](https://github.com/srsgores)
+- [@tassoevan](https://github.com/tassoevan)
+- [@Torgen](https://github.com/Torgen)
+- [@MarcosSpessatto](https://github.com/MarcosSpessatto)
+- [@vincentcarpentier](https://github.com/vincentcarpentier)
+- [@ggazzo](https://github.com/ggazzo)
+- [@StevenMia](https://github.com/StevenMia)
+- [@acemtp](https://github.com/acemtp)
 
-For making this great framework even better!
-
-
+And so many more people, for making this great framework even better!
 ## v2.16.0, 2024-05-14
 
 ### Highlights

@@ -10,14 +10,14 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "10.5.0",
+    npm: "10.7.0",
     "node-gyp": "9.4.0",
     "@mapbox/node-pre-gyp": "1.0.11",
     typescript: "5.4.5",
-    "@meteorjs/babel": "7.19.0-beta.4",
+    "@meteorjs/babel": "7.20.0-beta.5",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
-    "@meteorjs/reify": "0.25.1",
+    "@meteorjs/reify": "0.25.2",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.15.3",
     // For backwards compatibility with isopackets that still depend on
@@ -63,7 +63,7 @@ var packageJson = {
     // version constraint imposed by optimism/package.json.
     optimism: "0.16.1",
     "@wry/context": "0.6.0",
-    'lru-cache': '4.1.5',
+    'lru-cache': '6.0.0',
     "anser": "2.0.1",
     'xmlbuilder2': '1.8.1',
     "ws": "7.4.5",

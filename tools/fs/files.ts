@@ -26,6 +26,7 @@ import {
   pathResolve,
   pathSep,
 } from "../static-assets/server/mini-files";
+import { realpathSync } from './fsFixPath';
 
 const _ = require('underscore');
 
@@ -202,22 +203,19 @@ export function usesWarehouse() {
 export function getToolsVersion() {
   if (! inCheckout()) {
     const isopackJsonPath = pathJoin(getCurrentToolsDir(),
-      '..',  // get out of tool, back to package
-      'isopack.json');
-
+        '..',  // get out of tool, back to package
+        'isopack.json');
     let parsed;
-
     if (exists(isopackJsonPath)) {
       // XXX "isopack-1" is duplicate of isopack.currentFormat
       parsed = JSON.parse(readFile(isopackJsonPath))["isopack-1"];
       return parsed.name + '@' + parsed.version;
     }
-
     // XXX COMPAT WITH 0.9.3
     const unipackageJsonPath = pathJoin(
-      getCurrentToolsDir(),
-      '..',  // get out of tool, back to package
-      'unipackage.json'
+        getCurrentToolsDir(),
+        '..',  // get out of tool, back to package
+        'unipackage.json'
     );
     parsed = JSON.parse(readFile(unipackageJsonPath));
     return parsed.name + '@' + parsed.version;
@@ -238,6 +236,10 @@ export function getCurrentNodeBinDir() {
 
 // Return the top-level directory for this meteor install or checkout
 export function getCurrentToolsDir() {
+  if (!process.env.SANDBOX && process.env.METEOR_WAREHOUSE_DIR) {
+    return pathDirname(realpathSync(pathJoin(process.env.METEOR_WAREHOUSE_DIR, 'meteor')));
+  }
+
   return pathDirname(pathDirname(convertToStandardPath(__dirname)));
 }
 
@@ -600,6 +602,7 @@ Profile("files.symlinkWithOverwrite", async function symlinkWithOverwrite(
 export function getPathsInDir(dir: string, options: {
   cwd?: string;
   output?: string[];
+  maxDepth?: number;
 }) {
   // Don't let this function yield so that the file system doesn't get changed
   // underneath us
@@ -619,6 +622,7 @@ export function getPathsInDir(dir: string, options: {
     }
 
     const output = options.output || [];
+    const maxDepth = options.maxDepth;
 
     function pathIsDirectory(path: string) {
       var stat = lstat(path);
@@ -631,10 +635,12 @@ export function getPathsInDir(dir: string, options: {
 
       output.push(newPath);
 
-      if (pathIsDirectory(newAbsPath)) {
+      const nextMaxDepth = maxDepth != null ? maxDepth - 1 : maxDepth;
+      if (pathIsDirectory(newAbsPath) && (nextMaxDepth == null || nextMaxDepth > 0)) {
         getPathsInDir(newPath, {
           cwd: cwd,
-          output: output
+          output: output,
+          ...nextMaxDepth != null && { maxDepth: nextMaxDepth },
         });
       }
     });

@@ -86,7 +86,7 @@ selftest.define("mongo with multiple --port numbers (#7563)", async function () 
   }
 
   // Make absolutely sure we're creating the database for the first time.
-  await check(["reset"], ["Project reset."]);
+  await check(["reset", "--db"], ["Project reset."]);
 
   let count = 0;
   function next() {

@@ -394,6 +394,11 @@ you want to process the method's result as soon as it arrives from the server,
 even if the method's writes are not available yet, you can specify an
 `onResultReceived` callback to [`Meteor.apply`](#Meteor-apply).
 
+::: warning
+Use `Meteor.call` only to call methods that do not have a stub, or have a sync stub. If you want to call methods with an async stub, `Meteor.callAsync` can be used with any method.
+:::
+
+
 <ApiBox name="Meteor.callAsync" />
 
 `Meteor.callAsync` is just like `Meteor.call`, except that it'll return a promise that you need to solve to get the result.
@@ -403,6 +408,10 @@ even if the method's writes are not available yet, you can specify an
 `Meteor.apply` is just like `Meteor.call`, except that the method arguments are
 passed as an array rather than directly as arguments, and you can specify
 options about how the client executes the method.
+
+::: warning
+Use `Meteor.apply` only to call methods that do not have a stub, or have a sync stub. If you want to call methods with an async stub, `Meteor.applyAsync` can be used with any method.
+:::
 
 <ApiBox name="Meteor.applyAsync" />
 

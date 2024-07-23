@@ -396,7 +396,7 @@ export class AccountsClient extends AccountsCommon {
     if (!options._suppressLoggingIn) {
       this._setLoggingIn(true);
     }
-    this.connection.apply(
+    this.connection.applyAsync(
       options.methodName,
       options.methodArguments,
       { wait: true, onResultReceived: onResultReceived },

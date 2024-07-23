@@ -35,16 +35,10 @@ const { exec } = require("child_process");
  */
 const runCommand = async (command) => {
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    exec(command, { env: process.env }, (error, stdout) => {
       if (error) {
         console.log(red`error: ${ error.message }`);
         reject(error);
-        return;
-      }
-      if (stderr) {
-        if (stderr.includes("Cloning into")) console.log(green`${ stderr }`);
-        else console.log(red`stderr: ${ stderr }`);
-        reject(stderr);
         return;
       }
       resolve(stdout);
@@ -944,38 +938,6 @@ main.registerCommand({
       })
     );
   }
-  await files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
-    `skel-${skeleton}`), appPath, {
-    transformFilename: function (f) {
-      return transform(f);
-    },
-    transformContents: function (contents, f) {
-
-      // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
-      if ((/packages/).test(f)) {
-
-        const prototypePackages =
-          () =>
-            'autopublish             # Publish all data to the clients (for prototyping)\n' +
-            'insecure                # Allow all DB writes from clients (for prototyping)';
-
-        // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
-        if (options.prototype) {
-          return Buffer.from(contents.toString().replace(/~prototype~/g, prototypePackages()))
-        } else {
-          return Buffer.from(contents.toString().replace(/~prototype~/g, ''))
-        }
-      }
-      if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
-        return Buffer.from(transform(contents.toString()));
-      } else {
-        return contents;
-      }
-    },
-    ignore: toIgnore,
-    preserveSymlinks: true,
-  });
-
   // Setup fn, which is called after the app is created, to print a message
   // about how to run the app.
   async function setupMessages() {
@@ -1087,9 +1049,21 @@ main.registerCommand({
    * @param {string} url
    */
   const setupExampleByURL = async (url) => {
-    const [ok, err] = await bash`git -v`;
+    const [ok, err] = await bash`git --version`;
     if (err) throw new Error("git is not installed");
-    await bash`git clone --progress ${url} ${appPath} `;
+    const isWindows = process.platform === "win32";
+
+    // Set GIT_TERMINAL_PROMPT=0 to disable prompting
+    process.env.GIT_TERMINAL_PROMPT = 0;
+
+    const gitCommand = isWindows
+      ? `git clone --progress ${url} ${files.convertToOSPath(appPath)}`
+      : `git clone --progress ${url} ${appPath}`;
+    const [okClone, errClone] = await bash`${gitCommand}`;
+    const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
+    if (errorMessage && errorMessage.includes("Cloning into")) {
+      throw new Error("error cloning skeleton");
+    }
     // remove .git folder from the example
     await files.rm_recursive_async(files.pathJoin(appPath, ".git"));
     await setupMessages();
@@ -1533,6 +1507,11 @@ https://guide.meteor.com/cordova.html#submitting-android
   }
 
   await files.rm_recursive(buildDir);
+
+  const npmShrinkwrapFilePath = files.pathJoin(bundlePath, 'programs/server/npm-shrinkwrap.json');
+  if (files.exists(npmShrinkwrapFilePath)) {
+    files.chmod(npmShrinkwrapFilePath, 0o644);
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1731,11 +1710,18 @@ main.registerCommand({
   // Doesn't actually take an argument, but we want to print an custom
   // error message if they try to pass one.
   maxArgs: 1,
+  options: {
+    db: { type: Boolean },
+  },
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
   if (options.args.length !== 0) {
-    Console.error("meteor reset only affects the locally stored database.");
+    Console.error("'meteor reset' command only affects the local project cache.");
+    Console.error();
+    Console.error("To remove also the local database use");
+    Console.error(
+      Console.command("meteor reset --db"), Console.options({ indent: 2 }));
     Console.error();
     Console.error("To reset a deployed application use");
     Console.error(
@@ -1752,24 +1738,39 @@ main.registerCommand({
                  "MONGO_URL will NOT be reset.");
   }
 
-  // XXX detect the case where Meteor is running the app, but
-  // MONGO_URL was set, so we don't see a Mongo process
-  var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-  var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
-  if (isRunning) {
-    Console.error("reset: Meteor is running.");
-    Console.error();
-    Console.error(
-      "This command does not work while Meteor is running your application.",
-      "Exit the running Meteor development server.");
-    return 1;
+  if (options.db) {
+    // XXX detect the case where Meteor is running the app, but
+    // MONGO_URL was set, so we don't see a Mongo process
+    var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
+    var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
+    if (isRunning) {
+      Console.error("reset: Meteor is running.");
+      Console.error();
+      Console.error(
+        "This command does not work while Meteor is running your application.",
+        "Exit the running Meteor development server.");
+      return 1;
+    }
+
+    await files.rm_recursive_async(
+      files.pathJoin(options.appDir, '.meteor', 'local')
+    );
+    Console.info("Project reset.");
+    return;
   }
 
-  return files.rm_recursive_async(
-    files.pathJoin(options.appDir, '.meteor', 'local')
-  ).then(() => {
-    Console.info("Project reset.");
+  var allExceptDb = files.getPathsInDir(files.pathJoin('.meteor', 'local'), {
+    cwd: options.appDir,
+    maxDepth: 1,
+  }).filter(function (path) {
+    return !path.includes('.meteor/local/db');
   });
+
+  var allRemovePromises = allExceptDb.map(_path => files.rm_recursive_async(
+    files.pathJoin(options.appDir, _path)
+  ));
+  await Promise.all(allRemovePromises);
+  Console.info("Project reset.");
 });
 
 ///////////////////////////////////////////////////////////////////////////////
