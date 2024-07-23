@@ -242,18 +242,4 @@ export const loadAsyncStubHelpers = () => {
       }
     });
   };
-  let _oldSendOutstandingMethodBlocksMessages =
-    Connection.prototype._sendOutstandingMethodBlocksMessages;
-  Connection.prototype._sendOutstandingMethodBlocksMessages = function () {
-    if (this._stream._neverQueued) {
-      return _oldSendOutstandingMethodBlocksMessages.apply(this, arguments);
-    }
-    queueFunction((resolve) => {
-      try {
-        _oldSendOutstandingMethodBlocksMessages.apply(this, arguments);
-      } finally {
-        resolve();
-      }
-    });
-  };
 };
