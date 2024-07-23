@@ -4,11 +4,11 @@ if (Meteor.isClient) {
   Meteor.startup(function () {
     ['production_css', 'development_css', 'minified_lazy'].forEach(cls => {
       var color = getComputedStyle(document.querySelectorAll('.' + cls)[0]).color;
-      Meteor.call('print', cls + ': ' + color);
+      Meteor.callAsync('print', cls + ': ' + color);
     });
 
     // this log is expected to be transformed by minifier
-    Meteor.call('print', 'Message (client): foo');
+    Meteor.callAsync('print', 'Message (client): foo');
   });
 } else {
   Meteor.startup(function () {
