@@ -124,6 +124,7 @@ Meteor.publish(
     });
 
     this.onStop(() => stop());
+    this.ready();
   },
   {is_auto: true}
 );
