@@ -447,20 +447,9 @@ Tinytest.addAsync("livedata server - waiting for Promise", (test, onComplete) =>
  * https://github.com/meteor/meteor/issues/13212
  */
 Tinytest.addAsync('livedata server - publish cursor is properly awaited', async function (test) {
-  const messages = []
-
   let sub = null;
 
-  const { clientConn } = await getTestConnections(test)
-
-  const send = clientConn._stream.send
-
-  clientConn._stream.send = function (...args) {
-    send.apply(this, args)
-    messages.push(args[0])
-  }
-
-  clientConn._stream.on('message', message => messages.push(message));
+  const { conn, messages, cleanup } = await captureConnectionMessages(test);
 
   const coll = new Mongo.Collection('items', {
     defineMutationMethods: false,
@@ -482,7 +471,7 @@ Tinytest.addAsync('livedata server - publish cursor is properly awaited', async 
   const reactiveVar = new ReactiveVar(1);
 
   const computation = Tracker.autorun(() => {
-    sub = clientConn.subscribe(publicationName, reactiveVar.get());
+    sub = conn.subscribe(publicationName, reactiveVar.get());
   });
 
   await sleep(100)
@@ -496,11 +485,13 @@ Tinytest.addAsync('livedata server - publish cursor is properly awaited', async 
   /**
    * There shouldn't ever be `removed` messages here, otherwise the UI will glitch
    */
-  const parsedMessages = messages.map(m => EJSON.parse(m).msg)
+  const parsedMessages = messages.map(m => m.msg)
 
   test.equal(parsedMessages, expectedMessages)
 
   computation.stop();
+
+  cleanup()
 });
 
 function getTestConnections(test) {

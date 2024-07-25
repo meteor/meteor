@@ -22,15 +22,29 @@ Package.onUse(function (api) {
   // the like.
   api.use('ddp');
 
-
   api.export([
-    'pollUntil', 'try_all_permutations',
-    'SeededRandom', 'clickElement', 'blurElement',
-    'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
-    'renderToDiv', 'clickIt',
-    'withCallbackLogger', 'testAsyncMulti',
-    'simplePoll', 'runAndThrowIfNeeded',
-    'makeTestConnection', 'DomUtils', 'mockBehaviours', 'waitUntil']);
+    'pollUntil',
+    'try_all_permutations',
+    'SeededRandom',
+    'clickElement',
+    'blurElement',
+    'focusElement',
+    'simulateEvent',
+    'getStyleProperty',
+    'canonicalizeHtml',
+    'renderToDiv',
+    'clickIt',
+    'withCallbackLogger',
+    'testAsyncMulti',
+    'simplePoll',
+    'runAndThrowIfNeeded',
+    'DomUtils',
+    'mockBehaviours',
+    'waitUntil',
+    'makeTestConnection',
+    'createTestConnectionPromise',
+    'captureConnectionMessages',
+  ]);
 
   api.addFiles('try_all_permutations.js');
   api.addFiles('async_multi.js');
