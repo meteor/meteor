@@ -37,6 +37,8 @@ export class AccountsClient extends AccountsCommon {
     this._loginCallbacksCalled = false;
 
     Tracker.autorun(() => {
+      // This means that the socket connection is established and not that the `connected` message has been received
+      // and the first `connect` message is triggered by `onopen` and then `onReset`
       if (this.connection.status().connected) {
         this._loginServicesHandle =
           this.connection.subscribe("meteor.loginServiceConfiguration");

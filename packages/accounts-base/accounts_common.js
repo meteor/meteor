@@ -20,6 +20,7 @@ const VALID_CONFIG_KEYS = [
   'tokenSequenceLength',
   'clientStorage',
   'ddpUrl',
+  'connection',
 ];
 
 /**
