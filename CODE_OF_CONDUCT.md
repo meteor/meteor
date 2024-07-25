@@ -1,69 +1,101 @@
-# Meteor Project Code of Conduct
+# Meteor Code of Conduct
 
-### Community and Diversity
+Meteor Software and its member projects use [Contributor Covenant v2.0](https://contributor-covenant.org/version/2/0/code_of_conduct) as their code of conduct. The full text is included below in English, and [translations](https://www.contributor-covenant.org/translations) are available on the Contributor Covenant website.
 
-We want to build a productive, happy and agile community that welcomes new ideas, constantly looks for areas to improve, and fosters collaboration. 
+## Commitment
 
-The project gains strength from a diversity of backgrounds and perspectives in our contributor community, and we actively seek participation from those who enhance it. This code of conduct exists to lay some ground rules that ensure we can collaborate and communicate effectively, despite our diversity. The code applies equally to founders, team members and those seeking help and guidance.
+All recipients of reports commit to maintain the confidentiality with regard to the reporter and victim of an incident.
 
-### Using This Code
+## Report an issue
 
-This isn’t an exhaustive list of things that you can’t do. Rather, it’s a guide for participation in the community that outlines how each of us can work to keep Meteor a positive, successful, and growing project. 
+To report an issue in one of the projects listed below, please email code-of-conduct@meteor.com.
 
-This code of conduct applies to all spaces managed by the Meteor project or company. This includes Slack, GitHub issues, and any other forums created by the Meteor team which the community uses for communication. Breaches of this code outside these spaces may affect a person's ability to participate within them. We expect it to be honored by everyone who represents or participates in the project, whether officially or informally.
+* [OSS Meteor Projects](https://github.com/meteor)
+* [Meteor Forum](https://forums.meteor.com/)
+* [Meteor Lounge on Discord](https://discord.gg/hZkTCaVjmT)
 
-If you believe someone is violating the code of conduct, please report it by emailing [community@meteor.com](mailto:community@meteor.com). 
+## Code of Conduct panel
 
-### We Strive To:
+The Code of Conduct panel is a moderation team that handle code of conduct issues. The makeup of this team is as follows:
 
-- **Be open, patient, and welcoming**
+* CEO at Meteor Software - Frederico Maia Arantes
+* Software Engineer at Meteor Software - Denilson Silva
+* CEO at High Impact Tech - Alim S. Gafar
 
-    Members of this community are open to collaboration, whether it's on PRs, issues, or problems. We're receptive to constructive comment and criticism, as we value what the experiences and skill sets of contributors bring to the project. We're accepting of all who wish to get involved, and find ways for anyone to participate in a way that best matches their strengths.
-  
-- **Be considerate**
+Members of the CoCP team will be added for a 1-year term and will be re-confirmed on a yearly basis.
 
-    We are considerate of our peers: other Meteor users and contributors. We’re thoughtful when addressing others’ efforts, keeping in mind that work is often undertaken for the benefit of the community. We also value others’ time and appreciate that not every issue or comment will be responded to immediately. We strive to be mindful in our communications, whether in person or online, and we're tactful when approaching views that are different from our own.
-    
-- **Be respectful**
+## Our Pledge
 
-    As a community of professionals, we are professional in our handling of disagreements, and don’t allow frustration to turn into a personal attack. We work together to resolve conflict, assume good intentions and do our best to act in an empathic fashion. 
+We as members, contributors, and leaders pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
-    We do not tolerate harassment or exclusionary behavior. This includes, but is not limited to:
-  - Violent threats or language directed against another person.
-  - Discriminatory jokes and language.
-  - Posting sexually explicit or sexualized content.
-  - Posting content depicting or encouraging violence. 
-  - Posting (or threatening to post) other people's personally identifying information ("doxing").
-  - Personal insults, especially those using racist or sexist terms.
-  - Unwelcome sexual attention.
-  - Advocating for, or encouraging, any of the above behavior.
-  - Repeated harassment of others. In general, if someone asks you to stop, then stop.
-  
-- **Take responsibility for our words and our actions**
+We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 
-    We can all make mistakes; when we do, we take responsibility for them. If someone has been harmed or offended, we listen carefully and respectfully. We are also considerate of others’ attempts to amend their mistakes.
-    
-- **Be collaborative**  
+## Our Standards
 
-    The work we produce is (and is part of) an ecosystem containing several parallel efforts working towards a similar goal. Collaboration between teams and individuals that each have their own goal and vision is essential to reduce redundancy and improve the quality of our work. 
-    
-    Internally and externally, we celebrate good collaboration. Wherever possible, we work closely with upstream projects and others in the free software community to coordinate our efforts. We prefer to work transparently and involve interested parties as early as possible.
-    
-- **Ask for help when in doubt**
+Examples of behavior that contributes to a positive environment for our community include:
 
-    Nobody is expected to be perfect in this community. Asking questions early avoids many problems later, so questions are encouraged, though they may be directed to the appropriate forum. Those who are asked should be responsive and helpful.
-    
-- **Take initiative** 
+* Demonstrating empathy and kindness toward other people
+* Being respectful of differing opinions, viewpoints, and experiences
+* Giving and gracefully accepting constructive feedback
+* Accepting responsibility apologizing to those affected by our mistakes, and learning from the experience
+* Focusing on what is best not just for us as individuals, but for the overall community
 
-    We encourage new participants to feel empowered to lead, to take action, and to experiment when they feel innovation could improve the project. If we have an idea for a new tool, or how an existing tool can be improved, we speak up and take ownership of that work when possible. 
-    
-### Attribution
+Examples of unacceptable behavior include:
 
-Sections of this Code of Conduct were inspired in by the following Codes from other open source projects and resources we admire:  
+* The use of sexualized language or imagery, and sexual attention or advances of any kind
+* Trolling, insulting or derogatory comments, and personal or political attacks
+* Public or private harassment
+* Publishing others’ private information, such as a physical or email address, without their explicit permission
+* Other conduct that could reasonably be considered inappropriate in a professional setting
 
-- [The Contributor Covenant](https://www.contributor-covenant.org/version/1/4/code-of-conduct/)
-- [Python](https://www.python.org/psf/codeofconduct/)
-- [Ubuntu](https://ubuntu.com/community/code-of-conduct)
-- [Django](https://www.djangoproject.com/conduct/)
+## Enforcement Responsibilities
 
-*This Meteor Code of Conduct is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/) license. This Code was last updated on August 28, 2017.* 
+Community leaders are responsible for clarifying and enforcing our standards of acceptable behavior and will take appropriate and fair corrective action in response to any behavior that they deem inappropriate, threatening, offensive, or harmful.
+
+Community leaders have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned with this Code of Conduct and will communicate reasons for moderation decisions when appropriate.
+
+## Scope
+
+This Code of Conduct applies within all community spaces and also applies when an individual is officially representing the community in public spaces. Examples of representing our community include using an official e-mail address, posting via an official social media account, or acting as an appointed representative at an online or offline event.
+
+## Enforcement
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at the email addresses listed above in the Reporting section. All complaints will be reviewed and investigated promptly and fairly.
+
+All community leaders are obligated to respect the privacy and security of the reporter of any incident.
+
+## Enforcement Guidelines
+
+Community leaders will follow these Community Impact Guidelines in determining the consequences for any action they deem in violation of this Code of Conduct:
+
+### 1. Correction
+
+**Community Impact:** Use of inappropriate language or other behavior deemed unprofessional or unwelcome in the community.
+
+**Consequence:** A private, written warning from community leaders, providing clarity around the nature of the violation and an explanation of why the behavior was inappropriate. A public apology may be requested.
+
+### 2. Warning
+
+**Community Impact:** A violation through a single incident or series of actions.
+
+**Consequence:** A warning with consequences for continued behavior. No interaction with the people involved, including unsolicited interaction with those enforcing the Code of Conduct, for a specified period. This includes avoiding interactions in community space and external channels like social media. Violating these terms may lead to a temporary or permanent ban.
+
+### 3. Temporary Ban
+
+**Community Impact:** A serious violation of community standards, including sustained inappropriate behavior.
+
+**Consequence:** A temporary ban from anf interaction or public communication with the community for a specified period. No public or private interaction with the people involved, including unsolicited interaction with those enforcing the Code of Conduct, is allowed during this period. Violating these terms may lead to a permanent ban.
+
+### 4. Permanent Ban
+
+**Community Impact:** Demonstrating a pattern of violation of community standards, including sustained inappropriate behavior, harassment of an individual, or aggression toward or disparagement of classes of individuals.
+
+**Consequence**: A permanent ban from public interaction within the community.
+
+## Attribution
+
+This Code of Conduct is adapted from the Contributor Covenant, version 2.0, available at https://www.contributor-covenant.org/version/2/0/code\_of\_conduct.html.
+
+Community Impact Guidelines were inspired by [OpenJS's code of conduct](https://github.com/openjs-foundation/cross-project-council/blob/main/CODE_OF_CONDUCT.md) enforcement ladder.
+
+For answers to common questions about this code of conduct, see the FAQ at [https://www.contributor-covenant.org/faq](https://www.contributor-covenant.org/faq). Translations are available at [https://www.contributor-covenant.org/translations](https://www.contributor-covenant.org/translations).

@@ -1,5 +1,5 @@
 const path = Plugin.path;
-const LRU = Npm.require('lru-cache');
+const LRUCache = Npm.require('lru-cache');
 
 // MultiFileCachingCompiler is like CachingCompiler, but for implementing
 // languages which allow files to reference each other, such as CSS
@@ -23,7 +23,7 @@ extends CachingCompilerBase {
     // Maps from cache key to { compileResult, cacheKeys }, where
     // cacheKeys is an object mapping from absolute import path to hashed
     // cacheKey for each file referenced by this file (including itself).
-    this._cache = new LRU({
+    this._cache = new LRUCache({
       max: this._cacheSize,
       // We ignore the size of cacheKeys here.
       length: (value) => this.compileResultSize(value.compileResult),
@@ -166,7 +166,7 @@ extends CachingCompilerBase {
       } else if (this.isRoot(inputFile)) {
         const result = await getResult();
         if (result) {
-          this.addCompileResult(inputFile, result);
+          await this.addCompileResult(inputFile, result);
         }
       }
     }

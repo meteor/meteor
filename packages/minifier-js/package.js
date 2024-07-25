@@ -1,10 +1,10 @@
 Package.describe({
   summary: "JavaScript minifier",
-  version: '3.0.0-alpha300.19',
+  version: '3.0.0',
 });
 
 Npm.depends({
-  terser: "5.14.2"
+  terser: "5.31.0"
 });
 
 Package.onUse(function (api) {

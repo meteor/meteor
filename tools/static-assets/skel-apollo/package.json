@@ -2,19 +2,17 @@
   "name": "~name~",
   "private": true,
   "scripts": {
-    "start": "meteor run",
+    "start": "meteor run --open",
     "test": "meteor test --once --driver-package meteortesting:mocha",
     "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@apollo/client": "^3.7.14",
-    "@apollo/server": "^4.7.1",
-    "@babel/runtime": "^7.21.5",
-    "body-parser": "^1.20.2",
-    "express": "^4.18.2",
-    "graphql": "^16.6.0",
-    "meteor-node-stubs": "^1.2.5",
+    "@apollo/client": "^3.9.2",
+    "@apollo/server": "^4.10.0",
+    "@babel/runtime": "^7.23.9",
+    "graphql": "^16.8.1",
+    "meteor-node-stubs": "^1.2.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

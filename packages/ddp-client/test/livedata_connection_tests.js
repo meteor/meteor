@@ -500,7 +500,7 @@ if (Meteor.isClient) {
     // setup method
     conn.methods({
       do_something: async function(x) {
-        return coll.insertAsync({ value: x });
+        return coll.insertAsync({ value: x }).stubPromise;
       }
     });
 
@@ -686,7 +686,7 @@ if (Meteor.isClient) {
         await conn.applyAsync('do_something_else', []);
       },
       do_something_else: async function() {
-        await coll.insertAsync({ a: 1 });
+        await coll.insertAsync({ a: 1 }).stubPromise;
       }
     });
 
@@ -747,7 +747,7 @@ if (Meteor.isClient) {
     o.stop();
   });
 }
-Tinytest.add('livedata stub - method call before connect', function(test) {
+Tinytest.addAsync('livedata stub - method call before connect', async function(test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -761,7 +761,7 @@ Tinytest.add('livedata stub - method call before connect', function(test) {
   stream.sent.length = 0;
 
   // Now connect.
-  stream.reset();
+  await stream.reset();
 
   testGotMessage(test, stream, makeConnectMessage());
   testGotMessage(test, stream, {
@@ -1037,7 +1037,7 @@ if (Meteor.isClient) {
       conn.methods({
         writeSomething: async function() {
           // stub write
-          await coll.insertAsync({ foo: 'bar' });
+          await coll.insertAsync({ foo: 'bar' }).stubPromise;
         }
       });
 
@@ -1374,10 +1374,10 @@ if (Meteor.isClient) {
     conn.methods({
       insertSomething: async function() {
         // stub write
-        await coll.insertAsync({ foo: 'bar' });
+        await coll.insertAsync({ foo: 'bar' }).stubPromise;
       },
       updateIt: async function(id) {
-        await coll.updateAsync(id, { $set: { baz: 42 } });
+        await coll.updateAsync(id, { $set: { baz: 42 } }).stubPromise;
       }
     });
 
@@ -1496,7 +1496,7 @@ if (Meteor.isClient) {
       conn.methods({
         insertSomething: async function() {
           // stub write
-          await coll.insertAsync({ foo: 'bar' });
+          await coll.insertAsync({ foo: 'bar' }).stubPromise;
         }
       });
 
@@ -2297,7 +2297,7 @@ if (Meteor.isClient) {
     test.length(stream.sent, 0);
 
     // Insert a document. The stub updates "conn" directly.
-    coll.insertAsync({ _id: 'foo', bar: 42 });
+    await coll.insertAsync({ _id: 'foo', bar: 42 }).stubPromise;
     test.equal(await coll.find().countAsync(), 1);
     test.equal(await coll.findOneAsync(), { _id: 'foo', bar: 42 });
     // It also sends the method message.
@@ -2339,7 +2339,7 @@ if (Meteor.isClient) {
 
       conn.methods({
         update_value: async function() {
-          await coll.updateAsync('aaa', { value: 222, tet: "dfsdfsdf" });
+          await coll.updateAsync('aaa', { value: 222, tet: "dfsdfsdf" }).stubPromise;
         }
       });
 
@@ -2431,7 +2431,7 @@ if (Meteor.isClient) {
       update_value: async function() {
         const value = (await coll.findOneAsync('aaa')).subscription;
         // Method should have access to the latest value of the collection.
-        await coll.updateAsync('aaa', { $set: { method: value + 110 } });
+        await coll.updateAsync('aaa', { $set: { method: value + 110 } }).stubPromise;
       }
     });
 
@@ -2509,6 +2509,47 @@ if (Meteor.isClient) {
     test.equal((await coll.findOneAsync('aaa')).method, 222);
     test.equal((await coll.findOneAsync('aaa')).subscription, 112);
   });
+
+  Tinytest.addAsync(
+    "livedata connection - make sure the sub and unsub run in the correct order",
+    async function (test, onComplete) {
+      const stream = new StubStream();
+      // Make sure to disable this flag so the subscribe and unsubscribe are queued
+      stream._neverQueued = false;
+      const conn = newConnection(stream);
+
+      const sub = conn.subscribe("test_data");
+
+      // the subscribe message is still in the queue
+      test.isFalse(conn._readyToMigrate());
+      test.length(stream.sent, 0);
+
+      // unsubscribe
+      sub.stop();
+
+      // the queue still holds the data and no message arrived yet
+      test.isFalse(conn._readyToMigrate());
+      test.length(stream.sent, 0);
+
+      // waits until the queue is empty
+      await waitUntil(conn._readyToMigrate);
+
+      // the first message is the sub message
+      let subMessage = JSON.parse(stream.sent.shift());
+      test.equal(subMessage, {
+        msg: "sub",
+        name: "test_data",
+        params: [],
+        id: subMessage.id,
+      });
+      test.length(stream.sent, 1);
+
+      // the second message is the unsub
+      subMessage = JSON.parse(stream.sent.shift());
+      test.equal(subMessage, { msg: "unsub", id: subMessage.id });
+      test.length(stream.sent, 0);
+    }
+  );
 }
 
 // XXX also test:

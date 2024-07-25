@@ -41,6 +41,12 @@ Meteor's build tool and Pub/Sub API (or Apollo) provides Vue with this API that 
 
 <h3 id="integrating-vue-with-meteor">Integrating Vue With Meteor</h3>
 
+Creating vue3 app
+
+```
+meteor create --vue
+```
+
 To start a new project:  
 
 ```sh
@@ -424,7 +430,7 @@ VueSSR.createApp = function (context) {
 
 <h3 id="async-data-and-hydration">Async data and Hydration</h3>
 
-Hydration is the the word for loading state into components on the serverside and then reusing that data on the clientside.
+Hydration is the word for loading state into components on the serverside and then reusing that data on the clientside.
 This allows components to fully render their markup on the server and prevents a 're-render' on the clientside when the bundle is loaded.
 
 [Nuxt](https://nuxtjs.org/) solves this gracefully with a feature called [asyncData](https://nuxtjs.org/guide/async-data).

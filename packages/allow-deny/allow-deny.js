@@ -186,8 +186,11 @@ CollectionPrototype._defineMutationMethods = function(options) {
               );
             }
 
-            const validatedMethodName =
-                  '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
+            const syncMethodName = method.replace('Async', '');
+            const syncValidatedMethodName = '_validated' + method.charAt(0).toUpperCase() + syncMethodName.slice(1);
+            // it forces to use async validated behavior on the server
+            const validatedMethodName = Meteor.isServer ? syncValidatedMethodName + 'Async' : syncValidatedMethodName;
+
             args.unshift(this.userId);
             isInsert(method) && args.push(generatedId);
             return self[validatedMethodName].apply(self, args);
@@ -266,21 +269,40 @@ CollectionPrototype._isInsecure = function () {
   return self._insecure;
 };
 
-CollectionPrototype._validatedInsertAsync = function (userId, doc,
-                                                         generatedId) {
-  const self = this;
+async function asyncSome(array, predicate) {
+  for (let item of array) {
+    if (await predicate(item)) {
+      return true;
+    }
+  }
+  return false;
+}
 
+async function asyncEvery(array, predicate) {
+  for (let item of array) {
+    if (!await predicate(item)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+CollectionPrototype._validatedInsertAsync = async function(userId, doc,
+                                                           generatedId) {
+  const self = this;
   // call user validators.
   // Any deny returns true means denied.
-  if (self._validators.insertAsync.deny.some((validator) => {
-    return validator(userId, docToValidate(validator, doc, generatedId));
+  if (await asyncSome(self._validators.insertAsync.deny, async (validator) => {
+    const result = validator(userId, docToValidate(validator, doc, generatedId));
+    return Meteor._isPromise(result) ? await result : result;
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
 
-  if (self._validators.insertAsync.allow.every((validator) => {
-    return !validator(userId, docToValidate(validator, doc, generatedId));
+  if (await asyncEvery(self._validators.insertAsync.allow, async (validator) => {
+    const result = validator(userId, docToValidate(validator, doc, generatedId));
+    return !(Meteor._isPromise(result) ? await result : result);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
@@ -392,22 +414,24 @@ CollectionPrototype._validatedUpdateAsync = async function(
 
   // call user validators.
   // Any deny returns true means denied.
-  if (self._validators.updateAsync.deny.some((validator) => {
+  if (await asyncSome(self._validators.updateAsync.deny, async (validator) => {
     const factoriedDoc = transformDoc(validator, doc);
-    return validator(userId,
-                     factoriedDoc,
-                     fields,
-                     mutator);
+    const result = validator(userId,
+      factoriedDoc,
+      fields,
+      mutator);
+    return Meteor._isPromise(result) ? await result : result;
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (self._validators.updateAsync.allow.every((validator) => {
+  if (await asyncEvery(self._validators.updateAsync.allow, async (validator) => {
     const factoriedDoc = transformDoc(validator, doc);
-    return !validator(userId,
-                      factoriedDoc,
-                      fields,
-                      mutator);
+    const result = validator(userId,
+      factoriedDoc,
+      fields,
+      mutator);
+    return !(Meteor._isPromise(result) ? await result : result);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
@@ -549,14 +573,16 @@ CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
 
   // call user validators.
   // Any deny returns true means denied.
-  if (self._validators.removeAsync.deny.some((validator) => {
-    return validator(userId, transformDoc(validator, doc));
+  if (await asyncSome(self._validators.removeAsync.deny, async (validator) => {
+    const result = validator(userId, transformDoc(validator, doc));
+    return Meteor._isPromise(result) ? await result : result;
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (self._validators.removeAsync.allow.every((validator) => {
-    return !validator(userId, transformDoc(validator, doc));
+  if (await asyncEvery(self._validators.removeAsync.allow, async (validator) => {
+    const result = validator(userId, transformDoc(validator, doc));
+    return !(Meteor._isPromise(result) ? await result : result);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
@@ -606,7 +632,7 @@ CollectionPrototype._validatedRemove = function(userId, selector) {
   return self._collection.remove.call(self._collection, selector);
 };
 
-CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethodAsync(name, args, options = {}) {
+CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(name, args, options = {}) {
 
   // For two out of three mutator methods, the first argument is a selector
   const firstArgIsSelector = name === "updateAsync" || name === "removeAsync";
@@ -619,8 +645,9 @@ CollectionPrototype._callMutatorMethodAsync = async function _callMutatorMethodA
 
   const mutatorMethodName = this._prefix + name;
   return this._connection.applyAsync(mutatorMethodName, args, {
-    returnStubValue: true,
-    returnServerResultPromise: true,
+    returnStubValue: this.resolverType === 'stub' || this.resolverType == null,
+    // StubStream is only used for testing where you don't care about the server
+    returnServerResultPromise: !this._connection._stream._isStub && this.resolverType !== 'stub',
     ...options,
   });
 }

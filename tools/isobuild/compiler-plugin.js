@@ -9,7 +9,7 @@ var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
 import {readAndWatchFileWithHash, sha1, WatchSet,} from '../fs/watch';
-import LRU from 'lru-cache';
+import LRUCache from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner';
@@ -61,12 +61,12 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 25; // Increment this number to force relinking.
-const LINKER_CACHE = new LRU({
+const LINKER_CACHE_SALT = 26; // Increment this number to force relinking.
+const LINKER_CACHE = new LRUCache({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
   // Key is JSONification of all options plus all hashes.
-  length: function (files) {
+  length (files) {
     return files.reduce((soFar, current) => {
       return soFar + current.data.length + sourceMapLength(current.sourceMap);
     }, 0);
@@ -542,13 +542,13 @@ class InputFile extends buildPluginModule.InputFile {
    * @memberOf InputFile
    * @instance
    */
-  addHtml(options, lazyFinalizer) {
+  async addHtml(options, lazyFinalizer) {
     if (typeof lazyFinalizer === "function") {
       // For now, just call the lazyFinalizer function immediately. Since
       // HTML is not compiled, this immediate invocation is probably
       // permanently appropriate for addHtml, whereas methods like
       // addJavaScript benefit from waiting to call lazyFinalizer.
-      Object.assign(options, Promise.await(lazyFinalizer()));
+      Object.assign(options, await lazyFinalizer());
     }
 
     this._resourceSlot.addHtml(options);
@@ -738,7 +738,7 @@ class ResourceSlot {
         if (! css && typeof css !== "string") {
           // The minifier didn't do anything, so we should use the
           // original contents of cssResource.data.
-          css = cssResource.data.toString("utf8");
+          css = (await cssResource.data).toString("utf8");
 
           if (cssResource.sourceMap) {
             // Add the source map as an asset, and append a

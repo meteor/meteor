@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { Meteor } from 'meteor/meteor'
+import { Meteor } from 'meteor/meteor';
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
@@ -181,7 +181,7 @@ export class AccountsServer extends AccountsCommon {
     }
 
     this._onCreateLoginTokenHook = func;
-  };
+  }
 
   /**
    * @summary Customize new user creation.
@@ -716,7 +716,7 @@ export class AccountsServer extends AccountsCommon {
 
     // Allow a one-time configuration for a login service. Modifications
     // to this collection are also allowed in insecure mode.
-    methods.configureLoginService = (options) => {
+    methods.configureLoginService = async (options) => {
       check(options, Match.ObjectIncluding({service: String}));
       // Don't let random users configure a service we haven't added yet (so
       // that when we do later add it, it's set up with their configuration
@@ -731,7 +731,8 @@ export class AccountsServer extends AccountsCommon {
 
       if (Package['service-configuration']) {
         const { ServiceConfiguration } = Package['service-configuration'];
-        if (ServiceConfiguration.configurations.findOneAsync({service: options.service}))
+        const service = await ServiceConfiguration.configurations.findOneAsync({service: options.service})
+        if (service)
           throw new Meteor.Error(403, `Service ${options.service} already configured`);
 
         if (Package["oauth-encryption"]) {
@@ -740,7 +741,7 @@ export class AccountsServer extends AccountsCommon {
             options.secret = OAuthEncryption.seal(options.secret);
         }
 
-        ServiceConfiguration.configurations.insert(options);
+        await ServiceConfiguration.configurations.insertAsync(options);
       }
     };
 
@@ -1518,9 +1519,10 @@ export class AccountsServer extends AccountsCommon {
   }
 
   _handleError = (msg, throwError = true, errorCode = 403) => {
+    const isErrorAmbiguous = this._options.ambiguousErrorMessages ?? Meteor.isProduction;
     const error = new Meteor.Error(
       errorCode,
-      this._options.ambiguousErrorMessages
+      isErrorAmbiguous
         ? "Something went wrong. Please check your credentials."
         : msg
     );

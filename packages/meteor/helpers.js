@@ -70,11 +70,13 @@ Meteor._delete = function (obj /*, arguments */) {
 
 
 /**
- * Takes a function that has a callback argument as the last one and promissify it.
+ * @memberOf Meteor
+ * @locus Anywhere
+ * @summary Takes a function that has a callback argument as the last one and promissify it.
  * One option would be to use node utils.promisify, but it won't work on the browser.
- * @param fn
- * @param context
- * @param errorFirst - If the callback follows the errorFirst style
+ * @param {Function} fn
+ * @param {Object} [context]
+ * @param {Boolean} [errorFirst] - If the callback follows the errorFirst style, default to true
  * @returns {function(...[*]): Promise<unknown>}
  */
 Meteor.promisify = function (fn, context, errorFirst) {

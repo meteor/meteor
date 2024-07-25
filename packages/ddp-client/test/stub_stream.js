@@ -53,5 +53,8 @@ _.extend(StubStream.prototype, {
 
   // Provide a tag to detect stub streams.
   // We don't log heartbeat failures on stub streams, for example.
-  _isStub: true
+  _isStub: true,
+  // useful for testing, where we're sure we don't rely on previous method calls
+  // this is an example of one https://github.com/meteor/meteor/blob/918e4e10ac05a28a553a36bb1405914f71302170/packages/ddp-client/test/livedata_connection_tests.js#L200
+  _neverQueued: true,
 });

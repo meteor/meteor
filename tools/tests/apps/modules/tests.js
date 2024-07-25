@@ -99,11 +99,6 @@ describe("app modules", () => {
     }
   });
 
-  it("should not be parsed in strictMode", () => {
-    let foo = 1234;
-    delete foo;
-  });
-
   it("should have access to filename and dirname", () => {
     assert.strictEqual(require(__filename), exports);
     assert.strictEqual(
@@ -284,7 +279,7 @@ describe("local node_modules", () => {
 
   it('should expose "version" field of package.json', () => {
     const pkg = require("moment/package.json");
-    assert.strictEqual(pkg.version, "2.24.0");
+    assert.strictEqual(pkg.version, "2.30.1");
   });
 
   it('should support object-valued package.json "browser" fields', () => {

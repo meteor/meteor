@@ -154,6 +154,9 @@ export default class Sandbox {
     const array = Object.keys(this.clients);
     for (const [index, clientKey] of array.entries()) {
       const client = this.clients[clientKey];
+      if (client.init) {
+        await client.init();
+      }
       console.log(
           `(${index+1}/${array.length}) Testing ${testNameAndFile}with ${client.name}...`);
       const run = new Run(this.execPath, {
@@ -316,6 +319,18 @@ export default class Sandbox {
     }
   }
 
+  // Reads a dir in the sandbox. 'filepath' is a
+  // path interpreted relative to the Sandbox's cwd.  Returns null if
+  // dir does not exist.
+  readDir(filepath) {
+    const file = files.pathJoin(this.cwd, filepath);
+    if (!files.exists(file)) {
+      return null;
+    } else {
+      return files.readdir(files.pathJoin(this.cwd, filepath), 'utf8');
+    }
+  }
+
   // Copy the contents of one file to another.  In these series of tests, we often
   // want to switch contents of package.js files. It is more legible to copy in
   // the backup file rather than trying to write into it manually.
@@ -370,6 +385,9 @@ export default class Sandbox {
 
       // Don't ever try to refresh the stub catalog we made.
       env.METEOR_OFFLINE_CATALOG = "t";
+
+      // Tell the env we are in SANDBOX.
+      env.SANDBOX = "true";
     }
 
     // By default (ie, with no mock warehouse and no --release arg) we should be

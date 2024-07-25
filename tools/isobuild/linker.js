@@ -1,12 +1,10 @@
-import {debug} from "util";
-
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;
 import assert from 'assert';
-import LRU from 'lru-cache';
+import LRUCache from 'lru-cache';
 import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
@@ -17,14 +15,14 @@ import { convert as convertColons } from '../utils/colon-converter.js';
 const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024*1024*20;
 
 // Cache individual files prelinked
-const APP_PRELINK_CACHE = new LRU({
+const APP_PRELINK_CACHE = new LRUCache({
   max: CACHE_SIZE,
-  length: function (prelinked) {
+  length (prelinked) {
     return prelinked.source.length + sourceMapLength(prelinked.sourceMap);
   }
 });
 // Caches code with source map for dynamic files
-const DYNAMIC_PRELINKED_OUTPUT_CACHE = new LRU({
+const DYNAMIC_PRELINKED_OUTPUT_CACHE = new LRUCache({
   max: Math.pow(2, 11)
 });
 
@@ -139,6 +137,7 @@ Object.assign(Module.prototype, {
 
         if (APP_PRELINK_CACHE.has(cacheKey)) {
           ret.push(APP_PRELINK_CACHE.get(cacheKey));
+          continue;
         }
 
         const node = await file.getPrelinkedOutput({ preserveLineNumbers: true });
@@ -167,14 +166,7 @@ Object.assign(Module.prototype, {
         ret.push(prelinked);
       }
 
-      // TODO[fibers]: This is a temporary hack to make sure that we don't return the same
-        // file twice. I'm not sure why, but self.files sometimes contains the same file twice.
-        // these tool tests fail without this hack:
-        // - assets - unicode asset names are allowed
-        // - javascript hot code push
-        // and probably others
-      const uniqueHashes = [...new Set(ret.map((f) => f.hash))];
-      return uniqueHashes.map((h) => ret.find((f) => f.hash === h));
+      return ret;
     }
 
     // Otherwise..
@@ -951,22 +943,9 @@ var getHeader = function (options) {
     return '(function() {\n\n';
   }
 
+  var chunks = [`Package["core-runtime"].queue("${options.name}",function () {`];
+
   var isApp = options.name === null;
-  var chunks = [];
-   let orderedDeps = [];
-
-  options.deps.forEach(dep => {
-    if (!dep.unordered) {
-      orderedDeps.push(JSON.stringify(dep.package))
-    }
-  });
-
-  chunks.push(
-      `Package["core-runtime"].queue("${options.name}", [`,
-      orderedDeps.join(', '),
-      '], function () {'
-  );
-
   if (isApp) {
     chunks.push(
       getImportCode(options.imports, "/* Imports for global scope */\n\n", true),
@@ -984,8 +963,7 @@ var getHeader = function (options) {
 
   if (!_.isEmpty(packageVariables)) {
     chunks.push(
-      "/* Package-scope variables */\n",
-      "var ",
+      "/* Package-scope variables */\nvar ",
       packageVariables.join(', '),
       ";\n\n",
     );

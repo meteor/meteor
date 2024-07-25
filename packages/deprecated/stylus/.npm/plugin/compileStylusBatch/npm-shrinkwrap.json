@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 4,
   "dependencies": {
     "amdefine": {
       "version": "1.0.1",
@@ -32,9 +32,9 @@
       "integrity": "sha512-fKSWtyNQTclfi1A+s2KU91/r1mfANG1ZibxTdCwJGfV1J9UwcV22plFOm0wkaq4WzqW87zxiAkyp2Ho1Wn1NnA=="
     },
     "caniuse-db": {
-      "version": "1.0.30001509",
-      "resolved": "https://registry.npmjs.org/caniuse-db/-/caniuse-db-1.0.30001509.tgz",
-      "integrity": "sha512-Gf3pFp97loixG5w83NVb09DMI+WzkVXLn4H2abxv7DXxHUyKYbZc5qpEqAQy/mDFO6bAnNQh4hZ8lLeGlPTZQg=="
+      "version": "1.0.30001640",
+      "resolved": "https://registry.npmjs.org/caniuse-db/-/caniuse-db-1.0.30001640.tgz",
+      "integrity": "sha512-K8/5iWoH/NULlqJz/iaopQJraQCHGcFGvs8dmTpAH7GyvoQu2Xq8ht3jq2c+wNck4bgQu/PHu2GN2mJfUj9qtw=="
     },
     "concat-map": {
       "version": "0.0.1",
@@ -47,9 +47,9 @@
       "integrity": "sha512-OI38lO4JQQX2GSisTqwiSFxiWNmLajXdW4tCCxAuiwGKjusHALQadSHBSxGlU8lrFp47IkLuU2AfSYz31qpETQ=="
     },
     "debug": {
-      "version": "4.3.4",
-      "resolved": "https://registry.npmjs.org/debug/-/debug-4.3.4.tgz",
-      "integrity": "sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ=="
+      "version": "4.3.5",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-4.3.5.tgz",
+      "integrity": "sha512-pt0bNEmneDIvdL1Xsd9oDQ/wrQRkXDT4AUWlNZNPKvW5x/jyO9VFXkJUP07vQ2upmw5PlaITaPKc31jK13V+jg=="
     },
     "fs.realpath": {
       "version": "1.0.0",

@@ -552,7 +552,8 @@ var springboard = async function (rel, options) {
       var execPath = files.convertToOSPath(executable);
       var child = require("child_process").spawn(execPath, newArgv, {
         env: process.env,
-        stdio: 'inherit'
+        stdio: 'inherit',
+        shell: true,
       }).on('exit', resolve);
     }));
   }
@@ -924,6 +925,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   }
 
   var releaseName, appReleaseFile;
+
   if (appDir) {
     appReleaseFile = new projectContextModule.ReleaseFile({
       projectDir: appDir
@@ -1169,6 +1171,23 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         mayReturn: true,
       });
     }
+  }
+
+  try {
+    const { getChildProcess } =  require("./dev-bundle-bin-commands")
+
+    const child = await getChildProcess({ isFirstTry: false })
+
+    // If we spawned a process to handle a dev_bundle/bin command like
+    // `meteor npm` or `meteor node`, then don't run any other tool code.
+
+    if (child) {
+      return;
+    }
+  } catch (error) {
+    process.nextTick(function () {
+      throw error;
+    });
   }
 
   // Check for the '--help' option.

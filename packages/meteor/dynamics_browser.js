@@ -35,14 +35,19 @@ EVp.getOrNullIfOutsideFiber = function () {
  * @returns {any} The return value of the function
  */
 EVp.withValue = function (value, func) {
+  // WARNING: Do not change the behavior of this function.
+  // If you compare this function to it's version in the server-side, you'll see that there we handle async results.
+  // In the client we don't need to do this. If we try to, it can lead to problems like this:
+  // https://github.com/meteor/meteor/pull/13198#issuecomment-2181254734/.
   var saved = currentValues[this.slot];
+
   try {
     currentValues[this.slot] = value;
-    var ret = func();
+
+    return func();
   } finally {
     currentValues[this.slot] = saved;
   }
-  return ret;
 };
 
 EVp._set = function (context) {

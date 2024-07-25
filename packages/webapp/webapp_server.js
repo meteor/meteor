@@ -18,7 +18,7 @@ import {
   registerSocketFileCleanup,
 } from './socket_file.js';
 import cluster from 'cluster';
-import whomst from '@vlasky/whomst';
+import { execSync } from 'child_process';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
@@ -43,6 +43,9 @@ WebAppInternals.NpmModules = {
     module: express,
   }
 };
+
+// More of a convenience for the end user
+WebApp.express = express;
 
 // Though we might prefer to use web.browser (modern) as the default
 // architecture, safety requires a more compatible defaultArch.
@@ -425,10 +428,10 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
-function getBoilerplateAsync(request, arch) {
+async function getBoilerplateAsync(request, arch) {
   let boilerplate = boilerplateByArch[arch];
-  runtimeConfig.hooks.forEach(hook => {
-    const meteorRuntimeConfig = hook({
+  await runtimeConfig.hooks.forEachAsync(async hook => {
+    const meteorRuntimeConfig = await hook({
       arch,
       request,
       encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
@@ -1148,12 +1151,12 @@ async function runWebAppServer() {
    * @summary callback handler for `WebApp.expressHandlers`
    * @param {Object} req
    * a Node.js
-   * [IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
+   * [IncomingMessage](https://nodejs.org/api/http.html#class-httpincomingmessage)
    * object with some extra properties. This argument can be used
    *  to get information about the incoming request.
    * @param {Object} res
    * a Node.js
-   * [ServerResponse](http://nodejs.org/api/http.html#http_class_http_serverresponse)
+   * [ServerResponse](https://nodejs.org/api/http.html#class-httpserverresponse)
    * object. Use this to write data that should be sent in response to the
    * request, and call `res.end()` when you are done.
    * @param {Function} next
@@ -1394,7 +1397,7 @@ async function runWebAppServer() {
 
     const startHttpServer = listenOptions => {
       WebApp.startListening(
-        httpServer,
+        argv?.httpServer || httpServer,
         listenOptions,
         Meteor.bindEnvironment(
           () => {
@@ -1403,7 +1406,7 @@ async function runWebAppServer() {
             }
             const callbacks = onListeningCallbacks;
             onListeningCallbacks = null;
-            callbacks.forEach(callback => {
+            callbacks?.forEach(callback => {
               callback();
             });
           },
@@ -1440,8 +1443,7 @@ async function runWebAppServer() {
 
       const unixSocketGroup = (process.env.UNIX_SOCKET_GROUP || '').trim();
       if (unixSocketGroup) {
-        //whomst automatically handles both group names and numerical gids
-        const unixSocketGroupInfo = whomst.sync.group(unixSocketGroup);
+        const unixSocketGroupInfo = getGroupInfo(unixSocketGroup);
         if (unixSocketGroupInfo === null) {
           throw new Error('Invalid UNIX_SOCKET_GROUP name specified');
         }
@@ -1468,6 +1470,48 @@ async function runWebAppServer() {
     return 'DAEMON';
   };
 }
+
+const isGetentAvailable = () => {
+  try {
+    execSync('which getent');
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const getGroupInfoUsingGetent = (groupName) => {
+  try {
+    const stdout = execSync(`getent group ${groupName}`, { encoding: 'utf8' });
+    if (!stdout) return null;
+    const [name, , gid] = stdout.trim().split(':');
+    if (name == null || gid == null) return null;
+    return { name, gid: Number(gid) };
+  } catch (error) {
+    return null;
+  }
+};
+
+const getGroupInfoFromFile = (groupName) => {
+  try {
+    const data = readFileSync('/etc/group', 'utf8');
+    const groupLine = data.trim().split('\n').find(line => line.startsWith(`${groupName}:`));
+    if (!groupLine) return null;
+    const [name, , gid] = groupLine.trim().split(':');
+    if (name == null || gid == null) return null;
+    return { name, gid: Number(gid) };
+  } catch (error) {
+    return null;
+  }
+};
+
+export const getGroupInfo = (groupName) => {
+  let groupInfo = getGroupInfoFromFile(groupName);
+  if (!groupInfo && isGetentAvailable()) {
+    groupInfo = getGroupInfoUsingGetent(groupName);
+  }
+  return groupInfo;
+};
 
 var inlineScriptsAllowed = true;
 
@@ -1513,4 +1557,3 @@ WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
 await runWebAppServer();
-

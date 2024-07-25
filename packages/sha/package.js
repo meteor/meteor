@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.0.10-alpha300.19',
+  version: '1.0.10',
   summary: 'SHA256 implementation',
   git: 'https://github.com/meteor/meteor'
 });

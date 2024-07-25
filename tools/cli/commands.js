@@ -19,10 +19,14 @@ const {
   red,
   yellow
 } = require('../console/console.js').colors;
+const inquirer = require('inquirer');
+
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
 const { Profile } = require("../tool-env/profile");
+const open = require('open')
+
 const { exec } = require("child_process");
 /**
  * Run a command in the shell.
@@ -31,16 +35,10 @@ const { exec } = require("child_process");
  */
 const runCommand = async (command) => {
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    exec(command, { env: process.env }, (error, stdout) => {
       if (error) {
         console.log(red`error: ${ error.message }`);
         reject(error);
-        return;
-      }
-      if (stderr) {
-        if (stderr.includes("Cloning into")) console.log(green`${ stderr }`);
-        else console.log(red`stderr: ${ stderr }`);
-        reject(stderr);
         return;
       }
       resolve(stdout);
@@ -353,6 +351,7 @@ var runCommandOptions = {
   maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
+    open: { type: Boolean, short: "o", default: false },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
     'app-port': { type: String },
@@ -374,7 +373,7 @@ var runCommandOptions = {
     // of top-level dependencies.
     'allow-incompatible-update': { type: Boolean },
     'extra-packages': { type: String },
-    'exclude-archs': { type: String }
+    'exclude-archs': { type: String },
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -448,6 +447,7 @@ async function doRunCommand(options) {
     runLog.setRawLogs(true);
   }
 
+
   let webArchs = projectContext.platformList.getWebArchs();
   if (! _.isEmpty(runTargets) ||
       options['mobile-server']) {
@@ -505,7 +505,18 @@ async function doRunCommand(options) {
     cordovaServerPort: parsedCordovaServerPort,
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
-    cordovaRunner: cordovaRunner
+    cordovaRunner: cordovaRunner,
+    onBuilt: function () {
+      // Opens a browser window when it finishes building
+      if (options.open) {
+        console.log("=> Opening your app in a browser...");
+        if (process.env.ROOT_URL) {
+          open(process.env.ROOT_URL)
+        } else {
+          open(`http://localhost:${options.port}`)
+        }
+      }
+    }
   });
 }
 
@@ -590,16 +601,31 @@ export const AVAILABLE_SKELETONS = [
   DEFAULT_SKELETON,
   "typescript",
   "vue",
-  'vue-2',
   "svelte",
   "tailwind",
   "chakra-ui",
   "solid",
 ];
 
+const SKELETON_INFO = {
+  "apollo": "To create a basic Apollo + React app",
+  "bare": "To create an empty app",
+  "blaze": "To create an app using Blaze",
+  "full": "To create a more complete scaffolded app",
+  "minimal": "To create an app with as few Meteor packages as possible",
+  "react": "To create a basic React-based app",
+  "typescript": "To create an app using TypeScript and React",
+  "vue": "To create a basic Vue3-based app",
+  "svelte": "To create a basic Svelte app",
+  "tailwind": "To create an app using React and Tailwind",
+  "chakra-ui": "To create an app Chakra UI and React",
+  "solid": "To create a basic Solid app"
+}
+
 main.registerCommand({
   name: 'create',
   maxArgs: 1,
+  minArgs: 0,
   options: {
     list: { type: Boolean },
     example: { type: String },
@@ -610,7 +636,6 @@ main.registerCommand({
     blaze: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
-    'vue-2': { type: Boolean },
     typescript: { type: Boolean },
     apollo: { type: Boolean },
     svelte: { type: Boolean },
@@ -620,6 +645,7 @@ main.registerCommand({
     prototype: { type: Boolean },
     from: { type: String },
   },
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
   // Creating a package is much easier than creating an app, so if that's what
@@ -785,12 +811,64 @@ main.registerCommand({
     return 0;
   }
 
-  var appPathAsEntered;
-  if (options.args.length === 1) {
-    appPathAsEntered = options.args[0];
-  } else {
-    throw new main.ShowUsage();
+  /**
+   *
+   * @returns {{appPathAsEntered: string, skeleton: string }}
+   */
+  const setup = async () => {
+    // meteor create app-name
+    if (options.args.length === 1) {
+      const appPathAsEntered = options.args[0];
+      const skeletonExplicitOption =
+        AVAILABLE_SKELETONS.find(skeleton => !!options[skeleton]);
+
+      const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
+
+      console.log(`Using ${green`${skeleton}`} skeleton`);
+      return {
+        appPathAsEntered,
+        skeleton
+      }
+    }
+    function capitalizeFirstLetter(string) {
+      return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+    const prompt = inquirer.createPromptModule();
+    // meteor create
+    // need to ask app name and skeleton
+    const r = await prompt([
+      {
+        type: 'input',
+        name: 'appPathAsEntered',
+        message: `What is the name/path of your ${yellow`app`}? `,
+        default(){
+          return 'my-app';
+        }
+      },
+      {
+        type: 'list',
+        name: 'skeleton',
+        message: `Which ${yellow`skeleton`} do you want to use?`,
+        choices: AVAILABLE_SKELETONS.map(skeleton => {return `${capitalizeFirstLetter(skeleton)} # ${SKELETON_INFO[skeleton]}`}),
+        default(){
+          return `${capitalizeFirstLetter(DEFAULT_SKELETON)} # ${SKELETON_INFO[DEFAULT_SKELETON]}`;
+        },
+        filter(val) {
+          const skel = val.split(' ')[0];
+          console.log(`Using ${green`${skel}`} skeleton`);
+          return skel.toLowerCase();
+        }
+      }
+    ])
+    return r;
   }
+
+  var {
+    appPathAsEntered,
+    skeleton
+  } = await setup();
+  Console.setPretty(true) // to not lose the console
+
   var appPath = files.pathResolve(appPathAsEntered);
 
   if (files.findAppDir(appPath)) {
@@ -862,7 +940,7 @@ main.registerCommand({
   }
   // Setup fn, which is called after the app is created, to print a message
   // about how to run the app.
-  async function setup() {
+  async function setupMessages() {
     // We are actually working with a new meteor project at this point, so
     // set up its context.
     var projectContext = new projectContextModule.ProjectContext({
@@ -971,12 +1049,24 @@ main.registerCommand({
    * @param {string} url
    */
   const setupExampleByURL = async (url) => {
-    const [ok, err] = await bash`git -v`;
+    const [ok, err] = await bash`git --version`;
     if (err) throw new Error("git is not installed");
-    await bash`git clone --progress ${url} ${appPath} `;
+    const isWindows = process.platform === "win32";
+
+    // Set GIT_TERMINAL_PROMPT=0 to disable prompting
+    process.env.GIT_TERMINAL_PROMPT = 0;
+
+    const gitCommand = isWindows
+      ? `git clone --progress ${url} ${files.convertToOSPath(appPath)}`
+      : `git clone --progress ${url} ${appPath}`;
+    const [okClone, errClone] = await bash`${gitCommand}`;
+    const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
+    if (errorMessage && errorMessage.includes("Cloning into")) {
+      throw new Error("error cloning skeleton");
+    }
     // remove .git folder from the example
     await files.rm_recursive_async(files.pathJoin(appPath, ".git"));
-    await setup();
+    await setupMessages();
   };
 
   if (options.example) {
@@ -1015,11 +1105,6 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/);
   }
 
-  const skeletonExplicitOption = AVAILABLE_SKELETONS.find(
-    (skeleton) => !!options[skeleton]
-  );
-  const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
-
   try {
     // Prototype option should use local skeleton.
     // Maybe we should use a different skeleton for prototype
@@ -1032,7 +1117,7 @@ main.registerCommand({
   } catch (e) {
 
     if (
-      e.message !== "Using prototype option" ||
+      e.message !== "Using prototype option" &&
       e.message !== "Using release option"
     ) {
       // something has happened while creating the app using git clone
@@ -1083,39 +1168,7 @@ main.registerCommand({
           preserveSymlinks: true,
         }
       );
-      await setup();
-  }
-  if (!!skeletonExplicitOption) {
-    // Notify people about the skeleton options
-    Console.info(
-      [
-        "",
-        "To start with a different app template, try one of the following:",
-        "",
-      ].join("\n")
-    );
-
-    cmd("meteor create --bare       # to create an empty app");
-    cmd(
-      "meteor create --minimal    # to create an app with as few Meteor packages as possible"
-    );
-    cmd(
-      "meteor create --full       # to create a more complete scaffolded app"
-    );
-    cmd("meteor create --react      # to create a basic React-based app");
-    cmd("meteor create --vue        # to create a basic Vue3-based app");
-    cmd("meteor create --vue-2      # to create a basic Vue2-based app");
-    cmd("meteor create --apollo     # to create a basic Apollo + React app");
-    cmd("meteor create --svelte     # to create a basic Svelte app");
-    cmd(
-      "meteor create --typescript # to create an app using TypeScript and React"
-    );
-    cmd("meteor create --blaze      # to create an app using Blaze");
-    cmd(
-      "meteor create --tailwind   # to create an app using React and Tailwind"
-    );
-    cmd("meteor create --chakra-ui  # to create an app Chakra UI and React");
-    cmd("meteor create --solid      # to create a basic Solid app");
+      await setupMessages();
   }
 
   Console.info("");
@@ -1454,6 +1507,11 @@ https://guide.meteor.com/cordova.html#submitting-android
   }
 
   await files.rm_recursive(buildDir);
+
+  const npmShrinkwrapFilePath = files.pathJoin(bundlePath, 'programs/server/npm-shrinkwrap.json');
+  if (files.exists(npmShrinkwrapFilePath)) {
+    files.chmod(npmShrinkwrapFilePath, 0o644);
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1652,11 +1710,18 @@ main.registerCommand({
   // Doesn't actually take an argument, but we want to print an custom
   // error message if they try to pass one.
   maxArgs: 1,
+  options: {
+    db: { type: Boolean },
+  },
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
   if (options.args.length !== 0) {
-    Console.error("meteor reset only affects the locally stored database.");
+    Console.error("'meteor reset' command only affects the local project cache.");
+    Console.error();
+    Console.error("To remove also the local database use");
+    Console.error(
+      Console.command("meteor reset --db"), Console.options({ indent: 2 }));
     Console.error();
     Console.error("To reset a deployed application use");
     Console.error(
@@ -1673,24 +1738,39 @@ main.registerCommand({
                  "MONGO_URL will NOT be reset.");
   }
 
-  // XXX detect the case where Meteor is running the app, but
-  // MONGO_URL was set, so we don't see a Mongo process
-  var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-  var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
-  if (isRunning) {
-    Console.error("reset: Meteor is running.");
-    Console.error();
-    Console.error(
-      "This command does not work while Meteor is running your application.",
-      "Exit the running Meteor development server.");
-    return 1;
+  if (options.db) {
+    // XXX detect the case where Meteor is running the app, but
+    // MONGO_URL was set, so we don't see a Mongo process
+    var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
+    var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
+    if (isRunning) {
+      Console.error("reset: Meteor is running.");
+      Console.error();
+      Console.error(
+        "This command does not work while Meteor is running your application.",
+        "Exit the running Meteor development server.");
+      return 1;
+    }
+
+    await files.rm_recursive_async(
+      files.pathJoin(options.appDir, '.meteor', 'local')
+    );
+    Console.info("Project reset.");
+    return;
   }
 
-  return files.rm_recursive_async(
-    files.pathJoin(options.appDir, '.meteor', 'local')
-  ).then(() => {
-    Console.info("Project reset.");
+  var allExceptDb = files.getPathsInDir(files.pathJoin('.meteor', 'local'), {
+    cwd: options.appDir,
+    maxDepth: 1,
+  }).filter(function (path) {
+    return !path.includes('.meteor/local/db');
   });
+
+  var allRemovePromises = allExceptDb.map(_path => files.rm_recursive_async(
+    files.pathJoin(options.appDir, _path)
+  ));
+  await Promise.all(allRemovePromises);
+  Console.info("Project reset.");
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1902,6 +1982,7 @@ testCommandOptions = {
   catalogRefresh: new catalog.Refresh.Never(),
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
+    open: { type: Boolean, short: "o", default: false },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
     'debug-port': { type: String },
@@ -1988,7 +2069,7 @@ main.registerCommand(Object.assign(
 async function doTestCommand(options) {
   // This "metadata" is accessed in a few places. Using a global
   // variable here was more expedient than navigating the many layers
-  // of abstraction across the the build process.
+  // of abstraction across the build process.
   //
   // As long as the Meteor CLI runs a single command as part of each
   // process, this should be safe.
@@ -2360,7 +2441,18 @@ var runTestAppForPackages = async function (projectContext, options) {
       // On the first run, we shouldn't display the delta between "no packages
       // in the temp app" and "all the packages we're testing". If we make
       // changes and reload, though, it's fine to display them.
-      omitPackageMapDeltaDisplayOnFirstRun: true
+      omitPackageMapDeltaDisplayOnFirstRun: true,
+      onBuilt: function () {
+        // Opens a browser window when it finishes building
+        if (options.open) {
+          console.log("=> Opening your app in a browser...");
+          if (process.env.ROOT_URL) {
+            open(process.env.ROOT_URL)
+          } else {
+            open(`http://localhost:${options.port}`)
+          }
+        }
+      }
     });
   }
 };

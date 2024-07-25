@@ -1528,7 +1528,7 @@ var maybeUpdateRelease = async function (options) {
     if (release.current && ! release.current.isRecommended() &&
         options.appDir && ! options.patch) {
       var releaseVersion = await release.current.getReleaseVersion();
-      var newerRecommendedReleases = getLaterReleaseVersions(
+      var newerRecommendedReleases = await getLaterReleaseVersions(
         releaseTrack, releaseVersion);
       if (!newerRecommendedReleases.length) {
         // When running 'meteor update' without --release in an app,
@@ -1866,10 +1866,19 @@ main.registerCommand({
     if (options["all-packages"]) {
       Console.error("You cannot both specify a list of packages to"
        + " update and pass --all-packages.");
-       exit(1)
+       process.exit(1)
     }
 
     upgradePackageNames = options.args;
+
+    if (upgradePackageNames.some(name => name.includes("@"))) {
+      Console.error(
+        "Package names can not contain \"@\". If you are trying to",
+        "update a package to a specific version, instead use",
+        Console.command('"meteor add"')
+      );
+      process.exit(1);
+    }
   }
   // We want to use the project's release for constraints even if we are
   // currently running a newer release (eg if we ran 'meteor update --patch' and
@@ -2645,7 +2654,7 @@ main.registerCommand({
     // check if the passed arch is in the list
     var arch = options['target-arch'];
     if (! osArches.includes(arch)) {
-      throw new Error(
+	      throw new Error(
         arch + ": the arch is not available for the release. Available arches: "
         + osArches.join(', '));
     }

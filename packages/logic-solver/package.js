@@ -1,11 +1,15 @@
 Package.describe({
   summary: "General satisfiability solver for logic problems",
-  version: '3.0.0-alpha300.19',
+  version: '3.0.0',
+});
+
+Npm.depends({
+  'lodash.has': '4.5.2'
 });
 
 Package.onUse(function (api) {
   api.export('Logic');
-  api.use('underscore');
+  api.use('ecmascript');
   api.addFiles(['minisat.js',
                  'minisat_wrapper.js',
                  'types.js',
@@ -14,7 +18,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['tinytest', 'check', 'underscore']);
+  api.use(['tinytest', 'check']);
   api.use('logic-solver');
 
   // logic-solver is totally meant for the client too, but not old

@@ -1,25 +1,26 @@
 Meteor._noYieldsAllowed = function (f) {
-  const result = f();
+  var result = f();
   if (Meteor._isPromise(result)) {
     throw new Error("function is a promise when calling Meteor._noYieldsAllowed");
   }
   return result
 };
 
-class FakeDoubleEndedQueue {
-  constructor() {
-    this.queue = [];
-  }
-  push(task) {
-    this.queue.push(task);
-  }
-  shift() {
-    return this.queue.shift();
-  }
-  isEmpty() {
-    return this.queue.length === 0;
-  }
+function FakeDoubleEndedQueue () {
+  this.queue = [];
 }
+
+FakeDoubleEndedQueue.prototype.push = function (task) {
+  this.queue.push(task);
+};
+
+FakeDoubleEndedQueue.prototype.shift = function () {
+  return this.queue.shift();
+};
+
+FakeDoubleEndedQueue.prototype.isEmpty = function () {
+  return this.queue.length === 0;
+};
 
 Meteor._DoubleEndedQueue = Meteor.isServer ? Npm.require('denque') : FakeDoubleEndedQueue;
 
@@ -40,17 +41,16 @@ Meteor._DoubleEndedQueue = Meteor.isServer ? Npm.require('denque') : FakeDoubleE
 // XXX could maybe use the npm 'schlock' module instead, which would
 //     also support multiple concurrent "read" tasks
 //
-class AsynchronousQueue {
-  constructor() {
-    this._taskHandles = new Meteor._DoubleEndedQueue();
-    this._runningOrRunScheduled = false;
-    // This is true if we're currently draining.  While we're draining, a further
-    // drain is a noop, to prevent infinite loops.  "drain" is a heuristic type
-    // operation, that has a meaning like unto "what a naive person would expect
-    // when modifying a table from an observe"
-    this._draining = false;
-  }
-
+function AsynchronousQueue () {
+  this._taskHandles = new Meteor._DoubleEndedQueue();
+  this._runningOrRunScheduled = false;
+  // This is true if we're currently draining.  While we're draining, a further
+  // drain is a noop, to prevent infinite loops.  "drain" is a heuristic type
+  // operation, that has a meaning like unto "what a naive person would expect
+  // when modifying a table from an observe"
+  this._draining = false;
+}
+Object.assign(AsynchronousQueue.prototype, {
   queueTask(task) {
     const self = this;
     self._taskHandles.push({
@@ -58,7 +58,7 @@ class AsynchronousQueue {
       name: task.name
     });
     self._scheduleRun();
-  }
+  },
 
   async _scheduleRun() {
     // Already running or scheduled? Do nothing.
@@ -71,7 +71,7 @@ class AsynchronousQueue {
     const promise = new Promise(r => resolve = r);
     const runImmediateHandle = (fn) => {
       if (Meteor.isServer) {
-        setImmediate(fn);
+        Meteor._runFresh(() => setImmediate(fn))
         return;
       }
       setTimeout(fn, 0);
@@ -80,7 +80,7 @@ class AsynchronousQueue {
       this._run().finally(resolve);
     });
     return promise;
-  }
+  },
 
   async _run() {
     if (!this._runningOrRunScheduled)
@@ -117,23 +117,23 @@ class AsynchronousQueue {
         taskHandle.resolver();
       }
     }
-  }
+  },
 
   async runTask(task) {
     let resolver;
     const promise = new Promise(
       (resolve, reject) =>
-        (resolver = (res, rej) => {
-          if (rej) {
-            reject(rej);
-            return;
-          }
-          resolve(res);
-        })
+      (resolver = (res, rej) => {
+        if (rej) {
+          reject(rej);
+          return;
+        }
+        resolve(res);
+      })
     );
 
     const handle = {
-      task: Meteor.bindEnvironment(task, function(e) {
+      task: Meteor.bindEnvironment(task, function (e) {
         Meteor._debug('Exception from task', e);
         throw e;
       }),
@@ -143,11 +143,11 @@ class AsynchronousQueue {
     this._taskHandles.push(handle);
     await this._scheduleRun();
     return promise;
-  }
+  },
 
   flush() {
-    return this.runTask(() => {});
-  }
+    return this.runTask(() => { });
+  },
 
   async drain() {
     if (this._draining)
@@ -159,7 +159,7 @@ class AsynchronousQueue {
     }
     this._draining = false;
   }
-}
+});
 
 Meteor._AsynchronousQueue = AsynchronousQueue;
 
