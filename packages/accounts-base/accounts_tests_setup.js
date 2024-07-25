@@ -1,3 +1,7 @@
+import { Accounts } from 'meteor/accounts-base';
+
+import { registerTestLoginHandler, removeTestLoginHandler } from './accounts_login_options_server_tests';
+
 const getTokenFromSecret = async ({ selector, secret: secretParam }) => {
   let secret = secretParam;
 
@@ -33,4 +37,18 @@ Meteor.methods({
     return await getTokenFromSecret({ selector, secret });
   },
   getTokenFromSecret,
+  // Helpers for `accounts_login_options_client_tests.js`
+  registerTestLoginHandler() {
+    registerTestLoginHandler(({ userId }) => ({
+      userId,
+      options: { foo: 'bar' },
+    }));
+    // Insert a test user so the client doesn't have to deal with it.
+    return Accounts.insertUserDoc({});
+  },
+  removeTestLoginHandler(userId) {
+    removeTestLoginHandler();
+    // Remove the test user.
+    Meteor.users.remove(userId);
+  }
 });
