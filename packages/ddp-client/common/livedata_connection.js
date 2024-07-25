@@ -403,7 +403,7 @@ export class Connection {
         // onReady callback provided, if any.)
         // If the sub is already ready, run the ready callback right away.
         // It seems that users would expect an onReady callback inside an
-        // autorun to trigger once the the sub first becomes ready and also
+        // autorun to trigger once the sub first becomes ready and also
         // when re-subs happens.
         if (existing.ready) {
           callbacks.onReady();

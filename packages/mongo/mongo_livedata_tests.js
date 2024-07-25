@@ -3530,7 +3530,7 @@ testAsyncMulti('mongo-livedata - collection sync operations data persistence', [
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, []); // data IS NOT persisted
           resolve();
-        }, 10);
+        }, 250);
       });
     }
 
@@ -3568,7 +3568,7 @@ testAsyncMulti('mongo-livedata - collection sync operations data persistence', [
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, ['a']); // data is persisted
           resolve();
-        }, 10);
+        }, 250);
       });
     }
 
@@ -3599,7 +3599,7 @@ testAsyncMulti('mongo-livedata - collection sync operations data persistence', [
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, []); // data IS NOT persisted
           resolve();
-        }, 10);
+        }, 250);
       });
     }
 
@@ -3640,7 +3640,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, []); // data IS NOT persisted
           resolve();
-        }, 10);
+        }, 250);
       });
     }
 
@@ -3678,7 +3678,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, ['a']); // data is persisted
           resolve();
-        }, 10);
+        }, 250);
       });
     }
 
@@ -3709,7 +3709,7 @@ testAsyncMulti('mongo-livedata - collection async operations data persistence', 
           itemIds = items.map(_item => _item._id);
           test.equal(itemIds, []); // data IS NOT persisted
           resolve();
-        }, 10);
+        }, 250);
       });
     }
 

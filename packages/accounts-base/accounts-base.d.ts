@@ -1,6 +1,7 @@
 import { Mongo } from 'meteor/mongo';
 import { Meteor } from 'meteor/meteor';
 import { Configuration } from 'meteor/service-configuration';
+import { DDP } from 'meteor/ddp';
 
 export interface URLS {
   resetPassword: (token: string) => string;
@@ -13,6 +14,16 @@ export interface EmailFields {
   subject?: ((user: Meteor.User) => string) | undefined;
   text?: ((user: Meteor.User, url: string) => string) | undefined;
   html?: ((user: Meteor.User, url: string) => string) | undefined;
+}
+
+export interface AccountsClientOptions {
+  connection?: DDP.DDPStatic;
+  ddpUrl?: string;
+}
+
+export class AccountsClient {
+  constructor(options?: AccountsClientOptions);
+  connection: DDP.DDPStatic;
 }
 
 export namespace Accounts {
@@ -75,6 +86,7 @@ export namespace Accounts {
     collection?: string | undefined;
     loginTokenExpirationHours?: number | undefined;
     tokenSequenceLength?: number | undefined;
+    clientStorage?: 'session' | 'local';
   }): void;
 
   function onLogin(
