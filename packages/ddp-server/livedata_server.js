@@ -775,15 +775,13 @@ Object.assign(Session.prototype, {
         return;
       }
 
-      var setUserId = function(userId) {
-        self._setUserId(userId);
-      };
-
       var invocation = new DDPCommon.MethodInvocation({
         name: msg.method,
         isSimulation: false,
         userId: self.userId,
-        setUserId: setUserId,
+        setUserId(userId) {
+          return self._setUserId(userId);
+        },
         unblock: unblock,
         connection: self.connectionHandle,
         randomSeed: randomSeed,
@@ -816,6 +814,8 @@ Object.assign(Session.prototype, {
           }
         }
 
+
+
         const getCurrentMethodInvocationResult = () =>
           DDP._CurrentMethodInvocation.withValue(
             invocation,
@@ -831,6 +831,7 @@ Object.assign(Session.prototype, {
               keyName: 'getCurrentMethodInvocationResult',
             }
           );
+
         resolve(
           DDPServer._CurrentWriteFence.withValue(
             fence,
@@ -1862,25 +1863,22 @@ Object.assign(Server.prototype, {
     // get the user state from the outer method or publish function, otherwise
     // don't allow setUserId to be called
     var userId = null;
-    var setUserId = function() {
+    let setUserId = () => {
       throw new Error("Can't call setUserId on a server initiated method call");
     };
     var connection = null;
     var currentMethodInvocation = DDP._CurrentMethodInvocation.get();
     var currentPublicationInvocation = DDP._CurrentPublicationInvocation.get();
     var randomSeed = null;
+
     if (currentMethodInvocation) {
       userId = currentMethodInvocation.userId;
-      setUserId = function(userId) {
-        currentMethodInvocation.setUserId(userId);
-      };
+      setUserId = (userId) => currentMethodInvocation.setUserId(userId);
       connection = currentMethodInvocation.connection;
       randomSeed = DDPCommon.makeRpcSeed(currentMethodInvocation, name);
     } else if (currentPublicationInvocation) {
       userId = currentPublicationInvocation.userId;
-      setUserId = function(userId) {
-        currentPublicationInvocation._session._setUserId(userId);
-      };
+      setUserId = (userId) => currentPublicationInvocation._session._setUserId(userId);
       connection = currentPublicationInvocation.connection;
     }
 
