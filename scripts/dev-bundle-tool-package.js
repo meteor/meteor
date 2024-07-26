@@ -14,23 +14,23 @@ var packageJson = {
     "node-gyp": "9.4.0",
     "@mapbox/node-pre-gyp": "1.0.11",
     typescript: "5.4.5",
-    "@meteorjs/babel": "7.20.0-beta.5",
+    "@meteorjs/babel": "7.21.0-beta.5",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "@meteorjs/reify": "0.25.2",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.15.3",
+    "@babel/runtime": "7.24.8",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
-    "@types/underscore": "1.11.2",
-    underscore: "1.13.6",
+    "@types/underscore": "1.11.15",
+    underscore: "1.13.7",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     "@types/semver": "5.5.0",
     semver: "7.5.4",
     request: "2.88.2",
     uuid: "3.4.0",
-    "graceful-fs": "4.2.6",
+    "graceful-fs": "4.2.11",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "6.1.11",
     'tar-fs': "2.1.1",
@@ -41,12 +41,12 @@ var packageJson = {
     "source-map": "0.7.4",
     chalk: "4.1.2",
     // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
-    sqlite3: "5.0.2",
+    sqlite3: "5.1.7",
     inquirer: "8.2.6",
     "http-proxy": "1.18.1",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
-    "moment": "2.29.1",
+    "moment": "2.30.1",
     "rimraf": "2.6.2",
     "glob": "7.1.6",
     ignore: "3.3.7",
@@ -57,14 +57,14 @@ var packageJson = {
     escope: "3.6.0",
     split2: "3.2.2",
     multipipe: "2.0.1",
-    pathwatcher: "8.1.0",
+    pathwatcher: "8.1.2",
     "vscode-nsfw": "2.1.8",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
     optimism: "0.16.1",
     "@wry/context": "0.6.0",
     'lru-cache': '6.0.0',
-    "anser": "2.0.1",
+    "anser": "2.1.1",
     'xmlbuilder2': '1.8.1',
     "ws": "7.4.5",
     "open":"8.4.2"
