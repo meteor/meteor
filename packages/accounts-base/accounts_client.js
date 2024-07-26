@@ -18,9 +18,6 @@ export class AccountsClient extends AccountsCommon {
     this._loggingIn = new ReactiveVar(false);
     this._loggingOut = new ReactiveVar(false);
 
-    this._loginServicesHandle =
-      this.connection.subscribe("meteor.loginServiceConfiguration");
-
     this._pageLoadLoginCallbacks = [];
     this._pageLoadLoginAttemptInfo = null;
 
@@ -38,6 +35,15 @@ export class AccountsClient extends AccountsCommon {
     // This tracks whether callbacks registered with
     // Accounts.onLogin have been called
     this._loginCallbacksCalled = false;
+
+    Tracker.autorun(() => {
+      // This means that the socket connection is established and not that the `connected` message has been received
+      // and the first `connect` message is triggered by `onopen` and then `onReset`
+      if (this.connection.status().connected) {
+        this._loginServicesHandle =
+          this.connection.subscribe("meteor.loginServiceConfiguration");
+      }
+    })
   }
 
   initStorageLocation(options) {
