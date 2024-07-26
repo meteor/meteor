@@ -45,7 +45,6 @@ Package.onUse(function (api) {
     'createTestConnectionPromise',
     'captureConnectionMessages',
     'captureConnectionMessagesClient',
-    'sleep',
   ]);
 
   api.addFiles('try_all_permutations.js');
@@ -59,7 +58,6 @@ Package.onUse(function (api) {
   api.addFiles('mock.js');
   api.addFiles('wait.js');
   api.addFiles('domutils.js', 'client');
-  api.addFiles('utils.js');
   api.addFiles('connection_server.js', 'server');
   api.addFiles('connection_client.js', 'client');
 });

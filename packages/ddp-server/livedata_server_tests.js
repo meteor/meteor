@@ -474,11 +474,11 @@ Tinytest.addAsync('livedata server - publish cursor is properly awaited', async 
     sub = conn.subscribe(publicationName, reactiveVar.get());
   });
 
-  await sleep(100)
+  await Meteor._sleepForMs(100);
 
   reactiveVar.set(2);
 
-  await sleep(100)
+  await Meteor._sleepForMs(100);
 
   const expectedMessages = ['sub', 'added', 'ready', 'sub', 'unsub', 'added', 'ready', 'nosub']
 
