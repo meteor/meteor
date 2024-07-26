@@ -188,7 +188,7 @@ testAsyncMulti("accounts emails - verify email flow", [
       test.equal(await Meteor.user(), null);
     }));
   },
-  function (test, expect) { // failing
+  function (test, expect) {
     Accounts.verifyEmail(verifyEmailToken, loggedIn(test, expect));
   },
   async function (test) {
@@ -198,7 +198,7 @@ testAsyncMulti("accounts emails - verify email flow", [
     test.equal(u.emails[0].address, this.email);
     test.isTrue(u.emails[0].verified);
   },
-  function (test, expect) { // failing
+  function (test, expect) {
     Accounts.connection.call(
       "addEmailForTestAndVerify", this.anotherEmail,
       expect(async (error, result) => {
