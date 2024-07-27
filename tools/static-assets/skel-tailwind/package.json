@@ -8,9 +8,9 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.23.5",
+    "@babel/runtime": "^7.25.0",
     "autoprefixer": "^10.4.4",
-    "meteor-node-stubs": "^1.2.7",
+    "meteor-node-stubs": "^1.2.9",
     "postcss": "^8.4.12",
     "postcss-load-config": "^3.1.4",
     "react": "^17.0.2",
