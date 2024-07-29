@@ -303,7 +303,7 @@ async function setupExecPath() {
   if (isWindows()) {
     // set for the current session and beyond
     child_process.execSync(
-      `powershell -c "$path = (Get-Item 'HKCU:\\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames'); [Environment]::SetEnvironmentVariable('PATH', \\"${meteorPath};$path\\", 'User');"`
+      `powershell -c "$path = (Get-Item 'HKCU:\\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames'); [Environment]::SetEnvironmentVariable('PATH', \\"${meteorPath};$path\\", 'User');"`,
     );
     return;
   }
