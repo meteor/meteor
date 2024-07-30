@@ -348,15 +348,17 @@ Tinytest.addAsync('accounts - storage',
 Tinytest.addAsync('accounts - should only start subscription when connected', async function (test) {
   const { conn, messages, cleanup } = await captureConnectionMessagesClient(test);
 
-  new AccountsClient({
+  const acc = new AccountsClient({
     connection: conn,
   })
+
+  acc.callLoginMethod()
 
   await Meteor._sleepForMs(100);
 
   // The sub call needs to come right after `connect` since this is when `status().connected` gets to be true and
   // not after `connected` as it is based on the socket connection status.
-  const expectedMessages = ['connect', 'sub', 'connected', 'ready']
+  const expectedMessages = ['connect', 'method', 'sub', 'connected', 'updated', 'result', 'ready']
 
   const parsedMessages = messages.map(m => m.msg).filter(Boolean).filter(m => m !== 'added')
 
