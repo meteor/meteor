@@ -7,6 +7,9 @@ If ($env:PLATFORM -Match '^x86|x64$') {
 $dirCheckout = (Get-Item $PSScriptRoot).parent.parent.parent.FullName
 $meteorBat = Join-Path $dirCheckout 'meteor.bat'
 
+Write-Host "Resetting git checkout..." -ForegroundColor Magenta
+& git.exe -C "$dirCheckout" reset --hard
+
 Write-Host "Updating submodules recursively..." -ForegroundColor Magenta
 # Appveyor suggests -q flag for 'git submodule...' https://goo.gl/4TFAHm
 & git.exe -C "$dirCheckout" submodule -q update --init --recursive
