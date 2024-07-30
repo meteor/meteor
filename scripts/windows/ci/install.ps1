@@ -9,6 +9,7 @@ $meteorBat = Join-Path $dirCheckout 'meteor.bat'
 
 Write-Host "Resetting git checkout..." -ForegroundColor Magenta
 & git.exe -C "$dirCheckout" reset --hard
+& git.exe -C "$dirCheckout" submodule foreach --recursive 'git reset --hard'
 
 Write-Host "Updating submodules recursively..." -ForegroundColor Magenta
 # Appveyor suggests -q flag for 'git submodule...' https://goo.gl/4TFAHm
