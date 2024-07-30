@@ -449,7 +449,7 @@ var markBoundary = function (f, context) {
 //   If this is a number instead of 'true', skips that many stack frames.
 // - downcase: if true, the first character of `message` will be
 //   converted to lower case.
-// - secondary: ignore this error if there are are already other
+// - secondary: ignore this error if there are already other
 //   errors in this job (the implication is that it's probably
 //   downstream of the other error, ie, a consequence of our attempt
 //   to continue past other errors)

@@ -102,6 +102,7 @@ Tinytest.addAsync(
     function (test, onComplete) {
 
         var cb = Meteor.onMessage(function (msg, session) {
+            if (msg.method !== 'livedata_server_test_inner') return;
             test.equal(msg.method, 'livedata_server_test_inner');
             cb.stop();
             onComplete();

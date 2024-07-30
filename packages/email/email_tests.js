@@ -274,6 +274,32 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  '[Async] email - with custom encryption',
+  function (test, onComplete) {
+    const allPromises = [];
+    smokeEmailTest((stream) => {
+      Email.customTransport = (options) => {
+        test.equal(options.encryptionKeys, ['-----BEGIN PGP PUBLIC KEY BLOCK-----…']);
+        test.equal(options.shouldSign, true);
+      };
+      allPromises.push(
+        Email.sendAsync({
+          from: 'foo@example.com',
+          to: 'bar@example.com',
+          text: '*Cool*, man',
+          html: '<i>Cool</i>, man',
+          encryptionKeys: ['-----BEGIN PGP PUBLIC KEY BLOCK-----…'],
+          shouldSign: true
+        }).then(() => {
+          test.equal(stream.getContentsAsString('utf8'), false);
+        })
+      );
+      Promise.all(allPromises).then(() => onComplete());
+    });
+  }
+);
+
+Tinytest.addAsync(
   '[Async] email - with custom transport long time running',
   async function (test) {
     Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
