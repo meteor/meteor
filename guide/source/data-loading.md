@@ -589,31 +589,35 @@ A pattern for turning a polled REST endpoint looks something like this:
 ```js
 const POLL_INTERVAL = 5000;
 
-Meteor.publish('polled-publication', function() {
-  const publishedKeys = {};
+Meteor.publish('polled-publication', async function() {
+    const publishedKeys = {};
 
-  const poll = () => {
-    // Let's assume the data comes back as an array of JSON documents, with an _id field
-    const data = HTTP.get(REST_URL, REST_OPTIONS);
+    const poll = async () => {
+        // Let's assume the data comes back as an array of JSON documents, with an _id field
+            const response = await fetch(REST_URL, REST_OPTIONS);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            } else {
+                data = await response.json();
+                data.forEach((doc) => {
+                    if (publishedKeys[doc._id]) {
+                        this.changed(COLLECTION_NAME, doc._id, doc);
+                    } else {
+                        publishedKeys[doc._id] = true;
+                        this.added(COLLECTION_NAME, doc._id, doc);
+                    }
+                });
+            }
+    };
 
-    data.forEach((doc) => {
-      if (publishedKeys[doc._id]) {
-        this.changed(COLLECTION_NAME, doc._id, doc);
-      } else {
-        publishedKeys[doc._id] = true;
-        this.added(COLLECTION_NAME, doc._id, doc);
-      }
+    await poll();
+    this.ready();
+
+    const interval = Meteor.setInterval(poll, POLL_INTERVAL);
+
+    this.onStop(() => {
+        Meteor.clearInterval(interval);
     });
-  };
-
-  poll();
-  this.ready();
-
-  const interval = Meteor.setInterval(poll, POLL_INTERVAL);
-
-  this.onStop(() => {
-    Meteor.clearInterval(interval);
-  });
 });
 ```
 
