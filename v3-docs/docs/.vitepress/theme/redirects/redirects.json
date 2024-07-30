@@ -1,0 +1,4 @@
+{
+  "meteor_call": "meteor-call",
+  "ddp_connect": "DDP-connect"
+}

@@ -1,5 +1,3 @@
-var Future = Npm.require('fibers/future');
-
 import { NpmModuleMongodb } from "meteor/npm-mongo";
 const { Long } = NpmModuleMongodb;
 
@@ -7,10 +5,6 @@ OPLOG_COLLECTION = 'oplog.rs';
 
 var TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
 var TAIL_TIMEOUT = +process.env.METEOR_OPLOG_TAIL_TIMEOUT || 30000;
-
-var showTS = function (ts) {
-  return "Timestamp(" + ts.getHighBits() + ", " + ts.getLowBits() + ")";
-};
 
 idForOp = function (op) {
   if (op.op === 'd')
@@ -33,9 +27,11 @@ OplogHandle = function (oplogUrl, dbName) {
 
   self._oplogLastEntryConnection = null;
   self._oplogTailConnection = null;
+  self._oplogOptions = null;
   self._stopped = false;
   self._tailHandle = null;
-  self._readyFuture = new Future();
+  self._readyPromiseResolver = null;
+  self._readyPromise = new Promise(r => self._readyPromiseResolver = r);
   self._crossbar = new DDPServer._Crossbar({
     factPackage: "mongo-livedata", factName: "oplog-watchers"
   });
@@ -72,7 +68,7 @@ OplogHandle = function (oplogUrl, dbName) {
   // incremented to be past its timestamp by the worker fiber.
   //
   // XXX use a priority queue or something else that's faster than an array
-  self._catchingUpFutures = [];
+  self._catchingUpResolvers = [];
   self._lastProcessedTS = null;
 
   self._onSkippedEntriesHook = new Hook({
@@ -82,26 +78,29 @@ OplogHandle = function (oplogUrl, dbName) {
   self._entryQueue = new Meteor._DoubleEndedQueue();
   self._workerActive = false;
 
-  self._startTailing();
+  self._startTrailingPromise = self._startTailing();
+  //TODO[fibers] Why wait?
 };
 
+MongoInternals.OplogHandle = OplogHandle;
+
 Object.assign(OplogHandle.prototype, {
-  stop: function () {
+  stop: async function () {
     var self = this;
     if (self._stopped)
       return;
     self._stopped = true;
     if (self._tailHandle)
-      self._tailHandle.stop();
+      await self._tailHandle.stop();
     // XXX should close connections too
   },
-  onOplogEntry: function (trigger, callback) {
+  _onOplogEntry: async function(trigger, callback) {
     var self = this;
     if (self._stopped)
       throw new Error("Called onOplogEntry on stopped handle!");
 
     // Calling onOplogEntry requires us to wait for the tailing to be ready.
-    self._readyFuture.wait();
+    await self._readyPromise;
 
     var originalCallback = callback;
     callback = Meteor.bindEnvironment(function (notification) {
@@ -111,10 +110,13 @@ Object.assign(OplogHandle.prototype, {
     });
     var listenHandle = self._crossbar.listen(trigger, callback);
     return {
-      stop: function () {
-        listenHandle.stop();
+      stop: async function () {
+        await listenHandle.stop();
       }
     };
+  },
+  onOplogEntry: function (trigger, callback) {
+    return this._onOplogEntry(trigger, callback);
   },
   // Register a callback to be invoked any time we skip oplog entries (eg,
   // because we are too far behind).
@@ -124,19 +126,15 @@ Object.assign(OplogHandle.prototype, {
       throw new Error("Called onSkippedEntries on stopped handle!");
     return self._onSkippedEntriesHook.register(callback);
   },
-  // Calls `callback` once the oplog has been processed up to a point that is
-  // roughly "now": specifically, once we've processed all ops that are
-  // currently visible.
-  // XXX become convinced that this is actually safe even if oplogConnection
-  // is some kind of pool
-  waitUntilCaughtUp: function () {
+
+  async _waitUntilCaughtUp() {
     var self = this;
     if (self._stopped)
       throw new Error("Called waitUntilCaughtUp on stopped handle!");
 
     // Calling waitUntilCaughtUp requries us to wait for the oplog connection to
     // be ready.
-    self._readyFuture.wait();
+    await self._readyPromise;
     var lastEntry;
 
     while (!self._stopped) {
@@ -144,15 +142,17 @@ Object.assign(OplogHandle.prototype, {
       // tailing selector (ie, we need to specify the DB name) or else we might
       // find a TS that won't show up in the actual tail stream.
       try {
-        lastEntry = self._oplogLastEntryConnection.findOne(
-          OPLOG_COLLECTION, self._baseOplogSelector,
-          {projection: {ts: 1}, sort: {$natural: -1}});
+        lastEntry = await self._oplogLastEntryConnection.findOneAsync(
+          OPLOG_COLLECTION,
+          self._baseOplogSelector,
+          { projection: { ts: 1 }, sort: { $natural: -1 } }
+        );
         break;
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
         Meteor._debug("Got exception while reading last entry", e);
-        Meteor._sleepForMs(100);
+        await Meteor._sleepForMs(100);
       }
     }
 
@@ -177,21 +177,32 @@ Object.assign(OplogHandle.prototype, {
     // Insert the future into our list. Almost always, this will be at the end,
     // but it's conceivable that if we fail over from one primary to another,
     // the oplog entries we see will go backwards.
-    var insertAfter = self._catchingUpFutures.length;
-    while (insertAfter - 1 > 0 && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
+    var insertAfter = self._catchingUpResolvers.length;
+    while (insertAfter - 1 > 0 && self._catchingUpResolvers[insertAfter - 1].ts.greaterThan(ts)) {
       insertAfter--;
     }
-    var f = new Future;
-    self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
-    f.wait();
+    let promiseResolver = null;
+    const promiseToAwait = new Promise(r => promiseResolver = r);
+    self._catchingUpResolvers.splice(insertAfter, 0, {ts: ts, resolver: promiseResolver});
+    await promiseToAwait;
   },
-  _startTailing: function () {
+
+  // Calls `callback` once the oplog has been processed up to a point that is
+  // roughly "now": specifically, once we've processed all ops that are
+  // currently visible.
+  // XXX become convinced that this is actually safe even if oplogConnection
+  // is some kind of pool
+  waitUntilCaughtUp: async function () {
+    return this._waitUntilCaughtUp();
+  },
+
+  _startTailing: async function () {
     var self = this;
     // First, make sure that we're talking to the local database.
     var mongodbUri = Npm.require('mongodb-uri');
     if (mongodbUri.parse(self._oplogUrl).database !== 'local') {
       throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
-                  "a Mongo replica set");
+          "a Mongo replica set");
     }
 
     // We make two separate connections to Mongo. The Node Mongo driver
@@ -206,32 +217,40 @@ Object.assign(OplogHandle.prototype, {
     // The tail connection will only ever be running a single tail command, so
     // it only needs to make one underlying TCP connection.
     self._oplogTailConnection = new MongoConnection(
-      self._oplogUrl, {maxPoolSize: 1});
+        self._oplogUrl, {maxPoolSize: 1, minPoolSize: 1});
     // XXX better docs, but: it's to get monotonic results
     // XXX is it safe to say "if there's an in flight query, just use its
     //     results"? I don't think so but should consider that
     self._oplogLastEntryConnection = new MongoConnection(
-      self._oplogUrl, {maxPoolSize: 1});
+        self._oplogUrl, {maxPoolSize: 1, minPoolSize: 1});
+
 
     // Now, make sure that there actually is a repl set here. If not, oplog
     // tailing won't ever find anything!
     // More on the isMasterDoc
     // https://docs.mongodb.com/manual/reference/command/isMaster/
-    var f = new Future;
-    self._oplogLastEntryConnection.db.admin().command(
-      { ismaster: 1 }, f.resolver());
-    var isMasterDoc = f.wait();
+    const isMasterDoc = await new Promise(function (resolve, reject) {
+      self._oplogLastEntryConnection.db
+        .admin()
+        .command({ ismaster: 1 }, function (err, result) {
+          if (err) reject(err);
+          else resolve(result);
+        });
+    });
 
     if (!(isMasterDoc && isMasterDoc.setName)) {
       throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
-                  "a Mongo replica set");
+          "a Mongo replica set");
     }
 
     // Find the last oplog entry.
-    var lastOplogEntry = self._oplogLastEntryConnection.findOne(
-      OPLOG_COLLECTION, {}, {sort: {$natural: -1}, projection: {ts: 1}});
+    var lastOplogEntry = await self._oplogLastEntryConnection.findOneAsync(
+      OPLOG_COLLECTION,
+      {},
+      { sort: { $natural: -1 }, projection: { ts: 1 } }
+    );
 
-    var oplogSelector = _.clone(self._baseOplogSelector);
+    var oplogSelector = Object.assign({}, self._baseOplogSelector);
     if (lastOplogEntry) {
       // Start after the last entry that currently exists.
       oplogSelector.ts = {$gt: lastOplogEntry.ts};
@@ -241,8 +260,42 @@ Object.assign(OplogHandle.prototype, {
       self._lastProcessedTS = lastOplogEntry.ts;
     }
 
+    // These 2 settings allow you to either only watch certain collections (oplogIncludeCollections), or exclude some collections you don't want to watch for oplog updates (oplogExcludeCollections)
+    // Usage:
+    // settings.json = {
+    //   "packages": {
+    //     "mongo": {
+    //       "oplogExcludeCollections": ["products", "prices"] // This would exclude both collections "products" and "prices" from any oplog tailing. 
+    //                                                            Beware! This means, that no subscriptions on these 2 collections will update anymore!
+    //     }
+    //   }
+    // }
+    const includeCollections = Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
+    const excludeCollections = Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
+    if (includeCollections?.length && excludeCollections?.length) {
+      throw new Error("Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time.");
+    }
+    if (excludeCollections?.length) {
+      oplogSelector.ns = {
+        $regex: oplogSelector.ns,
+        $nin: excludeCollections.map((collName) => `${self._dbName}.${collName}`)
+      }
+      self._oplogOptions = { excludeCollections };
+    }
+    else if (includeCollections?.length) {
+      oplogSelector = { $and: [
+        { $or: [
+          { ns: /^admin\.\$cmd/ },
+          { ns: { $in: includeCollections.map((collName) => `${self._dbName}.${collName}`) } }
+        ] },
+        { $or: oplogSelector.$or }, // the initial $or to select only certain operations (op)
+        { ts: oplogSelector.ts }
+      ] };
+      self._oplogOptions = { includeCollections };
+    }
+
     var cursorDescription = new CursorDescription(
-      OPLOG_COLLECTION, oplogSelector, {tailable: true});
+        OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
     // Start tailing the oplog.
     //
@@ -251,14 +304,15 @@ Object.assign(OplogHandle.prototype, {
     // one bug that can lead to query callbacks never getting called (even with
     // an error) when leadership failover occur.
     self._tailHandle = self._oplogTailConnection.tail(
-      cursorDescription,
-      function (doc) {
-        self._entryQueue.push(doc);
-        self._maybeStartWorker();
-      },
-      TAIL_TIMEOUT
+        cursorDescription,
+        function (doc) {
+          self._entryQueue.push(doc);
+          self._maybeStartWorker();
+        },
+        TAIL_TIMEOUT
     );
-    self._readyFuture.return();
+
+    self._readyPromiseResolver();
   },
 
   _maybeStartWorker: function () {
@@ -266,22 +320,22 @@ Object.assign(OplogHandle.prototype, {
     if (self._workerActive) return;
     self._workerActive = true;
 
-    Meteor.defer(function () {
+    Meteor.defer(async function () {
       // May be called recursively in case of transactions.
-      function handleDoc(doc) {
+      async function handleDoc(doc) {
         if (doc.ns === "admin.$cmd") {
           if (doc.o.applyOps) {
             // This was a successful transaction, so we need to apply the
             // operations that were involved.
             let nextTimestamp = doc.ts;
-            doc.o.applyOps.forEach(op => {
+            for (const op of doc.o.applyOps) {
               // See https://github.com/meteor/meteor/issues/10420.
               if (!op.ts) {
                 op.ts = nextTimestamp;
                 nextTimestamp = nextTimestamp.add(Long.ONE);
               }
-              handleDoc(op);
-            });
+              await handleDoc(op);
+            }
             return;
           }
           throw new Error("Unknown command " + EJSON.stringify(doc));
@@ -320,7 +374,7 @@ Object.assign(OplogHandle.prototype, {
           trigger.id = idForOp(doc);
         }
 
-        self._crossbar.fire(trigger);
+        await self._crossbar.fire(trigger);
       }
 
       try {
@@ -346,7 +400,7 @@ Object.assign(OplogHandle.prototype, {
           const doc = self._entryQueue.shift();
 
           // Fire trigger(s) for this doc.
-          handleDoc(doc);
+          await handleDoc(doc);
 
           // Now that we've processed this operation, process pending
           // sequencers.
@@ -365,9 +419,9 @@ Object.assign(OplogHandle.prototype, {
   _setLastProcessedTS: function (ts) {
     var self = this;
     self._lastProcessedTS = ts;
-    while (!_.isEmpty(self._catchingUpFutures) && self._catchingUpFutures[0].ts.lessThanOrEqual(self._lastProcessedTS)) {
-      var sequencer = self._catchingUpFutures.shift();
-      sequencer.future.return();
+    while (!_.isEmpty(self._catchingUpResolvers) && self._catchingUpResolvers[0].ts.lessThanOrEqual(self._lastProcessedTS)) {
+      var sequencer = self._catchingUpResolvers.shift();
+      sequencer.resolver();
     }
   },
 

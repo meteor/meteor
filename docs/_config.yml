@@ -1,6 +1,7 @@
 title: Meteor API Docs
 subtitle: API Docs
 versions:
+  - '2.16'
   - '2.14'
   - '2.13'
   - '2.12'
@@ -63,6 +64,7 @@ sidebar_categories:
     - api/packagejs
     - api/mobile-config
     - api/environment
+    - api/top-level-await
   Packages:
     - packages/accounts-ui
     - packages/accounts-passwordless
