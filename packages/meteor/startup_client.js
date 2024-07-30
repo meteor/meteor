@@ -1,5 +1,6 @@
 var callbackQueue = [];
 var isLoadingCompleted = false;
+var eagerCodeRan = false;
 var isReady = false;
 
 // Keeps track of how many events to wait for in addition to loading completing,
@@ -16,7 +17,7 @@ var releaseReadyHold = function () {
 }
 
 var maybeReady = function () {
-  if (isReady || !isLoadingCompleted || readyHoldsCount > 0)
+  if (isReady || !eagerCodeRan || readyHoldsCount > 0)
     return;
 
   isReady = true;
@@ -32,11 +33,30 @@ var maybeReady = function () {
   }
 };
 
-var loadingCompleted = function () {
-  if (!isLoadingCompleted) {
-    isLoadingCompleted = true;
+function waitForEagerAsyncModules () {
+  function finish() {
+    eagerCodeRan = true;
     maybeReady();
   }
+
+  var potentialPromise = Package['core-runtime'].waitUntilAllLoaded();
+
+  if (potentialPromise === null) {
+    finish();
+  } else {
+    potentialPromise.then(function () {
+      finish();
+    });
+  }
+}
+
+var loadingCompleted = function () {
+  if (isLoadingCompleted) {
+    return;
+  }
+
+  isLoadingCompleted = true;
+  waitForEagerAsyncModules();
 }
 
 if (Meteor.isCordova) {
