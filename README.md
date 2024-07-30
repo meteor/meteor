@@ -86,7 +86,7 @@ meteor
 
 * Deploy on [Meteor Cloud](https://www.meteor.com/cloud)
 * Discuss on [Forums](https://forums.meteor.com/)
-* Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
+* Join the Meteor community Discord by clicking this [invite link](https://discord.gg/hZkTCaVjmT).
 * Announcement list. Subscribe in the [footer](https://www.meteor.com/).
 
 
