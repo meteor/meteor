@@ -2,7 +2,7 @@ language: node_js
 os: linux
 dist: jammy
 node_js:
-  - "14.17.6"
+  - "14.21.3"
 cache:
   directories:
     - ".meteor"
