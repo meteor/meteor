@@ -32,12 +32,6 @@ jobs:
         with:
           node-version: 20.x
 
-      - name: Git Reset Hard
-        shell: pwsh
-        run: |
-          git reset --hard
-          git clean -fdx
-
       - name: Install dependencies
         shell: pwsh
         run: |
