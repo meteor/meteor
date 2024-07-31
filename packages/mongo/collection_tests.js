@@ -464,6 +464,15 @@ Tinytest.addAsync('collection - should not block on cursor mismatch (#12516)',
   }
 );
 
+Tinytest.add('collection - get collection by name',
+    function (test) {
+        const collectionName = 'get' + test.id;
+        const collection = new Mongo.Collection(collectionName);
+
+        test.ok(Mongo.getCollection(collectionName) instanceof Mongo.Collection);
+        test.equal(Mongo.getCollection(collectionName), collection);
+    }
+);
 
 
 Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(test){
