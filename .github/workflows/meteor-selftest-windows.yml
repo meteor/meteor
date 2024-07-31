@@ -6,11 +6,10 @@ on:
       - opened
       - reopened
       - synchronize
-    branches:
-      - release-3.0
   push:
     branches:
-      - release-3.0
+      - devel
+      - 2.x.x
 
 env:
   METEOR_PRETTY_OUTPUT: 0
