@@ -58,7 +58,6 @@ sidebar_categories:
     - api/reactive-var
     - api/reactive-dict
     - api/ejson
-    - api/http
     - api/email
     - api/assets
     - api/packagejs
