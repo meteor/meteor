@@ -80,7 +80,7 @@ package) so that Meteor will pick up the local dependency.
 > In a lifecycle of a package there might come time to end the development for various reasons, or
 it gets superseded. In either case Meteor allows you to easily notify the users of the package by
 setting the deprecated flag to true: `deprecated: true` in the package description. In addition, you
-replace it with a string that tells the users where to find replacement or what to do. 
+replace it with a string that tells the users where to find replacement or what to do.
 
 Provide basic package information with `Package.describe(options)`. To publish a
 package, you must define `summary` and `version`.
@@ -97,7 +97,7 @@ package is exported to.
 {% apibox "PackageAPI#versionsFrom" %}
 
 > Choose Meteor versions carefully. First determine the minimum version of Meteor you need for the API you use in your package.
- This should be based on specific needs of your package like needed the *Async calls, which would require minimum version to be 
+ This should be based on specific needs of your package like needed the *Async calls, which would require minimum version to be
  at least 2.8. Another example are where packages had a major version bump, for example this has happened with the accounts packages
  in Meteor 2.3. If you want to be backward and forward compatible it is good to include Meteor version before 2.3 and then 2.3.6 in the array.
  A general recommendation for most compatibility for accounts packages (unless you need API that was affected in Meteor 2.3) is to have the following
@@ -315,7 +315,7 @@ methods are available:
  - `addAsset` - Add a file to serve as-is to the browser or to include on the
    browser, depending on the target. On the web, it will be served at the exact
    path requested. For server targets, it can be retrieved using
-   `Assets.getText` or `Assets.getBinary`.
+   `Assets.getTextAsync` or `Assets.getBinaryAsync`.
  - `addHtml` - Works in web targets only. Add markup to the `head` or `body`
    section of the document.
  - `hmrAvailable` - Returns true if the file can be updated with HMR. Among other things,

@@ -49,6 +49,7 @@ const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
 const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
 import Resolver, { Resolution, resolveRealPath } from "./resolver";
+import LRUCache from 'lru-cache';
 
 const MONOREPO_ROOT = process.env.METEOR_MONOREPO_ROOT
   ? pathResolve(process.env.METEOR_MONOREPO_ROOT)
@@ -102,7 +103,7 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
 
   if (cacheFilePath) {
     Promise.resolve().then(
-      () => writeFileAtomically(cacheFilePath, result),
+      async () => await writeFileAtomically(cacheFilePath, result),
     );
   }
 
@@ -137,11 +138,11 @@ class DefaultHandlers {
   call(
     method: "js" | "mjs" | "json" | "css",
     file: RawFile,
-  ): string {
+  ): string | Promise<any> {
     return this[method](file);
   }
 
-  js(file: RawFile) {
+  async js(file: RawFile) {
     const parts = file.absPath.split("/");
     const nmi = parts.lastIndexOf("node_modules");
     if (nmi >= 0) {
@@ -161,7 +162,7 @@ class DefaultHandlers {
 
     return reifyCompileWithCache(
       file.dataString,
-      file.hash,
+      await file.hash,
       this.bundleArch,
       cacheFileName
     )
@@ -294,8 +295,8 @@ function setImportedStatus(file: File, status: string | boolean) {
 // The cache can be global because findImportedModuleIdentifiers
 // is a pure function, and that way it applies across instances
 // of ImportScanner (which do not persist across builds).
-const LRU = require("lru-cache");
-const IMPORT_SCANNER_CACHE = new LRU({
+
+const IMPORT_SCANNER_CACHE = new LRUCache({
   max: Math.pow(2, 23),
   length(ids: Record<string, ImportInfo>) {
     let total = 40; // size of key
@@ -352,7 +353,7 @@ interface File extends RawFile {
   implicit?: boolean;
   imported: string | boolean;
   [fakeSymbol]?: boolean;
-  reportPendingErrors?: () => number;
+  reportPendingErrors?: () => Promise<number>;
   hasErrors?: boolean;
   missingModules?: Record<string, ImportInfo>;
   alias?: FileAlias;
@@ -507,9 +508,9 @@ export default class ImportScanner {
     });
   }
 
-  addInputFiles(files: File[]) {
-    files.forEach(file => {
-      this.checkSourceAndTargetPaths(file);
+  async addInputFiles(files: File[]) {
+    for (const file of files) {
+      await this.checkSourceAndTargetPaths(file);
 
       const links: Record<string, string> = Object.create(null);
       const linkRoots: string[] = [];
@@ -537,16 +538,16 @@ export default class ImportScanner {
       file.imported = false;
 
       file.absModuleId = file.absModuleId ||
-        this.getAbsModuleId(file.absPath);
+          this.getAbsModuleId(file.absPath);
 
       if (! this.addFile(file.absPath, file)) {
         // Collisions can happen if a compiler plugin calls addJavaScript
         // multiple times with the same sourcePath. #6422
-        this.combineFiles(this.getFile(file.absPath)!, file);
+        await this.combineFiles(this.getFile(file.absPath)!, file);
       }
 
       this.addFileByRealPath(file, this.realPath(file.absPath));
-    });
+    }
 
     return this;
   }
@@ -565,16 +566,16 @@ export default class ImportScanner {
     return file;
   }
 
-  private getInfoByRealPath(realPath: string): RawFile | null {
+  private async getInfoByRealPath(realPath: string): Promise<RawFile | null> {
     const files = this.realPathToFiles[realPath];
     if (files && files.length > 0) {
       const firstFile = files[0];
-      const dataString = this.getDataString(firstFile);
+      const dataString = await this.getDataString(firstFile);
       return {
         absPath: realPath,
-        data: firstFile.data,
+        data: await firstFile.data,
         dataString: dataString,
-        hash: firstFile.hash,
+        hash: await firstFile.hash,
       };
     }
     return null;
@@ -626,7 +627,7 @@ export default class ImportScanner {
 
   // Make sure file.sourcePath is defined, and handle the possibility that
   // file.targetPath differs from file.sourcePath.
-  private checkSourceAndTargetPaths(file: File) {
+  private async checkSourceAndTargetPaths(file: File) {
     file.sourcePath = this.getSourcePath(file);
 
     if (! isString(file.targetPath)) {
@@ -695,13 +696,13 @@ export default class ImportScanner {
       // plugin calling inputFile.addJavaScript multiple times for the
       // same source file (see discussion in #9176), with different target
       // paths, code, laziness, etc.
-      sourceFile.dataString = this.getDataString(sourceFile) +
+      sourceFile.dataString = await this.getDataString(sourceFile) +
         // The + in "*+" indicates that the "default" property should be
         // included as well as any other re-exported properties.
         "module.link(" + JSON.stringify(relativeId) + ', { "*": "*+" });\n';
 
       sourceFile.data = Buffer.from(sourceFile.dataString, "utf8");
-      sourceFile.hash = sha1(sourceFile.data);
+      sourceFile.hash = sha1(await sourceFile.data);
       sourceFile.deps = sourceFile.deps || Object.create(null);
       sourceFile.deps![relativeId] = {
         dynamic: false,
@@ -714,7 +715,7 @@ export default class ImportScanner {
   // Concatenate the contents of oldFile and newFile, combining source
   // maps and updating all other properties appropriately. Once this
   // combination is done, oldFile should be kept and newFile discarded.
-  private combineFiles(oldFile: File, newFile: File) {
+  private async combineFiles(oldFile: File, newFile: File) {
     const scanner = this;
 
     function checkProperty(name: "lazy" | "bare") {
@@ -745,17 +746,17 @@ export default class ImportScanner {
     checkProperty("lazy");
     checkProperty("bare");
 
-    function getChunk(file: File) {
+    async function getChunk(file: File) {
       if (file.sourceMap) {
-        const consumer = Promise.await(new SourceMapConsumer(file.sourceMap));
+        const consumer = await new SourceMapConsumer(file.sourceMap);
         const node = SourceNode.fromStringWithSourceMap(
-          scanner.getDataString(file),
+          await scanner.getDataString(file),
           consumer
         );
         consumer.destroy();
         return node;
       } else {
-        return scanner.getDataString(file);
+        return await scanner.getDataString(file);
       }
     }
 
@@ -763,16 +764,16 @@ export default class ImportScanner {
       code: combinedDataString,
       map: combinedSourceMap,
     } = new SourceNode(null, null, null, [
-      getChunk(oldFile),
+      await getChunk(oldFile),
       "\n\n",
-      getChunk(newFile)
+      await getChunk(newFile)
     ]).toStringWithSourceMap({
       file: oldFile.servePath || newFile.servePath
     });
 
     oldFile.dataString = combinedDataString;
     oldFile.data = Buffer.from(oldFile.dataString, "utf8");
-    oldFile.hash = sha1(oldFile.data);
+    oldFile.hash = sha1(await oldFile.data);
 
     alignImportedStatuses(oldFile, newFile);
 
@@ -782,17 +783,17 @@ export default class ImportScanner {
     }
   }
 
-  scanImports() {
-    this.outputFiles.forEach(file => {
-      if (! file.lazy) {
-        this.scanFile(file);
+  async scanImports() {
+    for (const file of this.outputFiles) {
+      if (!file.lazy) {
+        await this.scanFile(file);
       }
-    });
+    }
 
     return this;
   }
 
-  scanMissingModules(missingModules: MissingMap) {
+  async scanMissingModules(missingModules: MissingMap) {
     assert.ok(missingModules);
     assert.ok(typeof missingModules === "object");
     assert.ok(! Array.isArray(missingModules));
@@ -804,7 +805,7 @@ export default class ImportScanner {
       const previousAllMissingModules = this.allMissingModules;
       this.allMissingModules = newlyMissing;
 
-      Object.keys(missingModules).forEach(id => {
+      for (const id of Object.keys(missingModules)) {
         let staticImportInfo: ImportInfo | null = null;
         let dynamicImportInfo: ImportInfo | null = null;
 
@@ -839,7 +840,7 @@ export default class ImportScanner {
         }
 
         if (staticImportInfo) {
-          this.scanFile({
+          await this.scanFile({
             ...fakeStub,
             // By specifying the .deps property of this fake file ahead of
             // time, we can avoid calling findImportedModuleIdentifiers in
@@ -850,12 +851,12 @@ export default class ImportScanner {
         }
 
         if (dynamicImportInfo) {
-          this.scanFile({
+          await this.scanFile({
             ...fakeStub,
             deps: { [id]: dynamicImportInfo },
           }, true); // forDynamicImport
         }
-      });
+      }
 
       this.allMissingModules = previousAllMissingModules;
 
@@ -870,21 +871,21 @@ export default class ImportScanner {
       // Remove previously seen missing module identifiers from
       // newlyMissing and merge the new identifiers back into
       // this.allMissingModules.
-      Object.keys(newlyMissing).forEach(id => {
+      for (const id of Object.keys(newlyMissing)) {
         const skipScan = has(previousAllMissingModules, id) &&
-          !isHigherStatus(
-            getParentStatus(newlyMissing[id]),
-            getParentStatus(previousAllMissingModules[id]));
+            !isHigherStatus(
+                getParentStatus(newlyMissing[id]),
+                getParentStatus(previousAllMissingModules[id]));
 
         if (skipScan) {
           delete newlyMissing[id];
         } else {
-          ImportScanner.mergeMissing(
-            previousAllMissingModules,
-            { [id]: newlyMissing[id] }
+          await ImportScanner.mergeMissing(
+              previousAllMissingModules,
+              { [id]: newlyMissing[id] }
           );
         }
-      });
+      }
     }
 
     return {
@@ -1021,16 +1022,17 @@ export default class ImportScanner {
     return pathNormalize(pathJoin(".", sourcePath));
   }
 
-  private findImportedModuleIdentifiers(
+  private async findImportedModuleIdentifiers(
     file: File,
-  ): Record<string, ImportInfo> {
-    if (IMPORT_SCANNER_CACHE.has(file.hash)) {
-      return IMPORT_SCANNER_CACHE.get(file.hash);
+  ): Promise<Record<string, ImportInfo>> {
+    const fileHash = file.hash;
+    if (IMPORT_SCANNER_CACHE.has(fileHash)) {
+      return IMPORT_SCANNER_CACHE.get(fileHash) as Record<string, ImportInfo>;
     }
 
     const result = findImportedModuleIdentifiers(
-      this.getDataString(file),
-      file.hash,
+      await this.getDataString(file),
+        fileHash,
     );
 
     // there should always be file.hash, but better safe than sorry
@@ -1113,7 +1115,7 @@ export default class ImportScanner {
     return relativeId;
   }
 
-  private scanFile(file: File, forDynamicImport = false) {
+  private async scanFile(file: File, forDynamicImport = false) {
     if (file.imported === "static") {
       // If we've already scanned this file non-dynamically, then we don't
       // need to scan it again.
@@ -1131,7 +1133,7 @@ export default class ImportScanner {
     setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
 
     if (file.reportPendingErrors &&
-        file.reportPendingErrors() > 0) {
+        await file.reportPendingErrors() > 0) {
       file.hasErrors = true;
       // Any errors reported to InputFile#error were saved but not
       // reported at compilation time. Now that we know the file has been
@@ -1140,7 +1142,7 @@ export default class ImportScanner {
     }
 
     try {
-      file.deps = file.deps || this.findImportedModuleIdentifiers(file);
+      file.deps = file.deps || await this.findImportedModuleIdentifiers(file);
     } catch (e: any) {
       if (e.$ParseError) {
         (buildmessage as any).error(e.message, {
@@ -1153,24 +1155,24 @@ export default class ImportScanner {
       throw e;
     }
 
-    each(file.deps, (info: ImportInfo, id: string) => {
+    for (const [id, info] of Object.entries(file.deps)) {
       // Asynchronous module fetching only really makes sense in the
       // browser (even though it works equally well on the server), so
       // it's better if forDynamicImport never becomes true on the server.
       const dynamic = this.isWebBrowser() &&
-        (forDynamicImport ||
-         info.parentWasDynamic ||
-         info.dynamic);
+          (forDynamicImport ||
+              info.parentWasDynamic ||
+              info.dynamic);
 
       const resolved = this.resolve(file, id, dynamic);
       const absImportedPath = resolved && resolved !== "missing" && resolved.path;
       if (! absImportedPath) {
-        return;
+        continue;
       }
 
       if (resolved && 'links' in resolved && resolved.links) {
         this.addSymbolicLinks(resolved.links, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
-      }      
+      }
 
       let depFile = this.getFile(absImportedPath);
       if (depFile) {
@@ -1194,22 +1196,22 @@ export default class ImportScanner {
         // If depFile has already been scanned, this._scanFile will return
         // immediately thanks to the depFile.imported-checking logic at
         // the top of the method.
-        this.scanFile(depFile, dynamic);
+        await this.scanFile(depFile, dynamic);
 
-        return;
+        continue;
       }
 
-      depFile = this.readDepFile(absImportedPath);
+      depFile = await this.readDepFile(absImportedPath);
       if (! depFile) {
-        return;
+        continue;
       }
 
       // Append this file to the output array and record its index.
       this.addFile(absImportedPath, depFile);
 
       // Recursively scan the module's imported dependencies.
-      this.scanFile(depFile, dynamic);
-    });
+      await this.scanFile(depFile, dynamic);
+    }
   }
 
   isWeb() {
@@ -1221,19 +1223,20 @@ export default class ImportScanner {
     return archMatches(this.bundleArch, "web.browser");
   }
 
-  private getDataString(file: File) {
-    if (typeof file.dataString === "string") {
-      return file.dataString;
+  private async getDataString(file: File) {
+    const fileData = await file.data;
+    if (typeof fileData === "string") {
+      return fileData;
     }
 
-    const rawDataString = file.data.toString("utf8");
+    const rawDataString = fileData.toString("utf8");
     if (file.type === "js") {
       // Avoid compiling .js file with Reify when all we want is a string
       // version of file.data.
       file.dataString = stripHashBang(rawDataString);
     } else {
       file.dataString = rawDataString;
-      file.dataString = this.defaultHandlers.call(file.type as any, file);
+      file.dataString = await this.defaultHandlers.call(file.type as any, file);
     }
 
     if (! (file.data instanceof Buffer) ||
@@ -1294,7 +1297,7 @@ export default class ImportScanner {
     return info;
   }
 
-  private readModule(absPath: string): RawFile | null {
+  private async readModule(absPath: string): Promise<RawFile | null> {
     const dotExt = pathExtname(absPath).toLowerCase();
 
     if (dotExt === ".node") {
@@ -1328,7 +1331,7 @@ export default class ImportScanner {
       }
     }
 
-    info.dataString = this.defaultHandlers.call(ext as any, info);
+    info.dataString = await this.defaultHandlers.call(ext as any, info);
     if (info.dataString !== dataString) {
       info.data = Buffer.from(info.dataString, "utf8");
     }
@@ -1336,7 +1339,7 @@ export default class ImportScanner {
     return info;
   }
 
-  private readDepFile(absPath: string): File | null {
+  private async readDepFile(absPath: string): Promise<File | null> {
     const absModuleId = this.getAbsModuleId(absPath);
     if (! absModuleId) {
       // The given path cannot be installed on this architecture.
@@ -1345,7 +1348,7 @@ export default class ImportScanner {
 
     const realPath = this.realPath(absPath);
 
-    let rawFile = this.getInfoByRealPath(realPath);
+    let rawFile = await this.getInfoByRealPath(realPath);
     if (rawFile) {
       // If we already have a file with the same real path, use its data
       // rather than reading the file again, or generating a stub. This
@@ -1372,7 +1375,7 @@ export default class ImportScanner {
     } else {
       rawFile = absModuleId.endsWith("/package.json")
         ? this.readPackageJson(absPath)
-        : this.readModule(absPath);
+        : await this.readModule(absPath);
 
       // If the module is not readable, _readModule may return null.
       // Otherwise it will return { data, dataString, hash }.

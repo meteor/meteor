@@ -118,17 +118,25 @@ Accounts.config({
 });
 
 
-Meteor.methods({
-  testMeteorUser: () => Meteor.user(),
-  clearUsernameAndProfile: function () {
-    if (!this.userId)
-      throw new Error("Not logged in!");
-    Meteor.users.update(this.userId,
-                        {$unset: {profile: 1, username: 1}});
-  },
+Meteor.methods(
+  {
+    testMeteorUser:
+      async () => await Meteor.user(),
 
-  expireTokens: function () {
-    Accounts._expireTokens(new Date(), this.userId);
-  },
-  removeUser: username => Meteor.users.remove({ "username": username }),
-});
+    clearUsernameAndProfile:
+      async function () {
+        if (!this.userId) throw new Error("Not logged in!");
+        await Meteor
+          .users
+          .updateAsync(this.userId, { $unset: { profile: 1, username: 1 } });
+      },
+
+    expireTokens:
+      async function () {
+        await Accounts._expireTokens(new Date(), this.userId);
+      },
+
+    removeUser:
+      async username => await Meteor.users.removeAsync({ "username": username }),
+  }
+);
