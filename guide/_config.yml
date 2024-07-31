@@ -3,8 +3,13 @@ subtitle: The Official Guide
 github_repo: 'meteor/meteor'
 edit_branch: 'devel'
 edit_path: 'guide'
-content_root: 'content'
+content_root: 'source'
 versions:
+  - '2.16'
+  - '2.15'
+  - '2.14'
+  - '2.13'
+  - '2.12'
   - '2.11'
   - '2.10'
   - '2.9'
@@ -29,10 +34,10 @@ versions:
   - '1.3'
   - '1.2'
 versioned-netlify-redirects:
-    netlify_site_id: meteor-guide
+  netlify_site_id: meteor-guide
 
 logo:
-  title:
+  title: Meteor
   subtitle: Guide
 
 sidebar_categories:
@@ -40,7 +45,9 @@ sidebar_categories:
     - index
     - code-style
     - structure
-    - 2.11-migration
+    - 2.14-migration
+    - 3.0-migration
+    - prepare-meteor-3.0
   Data:
     - collections
     - data-loading
@@ -55,6 +62,8 @@ sidebar_categories:
     - react
     - angular
     - vue
+  Integrations:
+    - flowbite
   Mobile:
     - cordova
     - react-native
@@ -69,6 +78,8 @@ sidebar_categories:
   Production:
     - security
     - deployment
+    - performance-improvement
+    - using-node-v14.21.4
   Meta:
     - CONTRIBUTING
     - CHANGELOG
@@ -87,7 +98,7 @@ redirects:
   '/using-packages.html#using-npm': using-npm-packages.html#using-npm
   '/using-packages.html#npm-styles': using-npm-packages.html#npm-styles
   '/using-packages.html#npm-shrinkwrap': using-npm-packages.html#npm-shrinkwrap
-  '/using-packages.html#atmosphere':  using-atmosphere-packages.html
+  '/using-packages.html#atmosphere': using-atmosphere-packages.html
   '/using-packages.html#atmosphere-searching': using-atmosphere-packages.html#atmosphere-searching
   '/using-packages.html#atmosphere-naming': using-atmosphere-packages.html#atmosphere-naming
   '/using-packages.html#installing-atmosphere': using-atmosphere-packages.html#installing-atmosphere
@@ -99,7 +110,7 @@ redirects:
   '/using-packages.html#bind-environment': using-npm-packages.html#bind-environment
   '/using-packages.html#wrap-async': using-npm-packages.html#wrap-async
   '/using-packages.html#promises': using-npm-packages.html#promises
-  '/using-packages.html#overriding-packages':  writing-npm-packages.html#overriding-npm-packages
+  '/using-packages.html#overriding-packages': writing-npm-packages.html#overriding-npm-packages
   '/using-packages.html#npm-overriding': writing-npm-packages.html#overriding-npm-packages
   '/using-packages.html#atmosphere-overriding': writing-atmosphere-packages.html#overriding-atmosphere-packages
   '/using-packages.html#npm-shrinkpack': using-npm-packages.html#npm-shrinkpack

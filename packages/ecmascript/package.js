@@ -1,9 +1,14 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.16.6',
+  version: '0.16.9',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md',
 });
+
+Npm.depends({
+  '@babel/runtime': '7.20.7'
+});
+
 
 Package.registerBuildPlugin({
   name: 'compile-ecmascript',
@@ -13,7 +18,6 @@ Package.registerBuildPlugin({
 
 Package.onUse(function(api) {
   api.use('isobuild:compiler-plugin@1.0.0');
-  api.use('babel-compiler');
   api.use('react-fast-refresh');
 
   // The following api.imply calls should match those in
@@ -40,5 +44,5 @@ Package.onTest(function(api) {
   api.addFiles('bare-test-file.js', ['client', 'server'], {
     bare: true,
   });
-  api.addFiles('runtime-tests-client.js', ['client', 'web.browser.legacy']);
+  api.addFiles('runtime-client-tests.js', ['client', 'web.browser.legacy']);
 });

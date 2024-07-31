@@ -306,13 +306,6 @@ Function Add-NpmModulesFromJsBundleFile {
 
   cd node_modules
 
-  # Since we install a patched version of pacote in $Destination\lib\node_modules,
-  # we need to remove npm's bundled version to make it use the new one.
-  if (Test-Path "pacote") {
-    Remove-DirectoryRecursively "npm\node_modules\pacote"
-    & "$($Commands.node)" -e "require('fs').renameSync('pacote', 'npm\\node_modules\\pacote')"
-  }
-
   cd "$previousCwd"
 }
 

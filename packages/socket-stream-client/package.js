@@ -1,13 +1,15 @@
 Package.describe({
   name: "socket-stream-client",
-  version: "0.5.0",
+  version: '0.5.3',
   summary: "Provides the ClientStream abstraction used by ddp-client",
   documentation: "README.md"
 });
 
 Npm.depends({
   "faye-websocket": "0.11.4",
-  "permessage-deflate": "0.1.7"
+  "permessage-deflate": "0.1.7",
+  "lodash.isequal": "4.5.0",
+  "lodash.once": "4.1.1"
 });
 
 Package.onUse(function(api) {
@@ -15,7 +17,6 @@ Package.onUse(function(api) {
   api.use("modern-browsers");
   api.use("retry"); // TODO Try to remove this.
 
-  api.addFiles("sockjs-0.3.4.js", "legacy");
   api.mainModule("browser.js", "client", { lazy: true });
 
   api.addFiles("server.js", "server");
@@ -23,7 +24,6 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use("underscore");
   api.use("ecmascript");
   api.use("tinytest");
   api.use("test-helpers");
@@ -31,5 +31,4 @@ Package.onTest(function(api) {
   api.use("http");
   api.use("socket-stream-client");
   api.mainModule("client-tests.js", "client");
-  api.mainModule("server-tests.js", "server");
 });

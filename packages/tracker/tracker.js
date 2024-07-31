@@ -196,6 +196,16 @@ Tracker.Computation = class Computation {
     this._onError = onError;
     this._recomputing = false;
 
+    /**
+     * @summary Forces autorun blocks to be executed in synchronous-looking order by storing the value autorun promise thus making it awaitable.
+     * @locus Client
+     * @memberOf Tracker.Computation
+     * @instance
+     * @name  firstRunPromise
+     * @returns {Promise<unknown>}
+     */
+    this.firstRunPromise = undefined;
+
     var errored = true;
     try {
       this._compute();
@@ -206,6 +216,22 @@ Tracker.Computation = class Computation {
         this.stop();
     }
   }
+
+
+    /**
+   * Resolves the firstRunPromise with the result of the autorun function.
+   * @param {*} onResolved
+   * @param {*} onRejected
+   * @returns{Promise<unknown}
+   */
+    then(onResolved, onRejected) {
+      return this.firstRunPromise.then(onResolved, onRejected);
+    };
+
+
+    catch(onRejected) {
+      return this.firstRunPromise.catch(onRejected)
+    };
 
   // http://docs.meteor.com/#computation_oninvalidate
 
@@ -297,10 +323,18 @@ Tracker.Computation = class Computation {
 
     var previousInCompute = inCompute;
     inCompute = true;
+
     try {
-      Tracker.withComputation(this, () => {
-        withNoYieldsAllowed(this._func)(this);
+      // In case of async functions, the result of this function will contain the promise of the autorun function
+      // & make autoruns await-able.
+      const firstRunPromise = Tracker.withComputation(this, () => {
+        return withNoYieldsAllowed(this._func)(this);
       });
+      // We'll store the firstRunPromise on the computation so it can be awaited by the callers, but only
+      // during the first run. We don't want things to get mixed up.
+      if (this.firstRun) {
+        this.firstRunPromise = Promise.resolve(firstRunPromise);
+      }
     } finally {
       inCompute = previousInCompute;
     }
@@ -560,15 +594,12 @@ Tracker._runFlush = function (options) {
  * thrown. Defaults to the error being logged to the console.
  * @returns {Tracker.Computation}
  */
-Tracker.autorun = function (f, options) {
+Tracker.autorun = function (f, options = {}) {
   if (typeof f !== 'function')
     throw new Error('Tracker.autorun requires a function argument');
 
-  options = options || {};
-
   constructingComputation = true;
-  var c = new Tracker.Computation(
-    f, Tracker.currentComputation, options.onError);
+  var c = new Tracker.Computation(f, Tracker.currentComputation, options.onError);
 
   if (Tracker.active)
     Tracker.onInvalidate(function () {
@@ -594,6 +625,11 @@ Tracker.nonreactive = function (f) {
   return Tracker.withComputation(null, f);
 };
 
+/**
+ * @summary Helper function to make the tracker work with promises.
+ * @param computation Computation that tracked
+ * @param func async function that needs to be called and be reactive
+ */
 Tracker.withComputation = function (computation, f) {
   var previousComputation = Tracker.currentComputation;
 

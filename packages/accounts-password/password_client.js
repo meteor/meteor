@@ -23,7 +23,7 @@ const internalLoginWithPassword = ({ selector, password, code, callback }) => {
       if (error) {
         reportError(error, callback);
       } else {
-        callback && callback();
+        callback && callback(error, result);
       }
     },
   });
@@ -119,6 +119,29 @@ Accounts.createUser = (options, callback) => {
     methodArguments: [options],
     userCallback: callback
   });
+};
+
+
+/**
+ * @summary Create a new user and returns a promise of its result.
+ * @locus Anywhere
+ * @param {Object} options
+ * @param {String} options.username A unique name for this user.
+ * @param {String} options.email The user's email address.
+ * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
+ * @param {Object} options.profile The user's profile, typically including the `name` field.
+ * @importFromPackage accounts-base
+ */
+Accounts.createUserAsync = (options) => {
+  return new Promise((resolve, reject) =>
+    Accounts.createUser(options, (e) => {
+      if (e) {
+        reject(e);
+      } else {
+        resolve();
+      }
+    })
+  );
 };
 
 // Change password. Must be logged in.

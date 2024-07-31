@@ -10,14 +10,14 @@ jobs:
       run:
         working-directory: guide/
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 12.x
       - name: Build the Guide
         run: npm ci && npm run build
       - name: Deploy to Netlify for preview
-        uses: nwtgck/actions-netlify@v1.2.4
+        uses: nwtgck/actions-netlify@v2.1.0
         with:
           publish-dir: './guide/public'
           production-branch: devel

@@ -12,7 +12,7 @@ var CS = ConstraintSolver;
 // in that order.  If that's not true, these tests will break.
 var sortKeys = function (obj) {
   var result = {};
-  _.each(_.keys(obj).sort(), function (k) {
+  Object.keys(obj).sort().forEach(function (k) {
     result[k] = obj[k];
   });
   return result;
@@ -22,12 +22,12 @@ var formatSolution = function (obj) {
   // results into tests.
   return JSON.stringify({
     answer: sortKeys(obj.answer),
-    allAnswers: obj.allAnswers && _.map(obj.allAnswers, sortKeys),
+    allAnswers: obj.allAnswers && obj.allAnswers.map(sortKeys),
     neededToUseUnanticipatedPrereleases: obj.neededToUseUnanticipatedPrereleases
   }, null, 2);
 };
 
-var doTest = function (test, inputJSONable, outputJSONable, options) {
+var doTest = async function (test, inputJSONable, outputJSONable, options) {
   var input;
   if (inputJSONable instanceof CS.Input) {
     input = inputJSONable;
@@ -36,18 +36,18 @@ var doTest = function (test, inputJSONable, outputJSONable, options) {
   }
 
   if (typeof outputJSONable.neededToUseUnanticipatedPrereleases !== 'boolean') {
-    outputJSONable = _.extend(outputJSONable, {
+    outputJSONable = Object.assign(outputJSONable, {
       neededToUseUnanticipatedPrereleases: (
         !! outputJSONable.neededToUseUnanticipatedPrereleases)
     });
   }
 
   test.equal(
-    formatSolution(CS.PackagesResolver._resolveWithInput(input, options)),
+    formatSolution(await CS.PackagesResolver._resolveWithInput(input, options)),
     formatSolution(outputJSONable));
 };
 
-var doFailTest = function (test, inputJSONable, messageExpect) {
+var doFailTest = async function (test, inputJSONable, messageExpect) {
   var input;
   if (inputJSONable instanceof CS.Input) {
     input = inputJSONable;
@@ -55,9 +55,9 @@ var doFailTest = function (test, inputJSONable, messageExpect) {
     input = CS.Input.fromJSONable(inputJSONable);
   }
 
-  test.throws(function () {
+  await test.throwsAsync(async function () {
     try {
-      CS.PackagesResolver._resolveWithInput(input);
+      await CS.PackagesResolver._resolveWithInput(input);
     } catch (e) {
       if (! e.constraintSolverError) {
         test.fail(e.message);
@@ -67,8 +67,8 @@ var doFailTest = function (test, inputJSONable, messageExpect) {
   }, messageExpect);
 };
 
-Tinytest.add("constraint solver - input - upgrade indirect dependency", function (test) {
-  doTest(test, {
+Tinytest.addAsync("constraint solver - input - upgrade indirect dependency", async function (test) {
+  await doTest(test, {
     dependencies: ["foo"],
     constraints: [],
     previousSolution: { foo: "1.0.0", bar: "2.0.0" },
@@ -90,8 +90,8 @@ Tinytest.add("constraint solver - input - upgrade indirect dependency", function
   });
 });
 
-Tinytest.add("constraint solver - input - upgrade direct, don't break", function (test) {
-  doTest(test, {
+Tinytest.addAsync("constraint solver - input - upgrade direct, don't break", async function (test) {
+  await doTest(test, {
     dependencies: ["foo", "bar"],
     constraints: [],
     previousSolution: { foo: "1.0.0", bar: "2.0.0" },
@@ -111,7 +111,7 @@ Tinytest.add("constraint solver - input - upgrade direct, don't break", function
   });
 
   // if allowIncompatibleUpdate is set, upgrade bar to 3.0.0
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["foo", "bar"],
     constraints: [],
     previousSolution: { foo: "1.0.0", bar: "2.0.0" },
@@ -132,8 +132,8 @@ Tinytest.add("constraint solver - input - upgrade direct, don't break", function
   });
 });
 
-Tinytest.add("constraint solver - input - previous solution no patch", function (test) {
-  doTest(test, {
+Tinytest.addAsync("constraint solver - input - previous solution no patch", async function (test) {
+  await doTest(test, {
     dependencies: ["foo"],
     constraints: [],
     previousSolution: { foo: "1.0.0", bar: "2.0.0" },
@@ -154,8 +154,8 @@ Tinytest.add("constraint solver - input - previous solution no patch", function 
 });
 
 
-Tinytest.add("constraint solver - input - don't break root dep", function (test) {
-  doTest(test, {
+Tinytest.addAsync("constraint solver - input - don't break root dep", async function (test) {
+  await doTest(test, {
     dependencies: ["foo", "bar"],
     constraints: [],
     previousSolution: { bar: "2.0.0" },
@@ -174,7 +174,7 @@ Tinytest.add("constraint solver - input - don't break root dep", function (test)
     }
   });
 
-  doFailTest(test, {
+  await doFailTest(test, {
     dependencies: ["foo", "bar"],
     constraints: [],
     previousSolution: { bar: "2.0.1" },
@@ -189,12 +189,12 @@ Tinytest.add("constraint solver - input - don't break root dep", function (test)
   }, 'Potentially incompatible change required to top-level dependency: bar 2.0.0, was 2.0.1.\nConstraints on package "bar":\n* bar@=2.0.0 <- foo 1.0.0\n\nTo allow potentially incompatible changes to top-level dependencies, you must pass --allow-incompatible-update on the command line.');
 });
 
-Tinytest.add("constraint solver - input - don't pick RCs", function (test) {
+Tinytest.addAsync("constraint solver - input - don't pick RCs", async function (test) {
   // First verify that the solver takes the latest version when
   // presented with a new root dependency (i.e. one not mentioned in
   // a previous solution) -- and also that it will take a prerelease if
   // it has no choice.
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["a"],
     constraints: [],
     catalogCache: {
@@ -212,7 +212,7 @@ Tinytest.add("constraint solver - input - don't pick RCs", function (test) {
 
   // If we have the option to take a non-pre-release version,
   // we should.
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["a"],
     constraints: [],
     catalogCache: {
@@ -231,7 +231,7 @@ Tinytest.add("constraint solver - input - don't pick RCs", function (test) {
 
   // If the prerelease versions are "anticipated", take
   // the latest one.
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["a"],
     constraints: [],
     anticipatedPrereleases: { a: {
@@ -251,7 +251,7 @@ Tinytest.add("constraint solver - input - don't pick RCs", function (test) {
   });
 
   // Don't take the unanticipated pre-releases here.
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["a"],
     constraints: ["a@1.0.0"],
     catalogCache: {
@@ -271,7 +271,7 @@ Tinytest.add("constraint solver - input - don't pick RCs", function (test) {
   // If we ask for one prerelease, we might get another.
   // If it isn't anticipated, it sets the flag on the result
   // (differs from older behavior).
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["a"],
     constraints: ["a@1.0.1-pre.0"],
     anticipatedPrereleases: { a: {
@@ -292,8 +292,8 @@ Tinytest.add("constraint solver - input - don't pick RCs", function (test) {
 
 });
 
-Tinytest.add("constraint solver - input - previous solution no longer needed", function (test) {
-  doTest(test, {
+Tinytest.addAsync("constraint solver - input - previous solution no longer needed", async function (test) {
+  await doTest(test, {
     dependencies: ["foo"],
     constraints: [],
     previousSolution: { foo: "1.0.0", bar: "1.0.0" },
@@ -311,9 +311,9 @@ Tinytest.add("constraint solver - input - previous solution no longer needed", f
   });
 });
 
-Tinytest.add("constraint solver - input - conflicting top-level constraints", function (test) {
+Tinytest.addAsync("constraint solver - input - conflicting top-level constraints", async function (test) {
   // conflicting dependencies don't matter if we don't need the package
-  doTest(test, {
+  await doTest(test, {
     dependencies: [],
     constraints: ["foo@1.0.0", "foo@2.0.0"],
     previousSolution: {},
@@ -329,7 +329,7 @@ Tinytest.add("constraint solver - input - conflicting top-level constraints", fu
   });
 
   // ... but they do if we do
-  doFailTest(test, {
+  await doFailTest(test, {
     dependencies: ["bar"],
     constraints: ["foo@1.0.0", "foo@2.0.0"],
     previousSolution: {},
@@ -343,15 +343,15 @@ Tinytest.add("constraint solver - input - conflicting top-level constraints", fu
   }, /No version of foo satisfies all constraints: @1.0.0, @2.0.0/);
 });
 
-Tinytest.add("constraint solver - input - unknown package", function (test) {
-  doFailTest(test, {
+Tinytest.addAsync("constraint solver - input - unknown package", async function (test) {
+  await doFailTest(test, {
     dependencies: ["bar"],
     constraints: [],
     catalogCache: {
       data: {}
     }
   }, /unknown package in top-level dependencies: bar/);
-  doFailTest(test, {
+  await doFailTest(test, {
     dependencies: ['foo'],
     constraints: [],
     catalogCache: {
@@ -360,14 +360,14 @@ Tinytest.add("constraint solver - input - unknown package", function (test) {
       }
     }
   }, /unknown package: bar\nRequired by: foo 1.0.0/);
-  doFailTest(test, {
+  await doFailTest(test, {
     dependencies: ["isobuild:bar"],
     constraints: [],
     catalogCache: {
       data: {}
     }
   }, /unsupported Isobuild feature "isobuild:bar" in top-level dependencies/);
-  doFailTest(test, {
+  await doFailTest(test, {
     dependencies: ['foo'],
     constraints: [],
     catalogCache: {
@@ -378,8 +378,8 @@ Tinytest.add("constraint solver - input - unknown package", function (test) {
   }, /unsupported Isobuild feature "isobuild:bar";.*\nRequired by: foo 1.0.0/);
 });
 
-Tinytest.add("constraint solver - input - previous indirect deps", function (test) {
-  doTest(test, {
+Tinytest.addAsync("constraint solver - input - previous indirect deps", async function (test) {
+  await doTest(test, {
     dependencies: ["a"],
     constraints: [],
     previousSolution: { c: "1.2.3" },
@@ -404,8 +404,8 @@ Tinytest.add("constraint solver - input - previous indirect deps", function (tes
   });
 });
 
-Tinytest.add("constraint solver - input - new indirect deps", function (test) {
-  doTest(test, {
+Tinytest.addAsync("constraint solver - input - new indirect deps", async function (test) {
+  await doTest(test, {
     dependencies: ["a"],
     constraints: [],
     previousSolution: {},
@@ -430,8 +430,8 @@ Tinytest.add("constraint solver - input - new indirect deps", function (test) {
   });
 });
 
-Tinytest.add("constraint solver - input - trade-off", function (test) {
-  doTest(test, {
+Tinytest.addAsync("constraint solver - input - trade-off", async function (test) {
+  await doTest(test, {
     dependencies: ["a"],
     constraints: [],
     previousSolution: { b: "1.0.0", c: "1.0.0" },
@@ -461,7 +461,7 @@ Tinytest.add("constraint solver - input - trade-off", function (test) {
     }
   });
 
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["a", "b", "c"],
     constraints: [],
     previousSolution: {},
@@ -492,7 +492,7 @@ Tinytest.add("constraint solver - input - trade-off", function (test) {
 
 });
 
-Tinytest.add("constraint solver - input - fake PackageConstraint", function (test) {
+Tinytest.addAsync("constraint solver - input - fake PackageConstraint", async function (test) {
   // The tool gives us PackageConstraint objects constructed with a different
   // copy of package-version-parser.  If we're not careful in CS.Input or
   // CS.Solver, this case will throw an error.  See comments in CS.Input.
@@ -511,7 +511,7 @@ Tinytest.add("constraint solver - input - fake PackageConstraint", function (tes
     return '2.0.0';
   };
 
-  doFailTest(test,
+  await doFailTest(test,
              new CS.Input(["foo", "bar"], [fakeConstraint],
                           CS.CatalogCache.fromJSONable({
                             data: {
@@ -523,7 +523,7 @@ Tinytest.add("constraint solver - input - fake PackageConstraint", function (tes
              /Constraint foo@1.0.0 is not satisfied by foo 2.0.0/);
 });
 
-Tinytest.add("constraint solver - input - stack overflow bug", function (test) {
+Tinytest.addAsync("constraint solver - input - stack overflow bug", async function (test) {
   // This case is taken from the "solver-error" branch of the meteor/rectangles
   // repo.  It's an app running from a release (new-version-solver-2) with an
   // unsatisfiable constraint in .meteor/packages.  It caused a stack overflow
@@ -533,7 +533,7 @@ Tinytest.add("constraint solver - input - stack overflow bug", function (test) {
   //
   // It's not actually a good test of logic-solver overflowing the stack anymore,
   // because the constraint-solver is smarter now.
-  doFailTest(test, STACK_OVERFLOW_BUG_INPUT,
+  await doFailTest(test, STACK_OVERFLOW_BUG_INPUT,
              /No version of follower-livedata satisfies all constraints: @0.9.0/);
 });
 
@@ -560,11 +560,11 @@ Tinytest.add("constraint solver - input - bad package name", function (test) {
 });
 
 
-Tinytest.add("constraint solver - input - slow solve", function (test) {
+Tinytest.addAsync("constraint solver - input - slow solve", async function (test) {
   var input = CS.Input.fromJSONable(SLOW_TEST_DATA);
 
   test.equal(
-    formatSolution(CS.PackagesResolver._resolveWithInput(input)),
+    formatSolution(await CS.PackagesResolver._resolveWithInput(input)),
     formatSolution({
       "answer":{
         "autopublish":"1.0.2",
@@ -639,11 +639,11 @@ Tinytest.add("constraint solver - input - slow solve", function (test) {
     }));
 });
 
-Tinytest.add("constraint solver - input - update unknown", function (test) {
+Tinytest.addAsync("constraint solver - input - update unknown", async function (test) {
   // trying to update an unknown package is currently not an error
   // at the CS.Input level.  It IS an error in the tool, so this case
   // won't make it through in actual tool usage.
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["direct"],
     constraints: [],
     previousSolution: {
@@ -662,12 +662,12 @@ Tinytest.add("constraint solver - input - update unknown", function (test) {
   });
 });
 
-Tinytest.add("constraint solver - input - update indirect deps", function (test) {
+Tinytest.addAsync("constraint solver - input - update indirect deps", async function (test) {
   // test upgrading an indirect dependency explicitly.
   // `meteor update indirect` takes it from 1.0.0 to 2.0.0 (with no concern
   // about bumping the major version because it's not a top-level package,
   // and the only package that uses it doesn't specify any constraint).
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["direct"],
     constraints: [],
     previousSolution: {
@@ -692,7 +692,7 @@ Tinytest.add("constraint solver - input - update indirect deps", function (test)
   // Normally, we don't take patches to indirect dependencies, even when
   // updating direct dependencies.  This is what would happen if the user
   // typed `meteor update direct`.
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["direct"],
     constraints: [],
     previousSolution: {
@@ -720,7 +720,7 @@ Tinytest.add("constraint solver - input - update indirect deps", function (test)
   // If upgradeIndirectDepPatchVersions is true, user just typed
   // `meteor update`.  Take the opportunity to take patches to indirect
   // dependencies.
-  doTest(test, {
+  await doTest(test, {
     dependencies: ["direct"],
     constraints: [],
     previousSolution: {
@@ -754,8 +754,8 @@ Tinytest.add("constraint solver - input - update indirect deps", function (test)
   });
 });
 
-Tinytest.add("constraint solver - input - package is only weak dep", function (test) {
-  doTest(test, {
+Tinytest.addAsync("constraint solver - input - package is only weak dep", async function (test) {
+  await doTest(test, {
     dependencies: ["foo"],
     constraints: [],
     previousSolution: {},

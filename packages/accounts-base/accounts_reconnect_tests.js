@@ -1,8 +1,11 @@
 if (Meteor.isServer) {
   Meteor.methods({
-    getConnectionUserId: function() {
+    getConnectionUserId: function () {
       return this.userId;
-    }
+    },
+    logCurrentUserId: function () {
+      return this.userId;
+    },
   });
 }
 
@@ -124,6 +127,40 @@ if (Meteor.isClient) {
             'Only one onReconnect callback should be registered'
           );
           done();
+        }, 1000);
+      });
+    }
+  );
+  // Make sure this is issue is fixed: https://forums.meteor.com/t/back-from-offline-method-does-not-apply-on-server-side/61619
+  // PR #13221
+  Tinytest.addAsync(
+    "accounts - user is in the server as soon as we reconnect",
+    (test, done) => {
+      loginAsUser1(async (err) => {
+        test.isUndefined(err, "Unexpected error logging in as user1");
+        test.isTrue(Meteor.userId(), "User should be logged in");
+
+        let userId = await Meteor.callAsync("logCurrentUserId");
+        test.isTrue(
+          userId,
+          "userId exists in the server while connecting is up"
+        );
+        // 1. Disconnect client and server
+        Meteor.disconnect();
+        test.isFalse(Meteor.status().connected);
+
+        // 2. Invoke a method call after the disconnection
+        Meteor.callAsync("logCurrentUserId")
+          .then((id) => {
+            // 4. the server should still return an id after connection
+            test.isTrue(Meteor.status().connected);
+            test.isTrue(id);
+          })
+          .finally(done);
+
+        setTimeout(() => {
+          // 3. reconnect the client and server after some time
+          Meteor.reconnect();
         }, 1000);
       });
     }

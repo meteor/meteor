@@ -69,6 +69,11 @@ client, no arguments are passed.
   The `connection` object the request came in on. See
   [`Meteor.onConnection`](#meteor_onconnection) for details.
 {% enddtdd %}
+
+{% dtdd name:"collection" type:"Object" %}
+  The `collection` The name of the Mongo.Collection
+  or the Mongo.Collection object to hold the users.
+{% enddtdd %}
 </dl>
 
 {% apibox "AccountsClient" %}
@@ -212,6 +217,11 @@ are called with a single argument, the attempt info object:
   [`Meteor.onConnection`](#meteor_onconnection) for details.
 {% enddtdd %}
 
+{% dtdd name:"collection" type:"Object" %}
+  The `collection` The name of the Mongo.Collection
+  or the Mongo.Collection object to hold the users.
+{% enddtdd %}
+
 {% dtdd name:"methodName" type:"String" %}
   The name of the Meteor method being used to login.
 {% enddtdd %}
@@ -287,7 +297,7 @@ The function will be called with a single argument, the info object:
 {% enddtdd %}
 
 {% dtdd name:"options" type:"Exception" %}
-  An optional arugment passed down from the oauth service that may contain
+  An optional argument passed down from the oauth service that may contain
   additional user profile information. As the data in `options` comes from an
   external source, make sure you validate any values you read from it.
 {% enddtdd %}
@@ -336,3 +346,7 @@ of legitimate users by attempting all possible passwords.
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the
 [`DDPRateLimiter`](#ddpratelimiter) docs for more information.
+
+{% apibox "AccountsServer#addDefaultRateLimit" %}
+
+{% apibox "AccountsServer#removeDefaultRateLimit" %}

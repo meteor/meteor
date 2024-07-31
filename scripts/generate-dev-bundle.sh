@@ -36,6 +36,7 @@ downloadNodeFromS3() {
     curl "${NODE_URL}" | tar zx --strip 1
 }
 
+
 downloadOfficialNode() {
     NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
     echo "Downloading Node from ${NODE_URL}" >&2
@@ -49,8 +50,7 @@ downloadReleaseCandidateNode() {
 }
 
 # Try each strategy in the following order:
-extractNodeFromTarGz || downloadNodeFromS3 || \
-  downloadOfficialNode || downloadReleaseCandidateNode
+extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode || downloadReleaseCandidateNode
 
 # On macOS, download MongoDB from mongodb.com. On Linux, download a custom build
 # that is compatible with current distributions. If a 32-bit Linux is used,
@@ -64,7 +64,7 @@ fi
 case $OS in
     macos) MONGO_BASE_URL="https://fastdl.mongodb.org/osx" ;;
     linux)
-        [ $ARCH = "i686" ] &&
+        [ $ARCH = "i686" -o $ARCH = "aarch64" ] &&
             MONGO_BASE_URL="https://fastdl.mongodb.org/linux" ||
             MONGO_BASE_URL="https://github.com/meteor/mongodb-builder/releases/download/v${MONGO_VERSION}"
         ;;
@@ -73,6 +73,8 @@ esac
 
 if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ] ; then
   MONGO_NAME="mongodb-${OS}-x86_64-${MONGO_VERSION}"
+elif [ $OS = "linux" ] && [ "$ARCH" = "aarch64" ] ; then
+  MONGO_NAME="mongodb-linux-aarch64-ubuntu2204-${MONGO_VERSION}"
 else
   MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
 fi
@@ -94,7 +96,11 @@ export PATH="$DIR/bin:$PATH"
 cd "$DIR/lib"
 # Overwrite the bundled version with the latest version of npm.
 npm install "npm@$NPM_VERSION"
-npm config set python `which python3`
+# Starting from npm v9.5.1 we can't set the python (and many others) config
+# https://github.com/npm/cli/issues/6126
+# for now we'll not set it anymore and see if it works
+# if it doesn't, we can set python3 in other ways
+#npm config set python `which python3`
 which node
 which npm
 npm version
@@ -141,6 +147,11 @@ cd "${DIR}/build/npm-tool-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
 npm install
 cp -R node_modules/* "${DIR}/lib/node_modules/"
+
+#Also copy package.json and package-lock.json to lib folder so that npm
+# keep everything installed correctly
+cp package.json "${DIR}/lib/"
+cp package-lock.json "${DIR}/lib/"
 # Also include node_modules/.bin, so that `meteor npm` can make use of
 # commands like node-gyp and node-pre-gyp.
 cp -R node_modules/.bin "${DIR}/lib/node_modules/"
@@ -162,16 +173,7 @@ delete () {
     rm -rf "$1"
 }
 
-# Since we install a patched version of pacote in $DIR/lib/node_modules,
-# we need to remove npm's bundled version to make it use the new one.
-if [ -d "pacote" ]
-then
-    delete npm/node_modules/pacote
-    mv pacote npm/node_modules/
-fi
-
 delete sqlite3/deps
-delete sqlite3/node_modules/node-pre-gyp
 delete wordwrap/test
 delete moment/min
 

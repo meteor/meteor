@@ -1,5 +1,5 @@
 import { SendMailOptions } from 'nodemailer';
- 
+
 export namespace Email {
   /**
    * ExtraMailOptions is intentionally left empty here, but can be overridden in
@@ -11,10 +11,11 @@ export namespace Email {
   interface ExtraMailOptions {}
   type EmailOptions = { mailComposer: MailComposer } | (ExtraMailOptions & SendMailOptions)
 
-  interface CustomEmailOptions extends EmailOptions {
+  type CustomEmailOptions = EmailOptions & {
     packageSettings?: unknown;
   }
 
+  /** @deprecated */
   function send(options: EmailOptions): void;
   function sendAsync(options: EmailOptions): Promise<void>;
   function hookSend(fn: (options: EmailOptions) => boolean): void;

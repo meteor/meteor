@@ -1,6 +1,6 @@
 ---
 title: Check
-desription: Documentation on how to use check, Meteor's type checking library.
+description: Documentation on how to use check, Meteor's type checking library.
 ---
 
 The `check` package includes pattern checking functions useful for checking the types and structure
@@ -45,6 +45,11 @@ If the match fails, `check` throws a `Match.Error` describing how it failed. If
 this error gets sent over the wire to the client, it will appear only as
 `Meteor.Error(400, 'Match Failed')`. The failure details will be written to the
 server logs but not revealed to the client.
+
+By default, `check` will throw immediately at the first error encountered. Pass in `{ throwAllErrors: true }` to throw an array of all errors. For example:
+```js
+check(message, {/* ... */}, {throwAllErrors: true})
+```
 
 {% apibox "Match.test" %}
 

@@ -91,6 +91,8 @@ Template.main.events({
 // Clicking the button will change the page to say "We've always been at war with Eurasia"
 ```
 
+{% apibox "ReactiveDict#delete" %}
+
 {% apibox "ReactiveDict#equals" %}
 
 If value is a scalar, then these two expressions do the same thing:

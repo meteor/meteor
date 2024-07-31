@@ -14,13 +14,16 @@
     "hexo-renderer-marked": "2.0.0",
     "hexo-server": "1.0.0",
     "hexo-versioned-netlify-redirects": "1.1.0",
-    "meteor-hexo-config": "1.0.12",
-    "meteor-theme-hexo": "2.0.3"
+    "@meteorjs/meteor-hexo-config": "1.0.14",
+    "@meteorjs/meteor-theme-hexo": "2.0.8"
   },
   "scripts": {
-    "build": "chexo meteor-hexo-config -- generate",
+    "build": "chexo @meteorjs/meteor-hexo-config -- generate",
     "clean": "hexo clean",
     "test": "npm run clean; npm run build",
-    "start": "npm run build && chexo meteor-hexo-config -- server"
+    "start": "npm run build && chexo @meteorjs/meteor-hexo-config -- server"
+  },
+  "volta": {
+    "node": "14.21.3"
   }
 }

@@ -9,6 +9,7 @@ import {AccountsCommon} from "./accounts_common.js";
  * @param {Object} options an object with fields:
  * @param {Object} options.connection Optional DDP connection to reuse.
  * @param {String} options.ddpUrl Optional URL for creating a new DDP connection.
+ * @param {'session' | 'local'} options.clientStorage Optional Define what kind of storage you want for credentials on the client. Default is 'local' to use `localStorage`. Set to 'session' to use session storage.
  */
 export class AccountsClient extends AccountsCommon {
   constructor(options) {
@@ -26,6 +27,8 @@ export class AccountsClient extends AccountsCommon {
     this.savedHash = window.location.hash;
     this._initUrlMatching();
 
+    this.initStorageLocation();
+
     // Defined in localstorage_token.js.
     this._initLocalStorage();
 
@@ -35,6 +38,17 @@ export class AccountsClient extends AccountsCommon {
     // This tracks whether callbacks registered with
     // Accounts.onLogin have been called
     this._loginCallbacksCalled = false;
+  }
+
+  initStorageLocation(options) {
+    // Determine whether to use local or session storage to storage credentials and anything else.
+    this.storageLocation = (options?.clientStorage === 'session' || Meteor.settings?.public?.packages?.accounts?.clientStorage === 'session') ? window.sessionStorage : Meteor._localStorage;
+  }
+
+  config(options) {
+    super.config(options);
+
+    this.initStorageLocation(options);
   }
 
   ///
@@ -119,18 +133,21 @@ export class AccountsClient extends AccountsCommon {
    */
   logout(callback) {
     this._loggingOut.set(true);
-    this.connection.apply('logout', [], {
+
+    this.connection.applyAsync('logout', [], {
+      // TODO[FIBERS]: Look this { wait: true } later.
       wait: true
-    }, (error, result) => {
-      this._loggingOut.set(false);
-      this._loginCallbacksCalled = false;
-      if (error) {
-        callback && callback(error);
-      } else {
+    })
+      .then((result) => {
+        this._loggingOut.set(false);
+        this._loginCallbacksCalled = false;
         this.makeClientLoggedOut();
         callback && callback();
-      }
-    });
+      })
+      .catch((e) => {
+        this._loggingOut.set(false);
+        callback && callback(e);
+      });
   }
 
   /**
@@ -226,13 +243,14 @@ export class AccountsClient extends AccountsCommon {
     const loginCallbacks = ({ error, loginDetails }) => {
       if (!called) {
         called = true;
-        this._loginCallbacksCalled = true;
         if (!error) {
           this._onLoginHook.forEach(callback => {
             callback(loginDetails);
             return true;
           });
+          this._loginCallbacksCalled = true;
         } else {
+          this._loginCallbacksCalled = false;
           this._onLoginFailureHook.forEach(callback => {
             callback({ error });
             return true;
@@ -361,13 +379,24 @@ export class AccountsClient extends AccountsCommon {
 
       // Make the client logged in. (The user data should already be loaded!)
       this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
-      loginCallbacks({ loginDetails: result });
+
+      // use Tracker to make we sure have a user before calling the callbacks
+      Tracker.autorun(async function (computation) {
+        const user = await Tracker.withComputation(computation, () =>
+          Meteor.userAsync(),
+        );
+
+        if (user) {
+          loginCallbacks({ loginDetails: result })
+        }
+      });
+
     };
 
     if (!options._suppressLoggingIn) {
       this._setLoggingIn(true);
     }
-    this.connection.apply(
+    this.connection.applyAsync(
       options.methodName,
       options.methodArguments,
       { wait: true, onResultReceived: onResultReceived },
@@ -496,11 +525,11 @@ export class AccountsClient extends AccountsCommon {
   };
 
   _storeLoginToken(userId, token, tokenExpires) {
-    Meteor._localStorage.setItem(this.USER_ID_KEY, userId);
-    Meteor._localStorage.setItem(this.LOGIN_TOKEN_KEY, token);
+    this.storageLocation.setItem(this.USER_ID_KEY, userId);
+    this.storageLocation.setItem(this.LOGIN_TOKEN_KEY, token);
     if (! tokenExpires)
       tokenExpires = this._tokenExpiration(new Date());
-    Meteor._localStorage.setItem(this.LOGIN_TOKEN_EXPIRES_KEY, tokenExpires);
+    this.storageLocation.setItem(this.LOGIN_TOKEN_EXPIRES_KEY, tokenExpires);
 
     // to ensure that the localstorage poller doesn't end up trying to
     // connect a second time
@@ -508,9 +537,9 @@ export class AccountsClient extends AccountsCommon {
   };
 
   _unstoreLoginToken() {
-    Meteor._localStorage.removeItem(this.USER_ID_KEY);
-    Meteor._localStorage.removeItem(this.LOGIN_TOKEN_KEY);
-    Meteor._localStorage.removeItem(this.LOGIN_TOKEN_EXPIRES_KEY);
+    this.storageLocation.removeItem(this.USER_ID_KEY);
+    this.storageLocation.removeItem(this.LOGIN_TOKEN_KEY);
+    this.storageLocation.removeItem(this.LOGIN_TOKEN_EXPIRES_KEY);
 
     // to ensure that the localstorage poller doesn't end up trying to
     // connect a second time
@@ -520,15 +549,15 @@ export class AccountsClient extends AccountsCommon {
   // This is private, but it is exported for now because it is used by a
   // test in accounts-password.
   _storedLoginToken() {
-    return Meteor._localStorage.getItem(this.LOGIN_TOKEN_KEY);
+    return this.storageLocation.getItem(this.LOGIN_TOKEN_KEY);
   };
 
   _storedLoginTokenExpires() {
-    return Meteor._localStorage.getItem(this.LOGIN_TOKEN_EXPIRES_KEY);
+    return this.storageLocation.getItem(this.LOGIN_TOKEN_EXPIRES_KEY);
   };
 
   _storedUserId() {
-    return Meteor._localStorage.getItem(this.USER_ID_KEY);
+    return this.storageLocation.getItem(this.USER_ID_KEY);
   };
 
   _unstoreLoginTokenIfExpiresSoon() {
@@ -734,7 +763,7 @@ export class AccountsClient extends AccountsCommon {
     this._accountsCallbacks["enroll-account"] = callback;
   };
 
-};
+}
 
 /**
  * @summary True if a login method (such as `Meteor.loginWithPassword`,

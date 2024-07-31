@@ -1,4 +1,3 @@
-var Fiber = Npm.require('fibers');
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -23,6 +22,8 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   var methodInvocation = DDP._CurrentMethodInvocation.get();
   var publicationInvocation = DDP._CurrentPublicationInvocation.get();
 
+// console.log('methodInvocation', methodInvocation);
+// console.log('publicationInvocation', !!publicationInvocation);
   // Check the publish function's environment variables and context.
   if (callback) {
     callback.call(this, methodInvocation, publicationInvocation);
@@ -33,6 +34,7 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   this.onStop(function() {
     var onStopMethodInvocation = DDP._CurrentMethodInvocation.get();
     var onStopPublicationInvocation = DDP._CurrentPublicationInvocation.get();
+
     callback.call(
       this,
       onStopMethodInvocation,
@@ -45,7 +47,7 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
     this.stop();
   } else {
     this.ready();
-    Meteor.call('livedata_server_test_setuserid', userId);
+    await Meteor.callAsync('livedata_server_test_setuserid', userId);
   }
 });
 
@@ -99,7 +101,7 @@ Meteor.publish({
   async publicationObjectAsync() {
     await sleep(50);
     let callback = onSubscriptions;
-    if (callback) callback();
+    if (callback) callback("publicationObjectAsync");
     this.stop();
   },
 });
@@ -108,7 +110,7 @@ Meteor.publish({
   publication_object_async: async function() {
     await sleep(50);
     let callback = onSubscriptions;
-    if (callback) callback();
+    if (callback) callback("publication_object_async");
     this.stop();
   },
 });
@@ -116,7 +118,7 @@ Meteor.publish({
 Meteor.publish('publication_compatibility_async', async function() {
   await sleep(50);
   let callback = onSubscriptions;
-  if (callback) callback();
+  if (callback) callback("publication_compatibility_async");
   this.stop();
 });
 
@@ -128,10 +130,12 @@ Tinytest.addAsync('livedata server - async publish object', function(
     let testsLength = 0;
 
     onSubscriptions = function(subscription) {
-      delete onSubscriptions;
-      clientConn.disconnect();
+      // for debugging
+      // console.log('subscription is ok:', subscription) 
       testsLength++;
-      if (testsLength == 3) {
+      delete onSubscriptions;
+      if (testsLength === 3) {
+        clientConn.disconnect();
         onComplete();
       }
     };
@@ -148,7 +152,7 @@ async function getAllNames(shouldThrow = false) {
     throw new Meteor.Error('Expected error');
   }
   if (count <= 0) {
-    collection.insert({ name: 'async' });
+    await collection.insertAsync({ name: 'async' });
   }
 }
 Meteor.publish('asyncPublishCursor', async function() {
@@ -164,8 +168,8 @@ Tinytest.addAsync('livedata server - async publish cursor', function(
     const remoteCollection = new Mongo.Collection('names', {
       connection: clientConn,
     });
-    clientConn.subscribe('asyncPublishCursor', () => {
-      const actual = remoteCollection.find().fetch();
+    clientConn.subscribe('asyncPublishCursor', async () => {
+      const actual = await remoteCollection.find().fetch();
       test.equal(actual[0].name, 'async');
       onComplete();
     });

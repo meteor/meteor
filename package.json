@@ -13,27 +13,70 @@
   },
   "homepage": "https://github.com/meteor/meteor#readme",
   "devDependencies": {
-    "@quave/eslint-config-quave": "^1.0.3",
-    "@types/node": "^14.17.6"
+    "@babel/core": "^7.21.3",
+    "@babel/eslint-parser": "^7.21.3",
+    "@babel/eslint-plugin": "^7.19.1",
+    "@babel/preset-react": "^7.18.6",
+    "@types/node": "^18.16.18",
+    "@typescript-eslint/eslint-plugin": "^5.56.0",
+    "@typescript-eslint/parser": "^5.56.0",
+    "eslint": "^8.36.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-config-vazco": "^7.1.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^2.8.6",
+    "typescript": "^5.4.5"
+  },
+  "jshintConfig": {
+    "esversion": 11
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": false
   },
   "eslintConfig": {
-    "extends": [
-      "@quave/quave"
-    ],
+    "extends": "vazco",
     "rules": {
       "global-require": "off",
       "no-console": "off",
       "camelcase": "warn",
       "consistent-return": "off",
-      "quotes": "warn",
+      "quotes": [
+        "warn",
+        "single",
+        {
+          "allowTemplateLiterals": true
+        }
+      ],
       "no-shadow": [
         "error",
         {
-          "allow": ["resolve"]
+          "allow": [
+            "resolve"
+          ]
         }
       ],
       "no-use-before-define": "warn",
-      "import/no-unresolved": "warn"
+      "import/no-unresolved": "warn",
+      "require-await": "warn",
+      "space-before-function-paren": [
+        "warn",
+        {
+          "anonymous": "never",
+          "named": "never",
+          "asyncArrow": "always"
+        }
+      ],
+      "complexity": "off",
+      "func-names": "off",
+      "no-undef": "warn",
+      "curly": "off",
+      "sort-imports": "off"
     }
   }
 }
