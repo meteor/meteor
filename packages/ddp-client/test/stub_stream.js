@@ -5,7 +5,7 @@ StubStream = function() {
   self.callbacks = Object.create(null);
 };
 
-_.extend(StubStream.prototype, {
+Object.assign(StubStream.prototype, {
   // Methods from Stream
   on: function(name, callback) {
     const self = this;

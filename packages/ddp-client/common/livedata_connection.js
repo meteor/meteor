@@ -102,6 +102,10 @@ export class Connection {
     }
 
     self._lastSessionId = null;
+    // how many messages we've received (excluding ping/pong).
+    // when we try to reconnect to the server, it will check this against the number of messages it sent.
+    // if there is a mismatch, our info is out of date and we need a clean session.
+    self._receivedCount = 0;
     self._versionSuggestion = null; // The last proposed DDP version.
     self._version = null; // The DDP version agreed on by client and server.
     self._stores = Object.create(null); // name -> object with methods
@@ -1052,11 +1056,12 @@ export class Connection {
    * @locus Client
    */
   disconnect(...args) {
+    this._send({ msg: 'disconnect' });
     return this._stream.disconnect(...args);
   }
 
   close() {
-    return this._stream.disconnect({ _permanent: true });
+    return this.disconnect({ _permanent: true });
   }
 
   ///
@@ -1127,6 +1132,8 @@ export class Connection {
       // this possible, at which point we'll probably need more code here.
       return;
     }
+
+    self._receivedCount = 1;
 
     // Server doesn't have our data any more. Re-sync a new session.
 
@@ -1783,7 +1790,10 @@ export class Connection {
       }
       return;
     }
-
+    const ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
+    if (!ignoredMsgsForSessionOutOfDateCheck.includes(msg.msg)) {
+      this._receivedCount++;
+    }
     if (msg.msg === 'connected') {
       this._version = this._versionSuggestion;
       this._livedata_connected(msg);
@@ -1823,7 +1833,10 @@ export class Connection {
     // NOTE: reset is called even on the first connection, so this is
     // the only place we send this message.
     const msg = { msg: 'connect' };
-    if (this._lastSessionId) msg.session = this._lastSessionId;
+    if (this._lastSessionId) {
+      msg.session = this._lastSessionId;
+      msg.receivedCount = this._receivedCount;
+    }
     msg.version = this._versionSuggestion || this._supportedDDPVersions[0];
     this._versionSuggestion = msg.version;
     msg.support = this._supportedDDPVersions;
