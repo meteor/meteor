@@ -1034,6 +1034,9 @@ export class Connection {
   // Always queues the call before sending the message
   // Used, for example, on subscription.[id].stop() to make sure a "sub" message is always called before an "unsub" message
   // https://github.com/meteor/meteor/issues/13212
+  //
+  // This is part of the actual fix for the rest check:
+  // https://github.com/meteor/meteor/pull/13236
   _sendQueued(obj) {
     this._send(obj, true);
   }

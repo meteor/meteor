@@ -29,7 +29,7 @@ Install the latest official version of Meteor.js from your terminal by running o
 For Windows, Linux and OS X, you can run the following command:
 
 ```bash
-npx meteor@rc
+npx meteor
 ```
 
 ::: tip
@@ -136,7 +136,7 @@ To be able to user `meteor` command from fish it's needed to include `/home/<use
 If you installed Meteor using npx, you can remove it by running:
 
 ```bash
-npx meteor@rc uninstall
+npx meteor uninstall
 ```
 
 If you installed Meteor using curl or as a fallback solution, run:

@@ -153,6 +153,8 @@ Mongo.Collection = function Collection(name, options) {
       is_auto: true,
     });
   }
+
+  Mongo._collections.set(this._name, this);
 };
 
 Object.assign(Mongo.Collection.prototype, {
@@ -1207,6 +1209,28 @@ Object.assign(Mongo.Collection.prototype, {
     return self._driver.mongo.db;
   },
 });
+
+Object.assign(Mongo, {
+  /**
+   * @summary Retrieve a Meteor collection instance by name. Only collections defined with [`new Mongo.Collection(...)`](#collections) are available with this method. For plain MongoDB collections, you'll want to look at [`rawDatabase()`](#Mongo-Collection-rawDatabase).
+   * @locus Anywhere
+   * @memberof Mongo
+   * @static
+   * @param {string} name Name of your collection as it was defined with `new Mongo.Collection()`.
+   * @returns {Mongo.Collection | undefined}
+   */
+  getCollection(name) {
+    return this._collections.get(name);
+  },
+
+  /**
+   * @summary A record of all defined Mongo.Collection instances, indexed by collection name.
+   * @type {Map<string, Mongo.Collection>}
+   * @memberof Mongo
+   * @protected
+   */
+  _collections: new Map(),
+})
 
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {

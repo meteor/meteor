@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '2.0.0',
+  version: '2.0.1-beta302.2',
 });
 
 Package.onUse(function (api) {
@@ -22,15 +22,30 @@ Package.onUse(function (api) {
   // the like.
   api.use('ddp');
 
-
   api.export([
-    'pollUntil', 'try_all_permutations',
-    'SeededRandom', 'clickElement', 'blurElement',
-    'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
-    'renderToDiv', 'clickIt',
-    'withCallbackLogger', 'testAsyncMulti',
-    'simplePoll', 'runAndThrowIfNeeded',
-    'makeTestConnection', 'DomUtils', 'mockBehaviours', 'waitUntil']);
+    'pollUntil',
+    'try_all_permutations',
+    'SeededRandom',
+    'clickElement',
+    'blurElement',
+    'focusElement',
+    'simulateEvent',
+    'getStyleProperty',
+    'canonicalizeHtml',
+    'renderToDiv',
+    'clickIt',
+    'withCallbackLogger',
+    'testAsyncMulti',
+    'simplePoll',
+    'runAndThrowIfNeeded',
+    'DomUtils',
+    'mockBehaviours',
+    'waitUntil',
+    'makeTestConnection',
+    'createTestConnectionPromise',
+    'captureConnectionMessages',
+    'captureConnectionMessagesClient',
+  ]);
 
   api.addFiles('try_all_permutations.js');
   api.addFiles('async_multi.js');
@@ -43,7 +58,8 @@ Package.onUse(function (api) {
   api.addFiles('mock.js');
   api.addFiles('wait.js');
   api.addFiles('domutils.js', 'client');
-  api.addFiles('connection.js', 'server');
+  api.addFiles('connection_server.js', 'server');
+  api.addFiles('connection_client.js', 'client');
 });
 
 Package.onTest(function (api) {

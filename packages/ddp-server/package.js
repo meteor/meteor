@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
-  version: '3.0.0',
+  version: '3.0.1-beta302.2',
   documentation: null
 });
 
@@ -49,6 +49,7 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use('ecmascript', ['client', 'server']);
+  api.use('ejson', ['client', 'server']);
   api.use('livedata', ['client', 'server']);
   api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
