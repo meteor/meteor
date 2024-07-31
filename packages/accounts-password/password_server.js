@@ -103,7 +103,7 @@ const checkPassword = (user, password) => {
 };
 
 Accounts._checkPassword = checkPassword;
-Accounts._checkPasswordAsync =  checkPasswordAsync;
+Accounts._checkPasswordAsync = checkPasswordAsync;
 
 ///
 /// LOGIN

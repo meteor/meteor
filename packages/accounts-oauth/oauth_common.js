@@ -7,7 +7,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 
 // Helper for registering OAuth based accounts packages.
 // On the server, adds an index to the user collection.
-Accounts.oauth.registerService = name => {
+Accounts.oauth.registerService = async (name) => {
   if (hasOwn.call(services, name))
     throw new Error(`Duplicate service: ${name}`);
   services[name] = true;

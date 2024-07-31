@@ -23,7 +23,7 @@ OAuth._pendingCredentials.createIndexAsync('createdAt');
 
 
 // Periodically clear old entries that were never retrieved
-const _cleanStaleResults = () => {
+const _cleanStaleResults = async () => {
   // Remove credentials older than 1 minute
   const timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
@@ -53,7 +53,7 @@ OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
   // We do an upsert here instead of an insert in case the user happens
   // to somehow send the same `state` parameter twice during an OAuth
   // login; we don't want a duplicate key error.
-  OAuth._pendingCredentials.upsert({
+  OAuth._pendingCredentials.upsertAsync({
     key,
   }, {
     key,
@@ -72,7 +72,7 @@ OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
 OAuth._retrievePendingCredential = (key, credentialSecret = null) => {
   check(key, String);
 
-  const pendingCredential = OAuth._pendingCredentials.findOne({
+  const pendingCredential = OAuth._pendingCredentials.findOneAsync({
     key,
     credentialSecret,
   });
