@@ -348,7 +348,14 @@ export class CordovaBuilder {
     files.writeFile(configXmlPath, formattedXmlConfig, 'utf8');
   }
 
-  _copyImageToBuildFolderAndAppendToXmlNode(suppliedPath, newFilename, xmlElement, tag, attributes = {}) {
+  _copyImageToBuildFolderAndAppendToXmlNode(suppliedPath, newFilename, xmlElement, tag, attributes = {}, isIos = false) {
+    // will only change for the tag splash for preference in android.
+    const isAndroid = !isIos;
+    if (tag === 'splash' && isAndroid) {
+      return
+      Console.labelWarn('Android launch screens are no longer supported. Please use App.setPreference("AndroidWindowSplashScreenAnimatedIcon", "path/to/file", "android"). Visit https://cordova.apache.org/docs/en/latest/core/features/splashscreen/index.html#android-specific-information.')
+    }
+
     const src = files.pathJoin('resources', newFilename);
 
     files.copyFile(
@@ -422,21 +429,27 @@ export class CordovaBuilder {
           this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPathDarkMode,
               appendDarkMode(value),
               xmlElement,
-              'splash');
+              'splash',
+              {},
+              isIos);
         }
         this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath,
             value,
             xmlElement,
-            'splash');
+            'splash',
+            {},
+            isIos);
         return;
       }
 
       const filename = this._resolveFilenameForImages(suppliedPath, key, 'splash');
+
       this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath,
-          filename,
-          xmlElement,
-          'preference',
-          { name: value });
+        filename,
+        xmlElement,
+        'settings',
+        { name: value },
+        isIos);
     });
   }
 
