@@ -9,9 +9,9 @@ This guide is for users with Meteor 2.x projects understand the changes between 
 
 ## What's the status of version 3.0?
 
-Meteor 3.0 is currently in its Release Candidate (RC) phase, a nearly final version ready for final testing ahead of the official launch.
+Meteor 3.0 is currently in its official version!
 
-**Latest version:** `3.0-rc.10` <br/>
+**Latest version:** `3.0.1` <br/>
 **Node.js version:** `20.15.1 LTS` <br/>
 **NPM version:** `10.7.0`
 
@@ -20,7 +20,7 @@ Meteor 3.0 is currently in its Release Candidate (RC) phase, a nearly final vers
 You can create a new Meteor 3.0 project by running the command below:
 
 ```bash
-meteor create my-new-project --release 3.0-rc.4
+meteor create my-new-project --release 3.0.1
 ```
 
 ## How to upgrade from Meteor 2.x?
@@ -28,7 +28,7 @@ meteor create my-new-project --release 3.0-rc.4
 You can upgrade your Meteor 2.x project by running the command below inside your project folder:
 
 ```bash
-meteor update --release 3.0-rc.4
+meteor update --release 3.0.1
 meteor reset # resets project to a fresh state
 ```
 
