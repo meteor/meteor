@@ -1,3 +1,6 @@
+v1.2.8 - 2024-04-01
+* Add new dependency `@meteorjs/crypto-browserify` to replace `crypto-browserify` as it had unsafe dependencies.
+
 v1.2.1 - 2022-03-17
 
 * Fix the missing dependencies.
