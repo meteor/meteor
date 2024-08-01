@@ -43,7 +43,7 @@
     "@babel/traverse": "^7.25.0",
     "@babel/types": "^7.25.0",
     "@meteorjs/reify": "0.25.2",
-    "babel-preset-meteor": "^7.25.0",
+    "babel-preset-meteor": "^7.11.1",
     "babel-preset-minify": "^0.5.2",
     "convert-source-map": "^1.9.0",
     "lodash": "^4.17.21",
