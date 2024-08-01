@@ -1,11 +1,11 @@
 
 Package.describe({
   summary: "JavaScript's utility _ belt",
-  version: '1.8.3',
+  version: '1.9.2',
 });
 
 Npm.depends({
-  '@types/underscore': '1.11.9',
+  '@types/underscore': '1.8.20',
 });
 Package.onUse(function (api) {
   // Like all packages, we have an implicit dependency on the 'meteor'
