@@ -1998,7 +1998,7 @@ export class Connection {
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
     Object.entries(this._subscriptions).forEach(([id, sub]) => {
-      this._send({
+      this._sendQueued({
         msg: 'sub',
         id: id,
         name: sub.name,

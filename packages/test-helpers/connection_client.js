@@ -6,7 +6,10 @@ captureConnectionMessagesClient = async function () {
   const send = conn._stream.send;
 
   conn._stream.send = function (...args) {
-    messages.push(EJSON.parse(args[0]));
+    // Messages are not really sent when the socket is not connected, duh
+    if (conn._stream.currentStatus.connected) {
+      messages.push(EJSON.parse(args[0]));
+    }
     send.apply(this, args);
   }
 
