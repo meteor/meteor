@@ -7,7 +7,7 @@
     "exit-normally": "echo \"This script will exit normally\" && exit 0"
   },
   "dependencies": {
-    "@babel/runtime": "^7.25.0",
-    "meteor-node-stubs": "^1.2.9"
+    "@babel/runtime": "^7.23.5",
+    "meteor-node-stubs": "^1.2.7"
   }
 }

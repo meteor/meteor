@@ -12,7 +12,7 @@ var packageJson = {
     // found in dev-bundle-tool-package.js.
     promise: "8.3.0",
     "@meteorjs/reify": "0.25.2",
-    "@babel/parser": "7.25.0",
+    "@babel/parser": "7.24.8",
     "lru-cache": "6.0.0",
     underscore: "1.13.7",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/81bce1f99625e62af73338f63afcf2b44c6cfa5e",

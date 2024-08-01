@@ -2,8 +2,8 @@
   "name": "app-prints-pid",
   "private": true,
   "dependencies": {
-    "@babel/runtime": "^7.25.0",
-    "meteor-node-stubs": "^1.2.9"
+    "@babel/runtime": "^7.23.5",
+    "meteor-node-stubs": "^1.2.7"
   },
   "meteor": {
     "mainModule": {

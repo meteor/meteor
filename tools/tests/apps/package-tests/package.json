@@ -5,6 +5,6 @@
     "start": "meteor run"
   },
   "dependencies": {
-    "@babel/runtime": "^7.25.0"
+    "@babel/runtime": "^7.15.3"
   }
 }

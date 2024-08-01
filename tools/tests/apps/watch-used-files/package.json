@@ -8,7 +8,7 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.25.0"
+    "@babel/runtime": "^7.15.3"
   },
   "meteor": {
     "mainModule": {
