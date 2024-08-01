@@ -3,8 +3,8 @@
 layout: home
 
 hero:
-  text: "Meteor Docs"
-  tagline: "All the documentation you need to build and deploy your app with Meteor."
+  text: "Meteor.js Docs"
+  tagline: "Documentation, resources, and API references to help you build and deploy with Meteor.js."
   image:
     src: /logo.png
     alt: Meteor
