@@ -19,7 +19,7 @@ var packageJson = {
     // found in dev-bundle-server-package.js.
     "@meteorjs/reify": "0.25.2",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.24.8",
+    "@babel/runtime": "7.25.0",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
