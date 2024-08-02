@@ -40,7 +40,13 @@ export default defineConfig({
           {
             text: 'Migration from Meteor.js 2',
             link: 'https://v3-migration-docs.meteor.com'
-          }
+          },
+          {
+            text: 'Tutorials',
+            items: [
+              { text: 'Meteor.js 3 + Vue.js 3', link: '/tutorials/meteorjs-vue' },
+            ]
+          },
         ]
       },
       {
@@ -217,7 +223,7 @@ export default defineConfig({
             link: '/api/top-level-await'
           }
         ],
-        collapsed: false,
+        collapsed: true,
       },
       {
         text: "Packages",
@@ -346,6 +352,13 @@ export default defineConfig({
           { link: "/cli/", text: "CLI" },
           { link: "/cli/using-core-types", text: "Using Core Types" },
           { link: "/cli/environment-variables", text: "Environment Variables" },
+        ],
+        collapsed: true,
+      },
+      {
+        text: "Tutorials",
+        items: [
+          { link: "/tutorials/meteorjs-vue", text: "Meteor.js + Vue" },
         ],
         collapsed: true,
       },
