@@ -118,7 +118,7 @@ Now, we need to import this file in our server:
 ...
 import { TasksCollection } from '/imports/api/TasksCollection';
 
-import "../imports/api/TasksPublications";
+import "../imports/api/TasksPublications"; // [!code highlight]
 
 const insertTask = taskText => TasksCollection.insertAsync({ text: taskText });
 ...
@@ -145,7 +145,13 @@ export const App = () => {
 }
 ```
 
+As you can see, when subscribing to a publication using `useSubscribe` you'll get a `isLoading` function, that you can use to render some loading component before the data is ready.
+
+> For more information on Publications/Subscriptions, please check our [docs](https://v3-docs.meteor.com/api/meteor.html#pubsub).
+
 See how your app should look like now:
+
+<img width="200px" src="/tutorials/react/assets/collections-tasks-list.png"/>
 
 You can change your data on MongoDB in the server and your app will react and re-render for you.
 
@@ -153,12 +159,14 @@ You can connect to your MongoDB running `meteor mongo` in the terminal from your
 
 See how to connect:
 
+<img width="500px" src="/tutorials/react/assets/collections-connect-db.png"/>
+
 See your database:
+
+<img width="500px" src="/tutorials/react/assets/collections-see-database.png"/>
 
 You can double-click your collection to see the documents stored on it:
 
-But wait, how are my tasks coming from the server to the client? We are going to explain this later, in the step about Publications and Subscriptions. What you need to know now is that you are publishing all the data from the database to the client. This will be removed later as we don't want to publish all the data all the time.
-
-> Review: you can check how your code should be at the end of this step [here](https://github.com/meteor/react-tutorial/tree/master/src/simple-todos/step02)
+<img width="500px" src="/tutorials/react/assets/collections-documents.png"/>
 
 In the next step, we are going to create tasks using a form.
