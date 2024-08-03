@@ -1519,11 +1519,11 @@ export class AccountsServer extends AccountsCommon {
   }
 
   _handleError = (msg, throwError = true, errorCode = 403) => {
-    const isErrorAmbiguous = this._options.ambiguousErrorMessages ?? Meteor.isProduction;
+    const isErrorAmbiguous = this._options.ambiguousErrorMessages ?? true;
     const error = new Meteor.Error(
       errorCode,
       isErrorAmbiguous
-        ? "Something went wrong. Please check your credentials."
+        ? 'Something went wrong. Please check your credentials.'
         : msg
     );
     if (throwError) {
