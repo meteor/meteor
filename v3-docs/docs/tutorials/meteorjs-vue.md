@@ -33,6 +33,10 @@ To set up Meteor with Vue easily, run the following command, replacing `simple-t
 meteor create --vue simple-todos-vue --release=3.0.2
 ```
 
+::: info
+You can find the final version of this tutorial in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
+:::
+
 Meteor will create all the necessary files for you. The `--vue` flag generates a project using Vue, Vite and Tailwind CSS.
 
 You will find the `client` directory contains files for your client-side setup. Inside, there should be an empty `main.js` file required for Meteor's import mode. However, with Vite, the entry point is set in the `vite.config.js` file, pointing to `imports/ui/main.js`, which is where Meteor renders the main component.
@@ -1357,6 +1361,10 @@ This is huge, you have your app running on Galaxy, ready to be used by anyone in
 You have completed the tutorial!
 
 By now, you should have a good understanding of working with Meteor and Vue.
+
+::: info
+You can find the final version of this tutorial in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
+:::
 
 Here are some options for what you can do next:
 
