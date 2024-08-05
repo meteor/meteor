@@ -30,7 +30,7 @@ If you encounter any issues, please refer to the requirements and details in [ou
 To set up Meteor with Vue easily, run the following command, replacing `simple-todos-vue` with your chosen project name:
 
 ```shell
-meteor create --vue simple-todos-vue --release=3.0.2
+meteor create --vue simple-todos-vue --release=3.0.1
 ```
 
 ::: info
