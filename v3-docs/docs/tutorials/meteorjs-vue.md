@@ -1,4 +1,4 @@
-# Meteor.js 3 + Vue.js 3 Tutorial
+# Meteor.js 3 + Vue Tutorial
 
 In this tutorial, we will create a simple To-Do app using [Vue 3](https://vuejs.org/) and Meteor 3.0. Meteor works well with other frameworks like [Blaze](https://www.blazejs.org/), [React](https://react.dev/), [Solid](https://www.solidjs.com/), and [Svelte](https://svelte.dev/).
 
@@ -7,6 +7,10 @@ Vue.js is a powerful JavaScript framework for making user interfaces. It helps y
 To start building your Vue.js app, you'll need a code editor. If you're unsure which one to choose, [Visual Studio Code](https://code.visualstudio.com/) is a good option. After installing it, you can enhance your experience by adding extensions like [Meteor Toolbox](https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox) and [Vue Language Features](https://marketplace.visualstudio.com/items?itemName=Vue.volar).
 
 Let’s begin building your app!
+
+# Table of Contents
+
+[[toc]]
 
 ## 1: Creating the app
 
@@ -53,9 +57,8 @@ Let's remove some unnecessary files for a cleaner start. Keep only `App.vue`, `m
 
 Next, update `router.js` to remove references to the deleted components:
 
-`imports/ui/router.js`
-
-```javascript
+::: code-group
+```javascript [imports/ui/router.js]
 import { createRouter, createWebHistory } from 'vue-router';
 import App from './App.vue';
 
@@ -70,21 +73,21 @@ export const router = createRouter({
   ],
 });
 ```
+:::
 
 This file is where you set up your routes and decide which component to render for each path.
 
 Also, update the App component since some components no longer exist.
 
-`imports/ui/App.vue`
-
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <template>
   <div class="p-8">
     <h1>Hello Meteor</h1>
   </div>
 </template>
 ```
-
+:::
 
 ### 1.4: Creating Sample Tasks
 
@@ -94,9 +97,8 @@ We’ll create our Vue components in the `imports/ui/components` folder. Start b
 This file will export a Vue component called `Task`, representing an individual task in your To-Do list.
 
 
-`imports/ui/components/Task.vue`
-
-```vue
+::: code-group
+```vue [imports/ui/components/Task.vue]
 <script setup>
 defineProps({
   task: {
@@ -110,16 +112,15 @@ defineProps({
   <li>{{ task.text }}</li>
 </template>
 ```
-
+:::
 
 Since the `Task` component will be part of a list, it returns a `li` element.
 
 For now, we won’t connect to our database, so define some sample data in the `App.vue` file to display a list of tasks. Create an array and a function to return this array.
 
 
-`imports/ui/App.vue`
-
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <script setup>
 import Task from './components/Task.vue'
 
@@ -138,7 +139,7 @@ const getTasks = () => {
   </div>
 </template>
 ```
-
+:::
 
 ### 1.5: Rendering Tasks
 
@@ -148,9 +149,8 @@ Now let's add some simple rendering logic with Vue to display our list items usi
 Update the template of the `App` component to include the list of tasks:
 
 
-`imports/ui/App.vue`
-
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <script setup>
 import Task from './components/Task.vue'
 
@@ -173,9 +173,9 @@ const getTasks = () => {
   </div>
 </template>
 ```
+:::
 
-
-> For more information on Vue iterations, you can read [here](https://vuejs.org/api/built-in-directives.html#v-for).
+For more information on Vue iterations, you can read [here](https://vuejs.org/api/built-in-directives.html#v-for).
 
 In the next step, we will connect to the MongoDB database to store our tasks.
 
@@ -184,8 +184,7 @@ In the next step, we will connect to the MongoDB database to store our tasks.
 
 
 Meteor already sets up MongoDB for you. In order to use our database we need to create a *collection*, which is where we will store our *documents*, in our case our `tasks`.
-
-> You can read more about collections [here](http://guide.meteor.com/collections.html).
+You can read more about collections [here](http://guide.meteor.com/collections.html).
 
 
 In this step we will implement all the necessary code to have a basic collection for our tasks up and running.
@@ -195,14 +194,14 @@ In this step we will implement all the necessary code to have a basic collection
 
 Before creating our collection, let's remove the `links.js` file from the `imports/api`  folder because we won't use it. Now, you can create a new collection to store our tasks by creating a new file named `TasksCollection.js` inside the `imports/api` folder.
 
-`imports/api/TasksCollection.js`
 
-```javascript
+::: code-group
+```javascript [imports/api/TasksCollection.js]
 import { Mongo } from 'meteor/mongo';
  
 export const TasksCollection = new Mongo.Collection('tasks');
 ```
-
+:::
 
 The code above instantiates a new MongoDB collection and exports it. You can read more about app structure and imports/exports [here](https://guide.meteor.com/structure.html).
 
@@ -217,10 +216,8 @@ Now, it’s easy to check if there is data in our collection, or we can easily a
 
 Replace the old content in `server/main.js` with the code below.
 
-
-`server/main.js`
-
-```javascript
+::: code-group
+```javascript [server/main.js]
 import { Meteor } from 'meteor/meteor';
 import { TasksCollection } from '../imports/api/TasksCollection';
 
@@ -239,7 +236,7 @@ Meteor.startup(async () => {
   }
 });
 ```
-
+:::
 
 So you are importing the `TasksCollection` and adding a few tasks on it calling a function to insert this string as our `text` field in our `task` document.
 
@@ -248,21 +245,22 @@ So you are importing the `TasksCollection` and adding a few tasks on it calling 
 
 Now comes the fun part, you will render the tasks using a “data container” to feed Meteor’s reactive data into Vue’s component hierarchy. We will use the [vue-meteor-tracker](https://www.npmjs.com/package/vue-meteor-tracker) package for this.
 
-> Meteor works with Meteor packages and NPM packages, usually Meteor packages are using Meteor internals or other Meteor packages.
-
+::: info
+Meteor works with Meteor packages and NPM packages, usually Meteor packages are using Meteor internals or other Meteor packages.
+:::
 
 The `vue-meteor-tracker` package is already included in the Vue skeleton, so you don’t need to add it.
-
-> The `vue-meteor-tracker` package doesn't support async calls yet, so we need to use sync functions for now.
-
 
 When importing code from a Meteor package the only difference from NPM modules is that you need to prepend `meteor/` in the from part of your import.  
 First we need to implement a subscription at the `App` component to get the tasks updated from the server. It can be done simply by using the `subscribe` and `autorun` functions from `vue-meteor-tracker`.
 
+::: info
+The `vue-meteor-tracker` package doesn't support async calls yet, so we need to use sync functions. This is not an issue, but it's important to know.
+:::
 
-`imports/ui/App.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <script setup>
 import Task from './components/Task.vue';
 import { subscribe, autorun } from 'vue-meteor-tracker';
@@ -283,13 +281,13 @@ const tasks = autorun(() => TasksCollection.find({}).fetch()).result;
   </div>
 </template>
 ```
-
+:::
 
 To be able to fetch data in the client, you need to publish it in the server. To do it, create a file called `tasksPublications.js` and add the following code:
 
-`imports/api/tasksPublications.js`
 
-```javascript
+::: code-group
+```javascript [imports/api/tasksPublications.js]
 import { Meteor } from 'meteor/meteor';
 import { TasksCollection } from './TasksCollection';
 
@@ -297,18 +295,18 @@ Meteor.publish('tasks', function publishTasks() {
     return TasksCollection.find();
 });
 ```
-
+:::
 
 Now, import it on the server:
 
-`server/main.js`
 
-```javascript
+::: code-group
+```javascript [server/main.js]
 import '../imports/api/tasksPublications';
 ```
+:::
 
-
-If you want to learn more about how publications works, you can read the [Meteor Guide](https://docs.meteor.com/api/pubsub.html).
+> If you want to learn more about how publications works, you can read the [Meteor Guide](https://docs.meteor.com/api/pubsub.html).
 
 Now, your app should look like this:
 
@@ -342,9 +340,9 @@ First, we need to create a simple form component to encapsulate our logic.
 
 Create a new file `TaskForm.vue` in your `ui/components` folder.
 
-`imports/ui/components/TaskForm.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/components/TaskForm.vue]
 <script setup>
 import { ref } from 'vue';
 
@@ -365,7 +363,7 @@ const addTask = () => {
     </form>
 </template>
 ```
-
+:::
 
 This form will have an input element that has a `v-model` attribute. The `newTask` data field will now be bound via two-way binding to the input element’s value.
 
@@ -376,9 +374,9 @@ You can see that the form element has a `@submit.prevent` attribute. This will c
 
 Then we can simply add this to our `App` component above your list of tasks:
 
-`imports/ui/App.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <script setup>
 import Task from './components/Task.vue';
 import TaskForm from './components/TaskForm.vue';
@@ -401,7 +399,7 @@ const tasks = autorun(() => TasksCollection.find({}).fetch()).result;
   </div>
 </template>
 ```
-
+:::
 
 ### 3.3: Add Insert Operation
 
@@ -412,9 +410,9 @@ Methods are essentially RPC calls to the server that let you perform operations 
 
 To create your methods, you can create a file called `tasksMethods.js`.
 
-`imports/api/tasksMethods.js`
 
-```javascript
+::: code-group
+```javascript [imports/api/tasksMethods.js]
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
 import { TasksCollection } from './TasksCollection';
@@ -429,25 +427,25 @@ async function insertTask(text) {
 
 Meteor.methods({ insertTask });
 ```
-
+:::
 
 Remember to import your method on the `main.js` server file.
 
-`server/main.js`
 
-```javascript
+::: code-group
+```javascript [server/main.js]
 import { Meteor } from 'meteor/meteor';
 import { TasksCollection } from '../imports/api/TasksCollection';
 import './imports/api/tasksPublications';
 import '../imports/api/tasksMethods';
 ```
-
+:::
 
 Now, we can call this method from our `TaskForm.vue` component.
 
-`imports/ui/components/TaskForm.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/components/TaskForm.vue]
 <script setup>
 import { ref } from 'vue';
 import { Meteor } from 'meteor/meteor';
@@ -460,7 +458,7 @@ const addTask = async () => {
 }
 </script>
 ```
-
+:::
 
 Inside the function, we are adding a task to the `tasks` collection by calling `Meteor.callAsync()`. The first argument is the name of the method we want to call, and the second argument is the text of the task. We are also trimming the text to remove any extra spaces.
 
@@ -469,9 +467,9 @@ Inside the function, we are adding a task to the `tasks` collection by calling `
 
 Now, you just need to make a change which will improve user experience: we will show the newest tasks first. We can accomplish this quickly by sorting our [MongoDB](https://guide.meteor.com/collections.html#mongo-collections) query.
 
-`imports/ui/App.vue`
 
-```javascript
+::: code-group
+```javascript [imports/ui/App.vue]
 ...
 
 const tasks = autorun(() => {
@@ -480,7 +478,7 @@ const tasks = autorun(() => {
 
 ...
 ```
-
+:::
 
 Your app should look like this:
 
@@ -500,9 +498,8 @@ To do this, we need to add a `ref` to the task document. This will allow us to a
 We also have a prop called `task` that is passed to the component. This prop is an object that represents the task document.
 
 
-`imports/ui/components/Task.vue`
-
-```vue
+::: code-group
+```vue [imports/ui/components/Task.vue]
 <script setup>
 import { ref, computed } from 'vue';
 
@@ -531,16 +528,16 @@ const isChecked = computed(() => taskRef.value.checked);
 </template>
  ..
 ```
-
+:::
 
 ### 4.2: Toggle Checkbox
 
 
 We need to implement the method to update the task document. So, update the `tasksMethods.js` file with the following code:
 
-`imports/api/tasksMethods.js`
 
-```javascript
+::: code-group
+```javascript [imports/api/tasksMethods.js]
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
 import { TasksCollection } from './TasksCollection';
@@ -571,7 +568,7 @@ async function setIsCheckedTask(taskId, checked) {
 
 Meteor.methods({ insertTask, removeTask, setIsCheckedTask });
 ```
-
+:::
 
 The `updateAsync` function on a collection takes two arguments. The first is a selector that identifies a subset of the collection, and the second is an update parameter that specifies what should be done to the matched objects.
 
@@ -579,9 +576,9 @@ In this case, the selector is just the `_id` of the relevant task. The update pa
 
 On the client side, you need to add a function to handle the checkbox change event. This method updates the local `taskRef.checked` state and handles the Meteor call to update the task's checked status. It encapsulate any logic you want to perform when the checkbox is checked or unchecked.
 
-`imports/ui/components/Task.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/components/Task.vue]
 <script setup>
 import { ref, computed } from 'vue';
 
@@ -619,7 +616,7 @@ const handleCheckboxChange = async (event) => {
   </div>
 </template>
 ```
-
+:::
 
 Your app should look like this:
 
@@ -632,9 +629,8 @@ You can remove tasks with just a few lines of code.
 
 First add a button after the text in your `Task` component and receive a callback function.
 
-`imports/ui/components/Task.vue`
-
-```vue
+::: code-group
+```vue [imports/ui/components/Task.vue]
 ...
 <span class="text-gray-600 pl-2" :class="{ 'text-gray-400 italic line-through': taskRef.checked }">
   {{ task.text }}
@@ -646,15 +642,14 @@ First add a button after the text in your `Task` component and receive a callbac
 </button>
 ...
 ```
-
+:::
 
 Now add the removal logic into methods:
 
-`imports/ui/components/Task.vue`
 
-```javascript
+::: code-group
+```javascript [imports/ui/components/Task.vue]
 ...
-
 const deleteTask = async () => {
   try {
     await Meteor.callAsync('removeTask', taskRef.value._id);
@@ -662,10 +657,9 @@ const deleteTask = async () => {
     console.error('Error deleting task:', error);
   }
 };
-
 ...
 ```
-
+:::
 
 Your app should look like this:
 
@@ -679,9 +673,9 @@ Your app should look like this:
 
 Our user interface has not looked great so far. Let’s add some basic styling to create a foundation for a more professional app. We'll start with the App component.
 
-`imports/ui/App.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <template>
   <header class="flex items-center justify-between px-4 py-4 bg-gray-100 border-t border-b border-gray-200">
     <h1 class="text-4xl font-bold text-gray-800 my-4">🚀 To-Do List</h1>
@@ -696,18 +690,15 @@ Our user interface has not looked great so far. Let’s add some basic styling t
   </div>
 </template>
 ```
+:::
 
-> If you want to learn more about this stylesheet check this article about [Flexbox](https://css-tricks.com/snippets/css/a-guide-to-flexbox/), and also this free [video tutorial](https://flexbox.io/) about it from [Wes Bos](https://twitter.com/wesbos).
-> Flexbox is an excellent tool to distribute and align elements in your UI. Also check this [article](https://tailwindcss.com/docs/) about [Tailwind CSS](https://tailwindcss.com/), the CSS framework we are using in this tutorial.
-
-
+> Flexbox is an excellent tool to distribute and align elements in your UI. Check this [article](https://tailwindcss.com/docs/) to learn more about [Tailwind CSS](https://tailwindcss.com/), the CSS framework we are using in this tutorial.
 
 We’ll also update the `TaskForm` component and the `Task` component.
 
 
-`imports/ui/components/TaskForm.vue`
-
-```vue
+::: code-group
+```vue [imports/ui/components/TaskForm.vue]
 <template>
   <form @submit.prevent="addTask">
     <input
@@ -719,10 +710,7 @@ We’ll also update the `TaskForm` component and the `Task` component.
 </template>
 ```
 
-
-`imports/ui/components/Task.vue`
-
-```vue
+```vue [imports/ui/components/Task.vue]
 <template>
   <div class="flex items-center rounded p-4 py-2 mb-2 shadow-sm border border-gray-200 md:mr-8">
     <li>
@@ -737,7 +725,7 @@ We’ll also update the `TaskForm` component and the `Task` component.
   </div>
 </template>
 ```
-
+:::
 
 Your app should look like this:
 
@@ -756,9 +744,9 @@ In this step you will filter your tasks by status and show the quantity of pendi
 
 First, you will add a button to show or hide the completed tasks from the list:
 
-`imports/ui/App.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <div class="mb-8 md:w-96 md:mx-auto md:mb-0 md:mt-8 md:px-4 md:py-8 text-center md:bg-gray-100 md:rounded-lg">
     <TaskForm />
     <div>
@@ -772,13 +760,13 @@ First, you will add a button to show or hide the completed tasks from the list:
     </ul>
 </div>
 ```
-
+:::
 
 You can see that it reads from `hideCompleted`. We’ll need to initialize the value of `hideCompleted` using `ref` in the script section:
 
-`imports/ui/App.vue`
 
-```javascript
+::: code-group
+```javascript [imports/ui/App.vue]
 ...
 import { ref } from 'vue';
 
@@ -787,13 +775,12 @@ const hideCompleted = ref(false);
 subscribe('tasks');
 ...
 ```
-
+:::
 
 We can update `hideCompleted` from an event handler directly, which will then cause the component to re-render:
 
-`imports/ui/App.vue`
-
-```javascript
+::: code-group
+```javascript [imports/ui/App.vue]
 ...
 const toggleHideCompleted = () => {
   hideCompleted.value = !hideCompleted.value
@@ -801,6 +788,7 @@ const toggleHideCompleted = () => {
 </script>
 ...
 ```
+:::
 
 Now, we need to update the list of tasks to filter out completed tasks when `hideCompleted` is `true`.
 
@@ -829,9 +817,9 @@ Update the App component in order to show the number of pending tasks in the app
 
 You should avoid adding zero to your app bar when there are no pending tasks.
 
-`imports/ui/App.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <script setup>
 ... 
 const incompleteTasksCount = autorun(() => {
@@ -848,7 +836,7 @@ const incompleteTasksCount = autorun(() => {
 ...
 </template>
 ```
-
+:::
 
 At this point, your app should look like this:
 
@@ -885,9 +873,9 @@ meteor npm install --save bcrypt
 
 Now, you can create a default user for our app. We will create a new user when the server starts if we don’t find one in the database. Let's make specific functions for user creation and task creation, and then call both in `Meteor.startup()`.
 
-`server/main.js`
 
-```javascript
+::: code-group
+```javascript [server/main.js]
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { TasksCollection } from '../imports/api/TasksCollection';
@@ -927,7 +915,7 @@ Meteor.startup(async () => {
   await createTasks();
 });
 ```
-
+:::
 
 You should not see anything different in your app UI yet.
 
@@ -938,9 +926,9 @@ You need to give users a way to enter their credentials and log in. For this, we
 
 Create a new file called `LoginForm.vue` and add a form to it. Use `Meteor.loginWithPassword(username, password)` to log in the user with the provided information.
 
-`imports/ui/components/LoginForm.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/components/LoginForm.vue]
 <script setup>
 import { Meteor } from 'meteor/meteor';
 import { ref } from 'vue';
@@ -976,7 +964,7 @@ const login = () => {
   </form>
 </template>
 ```
-
+:::
 
 ### 7.4: Require Authentication
 
@@ -987,9 +975,9 @@ We can achieve this by showing the `LoginForm` component when there is no authen
 
 We’ll need a `ref` to check if the user is logged in, a `userId` variable to store user data, and some logic using `watch` to update the `isLogged` `ref` when the user changes.
 
-`imports/ui/App.vue`
 
-```javascript
+::: code-group
+```javascript [imports/ui/App.vue]
 ...
 import { Meteor } from 'meteor/meteor';
 import { ref, watch } from 'vue';
@@ -1008,13 +996,13 @@ watch(
 );
 ...
 ```
-
+:::
 
 Next, we can wrap our user features in a `<div>` tag and use the `v-if` directive to show these features only when a user is logged in:
 
-`imports/ui/App.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <script setup>
 ...
 import LoginForm from './components/LoginForm.vue';
@@ -1049,7 +1037,7 @@ import LoginForm from './components/LoginForm.vue';
   </div>
 </template>
 ```
-
+:::
 
 ### 7.5: Server startup
 
@@ -1060,9 +1048,9 @@ From now on, every task must have an owner. Please go to your database and remov
 
 Then, update your `server/main.js` to add the seed tasks with your `meteoriote` user as the owner.
 
-`server/main.js`
 
-```javascript
+::: code-group
+```javascript [server/main.js]
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { TasksCollection } from '../imports/api/TasksCollection';
@@ -1106,15 +1094,15 @@ Meteor.startup(async () => {
   await createTasks();
 });
 ```
-
+:::
 
 See that we are using a new field called `userId` with our user `_id` field, we are also setting `createdAt` field.
 
 Go to the tasks publication and add the `userId` to the find selector, so users will be able to see only their own tasks.
 
-`imports/api/tasksPublications.js`
 
-```javascript
+::: code-group
+```javascript [imports/api/tasksPublications.js]
 import { Meteor } from 'meteor/meteor';
 import { TasksCollection } from '../db/TasksCollection';
 
@@ -1122,7 +1110,7 @@ Meteor.publish('tasks', function publishTasks() {
   return TasksCollection.find({ userId: Meteor.userId() });
 });
 ```
-
+:::
 
 Before testing, make sure to restart the server after making this change so that the `Meteor.startup` block runs again. This will likely happen automatically since you're changing the server-side code.
 
@@ -1133,9 +1121,9 @@ Tasks are filtered by their owner in the publication using the authenticated use
 
 Your `tasks` function should look like this:
 
-`imports/ui/App.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <script setup>
 ...
 const userId = autorun(() => Meteor.userId()).result;
@@ -1162,16 +1150,16 @@ const incompleteTasksCount = autorun(() => {
 ...
 </script>
 ```
-
+:::
 
 ### 7.8: Log out
 
 
 We can include a new `button` right after our `h1`. On this button you can add an `onClick` handler to logout the user. It is very straightforward, just call `Meteor.logout()` on it.
 
-`imports/ui/App.vue`
 
-```vue
+::: code-group
+```vue [imports/ui/App.vue]
 <script setup>
 ...
 const logout = () => Meteor.logout();
@@ -1189,6 +1177,7 @@ const logout = () => Meteor.logout();
 </button>
 ...
 ```
+:::
 
 Now that we have authentication, we can add a check on the server side to ensure only logged-in users can delete, update, or add new tasks.
 
@@ -1205,9 +1194,8 @@ if (!Meteor.userId()) {
 Follow how your `tasksMethods` should look like:
 
 
-`/imports/api/tasksMethods.js`
-
-```javascript
+::: code-group
+```javascript [/imports/api/tasksMethods.js]
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
 import { TasksCollection } from './TasksCollection';
@@ -1219,6 +1207,7 @@ async function insertTask(text) {
     }
     return await TasksCollection.insertAsync({
         text,
+        userId: Meteor.userId(),
         createdAt: new Date,
     });
 }
@@ -1248,7 +1237,7 @@ async function setIsCheckedTask(taskId, checked) {
 
 Meteor.methods({ insertTask, removeTask, setIsCheckedTask });
 ```
-
+:::
 
 Phew! You have done quite a lot in this step. Authenticated the user, set the user in the tasks and provided a way for the user to log out.
 
@@ -1292,9 +1281,9 @@ You need to create a setting file, it’s a JSON file that Meteor apps can read 
 
 Make sure you replace `Your MongoDB URL` by your own MongoDB URL :)
 
-`private/settings.json`
 
-```json
+::: code-group
+```json [private/settings.json]
 {
   "galaxy.meteor.com": {
     "env": {
@@ -1303,7 +1292,7 @@ Make sure you replace `Your MongoDB URL` by your own MongoDB URL :)
   }
 }
 ```
-
+:::
 
 ### 8.4: Deploy it
 
@@ -1348,7 +1337,6 @@ This process usually takes just a few minutes, but it depends on your internet s
 
 > Galaxy builds a new Docker image that contains your app bundle and then deploy containers using it, [read more](https://galaxy-guide.meteor.com/container-environment.html).
 
-
 You can check your logs on Galaxy, including the part that Galaxy is building your Docker image and deploying it.
 
 ### 8.5: Access the app and enjoy
@@ -1356,12 +1344,11 @@ You can check your logs on Galaxy, including the part that Galaxy is building yo
 
 Now you should be able to access your Galaxy dashboard at `https://galaxy.meteor.com/app/vue3-meteor-3.meteorapp.com`.
 
-You can also access your app on Galaxy 2.0 which is currently in beta at `https://galaxy-beta.meteor.com/<your-username>/us-east-1/apps/<your-app-name>.meteorapp.com` . Remember to use your own sub-domain instead of `vue3-meteor-3`.
+You can also access your app on Galaxy 2.0 which is currently in beta at `https://galaxy-beta.meteor.com/<your-username>/us-east-1/apps/<your-app-name>.meteorapp.com`. Remember to use your own subdomain instead of `vue3-meteor-3`.
 
 You can access the app at [vue3-meteor-3.meteorapp.com](https://vue3-meteor-3.meteorapp.com/)! Just use your subdomain to access yours!
 
 > We deployed to Galaxy running in the US (us-east-1), we also have Galaxy running in other regions in the world, check the list [here](https://galaxy-guide.meteor.com/deploy-region.html).
-
 
 This is huge, you have your app running on Galaxy, ready to be used by anyone in the world!
 

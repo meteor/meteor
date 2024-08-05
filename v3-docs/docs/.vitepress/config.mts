@@ -44,7 +44,7 @@ export default defineConfig({
           {
             text: 'Tutorials',
             items: [
-              { text: 'Meteor.js 3 + Vue.js 3', link: '/tutorials/meteorjs-vue' },
+              { text: 'Meteor.js 3 + Vue', link: '/tutorials/meteorjs-vue' },
             ]
           },
         ]
