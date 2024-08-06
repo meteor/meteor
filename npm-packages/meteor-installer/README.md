@@ -48,7 +48,7 @@ npm install -g meteor --ignore-meteor-setup-exec-path
 
 Set the `https_proxy` or `HTTPS_PROXY` environment variable to a valid proxy URL to download Meteor files through the configured proxy.
 
-### Meteor version relationship
+### Meteor Version Compatibility
 
 | NPM Package | Meteor Official Release |
 |-------------|-------------------------|
