@@ -2,9 +2,9 @@
 
 ### Recommended Versions
 
-- For Meteor 2
-  - Use Node.js 14.x or higher
-  - Use npm 6.x or higher
+- For Meteor 2 (Legacy)
+  - Use Node.js 14.x
+  - Use npm 6.x
 - For Meteor 3
   - Use Node.js 20.x or higher
   - Use npm 9.x or higher
@@ -14,21 +14,31 @@
 To install Meteor, run the following command:
 
 ```bash
-npm install -g meteor
+npx meteor
 ```
 
-#### Running with `npx`:
+It will install Meteor's latest version, alternatively you can install a specific version by running:
 
 ```bash
-npx meteor
-
-# or with a specific version
 npx meteor@<version>
 ```
 
 This command will execute the Meteor installer without adding it permanently to your global npm packages.
 
-For more information, visit the [official Meteor installation guide](https://www.meteor.com/developers/install).
+You can also install it globally by running the following command, but it is not recommended:
+
+```bash
+npm install -g meteor
+```
+
+For more information, visit:
+
+- [Meteor 2 Installation Guide (Legacy)](https://v2-docs.meteor.com/install.html)
+- [**Meteor 3 Installation Guide**](https://v3-docs.meteor.com/about/install.html)
+
+
+
+
 
 ### Important Note
 
