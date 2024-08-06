@@ -25,12 +25,6 @@ npx meteor@<version>
 
 This command will execute the Meteor installer without adding it permanently to your global npm packages.
 
-You can also install it globally by running the following command, but it is not recommended:
-
-```bash
-npm install -g meteor
-```
-
 For more information, visit:
 
 - [Meteor 2 Installation Guide (Legacy)](https://v2-docs.meteor.com/install.html)
