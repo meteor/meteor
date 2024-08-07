@@ -8,9 +8,9 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.23.9",
-    "meteor-node-stubs": "^1.2.7",
-    "solid-js": "^1.8.15"
+    "@babel/runtime": "^7.25.0",
+    "meteor-node-stubs": "^1.2.9",
+    "solid-js": "^1.8.19"
   },
   "meteor": {
     "mainModule": {
@@ -20,10 +20,10 @@
     "testModule": "tests/main.js"
   },
   "devDependencies": {
-    "babel-preset-solid": "^1.8.15",
-    "meteor-vite": "^1.10.2",
-    "vite": "^4.5.2",
-    "vite-plugin-solid": "^2.10.1",
-    "vite-plugin-solid-svg": "^0.8.0"
+    "babel-preset-solid": "^1.8.19",
+    "meteor-vite": "^1.10.4",
+    "vite": "^4.5.3",
+    "vite-plugin-solid": "^2.10.2",
+    "vite-plugin-solid-svg": "^0.8.1"
   }
 }

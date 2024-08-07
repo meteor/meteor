@@ -8,16 +8,16 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.23.5",
+    "@babel/runtime": "^7.25.0",
     "@chakra-ui/icons": "^1.1.7",
     "@chakra-ui/react": "^1.8.8",
     "@emotion/react": "^11.9.3",
     "@emotion/styled": "^11.9.3",
     "@react-icons/all-files": "^4.1.0",
     "framer-motion": "^6.4.2",
-    "meteor-node-stubs": "^1.2.7",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "meteor-node-stubs": "^1.2.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "meteor": {
     "mainModule": {
