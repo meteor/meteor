@@ -19,6 +19,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 ### Next releases
 
 - Improve TypeScript support for Meteor and packages ([Discussion](https://github.com/meteor/meteor/discussions/12080))
+  - This should be an ongoing effort to improve the TypeScript support in Meteor and packages, as we write new code in TypeScript and get more skin in the game, it should naturally improve.
 - MongoDB Change Streams support ([Discussion](https://github.com/meteor/meteor/discussions/11842))
 - Integrated support for Vite (Client Bundler)
   - Tree-shaking (Client)
