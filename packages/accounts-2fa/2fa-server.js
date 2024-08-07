@@ -13,8 +13,8 @@ Accounts._check2faEnabled = user => {
   );
 };
 
-Accounts._is2faEnabledForUser = () => {
-  const user = Meteor.user();
+Accounts._is2faEnabledForUser = async () => {
+  const user = await Meteor.user();
   if (!user) {
     throw new Meteor.Error('no-logged-user', 'No user logged in.');
   }
@@ -34,9 +34,9 @@ Accounts._isTokenValid = (secret, code) => {
 };
 
 Meteor.methods({
-  generate2faActivationQrCode(appName) {
+  async generate2faActivationQrCode(appName) {
     check(appName, String);
-    const user = Meteor.user();
+    const user = await Meteor.user();
 
     if (!user) {
       throw new Meteor.Error(
@@ -59,7 +59,7 @@ Meteor.methods({
     });
     const svg = new QRCode(uri).svg();
 
-    Meteor.users.update(
+    await Meteor.users.updateAsync(
       { _id: user._id },
       {
         $set: {
@@ -72,9 +72,9 @@ Meteor.methods({
 
     return { svg, secret, uri };
   },
-  enableUser2fa(code) {
+  async enableUser2fa(code) {
     check(code, String);
-    const user = Meteor.user();
+    const user = await Meteor.user();
 
     if (!user) {
       throw new Meteor.Error(400, 'No user logged in.');
@@ -94,7 +94,7 @@ Meteor.methods({
       Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
     }
 
-    Meteor.users.update(
+    await Meteor.users.updateAsync(
       { _id: user._id },
       {
         $set: {
@@ -106,14 +106,14 @@ Meteor.methods({
       }
     );
   },
-  disableUser2fa() {
+  async disableUser2fa() {
     const userId = Meteor.userId();
 
     if (!userId) {
       throw new Meteor.Error(400, 'No user logged in.');
     }
 
-    Meteor.users.update(
+    await Meteor.users.updateAsync(
       { _id: userId },
       {
         $unset: {
@@ -122,8 +122,8 @@ Meteor.methods({
       }
     );
   },
-  has2faEnabled() {
-    return Accounts._is2faEnabledForUser();
+  async has2faEnabled() {
+    return await Accounts._is2faEnabledForUser();
   },
 });
 

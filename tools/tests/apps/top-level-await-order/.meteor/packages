@@ -1,0 +1,16 @@
+# Meteor packages used by this project, one per line.
+# Check this file (and the other files in this directory) into your repository.
+#
+# 'meteor add' and 'meteor remove' will edit this file for you,
+# but you can also edit it by hand.
+print
+meteor-base             # Packages every Meteor app needs to have
+
+ecmascript              # Enable ECMAScript2015+ syntax in app code
+build-plugin
+webapp
+sync-package
+package-1
+package-2
+lazy-package
+standard-minifier-js

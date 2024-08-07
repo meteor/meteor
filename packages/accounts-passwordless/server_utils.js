@@ -5,8 +5,8 @@ import { SHA256 } from 'meteor/sha';
 const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
 export const DEFAULT_TOKEN_SEQUENCE_LENGTH = 6;
 
-export const getUserById = (id, options) =>
-  Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
+export const getUserById = async (id, options) =>
+    Meteor.users.findOneAsync(id, Accounts._addDefaultFieldSelector(options));
 
 export const tokenValidator = () => {
   const tokenLength =

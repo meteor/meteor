@@ -470,7 +470,7 @@ Generally speaking, all production HTTP requests should go over HTTPS, and all W
 It's best to handle the redirection from HTTP to HTTPS on the platform which handles the SSL certificates and termination.
 
 * On [Galaxy](deployment.html#galaxy), enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
-* Other deployments *may* have control panel options or may need to be manually configured on the the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
+* Other deployments *may* have control panel options or may need to be manually configured on the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
 
 In the event that a platform does not offer the ability to configure this, the `force-ssl` package can be added to the project and Meteor will attempt to intelligently redirect based on the presence of the `x-forwarded-for` header.
 
@@ -497,7 +497,7 @@ By default, Helmet can be used to set various HTTP headers (see link above). The
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.connectHandlers.use(helmet())
+WebApp.handlers.use(helmet())
 ```
 
 At a minimum, Meteor recommends users to set the following headers. Note that code examples shown below are specific to Helmet.
@@ -517,7 +517,7 @@ By default, Meteor recommends unsafe inline scripts and styles are allowed, sinc
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.connectHandlers.use(
+WebApp.handlers.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
@@ -696,7 +696,7 @@ With Helmet, Frameguard sets the X-Frame-Options header.
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.connectHandlers.use(helmet.frameguard());  // defaults to sameorigin
+WebApp.handlers.use(helmet.frameguard());  // defaults to sameorigin
 ```
 For more detail please read the following guide: [Frameguard](https://helmetjs.github.io/docs/frameguard/).
 

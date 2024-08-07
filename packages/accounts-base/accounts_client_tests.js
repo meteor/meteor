@@ -36,9 +36,9 @@ const createUserAndLogout = (test, done, nextTests) => {
       },
     },
     () => {
-      Meteor.logout(() => {
+      Meteor.logout(async () => {
         // Make sure we're logged out
-        test.isFalse(Meteor.user());
+        test.isFalse(await Meteor.userAsync());
         // Handle next tests
         nextTests(test, done);
       });
@@ -47,13 +47,13 @@ const createUserAndLogout = (test, done, nextTests) => {
 };
 
 const removeTestUser = done => {
-  Meteor.call('removeAccountsTestUser', username, () => {
+  Meteor.callAsync('removeAccountsTestUser', username).then(() => {
     done();
   });
 };
 
 const forceEnableUser2fa = done => {
-  Meteor.call('forceEnableUser2fa', { username }, secret2fa, (err, token) => {
+  Meteor.callAsync('forceEnableUser2fa', { username }, secret2fa).then((token) => {
     done(token);
   });
 };
@@ -245,13 +245,13 @@ Tinytest.addAsync(
 );
 
 
-Tinytest.addAsync(
+ Tinytest.addAsync(
   'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() fails with invalid code',
   (test, done) => {
     createUserAndLogout(test, done, () => {
       forceEnableUser2fa(() => {
-        Meteor.loginWithPasswordAnd2faCode(username, password, 'ABC', e => {
-          test.isFalse(Meteor.user());
+        Meteor.loginWithPasswordAnd2faCode(username, password, 'ABC', async e => {
+          test.isFalse(await Meteor.user());
           test.equal(e.reason, 'Invalid 2FA code');
           removeTestUser(done);
         });
@@ -304,3 +304,42 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync('accounts - storage',
+  async function(test) {
+    const expectWhenSessionStorage = () => {
+      test.isNotUndefined(sessionStorage.getItem('Meteor.loginToken'));
+      test.isNull(localStorage.getItem('Meteor.loginToken'));
+    };
+    const expectWhenLocalStorage = () => {
+      test.isNotUndefined(localStorage.getItem('Meteor.loginToken'));
+      test.isNull(sessionStorage.getItem('Meteor.loginToken'));
+    };
+
+    const testCases = [{
+      clientStorage: undefined,
+      expectStorage: expectWhenLocalStorage,
+    }, {
+      clientStorage: 'local',
+      expectStorage: expectWhenLocalStorage,
+    }, {
+      clientStorage: 'session',
+      expectStorage: expectWhenSessionStorage,
+    }];
+    for await (const testCase of testCases) {
+      await new Promise(resolve => {
+        sessionStorage.clear();
+        localStorage.clear();
+
+        const { clientStorage, expectStorage } = testCase;
+        Accounts.config({ clientStorage });
+        test.equal(Accounts._options.clientStorage, clientStorage);
+
+        // Login a user and test that tokens are in expected storage
+        logoutAndCreateUser(test, resolve, () => {
+          Accounts.logout();
+          expectStorage();
+          removeTestUser(resolve);
+        });
+      });
+    }
+  });
