@@ -24,11 +24,12 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 - Integrated support for Vite (Client Bundler)
   - Tree-shaking (Client)
   - Improve Meteor build time (Client, [Discussion](https://github.com/meteor/meteor/discussions/11587))
-- Replace Babel with ESBuild or SWC for the server bundle
+- Replace Babel with ESBuild, SWC or another tool for the server bundle
   - Tree-shaking (Server)
   - Improve Meteor build time (Server, [Discussion](https://github.com/meteor/meteor/discussions/11587))
 - Improve release CI/CD speed and reliability (optimized build times will help)
 - Review and help to modernize Meteor tools ([Discussion](https://github.com/meteor/meteor/discussions/12073))
+  - TypeScript Refactor for CLI
 - Improve support for Windows 11 or adopt Windows with WSL
 - HTTP/3 Support
 - Support package.json exports fields ([Discussion](https://github.com/meteor/meteor/discussions/11727))
