@@ -4,7 +4,7 @@ Describes the high-level features and actions for the Meteor project in the near
 
 ## Introduction
 
-**Quick update moving items to Finished: August 7th, 2024**
+**Quick update moving items to Finished: August 7th, 2024.**
 
 **Last new items added: August 7th, 2024.**
 
