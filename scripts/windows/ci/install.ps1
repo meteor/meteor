@@ -1,4 +1,4 @@
-﻿# Appveyor already sets $PLATFORM to exactly what we don't want, so
+# Appveyor already sets $PLATFORM to exactly what we don't want, so
 # we'll prepend it with 'windows_' if that seems to be the case.
 If ($env:PLATFORM -Match '^x86|x64$') {
   $env:PLATFORM = "windows_${env:PLATFORM}"
@@ -36,7 +36,6 @@ while ($attempt -gt 0 -and -not $success) {
   } else {
     $attempt--
   }
-
 }
 
 If ($LASTEXITCODE -ne 0) {
