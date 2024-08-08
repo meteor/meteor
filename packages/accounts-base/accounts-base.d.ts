@@ -337,11 +337,11 @@ export namespace Accounts {
    * - a login method result object
    **/
   function registerLoginHandler(
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
   function registerLoginHandler(
     name: string,
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
 
   type Password =
