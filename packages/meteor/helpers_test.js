@@ -101,7 +101,7 @@ Tinytest.add("environment - startup", function (test) {
   test.isTrue(called);
 });
 
-Tinytest.addAsync("environment - promisify", async function (test) {
+Tinytest.addAsync("environment - promisify", function (test, done) {
   function TestClass(value) {
     this.value = value;
   }
@@ -116,8 +116,13 @@ Tinytest.addAsync("environment - promisify", async function (test) {
   TestClass.prototype.methodAsync = Meteor.promisify(TestClass.prototype.method);
 
   var instance = new TestClass(5);
-  test.equal(await instance.methodAsync(1, 2), 8);
-
   var asyncMethodWithContext = Meteor.promisify(instance.method, instance);
-  test.equal(await asyncMethodWithContext(2, 3), 10);
+
+  Promise.all([
+    instance.methodAsync(1, 2),
+    asyncMethodWithContext(2, 3),
+  ]).then(function (results) {
+    test.equal(results, [8, 10]);
+    done();
+  });
 });
