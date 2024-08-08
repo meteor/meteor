@@ -442,3 +442,66 @@ Tinytest.addAsync("livedata server - waiting for Promise", (test, onComplete) =>
       .then(onComplete);
   })
 );
+
+/**
+ * https://github.com/meteor/meteor/issues/13212
+ */
+Tinytest.addAsync('livedata server - publish cursor is properly awaited', async function (test) {
+  let sub = null;
+
+  const { conn, messages, cleanup } = await captureConnectionMessages(test);
+
+  const coll = new Mongo.Collection('items', {
+    defineMutationMethods: false,
+  });
+
+  for (let i = 0; i < 10; i++) {
+    await coll.removeAsync({ _id: `item_${i}` })
+    await coll.insertAsync({ _id: `item_${i}`, title: `Item #${i}` });
+  }
+
+  const publicationName = `publication_${Random.id()}`
+
+  delete Meteor.server.publish_handlers[publicationName];
+
+  Meteor.publish(publicationName, async function (count) {
+    return coll.find({}, { limit: count });
+  });
+
+  const reactiveVar = new ReactiveVar(1);
+
+  const computation = Tracker.autorun(() => {
+    sub = conn.subscribe(publicationName, reactiveVar.get());
+  });
+
+  await Meteor._sleepForMs(100);
+
+  reactiveVar.set(2);
+
+  await Meteor._sleepForMs(100);
+
+  const expectedMessages = ['sub', 'added', 'ready', 'sub', 'unsub', 'added', 'ready', 'nosub']
+
+  /**
+   * There shouldn't ever be `removed` messages here, otherwise the UI will glitch
+   */
+  const parsedMessages = messages.map(m => m.msg)
+
+  test.equal(parsedMessages, expectedMessages)
+
+  computation.stop();
+
+  cleanup()
+});
+
+function getTestConnections(test) {
+  return new Promise((resolve, reject) => {
+    makeTestConnection(test, (clientConn, serverConn) => {
+      resolve({ clientConn, serverConn });
+    }, reject);
+  })
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

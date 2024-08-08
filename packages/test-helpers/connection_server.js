@@ -52,3 +52,34 @@ makeTestConnection = function (test, succeeded, failed) {
     }
   );
 };
+
+createTestConnectionPromise = function (test) {
+  return new Promise((resolve, reject) => {
+    makeTestConnection(test, resolve, reject);
+  });
+};
+
+captureConnectionMessages = async function (test) {
+  const messages = []
+
+  const conn = await createTestConnectionPromise(test);
+
+  const send = conn._stream.send;
+
+  conn._stream.send = function (...args) {
+    send.apply(this, args);
+    messages.push(EJSON.parse(args[0]));
+  }
+
+  conn._stream.on('message', message => messages.push(EJSON.parse(message)));
+
+  function cleanup() {
+    conn._stream.send = send
+  }
+
+  return {
+    conn,
+    messages,
+    cleanup
+  }
+};

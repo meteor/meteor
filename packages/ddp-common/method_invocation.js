@@ -99,11 +99,11 @@ DDPCommon.MethodInvocation = class MethodInvocation {
    * @instance
    * @param {String | null} userId The value that should be returned by `userId` on this connection.
    */
-  setUserId(userId) {
+  async setUserId(userId) {
     if (this._calledUnblock) {
       throw new Error("Can't call setUserId in a method after calling unblock");
     }
     this.userId = userId;
-    this._setUserId(userId);
+    await this._setUserId(userId);
   }
 };

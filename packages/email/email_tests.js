@@ -6,10 +6,6 @@ const CUSTOM_TRANSPORT_SETTINGS = {
   email: { service: '1on1', user: 'test', password: 'pwd' },
 };
 
-const sleep = (ms) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
 // Create dynamic async tests
 TEST_CASES.forEach(({ title, options, testCalls }) => {
   Tinytest.addAsync(`${title}`, async function (test, onComplete) {
@@ -222,7 +218,7 @@ Tinytest.addAsync(
   async function (test) {
     Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
     Email.customTransport = async (options) => {
-      await sleep(3000);
+      await Meteor._sleepForMs(3000);
       test.equal(options.from, 'foo@example.com');
       test.equal(options.packageSettings?.service, '1on1');
     };

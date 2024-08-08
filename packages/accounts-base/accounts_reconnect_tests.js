@@ -154,7 +154,7 @@ if (Meteor.isClient) {
           .then((id) => {
             // 4. the server should still return an id after connection
             test.isTrue(Meteor.status().connected);
-            test.isTrue(id);
+            test.isTrue(id, 'userId exists in the server after reconnect');
           })
           .finally(done);
 

@@ -10,14 +10,6 @@ Meteor.methods({
   }
 });
 
-// XXX it'd be cool to also test that the right thing happens if options
-// *are* validated, but Accounts._options is global state which makes this hard
-// (impossible?)
-Tinytest.add(
-  'accounts - config - validates keys',
-  test => test.throws(() => Accounts.config({ foo: "bar" }))
-);
-
 Tinytest.addAsync('accounts - config - token lifetime', async test => {
   const { loginExpirationInDays } = Accounts._options;
   Accounts._options.loginExpirationInDays = 2;

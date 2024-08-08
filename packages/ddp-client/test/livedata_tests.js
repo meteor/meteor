@@ -1,8 +1,6 @@
 import { DDP } from '../common/namespace.js';
 import { Connection } from '../common/livedata_connection.js';
 
-const _sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
 const callWhenSubReady = async (subName, handle, cb = () => {}) => {
   let control = 0;
 
@@ -12,7 +10,7 @@ const callWhenSubReady = async (subName, handle, cb = () => {}) => {
       if (control++ === 1000) {
         throw new Error(`Subscribe to ${subName} is taking too long!`);
       }
-      await _sleep(0);
+      await Meteor._sleepForMs(0);
       return;
     }
     await cb();

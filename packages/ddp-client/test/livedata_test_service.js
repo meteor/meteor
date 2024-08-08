@@ -34,9 +34,9 @@ Meteor.methods({
       throw e;
     }
   },
-  setUserId: function(userId) {
+  async setUserId(userId) {
     check(userId, Match.OneOf(String, null));
-    this.setUserId(userId);
+    await this.setUserId(userId);
   }
 });
 
@@ -218,14 +218,14 @@ if (Meteor.isServer) {
 
 if (Meteor.isServer) {
   Meteor.methods({
-    setUserIdAfterUnblock: function() {
+    async setUserIdAfterUnblock() {
       this.unblock();
       let threw = false;
       const originalUserId = this.userId;
       try {
         // Calling setUserId after unblock should throw an error (and not mutate
         // userId).
-        this.setUserId(originalUserId + 'bla');
+        await this.setUserId(originalUserId + 'bla');
       } catch (e) {
         threw = true;
       }

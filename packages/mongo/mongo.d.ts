@@ -83,6 +83,15 @@ export namespace Mongo {
         defineMutationMethods?: boolean | undefined;
       }
     ): Collection<T, U>;
+
+    /**
+     * Retrieve a previously defined Mongo.Collection instance by its name. The collection must already have been defined with `new Mongo.Collection(name, ...)`.
+     * Plain MongoDB collections are not available by this method.
+     * @param name The name of the collection instance.
+     */
+    getCollection<
+        TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
+    >(name: string): TCollection;
   }
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T> = undefined>(options: {

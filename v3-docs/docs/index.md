@@ -44,7 +44,7 @@ features:
 
   - title: Built-in Accounts
     icon: 👤
-    details: Login and Accounts package ready to use with your app. Never rebuilt an authentication system again.
+    details: Login and Accounts package ready to use with your app. Never rebuild an authentication system again.
 
   - title: Pioneering and Reliable
     icon: 🏆

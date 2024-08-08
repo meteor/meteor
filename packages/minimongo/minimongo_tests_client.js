@@ -3301,9 +3301,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
     handle = c
       .find({ tags: "flower" }, { reactive: false })
       .observe(makecb("c"));
-    // TODO: think about this one below.
-    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    await sleep(10);
+    await Meteor._sleepForMs(10);
     expect("ac4_ac5_");
     // This insert shouldn't trigger a callback because it's not reactive.
     await c.insertAsync({ _id: 6, name: "river", tags: ["flower"] });
