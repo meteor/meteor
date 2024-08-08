@@ -92,7 +92,6 @@
 ### [meteor-base](https://github.com/meteor/meteor/tree/devel/packages/meteor-base) {#meteor-base}
 ### [meteor-developer-config-ui](https://github.com/meteor/meteor/tree/devel/packages/meteor-developer-config-ui) {#meteor-developer-config-ui}
 ### [meteor-developer-oauth](https://github.com/meteor/meteor/tree/devel/packages/meteor-developer-oauth) {#meteor-developer-oauth}
-### [meteor-synced-cron](https://github.com/meteor/meteor/tree/devel/packages/meteor-synced-cron) {#meteor-synced-cron}
 ### [meteor-tool](https://github.com/meteor/meteor/tree/devel/packages/meteor-tool) {#meteor-tool}
 ### [minifier-css](https://github.com/meteor/meteor/tree/devel/packages/minifier-css) {#minifier-css}
 ### [minifier-js](https://github.com/meteor/meteor/tree/devel/packages/minifier-js) {#minifier-js}
