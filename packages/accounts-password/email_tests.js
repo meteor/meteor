@@ -169,7 +169,7 @@ testAsyncMulti("accounts emails - verify email flow", [
       loggedIn(test, expect));
   },
   async function (test, expect) {
-    const u = await Meteor.user();
+    const u = await Meteor.userAsync();
     test.equal(u.emails.length, 1);
     test.equal(u.emails[0].address, this.email);
     test.isFalse(u.emails[0].verified);
@@ -191,7 +191,7 @@ testAsyncMulti("accounts emails - verify email flow", [
                          loggedIn(test, expect));
   },
   async function (test, expect) {
-    const u = await Meteor.user();
+    const u = await Meteor.userAsync();
 
     test.equal(u.emails.length, 1);
     test.equal(u.emails[0].address, this.email);
@@ -201,7 +201,7 @@ testAsyncMulti("accounts emails - verify email flow", [
     Accounts.connection.call(
       "addEmailForTestAndVerify", this.anotherEmail,
       expect(async (error, result) => {
-        const u = await Meteor.user();
+        const u = await Meteor.userAsync();
 
         test.isFalse(error);
         test.equal(u.emails.length, 2);
@@ -232,7 +232,7 @@ testAsyncMulti("accounts emails - verify email flow", [
     Accounts.connection.call(
       "addEmailForTestAndVerify", this.anotherEmailCaps,
       expect(async (error, result) => {
-        const u = await Meteor.user();
+        const u = await Meteor.userAsync();
         test.isFalse(error);
         test.equal(u.emails.length, 3);
         test.equal(u.emails[2].address, this.anotherEmailCaps);
@@ -255,7 +255,7 @@ testAsyncMulti("accounts emails - verify email flow", [
                          loggedIn(test, expect));
   },
   async function (test, expect) {
-    const u = await Meteor.user();
+    const u = await Meteor.userAsync();
 
     test.equal(u.emails[2].address, this.anotherEmailCaps);
     test.isTrue(u.emails[2].verified);

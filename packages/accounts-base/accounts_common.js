@@ -163,6 +163,14 @@ export class AccountsCommon {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    */
   user(options) {
+    if (Meteor.isServer) {
+      console.warn([
+        "`Meteor.user()` is deprecated on the server side.",
+        "    To fetch the current user record on the server,",
+        "    use `Meteor.userAsync()` instead.",
+      ].join("\n"));
+    }
+
     const self = this;
     const userId = self.userId();
     const findOne = (...args) => Meteor.isClient
