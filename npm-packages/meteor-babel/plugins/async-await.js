@@ -8,6 +8,10 @@ module.exports = function (babel) {
     visitor: {
       Function: {
         exit: function (path) {
+          if (this.opts.useNativeAsyncAwait !== false) {
+            return;
+          }
+
           const node = path.node;
           if (!node.async) {
             return;
@@ -27,7 +31,7 @@ module.exports = function (babel) {
             node.body,
             // The inner function called by Promise.asyncApply should be
             // async if we have native async/await support.
-            !! this.opts.useNativeAsyncAwait
+            !!this.opts.useNativeAsyncAwait
           );
 
           const promiseResultExpression = t.callExpression(
@@ -53,7 +57,7 @@ module.exports = function (babel) {
       },
 
       AwaitExpression: function (path) {
-        if (this.opts.useNativeAsyncAwait) {
+        if (this.opts.useNativeAsyncAwait !== false) {
           // No need to transform await expressions if we have native
           // support for them.
           return;
