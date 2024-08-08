@@ -701,7 +701,7 @@ if (Meteor.isClient) (() => {
     // accounts-base/accounts_tests.js, but this is where the tests that
     // actually log in are.
     async function (test, expect) {
-      const clientUser = await Meteor.user();
+      const clientUser = await Meteor.userAsync();
       Accounts.connection.call('testMeteorUser', expect((err, result) => {
         test.equal(result._id, clientUser._id);
         test.equal(result.username, clientUser.username);

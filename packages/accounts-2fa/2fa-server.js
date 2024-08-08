@@ -14,7 +14,7 @@ Accounts._check2faEnabled = user => {
 };
 
 Accounts._is2faEnabledForUser = async () => {
-  const user = await Meteor.user();
+  const user = await Meteor.userAsync();
   if (!user) {
     throw new Meteor.Error('no-logged-user', 'No user logged in.');
   }
@@ -36,7 +36,7 @@ Accounts._isTokenValid = (secret, code) => {
 Meteor.methods({
   async generate2faActivationQrCode(appName) {
     check(appName, String);
-    const user = await Meteor.user();
+    const user = await Meteor.userAsync();
 
     if (!user) {
       throw new Meteor.Error(
@@ -74,7 +74,7 @@ Meteor.methods({
   },
   async enableUser2fa(code) {
     check(code, String);
-    const user = await Meteor.user();
+    const user = await Meteor.userAsync();
 
     if (!user) {
       throw new Meteor.Error(400, 'No user logged in.');
