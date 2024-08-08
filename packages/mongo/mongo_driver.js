@@ -194,6 +194,11 @@ MongoConnection = function (url, options) {
   self._oplogHandle = null;
   self._docFetcher = null;
 
+  mongoOptions.driverInfo = {
+    name: 'Meteor',
+    version: Meteor.release
+  }
+  
   self.client = new MongoDB.MongoClient(url, mongoOptions);
   self.db = self.client.db();
 
