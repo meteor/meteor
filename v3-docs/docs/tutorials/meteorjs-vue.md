@@ -196,11 +196,11 @@ In this step we will implement all the necessary code to have a basic collection
 ### 2.1: Create Tasks Collection
 
 
-Before creating our collection, let's remove the `links.js` file from the `imports/api`  folder because we won't use it. Now, you can create a new collection to store our tasks by creating a new file named `TasksCollection.js` inside the `imports/api` folder.
+Before creating our collection, let's remove the `links.js` file from the `imports/api`  folder because we won't use it. Now, you can create a new collection to store our tasks by creating a new file named `tasksCollection.js` inside the `imports/api` folder.
 
 
 ::: code-group
-```javascript [imports/api/TasksCollection.js]
+```javascript [imports/api/tasksCollection.js]
 import { Mongo } from 'meteor/mongo';
  
 export const TasksCollection = new Mongo.Collection('tasks');
@@ -214,7 +214,7 @@ The code above instantiates a new MongoDB collection and exports it. You can rea
 
 To make our collection work, you need to import it on the server to set things up.
 
-You can use import `'./imports/api/TasksCollection'` or `import { TasksCollection } from './imports/api/TasksCollection'` if you plan to use `TasksCollection` in the same file. Just make sure it's imported.
+You can use import `'./imports/api/tasksCollection'` or `import { TasksCollection } from './imports/api/tasksCollection'` if you plan to use `TasksCollection` in the same file. Just make sure it's imported.
 
 Now, it’s easy to check if there is data in our collection, or we can easily add some sample data.
 
@@ -223,7 +223,7 @@ Replace the old content in `server/main.js` with the code below.
 ::: code-group
 ```javascript [server/main.js]
 import { Meteor } from 'meteor/meteor';
-import { TasksCollection } from '../imports/api/TasksCollection';
+import { TasksCollection } from '../imports/api/tasksCollection';
 
 const insertTask = async text => await TasksCollection.insertAsync({text});
 
@@ -268,7 +268,7 @@ The `vue-meteor-tracker` package doesn't support async calls yet, so we need to 
 <script setup>
 import Task from './components/Task.vue';
 import { subscribe, autorun } from 'vue-meteor-tracker';
-import { TasksCollection } from '../api/TasksCollection';
+import { TasksCollection } from '../api/tasksCollection';
 
 subscribe('tasks');
 const tasks = autorun(() => TasksCollection.find({}).fetch()).result;
@@ -293,7 +293,7 @@ To be able to fetch data in the client, you need to publish it in the server. To
 ::: code-group
 ```javascript [imports/api/tasksPublications.js]
 import { Meteor } from 'meteor/meteor';
-import { TasksCollection } from './TasksCollection';
+import { TasksCollection } from './tasksCollection';
 
 Meteor.publish('tasks', function publishTasks() {
     return TasksCollection.find();
@@ -385,7 +385,7 @@ Then we can simply add this to our `App` component above your list of tasks:
 import Task from './components/Task.vue';
 import TaskForm from './components/TaskForm.vue';
 import { subscribe, autorun } from 'vue-meteor-tracker';
-import { TasksCollection } from '../api/TasksCollection';
+import { TasksCollection } from '../api/tasksCollection';
 
 subscribe('tasks');
 const tasks = autorun(() => TasksCollection.find({}).fetch()).result;
@@ -419,7 +419,7 @@ To create your methods, you can create a file called `tasksMethods.js`.
 ```javascript [imports/api/tasksMethods.js]
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
-import { TasksCollection } from './TasksCollection';
+import { TasksCollection } from './tasksCollection';
 
 async function insertTask(text) {
     check(text, String);
@@ -439,7 +439,7 @@ Remember to import your method on the `main.js` server file.
 ::: code-group
 ```javascript [server/main.js]
 import { Meteor } from 'meteor/meteor';
-import { TasksCollection } from '../imports/api/TasksCollection';
+import { TasksCollection } from '../imports/api/tasksCollection';
 import '../imports/api/tasksPublications';
 import '../imports/api/tasksMethods';
 ```
@@ -544,7 +544,7 @@ We need to implement the method to update the task document. So, update the `tas
 ```javascript [imports/api/tasksMethods.js]
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
-import { TasksCollection } from './TasksCollection';
+import { TasksCollection } from './tasksCollection';
 
 async function insertTask(text) {
     check(text, String);
@@ -882,7 +882,7 @@ Now, you can create a default user for our app. We will create a new user when t
 ```javascript [server/main.js]
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
-import { TasksCollection } from '../imports/api/TasksCollection';
+import { TasksCollection } from '../imports/api/tasksCollection';
 import '../imports/api/tasksPublications';
 import '../imports/api/tasksMethods';
 
@@ -1057,7 +1057,7 @@ Then, update your `server/main.js` to add the seed tasks with your `meteoriote` 
 ```javascript [server/main.js]
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
-import { TasksCollection } from '../imports/api/TasksCollection';
+import { TasksCollection } from '../imports/api/tasksCollection';
 import '../imports/api/tasksPublications';
 import '../imports/api/tasksMethods';
 
@@ -1108,7 +1108,7 @@ Go to the tasks publication and add the `userId` to the find selector, so users 
 ::: code-group
 ```javascript [imports/api/tasksPublications.js]
 import { Meteor } from 'meteor/meteor';
-import { TasksCollection } from './TasksCollection';
+import { TasksCollection } from './tasksCollection';
 
 Meteor.publish('tasks', function publishTasks() {
   return TasksCollection.find({ userId: Meteor.userId() });
@@ -1202,7 +1202,7 @@ Follow how your `tasksMethods` should look like:
 ```javascript [/imports/api/tasksMethods.js]
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
-import { TasksCollection } from './TasksCollection';
+import { TasksCollection } from './tasksCollection';
 
 async function insertTask(text) {
     check(text, String);
