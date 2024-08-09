@@ -440,7 +440,7 @@ Remember to import your method on the `main.js` server file.
 ```javascript [server/main.js]
 import { Meteor } from 'meteor/meteor';
 import { TasksCollection } from '../imports/api/TasksCollection';
-import './imports/api/tasksPublications';
+import '../imports/api/tasksPublications';
 import '../imports/api/tasksMethods';
 ```
 :::
@@ -718,7 +718,7 @@ We’ll also update the `TaskForm` component and the `Task` component.
 <template>
   <div class="flex items-center rounded p-4 py-2 mb-2 shadow-sm border border-gray-200 md:mr-8">
     <li>
-      <input v-model="taskRef.checked" type="checkbox" readonly :checked="taskRef.checked" />
+      <input v-model="taskRef.checked" type="checkbox" readonly :checked="isChecked" @change="handleCheckboxChange" />
     </li>
     <span class="text-gray-600 pl-2" :class="{ 'text-gray-400 italic line-through': taskRef.checked }">
       {{ task.text }}
@@ -1017,7 +1017,7 @@ import LoginForm from './components/LoginForm.vue';
   <div v-if="isLogged">
     <header class="flex items-center justify-between px-4 py-4 bg-gray-100 border-t border-b border-gray-200">
       <h1 class="text-4xl font-bold text-gray-800 my-4">🚀 To-Do List
-        <span v-if="incompleteTasksCount > 0" class="text-lg font-light text-gray-600">({{ incompleteTasksCount }})</span>
+        <span v-if="incompleteTasksCount > 0" class="text-xl font-light text-gray-600">({{ incompleteTasksCount }})</span>
       </h1>
     </header>
     <div class="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
@@ -1108,7 +1108,7 @@ Go to the tasks publication and add the `userId` to the find selector, so users 
 ::: code-group
 ```javascript [imports/api/tasksPublications.js]
 import { Meteor } from 'meteor/meteor';
-import { TasksCollection } from '../db/TasksCollection';
+import { TasksCollection } from './TasksCollection';
 
 Meteor.publish('tasks', function publishTasks() {
   return TasksCollection.find({ userId: Meteor.userId() });
@@ -1133,11 +1133,11 @@ Your `tasks` function should look like this:
 const userId = autorun(() => Meteor.userId()).result;
 
 watch(
-    () => userId.value,
-    (newUserId) => {
-      isLogged.value = !!newUserId
-    },
-    { immediate: true }
+  () => userId.value,
+  (newUserId) => {
+    isLogged.value = !!newUserId
+  },
+  { immediate: true }
 );
 
 subscribe('tasks');
