@@ -15,7 +15,7 @@
     "https-proxy-agent": "^5.0.1",
     "node-7z": "^2.1.2",
     "node-downloader-helper": "^2.1.9",
-    "rimraf": "^3.0.2",
+    "rimraf": "^6.0.1",
     "semver": "^7.3.7",
     "tar": "^6.1.11",
     "tmp": "^0.2.1"
