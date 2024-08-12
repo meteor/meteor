@@ -1756,7 +1756,7 @@ function defaultValidateNewUserHook(user) {
   }
 }
 
-const setupUsersCollection = users => {
+const setupUsersCollection = async (users) => {
   ///
   /// RESTRICTING WRITES TO USER OBJECTS
   ///
