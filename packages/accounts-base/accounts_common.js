@@ -19,7 +19,7 @@ const VALID_CONFIG_KEYS = [
   'loginTokenExpirationHours',
   'tokenSequenceLength',
   'clientStorage',
-  "ddpUrl"
+  'ddpUrl'
 ];
 
 /**
