@@ -86,8 +86,8 @@ build_machine_environment: &build_machine_environment
 
     # These will be evaled before each command.
     PRE_TEST_COMMANDS: |-
-        ulimit -c unlimited; # Set core dump size as Ubuntu 14.04 lacks prlimit.
-        ulimit -a # Display all ulimit settings for transparency.
+      ulimit -c unlimited; # Set core dump size as Ubuntu 14.04 lacks prlimit.
+      ulimit -a # Display all ulimit settings for transparency.
 
     # This is only to make Meteor self-test not remind us that we can set
     # this argument for self-tests.
