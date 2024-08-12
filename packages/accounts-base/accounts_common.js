@@ -19,6 +19,8 @@ const VALID_CONFIG_KEYS = [
   'loginTokenExpirationHours',
   'tokenSequenceLength',
   'clientStorage',
+  'ddpUrl',
+  'connection',
 ];
 
 /**
@@ -37,8 +39,7 @@ export class AccountsCommon {
     // Validate config options keys
     for (const key of Object.keys(options)) {
       if (!VALID_CONFIG_KEYS.includes(key)) {
-        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
+        console.error(`Accounts.config: Invalid key: ${key}`);
       }
     }
 
@@ -292,8 +293,7 @@ export class AccountsCommon {
     // Validate config options keys
     for (const key of Object.keys(options)) {
       if (!VALID_CONFIG_KEYS.includes(key)) {
-        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
+        console.error(`Accounts.config: Invalid key: ${key}`);
       }
     }
 

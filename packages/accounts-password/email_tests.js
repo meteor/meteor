@@ -150,10 +150,12 @@ const getVerifyEmailToken = (email, test, expect) => {
     }));
 };
 
-const loggedIn = (test, expect) => expect((error) => {
+const loggedIn = (test, expect) => {
+  return expect(async (error) => {
     test.equal(error, undefined);
-    test.isTrue(Meteor.user());
+    test.isTrue(await Meteor.user());
   });
+};
 
 testAsyncMulti("accounts emails - verify email flow", [
   function (test, expect) {
@@ -187,10 +189,9 @@ testAsyncMulti("accounts emails - verify email flow", [
     }));
   },
   function (test, expect) {
-    Accounts.verifyEmail(verifyEmailToken,
-                         loggedIn(test, expect));
+    Accounts.verifyEmail(verifyEmailToken, loggedIn(test, expect));
   },
-  async function (test, expect) {
+  async function (test) {
     const u = await Meteor.userAsync();
 
     test.equal(u.emails.length, 1);
