@@ -303,7 +303,6 @@ Tinytest.addAsync(
       let testsLength = 0;
 
       onSubscriptions = function (subscription) {
-        onSubscriptions = undefined;
         clientConn.disconnect();
         testsLength++;
         if (testsLength == 3) {
