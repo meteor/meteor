@@ -9,3 +9,4 @@ We will create, update, and remove tasks using Methods, and present them with re
 
 <!-- @include: ./creating-the-app.md-->
 <!-- @include: ./collections.md-->
+<!-- @include: ./forms-and-events.md-->

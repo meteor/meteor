@@ -1,4 +1,4 @@
-## Creating the app
+## 1: Creating the app
 
 ### Install Meteor {#install-meteor}
 First, we need to install Meteor.
