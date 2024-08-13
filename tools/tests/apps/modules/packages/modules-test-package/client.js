@@ -7,7 +7,7 @@ import {
 export const where = "client";
 export * from "./common";
 
-checkWhere(where);
+await checkWhere(where);
 
 var style = require("./css/imported.css");
 if (! style) {

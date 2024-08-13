@@ -6,8 +6,8 @@ import shared from "./imports/shared";
 import { Meteor as ImportedMeteor } from "meteor/meteor";
 
 describe("app modules", () => {
-  it("can be imported using absolute identifiers", () => {
-    assert.strictEqual(require("/tests"), exports);
+  it("can be imported using absolute identifiers", async () => {
+    assert.strictEqual(await require("/tests"), exports);
   });
 
   it("can have different file extensions", () => {
@@ -40,28 +40,28 @@ describe("app modules", () => {
   it("are lazily evaluated if inside imports/", (done) => {
     const delayMs = 200;
 
-    setTimeout(() => {
+    setTimeout(async () => {
       assert.strictEqual(shared["/imports/lazy1.js"], void 0);
       assert.strictEqual(shared["/imports/lazy2.js"], void 0);
 
-      var reset1 = require("./imports/lazy1").reset;
+      var reset1 = (await require("./imports/lazy1")).reset;
 
       assert.strictEqual(shared["/imports/lazy1.js"], 1);
       assert.strictEqual(shared["/imports/lazy2.js"], 2);
 
       // Make sure this test can run again without starting a new process.
-      require("./imports/lazy2").reset();
+      (await require("./imports/lazy2")).reset();
       reset1();
 
       done();
     }, delayMs);
   });
 
-  it("cannot import server modules on client", () => {
+  it("cannot import server modules on client", async () => {
     let error;
     let result;
     try {
-      result = require("./server/only").default;
+      result = (await require("./server/only")).default;
     } catch (expectedOnClient) {
       error = expectedOnClient;
     }
@@ -69,8 +69,8 @@ describe("app modules", () => {
     if (Meteor.isServer) {
       assert.strictEqual(typeof error, "undefined");
       assert.strictEqual(result, "/server/only.js");
-      assert.strictEqual(require("./server/only"),
-                         require("/server/only"));
+      assert.strictEqual(await require("./server/only"),
+                         await require("/server/only"));
     }
 
     if (Meteor.isClient) {
@@ -99,8 +99,8 @@ describe("app modules", () => {
     }
   });
 
-  it("should have access to filename and dirname", () => {
-    assert.strictEqual(require(__filename), exports);
+  it("should have access to filename and dirname", async () => {
+    assert.strictEqual(await require(__filename), exports);
     assert.strictEqual(
       require("path").relative(__dirname, __filename),
       "tests.js"
@@ -158,7 +158,7 @@ describe("css modules", () => {
     assert.strictEqual($(".app-lazy-css").css("padding"), "10px");
   });
 
-  it("should be importable by a package", () => {
+  it("should be importable by a package", async () => {
     assert.strictEqual(
       $(".pkg-lazy-css.imported").css("padding"),
       "0px"
@@ -171,7 +171,7 @@ describe("css modules", () => {
 
     // Since client.js is a lazy main module, its side effects don't
     // happen until we import it for the first time (here).
-    require("meteor/modules-test-package/client.js");
+    await require("meteor/modules-test-package/client.js");
 
     assert.strictEqual(
       $(".pkg-lazy-css.imported").css("padding"),
@@ -738,16 +738,16 @@ describe("return statements at top level", () => {
 });
 
 describe("circular package.json resolution chains", () => {
-  it("should be broken appropriately", () => {
+  it("should be broken appropriately", async () => {
     assert.strictEqual(
-      require("./lib").aMain,
+      (await require("./lib")).aMain,
       "/lib/a/index.js"
     );
   });
 });
 
-describe("imported *.tests.js modules", () => {
-  const { name } = require("./imports/imported.tests.js");
+describe("imported *.tests.js modules", async () => {
+  const { name } = await require("./imports/imported.tests.js");
   it("should be properly compiled", () => {
     assert.strictEqual(name, "imported.tests.js");
   });
