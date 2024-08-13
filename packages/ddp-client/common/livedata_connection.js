@@ -3,7 +3,6 @@ import { DDPCommon } from 'meteor/ddp-common';
 import { Tracker } from 'meteor/tracker';
 import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
-import { Hook } from 'meteor/callback-hook';
 import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
 import MethodInvoker from './MethodInvoker.js';
