@@ -1,9 +1,6 @@
-This tutorial is where to start learning the basics of [Meteor](https://meteor.com) with [React](https://react.dev/).
-In this tutorial, we will build a To-Do app that will insert and fetch data from MongoDB, authenticate users with passwords.
+## Creating the app
 
-We will create, update, and remove tasks using Methods, and present them with real-time updates using Publications and Subscriptions.
-
-## Install Meteor {#install-meteor}
+### Install Meteor {#install-meteor}
 First, we need to install Meteor.
 
 If you don't have Meteor installed, you can install it by running:
@@ -12,7 +9,7 @@ If you don't have Meteor installed, you can install it by running:
 npx meteor
 ```
 
-## Create Meteor Project {#create-meteor-project}
+### Create Meteor Project {#create-meteor-project}
 
 The easiest way to setup Meteor with React is by using the command `meteor create` with the option `--react` and your project name (you can also omit the `--react` option since it is the default):
 
@@ -38,7 +35,7 @@ Your React code will be located inside the `imports/ui` directory, and `App.jsx`
 
 Take a quick look at all the files created by Meteor, you don't need to understand them now but it's good to know where they are.
 
-## Create Task Component {#create-task-component}
+### Create Task Component {#create-task-component}
 
 You will make your first change now. Create a new file called `Task.jsx` in your `ui` folder.
 
@@ -55,7 +52,7 @@ export const Task = ({ task }) => {
 
 As this component will be inside a list you are returning a `li` element.
 
-## Create Sample Tasks {#create-sample-tasks}
+### Create Sample Tasks {#create-sample-tasks}
 
 As you are not connecting to your server and your database yet let's define some sample data which will be used shortly to render a list of tasks. It will be an array, and you can call it `tasks`.
 
@@ -74,7 +71,7 @@ export const App = () => ...
 
 You can put anything as your `text` property on each task. Be creative!
 
-## Render Sample Tasks {#render-sample-tasks}
+### Render Sample Tasks {#render-sample-tasks}
 
 Now we can implement some simple rendering logic with React. We can now use our previous `Task` component to render our list items.
 
@@ -106,7 +103,7 @@ Remember to add the `key` property to your task, otherwise React will emit a war
 
 Remove the `Hello` and `Info` from your `App` component, remember to also remove the imports for them at the top of the file. Remove the `Hello.jsx` and `Info.jsx` files as well.
 
-## Hot Module Replacement {#hot-module-replacement}
+### Hot Module Replacement {#hot-module-replacement}
 
 Meteor by default when using React is already adding for you a package called `hot-module-replacement`. This package updates the javascript modules in a running app that were modified during a rebuild. Reduces the feedback cycle while developing so you can view and test changes quicker (it even updates the app before the build has finished). You are also not going to lose the state, your app code will be updated and your state will be the same.
 

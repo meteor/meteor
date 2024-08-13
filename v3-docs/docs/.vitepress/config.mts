@@ -236,63 +236,11 @@ export default defineConfig({
       },
       {
         text: "Tutorials",
-        link: "/tutorials/",
+        link: "/tutorials/react/index",
         items: [
           {
             text: "React",
-            link: "/tutorials/react/creating-the-app",
-            items: [
-              {
-                text: "Creating the app",
-                link: "/tutorials/react/creating-the-app",
-                items: [
-                  {
-                    text: "Install Meteor",
-                    link: "/tutorials/react/creating-the-app#install-meteor",
-                  },
-                  {
-                    text: "Create Meteor Project",
-                    link: "/tutorials/react/creating-the-app#create-meteor-project",
-                  },
-                  {
-                    text: "Create Task Component",
-                    link: "/tutorials/react/creating-the-app#create-task-component",
-                  },
-                  {
-                    text: "Create Sample Tasks",
-                    link: "/tutorials/react/creating-the-app#create-sample-tasks",
-                  },
-                  {
-                    text: "Render Sample Tasks",
-                    link: "/tutorials/react/creating-the-app#render-sample-tasks",
-                  },
-                  {
-                    text: "Hot Module Replacement",
-                    link: "/tutorials/react/creating-the-app#hot-module-replacement",
-                  },
-                ],
-                collapsed: true,
-              },
-              {
-                text: "Collections",
-                link: "/tutorials/react/collections",
-                items: [
-                  {
-                    text: "Create Tasks Collection",
-                    link: "/tutorials/react/collections#create-tasks-collection",
-                  },
-                  {
-                    text: "Initialize Tasks Collection",
-                    link: "/tutorials/react/collections#initialize-tasks-collection",
-                  },
-                  {
-                    text: "Render Tasks Collection",
-                    link: "/tutorials/react/collections#render-tasks-collection",
-                  },
-                ],
-                collapsed: true,
-              },
-            ],
+            link: "/tutorials/react/index",
             collapsed: true,
           },
         ],

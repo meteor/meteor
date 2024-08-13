@@ -1,10 +1,12 @@
+## Collections
+
 Meteor already sets up MongoDB for you. In order to use our database, we need to create a _collection_, which is where we will store our _documents_, in our case our `tasks`.
 
 > You can read more about collections [here](https://v3-docs.meteor.com/api/collections.html).
 
 In this step, we will implement all the necessary code to have a basic collection for our tasks up and running using React hooks.
 
-## Create Tasks Collection {#create-tasks-collection}
+### Create Tasks Collection {#create-tasks-collection}
 
 We can create a new collection to store our tasks by creating a new file at `imports/api/TasksCollection.js` which instantiates a new Mongo collection and exports it.
 
@@ -21,7 +23,7 @@ You can delete the `links.js` file in this folder as we are not going to use thi
 
 > You can read more about app structure and imports/exports [here](http://guide.meteor.com/structure.html).
 
-## Initialize Tasks Collection {#initialize-tasks-collection}
+### Initialize Tasks Collection {#initialize-tasks-collection}
 
 For our collection to work, you need to import it in the server so it sets some plumbing up.
 
@@ -55,7 +57,7 @@ Meteor.startup(async () => {
 
 So you are importing the `TasksCollection` and adding a few tasks to it iterating over an array of strings and for each string calling a function to insert this string as our `text` field in our `task` document.
 
-## Render Tasks Collection {#render-tasks-collection}
+### Render Tasks Collection {#render-tasks-collection}
 
 Now comes the fun part, you will render the tasks using a React Function Component and a Hook called `useTracker` from a package called [react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data).
 
