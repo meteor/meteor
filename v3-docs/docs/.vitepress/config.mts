@@ -2,8 +2,8 @@ import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Meteor Docs",
-  description: "Meteor.js API Docs",
+  title: "Docs",
+  description: "Meteor.js Docs",
   head: [
     ["link", { rel: "icon", href: "/logo.png" }],
     [
@@ -26,12 +26,79 @@ export default defineConfig({
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: "Deploy", link: "https://www.meteor.com/cloud" },
       {
-        text: "Tutorials",
-        link: "https://www.meteor.com/developers/tutorials",
+        text: 'Docs',
+        activeMatch: `^/(guide|docs|examples)/`,
+        items: [
+
+          { text: 'Quick Start', link: '/about/install' },
+          { text: 'Examples', link: 'https://github.com/meteor/examples' },
+          {
+            text: 'Meteor.js 2 Docs',
+            link: 'https://v2-docs.meteor.com'
+          },
+          {
+            text: 'Migration from Meteor.js 2',
+            link: 'https://v3-migration-docs.meteor.com'
+          }
+        ]
       },
-      { text: "Forums", link: "https://forums.meteor.com/" },
+      {
+        text: 'Ecosystem',
+        activeMatch: `^/ecosystem/`,
+        items: [
+          {
+            text: 'Community & Help',
+            items: [
+              {
+                text: 'Meteor Forums',
+                link: 'https://forums.meteor.com'
+              },
+              {
+                text: 'Meteor Lounge Discord',
+                link: 'https://discord.gg/hZkTCaVjmT'
+              },
+              {
+                text: 'GitHub Discussions',
+                link: 'https://github.com/meteor/meteor/discussions'
+              },
+            ]
+          },
+          {
+            text: 'Resources',
+            items: [
+              { text: 'Packages on Atmosphere', link: 'https://atmospherejs.com/' },
+              { text: 'VS Code Extension', link: 'https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox' },
+              { text: 'DevTools - Chrome Extension', link: 'https://chromewebstore.google.com/detail/ibniinmoafhgbifjojidlagmggecmpgf' },
+              { text: 'DevTools - Firefox Extension', link: 'https://addons.mozilla.org/en-US/firefox/addon/meteor-devtools-evolved/' },
+            ]
+          },
+          {
+            text: 'Learning',
+            items: [
+              {
+                text: 'Meteor University',
+                link: 'https://university.meteor.com'
+              },
+              {
+                text: 'Youtube Channel',
+                link: 'https://www.youtube.com/@meteorsoftware'
+              },
+            ]
+          },
+          {
+            text: 'News',
+            items: [
+              { text: 'Blog on Dev.to', link: 'https://dev.to/meteor' },
+              { text: 'Blog on Medium', link: 'https://blog.meteor.com' },
+              { text: 'Twitter', link: 'https://x.com/meteorjs' },
+              { text: 'LinkedIn', link: 'https://www.linkedin.com/company/meteor-software/' },
+            ]
+          }
+        ]
+      },
+      { text: "API", link: "/api/" },
+      { text: "Galaxy Cloud", link: "https://www.meteor.com/cloud" },
     ],
     sidebar: [
       {
@@ -296,7 +363,12 @@ export default defineConfig({
       },
     ],
 
-    socialLinks: [{ icon: "github", link: "https://github.com/meteor/meteor" }],
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/meteor/meteor' },
+      { icon: 'twitter', link: 'https://x.com/meteorjs' },
+      { icon: 'discord', link: 'https://discord.gg/hZkTCaVjmT' }
+    ],
+
     logo: { dark: "/meteor-logo.png", light: "/meteor-blue.png" },
 
     search: {
@@ -318,7 +390,7 @@ export default defineConfig({
         'Copyright (c) 2011 - present <a href="https://www.meteor.com/">Meteor Software</a>.',
     },
     editLink: {
-      pattern: "https://github.com/meteor/meteor/edit/release-3.0/v3-docs/docs/:path",
+      pattern: "https://github.com/meteor/meteor/edit/devel/v3-docs/docs/:path",
       text: "Edit this page on GitHub",
     },
   },
