@@ -16,8 +16,8 @@ var packageJson = {
     "lru-cache": "6.0.0",
     underscore: "1.13.7",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/81bce1f99625e62af73338f63afcf2b44c6cfa5e",
-    "@types/semver": "5.5.8",
-    semver: "7.5.4"
+    "@types/semver": "7.5.8",
+    semver: "7.6.3"
   },
   // These are only used in dev mode (by shell.js) so end-users can avoid
   // needing to install them if they use `npm install --production`.

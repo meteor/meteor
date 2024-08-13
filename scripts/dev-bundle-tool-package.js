@@ -14,7 +14,7 @@ var packageJson = {
     "node-gyp": "9.4.0",
     "@mapbox/node-pre-gyp": "1.0.11",
     typescript: "5.4.5",
-    "@meteorjs/babel": "7.21.0-beta.5",
+    "@meteorjs/babel": "7.20.0-beta.5",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "@meteorjs/reify": "0.25.2",
@@ -26,8 +26,8 @@ var packageJson = {
     "@types/underscore": "1.11.15",
     underscore: "1.13.7",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
-    "@types/semver": "5.5.0",
-    semver: "7.5.4",
+    "@types/semver": "7.5.8",
+    semver: "7.6.3",
     request: "2.88.2",
     uuid: "3.4.0",
     "graceful-fs": "4.2.11",
@@ -49,7 +49,7 @@ var packageJson = {
     "moment": "2.30.1",
     "rimraf": "2.6.2",
     "glob": "7.1.6",
-    ignore: "3.3.7",
+    ignore: "5.3.2",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
