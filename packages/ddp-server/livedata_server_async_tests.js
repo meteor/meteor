@@ -133,7 +133,7 @@ Tinytest.addAsync('livedata server - async publish object', function(
       // for debugging
       // console.log('subscription is ok:', subscription) 
       testsLength++;
-      delete onSubscriptions;
+      onSubscriptions = undefined;
       if (testsLength === 3) {
         clientConn.disconnect();
         onComplete();
