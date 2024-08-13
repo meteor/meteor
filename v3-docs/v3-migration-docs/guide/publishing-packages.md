@@ -1,11 +1,11 @@
 ## Publishing Packages
 
-Publishing a Meteor package involves a few key steps, including setting up your package, testing it, and finally publishing it to the Meteor package repository. Here's a brief guide on how to publish Meteor packages using Meteor 3, specifically with the `meteor publish --release=3.0-rc.2` command.
+Publishing a Meteor package involves a few key steps, including setting up your package, testing it, and finally publishing it to the Meteor package repository. Here's a brief guide on how to publish Meteor packages using Meteor 3, specifically with the `meteor publish --release=3.0.1` command.
 
 ### Prerequisites
 - Ensure you have Meteor 3 installed. You can check your Meteor version and automatically download it if it's missing:
   ```bash
-  meteor --version --release=3.0-rc.2
+  meteor --version --release=3.0.1
   ```
 - Have a Meteor developer account. You can create one at [Meteor's official website](https://www.meteor.com/).
 
@@ -35,7 +35,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
- api.versionsFrom('3.0-rc.2');
+ api.versionsFrom('3.0');
  api.use('ecmascript');
  api.mainModule('my-package.js');
 });
@@ -51,7 +51,7 @@ Package.onTest(function(api) {
 If the package is also intended to work with Meteor 2 you can use:
 
 ```javascript
-api.versionsFrom(['2.3', '3.0-rc.2']);
+api.versionsFrom(['2.3', '3.0']);
 ```
 
 3. **Create the main module file:**
@@ -87,10 +87,10 @@ meteor test-packages ./ --driver-package meteortesting:mocha
 Once your package is ready and tested, you can publish it using the following command:
 
 ```bash
-meteor publish --release=3.0-rc.2
+meteor publish --release=3.0.1
 ```
 
-You can replace `3.0-rc.2` with the appropriate release version. If you omit the `--release` flag, it will default to the latest official Meteor version, which at the time of this writing is Meteor 2. That way packages published without specifying a release will not be compatible with Meteor 3, as there will probably be a `fibers` related error.
+You can replace `3.0.1` with the appropriate release version. If you omit the `--release` flag, it will default to the latest official Meteor version, which at the time of this writing is Meteor 2. That way packages published without specifying a release will not be compatible with Meteor 3, as there will probably be a `fibers` related error.
 
 - **Login if prompted:**
   You will be asked to log in with your Meteor developer account credentials if you aren't already logged in.

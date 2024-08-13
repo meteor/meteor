@@ -759,7 +759,13 @@ jobs:
       - run:
           name: Cloning "meteor" Repository's current branch
           command: |
-            git clone --branch $CIRCLE_BRANCH https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
+            if [[ -n "$CIRCLE_PULL_REQUEST" ]]; then
+              PR_NUMBER=$(echo $CIRCLE_PULL_REQUEST | sed 's|.*/pull/\([0-9]*\)|\1|')
+              PR_BRANCH=$(curl -s https://api.github.com/repos/meteor/meteor/pulls/$PR_NUMBER | jq -r .head.ref)
+              git clone --branch $PR_BRANCH https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
+            else
+              git clone --branch $CIRCLE_BRANCH https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
+            fi
       # Run almost the same steps the meteor/docs repository runs, minus deploy.
       - run:
           name: Generating Meteor documentation for JSDoc testing
