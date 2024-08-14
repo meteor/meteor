@@ -2,9 +2,9 @@
   "lockfileVersion": 4,
   "dependencies": {
     "@types/node": {
-      "version": "22.0.0",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.0.0.tgz",
-      "integrity": "sha512-VT7KSYudcPOzP5Q0wfbowyNLaVR8QWUdw+088uFWwfvpY6uCWaXpqV6ieLAu9WBcnTa7H4Z5RLK8I5t2FuOcqw=="
+      "version": "22.1.0",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.1.0.tgz",
+      "integrity": "sha512-AOmuRF0R2/5j1knA3c6G3HOk523Ga+l+ZXltX8SF1+5oqcXijjfTd8fY3XRZqSihEu9XhtQnKYLmkFaoxgsJHw=="
     },
     "@types/nodemailer": {
       "version": "6.4.14",
@@ -57,9 +57,9 @@
       "integrity": "sha512-DQi1h8VEBA/lURbSwFtEHnSTb9s2/pwLEaFuNhXwy1Dx3Sa0lOuYT2yNUr4/j2fs8oCAMANtrZ5OrPZtyVs3MQ=="
     },
     "undici-types": {
-      "version": "6.11.1",
-      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-6.11.1.tgz",
-      "integrity": "sha512-mIDEX2ek50x0OlRgxryxsenE5XaQD4on5U2inY7RApK3SOJpofyw7uW2AyfMKkhAxXIceo2DeWGVGwyvng1GNQ=="
+      "version": "6.13.0",
+      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-6.13.0.tgz",
+      "integrity": "sha512-xtFJHudx8S2DSoujjMd1WeWvn7KKWFRESZTMeL1RptAYERu29D6jphMjjY+vn96jvN3kVPDNxU/E13VTaXj6jg=="
     }
   }
 }
