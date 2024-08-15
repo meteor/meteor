@@ -19,6 +19,8 @@ const VALID_CONFIG_KEYS = [
   'loginTokenExpirationHours',
   'tokenSequenceLength',
   'clientStorage',
+  'ddpUrl',
+  'connection',
 ];
 
 /**
@@ -37,8 +39,7 @@ export class AccountsCommon {
     // Validate config options keys
     for (const key of Object.keys(options)) {
       if (!VALID_CONFIG_KEYS.includes(key)) {
-        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
+        console.error(`Accounts.config: Invalid key: ${key}`);
       }
     }
 
@@ -163,6 +164,14 @@ export class AccountsCommon {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    */
   user(options) {
+    if (Meteor.isServer) {
+      console.warn([
+        "`Meteor.user()` is deprecated on the server side.",
+        "    To fetch the current user record on the server,",
+        "    use `Meteor.userAsync()` instead.",
+      ].join("\n"));
+    }
+
     const self = this;
     const userId = self.userId();
     const findOne = (...args) => Meteor.isClient
@@ -284,8 +293,7 @@ export class AccountsCommon {
     // Validate config options keys
     for (const key of Object.keys(options)) {
       if (!VALID_CONFIG_KEYS.includes(key)) {
-        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
+        console.error(`Accounts.config: Invalid key: ${key}`);
       }
     }
 
