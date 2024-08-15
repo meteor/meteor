@@ -25,7 +25,7 @@ export const CORDOVA_DEV_BUNDLE_VERSIONS = {
 
 export const CORDOVA_PLATFORM_VERSIONS = {
   'android': CORDOVA_ANDROID_VERSION,
-  'ios': '7.1.0',
+  'ios': '7.1.1',
 };
 
 export const SWIFT_VERSION = 5;
