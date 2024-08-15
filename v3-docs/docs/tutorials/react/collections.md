@@ -10,12 +10,15 @@ In this step, we will implement all the necessary code to have a basic collectio
 
 We can create a new collection to store our tasks by creating a new file at `imports/api/TasksCollection.js` which instantiates a new Mongo collection and exports it.
 
-`imports/api/TasksCollection.js`
-```js
-import { Mongo } from 'meteor/mongo';
+::: code-group
 
-export const TasksCollection = new Mongo.Collection('tasks');
+```js [imports/api/TasksCollection.js]
+import { Mongo } from "meteor/mongo";
+
+export const TasksCollection = new Mongo.Collection("tasks");
 ```
+
+:::
 
 Notice that we stored the file in the `imports/api` directory, which is a place to store API-related code, like publications and methods. You can name this folder as you want, this is just a choice.
 
@@ -33,27 +36,31 @@ Now it is easy to check if there is data or not in our collection, otherwise, we
 
 You don't need to keep the old content of `server/main.js`.
 
-`server/main.js`
-```js
-import { Meteor } from 'meteor/meteor';
-import { TasksCollection } from '/imports/api/TasksCollection';
+::: code-group
 
-const insertTask = taskText => TasksCollection.insertAsync({ text: taskText });
+```js [server/main.js]
+import { Meteor } from "meteor/meteor";
+import { TasksCollection } from "/imports/api/TasksCollection";
+
+const insertTask = (taskText) =>
+  TasksCollection.insertAsync({ text: taskText });
 
 Meteor.startup(async () => {
-  if (await TasksCollection.find().countAsync() === 0) {
+  if ((await TasksCollection.find().countAsync()) === 0) {
     [
-      'First Task',
-      'Second Task',
-      'Third Task',
-      'Fourth Task',
-      'Fifth Task',
-      'Sixth Task',
-      'Seventh Task'
-    ].forEach(insertTask)
+      "First Task",
+      "Second Task",
+      "Third Task",
+      "Fourth Task",
+      "Fifth Task",
+      "Sixth Task",
+      "Seventh Task",
+    ].forEach(insertTask);
   }
 });
 ```
+
+:::
 
 So you are importing the `TasksCollection` and adding a few tasks to it iterating over an array of strings and for each string calling a function to insert this string as our `text` field in our `task` document.
 
@@ -75,12 +82,13 @@ The `useTracker` function exported by `react-meteor-data` is a React Hook that a
 
 > For more information about React Hooks read [here](https://reactjs.org/docs/hooks-faq.html).
 
-`imports/ui/App.jsx`
-```javascript
-import React from 'react';
-import { useTracker } from 'meteor/react-meteor-data';
-import { TasksCollection } from '/imports/api/TasksCollection';
-import { Task } from './Task';
+::: code-group
+
+```javascript [imports/ui/App.jsx]
+import React from "react";
+import { useTracker } from "meteor/react-meteor-data";
+import { TasksCollection } from "/imports/api/TasksCollection";
+import { Task } from "./Task";
 
 export const App = () => {
   const tasks = useTracker(() => TasksCollection.find({}).fetch());
@@ -90,12 +98,16 @@ export const App = () => {
       <h1>Welcome to Meteor!</h1>
 
       <ul>
-        { tasks.map(task => <Task key={ task._id } task={ task }/>) }
+        {tasks.map((task) => (
+          <Task key={task._id} task={task} />
+        ))}
       </ul>
     </div>
   );
 };
 ```
+
+:::
 
 But wait! Something is missing. If you run your app now, you'll see that you don't render any tasks.
 
@@ -104,19 +116,21 @@ That's because we need to publish our data to the client.
 Fist, create a publication for our tasks:
 
 `imports/api/TasksPublications.js`
+
 ```javascript
 import { Meteor } from "meteor/meteor";
 import { TasksCollection } from "./TasksCollection";
 
 Meteor.publish("tasks", () => {
   return TasksCollection.find();
-})
+});
 ```
 
 Now, we need to import this file in our server:
 
-`server/main.js`
-```js
+::: code-group
+
+```js [server/main.js]
 ...
 import { TasksCollection } from '/imports/api/TasksCollection';
 
@@ -126,9 +140,12 @@ const insertTask = taskText => TasksCollection.insertAsync({ text: taskText });
 ...
 ```
 
+:::
+
 The only thing left is subscribe to this publication:
 
 `imports/ui/App.jsx`
+
 ```javascript
 import React from 'react';
 import { useTracker, useSubscribe } from 'meteor/react-meteor-data'; // [!code highlight]

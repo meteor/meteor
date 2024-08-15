@@ -1,6 +1,7 @@
 ## 1: Creating the app
 
 ### Install Meteor {#install-meteor}
+
 First, we need to install Meteor.
 
 If you don't have Meteor installed, you can install it by running:
@@ -13,7 +14,7 @@ npx meteor
 
 The easiest way to setup Meteor with React is by using the command `meteor create` with the option `--react` and your project name (you can also omit the `--react` option since it is the default):
 
-```
+```shell
 meteor create simple-todos-react
 ```
 
@@ -25,7 +26,7 @@ Also, check the `server` directory where Meteor is setting up the server side (N
 
 You can now run your Meteor app using:
 
-```
+```shell
 meteor run
 ```
 
@@ -41,14 +42,17 @@ You will make your first change now. Create a new file called `Task.jsx` in your
 
 This file will export a React component called `Task` that will represent one task in your To-Do list.
 
-`imports/ui/Task.jsx`
-```js
-import React from 'react';
+::: code-group
+
+```js [imports/ui/Task.jsx]
+import React from "react";
 
 export const Task = ({ task }) => {
-  return <li>{task.text}</li>
+  return <li>{task.text}</li>;
 };
 ```
+
+:::
 
 As this component will be inside a list you are returning a `li` element.
 
@@ -56,8 +60,9 @@ As this component will be inside a list you are returning a `li` element.
 
 As you are not connecting to your server and your database yet let's define some sample data which will be used shortly to render a list of tasks. It will be an array, and you can call it `tasks`.
 
-`imports/ui/App.jsx`
-```js
+::: code-group
+
+```js [imports/ui/App.jsx]
 import React from 'react';
 
 const tasks = [
@@ -65,9 +70,11 @@ const tasks = [
   {_id: 2, text: 'Second Task'},
   {_id: 3, text: 'Third Task'},
 ];
- 
+
 export const App = () => ...
 ```
+
+:::
 
 You can put anything as your `text` property on each task. Be creative!
 
@@ -79,8 +86,9 @@ In React you can use `{` `}` to write Javascript code between them.
 
 See below that you will use a `.map` function from the `Array` object to iterate over your sample tasks.
 
-`imports/ui/App.jsx`
-```js
+::: code-group
+
+```js [imports/ui/App.jsx]
 import React from 'react';
 import { Task } from './Task';
 
@@ -96,6 +104,8 @@ export const App = () => (
   </div>
 );
 ```
+
+:::
 
 Remember to add the `key` property to your task, otherwise React will emit a warning because it will see many components of the same type as siblings. Without a key, it will be hard for React to re-render one of them if necessary.
 
