@@ -7,7 +7,7 @@ function sleep(ms) {
 var onSubscription = {};
 
 Meteor.publish('livedata_server_test_sub_async', async function(connectionId) {
-  await sleep(50);
+  await Meteor._sleepForMs(50);
   var callback = onSubscription[connectionId];
   if (callback) callback(this);
   this.stop();
@@ -17,7 +17,7 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   connectionId,
   userId
 ) {
-  await sleep(50);
+  await Meteor._sleepForMs(50);
   var callback = onSubscription[connectionId];
   var methodInvocation = DDP._CurrentMethodInvocation.get();
   var publicationInvocation = DDP._CurrentPublicationInvocation.get();
@@ -99,7 +99,7 @@ let onSubscriptions = {};
 
 Meteor.publish({
   async publicationObjectAsync() {
-    await sleep(50);
+    await Meteor._sleepForMs(50);
     let callback = onSubscriptions;
     if (callback) callback("publicationObjectAsync");
     this.stop();
@@ -108,7 +108,7 @@ Meteor.publish({
 
 Meteor.publish({
   publication_object_async: async function() {
-    await sleep(50);
+    await Meteor._sleepForMs(50);
     let callback = onSubscriptions;
     if (callback) callback("publication_object_async");
     this.stop();
@@ -116,7 +116,7 @@ Meteor.publish({
 });
 
 Meteor.publish('publication_compatibility_async', async function() {
-  await sleep(50);
+  await Meteor._sleepForMs(50);
   let callback = onSubscriptions;
   if (callback) callback("publication_compatibility_async");
   this.stop();
