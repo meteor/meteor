@@ -57,7 +57,7 @@ npx meteor
 While we’re in the Release Candidate phase, use:
 
 ```bash
-npx meteor@rc
+npx meteor
 ```
 
 or specify a version directly:

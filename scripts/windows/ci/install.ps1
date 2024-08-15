@@ -1,4 +1,4 @@
-﻿# Appveyor already sets $PLATFORM to exactly what we don't want, so
+# Appveyor already sets $PLATFORM to exactly what we don't want, so
 # we'll prepend it with 'windows_' if that seems to be the case.
 If ($env:PLATFORM -Match '^x86|x64$') {
   $env:PLATFORM = "windows_${env:PLATFORM}"
@@ -6,6 +6,10 @@ If ($env:PLATFORM -Match '^x86|x64$') {
 
 $dirCheckout = (Get-Item $PSScriptRoot).parent.parent.parent.FullName
 $meteorBat = Join-Path $dirCheckout 'meteor.bat'
+
+Write-Host "Resetting git checkout..." -ForegroundColor Magenta
+& git.exe -C "$dirCheckout" reset --hard
+& git.exe -C "$dirCheckout" submodule foreach --recursive 'git reset --hard'
 
 Write-Host "Updating submodules recursively..." -ForegroundColor Magenta
 # Appveyor suggests -q flag for 'git submodule...' https://goo.gl/4TFAHm
@@ -32,7 +36,6 @@ while ($attempt -gt 0 -and -not $success) {
   } else {
     $attempt--
   }
-
 }
 
 If ($LASTEXITCODE -ne 0) {
