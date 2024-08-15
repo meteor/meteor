@@ -12,9 +12,9 @@ Please note the _array destructuring_ `[text, setText]`, where `text` is the sto
 
 Create a new file `TaskForm.jsx` in your `ui` folder.
 
-`imports/ui/TaskForm.jsx`
+::: code-group
 
-```js
+```js [imports/ui/TaskForm.jsx]
 import React, { useState } from "react";
 
 export const TaskForm = () => {
@@ -30,21 +30,22 @@ export const TaskForm = () => {
 };
 ```
 
+:::
+
 ### Update the App component
 
 Then we can simply add this to our `App` component above your list of tasks:
 
-`imports/ui/App.jsx`
+::: code-group
 
-```js
-import React from 'react';
-import { useTracker, useSubscribe } from 'meteor/react-meteor-data';
-import { TasksCollection } from '/imports/api/TasksCollection';
-import { Task } from './Task';
+```js [imports/ui/App.jsx]
+import React from "react";
+import { useTracker, useSubscribe } from "meteor/react-meteor-data";
+import { TasksCollection } from "/imports/api/TasksCollection";
+import { Task } from "./Task";
 import { TaskForm } from "./TaskForm";
 
 export const App = () => {
-
   const isLoading = useSubscribe("tasks");
   const tasks = useTracker(() => TasksCollection.find({}).fetch());
 
@@ -58,26 +59,75 @@ export const App = () => {
       <TaskForm />
 
       <ul>
-        { tasks.map(task => <Task key={ task._id } task={ task }/>) }
+        {tasks.map((task) => (
+          <Task key={task._id} task={task} />
+        ))}
       </ul>
     </div>
   );
 };
 ```
 
+:::
+
 ### Update the Stylesheet
 
 You also can style it as you wish. For now, we only need some margin at the top so the form doesn't seem off the mark. Add the CSS class `.task-form`, this needs to be the same name in your `className` attribute in the form component.
 
-`client/main.css`
+::: code-group
 
-```css
+```css [client/main.css]
 .task-form {
   margin-top: 1rem;
 }
 ```
 
+:::
+
 ### Add Submit Handler
+
+Now let's create a function to handle the form submit and insert a new task into the database. To do it, we will need to implement a Meteor Method.
+
+Methods are essentially RPC calls to the server that let you perform operations on the server side securely. You can read more about Meteor Methods [here](https://guide.meteor.com/methods.html).
+
+To create your methods, you can create a file called `tasksMethods.js`.
+
+::: code-group
+
+```javascript [imports/api/tasksMethods.js]
+import { Meteor } from "meteor/meteor";
+import { TasksCollection } from "./TasksCollection";
+
+Meteor.methods({
+  "tasks.insert"(doc) {
+    return TasksCollection.insertAsync(doc);
+  },
+});
+```
+
+:::
+
+Remember to import your method on the `main.js` server file and the `main.jsx` client file.
+
+::: code-group
+
+```javascript [server/main.js]
+import { Meteor } from "meteor/meteor";
+import { TasksCollection } from "../imports/api/tasksCollection";
+import "../imports/api/tasksPublications";
+import "../imports/api/tasksMethods"; // [!code highlight]
+```
+
+```javascript [client/main.jsx]
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { Meteor } from "meteor/meteor";
+import { App } from "/imports/ui/App";
+
+import "../imports/api/tasksMethods"; // [!code highlight]
+```
+
+:::
 
 Now you can attach a submit handler to your form using the `onSubmit` event, and also plug your React Hook into the `onChange` event present in the input element.
 
@@ -85,21 +135,21 @@ As you can see you are using the `useState` React Hook to store the `value` of y
 
 > In more complex applications you might want to implement some `debounce` or `throttle` logic if there are many calculations happening between potentially frequent events like `onChange`. There are libraries which will help you with this, like [Lodash](https://lodash.com/), for instance.
 
-`imports/ui/TaskForm.jsx`
+::: code-group
 
-```js
+```js [imports/ui/TaskForm.jsx]
 import React, { useState } from "react";
 import { TasksCollection } from "/imports/api/TasksCollection";
 
 export const TaskForm = () => {
   const [text, setText] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!text) return;
 
-    TasksCollection.insert({
+    await Meteor.callAsync("tasks.insert", {
       text: text.trim(),
       createdAt: new Date(),
     });
@@ -122,15 +172,19 @@ export const TaskForm = () => {
 };
 ```
 
+:::
+
+Inside the function, we are adding a task to the `tasks` collection by calling `Meteor.callAsync()`. The first argument is the name of the method we want to call, and the second argument is the text of the task. We are also trimming the text to remove any extra spaces.
+
 Also, insert a date `createdAt` in your `task` document so you know when each task was created.
 
 ### Show Newest Tasks First
 
 Now you just need to make a change that will make users happy: we need to show the newest tasks first. We can accomplish this quite quickly by sorting our [Mongo](https://guide.meteor.com/collections.html#mongo-collections) query.
 
-`imports/ui/App.jsx`
+::: code-group
 
-```js
+```js [imports/ui/App.jsx]
 ..
 
 export const App = () => {
@@ -138,12 +192,12 @@ export const App = () => {
   ..
 ```
 
+:::
+
 Your app should look like this:
 
 <img width="200px" src="/tutorials/react/assets/step03-form-new-task.png"/>
 
 <img width="200px" src="/tutorials/react/assets/step03-new-task-on-list.png"/>
-
-> Review: you can check how your code should be at the end of this step [here](https://github.com/meteor/react-tutorial/tree/master/src/simple-todos/step03)
 
 In the next step, we are going to update your tasks state and provide a way for users to remove tasks.
