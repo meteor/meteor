@@ -422,7 +422,7 @@ export class AccountsServer extends AccountsCommon {
       )
     );
 
-    methodInvocation.setUserId(userId);
+    await methodInvocation.setUserId(userId);
 
     return {
       id: userId,
@@ -664,7 +664,7 @@ export class AccountsServer extends AccountsCommon {
        await accounts.destroyToken(this.userId, token);
       }
       await accounts._successfulLogout(this.connection, this.userId);
-      this.setUserId(null);
+      await this.setUserId(null);
     };
 
     // Generates a new login token with the same expiration as the
