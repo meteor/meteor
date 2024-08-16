@@ -13,3 +13,4 @@ We will create, update, and remove tasks using Methods, and present them with re
 <!-- @include: ./4.update-and-remove.md-->
 <!-- @include: ./5.styles.md-->
 <!-- @include: ./7.adding-user-accounts.md-->
+<!-- @include: ./8.deploying.md-->
