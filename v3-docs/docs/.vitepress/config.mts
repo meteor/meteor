@@ -238,7 +238,7 @@ export default defineConfig({
         text: "Tutorials",
         items: [
           {
-            text: "Meteorjs + React",
+            text: "Meteor.js 3 + React",
             link: "/tutorials/react/index",
             collapsed: true,
           },
