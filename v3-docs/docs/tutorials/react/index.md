@@ -7,6 +7,7 @@ We will create, update, and remove tasks using Methods, and present them with re
 
 [[toc]]
 
-<!-- @include: ./creating-the-app.md-->
-<!-- @include: ./collections.md-->
-<!-- @include: ./forms-and-events.md-->
+<!-- @include: ./1.creating-the-app.md-->
+<!-- @include: ./2.collections.md-->
+<!-- @include: ./3.forms-and-events.md-->
+<!-- @include: ./4.update-and-remove.md-->
