@@ -11,3 +11,4 @@ We will create, update, and remove tasks using Methods, and present them with re
 <!-- @include: ./2.collections.md-->
 <!-- @include: ./3.forms-and-events.md-->
 <!-- @include: ./4.update-and-remove.md-->
+<!-- @include: ./5.styles.md-->
