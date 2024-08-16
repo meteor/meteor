@@ -1,10 +1,14 @@
-# Meteor.js 3 + Vue Tutorial
+# Building with Meteor.js 3, Vue 3 and `vue-meteor-tracker`
 
 In this tutorial, we will create a simple To-Do app using [Vue 3](https://vuejs.org/) and Meteor 3.0. Meteor works well with other frameworks like [Blaze](https://www.blazejs.org/), [React](https://react.dev/), [Solid](https://www.solidjs.com/), and [Svelte](https://svelte.dev/).
 
 Vue.js is a powerful JavaScript framework for making user interfaces. It helps you build interactive applications by using templates that connect to data and update automatically when the data changes. Vue.js templates use a simple syntax similar to HTML and work with Vue’s reactivity system to show components in the browser.
 
 To start building your Vue.js app, you'll need a code editor. If you're unsure which one to choose, [Visual Studio Code](https://code.visualstudio.com/) is a good option. After installing it, you can enhance your experience by adding extensions like [Meteor Toolbox](https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox) and [Vue Language Features](https://marketplace.visualstudio.com/items?itemName=Vue.volar).
+
+:::warning
+This tutorial uses the `vue-meteor-tracker` package, which is currently in beta and does not support async calls yet. However, it is still a valuable package, and we hope it will be updated soon. We are also working on a new tutorial that will use Meteor core packages instead.
+:::
 
 Let’s begin building your app!
 
@@ -30,11 +34,11 @@ If you encounter any issues, please refer to the requirements and details in [ou
 To set up Meteor with Vue easily, run the following command, replacing `simple-todos-vue` with your chosen project name:
 
 ```shell
-meteor create --vue simple-todos-vue --release=3.0.1
+meteor create --vue simple-todos-vue --release=3.0.2
 ```
 
 ::: info
-You can find the final version of this tutorial in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
+You can find the final version of this app in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
 :::
 
 Meteor will create all the necessary files for you. The `--vue` flag generates a project using Vue, Vite and Tailwind CSS.
@@ -1363,7 +1367,7 @@ You have completed the tutorial!
 By now, you should have a good understanding of working with Meteor and Vue.
 
 ::: info
-You can find the final version of this tutorial in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
+You can find the final version of this app in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
 :::
 
 Here are some options for what you can do next:
