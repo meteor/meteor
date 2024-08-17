@@ -363,7 +363,6 @@ export default defineConfig({
       },
     ],
 
-    socialLinks: [{ icon: "github", link: "" }],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/meteor/meteor' },
       { icon: 'twitter', link: 'https://x.com/meteorjs' },

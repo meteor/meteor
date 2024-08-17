@@ -10,14 +10,6 @@ Meteor.methods({
   }
 });
 
-// XXX it'd be cool to also test that the right thing happens if options
-// *are* validated, but Accounts._options is global state which makes this hard
-// (impossible?)
-Tinytest.add(
-  'accounts - config - validates keys',
-  test => test.throws(() => Accounts.config({ foo: "bar" }))
-);
-
 Tinytest.addAsync('accounts - config - token lifetime', async test => {
   const { loginExpirationInDays } = Accounts._options;
   Accounts._options.loginExpirationInDays = 2;
@@ -487,28 +479,28 @@ Tinytest.addAsync(
     Accounts._options = {};
 
     // test the field is included by default
-    let user = await Meteor.user();
+    let user = await Meteor.userAsync();
     test.isNotUndefined(user[ignoreFieldName], 'included by default');
 
     // test the field is excluded
     Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
-    user = await Meteor.user();
+    user = await Meteor.userAsync();
     test.isUndefined(user[ignoreFieldName], 'excluded');
-    user = await Meteor.user({});
+    user = await Meteor.userAsync({});
     test.isUndefined(user[ignoreFieldName], 'excluded {}');
 
     // test the field can still be retrieved if required
-    user = await Meteor.user({ fields: { [ignoreFieldName]: 1 } });
+    user = await Meteor.userAsync({ fields: { [ignoreFieldName]: 1 } });
     test.isNotUndefined(user[ignoreFieldName], 'field can be retrieved');
     test.isUndefined(user.username, 'field can be retrieved username');
 
     // test a combined negative field specifier
-    user = await Meteor.user({ fields: { username: 0 } });
+    user = await Meteor.userAsync({ fields: { username: 0 } });
     test.isUndefined(user[ignoreFieldName], 'combined field selector');
     test.isUndefined(user.username, 'combined field selector username');
 
     // test an explicit request for the full user object
-    user = await Meteor.user({ fields: {} });
+    user = await Meteor.userAsync({ fields: {} });
     test.isNotUndefined(user[ignoreFieldName], 'full selector');
     test.isNotUndefined(user.username, 'full selector username');
 
@@ -516,7 +508,7 @@ Tinytest.addAsync(
 
     // Test that a custom field gets retrieved properly
     Accounts.config({ defaultFieldSelector: { [customField]: 1 } });
-    user = await Meteor.user()
+    user = await Meteor.userAsync()
     test.isNotUndefined(user[customField]);
     test.isUndefined(user.username);
     test.isUndefined(user[ignoreFieldName]);
@@ -922,4 +914,3 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // cleanup
   await Meteor.users.removeAsync(u1.id);
 });
-
