@@ -353,14 +353,14 @@ export default defineConfig({
         text: "Changelog",
         items: [
           // TODO: Open issue in Vitepress about this
-          { link: "/history", text: "Current" },
+          { link: "/history", text: "Meteor.js v3 (Current)" },
           {
             link: "https://docs.meteor.com/changelog",
-            text: "Pre-3.0",
+            text: "Meteor.js v2 (Legacy)",
           },
           {
-            link: "https://docs.meteor.com/changelog#v2020210120",
-            text: "Pre-2.0",
+            link: "https://docs.meteor.com/changelog#v112220211012",
+            text: "Meteor.js v1 (Legacy)",
           },
         ],
         collapsed: true,
