@@ -17,6 +17,7 @@ Let’s begin building your app!
 <!-- @include: ./3.forms-and-events.md-->
 <!-- @include: ./4.update-and-remove.md-->
 <!-- @include: ./5.styles.md-->
+<!-- @include: ./6.filter-tasks.md-->
 <!-- @include: ./7.adding-user-accounts.md-->
 <!-- @include: ./8.deploying.md-->
 <!-- @include: ./9.next-steps.md-->
