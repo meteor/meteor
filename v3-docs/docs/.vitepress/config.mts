@@ -355,6 +355,10 @@ export default defineConfig({
           // TODO: Open issue in Vitepress about this
           { link: "/history", text: "Current" },
           {
+            link: "https://docs.meteor.com/changelog",
+            text: "Pre-3.0",
+          },
+          {
             link: "https://docs.meteor.com/changelog#v2020210120",
             text: "Pre-2.0",
           },
