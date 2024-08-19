@@ -356,11 +356,11 @@ export default defineConfig({
           { link: "/history", text: "Meteor.js v3 (Current)" },
           {
             link: "https://docs.meteor.com/changelog",
-            text: "Meteor.js v2 (Legacy)",
+            text: "Meteor.js v2",
           },
           {
             link: "https://docs.meteor.com/changelog#v112220211012",
-            text: "Meteor.js v1 (Legacy)",
+            text: "Meteor.js v1",
           },
         ],
         collapsed: true,
