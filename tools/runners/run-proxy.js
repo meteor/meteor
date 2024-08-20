@@ -26,7 +26,7 @@ Object.assign(Proxy.prototype, {
   // Start the proxy server, block (yield) until it is ready to go
   // (actively listening on outer and proxying to inner), and then
   // return.
-  start: function () {
+  start: async function () {
     var self = this;
 
     if (self.server) {
@@ -71,7 +71,7 @@ Object.assign(Proxy.prototype, {
       allowStart = resolve;
     });
 
-    self.server.on('error', function (err) {
+    self.server.on('error', async function (err) {
       if (err.code === 'EADDRINUSE') {
         var port = self.listenPort;
         runLog.log(
@@ -92,7 +92,7 @@ Object.assign(Proxy.prototype, {
       } else {
         runLog.log('' + err);
       }
-      self.onFailure();
+      await self.onFailure();
       allowStart();
     });
 
@@ -142,7 +142,7 @@ Object.assign(Proxy.prototype, {
       allowStart();
     });
 
-    promise.await();
+    await promise;
   },
 
   // Idempotent.

@@ -1,7 +1,7 @@
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const METEOR_LATEST_VERSION = '2.15';
+const METEOR_LATEST_VERSION = '3.0.2';
 const sudoUser = process.env.SUDO_USER || '';
 function isRoot() {
   return process.getuid && process.getuid() === 0;
@@ -22,7 +22,7 @@ if (isWindows()) {
 } else {
   if (isRoot()) {
     console.info(
-      'You are running the install script as root, without SUDO. This is not recommended and should be avoided. Continuing.'
+      'You are running the install script as root, without SUDO. This is not recommended and should be avoided. Continuing.',
     );
   }
   rootPath = os.homedir();
