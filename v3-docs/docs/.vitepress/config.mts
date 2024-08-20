@@ -40,7 +40,13 @@ export default defineConfig({
           {
             text: 'Migration from Meteor.js 2',
             link: 'https://v3-migration-docs.meteor.com'
-          }
+          },
+          {
+            text: 'Tutorials',
+            items: [
+              { text: 'Meteor + Vue + vue-meteor-tracker', link: '/tutorials/meteorjs3-vue3-vue-meteor-tracker' },
+            ]
+          },
         ]
       },
       {
@@ -217,7 +223,7 @@ export default defineConfig({
             link: '/api/top-level-await'
           }
         ],
-        collapsed: false,
+        collapsed: true,
       },
       {
         text: "Packages",
@@ -350,20 +356,30 @@ export default defineConfig({
         collapsed: true,
       },
       {
+        text: "Tutorials",
+        items: [
+          { link: "/tutorials/meteorjs3-vue3-vue-meteor-tracker", text: "Meteor + Vue + vue-meteor-tracker" },
+        ],
+        collapsed: true,
+      },
+      {
         text: "Changelog",
         items: [
           // TODO: Open issue in Vitepress about this
-          { link: "/history", text: "Current" },
+          { link: "/history", text: "Meteor.js v3 (Current)" },
           {
-            link: "https://docs.meteor.com/changelog#v2020210120",
-            text: "Pre-2.0",
+            link: "https://docs.meteor.com/changelog",
+            text: "Meteor.js v2",
+          },
+          {
+            link: "https://docs.meteor.com/changelog#v112220211012",
+            text: "Meteor.js v1",
           },
         ],
         collapsed: true,
       },
     ],
 
-    socialLinks: [{ icon: "github", link: "" }],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/meteor/meteor' },
       { icon: 'twitter', link: 'https://x.com/meteorjs' },
