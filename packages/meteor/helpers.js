@@ -85,6 +85,10 @@ Meteor.promisify = function (fn, context, errorFirst) {
   }
 
   return function () {
+    var self = this;
+    var filteredArgs = Array.prototype.slice.call(arguments)
+      .filter(function (i) { return i !== undefined; });
+
     return new Promise(function (resolve, reject) {
       var callback = Meteor.bindEnvironment(function (error, result) {
         var _error = error, _result = result;
@@ -100,11 +104,9 @@ Meteor.promisify = function (fn, context, errorFirst) {
         resolve(_result);
       });
 
-      var filteredArgs = Array.prototype.slice.call(arguments)
-        .filter(function (i) { return i !== undefined; });
       filteredArgs.push(callback);
 
-      return fn.apply(context || this, filteredArgs);
+      return fn.apply(context || self, filteredArgs);
     });
   };
 };
