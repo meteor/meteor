@@ -4,9 +4,7 @@ Describes the high-level features and actions for the Meteor project in the near
 
 ## Introduction
 
-**Quick update moving items to Finished: August 7th, 2024.**
-
-**Last new items added: August 7th, 2024.**
+**Last updated: August 7th, 2024.**
 
 The description of many items includes sentences and ideas from Meteor community members.
 
@@ -19,35 +17,32 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 ### Next releases
 
 - Improve TypeScript support for Meteor and packages ([Discussion](https://github.com/meteor/meteor/discussions/12080))
-  - This should be an ongoing effort to improve the TypeScript support in Meteor and packages, as we write new code in TypeScript and get more skin in the game, it should naturally improve.
+  - This should be an ongoing effort to improve the TypeScript support in Meteor and packages, as we write new code in TypeScript and get more skin in the game, it should naturally improve. This does not mean we will actively refactor working code.
+- Performance improvements for Meteor 3.0
+- Bringing community packages to the core
 - MongoDB Change Streams support ([Discussion](https://github.com/meteor/meteor/discussions/11842))
 - Integrated support for Vite (Client Bundler)
   - Tree-shaking (Client)
   - Improve Meteor build time (Client, [Discussion](https://github.com/meteor/meteor/discussions/11587))
+  - Support package.json exports fields ([Discussion](https://github.com/meteor/meteor/discussions/11727)) (Vite solves this too)
 - Replace Babel with ESBuild, SWC or another tool for the server bundle
   - Tree-shaking (Server)
   - Improve Meteor build time (Server, [Discussion](https://github.com/meteor/meteor/discussions/11587))
 - Improve release CI/CD speed and reliability (optimized build times will help)
-- Review and help to modernize Meteor tools ([Discussion](https://github.com/meteor/meteor/discussions/12073))
-  - TypeScript Refactor for CLI
-- Improve support for Windows 11 or adopt Windows with WSL
+- Improve support for Windows 11
+- Document better Windows with WSL
 - HTTP/3 Support
-- Support package.json exports fields ([Discussion](https://github.com/meteor/meteor/discussions/11727))
 
 ### Candidate items
 
 We need to discuss further to decide whether to proceed with these implementations.
 
-- Update and fix Meteor Client Bundler or Improve DDP Client
+- Improve DDP Client
 - Improve Passwordless package ([Discussion](https://github.com/meteor/meteor/discussions/12075))
+- Integrate with Tauri, it might replace Cordova and Electron in a single tool
 - Support building mobile apps using CapacitorJS
 - Bring Redis-oplog to core ([Repository](https://github.com/Meteor-Community-Packages/redis-oplog))
 - Better file upload support via DDP ([Discussion](https://github.com/meteor/meteor/discussions/11523))
-
-### Next educational items
-
-- Create a new Meteor Guide ([Current Guide](https://guide.meteor.com/))
-- Scaling Meteor Apps course ([Meteor University](https://university.meteor.com/))
 
 ### Finished items
 
@@ -67,3 +62,5 @@ We need to discuss further to decide whether to proceed with these implementatio
 -----------
 
 For more completed items, refer to our [changelog](https://docs.meteor.com/changelog.html).
+
+Todo: Add short descriptions to each item
