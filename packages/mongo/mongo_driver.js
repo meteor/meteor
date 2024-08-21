@@ -1190,6 +1190,9 @@ class AsynchronousCursor {
 
       const docs = await self._dbCursor.toArray();
 
+      // Need to rewind the cursor otherwise docs will be removed on subsequent polls.
+      this._dbCursor.rewind();
+
       docs.forEach(doc => {
         results.set(doc._id, replaceTypes(doc, replaceMongoAtomWithMeteor));
       });
