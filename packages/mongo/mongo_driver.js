@@ -1000,6 +1000,7 @@ MongoConnection.prototype._createSynchronousCursor = function(
     skip: cursorOptions.skip,
     projection: cursorOptions.fields || cursorOptions.projection,
     readPreference: cursorOptions.readPreference,
+    batchSize: 128,
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
@@ -1009,7 +1010,8 @@ MongoConnection.prototype._createSynchronousCursor = function(
 
   var dbCursor = collection.find(
     replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
-    mongoOptions);
+    mongoOptions
+  );
 
   // Do we want a tailable cursor (which only works on capped collections)?
   if (cursorOptions.tailable) {
@@ -1185,9 +1187,13 @@ class AsynchronousCursor {
       return self.fetch();
     } else {
       var results = new LocalCollection._IdMap;
-      await self.forEach(function (doc) {
-        results.set(doc._id, doc);
+
+      const docs = await self._dbCursor.toArray();
+
+      docs.forEach(doc => {
+        results.set(doc._id, replaceTypes(doc, replaceMongoAtomWithMeteor));
       });
+
       return results;
     }
   }
