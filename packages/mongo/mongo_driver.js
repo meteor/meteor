@@ -898,7 +898,7 @@ Cursor.prototype.countAsync = async function () {
 
 Cursor.prototype.count = function () {
   throw new Error(
-    "count() is not avaible on the server. Please use countAsync() instead."
+    "count() is not available on the server. Please use countAsync() instead."
   );
 };
 
