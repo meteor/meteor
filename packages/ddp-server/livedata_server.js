@@ -396,13 +396,6 @@ var Session = function (server, version, socket, options) {
 };
 
 Object.assign(Session.prototype, {
-  _checkPublishPromiseBeforeSend(f) {
-    if (!this._publishCursorPromise) {
-      f();
-      return;
-    }
-    this._publishCursorPromise.finally(() => f());
-  },
   sendReady: function (subscriptionIds) {
     var self = this;
     if (self._isSending) {
@@ -556,13 +549,11 @@ Object.assign(Session.prototype, {
   // It should be a JSON object (it will be stringified).
   send: function (msg) {
     const self = this;
-    this._checkPublishPromiseBeforeSend(() => {
-      if (self.socket) {
-        if (Meteor._printSentDDP)
-          Meteor._debug('Sent DDP', DDPCommon.stringifyDDP(msg));
-        self.socket.send(DDPCommon.stringifyDDP(msg));
-      }
-    });
+    if (self.socket) {
+      if (Meteor._printSentDDP)
+        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
+      self.socket.send(DDPCommon.stringifyDDP(msg));
+    }
   },
 
   // Send a connection error.
@@ -627,6 +618,7 @@ Object.assign(Session.prototype, {
 
     var processNext = function () {
       var msg = self.inQueue && self.inQueue.shift();
+
       if (!msg) {
         self.workerRunning = false;
         return;
@@ -653,6 +645,7 @@ Object.assign(Session.prototype, {
             msg,
             unblock
           );
+
           if (Meteor._isPromise(result)) {
             result.finally(() => unblock());
           } else {
@@ -782,15 +775,13 @@ Object.assign(Session.prototype, {
         return;
       }
 
-      var setUserId = function(userId) {
-        self._setUserId(userId);
-      };
-
       var invocation = new DDPCommon.MethodInvocation({
         name: msg.method,
         isSimulation: false,
         userId: self.userId,
-        setUserId: setUserId,
+        setUserId(userId) {
+          return self._setUserId(userId);
+        },
         unblock: unblock,
         connection: self.connectionHandle,
         randomSeed: randomSeed,
@@ -823,6 +814,8 @@ Object.assign(Session.prototype, {
           }
         }
 
+
+
         const getCurrentMethodInvocationResult = () =>
           DDP._CurrentMethodInvocation.withValue(
             invocation,
@@ -838,6 +831,7 @@ Object.assign(Session.prototype, {
               keyName: 'getCurrentMethodInvocationResult',
             }
           );
+
         resolve(
           DDPServer._CurrentWriteFence.withValue(
             fence,
@@ -903,7 +897,7 @@ Object.assign(Session.prototype, {
 
   // Sets the current user id in all appropriate contexts and reruns
   // all subscriptions
-  _setUserId: function(userId) {
+  async _setUserId(userId) {
     var self = this;
 
     if (userId !== null && typeof userId !== "string")
@@ -938,19 +932,21 @@ Object.assign(Session.prototype, {
     // DDP._CurrentMethodInvocation set. But DDP._CurrentMethodInvocation is not
     // expected to be set inside a publish function, so we temporary unset it.
     // Inside a publish function DDP._CurrentPublicationInvocation is set.
-    DDP._CurrentMethodInvocation.withValue(undefined, function () {
+    await DDP._CurrentMethodInvocation.withValue(undefined, async function () {
       // Save the old named subs, and reset to having no subscriptions.
       var oldNamedSubs = self._namedSubs;
       self._namedSubs = new Map();
       self._universalSubs = [];
 
-      oldNamedSubs.forEach(function (sub, subscriptionId) {
-        var newSub = sub._recreate();
+
+
+      await Promise.all([...oldNamedSubs].map(async ([subscriptionId, sub]) => {
+        const newSub = sub._recreate();
         self._namedSubs.set(subscriptionId, newSub);
         // nb: if the handler throws or calls this.error(), it will in fact
         // immediately send its 'nosub'. This is OK, though.
-        newSub._runHandler();
-      });
+        await newSub._runHandler();
+      }));
 
       // Allow newly-created universal subs to be started on our connection in
       // parallel with the ones we're spinning up here, and spin up universal
@@ -1207,16 +1203,16 @@ Object.assign(Subscription.prototype, {
       resultOrThenable && typeof resultOrThenable.then === 'function';
     if (isThenable) {
       try {
-        self._publishHandlerResult(await resultOrThenable);
+        await self._publishHandlerResult(await resultOrThenable);
       } catch(e) {
         self.error(e)
       }
     } else {
-      self._publishHandlerResult(resultOrThenable);
+      await self._publishHandlerResult(resultOrThenable);
     }
   },
 
-  _publishHandlerResult: function (res) {
+  async _publishHandlerResult (res) {
     // SPECIAL CASE: Instead of writing their own callbacks that invoke
     // this.added/changed/ready/etc, the user can just return a collection
     // cursor or array of cursors from the publish function; we call their
@@ -1239,11 +1235,15 @@ Object.assign(Subscription.prototype, {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
-      this._publishCursorPromise = res._publishCursor(self).then(() => {
-        // _publishCursor only returns after the initial added callbacks have run.
-        // mark subscription as ready.
-        self.ready();
-      }).catch((e) => self.error(e));
+      try {
+        await res._publishCursor(self);
+      } catch (e) {
+        self.error(e);
+        return;
+      }
+      // _publishCursor only returns after the initial added callbacks have run.
+      // mark subscription as ready.
+      self.ready();
     } else if (_.isArray(res)) {
       // Check all the elements are cursors
       if (! _.all(res, isCursor)) {
@@ -1254,6 +1254,7 @@ Object.assign(Subscription.prototype, {
       // XXX we should support overlapping cursors, but that would require the
       // merge box to allow overlap within a subscription
       var collectionNames = {};
+
       for (var i = 0; i < res.length; ++i) {
         var collectionName = res[i]._getCollectionName();
         if (_.has(collectionNames, collectionName)) {
@@ -1263,15 +1264,15 @@ Object.assign(Subscription.prototype, {
           return;
         }
         collectionNames[collectionName] = true;
-      };
+      }
 
-      this._publishCursorPromise = Promise.all(
-        res.map(c => c._publishCursor(self))
-      )
-        .then(() => {
-          self.ready();
-        })
-        .catch((e) => self.error(e));
+      try {
+        await Promise.all(res.map(cur => cur._publishCursor(self)));
+      } catch (e) {
+        self.error(e);
+        return;
+      }
+      self.ready();
     } else if (res) {
       // Truthy values other than cursors or arrays are probably a
       // user mistake (possible returning a Mongo document via, say,
@@ -1409,7 +1410,6 @@ Object.assign(Subscription.prototype, {
       ids.add(id);
     }
 
-    this._session._publishCursorPromise = this._publishCursorPromise;
     this._session.added(this._subscriptionHandle, collectionName, id, fields);
   },
 
@@ -1863,25 +1863,22 @@ Object.assign(Server.prototype, {
     // get the user state from the outer method or publish function, otherwise
     // don't allow setUserId to be called
     var userId = null;
-    var setUserId = function() {
+    let setUserId = () => {
       throw new Error("Can't call setUserId on a server initiated method call");
     };
     var connection = null;
     var currentMethodInvocation = DDP._CurrentMethodInvocation.get();
     var currentPublicationInvocation = DDP._CurrentPublicationInvocation.get();
     var randomSeed = null;
+
     if (currentMethodInvocation) {
       userId = currentMethodInvocation.userId;
-      setUserId = function(userId) {
-        currentMethodInvocation.setUserId(userId);
-      };
+      setUserId = (userId) => currentMethodInvocation.setUserId(userId);
       connection = currentMethodInvocation.connection;
       randomSeed = DDPCommon.makeRpcSeed(currentMethodInvocation, name);
     } else if (currentPublicationInvocation) {
       userId = currentPublicationInvocation.userId;
-      setUserId = function(userId) {
-        currentPublicationInvocation._session._setUserId(userId);
-      };
+      setUserId = (userId) => currentPublicationInvocation._session._setUserId(userId);
       connection = currentPublicationInvocation.connection;
     }
 

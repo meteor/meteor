@@ -639,6 +639,7 @@ export class Connection {
    * @param {Boolean} options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
+   * @param {Boolean} options.returnServerResultPromise (Client only) If true, the promise returned by applyAsync will resolve to the server's return value, rather than the stub's return value. This is useful when you want to ensure that the server's return value is used, even if the stub returns a promise. The same behavior as `callAsync`.
    */
   applyAsync(name, args, options, callback = null) {
     const stubPromise = this._applyAsyncStubInvocation(name, args, options);
@@ -1034,6 +1035,9 @@ export class Connection {
   // Always queues the call before sending the message
   // Used, for example, on subscription.[id].stop() to make sure a "sub" message is always called before an "unsub" message
   // https://github.com/meteor/meteor/issues/13212
+  //
+  // This is part of the actual fix for the rest check:
+  // https://github.com/meteor/meteor/pull/13236
   _sendQueued(obj) {
     this._send(obj, true);
   }
@@ -1995,7 +1999,7 @@ export class Connection {
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
     Object.entries(this._subscriptions).forEach(([id, sub]) => {
-      this._send({
+      this._sendQueued({
         msg: 'sub',
         id: id,
         name: sub.name,
