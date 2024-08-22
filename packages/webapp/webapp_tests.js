@@ -1,3 +1,5 @@
+import { WebApp, WebAppInternals } from './webapp_server';
+
 const url = require("url");
 const crypto = require("crypto");
 const http = require("http");
@@ -43,8 +45,15 @@ MockResponse.prototype.end = function (data, encoding) {
 MockResponse.prototype.getBody = function () {
   return this.buffer;
 };
-
-Tinytest.add("webapp - content-type header", function (test) {
+const asyncGet =
+  (url, opt) =>
+    new Promise((resolve, reject) =>
+      HTTP.get(url, opt, (err, res) =>
+        err
+          ? reject(err)
+          : resolve(res)
+      ));
+Tinytest.addAsync("webapp - content-type header", async function (test) {
   const staticFiles = WebAppInternals.staticFilesByArch["web.browser"];
   const staticFilesKeys = Object.keys(staticFiles);
 
@@ -59,11 +68,10 @@ Tinytest.add("webapp - content-type header", function (test) {
       return staticFiles[url].type === "js";
     }
   );
-
-  let resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), cssResource));
+  let resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), cssResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "text/css; charset=utf-8");
-  resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), jsResource));
+  resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), jsResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "application/javascript; charset=utf-8");
 });
@@ -157,10 +165,10 @@ Tinytest.addAsync(
 
     // It's okay to set this global state because we're not going to yield
     // before setting it back to what it was originally.
-    WebAppInternals.setInlineScriptsAllowed(true);
+    await WebAppInternals.setInlineScriptsAllowed(true);
 
     {
-      const { stream } = WebAppInternals.getBoilerplate({
+      const { stream } = await WebAppInternals.getBoilerplate({
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
       }, "web.browser");
@@ -189,11 +197,11 @@ Tinytest.addAsync(
       // When inline scripts are disallowed, the script body should not be
       // inlined, and the script should be included in a <script src="..">
       // tag.
-      WebAppInternals.setInlineScriptsAllowed(false);
+      await WebAppInternals.setInlineScriptsAllowed(false);
     }
 
     {
-      const { stream } = WebAppInternals.getBoilerplate({
+      const { stream }  = await WebAppInternals.getBoilerplate({
         browser: "doesn't-matter",
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
@@ -220,7 +228,7 @@ Tinytest.addAsync(
     test.isTrue(resBody.indexOf(additionalScript) !== -1);
     test.equal(res.statusCode, 200);
 
-    WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
+    await WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
   }
 );
 
@@ -274,7 +282,7 @@ Tinytest.addAsync(
     req.browser = { name: "headless" };
     req.dynamicHead = "so dynamic";
 
-    const { stream } = WebAppInternals.getBoilerplate(req, "web.browser");
+    const { stream } = await WebAppInternals.getBoilerplate(req, "web.browser");
     const html = await streamToString(stream);
 
     test.equal(callCount, 1);
@@ -333,8 +341,26 @@ __meteor_runtime_config__.WEBAPP_TEST_B = '</script>';
 
 Tinytest.add("webapp - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(WebAppInternals.NpmModules.connect.version, /^3\.(\d+)\.(\d+)/);
-  test.equal(typeof(WebAppInternals.NpmModules.connect.module), 'function');
-  test.equal(typeof(WebAppInternals.NpmModules.connect.module.basicAuth),
-             'function');
+  test.matches(WebAppInternals.NpmModules.express.version, /^4\.(\d+)\.(\d+)/);
+  test.equal(typeof(WebAppInternals.NpmModules.express.module), 'function');
 });
+
+Tinytest.addAsync(
+  "webapp - addRuntimeConfigHook usage",
+  async function (test, done) {
+    WebApp.addRuntimeConfigHook(async (config) => {
+      const nextConfig = {
+        ...WebApp.decodeRuntimeConfig(config.encodedCurrentConfig),
+        customKey: 'customValue',
+      };
+      return WebApp.encodeRuntimeConfig(nextConfig);
+    });
+
+    const req = new http.IncomingMessage();
+    req.url = 'http://example.com';
+    req.browser = { name: 'headless' };
+    const boilerplate = await WebAppInternals.getBoilerplate(req, 'web.browser');
+    const html = await streamToString(boilerplate.stream);
+    test.isTrue(/__meteor_runtime_config__ = (.*customKey[^"].*customValue.*)/.test(html));
+  }
+);

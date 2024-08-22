@@ -77,6 +77,10 @@ const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // allowed to return a Promise instead of having to await async
   // compilation using fibers and/or futures.
   'isobuild:async-plugins': ['1.6.1'],
+
+  // This package requires functionality introduced in meteor-tools@3.0
+  // to enable using top level await
+  'isobuild:top-level-await': ['3.0.0'],
 }
 
 import {
@@ -310,59 +314,92 @@ Object.assign(ProjectContext.prototype, {
     self._readResolverResultCache();
   },
 
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   readProjectMetadata: function () {
     // don't generate a profiling report for this stage (Profile.run),
     // because all we do here is read a handful of files.
-    this._completeStagesThrough(STAGE.READ_PROJECT_METADATA);
+    return this._completeStagesThrough(STAGE.READ_PROJECT_METADATA);
   },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   initializeCatalog: function () {
-    Profile.run('ProjectContext initializeCatalog', () => {
-      this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
+    return Profile.run('ProjectContext initializeCatalog', () => {
+      return this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
     });
   },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   resolveConstraints: function () {
-    Profile.run('ProjectContext resolveConstraints', () => {
-      this._completeStagesThrough(STAGE.RESOLVE_CONSTRAINTS);
-    });
-  },
-  downloadMissingPackages: function () {
-    Profile.run('ProjectContext downloadMissingPackages', () => {
-      this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
-    });
-  },
-  buildLocalPackages: function () {
-    Profile.run('ProjectContext buildLocalPackages', () => {
-      this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
-    });
-  },
-  saveChangedMetadata: function () {
-    Profile.run('ProjectContext saveChangedMetadata', () => {
-      this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
-    });
-  },
-  prepareProjectForBuild: function () {
-    // This is the same as saveChangedMetadata, but if we insert stages after
-    // that one it will continue to mean "fully finished".
-    Profile.run('ProjectContext prepareProjectForBuild', () => {
-      this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    return Profile.run('ProjectContext resolveConstraints', () => {
+      return this._completeStagesThrough(STAGE.RESOLVE_CONSTRAINTS);
     });
   },
 
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
+  downloadMissingPackages: function () {
+    return Profile.run('ProjectContext downloadMissingPackages', () => {
+      return this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
+    });
+  },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
+  buildLocalPackages: function () {
+    return Profile.run('ProjectContext buildLocalPackages', () => {
+      return this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
+    });
+  },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
+  saveChangedMetadata: function () {
+    return Profile.run('ProjectContext saveChangedMetadata', () => {
+      return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    });
+  },
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
+  prepareProjectForBuild: function () {
+    // This is the same as saveChangedMetadata, but if we insert stages after
+    // that one it will continue to mean "fully finished".
+    return Profile.run('ProjectContext prepareProjectForBuild', () => {
+      return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    });
+  },
+
+  /**
+   *
+   * @return {Promise<*|undefined>}
+   */
   _completeStagesThrough: function (targetStage) {
     var self = this;
     buildmessage.assertInCapture();
 
-    buildmessage.enterJob('preparing project', function () {
+    return buildmessage.enterJob('preparing project', async function () {
       while (self._completedStage !== targetStage) {
         // This error gets thrown if you request to go to a stage that's earlier
         // than where you started. Note that the error will be mildly confusing
         // because the key of STAGE does not match the value.
-        if (self.completedStage === STAGE.SAVE_CHANGED_METADATA)
+        if (self._completedStage === STAGE.SAVE_CHANGED_METADATA)
           throw Error("can't find requested stage " + targetStage);
 
         // The actual value of STAGE.FOO is the name of the method that takes
         // you to the next step after FOO.
-        self[self._completedStage]();
+        await self[self._completedStage]();
         if (buildmessage.jobHasMessages())
           return;
       }
@@ -384,13 +421,17 @@ Object.assign(ProjectContext.prototype, {
   //
   // This should be pretty fast --- for example, we shouldn't worry about
   // needing to wait for it to be done before we open the runner proxy.
-  _readProjectMetadata: Profile('_readProjectMetadata', function () {
+  /**
+   *
+   * @return {Promise<void>}
+   */
+  _readProjectMetadata: Profile('_readProjectMetadata', async function () {
     var self = this;
     buildmessage.assertInCapture();
 
-    buildmessage.enterJob('reading project metadata', function () {
+    await buildmessage.enterJob('reading project metadata', async function () {
       // Ensure this is actually a project directory.
-      self._ensureProjectDir();
+      await self._ensureProjectDir();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -399,6 +440,7 @@ Object.assign(ProjectContext.prototype, {
         projectDir: self.projectDir,
         catalog: self._officialCatalog,
       });
+      await self.releaseFile.init();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -421,6 +463,7 @@ Object.assign(ProjectContext.prototype, {
       self.cordovaPluginsFile = new exports.CordovaPluginsFile({
         projectDir: self.projectDir
       });
+      await self.cordovaPluginsFile.init();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -428,11 +471,13 @@ Object.assign(ProjectContext.prototype, {
       self.platformList = new exports.PlatformList({
         projectDir: self.projectDir
       });
+      await self.platformList._init();
+
       if (buildmessage.jobHasMessages())
         return;
 
       // Read .meteor/.id, creating it if necessary.
-      self._ensureAppIdentifier();
+      await self._ensureAppIdentifier();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -457,12 +502,12 @@ Object.assign(ProjectContext.prototype, {
 
   // Write the new release to .meteor/release and create a
   // .meteor/dev_bundle symlink to the corresponding dev_bundle.
-  writeReleaseFileAndDevBundleLink(releaseName) {
+  async writeReleaseFileAndDevBundleLink(releaseName) {
     assert.strictEqual(files.inCheckout(), false);
-    this.releaseFile.write(releaseName);
+    await this.releaseFile.write(releaseName);
   },
 
-  _ensureProjectDir: function () {
+  _ensureProjectDir: async function () {
     var self = this;
     files.mkdir_p(files.pathJoin(self.projectDir, '.meteor'));
 
@@ -470,13 +515,13 @@ Object.assign(ProjectContext.prototype, {
     // so let's make sure it exists!
     var constraintFilePath = files.pathJoin(self.projectDir, '.meteor', 'packages');
     if (! files.exists(constraintFilePath)) {
-      files.writeFileAtomically(constraintFilePath, '');
+      await files.writeFileAtomically(constraintFilePath, '');
     }
 
     // Let's also make sure we have a minimal gitignore.
     var gitignorePath = files.pathJoin(self.projectDir, '.meteor', '.gitignore');
     if (! files.exists(gitignorePath)) {
-      files.writeFileAtomically(gitignorePath, 'local\n');
+      await files.writeFileAtomically(gitignorePath, 'local\n');
     }
   },
 
@@ -523,7 +568,7 @@ Object.assign(ProjectContext.prototype, {
     return self.isopackCache.getLintingMessagesForLocalPackages();
   },
 
-  _ensureAppIdentifier: function () {
+  _ensureAppIdentifier: async function () {
     var self = this;
     var identifierFile = files.pathJoin(self.projectDir, '.meteor', '.id');
 
@@ -548,17 +593,16 @@ Object.assign(ProjectContext.prototype, {
 "#   - ensuring you don't accidentally deploy one app on top of another\n" +
 "#   - providing package authors with aggregated statistics\n" +
 "\n");
-      files.writeFileAtomically(identifierFile, comment + appId + '\n');
+      await files.writeFileAtomically(identifierFile, comment + appId + '\n');
     }
 
     self.appIdentifier = appId;
   },
 
-  _resolveConstraints: Profile('_resolveConstraints', function () {
+  _resolveConstraints: Profile('_resolveConstraints', async function () {
     var self = this;
     buildmessage.assertInJob();
-
-    var depsAndConstraints = self._getRootDepsAndConstraints();
+    var depsAndConstraints = await self._getRootDepsAndConstraints();
     // If this is in the runner and we have reset this ProjectContext for a
     // rebuild, use the versions we calculated last time in this process (which
     // may not have been written to disk if our release doesn't match the
@@ -589,9 +633,9 @@ Object.assign(ProjectContext.prototype, {
 
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
-    catalog.runAndRetryWithRefreshIfHelpful(function (canRetry) {
-      buildmessage.enterJob("selecting package versions", function () {
-        var resolver = self._buildResolver();
+    await catalog.runAndRetryWithRefreshIfHelpful(function (canRetry) {
+      return buildmessage.enterJob("selecting package versions", async function () {
+        var resolver = await self._buildResolver();
 
         var resolveOptions = {
           previousSolution: cachedVersions,
@@ -618,11 +662,11 @@ Object.assign(ProjectContext.prototype, {
 
         var solution;
         try {
-          Profile.time(
+          await Profile.time(
             "Select Package Versions" +
               (resolverRunCount > 1 ? (" (Try " + resolverRunCount + ")") : ""),
-            function () {
-              solution = resolver.resolve(
+            async function () {
+              solution = await resolver.resolve(
                 depsAndConstraints.deps, depsAndConstraints.constraints,
                 resolveOptions);
             });
@@ -655,7 +699,9 @@ Object.assign(ProjectContext.prototype, {
           anticipatedPrereleases: anticipatedPrereleases
         });
 
-        self._saveResolverResultCache();
+        await self.packageMapDelta.init();
+
+        await self._saveResolverResultCache();
 
         self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
       });
@@ -679,8 +725,8 @@ Object.assign(ProjectContext.prototype, {
     return this._resolverResultCache;
   },
 
-  _saveResolverResultCache() {
-    files.writeFileAtomically(
+  async _saveResolverResultCache() {
+    await files.writeFileAtomically(
       files.pathJoin(
         this.projectLocalDir,
         "resolver-result-cache.json"
@@ -700,8 +746,8 @@ Object.assign(ProjectContext.prototype, {
     }
   },
 
-  saveBuildCache(buildCache) {
-    files.writeFileAtomically(
+  async saveBuildCache(buildCache) {
+    await files.writeFileAtomically(
       files.pathJoin(
         this.projectLocalDir,
         "build-cache.json"
@@ -777,20 +823,19 @@ Object.assign(ProjectContext.prototype, {
   // but does not compile the packages.
   //
   // Must be run in a buildmessage context. On build error, returns null.
-  _initializeCatalog: Profile('_initializeCatalog', function () {
+  _initializeCatalog: Profile('_initializeCatalog', async function () {
     var self = this;
     buildmessage.assertInJob();
-
-    catalog.runAndRetryWithRefreshIfHelpful(function () {
-      buildmessage.enterJob(
+    await catalog.runAndRetryWithRefreshIfHelpful(async function () {
+      return await buildmessage.enterJob(
         "scanning local packages",
-        function () {
-          self.localCatalog = new catalogLocal.LocalCatalog;
+        async function () {
+          self.localCatalog = new catalogLocal.LocalCatalog();
           self.projectCatalog = new catalog.LayeredCatalog(
             self.localCatalog, self._officialCatalog);
 
           var searchDirs = self._localPackageSearchDirs();
-          self.localCatalog.initialize({
+          await self.localCatalog.initialize({
             localPackageSearchDirs: searchDirs,
             explicitlyAddedLocalPackageDirs: self._explicitlyAddedLocalPackageDirs
           });
@@ -816,14 +861,14 @@ Object.assign(ProjectContext.prototype, {
     });
   }),
 
-  _getRootDepsAndConstraints: function () {
+  _getRootDepsAndConstraints: async function () {
     const depsAndConstraints = {
       deps: [],
       constraints: [],
     };
 
     this._addAppConstraints(depsAndConstraints);
-    this._addLocalPackageConstraints(depsAndConstraints);
+    await this._addLocalPackageConstraints(depsAndConstraints);
     this._addReleaseConstraints(depsAndConstraints);
 
     return depsAndConstraints;
@@ -838,16 +883,17 @@ Object.assign(ProjectContext.prototype, {
     });
   },
 
-  _addLocalPackageConstraints: function (depsAndConstraints) {
+  _addLocalPackageConstraints: async function (depsAndConstraints) {
     var self = this;
-    _.each(self.localCatalog.getAllPackageNames(), function (packageName) {
+    const packageNames = await self.localCatalog.getAllPackageNames();
+    packageNames.forEach((packageName) => {
       var versionRecord = self.localCatalog.getLatestVersion(packageName);
       var constraint = utils.parsePackageConstraint(
-        packageName + "@=" + versionRecord.version);
+          packageName + "@=" + versionRecord.version);
       // Add a constraint ("this is the only version available") but no
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
-    });
+    })
   },
 
   _addReleaseConstraints: function (depsAndConstraints) {
@@ -898,27 +944,27 @@ Object.assign(ProjectContext.prototype, {
     return anticipatedPrereleases;
   },
 
-  _buildResolver: function () {
-    const { ConstraintSolver } = loadIsopackage('constraint-solver');
+  _buildResolver: async function () {
+    const { ConstraintSolver } = await loadIsopackage('constraint-solver');
 
     return new ConstraintSolver.PackagesResolver(this.projectCatalog, {
-      nudge() {
-        Console.nudge(true);
+      yield() {
+        return Console.yield();
       },
       Profile: Profile,
       resultCache: this._resolverResultCache
     });
   },
 
-  _downloadMissingPackages: Profile('_downloadMissingPackages', function () {
+  _downloadMissingPackages: Profile('_downloadMissingPackages', async function () {
     var self = this;
     buildmessage.assertInJob();
     if (!self.packageMap)
       throw Error("which packages to download?");
 
-    catalog.runAndRetryWithRefreshIfHelpful(function () {
-      buildmessage.enterJob("downloading missing packages", function () {
-        self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
+    await catalog.runAndRetryWithRefreshIfHelpful(function () {
+      return buildmessage.enterJob("downloading missing packages", async function () {
+        await self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
           serverArchitectures: self._serverArchitectures
         });
         if (buildmessage.jobHasMessages())
@@ -928,12 +974,12 @@ Object.assign(ProjectContext.prototype, {
     });
   }),
 
-  _buildLocalPackages: Profile('_buildLocalPackages', function () {
+  _buildLocalPackages: Profile('_buildLocalPackages', async function () {
     var self = this;
     buildmessage.assertInCapture();
 
 
-    self.packageMap.eachPackage((name, packageInfo) => {
+    await self.packageMap.eachPackage((name, packageInfo) => {
       if (packageInfo.kind === 'local') {
         addWatchRoot(packageInfo.packageSource.sourceRoot)
       }
@@ -952,23 +998,23 @@ Object.assign(ProjectContext.prototype, {
     });
 
     if (self._forceRebuildPackages) {
-      self.isopackCache.wipeCachedPackages(
+      await self.isopackCache.wipeCachedPackages(
         self._forceRebuildPackages === true
           ? null : self._forceRebuildPackages);
     }
 
-    buildmessage.enterJob('building local packages', function () {
-      self.isopackCache.buildLocalPackages();
+    await buildmessage.enterJob('building local packages', async function () {
+      return await self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
   }),
 
-  _saveChangedMetadata: Profile('_saveChangedMetadata', function () {
+  _saveChangedMetadata: Profile('_saveChangedMetadata', async function () {
     var self = this;
 
     // Save any changes to .meteor/packages.
     if (! self._neverWriteProjectConstraintsFile)
-      self.projectConstraintsFile.writeIfModified();
+      await self.projectConstraintsFile.writeIfModified();
 
     // Write .meteor/versions if the command always wants to (create/update),
     // or if the release of the app matches the release of the process.
@@ -978,7 +1024,7 @@ Object.assign(ProjectContext.prototype, {
          (! release.current.isCheckout() &&
           release.current.name === self.releaseFile.fullReleaseName))) {
 
-      self.packageMapFile.write(self.packageMap);
+      await self.packageMapFile.write(self.packageMap);
     }
 
     self._completedStage = STAGE.SAVE_CHANGED_METADATA;
@@ -1093,12 +1139,12 @@ Object.assign(exports.ProjectConstraintsFile.prototype, {
     });
   },
 
-  writeIfModified: function () {
+  writeIfModified: async function () {
     var self = this;
-    self._modified && self._write();
+    self._modified && (await self._write());
   },
 
-  _write: function () {
+  _write: async function () {
     var self = this;
     var lines = _.map(self._constraintLines, function (lineRecord) {
       // Don't write packages that were not loaded from .meteor/packages
@@ -1114,11 +1160,11 @@ Object.assign(exports.ProjectConstraintsFile.prototype, {
       lineParts.push(lineRecord.trailingSpaceAndComment, '\n');
       return lineParts.join('');
     });
-    files.writeFileAtomically(self.filename, lines.join(''));
-    var messages = buildmessage.capture(
+    await files.writeFileAtomically(self.filename, lines.join(''));
+    var messages = await buildmessage.capture(
       { title: 're-reading .meteor/packages' },
       function () {
-        self._readFile();
+        return self._readFile();
       });
     // We shouldn't choke on something we just wrote!
     if (messages.hasMessages())
@@ -1133,6 +1179,14 @@ Object.assign(exports.ProjectConstraintsFile.prototype, {
       if (! lineRecord.skipOnRead && lineRecord.constraint)
         iterator(lineRecord.constraint);
     });
+  },
+
+  eachConstraintAsync: async function (iterator){
+    const self = this;
+    for (const lineRecord of self._constraintLines) {
+      if (! lineRecord.skipOnRead && lineRecord.constraint)
+        await iterator(lineRecord.constraint);
+    }
   },
 
   // Returns the constraint in the format returned by
@@ -1294,7 +1348,7 @@ Object.assign(exports.PackageMapFile.prototype, {
     return _.clone(self._versions);
   },
 
-  write: function (packageMap) {
+  write: async function (packageMap) {
     var self = this;
     var newVersions = packageMap.toVersionMap();
 
@@ -1311,7 +1365,7 @@ Object.assign(exports.PackageMapFile.prototype, {
       lines.push(packageName + "@" + self._versions[packageName] + "\n");
     });
     var fileContents = Buffer.from(lines.join(''));
-    files.writeFileAtomically(self.filename, fileContents);
+    await files.writeFileAtomically(self.filename, fileContents);
 
     // Replace our watchSet with one for the new contents of the file.
     var hash = watch.sha1(fileContents);
@@ -1330,15 +1384,17 @@ exports.PlatformList = function (options) {
   self.filename = files.pathJoin(options.projectDir, '.meteor', 'platforms');
   self.watchSet = null;
   self._platforms = null;
-
-  self._readFile();
 };
 
 // These platforms are always present and can be neither added or removed
 exports.PlatformList.DEFAULT_PLATFORMS = ['browser', 'server'];
 
 Object.assign(exports.PlatformList.prototype, {
-  _readFile: function () {
+  _init: async function() {
+    const self = this;
+    await self._readFile();
+  },
+  _readFile: async function () {
     var self = this;
 
     // Reset the WatchSet.
@@ -1358,7 +1414,7 @@ Object.assign(exports.PlatformList.prototype, {
       // Write the platforms to disk (automatically adding DEFAULT_PLATFORMS and
       // sorting), which automatically calls this function recursively to
       // re-reads them.
-      self.write(platforms);
+      await self.write(platforms);
       return;
     }
 
@@ -1367,14 +1423,14 @@ Object.assign(exports.PlatformList.prototype, {
 
   // Replaces the current platform file with the given list and resets this
   // object (and its WatchSet) to track the new value.
-  write: function (platforms) {
+  write: async function (platforms) {
     var self = this;
     self._platforms = null;
     platforms = _.uniq(
       platforms.concat(exports.PlatformList.DEFAULT_PLATFORMS));
     platforms.sort();
-    files.writeFileAtomically(self.filename, platforms.join('\n') + '\n');
-    self._readFile();
+    await files.writeFileAtomically(self.filename, platforms.join('\n') + '\n');
+    await self._readFile();
   },
 
   getPlatforms: function () {
@@ -1421,11 +1477,13 @@ exports.CordovaPluginsFile = function (options) {
   self.watchSet = null;
   // Map from plugin name to version.
   self._plugins = null;
-
-  self._readFile();
 };
 
 Object.assign(exports.CordovaPluginsFile.prototype, {
+  init: async function() {
+    const self = this;
+    await self._readFile();
+  },
   _readFile: function () {
     var self = this;
     buildmessage.assertInCapture();
@@ -1471,18 +1529,18 @@ Object.assign(exports.CordovaPluginsFile.prototype, {
     return _.clone(self._plugins);
   },
 
-  write: function (plugins) {
+  write: async function (plugins) {
     var self = this;
     var pluginNames = Object.keys(plugins);
     pluginNames.sort();
     var lines = _.map(pluginNames, function (pluginName) {
       return pluginName + '@' + plugins[pluginName] + '\n';
     });
-    files.writeFileAtomically(self.filename, lines.join(''));
-    var messages = buildmessage.capture(
+    await files.writeFileAtomically(self.filename, lines.join(''));
+    var messages = await buildmessage.capture(
       { title: 're-reading .meteor/cordova-plugins' },
-      function () {
-        self._readFile();
+      async function () {
+        await self._readFile();
       });
     // We shouldn't choke on something we just wrote!
     if (messages.hasMessages())
@@ -1511,10 +1569,13 @@ exports.ReleaseFile = function (options) {
   // Just the track.
   self.releaseTrack = null;
   self.releaseVersion = null;
-  self._readFile();
 };
 
 Object.assign(exports.ReleaseFile.prototype, {
+  init: async function() {
+    const self = this;
+    await self._readFile();
+  },
   fileMissing: function () {
     var self = this;
     return self.unnormalizedReleaseName === null;
@@ -1533,7 +1594,7 @@ Object.assign(exports.ReleaseFile.prototype, {
               || self.isCheckout());
   },
 
-  _readFile: function () {
+  _readFile: async function () {
     var self = this;
 
     // Start a new watchSet, in case we just overwrote this.
@@ -1561,18 +1622,18 @@ Object.assign(exports.ReleaseFile.prototype, {
     self.releaseTrack = parts[0];
     self.releaseVersion = parts[1];
 
-    self.ensureDevBundleLink();
+    await self.ensureDevBundleLink();
   },
 
   // Returns an absolute path to the dev_bundle appropriate for the
   // release specified in the .meteor/release file.
-  getDevBundle() {
+  async getDevBundle() {
     let devBundle = files.getDevBundle();
     const devBundleParts = devBundle.split(files.pathSep);
     const meteorToolIndex = devBundleParts.lastIndexOf("meteor-tool");
 
     if (meteorToolIndex >= 0) {
-      const releaseVersion = this.catalog.getReleaseVersion(
+      const releaseVersion = await this.catalog.getReleaseVersion(
         this.releaseTrack,
         this.releaseVersion
       );
@@ -1593,7 +1654,7 @@ Object.assign(exports.ReleaseFile.prototype, {
   },
 
   // Make a symlink from .meteor/local/dev_bundle to the actual dev_bundle.
-  ensureDevBundleLink() {
+  async ensureDevBundleLink() {
     import { makeLink, readLink } from "./cli/dev-bundle-links.js";
 
     const dotMeteorDir = files.pathDirname(this.filename);
@@ -1603,7 +1664,7 @@ Object.assign(exports.ReleaseFile.prototype, {
     if (this.isCheckout()) {
       // Only create .meteor/local/dev_bundle if .meteor/release refers to
       // an actual release, and remove it otherwise.
-      files.rm_recursive(devBundleLink);
+      await files.rm_recursive(devBundleLink);
       return;
     }
 
@@ -1612,7 +1673,7 @@ Object.assign(exports.ReleaseFile.prototype, {
       return;
     }
 
-    const newTarget = this.getDevBundle();
+    const newTarget = await this.getDevBundle();
     if (! newTarget) {
       return;
     }
@@ -1638,10 +1699,10 @@ Object.assign(exports.ReleaseFile.prototype, {
     }
   },
 
-  write: function (releaseName) {
+  write: async function (releaseName) {
     var self = this;
-    files.writeFileAtomically(self.filename, releaseName + '\n');
-    self._readFile();
+    await files.writeFileAtomically(self.filename, releaseName + '\n');
+    await self._readFile();
   }
 });
 
@@ -1674,6 +1735,9 @@ Object.assign(exports.FinishedUpgraders.prototype, {
   appendUpgraders: function (upgraders) {
     var self = this;
 
+    /**
+     * @type {string}
+     */
     var current = null;
     try {
       current = files.readFile(self.filename, 'utf8');

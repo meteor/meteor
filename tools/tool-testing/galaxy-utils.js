@@ -46,10 +46,10 @@ exports.sanityCheck = selftest.markStack(function () {
 //
 // Unlike the normal `meteor deploy` Galaxy is not yet publicly available, so
 // we don't want to use the publicly-accessible test account here.
-exports.loginToGalaxy = selftest.markStack(function (sandbox) {
+exports.loginToGalaxy = selftest.markStack(async function (sandbox) {
   var user = GALAXY_USERNAME;
   var pass = GALAXY_PASSWORD;
-  testUtils.login(sandbox, user, pass);
+  await testUtils.login(sandbox, user, pass);
 });
 
 // Curl an app running on Galaxy. Automatically follow redirects.
@@ -73,10 +73,10 @@ exports.httpRedirect = "HTTP/1.1 307 Temporary Redirect";
 //
 // In the future, we can use this function to poll whether the containers have
 // started and maybe our tests will be faster.
-exports.waitForContainers = selftest.markStack(function () {
+exports.waitForContainers = selftest.markStack(async function () {
   // We are not spinning up any containers in mock mode, so don't wait too long.
   var waitTime = GALAXY_MOCK_MODE ? 1000 : 1000 * 10 * utils.timeoutScaleFactor;
-  utils.sleepMs(waitTime);
+  await utils.sleepMs(waitTime);
 });
 
 // Deploy an app against a Galaxy
@@ -94,7 +94,7 @@ exports.waitForContainers = selftest.markStack(function () {
 //   - useOldSettings: don't make a new settings object this app! This is a
 //     redeploy, so reuse the settings that Galaxy has saved.
 //
-exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
+exports.createAndDeployApp =  selftest.markStack(async function (sandbox, options) {
   options = options || {};
   var settings = options.settings;
   var appName = options.appName || testUtils.randomAppName();
@@ -137,7 +137,7 @@ exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
   }
 
   // Galaxy might take a while to spin up an app.
-  exports.waitForContainers();
+  await exports.waitForContainers();
 
   return fullAppName;
 
@@ -147,12 +147,12 @@ exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
 //
 // XXX: We should also clean out its Mongo, but we don't, since, currently, none
 // of our apps actually put any records into it.
-exports.cleanUpApp = selftest.markStack(function (sandbox, appName) {
-  testUtils.cleanUpApp(sandbox, appName);
+exports.cleanUpApp = selftest.markStack(async function (sandbox, appName) {
+  await testUtils.cleanUpApp(sandbox, appName);
 
   // Galaxy might take a while to spin up an app, though it should be fairly
   // quick.
-  exports.waitForContainers();
+  await exports.waitForContainers();
 });
 
 //////////////////////////////////////////////////////////////////////////////
@@ -163,9 +163,9 @@ exports.cleanUpApp = selftest.markStack(function (sandbox, appName) {
 ////////////////////////////////////////////////////////////////////////////////
 
 // Returns a logged in connection to GalaxyAPI
-exports.loggedInGalaxyAPIConnection = selftest.markStack(function () {
+exports.loggedInGalaxyAPIConnection = selftest.markStack(async function () {
   // The credentials of the user might not be the credentials of the galaxytester.
-  auth.doInteractivePasswordLogin({
+  await auth.doInteractivePasswordLogin({
     username: GALAXY_USERNAME,
     password: GALAXY_PASSWORD
   });
@@ -180,10 +180,10 @@ exports.loggedInGalaxyAPIConnection = selftest.markStack(function () {
 
 // If the connection has disconnected, close it and open a new one. (workaround
 // for the fact that connections in the tool do not reconnect)
-exports.renewConnection = selftest.markStack(function (conn) {
+exports.renewConnection = selftest.markStack(async function (conn) {
   if (!conn.connected) {
     conn.close();
-    conn = exports.loggedInGalaxyAPIConnection();
+    conn = await exports.loggedInGalaxyAPIConnection();
   }
   return conn;
 });
@@ -191,16 +191,16 @@ exports.renewConnection = selftest.markStack(function (conn) {
 // Given a connection, makes a call to Galaxy API.
 exports.callGalaxyAPI = function (conn, ...args) {
   conn = exports.renewConnection(conn);
-  return conn.call(...args);
+  return conn.callAsync(...args);
 };
 
 // Gets app record from Galaxy API by name.
 //
 // This method will create and manage its own connection.
-exports.getAppRecordByName = selftest.markStack(function (appName) {
-  var conn = exports.loggedInGalaxyAPIConnection();
+exports.getAppRecordByName = selftest.markStack(async function (appName) {
+  var conn = await exports.loggedInGalaxyAPIConnection();
   var appRecord = {};
-  conn.connection.registerStore('app', {
+  await conn.connection.registerStoreServer('app', {
     update: function (msg) {
       if (msg.msg === 'added' && msg.fields &&
           msg.fields.hostname === appName) {
@@ -208,7 +208,7 @@ exports.getAppRecordByName = selftest.markStack(function (appName) {
       }
     }
   });
-  conn.subscribeAndWait("/app", appName);
+  await conn.subscribeAndWait("/app", appName);
   // If we can't find the app, fail the test right now.
   if (_.isEmpty(appRecord)) {
     selftest.fail("Cannot find app: ", appName);
@@ -221,12 +221,12 @@ exports.getAppRecordByName = selftest.markStack(function (appName) {
 // Get container statuses for the given app ID.
 //
 // This method will create and manage its own connection.
-exports.getAppContainerStatuses = selftest.markStack(function (appId, appName) {
-  var conn = exports.loggedInGalaxyAPIConnection();
+exports.getAppContainerStatuses = selftest.markStack(async function (appId, appName) {
+  var conn = await exports.loggedInGalaxyAPIConnection();
 
   var containers = [];
   var statuses = "/app/containerStatuses";
-  conn.connection.registerStore(statuses, {
+  await conn.connection.registerStoreServer(statuses, {
     update: function (msg) {
       if (msg.msg === 'added' && msg.fields &&
           msg.fields.appId === appId) {
@@ -234,14 +234,14 @@ exports.getAppContainerStatuses = selftest.markStack(function (appId, appName) {
       }
     }
   });
-  conn.subscribeAndWait(statuses, appName);
+  await conn.subscribeAndWait(statuses, appName);
   conn.close();
   return containers;
 });
 
 // Close and logout.
-exports.closeGalaxyConnection = selftest.markStack(function (conn) {
-  auth.logoutCommand();
+exports.closeGalaxyConnection = selftest.markStack(async function (conn) {
+  await auth.logoutCommand();
   conn.close();
 });
 
