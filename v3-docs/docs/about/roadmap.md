@@ -17,21 +17,39 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 ### Next releases
 
 - Improve TypeScript support for Meteor and packages ([Discussion](https://github.com/meteor/meteor/discussions/12080))
-  - This should be an ongoing effort to improve the TypeScript support in Meteor and packages, as we write new code in TypeScript and get more skin in the game, it should naturally improve. This does not mean we will actively refactor working code.
+> Should be an ongoing effort to improve the TypeScript support in Meteor and packages, as we write new code in TypeScript and get more skin in the game, it should naturally improve. This doesn’t mean we will actively refactor working code.
+
 - Performance improvements for Meteor 3.0
+> After the removal of fibers, we became heavily reliant on async resources and consequently Async Hooks/Async Local Storage, that has a performance cost, we need to optimize that.
+
 - Bringing community packages to the core
+> Some packages are widely used and should be part of the core, so this involves identifying and moving them there.
+
 - MongoDB Change Streams support ([Discussion](https://github.com/meteor/meteor/discussions/11842))
-- Integrated support for Vite (Client Bundler)
-  - Tree-shaking (Client)
-  - Improve Meteor build time (Client, [Discussion](https://github.com/meteor/meteor/discussions/11587))
-  - Support package.json exports fields ([Discussion](https://github.com/meteor/meteor/discussions/11727)) (Vite solves this too)
-- Replace Babel with ESBuild, SWC or another tool for the server bundle
-  - Tree-shaking (Server)
-  - Improve Meteor build time (Server, [Discussion](https://github.com/meteor/meteor/discussions/11587))
+> Change Streams is the official way to listen to changes in MongoDB; we should provide a way to use it in Meteor, seamlessly. It has been planned for a long time, and now we’re in a position to do it.
+
+- Integrated support for Vite (Client Bundler, [Discussion](https://github.com/meteor/meteor/discussions/11587))
+> Vite is a fast and modern client bundler with an amazing ecosystem, it has many potential benefits for Meteor: build performance, tree-shaking, making our codebase leaner, and focus on what we do best. 
+
+- Replace Babel with ESBuild, Rollup, SWC, or another tool for the server bundle ([Discussion](https://github.com/meteor/meteor/discussions/11587))
+> Babel is a great tool, but it's slow and has some limitations; we should consider replacing it with a faster and more modern tool for the server bundle. We could potentially use the same tools Vite uses.
+
+- Support package.json exports fields ([Discussion](https://github.com/meteor/meteor/discussions/11727))
+- Tree-shaking
+
+> Tree sharking and exports fields may be implemented by integrating with more modern build tools, see previous items.
+
 - Improve release CI/CD speed and reliability (optimized build times will help)
+> Sometimes our CI/CD takes too long to run, causing long queues and delays in our release process and feedback loop, we need to improve that.
+
 - Improve support for Windows 11
+> We had many complaints in the past, we need to research and make architectural improvements to make it easier to support Windows, not just punctual fixes.
+
 - Document better Windows with WSL
+> It's already possible to use Meteor on Windows with WSL, but we need to document it better
+
 - HTTP/3 Support
+> HTTP/3 is the next version of the HTTP protocol, we should support it in Meteor to leverage its performance and security benefits.
 
 ### Candidate items
 
@@ -61,6 +79,4 @@ We need to discuss further to decide whether to proceed with these implementatio
 
 -----------
 
-For more completed items, refer to our [changelog](https://docs.meteor.com/changelog.html).
-
-Todo: Add short descriptions to each item
+For more completed items, refer to our [changelog](https://docs.meteor.com/about/roadmap.html).
