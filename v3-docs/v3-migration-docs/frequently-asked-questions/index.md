@@ -14,7 +14,7 @@ from Ben Newman and this Stack Overflow [answer](https://stackoverflow.com/a/408
 
 ## What is the Meteor v3 release schedule?
 
-Our current plan is to release Meteor v3 until Q2 2024. This is subject to change as we progress through the development of Meteor v3.
+Meteor 3 official version is already out! You can check our posts about it on the [Forums](https://forums.meteor.com/t/its-official-meteor-3-0-official-release-is-out/61860) and [blog](https://dev.to/meteor/meteor-3-is-officially-here-3gml).
 
 ## Will MongoDB Collection Methods be removed from the client?
 
@@ -98,9 +98,7 @@ You can check more information on the [react page](../front-end/react.md).
 
 ## When will Blaze be ready for version 3.0?
 
-The team considered Blaze adjustments to version 3.0 done, version 2.9 and upper are with all features regarding async APIs.
-
-You can check more information on the [Blaze page](../front-end/blaze.md).
+Blaze 3 is out and compatible with Meteor 3. You can check the post about it [here](https://forums.meteor.com/t/blaze-3-is-out/61861).
 
 ## When will XYZ package be ready for version 3.0?
 
@@ -112,6 +110,4 @@ This is the [list of all core packages](https://docs.meteor.com/packages/package
 For those packages that are not in the core but are maintained by the [community](https://github.com/Meteor-Community-Packages),
 we hope that the community can work on them, but if for some reason that is not possible,
 you can always ping us on [Slack](https://join.slack.com/t/meteor-community/shared_invite/zt-28aru814j-AwswQGt2D1xIXurvmtJvug) or in the [Forums](https://forums.meteor.com/).
-
-Following the official release of Meteor 3.0, we plan to add new packages to the core and migrating them to Meteor 3.0.
 
