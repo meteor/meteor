@@ -16,6 +16,10 @@ export class TestCaseResults {
     this.extraDetails = {};
   }
 
+  sleep(ms = 0) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   ok(doc) {
     var ok = {type: "ok"};
     if (doc)
@@ -269,7 +273,6 @@ export class TestCaseResults {
     } catch (exception) {
       actual = exception;
     }
-
     this._assertActual(actual, predicate, message);
   }
 
@@ -413,7 +416,7 @@ export class TestCase {
   // test raised (or voluntarily reported) an exception.
   run(onEvent, onComplete, onException, stop_at_offset) {
     let completed = false;
-
+    const self = this;
     return new Promise((resolve, reject) => {
       const results = new TestCaseResults(
         this,
@@ -423,6 +426,7 @@ export class TestCase {
           // test will display as "waiting" even when it counts as passed
           // or failed.
           if (completed) {
+            console.warn('Test name:', self.name);
             console.trace("event after complete!");
           }
           return onEvent(event);
@@ -433,7 +437,7 @@ export class TestCase {
 
       const result = this.func(results, resolve);
       if (result && typeof result.then === "function") {
-        result.then(resolve, reject);
+        return result.then(resolve, reject);
       }
 
     }).then(
@@ -457,7 +461,7 @@ export const TestManager = new (class TestManager {
   constructor() {
     this.tests = {};
     this.ordered_tests = [];
-    this.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
+    this.testQueue = Meteor.isServer && new Meteor._AsynchronousQueue();
     this.onlyTestsNames = [];
   }
 
@@ -531,8 +535,9 @@ export class TestRun {
 
   _runTest(test, onComplete, stop_at_offset) {
     var startTime = (+new Date);
+    Tinytest._currentRunningTestName = test.name;
 
-    test.run(event => {
+    return test.run(event => {
       /* onEvent */
       // Ignore result callbacks if the test has already been reported
       // as timed out.
@@ -611,7 +616,7 @@ export class TestRun {
       });
     } else {
       // client
-      this._runTest(test, () => {
+      return this._runTest(test, () => {
         onComplete && onComplete();
       }, stop_at_offset);
     }
@@ -671,6 +676,7 @@ export class TestRun {
 /******************************************************************************/
 
 export const Tinytest = {};
+globalThis.__Tinytest = Tinytest;
 
 Tinytest.addAsync = function (name, func, options) {
   TestManager.addCase(new TestCase(name, func), options);
@@ -700,6 +706,22 @@ Tinytest._runTests = function (onReport, onComplete, pathPrefix) {
   var testRun = TestManager.createRun(onReport, pathPrefix);
   testRun.run(onComplete);
 };
+
+Tinytest._currentRunningTestName = ""
+
+Meteor.methods({
+  'tinytest/getCurrentRunningTestName'() {
+    return Tinytest._currentRunningTestName;
+  }
+})
+
+Tinytest._getCurrentRunningTestOnServer = function () {
+  return Meteor.callAsync('tinytest/getCurrentRunningTestName');
+}
+
+Tinytest._getCurrentRunningTestOnClient = function () {
+  return Tinytest._currentRunningTestName;
+}
 
 // Run just one test case, and stop the debugger at a particular
 // error, all as indicated by 'cookie', which will have come from a

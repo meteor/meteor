@@ -152,8 +152,9 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--vue-2|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
+Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
+       meteor create [--release <release>] --from <git_url> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
 
@@ -180,13 +181,13 @@ currently no package examples.
 Options:
   --package     Create a new meteor package instead of an app.
   --example     Example template to use.
+  --from        Clones a meteor project from a url.
   --list        Show list of available examples.
   --bare        Create an empty app.
   --minimal     Create an app with as few Meteor packages as possible.
   --full        Create a fully scaffolded app.
   --react       Create a basic react-based app, same as default.
   --vue         Create a basic vue3-based app.
-  --vue-2       Create a basic vue2-based app.
   --apollo      Create a basic apollo-based app.
   --svelte      Create a basic svelte-based app.
   --typescript  Create a basic Typescript React-based app.
@@ -194,7 +195,7 @@ Options:
   --tailwind    Create a basic react-based app, with tailwind configured.
   --chakra-ui   Create a basic react-based app, with chakra-ui configured.
   --solid       Create a basic solid-based app.
-  --prototype   Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
+  --prototype Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
 
 
 >>> update
@@ -499,11 +500,12 @@ development database. The current working directory must be a Meteor
 project directory, and the Meteor application must already be running.
 
 >>> reset
-Reset the project state. Erases the local database.
-Usage: meteor reset
+Reset the project state.
+Usage: meteor reset [--db]
 
-Reset the current project to a fresh state. Removes all local data.
+Reset the current project to a fresh state and clear the local cache.
 
+The --db flag also removes the local database.
 
 >>> deploy
 Deploy this project to Galaxy, Meteor's hosting service.

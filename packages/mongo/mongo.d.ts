@@ -83,6 +83,15 @@ export namespace Mongo {
         defineMutationMethods?: boolean | undefined;
       }
     ): Collection<T, U>;
+
+    /**
+     * Retrieve a previously defined Mongo.Collection instance by its name. The collection must already have been defined with `new Mongo.Collection(name, ...)`.
+     * Plain MongoDB collections are not available by this method.
+     * @param name The name of the collection instance.
+     */
+    getCollection<
+        TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
+    >(name: string): TCollection;
   }
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T> = undefined>(options: {
@@ -431,6 +440,11 @@ export namespace Mongo {
      */
     observe(callbacks: ObserveCallbacks<U>): Meteor.LiveQueryHandle;
     /**
+     * Watch a query. Receive callbacks as the result set changes.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     */
+    observeAsync(callbacks: ObserveCallbacks<U>): Promise<Meteor.LiveQueryHandle>;
+    /**
      * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
      * @param callbacks Functions to call to deliver the result set as it changes
      */
@@ -440,6 +454,15 @@ export namespace Mongo {
     ): Meteor.LiveQueryHandle;
     [Symbol.iterator](): Iterator<T>;
     [Symbol.asyncIterator](): AsyncIterator<T>;
+    /**
+     * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     * @param options { nonMutatingCallbacks: boolean }
+     */
+    observeChangesAsync(
+      callbacks: ObserveChangesCallbacks<T>,
+      options?: { nonMutatingCallbacks?: boolean | undefined }
+    ): Promise<Meteor.LiveQueryHandle>;
   }
 
   var ObjectID: ObjectIDStatic;

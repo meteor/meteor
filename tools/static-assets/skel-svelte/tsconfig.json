@@ -16,5 +16,5 @@
     "preserveSymlinks": true, // required by zodern:types
     "preserveValueImports": true // otherwise TS will remove imported components
   },
-  "exclude": ["./.meteor/**", "./packages/**"] // this may solve VS Code Svelte plugin warnings
+  "exclude": ["./.meteor/**", "!./.meteor/local/types", "./packages/**"] // this may solve VS Code Svelte plugin warnings
 }
