@@ -42,10 +42,17 @@ export default defineConfig({
             link: "https://v3-migration-docs.meteor.com",
           },
           {
-            text: 'Tutorials',
+            text: "Tutorials",
             items: [
-              { text: 'Meteor + Vue + vue-meteor-tracker', link: '/tutorials/meteorjs3-vue3-vue-meteor-tracker' },
-            ]
+              {
+                text: "Meteor.js 3 + React",
+                link: "/tutorials/react/index",
+              },
+              {
+                text: "Meteor + Vue + vue-meteor-tracker",
+                link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
+              },
+            ],
           },
         ],
       },
@@ -241,17 +248,6 @@ export default defineConfig({
         collapsed: true,
       },
       {
-        text: "Tutorials",
-        items: [
-          {
-            text: "Meteor.js 3 + React",
-            link: "/tutorials/react/index",
-            collapsed: true,
-          },
-        ],
-        collapsed: true,
-      },
-      {
         text: "Packages",
         items: [
           {
@@ -384,7 +380,14 @@ export default defineConfig({
       {
         text: "Tutorials",
         items: [
-          { link: "/tutorials/meteorjs3-vue3-vue-meteor-tracker", text: "Meteor + Vue + vue-meteor-tracker" },
+          {
+            text: "Meteor.js 3 + React",
+            link: "/tutorials/react/index",
+          },
+          {
+            link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
+            text: "Meteor + Vue + vue-meteor-tracker",
+          },
         ],
         collapsed: true,
       },
