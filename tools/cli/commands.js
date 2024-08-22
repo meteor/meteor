@@ -516,7 +516,8 @@ async function doRunCommand(options) {
           open(`http://localhost:${options.port}`)
         }
       }
-    }
+    }, 
+    open: options.open,
   });
 }
 
