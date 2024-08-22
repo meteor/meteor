@@ -6,8 +6,6 @@ const { resolve, dirname } = require('path');
 const { isLinux } = require('./config.js');
 const tar = require('tar');
 
-const { isMac } = require('./config.js');
-
 function extractWith7Zip(tarPath, destination, onProgress) {
   return new Promise((resolve, reject) => {
     const stream = Seven.extractFull(tarPath, destination, {
