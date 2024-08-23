@@ -133,13 +133,11 @@ Object.assign(AsynchronousQueue.prototype, {
     );
 
     const handle = {
-      task: Meteor.bindEnvironment(task, function (e) {
-        Meteor._debug('Exception from task', e);
-        throw e;
-      }),
+      task,
       name: task.name,
       resolver,
     };
+
     this._taskHandles.push(handle);
     await this._scheduleRun();
     return promise;
