@@ -331,10 +331,6 @@ var writeCallback = function (write, refresh, callback) {
   };
 };
 
-var bindEnvironmentForWrite = function (callback) {
-  return Meteor.bindEnvironment(callback, "Mongo write");
-};
-
 MongoConnection.prototype.insertAsync = async function (collection_name, document) {
   const self = this;
 
@@ -960,24 +956,8 @@ Cursor.prototype.observeAsync = function (callbacks) {
 
 Cursor.prototype.observeChanges = function (callbacks, options = {}) {
   var self = this;
-  var methods = [
-    'addedAt',
-    'added',
-    'changedAt',
-    'changed',
-    'removedAt',
-    'removed',
-    'movedTo'
-  ];
-  var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
 
-  let exceptionName = callbacks._fromObserve ? 'observe' : 'observeChanges';
-  exceptionName += ' callback';
-  methods.forEach(function (method) {
-    if (callbacks[method] && typeof callbacks[method] == "function") {
-      callbacks[method] = Meteor.bindEnvironment(callbacks[method], method + exceptionName);
-    }
-  });
+  var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
 
   return self._mongo._observeChanges(
     self._cursorDescription, ordered, callbacks, options.nonMutatingCallbacks);
