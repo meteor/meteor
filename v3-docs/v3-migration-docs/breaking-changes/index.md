@@ -20,6 +20,16 @@ const doc = await MyCollection.findOneAsync({ _id: '123' }); // [!code highlight
 
 ```
 
+::: tip
+
+You can automatically transform deprecated methods to their `Async` counterparts by running the [following codemod](https://go.codemod.com/meteor-mongo-async):
+
+```bash
+npx codemod@latest mongo-db-async-methods
+```
+
+:::
+
 ## CLI
 
 ### vue2
