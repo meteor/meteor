@@ -1193,9 +1193,10 @@ class AsynchronousCursor {
       // Need to rewind the cursor otherwise docs will be removed on subsequent polls.
       this._dbCursor.rewind();
 
-      docs.forEach(doc => {
+      // https://romgrk.com/posts/optimizing-javascript#3-avoid-arrayobject-methods
+      for (const doc of docs) {
         results.set(doc._id, replaceTypes(doc, replaceMongoAtomWithMeteor));
-      });
+      }
 
       return results;
     }
