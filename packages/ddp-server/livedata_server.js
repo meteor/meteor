@@ -1,4 +1,3 @@
-import Fiber from 'fibers';
 import isEmpty from 'lodash.isempty';
 import has from 'lodash.has';
 import isString from 'lodash.isstring';
