@@ -177,7 +177,7 @@ MongoConnection = function (url, options) {
     // set it for replSet, it will be ignored if we're not using a replSet.
     mongoOptions.maxPoolSize = options.maxPoolSize;
   }
-  if (_.has(options, 'minPoolSize')) {
+  if (has(options, 'minPoolSize')) {
     mongoOptions.minPoolSize = options.minPoolSize;
   }
 
@@ -721,15 +721,10 @@ var simulateUpsertWithInsertedId = async function (collection, selector, mod, op
         }
       });
 
-  doUpdate();
+  };
+  return doUpdate();
 };
 
-_.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
-  MongoConnection.prototype[method] = function (/* arguments */) {
-    var self = this;
-    return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
-  };
-});
 
 // XXX MongoConnection.upsertAsync() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
@@ -1493,11 +1488,10 @@ Object.assign(MongoConnection.prototype, {
     var multiplexer, observeDriver;
     var firstHandle = false;
 
-  // Find a matching ObserveMultiplexer, or create a new one. This next block is
-  // guaranteed to not yield (and it doesn't call anything that can observe a
-  // new query), so no other calls to this function can interleave with it.
-  Meteor._noYieldsAllowed(function () {
-    if (_.has(self._observeMultiplexers, observeKey)) {
+    // Find a matching ObserveMultiplexer, or create a new one. This next block is
+    // guaranteed to not yield (and it doesn't call anything that can observe a
+    // new query), so no other calls to this function can interleave with it.
+    if (has(self._observeMultiplexers, observeKey)) {
       multiplexer = self._observeMultiplexers[observeKey];
     } else {
       firstHandle = true;
@@ -1516,16 +1510,38 @@ Object.assign(MongoConnection.prototype, {
         nonMutatingCallbacks,
     );
 
+    const oplogOptions = self?._oplogHandle?._oplogOptions || {};
+  const { includeCollections, excludeCollections } = oplogOptions;
   if (firstHandle) {
-    var matcher, sorter;
-    var canUseOplog = _.all([
+      var matcher, sorter;
+    var canUseOplog = [
+        function () {
+          // At a bare minimum, using the oplog requires us to have an oplog, to
+          // want unordered callbacks, and to not want a callback on the polls
+          // that won't happen.
+          return self._oplogHandle && !ordered &&
+            !callbacks._testOnlyPollCallback;
+  },
       function () {
-        // At a bare minimum, using the oplog requires us to have an oplog, to
-        // want unordered callbacks, and to not want a callback on the polls
-        // that won't happen.
-        return self._oplogHandle && !ordered &&
-          !callbacks._testOnlyPollCallback;
-      }, function () {
+        // We also need to check, if the collection of this Cursor is actually being "watched" by the Oplog handle
+        // if not, we have to fallback to long polling
+        if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        if (includeCollections?.length && !includeCollections.includes(collectionName)) {
+          if (!oplogCollectionWarnings.includes(collectionName)) {
+            console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
+            oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+          }
+          return false;
+        }
+        return true;
+      },
+      function () {
         // We need to be able to compile the selector. Fall back to polling for
         // some newfangled $selector that minimongo doesn't support yet.
         try {
@@ -1536,10 +1552,12 @@ Object.assign(MongoConnection.prototype, {
           //     so that this doesn't ignore unrelated exceptions
           return false;
         }
-      }, function () {
+      },
+      function () {
         // ... and the selector itself needs to support oplog.
         return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
-      }, function () {
+      },
+      function () {
         // And we need to be able to compile the sort, if any.  eg, can't be
         // {$natural: 1}.
         if (!cursorDescription.options.sort)
@@ -1552,32 +1570,33 @@ Object.assign(MongoConnection.prototype, {
           //     so that this doesn't ignore unrelated exceptions
           return false;
         }
-      }], function (f) { return f(); });  // invoke each function
-
-      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
-      observeDriver = new driverClass({
-        cursorDescription: cursorDescription,
-        mongoHandle: self,
-        multiplexer: multiplexer,
-        ordered: ordered,
-        matcher: matcher,  // ignored by polling
-        sorter: sorter,  // ignored by polling
-        _testOnlyPollCallback: callbacks._testOnlyPollCallback
-      });
-
-      if (observeDriver._init) {
-        await observeDriver._init();
       }
+    ].every(f => f());  // invoke each function and check if all return true
 
-      // This field is only set for use in tests.
-      multiplexer._observeDriver = observeDriver;
+    var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+    observeDriver = new driverClass({
+      cursorDescription: cursorDescription,
+      mongoHandle: self,
+      multiplexer: multiplexer,
+      ordered: ordered,
+      matcher: matcher,  // ignored by polling
+      sorter: sorter,  // ignored by polling
+      _testOnlyPollCallback: callbacks._testOnlyPollCallback
+});
+
+    if (observeDriver._init) {
+      await observeDriver._init();
     }
-    self._observeMultiplexers[observeKey] = multiplexer;
-    // Blocks until the initial adds have been sent.
-    await multiplexer.addHandleAndSendInitialAdds(observeHandle);
 
-    return observeHandle;
-  },
+    // This field is only set for use in tests.
+    multiplexer._observeDriver = observeDriver;
+  }
+  self._observeMultiplexers[observeKey] = multiplexer;
+  // Blocks until the initial adds have been sent.
+  await multiplexer.addHandleAndSendInitialAdds(observeHandle);
+
+  return observeHandle;
+},
 
 });
 
@@ -1613,10 +1632,6 @@ forEachTrigger = async function (cursorDescription, triggerCallback) {
       await triggerCallback(_.extend({id: id}, key));
     }
     await triggerCallback(_.extend({dropCollection: true, id: null}, key));
-    specificIds.forEach(function (id) {
-      triggerCallback(Object.assign({id: id}, key));
-    });
-    triggerCallback(Object.assign({dropCollection: true, id: null}, key));
   } else {
     await triggerCallback(key);
   }
