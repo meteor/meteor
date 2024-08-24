@@ -88,13 +88,11 @@ _.extend(PollingObserveDriver.prototype, {
     // Make sure we actually poll soon!
     await this._unthrottledEnsurePollIsScheduled();
 
-  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
-    "mongo-livedata", "observe-drivers-polling", 1);
-};
-
-_.extend(PollingObserveDriver.prototype, {
-  // This is always called through _.throttle (except once at startup).
-  _unthrottledEnsurePollIsScheduled: async function () {
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
+      "mongo-livedata", "observe-drivers-polling", 1);
+},
+// This is always called through _.throttle (except once at startup).
+_unthrottledEnsurePollIsScheduled: async function () {
     var self = this;
     if (self._pollsScheduledButNotStarted > 0)
       return;
@@ -210,20 +208,24 @@ _.extend(PollingObserveDriver.prototype, {
     // round, mark all the writes which existed before this call as
     // commmitted. (If new writes have shown up in the meantime, there'll
     // already be another _pollMongo task scheduled.)
-    self._multiplexer.onFlush(function () {
-      _.each(writesForCycle, function (w) {
-        w.committed();
-      });
+    await self._multiplexer.onFlush(async function () {
+      for (const w of writesForCycle) {
+        await w.committed();
+      }
     });
   },
 
   stop: function () {
     var self = this;
     self._stopped = true;
-    _.each(self._stopCallbacks, function (c) { c(); });
+    const stopCallbacksCaller = async function(c) {
+      await c();
+    };
+
+    self._stopCallbacks.forEach(stopCallbacksCaller);
     // Release any write fences that are waiting on us.
-    _.each(self._pendingWrites, function (w) {
-      w.committed();
+    self._pendingWrites.forEach(async function (w) {
+      await w.committed();
     });
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", -1);
