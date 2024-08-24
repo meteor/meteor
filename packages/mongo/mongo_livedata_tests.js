@@ -408,7 +408,7 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
       [2, 8]
     );
 
-  test.equal(coll.find({run: run}, {sort: {x: -1}}).fetch().map(doc => doc.x),
+  test.equal(await coll.find({run: run}, {sort: {x: -1}}).fetchAsync().mapAsync(doc => doc.x),
              [4, 1]);
 
     await expectObserve('', async function() {
@@ -595,11 +595,11 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
       });
       test.equal(actual, correct);
 
-    // Did we limit ourselves to one 'moved' message per change,
-    // rather than O(results) moved messages?
-    Object.entries(max_counters).forEach(function ([k, v]) {
-      test.isTrue(max_counters[k] >= counters[k], k);
-    });
+      // Did we limit ourselves to one 'moved' message per change,
+      // rather than O(results) moved messages?
+      _.each(max_counters, function(v, k) {
+        test.isTrue(max_counters[k] >= counters[k], k);
+      });
 
       await doStep();
     };
@@ -1323,13 +1323,13 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
           ])
         );
 
-    test.length(Object.keys(o.state), 3);
-    test.equal(o.state[docId6], { _id: docId6, foo: 22, bar: 24 });
-    test.equal(o.state[docId11], { _id: docId11, foo: 22, bar: 33.5 });
-    test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
-    clearOutput(o);
-    testOplogBufferIds([]);
-    testSafeAppendToBufferFlag(true);
+        test.length(_.keys(o.state), 3);
+        test.equal(o.state[docId6], { _id: docId6, foo: 22, bar: 24 });
+        test.equal(o.state[docId11], { _id: docId11, foo: 22, bar: 33.5 });
+        test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
+        clearOutput(o);
+        testOplogBufferIds([]);
+        testSafeAppendToBufferFlag(true);
 
         var docId13 = await ins({ foo: 22, bar: 50 });
         var docId14 = await ins({ foo: 22, bar: 51 });
@@ -1424,10 +1424,10 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
           setsEqual(o.output, [{ added: docId4 }, { removed: docId2 }])
         );
 
-    test.equal(Object.keys(o.state).length, 2);
-    test.equal(o.state[docId4], {_id: docId4, y: -1222});
-    test.equal(o.state[docId1], {_id: docId1, y: 1222});
-    clearOutput(o);
+        test.equal(_.size(o.state), 2);
+        test.equal(o.state[docId4], { _id: docId4, y: -1222 });
+        test.equal(o.state[docId1], { _id: docId1, y: 1222 });
+        clearOutput(o);
 
         await rem(docId2);
         // Becomes [docId4 docId1 | docId3]
@@ -1440,10 +1440,10 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
           setsEqual(o.output, [{ added: docId3 }, { removed: docId4 }])
         );
 
-    test.equal(Object.keys(o.state).length, 2);
-    test.equal(o.state[docId3], {_id: docId3, y: 7222});
-    test.equal(o.state[docId1], {_id: docId1, y: 1222});
-    clearOutput(o);
+        test.equal(_.size(o.state), 2);
+        test.equal(o.state[docId3], { _id: docId3, y: 7222 });
+        test.equal(o.state[docId1], { _id: docId1, y: 1222 });
+        clearOutput(o);
 
         onComplete();
       }
@@ -2113,9 +2113,9 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
 
 // This test is duplicated below (with some changes) for async upserts that go
 // over the network.
-  Meteor.isServer ? [true, false] : [true].forEach(function(minimongo) {
-    [true, false].forEach(function(useUpdate) {
-      [true, false].forEach(function(useDirectCollection) {
+  _.each(Meteor.isServer ? [true, false] : [true], function(minimongo) {
+    _.each([true, false], function(useUpdate) {
+      _.each([true, false], function(useDirectCollection) {
         Tinytest.addAsync(
           'mongo-livedata - ' +
             (useUpdate ? 'update ' : '') +
@@ -2131,7 +2131,7 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
             // directly calling MongoConnection.upsert().
             var skipIds = useUpdate || (!minimongo && useDirectCollection);
             if (minimongo)
-              options = Object.assign({}, collectionOptions, { connection: null });
+              options = _.extend({}, collectionOptions, { connection: null });
             var coll = new Mongo.Collection(
               'livedata_upsert_collection_' +
                 run +
@@ -2358,9 +2358,9 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
 // the Mongo.Collection and the MongoConnection.
 //
 // XXX Rewrite with testAsyncMulti, that would simplify things a lot!
-  Meteor.isServer ? [false] : [true, false].forEach(function(useNetwork) {
-    useNetwork ? [false] : [true, false].forEach(function(useDirectCollection) {
-      [true, false].forEach(function(useUpdate) {
+  _.each(Meteor.isServer ? [false] : [true, false], function(useNetwork) {
+    _.each(useNetwork ? [false] : [true, false], function(useDirectCollection) {
+      _.each([true, false], function(useUpdate) {
         Tinytest.addAsync(
           asyncUpsertTestName(
             useNetwork,
@@ -2651,7 +2651,7 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
 // Runs a method and its stub which do some upserts. The method throws an error
 // if we don't get the right return values.
   if (Meteor.isClient) {
-    [true, false].forEach(function(useUpdate) {
+    _.each([true, false], function(useUpdate) {
       Tinytest.addAsync(
         'mongo-livedata - ' +
           (useUpdate ? 'update ' : '') +
@@ -2680,8 +2680,8 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
     });
   }
 
-  Meteor.isServer ? [true, false] : [true].forEach(function(minimongo) {
-    [true, false].forEach(function(useUpdate) {
+  _.each(Meteor.isServer ? [true, false] : [true], function(minimongo) {
+    _.each([true, false], function(useUpdate) {
       Tinytest.addAsync(
         'mongo-livedata - ' +
           (useUpdate ? 'update ' : '') +
@@ -2693,7 +2693,7 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
           var run = test.runId();
           var options = collectionOptions;
           if (minimongo)
-            options = Object.assign({}, collectionOptions, { connection: null });
+            options = _.extend({}, collectionOptions, { connection: null });
           var coll = new Mongo.Collection(
             'livedata_upsert_by_id_collection_' + run,
             options
@@ -2823,7 +2823,7 @@ testAsyncMulti("mongo-livedata - specified _id", [
 async function collectionInsert (test, expect, coll, index) {
   const id = await coll.insertAsync({name: "foo"});
   const o = await coll.findOneAsync(id) || {};
-  test.isTrue(isObject(o));
+  test.isTrue(_.isObject(o));
   test.equal(o.name, 'foo');
 }
 
@@ -2835,7 +2835,7 @@ async function collectionUpsert(test, expect, coll, index) {
   test.equal(result.numberAffected, 1);
 
   const o = await coll.findOneAsync(upsertId);
-  test.isTrue(isObject(o));
+  test.isTrue(_.isObject(o));
   test.equal(o.name, 'foo');
 }
 
@@ -2843,14 +2843,14 @@ async function collectionUpsertExisting(test, expect, coll, index) {
   const id = await coll.insertAsync({ name: 'foo' });
 
   const o = await coll.findOneAsync(id);
-  test.isTrue(isObject(o));
+  test.isTrue(_.isObject(o));
 
   const result = await coll.upsertAsync(id, { $set: { name: 'bar' } });
   test.equal(result.insertedId, id);
   test.equal(result.numberAffected, 1);
 
   const ob = await coll.findOneAsync(id);
-  test.isTrue(isObject(ob));
+  test.isTrue(_.isObject(ob));
   test.equal(ob.name, 'bar');
 }
 
@@ -2869,7 +2869,7 @@ async function functionCallsInsert(test, expect, coll, index) {
   test.equal(ids[0], stubId);
 
   const o = await coll.findOneAsync(stubId);
-  test.isTrue(isObject(o));
+  test.isTrue(_.isObject(o));
   test.equal(o.name, 'foo');
 }
 
@@ -2887,7 +2887,7 @@ async function functionCallsUpsert(test, expect, coll, index) {
   test.equal(result.numberAffected, 1);
 
   const o = await coll.findOneAsync(upsertId);
-  test.isTrue(isObject(o));
+  test.isTrue(_.isObject(o));
   test.equal(o.name, 'foo');
 }
 
@@ -2910,7 +2910,7 @@ async function functionCallsUpsertExisting(test, expect, coll, index) {
   test.equal(result.insertedId, undefined);
 
   const ob = await coll.findOneAsync(id);
-  test.isTrue(isObject(ob));
+  test.isTrue(_.isObject(ob));
   test.equal(ob.name, 'bar');
 }
 
@@ -2929,7 +2929,7 @@ async function functionCalls3Inserts(test, expect, coll, index) {
     test.equal(ids[i], stubId);
 
     var o = await coll.findOneAsync(stubId);
-    test.isTrue(isObject(o));
+    test.isTrue(_.isObject(o));
     test.equal(o.name, 'foo');
   }
 }
@@ -2951,7 +2951,7 @@ async function functionChainInsert(test, expect, coll, index) {
   await Meteor._sleepForMs(100);
 
   var o = await coll.findOneAsync(stubId);
-  test.isTrue(isObject(o));
+  test.isTrue(_.isObject(o));
   test.equal(o.name, 'foo');
 }
 
@@ -2973,7 +2973,7 @@ async function functionChain2Insert(test, expect, coll, index) {
   await Meteor._sleepForMs(100);
 
   const o = await coll.findOneAsync(stubId);
-  test.isTrue(isObject(o));
+  test.isTrue(_.isObject(o));
   test.equal(o.name, 'foo');
 }
 
@@ -2991,69 +2991,91 @@ async function functionChain2Upsert(test, expect, coll, index) {
   test.equal(result.numberAffected, 1);
   await Meteor._sleepForMs(100);
   const o = await coll.findOneAsync(upsertId);
-  test.isTrue(isObject(o));
+  test.isTrue(_.isObject(o));
   test.equal(o.name, 'foo');
 }
 
-Object.entries({
-  collectionInsert: collectionInsert,
-  collectionUpsert: collectionUpsert,
-  functionCallsInsert: functionCallsInsert,
-  functionCallsUpsert: functionCallsUpsert,
-  functionCallsUpsertExisting: functionCallsUpsertExisting,
-  functionCalls3Insert: functionCalls3Inserts,
-  functionChainInsert: functionChainInsert,
-  functionChain2Insert: functionChain2Insert,
-  functionChain2Upsert: functionChain2Upsert
-}).forEach(function([name, fn]) {
-  [1, 3].forEach(function(repetitions) {
-      [1, 3].forEach(function(collectionCount) {
-          ['STRING', 'MONGO'].forEach(function(idGeneration) {
+_.each(
+  {
+    collectionInsert: collectionInsert,
+    collectionUpsert: collectionUpsert,
+    functionCallsInsert: functionCallsInsert,
+    functionCallsUpsert: functionCallsUpsert,
+    functionCallsUpsertExisting: functionCallsUpsertExisting,
+    functionCalls3Insert: functionCalls3Inserts,
+    functionChainInsert: functionChainInsert,
+    functionChain2Insert: functionChain2Insert,
+    functionChain2Upsert: functionChain2Upsert,
+  },
+  function(fn, name) {
+    _.each([1, 3], function(repetitions) {
+      _.each([1, 3], function(collectionCount) {
+        _.each(['STRING', 'MONGO'], function(idGeneration) {
+          testAsyncMulti(
+            'mongo-livedata - consistent _id generation ' +
+              name +
+              ', ' +
+              repetitions +
+              ' repetitions on ' +
+              collectionCount +
+              ' collections, idGeneration=' +
+              idGeneration,
+            [
+              function(test, expect) {
+                var collectionOptions = { idGeneration: idGeneration };
 
-              testAsyncMulti('mongo-livedata - consistent _id generation ' + name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [function(test, expect) {
-                  var collectionOptions = {
-                      idGeneration: idGeneration
-                  };
-
-                  var cleanups = this.cleanups = [];
-                  this.collections = times(collectionCount, function() {
-                      var collectionName = "consistentid_" + Random.id();
-                      if (Meteor.isClient) {
-                          Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-                          Meteor.subscribe('c-' + collectionName, expect());
-                          cleanups.push(function(expect) {
-                              Meteor.call('dropInsecureCollection', collectionName, expect(function() {}));
-                          });
-                      }
-
-                      var collection = new Mongo.Collection(collectionName, collectionOptions);
-                      if (Meteor.isServer) {
-                          cleanups.push(function() {
-                              collection._dropCollection();
-                          });
-                      }
-                      COLLECTIONS[collectionName] = collection;
-                      return collection;
-                  });
-              }, function(test, expect) {
-                  // now run the actual test
-                  for (var i = 0; i < repetitions; i++) {
-                      for (var j = 0; j < collectionCount; j++) {
-                          fn(test, expect, this.collections[j], i);
-                      }
+                var cleanups = (this.cleanups = []);
+                this.collections = _.times(collectionCount, function() {
+                  var collectionName = 'consistentid_' + Random.id();
+                  if (Meteor.isClient) {
+                    Meteor.call(
+                      'createInsecureCollection',
+                      collectionName,
+                      collectionOptions
+                    );
+                    Meteor.subscribe('c-' + collectionName, expect());
+                    cleanups.push(async function(expect) {
+                      await Meteor.callAsync(
+                        'dropInsecureCollection',
+                        collectionName
+                      );
+                    });
                   }
-              }, function(test, expect) {
-                  // Run any registered cleanup functions (e.g. to drop collections)
-                  this.cleanups.forEach(function(cleanup) {
-                      cleanup(expect);
-                  });
-              }]);
 
-          });
+                  var collection = new Mongo.Collection(
+                    collectionName,
+                    collectionOptions
+                  );
+                  if (Meteor.isServer) {
+                    cleanups.push(async function() {
+                      await collection.dropCollectionAsync();
+                    });
+                  }
+                  COLLECTIONS[collectionName] = collection;
+                  return collection;
+                });
+              },
+              async function(test) {
+                // now run the actual test
+                for (var i = 0; i < repetitions; i++) {
+                  for (var j = 0; j < collectionCount; j++) {
+                    await fn(test, () => {}, this.collections[j], i);
+                  }
+                }
+              },
+              async function(test, expect) {
+                // Run any registered cleanup functions (e.g. to drop collections)
+                for (const cleanup of this.cleanups) {
+                  await cleanup();
+                }
+              },
+            ]
+          );
+        });
       });
-  });
-});
-
+    });
+  }
+);
 
 
 
@@ -3652,7 +3674,7 @@ var TestCustomType = function (head, tail) {
   this.myHead = head;
   this.myTail = tail;
 };
-Object.assign(TestCustomType.prototype, {
+_.extend(TestCustomType.prototype, {
   clone: function () {
     return new TestCustomType(this.myHead, this.myTail);
   },
@@ -3787,7 +3809,7 @@ testAsyncMulti('mongo-livedata - oplog - update EJSON', [
 
 async function waitUntilOplogCaughtUp() {
   var oplogHandle =
-        MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+    MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
   if (oplogHandle)
     await oplogHandle.waitUntilCaughtUp();
 }
@@ -3796,7 +3818,7 @@ async function waitUntilOplogCaughtUp() {
 Meteor.isServer &&
   Tinytest.addAsync('mongo-livedata - cursor dedup stop', async function(test) {
     var coll = new Mongo.Collection(Random.id());
-    times(100, async function() {
+    _.times(100, async function() {
       await coll.insertAsync({ foo: 'baz' });
     });
     var handler = await coll.find({}).observeChanges({
@@ -3892,14 +3914,14 @@ Meteor.isServer &&
           { multi: 1 }
         );
       });
-      test.equal(Object.keys(state), [self.id2]);
+      test.equal(_.keys(state), [self.id2]);
 
       // Now remove the one published document. This should slide up id1 from the
       // buffer, but this didn't work before the #2274 fix.
       await runInFence(async function() {
         await self.coll.removeAsync({ toDelete: true });
       });
-      test.equal(Object.keys(state), [self.id1]);
+      test.equal(_.keys(state), [self.id1]);
     },
   ]);
 
@@ -3965,11 +3987,11 @@ if (Meteor.isServer) {
     async function(test) {
       var collection = new Mongo.Collection(Random.id());
 
-    times(10, function () {
-      collection.insert({ data: "Hello" });
-    });
+      for (let i = 0; i < 10; i ++) {
+        await collection.insertAsync({ data: 'Hello' });
+      }
 
-    test.equal(collection.find().count(), 10);
+      test.equal(await collection.find().countAsync(), 10);
 
       // Test several array-related selectors
       for (const selector of [[], [1, 2, 3], [{}]]) {
