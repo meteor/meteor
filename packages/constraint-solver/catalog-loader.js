@@ -1,3 +1,5 @@
+const has = require('lodash.has');
+
 var PV = PackageVersion;
 var CS = ConstraintSolver;
 
@@ -35,10 +37,10 @@ CS.CatalogLoader = function (fromCatalog, toCatalogCache) {
 };
 
 var convertDeps = function (catalogDeps) {
-  return _.map(catalogDeps, function (dep, pkg) {
+  return Object.entries(catalogDeps).map(function ([pkg, dep], ) {
     // The dependency is strong if any of its "references"
     // (for different architectures) are strong.
-    var isStrong = _.any(dep.references, function (ref) {
+    var isStrong = dep.references.some(function (ref) {
       return !ref.weak;
     });
 
@@ -51,27 +53,27 @@ var convertDeps = function (catalogDeps) {
 
 // Since we don't fetch different versions of a package independently
 // at the moment, this helper is where we get our data.
-CS.CatalogLoader.prototype._getSortedVersionRecords = function (pkg) {
-  if (! _.has(this._sortedVersionRecordsCache, pkg)) {
+CS.CatalogLoader.prototype._getSortedVersionRecords = async function (pkg) {
+  if (!has(this._sortedVersionRecordsCache, pkg)) {
     this._sortedVersionRecordsCache[pkg] =
-      this.catalog.getSortedVersionRecords(pkg);
+      await this.catalog.getSortedVersionRecords(pkg);
   }
 
   return this._sortedVersionRecordsCache[pkg];
 };
 
-CS.CatalogLoader.prototype.loadSingleVersion = function (pkg, version) {
+CS.CatalogLoader.prototype.loadSingleVersion = async function (pkg, version) {
   var self = this;
   var cache = self.catalogCache;
   if (! cache.hasPackageVersion(pkg, version)) {
     var rec;
-    if (_.has(self._sortedVersionRecordsCache, pkg)) {
-      rec = _.find(self._sortedVersionRecordsCache[pkg],
+    if (has(self._sortedVersionRecordsCache, pkg)) {
+      rec = self._sortedVersionRecordsCache[pkg].find(
                    function (r) {
                      return r.version === version;
                    });
     } else {
-      rec = self.catalog.getVersion(pkg, version);
+      rec = await self.catalog.getVersion(pkg, version);
     }
     if (rec) {
       var deps = convertDeps(rec.dependencies);
@@ -80,11 +82,11 @@ CS.CatalogLoader.prototype.loadSingleVersion = function (pkg, version) {
   }
 };
 
-CS.CatalogLoader.prototype.loadAllVersions = function (pkg) {
+CS.CatalogLoader.prototype.loadAllVersions = async function (pkg) {
   var self = this;
   var cache = self.catalogCache;
-  var versionRecs = self._getSortedVersionRecords(pkg);
-  _.each(versionRecs, function (rec) {
+  var versionRecs = await self._getSortedVersionRecords(pkg);
+  versionRecs.forEach(function (rec) {
     var version = rec.version;
     if (! cache.hasPackageVersion(pkg, version)) {
       var deps = convertDeps(rec.dependencies);
@@ -95,7 +97,7 @@ CS.CatalogLoader.prototype.loadAllVersions = function (pkg) {
 
 // Takes an array of package names.  Loads all versions of them and their
 // (strong) dependencies.
-CS.CatalogLoader.prototype.loadAllVersionsRecursive = function (packageList) {
+CS.CatalogLoader.prototype.loadAllVersionsRecursive = async function (packageList) {
   var self = this;
 
   // Within a call to loadAllVersionsRecursive, we only visit each package
@@ -106,20 +108,20 @@ CS.CatalogLoader.prototype.loadAllVersionsRecursive = function (packageList) {
   var packagesEverEnqueued = {};
 
   var enqueue = function (pkg) {
-    if (! _.has(packagesEverEnqueued, pkg)) {
+    if (!has(packagesEverEnqueued, pkg)) {
       packagesEverEnqueued[pkg] = true;
       loadQueue.push(pkg);
     }
   };
 
-  _.each(packageList, enqueue);
+  packageList.forEach(enqueue);
 
   while (loadQueue.length) {
     var pkg = loadQueue.pop();
-    self.loadAllVersions(pkg);
-    _.each(self.catalogCache.getPackageVersions(pkg), function (v) {
+    await self.loadAllVersions(pkg);
+    self.catalogCache.getPackageVersions(pkg).forEach(function (v) {
       var depMap = self.catalogCache.getDependencyMap(pkg, v);
-      _.each(depMap, function (dep, package2) {
+      Object.entries(depMap).forEach(function ([package2, dep]) {
         enqueue(package2);
       });
     });

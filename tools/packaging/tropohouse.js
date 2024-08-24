@@ -40,11 +40,11 @@ exports.default = new exports.Tropohouse(defaultWarehouseDir());
  * Extract a package tarball, and on Windows convert file paths and metadata
  * @param  {String} packageTarball path to tarball
  * @param {Boolean} forceConvert Convert paths even on unix, for testing
- * @return {String}                Temporary directory with contents of package
+ * @return {Promise<String>}                Temporary directory with contents of package
  */
-exports._extractAndConvert = function (packageTarball, forceConvert) {
+exports._extractAndConvert = async function (packageTarball, forceConvert) {
   var targetDirectory = files.mkdtemp();
-  files.extractTarGz(packageTarball, targetDirectory, {
+  await files.extractTarGz(packageTarball, targetDirectory, {
     forceConvert: forceConvert
   });
 
@@ -324,14 +324,14 @@ Object.assign(exports.Tropohouse.prototype, {
     return downloadedArches;
   },
 
-  _saveIsopack: function (isopack, packageName) {
+  _saveIsopack: async function (isopack, packageName) {
     // XXX does this actually need the name as an argument or can we just get
     // it from isopack?
 
     var self = this;
 
     if (self.platform === "win32") {
-      isopack.saveToPath(self.packagePath(packageName, isopack.version), {
+      await isopack.saveToPath(self.packagePath(packageName, isopack.version), {
         includePreCompilerPluginIsopackVersions: true
       });
     } else {
@@ -347,11 +347,11 @@ Object.assign(exports.Tropohouse.prototype, {
       var combinedDirectory = self.packagePath(
         packageName, newPackageLinkTarget);
 
-      isopack.saveToPath(combinedDirectory, {
+      await isopack.saveToPath(combinedDirectory, {
         includePreCompilerPluginIsopackVersions: true
       });
 
-      files.symlinkOverSync(newPackageLinkTarget,
+      await files.symlinkOverSync(newPackageLinkTarget,
         self.packagePath(packageName, isopack.version));
     }
   },
@@ -367,7 +367,7 @@ Object.assign(exports.Tropohouse.prototype, {
   // and download; download is a method which should be called in a buildmessage
   // capture which actually downloads the package (registering any errors with
   // buildmessage).
-  _makeDownloader: function (options) {
+  _makeDownloader: async function (options) {
     var self = this;
     buildmessage.assertInJob();
 
@@ -404,7 +404,7 @@ Object.assign(exports.Tropohouse.prototype, {
     // local package check), we can use the official catalog here. (This is
     // important, since springboarding calls this function before the complete
     // catalog is ready!)
-    var buildsToDownload = catalog.official.getBuildsForArches(
+    var buildsToDownload = await catalog.official.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
       buildmessage.error(
@@ -415,15 +415,15 @@ Object.assign(exports.Tropohouse.prototype, {
     }
 
     var packagePath = self.packagePath(packageName, version);
-    var download = function download () {
+    var download = async function download () {
       buildmessage.assertInCapture();
 
       Console.debug("Downloading missing local versions of package",
                     packageName + "@" + version, ":", archesToDownload);
 
-      buildmessage.enterJob({
+      await buildmessage.enterJob({
         title: "downloading " + packageName + "@" + version + "..."
-      }, function() {
+      }, async function() {
         var buildInputDirs = [];
         var buildTempDirs = [];
         var packageLinkTarget = null;
@@ -463,21 +463,21 @@ Object.assign(exports.Tropohouse.prototype, {
         // XXX how does concurrency work here?  we could just get errors if we
         // try to rename over the other thing?  but that's the same as in
         // warehouse?
-        _.each(buildsToDownload, ({ build: { url }}) => {
-          const packageTarball = buildmessage.enterJob({
+        for (const { build: { url }} of buildsToDownload) {
+          const packageTarball = await buildmessage.enterJob({
             title: "downloading " + packageName + "@" + version + "..."
-          }, () => {
+          }, async function() {
             try {
               // Override the download domain name and protocol if METEOR_WAREHOUSE_URLBASE
               // provided.
               if (process.env.METEOR_WAREHOUSE_URLBASE) {
                 url = url.replace(
-                  /^[a-zA-Z]+:\/\/[^\/]+/,
-                  process.env.METEOR_WAREHOUSE_URLBASE
+                    /^[a-zA-Z]+:\/\/[^\/]+/,
+                    process.env.METEOR_WAREHOUSE_URLBASE
                 );
               }
 
-              return httpHelpers.getUrlWithResuming({
+              return await httpHelpers.getUrlWithResuming({
                 url: url,
                 encoding: null,
                 progress: buildmessage.getCurrentProgressTracker(),
@@ -491,36 +491,36 @@ Object.assign(exports.Tropohouse.prototype, {
               buildmessage.error(e.error.message);
             }
           });
-
           if (buildmessage.jobHasMessages()) {
             return;
           }
 
-          buildmessage.enterJob({
+          await buildmessage.enterJob({
             title: "extracting " + packageName + "@" + version + "..."
-          }, () => {
-            const buildTempDir = exports._extractAndConvert(packageTarball);
+          }, async function ()  {
+            const buildTempDir = await exports._extractAndConvert(packageTarball);
             buildInputDirs.push(buildTempDir);
             buildTempDirs.push(buildTempDir);
           });
-        });
+        }
 
         if (buildmessage.jobHasMessages()) {
           return;
         }
 
-        buildmessage.enterJob({
+        await buildmessage.enterJob({
           title: "loading " + packageName + "@" + version + "..."
-        }, () => {
+        },  async function ()  {
           // We need to turn our builds into a single isopack.
           var isopack = new Isopack();
-          _.each(buildInputDirs, (buildTempDir, i) => {
-            isopack._loadUnibuildsFromPath(packageName, buildTempDir, {
+          for (let i = 0; i < buildInputDirs.length; i++) {
+            const buildTempDir = buildInputDirs[i];
+            await isopack._loadUnibuildsFromPath(packageName, buildTempDir, {
               firstIsopack: i === 0,
             });
-          });
+          }
 
-          self._saveIsopack(isopack, packageName, version);
+          await self._saveIsopack(isopack, packageName, version);
         });
 
         // Delete temp directories now (asynchronously).
@@ -530,7 +530,7 @@ Object.assign(exports.Tropohouse.prototype, {
 
         // Clean up old version.
         if (packageLinkTarget) {
-          files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
+          await files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
         }
       });
     };
@@ -547,7 +547,7 @@ Object.assign(exports.Tropohouse.prototype, {
   // already have.
   //
   // Reports errors via buildmessage.
-  downloadPackagesMissingFromMap: function (packageMap, options) {
+  downloadPackagesMissingFromMap: async function (packageMap, options) {
     var self = this;
     buildmessage.assertInCapture();
     options = options || {};
@@ -555,14 +555,14 @@ Object.assign(exports.Tropohouse.prototype, {
 
     var downloader;
     var downloaders = [];
-    packageMap.eachPackage(function (packageName, info) {
+    await packageMap.eachPackage(async function (packageName, info) {
       if (info.kind !== 'versioned') {
         return;
       }
-      buildmessage.enterJob(
+      await buildmessage.enterJob(
         "checking for " + packageName + "@" + info.version,
-        function () {
-          downloader = self._makeDownloader({
+        async function () {
+          downloader = await self._makeDownloader({
             packageName: packageName,
             version: info.version,
             architectures: serverArchs
@@ -591,10 +591,10 @@ Object.assign(exports.Tropohouse.prototype, {
     // Just one package to download? Use a good message.
     if (downloaders.length === 1) {
       downloader = downloaders[0];
-      buildmessage.enterJob(
+      await buildmessage.enterJob(
         "downloading " + downloader.packageName + "@" + downloader.version,
-        function () {
-          downloader.download();
+        async function () {
+          await downloader.download();
         }
       );
       return;
@@ -603,11 +603,10 @@ Object.assign(exports.Tropohouse.prototype, {
     // Download multiple packages in parallel.
     // XXX use a better progress bar that shows how many you've
     // finished downloading.
-    buildmessage.forkJoin({
+    await buildmessage.enterJob({
       title: 'downloading ' + downloaders.length + ' packages',
-      parallel: true
-    }, downloaders, function (downloader) {
-      downloader.download();
+    }, async function () {
+      return await Promise.all(downloaders.map(d => d.download()));
     });
   },
 
@@ -617,10 +616,10 @@ Object.assign(exports.Tropohouse.prototype, {
     return files.readLinkToMeteorScript(linkPath, self.platform);
   },
 
-  linkToLatestMeteor: function (scriptLocation) {
+  linkToLatestMeteor: async function (scriptLocation) {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
-    files.linkToMeteorScript(scriptLocation, linkPath, self.platform);
+    await files.linkToMeteorScript(scriptLocation, linkPath, self.platform);
   },
 
   _getPlatform: function () {

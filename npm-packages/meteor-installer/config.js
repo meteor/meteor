@@ -1,7 +1,7 @@
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const METEOR_LATEST_VERSION = '2.13.3';
+const METEOR_LATEST_VERSION = '3.0.2';
 const sudoUser = process.env.SUDO_USER || '';
 function isRoot() {
   return process.getuid && process.getuid() === 0;
@@ -12,6 +12,7 @@ function isSudo() {
 const localAppData = process.env.LOCALAPPDATA;
 const isWindows = () => os.platform() === 'win32';
 const isMac = () => os.platform() === 'darwin';
+const isLinux = () => os.platform() === 'linux';
 
 let rootPath;
 if (isWindows()) {
@@ -21,7 +22,7 @@ if (isWindows()) {
 } else {
   if (isRoot()) {
     console.info(
-      'You are running the install script as root, without SUDO. This is not recommended and should be avoided. Continuing.'
+      'You are running the install script as root, without SUDO. This is not recommended and should be avoided. Continuing.',
     );
   }
   rootPath = os.homedir();
@@ -47,6 +48,7 @@ module.exports = {
   startedPath: path.resolve(rootPath, '.meteor-install-started.txt'),
   isWindows,
   isMac,
+  isLinux,
   isRoot,
   isSudo,
   shouldSetupExecPath,

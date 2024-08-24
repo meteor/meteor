@@ -4,9 +4,9 @@ var testUtils = require('../tool-testing/test-utils.js');
 var Sandbox = selftest.Sandbox;
 import { host } from "../utils/archinfo";
 const relBuildDir = "../build";
-const isOSX = host().split(".", 2).join(".") === "os.osx";
+const isOSX = async () => (await host()).split(".", 2).join(".") === "os.osx";
 
-var checkMobileServer = selftest.markStack(function (s, expected) {
+var checkMobileServer = selftest.markStack(async function (s, expected) {
   function checkIndexHtml(path) {
     const output = s.read(path);
     const mrc = testUtils.getMeteorRuntimeConfigFromHTML(output);
@@ -18,7 +18,7 @@ var checkMobileServer = selftest.markStack(function (s, expected) {
     "android/project/app/src/main/assets/www/application/index.html"
   ));
 
-  if (isOSX) {
+  if (await isOSX()) {
     checkIndexHtml(files.pathJoin(
       relBuildDir,
       "ios/project/www/application/index.html"
@@ -27,58 +27,60 @@ var checkMobileServer = selftest.markStack(function (s, expected) {
 });
 
 function cleanUpBuild(s) {
-  files.rm_recursive(files.pathJoin(s.cwd, relBuildDir));
+  return files.rm_recursive(files.pathJoin(s.cwd, relBuildDir));
 }
 
-selftest.define("cordova builds with server options", ["cordova"], function () {
+selftest.define("cordova builds with server options", ["cordova"], async function () {
   const s = new Sandbox();
+  await s.init();
   let run;
 
-  s.createApp("myapp", "standard-app");
+  await s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
   run = s.run("add-platform", "android");
-  run.match("added");
-  run.expectExit(0);
+  run.waitSecs(90);
+  await run.match("added");
+  await run.expectExit(0);
 
-  if (isOSX) {
+  if (await isOSX()) {
     run = s.run("add-platform", "ios");
-    run.match("added");
-    run.expectExit(0);
+    await run.match("added");
+    await run.expectExit(0);
   }
 
   run = s.run("build", relBuildDir);
   run.waitSecs(90);
-  run.matchErr(
+  await run.matchErr(
     "Supply the server hostname and port in the --server option");
-  run.expectExit(1);
+  await run.expectExit(1);
 
   run = s.run("build", relBuildDir, "--server", "5000");
   run.waitSecs(90);
-  run.matchErr("--server must include a hostname");
-  run.expectExit(1);
+  await run.matchErr("--server must include a hostname");
+  await run.expectExit(1);
 
   run = s.run("build", relBuildDir, "--server", "https://example.com:5000");
-  run.waitSecs(300);
-  run.expectExit(0);
-  checkMobileServer(s, "https://example.com:5000/");
-  cleanUpBuild(s);
+  run.waitSecs(90);
+  await run.expectExit(0);
+  await checkMobileServer(s, "https://example.com:5000/");
+  await cleanUpBuild(s);
 
   run = s.run("build", relBuildDir, "--server", "example.com:5000");
   run.waitSecs(90);
-  run.expectExit(0);
-  checkMobileServer(s, "http://example.com:5000/");
-  cleanUpBuild(s);
+  await run.expectExit(0);
+  await checkMobileServer(s, "http://example.com:5000/");
+  await cleanUpBuild(s);
 
   run = s.run("build", relBuildDir, "--server", "example.com");
   run.waitSecs(90);
-  run.expectExit(0);
-  checkMobileServer(s, "http://example.com/");
-  cleanUpBuild(s);
+  await run.expectExit(0);
+  await checkMobileServer(s, "http://example.com/");
+  await cleanUpBuild(s);
 
   run = s.run("build", relBuildDir, "--server", "https://example.com");
   run.waitSecs(90);
-  run.expectExit(0);
-  checkMobileServer(s, "https://example.com/");
-  cleanUpBuild(s);
+  await run.expectExit(0);
+  await checkMobileServer(s, "https://example.com/");
+  await cleanUpBuild(s);
 });

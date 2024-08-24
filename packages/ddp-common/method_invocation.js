@@ -18,6 +18,16 @@ DDPCommon.MethodInvocation = class MethodInvocation {
     // zero-latency connection to the user.
 
     /**
+     * @summary The name given to the method.
+     * @locus Anywhere
+     * @name  name
+     * @memberOf DDPCommon.MethodInvocation
+     * @instance
+     * @type {String}
+     */
+    this.name = options.name;
+
+    /**
      * @summary Access inside a method invocation.  Boolean value, true if this invocation is a stub.
      * @locus Anywhere
      * @name  isSimulation
@@ -67,6 +77,8 @@ DDPCommon.MethodInvocation = class MethodInvocation {
 
     // This is set by RandomStream.get; and holds the random stream state
     this.randomStream = null;
+
+    this.fence = options.fence;
   }
 
   /**
@@ -87,11 +99,11 @@ DDPCommon.MethodInvocation = class MethodInvocation {
    * @instance
    * @param {String | null} userId The value that should be returned by `userId` on this connection.
    */
-  setUserId(userId) {
+  async setUserId(userId) {
     if (this._calledUnblock) {
       throw new Error("Can't call setUserId in a method after calling unblock");
     }
     this.userId = userId;
-    this._setUserId(userId);
+    await this._setUserId(userId);
   }
 };

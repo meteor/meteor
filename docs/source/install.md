@@ -8,6 +8,8 @@ You need to install the Meteor command line tool to create, run, and manage your
 
 <h3 id="prereqs-node">Node.js version</h3>
 
+> Meteor 2.x uses the deprecated Node.js 14. Meteor 3.0 has been released and runs on Node.js 20. Check out our [v3 docs](https://v3-docs.meteor.com) and [migration guide](https://v3-migration-docs.meteor.com/).
+
 - Node.js version >= 10 and <= 14 is required.
 - We recommend you using [nvm](https://github.com/nvm-sh/nvm) or [Volta](https://volta.sh/) for managing Node.js versions.
 
@@ -28,9 +30,11 @@ You need to install the Meteor command line tool to create, run, and manage your
 
 Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://docs.meteor.com/changelog.html) for the release notes.
 
-> Run `node -v` to ensure you are using Node.js 14.
+> Run `node -v` to ensure you are using Node.js 14. Meteor 3.0, currently in its Release Candidate version, runs on Node.js v20.
 
 For Windows, Linux and OS X, you can run the following command:
+
+> Preferably, do not use `sudo` to install Meteor. If you need to use `sudo`, please check the [troubleshooting section](#troubleshooting).
 
 ```bash
 npm install -g meteor
@@ -64,6 +68,8 @@ Only run the above command with sudo if you know what you are doing.
 If you only use sudo because of a distribution default permission system, [check this link for fixing it](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally).
 
 In some cases you can get this error `npm WARN checkPermissions Missing write access to /usr/local/lib/node_modules` because your Node.js installation was performed with wrong permissions. An easy way to fix this is to install Node.js using [nvm](https://github.com/nvm-sh/nvm) and forcing it to be used in your terminal. You can force it in the current session of your terminal by running `nvm use 14`.
+
+As a last resort you can delete the `.meteor` folder in your home directory and try to install Meteor again using the correct permissions.
 
 <h2 id="path-management">PATH management</h2>
 
@@ -116,5 +122,4 @@ If you installed Meteor using npm, you can remove it by running:
 
 If you installed Meteor using curl, you can remove it by running:
 `rm -rf ~/.meteor`
-`sudo rm /usr/local/bin/meteor` 
-
+`sudo rm /usr/local/bin/meteor`

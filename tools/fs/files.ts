@@ -4,29 +4,12 @@
 /// (such as testing whether an directory is a meteor app)
 ///
 
-import fs, { PathLike, Stats, Dirent } from "fs";
+import fs, { Dirent, PathLike, Stats } from "fs";
 import os from "os";
 import { execFile } from "child_process";
 import { EventEmitter } from "events";
 import { Slot } from "@wry/context";
 import { dep } from "optimism";
-
-const _ = require('underscore');
-const Fiber = require("fibers");
-
-const rimraf = require('rimraf');
-const sourcemap = require('source-map');
-const sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
-
-const utils = require('../utils/utils.js');
-const cleanup = require('../tool-env/cleanup.js');
-const buildmessage = require('../utils/buildmessage.js');
-const fiberHelpers = require('../utils/fiber-helpers.js');
-const colonConverter = require('../utils/colon-converter.js');
-
-const Profile = require('../tool-env/profile').Profile;
-
-export * from '../static-assets/server/mini-files';
 import {
   convertToOSPath,
   convertToPosixPath,
@@ -43,6 +26,23 @@ import {
   pathResolve,
   pathSep,
 } from "../static-assets/server/mini-files";
+import { realpathSync } from './fsFixPath';
+
+const _ = require('underscore');
+
+const rimraf = require('rimraf');
+const sourcemap = require('source-map');
+const sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
+
+const utils = require('../utils/utils.js');
+const cleanup = require('../tool-env/cleanup.js');
+const buildmessage = require('../utils/buildmessage.js');
+const fiberHelpers = require('../utils/fiber-helpers.js');
+const colonConverter = require('../utils/colon-converter.js');
+
+const Profile = require('../tool-env/profile').Profile;
+
+export * from '../static-assets/server/mini-files';
 
 const { hasOwnProperty } = Object.prototype;
 
@@ -62,11 +62,11 @@ function useParsedSourceMap(pathForSourceMap: string) {
 // Try this source map first
 sourceMapRetrieverStack.push(useParsedSourceMap);
 
-function canYield() {
-  return Fiber.current &&
-    Fiber.yield &&
-    ! Fiber.yield.disallowed;
-}
+// function canYield() {
+//   return Fiber.current &&
+//     Fiber.yield &&
+//     ! Fiber.yield.disallowed;
+// }
 
 // given a predicate function and a starting path, traverse upwards
 // from the path until we find a path that satisfies the predicate.
@@ -148,7 +148,7 @@ export function findGitCommitHash(path: string) {
     } else {
       resolve();
     }
-  }).await();
+  });
 }
 
 // create a .gitignore file in dirPath if one doesn't exist. add
@@ -203,22 +203,19 @@ export function usesWarehouse() {
 export function getToolsVersion() {
   if (! inCheckout()) {
     const isopackJsonPath = pathJoin(getCurrentToolsDir(),
-      '..',  // get out of tool, back to package
-      'isopack.json');
-
+        '..',  // get out of tool, back to package
+        'isopack.json');
     let parsed;
-
     if (exists(isopackJsonPath)) {
       // XXX "isopack-1" is duplicate of isopack.currentFormat
       parsed = JSON.parse(readFile(isopackJsonPath))["isopack-1"];
       return parsed.name + '@' + parsed.version;
     }
-
     // XXX COMPAT WITH 0.9.3
     const unipackageJsonPath = pathJoin(
-      getCurrentToolsDir(),
-      '..',  // get out of tool, back to package
-      'unipackage.json'
+        getCurrentToolsDir(),
+        '..',  // get out of tool, back to package
+        'unipackage.json'
     );
     parsed = JSON.parse(readFile(unipackageJsonPath));
     return parsed.name + '@' + parsed.version;
@@ -239,6 +236,10 @@ export function getCurrentNodeBinDir() {
 
 // Return the top-level directory for this meteor install or checkout
 export function getCurrentToolsDir() {
+  if (!process.env.SANDBOX && process.env.METEOR_WAREHOUSE_DIR) {
+    return pathDirname(realpathSync(pathJoin(process.env.METEOR_WAREHOUSE_DIR, 'meteor')));
+  }
+
   return pathDirname(pathDirname(convertToStandardPath(__dirname)));
 }
 
@@ -344,14 +345,13 @@ export function rm_recursive_async(path: string) {
 }
 
 // Like rm -r.
-export const rm_recursive = Profile("files.rm_recursive", (path: string) => {
+export const rm_recursive = Profile("files.rm_recursive", async (path: string) => {
   try {
     rimraf.sync(convertToOSPath(path));
   } catch (e: any) {
     if ((e.code === "ENOTEMPTY" ||
-         e.code === "EPERM") &&
-        canYield()) {
-      rm_recursive_async(path).await();
+         e.code === "EPERM")) {
+      await rm_recursive_async(path);
       return;
     }
     throw e;
@@ -362,17 +362,10 @@ export const rm_recursive = Profile("files.rm_recursive", (path: string) => {
 export function fileHash(filename: string) {
   const crypto = require('crypto');
   const hash = crypto.createHash('sha256');
-  hash.setEncoding('base64');
-  const rs = createReadStream(filename);
-  return new Promise(function (resolve) {
-    rs.on('end', function () {
-      rs.close();
-      resolve(hash.digest('base64'));
-    });
-    rs.pipe(hash, { end: false });
-  }).await();
+  const fileBuff = readFile(filename);
+  hash.update(fileBuff);
+  return hash.digest('base64');
 }
-
 // This is the result of running fileHash on a blank file.
 export const blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 
@@ -387,9 +380,9 @@ export function treeHash(root: string, optionsParams: {
     ...optionsParams,
   };
 
-  const hash = require('crypto').createHash('sha256');
+   function traverse(relativePath: string) {
+    const hash = require('crypto').createHash('sha256');
 
-  function traverse(relativePath: string) {
     if (options.ignore(relativePath)) {
       return;
     }
@@ -408,8 +401,9 @@ export function treeHash(root: string, optionsParams: {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
+      const fileHashed = fileHash(absPath);
       hash.update('file ' + JSON.stringify(relativePath) + ' ' +
-                  stat?.size + ' ' + fileHash(absPath) + '\n');
+                  stat?.size + ' ' +  fileHashed + '\n');
 
       // @ts-ignore
       if (stat.mode & 0o100) {
@@ -423,9 +417,11 @@ export function treeHash(root: string, optionsParams: {
                   JSON.stringify(readlink(absPath)) + '\n');
     }
     // ignore anything weirder
+
+    return hash
   }
 
-  traverse('');
+  const hash = traverse('');
 
   return hash.digest('base64');
 }
@@ -489,7 +485,7 @@ function pathIsDirectory(path: string) {
 // If options.ignore is present, it should be a list of regexps. Any
 // file whose basename matches one of the regexps, before
 // transformation, will be skipped.
-export function cp_r(from: string, to: string, options: {
+export async function cp_r(from: string, to: string, options: {
   preserveSymlinks?: boolean;
   ignore?: RegExp[];
   transformFilename?: (f: string) => string;
@@ -508,7 +504,7 @@ export function cp_r(from: string, to: string, options: {
   if (stat.isDirectory()) {
     mkdir_p(to, 0o755);
 
-    readdir(from).forEach(f => {
+    for (let f of readdir(from)) {
       if (options.ignore &&
           options.ignore.some(pattern => f.match(pattern))) {
         return;
@@ -517,15 +513,15 @@ export function cp_r(from: string, to: string, options: {
       const fullFrom = pathJoin(from, f);
 
       if (options.transformFilename) {
-        f = options.transformFilename(f);
+        f = await options.transformFilename(f);
       }
 
-      cp_r(
-        fullFrom,
-        pathJoin(to, f),
-        options
+      await cp_r(
+          fullFrom,
+          pathJoin(to, f),
+          options
       );
-    })
+    }
 
     return;
   }
@@ -533,10 +529,9 @@ export function cp_r(from: string, to: string, options: {
   mkdir_p(pathDirname(to));
 
   if (stat.isSymbolicLink()) {
-    symlinkWithOverwrite(readlink(from), to);
-
+    await symlinkWithOverwrite(readlink(from), to);
   } else if (options.transformContents) {
-    writeFile(to, options.transformContents(
+    writeFile(to, await options.transformContents(
       readFile(from),
       pathBasename(from)
     ), {
@@ -559,7 +554,7 @@ export function cp_r(from: string, to: string, options: {
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
 export const symlinkWithOverwrite =
-Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(
+Profile("files.symlinkWithOverwrite", async function symlinkWithOverwrite(
   source: string,
   target: string,
 ) {
@@ -588,7 +583,7 @@ Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(
         return;
       }
       // overwrite existing link, file, or directory
-      rm_recursive(target);
+      await rm_recursive(target);
       symlink(...args);
     } else {
       throw e;
@@ -607,6 +602,7 @@ Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(
 export function getPathsInDir(dir: string, options: {
   cwd?: string;
   output?: string[];
+  maxDepth?: number;
 }) {
   // Don't let this function yield so that the file system doesn't get changed
   // underneath us
@@ -626,6 +622,7 @@ export function getPathsInDir(dir: string, options: {
     }
 
     const output = options.output || [];
+    const maxDepth = options.maxDepth;
 
     function pathIsDirectory(path: string) {
       var stat = lstat(path);
@@ -638,10 +635,12 @@ export function getPathsInDir(dir: string, options: {
 
       output.push(newPath);
 
-      if (pathIsDirectory(newAbsPath)) {
+      const nextMaxDepth = maxDepth != null ? maxDepth - 1 : maxDepth;
+      if (pathIsDirectory(newAbsPath) && (nextMaxDepth == null || nextMaxDepth > 0)) {
         getPathsInDir(newPath, {
           cwd: cwd,
-          output: output
+          output: output,
+          ...nextMaxDepth != null && { maxDepth: nextMaxDepth },
         });
       }
     });
@@ -704,6 +703,7 @@ export function mkdtemp(prefix: string): string {
         mkdir(dirPath, 0o700);
         return dirPath;
       } catch (err) {
+        console.error(err);
         tries--;
       }
     }
@@ -748,10 +748,10 @@ export function changeTempDirStatus(dir: string, status: boolean) {
 
 if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function () {
-    Object.entries(tempDirs).filter(([_, isTmp]) => !!isTmp).map(([dir]) => dir).forEach(dir => {
+    return Object.entries(tempDirs).filter(([_, isTmp]) => !!isTmp).map(([dir]) => dir).map(async dir => {
       delete tempDirs[dir];
       try {
-        rm_recursive(dir);
+        await rm_recursive(dir);
       } catch (err) {
         // Don't crash and print a stack trace because we failed to delete
         // a temp directory. This happens sometimes on Windows and seems
@@ -770,7 +770,7 @@ type TarOptions = {
 // into a destination directory. destPath should not exist yet, and
 // the archive should contain a single top-level directory, which will
 // be renamed atomically to destPath.
-export function extractTarGz(
+export async function extractTarGz(
   buffer: Buffer,
   destPath: string,
   options: TarOptions = {},
@@ -786,9 +786,7 @@ export function extractTarGz(
   const startTime = +new Date;
 
   // standardize only one way of extracting, as native ones can be tricky
-  const promise = tryExtractWithNpmTar(buffer, tempDir, options)
-
-  promise.await();
+  await tryExtractWithNpmTar(buffer, tempDir, options);
 
   // succeed!
   const topLevelOfArchive = readdir(tempDir)
@@ -802,8 +800,8 @@ export function extractTarGz(
   }
 
   const extractDir = pathJoin(tempDir, topLevelOfArchive[0]);
-  rename(extractDir, destPath);
-  rm_recursive(tempDir);
+  await rename(extractDir, destPath);
+  await rm_recursive(tempDir);
 
   if (options.verbose) {
     console.log("Finished extracting in", Date.now() - startTime, "ms");
@@ -905,11 +903,11 @@ export const createTarball = Profile(function (_: string, tarball: string) {
   return "files.createTarball " + pathBasename(tarball);
 }, function (dirPath: string, tarball: string) {
   const out = createWriteStream(tarball);
-  new Promise(function (resolve, reject) {
+  return new Promise(function (resolve, reject) {
     out.on('error', reject);
     out.on('close', resolve);
     createTarGzStream(dirPath).pipe(out);
-  }).await();
+  });
 });
 
 // Use this if you'd like to replace a directory with another
@@ -920,7 +918,7 @@ export const createTarball = Profile(function (_: string, tarball: string) {
 // sitting around", but not "there's any time where toDir exists but
 // is in a state other than initial or final".)
 export const renameDirAlmostAtomically =
-Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
+Profile("files.renameDirAlmostAtomically", async (fromDir: string, toDir: string) => {
   const garbageDir = pathJoin(
     pathDirname(toDir),
     // Begin the base filename with a '.' character so that it can be
@@ -932,7 +930,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   let cleanupGarbage = false;
   let forceCopy = false;
   try {
-    rename(toDir, garbageDir);
+    await rename(toDir, garbageDir);
     cleanupGarbage = true;
   } catch (e: any) {
     if (e.code === 'EXDEV') {
@@ -951,7 +949,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
 
   if (! forceCopy) {
     try {
-      rename(fromDir, toDir);
+      await rename(fromDir, toDir);
     } catch (e: any) {
       // It's possible that there may not have been a `toDir` to have
       // advanced warning about this, so we're prepared to handle it again.
@@ -966,8 +964,8 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   // If we've been forced to jeopardize our atomicity due to file-system
   // limitations, we'll resort to copying.
   if (forceCopy) {
-    rm_recursive(toDir);
-    cp_r(fromDir, toDir, {
+    await rm_recursive(toDir);
+    await cp_r(fromDir, toDir, {
       preserveSymlinks: true,
     });
   }
@@ -975,12 +973,12 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   // ... and take out the trash.
   if (cleanupGarbage) {
     // We don't care about how long this takes, so we'll let it go async.
-    rm_recursive_async(garbageDir);
+    await rm_recursive_async(garbageDir);
   }
 });
 
 export const writeFileAtomically =
-Profile("files.writeFileAtomically", function (filename: string, contents: string | Buffer) {
+Profile("files.writeFileAtomically", async function (filename: string, contents: string | Buffer) {
   const parentDir = pathDirname(filename);
   mkdir_p(parentDir);
 
@@ -990,19 +988,19 @@ Profile("files.writeFileAtomically", function (filename: string, contents: strin
   );
 
   writeFile(tmpFile, contents);
-  rename(tmpFile, filename);
+  await rename(tmpFile, filename);
 });
 
 // Like fs.symlinkSync, but creates a temporary link and renames it over the
 // file; this means it works even if the file already exists.
 // Do not use this function on Windows, it won't work.
-export function symlinkOverSync(linkText: string, file: string) {
+export async function symlinkOverSync(linkText: string, file: string) {
   file = pathResolve(file);
   const tmpSymlink = pathJoin(
     pathDirname(file),
     "." + pathBasename(file) + ".tmp" + utils.randomToken());
   symlink(linkText, tmpSymlink);
-  rename(tmpSymlink, file);
+  await rename(tmpSymlink, file);
 }
 
 // Return the result of evaluating `code` using
@@ -1034,7 +1032,7 @@ export function runJavaScript(code: string, {
   sourceMap?: object;
   sourceMapRoot?: string;
 }) {
-  return Profile.time('runJavaScript ' + filename, () => {
+  return Profile.time('runJavaScript ' + filename, async () => {
     const keys: string[] = [], values: any[] = [];
     // don't assume that _.keys and _.values are guaranteed to
     // enumerate in the same order
@@ -1054,7 +1052,7 @@ export function runJavaScript(code: string, {
     const header = "(function(" + keys.join(',') + "){";
     chunks.push(header);
     if (sourceMap) {
-      const sourcemapConsumer = Promise.await(new sourcemap.SourceMapConsumer(sourceMap));
+      const sourcemapConsumer = await new sourcemap.SourceMapConsumer(sourceMap);
       chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
         code, sourcemapConsumer));
       sourcemapConsumer.destroy();
@@ -1126,7 +1124,7 @@ export function runJavaScript(code: string, {
 
         if (parsedSourceMap) {
           // XXX this duplicates code in computeGlobalReferences
-          var consumer2 = Promise.await(new sourcemap.SourceMapConsumer(parsedSourceMap));
+          var consumer2 = await new sourcemap.SourceMapConsumer(parsedSourceMap);
           var original = consumer2.originalPositionFor(parseError.loc);
           consumer2.destroy();
           if (original.source) {
@@ -1156,7 +1154,7 @@ export function runJavaScript(code: string, {
     }
 
     return buildmessage.markBoundary(
-      script.runInThisContext()
+      await script.runInThisContext()
     ).apply(null, values);
   });
 }
@@ -1377,7 +1375,7 @@ export function _getLocationFromScriptLinkToMeteorScript(script: string | Buffer
   return convertToPosixPath(scriptLocation, ! isAbsolute);
 }
 
-export function linkToMeteorScript(
+export async function linkToMeteorScript(
   scriptLocation: string,
   linkLocation: string,
   platform: string,
@@ -1392,7 +1390,7 @@ export function linkToMeteorScript(
     writeFile(linkLocation, script, { encoding: "ascii" });
   } else {
     // Symlink meteor tool
-    symlinkOverSync(scriptLocation, linkLocation);
+    await symlinkOverSync(scriptLocation, linkLocation);
   }
 }
 
@@ -1617,15 +1615,15 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
       }
     }
     attempt();
-  }).catch((error: any) => {
+  }).catch(async (error: any) => {
     if (error.code === 'EPERM' ||
-        error.code === 'EACCESS') {
-      cp_r(from, to, { preserveSymlinks: true });
-      rm_recursive(from);
+        error.code === 'EACCES') {
+      await cp_r(from, to, { preserveSymlinks: true });
+      await rm_recursive(from);
     } else {
       throw error;
     }
-  }).await();
+  });
 } : wrappedRename;
 
 // Warning: doesn't convert slashes in the second 'cache' arg
