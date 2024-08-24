@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NotFound from './NotFound.vue'
 import { useData, useRouter } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 import { nextTick, provide } from 'vue'
@@ -50,7 +51,11 @@ provide('toggle-appearance', async ({ clientX: x, clientY: y }: MouseEvent) => {
 </script>
 
 <template>
-  <DefaultTheme.Layout />
+  <DefaultTheme.Layout >
+    <template #not-found>
+      <NotFound />
+    </template>
+  </DefaultTheme.Layout>
 </template>
 
 <style>
