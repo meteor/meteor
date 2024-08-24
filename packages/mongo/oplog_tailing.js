@@ -1,6 +1,5 @@
 import isEmpty from 'lodash.isempty';
 import has from 'lodash.has';
-var Future = Npm.require('fibers/future');
 
 import { NpmModuleMongodb } from "meteor/npm-mongo";
 const { Long } = NpmModuleMongodb;
