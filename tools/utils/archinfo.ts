@@ -132,11 +132,12 @@ export const VALID_ARCHITECTURES: Record<string, boolean> = {
   "os.osx.arm64": true,
   "os.linux.x86_64": true,
   "os.windows.x86_64": true,
+  "os.linux.aarch64": true,
 };
 
 // Returns the fully qualified arch of this host -- something like
-// "os.linux.x86_32" or "os.osx.x86_64". Must be called inside
-// a fiber. Throws an error if it's not a supported architecture.
+// "os.linux.x86_32" or "os.osx.x86_64".
+// Throws an error if it's not a supported architecture.
 //
 // If you change this, also change scripts/admin/launch-meteor
 let _host: string | null = null; // memoize
@@ -150,7 +151,7 @@ export function host() {
         throw new Error(`Can't get arch with ${args.join(" ")}?`);
       }
 
-      return result.replace(/\s*$/, ''); // trailing whitespace
+      return result.replace(/\s*$/, ''); // remove trailing whitespace
     };
 
     const platform = os.platform();
@@ -161,7 +162,7 @@ export function host() {
       const arch = run('uname', '-p');
 
       if ((arch !== "i386" && arch !== "arm") ||
-          run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
+         run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel and M1 processors are supported on OS X");
       }
       if(arch === "arm"){
@@ -173,6 +174,8 @@ export function host() {
       const machine = run('uname', '-m');
       if (["x86_64", "amd64", "ia64"].includes(machine)) {
         _host = "os.linux.x86_64";
+      } else if(machine === "aarch64") {
+        _host = "os.linux.aarch64";
       } else {
         throw new Error(`Unsupported architecture: ${machine}`);
       }
