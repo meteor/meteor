@@ -1,13 +1,10 @@
 import has from 'lodash.has'; 
 import isEmpty from 'lodash.isempty';
 
-var Future = Npm.require('fibers/future');
 
-ObserveMultiplexer = function (options) {
-  var self = this;
-
-  if (!options || !has(options, 'ordered'))
-    throw Error("must specified ordered");
+ObserveMultiplexer = class {
+  constructor({ ordered, onStop = () => {} } = {}) {
+    if (ordered === undefined) throw Error("must specify ordered");
 
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
         "mongo-livedata", "observe-multiplexers", 1);
