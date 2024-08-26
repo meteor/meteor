@@ -49,7 +49,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 > It's already possible to use Meteor on Windows with WSL, but we need to document it better
 
 - HTTP/3 Support
-> HTTP/3 is the next version of the HTTP protocol, we should support it in Meteor to leverage its performance and security benefits.
+> HTTP/3 is the next version of the HTTP protocol. We should support it in Meteor to leverage its performance and security benefits.
 
 ### Candidate items
 
