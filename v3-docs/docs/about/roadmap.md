@@ -23,7 +23,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 > After removing fibers, we became heavily reliant on async resources and consequently Async Hooks/Async Local Storage, which has a performance cost, we need to optimize that.
 
 - Bringing community packages to the core
-> Some packages are widely used and should be part of the core, so this involves identifying and moving them there.
+> Some packages are widely used and should be part of the core, which involves identifying and moving them to the core.
 
 - MongoDB Change Streams support ([Discussion](https://github.com/meteor/meteor/discussions/11842))
 > Change Streams is the official way to listen to changes in MongoDB. We should provide a way to use it seamlessly in Meteor. It has been planned for a long time, and now we’re in a position to do it.
