@@ -29,7 +29,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 > Change Streams is the official way to listen to changes in MongoDB; we should provide a way to use it in Meteor, seamlessly. It has been planned for a long time, and now we’re in a position to do it.
 
 - Integrated support for Vite (Client Bundler, [Discussion](https://github.com/meteor/meteor/discussions/11587))
-> Vite is a fast and modern client bundler with an amazing ecosystem, it has many potential benefits for Meteor: build performance, tree-shaking, making our codebase leaner, and focus on what we do best.
+> Vite is a fast and modern client bundler with an amazing ecosystem. It has many potential benefits for Meteor: build performance, tree-shaking, making our codebase leaner, and focusing on what we do best.
 
 - Replace Babel with ESBuild, Rollup, SWC, or another tool for the server bundle ([Discussion](https://github.com/meteor/meteor/discussions/11587))
 > Babel is a great tool, but it's slow and has some limitations; we should consider replacing it with a faster and more modern tool for the server bundle. We could potentially use the same tools Vite uses.
