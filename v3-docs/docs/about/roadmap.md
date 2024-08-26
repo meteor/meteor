@@ -20,7 +20,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 > Should be an ongoing effort to improve the TypeScript support in Meteor and packages, as we write new code in TypeScript and get more skin in the game, it should naturally improve. This doesn’t mean we will actively refactor working code.
 
 - Performance improvements for Meteor 3.0
-> After the removal of fibers, we became heavily reliant on async resources and consequently Async Hooks/Async Local Storage, that has a performance cost, we need to optimize that.
+> After removing fibers, we became heavily reliant on async resources and consequently Async Hooks/Async Local Storage, which has a performance cost, we need to optimize that.
 
 - Bringing community packages to the core
 > Some packages are widely used and should be part of the core, so this involves identifying and moving them there.
