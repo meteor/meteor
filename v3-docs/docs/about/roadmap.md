@@ -26,7 +26,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 > Some packages are widely used and should be part of the core, so this involves identifying and moving them there.
 
 - MongoDB Change Streams support ([Discussion](https://github.com/meteor/meteor/discussions/11842))
-> Change Streams is the official way to listen to changes in MongoDB; we should provide a way to use it in Meteor, seamlessly. It has been planned for a long time, and now we’re in a position to do it.
+> Change Streams is the official way to listen to changes in MongoDB. We should provide a way to use it seamlessly in Meteor. It has been planned for a long time, and now we’re in a position to do it.
 
 - Integrated support for Vite (Client Bundler, [Discussion](https://github.com/meteor/meteor/discussions/11587))
 > Vite is a fast and modern client bundler with an amazing ecosystem. It has many potential benefits for Meteor: build performance, tree-shaking, making our codebase leaner, and focusing on what we do best.
