@@ -79,4 +79,4 @@ We need to discuss further to decide whether to proceed with these implementatio
 
 -----------
 
-For more completed items, refer to our [changelog](https://docs.meteor.com/about/roadmap.html).
+For more completed items, refer to our [changelog](https://docs.meteor.com/history.html).
