@@ -428,7 +428,7 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
       );
       test.equal(count, 2);
       test.equal(
-        _.pluck(await coll.find({ run: run }, { sort: { x: -1 } }).fetchAsync(), 'x'),
+        (await coll.find({ run: run }, { sort: { x: -1 } }).fetchAsync()).map(doc => doc.x),
         [6, 3]
       );
     });
@@ -443,8 +443,8 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
       async function() {
         await coll.updateAsync({ run: run, x: 3 }, { $inc: { x: 10 } }, { multi: true });
         test.equal(
-          _.pluck(await coll.find({ run: run }, { sort: { x: -1 } }).fetchAsync(), 'x'),
-          [13, 6]
+(await coll.find({ run: run }, { sort: { x: -1 } }).fetchAsync()).map(doc => doc.x),
+[13, 6]
         );
       }
     );
@@ -597,7 +597,7 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
 
       // Did we limit ourselves to one 'moved' message per change,
       // rather than O(results) moved messages?
-      _.each(max_counters, function(v, k) {
+      Object.entries(max_counters).forEach(([k, v]) => {
         test.isTrue(max_counters[k] >= counters[k], k);
       });
 
@@ -1823,8 +1823,9 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
     'mongo-livedata - transform sets _id if not present, ' + idGeneration,
     [
       function(test, expect) {
-        var justId = function(doc) {
-          return _.omit(doc, '_id');
+        const justId = function(doc) {
+          const { _id, ...rest } = doc;
+          return rest;
         };
         TRANSFORMS['justId'] = justId;
         var collectionOptions = {
@@ -2401,7 +2402,7 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
               coll = new Mongo.Collection(collName, collectionOptions);
               Meteor.subscribe('c-' + collName, next0);
             } else {
-              var opts = _.clone(collectionOptions);
+              var opts = Object.assign({}, collectionOptions);
               if (Meteor.isClient) opts.connection = null;
               coll = new Mongo.Collection(collName, opts);
               if (useDirectCollection) coll = coll._collection;
@@ -2869,7 +2870,7 @@ async function functionCallsInsert(test, expect, coll, index) {
   test.equal(ids[0], stubId);
 
   const o = await coll.findOneAsync(stubId);
-  test.isTrue(_.isObject(o));
+  test.isTrue(isObject(o));
   test.equal(o.name, 'foo');
 }
 
@@ -3892,7 +3893,7 @@ Meteor.isServer &&
           toDelete: true,
         });
       });
-      test.equal(_.keys(state), [self.id2]);
+      test.equal(Object.keys(state), [self.id2]);
 
       // Mutate the one in the unpublished buffer and the one below the
       // buffer. Before the fix for #2274, this left the observe state machine in
