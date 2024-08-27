@@ -1,6 +1,7 @@
 import has from 'lodash.has'; 
 import isEmpty from 'lodash.isempty';
 
+let nextObserveHandleId = 1;
 
 ObserveMultiplexer = class {
   constructor({ ordered, onStop = () => {} } = {}) {
