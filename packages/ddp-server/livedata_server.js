@@ -86,6 +86,14 @@ var SessionDocumentView = function () {
 
 DDPServer._SessionDocumentView = SessionDocumentView;
 
+DDPServer._getCurrentFence = function () {
+  let currentInvocation = this._CurrentWriteFence.get();
+  if (currentInvocation) {
+    return currentInvocation;
+  }
+  currentInvocation = DDP._CurrentMethodInvocation.get();
+  return currentInvocation ? currentInvocation.fence : undefined;
+};
 
 Object.assign(SessionDocumentView.prototype, {
 
