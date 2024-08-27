@@ -1552,6 +1552,10 @@ Object.assign(MongoConnection.prototype, {
           }
         }], function (f) { return f(); });  // invoke each function
 
+      if (!canUseOplog) {
+        console.warn(`Cursor ${collectionName} cannot use the oplog, falling back to polling.`, cursorDescription)
+      }
+
       var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
       observeDriver = new driverClass({
         cursorDescription: cursorDescription,
