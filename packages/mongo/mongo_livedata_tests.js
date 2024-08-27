@@ -408,7 +408,7 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
       [2, 8]
     );
 
-  test.equal(await coll.find({run: run}, {sort: {x: -1}}).fetchAsync().mapAsync(doc => doc.x),
+  test.equal(await coll.find({run: run}, {sort: {x: -1}}).mapAsync(doc => doc.x),
              [4, 1]);
 
     await expectObserve('', async function() {
@@ -1008,10 +1008,13 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
     );
 
   // compares arrays a and b w/o looking at order
-  var setsEqual = function (a, b) {
+const setsEqual = function (a, b) {
     a = a.map(EJSON.stringify);
     b = b.map(EJSON.stringify);
-    return isEmpty(difference([a, b])) && isEmpty(difference([b, a]));
+
+  const difference = (arr1, arr2) => arr1.filter(x => !arr2.includes(x));
+
+  return difference(a, b).length === 0 && difference(b, a).length === 0;
   };
 
     // This test mainly checks the correctness of oplog code dealing with limited
