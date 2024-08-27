@@ -1,28 +1,3 @@
-// By default, we use the permessage-deflate extension with default
-// configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
-// JSON. If it represents a falsey value, then we do not use permessage-deflate
-// at all; otherwise, the JSON value is used as an argument to deflate's
-// configure method; see
-// https://github.com/faye/permessage-deflate-node/blob/master/README.md
-//
-// (We do this in an _.once instead of at startup, because we don't want to
-// crash the tool during isopacket load if your JSON doesn't parse. This is only
-// a problem because the tool has to load the DDP server code just in order to
-// be a DDP client; see https://github.com/meteor/meteor/issues/3452 .)
-var websocketExtensions = _.once(function () {
-  var extensions = [];
-
-  var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION
-        ? JSON.parse(process.env.SERVER_WEBSOCKET_COMPRESSION) : {};
-  if (websocketCompressionConfig) {
-    extensions.push(Npm.require('permessage-deflate').configure(
-      websocketCompressionConfig
-    ));
-  }
-
-  return extensions;
-});
-
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
 StreamServer = function () {
@@ -67,7 +42,7 @@ StreamServer = function () {
     serverOptions.websocket = false;
   } else {
     serverOptions.faye_server_options = {
-      extensions: websocketExtensions()
+      extensions: []
     };
   }
 
