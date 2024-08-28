@@ -1166,18 +1166,10 @@ class AsynchronousCursor {
     if (ordered) {
       return self.fetch();
     } else {
-      var results = new LocalCollection._IdMap;
-
-      const docs = await self._dbCursor.toArray();
-
-      // Need to rewind the cursor otherwise docs will be removed on subsequent polls.
-      this._dbCursor.rewind();
-
-      // https://romgrk.com/posts/optimizing-javascript#3-avoid-arrayobject-methods
-      for (const doc of docs) {
-        results.set(doc._id, replaceTypes(doc, replaceMongoAtomWithMeteor));
-      }
-
+      var results = new LocalCollection._IdMap();
+      await self.forEach(function (doc) {
+        results.set(doc._id, doc);
+      });
       return results;
     }
   }
