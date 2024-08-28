@@ -35,3 +35,4 @@ packages/**/.npm
 
 # doc files should not be committed
 packages/**/*.docs.js
+jsconfig.json
