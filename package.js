@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: 'Authorization package for Meteor',
-  version: '4.0.0-rc.2',
+  version: '4.0.0-rc.3',
   git: 'https://github.com/Meteor-Community-Packages/meteor-roles.git',
   name: 'alanning:roles'
 })
@@ -41,8 +41,8 @@ Package.onTest(function (api) {
   // Add code coverage
   api.use([
     'lmieulet:meteor-legacy-coverage',
-    'lmieulet:meteor-coverage@4.1.0',
-    'meteortesting:mocha@2.1.0'
+    'lmieulet:meteor-coverage@4.1.0 || 5.0.0',
+    'meteortesting:mocha@2.1.0 || 3.0.0'
   ])
 
   api.versionsFrom(['2.8.1', '3.0'])
