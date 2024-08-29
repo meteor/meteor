@@ -3,7 +3,6 @@
 
 import { Meteor } from 'meteor/meteor'
 import { assert } from 'chai'
-import { Roles } from 'meteor/alanning:roles'
 
 // To ensure that the files are loaded for coverage
 import '../roles_client'
