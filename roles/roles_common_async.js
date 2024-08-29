@@ -290,13 +290,13 @@ Object.assign(Roles, {
     const role = await RolesCollection.findOneAsync({ _id: roleName })
 
     if (!role) {
-      throw new Error("Role '" + roleName + "' does not exist.")
+      throw new Error(`Role '${roleName}' does not exist.`)
     }
 
     // detect cycles
     if ((await Roles._getInheritedRoleNamesAsync(role)).includes(parentName)) {
       throw new Error(
-        "Roles '" + roleName + "' and '" + parentName + "' would form a cycle."
+        `Roles '${roleName}' and '${parentName}' would form a cycle.`
       )
     }
 
@@ -1219,7 +1219,7 @@ Object.assign(Roles, {
       typeof roleName !== 'string' ||
       roleName.trim() !== roleName
     ) {
-      throw new Error("Invalid role name '" + roleName + "'.")
+      throw new Error(`Invalid role name '${roleName}'.`)
     }
   },
 
@@ -1320,7 +1320,7 @@ Object.assign(Roles, {
       typeof scopeName !== 'string' ||
       scopeName.trim() !== scopeName
     ) {
-      throw new Error("Invalid scope name '" + scopeName + "'.")
+      throw new Error(`Invalid scope name '${scopeName}'.`)
     }
   }
 })

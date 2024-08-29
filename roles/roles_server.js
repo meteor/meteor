@@ -11,7 +11,9 @@ const indexes = [
   { scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }, // Adding userId and roleId might speed up other queries depending on the first index
   { 'inheritedRoles._id': 1 }
 ]
-indexes.forEach(index => indexFnAssignment(index))
+for (const index of indexes) {
+  indexFnAssignment(index)
+}
 indexFnRoles({ 'children._id': 1 })
 
 /*
