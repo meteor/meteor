@@ -10,8 +10,10 @@
 
 [![Travis CI Status](https://api.travis-ci.com/meteor/meteor.svg?branch=devel)](https://app.travis-ci.com/github/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor.svg?style=svg)](https://app.circleci.com/pipelines/github/meteor/meteor?branch=devel)
-[![built with Meteor](https://img.shields.io/badge/Meteor-3.0.1-green?logo=meteor&logoColor=white)](https://meteor.com)
-
+[![built with Meteor](https://img.shields.io/badge/Meteor-3.0.2-green?logo=meteor&logoColor=white)](https://meteor.com)
+![node-current](https://img.shields.io/node/v/meteor)
+![Discord](https://img.shields.io/discord/1247973371040239676)
+![Twitter Follow](https://img.shields.io/twitter/follow/meteorjs?style=social)
 
 </div>
 
@@ -22,7 +24,7 @@ Meteor is an **ultra-simple** environment for building **modern** web applicatio
 <hr>
 
 - [Official Website](https://www.meteor.com)
-- [Installation](https://www.meteor.com/developers/install)
+- [Installation](https://docs.meteor.com/about/install.html)
 - [Documentation](https://docs.meteor.com/#/full/)
 
 <hr>
@@ -105,4 +107,4 @@ To uninstall Meteor:
     rm -rf ~/.meteor 
     sudo rm /usr/local/bin/meteor
     ```
-To find more information about installation, [read here](https://docs.meteor.com/install.html#uninstall).
+To find more information about installation, [read here](https://docs.meteor.com/about/install.html#uninstall).

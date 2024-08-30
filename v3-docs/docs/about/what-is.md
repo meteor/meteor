@@ -6,7 +6,7 @@
 
 :::info You are reading the Meteor 3 documentation!
 
-- Searching for the Meteor 2 documentation? Access the [Meteor 2 Docs](https://docs.meteor.com/).
+- Searching for the Meteor 2 documentation? Access the [Meteor 2 Docs](https://v2-docs.meteor.com/).
 - Upgrading from Meteor 2? Check out the [Migration Guide](https://v3-migration-docs.meteor.com/).
   :::
 
@@ -30,7 +30,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 - Participate in Meteor's fully professional, engaging and interactive online school. Join [Meteor University](https://university.meteor.com/).
 
-- Subscribe to our official [Youtube channel](https://www.youtube.com/@MeteorVideos) and watch the latest MeteorJS videos and presentations.
+- Subscribe to our official [Youtube channel](https://www.youtube.com/@meteorsoftware) and watch the latest MeteorJS videos and presentations.
 
 ### Developer Resources
 
@@ -48,6 +48,6 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 - Participate in the [Official Forum](https://forums.meteor.com) for project news, support, community discussions, and updates on core features.
 
-- Engage with peers in the [Meteor Slack Community](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc) for technical support, meeting new developers, and exchanging ideas.
+- Join the discussion and stay updated with announcements on the official [Meteor Lounge Discord](https://discord.gg/hZkTCaVjmT).
 
-- Join the discussion and stay updated with announcements on the [Meteor Discord Community](https://discord.gg/mukjwCA56P).
+- Engage with peers in the [Meteor Slack Community](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc) for technical support, meeting new developers, and exchanging ideas.
