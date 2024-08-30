@@ -8,7 +8,7 @@ const newConnection = function(stream, options) {
   // change.
   return new Connection(
     stream,
-    _.extend(
+    Object.assign(
       {
         reloadWithOutstanding: true,
         bufferedWritesInterval: 0
@@ -18,14 +18,16 @@ const newConnection = function(stream, options) {
   );
 };
 
-const makeConnectMessage = function(session) {
+const makeConnectMessage = function(session, receivedCount) {
   const msg = {
     msg: 'connect',
     version: DDPCommon.SUPPORTED_DDP_VERSIONS[0],
-    support: DDPCommon.SUPPORTED_DDP_VERSIONS
+    support: DDPCommon.SUPPORTED_DDP_VERSIONS,
   };
 
   if (session) msg.session = session;
+  if (receivedCount) msg.receivedCount = receivedCount;
+
   return msg;
 };
 
@@ -836,7 +838,7 @@ Tinytest.add('livedata stub - reconnect', function(test) {
   // sub. The wait method still is blocked.
   stream.reset();
 
-  testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+  testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
   testGotMessage(test, stream, methodMessage);
   testGotMessage(test, stream, subMessage);
 
@@ -957,7 +959,7 @@ if (Meteor.isClient) {
     stream.reset();
 
     // verify that a reconnect message was sent.
-    testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
     // Make sure that the stream triggers connection.
     stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
 
@@ -1081,7 +1083,7 @@ if (Meteor.isClient) {
       // in. Reconnect quiescence happens as soon as 'connected' is received because
       // there are no pending methods or subs in need of revival.
       stream.reset();
-      testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+      testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
       // Still holding out hope for session resumption, so nothing updated yet.
       test.equal(coll.find().count(), 1);
       test.equal(coll.findOne(stubWrittenId), {
@@ -1176,7 +1178,8 @@ if (Meteor.isClient) {
       // but slowMethod gets called via onReconnect. Reconnect quiescence is now
       // blocking on slowMethod.
       stream.reset();
-      testGotMessage(test, stream, makeConnectMessage(SESSION_ID + 1));
+
+      testGotMessage(test, stream, makeConnectMessage(SESSION_ID + 1, conn._receivedCount));
       const slowMethodId = testGotMessage(test, stream, {
         msg: 'method',
         method: 'slowMethod',
@@ -1297,7 +1300,7 @@ Tinytest.add('livedata stub - reconnect method which only got data', function(
   // Reset stream. Method gets resent (with same ID), and blocks reconnect
   // quiescence.
   stream.reset();
-  testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+  testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
   testGotMessage(test, stream, {
     msg: 'method',
     method: 'doLittle',
@@ -1774,7 +1777,7 @@ addReconnectTests(
     // reconnect
     stream.sent = [];
     stream.reset();
-    testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId));
+    testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
 
     // Test that we sent what we expect to send, and we're blocked on
     // what we expect to be blocked. The subsequent logic to correctly
@@ -2000,7 +2003,7 @@ addReconnectTests(
     // reconnect
     stream.sent = [];
     stream.reset();
-    testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId));
+    testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
 
     // Test that we sent what we expect to send, and we're blocked on
     // what we expect to be blocked. The subsequent logic to correctly
@@ -2051,7 +2054,7 @@ addReconnectTests(
     // initial connect
     stream.sent = [];
     stream.reset();
-    testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId));
+    testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
 
     // Test that we sent just the login message.
     const loginId = testGotMessage(test, stream, {
@@ -2118,7 +2121,7 @@ addReconnectTests('livedata stub - reconnect double wait method', function(
   // Reset stream. halfwayMethod does NOT get resent, but reconnectMethod does!
   // Reconnect quiescence happens when reconnectMethod is done.
   stream.reset();
-  testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+  testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
   const reconnectId = testGotMessage(test, stream, {
     msg: 'method',
     method: 'reconnectMethod',
@@ -2223,7 +2226,7 @@ Tinytest.add('livedata stub - subscribe errors', function(test) {
   // stream reset: reconnect!
   stream.reset();
   // We send a connect.
-  testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+  testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
   // We should NOT re-sub to the sub, because we processed the error.
   test.length(stream.sent, 0);
   test.isFalse(onReadyFired);
@@ -2342,7 +2345,7 @@ if (Meteor.isClient) {
 
       // Initiate reconnect.
       stream.reset();
-      testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+      testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
       testGotMessage(test, stream, subMessage);
       stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
 
