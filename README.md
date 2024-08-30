@@ -24,7 +24,7 @@ Meteor is an **ultra-simple** environment for building **modern** web applicatio
 <hr>
 
 - [Official Website](https://www.meteor.com)
-- [Installation](https://www.meteor.com/developers/install)
+- [Installation](https://docs.meteor.com/about/install.html)
 - [Documentation](https://docs.meteor.com/#/full/)
 
 <hr>
