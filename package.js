@@ -42,7 +42,7 @@ Package.onTest(function (api) {
   api.use([
     'lmieulet:meteor-legacy-coverage',
     'lmieulet:meteor-coverage@4.1.0 || 5.0.0',
-    'meteortesting:mocha@2.1.0 || 3.0.0'
+    'meteortesting:mocha@2.1.0 || 3.2.0'
   ])
 
   api.versionsFrom(['2.8.1', '3.0'])
