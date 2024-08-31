@@ -1,0 +1,19 @@
+# Meteor packages used by this project, one per line.
+# Check this file (and the other files in this directory) into your repository.
+#
+# 'meteor add' and 'meteor remove' will edit this file for you,
+# but you can also edit it by hand.
+
+meteor-base@1.5.2             # Packages every Meteor app needs to have
+mobile-experience@1.1.2       # Packages for a great mobile UX
+mongo@2.0.1                   # The database Meteor supports right now
+static-html@1.3.3             # Define static page content in .html files
+reactive-var@1.0.13            # Reactive variable for tracker
+tracker@1.3.4                 # Meteor's client-side reactive programming library
+
+standard-minifier-css@1.9.3   # CSS minifier run for production mode
+standard-minifier-js@3.0.0    # JS minifier run for production mode
+es5-shim@4.8.1                # ECMAScript 5 compatibility for older browsers
+ecmascript@0.16.9              # Enable ECMAScript2015+ syntax in app code
+typescript@5.4.3              # Enable TypeScript syntax in .ts and .tsx modules
+shell-server@0.6.0            # Server-side component of the `meteor shell` command

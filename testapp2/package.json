@@ -1,5 +1,5 @@
 {
-  "name": "testapp",
+  "name": "testapp2",
   "private": true,
   "scripts": {
     "setup": "mkdir -p packages && ln -sfn ../../ ./packages/meteor-roles",
@@ -36,7 +36,8 @@
     "ignore": [
       "**/.meteor/",
       "**/examples/",
-      "**/testapp"
+      "**/testapp2",
+      "**/testapp3"
     ]
   }
 }
