@@ -107,4 +107,4 @@ To uninstall Meteor:
     rm -rf ~/.meteor 
     sudo rm /usr/local/bin/meteor
     ```
-To find more information about installation, [read here](https://docs.meteor.com/install.html#uninstall).
+To find more information about installation, [read here](https://docs.meteor.com/about/install.html#uninstall).
