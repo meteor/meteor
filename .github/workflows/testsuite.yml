@@ -27,7 +27,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-20-
 
-      - run: cd testapp && npm ci && npm run setup && npm run lint
+      - run: cd testapp3 && npm ci && npm run setup && npm run lint
 
   test2:
     name: Meteor package tests 2.16
