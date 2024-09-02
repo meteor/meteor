@@ -194,6 +194,11 @@ MongoConnection = function (url, options) {
   self._oplogHandle = null;
   self._docFetcher = null;
 
+  mongoOptions.driverInfo = {
+    name: 'Meteor',
+    version: Meteor.release
+  }
+  
   self.client = new MongoDB.MongoClient(url, mongoOptions);
   self.db = self.client.db();
 
@@ -898,7 +903,7 @@ Cursor.prototype.countAsync = async function () {
 
 Cursor.prototype.count = function () {
   throw new Error(
-    "count() is not avaible on the server. Please use countAsync() instead."
+    "count() is not available on the server. Please use countAsync() instead."
   );
 };
 

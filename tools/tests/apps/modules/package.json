@@ -19,7 +19,7 @@
     "jsx-import-test": "file:imports/links/jsx-import-test",
     "lodash-es": "^4.17.21",
     "markdown-to-jsx": "4.0.3",
-    "meteor-node-stubs": "^1.2.7",
+    "meteor-node-stubs": "^1.2.10",
     "mobx": "5.8.0",
     "moment": "^2.30.1",
     "mssql": "^3.1.1",
