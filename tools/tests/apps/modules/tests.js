@@ -1,9 +1,9 @@
 import assert from "assert";
 import fs from "fs";
-import path from "path";
-import moment from "moment";
-import shared from "./imports/shared";
 import { Meteor as ImportedMeteor } from "meteor/meteor";
+import moment from "moment";
+import path from "path";
+import shared from "./imports/shared";
 
 describe("app modules", () => {
   it("can be imported using absolute identifiers", async () => {
@@ -466,8 +466,8 @@ describe("Meteor packages", () => {
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");
   });
 
-  it("should expose their files for import", () => {
-    const osStub = require("meteor/modules-test-package/os-stub");
+  it("should expose their files for import", async () => {
+    const osStub = await require("meteor/modules-test-package/os-stub");
 
     assert.strictEqual(
       osStub.platform(),
