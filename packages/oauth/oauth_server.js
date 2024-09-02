@@ -1,5 +1,3 @@
-import bodyParser from 'body-parser';
-
 OAuth = {};
 OAuthTest = {};
 
@@ -131,8 +129,8 @@ OAuth._checkRedirectUrlOrigin = redirectUrl => {
     replaceLocalhost: true
   });
   return (
-    redirectUrl.substr(0, appHost.length) !== appHost &&
-    redirectUrl.substr(0, appHostReplacedLocalhost.length) !== appHostReplacedLocalhost
+    redirectUrl.substring(0, appHost.length) !== appHost &&
+    redirectUrl.substring(0, appHostReplacedLocalhost.length) !== appHostReplacedLocalhost
   );
 };
 
@@ -142,7 +140,7 @@ const middleware = async (req, res, next) => {
   // Make sure to catch any exceptions because otherwise we'd crash
   // the runner
   try {
-    const serviceName = oauthServiceName(req);
+    const serviceName = req.params.service;
     if (!serviceName) {
       // not an oauth request. pass to next middleware.
       next();
@@ -205,37 +203,14 @@ const middleware = async (req, res, next) => {
 };
 
 // Listen to incoming OAuth http requests
-WebApp.handlers.use('/_oauth', bodyParser.json());
-WebApp.handlers.use('/_oauth', bodyParser.urlencoded({ extended: false }));
-WebApp.handlers.use(middleware);
+WebApp.handlers.use('/_oauth', WebApp.express.json());
+WebApp.handlers.use('/_oauth', WebApp.express.urlencoded({ extended: false }));
+// WebApp.handlers.use('/_oauth', WebApp.express.json(), WebApp.express.urlencoded({ extended: false }));
+WebApp.handlers.route('/_oauth/:service').all(middleware);
 
 OAuthTest.middleware = middleware;
 
 OAuthTest.registeredServices = registeredServices;
-
-// Handle /_oauth/* paths and extract the service name.
-//
-// @returns {String|null} e.g. "facebook", or null if this isn't an
-// oauth request
-const oauthServiceName = req => {
-  // req.url will be "/_oauth/<service name>" with an optional "?close".
-  const i = req.url.indexOf('?');
-  let barePath;
-  if (i === -1)
-    barePath = req.url;
-  else
-    barePath = req.url.substring(0, i);
-  const splitPath = barePath.split('/');
-
-  // Any non-oauth request will continue down the default
-  // middlewares.
-  if (splitPath[1] !== '_oauth')
-    return null;
-
-  // Find service based on url
-  const serviceName = splitPath[2];
-  return serviceName;
-};
 
 // Make sure we're configured
 const ensureConfigured =
