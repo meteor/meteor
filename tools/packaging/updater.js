@@ -142,7 +142,7 @@ var maybeShowBanners = async function () {
     if (shouldShow(futureReleaseKey)) {
       runLog.log(
         "=> " + catalogUtils.displayRelease(track, futureReleases[0]) +
-        " is available. Check the changelog https://v3-docs.meteor.com/history.html and update this project with 'meteor update'.");
+        " is available. Check the changelog https://docs.meteor.com/history.html and update this project with 'meteor update'.");
     }
     return;
   }
