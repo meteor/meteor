@@ -450,7 +450,7 @@ describe("Meteor packages", () => {
     assert.ok(error instanceof Error);
   });
 
-  it("can be local", () => {
+  it("can be local", async () => {
     // ModulesTestPackage is only api.export-ed on the server.
     if (Meteor.isServer) {
       assert.strictEqual(ModulesTestPackage, "loaded");
@@ -460,7 +460,7 @@ describe("Meteor packages", () => {
     }
 
     // But it is importable by both client and server.
-    const mtp = require("meteor/modules-test-package");
+    const mtp = await require("meteor/modules-test-package");
     assert.strictEqual(mtp.ModulesTestPackage, "loaded");
 
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");

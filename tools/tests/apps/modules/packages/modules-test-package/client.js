@@ -1,13 +1,12 @@
-import assert from "assert";
 import {
-  checkWhere,
   checkPackageVars,
+  checkWhere,
 } from "./common";
 
 export const where = "client";
 export * from "./common";
 
-await checkWhere(where);
+checkWhere(where);
 
 var style = require("./css/imported.css");
 if (! style) {
