@@ -130,6 +130,11 @@ export function filterMap(filter, apiList) {
     const newLinks = {};
     for (const key in apiList[api]) {
       const links = apiList[api][key];
+      // We get the shouldGoTo link here as well.
+      // In this case we just skip it
+      if (!Array.isArray(links)) {
+        continue;
+      }
       const newLinksArray = links.filter((link) => {
         return link.toLowerCase().includes(filter.toLowerCase());
       });

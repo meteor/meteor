@@ -6,7 +6,7 @@
 
 :::info You are reading the Meteor 3 documentation!
 
-- Searching for the Meteor 2 documentation? Access the [Meteor 2 Docs](https://docs.meteor.com/).
+- Searching for the Meteor 2 documentation? Access the [Meteor 2 Docs](https://v2-docs.meteor.com/).
 - Upgrading from Meteor 2? Check out the [Migration Guide](https://v3-migration-docs.meteor.com/).
   :::
 
