@@ -16,14 +16,24 @@ Meteor.publish('client_assignments', async () => {
 })
 
 // To allow inserting on the client, needed for testing.
-Meteor.roleAssignment.allow({
-  insert () { return true },
-  insertAsync () { return true },
-  update () { return true },
-  updateAsync () { return true },
-  remove () { return true },
-  removeAsync () { return true }
-})
+if (Meteor.release.split('@')[1][1] === '2') {
+  Meteor.roleAssignment.allow({
+    insert () { return true },
+    update () { return true },
+    remove () { return true }
+  })
+} else {
+  // Meteor 3+
+  Meteor.roleAssignment.allow({
+    insert () { return true },
+    insertAsync () { return true },
+    update () { return true },
+    updateAsync () { return true },
+    remove () { return true },
+    removeAsync () { return true }
+  })
+}
+
 
 const hasProp = (target, prop) => Object.hasOwnProperty.call(target, prop)
 
