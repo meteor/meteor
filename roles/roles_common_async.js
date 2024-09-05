@@ -1277,7 +1277,9 @@ Object.assign(Roles, {
   _normalizeOptions: function (options) {
     options = options === undefined ? {} : options
 
-    if (options === null || typeof options === 'string') {
+    // TODO Number will error out on scope validation, we can either error it out here
+    // or make it into a string and hence a valid input.
+    if (options === null || typeof options === 'string' || typeof options === 'number') {
       options = { scope: options }
     }
 
