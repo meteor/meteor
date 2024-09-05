@@ -34,7 +34,6 @@ if (Meteor.release.split('@')[1][1] === '2') {
   })
 }
 
-
 const hasProp = (target, prop) => Object.hasOwnProperty.call(target, prop)
 
 describe('roles async', async function () {
