@@ -10,9 +10,9 @@ describe("app modules", () => {
     assert.strictEqual(await require("/tests"), exports);
   });
 
-  it("can have different file extensions", () => {
+  it("can have different file extensions", async () => {
     assert.strictEqual(
-      require("./eager-jsx").extension,
+      (await require("./eager-jsx")).extension,
       ".jsx"
     );
 
@@ -22,7 +22,7 @@ describe("app modules", () => {
     );
 
     assert.strictEqual(
-      require("/eager-jsx").extension,
+      (await require("/eager-jsx")).extension,
       ".jsx"
     );
 
