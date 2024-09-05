@@ -16,7 +16,7 @@ Meteor.publish('client_assignments', async () => {
 })
 
 // To allow inserting on the client, needed for testing.
-if (Meteor.release.split('@')[1][1] === '2') {
+if (Meteor.release.split('@')[1][0] === '2') {
   Meteor.roleAssignment.allow({
     insert () { return true },
     update () { return true },
