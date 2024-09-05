@@ -128,10 +128,6 @@ jobs:
           # https://discuss.circleci.com/t/git-submodule-url-isnt-playing-nice-with-the-cache/549/3
           name: Git Submodules.
           command: (git submodule sync && git submodule update --init --recursive) || (rm -fr .git/config .git/modules && git submodule deinit -f . && git submodule update --init --recursive)
-      - restore_cache:
-          keys:
-            - v3-dev-bundle-cache-{{ checksum "meteor" }}
-            - v3-dev-bundle-cache-
       - run:
           name: Combine NPM Shrinkwrap Files
           command: |
@@ -145,23 +141,6 @@ jobs:
               cat $d/npm-shrinkwrap.json >> shrinkwraps.txt;
               fi
             done
-      - restore_cache:
-          keys:
-            - package-npm-deps-cache-group1-v3-{{ checksum "shrinkwraps.txt" }}
-            - package-npm-deps-cache-group1-v3-
-      - restore_cache:
-          keys:
-            - package-npm-deps-cache-group2-v6-{{ checksum "shrinkwraps.txt" }}
-            - package-npm-deps-cache-group2-v6-
-      - restore_cache:
-          keys:
-            - v7-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
-            - v7-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
-            - v7-other-deps-cache-{{ .Branch }}-
-      - restore_cache:
-          keys:
-            - v4-test-groups-{{ .Branch }}
-            - v4-test-groups-
       - run:
           name: Create Test Results Directory
           command: |
@@ -789,66 +768,6 @@ jobs:
           command: |
             npm install --prefix ./scripts/test-balancer
             npm start --prefix ./scripts/test-balancer --num-groups ${NUM_GROUPS} --running-avg-length ${RUNNING_AVG_LENGTH}
-      - save_cache:
-          key: v1-test-groups-{{ .Branch }}-{{ .BuildNum }}
-          paths:
-            - ./tmp/test-groups
-          when: on_success
-      - save_cache:
-          key: v3-dev-bundle-cache-{{ checksum "meteor" }}
-          paths:
-            - "dev_bundle"
-      # The package npm dependencies are split into two caches to avoid an AWS
-      # `MetadataTooLarge` error that consistently appears if we put all of
-      # these folders in the same cache
-      - save_cache:
-          key: package-npm-deps-cache-group1-v3-{{ checksum "shrinkwraps.txt" }}
-          paths:
-            - packages/meteor/.npm/package/node_modules
-            - packages/modules-runtime/.npm/package/node_modules
-            - packages/modules/.npm/package/node_modules
-            - packages/ecmascript-runtime-server/.npm/package/node_modules
-            - packages/promise/.npm/package/node_modules
-            - packages/babel-compiler/.npm/package/node_modules
-            - packages/babel-runtime/.npm/package/node_modules
-            - packages/http/.npm/package/node_modules
-            - packages/socket-stream-client/.npm/package/node_modules
-            - packages/ddp-client/.npm/package/node_modules
-            - packages/npm-mongo/.npm/package/node_modules
-            - packages/package-version-parser/.npm/package/node_modules
-            - packages/boilerplate-generator/.npm/package/node_modules
-      - save_cache:
-          key: package-npm-deps-cache-group2-v5-{{ checksum "shrinkwraps.txt" }}
-          paths:
-            - packages/xmlbuilder/.npm/package/node_modules
-            - packages/logging/.npm/package/node_modules
-            - packages/webapp/.npm/package/node_modules
-            - packages/ddp-server/.npm/package/node_modules
-            - packages/mongo/.npm/package/node_modules
-            - packages/npm-bcrypt/.npm/package/node_modules
-            - packages/email/.npm/package/node_modules
-            - packages/caching-compiler/.npm/package/node_modules
-            - packages/less/.npm/plugin/compileLessBatch/node_modules
-            - packages/non-core/blaze/packages/spacebars-compiler/.npm/package/node_modules
-            - packages/boilerplate-generator-tests/.npm/package/node_modules
-            - packages/non-core/bundle-visualizer/.npm/package/node_modules
-            - packages/d3-hierarchy/.npm/package/node_modules
-            - packages/non-core/coffeescript-compiler/.npm/package/node_modules
-            - packages/server-render/.npm/package/node_modules
-            - packages/es5-shim/.npm/package/node_modules
-            - packages/force-ssl-common/.npm/package/node_modules
-            - packages/jshint/.npm/plugin/lintJshint/node_modules
-            - packages/minifier-css/.npm/package/node_modules
-            - packages/minifier-js/.npm/package/node_modules
-            - packages/standard-minifier-css/.npm/plugin/minifyStdCSS/node_modules
-            - packages/inter-process-messaging/.npm/package/node_modules
-            - packages/fetch/.npm/package/node_modules
-            - packages/non-core/mongo-decimal/.npm/package/node_modules
-      - save_cache:
-          key: v7-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
-          paths:
-            - ".babel-cache"
-            - ".meteor"
 
 workflows:
   version: 2
