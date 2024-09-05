@@ -1,0 +1,5185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Roles - The meteor-roles API</title>
+    <link rel="stylesheet" href="http://yui.yahooapis.com/3.9.1/build/cssgrids/cssgrids-min.css">
+    <link rel="stylesheet" href="../assets/vendor/prettify/prettify-min.css">
+    <link rel="stylesheet" href="../assets/css/main.css" id="site_styles">
+    <link rel="icon" href="../assets/favicon.ico">
+    <script src="http://yui.yahooapis.com/combo?3.9.1/build/yui/yui-min.js"></script>
+</head>
+<body class="yui3-skin-sam">
+
+<div id="doc">
+    <div id="hd" class="yui3-g header">
+        <div class="yui3-u-3-4">
+                <h1><img src="../assets/css/logo.png" title="The meteor-roles API" width="117" height="52"></h1>
+        </div>
+        <div class="yui3-u-1-4 version">
+            <em>API Docs for: v4.0.0</em>
+        </div>
+    </div>
+    <div id="bd" class="yui3-g">
+
+        <div class="yui3-u-1-4">
+            <div id="docs-sidebar" class="sidebar apidocs">
+                <div id="api-list">
+                    <h2 class="off-left">APIs</h2>
+                    <div id="api-tabview" class="tabview">
+                        <ul class="tabs">
+                            <li><a href="#api-classes">Classes</a></li>
+                            <li><a href="#api-modules">Modules</a></li>
+                        </ul>
+                
+                        <div id="api-tabview-filter">
+                            <input type="search" id="api-filter" placeholder="Type to filter APIs">
+                        </div>
+                
+                        <div id="api-tabview-panel">
+                            <ul id="api-classes" class="apis classes">
+                                <li><a href="../classes/Roles.html">Roles</a></li>
+                                <li><a href="../classes/UIHelpers.html">UIHelpers</a></li>
+                            </ul>
+                
+                
+                            <ul id="api-modules" class="apis modules">
+                                <li><a href="../modules/Roles.html">Roles</a></li>
+                                <li><a href="../modules/UIHelpers.html">UIHelpers</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="yui3-u-3-4">
+                <div id="api-options">
+                    Show:
+                    <label for="api-show-inherited">
+                        <input type="checkbox" id="api-show-inherited" checked>
+                        Inherited
+                    </label>
+            
+                    <label for="api-show-protected">
+                        <input type="checkbox" id="api-show-protected">
+                        Protected
+                    </label>
+            
+                    <label for="api-show-private">
+                        <input type="checkbox" id="api-show-private">
+                        Private
+                    </label>
+                    <label for="api-show-deprecated">
+                        <input type="checkbox" id="api-show-deprecated">
+                        Deprecated
+                    </label>
+            
+                </div>
+            
+            <div class="apidocs">
+                <div id="docs-main">
+                    <div class="content">
+<h1>Roles Class</h1>
+<div class="box meta">
+
+
+        <div class="foundat">
+            Defined in: <a href="../files/roles_roles_common_async.js.html#l41"><code>roles&#x2F;roles_common_async.js:41</code></a>
+        </div>
+
+            Module: <a href="../modules/Roles.html">Roles</a>
+
+</div>
+
+
+<div class="box intro">
+    
+</div>
+
+
+<div id="classdocs" class="tabview">
+    <ul class="api-class-tabs">
+        <li class="api-class-tab index"><a href="#index">Index</a></li>
+
+            <li class="api-class-tab methods"><a href="#methods">Methods</a></li>
+            <li class="api-class-tab properties"><a href="#properties">Properties</a></li>
+    </ul>
+
+    <div>
+        <div id="index" class="api-class-tabpanel index">
+            <h2 class="off-left">Item Index</h2>
+
+                <div class="index-section methods">
+                    <h3>Methods</h3>
+
+                    <ul class="index-list methods">
+                            <li class="index-item method private">
+                                <a href="#method__addRoleToParent">_addRoleToParent</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__addRoleToParentAsync">_addRoleToParentAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__addUserToRole">_addUserToRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__addUserToRoleAsync">_addUserToRoleAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__checkRoleName">_checkRoleName</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__checkRoleName">_checkRoleName</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__checkRoleName">_checkRoleName</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__checkScopeName">_checkScopeName</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__getInheritedRoleNames">_getInheritedRoleNames</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__getInheritedRoleNames">_getInheritedRoleNames</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__getParentRoleNames">_getParentRoleNames</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__getParentRoleNamesAsync">_getParentRoleNamesAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__getUsersInRoleCursor">_getUsersInRoleCursor</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__getUsersInRoleCursor">_getUsersInRoleCursor</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__normalizeOptions">_normalizeOptions</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__normalizeOptions">_normalizeOptions</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__normalizeScopeName">_normalizeScopeName</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__normalizeScopeName">_normalizeScopeName</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__removeRoleFromParent">_removeRoleFromParent</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__removeRoleFromParentAsync">_removeRoleFromParentAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__removeUserFromRole">_removeUserFromRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__removeUserFromRoleAsync">_removeUserFromRoleAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_addRolesToParent">addRolesToParent</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_addRolesToParentAsync">addRolesToParentAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_addUsersToRoles">addUsersToRoles</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_addUsersToRolesAsync">addUsersToRolesAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_createRole">createRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_createRoleAsync">createRoleAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_deleteRole">deleteRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_deleteRoleAsync">deleteRoleAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getAllRoles">getAllRoles</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getAllRoles">getAllRoles</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method deprecated">
+                                <a href="#method_getGroupsForUser">getGroupsForUser</a>
+
+                                    <span class="flag static">static</span>
+                                    <span class="flag deprecated">deprecated</span>
+                            </li>
+                            <li class="index-item method deprecated">
+                                <a href="#method_getGroupsForUserAsync">getGroupsForUserAsync</a>
+
+                                    <span class="flag static">static</span>
+                                    <span class="flag deprecated">deprecated</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getRolesForUser">getRolesForUser</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getRolesForUserAsync">getRolesForUserAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getScopesForUser">getScopesForUser</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getScopesForUserAsync">getScopesForUserAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getUserAssignmentsForRole">getUserAssignmentsForRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getUserAssignmentsForRole">getUserAssignmentsForRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getUsersInRole">getUsersInRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getUsersInRoleAsync">getUsersInRoleAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_isParentOf">isParentOf</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_isParentOfAsync">isParentOfAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_removeRolesFromParent">removeRolesFromParent</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_removeRolesFromParentAsync">removeRolesFromParentAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_removeScope">removeScope</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_removeScopeAsync">removeScopeAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_removeUsersFromRoles">removeUsersFromRoles</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_removeUsersFromRolesAsync">removeUsersFromRolesAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_renameRole">renameRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_renameRoleAsync">renameRoleAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_renameScope">renameScope</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_renameScopeAsync">renameScopeAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_setUserRoles">setUserRoles</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_setUserRolesAsync">setUserRolesAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_userIsInRole">userIsInRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_userIsInRoleAsync">userIsInRoleAsync</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                    </ul>
+                </div>
+
+                <div class="index-section properties">
+                    <h3>Properties</h3>
+
+                    <ul class="index-list properties">
+                            <li class="index-item property deprecated">
+                                <a href="#property_GLOBAL_GROUP">GLOBAL_GROUP</a>
+
+                                    <span class="flag static">static</span>
+                                    <span class="flag deprecated">deprecated</span>
+                            </li>
+                            <li class="index-item property deprecated">
+                                <a href="#property_GLOBAL_GROUP">GLOBAL_GROUP</a>
+
+                                    <span class="flag static">static</span>
+                                    <span class="flag deprecated">deprecated</span>
+                            </li>
+                    </ul>
+                </div>
+
+
+        </div>
+
+            <div id="methods" class="api-class-tabpanel">
+                <h2 class="off-left">Methods</h2>
+
+<div id="method__addRoleToParent" class="method item private">
+    <h3 class="name"><code>_addRoleToParent</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code>parentName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l205"><code>roles&#x2F;roles_client.js:205</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">parentName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of parent role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__addRoleToParentAsync" class="method item private">
+    <h3 class="name"><code>_addRoleToParentAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code>parentName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l277"><code>roles&#x2F;roles_common_async.js:277</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">parentName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of parent role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method__addUserToRole" class="method item private">
+    <h3 class="name"><code>_addUserToRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>userId</code>
+                </li>
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code>options</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l437"><code>roles&#x2F;roles_client.js:437</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Add one user to one role.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">userId</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The user ID.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of the role to add the user to. The role have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">options</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
+</ul>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__addUserToRoleAsync" class="method item private">
+    <h3 class="name"><code>_addUserToRoleAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>userId</code>
+                </li>
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code>options</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l555"><code>roles&#x2F;roles_common_async.js:555</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Add one user to one role.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">userId</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The user ID.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of the role to add the user to. The role have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">options</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
+</ul>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method__checkRoleName" class="method item private">
+    <h3 class="name"><code>_checkRoleName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l989"><code>roles&#x2F;roles_client.js:989</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Throw an exception if <code>roleName</code> is an invalid role name.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A role name to match against.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__checkRoleName" class="method item private">
+    <h3 class="name"><code>_checkRoleName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>scopeName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l1083"><code>roles&#x2F;roles_client.js:1083</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Throw an exception if <code>scopeName</code> is an invalid scope name.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">scopeName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A scope name to match against.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__checkRoleName" class="method item private">
+    <h3 class="name"><code>_checkRoleName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1208"><code>roles&#x2F;roles_common_async.js:1208</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Throw an exception if <code>roleName</code> is an invalid role name.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A role name to match against.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__checkScopeName" class="method item private">
+    <h3 class="name"><code>_checkScopeName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>scopeName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1309"><code>roles&#x2F;roles_common_async.js:1309</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Throw an exception if <code>scopeName</code> is an invalid scope name.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">scopeName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A scope name to match against.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__getInheritedRoleNames" class="method item private">
+    <h3 class="name"><code>_getInheritedRoleNames</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>role</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l520"><code>roles&#x2F;roles_client.js:520</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Returns an array of role names the given role name is a parent of.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">role</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>The role object</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles._getInheritedRoleNames({ _id: 'admin', children; [] })</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method__getInheritedRoleNames" class="method item private">
+    <h3 class="name"><code>_getInheritedRoleNames</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>role</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l683"><code>roles&#x2F;roles_common_async.js:683</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Returns an array of role names the given role name is a parent of.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">role</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>The role object</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles._getInheritedRoleNames({ _id: 'admin', children; [] })</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method__getParentRoleNames" class="method item private">
+    <h3 class="name"><code>_getParentRoleNames</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>role</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l491"><code>roles&#x2F;roles_client.js:491</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Returns an array of role names the given role name is a child of.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">role</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>The role object</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles._getParentRoleNames({ _id: 'admin', children; [] })</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method__getParentRoleNamesAsync" class="method item private">
+    <h3 class="name"><code>_getParentRoleNamesAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>role</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l651"><code>roles&#x2F;roles_common_async.js:651</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Returns an array of role names the given role name is a child of.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">role</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>The role object</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles._getParentRoleNamesAsync({ _id: 'admin', children; [] })</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method__getUsersInRoleCursor" class="method item private">
+    <h3 class="name"><code>_getUsersInRoleCursor</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[filter]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l844"><code>roles&#x2F;roles_client.js:844</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role or an array of roles. If array, ids of users are
+returned which have at least one of the roles
+assigned but need not have <em>all</em> roles.
+Roles do not have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope to restrict roles to; user's global
+roles will also be checked</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[filter]</code>
+                        <span class="type">Object</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options which are passed directly
+through to <code>RoleAssignmentCollection.find(query, options)</code></p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>Cursor to the assignment documents</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method__getUsersInRoleCursor" class="method item private">
+    <h3 class="name"><code>_getUsersInRoleCursor</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[filter]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1041"><code>roles&#x2F;roles_common_async.js:1041</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role or an array of roles. If array, ids of users are
+returned which have at least one of the roles
+assigned but need not have <em>all</em> roles.
+Roles do not have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope to restrict roles to; user's global
+roles will also be checked</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[filter]</code>
+                        <span class="type">Object</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options which are passed directly
+through to <code>RoleAssignmentCollection.find(query, options)</code></p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>Cursor to the assignment documents</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method__normalizeOptions" class="method item private">
+    <h3 class="name"><code>_normalizeOptions</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>options</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l1044"><code>roles&#x2F;roles_client.js:1044</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Normalize options.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">options</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Options to normalize.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>Normalized options.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method__normalizeOptions" class="method item private">
+    <h3 class="name"><code>_normalizeOptions</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>options</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1268"><code>roles&#x2F;roles_common_async.js:1268</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Normalize options.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">options</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Options to normalize.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>Normalized options.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method__normalizeScopeName" class="method item private">
+    <h3 class="name"><code>_normalizeScopeName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>scopeName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">String</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l1065"><code>roles&#x2F;roles_client.js:1065</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Normalize scope name.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">scopeName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A scope name to normalize.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">String</span>:
+                    <p>Normalized scope name.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method__normalizeScopeName" class="method item private">
+    <h3 class="name"><code>_normalizeScopeName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>scopeName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">String</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1291"><code>roles&#x2F;roles_common_async.js:1291</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Normalize scope name.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">scopeName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A scope name to normalize.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">String</span>:
+                    <p>Normalized scope name.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method__removeRoleFromParent" class="method item private">
+    <h3 class="name"><code>_removeRoleFromParent</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code>parentName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l274"><code>roles&#x2F;roles_client.js:274</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">parentName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of parent role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__removeRoleFromParentAsync" class="method item private">
+    <h3 class="name"><code>_removeRoleFromParentAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code>parentName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l362"><code>roles&#x2F;roles_common_async.js:362</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">parentName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of parent role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method__removeUserFromRole" class="method item private">
+    <h3 class="name"><code>_removeUserFromRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>userId</code>
+                </li>
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code>options</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l593"><code>roles&#x2F;roles_client.js:593</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove one user from one role.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">userId</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The user ID.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of the role to add the user to. The role have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">options</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+</ul>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__removeUserFromRoleAsync" class="method item private">
+    <h3 class="name"><code>_removeUserFromRoleAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>userId</code>
+                </li>
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code>options</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l763"><code>roles&#x2F;roles_common_async.js:763</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove one user from one role.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">userId</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The user ID.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of the role to add the user to. The role have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">options</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+</ul>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method_addRolesToParent" class="method item">
+    <h3 class="name"><code>addRolesToParent</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>rolesNames</code>
+                </li>
+                <li class="arg">
+                        <code>parentName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l185"><code>roles&#x2F;roles_client.js:185</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Add role parent to roles.</p>
+<p>Previous parents are kept (role can have multiple parents). For users which have the
+parent role set, new subroles are added automatically.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">rolesNames</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of role(s).</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">parentName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of parent role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_addRolesToParentAsync" class="method item">
+    <h3 class="name"><code>addRolesToParentAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>rolesNames</code>
+                </li>
+                <li class="arg">
+                        <code>parentName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l256"><code>roles&#x2F;roles_common_async.js:256</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Add role parent to roles.</p>
+<p>Previous parents are kept (role can have multiple parents). For users which have the
+parent role set, new subroles are added automatically.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">rolesNames</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of role(s).</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">parentName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of parent role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method_addUsersToRoles" class="method item">
+    <h3 class="name"><code>addUsersToRoles</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>users</code>
+                </li>
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l323"><code>roles&#x2F;roles_client.js:323</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Add users to roles.</p>
+<p>Adds roles to existing roles for each user.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">users</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>User ID(s) or object(s) with an <code>_id</code> field.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of roles to add users to. Roles have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles.addUsersToRoles(userId, 'admin')
+Roles.addUsersToRoles(userId, ['view-secrets'], 'example.com')
+Roles.addUsersToRoles([user1, user2], ['user','editor'])
+Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method_addUsersToRolesAsync" class="method item">
+    <h3 class="name"><code>addUsersToRolesAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>users</code>
+                </li>
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l433"><code>roles&#x2F;roles_common_async.js:433</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Add users to roles.</p>
+<p>Adds roles to existing roles for each user.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">users</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>User ID(s) or object(s) with an <code>_id</code> field.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of roles to add users to. Roles have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
+</ul>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+                    <p>Alternatively, it can be a scope name string.</p>
+
+            </div>
+        </div>
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles.addUsersToRolesAsync(userId, 'admin')
+Roles.addUsersToRolesAsync(userId, ['view-secrets'], 'example.com')
+Roles.addUsersToRolesAsync([user1, user2], ['user','editor'])
+Roles.addUsersToRolesAsync([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method_createRole" class="method item">
+    <h3 class="name"><code>createRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">String</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l49"><code>roles&#x2F;roles_client.js:49</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Create a new role.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>unlessExists</code>: if <code>true</code>, exception will not be thrown in the role already exists</li>
+</ul>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">String</span>:
+                    <p>ID of the new role or null.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_createRoleAsync" class="method item">
+    <h3 class="name"><code>createRoleAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise<String></span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l73"><code>roles&#x2F;roles_common_async.js:73</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Create a new role.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>unlessExists</code>: if <code>true</code>, exception will not be thrown in the role already exists</li>
+</ul>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise<String></span>:
+                    <p>ID of the new role or null.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_deleteRole" class="method item">
+    <h3 class="name"><code>deleteRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l76"><code>roles&#x2F;roles_client.js:76</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Delete an existing role.</p>
+<p>If the role is set for any user, it is automatically unset.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_deleteRoleAsync" class="method item">
+    <h3 class="name"><code>deleteRoleAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roleName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l118"><code>roles&#x2F;roles_common_async.js:118</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Delete an existing role.</p>
+<p>If the role is set for any user, it is automatically unset.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getAllRoles" class="method item">
+    <h3 class="name"><code>getAllRoles</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>queryOptions</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Cursor</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l767"><code>roles&#x2F;roles_client.js:767</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve cursor of all existing roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">queryOptions</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Options which are passed directly
+through to <code>RolesCollection.find(query, options)</code>.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Cursor</span>:
+                    <p>Cursor of existing roles.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getAllRoles" class="method item">
+    <h3 class="name"><code>getAllRoles</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code class="optional">[queryOptions]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Cursor</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l956"><code>roles&#x2F;roles_common_async.js:956</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve cursor of all existing roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name optional">[queryOptions]</code>
+                        <span class="type">Object</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options which are passed directly
+through to <code>RolesCollection.find(query, options)</code>.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Cursor</span>:
+                    <p>Cursor of existing roles.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getGroupsForUser" class="method item deprecated">
+    <h3 class="name"><code>getGroupsForUser</code></h3>
+
+        <span class="paren">()</span>
+
+
+        <span class="flag deprecated">deprecated</span>
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l892"><code>roles&#x2F;roles_client.js:892</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Deprecated. Use <code>getScopesForUser</code> instead.</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_getGroupsForUserAsync" class="method item deprecated">
+    <h3 class="name"><code>getGroupsForUserAsync</code></h3>
+
+        <span class="paren">()</span>
+
+        <span class="returns-inline">
+            <span class="type">Promise<Array></span>
+        </span>
+
+        <span class="flag deprecated">deprecated</span>
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1097"><code>roles&#x2F;roles_common_async.js:1097</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Deprecated. Use <code>getScopesForUser</code> instead.</p>
+
+    </div>
+
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise<Array></span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getRolesForUser" class="method item">
+    <h3 class="name"><code>getRolesForUser</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>user</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Array</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l691"><code>roles&#x2F;roles_client.js:691</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve user's roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">user</code>
+                        <span class="type">String | Object</span>
+
+
+                    <div class="param-description">
+                        <p>User ID or an actual user object.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of scope to provide roles for; if not specified, global roles are returned</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> and <code>onlyAssigned</code> options are ignored)</li>
+<li><code>onlyScoped</code>: if set, only roles in the specified scope are returned</li>
+<li><code>onlyAssigned</code>: return only assigned roles and not automatically inferred (like subroles)</li>
+<li><code>fullObjects</code>: return full roles objects (<code>true</code>) or just names (<code>false</code>) (<code>onlyAssigned</code> option is ignored) (default <code>false</code>)
+If you have a use-case for this option, please file a feature-request. You shouldn't need to use it as it's
+result strongly dependent on the internal data structure of this plugin.</li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Array</span>:
+                    <p>Array of user's roles, unsorted.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getRolesForUserAsync" class="method item">
+    <h3 class="name"><code>getRolesForUserAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>user</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise<Array></span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l871"><code>roles&#x2F;roles_common_async.js:871</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve user's roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">user</code>
+                        <span class="type">String | Object</span>
+
+
+                    <div class="param-description">
+                        <p>User ID or an actual user object.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of scope to provide roles for; if not specified, global roles are returned</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> and <code>onlyAssigned</code> options are ignored)</li>
+<li><code>onlyScoped</code>: if set, only roles in the specified scope are returned</li>
+<li><code>onlyAssigned</code>: return only assigned roles and not automatically inferred (like subroles)</li>
+<li><code>fullObjects</code>: return full roles objects (<code>true</code>) or just names (<code>false</code>) (<code>onlyAssigned</code> option is ignored) (default <code>false</code>)
+If you have a use-case for this option, please file a feature-request. You shouldn't need to use it as it's
+result strongly dependent on the internal data structure of this plugin.</li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise<Array></span>:
+                    <p>Array of user's roles, unsorted.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getScopesForUser" class="method item">
+    <h3 class="name"><code>getScopesForUser</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>user</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[roles]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Array</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l908"><code>roles&#x2F;roles_client.js:908</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve users scopes, if any.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">user</code>
+                        <span class="type">String | Object</span>
+
+
+                    <div class="param-description">
+                        <p>User ID or an actual user object.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[roles]</code>
+                        <span class="type">Array | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Name of roles to restrict scopes to.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Array</span>:
+                    <p>Array of user's scopes, unsorted.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getScopesForUserAsync" class="method item">
+    <h3 class="name"><code>getScopesForUserAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>user</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[roles]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise<Array></span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1117"><code>roles&#x2F;roles_common_async.js:1117</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve users scopes, if any.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">user</code>
+                        <span class="type">String | Object</span>
+
+
+                    <div class="param-description">
+                        <p>User ID or an actual user object.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[roles]</code>
+                        <span class="type">Array | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Name of roles to restrict scopes to.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise<Array></span>:
+                    <p>Array of user's scopes, unsorted.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getUserAssignmentsForRole" class="method item">
+    <h3 class="name"><code>getUserAssignmentsForRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Cursor</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l812"><code>roles&#x2F;roles_client.js:812</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve all assignments of a user which are for the target role.</p>
+<p>Options:</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role or an array of roles. If array, users
+returned will have at least one of the roles
+specified but need not have <em>all</em> roles.
+Roles do not have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope to restrict roles to; user's global
+roles will also be checked</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+<li><code>queryOptions</code>: options which are passed directly
+through to <code>RoleAssignmentCollection.find(query, options)</code></li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Cursor</span>:
+                    <p>Cursor of user assignments for roles.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getUserAssignmentsForRole" class="method item">
+    <h3 class="name"><code>getUserAssignmentsForRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Cursor</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1006"><code>roles&#x2F;roles_common_async.js:1006</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve all assignments of a user which are for the target role.</p>
+<p>Options:</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role or an array of roles. If array, users
+returned will have at least one of the roles
+specified but need not have <em>all</em> roles.
+Roles do not have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope to restrict roles to; user's global
+roles will also be checked</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+<li><code>queryOptions</code>: options which are passed directly
+through to <code>RoleAssignmentCollection.find(query, options)</code></li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Cursor</span>:
+                    <p>Cursor of user assignments for roles.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getUsersInRole" class="method item">
+    <h3 class="name"><code>getUsersInRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[queryOptions]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Cursor</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l782"><code>roles&#x2F;roles_client.js:782</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve all users who are in target role.</p>
+<p>Options:</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role or an array of roles. If array, users
+returned will have at least one of the roles
+specified but need not have <em>all</em> roles.
+Roles do not have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope to restrict roles to; user's global
+roles will also be checked</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+<li><code>onlyScoped</code>: if set, only roles in the specified scope are returned</li>
+<li><code>queryOptions</code>: options which are passed directly
+through to <code>Meteor.users.find(query, options)</code></li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[queryOptions]</code>
+                        <span class="type">Object</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options which are passed directly
+through to <code>Meteor.users.find(query, options)</code></p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Cursor</span>:
+                    <p>Cursor of users in roles.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getUsersInRoleAsync" class="method item">
+    <h3 class="name"><code>getUsersInRoleAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[queryOptions]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise<Cursor></span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l971"><code>roles&#x2F;roles_common_async.js:971</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve all users who are in target role.</p>
+<p>Options:</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role or an array of roles. If array, users
+returned will have at least one of the roles
+specified but need not have <em>all</em> roles.
+Roles do not have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope to restrict roles to; user's global
+roles will also be checked</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+<li><code>onlyScoped</code>: if set, only roles in the specified scope are returned</li>
+<li><code>queryOptions</code>: options which are passed directly
+through to <code>Meteor.users.find(query, options)</code></li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[queryOptions]</code>
+                        <span class="type">Object</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options which are passed directly
+through to <code>Meteor.users.find(query, options)</code></p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise<Cursor></span>:
+                    <p>Cursor of users in roles.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_isParentOf" class="method item">
+    <h3 class="name"><code>isParentOf</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>parentRoleName</code>
+                </li>
+                <li class="arg">
+                        <code>childRoleName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l1003"><code>roles&#x2F;roles_client.js:1003</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Find out if a role is an ancestor of another role.</p>
+<p>WARNING: If you check this on the client, please make sure all roles are published.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">parentRoleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The role you want to research.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">childRoleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The role you expect to be among the children of parentRoleName.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_isParentOfAsync" class="method item">
+    <h3 class="name"><code>isParentOfAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>parentRoleName</code>
+                </li>
+                <li class="arg">
+                        <code>childRoleName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1226"><code>roles&#x2F;roles_common_async.js:1226</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Find out if a role is an ancestor of another role.</p>
+<p>WARNING: If you check this on the client, please make sure all roles are published.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">parentRoleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The role you want to research.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">childRoleName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The role you expect to be among the children of parentRoleName.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method_removeRolesFromParent" class="method item">
+    <h3 class="name"><code>removeRolesFromParent</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>rolesNames</code>
+                </li>
+                <li class="arg">
+                        <code>parentName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l254"><code>roles&#x2F;roles_client.js:254</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove role parent from roles.</p>
+<p>Other parents are kept (role can have multiple parents). For users which have the
+parent role set, removed subrole is removed automatically.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">rolesNames</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of role(s).</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">parentName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of parent role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_removeRolesFromParentAsync" class="method item">
+    <h3 class="name"><code>removeRolesFromParentAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>rolesNames</code>
+                </li>
+                <li class="arg">
+                        <code>parentName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l341"><code>roles&#x2F;roles_common_async.js:341</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove role parent from roles.</p>
+<p>Other parents are kept (role can have multiple parents). For users which have the
+parent role set, removed subrole is removed automatically.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">rolesNames</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of role(s).</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">parentName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of parent role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method_removeScope" class="method item">
+    <h3 class="name"><code>removeScope</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l974"><code>roles&#x2F;roles_client.js:974</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove a scope.</p>
+<p>Roles assigned with a given scope are removed.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The name of a scope.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_removeScopeAsync" class="method item">
+    <h3 class="name"><code>removeScopeAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1192"><code>roles&#x2F;roles_common_async.js:1192</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove a scope.</p>
+<p>Roles assigned with a given scope are removed.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The name of a scope.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method_removeUsersFromRoles" class="method item">
+    <h3 class="name"><code>removeUsersFromRoles</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>users</code>
+                </li>
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l547"><code>roles&#x2F;roles_client.js:547</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove users from assigned roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">users</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>User ID(s) or object(s) with an <code>_id</code> field.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of roles to remove users from. Roles have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles.removeUsersFromRoles(userId, 'admin')
+Roles.removeUsersFromRoles([userId, user2], ['editor'])
+Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method_removeUsersFromRolesAsync" class="method item">
+    <h3 class="name"><code>removeUsersFromRolesAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>users</code>
+                </li>
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l716"><code>roles&#x2F;roles_common_async.js:716</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove users from assigned roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">users</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>User ID(s) or object(s) with an <code>_id</code> field.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of roles to remove users from. Roles have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+</ul>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+                    <p>Alternatively, it can be a scope name string.</p>
+
+            </div>
+        </div>
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>await Roles.removeUsersFromRolesAsync(userId, 'admin')
+await Roles.removeUsersFromRolesAsync([userId, user2], ['editor'])
+await Roles.removeUsersFromRolesAsync(userId, ['user'], 'group1')</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method_renameRole" class="method item">
+    <h3 class="name"><code>renameRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>oldName</code>
+                </li>
+                <li class="arg">
+                        <code>newName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l126"><code>roles&#x2F;roles_client.js:126</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Rename an existing role.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">oldName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Old name of a role.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">newName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>New name of a role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_renameRoleAsync" class="method item">
+    <h3 class="name"><code>renameRoleAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>oldName</code>
+                </li>
+                <li class="arg">
+                        <code>newName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l184"><code>roles&#x2F;roles_common_async.js:184</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Rename an existing role.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">oldName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Old name of a role.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">newName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>New name of a role.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method_renameScope" class="method item">
+    <h3 class="name"><code>renameScope</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>oldName</code>
+                </li>
+                <li class="arg">
+                        <code>newName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l945"><code>roles&#x2F;roles_client.js:945</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Rename a scope.</p>
+<p>Roles assigned with a given scope are changed to be under the new scope.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">oldName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Old name of a scope.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">newName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>New name of a scope.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_renameScopeAsync" class="method item">
+    <h3 class="name"><code>renameScopeAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>oldName</code>
+                </li>
+                <li class="arg">
+                        <code>newName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l1158"><code>roles&#x2F;roles_common_async.js:1158</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Rename a scope.</p>
+<p>Roles assigned with a given scope are changed to be under the new scope.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">oldName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Old name of a scope.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">newName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>New name of a scope.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+            </div>
+        </div>
+
+
+</div>
+<div id="method_setUserRoles" class="method item">
+    <h3 class="name"><code>setUserRoles</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>users</code>
+                </li>
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l375"><code>roles&#x2F;roles_client.js:375</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Set users' roles.</p>
+<p>Replaces all existing roles with a new set of roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">users</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>User ID(s) or object(s) with an <code>_id</code> field.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of roles to add users to. Roles have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>anyScope</code>: if <code>true</code>, remove all roles the user has, of any scope, if <code>false</code>, only the one in the same scope</li>
+<li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles.setUserRoles(userId, 'admin')
+Roles.setUserRoles(userId, ['view-secrets'], 'example.com')
+Roles.setUserRoles([user1, user2], ['user','editor'])
+Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method_setUserRolesAsync" class="method item">
+    <h3 class="name"><code>setUserRolesAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>users</code>
+                </li>
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l489"><code>roles&#x2F;roles_common_async.js:489</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Set users' roles.</p>
+<p>Replaces all existing roles with a new set of roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">users</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>User ID(s) or object(s) with an <code>_id</code> field.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name(s) of roles to add users to. Roles have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
+<li><code>anyScope</code>: if <code>true</code>, remove all roles the user has, of any scope, if <code>false</code>, only the one in the same scope</li>
+<li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
+</ul>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise</span>:
+                    <p>Alternatively, it can be a scope name string.</p>
+
+            </div>
+        </div>
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>await Roles.setUserRolesAsync(userId, 'admin')
+await Roles.setUserRolesAsync(userId, ['view-secrets'], 'example.com')
+await Roles.setUserRolesAsync([user1, user2], ['user','editor'])
+await Roles.setUserRolesAsync([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method_userIsInRole" class="method item">
+    <h3 class="name"><code>userIsInRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>user</code>
+                </li>
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Boolean</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l623"><code>roles&#x2F;roles_client.js:623</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Check if user has specified roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">user</code>
+                        <span class="type">String | Object</span>
+
+
+                    <div class="param-description">
+                        <p>User ID or an actual user object.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role or an array of roles to check against. If array,
+will return <code>true</code> if user is in <em>any</em> role.
+Roles do not have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope; if supplied, limits check to just that scope
+the user's global roles will always be checked whether scope is specified or not</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Boolean</span>:
+                    <p><code>true</code> if user is in <em>any</em> of the target roles</p>
+
+            </div>
+        </div>
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>// global roles
+Roles.userIsInRole(user, 'admin')
+Roles.userIsInRole(user, ['admin','editor'])
+Roles.userIsInRole(userId, 'admin')
+Roles.userIsInRole(userId, ['admin','editor'])
+
+// scope roles (global roles are still checked)
+Roles.userIsInRole(user, 'admin', 'group1')
+Roles.userIsInRole(userId, ['admin','editor'], 'group1')
+Roles.userIsInRole(userId, ['admin','editor'], {scope: 'group1'})</code></pre>
+
+            </div>
+        </div>
+</div>
+<div id="method_userIsInRoleAsync" class="method item">
+    <h3 class="name"><code>userIsInRoleAsync</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>user</code>
+                </li>
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Promise<Boolean></span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l794"><code>roles&#x2F;roles_common_async.js:794</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Check if user has specified roles.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">user</code>
+                        <span class="type">String | Object</span>
+
+
+                    <div class="param-description">
+                        <p>User ID or an actual user object.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role or an array of roles to check against. If array,
+will return <code>true</code> if user is in <em>any</em> role.
+Roles do not have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>scope</code>: name of the scope; if supplied, limits check to just that scope
+the user's global roles will always be checked whether scope is specified or not</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
+</ul>
+<p>Alternatively, it can be a scope name string.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Promise<Boolean></span>:
+                    <p><code>true</code> if user is in <em>any</em> of the target roles</p>
+
+            </div>
+        </div>
+
+
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>// global roles
+await Roles.userIsInRoleAsync(user, 'admin')
+await Roles.userIsInRoleAsync(user, ['admin','editor'])
+await Roles.userIsInRoleAsync(userId, 'admin')
+await Roles.userIsInRoleAsync(userId, ['admin','editor'])
+
+// scope roles (global roles are still checked)
+await Roles.userIsInRoleAsync(user, 'admin', 'group1')
+await Roles.userIsInRoleAsync(userId, ['admin','editor'], 'group1')
+await Roles.userIsInRoleAsync(userId, ['admin','editor'], {scope: 'group1'})</code></pre>
+
+            </div>
+        </div>
+</div>
+            </div>
+
+            <div id="properties" class="api-class-tabpanel">
+                <h2 class="off-left">Properties</h2>
+
+<div id="property_GLOBAL_GROUP" class="property item deprecated">
+    <h3 class="name"><code>GLOBAL_GROUP</code></h3>
+    <span class="type">Unknown</span>
+
+        <span class="flag deprecated">deprecated</span>
+
+
+
+        <span class="flag static">static</span>
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_client.js.html#l40"><code>roles&#x2F;roles_client.js:40</code></a>
+        </p>
+
+
+    </div>
+
+    <div class="description">
+        <p>Used as a global group (now scope) name. Not used anymore.</p>
+
+    </div>
+
+
+
+</div>
+<div id="property_GLOBAL_GROUP" class="property item deprecated">
+    <h3 class="name"><code>GLOBAL_GROUP</code></h3>
+    <span class="type">Unknown</span>
+
+        <span class="flag deprecated">deprecated</span>
+
+
+
+        <span class="flag static">static</span>
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common_async.js.html#l64"><code>roles&#x2F;roles_common_async.js:64</code></a>
+        </p>
+
+
+    </div>
+
+    <div class="description">
+        <p>Used as a global group (now scope) name. Not used anymore.</p>
+
+    </div>
+
+
+
+</div>
+            </div>
+
+
+    </div>
+</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="../assets/vendor/prettify/prettify-min.js"></script>
+<script>prettyPrint();</script>
+<script src="../assets/js/yui-prettify.js"></script>
+<script src="../assets/../api.js"></script>
+<script src="../assets/js/api-filter.js"></script>
+<script src="../assets/js/api-list.js"></script>
+<script src="../assets/js/api-search.js"></script>
+<script src="../assets/js/apidocs.js"></script>
+</body>
+</html>

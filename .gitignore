@@ -17,7 +17,6 @@ smart.lock
 
 .idea
 .DS_Store
-docs/
 node_modules/
 .npm/
 .coverage/
