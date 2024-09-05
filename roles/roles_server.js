@@ -15,23 +15,3 @@ for (const index of indexes) {
   indexFnAssignment(index)
 }
 indexFnRoles({ 'children._id': 1 })
-
-/*
- * Publish logged-in user's roles so client-side checks can work.
- *
- * Use a named publish function so clients can check `ready()` state.
- */
-Meteor.publish('_roles', function () {
-  const loggedInUserId = this.userId
-  const fields = { roles: 1 }
-
-  if (!loggedInUserId) {
-    this.ready()
-    return
-  }
-
-  return Meteor.users.find(
-    { _id: loggedInUserId },
-    { fields }
-  )
-})

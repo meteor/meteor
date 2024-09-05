@@ -32,8 +32,7 @@ Package.onUse(function (api) {
   api.addFiles('roles/roles_server.js', 'server')
   api.addFiles([
     'roles/client/debug.js',
-    'roles/client/uiHelpers.js',
-    'roles/client/subscriptions.js'
+    'roles/client/uiHelpers.js'
   ], 'client')
 })
 

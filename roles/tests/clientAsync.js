@@ -12,7 +12,7 @@ import '../roles_common_async'
 chai.use(chaiAsPromised)
 
 const safeInsert = async (collection, data) => {
-  try {
+  return await collection.insertAsync(data).catch(e => console.error(e))
     await collection.insertAsync(data)
   } catch (e) {}
 }

@@ -1091,8 +1091,12 @@ Object.assign(Roles, {
   _checkScopeName: function (scopeName) {
     if (scopeName === null) return
 
-    if (!scopeName || typeof scopeName !== 'string' || scopeName.trim() !== scopeName) {
-      throw new Error('Invalid scope name \'' + scopeName + '\'.')
+    if (
+      !scopeName ||
+      typeof scopeName !== 'string' ||
+      scopeName.trim() !== scopeName
+    ) {
+      throw new Error(`Invalid scope name '${scopeName}'.`)
     }
   }
 })
