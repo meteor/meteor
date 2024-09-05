@@ -13,8 +13,6 @@ chai.use(chaiAsPromised)
 
 const safeInsert = async (collection, data) => {
   return await collection.insertAsync(data).catch(e => console.error(e))
-    await collection.insertAsync(data)
-  } catch (e) {}
 }
 
 describe('roles async', function () {
@@ -40,7 +38,7 @@ describe('roles async', function () {
       const msg = username + ' expected to have \'' + role + '\' permission but does not'
       const nmsg = username + ' had un-expected permission ' + role
 
-      const result = await Roles.userIsInRoleAsync(user, role, scope)
+      const result = await Roles.userIsInRoleAsync(user._id, role, scope)
       if (expected) {
         assert.isTrue(result, msg)
       } else {
@@ -56,6 +54,7 @@ describe('roles async', function () {
     Meteor.user = function () {
       return users.eve
     }
+    Meteor.subscribe('client_assignments')
   })
 
   after(() => {

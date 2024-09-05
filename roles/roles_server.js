@@ -1,4 +1,3 @@
-import { Meteor } from 'meteor/meteor'
 import { RolesCollection, RoleAssignmentCollection } from './roles_common_async'
 
 const indexFnAssignment = RoleAssignmentCollection.createIndexAsync.bind(RoleAssignmentCollection)

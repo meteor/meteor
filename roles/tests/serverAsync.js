@@ -10,6 +10,11 @@ import '../roles_common_async'
 
 chai.use(chaiAsPromised)
 
+// Publication for the client tests
+Meteor.publish('client_assignments', async () => {
+  return Meteor.roleAssignment.find()
+})
+
 // To allow inserting on the client, needed for testing.
 Meteor.roleAssignment.allow({
   insert () { return true },
