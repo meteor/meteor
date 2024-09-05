@@ -13,8 +13,11 @@ chai.use(chaiAsPromised)
 // To allow inserting on the client, needed for testing.
 Meteor.roleAssignment.allow({
   insert () { return true },
+  insertAsync () { return true },
   update () { return true },
-  remove () { return true }
+  updateAsync () { return true },
+  remove () { return true },
+  removeAsync () { return true }
 })
 
 const hasProp = (target, prop) => Object.hasOwnProperty.call(target, prop)

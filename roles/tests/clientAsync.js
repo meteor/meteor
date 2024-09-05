@@ -40,10 +40,11 @@ describe('roles async', function () {
       const msg = username + ' expected to have \'' + role + '\' permission but does not'
       const nmsg = username + ' had un-expected permission ' + role
 
+      const result = await Roles.userIsInRoleAsync(user, role, scope)
       if (expected) {
-        assert.isTrue(await Roles.userIsInRoleAsync(user, role, scope), msg)
+        assert.isTrue(result, msg)
       } else {
-        assert.isFalse(await Roles.userIsInRoleAsync(user, role, scope), nmsg)
+        assert.isFalse(result, nmsg)
       }
     }
   }

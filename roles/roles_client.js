@@ -97,7 +97,7 @@ Object.assign(Roles, {
       // For all roles who have it as a dependency ...
       roles = Roles._getParentRoleNames(Meteor.roles.findOne({ _id: roleName }))
 
-      Meteor.roles.find({ _id: { $in: roles } }).fetch().forEach(r => {
+      for (const r of Meteor.roles.find({ _id: { $in: roles } }).fetch()) {
         Meteor.roles.update({
           _id: r._id
         }, {
@@ -116,7 +116,7 @@ Object.assign(Roles, {
             inheritedRoles: [r._id, ...inheritedRoles].map(r2 => ({ _id: r2 }))
           }
         }, { multi: true })
-      })
+      }
     } while (roles.length > 0)
 
     // And finally remove the role itself
@@ -197,9 +197,9 @@ Object.assign(Roles, {
     // ensure arrays
     if (!Array.isArray(rolesNames)) rolesNames = [rolesNames]
 
-    rolesNames.forEach(function (roleName) {
+    for (const roleName of rolesNames) {
       Roles._addRoleToParent(roleName, parentName)
-    })
+    }
   },
 
   /**
@@ -266,9 +266,9 @@ Object.assign(Roles, {
     // ensure arrays
     if (!Array.isArray(rolesNames)) rolesNames = [rolesNames]
 
-    rolesNames.forEach(function (roleName) {
+    for (const roleName of rolesNames) {
       Roles._removeRoleFromParent(roleName, parentName)
-    })
+    }
   },
 
   /**
@@ -307,7 +307,7 @@ Object.assign(Roles, {
     // For all roles who have had it as a dependency ...
     const roles = [...Roles._getParentRoleNames(Meteor.roles.findOne({ _id: parentName })), parentName]
 
-    Meteor.roles.find({ _id: { $in: roles } }).fetch().forEach(r => {
+    for (const r of Meteor.roles.find({ _id: { $in: roles } }).fetch()) {
       const inheritedRoles = Roles._getInheritedRoleNames(Meteor.roles.findOne({ _id: r._id }))
       Meteor.roleAssignment.update({
         'role._id': r._id,
@@ -317,7 +317,7 @@ Object.assign(Roles, {
           inheritedRoles: [r._id, ...inheritedRoles].map(r2 => ({ _id: r2 }))
         }
       }, { multi: true })
-    })
+    }
   },
 
   /**
@@ -359,17 +359,17 @@ Object.assign(Roles, {
       ifExists: false
     }, options)
 
-    users.forEach(function (user) {
+    for (const user of users) {
       if (typeof user === 'object') {
         id = user._id
       } else {
         id = user
       }
 
-      roles.forEach(function (role) {
+      for (const role of roles) {
         Roles._addUserToRole(id, role, options)
-      })
-    })
+      }
+    }
   },
 
   /**
@@ -413,7 +413,7 @@ Object.assign(Roles, {
       anyScope: false
     }, options)
 
-    users.forEach(function (user) {
+    for (const user of users) {
       if (typeof user === 'object') {
         id = user._id
       } else {
@@ -428,10 +428,10 @@ Object.assign(Roles, {
       Meteor.roleAssignment.remove(selector)
 
       // and then add all
-      roles.forEach(function (role) {
+      for (const role of roles) {
         Roles._addUserToRole(id, role, options)
-      })
-    })
+      }
+    }
   },
 
   /**
@@ -506,11 +506,11 @@ Object.assign(Roles, {
 
     const parentRoles = new Set([role._id])
 
-    parentRoles.forEach(roleName => {
+    for (const roleName of parentRoles) {
       Meteor.roles.find({ 'children._id': roleName }).fetch().forEach(parentRole => {
         parentRoles.add(parentRole._id)
       })
-    })
+    }
 
     parentRoles.delete(role._id)
 
@@ -532,14 +532,14 @@ Object.assign(Roles, {
     const inheritedRoles = new Set()
     const nestedRoles = new Set([role])
 
-    nestedRoles.forEach(r => {
+    for (const r of nestedRoles) {
       const roles = Meteor.roles.find({ _id: { $in: r.children.map(r => r._id) } }, { fields: { children: 1 } }).fetch()
 
-      roles.forEach(r2 => {
+      for (const r2 of roles) {
         inheritedRoles.add(r2._id)
         nestedRoles.add(r2)
-      })
-    })
+      }
+    }
 
     return [...inheritedRoles]
   },
@@ -574,10 +574,10 @@ Object.assign(Roles, {
 
     Roles._checkScopeName(options.scope)
 
-    users.forEach(function (user) {
-      if (!user) return
+    for (const user of users) {
+      if (!user) continue
 
-      roles.forEach(function (role) {
+      for (const role of roles) {
         let id
         if (typeof user === 'object') {
           id = user._id
@@ -586,8 +586,8 @@ Object.assign(Roles, {
         }
 
         Roles._removeUserFromRole(id, role, options)
-      })
-    })
+      }
+    }
   },
 
   /**
