@@ -19,7 +19,7 @@
     "chai": "^4.5.0",
     "chai-as-promised": "^7.1.2",
     "nyc": "^15.1.0",
-    "puppeteer": "^19.11.1",
+    "puppeteer": "^23.3.0",
     "standard": "^17.1.0"
   },
   "babel": {
