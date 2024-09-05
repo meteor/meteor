@@ -26,12 +26,16 @@ import { Mongo } from 'meteor/mongo'
  *
  * @module Roles
  */
+export const RolesCollection = new Mongo.Collection('roles')
+
 if (!Meteor.roles) {
-  Meteor.roles = new Mongo.Collection('roles')
+  Meteor.roles = RolesCollection
 }
 
+export const RoleAssignmentCollection = new Mongo.Collection('role-assignment')
+
 if (!Meteor.roleAssignment) {
-  Meteor.roleAssignment = new Mongo.Collection('role-assignment')
+  Meteor.roleAssignment = RoleAssignmentCollection
 }
 
 /**
@@ -134,7 +138,7 @@ Object.assign(Roles, {
 
     do {
       // For all roles who have it as a dependency ...
-      roles = Roles._getParentRoleNames(
+      roles = await Roles._getParentRoleNamesAsync(
         await Meteor.roles.findOneAsync({ _id: roleName })
       )
 
@@ -286,13 +290,13 @@ Object.assign(Roles, {
     const role = await Meteor.roles.findOneAsync({ _id: roleName })
 
     if (!role) {
-      throw new Error("Role '" + roleName + "' does not exist.")
+      throw new Error(`Role '${roleName}' does not exist.`)
     }
 
     // detect cycles
     if ((await Roles._getInheritedRoleNamesAsync(role)).includes(parentName)) {
       throw new Error(
-        "Roles '" + roleName + "' and '" + parentName + "' would form a cycle."
+        `Roles '${roleName}' and '${parentName}' would form a cycle.`
       )
     }
 
@@ -375,7 +379,7 @@ Object.assign(Roles, {
     )
 
     if (!role) {
-      throw new Error("Role '" + roleName + "' does not exist.")
+      throw new Error(`Role '${roleName}' does not exist.`)
     }
 
     const count = await Meteor.roles.updateAsync(
@@ -543,7 +547,7 @@ Object.assign(Roles, {
 
       // and then add all
       for (const role of roles) {
-        await Roles._addUserToRole(id, role, options)
+        await Roles._addUserToRoleAsync(id, role, options)
       }
     }
   },
@@ -551,7 +555,7 @@ Object.assign(Roles, {
   /**
    * Add one user to one role.
    *
-   * @method _addUserToRole
+   * @method _addUserToRoleAsync
    * @param {String} userId The user ID.
    * @param {String} roleName Name of the role to add the user to. The role have to exist.
    * @param {Object} options Options:
@@ -584,7 +588,7 @@ Object.assign(Roles, {
 
     // This might create duplicates, because we don't have a unique index, but that's all right. In case there are two, withdrawing the role will effectively kill them both.
     // TODO revisit this
-    /* const res = await Meteor.roleAssignment.upsertAsync(
+    /* const res = await RoleAssignmentCollection.upsertAsync(
       {
         "user._id": userId,
         "role._id": roleName,
@@ -648,9 +652,9 @@ Object.assign(Roles, {
    * Returns an array of role names the given role name is a child of.
    *
    * @example
-   *     Roles._getParentRoleNames({ _id: 'admin', children; [] })
+   *     Roles._getParentRoleNamesAsync({ _id: 'admin', children; [] })
    *
-   * @method _getParentRoleNames
+   * @method _getParentRoleNamesAsync
    * @param {object} role The role object
    * @returns {Promise}
    * @private
@@ -759,7 +763,7 @@ Object.assign(Roles, {
   /**
    * Remove one user from one role.
    *
-   * @method _removeUserFromRole
+   * @method _removeUserFromRoleAsync
    * @param {String} userId The user ID.
    * @param {String} roleName Name of the role to add the user to. The role have to exist.
    * @param {Object} options Options:
@@ -857,9 +861,7 @@ Object.assign(Roles, {
     const res = await asyncSome(roles, async (roleName) => {
       selector['inheritedRoles._id'] = roleName
       const out =
-        (await Meteor.roleAssignment
-          .find(selector, { limit: 1 })
-          .countAsync()) > 0
+        (await Meteor.roleAssignment.countDocuments(selector, { limit: 1 })) > 0
       return out
     })
 
@@ -956,7 +958,7 @@ Object.assign(Roles, {
    *
    * @method getAllRoles
    * @param {Object} [queryOptions] Options which are passed directly
-   *                                through to `Meteor.roles.find(query, options)`.
+   *                                through to `RolesCollection.find(query, options)`.
    * @return {Cursor} Cursor of existing roles.
    * @static
    */
@@ -1016,7 +1018,7 @@ Object.assign(Roles, {
    *     roles will also be checked
    *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
    *   - `queryOptions`: options which are passed directly
-   *     through to `Meteor.roleAssignment.find(query, options)`
+   *     through to `RoleAssignmentCollection.find(query, options)`
 
    * Alternatively, it can be a scope name string.
    * @return {Cursor} Cursor of user assignments for roles.
@@ -1049,7 +1051,7 @@ Object.assign(Roles, {
    *
    * Alternatively, it can be a scope name string.
    * @param {Object} [filter] Options which are passed directly
-   *                                through to `Meteor.roleAssignment.find(query, options)`
+   *                                through to `RoleAssignmentCollection.find(query, options)`
    * @return {Object} Cursor to the assignment documents
    * @private
    * @static
@@ -1217,7 +1219,7 @@ Object.assign(Roles, {
       typeof roleName !== 'string' ||
       roleName.trim() !== roleName
     ) {
-      throw new Error("Invalid role name '" + roleName + "'.")
+      throw new Error(`Invalid role name '${roleName}'.`)
     }
   },
 
@@ -1275,7 +1277,9 @@ Object.assign(Roles, {
   _normalizeOptions: function (options) {
     options = options === undefined ? {} : options
 
-    if (options === null || typeof options === 'string') {
+    // TODO Number will error out on scope validation, we can either error it out here
+    // or make it into a string and hence a valid input.
+    if (options === null || typeof options === 'string' || typeof options === 'number') {
       options = { scope: options }
     }
 
@@ -1305,7 +1309,7 @@ Object.assign(Roles, {
   /**
    * Throw an exception if `scopeName` is an invalid scope name.
    *
-   * @method _checkRoleName
+   * @method _checkScopeName
    * @param {String} scopeName A scope name to match against.
    * @private
    * @static
@@ -1318,7 +1322,7 @@ Object.assign(Roles, {
       typeof scopeName !== 'string' ||
       scopeName.trim() !== scopeName
     ) {
-      throw new Error("Invalid scope name '" + scopeName + "'.")
+      throw new Error(`Invalid scope name '${scopeName}'.`)
     }
   }
 })

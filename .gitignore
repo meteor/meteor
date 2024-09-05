@@ -21,3 +21,5 @@ docs/
 node_modules/
 .npm/
 .coverage/
+
+examples/react-teams/.meteor/local/build/programs/server/node_modules

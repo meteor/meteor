@@ -6,17 +6,33 @@ import chai, { assert } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 
 // To ensure that the files are loaded for coverage
-import '../roles_server'
-import '../roles_common'
+import '../roles_common_async'
 
 chai.use(chaiAsPromised)
 
-// To allow inserting on the client, needed for testing.
-Meteor.roleAssignment.allow({
-  insert () { return true },
-  update () { return true },
-  remove () { return true }
+// Publication for the client tests
+Meteor.publish('client_assignments', async () => {
+  return Meteor.roleAssignment.find()
 })
+
+// To allow inserting on the client, needed for testing.
+if (Meteor.release.split('@')[1][0] === '2') {
+  Meteor.roleAssignment.allow({
+    insert () { return true },
+    update () { return true },
+    remove () { return true }
+  })
+} else {
+  // Meteor 3+
+  Meteor.roleAssignment.allow({
+    insert () { return true },
+    insertAsync () { return true },
+    update () { return true },
+    updateAsync () { return true },
+    remove () { return true },
+    removeAsync () { return true }
+  })
+}
 
 const hasProp = (target, prop) => Object.hasOwnProperty.call(target, prop)
 
@@ -781,11 +797,13 @@ describe('roles async', async function () {
 
     // compare roles, sorted alphabetically
     const expected = roles
-    const actual = Roles.getAllRoles().fetch().map(r => r._id)
+    const fetchAll = await Roles.getAllRoles().fetchAsync()
+    const actual = fetchAll.map(r => r._id)
 
     assert.sameMembers(actual, expected)
 
-    assert.sameMembers(Roles.getAllRoles({ sort: { _id: -1 } }).fetch().map(r => r._id), expected.reverse())
+    const fetchSorted = await Roles.getAllRoles({ sort: { _id: -1 } }).fetchAsync()
+    assert.sameMembers(fetchSorted.map(r => r._id), expected.reverse())
   })
 
   it('get an empty list of roles for an empty user', async function () {
@@ -1232,7 +1250,8 @@ describe('roles async', async function () {
 
     const expected = [users.eve, users.joe]
     const cursor = await Roles.getUsersInRoleAsync('admin')
-    const actual = cursor.fetch().map(r => r._id)
+    const fetched = await cursor.fetchAsync()
+    const actual = fetched.map(r => r._id)
 
     assert.sameMembers(actual, expected)
   })
@@ -1246,22 +1265,26 @@ describe('roles async', async function () {
 
     let expected = [users.eve, users.joe]
     const cursor1 = await Roles.getUsersInRoleAsync('admin', 'scope1')
-    let actual = cursor1.fetch().map(r => r._id)
+    const fetched1 = await cursor1.fetchAsync()
+    let actual = fetched1.map(r => r._id)
 
     assert.sameMembers(actual, expected)
 
     expected = [users.eve, users.joe]
     const cursor2 = await Roles.getUsersInRoleAsync('admin', { scope: 'scope1' })
-    actual = cursor2.fetch().map(r => r._id)
+    const fetched2 = await cursor2.fetchAsync()
+    actual = fetched2.map(r => r._id)
     assert.sameMembers(actual, expected)
 
     expected = [users.eve, users.bob, users.joe]
     const cursor3 = await Roles.getUsersInRoleAsync('admin', { anyScope: true })
-    actual = cursor3.fetch().map(r => r._id)
+    const fetched3 = await cursor3.fetchAsync()
+    actual = fetched3.map(r => r._id)
     assert.sameMembers(actual, expected)
 
     const cursor4 = await Roles.getUsersInRoleAsync('admin')
-    actual = cursor4.fetch().map(r => r._id)
+    const fetched4 = await cursor4.fetchAsync()
+    actual = fetched4.map(r => r._id)
     assert.sameMembers(actual, [])
   })
 
@@ -1320,7 +1343,7 @@ describe('roles async', async function () {
     await Roles.addUsersToRolesAsync([users.bob, users.joe], ['admin'], 'scope2')
 
     const cursor = await Roles.getUsersInRoleAsync('admin', 'scope1', { fields: { username: 0 }, limit: 1 })
-    const results = cursor.fetch()
+    const results = await cursor.fetchAsync()
 
     assert.equal(1, results.length)
     assert.isTrue(hasProp(results[0], '_id'))
@@ -1485,7 +1508,7 @@ describe('roles async', async function () {
       inheritedRoles: [{ _id: 'admin' }]
     }])
 
-    Roles._removeUserFromRole(users.eve, 'admin', { scope: null })
+    await Roles._removeUserFromRoleAsync(users.eve, 'admin', { scope: null })
 
     const rolesForUser2 = await Roles.getRolesForUserAsync(users.eve, { anyScope: true, fullObjects: true })
     assert.sameDeepMembers(rolesForUser2.map(obj => { delete obj._id; return obj }), [])

@@ -5,7 +5,7 @@ import { Meteor } from 'meteor/meteor'
 import { assert } from 'chai'
 
 // To ensure that the files are loaded for coverage
-import '../roles_common'
+import '../roles_client'
 
 const safeInsert = (collection, data) => {
   try {
@@ -31,7 +31,7 @@ describe('roles', function () {
     const user = users[username]
 
     // test using user object rather than userId to avoid mocking
-    roles.forEach(function (role) {
+    for (const role of roles) {
       const expected = expectedRoles.includes(role)
       const msg = username + ' expected to have \'' + role + '\' permission but does not'
       const nmsg = username + ' had un-expected permission ' + role
@@ -41,7 +41,7 @@ describe('roles', function () {
       } else {
         assert.isFalse(Roles.userIsInRole(user, role, scope), nmsg)
       }
-    })
+    }
   }
 
   let meteorUserMethod

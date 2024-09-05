@@ -1,5 +1,14 @@
 # Changelog
 
+## v4.0.0
+
+* BREAKING: Synchronous functions are now available only on client side
+* BREAKING: Migration functions for past versions are no longer available
+* Removed deprecated publication of legacy role assignments
+* UI Helpers now use `console.debug` for debugging messages
+* `RolesCollection` and `RoleAssignmentsCollection` can now be exported in addition to being accessed via `Meteor.roles` and `Meteor.roleAssignment`
+* Support for Meteor 3
+
 ## v3.6.3
 
 * Added missing dependency on the `ddp` package [@storytellercz](https://github.com/sponsors/StorytellerCZ)
