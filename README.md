@@ -12,6 +12,7 @@ Authorization package for Meteor - compatible with built-in accounts package.
 There are also older versions of this package:
 * [v1](https://github.com/Meteor-Community-Packages/meteor-roles/tree/v1)
 * [v2](https://github.com/Meteor-Community-Packages/meteor-roles/tree/v2)
+* [v3](https://github.com/Meteor-Community-Packages/meteor-roles/tree/v3)
 
 <br />
 
@@ -40,6 +41,9 @@ There are also older versions of this package:
 
 Thanks to:
 
+  * [@storytellerCZ](https://github.com/sponsors/StorytellerCZ)
+  * [@jankapunkt](https://github.com/sponsors/jankapunkt)
+  * [@alanning](https://github.com/alanning)
   * [@mitar](https://github.com/mitar)
   * [@challett](https://github.com/challett)
   * [@ianserlin](https://github.com/ianserlin)
@@ -53,7 +57,6 @@ Thanks to:
   * [@pascoual](https://github.com/pascoual)
   * [@nickmoylan](https://github.com/nickmoylan)
   * [@mcrider](https://github.com/mcrider)
-  * [@alanning](https://github.com/alanning)
   * [@simonsimcity](https://github.com/simonsimcity)
 
 <br />
@@ -93,13 +96,13 @@ with:
 ```javascript
 import { Roles } from 'meteor/alanning:roles';
 
-Roles.createRole('user');
-Roles.createRole('admin');
-Roles.createRole('USERS_VIEW');
-Roles.createRole('POST_EDIT');
-Roles.addRolesToParent('USERS_VIEW', 'admin');
-Roles.addRolesToParent('POST_EDIT', 'admin');
-Roles.addRolesToParent('POST_EDIT', 'user');
+Roles.createRoleAsync('user');
+Roles.createRoleAsync('admin');
+Roles.createRoleAsync('USERS_VIEW');
+Roles.createRoleAsync('POST_EDIT');
+Roles.addRolesToParentAsync('USERS_VIEW', 'admin');
+Roles.addRolesToParentAsync('POST_EDIT', 'admin');
+Roles.addRolesToParentAsync('POST_EDIT', 'user');
 ```
 
 <br />
@@ -118,11 +121,11 @@ But scopes are independent of each other. Users can have one set of roles in sco
 of roles in scope B. Let's go through an example of this using soccer/football teams as scopes.
 
 ```javascript
-Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester-united.com');
-Roles.addUsersToRoles(joesUserId, ['player','goalie'], 'real-madrid.com');
+Roles.addUsersToRolesAsync(joesUserId, ['manage-team','schedule-game'], 'manchester-united.com');
+Roles.addUsersToRolesAsync(joesUserId, ['player','goalie'], 'real-madrid.com');
 
-Roles.userIsInRole(joesUserId, 'manage-team', 'manchester-united.com'); // true
-Roles.userIsInRole(joesUserId, 'manage-team', 'real-madrid.com'); // false
+Roles.userIsInRoleAsync(joesUserId, 'manage-team', 'manchester-united.com'); // true
+Roles.userIsInRoleAsync(joesUserId, 'manage-team', 'real-madrid.com'); // false
 ```
 
 In this example, we can see that Joe manages Manchester United and plays for Real Madrid. By using scopes, we can
@@ -132,9 +135,10 @@ Now, let's take a look at how to use the global roles. Say we want to give Joe p
 all of our scopes. That is what the global roles are for:
 
 ```javascript
-Roles.addUsersToRoles(joesUserId, 'super-admin', null); // Or you could just omit the last argument.
+Roles.addUsersToRolesAsync(joesUserId, 'super-admin', null); // Or you could just omit the last argument.
 
-if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.com')) {
+const isInRole = await Roles.userIsInRoleAsync(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.com')
+if (isInRole) {
   // True! Even though Joe doesn't manage Real Madrid, he has
   // a 'super-admin' global role so this check succeeds.
 }
@@ -183,6 +187,33 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 <br />
 
 <a id="roles-migration" name="roles-migration"></a>
+## Migration to 4.0
+
+If you are currently using this package in a version older than 3.6, please upgrade to 3.6 and follow all the steps described for previous major version upgrades.
+Make sure to stay on 3.x until you have run the migration scripts as those are no longer available in version 4.
+
+Before upgrading to version 4 make sure that all your server side roles call use the async versions of the functions.
+
+Here is a full list of new async functions:
+  * createRoleAsync
+  * deleteRoleAsync
+  * renameRoleAsync
+  * addRolesToParentAsync
+  * removeRolesFromParentAsync
+  * addUsersToRolesAsync
+  * setUserRolesAsync
+  * removeUsersFromRolesAsync
+  * userIsInRoleAsync
+  * getRolesForUserAsync
+  * getUsersInRoleAsync
+  * getGroupsForUserAsync
+  * getScopesForUserAsync
+  * renameScopeAsync
+  * removeScopeAsync
+  * isParentOfAsync
+
+> NOTE: The sync version of these functions are still available on the client.
+
 ## Migration to 3.0
 
 If you are currently using this package in a version older than 2.x, please upgrade to 2.0 by running the migration script required there: https://github.com/Meteor-Community-Packages/meteor-roles/tree/v2#migration-to-20
@@ -246,26 +277,27 @@ var users = [
       {name:"Admin User",email:"admin@example.com",roles:['admin']}
     ];
 
-users.forEach(function (user) {
+for (const user of users) {
   var id;
 
-  id = Accounts.createUser({
+  id = await Accounts.createUserAsync({
     email: user.email,
     password: "apple1",
     profile: { name: user.name }
   });
 
-  if (Meteor.roleAssignment.find({ 'user._id': id }).count() === 0) {
+  const count = await Meteor.roleAssignment.coundDocuments({ 'user._id': id })
+  if (count === 0) {
     import { Roles } from 'meteor/alanning:roles';
     
-    user.roles.forEach(function (role) {
-      Roles.createRole(role, {unlessExists: true});
-    });
+    for (const role of user.roles)  {
+      Roles.createRoleAsync(role, {unlessExists: true});
+    }
     // Need _id of existing user record so this call must come after `Accounts.createUser`.
-    Roles.addUsersToRoles(id, user.roles);
+    Roles.addUsersToRolesAsync(id, user.roles);
   }
 
-});
+}
 ```
 
 <br />
@@ -283,10 +315,11 @@ Check user roles before publishing sensitive data:
 import { Roles } from 'meteor/alanning:roles'
 
 // Give authorized users access to sensitive data by scope
-Meteor.publish('secrets', function (scope) {
+Meteor.publish('secrets', async function (scope) {
   check(scope, String);
 
-  if (Roles.userIsInRole(this.userId, ['view-secrets','admin'], scope)) {
+  const isInRole = await Roles.userIsInRoleAsync(this.userId, ['view-secrets','admin'], scope)
+  if (isInRole) {
     
     return Meteor.secrets.find({scope: scope});
     
@@ -304,12 +337,13 @@ Meteor.publish('secrets', function (scope) {
 
 Prevent non-authorized users from creating new users:
 ```js
-Accounts.validateNewUser(function (user) {
+Accounts.validateNewUser(async function (user) {
   import { Roles } from 'meteor/alanning:roles'
   
   var loggedInUser = Meteor.user();
 
-  if (Roles.userIsInRole(loggedInUser, ['admin','manage-users'])) {
+  const isInRole = await Roles.userIsInRoleAsync(loggedInUser, ['admin','manage-users'])
+  if () {
     return true;
   }
 
@@ -332,20 +366,19 @@ Meteor.methods({
    * @param {String} targetUserId ID of user to revoke roles for.
    * @param {String} scope Company to update roles for.
    */
-  revokeUser: function (targetUserId, scope) {
+  revokeUser: async function (targetUserId, scope) {
     check(targetUserId, String);
     check(scope, String);
   
-    var loggedInUser = Meteor.user();
+    const loggedInUser = Meteor.user();
 
-    if (!loggedInUser ||
-        !Roles.userIsInRole(loggedInUser, 
-                            ['manage-users', 'support-staff'], scope)) {
+    const isInRole = await Roles.userIsInRole(loggedInUser, ['manage-users', 'support-staff'], scope);
+    if (!loggedInUser || !isInRole) {
       throw new Meteor.Error('access-denied', "Access denied")
     }
 
     // remove roles for target scope
-    Roles.setUserRoles(targetUserId, [], scope)
+    Roles.setUserRolesAsync(targetUserId, [], scope)
   }
 })
 ```
@@ -365,20 +398,19 @@ Meteor.methods({
    * @param {Array} roles User's new roles.
    * @param {String} scope Company to update roles for.
    */
-  updateRoles: function (targetUserId, roles, scope) {
+  updateRoles: async function (targetUserId, roles, scope) {
     check(targetUserId, String);
     check(roles, [String]);
     check(scope, String);
 
-    var loggedInUser = Meteor.user();
+    const loggedInUser = Meteor.user();
 
-    if (!loggedInUser ||
-        !Roles.userIsInRole(loggedInUser, 
-                            ['manage-users', 'support-staff'], scope)) {
+    const isInRole = await Roles.userIsInRole(loggedInUser, ['manage-users', 'support-staff'], scope);
+    if (!loggedInUser || !isInRole) {
       throw new Meteor.Error('access-denied', "Access denied");
     }
 
-    Roles.setUserRoles(targetUserId, roles, scope);
+    Roles.setUserRolesAsync(targetUserId, roles, scope);
   }
 })
 ```
