@@ -5,7 +5,7 @@ export function getAsyncMethodName(method) {
   return `${method.replace('_', '')}Async`;
 }
 
-export const ASYNC_COLLECTION_METHODS = [
+export const COLLECTION_METHODS = [
   '_createCappedCollection',
   'dropCollection',
   'dropIndex',
@@ -90,7 +90,7 @@ export const ASYNC_COLLECTION_METHODS = [
   'upsert',
 ];
 
-export const ASYNC_CURSOR_METHODS = [
+export const CURSOR_METHODS = [
   /**
    * @deprecated in 2.9
    * @summary Returns the number of documents that match a query. This method is

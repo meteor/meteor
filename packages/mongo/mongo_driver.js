@@ -16,7 +16,7 @@ const util = require("util");
 var MongoDB = NpmModuleMongodb;
 import { DocFetcher } from "./doc_fetcher.js";
 import {
-  ASYNC_CURSOR_METHODS,
+  CURSOR_METHODS,
   CLIENT_ONLY_METHODS,
   getAsyncMethodName
 } from "meteor/minimongo/constants";
@@ -198,7 +198,7 @@ MongoConnection = function (url, options) {
     name: 'Meteor',
     version: Meteor.release
   }
-  
+
   self.client = new MongoDB.MongoClient(url, mongoOptions);
   self.db = self.client.db();
 
@@ -768,7 +768,7 @@ MongoConnection.prototype.findOneAsync = async function (collection_name, select
   options = options || {};
   options.limit = 1;
 
-  const results = await self.find(collection_name, selector, options).fetch();
+  const results = await self.find(collection_name, selector, options).fetchAsync();
 
   return results[0];
 };
@@ -834,13 +834,13 @@ CLIENT_ONLY_METHODS.forEach(function (m) {
 // not affect observeChanges output (eg, options.transform functions are not
 // stringifiable but do not affect observeChanges).
 //
-// SynchronousCursor is a wrapper around a MongoDB cursor
-// which includes fully-synchronous versions of forEach, etc.
+// AsynchronousCursor is a wrapper around a MongoDB cursor
+// which includes fully-asynchronous versions of forEach, etc.
 //
 // Cursor is the cursor object returned from find(), which implements the
 // documented Mongo.Collection cursor API.  It wraps a CursorDescription and a
-// SynchronousCursor (lazily: it doesn't contact Mongo until you call a method
-// like fetch or forEach on it).
+// AsynchronousCursor (lazily: it doesn't contact Mongo until you call a method
+// like fetch/fetchAsync or forEach/forEachAsync on it).
 //
 // ObserveHandle is the "observe handle" returned from observeChanges. It has a
 // reference to an ObserveMultiplexer.
@@ -869,29 +869,8 @@ Cursor = function (mongo, cursorDescription) {
 
   self._mongo = mongo;
   self._cursorDescription = cursorDescription;
-  self._synchronousCursor = null;
+  self._asynchronousCursor = null;
 };
-
-function setupSynchronousCursor(cursor, method) {
-  // You can only observe a tailable cursor.
-  if (cursor._cursorDescription.options.tailable)
-    throw new Error('Cannot call ' + method + ' on a tailable cursor');
-
-  if (!cursor._synchronousCursor) {
-    cursor._synchronousCursor = cursor._mongo._createSynchronousCursor(
-      cursor._cursorDescription,
-      {
-        // Make sure that the "cursor" argument to forEach/map callbacks is the
-        // Cursor, not the SynchronousCursor.
-        selfForIteration: cursor,
-        useTransform: true,
-      }
-    );
-  }
-
-  return cursor._synchronousCursor;
-}
-
 
 Cursor.prototype.countAsync = async function () {
   const collection = this._mongo.rawCollection(this._cursorDescription.collectionName);
@@ -907,30 +886,29 @@ Cursor.prototype.count = function () {
   );
 };
 
-[...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
-  // count is handled specially since we don't want to create a cursor.
-  // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
-  if (methodName === 'count') {
-    return
-  }
-  Cursor.prototype[methodName] = function (...args) {
-    const cursor = setupSynchronousCursor(this, methodName);
-    return cursor[methodName](...args);
-  };
+// We don't handle the count method here.
+[...CURSOR_METHODS, Symbol.asyncIterator].filter(method => method !== CURSOR_METHODS[0]).forEach(function(method) {
+  Cursor.prototype[method] = function asynchronousCursorMethod () {
+    // You can only observe a tailable cursor.
+    if (this._cursorDescription.options.tailable)
+      throw new Error("Cannot call " + method + " on a tailable cursor");
 
-  // These methods are handled separately.
-  if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) {
-    return;
-  }
-
-  const methodNameAsync = getAsyncMethodName(methodName);
-  Cursor.prototype[methodNameAsync] = function (...args) {
-    try {
-      return Promise.resolve(this[methodName](...args));
-    } catch (error) {
-      return Promise.reject(error);
+    if (!this._asynchronousCursor) {
+      this._asynchronousCursor = this._mongo._createAsynchronousCursor(
+          this._cursorDescription, {
+            // Make sure that the "self" argument to forEach/map callbacks is the
+            // Cursor, not the AsynchronousCursor.
+            selfForIteration: this,
+            useTransform: true
+          });
     }
+
+    return this._asynchronousCursor[method].apply(
+        this._asynchronousCursor, arguments);
   };
+  if (method !== Symbol.asyncIterator) {
+    Cursor.prototype[getAsyncMethodName(method)] = Cursor.prototype[method];
+  }
 });
 
 Cursor.prototype.getTransform = function () {
@@ -992,7 +970,7 @@ Cursor.prototype.observeChangesAsync = async function (callbacks, options = {}) 
   return this.observeChanges(callbacks, options);
 };
 
-MongoConnection.prototype._createSynchronousCursor = function(
+MongoConnection.prototype._createAsynchronousCursor = function(
     cursorDescription, options) {
   var self = this;
   options = _.pick(options || {}, 'selfForIteration', 'useTransform');
@@ -1198,203 +1176,6 @@ class AsynchronousCursor {
   }
 }
 
-var SynchronousCursor = function (dbCursor, cursorDescription, options, collection) {
-  var self = this;
-  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
-
-  self._dbCursor = dbCursor;
-  self._cursorDescription = cursorDescription;
-  // The "self" argument passed to forEach/map callbacks. If we're wrapped
-  // inside a user-visible Cursor, we want to provide the outer cursor!
-  self._selfForIteration = options.selfForIteration || self;
-  if (options.useTransform && cursorDescription.options.transform) {
-    self._transform = LocalCollection.wrapTransform(
-      cursorDescription.options.transform);
-  } else {
-    self._transform = null;
-  }
-
-  self._synchronousCount = Future.wrap(
-    collection.countDocuments.bind(
-      collection,
-      replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
-      replaceTypes(cursorDescription.options, replaceMeteorAtomWithMongo),
-    )
-  );
-  self._visitedIds = new LocalCollection._IdMap;
-};
-
-_.extend(SynchronousCursor.prototype, {
-  // Returns a Promise for the next object from the underlying cursor (before
-  // the Mongo->Meteor type replacement).
-  _rawNextObjectPromise: function () {
-    const self = this;
-    return new Promise((resolve, reject) => {
-      self._dbCursor.next((err, doc) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(doc);
-        }
-      });
-    });
-  },
-
-  // Returns a Promise for the next object from the cursor, skipping those whose
-  // IDs we've already seen and replacing Mongo atoms with Meteor atoms.
-  _nextObjectPromise: async function () {
-    var self = this;
-
-    while (true) {
-      var doc = await self._rawNextObjectPromise();
-
-      if (!doc) return null;
-      doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
-
-      if (!self._cursorDescription.options.tailable && _.has(doc, '_id')) {
-        // Did Mongo give us duplicate documents in the same cursor? If so,
-        // ignore this one. (Do this before the transform, since transform might
-        // return some unrelated value.) We don't do this for tailable cursors,
-        // because we want to maintain O(1) memory usage. And if there isn't _id
-        // for some reason (maybe it's the oplog), then we don't do this either.
-        // (Be careful to do this for falsey but existing _id, though.)
-        if (self._visitedIds.has(doc._id)) continue;
-        self._visitedIds.set(doc._id, true);
-      }
-
-      if (self._transform)
-        doc = self._transform(doc);
-
-      return doc;
-    }
-  },
-
-  // Returns a promise which is resolved with the next object (like with
-  // _nextObjectPromise) or rejected if the cursor doesn't return within
-  // timeoutMS ms.
-  _nextObjectPromiseWithTimeout: function (timeoutMS) {
-    const self = this;
-    if (!timeoutMS) {
-      return self._nextObjectPromise();
-    }
-    const nextObjectPromise = self._nextObjectPromise();
-    const timeoutErr = new Error('Client-side timeout waiting for next object');
-    const timeoutPromise = new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(timeoutErr);
-      }, timeoutMS);
-    });
-    return Promise.race([nextObjectPromise, timeoutPromise])
-      .catch((err) => {
-        if (err === timeoutErr) {
-          self.close();
-        }
-        throw err;
-      });
-  },
-
-  _nextObject: function () {
-    var self = this;
-    return self._nextObjectPromise().await();
-  },
-
-  forEach: function (callback, thisArg) {
-    var self = this;
-    const wrappedFn = Meteor.wrapFn(callback);
-
-    // Get back to the beginning.
-    self._rewind();
-
-    // We implement the loop ourself instead of using self._dbCursor.each,
-    // because "each" will call its callback outside of a fiber which makes it
-    // much more complex to make this function synchronous.
-    var index = 0;
-    while (true) {
-      var doc = self._nextObject();
-      if (!doc) return;
-      wrappedFn.call(thisArg, doc, index++, self._selfForIteration);
-    }
-  },
-
-  // XXX Allow overlapping callback executions if callback yields.
-  map: function (callback, thisArg) {
-    var self = this;
-    const wrappedFn = Meteor.wrapFn(callback);
-    var res = [];
-    self.forEach(function (doc, index) {
-      res.push(wrappedFn.call(thisArg, doc, index, self._selfForIteration));
-    });
-    return res;
-  },
-
-  _rewind: function () {
-    var self = this;
-
-    // known to be synchronous
-    self._dbCursor.rewind();
-
-    self._visitedIds = new LocalCollection._IdMap;
-  },
-
-  // Mostly usable for tailable cursors.
-  close: function () {
-    var self = this;
-
-    self._dbCursor.close();
-  },
-
-  fetch: function () {
-    var self = this;
-    return self.map(_.identity);
-  },
-
-  count: function () {
-    var self = this;
-    return self._synchronousCount().wait();
-  },
-
-  // This method is NOT wrapped in Cursor.
-  getRawObjects: function (ordered) {
-    var self = this;
-    if (ordered) {
-      return self.fetch();
-    } else {
-      var results = new LocalCollection._IdMap;
-      self.forEach(function (doc) {
-        results.set(doc._id, doc);
-      });
-      return results;
-    }
-  }
-});
-
-SynchronousCursor.prototype[Symbol.iterator] = function () {
-  var self = this;
-
-  // Get back to the beginning.
-  self._rewind();
-
-  return {
-    next() {
-      const doc = self._nextObject();
-      return doc ? {
-        value: doc
-      } : {
-        done: true
-      };
-    }
-  };
-};
-
-SynchronousCursor.prototype[Symbol.asyncIterator] = function () {
-  const syncResult = this[Symbol.iterator]();
-  return {
-    async next() {
-      return Promise.resolve(syncResult.next());
-    }
-  };
-}
-
 // Tails the cursor described by cursorDescription, most likely on the
 // oplog. Calls docCallback with each document found. Ignores errors and just
 // restarts the tail on error.
@@ -1406,7 +1187,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   if (!cursorDescription.options.tailable)
     throw new Error("Can only tail a tailable cursor");
 
-  var cursor = self._createSynchronousCursor(cursorDescription);
+  var cursor = self._createAsynchronousCursor(cursorDescription);
 
   var stopped = false;
   var lastTS;
@@ -1441,7 +1222,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
         if (lastTS) {
           newSelector.ts = {$gt: lastTS};
         }
-        cursor = self._createSynchronousCursor(new CursorDescription(
+        cursor = self._createAsynchronousCursor(new CursorDescription(
           cursorDescription.collectionName,
           newSelector,
           cursorDescription.options));

@@ -1265,15 +1265,14 @@ export class AccountsServer extends AccountsCommon {
     // that would give a lot of power to an attacker with a stolen login
     // token and the ability to crash the server.
     Meteor.startup(async () => {
-      const users = await this.users.find({
+      await this.users.find({
         "services.resume.haveLoginTokensToDelete": true
       }, {
         fields: {
           "services.resume.loginTokensToDelete": 1
         }
-      })
-      users.forEach(user => {
-        this._deleteSavedTokensForUser(
+      }).forEachAsync(user => {
+        return this._deleteSavedTokensForUser(
           user._id,
           user.services.resume.loginTokensToDelete
         )

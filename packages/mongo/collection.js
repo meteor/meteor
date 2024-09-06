@@ -1,10 +1,5 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
-import {
-  ASYNC_COLLECTION_METHODS,
-  getAsyncMethodName,
-} from 'meteor/minimongo/constants';
-
 import { normalizeProjection } from "./mongo_utils";
 
 /**

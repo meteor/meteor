@@ -12,7 +12,7 @@ PollingObserveDriver = function (options) {
   self._stopCallbacks = [];
   self._stopped = false;
 
-  self._cursor = self._mongoHandle._createSynchronousCursor(
+  self._cursor = self._mongoHandle._createAsynchronousCursor(
     self._cursorDescription);
 
   // previous results snapshot.  on each poll cycle, diffs against
@@ -38,7 +38,7 @@ PollingObserveDriver = function (options) {
   // XXX figure out if we still need a queue
   self._taskQueue = new Meteor._AsynchronousQueue();
 
-  
+
 };
 
 _.extend(PollingObserveDriver.prototype, {
@@ -61,7 +61,7 @@ _.extend(PollingObserveDriver.prototype, {
       }
     );
     self._stopCallbacks.push(async function () { await listenersHandle.stop(); });
-  
+
     // every once and a while, poll even if we don't think we're dirty, for
     // eventual consistency with database writes from outside the Meteor
     // universe.
@@ -82,7 +82,7 @@ _.extend(PollingObserveDriver.prototype, {
         Meteor.clearInterval(intervalHandle);
       });
     }
-    
+
     // Make sure we actually poll soon!
     await this._unthrottledEnsurePollIsScheduled();
 
