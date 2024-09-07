@@ -2951,8 +2951,9 @@ main.registerCommand({
     versions = await catalog.official.getSortedVersions(name);
   }
 
+  var conn;
   try {
-    var conn = await packageClient.loggedInPackagesConnection();
+    conn = await packageClient.loggedInPackagesConnection();
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;
@@ -2963,12 +2964,12 @@ main.registerCommand({
     // XXX: This should probably use progress bars instead.
     for (const version of versions) {
       Console.rawInfo(
-        "Setting " + name + "@" + version + " as " +
-         status + " migrated ...\n");
+          "Setting " + name + "@" + version + " as " +
+          status + " migrated ...\n");
       await packageClient.callPackageServer(
-        conn,
-        '_changeVersionMigrationStatus',
-        name, version, !options.success);
+          conn,
+          '_changeVersionMigrationStatus',
+          name, version, !options.success);
       Console.info("done.");
     }
   } catch (err) {
