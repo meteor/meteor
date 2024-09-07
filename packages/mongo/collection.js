@@ -1132,8 +1132,11 @@ Object.assign(Mongo.Collection.prototype, {
       ) {
         import { Log } from 'meteor/logging';
 
-        Log.info(`Re-creating index ${ index } for ${ self._name } due to options mismatch.`);
-        await self._collection.dropIndexAsync(index);
+        Log.info(`Re-creating index ${ JSON.stringify(index) } for ${ self._name } due to options mismatch.`);
+        // We can only drop text indexes (or compound indexes that contains a text index) by its name
+        const isTextIndex = Object.values(index).some(v => v === "text");
+        const indexName = isTextIndex && Object.entries(index).reduce((acc, [key, value], currentIndex) => `${acc}${currentIndex === 0 ? "" : "_"}${key}_${value}`, "");
+        await self._collection.dropIndexAsync(isTextIndex ? indexName : index);
         await self._collection.createIndexAsync(index, options);
       } else {
         console.error(e);
