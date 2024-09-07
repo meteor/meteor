@@ -1059,7 +1059,7 @@ class AsynchronousCursor {
   // the Mongo->Meteor type replacement).
   async _rawNextObjectPromise() {
     try {
-      return this._dbCursor.next();
+      return (await this._dbCursor.next());
     } catch (e) {
       console.error(e);
     }
