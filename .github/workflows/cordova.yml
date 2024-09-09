@@ -26,6 +26,8 @@ jobs:
       - name: Test Cordova
         run: |
           whoami
+          curl -s "https://get.sdkman.io" | bash
+          bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && sdk install gradle 8.7"
           java --version
           gradle --version
           ./meteor self-test ^cordova
