@@ -348,7 +348,6 @@ jobs:
             export PATH="/home/circleci/.sdkman/candidates/gradle/8.7/bin:${PATH}"
             java --version
             gradle --version
-            echo $PATH
             ./meteor self-test \
               "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
