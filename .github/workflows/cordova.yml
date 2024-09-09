@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: meteor/circleci:2024.09.10-android-34-node-20
+      image: meteor/circleci:2024.09.11-android-34-node-20
       options: --entrypoint "/bin/bash"
 
     steps:
@@ -32,7 +32,6 @@ jobs:
 
       - name: Test Cordova
         run: |
-          export PATH="/usr/local/gradle/8.7/bin:${PATH}"
           java --version
           gradle --version
           echo $PATH
