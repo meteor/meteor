@@ -1,4 +1,4 @@
-name: Meteor Cordova selftest
+name: Meteor Selftest Cordova
 
 on:
   pull_request:
@@ -23,9 +23,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Run a script inside the custom Docker image
+      - name: Test Cordova
         run: |
-          echo "Ready to test cordova!"
-          ls
           java --version
-          printenv
+          ./meteor self-test ^cordova
