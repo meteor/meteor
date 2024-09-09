@@ -345,6 +345,9 @@ jobs:
             if [ -f ./tmp/test-groups/2.txt ]; then TEST_GROUP=$(<./tmp/test-groups/2.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^co[n-z]'; fi
             echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
+            gradle --version
+            echo $PATH
+            export PATH="/usr/local/gradle-8.7/bin:${PATH}"
             ./meteor self-test \
               "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \

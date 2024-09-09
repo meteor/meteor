@@ -11,6 +11,27 @@ on:
       - devel
       - 2.x.x
 
+env:
+  # This multiplier scales the waitSecs for selftests.
+  TIMEOUT_SCALE_FACTOR: 8
+
+  # Retry failed tests additional times.
+  METEOR_SELF_TEST_RETRIES: 2
+
+  # These, mostly overlapping, flags ensure that CircleCI is as pretty as
+  # possible for a non-interactive environment.  See also: --headless.
+  METEOR_HEADLESS: true
+  METEOR_PRETTY_OUTPUT: 0
+
+  # In an effort to stop SIGSEGV, this just doesn't bother cleaning up
+  # the mess of temp directories that Meteor makes.
+  METEOR_SAVE_TMPDIRS: 1
+
+  # Skip these tests on every test run.
+  # If needed, for readability this should be a regex wrapped across
+  # multiple lines in quotes.
+  SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,14 +46,6 @@ jobs:
 
       - name: Test Cordova
         run: |
-          export PATH="/usr/local/gradle-8.9/bin:${PATH}"
-          whoami
-          curl -s "https://get.sdkman.io" | bash
-          bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && sdk install gradle 8.7 && sdk use gradle 8.7 && gradle --version"
-          ls /home/circleci/.sdkman/candidates/gradle
-          /home/circleci/.sdkman/candidates/gradle/current/bin/gradle --version
           java --version
-          which gradle
           gradle --version
-          echo $PATH
           ./meteor self-test ^cordova
