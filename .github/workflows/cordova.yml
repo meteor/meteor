@@ -36,4 +36,5 @@ jobs:
           export PATH="/usr/local/gradle-8.7/bin:${PATH}"
           java --version
           gradle --version
+          echo $PATH
           ./meteor self-test ^cordova
