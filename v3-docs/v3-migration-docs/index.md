@@ -11,7 +11,7 @@ This guide is for users with Meteor 2.x projects understand the changes between 
 
 Meteor 3.0 is currently in its official version!
 
-**Latest version:** `3.0.1` <br/>
+**Latest version:** `3.0.2` <br/>
 **Node.js version:** `20.15.1 LTS` <br/>
 **NPM version:** `10.7.0`
 
