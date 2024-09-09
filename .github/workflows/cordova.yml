@@ -46,6 +46,7 @@ jobs:
 
       - name: Test Cordova
         run: |
+          ls /home/circleci/.sdkman/candidates/gradle
           export PATH="/usr/local/gradle-8.7/bin:${PATH}"
           java --version
           gradle --version
