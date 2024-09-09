@@ -37,6 +37,6 @@ jobs:
           curl -s "https://get.sdkman.io" | bash
           bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && sdk install gradle 8.7 && sdk use gradle 8.7 && gradle --version"
           java --version
-          gradle --version
+          PATH="/usr/local/gradle-8.7/bin:${PATH}" gradle --version
           echo $PATH
-          ./meteor self-test ^cordova
+          PATH="/usr/local/gradle-8.7/bin:${PATH}" ./meteor self-test ^cordova
