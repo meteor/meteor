@@ -25,6 +25,7 @@ jobs:
 
       - name: Test Cordova
         run: |
+          whoami
           java --version
           gradle --version
           ./meteor self-test ^cordova
