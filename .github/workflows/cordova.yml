@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: meteor/circleci:2024.09.2-android-34-node-20
+      image: meteor/circleci:2024.09.9-android-34-node-20
       options: --entrypoint "/bin/bash"
 
     steps:
