@@ -1,0 +1,31 @@
+name: Meteor Cordova selftest
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+  push:
+    branches:
+      - devel
+      - 2.x.x
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: meteor/circleci:2024.09.2-android-34-node-20
+      options: --entrypoint "/bin/bash"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run a script inside the custom Docker image
+        run: |
+          echo "Ready to test cordova!"
+          ls
+          java --version
+          printenv
