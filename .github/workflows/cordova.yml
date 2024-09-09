@@ -25,5 +25,6 @@ jobs:
 
       - name: Test Cordova
         run: |
+          source "/home/circleci/.sdkman/bin/sdkman-init.sh" && sdk install gradle 8.7
           java --version
           ./meteor self-test ^cordova
