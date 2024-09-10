@@ -3,8 +3,9 @@ const child_process = require('child_process');
 const fs = require('fs');
 const Seven = require('node-7z');
 const { resolve, dirname } = require('path');
-const { isLinux } = require('./config.js');
 const tar = require('tar');
+
+const { isLinux } = require('./config.js');
 
 function extractWith7Zip(tarPath, destination, onProgress) {
   return new Promise((resolve, reject) => {
