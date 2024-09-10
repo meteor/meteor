@@ -1,4 +1,6 @@
-import { normalizeProjection } from "./mongo_utils";
+import has from 'lodash.has';
+import identity from 'lodash.identity';
+import clone from 'lodash.clone';
 
 /**
  * Provide a synchronous Collection API using fibers, backed by
@@ -47,11 +49,11 @@ const APP_FOLDER = 'app';
 // inside an EJSON custom type. It should only be called on pure JSON!
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object" && thing !== null) {
-    if (_.isArray(thing)) {
-      return _.map(thing, _.bind(replaceNames, null, filter));
+    if (Array.isArray(thing)) {
+      return thing.map(replaceNames.bind(null, filter));
     }
     var ret = {};
-    _.each(thing, function (value, key) {
+    Object.entries(thing).forEach(function ([key, value]) {
       ret[filter(key)] = replaceNames(filter, value);
     });
     return ret;
@@ -85,7 +87,7 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Decimal128) {
     return Decimal(document.toString());
   }
-  if (document["EJSON$type"] && document["EJSON$value"] && _.size(document) === 2) {
+  if (document["EJSON$type"] && document["EJSON$value"] && Object.keys(document).length === 2) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
   if (document instanceof MongoDB.Timestamp) {
@@ -138,12 +140,12 @@ var replaceTypes = function (document, atomTransformer) {
     return replacedTopLevelAtom;
 
   var ret = document;
-  _.each(document, function (val, key) {
+  Object.entries(document).forEach(function ([key, val]) {
     var valReplaced = replaceTypes(val, atomTransformer);
     if (val !== valReplaced) {
       // Lazy clone. Shallow copy.
       if (ret === document)
-        ret = _.clone(document);
+        ret = clone(document);
       ret[key] = valReplaced;
     }
   });
@@ -170,12 +172,12 @@ MongoConnection = function (url, options) {
 
   // Internally the oplog connections specify their own maxPoolSize
   // which we don't want to overwrite with any user defined value
-  if (_.has(options, 'maxPoolSize')) {
+  if (has(options, 'maxPoolSize')) {
     // If we just set this for "server", replSet will override it. If we just
     // set it for replSet, it will be ignored if we're not using a replSet.
     mongoOptions.maxPoolSize = options.maxPoolSize;
   }
-  if (_.has(options, 'minPoolSize')) {
+  if (has(options, 'minPoolSize')) {
     mongoOptions.minPoolSize = options.minPoolSize;
   }
 
@@ -385,8 +387,8 @@ MongoConnection.prototype._refresh = async function (collectionName, selector) {
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
   if (specificIds) {
     for (const id of specificIds) {
-      await Meteor.refresh(_.extend({id: id}, refreshKey));
-    }
+      await Meteor.refresh(Object.assign({id: id}, refreshKey));
+    };
   } else {
     await Meteor.refresh(refreshKey);
   }
@@ -743,7 +745,7 @@ MongoConnection.prototype.upsertAsync = async function (collectionName, selector
   }
 
   return self.updateAsync(collectionName, selector, mod,
-                     _.extend({}, options, {
+                     Object.assign({}, options, {
                        upsert: true,
                        _returnObject: true
                      }));
@@ -993,9 +995,10 @@ Cursor.prototype.observeChangesAsync = async function (callbacks, options = {}) 
 };
 
 MongoConnection.prototype._createSynchronousCursor = function(
-    cursorDescription, options) {
+    cursorDescription, options = {}) {
   var self = this;
-  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
+  const { selfForIteration, useTransform } = options; 
+  options = { selfForIteration, useTransform };
 
   var collection = self.rawCollection(cursorDescription.collectionName);
   var cursorOptions = cursorDescription.options;
@@ -1200,7 +1203,8 @@ class AsynchronousCursor {
 
 var SynchronousCursor = function (dbCursor, cursorDescription, options, collection) {
   var self = this;
-  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
+  const { selfForIteration, useTransform } = options; 
+  options = { selfForIteration, useTransform };
 
   self._dbCursor = dbCursor;
   self._cursorDescription = cursorDescription;
@@ -1224,7 +1228,7 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options, collecti
   self._visitedIds = new LocalCollection._IdMap;
 };
 
-_.extend(SynchronousCursor.prototype, {
+Object.assign(SynchronousCursor.prototype, {
   // Returns a Promise for the next object from the underlying cursor (before
   // the Mongo->Meteor type replacement).
   _rawNextObjectPromise: function () {
@@ -1251,7 +1255,7 @@ _.extend(SynchronousCursor.prototype, {
       if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
 
-      if (!self._cursorDescription.options.tailable && _.has(doc, '_id')) {
+      if (!self._cursorDescription.options.tailable && has(doc, '_id')) {
         // Did Mongo give us duplicate documents in the same cursor? If so,
         // ignore this one. (Do this before the transform, since transform might
         // return some unrelated value.) We don't do this for tailable cursors,
@@ -1345,7 +1349,7 @@ _.extend(SynchronousCursor.prototype, {
 
   fetch: function () {
     var self = this;
-    return self.map(_.identity);
+    return self.map(identity);
   },
 
   count: function () {
@@ -1437,7 +1441,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
         lastTS = doc.ts;
         docCallback(doc);
       } else {
-        var newSelector = _.clone(cursorDescription.selector);
+        var newSelector = Object.assign({}, cursorDescription.selector);
         if (lastTS) {
           newSelector.ts = {$gt: lastTS};
         }
@@ -1483,8 +1487,8 @@ Object.assign(MongoConnection.prototype, {
       throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
-    var observeKey = EJSON.stringify(
-        _.extend({ordered: ordered}, cursorDescription));
+  var observeKey = EJSON.stringify(
+    Object.assign({ordered: ordered}, cursorDescription));
 
     var multiplexer, observeDriver;
     var firstHandle = false;
@@ -1492,7 +1496,7 @@ Object.assign(MongoConnection.prototype, {
     // Find a matching ObserveMultiplexer, or create a new one. This next block is
     // guaranteed to not yield (and it doesn't call anything that can observe a
     // new query), so no other calls to this function can interleave with it.
-    if (_.has(self._observeMultiplexers, observeKey)) {
+    if (has(self._observeMultiplexers, observeKey)) {
       multiplexer = self._observeMultiplexers[observeKey];
     } else {
       firstHandle = true;
@@ -1512,15 +1516,18 @@ Object.assign(MongoConnection.prototype, {
     );
 
     const oplogOptions = self?._oplogHandle?._oplogOptions || {};
-  const { includeCollections, excludeCollections } = oplogOptions;if (firstHandle) {
+  const { includeCollections, excludeCollections } = oplogOptions;
+  if (firstHandle) {
       var matcher, sorter;
-      var canUseOplog = _.all([
+    var canUseOplog = [
         function () {
           // At a bare minimum, using the oplog requires us to have an oplog, to
           // want unordered callbacks, and to not want a callback on the polls
           // that won't happen.
           return self._oplogHandle && !ordered &&
-              !callbacks._testOnlyPollCallback;}, function () {
+            !callbacks._testOnlyPollCallback;
+  },
+      function () {
         // We also need to check, if the collection of this Cursor is actually being "watched" by the Oplog handle
         // if not, we have to fallback to long polling
         if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
@@ -1538,59 +1545,63 @@ Object.assign(MongoConnection.prototype, {
           return false;
         }
         return true;
-        }, function () {
-          // We need to be able to compile the selector. Fall back to polling for
-          // some newfangled $selector that minimongo doesn't support yet.
-          try {
-            matcher = new Minimongo.Matcher(cursorDescription.selector);
-            return true;
-          } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
-            return false;
-          }
-        }, function () {
-          // ... and the selector itself needs to support oplog.
-          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
-        }, function () {
-          // And we need to be able to compile the sort, if any.  eg, can't be
-          // {$natural: 1}.
-          if (!cursorDescription.options.sort)
-            return true;
-          try {
-            sorter = new Minimongo.Sorter(cursorDescription.options.sort);
-            return true;
-          } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
-            return false;
-          }
-        }], function (f) { return f(); });  // invoke each function
-
-      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
-      observeDriver = new driverClass({
-        cursorDescription: cursorDescription,
-        mongoHandle: self,
-        multiplexer: multiplexer,
-        ordered: ordered,
-        matcher: matcher,  // ignored by polling
-        sorter: sorter,  // ignored by polling
-        _testOnlyPollCallback: callbacks._testOnlyPollCallback
-      });
-
-      if (observeDriver._init) {
-        await observeDriver._init();
+      },
+      function () {
+        // We need to be able to compile the selector. Fall back to polling for
+        // some newfangled $selector that minimongo doesn't support yet.
+        try {
+          matcher = new Minimongo.Matcher(cursorDescription.selector);
+          return true;
+        } catch (e) {
+          // XXX make all compilation errors MinimongoError or something
+          //     so that this doesn't ignore unrelated exceptions
+          return false;
+        }
+      },
+      function () {
+        // ... and the selector itself needs to support oplog.
+        return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
+      },
+      function () {
+        // And we need to be able to compile the sort, if any.  eg, can't be
+        // {$natural: 1}.
+        if (!cursorDescription.options.sort)
+          return true;
+        try {
+          sorter = new Minimongo.Sorter(cursorDescription.options.sort);
+          return true;
+        } catch (e) {
+          // XXX make all compilation errors MinimongoError or something
+          //     so that this doesn't ignore unrelated exceptions
+          return false;
+        }
       }
+    ].every(f => f());  // invoke each function and check if all return true
 
-      // This field is only set for use in tests.
-      multiplexer._observeDriver = observeDriver;
+    var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+    observeDriver = new driverClass({
+      cursorDescription: cursorDescription,
+      mongoHandle: self,
+      multiplexer: multiplexer,
+      ordered: ordered,
+      matcher: matcher,  // ignored by polling
+      sorter: sorter,  // ignored by polling
+      _testOnlyPollCallback: callbacks._testOnlyPollCallback
+});
+
+    if (observeDriver._init) {
+      await observeDriver._init();
     }
-    self._observeMultiplexers[observeKey] = multiplexer;
-    // Blocks until the initial adds have been sent.
-    await multiplexer.addHandleAndSendInitialAdds(observeHandle);
 
-    return observeHandle;
-  },
+    // This field is only set for use in tests.
+    multiplexer._observeDriver = observeDriver;
+  }
+  self._observeMultiplexers[observeKey] = multiplexer;
+  // Blocks until the initial adds have been sent.
+  await multiplexer.addHandleAndSendInitialAdds(observeHandle);
+
+  return observeHandle;
+},
 
 });
 
@@ -1610,7 +1621,7 @@ listenAll = async function (cursorDescription, listenCallback) {
 
   return {
     stop: function () {
-      _.each(listeners, function (listener) {
+      listeners.forEach(function (listener) {
         listener.stop();
       });
     }
