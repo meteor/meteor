@@ -1,7 +1,7 @@
 
 # Cordova
 
-Meteor allows developers to build mobile applications using web technologies like HTML, CSS, and JavaScript, while also accessing native mobile capabilities. This integration is made with  Apache Cordova
+Meteor allows developers to build mobile applications using web technologies like HTML, CSS, and JavaScript, while also accessing native mobile capabilities. This integration is made with [Apache Cordova](https://cordova.apache.org).
 
 Cordova apps run in a web view, which is like a browser without the UI. Different browser engines have varying implementations and support for web standards. This means the web view your app uses can greatly affect its performance and available features. (For details on supported features across browsers and versions, check caniuse.com.)
 
