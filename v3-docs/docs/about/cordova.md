@@ -167,6 +167,8 @@ Now you can manage your app with **XCode**, including connecting to physical dev
 
 ## Production
 
+### Build
+
 Once development is complete, you’ll need to build the actual mobile application (APK/AAB for Android or IPA for iOS) to distribute to users or upload to the app stores.
 
 ```sh
