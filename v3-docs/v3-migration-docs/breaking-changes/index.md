@@ -310,7 +310,7 @@ function patchPublish(publish: typeof Meteor.publish) {
       },
       ...args,
     ); // [!code error]
-  } as typeof Meteor.publish; // [!code error]
+  } as typeof Meteor.publish;
 }
 
 // After
