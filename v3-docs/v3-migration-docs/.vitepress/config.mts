@@ -44,7 +44,6 @@ export default defineConfig({
           {text: "Renamed Functions", link: "/api/renamed-functions"},
           {text: "Removed Functions", link: "/api/removed-functions"},
           {text: "Using Async Functions", link: "/api/async-functions"},
-          {text: "Environment Variables", link: "/api/environment-variables"},
         ]
       },
       {
