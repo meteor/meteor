@@ -3,13 +3,11 @@ import { readFileSync, chmodSync, chownSync } from 'fs';
 import { createServer } from 'http';
 import { userInfo } from 'os';
 import { join as pathJoin, dirname as pathDirname } from 'path';
-import { parse as parseUrl } from 'url';
 import { createHash } from 'crypto';
 import express from 'express';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
-import parseRequest from 'parseurl';
 import { lookup as lookupUserAgent } from 'useragent';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
@@ -19,6 +17,7 @@ import {
 } from './socket_file.js';
 import cluster from 'cluster';
 import { execSync } from 'child_process';
+import { URL } from 'node:url';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
@@ -146,14 +145,14 @@ WebApp.categorizeRequest = function(req) {
   const path =
     typeof req.pathname === 'string'
       ? req.pathname
-      : parseRequest(req).pathname;
+      : URL.parse(req).pathname;
 
   const categorized = {
     browser,
     modern,
     path,
     arch: WebApp.defaultArch,
-    url: parseUrl(req.url, true),
+    url: URL.parse(req.url),
     dynamicHead: req.dynamicHead,
     dynamicBody: req.dynamicBody,
     headers: req.headers,
@@ -202,13 +201,13 @@ WebApp.categorizeRequest = function(req) {
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
-  _.each(htmlAttributeHooks || [], function(hook) {
+  for (const hook of htmlAttributeHooks || []) {
     var attributes = hook(request);
     if (attributes === null) return;
     if (typeof attributes !== 'object')
       throw Error('HTML attribute hook must return null or object');
-    _.extend(combinedAttributes, attributes);
-  });
+    Object.assign(combinedAttributes, attributes);
+  }
   return combinedAttributes;
 };
 WebApp.addHtmlAttributeHook = function(hook) {
@@ -290,9 +289,9 @@ WebApp._timeoutAdjustmentRequestCallback = function(req, res) {
   res.on('finish', function() {
     res.setTimeout(SHORT_SOCKET_TIMEOUT);
   });
-  _.each(finishListeners, function(l) {
+  for(var l of finishListeners) {
     res.on('finish', l);
-  });
+  }
 };
 
 // Will be updated by main before we listen.
@@ -582,7 +581,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   res,
   next
 ) {
-  var pathname = parseRequest(req).pathname;
+  var pathname = URL.parse(req).pathname;
   try {
     pathname = decodeURIComponent(pathname);
   } catch (e) {
@@ -801,7 +800,7 @@ async function runWebAppServer() {
   var syncQueue = new Meteor._AsynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
-    return decodeURIComponent(parseUrl(itemUrl).pathname);
+    return decodeURIComponent(URL.parse(itemUrl).pathname);
   };
 
   WebAppInternals.reloadClientPrograms = async function() {
@@ -1079,7 +1078,7 @@ async function runWebAppServer() {
   // Do this before the next middleware destroys req.url if a path prefix
   // is set to close #10111.
   app.use(function(request, response, next) {
-    request.query = qs.parse(parseUrl(request.url).query);
+    request.query = qs.parse(URL.parse(request.url).query);
     next();
   });
 
@@ -1099,7 +1098,7 @@ async function runWebAppServer() {
   // Strip off the path prefix, if it exists.
   app.use(function(request, response, next) {
     const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    const { pathname, search } = parseUrl(request.url);
+    const { pathname, search } = new URL(request.url);
 
     // check if the path in the url starts with the path prefix
     if (pathPrefix) {
@@ -1355,7 +1354,7 @@ async function runWebAppServer() {
   let warnedAboutConnectUsage = false;
 
   // start up app
-  _.extend(WebApp, {
+  Object.assign(WebApp, {
     connectHandlers: packageAndAppHandlers,
     handlers: packageAndAppHandlers,
     rawConnectHandlers: rawExpressHandlers,

@@ -9,7 +9,6 @@ Npm.depends({
   "@types/express": "4.17.15",
   compression: "1.7.4",
   errorhandler: "1.5.1",
-  parseurl: "1.3.3",
   send: "0.18.0",
   "stream-to-string": "1.2.1",
   qs: "6.11.2",
