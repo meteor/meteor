@@ -6,9 +6,9 @@ var makeCollection = function () {
   }
 };
 
-_.each ([{added: 'added', forceOrdered: true},
+([{added: 'added', forceOrdered: true},
   {added: 'added', forceOrdered: false},
-  {added: 'addedBefore', forceOrdered: false}], function (options) {
+  {added: 'addedBefore', forceOrdered: false}]).forEach(function (options) {
   var added = options.added;
   var forceOrdered = options.forceOrdered;
 
@@ -478,7 +478,7 @@ if (Meteor.isServer) {
       self.expects = [];
       self.insert = async function(fields) {
         return coll.insertAsync(
-          _.extend({ ts: new MongoInternals.MongoTimestamp(0, 0) }, fields)
+          Object.assign({ ts: new MongoInternals.MongoTimestamp(0, 0) }, fields)
         );
       };
 

@@ -1782,10 +1782,35 @@ export class MeteorConfig {
       const json = optimisticReadJsonOrNull(this.packageJsonPath);
       this._config = json && json.meteor || null;
       this.watchSet.addFile(
-        this.packageJsonPath,
-        optimisticHashOrNull(this.packageJsonPath)
+          this.packageJsonPath,
+          optimisticHashOrNull(this.packageJsonPath)
       );
     }
+
+    const customMeteorConfigClient = process.env.METEOR_CONFIG_CLIENT;
+    const customMeteorConfigServer = process.env.METEOR_CONFIG_SERVER;
+    const customMeteorConfigTest = process.env.METEOR_CONFIG_TEST;
+    const customMeteorConfigTestClient = process.env.METEOR_CONFIG_TEST_CLIENT;
+    const customMeteorConfigTestServer = process.env.METEOR_CONFIG_TEST_SERVER;
+    this._config =
+        customMeteorConfigClient != null ||
+        customMeteorConfigServer != null ||
+        customMeteorConfigTest != null ||
+        customMeteorConfigTestClient != null ||
+        customMeteorConfigTestServer != null ? {
+          ...this._config || {},
+          mainModule: {
+            client: process.env.METEOR_CONFIG_CLIENT || this._config.mainModule.client,
+            server: process.env.METEOR_CONFIG_SERVER || this._config.mainModule.server,
+          },
+          ...customMeteorConfigTest && {testModule: customMeteorConfigTest},
+          ...((customMeteorConfigTestClient || customMeteorConfigTestServer) && {
+            testModule: {
+              client: customMeteorConfigTestClient || this._config.testModule.client,
+              server: customMeteorConfigTestServer || this._config.testModule.server,
+            },
+          }),
+        } : this._config;
 
     return this._config;
   }

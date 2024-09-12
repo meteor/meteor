@@ -943,7 +943,7 @@ Returns a handle that can be used by `Meteor.clearInterval`.
 
 ## Enviroment variables {#envs}
 
-teor runs most app code within Fibers, which allows keeping track of the context a function is running in. `Meteor.EnvironmentVariable` works with `Meteor.bindEnvironment`, promises, and many other Meteor API's to preserve the context in async code. Some examples of how it is used in Meteor are to store the current user in methods, and record which arguments have been checked when using `audit-argument-checks`.
+Meteor implements `Meteor.EnvironmentVariable` with AsyncLocalStorage, which allows for maintaining context across asynchronous boundaries. `Meteor.EnvironmentVariable` works with `Meteor.bindEnvironment`, promises, and many other Meteor API's to preserve the context in async code. Some examples of how it is used in Meteor are to store the current user in methods, and record which arguments have been checked when using `audit-argument-checks`.
 
 ```js
 import { Meteor } from "meteor/meteor";

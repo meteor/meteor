@@ -67,7 +67,7 @@ const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props
           <td>{{ showTypes(param.type.names) }}</td>
           <template v-if="param.name === 'options'">
             <td>
-              <span v-html="param.description"></span>
+              <span v-if="param.description" v-html="param.description"></span>
               <button v-if="(props.options?.length || -1) > 0" type="button" @click="toggleOptionsTable">
                 {{ isOptionsTableOpen ? "Close" : "Open" }} options table
                 <Caret :is-open="isOptionsTableOpen" />
@@ -109,6 +109,9 @@ const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props
 <style scoped>
 table {
   text-align: center;
+}
+table td {
+  padding: 6px 12px;
 }
 
 .options-table {
