@@ -5,14 +5,14 @@ Package.describe({
 
 Npm.depends({
   "cookie-parser": "1.4.6",
-  express: "4.18.2",
-  "@types/express": "4.17.15",
+  express: "4.21.0",
+  "@types/express": "4.17.21",
   compression: "1.7.4",
   errorhandler: "1.5.1",
   parseurl: "1.3.3",
-  send: "0.18.0",
+  send: "1.1.0",
   "stream-to-string": "1.2.1",
-  qs: "6.11.2",
+  qs: "6.13.0",
   useragent: "2.3.0",
   "@types/connect": "3.4.38",
 });
