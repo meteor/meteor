@@ -1,3 +1,5 @@
+import throttle from 'lodash.throttle';
+
 var POLLING_THROTTLE_MS = +process.env.METEOR_POLLING_THROTTLE_MS || 50;
 var POLLING_INTERVAL_MS = +process.env.METEOR_POLLING_INTERVAL_MS || 10 * 1000;
 
@@ -31,7 +33,7 @@ PollingObserveDriver = function (options) {
 
   // Make sure to create a separately throttled function for each
   // PollingObserveDriver object.
-  self._ensurePollIsScheduled = _.throttle(
+  self._ensurePollIsScheduled = throttle(
     self._unthrottledEnsurePollIsScheduled,
     self._cursorDescription.options.pollingThrottleMs || POLLING_THROTTLE_MS /* ms */);
 
@@ -77,7 +79,7 @@ _.extend(PollingObserveDriver.prototype, {
             self._cursorDescription.options._pollingInterval || // COMPAT with 1.2
             POLLING_INTERVAL_MS;
       const intervalHandle = Meteor.setInterval(
-        _.bind(self._ensurePollIsScheduled, self), pollingInterval);
+        self._ensurePollIsScheduled.bind(self), pollingInterval);
       self._stopCallbacks.push(function () {
         Meteor.clearInterval(intervalHandle);
       });
@@ -87,10 +89,10 @@ _.extend(PollingObserveDriver.prototype, {
     await this._unthrottledEnsurePollIsScheduled();
 
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
-        "mongo-livedata", "observe-drivers-polling", 1);
-  },
-  // This is always called through _.throttle (except once at startup).
-  _unthrottledEnsurePollIsScheduled: async function () {
+      "mongo-livedata", "observe-drivers-polling", 1);
+},
+// This is always called through _.throttle (except once at startup).
+_unthrottledEnsurePollIsScheduled: async function () {
     var self = this;
     if (self._pollsScheduledButNotStarted > 0)
       return;
@@ -220,9 +222,9 @@ _.extend(PollingObserveDriver.prototype, {
       await c();
     };
 
-    _.each(self._stopCallbacks, stopCallbacksCaller);
+    self._stopCallbacks.forEach(stopCallbacksCaller);
     // Release any write fences that are waiting on us.
-    _.each(self._pendingWrites, async function (w) {
+    self._pendingWrites.forEach(async function (w) {
       await w.committed();
     });
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
