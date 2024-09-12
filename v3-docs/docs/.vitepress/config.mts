@@ -156,6 +156,10 @@ export default defineConfig({
             link: "/about/install",
           },
           // TODO: Your first app meteor app
+          {
+            text: "Cordova",
+            link: "/about/cordova",
+          },
         ],
         collapsed: true,
       },
