@@ -44,6 +44,7 @@ export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
 export PATH=$JAVA_HOME/bin:$PATH
 ```
 
+Run `echo $JAVA_HOME` to check the current Java version. If it's incorrect, manually set the correct path by finding where Java is installed.
 
 #### Android SDK
 
