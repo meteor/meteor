@@ -56,7 +56,7 @@ Ensure `ANDROID_HOME` environment variable is set by adding it to `~/.bashrc` or
 ```sh
 export ANDROID_HOME=$HOME/Library/Android/sdk
 export ANDROID_SDK_ROOT=${ANDROID_HOME}
-export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/emulator
+export PATH=$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/emulator:$PATH
 ```
 
 #### Gradle
@@ -75,7 +75,7 @@ curl -s "https://get.sdkman.io" | bash
 source "$HOME/.sdkman/bin/sdkman-init.sh"
 sdk install gradle 8.7
 
-gradle -version  # Verify installation
+gradle --version  # Verify installation
 ```
 
 ### iOS
