@@ -1,8 +1,8 @@
 import { WebApp, WebAppInternals } from './webapp_server';
 
-const url = require("url");
-const crypto = require("crypto");
-const http = require("http");
+const url = require("node:url");
+const crypto = require("node:crypto");
+const http = require("node:http");
 const streamToString = require("stream-to-string");
 import { isModern } from "meteor/modern-browsers";
 

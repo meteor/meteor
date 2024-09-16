@@ -1,4 +1,4 @@
-import { statSync, unlinkSync, existsSync } from 'fs';
+import { statSync, unlinkSync, existsSync } from 'node:fs';
 
 // Since a new socket file will be created when the HTTP server
 // starts up, if found remove the existing file.

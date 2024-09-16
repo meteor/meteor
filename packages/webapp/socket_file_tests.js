@@ -1,12 +1,12 @@
-import { writeFileSync, unlinkSync, statSync, readFileSync } from 'fs';
-import { createServer } from 'net';
-import { createServer as createServerHttp } from 'http';
+import { writeFileSync, unlinkSync, statSync, readFileSync } from 'node:fs';
+import { createServer } from 'node:net';
+import { createServer as createServerHttp } from 'node:http';
 import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
-import { EventEmitter } from 'events';
-import { tmpdir, userInfo, platform } from 'os';
+import { EventEmitter } from 'node:events';
+import { tmpdir, userInfo, platform } from 'node:os';
 import { main, getGroupInfo } from './webapp_server';
 import express from 'express';
 

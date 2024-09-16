@@ -1,9 +1,9 @@
-import assert from 'assert';
-import { readFileSync, chmodSync, chownSync } from 'fs';
-import { createServer } from 'http';
-import { userInfo } from 'os';
-import { join as pathJoin, dirname as pathDirname } from 'path';
-import { createHash } from 'crypto';
+import assert from 'node:assert';
+import { readFileSync, chmodSync, chownSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { userInfo } from 'node:os';
+import { join as pathJoin, dirname as pathDirname } from 'node:path';
+import { createHash } from 'node:crypto';
 import express from 'express';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
@@ -15,8 +15,8 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
-import cluster from 'cluster';
-import { execSync } from 'child_process';
+import cluster from 'node:cluster';
+import { execSync } from 'node:child_process';
 import { URL } from 'node:url';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
