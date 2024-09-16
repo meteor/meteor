@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import express from 'express';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
-import qs from 'qs';
+// import qs from 'qs';
 import { lookup as lookupUserAgent } from 'useragent';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
@@ -19,8 +19,8 @@ import cluster from 'node:cluster';
 import { execSync } from 'node:child_process';
 import { URL } from 'node:url';
 
-var SHORT_SOCKET_TIMEOUT = 5 * 1000;
-var LONG_SOCKET_TIMEOUT = 120 * 1000;
+const SHORT_SOCKET_TIMEOUT = 5 * 1000;
+const LONG_SOCKET_TIMEOUT = 120 * 1000;
 
 const createExpressApp = () => {
   const app = express();
@@ -29,7 +29,7 @@ const createExpressApp = () => {
   app.set('x-powered-by', false);
   app.set('etag', false);
   return app;
-}
+};
 export const WebApp = {};
 export const WebAppInternals = {};
 
@@ -145,14 +145,14 @@ WebApp.categorizeRequest = function(req) {
   const path =
     typeof req.pathname === 'string'
       ? req.pathname
-      : URL.parse(req).pathname;
+      : new URL(req.url).pathname;
 
   const categorized = {
     browser,
     modern,
     path,
     arch: WebApp.defaultArch,
-    url: URL.parse(req.url),
+    url: new URL(req.url),
     dynamicHead: req.dynamicHead,
     dynamicBody: req.dynamicBody,
     headers: req.headers,
@@ -581,7 +581,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   res,
   next
 ) {
-  var pathname = URL.parse(req).pathname;
+  var pathname = new URL(req.url).pathname;
   try {
     pathname = decodeURIComponent(pathname);
   } catch (e) {
@@ -800,7 +800,7 @@ async function runWebAppServer() {
   var syncQueue = new Meteor._AsynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
-    return decodeURIComponent(URL.parse(itemUrl).pathname);
+    return decodeURIComponent(new URL(itemUrl).pathname);
   };
 
   WebAppInternals.reloadClientPrograms = async function() {
@@ -1077,10 +1077,10 @@ async function runWebAppServer() {
   //
   // Do this before the next middleware destroys req.url if a path prefix
   // is set to close #10111.
-  app.use(function(request, response, next) {
-    request.query = qs.parse(URL.parse(request.url).query);
-    next();
-  });
+  // app.use(function(request, response, next) {
+  //   request.query = qs.parse(new URL(request.url).search);
+  //   next();
+  // });
 
   function getPathParts(path) {
     const parts = path.split('/');
