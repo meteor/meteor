@@ -516,7 +516,7 @@ async function doRunCommand(options) {
           open(`http://localhost:${options.port}`)
         }
       }
-    }, 
+    },
     open: options.open,
   });
 }
@@ -2903,6 +2903,8 @@ main.registerCommand({
     publications: { type: Boolean },
     templatePath : { type: String },
     replaceFn : { type: String },
+    importIntoServerMain: { type: Boolean },
+    serverImportFile: { type: String },
   },
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2920,19 +2922,29 @@ main.registerCommand({
       const arePublications = await ask(`There will be publications [${green`Y`}/${red`n`}]? press enter for ${green`yes`}  `);
       const publications = sanitizeBoolAnswer(arePublications);
       const path = await ask(`Where it will be placed? press enter for ${yellow`./imports/api/`} `);
+      const shouldImportIntoServerMain = await ask(`Should we place the imports into the server main file [${green`Y`}/${red`n`}]? press enter for ${green`yes`}  `)
+      const importIntoServerMain = sanitizeBoolAnswer(shouldImportIntoServerMain)
+      let serverImportFile
+      if (!importIntoServerMain) {
+        serverImportFile = await ask(`Into which file on server should we import? Press enter to not import into any file. `);
+      }
       return {
         isWizard: true,
         scaffoldName,
         path,
         methods,
         publications,
+        importIntoServerMain,
+        serverImportFile
       }
     }
 
     const {
       path,
       methods,
-      publications
+      publications,
+      importIntoServerMain = true,
+      serverImportFile
     } = options;
 
     return {
@@ -2941,6 +2953,8 @@ main.registerCommand({
       path,
       methods,
       publications,
+      importIntoServerMain,
+      serverImportFile
     }
   }
   /**
@@ -2951,7 +2965,9 @@ main.registerCommand({
     scaffoldName,
     path,
     methods,
-    publications
+    publications,
+    importIntoServerMain,
+    serverImportFile
   } = await setup(args[0]);
 
   checkScaffoldName(scaffoldName);
@@ -3107,21 +3123,29 @@ main.registerCommand({
     checkAndRemoveFiles()
   }
 
-  const packageJsonPath = files.pathJoin(appDir, 'package.json');
-  const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
-  const packageJson = JSON.parse(packageJsonFile);
+  if (importIntoServerMain || serverImportFile?.length > 0) {
+    let mainJsPath
+    if (importIntoServerMain) {
+      const packageJsonPath = files.pathJoin(appDir, 'package.json');
+      const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
+      const packageJson = JSON.parse(packageJsonFile);
 
-  const mainJsPath =
-    packageJson?.meteor?.mainModule?.server
-      ? files.pathJoin(appDir, packageJson.meteor.mainModule.server)
-      : files.pathJoin(appDir, 'server', 'main.js');
-  const mainJs = files.readFile(mainJsPath);
-  const mainJsLines = mainJs.toString().split('\n');
-  const importLine = path
-    ? `import '${path}';`
-    : `import '/imports/api/${ scaffoldName }';`
-  const mainJsFile = [importLine, ...mainJsLines].join('\n');
-  files.writeFile(mainJsPath, mainJsFile);
+      mainJsPath =
+        packageJson?.meteor?.mainModule?.server
+          ? files.pathJoin(appDir, packageJson.meteor.mainModule.server)
+          : files.pathJoin(appDir, 'server', 'main.js');
+    } else if (serverImportFile && serverImportFile.length > 0) {
+      mainJsPath = files.pathJoin(appDir, serverImportFile)
+    }
+    // If `mainJsPath` is not found the generate script will error out
+    const mainJs = files.readFile(mainJsPath);
+    const mainJsLines = mainJs.toString().split('\n');
+    const importLine = path
+      ? `import '${path}';`
+      : `import '/imports/api/${ scaffoldName }';`
+    const mainJsFile = [importLine, ...mainJsLines].join('\n');
+    files.writeFile(mainJsPath, mainJsFile);
+  }
 
   Console.info(`Created ${ blue(scaffoldName) } scaffold in ${ yellow(scaffoldPath) }`);
 

@@ -538,6 +538,12 @@ const transformName = (name) => {
   }
 ```
 
+<h3 id="meteorgenerate-template-server-main"> Selecting a file to import on the server</h3>
+
+By default, the script will add an import statement, pointing to index of the generated folder, to the main file on the server.
+
+You can set `--importIntoServerMain` to `false` to prevent this import. Alternatively you can also set `--serverImportFile` to the file where you want to import the generated index.
+
 <h3 id="meteorgenerate-template-faq"> How to bring your own templates? </h3>
 
 `--replaceFn`
@@ -591,7 +597,6 @@ export function transformContents(scaffoldName, contents, fileName) {
   return transformName(scaffoldName, contents);
 }
 ```
-
 
 
 
