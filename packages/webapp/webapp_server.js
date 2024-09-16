@@ -455,7 +455,7 @@ async function getBoilerplateAsync(request, arch) {
   let madeChanges = false;
   let promise = Promise.resolve();
 
-  Object.keys(boilerplateDataCallbacks).forEach(key => {
+  for (const key of Object.keys(boilerplateDataCallbacks)) {
     promise = promise
       .then(() => {
         const callback = boilerplateDataCallbacks[key];
@@ -467,7 +467,7 @@ async function getBoilerplateAsync(request, arch) {
           madeChanges = true;
         }
       });
-  });
+  }
 
   return promise.then(() => ({
     stream: boilerplate.toHTMLStream(data),
@@ -800,7 +800,7 @@ async function runWebAppServer() {
   var syncQueue = new Meteor._AsynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
-    return decodeURIComponent(new URL(itemUrl).pathname);
+    return decodeURIComponent(URL.parse(itemUrl, Meteor.absoluteUrl()).pathname);
   };
 
   WebAppInternals.reloadClientPrograms = async function() {
@@ -812,9 +812,9 @@ async function runWebAppServer() {
         configJson.clientArchs || Object.keys(configJson.clientPaths);
 
       try {
-        clientArchs.forEach(arch => {
+        for (const arch of clientArchs) {
           generateClientProgram(arch, staticFilesByArch);
-        });
+        }
         WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error('Error reloading the client program: ' + e.stack);
@@ -883,7 +883,7 @@ async function runWebAppServer() {
     const staticFiles = (staticFilesByArch[arch] = Object.create(null));
 
     const { manifest } = programJson;
-    manifest.forEach(item => {
+    for (const item of manifest) {
       if (item.url && item.where === 'client') {
         staticFiles[getItemPathname(item.url)] = {
           absolutePath: pathJoin(clientDir, item.path),
@@ -903,7 +903,7 @@ async function runWebAppServer() {
           };
         }
       }
-    });
+    }
 
     const { PUBLIC_SETTINGS } = __meteor_runtime_config__;
     const configOverrides = {
@@ -1020,7 +1020,9 @@ async function runWebAppServer() {
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
     await syncQueue.runTask(function() {
-      Object.keys(WebApp.clientPrograms).forEach(generateBoilerplateForArch);
+      for (const arch of Object.keys(WebApp.clientPrograms)) {
+        generateBoilerplateForArch(arch)
+      }
     });
   };
 
@@ -1405,9 +1407,9 @@ async function runWebAppServer() {
             }
             const callbacks = onListeningCallbacks;
             onListeningCallbacks = null;
-            callbacks?.forEach(callback => {
+            for (const callback of callbacks || []) {
               callback();
-            });
+            }
           },
           e => {
             console.error('Error listening:', e);

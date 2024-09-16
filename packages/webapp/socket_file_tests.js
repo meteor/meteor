@@ -32,7 +32,7 @@ const removeTestSocketFile = () => {
   } catch (error) {
     // Do nothing
   }
-}
+};
 
 Tinytest.add("socket file - don't remove a non-socket file", test => {
   writeFileSync(testSocketFile, "");
@@ -74,7 +74,7 @@ Tinytest.add(
 Tinytest.add('socket file - remove socket file on exit', test => {
   const testEventEmitter = new EventEmitter();
   registerSocketFileCleanup(testSocketFile, testEventEmitter);
-  ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
+  for (const signal of ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM']) {
     writeFileSync(testSocketFile, "");
     test.isNotUndefined(statSync(testSocketFile));
     testEventEmitter.emit(signal);
@@ -82,7 +82,7 @@ Tinytest.add('socket file - remove socket file on exit', test => {
       () => { statSync(testSocketFile); },
       /ENOENT/
     );
-  });
+  }
 });
 
 function prepareServer() {
