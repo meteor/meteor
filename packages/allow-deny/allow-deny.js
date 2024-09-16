@@ -113,14 +113,14 @@ CollectionPrototype._defineMutationMethods = function(options) {
   if (self._connection && (self._connection === Meteor.server || Meteor.isClient)) {
     const m = {};
 
-    [
+    for (const method of [
       'insertAsync',
       'updateAsync',
       'removeAsync',
       'insert',
       'update',
       'remove',
-    ].forEach(method => {
+    ]) {
       const methodName = self._prefix + method;
 
       if (options.useExisting) {
@@ -133,7 +133,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
           self._connection[handlerPropName] &&
           typeof self._connection[handlerPropName][methodName] === 'function'
         )
-          return;
+          continue;
       }
 
       const isInsert = name => name.includes('insert');
@@ -238,7 +238,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
           }
         }
       };
-    });
+    }
 
     self._connection.methods(m);
   }
@@ -378,7 +378,7 @@ CollectionPrototype._validatedUpdateAsync = async function(
   if (mutatorKeys.length === 0) {
     throw new Meteor.Error(403, noReplaceError);
   }
-  mutatorKeys.forEach((op) => {
+  for (const op of mutatorKeys) {
     const params = mutator[op];
     if (op.charAt(0) !== '$') {
       throw new Meteor.Error(403, noReplaceError);
@@ -396,16 +396,16 @@ CollectionPrototype._validatedUpdateAsync = async function(
         modifiedFields[field] = true;
       });
     }
-  });
+  }
 
   const fields = Object.keys(modifiedFields);
 
   const findOptions = {transform: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
-    self._validators.fetch.forEach((fieldName) => {
+    for (const fieldName of self._validators.fetch) {
       findOptions.fields[fieldName] = 1;
-    });
+    }
   }
 
   const doc = await self._collection.findOneAsync(selector, findOptions);
@@ -484,7 +484,7 @@ CollectionPrototype._validatedUpdate = function(
       throw new Meteor.Error(
         403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
     } else {
-      Object.keys(params).forEach((field) => {
+      for (let field of Object.keys(params)) {
         // treat dotted fields as if they are replacing their
         // top-level part
         if (field.indexOf('.') !== -1)
@@ -492,7 +492,7 @@ CollectionPrototype._validatedUpdate = function(
 
         // record the field we are trying to change
         modifiedFields[field] = true;
-      });
+      }
     }
   });
 
@@ -501,9 +501,9 @@ CollectionPrototype._validatedUpdate = function(
   const findOptions = {transform: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
-    self._validators.fetch.forEach((fieldName) => {
+    for (const fieldName of self._validators.fetch) {
       findOptions.fields[fieldName] = 1;
-    });
+    }
   }
 
   const doc = self._collection.findOne(selector, findOptions);
@@ -562,9 +562,9 @@ CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
   const findOptions = {transform: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
-    self._validators.fetch.forEach((fieldName) => {
+    for (const fieldName of self._validators.fetch) {
       findOptions.fields[fieldName] = 1;
-    });
+    }
   }
 
   const doc = await self._collection.findOneAsync(selector, findOptions);
@@ -601,9 +601,9 @@ CollectionPrototype._validatedRemove = function(userId, selector) {
   const findOptions = {transform: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
-    self._validators.fetch.forEach((fieldName) => {
+    for (const fieldName of self._validators.fetch) {
       findOptions.fields[fieldName] = 1;
-    });
+    }
   }
 
   const doc = self._collection.findOne(selector, findOptions);
@@ -650,7 +650,7 @@ CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(n
     returnServerResultPromise: !this._connection._stream._isStub && this.resolverType !== 'stub',
     ...options,
   });
-}
+};
 
 CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args, callback) {
   if (Meteor.isClient && !callback && !alreadyInSimulation()) {
@@ -708,21 +708,21 @@ function docToValidate(validator, doc, generatedId) {
 function addValidator(collection, allowOrDeny, options) {
   // validate keys
   const validKeysRegEx = /^(?:insertAsync|updateAsync|removeAsync|insert|update|remove|fetch|transform)$/;
-  Object.keys(options).forEach((key) => {
+  for (const key of Object.keys(options)) {
     if (!validKeysRegEx.test(key))
       throw new Error(allowOrDeny + ": Invalid key: " + key);
-  });
+  }
 
   collection._restricted = true;
 
-  [
+  for (const name of [
     'insertAsync',
     'updateAsync',
     'removeAsync',
     'insert',
     'update',
     'remove',
-  ].forEach(name => {
+  ]) {
     if (hasOwn.call(options, name)) {
       if (!(options[name] instanceof Function)) {
         throw new Error(
@@ -742,7 +742,7 @@ function addValidator(collection, allowOrDeny, options) {
       }
       collection._validators[name][allowOrDeny].push(options[name]);
     }
-  });
+  }
 
   // Only updateAsync the fetch fields if we're passed things that affect
   // fetching. This way allow({}) and allow({insertAsync: f}) don't result in
