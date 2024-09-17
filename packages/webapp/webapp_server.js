@@ -145,14 +145,14 @@ WebApp.categorizeRequest = function(req) {
   const path =
     typeof req.pathname === 'string'
       ? req.pathname
-      : new URL(req.url).pathname;
+      : new URL(req.url, Meteor.absoluteUrl()).pathname;
 
   const categorized = {
     browser,
     modern,
     path,
     arch: WebApp.defaultArch,
-    url: new URL(req.url),
+    url: new URL(req.url, Meteor.absoluteUrl()),
     dynamicHead: req.dynamicHead,
     dynamicBody: req.dynamicBody,
     headers: req.headers,
@@ -581,7 +581,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   res,
   next
 ) {
-  var pathname = new URL(req.url).pathname;
+  var pathname = new URL(req.url, Meteor.absoluteUrl()).pathname;
   try {
     pathname = decodeURIComponent(pathname);
   } catch (e) {
@@ -1100,7 +1100,7 @@ async function runWebAppServer() {
   // Strip off the path prefix, if it exists.
   app.use(function(request, response, next) {
     const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    const { pathname, search } = new URL(request.url);
+    const { pathname, search } = new URL(request.url, Meteor.absoluteUrl());
 
     // check if the path in the url starts with the path prefix
     if (pathPrefix) {
