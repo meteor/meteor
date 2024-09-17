@@ -10,7 +10,7 @@ import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
 import parseRequest from 'parseurl';
-import { lookup as lookupUserAgent } from 'useragent';
+import { lookup as lookupUserAgent } from 'useragent-ng';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
 import {
@@ -123,7 +123,7 @@ var camelCase = function(name) {
 };
 
 var identifyBrowser = function(userAgentString) {
-  var userAgent = lookupUserAgent(userAgentString);
+  var userAgent = lookupUserAgent(userAgentString.substring(0, 150));
   return {
     name: camelCase(userAgent.family),
     major: +userAgent.major,
