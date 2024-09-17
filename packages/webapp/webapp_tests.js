@@ -1,6 +1,6 @@
 import { WebApp, WebAppInternals } from './webapp_server';
+import { URL } from 'node:url';
 
-const url = require("node:url");
 const crypto = require("node:crypto");
 const http = require("node:http");
 const streamToString = require("stream-to-string");
@@ -11,6 +11,18 @@ WebAppInternals.addStaticJs(additionalScript);
 const hash = crypto.createHash('sha1');
 hash.update(additionalScript);
 const additionalScriptPathname = hash.digest('hex') + ".js";
+
+// Workaround for deprecated URL resolve function
+// https://nodejs.org/docs/latest/api/url.html#urlresolvefrom-to
+function urlResolve(from, to) {
+  const resolvedUrl = new URL(to, new URL(from, 'resolve://'));
+  if (resolvedUrl.protocol === 'resolve:') {
+    // `from` is a relative URL.
+    const { pathname, search, hash } = resolvedUrl;
+    return pathname + search + hash;
+  }
+  return resolvedUrl.toString();
+}
 
 // Mock the 'res' object that gets passed to connect handlers. This mock
 // just records any utf8 data written to the response and returns it
@@ -69,10 +81,10 @@ Tinytest.addAsync("webapp - content-type header", async function (test) {
       return staticFiles[url].type === "js";
     }
   );
-  let resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), cssResource));
+  let resp = await asyncGet(urlResolve(Meteor.absoluteUrl(), cssResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "text/css; charset=utf-8");
-  resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), jsResource));
+  resp = await asyncGet(urlResolve(Meteor.absoluteUrl(), jsResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "application/javascript; charset=utf-8");
 });
@@ -104,7 +116,7 @@ Tinytest.addAsync("webapp - modern/legacy static files", test => {
         continue;
       }
 
-      const absUrl = url.resolve(Meteor.absoluteUrl(), path);
+      const absUrl = urlResolve(Meteor.absoluteUrl(), path);
 
       for (const ua of [ // Try to request the modern/legacy assets with both modern and
         // legacy User Agent strings. (#9953)

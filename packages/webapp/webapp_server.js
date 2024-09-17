@@ -800,7 +800,7 @@ async function runWebAppServer() {
   var syncQueue = new Meteor._AsynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
-    return decodeURIComponent(URL.parse(itemUrl, Meteor.absoluteUrl()).pathname);
+    return decodeURIComponent(new URL(itemUrl, Meteor.absoluteUrl()).pathname);
   };
 
   WebAppInternals.reloadClientPrograms = async function() {
