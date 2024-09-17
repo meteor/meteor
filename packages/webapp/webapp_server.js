@@ -1021,7 +1021,7 @@ async function runWebAppServer() {
     // Meteor server accepting DDP connections and not the device's file server.
     await syncQueue.runTask(function() {
       for (const arch of Object.keys(WebApp.clientPrograms)) {
-        generateBoilerplateForArch(arch)
+        generateBoilerplateForArch(arch);
       }
     });
   };
@@ -1049,11 +1049,11 @@ async function runWebAppServer() {
   await WebAppInternals.reloadClientPrograms();
 
   // webserver
-  var app = createExpressApp()
+  var app = createExpressApp();
 
   // Packages and apps can add handlers that run before any other Meteor
   // handlers via WebApp.rawExpressHandlers.
-  var rawExpressHandlers = createExpressApp()
+  var rawExpressHandlers = createExpressApp();
   app.use(rawExpressHandlers);
 
   // Auto-compress any json, javascript, or text.
@@ -1220,7 +1220,7 @@ async function runWebAppServer() {
       };
 
       if (shuttingDown) {
-        headers['Connection'] = 'Close';
+        headers.Connection = 'Close';
       }
 
       var request = WebApp.categorizeRequest(req);
