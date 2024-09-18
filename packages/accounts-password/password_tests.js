@@ -1309,7 +1309,7 @@ if (Meteor.isServer) (() => {
               password: hashPassword("new-password")
             }
           ),
-        /Incorrect password/);
+        /Something went wrong. Please check your credentials./);
     });
 
   Tinytest.addAsync(
@@ -1388,7 +1388,7 @@ if (Meteor.isServer) (() => {
             password: hashPassword("new-password")
           }
         ),
-        /Incorrect password/);
+        /Something went wrong. Please check your credentials./);
     });
 
   Tinytest.addAsync('forgotPassword - different error messages returned depending' +
