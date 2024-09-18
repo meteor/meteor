@@ -6,6 +6,15 @@ In v3, we decided to rename a few functions to make their API more consistent.
   - `Assets.getText`
   - `Assets.getBinary`
 
+::: tip
+
+You can automatically adopt the new functions by running the [following codemod](https://go.codemod.com/meteor-renamed-functions):
+
+```bash
+npx codemod@latest meteor/v3/renamed-functions
+```
+
+:::
 
 ## Accounts.setPassword
 

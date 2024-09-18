@@ -7,10 +7,21 @@ Here is the list of removed functions:
   - `Fibers`
   - `Meteor.wrapAsync`
 
-
 ::: tip
 
 These functions were only available in the server-side.
+
+:::
+
+::: tip
+
+You can automatically remove the deprecated functions by running the [following codemod](https://go.codemod.com/meteor-removed-functions):
+
+```bash
+npx codemod@latest meteor/v3/removed-functions
+```
+
+Note that this codemod removes `Promise.await` and `Meteor.wrapAsync` functions. For info on `Fibers`, use the codemod mentioned [here](#fibers).
 
 :::
 
@@ -35,8 +46,6 @@ async function someFunction() {
 }
 
 ```
-
-
 
 ## Fibers
 
@@ -74,6 +83,16 @@ async function someFunction() {
 }
 
 ```
+
+::: tip
+
+You can automatically replace `Fibers` with `async/await` by running the [following codemod](https://go.codemod.com/meteor-fibers-async):
+
+```bash
+npx codemod@latest meteor/v3/fibers-to-async-promises
+```
+
+:::
 
 ## Meteor.wrapAsync
 
