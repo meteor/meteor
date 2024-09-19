@@ -1179,7 +1179,7 @@ certificates configurations.
 ### Mongo Oplog Options {#mongo-oplog-options}
 
 > Oplog options were introduced in Meteor 2.15.1
-If you set the [`MONGO_OPLOG_URL`](https://docs.meteor.com/environment-variables.html#MONGO-OPLOG-URL) env var, Meteor will use MongoDB's Oplog to show efficient, real time updates to your users via your subscriptions.
+If you set the [`MONGO_OPLOG_URL`](/cli/environment-variables.html#mongo-oplog-url) env var, Meteor will use MongoDB's Oplog to show efficient, real time updates to your users via your subscriptions.
 
 Due to how Meteor's Oplog implementation is built behind the scenes, if you have certain collections where you expect **big amounts of write operations**, this might lead to **big CPU spikes on your meteor app server, even if you have no publications/subscriptions on any data/documents of these collections**. For more information on this, please have a look into [this blog post from 2016](https://blog.meteor.com/tuning-meteor-mongo-livedata-for-scalability-13fe9deb8908), [this github discussion from 2022](https://github.com/meteor/meteor/discussions/11842) or [this meteor forums post from 2023](https://forums.meteor.com/t/cpu-spikes-due-to-oplog-updates-without-subscriptions/60028).
 
