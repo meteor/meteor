@@ -314,7 +314,7 @@ import '../imports/api/tasksPublications';
 ```
 :::
 
-> If you want to learn more about how publications works, you can read the [Meteor Guide](https://docs.meteor.com/api/pubsub.html).
+> If you want to learn more about how publications works, you can read [here](/api/meteor.html#pubsub).
 
 Now, your app should look like this:
 
