@@ -387,7 +387,6 @@ export default defineConfig({
       {
         text: "Tutorials",
         items: [
-          { link: "/tutorials/", text: "Tutorials" },
           {
             text: "Meteor.js 3 + React",
             link: "/tutorials/react/index",
