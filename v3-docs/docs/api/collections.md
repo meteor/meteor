@@ -1175,6 +1175,11 @@ option:
 You can pass any MongoDB valid option, these are just examples using
 certificates configurations.
 
+If you're using a certificate and having authentication errors when trying to connect to a database other than `admin`, make sure to provide the flags `&ssl=true&authSource=admin`. You MONGO_URL string should look like this:
+
+```
+mongodb://<username>:<password>@[server-1],[server-2],[server-3]/my-database?replicaSet=my-replica&ssl=true&authSource=admin
+```
 
 ### Mongo Oplog Options {#mongo-oplog-options}
 
