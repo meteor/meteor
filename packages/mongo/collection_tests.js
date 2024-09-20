@@ -191,12 +191,12 @@ Tinytest.add('collection - calling find with a valid readPreference',
       // as the cursor options are now private
       // You can check on abstract_cursor.ts the exposed public getters
       test.equal(
-        defaultCursor._synchronousCursor._dbCursor.readPreference
+        defaultCursor._asynchronousCursor._dbCursor.readPreference
           .mode,
         defaultReadPreference
       );
       test.equal(
-        customCursor._synchronousCursor._dbCursor.readPreference.mode,
+        customCursor._asynchronousCursor._dbCursor.readPreference.mode,
         customReadPreference
       );
     }
@@ -214,7 +214,7 @@ Tinytest.addAsync('collection - calling find with an invalid readPreference',
       );
 
       await test.throwsAsync(async function() {
-        // Trigger the creation of _synchronousCursor
+        // Trigger the creation of _asynchronousCursor
         await cursor.countAsync();
       }, `Invalid read preference mode "${invalidReadPreference}"`);
     }

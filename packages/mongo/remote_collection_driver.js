@@ -1,6 +1,6 @@
 import once from 'lodash.once';
 import {
-  ASYNC_COLLECTION_METHODS,
+  COLLECTION_METHODS,
   getAsyncMethodName,
   CLIENT_ONLY_METHODS
 } from "meteor/minimongo/constants";
@@ -35,7 +35,7 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
     REMOTE_COLLECTION_METHODS.forEach(function (m) {
       ret[m] = self.mongo[m].bind(self.mongo, name);
 
-      if (!ASYNC_COLLECTION_METHODS.includes(m)) return;
+      if (!COLLECTION_METHODS.includes(m)) return;
       const asyncMethodName = getAsyncMethodName(m);
       ret[asyncMethodName] = function (...args) {
         try {

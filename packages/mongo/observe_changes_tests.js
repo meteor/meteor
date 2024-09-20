@@ -469,7 +469,7 @@ const getPromiseAndResolver = () => {
 
 if (Meteor.isServer) {
   testAsyncMulti("observeChanges - tailable", [
-    async function (test, expect) {
+    async function (test) {
       var self = this;
       var collName = 'cap_' + Random.id();
       var coll = new Mongo.Collection(collName);
