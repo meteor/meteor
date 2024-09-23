@@ -155,7 +155,10 @@ export default defineConfig({
             text: "Install Meteor",
             link: "/about/install",
           },
-          // TODO: Your first app meteor app
+          {
+            text: "Web Apps",
+            link: "/about/web-apps",
+          },
           {
             text: "Cordova",
             link: "/about/cordova",

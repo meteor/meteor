@@ -1,4 +1,4 @@
-# Building with Meteor.js 3, Vue 3 and `vue-meteor-tracker`
+# Meteor.js 3 + Vue 3 and `vue-meteor-tracker`
 
 In this tutorial, we will create a simple To-Do app using [Vue 3](https://vuejs.org/) and Meteor 3.0. Meteor works well with other frameworks like [Blaze](https://www.blazejs.org/), [React](https://react.dev/), [Solid](https://www.solidjs.com/), and [Svelte](https://svelte.dev/).
 
