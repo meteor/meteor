@@ -2,7 +2,7 @@ Facebook = {};
 import crypto from 'crypto';
 import { Accounts } from 'meteor/accounts-base';
 
-const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '13.0';
+const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '17.0';
 
 Facebook.handleAuthFromAccessToken = async (accessToken, expiresAt) => {
   // include basic fields from facebook
@@ -73,7 +73,7 @@ function getAbsoluteUrlOptions(query) {
  * @returns {Promise<UserAccessToken>} - Promise with an Object containing the accessToken and expiresIn (lifetime of token in seconds)
  */
 const getTokenResponse = async (query) => {
-  const config = ServiceConfiguration.configurations.findOne({
+  const config = await ServiceConfiguration.configurations.findOneAsync({
     service: 'facebook',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
@@ -96,6 +96,7 @@ const getTokenResponse = async (query) => {
     .then((res) => res.json())
     .then(data => {
       const fbAccessToken = data.access_token;
+      console.log("-> fbAccessToken", fbAccessToken);
       const fbExpires = data.expires_in;
       if (!fbAccessToken) {
         throw new Error("Failed to complete OAuth handshake with facebook " +
@@ -117,7 +118,7 @@ const getTokenResponse = async (query) => {
 };
 
 const getIdentity = async (accessToken, fields) => {
-  const config = ServiceConfiguration.configurations.findOne({
+  const config = await ServiceConfiguration.configurations.findOneAsync({
     service: 'facebook',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
@@ -145,4 +146,3 @@ const getIdentity = async (accessToken, fields) => {
 
 Facebook.retrieveCredential = (credentialToken, credentialSecret) =>
   OAuth.retrieveCredential(credentialToken, credentialSecret);
-

@@ -83,6 +83,15 @@ export namespace Mongo {
         defineMutationMethods?: boolean | undefined;
       }
     ): Collection<T, U>;
+
+    /**
+     * Retrieve a previously defined Mongo.Collection instance by its name. The collection must already have been defined with `new Mongo.Collection(name, ...)`.
+     * Plain MongoDB collections are not available by this method.
+     * @param name The name of the collection instance.
+     */
+    getCollection<
+        TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
+    >(name: string): TCollection;
   }
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T> = undefined>(options: {
@@ -107,6 +116,11 @@ export namespace Mongo {
       byteSize?: number,
       maxDocuments?: number
     ): Promise<void>;
+
+    /**
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see createIndexAsync
+     */
     createIndex(
       indexSpec: NpmModuleMongodb.IndexSpecification,
       options?: NpmModuleMongodb.CreateIndexesOptions
@@ -150,11 +164,15 @@ export namespace Mongo {
     ): Cursor<T, DispatchTransform<O['transform'], T, U>>;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see findOneAsync
      * @param selector A query describing the documents to find
      */
     findOne(selector?: Selector<T> | ObjectID | string): U | undefined;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see findOneAsync
      * @param selector A query describing the documents to find
      */
     findOne<O extends Omit<Options<T>, 'limit'>>(
@@ -189,6 +207,8 @@ export namespace Mongo {
     estimatedDocumentCount(options?: NpmModuleMongodb.EstimatedDocumentCountOptions): Promise<number>;
     /**
      * Insert a document in the collection.  Returns its unique _id.
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see insertAsync
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
@@ -211,6 +231,8 @@ export namespace Mongo {
     rawDatabase(): NpmModuleMongodb.Db;
     /**
      * Remove documents from the collection
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see removeAsync
      * @param selector Specifies which documents to remove
      * @param callback If present, called with an error object as its argument.
      */
@@ -229,6 +251,8 @@ export namespace Mongo {
     ): Promise<number>;
     /**
      * Modify one or more documents in the collection. Returns the number of matched documents.
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see updateAsync
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
      * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
@@ -274,6 +298,8 @@ export namespace Mongo {
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
      * `insertedId` (the unique _id of the document that was inserted, if any).
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see upsertAsync
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
      * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
@@ -316,6 +342,10 @@ export namespace Mongo {
       options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     _dropCollection(): Promise<void>;
+    /**
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see dropIndexAsync
+     */
     _dropIndex(indexName: string): void;
   }
 
@@ -410,6 +440,11 @@ export namespace Mongo {
      */
     observe(callbacks: ObserveCallbacks<U>): Meteor.LiveQueryHandle;
     /**
+     * Watch a query. Receive callbacks as the result set changes.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     */
+    observeAsync(callbacks: ObserveCallbacks<U>): Promise<Meteor.LiveQueryHandle>;
+    /**
      * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
      * @param callbacks Functions to call to deliver the result set as it changes
      */
@@ -419,6 +454,15 @@ export namespace Mongo {
     ): Meteor.LiveQueryHandle;
     [Symbol.iterator](): Iterator<T>;
     [Symbol.asyncIterator](): AsyncIterator<T>;
+    /**
+     * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     * @param options { nonMutatingCallbacks: boolean }
+     */
+    observeChangesAsync(
+      callbacks: ObserveChangesCallbacks<T>,
+      options?: { nonMutatingCallbacks?: boolean | undefined }
+    ): Promise<Meteor.LiveQueryHandle>;
   }
 
   var ObjectID: ObjectIDStatic;

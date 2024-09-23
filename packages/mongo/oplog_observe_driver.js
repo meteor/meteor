@@ -1,6 +1,7 @@
+import has from 'lodash.has';
+import isEmpty from 'lodash.isempty';
 import { oplogV2V1Converter } from "./oplog_v2_converter";
-
-var Future = Npm.require('fibers/future');
+import { check, Match } from 'meteor/check';
 
 var PHASE = {
   QUERYING: "QUERYING",
@@ -30,7 +31,7 @@ var currentId = 0;
 // callbacks (and a ready() invocation) to the ObserveMultiplexer, and you stop
 // it by calling the stop() method.
 OplogObserveDriver = function (options) {
-  var self = this;
+  const self = this;
   self._usesOplog = true;  // tests look at this
 
   self._id = currentId;
@@ -44,10 +45,10 @@ OplogObserveDriver = function (options) {
     throw Error("OplogObserveDriver only supports unordered observeChanges");
   }
 
-  var sorter = options.sorter;
+  const sorter = options.sorter;
   // We don't support $near and other geo-queries so it's OK to initialize the
   // comparator only once in the constructor.
-  var comparator = sorter && sorter.getComparator();
+  const comparator = sorter && sorter.getComparator();
 
   if (options.cursorDescription.options.limit) {
     // There are several properties ordered driver implements:
@@ -59,7 +60,7 @@ OplogObserveDriver = function (options) {
     //                      into published set.
     // - _published - Max Heap (also implements IdMap methods)
 
-    var heapOptions = { IdMap: LocalCollection._IdMap };
+    const heapOptions = { IdMap: LocalCollection._IdMap };
     self._limit = self._cursorDescription.options.limit;
     self._comparator = comparator;
     self._sorter = sorter;
@@ -81,6 +82,12 @@ OplogObserveDriver = function (options) {
 
   self._stopped = false;
   self._stopHandles = [];
+  self._addStopHandles = function (newStopHandles) {
+    const expectedPattern = Match.ObjectIncluding({ stop: Function });
+    // Single item or array
+    check(newStopHandles, Match.OneOf([expectedPattern], expectedPattern));
+    self._stopHandles.push(newStopHandles);
+  }
 
   Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "mongo-livedata", "observe-drivers-oplog", 1);
@@ -90,7 +97,7 @@ OplogObserveDriver = function (options) {
   self._matcher = options.matcher;
   // we are now using projection, not fields in the cursor description even if you pass {fields}
   // in the cursor construction
-  var projection = self._cursorDescription.options.fields || self._cursorDescription.options.projection || {};
+  const projection = self._cursorDescription.options.fields || self._cursorDescription.options.projection || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection
@@ -107,100 +114,102 @@ OplogObserveDriver = function (options) {
   self._requeryWhenDoneThisQuery = false;
   self._writesToCommitWhenWeReachSteady = [];
 
-  // If the oplog handle tells us that it skipped some entries (because it got
-  // behind, say), re-poll.
-  self._stopHandles.push(self._mongoHandle._oplogHandle.onSkippedEntries(
-    finishIfNeedToPollQuery(function () {
-      self._needToPollQuery();
-    })
-  ));
 
-  forEachTrigger(self._cursorDescription, function (trigger) {
-    self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
-      trigger, function (notification) {
-        Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
-          var op = notification.op;
-          if (notification.dropCollection || notification.dropDatabase) {
-            // Note: this call is not allowed to block on anything (especially
-            // on waiting for oplog entries to catch up) because that will block
-            // onOplogEntry!
-            self._needToPollQuery();
-          } else {
-            // All other operators should be handled depending on phase
-            if (self._phase === PHASE.QUERYING) {
-              self._handleOplogEntryQuerying(op);
-            } else {
-              self._handleOplogEntrySteadyOrFetching(op);
-            }
-          }
-        }));
-      }
-    ));
-  });
 
-  // XXX ordering w.r.t. everything else?
-  self._stopHandles.push(listenAll(
-    self._cursorDescription, function (notification) {
-      // If we're not in a pre-fire write fence, we don't have to do anything.
-      var fence = DDPServer._CurrentWriteFence.get();
-      if (!fence || fence.fired)
-        return;
-
-      if (fence._oplogObserveDrivers) {
-        fence._oplogObserveDrivers[self._id] = self;
-        return;
-      }
-
-      fence._oplogObserveDrivers = {};
-      fence._oplogObserveDrivers[self._id] = self;
-
-      fence.onBeforeFire(function () {
-        var drivers = fence._oplogObserveDrivers;
-        delete fence._oplogObserveDrivers;
-
-        // This fence cannot fire until we've caught up to "this point" in the
-        // oplog, and all observers made it back to the steady state.
-        self._mongoHandle._oplogHandle.waitUntilCaughtUp();
-
-        _.each(drivers, function (driver) {
-          if (driver._stopped)
-            return;
-
-          var write = fence.beginWrite();
-          if (driver._phase === PHASE.STEADY) {
-            // Make sure that all of the callbacks have made it through the
-            // multiplexer and been delivered to ObserveHandles before committing
-            // writes.
-            driver._multiplexer.onFlush(function () {
-              write.committed();
-            });
-          } else {
-            driver._writesToCommitWhenWeReachSteady.push(write);
-          }
-        });
-      });
-    }
-  ));
-
-  // When Mongo fails over, we need to repoll the query, in case we processed an
-  // oplog entry that got rolled back.
-  self._stopHandles.push(self._mongoHandle._onFailover(finishIfNeedToPollQuery(
-    function () {
-      self._needToPollQuery();
-    })));
-
-  // Give _observeChanges a chance to add the new ObserveHandle to our
-  // multiplexer, so that the added calls get streamed.
-  Meteor.defer(finishIfNeedToPollQuery(function () {
-    self._runInitialQuery();
-  }));
-};
+ };
 
 _.extend(OplogObserveDriver.prototype, {
+  _init: async function() {
+    const self = this;
+
+    // If the oplog handle tells us that it skipped some entries (because it got
+    // behind, say), re-poll.
+    self._addStopHandles(self._mongoHandle._oplogHandle.onSkippedEntries(
+      finishIfNeedToPollQuery(function () {
+        return self._needToPollQuery();
+      })
+    ));
+    
+    await forEachTrigger(self._cursorDescription, async function (trigger) {
+      self._addStopHandles(await self._mongoHandle._oplogHandle.onOplogEntry(
+        trigger, function (notification) {
+          finishIfNeedToPollQuery(function () {
+            const op = notification.op;
+            if (notification.dropCollection || notification.dropDatabase) {
+              // Note: this call is not allowed to block on anything (especially
+              // on waiting for oplog entries to catch up) because that will block
+              // onOplogEntry!
+              return self._needToPollQuery();
+            } else {
+              // All other operators should be handled depending on phase
+              if (self._phase === PHASE.QUERYING) {
+                return self._handleOplogEntryQuerying(op);
+              } else {
+                return self._handleOplogEntrySteadyOrFetching(op);
+              }
+            }
+          })();
+        }
+      ));
+    });
+  
+    // XXX ordering w.r.t. everything else?
+    self._addStopHandles(await listenAll(
+      self._cursorDescription, function () {
+        // If we're not in a pre-fire write fence, we don't have to do anything.
+        const fence = DDPServer._getCurrentFence();
+        if (!fence || fence.fired)
+          return;
+  
+        if (fence._oplogObserveDrivers) {
+          fence._oplogObserveDrivers[self._id] = self;
+          return;
+        }
+  
+        fence._oplogObserveDrivers = {};
+        fence._oplogObserveDrivers[self._id] = self;
+  
+        fence.onBeforeFire(async function () {
+          const drivers = fence._oplogObserveDrivers;
+          delete fence._oplogObserveDrivers;
+  
+          // This fence cannot fire until we've caught up to "this point" in the
+          // oplog, and all observers made it back to the steady state.
+          await self._mongoHandle._oplogHandle.waitUntilCaughtUp();
+  
+          for (const driver of Object.values(drivers)) {
+            if (driver._stopped)
+              continue;
+  
+            const write = await fence.beginWrite();
+            if (driver._phase === PHASE.STEADY) {
+              // Make sure that all of the callbacks have made it through the
+              // multiplexer and been delivered to ObserveHandles before committing
+              // writes.
+              await driver._multiplexer.onFlush(write.committed);
+            } else {
+              driver._writesToCommitWhenWeReachSteady.push(write);
+            }
+          }
+        });
+      }
+    ));
+  
+    // When Mongo fails over, we need to repoll the query, in case we processed an
+    // oplog entry that got rolled back.
+    self._addStopHandles(self._mongoHandle._onFailover(finishIfNeedToPollQuery(
+      function () {
+        return self._needToPollQuery();
+      })));
+  
+    // Give _observeChanges a chance to add the new ObserveHandle to our
+    // multiplexer, so that the added calls get streamed.
+    return self._runInitialQuery();
+  },
   _addPublished: function (id, doc) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
-      var fields = _.clone(doc);
+      var fields = Object.assign({}, doc);
       delete fields._id;
       self._published.set(id, self._sharedProjectionFn(doc));
       self._multiplexer.added(id, self._projectionFn(fields));
@@ -289,7 +298,7 @@ _.extend(OplogObserveDriver.prototype, {
       var projectedOld = self._projectionFn(oldDoc);
       var changed = DiffSequence.makeChangedFields(
         projectedNew, projectedOld);
-      if (!_.isEmpty(changed))
+      if (!isEmpty(changed))
         self._multiplexer.changed(id, changed);
     });
   },
@@ -484,88 +493,103 @@ _.extend(OplogObserveDriver.prototype, {
   },
   _fetchModifiedDocuments: function () {
     var self = this;
-    Meteor._noYieldsAllowed(function () {
-      self._registerPhaseChange(PHASE.FETCHING);
-      // Defer, because nothing called from the oplog entry handler may yield,
-      // but fetch() yields.
-      Meteor.defer(finishIfNeedToPollQuery(function () {
-        while (!self._stopped && !self._needToFetch.empty()) {
-          if (self._phase === PHASE.QUERYING) {
-            // While fetching, we decided to go into QUERYING mode, and then we
-            // saw another oplog entry, so _needToFetch is not empty. But we
-            // shouldn't fetch these documents until AFTER the query is done.
-            break;
-          }
-
-          // Being in steady phase here would be surprising.
-          if (self._phase !== PHASE.FETCHING)
-            throw new Error("phase in fetchModifiedDocuments: " + self._phase);
-
-          self._currentlyFetching = self._needToFetch;
-          var thisGeneration = ++self._fetchGeneration;
-          self._needToFetch = new LocalCollection._IdMap;
-          var waiting = 0;
-          var fut = new Future;
-          // This loop is safe, because _currentlyFetching will not be updated
-          // during this loop (in fact, it is never mutated).
-          self._currentlyFetching.forEach(function (op, id) {
-            waiting++;
-            self._mongoHandle._docFetcher.fetch(
-              self._cursorDescription.collectionName, id, op,
-              finishIfNeedToPollQuery(function (err, doc) {
-                try {
-                  if (err) {
-                    Meteor._debug("Got exception while fetching documents",
-                                  err);
-                    // If we get an error from the fetcher (eg, trouble
-                    // connecting to Mongo), let's just abandon the fetch phase
-                    // altogether and fall back to polling. It's not like we're
-                    // getting live updates anyway.
-                    if (self._phase !== PHASE.QUERYING) {
-                      self._needToPollQuery();
-                    }
-                  } else if (!self._stopped && self._phase === PHASE.FETCHING
-                             && self._fetchGeneration === thisGeneration) {
-                    // We re-check the generation in case we've had an explicit
-                    // _pollQuery call (eg, in another fiber) which should
-                    // effectively cancel this round of fetches.  (_pollQuery
-                    // increments the generation.)
-                    self._handleDoc(id, doc);
-                  }
-                } finally {
-                  waiting--;
-                  // Because fetch() never calls its callback synchronously,
-                  // this is safe (ie, we won't call fut.return() before the
-                  // forEach is done).
-                  if (waiting === 0)
-                    fut.return();
-                }
-              }));
-          });
-          fut.wait();
-          // Exit now if we've had a _pollQuery call (here or in another fiber).
-          if (self._phase === PHASE.QUERYING)
-            return;
-          self._currentlyFetching = null;
+    self._registerPhaseChange(PHASE.FETCHING);
+    // Defer, because nothing called from the oplog entry handler may yield,
+    // but fetch() yields.
+    Meteor.defer(finishIfNeedToPollQuery(async function () {
+      while (!self._stopped && !self._needToFetch.empty()) {
+        if (self._phase === PHASE.QUERYING) {
+          // While fetching, we decided to go into QUERYING mode, and then we
+          // saw another oplog entry, so _needToFetch is not empty. But we
+          // shouldn't fetch these documents until AFTER the query is done.
+          break;
         }
-        // We're done fetching, so we can be steady, unless we've had a
-        // _pollQuery call (here or in another fiber).
-        if (self._phase !== PHASE.QUERYING)
-          self._beSteady();
-      }));
-    });
-  },
-  _beSteady: function () {
-    var self = this;
-    Meteor._noYieldsAllowed(function () {
-      self._registerPhaseChange(PHASE.STEADY);
-      var writes = self._writesToCommitWhenWeReachSteady;
-      self._writesToCommitWhenWeReachSteady = [];
-      self._multiplexer.onFlush(function () {
-        _.each(writes, function (w) {
-          w.committed();
+
+        // Being in steady phase here would be surprising.
+        if (self._phase !== PHASE.FETCHING)
+          throw new Error("phase in fetchModifiedDocuments: " + self._phase);
+
+        self._currentlyFetching = self._needToFetch;
+        var thisGeneration = ++self._fetchGeneration;
+        self._needToFetch = new LocalCollection._IdMap;
+        var waiting = 0;
+
+        let promiseResolver = null;
+        const awaitablePromise = new Promise(r => promiseResolver = r);
+        // This loop is safe, because _currentlyFetching will not be updated
+        // during this loop (in fact, it is never mutated).
+        await self._currentlyFetching.forEachAsync(async function (op, id) {
+          waiting++;
+          await self._mongoHandle._docFetcher.fetch(
+            self._cursorDescription.collectionName,
+            id,
+            op,
+            finishIfNeedToPollQuery(function(err, doc) {
+              if (err) {
+                Meteor._debug('Got exception while fetching documents', err);
+                // If we get an error from the fetcher (eg, trouble
+                // connecting to Mongo), let's just abandon the fetch phase
+                // altogether and fall back to polling. It's not like we're
+                // getting live updates anyway.
+                if (self._phase !== PHASE.QUERYING) {
+                  self._needToPollQuery();
+                }
+                waiting--;
+                // Because fetch() never calls its callback synchronously,
+                // this is safe (ie, we won't call fut.return() before the
+                // forEach is done).
+                if (waiting === 0) promiseResolver();
+                return;
+              }
+
+              try {
+                if (
+                  !self._stopped &&
+                  self._phase === PHASE.FETCHING &&
+                  self._fetchGeneration === thisGeneration
+                ) {
+                  // We re-check the generation in case we've had an explicit
+                  // _pollQuery call (eg, in another fiber) which should
+                  // effectively cancel this round of fetches.  (_pollQuery
+                  // increments the generation.)
+
+                  self._handleDoc(id, doc);
+                }
+              } finally {
+                waiting--;
+                // Because fetch() never calls its callback synchronously,
+                // this is safe (ie, we won't call fut.return() before the
+                // forEach is done).
+                if (waiting === 0) promiseResolver();
+              }
+            })
+          );
         });
-      });
+        await awaitablePromise;
+        // Exit now if we've had a _pollQuery call (here or in another fiber).
+        if (self._phase === PHASE.QUERYING)
+          return;
+        self._currentlyFetching = null;
+      }
+      // We're done fetching, so we can be steady, unless we've had a
+      // _pollQuery call (here or in another fiber).
+      if (self._phase !== PHASE.QUERYING)
+        await self._beSteady();
+    }));
+  },
+  _beSteady: async function () {
+    var self = this;
+    self._registerPhaseChange(PHASE.STEADY);
+    var writes = self._writesToCommitWhenWeReachSteady || [];
+    self._writesToCommitWhenWeReachSteady = [];
+    await self._multiplexer.onFlush(async function () {
+      try {
+        for (const w of writes) {
+          await w.committed();
+        }
+      } catch (e) {
+        console.error("_beSteady error", {writes}, e);
+      }
     });
   },
   _handleOplogEntryQuerying: function (op) {
@@ -580,6 +604,7 @@ _.extend(OplogObserveDriver.prototype, {
       var id = idForOp(op);
       // If we're already fetching this one, or about to, we can't optimize;
       // make sure that we fetch it again if necessary.
+
       if (self._phase === PHASE.FETCHING &&
           ((self._currentlyFetching && self._currentlyFetching.has(id)) ||
            self._needToFetch.has(id))) {
@@ -611,7 +636,7 @@ _.extend(OplogObserveDriver.prototype, {
         // selector)?
         // oplog format has changed on mongodb 5, we have to support both now
         // diff is the format in Mongo 5+ (oplog v2)
-        var isReplace = !_.has(op.o, '$set') && !_.has(op.o, 'diff') && !_.has(op.o, '$unset');
+        var isReplace = !has(op.o, '$set') && !has(op.o, 'diff') && !has(op.o, '$unset');
         // If this modifier modifies something inside an EJSON custom type (ie,
         // anything with EJSON$), then we can't try to use
         // LocalCollection._modify, since that just mutates the EJSON encoding,
@@ -623,7 +648,7 @@ _.extend(OplogObserveDriver.prototype, {
         var bufferedBefore = self._limit && self._unpublishedBuffer.has(id);
 
         if (isReplace) {
-          self._handleDoc(id, _.extend({_id: id}, op.o));
+          self._handleDoc(id, Object.assign({_id: id}, op.o));
         } else if ((publishedBefore || bufferedBefore) &&
                    canDirectlyModifyDoc) {
           // Oh great, we actually know what the document is, so we can apply
@@ -658,22 +683,27 @@ _.extend(OplogObserveDriver.prototype, {
       }
     });
   },
-  // Yields!
-  _runInitialQuery: function () {
+
+  async _runInitialQueryAsync() {
     var self = this;
     if (self._stopped)
       throw new Error("oplog stopped surprisingly early");
 
-    self._runQuery({initial: true});  // yields
+    await self._runQuery({initial: true});  // yields
 
     if (self._stopped)
       return;  // can happen on queryError
 
     // Allow observeChanges calls to return. (After this, it's possible for
     // stop() to be called.)
-    self._multiplexer.ready();
+    await self._multiplexer.ready();
 
-    self._doneQuerying();  // yields
+    await self._doneQuerying();  // yields
+  },
+
+  // Yields!
+  _runInitialQuery: function () {
+    return this._runInitialQueryAsync();
   },
 
   // In various circumstances, we may just want to stop processing the oplog and
@@ -704,15 +734,15 @@ _.extend(OplogObserveDriver.prototype, {
 
       // Defer so that we don't yield.  We don't need finishIfNeedToPollQuery
       // here because SwitchedToQuery is not thrown in QUERYING mode.
-      Meteor.defer(function () {
-        self._runQuery();
-        self._doneQuerying();
+      Meteor.defer(async function () {
+        await self._runQuery();
+        await self._doneQuerying();
       });
     });
   },
 
   // Yields!
-  _runQuery: function (options) {
+  async _runQueryAsync(options) {
     var self = this;
     options = options || {};
     var newResults, newBuffer;
@@ -735,7 +765,7 @@ _.extend(OplogObserveDriver.prototype, {
       // buffer if such is needed.
       var cursor = self._cursorForQuery({ limit: self._limit * 2 });
       try {
-        cursor.forEach(function (doc, i) {  // yields
+        await cursor.forEach(function (doc, i) {  // yields
           if (!self._limit || i < self._limit) {
             newResults.set(doc._id, doc);
           } else {
@@ -750,14 +780,14 @@ _.extend(OplogObserveDriver.prototype, {
           // successfully. Probably it's a bad selector or something, so we
           // should NOT retry. Instead, we should halt the observe (which ends
           // up calling `stop` on us).
-          self._multiplexer.queryError(e);
+          await self._multiplexer.queryError(e);
           return;
         }
 
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
         Meteor._debug("Got exception while polling query", e);
-        Meteor._sleepForMs(100);
+        await Meteor._sleepForMs(100);
       }
     }
 
@@ -765,6 +795,11 @@ _.extend(OplogObserveDriver.prototype, {
       return;
 
     self._publishNewResults(newResults, newBuffer);
+  },
+
+  // Yields!
+  _runQuery: function (options) {
+    return this._runQueryAsync(options);
   },
 
   // Transitions to QUERYING and runs another query, or (if already in QUERYING)
@@ -799,27 +834,28 @@ _.extend(OplogObserveDriver.prototype, {
   },
 
   // Yields!
-  _doneQuerying: function () {
+  _doneQuerying: async function () {
     var self = this;
 
     if (self._stopped)
       return;
-    self._mongoHandle._oplogHandle.waitUntilCaughtUp();  // yields
+
+    await self._mongoHandle._oplogHandle.waitUntilCaughtUp();
+
     if (self._stopped)
       return;
+
     if (self._phase !== PHASE.QUERYING)
       throw Error("Phase unexpectedly " + self._phase);
 
-    Meteor._noYieldsAllowed(function () {
-      if (self._requeryWhenDoneThisQuery) {
-        self._requeryWhenDoneThisQuery = false;
-        self._pollQuery();
-      } else if (self._needToFetch.empty()) {
-        self._beSteady();
-      } else {
-        self._fetchModifiedDocuments();
-      }
-    });
+    if (self._requeryWhenDoneThisQuery) {
+      self._requeryWhenDoneThisQuery = false;
+      self._pollQuery();
+    } else if (self._needToFetch.empty()) {
+      await self._beSteady();
+    } else {
+      self._fetchModifiedDocuments();
+    }
   },
 
   _cursorForQuery: function (optionsOverwrite) {
@@ -830,11 +866,11 @@ _.extend(OplogObserveDriver.prototype, {
       // the selector, not just the fields we are going to publish (that's the
       // "shared" projection). And we don't want to apply any transform in the
       // cursor, because observeChanges shouldn't use the transform.
-      var options = _.clone(self._cursorDescription.options);
+      var options = Object.assign({}, self._cursorDescription.options);
 
       // Allow the caller to modify the options. Useful to specify different
       // skip and limit values.
-      _.extend(options, optionsOverwrite);
+      Object.assign(options, optionsOverwrite);
 
       options.fields = self._sharedProjection;
       delete options.transform;
@@ -872,7 +908,7 @@ _.extend(OplogObserveDriver.prototype, {
         if (!newResults.has(id))
           idsToRemove.push(id);
       });
-      _.each(idsToRemove, function (id) {
+      idsToRemove.forEach(function (id) {
         self._removePublished(id);
       });
 
@@ -912,23 +948,20 @@ _.extend(OplogObserveDriver.prototype, {
   //
   // It's important to check self._stopped after every call in this file that
   // can yield!
-  stop: function () {
+  _stop: async function() {
     var self = this;
     if (self._stopped)
       return;
     self._stopped = true;
-    _.each(self._stopHandles, function (handle) {
-      handle.stop();
-    });
 
     // Note: we *don't* use multiplexer.onFlush here because this stop
     // callback is actually invoked by the multiplexer itself when it has
     // determined that there are no handles left. So nothing is actually going
     // to get flushed (and it's probably not valid to call methods on the
     // dying multiplexer).
-    _.each(self._writesToCommitWhenWeReachSteady, function (w) {
-      w.committed();  // maybe yields?
-    });
+    for (const w of self._writesToCommitWhenWeReachSteady) {
+      await w.committed();
+    }
     self._writesToCommitWhenWeReachSteady = null;
 
     // Proactively drop references to potentially big things.
@@ -940,7 +973,15 @@ _.extend(OplogObserveDriver.prototype, {
     self._listenersHandle = null;
 
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
-      "mongo-livedata", "observe-drivers-oplog", -1);
+        "mongo-livedata", "observe-drivers-oplog", -1);
+
+    for await (const handle of self._stopHandles) {
+      await handle.stop();
+    }
+  },
+  stop: async function() {
+    const self = this;
+    return await self._stop();
   },
 
   _registerPhaseChange: function (phase) {
@@ -1005,8 +1046,8 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
 };
 
 var modifierCanBeDirectlyApplied = function (modifier) {
-  return _.all(modifier, function (fields, operation) {
-    return _.all(fields, function (value, field) {
+  return Object.entries(modifier).every(function ([operation, fields]) {
+    return Object.entries(fields).every(function ([field, value]) {
       return !/EJSON\$/.test(field);
     });
   });

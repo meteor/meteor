@@ -1,7 +1,7 @@
 import { parse } from '@meteorjs/babel';
 import { analyze as analyzeScope } from 'escope';
-import LRU from "lru-cache";
-
+import LRUCache from "lru-cache";
+import { Profile } from '../tool-env/profile';
 import Visitor from "@meteorjs/reify/lib/visitor.js";
 import { findPossibleIndexes } from "@meteorjs/reify/lib/utils.js";
 
@@ -12,7 +12,7 @@ function isRegExp(value) {
   return value && objToStr.call(value) === "[object RegExp]";
 }
 
-var AST_CACHE = new LRU({
+var AST_CACHE = new LRUCache({
   max: Math.pow(2, 12),
   length(ast) {
     return ast.loc.end.line;
@@ -26,9 +26,23 @@ function tryToParse(source, hash) {
   }
 
   let ast;
-
   try {
-    ast = parse(source);
+    Profile.time('jsAnalyze.parse', () => {
+      ast = parse(source, {
+        strictMode: false,
+        sourceType: 'module',
+        allowImportExportEverywhere: true,
+        allowReturnOutsideFunction: true,
+        allowUndeclaredExports: true,
+        plugins: [
+          // Only plugins for stage 3 features are enabled
+          // Enabling some plugins significantly affects parser performance
+          'importAttributes',
+          'explicitResourceManagement',
+          'decorators'
+        ]
+      });
+    });
   } catch (e) {
     if (typeof e.loc === 'object') {
       e.$ParseError = true;
@@ -71,7 +85,10 @@ export function findImportedModuleIdentifiers(source, hash) {
   }
 
   const ast = tryToParse(source, hash);
-  importedIdentifierVisitor.visit(ast, source, possibleIndexes);
+  Profile.time('findImportedModuleIdentifiersVisitor', () => {
+    importedIdentifierVisitor.visit(ast, source, possibleIndexes);
+  });
+
   return importedIdentifierVisitor.identifiers;
 }
 
@@ -242,12 +259,12 @@ function isPropertyWithName(node, name) {
 //
 // It only cares about assignments to variables; an assignment to a field on an
 // object (`Foo.Bar = true`) neither causes `Foo` nor `Foo.Bar` to be returned.
-const globalsCache = new LRU({
+const globalsCache = new LRUCache({
   max: Math.pow(2, 12),
   length(globals) {
     let sum = 0;
     Object.keys(globals).forEach(name => sum += name.length);
-    return sum;
+    return sum === 0 ? 1 : sum;
   }
 });
 
@@ -273,7 +290,7 @@ export function findAssignedGlobals(source, hash) {
   // But it can't pull references outward, so for our purposes it is safe to
   // ignore.
   const scopeManager = analyzeScope(ast, {
-    ecmaVersion: 6,
+    ecmaVersion: 9,
     sourceType: "module",
     ignoreEval: true,
     // Ensures we don't treat top-level var declarations as globals.

@@ -1,6 +1,7 @@
 import { Mongo } from 'meteor/mongo';
 import { Meteor } from 'meteor/meteor';
 import { Configuration } from 'meteor/service-configuration';
+import { DDP } from 'meteor/ddp';
 
 export interface URLS {
   resetPassword: (token: string) => string;
@@ -13,6 +14,16 @@ export interface EmailFields {
   subject?: ((user: Meteor.User) => string) | undefined;
   text?: ((user: Meteor.User, url: string) => string) | undefined;
   html?: ((user: Meteor.User, url: string) => string) | undefined;
+}
+
+export interface AccountsClientOptions {
+  connection?: DDP.DDPStatic;
+  ddpUrl?: string;
+}
+
+export class AccountsClient {
+  constructor(options?: AccountsClientOptions);
+  connection: DDP.DDPStatic;
 }
 
 export namespace Accounts {
@@ -48,16 +59,34 @@ export namespace Accounts {
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<string>;
 
+  function createUserVerifyingEmail(
+    options: {
+      username?: string | undefined;
+      email?: string | undefined;
+      password?: string | undefined;
+      profile?: Meteor.UserProfile | undefined;
+    },
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ): Promise<string>;
+
   function config(options: {
     sendVerificationEmail?: boolean | undefined;
     forbidClientAccountCreation?: boolean | undefined;
     restrictCreationByEmailDomain?: string | Function | undefined;
+    loginExpiration?: number | undefined;
     loginExpirationInDays?: number | undefined;
     oauthSecretKey?: string | undefined;
+    passwordResetTokenExpiration?: number | undefined;
     passwordResetTokenExpirationInDays?: number | undefined;
+    passwordEnrollTokenExpiration?: number | undefined;
     passwordEnrollTokenExpirationInDays?: number | undefined;
     ambiguousErrorMessages?: boolean | undefined;
+    bcryptRounds?: number | undefined;
     defaultFieldSelector?: { [key: string]: 0 | 1 } | undefined;
+    collection?: string | undefined;
+    loginTokenExpirationHours?: number | undefined;
+    tokenSequenceLength?: number | undefined;
+    clientStorage?: 'session' | 'local';
   }): void;
 
   function onLogin(
@@ -191,12 +220,6 @@ export namespace Accounts {
 
   function setUsername(userId: string, newUsername: string): void;
 
-  function setPassword(
-    userId: string,
-    newPassword: string,
-    options?: { logout?: boolean | undefined }
-  ): void;
-
   function setPasswordAsync(
     userId: string,
     newPassword: string,
@@ -324,9 +347,9 @@ export namespace Accounts {
   type Password =
     | string
     | {
-        digest: string;
-        algorithm: 'sha-256';
-      };
+      digest: string;
+      algorithm: 'sha-256';
+    };
 
   /**
    *
@@ -336,10 +359,10 @@ export namespace Accounts {
    * properties `digest` and `algorithm` (in which case we bcrypt
    * `password.digest`).
    */
-  function _checkPassword(
+  function _checkPasswordAsync(
     user: Meteor.User,
     password: Password
-  ): { userId: string; error?: any };
+  ): Promise<{ userId: string; error?: any }>
 }
 
 export namespace Accounts {

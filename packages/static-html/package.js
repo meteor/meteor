@@ -8,8 +8,8 @@ Package.describe({
 Package.registerBuildPlugin({
   name: "compileStaticHtmlBatch",
   use: [
-    'ecmascript@0.16.2',
-    'static-html-tools@1.0.0'
+    'ecmascript@0.16.9',
+    'caching-html-compiler@1.2.2 || 2.0.0',
   ],
   sources: [
     'static-html.js'
@@ -20,5 +20,5 @@ Package.onUse(function(api) {
   api.use('isobuild:compiler-plugin@1.0.0');
 
   // Body attributes are compiled to code that uses Meteor.startup
-  api.imply('meteor@1.10.0', 'client');
+  api.imply('meteor', 'client');
 });

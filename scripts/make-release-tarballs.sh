@@ -12,13 +12,17 @@ done
 echo "BRANCH_NAME = $BRANCH_NAME"
 echo "VERSION = $VERSION"
 
-git fetch origin && git checkout release/METEOR@"$VERSION" &&
-  git reset --hard origin/"$BRANCH_NAME" &&
-  git clean -df &&
-  ./meteor admin make-bootstrap-tarballs --target-arch os.windows.x86_64 "$VERSION" win64 &&
+git fetch origin
+git checkout release/METEOR@"$VERSION"
+git reset --hard origin/"$BRANCH_NAME"
+git clean -df
+
+./meteor admin make-bootstrap-tarballs --target-arch os.windows.x86_64 "$VERSION" win64 &&
   aws s3 cp --acl public-read win64/meteor-bootstrap-os.windows.x86_64.tar.gz s3://com.meteor.static/packages-bootstrap/"$VERSION"/ &&
   ./meteor admin make-bootstrap-tarballs --target-arch os.linux.x86_64 "$VERSION" linux64 &&
   aws s3 cp --acl public-read linux64/meteor-bootstrap-os.linux.x86_64.tar.gz s3://com.meteor.static/packages-bootstrap/"$VERSION"/ &&
+  ./meteor admin make-bootstrap-tarballs --target-arch os.linux.aarch64 "$VERSION" linux64 &&
+  aws s3 cp --acl public-read linux64/meteor-bootstrap-os.linux.aarch64.tar.gz s3://com.meteor.static/packages-bootstrap/"$VERSION"/ &&
   ./meteor admin make-bootstrap-tarballs --target-arch os.osx.x86_64 "$VERSION" osx &&
   aws s3 cp --acl public-read osx/meteor-bootstrap-os.osx.x86_64.tar.gz s3://com.meteor.static/packages-bootstrap/"$VERSION"/ &&
   ./meteor admin make-bootstrap-tarballs --target-arch os.osx.arm64 "$VERSION" osx &&
