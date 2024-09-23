@@ -9,6 +9,7 @@ Package.registerBuildPlugin({
   name: "compileStaticHtmlBatch",
   use: [
     'ecmascript@0.16.9',
+    'static-html-tools@1.0.0',
     'caching-html-compiler@1.2.2 || 2.0.0',
   ],
   sources: [
