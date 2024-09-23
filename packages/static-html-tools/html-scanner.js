@@ -71,12 +71,12 @@ class HtmlScan {
 
       if (matchTokenUnsupported) {
         switch (matchTokenUnsupported.toLowerCase()) {
-        case '<!doctype':
-          this.throwCompileError(
-            "Can't set DOCTYPE here.  (Meteor sets <!DOCTYPE html> for you)");
-        case '{{!':
-          this.throwCompileError(
-            "Can't use '{{! }}' outside a template.  Use '<!-- -->'.");
+          case '<!doctype':
+            this.throwCompileError(
+              "Can't set DOCTYPE here.  (Meteor sets <!DOCTYPE html> for you)");
+          case '{{!':
+            this.throwCompileError(
+              "Can't use '{{! }}' outside a template.  Use '<!-- -->'.");
         }
 
         this.throwCompileError();

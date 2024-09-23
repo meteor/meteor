@@ -6,7 +6,7 @@ Tinytest.add("static-html-tools - html scanner", function (test) {
       test.ok();
     else
       test.fail("Expected "+JSON.stringify(wantedContents)+
-                " in "+JSON.stringify(actualStr));
+        " in "+JSON.stringify(actualStr));
   };
 
   var checkError = function(f, msgText, lineNum) {
@@ -21,7 +21,7 @@ Tinytest.add("static-html-tools - html scanner", function (test) {
         test.ok();
       else
         test.fail("Error should have been on line " + lineNum + ", not " +
-                  e.line);
+          e.line);
       testInString(e.message, msgText);
       return;
     }
@@ -79,7 +79,7 @@ Tinytest.add("static-html-tools - html scanner", function (test) {
   // same as previous, but with various HTML comments
   checkResults(
     scanForTest("\n<!--\n\nfoo\n-->\n<!-- -->\n"+
-                      "<body>\n\nHello\n\n</body>\n\n<!----\n>\n\n"),
+      "<body>\n\nHello\n\n</body>\n\n<!----\n>\n\n"),
     simpleBody('"Hello"'));
 
   // head and body
@@ -97,7 +97,7 @@ Tinytest.add("static-html-tools - html scanner", function (test) {
   // head, body, and template
   checkResults(
     scanForTest("<head>\n<title>Hello</title>\n</head>\n\n<body>World</body>\n\n"+
-                      '<template name="favoritefood">\n  pizza\n</template>\n'),
+      '<template name="favoritefood">\n  pizza\n</template>\n'),
     simpleBody('"World"') + simpleTemplate('"favoritefood"', '"pizza"'),
     "<title>Hello</title>");
 
@@ -109,13 +109,13 @@ Tinytest.add("static-html-tools - html scanner", function (test) {
   // template with other attributes
   checkResults(
     scanForTest('<template foo="bar" name="favoritefood" baz="qux">'+
-                      'pizza</template>'),
+      'pizza</template>'),
     simpleTemplate('"favoritefood"', '"pizza"'));
 
   // whitespace around '=' in attributes and at end of tag
   checkResults(
     scanForTest('<template foo = "bar" name  ="favoritefood" baz= "qux"  >'+
-                      'pizza</template\n\n>'),
+      'pizza</template\n\n>'),
     simpleTemplate('"favoritefood"', '"pizza"'));
 
   // whitespace around template name
@@ -126,7 +126,7 @@ Tinytest.add("static-html-tools - html scanner", function (test) {
   // single quotes around template name
   checkResults(
     scanForTest('<template name=\'the "cool" template\'>'+
-                      'pizza</template>'),
+      'pizza</template>'),
     simpleTemplate('"the \\"cool\\" template"', '"pizza"'));
 
   checkResults(scanForTest('<body foo="bar">\n  Hello\n</body>'), simpleBody('"Hello"'), "", {foo: "bar"});
@@ -162,8 +162,8 @@ Tinytest.add("static-html-tools - html scanner", function (test) {
   checkError(function() {
     return scanForTest(
       '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '+
-        '"http://www.w3.org/TR/html4/strict.dtd">'+
-        '\n\n<head>\n</head>');
+      '"http://www.w3.org/TR/html4/strict.dtd">'+
+      '\n\n<head>\n</head>');
   }, "DOCTYPE", 1);
 
   // lowercase basic doctype
@@ -180,7 +180,7 @@ Tinytest.add("static-html-tools - html scanner", function (test) {
   // can't mismatch quotes
   checkError(function() {
     return scanForTest('<template name="foo\'>'+
-                             'pizza</template>');
+      'pizza</template>');
   }, "error in tag", 1);
 
   // unexpected <html> at top level
