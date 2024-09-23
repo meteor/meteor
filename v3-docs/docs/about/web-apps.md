@@ -40,7 +40,7 @@ meteor
 ```
 
 With no arguments, `meteor` runs the project in the current directory in local development mode.
-Your application will be running at http://localhost:3000/, ready for you to begin development.
+Your application will be running at `http://localhost:3000/`, ready for you to begin development.
 
 ## Getting Help
 
