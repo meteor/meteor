@@ -401,7 +401,7 @@ export class AccountsClient extends AccountsCommon {
     this.connection.applyAsync(
       options.methodName,
       options.methodArguments,
-      { wait: true, onResultReceived: onResultReceived },
+      { wait: true, onResultReceived },
       loggedInAndDataReadyCallback);
   }
 
