@@ -7,7 +7,7 @@ Package.describe({
 
 Npm.depends({
   'lru-cache': '6.0.0'
-})
+});
 
 Package.onUse(function(api) {
   api.use(['ecmascript', 'random']);
