@@ -709,6 +709,7 @@ export class Connection {
 
   _apply(name, stubCallValue, args, options, callback) {
     const self = this;
+
     // We were passed 3 arguments. They may be either (name, args, options)
     // or (name, args, callback)
     if (!callback && typeof options === 'function') {
@@ -746,12 +747,16 @@ export class Connection {
         isFromCallAsync: stubCallValue.isFromCallAsync,
       })
     ) {
+      let result;
+
       if (callback) {
         callback(exception, stubReturnValue);
-        return undefined;
+      } else {
+        if (exception) throw exception;
+        result = stubReturnValue;
       }
-      if (exception) throw exception;
-      return stubReturnValue;
+
+      return options._returnMethodInvoker ? { result } : result;
     }
 
     // We only create the methodId here because we don't actually need one if
@@ -834,34 +839,23 @@ export class Connection {
       noRetry: !!options.noRetry
     });
 
-    if (options.wait) {
-      // It's a wait method! Wait methods go in their own block.
-      self._outstandingMethodBlocks.push({
-        wait: true,
-        methods: [methodInvoker]
-      });
-    } else {
-      // Not a wait method. Start a new block if the previous block was a wait
-      // block, and add it to the last block of methods.
-      if (isEmpty(self._outstandingMethodBlocks) ||
-          last(self._outstandingMethodBlocks).wait) {
-        self._outstandingMethodBlocks.push({
-          wait: false,
-          methods: [],
-        });
-      }
-
-      last(self._outstandingMethodBlocks).methods.push(methodInvoker);
-    }
-
-    // If we added it to the first block, send it out now.
-    if (self._outstandingMethodBlocks.length === 1) methodInvoker.sendMessage();
+    let result;
 
     if (promise) {
-      return options.returnStubValue ? promise.then(() => stubReturnValue) : promise;
+      result = options.returnStubValue ? promise.then(() => stubReturnValue) : promise;
     } else {
-      return options.returnStubValue ? stubReturnValue : undefined;
+      result = options.returnStubValue ? stubReturnValue : undefined;
     }
+
+    if (options._returnMethodInvoker) {
+      return {
+        methodInvoker,
+        result,
+      };
+    }
+
+    self._addOutstandingMethod(methodInvoker, options);
+    return result;
   }
 
   _stubCall(name, args, options) {
@@ -1739,6 +1733,33 @@ export class Connection {
     }
   }
 
+  _addOutstandingMethod(methodInvoker, options) {
+    if (options?.wait) {
+      // It's a wait method! Wait methods go in their own block.
+      this._outstandingMethodBlocks.push({
+        wait: true,
+        methods: [methodInvoker]
+      });
+    } else {
+      // Not a wait method. Start a new block if the previous block was a wait
+      // block, and add it to the last block of methods.
+      if (isEmpty(this._outstandingMethodBlocks) ||
+          last(this._outstandingMethodBlocks).wait) {
+        this._outstandingMethodBlocks.push({
+          wait: false,
+          methods: [],
+        });
+      }
+
+      last(this._outstandingMethodBlocks).methods.push(methodInvoker);
+    }
+
+    // If we added it to the first block, send it out now.
+    if (this._outstandingMethodBlocks.length === 1) {
+      methodInvoker.sendMessage();
+    }
+  }
+
   // Called by MethodInvoker after a method's callback is invoked.  If this was
   // the last outstanding method in the current block, runs the next block. If
   // there are no more methods, consider accepting a hot code push.
@@ -1820,6 +1841,7 @@ export class Connection {
     // Now add the rest of the original blocks on.
     self._outstandingMethodBlocks.push(...oldOutstandingMethodBlocks);
   }
+
   _callOnReconnectAndSendAppropriateOutstandingMethods() {
     const self = this;
     const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
