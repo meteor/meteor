@@ -51,7 +51,7 @@ Use the same code whether you’re developing for web, iOS, Android, or desktop 
 
 How about trying a tutorial to get started with your favorite technology?
 
-| [<img align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"> React](https://react-tutorial.meteor.com/) |
+| [<img align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"> React](https://docs.meteor.com/tutorials/react/) |
 | - |
 | [<img align="left" width="25" src="https://progsoft.net/images/blaze-css-icon-3e80acb3996047afd09f1150f53fcd78e98c1e1b.png"> Blaze](https://blaze-tutorial.meteor.com/) |
 | [<img align="left" width="25" src="https://vuejs.org/images/logo.png"> Vue](https://vue-tutorial.meteor.com/) |
