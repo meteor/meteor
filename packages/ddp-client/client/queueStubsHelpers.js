@@ -92,21 +92,18 @@ export const loadAsyncStubHelpers = () => {
 
     return queueFunction(
       (resolve, reject) => {
-        let hasStub = false;
         let finished = false;
 
         Meteor._setImmediate(() => {
           const applyAsyncPromise = oldApplyAsync.apply(this, args);
           stubPromiseResolver(applyAsyncPromise.stubPromise);
           serverPromiseResolver(applyAsyncPromise.serverPromise);
-          hasStub = !!applyAsyncPromise.stubPromise;
-          if (hasStub) {
-            applyAsyncPromise.stubPromise
-              .catch(() => {}) // silent uncaught promise
-              .finally(() => {
-                finished = true;
-              });
-          }
+
+          applyAsyncPromise.stubPromise
+            .catch(() => {}) // silent uncaught promise
+            .finally(() => {
+              finished = true;
+            });
 
           applyAsyncPromise
             .then((result) => {
@@ -115,11 +112,12 @@ export const loadAsyncStubHelpers = () => {
             .catch((err) => {
               reject(err);
             });
+
           serverPromise.catch(() => {}); // silent uncaught promise
         });
 
         Meteor._setImmediate(() => {
-          if (hasStub && !finished) {
+          if (!finished) {
             console.warn(
               `Method stub (${name}) took too long and could cause unexpected problems. Learn more at https://v3-migration-docs.meteor.com/breaking-changes/call-x-callAsync.html#considerations-for-effective-use-of-meteor-callasync`
             );
