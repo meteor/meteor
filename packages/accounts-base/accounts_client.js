@@ -390,6 +390,7 @@ export class AccountsClient extends AccountsCommon {
         if (user) {
           loginCallbacks({ loginDetails: result });
           this._setLoggingIn(false);
+          computation.stop();
         }
       });
 
