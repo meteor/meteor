@@ -155,7 +155,10 @@ export default defineConfig({
             text: "Install Meteor",
             link: "/about/install",
           },
-          // TODO: Your first app meteor app
+          {
+            text: "Web Apps",
+            link: "/about/web-apps",
+          },
           {
             text: "Cordova",
             link: "/about/cordova",
@@ -401,11 +404,11 @@ export default defineConfig({
           // TODO: Open issue in Vitepress about this
           { link: "/history", text: "Meteor.js v3 (Current)" },
           {
-            link: "https://docs.meteor.com/changelog",
+            link: "https://v2-docs.meteor.com/changelog",
             text: "Meteor.js v2",
           },
           {
-            link: "https://docs.meteor.com/changelog#v112220211012",
+            link: "https://v2-docs.meteor.com/changelog#v112220211012",
             text: "Meteor.js v1",
           },
         ],

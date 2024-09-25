@@ -1,4 +1,4 @@
-# Building with Meteor.js 3, Vue 3 and `vue-meteor-tracker`
+# Meteor.js 3 + Vue 3 and `vue-meteor-tracker`
 
 In this tutorial, we will create a simple To-Do app using [Vue 3](https://vuejs.org/) and Meteor 3.0. Meteor works well with other frameworks like [Blaze](https://www.blazejs.org/), [React](https://react.dev/), [Solid](https://www.solidjs.com/), and [Svelte](https://svelte.dev/).
 
@@ -314,7 +314,7 @@ import '../imports/api/tasksPublications';
 ```
 :::
 
-> If you want to learn more about how publications works, you can read the [Meteor Guide](https://docs.meteor.com/api/pubsub.html).
+> If you want to learn more about how publications works, you can read [here](/api/meteor.html#pubsub).
 
 Now, your app should look like this:
 
