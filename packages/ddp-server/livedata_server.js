@@ -1,5 +1,4 @@
 import isEmpty from 'lodash.isempty';
-import has from 'lodash.has';
 import isString from 'lodash.isstring';
 import isObject from 'lodash.isobject';
 
@@ -645,7 +644,7 @@ Object.assign(Session.prototype, {
           return true;
         });
 
-        if (has(self.protocol_handlers, msg.msg)) {
+        if (msg.msg in self.protocol_handlers) {
           const result = self.protocol_handlers[msg.msg].call(
             self,
             msg,
@@ -680,7 +679,7 @@ Object.assign(Session.prototype, {
       // reject malformed messages
       if (typeof (msg.id) !== "string" ||
           typeof (msg.name) !== "string" ||
-          (('params' in msg) && !(msg.params instanceof Array))) {
+          ('params' in msg && !(msg.params instanceof Array))) {
         self.sendError("Malformed subscription", msg);
         return;
       }
@@ -749,7 +748,7 @@ Object.assign(Session.prototype, {
       // for forwards compatibility.
       if (typeof (msg.id) !== "string" ||
           typeof (msg.method) !== "string" ||
-          (('params' in msg) && !(msg.params instanceof Array)) ||
+          ('params' in msg && !(msg.params instanceof Array)) ||
           (('randomSeed' in msg) && (typeof msg.randomSeed !== "string"))) {
         self.sendError("Malformed method invocation", msg);
         return;
@@ -1245,7 +1244,7 @@ Object.assign(Subscription.prototype, {
 
       for (var i = 0; i < res.length; ++i) {
         var collectionName = res[i]._getCollectionName();
-        if (has(collectionNames, collectionName)) {
+        if (collectionNames[collectionName]) {
           self.error(new Error(
             "Publish function returned multiple cursors for collection " +
               collectionName));
@@ -1952,8 +1951,7 @@ var wrapInternalException = function (exception, context) {
 
   // Did the error contain more details that could have been useful if caught in
   // server code (or if thrown from non-client-originated code), but also
-  // provided a "sanitized" version with more context than 500 Internal server
-  // error? Use that.
+  // provided a "sanitized" version with more context than 500 Internal server error? Use that.
   if (exception.sanitizedError) {
     if (exception.sanitizedError.isClientSafe)
       return exception.sanitizedError;

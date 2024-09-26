@@ -1,5 +1,3 @@
-import has from 'lodash.has';
-
 // A "crossbar" is a class that provides structured notification registration.
 // See _match for the definition of how a notification matches a trigger.
 // All notifications and triggers must have a string key named 'collection'.
@@ -22,7 +20,7 @@ Object.assign(DDPServer._Crossbar.prototype, {
   // msg is a trigger or a notification
   _collectionForMessage: function (msg) {
     var self = this;
-    if (! has(msg, 'collection')) {
+    if (!('collection' in msg)) {
       return '';
     } else if (typeof(msg.collection) === 'string') {
       if (msg.collection === '')
@@ -49,7 +47,7 @@ Object.assign(DDPServer._Crossbar.prototype, {
 
     var collection = self._collectionForMessage(trigger);
     var record = {trigger: EJSON.clone(trigger), callback: callback};
-    if (!has(self.listenersByCollection, collection)) {
+    if (! (collection in self.listenersByCollection)) {
       self.listenersByCollection[collection] = {};
       self.listenersByCollectionCount[collection] = 0;
     }
@@ -90,7 +88,7 @@ Object.assign(DDPServer._Crossbar.prototype, {
 
     var collection = self._collectionForMessage(notification);
 
-    if (!has(self.listenersByCollection, collection)) {
+    if (!(collection in self.listenersByCollection)) {
       return;
     }
 
@@ -112,7 +110,7 @@ Object.assign(DDPServer._Crossbar.prototype, {
     // first gets reduced down to the empty object (and then never gets
     // increased again).
     for (const id of callbackIds) {
-      if (has(listenersForCollection, id)) {
+      if (id in listenersForCollection) {
         await listenersForCollection[id].callback(notification);
       }
     }

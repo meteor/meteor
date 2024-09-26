@@ -8,7 +8,6 @@ Npm.depends({
   "permessage-deflate": "0.1.7",
   sockjs: "0.3.24",
   "lodash.once": "4.1.1",
-  "lodash.has": "4.5.2",
   "lodash.isempty": "4.4.0",
   "lodash.isstring": "4.0.1",
   "lodash.isobject": "3.0.2"
