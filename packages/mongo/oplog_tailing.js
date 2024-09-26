@@ -1,3 +1,6 @@
+import isEmpty from 'lodash.isempty';
+import has from 'lodash.has';
+
 import { NpmModuleMongodb } from "meteor/npm-mongo";
 const { Long } = NpmModuleMongodb;
 
@@ -358,7 +361,7 @@ Object.assign(OplogHandle.prototype, {
           if (doc.o.dropDatabase) {
             delete trigger.collection;
             trigger.dropDatabase = true;
-          } else if (_.has(doc.o, "drop")) {
+          } else if (has(doc.o, "drop")) {
             trigger.collection = doc.o.drop;
             trigger.dropCollection = true;
             trigger.id = null;
@@ -419,7 +422,7 @@ Object.assign(OplogHandle.prototype, {
   _setLastProcessedTS: function (ts) {
     var self = this;
     self._lastProcessedTS = ts;
-    while (!_.isEmpty(self._catchingUpResolvers) && self._catchingUpResolvers[0].ts.lessThanOrEqual(self._lastProcessedTS)) {
+    while (!isEmpty(self._catchingUpResolvers) && self._catchingUpResolvers[0].ts.lessThanOrEqual(self._lastProcessedTS)) {
       var sequencer = self._catchingUpResolvers.shift();
       sequencer.resolver();
     }
