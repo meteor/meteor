@@ -33,7 +33,8 @@ async function getChildProcess({ isFirstTry }) {
 
   const child = require("child_process").spawn(cmd, args, {
     stdio: "inherit",
-    env: env
+    env: env,
+    shell: true,
   });
   require("./flush-buffers-on-exit-in-windows");
   child.on("error", function (error) {
