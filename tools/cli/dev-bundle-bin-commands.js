@@ -31,6 +31,8 @@ async function getChildProcess({ isFirstTry }) {
     return null;
   }
 
+  console.log('-> cmd', cmd);
+
   const child = require("child_process").spawn(cmd, args, {
     stdio: "inherit",
     env: env,
