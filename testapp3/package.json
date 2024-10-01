@@ -36,7 +36,8 @@
       "**/.meteor/",
       "**/examples/",
       "**/testapp2",
-      "**/testapp3"
+      "**/testapp3",
+      "**/docs"
     ]
   }
 }
