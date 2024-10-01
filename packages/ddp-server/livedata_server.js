@@ -1,4 +1,9 @@
+import isEmpty from 'lodash.isempty';
+import isString from 'lodash.isstring';
+import isObject from 'lodash.isobject';
+
 DDPServer = {};
+
 
 // Publication strategies define how we handle data from published cursors at the collection level
 // This allows someone to:
@@ -89,7 +94,7 @@ DDPServer._getCurrentFence = function () {
   return currentInvocation ? currentInvocation.fence : undefined;
 };
 
-_.extend(SessionDocumentView.prototype, {
+Object.assign(SessionDocumentView.prototype, {
 
   getFields: function () {
     var self = this;
@@ -197,7 +202,7 @@ Object.assign(SessionCollectionView.prototype, {
   diff: function (previous) {
     var self = this;
     DiffSequence.diffMaps(previous.documents, self.documents, {
-      both: _.bind(self.diffDocument, self),
+      both: self.diffDocument.bind(self),
 
       rightOnly: function (id, nowDV) {
         self.callbacks.added(self.collectionName, id, nowDV.getFields());
@@ -243,7 +248,7 @@ Object.assign(SessionCollectionView.prototype, {
     }
     docView.existsIn.add(subscriptionHandle);
     var changeCollector = {};
-    _.each(fields, function (value, key) {
+    Object.entries(fields).forEach(function ([key, value]) {
       docView.changeField(
         subscriptionHandle, key, value, changeCollector, true);
     });
@@ -259,7 +264,7 @@ Object.assign(SessionCollectionView.prototype, {
     var docView = self.documents.get(id);
     if (!docView)
       throw new Error("Could not find element with id " + id + " to change");
-    _.each(changed, function (value, key) {
+      Object.entries(changed).forEach(function ([key, value]) {
       if (value === undefined)
         docView.clearField(subscriptionHandle, key, changedResult);
       else
@@ -401,7 +406,7 @@ Object.assign(Session.prototype, {
     if (self._isSending) {
       self.send({msg: "ready", subs: subscriptionIds});
     } else {
-      _.each(subscriptionIds, function (subscriptionId) {
+      subscriptionIds.forEach(function (subscriptionId) {
         self._pendingReady.push(subscriptionId);
       });
     }
@@ -419,7 +424,7 @@ Object.assign(Session.prototype, {
   },
 
   sendChanged(collectionName, id, fields) {
-    if (_.isEmpty(fields))
+    if (isEmpty(fields))
       return;
 
     if (this._canSend(collectionName)) {
@@ -441,9 +446,9 @@ Object.assign(Session.prototype, {
   getSendCallbacks: function () {
     var self = this;
     return {
-      added: _.bind(self.sendAdded, self),
-      changed: _.bind(self.sendChanged, self),
-      removed: _.bind(self.sendRemoved, self)
+      added: self.sendAdded.bind(self),
+      changed: self.sendChanged.bind(self),
+      removed: self.sendRemoved.bind(self)
     };
   },
 
@@ -493,8 +498,8 @@ Object.assign(Session.prototype, {
     // Make a shallow copy of the set of universal handlers and start them. If
     // additional universal publishers start while we're running them (due to
     // yielding), they will run separately as part of Server.publish.
-    var handlers = _.clone(self.server.universal_publish_handlers);
-    _.each(handlers, function (handler) {
+    var handlers = [...self.server.universal_publish_handlers];
+    handlers.forEach(function (handler) {
       self._startSubscription(handler);
     });
   },
@@ -536,7 +541,7 @@ Object.assign(Session.prototype, {
 
       // Defer calling the close callbacks, so that the caller closing
       // the session isn't waiting for all the callbacks to complete.
-      _.each(self._closeCallbacks, function (callback) {
+      self._closeCallbacks.forEach(function (callback) {
         callback();
       });
     });
@@ -639,7 +644,7 @@ Object.assign(Session.prototype, {
           return true;
         });
 
-        if (_.has(self.protocol_handlers, msg.msg)) {
+        if (msg.msg in self.protocol_handlers) {
           const result = self.protocol_handlers[msg.msg].call(
             self,
             msg,
@@ -674,7 +679,7 @@ Object.assign(Session.prototype, {
       // reject malformed messages
       if (typeof (msg.id) !== "string" ||
           typeof (msg.name) !== "string" ||
-          (('params' in msg) && !(msg.params instanceof Array))) {
+          ('params' in msg && !(msg.params instanceof Array))) {
         self.sendError("Malformed subscription", msg);
         return;
       }
@@ -743,7 +748,7 @@ Object.assign(Session.prototype, {
       // for forwards compatibility.
       if (typeof (msg.id) !== "string" ||
           typeof (msg.method) !== "string" ||
-          (('params' in msg) && !(msg.params instanceof Array)) ||
+          ('params' in msg && !(msg.params instanceof Array)) ||
           (('randomSeed' in msg) && (typeof msg.randomSeed !== "string"))) {
         self.sendError("Malformed method invocation", msg);
         return;
@@ -814,34 +819,16 @@ Object.assign(Session.prototype, {
           }
         }
 
-
-
-        const getCurrentMethodInvocationResult = () =>
-          DDP._CurrentMethodInvocation.withValue(
+        resolve(DDPServer._CurrentWriteFence.withValue(
+          fence,
+          () => DDP._CurrentMethodInvocation.withValue(
             invocation,
-            () =>
-              maybeAuditArgumentChecks(
-                handler,
-                invocation,
-                msg.params,
-                "call to '" + msg.method + "'"
-              ),
-            {
-              name: 'getCurrentMethodInvocationResult',
-              keyName: 'getCurrentMethodInvocationResult',
-            }
-          );
-
-        resolve(
-          DDPServer._CurrentWriteFence.withValue(
-            fence,
-            getCurrentMethodInvocationResult,
-            {
-              name: 'DDPServer._CurrentWriteFence',
-              keyName: '_CurrentWriteFence',
-            }
+            () => maybeAuditArgumentChecks(
+              handler, invocation, msg.params,
+              "call to '" + msg.method + "'"
+            )
           )
-        );
+        ));
       });
 
       async function finish() {
@@ -961,7 +948,7 @@ Object.assign(Session.prototype, {
     Meteor._noYieldsAllowed(function () {
       self._isSending = true;
       self._diffCollectionViews(beforeCVs);
-      if (!_.isEmpty(self._pendingReady)) {
+      if (!isEmpty(self._pendingReady)) {
         self.sendReady(self._pendingReady);
         self._pendingReady = [];
       }
@@ -1050,7 +1037,7 @@ Object.assign(Session.prototype, {
       return self.socket.remoteAddress;
 
     var forwardedFor = self.socket.headers["x-forwarded-for"];
-    if (! _.isString(forwardedFor))
+    if (!isString(forwardedFor))
       return null;
     forwardedFor = forwardedFor.trim().split(/\s*,\s*/);
 
@@ -1244,9 +1231,9 @@ Object.assign(Subscription.prototype, {
       // _publishCursor only returns after the initial added callbacks have run.
       // mark subscription as ready.
       self.ready();
-    } else if (_.isArray(res)) {
+    } else if (Array.isArray(res)) {
       // Check all the elements are cursors
-      if (! _.all(res, isCursor)) {
+      if (! res.every(isCursor)) {
         self.error(new Error("Publish function returned an array of non-Cursors"));
         return;
       }
@@ -1257,7 +1244,7 @@ Object.assign(Subscription.prototype, {
 
       for (var i = 0; i < res.length; ++i) {
         var collectionName = res[i]._getCollectionName();
-        if (_.has(collectionNames, collectionName)) {
+        if (collectionNames[collectionName]) {
           self.error(new Error(
             "Publish function returned multiple cursors for collection " +
               collectionName));
@@ -1302,7 +1289,7 @@ Object.assign(Subscription.prototype, {
     // Tell listeners, so they can clean up
     var callbacks = self._stopCallbacks;
     self._stopCallbacks = [];
-    _.each(callbacks, function (callback) {
+    callbacks.forEach(function (callback) {
       callback();
     });
   },
@@ -1589,33 +1576,33 @@ Object.assign(Server.prototype, {
   },
 
   /**
-   * @summary Set publication strategy for the given collection. Publications strategies are available from `DDPServer.publicationStrategies`. You call this method from `Meteor.server`, like `Meteor.server.setPublicationStrategy()`
+   * @summary Set publication strategy for the given publication. Publications strategies are available from `DDPServer.publicationStrategies`. You call this method from `Meteor.server`, like `Meteor.server.setPublicationStrategy()`
    * @locus Server
    * @alias setPublicationStrategy
-   * @param collectionName {String}
+   * @param publicationName {String}
    * @param strategy {{useCollectionView: boolean, doAccountingForCollection: boolean}}
    * @memberOf Meteor.server
    * @importFromPackage meteor
    */
-  setPublicationStrategy(collectionName, strategy) {
+  setPublicationStrategy(publicationName, strategy) {
     if (!Object.values(publicationStrategies).includes(strategy)) {
       throw new Error(`Invalid merge strategy: ${strategy} 
-        for collection ${collectionName}`);
+        for collection ${publicationName}`);
     }
-    this._publicationStrategies[collectionName] = strategy;
+    this._publicationStrategies[publicationName] = strategy;
   },
 
   /**
-   * @summary Gets the publication strategy for the requested collection. You call this method from `Meteor.server`, like `Meteor.server.getPublicationStrategy()`
+   * @summary Gets the publication strategy for the requested publication. You call this method from `Meteor.server`, like `Meteor.server.getPublicationStrategy()`
    * @locus Server
    * @alias getPublicationStrategy
-   * @param collectionName {String}
+   * @param publicationName {String}
    * @memberOf Meteor.server
    * @importFromPackage meteor
    * @return {{useCollectionView: boolean, doAccountingForCollection: boolean}}
    */
-  getPublicationStrategy(collectionName) {
-    return this._publicationStrategies[collectionName]
+  getPublicationStrategy(publicationName) {
+    return this._publicationStrategies[publicationName]
       || this.options.defaultPublicationStrategy;
   },
 
@@ -1637,9 +1624,9 @@ Object.assign(Server.prototype, {
     // The connect message must specify a version and an array of supported
     // versions, and it must claim to support what it is proposing.
     if (!(typeof (msg.version) === 'string' &&
-          _.isArray(msg.support) &&
-          _.all(msg.support, _.isString) &&
-          _.contains(msg.support, msg.version))) {
+          Array.isArray(msg.support) &&
+          msg.support.every(isString) &&
+          msg.support.includes(msg.version))) {
       socket.send(DDPCommon.stringifyDDP({msg: 'failed',
                                 version: DDPCommon.SUPPORTED_DDP_VERSIONS[0]}));
       socket.close();
@@ -1704,7 +1691,7 @@ Object.assign(Server.prototype, {
   publish: function (name, handler, options) {
     var self = this;
 
-    if (! _.isObject(name)) {
+    if (!isObject(name)) {
       options = options || {};
 
       if (name && name in self.publish_handlers) {
@@ -1752,7 +1739,7 @@ Object.assign(Server.prototype, {
       }
     }
     else{
-      _.each(name, function(value, key) {
+      Object.entries(name).forEach(function([key, value]) {
         self.publish(key, value, {});
       });
     }
@@ -1783,7 +1770,7 @@ Object.assign(Server.prototype, {
    */
   methods: function (methods) {
     var self = this;
-    _.each(methods, function (func, name) {
+    Object.entries(methods).forEach(function ([name, func]) {
       if (typeof func !== 'function')
         throw new Error("Method '" + name + "' must be a function");
       if (self.method_handlers[name])
@@ -1923,8 +1910,8 @@ Object.assign(Server.prototype, {
 
 var calculateVersion = function (clientSupportedVersions,
                                  serverSupportedVersions) {
-  var correctVersion = _.find(clientSupportedVersions, function (version) {
-    return _.contains(serverSupportedVersions, version);
+  var correctVersion = clientSupportedVersions.find(function (version) {
+    return serverSupportedVersions.includes(version);
   });
   if (!correctVersion) {
     correctVersion = serverSupportedVersions[0];
@@ -1964,8 +1951,7 @@ var wrapInternalException = function (exception, context) {
 
   // Did the error contain more details that could have been useful if caught in
   // server code (or if thrown from non-client-originated code), but also
-  // provided a "sanitized" version with more context than 500 Internal server
-  // error? Use that.
+  // provided a "sanitized" version with more context than 500 Internal server error? Use that.
   if (exception.sanitizedError) {
     if (exception.sanitizedError.isClientSafe)
       return exception.sanitizedError;
