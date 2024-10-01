@@ -1,19 +1,65 @@
 ## Meteor Installer
 
-Node.js <=14.x and npm <=6.x is recommended.
+### Recommended Versions
 
-Install Meteor by running:
+- For Meteor 2 (Legacy)
+  - Use Node.js 14.x
+  - Use npm 6.x
+- For Meteor 3
+  - Use Node.js 20.x or higher
+  - Use npm 9.x or higher
+
+### Installation
+
+To install Meteor, run the following command:
 
 ```bash
-npm install -g meteor
+npx meteor
 ```
 
-[Read more](https://www.meteor.com/developers/install)
+It will install Meteor's latest version, alternatively you can install a specific version by running:
 
-### Meteor version relationship
+```bash
+npx meteor@<version>
+```
+
+This command will execute the Meteor installer without adding it permanently to your global npm packages.
+
+For more information, visit:
+
+- [Meteor 2 Installation Guide (Legacy)](https://v2-docs.meteor.com/install.html)
+- [**Meteor 3 Installation Guide**](https://v3-docs.meteor.com/about/install.html)
+
+
+
+
+
+### Important Note
+
+This npm package is not the Meteor framework itself; it is just an installer. Do not include it as a dependency in your project, as doing so may break your deployment.
+
+### Path Management
+
+By default, the Meteor installer adds its install path (by default, `~/.meteor/`) to your PATH by updating either your `.bashrc`, `.bash_profile`, or `.zshrc` as appropriate. To disable this behavior, install Meteor by running:
+
+```bash
+npm install -g meteor --ignore-meteor-setup-exec-path
+```
+
+(or by setting the environment variable `npm_config_ignore_meteor_setup_exec_path=true`)
+
+### Proxy Configuration
+
+Set the `https_proxy` or `HTTPS_PROXY` environment variable to a valid proxy URL to download Meteor files through the configured proxy.
+
+### Meteor Version Compatibility
 
 | NPM Package | Meteor Official Release |
 |-------------|-------------------------|
+| 3.0.3       | 3.0.3                   |
+| 3.0.2       | 3.0.2                   |
+| 3.0.1       | 3.0.1                   |
+| 3.0.0       | 3.0                     |
 | 2.16.0      | 2.16.0                  |
 | 2.15.0      | 2.15.0                  |
 | 2.14.0      | 2.14.0                  |
@@ -57,22 +103,3 @@ npm install -g meteor
 | 2.3.3       | 2.3.2                   |
 | 2.3.2       | 2.3.1                   |
 | 2.3.1       | 2.2.1                   |
-
-### Important note
-
-This npm package is not Meteor itself, it is just an installer. You should not include it as a dependency in your project. If you do, your deployment is going to be broken.
-
-### Path management
-
-By default, the Meteor installer adds its install path (by default, `~/.meteor/`) to your PATH by updating either your `.bashrc`, `.bash_profile`, or `.zshrc` as appropriate. To disable this behavior, install Meteor by running:
-
-```bash
-npm install -g meteor --ignore-meteor-setup-exec-path
-```
-
-(or by setting the environment variable `npm_config_ignore_meteor_setup_exec_path=true`)
-
-### Proxy configuration
-
-Setting the `https_proxy` or `HTTPS_PROXY` environment variable to a valid proxy URL will cause the
-downloader to use the configured proxy to retrieve the Meteor files.

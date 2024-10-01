@@ -32,26 +32,29 @@ Object.assign(StubStream.prototype, {
   },
 
   // Methods for tests
-  receive: function(data) {
+  receive: async function(data) {
     const self = this;
 
     if (typeof data === 'object') {
       data = EJSON.stringify(data);
     }
 
-    _.each(self.callbacks['message'], function(cb) {
-      cb(data);
-    });
+    for (const cb of self.callbacks['message']) {
+      await cb(data);
+    }
   },
 
-  reset: function() {
+  reset: async function() {
     const self = this;
-    _.each(self.callbacks['reset'], function(cb) {
-      cb();
-    });
+    for (const cb of self.callbacks['reset']) {
+      await cb();
+    }
   },
 
   // Provide a tag to detect stub streams.
   // We don't log heartbeat failures on stub streams, for example.
-  _isStub: true
+  _isStub: true,
+  // useful for testing, where we're sure we don't rely on previous method calls
+  // this is an example of one https://github.com/meteor/meteor/blob/918e4e10ac05a28a553a36bb1405914f71302170/packages/ddp-client/test/livedata_connection_tests.js#L200
+  _neverQueued: true,
 });

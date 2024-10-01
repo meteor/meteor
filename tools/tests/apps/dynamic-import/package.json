@@ -10,13 +10,13 @@
     "acorn": "^7.4.1",
     "arson": "^0.2.6",
     "jquery": "^3.7.1",
-    "meteor-node-stubs": "^1.2.7",
+    "meteor-node-stubs": "^1.2.10",
     "moment": "^2.29.4",
     "optimism": "^0.11.5",
     "private": "^0.1.8",
     "puppeteer": "^2.1.1",
     "react": "^17.0.2",
     "regenerator-runtime": "^0.13.5",
-    "uuid": "^7.0.2"
+    "uuid": "^7.0.3"
   }
 }
