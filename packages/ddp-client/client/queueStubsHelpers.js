@@ -1,5 +1,4 @@
 import { DDP } from "../common/namespace.js";
-import { isEmpty, last } from "meteor/ddp-common/utils.js";
 import { Connection } from "../common/livedata_connection";
 
 // https://forums.meteor.com/t/proposal-to-fix-issues-with-async-method-stubs/60826
@@ -92,21 +91,18 @@ export const loadAsyncStubHelpers = () => {
 
     return queueFunction(
       (resolve, reject) => {
-        let hasStub = false;
         let finished = false;
 
         Meteor._setImmediate(() => {
           const applyAsyncPromise = oldApplyAsync.apply(this, args);
           stubPromiseResolver(applyAsyncPromise.stubPromise);
           serverPromiseResolver(applyAsyncPromise.serverPromise);
-          hasStub = !!applyAsyncPromise.stubPromise;
-          if (hasStub) {
-            applyAsyncPromise.stubPromise
-              .catch(() => {}) // silent uncaught promise
-              .finally(() => {
-                finished = true;
-              });
-          }
+
+          applyAsyncPromise.stubPromise
+            .catch(() => {}) // silent uncaught promise
+            .finally(() => {
+              finished = true;
+            });
 
           applyAsyncPromise
             .then((result) => {
@@ -115,11 +111,12 @@ export const loadAsyncStubHelpers = () => {
             .catch((err) => {
               reject(err);
             });
+
           serverPromise.catch(() => {}); // silent uncaught promise
         });
 
         Meteor._setImmediate(() => {
-          if (hasStub && !finished) {
+          if (!finished) {
             console.warn(
               `Method stub (${name}) took too long and could cause unexpected problems. Learn more at https://v3-migration-docs.meteor.com/breaking-changes/call-x-callAsync.html#considerations-for-effective-use-of-meteor-callasync`
             );
@@ -134,10 +131,10 @@ export const loadAsyncStubHelpers = () => {
   };
 
   let oldApply = Connection.prototype.apply;
-  Connection.prototype.apply = function () {
-    // [name, args, options]
-    let options = arguments[2] || {};
-    let wait = options.wait;
+  Connection.prototype.apply = function (name, args, options, callback) {
+    if (this._stream._neverQueued) {
+      return oldApply.apply(this, arguments);
+    }
 
     // Apply runs the stub before synchronously returning.
     //
@@ -147,63 +144,25 @@ export const loadAsyncStubHelpers = () => {
     // This does mean the stubs run in a different order than the methods on the
     // server.
 
-    let oldOutstandingMethodBlocks = Meteor.connection._outstandingMethodBlocks;
-    // Meteor only sends the method if _outstandingMethodBlocks.length is 1.
-    // Add a wait block to force Meteor to put the new method in a second block.
-    let outstandingMethodBlocks = [{ wait: true, methods: [] }];
-    Meteor.connection._outstandingMethodBlocks = outstandingMethodBlocks;
-
-    let result;
-    try {
-      result = oldApply.apply(this, arguments);
-    } finally {
-      Meteor.connection._outstandingMethodBlocks = oldOutstandingMethodBlocks;
+    if (!callback && typeof options === 'function') {
+      callback = options;
+      options = undefined;
     }
 
-    if (outstandingMethodBlocks[1]) {
-      let methodInvoker = outstandingMethodBlocks[1].methods[0];
+    let { methodInvoker, result } = oldApply.call(this, name, args, {
+      ...options,
+      _returnMethodInvoker: true,
+    }, callback);
 
-      if (methodInvoker) {
-        queueMethodInvoker(methodInvoker, wait);
-      }
+    if (methodInvoker) {
+      queueFunction((resolve) => {
+        this._addOutstandingMethod(methodInvoker, options);
+        resolve();
+      });
     }
 
     return result;
   };
-
-  function queueMethodInvoker(methodInvoker, wait) {
-    queueFunction((resolve) => {
-      let self = Meteor.connection;
-      // based on https://github.com/meteor/meteor/blob/e0631738f2a8a914d8a50b1060e8f40cb0873680/packages/ddp-client/common/livedata_connection.js#L833-L853C1
-      if (wait) {
-        // It's a wait method! Wait methods go in their own block.
-        self._outstandingMethodBlocks.push({
-          wait: true,
-          methods: [methodInvoker],
-        });
-      } else {
-        // Not a wait method. Start a new block if the previous block was a wait
-        // block, and add it to the last block of methods.
-        if (
-          isEmpty(self._outstandingMethodBlocks) ||
-          last(self._outstandingMethodBlocks).wait
-        ) {
-          self._outstandingMethodBlocks.push({
-            wait: false,
-            methods: [],
-          });
-        }
-
-        last(self._outstandingMethodBlocks).methods.push(methodInvoker);
-      }
-
-      // If we added it to the first block, send it out now.
-      if (self._outstandingMethodBlocks.length === 1)
-        methodInvoker.sendMessage();
-
-      resolve();
-    });
-  }
 
   /**
    * Queue subscriptions in case they rely on previous method calls
@@ -242,6 +201,7 @@ export const loadAsyncStubHelpers = () => {
       }
     });
   };
+
   let _oldSendOutstandingMethodBlocksMessages =
     Connection.prototype._sendOutstandingMethodBlocksMessages;
   Connection.prototype._sendOutstandingMethodBlocksMessages = function () {
