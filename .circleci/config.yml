@@ -178,7 +178,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             cd dev_bundle/lib
-            ../../meteor npm install @types/node@20.10.5 --save-dev
+            ../../meteor npm install @types/node@22.7.4 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
             ../../meteor npm install -g typescript
             cd ../../
