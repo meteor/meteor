@@ -2851,7 +2851,7 @@ main.registerCommand({
   }
 
   try {
-    var conn = packageClient.loggedInPackagesConnection();
+    var conn = await packageClient.loggedInPackagesConnection();
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;
