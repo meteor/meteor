@@ -1,6 +1,0 @@
-{
-  "name": "flow-router-advanced",
-  "dependencies": {
-    "@babel/runtime": "^7.7.2"
-  }
-}
