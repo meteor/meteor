@@ -33,10 +33,10 @@ async function getChildProcess({ isFirstTry }) {
 
   console.log('-> cmd', cmd);
 
-  const child = require("child_process").spawn(cmd, args, {
-    stdio: "inherit",
+  const child = require('child_process').spawn(cmd, args, {
+    stdio: 'inherit',
     env: env,
-    ...process.platform === 'win32' && { shell: true },
+    shell: process.platform === 'win32' && ['.cmd', '.bat'].some(_extension => cmd.endsWith(_extension)),
   });
   require("./flush-buffers-on-exit-in-windows");
   child.on("error", function (error) {
