@@ -25,7 +25,7 @@ function getReifyOptions(features) {
 
   if (features) {
     if (features.modernBrowsers ||
-        features.nodeMajorVersion >= 8) {
+      features.nodeMajorVersion >= 8) {
       reifyOptions.avoidModernSyntax = false;
       reifyOptions.generateLetDeclarations = true;
     }
@@ -61,7 +61,7 @@ exports.getDefaults = function getDefaults(features) {
   };
 
   const compileModulesOnly = features && features.compileModulesOnly;
-  if (! compileModulesOnly) {
+  if (!compileModulesOnly) {
     combined.presets.push(babelPresetMeteor);
 
     const rt = getRuntimeTransform(features);
@@ -100,7 +100,7 @@ function getDefaultsForModernBrowsers(features) {
   };
 
   const compileModulesOnly = features && features.compileModulesOnly;
-  if (! compileModulesOnly) {
+  if (!compileModulesOnly) {
     combined.presets.push(babelPresetMeteorModern.getPreset);
 
     const rt = getRuntimeTransform(features);
@@ -173,7 +173,7 @@ function getDefaultsForNode8(features) {
   };
 
   const compileModulesOnly = features.compileModulesOnly;
-  if (! compileModulesOnly) {
+  if (!compileModulesOnly) {
     combined.presets.push(babelPresetMeteorModern.getPreset);
 
     const rt = getRuntimeTransform(features);
@@ -198,10 +198,10 @@ function getDefaultsForNode8(features) {
       ]);
     }
     // Enable async generator functions proposal.
-    combined.plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
+    combined.plugins.push(require("@babel/plugin-transform-async-generator-functions"));
   }
 
-  if (! compileModulesOnly) {
+  if (!compileModulesOnly) {
     maybeAddReactPlugins(features, combined);
   }
 
@@ -210,7 +210,7 @@ function getDefaultsForNode8(features) {
 
 exports.getMinifierDefaults = function getMinifierDefaults(features) {
   const inlineNodeEnv = features && features.inlineNodeEnv;
-  const keepFnName = !! (features && features.keepFnName);
+  const keepFnName = !!(features && features.keepFnName);
   const options = {
     // Generate code in loose mode
     compact: false,

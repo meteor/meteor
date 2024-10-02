@@ -53,6 +53,7 @@
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "7.14.5",
     "@babel/plugin-syntax-decorators": "7.14.5",
+    "@babel/plugin-transform-async-generator-functions": "^7.25.7",
     "d3": "4.13.0",
     "fibers": "5.0.0",
     "mocha": "6.2.3",
