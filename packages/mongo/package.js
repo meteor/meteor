@@ -9,11 +9,19 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: "2.0.2-beta303.1",
+  version: "2.0.2",
 });
 
 Npm.depends({
   "mongodb-uri": "0.9.7",
+  "lodash.times": "4.3.2",
+  "lodash.isempty": "4.4.0",
+  "lodash.has": "4.5.2",
+  "lodash.throttle": "4.1.1",
+  "lodash.once": "4.1.1",
+  "lodash.identity": "3.0.0",
+  "lodash.isobject": "3.0.2",
+  "lodash.clone": "4.5.0"
 });
 
 Npm.strip({
@@ -95,20 +103,12 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use("mongo");
-  api.use("check");
-  api.use("ecmascript");
-  api.use("npm-mongo", "server");
-  //api.use('emitter-promise', 'server');
-  api.use([
-    "tinytest",
-    "underscore",
-    "test-helpers",
-    "ejson",
-    "random",
-    "ddp",
-    "base64",
-  ]);
+  api.use('mongo');
+  api.use('check');
+  api.use('ecmascript');
+  api.use('npm-mongo', 'server');
+  api.use(['tinytest', 'test-helpers', 'ejson', 'random',
+           'ddp', 'base64']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles("mongo_livedata_tests.js", ["client", "server"]);

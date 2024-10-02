@@ -5,7 +5,9 @@ Package.describe({
 });
 
 Npm.depends({
-  "@sinonjs/fake-timers": "7.0.5",
+  '@sinonjs/fake-timers': '7.0.5',
+  'lodash.has': '4.5.2',
+  'lodash.identity': '3.0.0'
 });
 
 Package.onUse((api) => {
@@ -42,20 +44,19 @@ Package.onUse((api) => {
 
 Package.onTest((api) => {
   api.use([
-    "livedata",
-    "mongo",
-    "test-helpers",
-    "ecmascript",
-    "underscore",
-    "tinytest",
-    "random",
-    "tracker",
-    "reactive-var",
-    "mongo-id",
-    "diff-sequence",
-    "ejson",
-    "ddp-common",
-    "check",
+    'livedata',
+    'mongo',
+    'test-helpers',
+    'ecmascript',
+    'tinytest',
+    'random',
+    'tracker',
+    'reactive-var',
+    'mongo-id',
+    'diff-sequence',
+    'ejson',
+    'ddp-common',
+    'check'
   ]);
 
   api.addFiles("test/stub_stream.js");

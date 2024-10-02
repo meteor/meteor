@@ -7,6 +7,10 @@ Package.describe({
 Npm.depends({
   "permessage-deflate": "0.1.7",
   sockjs: "0.3.24",
+  "lodash.once": "4.1.1",
+  "lodash.isempty": "4.4.0",
+  "lodash.isstring": "4.0.1",
+  "lodash.isobject": "3.0.2"
 });
 
 Package.onUse(function (api) {
@@ -15,7 +19,6 @@ Package.onUse(function (api) {
       "check",
       "random",
       "ejson",
-      "underscore",
       "retry",
       "mongo-id",
       "diff-sequence",
@@ -62,7 +65,6 @@ Package.onTest(function (api) {
   api.use("mongo", ["client", "server"]);
   api.use("test-helpers", ["client", "server"]);
   api.use([
-    "underscore",
     "tinytest",
     "random",
     "tracker",

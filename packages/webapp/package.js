@@ -1,25 +1,26 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: "2.0.1",
+  version: "2.0.2",
 });
 
 Npm.depends({
   "cookie-parser": "1.4.6",
-  express: "4.18.2",
-  "@types/express": "4.17.15",
+  express: "4.21.0",
+  "@types/express": "4.17.21",
   compression: "1.7.4",
   errorhandler: "1.5.1",
   parseurl: "1.3.3",
-  send: "0.18.0",
+  send: "1.1.0",
   "stream-to-string": "1.2.1",
-  qs: "6.11.2",
-  useragent: "2.3.0",
+  qs: "6.13.0",
+  "useragent-ng": "2.4.3",
   "@types/connect": "3.4.38",
+  "tmp": "0.2.3",
 });
 
 Npm.strip({
   multiparty: ["test/"],
-  useragent: ["test/"],
+  "useragent-ng": ["test/"],
 });
 
 // whitelist plugin is now included in the core

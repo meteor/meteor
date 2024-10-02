@@ -47,7 +47,7 @@ export namespace Accounts {
       profile?: Meteor.UserProfile | undefined;
     },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): string;
+  ): Promise<string>;
 
   function createUserAsync(
     options: {
@@ -113,23 +113,23 @@ export namespace Accounts {
     oldPassword: string,
     newPassword: string,
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   function forgotPassword(
     options: { email?: string | undefined },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   function resetPassword(
     token: string,
     newPassword: string,
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   function verifyEmail(
     token: string,
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   function onEmailVerificationLink(callback: Function): void;
 
@@ -143,11 +143,11 @@ export namespace Accounts {
 
   function logout(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   function logoutOtherClients(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   type PasswordSignupField = 'USERNAME_AND_EMAIL' | 'USERNAME_AND_OPTIONAL_EMAIL' | 'USERNAME_ONLY' | 'EMAIL_ONLY';
   type PasswordlessSignupField = 'USERNAME_AND_EMAIL' | 'EMAIL_ONLY';
@@ -179,9 +179,9 @@ export interface EmailTemplates {
 export namespace Accounts {
   var emailTemplates: EmailTemplates;
 
-  function addEmail(userId: string, newEmail: string, verified?: boolean): void;
+  function addEmailAsync(userId: string, newEmail: string, verified?: boolean): Promise<void>;
 
-  function removeEmail(userId: string, email: string): void;
+  function removeEmail(userId: string, email: string): Promise<void>;
 
   function onCreateUser(
     func: (options: { profile?: {} | undefined }, user: Meteor.User) => void
@@ -190,35 +190,35 @@ export namespace Accounts {
   function findUserByEmail(
     email: string,
     options?: { fields?: Mongo.FieldSpecifier | undefined }
-  ): Meteor.User | null | undefined;
+  ): Promise<Meteor.User | null | undefined>;
 
   function findUserByUsername(
     username: string,
     options?: { fields?: Mongo.FieldSpecifier | undefined }
-  ): Meteor.User | null | undefined;
+  ): Promise<Meteor.User | null | undefined>;
 
   function sendEnrollmentEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): void;
+  ): Promise<void>;
 
   function sendResetPasswordEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): void;
+  ): Promise<void>;
 
   function sendVerificationEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): void;
+  ): Promise<void>;
 
-  function setUsername(userId: string, newUsername: string): void;
+  function setUsername(userId: string, newUsername: string): Promise<void>;
 
   function setPasswordAsync(
     userId: string,

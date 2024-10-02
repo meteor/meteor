@@ -10,7 +10,7 @@ import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
 import parseRequest from 'parseurl';
-import { lookup as lookupUserAgent } from 'useragent';
+import { lookup as lookupUserAgent } from 'useragent-ng';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
 import {
@@ -117,13 +117,21 @@ var camelCase = function(name) {
   var parts = name.split(' ');
   parts[0] = parts[0].toLowerCase();
   for (var i = 1; i < parts.length; ++i) {
-    parts[i] = parts[i].charAt(0).toUpperCase() + parts[i].substr(1);
+    parts[i] = parts[i].charAt(0).toUpperCase() + parts[i].substring(1);
   }
   return parts.join('');
 };
 
 var identifyBrowser = function(userAgentString) {
-  var userAgent = lookupUserAgent(userAgentString);
+  if (!userAgentString) {
+    return {
+      name: 'unknown',
+      major: 0,
+      minor: 0,
+      patch: 0
+    };
+  }
+  var userAgent = lookupUserAgent(userAgentString.substring(0, 150));
   return {
     name: camelCase(userAgent.family),
     major: +userAgent.major,
