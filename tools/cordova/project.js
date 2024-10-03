@@ -463,7 +463,7 @@ to Cordova project`, async () => {
       // it keeps the dependencies installed.
       const packageLock = files.exists('node_modules/.package-lock.json') ? JSON.parse(files.readFile(
         files.pathJoin(self.projectRoot, 'node_modules/.package-lock.json')
-      )) : { packages: {} };
+      )) : { packages: { [`cordova-${platform}`]: { version }  } };
       const getPackageName = (pkgPath) => {
         const split = pkgPath.split("node_modules/");
         return split[split.length - 1];
