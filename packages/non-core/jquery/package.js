@@ -1,10 +1,11 @@
 Package.describe({
   summary: "Manipulate the DOM using CSS selectors",
-  version: '3.0.1-alpha300.10'
+  version: '3.0.2'
 });
 
 Package.onUse(function (api) {
-  api.use('modules@0.19.1-alpha300.17');
+  api.versionsFrom(['2.16', '3.0.3']);
+  api.use('modules');
 
   // Note that you can `meteor npm install jquery` (any version) into your
   // application's node_modules directory, and the meteor/jquery package
