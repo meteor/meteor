@@ -461,9 +461,9 @@ to Cordova project`, async () => {
       // As per Npm 8, we need now do inject a package.json file
       // with the dependencies so that when running any npm command
       // it keeps the dependencies installed.
-      const packageLock = JSON.parse(files.readFile(
+      const packageLock = files.exists('node_modules/.package-lock.json') ? JSON.parse(files.readFile(
         files.pathJoin(self.projectRoot, 'node_modules/.package-lock.json')
-      ));
+      )) : { packages: {} };
       const getPackageName = (pkgPath) => {
         const split = pkgPath.split("node_modules/");
         return split[split.length - 1];
