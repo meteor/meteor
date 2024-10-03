@@ -1,3 +1,5 @@
+import has from 'lodash.has';
+
 if (Meteor.isServer) {
   // Set up allow/deny rules for test collections
 
@@ -21,7 +23,7 @@ if (Meteor.isServer) {
       var fullName = name + idGeneration + nonce;
 
       var collection;
-      if (_.has(allowCollections, fullName)) {
+      if (has(allowCollections, fullName)) {
         collection = allowCollections[fullName];
         if (needToConfigure === true)
           throw new Error("collections inconsistently exist");
@@ -126,7 +128,7 @@ if (Meteor.isServer) {
           return doc.canInsert2;
         },
         updateAsync: function(userId, doc, fields, modifier) {
-          return -1 !== _.indexOf(fields, 'canUpdate2');
+          return -1 !== fields.indexOf('canUpdate2');
         },
         removeAsync: function(userId, doc) {
           return doc.canRemove2;
@@ -144,22 +146,22 @@ if (Meteor.isServer) {
       }, {
         insertAsync: function(userId, doc) {
           // Don't allow explicit ID to be set by the client.
-          return _.has(doc, '_id');
+          return has(doc, '_id');
         },
         updateAsync: function(userId, doc, fields, modifier) {
-          return -1 !== _.indexOf(fields, 'verySecret');
+          return -1 !== fields.indexOf('verySecret');
         }
       }];
 
-      _.each([
+      [
         restrictedCollectionDefaultSecure,
         restrictedCollectionDefaultInsecure,
         restrictedCollectionForUpdateOptionsTest
-      ], function (collection) {
-        _.each(allows, function (allow) {
+      ].forEach(function (collection) {
+        allows.forEach(function (allow) {
           collection.allow(allow);
         });
-        _.each(denies, function (deny) {
+        denies.forEach(function (deny) {
           collection.deny(deny);
         });
       });
@@ -180,12 +182,12 @@ if (Meteor.isServer) {
         updateAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
-            999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
+            999, "Test: Fields in doc: " + Object.keys(doc).sort().join(','));
         },
         removeAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
-            999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
+            999, "Test: Fields in doc: " + Object.keys(doc).sort().join(','));
         },
         fetch: ['field1']
       });
@@ -203,12 +205,12 @@ if (Meteor.isServer) {
         updateAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
-            999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
+            999, "Test: Fields in doc: " + Object.keys(doc).sort().join(','));
         },
         removeAsync: function(userId, doc) {
           // throw fields in doc so that we can inspect them in test
           throw new Meteor.Error(
-            999, "Test: Fields in doc: " + _.keys(doc).sort().join(','));
+            999, "Test: Fields in doc: " + Object.keys(doc).sort().join(','));
         },
         fetch: ['field1']
       });
@@ -222,7 +224,7 @@ if (Meteor.isServer) {
 }
 
 if (Meteor.isClient) {
-  _.each(['STRING', 'MONGO'], function (idGeneration) {
+  ['STRING', 'MONGO'].forEach(function (idGeneration) {
     // Set up a bunch of test collections... on the client! They match the ones
     // created by setUpAllowTestsCollections.
 
@@ -730,8 +732,8 @@ if (Meteor.isClient) {
       ]);
     })();
 
-    _.each(
-      [restrictedCollectionDefaultInsecure, restrictedCollectionDefaultSecure],
+    
+      [restrictedCollectionDefaultInsecure, restrictedCollectionDefaultSecure].forEach(
       function(collection) {
         var canUpdateId, canRemoveId;
 
@@ -1078,7 +1080,7 @@ if (Meteor.isServer) {
       collection.deny({invalidOption: true});
     });
 
-    _.each(['insert', 'update', 'remove', 'fetch'], function (key) {
+    ['insert', 'update', 'remove', 'fetch'].forEach(function (key) {
       var options = {};
       options[key] = true;
       test.throws(function () {
@@ -1089,7 +1091,7 @@ if (Meteor.isServer) {
       });
     });
 
-    _.each(['insert', 'update', 'remove'], function (key) {
+    ['insert', 'update', 'remove'].forEach(function (key) {
       var options = {};
       options[key] = false;
       test.throws(function () {
@@ -1100,7 +1102,7 @@ if (Meteor.isServer) {
       });
     });
 
-    _.each(['insert', 'update', 'remove'], function (key) {
+    ['insert', 'update', 'remove'].forEach(function (key) {
       var options = {};
       options[key] = undefined;
       test.throws(function () {
@@ -1111,7 +1113,7 @@ if (Meteor.isServer) {
       });
     });
 
-    _.each(['insert', 'update', 'remove'], function (key) {
+    ['insert', 'update', 'remove'].forEach(function (key) {
       var options = {};
       options[key] = ['an array']; // this should be a function, not an array
       test.throws(function () {

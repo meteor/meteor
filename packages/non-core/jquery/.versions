@@ -1,5 +1,5 @@
-core-runtime@1.0.0-alpha300.11
-jquery@3.0.1-alpha300.10
-meteor@2.0.0-alpha300.10
-modules@1.0.0-alpha300.10
-modules-runtime@1.0.0-alpha300.10
+core-runtime@1.0.0
+jquery@3.0.2
+meteor@2.0.1
+modules@0.20.1
+modules-runtime@0.13.2

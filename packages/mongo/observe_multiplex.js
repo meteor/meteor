@@ -1,3 +1,6 @@
+import has from 'lodash.has'; 
+import isEmpty from 'lodash.isempty';
+
 let nextObserveHandleId = 1;
 
 ObserveMultiplexer = class {
@@ -67,7 +70,7 @@ ObserveMultiplexer = class {
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
         "mongo-livedata", "observe-handles", -1);
 
-    if (_.isEmpty(this._handles) &&
+    if (isEmpty(this._handles) &&
         this._addHandleTasksScheduledButNotPerformed === 0) {
       await this._stop();
     }
@@ -190,7 +193,7 @@ ObserveMultiplexer = class {
       return;
     // note: docs may be an _IdMap or an OrderedDict
     await this._cache.docs.forEachAsync(async (doc, id) => {
-      if (!_.has(this._handles, handle._id))
+      if (!has(this._handles, handle._id))
         throw Error("handle got removed before sending initial adds!");
       const { _id, ...fields } = handle.nonMutatingCallbacks ? doc
           : EJSON.clone(doc);
