@@ -573,7 +573,8 @@ Tinytest.add('check - check throw all errors deeply nested', test => {
     int: { i: 1.2, a: [1, '2'], b: [{x: 1, y: '1'}, {x: '2', y: 2}, {x: '3', y: '3'}] },
     oneOf: { f: 'm', a: [1, '2'], b: [{x: 1, y: '1'}, {x: '2', y: 2}, {x: '3', y: '3'}] },
     where: { w: 'a', a: [1, '2'], b: [{x: 1, y: '1'}, {x: '2', y: 2}, {x: '3', y: '3'}] },
-    whereArr: [1, 2, 3]
+    whereArr: [1, 2, 3],
+    embedded: { thing: '1' }
   };
 
   const pattern = {
@@ -599,7 +600,10 @@ Tinytest.add('check - check throw all errors deeply nested', test => {
     whereArr: Match.Where((x) => {
       check(x, [String]);
       return x.length === 1;
-    })
+    }),
+    missing1: String,
+    missing2: String,
+    embedded: { thing: String, another: String }
   }
 
   try {
@@ -609,7 +613,8 @@ Tinytest.add('check - check throw all errors deeply nested', test => {
   }
 
   test.isTrue(error);
-  test.equal(error.length, 37);
+  test.equal(error.length, 40);
+  test.equal(error.filter(e => e.message.includes('Missing key')).map(e => e.message), [`Match error: Missing key 'another' in field embedded`, `Match error: Missing key 'missing1'`, `Match error: Missing key 'missing2'`]);
   error.every(e => test.instanceOf(e, Match.Error));
   test.isFalse(Match.test(value, pattern));
 })
