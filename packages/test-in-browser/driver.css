@@ -1,132 +1,226 @@
+
+* {
+    /* Variables */
+    /* for reference: https://tailwindcss.com/docs/customizing-colors */
+
+    --bg-black: #18181b;
+    --neutral-black: #343333;
+    --primary-white: #F9FAFB;
+    --red-50: #fef2f2;
+    --red-200: #fecaca;
+    --red-400: #ea5555;
+    --red-600: #dc2626;
+    --red-900: #7f1d1d;
+    --gray-300: #d6d3d1;
+    --gray-400: #a09d9a;
+    --gray-500: #737373;
+
+    --blue-gray-400: #5f6373;
+
+
+    --blue-500: #6366f1;
+    --blue-50: #eef2ff;
+
+    --yellow-400: #facc15;
+
+    --green-600: #16a34a;
+}
+
 body {
-  height: 100vh;
-  width: 100vw;
+    height: 100vh;
+    width: 100vw;
+    background-color: #18181b !important;
+    background-color: var(--bg-black) !important;
+    color: #F9FAFB !important;
+    color: var(--primary-white) !important;
+
 }
 
 .test-in-browser {
-  display: flex;
-  height: 100%;
-  flex-direction: column;
+    display: flex;
+    height: 100%;
+    flex-direction: column;
 }
 
 .test-results {
-  flex: 1;
-  overflow: auto;
+    flex: 1;
+    overflow: auto;
 }
 
 #testProgressBar {
-  flex: 1;
-  max-width: 400px;
-  position: relative;
+    flex: 1;
+    max-width: 400px;
+    position: relative;
 }
 
 .header {
-  font-family: Arial, sans-serif;
-  font-size: 24px;
-  padding-bottom: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 24px;
+    padding-bottom: 4px;
 }
 
 .header.in-progress {
-  color: #ccc;
+    color: #fef2f2;
+    color: var(--red-50);
 }
 
 .header.pass {
-  color: #090; /* green */
+    color: #16a34a;
+    color: var(--green-600); /* green */
 }
 
 .header.fail {
-  color: #900; /* red */
-  font-weight: bold;
+    color: var(--red-400);
+    color: #ea5555;
+    font-weight: bold;
 }
 
 .header .time {
-  color: #666;
-  font-size: 14px;
+    color: #737373;
+    font-size: 14px;
 }
 
 .test_table {
-  font-family: Arial, sans-serif;
-  font-size: 16px;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
 }
 
 .test_table .group {
-  border-left: 1px solid #ddd;
+    border-left: 1px solid #313131;
+    border-left: 1px solid var(--neutral-black);
 }
 
 .test_table .group .group {
-  margin-left: 20px;
+    margin-left: 20px;
 }
 
 .test_table .test {
-  margin-left: 20px;
+    margin-left: 20px;
 }
 
 .test_table .testname {
-  margin-left: 200px;
-  line-height: 24px;
-  vertical-align: middle;
-  text-decoration: underline;
-  cursor: pointer;
+    margin-left: 200px;
+    line-height: 24px;
+    vertical-align: middle;
+    text-decoration: underline;
+    cursor: pointer;
 }
 
 .test_table .groupname {
-  font-weight: bold;
-  background: #ddd;
-  padding-left: 5px;
-  line-height: 24px;
-  vertical-align: middle;
-  font-size: 16px;
+    font-weight: bold;
+    background: var(--neutral-black);
+    background: #313131;
+    padding-left: 5px;
+    line-height: 24px;
+    vertical-align: middle;
+    font-size: 16px;
+    color: var(--primary-white);
+    color: #F9FAFB;
 }
 
 .test_table .event {
-  margin-left: 20px;
-  font-size: 14px;
-  border-left: 2px solid #def;
-  padding: 4px;
-  position: relative;
+    margin-left: 20px;
+    font-size: 14px;
+    border-left: 2px solid var(--blue-gray-400);
+    border-left: 2px solid #5f6373;
+    padding: 4px;
+    position: relative;
 }
 
-.test_table .test .testrow { position: relative; overflow: hidden; /*hasLayout*/ }
+.test_table .test .testrow {
+    position: relative;
+    overflow: hidden; /*hasLayout*/
+}
 
-.test_table .running .testname { color: #66c; /* blue */ }
-.test_table .failed .testname { color: #900; /* red */ }
-.test_table .succeeded .testname { color: #090; /* green */ }
+.test_table .running .testname {
+    color: var(--blue-500);
+    color: #6366f1;
+}
+
+.test_table .failed .testname {
+    color: var(--red-400);
+    color: #ea5555;
+}
+
+.test_table .succeeded .testname {
+    color: var(--green-600);
+    color: #16a34a;
+}
 
 .test_table .teststatus {
-  position: absolute;
-  height: 100%;
-  width: 100px;
-  left: 0px;
-  top: 0;
-  text-align: center;
-  line-height: 24px;
-  vertical-align: middle;
+    position: absolute;
+    height: 100%;
+    width: 100px;
+    left: 0px;
+    top: 0;
+    text-align: left;
+    line-height: 24px;
+    vertical-align: middle;
 }
 
 .test_table .testtime {
-  position: absolute;
-  height: 100%;
-  width: 75px;
-  margin-right: 5px;
-  left: 100px;
-  top: 0;
-  text-align: right;
-  line-height: 24px;
-  vertical-align: middle;
-  font-size: 14px;
-  color: #666;
+    position: absolute;
+    height: 100%;
+    width: 75px;
+    margin-right: 5px;
+    left: 100px;
+    top: 0;
+    text-align: right;
+    line-height: 24px;
+    vertical-align: middle;
+    font-size: 14px;
+    color: var(--gray-500);
+    color: #737373;
 }
 
-.test_table .succeeded .teststatus { color: #090; /* green */  background: #cfc; }
-.test_table .failed .teststatus { color: #900; /* red */  background: #fcc; }
-.test_table .running .teststatus { color: #ccc; }
+.test_table .succeeded .teststatus {
+    color: var(--green-600);
+    background: var(--bg-black);
+    color: #16a34a;
+    background: #18181b;
+}
 
-.test_table .event .expected_fail { color: #600; }
-.test_table .event .fail { color: #d00; }
-.test_table .event .exception { color: #d00; }
-.test_table .event .nodata { color: #ccc; font-style: italic; }
+.test_table .failed .teststatus {
+    color: var(--red-400); /* red */
+    background: var(--bg-black);
+    color:  #ea5555; /* red */
+    background: #18181b;
+}
 
-.test_table .event .xtimes, .test_table .event .failkey { font-weight: bold; }
+.test_table .running .teststatus {
+    color: var(--red-50);
+    color: #fef2f2;
+}
+
+.test_table .event .expected_fail {
+    color: var(--red-400);
+    color: #ea5555;
+}
+
+.test_table .event .fail {
+    color: var(--red-400);
+    color: #ea5555;
+}
+
+.test_table .event .exception {
+    color: var(--red-400);
+    color: #ea5555;
+}
+
+.exception pre {
+    color: var(--primary-white);
+    color: #F9FAFB;
+}
+
+.test_table .event .nodata {
+    color: var(--red-50);
+    color: #fef2f2;
+    font-style: italic;
+}
+
+.test_table .event .xtimes, .test_table .event .failkey {
+    font-weight: bold;
+}
 
 .test_table .event .debug {
     display: none;
@@ -134,7 +228,8 @@ body {
 
 .test_table .event:hover .debug {
     display: inline;
-    color: gray;
+    color: var(--gray-400);
+    color: #a09d9a;
     text-decoration: underline;
     cursor: pointer;
 }
@@ -146,25 +241,41 @@ body {
 }
 
 .string_equal {
-  line-height: 1.2;
-  margin-left: 30px;
+    line-height: 1.2;
+    margin-left: 30px;
 }
+
 .string_equal ins {
-  text-decoration: none;
+    text-decoration: none;
 }
+
 .string_equal_expected ins {
-  background: #ed0;
+    background: #f59e0b;
 }
+
 .string_equal_actual ins {
-  color: #d00;
-  background: #fcc;
+    color: var(--red-600);
+    background: var(--red-200);
+    color: #dc2626;
+    background: #fecaca;
 }
 
 #current-client-test {
-  color: #ccc;
-  margin-right: 15px;
+    color: var(--gray-300);
+    color: #d6d3d1;
+    margin-right: 15px;
 }
 
 .failedTests {
-  color: #900; /* red */
+    color: var(--red-400);
+    color: #ea5555;
+}
+
+#testProgressBar {
+    background: --var(--blue-gray-400);
+    background: #5f6373;
+}
+
+.progress-bar.bg-warning {
+    background-color: #f59e0b !important;
 }
