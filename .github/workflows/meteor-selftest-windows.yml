@@ -1,5 +1,8 @@
 name: Meteor Selftest Windows
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     types:

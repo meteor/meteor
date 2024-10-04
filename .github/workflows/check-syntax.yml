@@ -1,4 +1,6 @@
 name: Check legacy syntax
+permissions:
+  contents: read
 on:
   - push
   - pull_request
