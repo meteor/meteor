@@ -19,7 +19,7 @@
   limitations under the License.
 */
 
-import assert from "assert";
+import assert from "node:assert";
 import prettyBytes from "pretty-bytes";
 
 // Make a custom "d3" object containing exactly what we need from the

@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { readFileSync as fsReadFileSync } from "fs";
 
 import { Meteor } from "meteor/meteor";
