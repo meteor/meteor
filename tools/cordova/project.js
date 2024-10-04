@@ -463,16 +463,15 @@ to Cordova project`, async () => {
       // As per Npm 8, we need now do inject a package.json file
       // with the dependencies so that when running any npm command
       // it keeps the dependencies installed.
-      const packageLock = JSON.parse(files.readFile(
+      const packageLock = files.exists('node_modules/.package-lock.json') ? JSON.parse(files.readFile(
           files.pathJoin(self.projectRoot, 'node_modules/.package-lock.json')
-      ));
+      )) : { packages: { [`cordova-${platform}`]: { version }  } };
       // Accumulated dependencies from plugins
       const cordovaPackagesPath = files.pathJoin(self.projectRoot, cordovaPackagesFile);
       const cordovaPackageLock = files.exists(cordovaPackagesPath) ? JSON.parse(files.readFile(cordovaPackagesPath)) : {};
 
       // Ensure all packages are kept installed
       const packages = { ...(cordovaPackageLock?.packages || {}), ...(packageLock?.packages || {}) };
-
       const getPackageName = (pkgPath) => {
         const split = pkgPath.split("node_modules/");
         return split[split.length - 1];
