@@ -1,8 +1,9 @@
 Package.describe({
   name: 'static-html-tools',
   summary: "Tools for static-html",
-  version: '1.0.0',
-  git: 'https://github.com/meteor/meteor.git'
+  version: '1.0.0-beta304.0',
+  git: 'https://github.com/meteor/meteor.git',
+  documentation: null
 });
 
 Npm.depends({

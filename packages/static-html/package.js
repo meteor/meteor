@@ -1,7 +1,7 @@
 Package.describe({
   name: 'static-html',
   summary: "Define static page content in .html files",
-  version: '1.4.0',
+  version: '1.4.0-beta304.0',
   git: 'https://github.com/meteor/meteor.git'
 });
 
@@ -9,7 +9,7 @@ Package.registerBuildPlugin({
   name: "compileStaticHtmlBatch",
   use: [
     'ecmascript@0.16.9',
-    'static-html-tools@1.0.0',
+    'static-html-tools@1.0.0-beta304.0',
     'caching-compiler@2.0.0',
   ],
   sources: [
