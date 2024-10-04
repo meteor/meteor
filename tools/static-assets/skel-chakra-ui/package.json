@@ -15,9 +15,9 @@
     "@emotion/styled": "^11.9.3",
     "@react-icons/all-files": "^4.1.0",
     "framer-motion": "^6.4.2",
-    "meteor-node-stubs": "^1.2.7",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "meteor-node-stubs": "^1.2.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "meteor": {
     "mainModule": {

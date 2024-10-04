@@ -1,7 +1,5 @@
 DDPServer = {};
 
-var Fiber = Npm.require('fibers');
-
 // Publication strategies define how we handle data from published cursors at the collection level
 // This allows someone to:
 // - Choose a trade-off between client-server bandwidth and server memory usage
@@ -82,6 +80,14 @@ var SessionDocumentView = function () {
 
 DDPServer._SessionDocumentView = SessionDocumentView;
 
+DDPServer._getCurrentFence = function () {
+  let currentInvocation = this._CurrentWriteFence.get();
+  if (currentInvocation) {
+    return currentInvocation;
+  }
+  currentInvocation = DDP._CurrentMethodInvocation.get();
+  return currentInvocation ? currentInvocation.fence : undefined;
+};
 
 _.extend(SessionDocumentView.prototype, {
 
@@ -366,9 +372,7 @@ var Session = function (server, version, socket, options) {
   self.send({ msg: 'connected', session: self.id });
 
   // On initial connect, spin up all the universal publishers.
-  Fiber(function () {
-    self.startUniversalSubs();
-  }).run();
+  self.startUniversalSubs();
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
     // We no longer need the low level timeout because we have heartbeats.
@@ -392,12 +396,11 @@ var Session = function (server, version, socket, options) {
 };
 
 Object.assign(Session.prototype, {
-
   sendReady: function (subscriptionIds) {
     var self = this;
-    if (self._isSending)
+    if (self._isSending) {
       self.send({msg: "ready", subs: subscriptionIds});
-    else {
+    } else {
       _.each(subscriptionIds, function (subscriptionId) {
         self._pendingReady.push(subscriptionId);
       });
@@ -410,8 +413,9 @@ Object.assign(Session.prototype, {
 
 
   sendAdded(collectionName, id, fields) {
-    if (this._canSend(collectionName))
-      this.send({msg: "added", collection: collectionName, id, fields});
+    if (this._canSend(collectionName)) {
+      this.send({ msg: 'added', collection: collectionName, id, fields });
+    }
   },
 
   sendChanged(collectionName, id, fields) {
@@ -429,8 +433,9 @@ Object.assign(Session.prototype, {
   },
 
   sendRemoved(collectionName, id) {
-    if (this._canSend(collectionName))
+    if (this._canSend(collectionName)) {
       this.send({msg: "removed", collection: collectionName, id});
+    }
   },
 
   getSendCallbacks: function () {
@@ -543,7 +548,7 @@ Object.assign(Session.prototype, {
   // Send a message (doing nothing if no socket is connected right now).
   // It should be a JSON object (it will be stringified).
   send: function (msg) {
-    var self = this;
+    const self = this;
     if (self.socket) {
       if (Meteor._printSentDDP)
         Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
@@ -593,10 +598,8 @@ Object.assign(Session.prototype, {
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
     if (self.heartbeat) {
-      Fiber(function () {
-        self.heartbeat.messageReceived();
-      }).run();
-    }
+      self.heartbeat.messageReceived();
+    };
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)
@@ -615,12 +618,13 @@ Object.assign(Session.prototype, {
 
     var processNext = function () {
       var msg = self.inQueue && self.inQueue.shift();
+
       if (!msg) {
         self.workerRunning = false;
         return;
       }
 
-      Fiber(function () {
+      function runHandlers() {
         var blocked = true;
 
         var unblock = function () {
@@ -635,19 +639,32 @@ Object.assign(Session.prototype, {
           return true;
         });
 
-        if (_.has(self.protocol_handlers, msg.msg))
-          self.protocol_handlers[msg.msg].call(self, msg, unblock);
-        else
+        if (_.has(self.protocol_handlers, msg.msg)) {
+          const result = self.protocol_handlers[msg.msg].call(
+            self,
+            msg,
+            unblock
+          );
+
+          if (Meteor._isPromise(result)) {
+            result.finally(() => unblock());
+          } else {
+            unblock();
+          }
+        } else {
           self.sendError('Bad request', msg);
-        unblock(); // in case the handler didn't already do it
-      }).run();
+          unblock(); // in case the handler didn't already do it
+        }
+      }
+
+      runHandlers();
     };
 
     processNext();
   },
 
   protocol_handlers: {
-    sub: function (msg, unblock) {
+    sub: async function (msg, unblock) {
       var self = this;
 
       // cacheUnblock temporarly, so we can capture it later
@@ -706,7 +723,7 @@ Object.assign(Session.prototype, {
 
       var handler = self.server.publish_handlers[msg.name];
 
-      self._startSubscription(handler, msg.id, msg.params, msg.name);
+      await self._startSubscription(handler, msg.id, msg.params, msg.name);
 
       // cleaning cached unblock
       self.cachedUnblock = null;
@@ -718,7 +735,7 @@ Object.assign(Session.prototype, {
       self._stopSubscription(msg.id);
     },
 
-    method: function (msg, unblock) {
+    method: async function (msg, unblock) {
       var self = this;
 
       // Reject malformed messages.
@@ -745,8 +762,7 @@ Object.assign(Session.prototype, {
         // example, because the method waits for them) their
         // writes will be included in the fence.
         fence.retire();
-        self.send({
-          msg: 'updated', methods: [msg.id]});
+        self.send({msg: 'updated', methods: [msg.id]});
       });
 
       // Find the handler
@@ -755,22 +771,21 @@ Object.assign(Session.prototype, {
         self.send({
           msg: 'result', id: msg.id,
           error: new Meteor.Error(404, `Method '${msg.method}' not found`)});
-        fence.arm();
+        await fence.arm();
         return;
       }
-
-      var setUserId = function(userId) {
-        self._setUserId(userId);
-      };
 
       var invocation = new DDPCommon.MethodInvocation({
         name: msg.method,
         isSimulation: false,
         userId: self.userId,
-        setUserId: setUserId,
+        setUserId(userId) {
+          return self._setUserId(userId);
+        },
         unblock: unblock,
         connection: self.connectionHandle,
-        randomSeed: randomSeed
+        randomSeed: randomSeed,
+        fence,
       });
 
       const promise = new Promise((resolve, reject) => {
@@ -799,37 +814,38 @@ Object.assign(Session.prototype, {
           }
         }
 
-        const getCurrentMethodInvocationResult = () => {
-          const currentContext = DDP._CurrentMethodInvocation._setNewContextAndGetCurrent(
-            invocation
+
+
+        const getCurrentMethodInvocationResult = () =>
+          DDP._CurrentMethodInvocation.withValue(
+            invocation,
+            () =>
+              maybeAuditArgumentChecks(
+                handler,
+                invocation,
+                msg.params,
+                "call to '" + msg.method + "'"
+              ),
+            {
+              name: 'getCurrentMethodInvocationResult',
+              keyName: 'getCurrentMethodInvocationResult',
+            }
           );
 
-          try {
-            let result;
-            const resultOrThenable = maybeAuditArgumentChecks(
-              handler,
-              invocation,
-              msg.params,
-              "call to '" + msg.method + "'"
-            );
-            const isThenable =
-              resultOrThenable && typeof resultOrThenable.then === 'function';
-            if (isThenable) {
-              result = Promise.await(resultOrThenable);
-            } else {
-              result = resultOrThenable;
+        resolve(
+          DDPServer._CurrentWriteFence.withValue(
+            fence,
+            getCurrentMethodInvocationResult,
+            {
+              name: 'DDPServer._CurrentWriteFence',
+              keyName: '_CurrentWriteFence',
             }
-            return result;
-          } finally {
-            DDP._CurrentMethodInvocation._set(currentContext);
-          }
-        };
-
-        resolve(DDPServer._CurrentWriteFence.withValue(fence, getCurrentMethodInvocationResult));
+          )
+        );
       });
 
-      function finish() {
-        fence.arm();
+      async function finish() {
+        await fence.arm();
         unblock();
       }
 
@@ -837,15 +853,14 @@ Object.assign(Session.prototype, {
         msg: "result",
         id: msg.id
       };
-
-      promise.then(result => {
-        finish();
+      return promise.then(async result => {
+        await finish();
         if (result !== undefined) {
           payload.result = result;
         }
         self.send(payload);
-      }, (exception) => {
-        finish();
+      }, async (exception) => {
+        await finish();
         payload.error = wrapInternalException(
           exception,
           `while invoking method '${msg.method}'`
@@ -882,7 +897,7 @@ Object.assign(Session.prototype, {
 
   // Sets the current user id in all appropriate contexts and reruns
   // all subscriptions
-  _setUserId: function(userId) {
+  async _setUserId(userId) {
     var self = this;
 
     if (userId !== null && typeof userId !== "string")
@@ -917,26 +932,28 @@ Object.assign(Session.prototype, {
     // DDP._CurrentMethodInvocation set. But DDP._CurrentMethodInvocation is not
     // expected to be set inside a publish function, so we temporary unset it.
     // Inside a publish function DDP._CurrentPublicationInvocation is set.
-    DDP._CurrentMethodInvocation.withValue(undefined, function () {
+    await DDP._CurrentMethodInvocation.withValue(undefined, async function () {
       // Save the old named subs, and reset to having no subscriptions.
       var oldNamedSubs = self._namedSubs;
       self._namedSubs = new Map();
       self._universalSubs = [];
 
-      oldNamedSubs.forEach(function (sub, subscriptionId) {
-        var newSub = sub._recreate();
+
+
+      await Promise.all([...oldNamedSubs].map(async ([subscriptionId, sub]) => {
+        const newSub = sub._recreate();
         self._namedSubs.set(subscriptionId, newSub);
         // nb: if the handler throws or calls this.error(), it will in fact
         // immediately send its 'nosub'. This is OK, though.
-        newSub._runHandler();
-      });
+        await newSub._runHandler();
+      }));
 
       // Allow newly-created universal subs to be started on our connection in
       // parallel with the ones we're spinning up here, and spin up universal
       // subs.
       self._dontStartNewUniversalSubs = false;
       self.startUniversalSubs();
-    });
+    }, { name: '_setUserId' });
 
     // Start sending messages again, beginning with the diff from the previous
     // state of the world to the current state. No yields are allowed during
@@ -968,7 +985,7 @@ Object.assign(Session.prototype, {
     else
       self._universalSubs.push(sub);
 
-    sub._runHandler();
+    return sub._runHandler();
   },
 
   // Tear down specified subscription
@@ -1142,7 +1159,7 @@ var Subscription = function (
 };
 
 Object.assign(Subscription.prototype, {
-  _runHandler: function() {
+  _runHandler: async function() {
     // XXX should we unblock() here? Either before running the publish
     // function, or before running _publishCursor.
     //
@@ -1157,16 +1174,19 @@ Object.assign(Subscription.prototype, {
     const self = this;
     let resultOrThenable = null;
     try {
-      resultOrThenable = DDP._CurrentPublicationInvocation.withValue(self, () =>
-        maybeAuditArgumentChecks(
-          self._handler,
-          self,
-          EJSON.clone(self._params),
-          // It's OK that this would look weird for universal subscriptions,
-          // because they have no arguments so there can never be an
-          // audit-argument-checks failure.
-          "publisher '" + self._name + "'"
-        )
+      resultOrThenable = DDP._CurrentPublicationInvocation.withValue(
+        self,
+        () =>
+          maybeAuditArgumentChecks(
+            self._handler,
+            self,
+            EJSON.clone(self._params),
+            // It's OK that this would look weird for universal subscriptions,
+            // because they have no arguments so there can never be an
+            // audit-argument-checks failure.
+            "publisher '" + self._name + "'"
+          ),
+        { name: self._name }
       );
     } catch (e) {
       self.error(e);
@@ -1182,16 +1202,17 @@ Object.assign(Subscription.prototype, {
     const isThenable =
       resultOrThenable && typeof resultOrThenable.then === 'function';
     if (isThenable) {
-      Promise.resolve(resultOrThenable).then(
-        (...args) => self._publishHandlerResult.bind(self)(...args),
-        e => self.error(e)
-      );
+      try {
+        await self._publishHandlerResult(await resultOrThenable);
+      } catch(e) {
+        self.error(e)
+      }
     } else {
-      self._publishHandlerResult(resultOrThenable);
+      await self._publishHandlerResult(resultOrThenable);
     }
   },
 
-  _publishHandlerResult: function (res) {
+  async _publishHandlerResult (res) {
     // SPECIAL CASE: Instead of writing their own callbacks that invoke
     // this.added/changed/ready/etc, the user can just return a collection
     // cursor or array of cursors from the publish function; we call their
@@ -1215,7 +1236,7 @@ Object.assign(Subscription.prototype, {
     };
     if (isCursor(res)) {
       try {
-        res._publishCursor(self);
+        await res._publishCursor(self);
       } catch (e) {
         self.error(e);
         return;
@@ -1233,6 +1254,7 @@ Object.assign(Subscription.prototype, {
       // XXX we should support overlapping cursors, but that would require the
       // merge box to allow overlap within a subscription
       var collectionNames = {};
+
       for (var i = 0; i < res.length; ++i) {
         var collectionName = res[i]._getCollectionName();
         if (_.has(collectionNames, collectionName)) {
@@ -1242,12 +1264,10 @@ Object.assign(Subscription.prototype, {
           return;
         }
         collectionNames[collectionName] = true;
-      };
+      }
 
       try {
-        _.each(res, function (cur) {
-          cur._publishCursor(self);
-        });
+        await Promise.all(res.map(cur => cur._publishCursor(self)));
       } catch (e) {
         self.error(e);
         return;
@@ -1495,7 +1515,7 @@ Server = function (options = {}) {
 
   self.sessions = new Map(); // map from id to session
 
-  self.stream_server = new StreamServer;
+  self.stream_server = new StreamServer();
 
   self.stream_server.register(function (socket) {
     // socket implements the SockJSConnection interface
@@ -1529,9 +1549,9 @@ Server = function (options = {}) {
             sendError("Already connected", msg);
             return;
           }
-          Fiber(function () {
-            self._handleConnect(socket, msg);
-          }).run();
+
+          self._handleConnect(socket, msg);
+
           return;
         }
 
@@ -1548,9 +1568,7 @@ Server = function (options = {}) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
-        Fiber(function () {
-          socket._meteorSession.close();
-        }).run();
+        socket._meteorSession.close();
       }
     });
   });
@@ -1728,9 +1746,7 @@ Object.assign(Server.prototype, {
         // self.sessions to change while we're running this loop.
         self.sessions.forEach(function (session) {
           if (!session._dontStartNewUniversalSubs) {
-            Fiber(function() {
-              session._startSubscription(handler);
-            }).run();
+            session._startSubscription(handler);
           }
         });
       }
@@ -1745,6 +1761,17 @@ Object.assign(Server.prototype, {
   _removeSession: function (session) {
     var self = this;
     self.sessions.delete(session.id);
+  },
+
+  /**
+   * @summary Tells if the method call came from a call or a callAsync.
+   * @locus Anywhere
+   * @memberOf Meteor
+   * @importFromPackage meteor
+   * @returns boolean
+   */
+  isAsyncCall: function(){
+    return DDP._CurrentMethodInvocation._isCallAsyncMethodRunning()
   },
 
   /**
@@ -1777,7 +1804,23 @@ Object.assign(Server.prototype, {
 
   // A version of the call method that always returns a Promise.
   callAsync: function (name, ...args) {
-    return this.applyAsync(name, args);
+    const options = args[0]?.hasOwnProperty('returnStubValue')
+      ? args.shift()
+      : {};
+    DDP._CurrentMethodInvocation._set();
+    DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
+    const promise = new Promise((resolve, reject) => {
+      DDP._CurrentCallAsyncInvocation._set({ name, hasCallAsyncParent: true });
+      this.applyAsync(name, args, { isFromCallAsync: true, ...options })
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
+          DDP._CurrentCallAsyncInvocation._set();
+        });
+    });
+    return promise.finally(() =>
+      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false)
+    );
   },
 
   apply: function (name, args, options, callback) {
@@ -1789,7 +1832,6 @@ Object.assign(Server.prototype, {
     } else {
       options = options || {};
     }
-
     const promise = this.applyAsync(name, args, options);
 
     // Return the result in whichever way the caller asked for it. Note that we
@@ -1803,7 +1845,7 @@ Object.assign(Server.prototype, {
         exception => callback(exception)
       );
     } else {
-      return promise.await();
+      return promise;
     }
   },
 
@@ -1811,35 +1853,32 @@ Object.assign(Server.prototype, {
   applyAsync: function (name, args, options) {
     // Run the handler
     var handler = this.method_handlers[name];
+
     if (! handler) {
       return Promise.reject(
         new Meteor.Error(404, `Method '${name}' not found`)
       );
     }
-
     // If this is a method call from within another method or publish function,
     // get the user state from the outer method or publish function, otherwise
     // don't allow setUserId to be called
     var userId = null;
-    var setUserId = function() {
+    let setUserId = () => {
       throw new Error("Can't call setUserId on a server initiated method call");
     };
     var connection = null;
     var currentMethodInvocation = DDP._CurrentMethodInvocation.get();
     var currentPublicationInvocation = DDP._CurrentPublicationInvocation.get();
     var randomSeed = null;
+
     if (currentMethodInvocation) {
       userId = currentMethodInvocation.userId;
-      setUserId = function(userId) {
-        currentMethodInvocation.setUserId(userId);
-      };
+      setUserId = (userId) => currentMethodInvocation.setUserId(userId);
       connection = currentMethodInvocation.connection;
       randomSeed = DDPCommon.makeRpcSeed(currentMethodInvocation, name);
     } else if (currentPublicationInvocation) {
       userId = currentPublicationInvocation.userId;
-      setUserId = function(userId) {
-        currentPublicationInvocation._session._setUserId(userId);
-      };
+      setUserId = (userId) => currentPublicationInvocation._session._setUserId(userId);
       connection = currentPublicationInvocation.connection;
     }
 
@@ -1851,15 +1890,25 @@ Object.assign(Server.prototype, {
       randomSeed
     });
 
-    return new Promise(resolve => resolve(
-      DDP._CurrentMethodInvocation.withValue(
-        invocation,
-        () => maybeAuditArgumentChecks(
-          handler, invocation, EJSON.clone(args),
-          "internal call to '" + name + "'"
-        )
-      )
-    )).then(EJSON.clone);
+    return new Promise((resolve, reject) => {
+      let result;
+      try {
+        result = DDP._CurrentMethodInvocation.withValue(invocation, () =>
+          maybeAuditArgumentChecks(
+            handler,
+            invocation,
+            EJSON.clone(args),
+            "internal call to '" + name + "'"
+          )
+        );
+      } catch (e) {
+        return reject(e);
+      }
+      if (!Meteor._isPromise(result)) {
+        return resolve(result);
+      }
+      result.then(r => resolve(r)).catch(reject);
+    }).then(EJSON.clone);
   },
 
   _urlForSession: function (sessionId) {

@@ -32,6 +32,24 @@ run_env_change: &run_env_change
     # Reload sysctl so these are in effect.
     # sudo sysctl -p
 
+log_env: &log_env
+  name: Log Environment
+  command: |
+    echo "==> LBS Version"
+    lsb_release -a
+    echo "==> cat /etc/os-release"
+    cat /etc/os-release
+    echo "==> uname -srm"
+    uname -srm
+    echo "==> Node version: $(node --version)"
+    echo "==> NPM version: $(npm --version)"
+    echo "==> Meteor Node version: $(./meteor node --version)"
+    echo "==> Meteor NPM version: $(./meteor npm --version)"
+    echo "==> Dev bundle package.json:"
+    cat ./dev_bundle/lib/package.json
+    echo "==> Dev bundle node_modules:"
+    ls -l ./dev_bundle/lib/node_modules
+
 # A reusable "run" snippet which enables the continued logging of memoryusage
 # to a file on disk which can be saved to build artifacts for later analysis.
 run_log_mem_use: &run_log_mem_use
@@ -61,7 +79,7 @@ run_save_node_bin: &run_save_node_bin
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
-    - image: meteor/circleci:20231116-android-33-node-14
+    - image: meteor/circleci:2024.09.11-android-34-node-20
   resource_class: large
   environment:
     # This multiplier scales the waitSecs for selftests.
@@ -97,36 +115,10 @@ build_machine_environment: &build_machine_environment
     NUM_GROUPS: 12
     RUNNING_AVG_LENGTH: 6
 
-can_disable_fibers: &can_disable_fibers
-  parameters:
-    fibers:
-      type: boolean
-      default: true
-
-set_fibers_env: &set_fibers_env
-  name: "Disable Fibers"
-  command: |
-    if [ "<< parameters.fibers >>" == "false" ]; then
-      echo "Disabling Fibers"
-      echo 'export DISABLE_FIBERS=1' >> "$BASH_ENV"
-      source "$BASH_ENV"
-    fi
-
-
-# Run tests with Fibers and then without.
-matrix_for_fibers: &matrix_for_fibers
-  matrix:
-    parameters:
-      # If we want to run with Fibers and without, just append false here.
-      fibers: [true]
-
-
 jobs:
   Get Ready:
     <<: *build_machine_environment
     steps:
-      - run:
-          command: rm -fR /home/circleci/project/*
       - run:
           <<: *run_log_mem_use
       - run:
@@ -143,8 +135,16 @@ jobs:
       - run:
           name: Combine NPM Shrinkwrap Files
           command: |
-            for d in packages/*/.npm/package; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
-            for d in packages/*/.npm/plugin/*; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
+            for d in packages/*/.npm/package; do
+              if [ -f $d/npm-shrinkwrap.json ]; then
+              cat $d/npm-shrinkwrap.json >> shrinkwraps.txt;
+              fi
+            done
+            for d in packages/*/.npm/plugin/*; do
+              if [ -f $d/npm-shrinkwrap.json ]; then
+              cat $d/npm-shrinkwrap.json >> shrinkwraps.txt;
+              fi
+            done
       - restore_cache:
           keys:
             - package-npm-deps-cache-group1-v3-{{ checksum "shrinkwraps.txt" }}
@@ -172,14 +172,18 @@ jobs:
           name: Clear npm cache
           command: ./meteor npm cache clear --force
       - run:
+          <<: *log_env
+      - run:
           name: Get Ready
           command: |
             eval $PRE_TEST_COMMANDS;
-            pushd tools
-            npm install @types/node@14.17.6 --save-dev
+            cd dev_bundle/lib
+            ../../meteor npm install @types/node@20.10.5 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
-            ../meteor npx tsc --noEmit --skipLibCheck
-            popd
+            ../../meteor npm install -g typescript
+            cd ../../
+            # tools/node_modules is a symlink, but starting on NPM 7, this symlinks are deleted https://github.com/npm/cli/issues/3669
+            # so we are copying the node_modules to tools
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
           no_output_timeout: 60m
@@ -194,7 +198,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Isolated Tests:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -203,7 +206,6 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
@@ -216,6 +218,8 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --headless \
           no_output_timeout: 20m
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Custom Warehouse Tests)"
           command: |
@@ -238,7 +242,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 0:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -247,10 +250,11 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 0)"
           command: |
@@ -280,7 +284,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 1:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -289,10 +292,11 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 1)"
           command: |
@@ -322,7 +326,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 2:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -331,7 +334,8 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
+      - run:
+          <<: *log_env
       - run:
           name: "Print environment"
           command: printenv
@@ -341,6 +345,9 @@ jobs:
             if [ -f ./tmp/test-groups/2.txt ]; then TEST_GROUP=$(<./tmp/test-groups/2.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^co[n-z]'; fi
             echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
+            export PATH="/home/circleci/.sdkman/candidates/gradle/8.7/bin:${PATH}"
+            java --version
+            gradle --version
             ./meteor self-test \
               "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
@@ -364,7 +371,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 3:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -373,7 +379,8 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
+      - run:
+          <<: *log_env
       - run:
           name: "Print environment"
           command: printenv
@@ -406,7 +413,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 4:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -415,10 +421,11 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 4)"
           command: |
@@ -448,7 +455,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 5:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -457,10 +463,11 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 5)"
           command: |
@@ -490,7 +497,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 6:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -499,10 +505,11 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 6)"
           command: |
@@ -532,7 +539,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 7:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -541,10 +547,11 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 7)"
           command: |
@@ -574,7 +581,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 8:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -583,10 +589,11 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 8)"
           command: |
@@ -616,7 +623,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 9:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -625,10 +631,11 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 9)"
           command: |
@@ -658,7 +665,6 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 10:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - run:
@@ -667,10 +673,11 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
-      - run: *set_fibers_env
       - run:
           name: "Print environment"
           command: printenv
+      - run:
+          <<: *log_env
       - run:
           name: "Running self-test (Test Group 10)"
           command: |
@@ -712,6 +719,8 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
+          <<: *log_env
+      - run:
           name: "Running self-test (Test Group 11)"
           command: |
             if [ -f ./tmp/test-groups/11.txt ]; then TEST_GROUP=$(<./tmp/test-groups/11.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^[d-g]'; fi
@@ -724,7 +733,7 @@ jobs:
               --headless \
               --junit ./tmp/results/junit/11.xml \
               --without-tag "custom-warehouse"
-          no_output_timeout: 30m
+          no_output_timeout: 35m
       - run:
           <<: *run_save_node_bin
       - store_test_results:
@@ -739,47 +748,36 @@ jobs:
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  # Test the JSDoc declarations which live within this codebase against the
-  # Meteor Docs (https://github.com/meteor/docs) repository, where they'll
-  # eventually be consumed.  This test aims to provide an early warning of
-  # potentially breaking changes, so they aren't discovered when the docs are
-  # next updated, which generally occurs during major Meteor version releases
-  # (for example, 1.4 to 1.5, 1.5 to 1.6).
+  # Test the JSDoc declarations which live within this codebase.
+  # Now the docs live in this repo, we can test them here, every PR is tested.
   Docs:
     docker:
       # This Node version should match that in the meteor/docs CircleCI config.
-      - image: meteor/circleci:android-28-node-12
+      - image: meteor/circleci:2024.09.11-android-34-node-20
     resource_class: large
     environment:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs
+    <<: *build_machine_environment
     steps:
       - run:
-          name: Cloning "meteor/docs" Repository's "update-to-meteor-1.9" branch
+          name: Cloning "meteor" Repository's current branch
           command: |
-            git clone --branch update-to-meteor-1.9 https://github.com/meteor/docs.git ${CHECKOUT_METEOR_DOCS}
-      # The "docs" repository normally brings in the Meteor code as a Git
-      # submodule checked out into the "code" directory.  As the goal of this
-      # test is to run it against the _current_ repository's code, we'll move
-      # the "code" directory out of the way and move the checkout (of meteor)
-      # into that directory, rather than the default $CIRCLE_WORKING_DIRECTORY.
-      - checkout
-      - run:
-          name: Move Meteor checkout into docs repository's "code" directory
-          command: |
-            rmdir "${CHECKOUT_METEOR_DOCS}/code"
-            # $CIRCLE_WORKING_DIRECTORY uses a tilde, so expand it to $HOME.
-            mv "${CIRCLE_WORKING_DIRECTORY/#\~/$HOME}" \
-              "${CHECKOUT_METEOR_DOCS}/code"
+            if [[ -n "$CIRCLE_PULL_REQUEST" ]]; then
+              PR_NUMBER=$(echo $CIRCLE_PULL_REQUEST | sed 's|.*/pull/\([0-9]*\)|\1|')
+              PR_BRANCH=$(curl -s https://api.github.com/repos/meteor/meteor/pulls/$PR_NUMBER | jq -r .head.ref)
+              git clone --branch $PR_BRANCH https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
+            else
+              git clone --branch $CIRCLE_BRANCH https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
+            fi
       # Run almost the same steps the meteor/docs repository runs, minus deploy.
       - run:
           name: Generating Meteor documentation for JSDoc testing
           command: |
-            cd ${CHECKOUT_METEOR_DOCS}
+            cd ${CHECKOUT_METEOR_DOCS}/docs
             npm install
             npm test
 
   Clean Up:
-    <<: *can_disable_fibers
     <<: *build_machine_environment
     steps:
       - attach_workspace:
@@ -862,58 +860,45 @@ workflows:
       - Docs
       - Get Ready
       - Isolated Tests:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 0:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 1:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 2:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 3:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 4:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 5:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 6:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 7:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 8:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 9:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 10:
-          <<: *matrix_for_fibers
           requires:
             - Get Ready
       - Test Group 11:
           requires:
             - Get Ready
       - Clean Up:
-          <<: *matrix_for_fibers
           requires:
             - Isolated Tests
             - Test Group 0

@@ -1,6 +1,3 @@
-if (Meteor.isServer)
-  var Future = Npm.require('fibers/future');
-
 if (typeof __meteor_runtime_config__ === 'object' &&
     __meteor_runtime_config__.meteorRelease) {
   /**
@@ -73,11 +70,13 @@ Meteor._delete = function (obj /*, arguments */) {
 
 
 /**
- * Takes a function that has a callback argument as the last one and promissify it.
+ * @memberOf Meteor
+ * @locus Anywhere
+ * @summary Takes a function that has a callback argument as the last one and promissify it.
  * One option would be to use node utils.promisify, but it won't work on the browser.
- * @param fn
- * @param context
- * @param errorFirst - If the callback follows the errorFirst style
+ * @param {Function} fn
+ * @param {Object} [context]
+ * @param {Boolean} [errorFirst] - If the callback follows the errorFirst style, default to true
  * @returns {function(...[*]): Promise<unknown>}
  */
 Meteor.promisify = function (fn, context, errorFirst) {
@@ -86,6 +85,10 @@ Meteor.promisify = function (fn, context, errorFirst) {
   }
 
   return function () {
+    var self = this;
+    var filteredArgs = Array.prototype.slice.call(arguments)
+      .filter(function (i) { return i !== undefined; });
+
     return new Promise(function (resolve, reject) {
       var callback = Meteor.bindEnvironment(function (error, result) {
         var _error = error, _result = result;
@@ -101,11 +104,9 @@ Meteor.promisify = function (fn, context, errorFirst) {
         resolve(_result);
       });
 
-      var filteredArgs = Array.prototype.slice.call(arguments)
-        .filter(function (i) { return i !== undefined; });
       filteredArgs.push(callback);
 
-      return fn.apply(context || this, filteredArgs);
+      return fn.apply(context || self, filteredArgs);
     });
   };
 };
@@ -148,38 +149,17 @@ Meteor.wrapAsync = function (fn, context) {
     }
 
     if (! callback) {
-      if (Meteor.isClient) {
-        callback = logErr;
-      } else {
-        var fut = new Future();
-        callback = fut.resolver();
-      }
+      callback = logErr;
       ++i; // Insert the callback just after arg.
     }
 
     newArgs[i] = Meteor.bindEnvironment(callback);
-    var result = fn.apply(self, newArgs);
-    return fut ? fut.wait() : result;
+    return fn.apply(self, newArgs);
   };
 };
 
 Meteor.wrapFn = function (fn) {
-  if (!fn || typeof fn !== 'function') {
-    throw new Meteor.Error("Expected to receive function to wrap");
-  }
-
-  if (Meteor.isClient) {
-    return fn;
-  }
-
-  return function() {
-    var ret = fn.apply(this, arguments);
-    if (ret && typeof ret.then === 'function') {
-      return Promise.await(ret);
-    }
-
-    return ret;
-  }
+  return fn;
 };
 
 // Sets child's prototype to a new object whose prototype is parent's
