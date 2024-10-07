@@ -12,6 +12,96 @@ This is a complete history of changes for Meteor releases.
 
 
 
+## v3.0.4, 2024-09-xx
+
+### Highlights
+
+N/A
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 3.0.4
+
+```
+
+#### Meteor Version Release
+
+N/A
+
+#### Special thanks to
+N/A
+## v3.0.3, 2024-09-11
+
+### Highlights
+
+- Fixed `Meteor.userId` only being invoked with `bindEnvironment`.
+- Updated to Node `20.17.x`.
+- Fixed an issue where `meteor --open` opens the browser before the app is started.
+- Investigated and addressed the error when installing the `jam:method` package.
+- Improved the message for new available versions when running an app.
+- Updated the documentation link inside `install.sh`.
+- Resolved the issue where subscriptions stopped after a parameter change.
+- Added MongoDB connection telemetry.
+- Bumped the `email` package to prevent update errors.
+- Cordova package updates
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+- Some internal changes to how async contexts are handled, ensuring better performance and garbage collection.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 3.0.3
+
+```
+
+If you've had your Meteor installation for over a year, we suggest reinstalling it to avoid any package installation issues. You can do this by running a few quick commands:
+
+```bash
+npx meteor uninstall // or rm -rf ~/.meteor
+npx meteor
+```
+
+
+
+#### Meteor Version Release
+
+* `Bumped packages`:
+  - accounts-base@3.0.2
+  - accounts-password@3.0.2
+  - email@3.1.0
+  - mongo@2.0.2
+
+
+#### Special thanks to
+
+- [@ayewo](https://github.com/ayewo).
+- [@denihs](https://github.com/denihs).
+- [@harryadel](https://github.com/harryadel).
+- [@kbarr1212](https://github.com/kbarr1212).
+- [@leonardoventurini](https://github.com/leonardoventurini).
+- [@nachocodoner](https://github.com/nachocodoner).
+
 ## v3.0.2, 2024-08-14
 
 ### Highlights

@@ -9,10 +9,10 @@
   },
   "devDependencies": {
     "canonical-json": "^0.0.4",
-    "jsdoc": "^4.0.2",
-    "vitepress": "1.0.1"
+    "jsdoc": "^4.0.3",
+    "vitepress": "1.0.2"
   },
   "dependencies": {
-    "vue-collapsed": "^1.3.0"
+    "vue-collapsed": "^1.3.4"
   }
 }
