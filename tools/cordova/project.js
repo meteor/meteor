@@ -431,13 +431,15 @@ to build apps for ${displayNameForPlatform(platform)}.`);
   }
 
   async installedVersionForPlatform(platform) {
-    const command = files.convertToOSPath(files.pathJoin(
+    const file = files.convertToOSPath(files.pathJoin(
       this.projectRoot, 'platforms', platform, 'cordova', 'version'));
+    const command = process.platform === "win32" ? process.execPath : file;
+    const args = process.platform === "win32" ? [file] : [];
     // Make sure the command exists before trying to execute it
     if (files.exists(command)) {
       return this.runCommands(
         `getting installed version for platform ${platform} in Cordova project`,
-        execFileAsync(command, {
+        execFileAsync(command, args, {
           env: this.defaultEnvWithPathsAdded(),
           cwd: this.projectRoot}), null, null);
     } else {
