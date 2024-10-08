@@ -46,6 +46,29 @@ export PATH=$JAVA_HOME/bin:$PATH
 
 Run `echo $JAVA_HOME` to check the current Java version. If it's incorrect, manually set the correct path by finding where Java is installed.
 
+##### Windows
+
+To install Java on Windows, [download the Java 17 executable](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html) and run the installer.
+
+Ensure the `JAVA_HOME` environment variable is set globally in your system path:
+
+1. Open System Properties: Press Windows Key + Pause/Break or right-click This PC > Properties.
+2. Click Advanced system settings.
+3. Click the Environment Variables button.
+4. Under System Variables, click New.
+5. Variable Value: Path to your JDK (e.g., C:\Program Files\Java\jdk-17).
+6. Click New and add `%JAVA_HOME%\bin`.
+7. Click OK to save all changes.
+
+Verify the installation in a terminal by running `echo %JAVA_HOME%`.
+
+Alternatively, you can set the environment variable in a terminal each time you work with your Meteor Cordova app:
+
+``` sh
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+$env:PATH += ";%JAVA_HOME%\bin"
+```
+
 #### Android SDK
 
 For Android builds, you will need the Android SDK. You can install it via [Android Studio](https://developer.android.com/studio).
@@ -58,6 +81,16 @@ Ensure `ANDROID_HOME` environment variable is set by adding it to `~/.bashrc` or
 export ANDROID_HOME=$HOME/Library/Android/sdk
 export ANDROID_SDK_ROOT=${ANDROID_HOME}
 export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH
+```
+
+##### Windows
+
+Ensure `ANDROID_HOME` environment variable are set globally on the system configuration or by setting the envs on the terminal.
+
+``` ps
+$env:ANDROID_HOME = "C:\Users\<USER>\AppData\Local\Android\Sdk"
+$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+$env:PATH = "$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:ANDROID_HOME\tools;$env:ANDROID_HOME\tools\bin;$env:ANDROID_HOME\platform-tools;$env:ANDROID_HOME\emulator;$env:PATH"
 ```
 
 #### Gradle
@@ -77,6 +110,16 @@ source "$HOME/.sdkman/bin/sdkman-init.sh"
 sdk install gradle 8.7
 
 gradle --version  # Verify installation
+```
+
+##### Windows
+
+Install Gradle on your Windows system [by following the official guide](https://gradle.org/install).
+
+Make sure the Gradle path is included in your system's PATH variable.
+
+```ps
+$env:PATH += ";C:\Gradle\gradle-8.10.2\bin"
 ```
 
 ### iOS
@@ -131,9 +174,23 @@ meteor run android
 meteor run ios
 ```
 
+#### Launch a new Android emulator
+
+1. **Open AVD Manager**: Go to **Tools** > **AVD Manager**.
+2. **Create New Device**: Click **Create Virtual Device...**.
+3. **Choose Hardware Profile**: Select a hardware profile and click **Next**.
+4. **Select System Image**: Choose a system image and click **Next**.
+5. **Configure Settings**: Name your AVD and adjust settings, then click **Finish**.
+6. **Launch Emulator**: Click the **green play icon** to start the emulator.
+7. **Run Meteor apps**: Run `meteor run android`. 
+
+#### Launch a new iOS emulator
+
+In iOS, you can launch simulator by opening Xcode and choose the desired simulator device from the device list at the top.
+
 ### Run physical device
 
-To run on a physical device, ensure the device is connected via USB:
+To run on a physical device, ensure the device is connected via USB or Wi-Fi:
 
 ```sh
 # Android
@@ -142,6 +199,8 @@ meteor run android-device
 # iOS (only works on macOS)
 meteor run ios-device
 ```
+
+You can manage connected devices in Android Studio and Xcode.
 
 ### Open IDE
 
