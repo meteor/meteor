@@ -48,7 +48,7 @@ Run `echo $JAVA_HOME` to check the current Java version. If it's incorrect, manu
 
 ##### Windows
 
-To install Java on Windows, download the Java 17 executable and run the installer.
+To install Java on Windows, [download the Java 17 executable](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html) and run the installer.
 
 Ensure the `JAVA_HOME` environment variable is set globally in your system path:
 
