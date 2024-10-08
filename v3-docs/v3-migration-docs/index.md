@@ -47,6 +47,29 @@ meteor npm install
 
 Which will install the necessary packages using the latest Node.js version from Meteor 3.
 
+## Migrating with codemods
+
+To streamline the upgrade process, we have collaborated with the [Codemod](https://github.com/codemod-com/codemod) team to automate many migration steps with [open-source codemods](https://go.codemod.com/meteor-v3).
+
+You can run all Meteor v3 codemods using the [following migration recipe](https://go.codemod.com/meteor-3-recipe):
+
+```bash
+npx codemod@latest meteor/v3/migration-recipe
+```
+
+This recipe will run all the following codemods in consequetive order:
+
+- [`meteor/v3/add-await-to-async-webapp-methods`](https://go.codemod.com/meteor-update-webapp-methods)
+- [`meteor/v3/api-rename-express-migration`](https://go.codemod.com/meteor-express-api-rename)
+- [`meteor/v3/call-async`](https://go.codemod.com/meteor-call-async)
+- [`meteor/v3/user-async`](https://go.codemod.com/meteor-user-async)
+- [`meteor/v3/fibers-to-async-promises`](https://go.codemod.com/meteor-fibers-async)
+- [`meteor/v3/removed-functions`](https://go.codemod.com/meteor-removed-functions)
+- [`meteor/v3/renamed-functions`](https://go.codemod.com/meteor-renamed-functions)
+- [`meteor/v3/mongo-db-async-methods`](https://go.codemod.com/meteor-mongo-async)
+
+Throughout this migration guide, you will find tips and instructions on using the individual codemods that address specific breaking changes.
+
 ## What this guide will cover?
 
 This guide covers the necessary topics for migrating your application from Meteor 2.x to Meteor 3.0, including:

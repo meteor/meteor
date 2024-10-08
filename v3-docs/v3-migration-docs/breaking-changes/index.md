@@ -7,7 +7,6 @@ As mentioned in the [Frequently Asked Questions](../frequently-asked-questions/i
 
 You should migrate to use their `Async` counterparts.
 
-
 ```js
 const docs = MyCollection.find({ _id: '123' }).fetch(); // [!code error] This will not work in the server
 const doc = MyCollection.findOne({ _id: '123' }); // [!code error] This will not work in the server
@@ -19,6 +18,18 @@ const docs = await MyCollection.find({ _id: '123' }).fetchAsync(); // [!code hig
 const doc = await MyCollection.findOneAsync({ _id: '123' }); // [!code highlight] This will work in the server
 
 ```
+
+::: tip
+
+You can automatically transform deprecated methods to their `Async` counterparts by running the [following codemod](https://go.codemod.com/meteor-mongo-async):
+
+```bash
+npx codemod@latest mongo-db-async-methods
+```
+
+Please note that this codemod will affect all occurrences of the mentioned MongoDB methods. Remember to discard the unwanted changes that might have affected client-side code before committing changes.
+
+:::
 
 ## CLI
 
@@ -45,7 +56,6 @@ This command is often recommended to fix your development project by clearing th
 Meteor 3.0 is now using Node v20. This means that if you have any dependencies or usages
 of Node v14, you will need to update them to be compatible with Node v20.
 
-
 ## NPM Installer Update
 
 The npm installer for Meteor has been changed. For the official release, you can install Meteor with this command:
@@ -67,7 +77,6 @@ npx meteor@<version>
 ```
 
 Ensure you're using Node version 20.0.0 or higher, especially in your CI/CD workflows, to be compatible with the latest Meteor version.
-
 
 ## Call x CallAsync
 
@@ -118,6 +127,16 @@ await Meteor.callAsync('getAllData') // [!code highlight]
 await Meteor.callAsync('otherMethod') // [!code highlight]
 
 ```
+
+::: tip
+
+You can automatically transform `call` to `callAsync` in your methods by running the [following codemod](https://go.codemod.com/meteor-call-async):
+
+```bash
+npx codemod@latest meteor/v3/call-async
+```
+
+:::
 
 ## WebApp Switches to Express
 
@@ -256,8 +275,17 @@ Having switched from Connect to Express, we updated API names to align with Expr
   - `WebApp.rawConnectHandlers.use(middleware)` is now `WebApp.rawHandlers.use(middleware)`
   - `WebApp.connectApp` is now `WebApp.expressApp`
 
+::: tip
 
-A few methods from WebApp internals are now async:
+You can automatically use the new Express API names by running the [following codemod](https://go.codemod.com/meteor-express-api-rename):
+
+```bash
+npx codemod@latest meteor/v3/api-rename-express-migration
+```
+
+:::
+
+Additionally, a few methods from WebApp internals are now async:
 
   - `WebAppInternals.reloadClientPrograms()`
   - `WebAppInternals.pauseClient()`
@@ -268,6 +296,16 @@ A few methods from WebApp internals are now async:
   - `WebAppInternals.setBundledJsCssUrlRewriteHook()`
   - `WebAppInternals.setBundledJsCssPrefix()`
   - `WebAppInternals.getBoilerplate`
+
+::: tip
+
+You can automatically update WebApp methods by running the [following codemod](https://go.codemod.com/meteor-update-webapp-methods):
+
+```bash
+npx codemod@latest meteor/v3/add-await-to-async-webapp-methods
+```
+
+:::
 
 ## Meteor.userAsync
 
@@ -281,6 +319,16 @@ const user = Meteor.user(); // [!code error]
 const user = await Meteor.userAsync(); // [!code highlight]
 
 ```
+
+::: tip
+
+You can automatically transform `Meteor.user` to `Meteor.userAsync` by running the [following codemod](https://go.codemod.com/meteor-user-async):
+
+```bash
+npx codemod@latest meteor/v3/user-async
+```
+
+:::
 
 ## Environment Variables
 
