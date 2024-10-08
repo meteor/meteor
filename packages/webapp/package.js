@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: "2.0.2",
+  version: "2.0.3-beta304.0",
 });
 
 Npm.depends({
@@ -13,13 +13,14 @@ Npm.depends({
   send: "1.1.0",
   "stream-to-string": "1.2.1",
   qs: "6.13.0",
-  useragent: "2.3.0",
+  "useragent-ng": "2.4.3",
   "@types/connect": "3.4.38",
+  "tmp": "0.2.3",
 });
 
 Npm.strip({
   multiparty: ["test/"],
-  useragent: ["test/"],
+  "useragent-ng": ["test/"],
 });
 
 // whitelist plugin is now included in the core

@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Check whether a value matches a pattern',
-  version: '1.4.2',
+  version: '1.4.4-beta304.0',
 });
 
 Package.onUse(api => {
