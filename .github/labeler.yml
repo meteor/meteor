@@ -119,3 +119,6 @@ Project:Docs:
 
 Project:Guide:
   - guide/**/*
+
+github_actions:
+  - ./github/**/*
