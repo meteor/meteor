@@ -263,7 +263,7 @@ Then, inside the server of your app (this example is for the Weebo service), imp
 
 ```js
 import { ServiceConfiguration } from "meteor/service-configuration";
-ServiceConfiguration.configurations.upsert(
+ServiceConfiguration.configurations.upsertAsync(
   { service: "weibo" },
   {
     $set: {
