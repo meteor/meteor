@@ -1,7 +1,6 @@
 import has from 'lodash.has'; 
 import isEmpty from 'lodash.isempty';
 
-let nextObserveHandleId = 1;
 
 ObserveMultiplexer = class {
   constructor({ ordered, onStop = () => {} } = {}) {
@@ -205,31 +204,3 @@ ObserveMultiplexer = class {
   }
 };
 
-// When the callbacks do not mutate the arguments, we can skip a lot of data clones
-ObserveHandle = class {
-  constructor(multiplexer, callbacks, nonMutatingCallbacks = false) {
-    this._multiplexer = multiplexer;
-    multiplexer.callbackNames().forEach((name) => {
-      if (callbacks[name]) {
-        this['_' + name] = callbacks[name];
-      } else if (name === "addedBefore" && callbacks.added) {
-        // Special case: if you specify "added" and "movedBefore", you get an
-        // ordered observe where for some reason you don't get ordering data on
-        // the adds.  I dunno, we wrote tests for it, there must have been a
-        // reason.
-        this._addedBefore = async function (id, fields, before) {
-          await callbacks.added(id, fields);
-        };
-      }
-    });
-    this._stopped = false;
-    this._id = nextObserveHandleId++;
-    this.nonMutatingCallbacks = nonMutatingCallbacks;
-  }
-
-  async stop() {
-    if (this._stopped) return;
-    this._stopped = true;
-    await this._multiplexer.removeHandle(this._id);
-  }
-};
