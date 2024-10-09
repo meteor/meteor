@@ -1,7 +1,7 @@
 Package.describe({
   name: 'static-html-tools',
   summary: "Tools for static-html",
-  version: '1.0.0-beta304.0',
+  version: '1.0.0-rc304.0',
   git: 'https://github.com/meteor/meteor.git',
   documentation: null
 });
