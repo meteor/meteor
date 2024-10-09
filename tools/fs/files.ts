@@ -4,10 +4,10 @@
 /// (such as testing whether an directory is a meteor app)
 ///
 
-import fs, { Dirent, PathLike, Stats } from "fs";
-import os from "os";
+import fs, { Dirent, PathLike, Stats } from "node:fs";
+import os from "node:os";
 import { execFile } from "child_process";
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import { Slot } from "@wry/context";
 import { dep } from "optimism";
 import {

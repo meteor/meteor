@@ -1,5 +1,5 @@
-import path from "path";
-import { release, EOL } from "os";
+import path from "node:path";
+import { release, EOL } from "node:os";
 
 // All of these functions are attached to files.js for the tool;
 // they live here because we need them in boot.js as well to avoid duplicating

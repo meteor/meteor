@@ -878,9 +878,11 @@ Options:
 	--help          	Show help.
 	--path          	The path to the folder where the files will be generated. Default is the current folder.
 	--templatePath  	Path to the template file check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
-	--replaceFn		 	  Replace function to replace the names in the template. Check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
+	--replaceFn		 	Replace function to replace the names in the template. Check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
 	--methods       	Generate methods.
 	--publications  	Generate publications.
+	--importIntoServerMain Set to false to not add import statement to the main server file.
+	--serverImportFile  The path to the server file where the import for the index of the generated files should be places.
 
 
 >>> publish-release
