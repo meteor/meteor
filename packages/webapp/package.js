@@ -5,8 +5,8 @@ Package.describe({
 
 Npm.depends({
   "cookie-parser": "1.4.6",
-  express: "4.21.0",
-  "@types/express": "4.17.21",
+  express: "5.0.1",
+  "@types/express": "5.0.0",
   compression: "1.7.4",
   errorhandler: "1.5.1",
   parseurl: "1.3.3",
@@ -14,7 +14,6 @@ Npm.depends({
   "stream-to-string": "1.2.1",
   qs: "6.13.0",
   "useragent-ng": "2.4.3",
-  "@types/connect": "3.4.38",
   "tmp": "0.2.3",
 });
 
