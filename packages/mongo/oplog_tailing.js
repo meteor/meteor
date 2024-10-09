@@ -105,12 +105,6 @@ Object.assign(OplogHandle.prototype, {
     // Calling onOplogEntry requires us to wait for the tailing to be ready.
     await self._readyPromise;
 
-    var originalCallback = callback;
-    callback = Meteor.bindEnvironment(function (notification) {
-      originalCallback(notification);
-    }, function (err) {
-      Meteor._debug("Error in oplog callback", err);
-    });
     var listenHandle = self._crossbar.listen(trigger, callback);
     return {
       stop: async function () {
