@@ -341,7 +341,7 @@ __meteor_runtime_config__.WEBAPP_TEST_B = '</script>';
 
 Tinytest.add("webapp - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(WebAppInternals.NpmModules.express.version, /^4\.(\d+)\.(\d+)/);
+  test.matches(WebAppInternals.NpmModules.express.version, /^5\.(\d+)\.(\d+)/);
   test.equal(typeof(WebAppInternals.NpmModules.express.module), 'function');
 });
 
