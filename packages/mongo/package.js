@@ -42,6 +42,7 @@ Package.onUse(function (api) {
     "mongo-id",
     "check",
     "ecmascript",
+    "typescript",
     "mongo-dev-server",
     "logging",
   ]);
