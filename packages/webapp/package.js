@@ -14,7 +14,6 @@ Npm.depends({
   "stream-to-string": "1.2.1",
   qs: "6.13.0",
   "useragent-ng": "2.4.3",
-  "@types/connect": "3.4.38",
   "tmp": "0.2.3",
 });
 
