@@ -3,7 +3,6 @@ import { DDPCommon } from 'meteor/ddp-common';
 import { Tracker } from 'meteor/tracker';
 import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
-import { Hook } from 'meteor/callback-hook';
 import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
 import MethodInvoker from './MethodInvoker.js';
@@ -77,7 +76,8 @@ export class Connection {
     if (typeof url === 'object') {
       self._stream = url;
     } else {
-      const { ClientStream } = require("meteor/socket-stream-client");
+      import { ClientStream } from "meteor/socket-stream-client";
+
       self._stream = new ClientStream(url, {
         retry: options.retry,
         ConnectionError: DDP.ConnectionError,
@@ -709,6 +709,7 @@ export class Connection {
 
   _apply(name, stubCallValue, args, options, callback) {
     const self = this;
+
     // We were passed 3 arguments. They may be either (name, args, options)
     // or (name, args, callback)
     if (!callback && typeof options === 'function') {
@@ -746,12 +747,16 @@ export class Connection {
         isFromCallAsync: stubCallValue.isFromCallAsync,
       })
     ) {
+      let result;
+
       if (callback) {
         callback(exception, stubReturnValue);
-        return undefined;
+      } else {
+        if (exception) throw exception;
+        result = stubReturnValue;
       }
-      if (exception) throw exception;
-      return stubReturnValue;
+
+      return options._returnMethodInvoker ? { result } : result;
     }
 
     // We only create the methodId here because we don't actually need one if
@@ -794,24 +799,18 @@ export class Connection {
     // return the value of the RPC to the caller.
 
     // If the caller didn't give a callback, decide what to do.
-    let future;
+    let promise;
     if (!callback) {
       if (
         Meteor.isClient &&
         !options.returnServerResultPromise &&
         (!options.isFromCallAsync || options.returnStubValue)
       ) {
-        // On the client, we don't have fibers, so we can't block. The
-        // only thing we can do is to return undefined and discard the
-        // result of the RPC. If an error occurred then print the error
-        // to the console.
         callback = (err) => {
           err && Meteor._debug("Error invoking Method '" + name + "'", err);
         };
       } else {
-        // On the server, make the function synchronous. Throw on
-        // errors, return on success.
-        future = new Promise((resolve, reject) => {
+        promise = new Promise((resolve, reject) => {
           callback = (...allArgs) => {
             let args = Array.from(allArgs);
             let err = args.shift();
@@ -840,44 +839,24 @@ export class Connection {
       noRetry: !!options.noRetry
     });
 
-    if (options.wait) {
-      // It's a wait method! Wait methods go in their own block.
-      self._outstandingMethodBlocks.push({
-        wait: true,
-        methods: [methodInvoker]
-      });
+    let result;
+
+    if (promise) {
+      result = options.returnStubValue ? promise.then(() => stubReturnValue) : promise;
     } else {
-      // Not a wait method. Start a new block if the previous block was a wait
-      // block, and add it to the last block of methods.
-      if (isEmpty(self._outstandingMethodBlocks) ||
-          last(self._outstandingMethodBlocks).wait) {
-        self._outstandingMethodBlocks.push({
-          wait: false,
-          methods: [],
-        });
-      }
-
-      last(self._outstandingMethodBlocks).methods.push(methodInvoker);
+      result = options.returnStubValue ? stubReturnValue : undefined;
     }
 
-    // If we added it to the first block, send it out now.
-    if (self._outstandingMethodBlocks.length === 1) methodInvoker.sendMessage();
-
-    // If we're using the default callback on the server,
-    // block waiting for the result.
-    if (future) {
-      // This is the result of the method ran in the client.
-      // You can opt-in in getting the local result by running:
-      // const { stubPromise, serverPromise } = Meteor.callAsync(...);
-      // const whatServerDid = await serverPromise;
-      if (options.returnStubValue) {
-        return future.then(() => stubReturnValue);
-      }
-      return future;
+    if (options._returnMethodInvoker) {
+      return {
+        methodInvoker,
+        result,
+      };
     }
-    return options.returnStubValue ? stubReturnValue : undefined;
+
+    self._addOutstandingMethod(methodInvoker, options);
+    return result;
   }
-
 
   _stubCall(name, args, options) {
     // Run the stub, if we have one. The stub is supposed to make some
@@ -1754,6 +1733,33 @@ export class Connection {
     }
   }
 
+  _addOutstandingMethod(methodInvoker, options) {
+    if (options?.wait) {
+      // It's a wait method! Wait methods go in their own block.
+      this._outstandingMethodBlocks.push({
+        wait: true,
+        methods: [methodInvoker]
+      });
+    } else {
+      // Not a wait method. Start a new block if the previous block was a wait
+      // block, and add it to the last block of methods.
+      if (isEmpty(this._outstandingMethodBlocks) ||
+          last(this._outstandingMethodBlocks).wait) {
+        this._outstandingMethodBlocks.push({
+          wait: false,
+          methods: [],
+        });
+      }
+
+      last(this._outstandingMethodBlocks).methods.push(methodInvoker);
+    }
+
+    // If we added it to the first block, send it out now.
+    if (this._outstandingMethodBlocks.length === 1) {
+      methodInvoker.sendMessage();
+    }
+  }
+
   // Called by MethodInvoker after a method's callback is invoked.  If this was
   // the last outstanding method in the current block, runs the next block. If
   // there are no more methods, consider accepting a hot code push.
@@ -1835,6 +1841,7 @@ export class Connection {
     // Now add the rest of the original blocks on.
     self._outstandingMethodBlocks.push(...oldOutstandingMethodBlocks);
   }
+
   _callOnReconnectAndSendAppropriateOutstandingMethods() {
     const self = this;
     const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;

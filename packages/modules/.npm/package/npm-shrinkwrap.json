@@ -2,14 +2,14 @@
   "lockfileVersion": 4,
   "dependencies": {
     "@meteorjs/reify": {
-      "version": "0.24.0",
-      "resolved": "git+ssh://git@github.com/meteor/reify.git#cf61c57c6c4fefcbf164bf63d3c12fda1924b3d2",
-      "integrity": "sha512-NN0E7fURAY9XrtgkmP1XqV6fMSwKHIjENOE6V5AqWXU0wynLlXb+l5NhMC72hYwbtT73R9E35dDR1lqBKQSFdg=="
+      "version": "0.25.3",
+      "resolved": "https://registry.npmjs.org/@meteorjs/reify/-/reify-0.25.3.tgz",
+      "integrity": "sha512-OVtWOLNvonGwA9Uowzp18q6L2Z3V/kPItS1bNyJMryfXFnosM2O0Hm3pYcxRfP36/0tc1BCiV3dA8yrr8RgMUA=="
     },
     "@types/estree": {
-      "version": "1.0.5",
-      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.5.tgz",
-      "integrity": "sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw=="
+      "version": "1.0.6",
+      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.6.tgz",
+      "integrity": "sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw=="
     },
     "acorn": {
       "version": "8.12.1",
@@ -42,9 +42,9 @@
       "integrity": "sha512-FuCZe61mWxQOJAQFEfmt9FjzebRlcpFz8sFPbyaCKtdusPkMEbA9ey0eARnRav5zAhmXznhaQkKGFAPn7X9NUw=="
     },
     "semver": {
-      "version": "5.7.2",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-5.7.2.tgz",
-      "integrity": "sha512-cBznnQ9KjJqU67B52RMC65CMarK2600WFnbkcaiwWq3xy/5haFJlshgnpjovMVJ+Hff49d8GEn0b87C5pDQ10g=="
+      "version": "7.6.3",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-7.6.3.tgz",
+      "integrity": "sha512-oVekP1cKtI+CTDvHWYFUcMtsK/00wmAEfyqKfNdARm8u1wNVhSgaX7A8d4UuIlUI5e84iEwOhs7ZPYRmzU9U6A=="
     },
     "sourcemap-codec": {
       "version": "1.4.8",

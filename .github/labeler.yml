@@ -115,6 +115,10 @@ Project:Dynamic Import:
 
 Project:Docs:
   - docs/**/*
+  - v3-docs/**/*
 
 Project:Guide:
   - guide/**/*
+
+github_actions:
+  - ./github/**/*
