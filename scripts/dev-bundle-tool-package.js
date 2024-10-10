@@ -13,7 +13,7 @@ var packageJson = {
     npm: "10.8.3",
     "node-gyp": "9.4.0",
     "@mapbox/node-pre-gyp": "1.0.11",
-    typescript: "5.4.5",
+    typescript: "5.6.3",
     "@meteorjs/babel": "7.20.0-beta.5",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
