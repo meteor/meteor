@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.2.6-beta304.0',
+  version: '1.2.6-rc304.0',
   summary: 'Meteor bundle analysis and visualization.',
   documentation: 'README.md',
 });
