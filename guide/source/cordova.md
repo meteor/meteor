@@ -151,12 +151,15 @@ To install an older version of SDK tools:
 
 If you're running Ubuntu, one way to install both a Java Development Kit and Android Studio is by using [Ubuntu Make](https://wiki.ubuntu.com/ubuntu-make), a command line tool that sets up development environments and dependencies for you.
 
-If you're on Ubuntu 14.04 LTS, you'll have to add the Ubuntu Make ppa first:
-* `sudo add-apt-repository ppa:ubuntu-desktop/ubuntu-make`
-* `sudo apt-get update`
+On Ubuntu you will have to install Snap version of `ubuntu-make`:
+* `snap install ubuntu-make --classic`
 
-Then, you can install Ubuntu Make itself:
-* `sudo apt-get install ubuntu-make`
+> If you're on Ubuntu 17.10 or earlier, you'll have to add the Ubuntu Make ppa first:
+> * `sudo add-apt-repository ppa:ubuntu-desktop/ubuntu-make`
+> * `sudo apt-get update`
+> 
+> Then, you can install Ubuntu Make itself:
+> * `sudo apt-get install ubuntu-make`
 
 And finally you use Ubuntu Make to install Android Studio and all dependencies:
 * `umake android`
@@ -200,6 +203,23 @@ export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 ```
 > Remember to reload your configuration using `source ~/.zshrc` or `source ~/.bashrc`
 - Install `gradle` using `brew install gradle`
+
+<h4>Ubuntu</h4>
+
+In order to run on Ubuntu you will have to do the following:
+
+* Make sure that you have Java JDK installed
+* Have Android Studio or the Android tools installed
+* Set `ANDROID_HOME`, which with the above should satisfy Gradle as well. Most often this should be enough:
+```
+export ANDROID_HOME="/usr/lib/android-sdk/"
+export PATH=${PATH}:${ANDROID_HOME}/tools
+export PATH=${PATH}:${ANDROID_HOME}/platform-tools
+```
+
+If you have Android Studio, the `ANDROID_HOME` folder will be in your home folder under `~/Android/Sdk`.
+
+* Ensure that you have [KVM](https://help.ubuntu.com/community/KVM/Installation) setup
 
 <h2 id ="running-your-app">Developing on a device</h2>
 
