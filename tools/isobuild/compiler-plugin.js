@@ -783,18 +783,16 @@ class ResourceSlot {
         // stub, so setting .implicit marks the resource as disposable.
       }).implicit = true;
 
-      // TODO[FIBERS]: Look into this. We probably don't want addStylesheet
-      // to be async, and I'm also not sure the old behavior here is what we wanted
-      //
-      // if (! cssResource.lazy &&s
-      //     ! Buffer.isBuffer(cssResource.data)) {
-      //   // If there was an error processing this file, cssResource.data
-      //   // will not be a Buffer, and accessing cssResource.data here
-      //   // should cause the error to be reported via inputFile.error.
-      //   return;
-      // }
-
-      this.outputResources.push(cssResource);
+      this.outputResources.push(async () => {
+        if (! cssResource.lazy &&
+          ! Buffer.isBuffer(await cssResource.data)) {
+          // If there was an error processing this file, cssResource.data
+          // will not be a Buffer, and accessing cssResource.data here
+          // should cause the error to be reported via inputFile.error.
+          return;
+        }
+        return cssResource;
+      });
     }
   }
 
