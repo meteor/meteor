@@ -17,6 +17,8 @@
     "@babel/eslint-parser": "^7.21.3",
     "@babel/eslint-plugin": "^7.19.1",
     "@babel/preset-react": "^7.18.6",
+    "@types/lodash.isempty": "^4.4.9",
+    "@types/meteor": "^2.9.8",
     "@types/node": "^18.16.18",
     "@typescript-eslint/eslint-plugin": "^5.56.0",
     "@typescript-eslint/parser": "^5.56.0",
