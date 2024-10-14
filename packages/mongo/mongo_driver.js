@@ -24,6 +24,7 @@ import {
 } from "meteor/minimongo/constants";
 import { Meteor } from "meteor/meteor";
 import { ObserveHandle } from './observe_handle';
+import { ObserveMultiplexer } from './observe_multiplex';
 
 MongoInternals = {};
 

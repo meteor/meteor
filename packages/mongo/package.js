@@ -88,7 +88,7 @@ Package.onUse(function (api) {
     [
       "mongo_driver.js",
       "oplog_tailing.js",
-      "observe_multiplex.js",
+      "observe_multiplex.ts",
       "doc_fetcher.js",
       "polling_observe_driver.js",
       "oplog_observe_driver.js",
