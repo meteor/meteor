@@ -186,14 +186,14 @@
       "integrity": "sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg=="
     },
     "express": {
-      "version": "4.21.0",
-      "resolved": "https://registry.npmjs.org/express/-/express-4.21.0.tgz",
-      "integrity": "sha512-VqcNGcj/Id5ZT1LZ/cfihi3ttTn+NJmkli2eZADigjq29qTlWi/hAQ43t/VLPq8+UX06FCEx3ByOYet6ZFblng==",
+      "version": "4.21.1",
+      "resolved": "https://registry.npmjs.org/express/-/express-4.21.1.tgz",
+      "integrity": "sha512-YSFlK1Ee0/GC8QaO91tHcDxJiE/X4FbpAyQWkxAvG6AXCuR65YzK8ua6D9hvi/TzUfZMpc+BwuM1IPw8fmQBiQ==",
       "dependencies": {
         "cookie": {
-          "version": "0.6.0",
-          "resolved": "https://registry.npmjs.org/cookie/-/cookie-0.6.0.tgz",
-          "integrity": "sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw=="
+          "version": "0.7.1",
+          "resolved": "https://registry.npmjs.org/cookie/-/cookie-0.7.1.tgz",
+          "integrity": "sha512-6DnInpx7SJ2AK3+CTUE/ZM0vWTUboZCegxhC2xiIydHR9jNuTAASBrfEpHhiGOZw/nX51bHt6YQl8jsGo4y/0w=="
         },
         "ms": {
           "version": "2.1.3",
