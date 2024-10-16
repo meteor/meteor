@@ -129,7 +129,7 @@ If you use a node version manager that uses a separate global `node_modules` fol
 
 ## Note for fish shell users (Linux) {#fish-shell}
 
-To be able to user `meteor` command from fish it's needed to include `/home/<user>/.meteor` in `$PATH`; to do that just add this line in `/home/<user>/.config/fish/config.fish` file (replace `<user>` with your username):
+To be able to use the `meteor` command from fish it's needed to include `/home/<user>/.meteor` in `$PATH`; to do that just add this line in `/home/<user>/.config/fish/config.fish` file (replace `<user>` with your username):
 
 `set PATH /home/<user>/.meteor $PATH`
 
