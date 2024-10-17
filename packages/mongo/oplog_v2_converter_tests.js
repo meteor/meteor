@@ -78,6 +78,10 @@ const cases = [
     { $v: 2, $set: { params: { e: { _str: '5f953cde8ceca90030bdb86f' } } } },
   ],
   [
+    { $v: 2, diff: { i: { id: new Mongo.ObjectID('ffffffffffffffffffffffff') } } },
+    { $v: 2, $set: { id: new Mongo.ObjectID('ffffffffffffffffffffffff') } },
+  ],
+  [
     {
       $v: 2,
       diff: {

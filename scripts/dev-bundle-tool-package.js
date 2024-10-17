@@ -10,30 +10,27 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.14.17",
-    pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
-    "node-gyp": "8.0.0",
-    "node-pre-gyp": "0.15.0",
-    typescript: "4.9.4",
-    "@meteorjs/babel": "7.18.0-beta.6",
+    npm: "10.8.2",
+    "node-gyp": "9.4.0",
+    "@mapbox/node-pre-gyp": "1.0.11",
+    typescript: "5.6.2",
+    "@meteorjs/babel": "7.20.0",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
-    "meteor-promise": "0.9.0",
-    fibers: "5.0.1",
-    "@meteorjs/reify": "0.24.0",
+    "@meteorjs/reify": "0.25.3",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.15.3",
+    "@babel/runtime": "7.25.0",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
-    "@types/underscore": "1.11.2",
-    underscore: "1.13.1",
+    "@types/underscore": "1.11.15",
+    underscore: "1.13.7",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
-    "@types/semver": "5.4.0",
-    semver: "5.4.1",
+    "@types/semver": "7.5.8",
+    semver: "7.6.3",
     request: "2.88.2",
     uuid: "3.4.0",
-    "graceful-fs": "4.2.6",
+    "graceful-fs": "4.2.11",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "6.1.11",
     'tar-fs': "2.1.1",
@@ -41,16 +38,18 @@ var packageJson = {
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
-    "source-map": "0.7.3",
-    chalk: "4.1.1",
-    sqlite3: "5.0.2",
+    "source-map": "0.7.4",
+    chalk: "4.1.2",
+    // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
+    sqlite3: "5.1.7",
+    inquirer: "8.2.6",
     "http-proxy": "1.18.1",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
-    "moment": "2.29.1",
+    "moment": "2.30.1",
     "rimraf": "2.6.2",
     "glob": "7.1.6",
-    ignore: "3.3.7",
+    ignore: "5.3.2",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
@@ -58,16 +57,17 @@ var packageJson = {
     escope: "3.6.0",
     split2: "3.2.2",
     multipipe: "2.0.1",
-    pathwatcher: "8.1.0",
+    pathwatcher: "8.1.2",
     "vscode-nsfw": "2.1.8",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
     optimism: "0.16.1",
     "@wry/context": "0.6.0",
-    'lru-cache': '4.1.5',
-    "anser": "2.0.1",
+    'lru-cache': '6.0.0',
+    "anser": "2.1.1",
     'xmlbuilder2': '1.8.1',
-    "ws": "7.4.5"
+    "ws": "7.4.5",
+    "open":"8.4.2"
   }
 };
 

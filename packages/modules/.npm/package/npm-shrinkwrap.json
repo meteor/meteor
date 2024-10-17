@@ -1,25 +1,20 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 4,
   "dependencies": {
     "@meteorjs/reify": {
-      "version": "0.24.0",
-      "resolved": "https://registry.npmjs.org/@meteorjs/reify/-/reify-0.24.0.tgz",
-      "integrity": "sha512-h7ZC9K9Ifqrkq7PBE8SnLD/2R6nhid63rNpJDDkjCLEYBZizEg7FBFe3QuyW7R0ZNKQ5uWFX9PxIARzHbcb3eA=="
+      "version": "0.25.3",
+      "resolved": "https://registry.npmjs.org/@meteorjs/reify/-/reify-0.25.3.tgz",
+      "integrity": "sha512-OVtWOLNvonGwA9Uowzp18q6L2Z3V/kPItS1bNyJMryfXFnosM2O0Hm3pYcxRfP36/0tc1BCiV3dA8yrr8RgMUA=="
     },
     "@types/estree": {
-      "version": "1.0.0",
-      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.0.tgz",
-      "integrity": "sha512-WulqXMDUTYAXCjZnk6JtIHPigp55cVtDgDrO2gHRwhyJto21+1zbVCtOYB2L1F9w4qCQ0rOGWBnBe0FNTiEJIQ=="
+      "version": "1.0.6",
+      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.6.tgz",
+      "integrity": "sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw=="
     },
     "acorn": {
-      "version": "6.4.2",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-6.4.2.tgz",
-      "integrity": "sha512-XtGIhXwF8YM8bJhGxG5kXgjkEuNGLTkoYqVE+KMR+aspr4KGYmKYg7yUe3KghyQ9yheNwLnjmzh/7+gfDBmHCQ=="
-    },
-    "acorn-dynamic-import": {
-      "version": "4.0.0",
-      "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
-      "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
+      "version": "8.12.1",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.12.1.tgz",
+      "integrity": "sha512-tcpGyI9zbizT9JbV6oYE477V6mTlXvvi0T0G3SNIYE2apm/G5huBa1+K89VGeovbg+jycCrfhl3ADxErOuO6Jg=="
     },
     "estree-walker": {
       "version": "2.0.2",
@@ -47,9 +42,9 @@
       "integrity": "sha512-FuCZe61mWxQOJAQFEfmt9FjzebRlcpFz8sFPbyaCKtdusPkMEbA9ey0eARnRav5zAhmXznhaQkKGFAPn7X9NUw=="
     },
     "semver": {
-      "version": "5.7.1",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-5.7.1.tgz",
-      "integrity": "sha512-sauaDf/PZdVgrLTNYHRtpXa1iRiKcaebiKQ1BJdpQlWH2lCvexQdX55snPFyK7QzpudqbCI0qXFfOasHdyNDGQ=="
+      "version": "7.6.3",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-7.6.3.tgz",
+      "integrity": "sha512-oVekP1cKtI+CTDvHWYFUcMtsK/00wmAEfyqKfNdARm8u1wNVhSgaX7A8d4UuIlUI5e84iEwOhs7ZPYRmzU9U6A=="
     },
     "sourcemap-codec": {
       "version": "1.4.8",

@@ -19,6 +19,15 @@ export namespace Meteor {
    * of Meteor.
    */
   var release: string;
+
+  var meteorRelease: string;
+  
+  interface ErrorConstructor {
+    new (...args: any[]): Error;
+    errorType: string;
+  }
+
+  function makeErrorType(name: string, constructor: Function): ErrorConstructor;
   /** Global props **/
 
   /** Settings **/
@@ -60,6 +69,9 @@ export namespace Meteor {
   function user(options?: {
     fields?: Mongo.FieldSpecifier | undefined;
   }): User | null;
+  function userAsync(options?: {
+    fields?: Mongo.FieldSpecifier | undefined;
+  }): Promise<Meteor.User | null>;
 
   function userId(): string | null;
   var users: Mongo.Collection<User>;
@@ -159,6 +171,47 @@ export namespace Meteor {
    */
   function callAsync(name: string, ...args: any[]): Promise<any>;
 
+  interface MethodApplyOptions<
+    Result extends
+      | EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  > {
+    /**
+     * (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
+     */
+    wait?: boolean | undefined;
+    /**
+     * (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
+     */
+    onResultReceived?:
+      | ((
+          error: global_Error | Meteor.Error | undefined,
+          result?: Result
+        ) => void)
+      | undefined;
+    /**
+     * (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
+     */
+    noRetry?: boolean | undefined;
+    /**
+     * (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
+     */
+    returnStubValue?: boolean | undefined;
+    /**
+     * (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
+     */
+    throwStubExceptions?: boolean | undefined;
+  }
+
+  /**
+   * Invokes a method with a sync stub, passing any number of arguments.
+   * @param name Name of method to invoke
+   * @param args Method arguments
+   * @param options Optional execution options
+   * @param asyncCallback Optional callback
+   */
   function apply<
     Result extends
       | EJSONable
@@ -168,26 +221,35 @@ export namespace Meteor {
   >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
-    options?: {
-      wait?: boolean | undefined;
-      onResultReceived?:
-        | ((
-            error: global_Error | Meteor.Error | undefined,
-            result?: Result
-          ) => void)
-        | undefined;
-      /**
-       * (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
-       */
-      noRetry?: boolean | undefined;
-      returnStubValue?: boolean | undefined;
-      throwStubExceptions?: boolean | undefined;
-    },
+    options?: MethodApplyOptions<Result>,
     asyncCallback?: (
       error: global_Error | Meteor.Error | undefined,
       result?: Result
     ) => void
   ): any;
+
+  /**
+   * Invokes a method with an async stub, passing any number of arguments.
+   * @param name Name of method to invoke
+   * @param args Method arguments
+   * @param options Optional execution options
+   * @param asyncCallback Optional callback
+   */
+  function applyAsync<
+    Result extends
+      | EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(
+    name: string,
+    args: ReadonlyArray<EJSONable | EJSONableProperty>,
+    options?: MethodApplyOptions<Result>,
+    asyncCallback?: (
+      error: global_Error | Meteor.Error | undefined,
+      result?: Result
+    ) => void
+  ): Promise<Result>;
   /** Method **/
 
   /** Url **/

@@ -5,8 +5,8 @@
     "start": "meteor run"
   },
   "dependencies": {
-    "@babel/runtime": "^7.15.3",
-    "meteor-node-stubs": "^1.2.1",
+    "@babel/runtime": "^7.23.5",
+    "meteor-node-stubs": "^1.2.10",
     "puppeteer": "^2.1.1"
   },
   "meteor": {

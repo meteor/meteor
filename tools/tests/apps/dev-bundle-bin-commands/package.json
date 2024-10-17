@@ -3,11 +3,11 @@
   "private": true,
   "scripts": {
     "start": "meteor run",
-    "exit-with-status": "echo \"This script has an exit status\" && exit 1",
+    "exit-with-status": "node exitWithStatus.js",
     "exit-normally": "echo \"This script will exit normally\" && exit 0"
   },
   "dependencies": {
-    "@babel/runtime": "^7.15.3",
-    "meteor-node-stubs": "^1.2.1"
+    "@babel/runtime": "^7.23.5",
+    "meteor-node-stubs": "^1.2.10"
   }
 }

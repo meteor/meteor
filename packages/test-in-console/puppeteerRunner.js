@@ -5,12 +5,29 @@ let testNumber = 0;
 async function runNextUrl(browser) {
   const page = await browser.newPage();
 
-  page.on('console', msg => {
+  page.on('console', async msg => {
     // this is a way to make sure the travis does not timeout
     // if the test is running for too long without any output to the console (10 minutes)
     if (msg._text !== undefined) console.log(msg._text);
-    else console.log(`Test number: ${ testNumber }`);
-    testNumber++;
+    else {
+      testNumber++;
+      const currentClientTest =
+       await page.evaluate(() =>  __Tinytest._getCurrentRunningTestOnClient());
+      if (currentClientTest !== '') {
+        console.log(`Currently running on the client test: ${ currentClientTest }`)
+        return;
+      }
+      // If we get here is because we have not yet started the test on the client
+      const currentServerTest =
+       await page.evaluate(async () => await __Tinytest._getCurrentRunningTestOnServer());
+
+      if (currentServerTest !== '') {
+        console.log(`Currently running on the server test: ${ currentServerTest }`);
+        return;
+      }
+      // we were not able to find the name of the test, this is a way to make sure the test is still running
+      console.log(`Test number: ${ testNumber }`);
+    }
   });
 
   if (!process.env.URL) {
@@ -23,10 +40,6 @@ async function runNextUrl(browser) {
   async function poll() {
     if (await isDone(page)) {
       let failCount = await getFailCount(page);
-      console.log(`
-      The number of tests from Test number may be different because 
-      of the way the test is written. causing the test to fail or
-       to run more than once. in the console. Test number total: ${ testNumber }`);
       console.log(`Tests complete with ${ failCount } failures`);
       console.log(`Tests complete with ${ await getPassCount(page) } passes`);
       if (failCount > 0) {
@@ -89,11 +102,7 @@ async function getFailCount(page) {
       return TEST_STATUS.FAILURES;
     }
 
-    if (typeof FAILURES === 'undefined') {
-      return 1;
-    }
-
-    return 0;
+    return typeof FAILURES !== 'undefined' && FAILURES;
   });
 }
 
@@ -112,12 +121,20 @@ async function getFailed(page) {
 }
 
 async function runTests() {
-  console.log(`Running test with Puppeteer at ${ process.env.URL }`);
+  console.log(`Running test with Puppeteer at ${process.env.URL}`);
 
   // --no-sandbox and --disable-setuid-sandbox must be disabled for CI compatibility
-  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-  console.log(`Using version: ${ await browser.version() }`);
+  const browser = await puppeteer.launch({
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-web-security',
+    ],
+  });
+  console.log(`Using version: ${await browser.version()}`);
   runNextUrl(browser);
 }
 
-runTests();
+runTests().catch((e) =>
+  console.log(`something broke while running puppeter: `, e)
+);

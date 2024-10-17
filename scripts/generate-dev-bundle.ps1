@@ -108,20 +108,11 @@ Function Add-Python {
   "$pythonExe"
 }
 
-# Nodejs 14 official download source has been discontinued, we are switching to our custom source https://static.meteor.com
 Function Add-NodeAndNpm {
   if ("${NODE_VERSION}" -match "-rc\.\d+$") {
     $nodeUrlBase = 'https://nodejs.org/download/rc'
   } else {
     $nodeUrlBase = 'https://nodejs.org/dist'
-  }
-}
-
-Function Add-Node14AndNpm {
-  if ("${NODE_VERSION}" -match "-rc\.\d+$") {
-    $nodeUrlBase = 'https://nodejs.org/download/rc'
-  } else {
-    $nodeUrlBase = 'https://static.meteor.com/dev-bundle-node-os'
   }
 
   $nodeArchitecture = 'win-x64'
@@ -315,13 +306,6 @@ Function Add-NpmModulesFromJsBundleFile {
 
   cd node_modules
 
-  # Since we install a patched version of pacote in $Destination\lib\node_modules,
-  # we need to remove npm's bundled version to make it use the new one.
-  if (Test-Path "pacote") {
-    Remove-DirectoryRecursively "npm\node_modules\pacote"
-    & "$($Commands.node)" -e "require('fs').renameSync('pacote', 'npm\\node_modules\\pacote')"
-  }
-
   cd "$previousCwd"
 }
 
@@ -350,7 +334,7 @@ $env:npm_config_cache = "$dirNpmCache"
 $env:PATH = "$env:PATH;$dirBin"
 
 # Install Node.js and npm and get their paths to use from here on.
-$toolCmds = Add-Node14AndNpm
+$toolCmds = Add-NodeAndNpm
 
 "Location of node.exe:"
 & Get-Command node | Select-Object -ExpandProperty Definition
@@ -393,10 +377,6 @@ $npmToolArgs = @{
   commands = $toolCmds
 }
 Add-NpmModulesFromJsBundleFile @npmToolArgs
-
-# Leaving these probably doesn't hurt, but are removed for consistency w/ Unix.
-Remove-Item $(Join-Path $dirLib 'package.json')
-Remove-Item $(Join-Path $dirLib 'package-lock.json')
 
 Write-Host "Done writing node_modules build(s)..." -ForegroundColor Magenta
 

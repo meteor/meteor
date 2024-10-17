@@ -44,9 +44,10 @@ exports.PackageMap = function (versions, options) {
 };
 
 Object.assign(exports.PackageMap.prototype, {
-  eachPackage: function (iterator) {
+  eachPackage: async function (iterator) {
     var self = this;
-    _.each(self._map, function (info, packageName) {
+
+    for (const [packageName, info] of Object.entries(self._map)) {
       // For reasons that are super unclear, if this `_.clone` is inlined into
       // the `iterator` call, the value produced can mysteriously turn into
       // undefined on the way into `iterator`. Presumably some sort of memory
@@ -54,8 +55,8 @@ Object.assign(exports.PackageMap.prototype, {
       // exercise in nondeterminism. But this does seem to be a sure-fire way to
       // fix it, for now. Who knows why, and who knows when it will recur again.
       var infoClone = _.clone(info);
-      iterator(packageName, infoClone);
-    });
+      await iterator(packageName, infoClone);
+    }
   },
   getInfo: function (packageName) {
     var self = this;
@@ -159,23 +160,27 @@ exports.PackageMap.fromReleaseVersion = function (releaseVersion) {
 exports.PackageMapDelta = function (options) {
   var self = this;
   self._changedPackages = {};
-
-  options.packageMap.eachPackage(function (packageName, info) {
-    var oldVersion = _.has(options.cachedVersions, packageName)
-          ? options.cachedVersions[packageName] : null;
-    self._storeAddOrChange(
-      packageName, info, oldVersion, options.anticipatedPrereleases,
-      options.neededToUseUnanticipatedPrereleases);
-  });
-
-  _.each(options.cachedVersions, function (oldVersion, packageName) {
-    if (! options.packageMap.getInfo(packageName)) {
-      self._storeRemove(packageName, oldVersion);
-    }
-  });
+  self.options = options;
 };
 
 Object.assign(exports.PackageMapDelta.prototype, {
+  init: async function() {
+    const self = this;
+
+    await self.options.packageMap.eachPackage(function (packageName, info) {
+      var oldVersion = _.has(self.options.cachedVersions, packageName)
+          ? self.options.cachedVersions[packageName] : null;
+      self._storeAddOrChange(
+          packageName, info, oldVersion, self.options.anticipatedPrereleases,
+          self.options.neededToUseUnanticipatedPrereleases);
+    });
+
+    _.each(self.options.cachedVersions, function (oldVersion, packageName) {
+      if (! self.options.packageMap.getInfo(packageName)) {
+        self._storeRemove(packageName, oldVersion);
+      }
+    });
+  },
   _storeAddOrChange: function (packageName, newInfo, oldVersion,
                                anticipatedPrereleases,
                                neededToUseUnanticipatedPrereleases) {

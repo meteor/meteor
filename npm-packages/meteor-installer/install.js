@@ -1,13 +1,13 @@
-const { DownloaderHelper } = require('node-downloader-helper');
-const cliProgress = require('cli-progress');
-const Seven = require('node-7z');
-const path = require('path');
 const sevenBin = require('7zip-bin');
-const semver = require('semver');
 const child_process = require('child_process');
-const tmp = require('tmp');
-const os = require('os');
+const cliProgress = require('cli-progress');
 const fs = require('fs');
+const Seven = require('node-7z');
+const { DownloaderHelper } = require('node-downloader-helper');
+const os = require('os');
+const path = require('path');
+const semver = require('semver');
+const tmp = require('tmp');
 
 const fsPromises = fs.promises;
 
@@ -20,17 +20,17 @@ const {
   rootPath,
   sudoUser,
   isSudo,
-  isMac,
+  isLinux,
   METEOR_LATEST_VERSION,
   shouldSetupExecPath,
 } = require('./config');
-const { uninstall } = require('./uninstall');
 const {
   extractWithTar,
   extractWith7Zip,
   extractWithNativeTar,
 } = require('./extract');
 const { engines } = require('./package.json');
+const { uninstall } = require('./uninstall');
 
 const nodeVersion = engines.node;
 const npmVersion = engines.npm;
@@ -38,38 +38,41 @@ const npmVersion = engines.npm;
 // Compare installed NodeJs version with required NodeJs version
 if (!semver.satisfies(process.version, nodeVersion)) {
   console.warn(
-    `WARNING: Recommended versions are Node.js ${nodeVersion} and npm ${npmVersion}.`
+    `WARNING: Recommended versions are Node.js ${nodeVersion} and npm ${npmVersion}.`,
   );
   console.warn(
-    `We recommend using a Node version manager like NVM or Volta to install Node.js and npm.\n`
+    `We recommend using a Node version manager like NVM or Volta to install Node.js and npm.\n`,
   );
 }
 
-const isInstalledGlobally = process.env.npm_config_global === 'true';
+const isInstalledGlobally =
+  process.env.npm_config_global === 'true' ||
+  process.env.npm_lifecycle_event === 'npx';
 
 if (!isInstalledGlobally) {
   console.error('******************************************');
   console.error(
-    'You are not using a global npm context to install, you should never add meteor to your package.json.'
+    'You are not using a global npm context to install, you should never add meteor to your package.json.',
   );
   console.error('Make sure you pass -g to npm install.');
   console.error('Aborting...');
   console.error('******************************************');
-  process.exit(1);
+  process.exit(0);
 }
 process.on('unhandledRejection', err => {
   throw err;
 });
+
 if (os.arch() !== 'x64') {
   const isValidM1Version = semver.gte(
     semver.coerce(METEOR_LATEST_VERSION),
-    '2.5.1-beta.3'
+    '2.5.1-beta.3',
   );
-  if (os.arch() !== 'arm64' || !isMac() || !isValidM1Version) {
+  if (os.arch() !== 'arm64' || !isValidM1Version) {
     console.error(
       'The current architecture is not supported in this version: ',
       os.arch(),
-      '. Try Meteor 2.5.1-beta.3 or above.'
+      '. Try Meteor 2.5.1-beta.3 or above.',
     );
     process.exit(1);
   }
@@ -81,9 +84,15 @@ const downloadPlatform = {
   linux: 'linux',
 };
 
-const url = `https://packages.meteor.com/bootstrap-link?arch=os.${
-  downloadPlatform[os.platform()]
-}.${os.arch() === 'arm64' ? 'arm64' : 'x86_64'}&release=${release}`;
+function getDownloadArch() {
+  const osArch = os.arch();
+  if (isLinux() && osArch === 'arm64') return 'aarch64';
+  if (osArch === 'arm64') return 'arm64';
+  return 'x86_64';
+}
+
+const arch = `os.${downloadPlatform[os.platform()]}.${getDownloadArch()}`;
+const url = `https://packages.meteor.com/bootstrap-link?arch=${arch}&release=${release}`;
 
 let tempDirObject;
 try {
@@ -95,10 +104,10 @@ try {
   console.error("Couldn't create tmp dir for extracting meteor.");
   console.error('There are 2 possible causes:');
   console.error(
-    '\t1. You are running npm install -g meteor as root without passing the --unsafe-perm option. Please rerun with this option enabled.'
+    '\t1. You are running npm install -g meteor as root without passing the --unsafe-perm option. Please rerun with this option enabled.',
   );
   console.error(
-    '\t2. You might not have enough space in disk or permission to create folders'
+    '\t2. You might not have enough space in disk or permission to create folders',
   );
   console.error('****************************');
   console.error('');
@@ -121,9 +130,9 @@ if (fs.existsSync(startedPath)) {
   console.log(
     `If you want to reinstall it, run:
 
-  $ meteor-installer uninstall
-  $ meteor-installer install
-`
+  $ npx meteor uninstall
+  $ npx meteor@<version> install
+`,
   );
   process.exit();
 }
@@ -151,6 +160,9 @@ try {
   }
 }
 
+console.log(`=> Arch: ${arch}`);
+console.log(`=> Meteor Release: ${release}`);
+
 download();
 
 function generateProxyAgent() {
@@ -171,7 +183,7 @@ function download() {
       format: 'Downloading |{bar}| {percentage}%',
       clearOnComplete: true,
     },
-    cliProgress.Presets.shades_classic
+    cliProgress.Presets.shades_classic,
   );
   downloadProgress.start(100, 0);
 
@@ -199,8 +211,19 @@ function download() {
     }
 
     if (isWindows()) {
-      decompress();
-      return;
+      const hasNativeTar = fs.existsSync(
+        path.resolve('C:/Windows/System32', 'tar.exe'),
+      );
+      if (hasNativeTar) {
+        // tar works exactly the same as it's bsdtar counterpart on UNIX so continue
+        console.log(
+          'Native binary for tar is available on this version of Windows.',
+        );
+        console.log('Switching to the native tar.exe binary on Windows.');
+      } else {
+        decompress();
+        return;
+      }
     }
 
     fs.writeFileSync(startedPath, 'Meteor install started');
@@ -209,7 +232,7 @@ function download() {
     await extractWithNativeTar(path.resolve(tempPath, tarGzName), extractPath);
     const extractEnd = Date.now();
     console.log(
-      `=> Meteor extracted in ${(extractEnd - extractStart) / 1000}s`
+      `=> Meteor extracted in ${(extractEnd - extractStart) / 1000}s`,
     );
     await setup();
   });
@@ -224,7 +247,7 @@ function decompress() {
       format: 'Decompressing |{bar}| {percentage}%',
       clearOnComplete: true,
     },
-    cliProgress.Presets.shades_classic
+    cliProgress.Presets.shades_classic,
   );
   decompressProgress.start(100, 0);
 
@@ -232,11 +255,11 @@ function decompress() {
     $progress: true,
     $bin: sevenBin.path7za,
   });
-  myStream.on('progress', function(progress) {
+  myStream.on('progress', function (progress) {
     decompressProgress.update(progress.percent);
   });
 
-  myStream.on('end', function() {
+  myStream.on('end', function () {
     decompressProgress.update(100);
     decompressProgress.stop();
     const end = Date.now();
@@ -254,7 +277,7 @@ async function extract() {
       format: 'Extracting |{bar}| {percentage}% - {fileCount} files completed',
       clearOnComplete: true,
     },
-    cliProgress.Presets.shades_classic
+    cliProgress.Presets.shades_classic,
   );
   decompressProgress.start(100, 0, {
     fileCount: 0,
@@ -290,7 +313,9 @@ async function setup() {
 async function setupExecPath() {
   if (isWindows()) {
     // set for the current session and beyond
-    child_process.execSync(`setx path "${meteorPath}/;%path%`);
+    child_process.execSync(
+      `powershell -c "$path = (Get-Item 'HKCU:\\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames'); [Environment]::SetEnvironmentVariable('PATH', \\"${meteorPath};$path\\", 'User');"`,
+    );
     return;
   }
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
@@ -316,7 +341,7 @@ function showGettingStarted() {
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
 
   const runCommand = isWindows()
-    ? `set path "${meteorPath}/;%path%`
+    ? `set path "${meteorPath}/;%path%"`
     : exportCommand;
   const message = `
 ***************************************
