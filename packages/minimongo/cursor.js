@@ -489,30 +489,33 @@ export default class Cursor {
         distances = new LocalCollection._IdMap();
       }
     }
-    this.collection._docs.forEach((doc, id) => {
-      const matchResult = this.matcher.documentMatches(doc);
-      if (matchResult.result) {
-        if (options.ordered) {
-          results.push(doc);
 
-          if (distances && matchResult.distance !== undefined) {
-            distances.set(id, matchResult.distance);
+    Meteor._runFresh(() => {
+      this.collection._docs.forEach((doc, id) => {
+        const matchResult = this.matcher.documentMatches(doc);
+        if (matchResult.result) {
+          if (options.ordered) {
+            results.push(doc);
+
+            if (distances && matchResult.distance !== undefined) {
+              distances.set(id, matchResult.distance);
+            }
+          } else {
+            results.set(id, doc);
           }
-        } else {
-          results.set(id, doc);
         }
-      }
 
-      // Override to ensure all docs are matched if ignoring skip & limit
-      if (!applySkipLimit) {
-        return true;
-      }
+        // Override to ensure all docs are matched if ignoring skip & limit
+        if (!applySkipLimit) {
+          return true;
+        }
 
-      // Fast path for limited unsorted queries.
-      // XXX 'length' check here seems wrong for ordered
-      return (
-        !this.limit || this.skip || this.sorter || results.length !== this.limit
-      );
+        // Fast path for limited unsorted queries.
+        // XXX 'length' check here seems wrong for ordered
+        return (
+          !this.limit || this.skip || this.sorter || results.length !== this.limit
+        );
+      });
     });
 
     if (!options.ordered) {
