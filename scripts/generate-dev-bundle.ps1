@@ -295,7 +295,7 @@ Function Add-NpmModulesFromJsBundleFile {
   # No bin-links because historically, they weren't used anyway.
 
   Write-Host "Run Commands.npm path: $($Commands.npm)" -ForegroundColor Magenta
-  Write-Host where npm
+  Write-Host "$(where npm)"
   & "$($Commands.npm)" install --verbose
   Write-Host "Done running Commands.npm" -ForegroundColor Magenta
   if ($LASTEXITCODE -ne 0) {
