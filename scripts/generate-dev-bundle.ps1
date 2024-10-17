@@ -296,7 +296,7 @@ Function Add-NpmModulesFromJsBundleFile {
 
   Write-Host "Run Commands.npm path: $($Commands.npm)" -ForegroundColor Magenta
   Write-Host "$(where npm)"
-  & "$($Commands.npm)" install --verbose
+  & "$($Commands.npm)" install --loglevel verbose
   Write-Host "Done running Commands.npm" -ForegroundColor Magenta
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm packages."
