@@ -4,3 +4,298 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+  - package-ecosystem: npm
+    directory: /docs
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /guide
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/babel-preset-meteor
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/cordova-plugin-meteor-webapp
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/cordova-plugin-meteor-webapp/tests
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/eslint-config-meteor
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/eslint-plugin-meteor
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/eslint-plugin-meteor/scripts/admin/jsdoc
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/eslint-plugin-meteor/scripts/test-balancer
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/meteor-babel
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/meteor-babel/packages/helpers
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/meteor-installer
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/meteor-node-stubs
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /npm-packages/meteor-promise
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /scripts/admin/check-legacy-syntax
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /scripts/admin/jsdoc
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /scripts/admin/update-semver
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /scripts/test-balancer
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-apollo
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-bare
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-blaze
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-chakra-ui
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-full
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-minimal
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-react
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-solid
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-svelte
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-tailwind
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-typescript
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/static-assets/skel-vue
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/app-config
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/app-prints-pid
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/client-refresh
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/css-injection-test
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/custom-minifier
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/dev-bundle-bin-commands
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/dynamic-import
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/ecmascript-regression
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/git-commit-hash
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/link-config-npm-package
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/linked-external-npm-package
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/meteor-ignore
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/modules/imports/dir
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/modules/imports/links/acorn
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/modules/imports/links/jsx-import-test
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/modules/issue-9878-test-package/dir
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/modules/issue-9878-test-package
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/modules/lib/a
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/modules/lib/b
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/modules
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/package-tests
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/shell
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/standard-app
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/top-level-await-order
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/apps/watch-used-files
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /tools/tests/old/app-with-private
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /v3-docs/docs
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /v3-docs/v3-migration-docs
+    schedule:
+      interval: daily

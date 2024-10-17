@@ -6,12 +6,15 @@ on:
   pull_request:
     paths:
       - 'npm-packages/meteor-installer/**'
+permissions:
+  contents: read
+
 jobs:
   check-code-style:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
         with:
           node-version: 20.x
       - run: npm ci

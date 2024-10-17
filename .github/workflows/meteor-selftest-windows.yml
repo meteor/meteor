@@ -19,16 +19,19 @@ env:
   METEOR_HEADLESS: true
   SELF_TEST_EXCLUDE: '^NULL-LEAVE-THIS-HERE-NULL$'
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: windows-2019-meteor
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@7c12f8017d5436eb855f1ed4399f037a36fbd9e8 # v2.5.2
         with:
           node-version: 20.x
 
@@ -45,7 +48,7 @@ jobs:
           .\scripts\windows\ci\test.ps1
 
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@8492260343ad570701412c2f464a5877dc76bace # v2
         with:
           path: |
             .\dev_bundle
