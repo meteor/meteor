@@ -289,9 +289,10 @@ Function Add-NpmModulesFromJsBundleFile {
     -ForegroundColor Magenta
   & "$($Commands.node)" $SourceJs |
     Out-File -FilePath $(Join-Path $Destination 'package.json') -Encoding ascii
-
+  Write-Host "Done running Commands.node" -ForegroundColor Magenta
   # No bin-links because historically, they weren't used anyway.
   & "$($Commands.npm)" install
+  Write-Host "Done running Commands.npm" -ForegroundColor Magenta
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm packages."
   }
@@ -303,7 +304,7 @@ Function Add-NpmModulesFromJsBundleFile {
       throw "Couldn't make shrinkwrap."
     }
   }
-
+  Write-Host "cd node_modules" -ForegroundColor Magenta
   cd node_modules
 
   cd "$previousCwd"
