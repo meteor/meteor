@@ -13,11 +13,11 @@ var packageJson = {
     npm: "10.8.2",
     "node-gyp": "9.4.0",
     "@mapbox/node-pre-gyp": "1.0.11",
-    typescript: "5.4.5",
-    "@meteorjs/babel": "7.20.0-beta.5",
+    typescript: "5.6.2",
+    "@meteorjs/babel": "7.20.0",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
-    "@meteorjs/reify": "0.25.2",
+    "@meteorjs/reify": "0.25.3",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.25.0",
     // For backwards compatibility with isopackets that still depend on

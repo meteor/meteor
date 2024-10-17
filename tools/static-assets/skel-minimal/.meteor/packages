@@ -13,6 +13,7 @@ ecmascript              # Enable ECMAScript2015+ syntax in app code
 typescript              # Enable TypeScript syntax in .ts and .tsx modules
 shell-server            # Server-side component of the `meteor shell` command
 webapp                  # Serves a Meteor app over HTTP
+ddp                     # The protocol and client/server libraries that Meteor uses to send data
 server-render           # Support for server-side rendering
 hot-module-replacement  # Rebuilds the client if there is a change on the client without restarting the server
 ~prototype~
