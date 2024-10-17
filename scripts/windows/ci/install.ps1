@@ -19,6 +19,12 @@ If ($LASTEXITCODE -ne 0) {
   throw "Updating submodules failed."
 }
 
+# The `meteor npm install` subcommand should work
+& "$meteorBat" npm install
+If ($LASTEXITCODE -ne 0) {
+  throw "'meteor npm install' failed."
+}
+
 # The `meteor --get-ready` command is susceptible to EPERM errors, so
 # we attempt it three times.
 $attempt = 3

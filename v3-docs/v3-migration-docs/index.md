@@ -11,8 +11,8 @@ This guide is for users with Meteor 2.x projects understand the changes between 
 
 Meteor 3.0 is currently in its official version!
 
-**Latest version:** `3.0.3` <br/>
-**Node.js version:** `20.17.0 LTS` <br/>
+**Latest version:** `3.0.4` <br/>
+**Node.js version:** `20.18.0 LTS` <br/>
 **NPM version:** `10.8.2`
 
 ## How to try Meteor 3.0?
@@ -20,7 +20,7 @@ Meteor 3.0 is currently in its official version!
 You can create a new Meteor 3.0 project by running the command below:
 
 ```bash
-meteor create my-new-project --release 3.0.3
+meteor create my-new-project --release 3.0.4
 ```
 
 ## How to upgrade from Meteor 2.x?
@@ -28,7 +28,7 @@ meteor create my-new-project --release 3.0.3
 You can upgrade your Meteor 2.x project by running the command below inside your project folder:
 
 ```bash
-meteor update --release 3.0.3
+meteor update --release 3.0.4
 meteor reset # resets project to a fresh state
 ```
 

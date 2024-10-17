@@ -1,3 +1,5 @@
+import once from 'lodash.once';
+
 // By default, we use the permessage-deflate extension with default
 // configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
 // JSON. If it represents a falsey value, then we do not use permessage-deflate
@@ -9,7 +11,7 @@
 // crash the tool during isopacket load if your JSON doesn't parse. This is only
 // a problem because the tool has to load the DDP server code just in order to
 // be a DDP client; see https://github.com/meteor/meteor/issues/3452 .)
-var websocketExtensions = _.once(function () {
+var websocketExtensions = once(function () {
   var extensions = [];
 
   var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION
@@ -116,7 +118,9 @@ StreamServer = function () {
       socket.write(data);
     };
     socket.on('close', function () {
-      self.open_sockets = _.without(self.open_sockets, socket);
+      self.open_sockets = self.open_sockets.filter(function(value) {
+        return value !== socket;
+      });
     });
     self.open_sockets.push(socket);
 
@@ -128,7 +132,7 @@ StreamServer = function () {
 
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
-    _.each(self.registration_callbacks, function (callback) {
+    self.registration_callbacks.forEach(function (callback) {
       callback(socket);
     });
   });
@@ -141,7 +145,7 @@ Object.assign(StreamServer.prototype, {
   register: function (callback) {
     var self = this;
     self.registration_callbacks.push(callback);
-    _.each(self.all_sockets(), function (socket) {
+    self.all_sockets().forEach(function (socket) {
       callback(socket);
     });
   },
@@ -149,7 +153,7 @@ Object.assign(StreamServer.prototype, {
   // get a list of all sockets
   all_sockets: function () {
     var self = this;
-    return _.values(self.open_sockets);
+    return Object.values(self.open_sockets);
   },
 
   // Redirect /websocket to /sockjs/websocket in order to not expose
@@ -183,7 +187,7 @@ Object.assign(StreamServer.prototype, {
           parsedUrl.pathname = self.prefix + '/websocket';
           request.url = url.format(parsedUrl);
         }
-        _.each(oldHttpServerListeners, function(oldListener) {
+        oldHttpServerListeners.forEach(function(oldListener) {
           oldListener.apply(httpServer, args);
         });
       };
