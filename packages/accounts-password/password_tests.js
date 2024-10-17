@@ -701,7 +701,7 @@ if (Meteor.isClient) (() => {
     // accounts-base/accounts_tests.js, but this is where the tests that
     // actually log in are.
     async function (test, expect) {
-      const clientUser = await Meteor.user();
+      const clientUser = await Meteor.userAsync();
       Accounts.connection.call('testMeteorUser', expect((err, result) => {
         test.equal(result._id, clientUser._id);
         test.equal(result.username, clientUser.username);
@@ -1309,7 +1309,7 @@ if (Meteor.isServer) (() => {
               password: hashPassword("new-password")
             }
           ),
-        /Incorrect password/);
+        /Something went wrong. Please check your credentials./);
     });
 
   Tinytest.addAsync(
@@ -1388,7 +1388,7 @@ if (Meteor.isServer) (() => {
             password: hashPassword("new-password")
           }
         ),
-        /Incorrect password/);
+        /Something went wrong. Please check your credentials./);
     });
 
   Tinytest.addAsync('forgotPassword - different error messages returned depending' +

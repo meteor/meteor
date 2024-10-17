@@ -1,10 +1,12 @@
+import has from 'lodash.has';
+
 Meteor.methods({
   nothing: function() {
     // No need to check if there are no arguments.
   },
-  echo: function(/* arguments */) {
+  echo: function(...args) {
     check(arguments, [Match.Any]);
-    return _.toArray(arguments);
+    return args;
   },
   echoOne: function(/*arguments*/) {
     check(arguments, [Match.Any]);
@@ -34,9 +36,9 @@ Meteor.methods({
       throw e;
     }
   },
-  setUserId: function(userId) {
+  async setUserId(userId) {
     check(userId, Match.OneOf(String, null));
-    this.setUserId(userId);
+    await this.setUserId(userId);
   }
 });
 
@@ -218,14 +220,14 @@ if (Meteor.isServer) {
 
 if (Meteor.isServer) {
   Meteor.methods({
-    setUserIdAfterUnblock: function() {
+    async setUserIdAfterUnblock() {
       this.unblock();
       let threw = false;
       const originalUserId = this.userId;
       try {
         // Calling setUserId after unblock should throw an error (and not mutate
         // userId).
-        this.setUserId(originalUserId + 'bla');
+        await this.setUserId(originalUserId + 'bla');
       } catch (e) {
         threw = true;
       }
@@ -243,15 +245,14 @@ if (Meteor.isServer) {
     const collName = 'overlappingUniversalSubs';
     const universalSubscribers = [[], []];
 
-    _.each([0, 1], function(index) {
+    [0, 1].forEach(function(index) {
       Meteor.publish(null, function() {
         const sub = this;
         universalSubscribers[index].push(sub);
         sub.onStop(function() {
-          universalSubscribers[index] = _.without(
-            universalSubscribers[index],
-            sub
-          );
+          universalSubscribers[index] = universalSubscribers[index].filter(function(value) {
+            return value !== sub;
+          });
         });
       });
     });
@@ -259,13 +260,13 @@ if (Meteor.isServer) {
     Meteor.methods({
       testOverlappingSubs: function(token) {
         check(token, String);
-        _.each(universalSubscribers[0], function(sub) {
+        universalSubscribers[0].forEach(function(sub) {
           sub.added(collName, token, {});
         });
-        _.each(universalSubscribers[1], function(sub) {
+        universalSubscribers[1].forEach(function(sub) {
           sub.added(collName, token, {});
         });
-        _.each(universalSubscribers[0], function(sub) {
+        universalSubscribers[0].forEach(function(sub) {
           sub.removed(collName, token);
         });
       }
@@ -370,11 +371,11 @@ Meteor.startup(async () => {
 const resultByValueArrays = Object.create(null);
 Meteor.methods({
   getArray: function(testId) {
-    if (!_.has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
+    if (!has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
     return resultByValueArrays[testId];
   },
   pushToArray: function(testId, value) {
-    if (!_.has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
+    if (!has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
     resultByValueArrays[testId].push(value);
   }
 });

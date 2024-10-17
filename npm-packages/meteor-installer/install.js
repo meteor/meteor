@@ -211,8 +211,19 @@ function download() {
     }
 
     if (isWindows()) {
-      decompress();
-      return;
+      const hasNativeTar = fs.existsSync(
+        path.resolve('C:/Windows/System32', 'tar.exe'),
+      );
+      if (hasNativeTar) {
+        // tar works exactly the same as it's bsdtar counterpart on UNIX so continue
+        console.log(
+          'Native binary for tar is available on this version of Windows.',
+        );
+        console.log('Switching to the native tar.exe binary on Windows.');
+      } else {
+        decompress();
+        return;
+      }
     }
 
     fs.writeFileSync(startedPath, 'Meteor install started');
@@ -302,7 +313,9 @@ async function setup() {
 async function setupExecPath() {
   if (isWindows()) {
     // set for the current session and beyond
-    child_process.execSync(`setx path "${meteorPath}/;%path%`);
+    child_process.execSync(
+      `powershell -c "$path = (Get-Item 'HKCU:\\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames'); [Environment]::SetEnvironmentVariable('PATH', \\"${meteorPath};$path\\", 'User');"`,
+    );
     return;
   }
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
