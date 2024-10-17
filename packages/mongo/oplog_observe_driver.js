@@ -118,7 +118,7 @@ OplogObserveDriver = function (options) {
 
  };
 
-_.extend(OplogObserveDriver.prototype, {
+Object.assign(OplogObserveDriver.prototype, {
   _init: async function() {
     const self = this;
 

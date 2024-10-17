@@ -23,7 +23,6 @@ client-only-ecmascript
 modules-test-plugin
 shell-server@0.6.0-beta300.6
 dynamic-import@0.7.4-beta300.6
-underscore@1.0.14-beta300.6
 import-local-json-module
 dummy-compiler
 typescript@5.3.3-beta300.6

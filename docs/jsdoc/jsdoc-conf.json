@@ -4,7 +4,6 @@
       "packages/ddp/sockjs-0.3.4.js",
       "packages/test-in-browser/diff_match_patch_uncompressed.js",
       "packages/jquery/jquery.js",
-      "packages/underscore/underscore.js",
       "packages/json/json2.js",
       "packages/minimongo/minimongo_tests.js",
       "tools/node_modules",

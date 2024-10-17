@@ -2,6 +2,7 @@
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
   version: '1.6.4',
+  deprecated: true
 });
 
 Npm.depends({
