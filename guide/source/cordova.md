@@ -695,3 +695,9 @@ From this point on, the process for submitting the app to the Play Store is the 
 Because Crosswalk bundles native code for Chromium, you will end up with APKs for both ARM and x86. You can find the generated APKs in the `<build-output-directory>/android/project/build/outputs/apk` directory.
 
 You will have to sign and `zipalign` both APKs. You will also have to submit both to the Play Store, see  [submitting multiple APKs](http://developer.android.com/google/play/publishing/multiple-apks.html) for more information.
+
+<h2>Other tips</h2>
+
+The back gesture is disabled by default on iOS, but it can be enabled at runtime like this:
+
+```window.WkWebView.allowsBackForwardNavigationGestures(true);```
