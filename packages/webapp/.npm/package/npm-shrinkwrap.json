@@ -294,6 +294,11 @@
       "resolved": "https://registry.npmjs.org/ipaddr.js/-/ipaddr.js-1.9.1.tgz",
       "integrity": "sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g=="
     },
+    "lodash.has": {
+      "version": "4.5.2",
+      "resolved": "https://registry.npmjs.org/lodash.has/-/lodash.has-4.5.2.tgz",
+      "integrity": "sha512-rnYUdIo6xRCJnQmbVFEwcxF144erlD+M3YcJUVesflU9paQaE8p+fJDcIQrlMYbxoANFL+AB9hZrzSBBk5PL+g=="
+    },
     "lru-cache": {
       "version": "7.18.3",
       "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-7.18.3.tgz",
@@ -508,6 +513,11 @@
       "version": "6.19.8",
       "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-6.19.8.tgz",
       "integrity": "sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw=="
+    },
+    "undici-types": {
+      "version": "5.26.5",
+      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-5.26.5.tgz",
+      "integrity": "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA=="
     },
     "unpipe": {
       "version": "1.0.0",
