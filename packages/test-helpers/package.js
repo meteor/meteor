@@ -3,10 +3,15 @@ Package.describe({
   version: "2.0.1",
 });
 
+Npm.depends({
+  'lodash.isequal': '4.5.0',
+  'lodash.isempty': '4.4.0',
+  'lodash.isstring': '4.0.1'
+});
+
 Package.onUse(function (api) {
   api.use([
     "ecmascript",
-    "underscore",
     "tracker",
     "ejson",
     "tinytest",
@@ -64,7 +69,7 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use("tinytest");
-  api.use(["test-helpers", "underscore"]);
+  api.use(["test-helpers"]);
   api.addFiles("try_all_permutations_test.js", "client");
   api.addFiles("seeded_random_test.js");
 });
