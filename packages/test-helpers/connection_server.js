@@ -1,3 +1,5 @@
+import isString from 'lodash.isstring';
+
 // Establish a connection from the server to the server, and wait
 // until the client side of the connection has received the session
 // id.  On success call `succeeded` with two arguments, the client
@@ -13,7 +15,7 @@ makeTestConnection = function (test, succeeded, failed) {
 
   // Add incoming connections to `serverConns`.
   var onConnectionHandle = Meteor.onConnection(function (serverConn) {
-    test.isTrue(_.isString(serverConn.id), "connection handle id exists and is a string");
+    test.isTrue(isString(serverConn.id), "connection handle id exists and is a string");
     if (serverConns[serverConn.id]) {
       test.fail("onConnection callback called multiple times for same session id");
       failed();
