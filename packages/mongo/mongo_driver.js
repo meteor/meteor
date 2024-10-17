@@ -1099,7 +1099,7 @@ class AsynchronousCursor {
       if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
 
-      if (!this._cursorDescription.options.tailable && _.has(doc, '_id')) {
+      if (!this._cursorDescription.options.tailable && doc._id) {
         // Did Mongo give us duplicate documents in the same cursor? If so,
         // ignore this one. (Do this before the transform, since transform might
         // return some unrelated value.) We don't do this for tailable cursors,
@@ -1174,7 +1174,8 @@ class AsynchronousCursor {
   }
 
   fetch() {
-    return this.map(_.identity);
+    var self = this;
+    return self.map(x => x);
   }
 
   /**
@@ -1634,9 +1635,9 @@ forEachTrigger = async function (cursorDescription, triggerCallback) {
     cursorDescription.selector);
   if (specificIds) {
     for (const id of specificIds) {
-      await triggerCallback(_.extend({id: id}, key));
+      await triggerCallback(Object.assign({id: id}, key));
     }
-    await triggerCallback(_.extend({dropCollection: true, id: null}, key));
+    await triggerCallback(Object.assign({dropCollection: true, id: null}, key));
   } else {
     await triggerCallback(key);
   }
