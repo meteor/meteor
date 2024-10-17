@@ -87,7 +87,7 @@ Package.onUse(function (api) {
   api.addFiles(
     [
       "mongo_driver.js",
-      "oplog_tailing.js",
+      "oplog_tailing.ts",
       "observe_multiplex.ts",
       "doc_fetcher.js",
       "polling_observe_driver.js",
