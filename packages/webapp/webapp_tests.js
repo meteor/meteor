@@ -1,8 +1,8 @@
 import { WebApp, WebAppInternals } from './webapp_server';
+import { URL } from 'node:url';
 
-const url = require("url");
-const crypto = require("crypto");
-const http = require("http");
+const crypto = require("node:crypto");
+const http = require("node:http");
 const streamToString = require("stream-to-string");
 import { isModern } from "meteor/modern-browsers";
 
@@ -11,6 +11,18 @@ WebAppInternals.addStaticJs(additionalScript);
 const hash = crypto.createHash('sha1');
 hash.update(additionalScript);
 const additionalScriptPathname = hash.digest('hex') + ".js";
+
+// Workaround for deprecated URL resolve function
+// https://nodejs.org/docs/latest/api/url.html#urlresolvefrom-to
+function urlResolve(from, to) {
+  const resolvedUrl = new URL(to, new URL(from, 'resolve://'));
+  if (resolvedUrl.protocol === 'resolve:') {
+    // `from` is a relative URL.
+    const { pathname, search, hash } = resolvedUrl;
+    return pathname + search + hash;
+  }
+  return resolvedUrl.toString();
+}
 
 // Mock the 'res' object that gets passed to connect handlers. This mock
 // just records any utf8 data written to the response and returns it
@@ -69,10 +81,10 @@ Tinytest.addAsync("webapp - content-type header", async function (test) {
       return staticFiles[url].type === "js";
     }
   );
-  let resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), cssResource));
+  let resp = await asyncGet(urlResolve(Meteor.absoluteUrl(), cssResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "text/css; charset=utf-8");
-  resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), jsResource));
+  resp = await asyncGet(urlResolve(Meteor.absoluteUrl(), jsResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "application/javascript; charset=utf-8");
 });
@@ -90,64 +102,66 @@ Tinytest.addAsync("webapp - modern/legacy static files", test => {
 
   const promises = [];
 
-  Object.keys(WebAppInternals.staticFilesByArch).forEach(arch => {
+  for (const arch of Object.keys(WebAppInternals.staticFilesByArch)) {
     const staticFiles = WebAppInternals.staticFilesByArch[arch];
 
-    Object.keys(staticFiles).forEach(path => {
+    for (const path of Object.keys(staticFiles)) {
       const { type } = staticFiles[path];
       if (type !== "asset") {
-        return;
+        continue;
       }
 
       const pathMatch = /\/(modern|legacy)_test_asset\.js$/.exec(path);
       if (! pathMatch) {
-        return;
+        continue;
       }
 
-      const absUrl = url.resolve(Meteor.absoluteUrl(), path);
+      const absUrl = urlResolve(Meteor.absoluteUrl(), path);
 
-      [ // Try to request the modern/legacy assets with both modern and
+      for (const ua of [ // Try to request the modern/legacy assets with both modern and
         // legacy User Agent strings. (#9953)
         modernUserAgent,
         legacyUserAgent,
-      ].forEach(ua => promises.push(new Promise((resolve, reject) => {
-        HTTP.get(absUrl, {
-          headers: {
-            "User-Agent": ua
-          }
-        }, (error, response) => {
-          if (error) {
-            reject(error);
-            return;
-          }
+      ]) {
+        promises.push(new Promise((resolve, reject) => {
+          HTTP.get(absUrl, {
+            headers: {
+              "User-Agent": ua
+            }
+          }, (error, response) => {
+            if (error) {
+              reject(error);
+              return;
+            }
 
-          if (response.statusCode !== 200) {
-            reject(new Error(`Bad status code ${
-              response.statusCode
-            } for ${path}`));
-            return;
-          }
+            if (response.statusCode !== 200) {
+              reject(new Error(`Bad status code ${
+                response.statusCode
+              } for ${path}`));
+              return;
+            }
 
-          const contentType = response.headers["content-type"];
-          if (! contentType.startsWith("application/javascript")) {
-            reject(new Error(`Bad Content-Type ${contentType} for ${path}`));
-            return;
-          }
+            const contentType = response.headers["content-type"];
+            if (!contentType.startsWith("application/javascript")) {
+              reject(new Error(`Bad Content-Type ${contentType} for ${path}`));
+              return;
+            }
 
-          const expectedText = pathMatch[1].toUpperCase();
-          const index = response.content.indexOf(expectedText);
-          if (index < 0) {
-            reject(new Error(`Missing ${
-              JSON.stringify(expectedText)
-            } text in ${path}`));
-            return;
-          }
+            const expectedText = pathMatch[1].toUpperCase();
+            const index = response.content.indexOf(expectedText);
+            if (index < 0) {
+              reject(new Error(`Missing ${
+                JSON.stringify(expectedText)
+              } text in ${path}`));
+              return;
+            }
 
-          resolve(path);
-        });
-      })));
-    });
-  });
+            resolve(path);
+          });
+        }))
+      }
+    }
+  }
 
   test.isTrue(promises.length > 0);
 
