@@ -106,6 +106,7 @@
 ### [mongo-dev-server](https://github.com/meteor/meteor/tree/devel/packages/mongo-dev-server) {#mongo-dev-server}
 ### [mongo-id](https://github.com/meteor/meteor/tree/devel/packages/mongo-id) {#mongo-id}
 ### [mongo-livedata](https://github.com/meteor/meteor/tree/devel/packages/mongo-livedata) {#mongo-livedata}
+### [npm-bcrypt](https://github.com/meteor/meteor/tree/devel/packages/npm-bcrypt) {#npm-bcrypt}
 ### [npm-mongo](https://github.com/meteor/meteor/tree/devel/packages/npm-mongo) {#npm-mongo}
 ### [oauth](https://github.com/meteor/meteor/tree/devel/packages/oauth) {#oauth}
 ### [oauth-encryption](https://github.com/meteor/meteor/tree/devel/packages/oauth-encryption) {#oauth-encryption}
@@ -134,6 +135,7 @@
 ### [standard-minifier-js](https://github.com/meteor/meteor/tree/devel/packages/standard-minifier-js) {#standard-minifier-js}
 ### [standard-minifiers](https://github.com/meteor/meteor/tree/devel/packages/standard-minifiers) {#standard-minifiers}
 ### [static-html](https://github.com/meteor/meteor/tree/devel/packages/static-html) {#static-html}
+### [static-html-tools](https://github.com/meteor/meteor/tree/devel/packages/static-html-tools) {#static-html-tools}
 ### [test-helpers](https://github.com/meteor/meteor/tree/devel/packages/test-helpers) {#test-helpers}
 ### [test-in-browser](https://github.com/meteor/meteor/tree/devel/packages/test-in-browser) {#test-in-browser}
 ### [test-in-console](https://github.com/meteor/meteor/tree/devel/packages/test-in-console) {#test-in-console}

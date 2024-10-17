@@ -38,28 +38,32 @@ const browserAliases = {
   safari: ['appleMail'],
 };
 
-// Expand the given minimum versions by reusing chrome versions for
-// chromeMobile (according to browserAliases above).
+/**
+ * Expand the given minimum versions by reusing chrome versions for
+ * chromeMobile (according to browserAliases above).
+ * @param versions {object}
+ * @return {any}
+ */
 function applyAliases(versions) {
   const lowerCaseVersions = Object.create(null);
 
-  Object.keys(versions).forEach(browser => {
+  for (const browser of Object.keys(versions)) {
     lowerCaseVersions[browser.toLowerCase()] = versions[browser];
-  });
+  }
 
-  Object.keys(browserAliases).forEach(original => {
+  for (let original of Object.keys(browserAliases)) {
     const aliases = browserAliases[original];
     original = original.toLowerCase();
 
     if (hasOwn.call(lowerCaseVersions, original)) {
-      aliases.forEach(alias => {
+      for (let alias of aliases) {
         alias = alias.toLowerCase();
         if (!hasOwn.call(lowerCaseVersions, alias)) {
           lowerCaseVersions[alias] = lowerCaseVersions[original];
         }
-      });
+      }
     }
-  });
+  }
 
   return lowerCaseVersions;
 }
@@ -67,9 +71,15 @@ function applyAliases(versions) {
 // TODO Should it be possible for callers to setMinimumBrowserVersions to
 // forbid any version of a particular browser?
 
-// Given a { name, major, minor, patch } object like the one provided by
-// webapp via request.browser, return true if that browser qualifies as
-// "modern" according to all requested version constraints.
+/**
+ * @name ModernBrowsers.isModern
+ * @summary Given a { name, major, minor, patch } object like the one provided by
+ * webapp via request.browser, return true if that browser qualifies as
+ * "modern" according to all requested version constraints.
+ * @locus server
+ * @param [browser] {object} { name: string, major: number, minor?: number, patch?: number }
+ * @return {boolean}
+ */
 function isModern(browser) {
   const lowerCaseName =
     browser && typeof browser.name === 'string' && browser.name.toLowerCase();
@@ -84,29 +94,44 @@ function isModern(browser) {
   );
 }
 
-// Any package that depends on the modern-browsers package can call this
-// function to communicate its expectations for the minimum browser
-// versions that qualify as "modern." The final decision between
-// web.browser.legacy and web.browser will be based on the maximum of all
-// requested minimum versions for each browser.
+/**
+ * @name ModernBrowsers.setMinimumBrowserVersions
+ * @summary Any package that depends on the modern-browsers package can call this
+ * function to communicate its expectations for the minimum browser
+ * versions that qualify as "modern." The final decision between
+ * web.browser.legacy and web.browser builds will be based on the maximum of all
+ * requested minimum versions for each browser.
+ * @locus server
+ * @param versions {object} Name of the browser engine and minimum version for at which it is considered modern. For example: {
+ *   chrome: 49,
+ *   edge: 12,
+ *   ie: 12,
+ *   firefox: 45,
+ *   mobileSafari: 10,
+ *   opera: 38,
+ *   safari: 10,
+ *   electron: [1, 6],
+ * }
+ * @param source {function} Name of the capability that requires these minimums.
+ */
 function setMinimumBrowserVersions(versions, source) {
   const lowerCaseVersions = applyAliases(versions);
 
-  Object.keys(lowerCaseVersions).forEach(lowerCaseName => {
+  for (const lowerCaseName of Object.keys(lowerCaseVersions)) {
     const version = lowerCaseVersions[lowerCaseName];
 
     if (
       hasOwn.call(minimumVersions, lowerCaseName) &&
       !greaterThan(version, minimumVersions[lowerCaseName].version)
     ) {
-      return;
+      continue;
     }
 
     minimumVersions[lowerCaseName] = {
       version: copy(version),
       source: source || getCaller('setMinimumBrowserVersions'),
     };
-  });
+  }
 }
 
 function getCaller(calleeName) {
@@ -123,12 +148,23 @@ function getCaller(calleeName) {
   return caller;
 }
 
+/**
+ * @name ModernBrowsers.getMinimumBrowserVersions
+ * @summary Returns an object that lists supported browser engines and their minimum versions to be considered modern for Meteor.
+ * @locus server
+ * @return {object}
+ */
 function getMinimumBrowserVersions() { return minimumVersions; }
 
 Object.assign(exports, {
   isModern,
   setMinimumBrowserVersions,
   getMinimumBrowserVersions,
+  /**
+   * @name ModernBrowsers.calculateHashOfMinimumVersions
+   * @summary Creates a hash of the object of minimum browser versions.
+   * @return {string}
+   */
   calculateHashOfMinimumVersions() {
     const { createHash } = require('crypto');
     return createHash('sha1')
