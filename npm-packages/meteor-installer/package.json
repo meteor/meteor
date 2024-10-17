@@ -1,6 +1,6 @@
 {
   "name": "meteor",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "Install Meteor",
   "main": "install.js",
   "scripts": {

@@ -1,7 +1,6 @@
-import assert from "assert";
 import {
-  checkWhere,
   checkPackageVars,
+  checkWhere,
 } from "./common";
 
 export const where = "client";

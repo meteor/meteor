@@ -203,7 +203,6 @@ Tinytest.addAsync(
     {
       const { stream }  = await WebAppInternals.getBoilerplate({
         browser: "doesn't-matter",
-        browser: "doesn't-matter",
         url: "also-doesnt-matter"
       }, "web.browser");
       const boilerplate = await streamToString(stream);
