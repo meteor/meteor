@@ -171,3 +171,5 @@ const _sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 Meteor._sleepForMs = function (ms) {
   return _sleep(ms);
 };
+
+Meteor.sleep = _sleep;
