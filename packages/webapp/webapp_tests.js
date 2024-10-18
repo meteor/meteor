@@ -340,7 +340,7 @@ __meteor_runtime_config__.WEBAPP_TEST_B = '</script>';
 
 Tinytest.add("webapp - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(WebAppInternals.NpmModules.express.version, /^4\.(\d+)\.(\d+)/);
+  test.matches(WebAppInternals.NpmModules.express.version, /^5\.(\d+)\.(\d+)/);
   test.equal(typeof(WebAppInternals.NpmModules.express.module), 'function');
 });
 
@@ -363,3 +363,53 @@ Tinytest.addAsync(
     test.isTrue(/__meteor_runtime_config__ = (.*customKey[^"].*customValue.*)/.test(html));
   }
 );
+
+Tinytest.addAsync("webapp - parse url queries", async function (test) {
+  WebApp.handlers.get("/queries", async (req, res) => {
+    res.json(req.query);
+  });
+
+  const queriesTestCases = [
+    'planet=Mars',
+    'galaxy=Andromeda&star=Betelgeuse',
+    'spacecraft=Voyager%202',
+    'meteor=Perseid&meteor=Leonid',
+    'astronaut[name]=Neil&astronaut[mission]=Apollo%2011',
+    'galaxy[name]=Milky%20Way&galaxy[diameter]=105700',
+    'constellation[name]=Orion&constellation[stars][]=Betelgeuse&constellation[stars][]=Rigel',
+    'galaxy[name]=Andromeda&galaxy[age]=10&meteors[]=Perseid&meteors[]=Geminid',
+    'astronaut[name]=Buzz&astronaut[missions][first]=Apollo%2011&astronaut[missions][second]=Apollo%2022',
+    'spacecraft[]=Voyager&spacecraft[]=Pioneer&spacecraft[0][type]=orbiter',
+    'comet=Halley&status=active%20comet',
+    'planet=&galaxy='
+  ];
+  const queryResults = [
+    { planet: 'Mars' },
+    { galaxy: 'Andromeda', star: 'Betelgeuse' },
+    { spacecraft: 'Voyager 2' },
+    { meteor: ['Perseid', 'Leonid'] },
+    { astronaut: { name: 'Neil', mission: 'Apollo 11' } },
+    { galaxy: { name: 'Milky Way', diameter: '105700' } },
+    { constellation: { name: 'Orion', stars: ['Betelgeuse', 'Rigel'] } },
+    {
+      galaxy: { name: 'Andromeda', age: '10' },
+      meteors: ['Perseid', 'Geminid']
+    },
+    {
+      astronaut: {
+        name: 'Buzz',
+        missions: { first: 'Apollo 11', second: 'Apollo 22' }
+      }
+    },
+    { spacecraft: ['Voyager', 'Pioneer', { type: 'orbiter' }] },
+    { comet: 'Halley', status: 'active comet' },
+    { planet: '', galaxy: '' }
+  ];
+  let i = 0;
+  for await (const queriesTestCase of queriesTestCases) {
+    const resp = await asyncGet(`${Meteor.absoluteUrl()}/queries?${queriesTestCase}`);
+    const queryParsed = JSON.parse(resp.content);
+    test.equal(queryParsed, queryResults[i]);
+    i++;
+  }
+});
