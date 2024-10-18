@@ -42,6 +42,7 @@ Package.onUse(function (api) {
     "mongo-id",
     "check",
     "ecmascript",
+    "typescript",
     "mongo-dev-server",
     "logging",
   ]);
@@ -86,8 +87,8 @@ Package.onUse(function (api) {
   api.addFiles(
     [
       "mongo_driver.js",
-      "oplog_tailing.js",
-      "observe_multiplex.js",
+      "oplog_tailing.ts",
+      "observe_multiplex.ts",
       "doc_fetcher.js",
       "polling_observe_driver.js",
       "oplog_observe_driver.js",

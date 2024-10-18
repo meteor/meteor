@@ -38,7 +38,7 @@ function updateAslStore(key, value) {
 
 function runFresh(fn) {
   var als = getAsl();
-  return als.run({}, fn);
+  return als.exit(fn);
 }
 
 Meteor._getAsl = getAsl;
