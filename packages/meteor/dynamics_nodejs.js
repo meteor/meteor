@@ -1,11 +1,10 @@
-// Implementation of dynamic scoping, for use on the server with AsyncLocalStorage
+const { AsyncLocalStorage } = Npm.require("async_hooks");
+
 let nextSlot = 0;
 let callAsyncMethodRunning = false;
 
-const CURRENT_VALUE_KEY_NAME = "currentValue";
-const UPPER_CALL_DYNAMICS_KEY_NAME = "upperCallDynamics";
+const CURRENT_VALUE_KEY = "currentValue";
 
-const SLOT_CALL_KEY = "slotCall";
 /**
  * @memberOf Meteor
  * @summary Constructor for EnvironmentVariable
@@ -15,6 +14,7 @@ const SLOT_CALL_KEY = "slotCall";
 class EnvironmentVariableAsync {
   constructor() {
     this.slot = nextSlot++;
+    this.als = new AsyncLocalStorage()
   }
 
   /**
@@ -26,12 +26,7 @@ class EnvironmentVariableAsync {
    * @returns {any} The current value of the variable, or `undefined` if no
    */
   get() {
-    if (this.slot !== Meteor._getValueFromAslStore(SLOT_CALL_KEY)) {
-      const dynamics = Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {};
-
-      return dynamics[this.slot];
-    }
-    return Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
+    return this.als.getStore()?.[CURRENT_VALUE_KEY];
   }
 
   getOrNullIfOutsideFiber() {
@@ -44,52 +39,21 @@ class EnvironmentVariableAsync {
    * @method withValue
    * @param {any} value The value to set for the duration of the function call
    * @param {Function} func The function to call with the new value of the
-   * @param {Object} [options] Optional additional properties for adding in [asl](https://nodejs.org/api/async_context.html#class-asynclocalstorage)
-   * @returns {Promise<any>} The return value of the function
+   * @returns {ReturnType<func>} The return value of the function
    */
-  withValue(value, func, options = {}) {
-    const self = this;
-    const slotCall = self.slot;
-    const dynamics = Object.assign(
-      {},
-      Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {}
-    );
-
-    if (slotCall != null) {
-      dynamics[slotCall] = value;
-    }
-
-    return Meteor._runAsync(
-      function () {
-        Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
-        Meteor._updateAslStore(UPPER_CALL_DYNAMICS_KEY_NAME, dynamics);
-        return func();
-      },
-      self,
-      Object.assign(
-        {
-          callId: `${this.slot}-${Math.random()}`,
-          [SLOT_CALL_KEY]: this.slot,
-        },
-        options,
-      ),
-    );
+  withValue(value, func) {
+    return this.als.run({ [CURRENT_VALUE_KEY]: value }, func);
   }
 
   _set(context) {
-    const _meteor_dynamics =
-      Meteor._getValueFromAslStore("_meteor_dynamics") || [];
-    _meteor_dynamics[this.slot] = context;
+    this.als.enterWith(context);
   }
 
   _setNewContextAndGetCurrent(value) {
-    let _meteor_dynamics = Meteor._getValueFromAslStore("_meteor_dynamics");
-    if (!_meteor_dynamics) {
-      _meteor_dynamics = [];
-    }
+    const saved = this.get()
 
-    const saved = _meteor_dynamics[this.slot];
-    this._set(value);
+    this._set({ [CURRENT_VALUE_KEY]: value });
+
     return saved;
   }
 
@@ -141,15 +105,12 @@ Meteor.EnvironmentVariable = EnvironmentVariableAsync;
  * @memberOf Meteor
  * @param {Function} func Function that is wrapped
  * @param {Function} onException
- * @param {Object} _this Optional `this` object against which the original function will be invoked
+ * @param {Object} thisValue Optional `this` object against which the original function will be invoked
  * @return {Function} The wrapped function
  */
-Meteor.bindEnvironment = (func, onException, _this) => {
-  const dynamics = Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
-  const currentSlot = Meteor._getValueFromAslStore(SLOT_CALL_KEY);
-
+Meteor.bindEnvironment = (func, onException = null, thisValue = null) => {
   if (!onException || typeof onException === "string") {
-    var description = onException || "callback of async function";
+    const description = onException || "callback of async function";
     onException = function (error) {
       Meteor._debug("Exception in " + description + ":", error);
     };
@@ -159,40 +120,19 @@ Meteor.bindEnvironment = (func, onException, _this) => {
     );
   }
 
-  return function (/* arguments */) {
-    var args = Array.prototype.slice.call(arguments);
+  return function (...args) {
+    let ret;
 
-    var runWithEnvironment = function () {
-      return Meteor._runAsync(
-        () => {
-          let ret;
-          try {
-            if (currentSlot) {
-              Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, dynamics);
-            }
-            ret = func.apply(_this, args);
+    try {
+      ret = func.apply(thisValue, args);
 
-            // Using this strategy to be consistent between client and server and stop always returning a promise from the server
-            if (Meteor._isPromise(ret)) {
-              ret = ret.catch(onException);
-            }
-          } catch (e) {
-            onException(e);
-          }
-          return ret;
-        },
-        _this,
-        {
-          callId: `bindEnvironment-${Math.random()}`,
-          [SLOT_CALL_KEY]: currentSlot,
-        }
-      );
-    };
-
-    if (Meteor._getAslStore()) {
-      return runWithEnvironment();
+      if (Meteor._isPromise(ret)) {
+        ret = ret.catch(onException);
+      }
+    } catch (e) {
+      onException(e);
     }
 
-    return Meteor._getAsl().run({}, runWithEnvironment);
+    return ret;
   };
 };

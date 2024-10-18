@@ -1,8 +1,8 @@
 var _ = require("underscore");
 
-const getAslStore = () => global.__METEOR_ASYNC_LOCAL_STORAGE.getStore();
-const getValueFromAslStore = key => getAslStore()[key];
-const updateAslStore = (key, value) => getAslStore()[key] = value;
+const getAlsStore = () => global.__METEOR_ASYNC_LOCAL_STORAGE.getStore();
+const getValueFromAslStore = key => getAlsStore()[key];
+const updateAslStore = (key, value) => getAlsStore()[key] = value;
 
 exports.makeGlobalAsyncLocalStorage = () => {
   if (!global.__METEOR_ASYNC_LOCAL_STORAGE) {
@@ -135,7 +135,7 @@ exports.bindEnvironment = function (func) {
       return ret;
     };
 
-    if (getAslStore()) {
+    if (getAlsStore()) {
       return runWithEnvironment();
     }
 

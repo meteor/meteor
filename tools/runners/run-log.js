@@ -1,5 +1,5 @@
 var Console = require('../console/console.js').Console;
-var fiberHelpers = require('../utils/fiber-helpers.js');
+var fiberHelpers = require('../utils/als_helpers.js');
 
 // runLog is primarily used by the parts of the tool which run apps locally. It
 // writes to standard output (and standard error, if rawLogs is set), and allows

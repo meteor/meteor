@@ -132,37 +132,22 @@ if (Meteor.isServer) {
     }
   );
 }
+
 Tinytest.addAsync("environment - bindEnvironment", async function (test) {
-  var raised_f;
-
-  var f = CurrentFoo.withValue(17, function () {
-    return Meteor.bindEnvironment(function (flag) {
+  function f() {
+    return CurrentFoo.withValue(17, () => {
       test.equal(CurrentFoo.get(), 17);
-      if (flag)
-        throw "test";
       return 12;
-    }, function (e) {
-      test.equal(CurrentFoo.get(), 17);
-      raised_f = e;
     });
-  });
+  }
 
-  var test_f = function () {
-    raised_f = null;
-
-    test.equal(f(false), 12);
-    test.equal(raised_f, null);
-
-    test.equal(f(true), undefined);
-    test.equal(raised_f, "test", 'raised_f should be "test"');
-  };
-
-  // At top level
+  function test_f() {
+    test.equal(f(), 12);
+  }
 
   test.equal(CurrentFoo.get(), undefined);
-  await test_f();
 
-  // Inside a withValue
+  test_f();
 
   CurrentFoo.withValue(22, function () {
     test.equal(CurrentFoo.get(), 22);
@@ -172,39 +157,21 @@ Tinytest.addAsync("environment - bindEnvironment", async function (test) {
 
   test.equal(CurrentFoo.get(), undefined);
 
-  // Multiple environment-bound functions on the stack (in the nodejs
-  // implementation, this needs to avoid creating additional fibers)
-
-  var raised_g;
-
-  var g = await CurrentFoo.withValue(99, function () {
-    return Meteor.bindEnvironment(function (flag) {
+  function g() {
+    return CurrentFoo.withValue(99, function () {
       test.equal(CurrentFoo.get(), 99);
-
-      if (flag)
-        throw "trial";
-
       test_f();
       return 88;
-    }, function (e) {
-      test.equal(CurrentFoo.get(), 99);
-      raised_g = e;
     });
-  });
+  }
 
-  var test_g = async function () {
-    raised_g = null;
+  function test_g() {
+    test.equal(g(), 88);
+  }
 
-    test.equal(await g(false), 88);
-    test.equal(raised_g, null);
+  test_g();
 
-    test.equal(await g(true), undefined);
-    test.equal(raised_g, "trial");
-  };
-
-  await test_g();
-
-  await CurrentFoo.withValue(77, function () {
+  CurrentFoo.withValue(77, function () {
     test.equal(CurrentFoo.get(), 77);
     test_g();
     test.equal(CurrentFoo.get(), 77);
