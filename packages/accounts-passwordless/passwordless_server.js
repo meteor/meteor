@@ -220,7 +220,7 @@ Meteor.methods({
  */
 Accounts.sendLoginTokenEmail = async ({ userId, sequence, email, extra = {} }) => {
   const user = await getUserById(userId);
-  const url = Accounts.urls.loginToken(email, sequence);
+  const url = Accounts.urls.loginToken(email, sequence, extra);
   const options = await Accounts.generateOptionsForEmail(
     email,
     user,
