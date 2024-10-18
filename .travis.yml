@@ -1,7 +1,6 @@
 language: node_js
 os: linux
 dist: jammy
-sudo: required
 services: xvfb
 node_js:
   - "20.15.1"
