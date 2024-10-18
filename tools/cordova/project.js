@@ -11,6 +11,7 @@ import { Profile } from '../tool-env/profile';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
 import { execFileAsync } from '../utils/processes';
+var meteorNpm = require('../isobuild/meteor-npm');
 
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
@@ -492,6 +493,8 @@ to Cordova project`, async () => {
         files.pathJoin(self.projectRoot, "package.json"),
         JSON.stringify(packageJsonObj, null, 2) + "\n"
       );
+
+      await meteorNpm.runNpmCommand(["install"], self.projectRoot);
     });
   }
 
