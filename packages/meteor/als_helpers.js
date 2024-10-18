@@ -4,60 +4,58 @@ Meteor.isFibersDisabled = typeof __meteor_bootstrap__ === 'object' &&
   __meteor_bootstrap__.isFibersDisabled !== undefined;
 Meteor._isFibersEnabled = !Meteor.isFibersDisabled;
 
-function getAsl() {
-  if (!Meteor.isFibersDisabled) {
-    throw new Error('Can not use async hooks when fibers are enabled');
-  }
-
+function getAls() {
+  /**
+   * lazily create __METEOR_ASYNC_LOCAL_STORAGE since this might run in older Meteor
+   * versions that are incompatible with async hooks
+   */
   if (!global.__METEOR_ASYNC_LOCAL_STORAGE) {
-    // lazily create __METEOR_ASYNC_LOCAL_STORAGE since this might run in older Meteor
-    // versions that are incompatible with async hooks
-    var AsyncLocalStorage = Npm.require('async_hooks').AsyncLocalStorage;
+
+    const { AsyncLocalStorage } = Npm.require('async_hooks');
+
     global.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
+
+    __METEOR_ASYNC_LOCAL_STORAGE.name = 'Meteor.AsyncLocalStorage';
   }
 
   return global.__METEOR_ASYNC_LOCAL_STORAGE;
 }
 
-function getAslStore() {
+function getAlsStore() {
   if (!Meteor.isServer) {
     return {};
   }
 
-  var als = getAsl();
+  const als = getAls();
+
   return als.getStore() || {};
 }
 
 function getValueFromAslStore(key) {
-  return getAslStore()[key];
+  return getAlsStore()[key];
 }
 
 function updateAslStore(key, value) {
-  return getAslStore()[key] = value;
+  return getAlsStore()[key] = value;
 }
 
 function runFresh(fn) {
-  var als = getAsl();
+  const als = getAls();
   return als.run({}, fn);
 }
 
-Meteor._getAsl = getAsl;
-Meteor._getAslStore = getAslStore;
-Meteor._getValueFromAslStore = getValueFromAslStore;
-Meteor._updateAslStore = updateAslStore;
+Meteor._getAls = getAls;
+Meteor._getAlsStore = getAlsStore;
+Meteor._getValueFromAlsStore = getValueFromAslStore;
+Meteor._updateAlsStore = updateAslStore;
 Meteor._runFresh = runFresh;
 
 Meteor._runAsync = function (fn, ctx, store) {
-  if (store === undefined) {
-    store = {};
-  }
-  var als = getAsl();
+  const als = getAls();
 
   return als.run(
-    store || Meteor._getAslStore(),
-    function () {
-      return fn.call(ctx);
-    }
+    store || Meteor._getAlsStore(),
+    fn.bind(ctx)
   );
 };
 

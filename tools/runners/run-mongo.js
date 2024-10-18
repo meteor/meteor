@@ -1,7 +1,7 @@
 import { MongoExitCodes } from '../utils/mongo-exit-codes';
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
-var fiberHelpers = require('../utils/fiber-helpers.js');
+var fiberHelpers = require('../utils/als_helpers.js');
 var runLog = require('./run-log.js');
 var child_process = require('child_process');
 var _ = require('underscore');

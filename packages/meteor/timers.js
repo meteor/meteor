@@ -1,29 +1,3 @@
-function withoutInvocation(f) {
-  if (Package.ddp) {
-    var DDP = Package.ddp.DDP;
-    var CurrentInvocation =
-      DDP._CurrentMethodInvocation ||
-      // For backwards compatibility, as explained in this issue:
-      // https://github.com/meteor/meteor/issues/8947
-      DDP._CurrentInvocation;
-
-    var invocation = CurrentInvocation.get();
-    if (invocation && invocation.isSimulation) {
-      throw new Error("Can't set timers inside simulations");
-    }
-
-    return function () {
-      CurrentInvocation.withValue(null, f);
-    };
-  } else {
-    return f;
-  }
-}
-
-function bindAndCatch(context, f) {
-  return Meteor.bindEnvironment(withoutInvocation(f), context);
-}
-
 // Meteor.setTimeout and Meteor.setInterval callbacks scheduled
 // inside a server method are not part of the method invocation and
 // should clear out the CurrentMethodInvocation environment variable.
@@ -36,7 +10,7 @@ function bindAndCatch(context, f) {
  * @param {Number} delay Number of milliseconds to wait before calling function
  */
 Meteor.setTimeout = function (f, duration) {
-  return setTimeout(bindAndCatch("setTimeout callback", f), duration);
+  return setTimeout(f, duration);
 };
 
 /**
@@ -47,7 +21,7 @@ Meteor.setTimeout = function (f, duration) {
  * @param {Number} delay Number of milliseconds to wait between each function call.
  */
 Meteor.setInterval = function (f, duration) {
-  return setInterval(bindAndCatch("setInterval callback", f), duration);
+  return setInterval(f, duration);
 };
 
 /**
@@ -82,5 +56,5 @@ Meteor.clearTimeout = function(x) {
  * @param {Function} func The function to run
  */
 Meteor.defer = function (f) {
-  Meteor._setImmediate(bindAndCatch("defer callback", f));
+  Meteor._setImmediate(f);
 };

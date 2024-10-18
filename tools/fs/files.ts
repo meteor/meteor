@@ -37,7 +37,7 @@ const sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.
 const utils = require('../utils/utils.js');
 const cleanup = require('../tool-env/cleanup.js');
 const buildmessage = require('../utils/buildmessage.js');
-const fiberHelpers = require('../utils/fiber-helpers.js');
+const fiberHelpers = require('../utils/als_helpers.js');
 const colonConverter = require('../utils/colon-converter.js');
 
 const Profile = require('../tool-env/profile').Profile;
