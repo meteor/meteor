@@ -299,9 +299,7 @@ Function Add-NpmModulesFromJsBundleFile {
 
   Write-Host "Run Commands.npm path: $($Commands.npm)" -ForegroundColor Magenta
 
-  & "$($Commands.npm)" install 2>&1 | Out-File -FilePath $(Join-Path $Destination 'npm-install.log') -Encoding ascii
-
-  Get-Content "$(Join-Path $Destination 'npm-install.log')"
+  & npm install
 
   Write-Host "Done running Commands.npm" -ForegroundColor Magenta
   if ($LASTEXITCODE -ne 0) {
