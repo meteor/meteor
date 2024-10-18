@@ -5,9 +5,9 @@ let testNumber = 0;
 async function runNextUrl(browser) {
   const page = await browser.newPage();
 
-  page.on('console', msg => {
-    console.log('PAGE LOG:', msg.text());
-  });
+  // page.on('console', msg => {
+  //   console.log('PAGE LOG:', msg.text());
+  // });
 
   page.on('console', async msg => {
     // this is a way to make sure the travis does not timeout
@@ -24,8 +24,6 @@ async function runNextUrl(browser) {
       // If we get here is because we have not yet started the test on the client
       const currentServerTest =
        await page.evaluate(async () => await __Tinytest._getCurrentRunningTestOnServer());
-
-      console.log({ currentClientTest, currentServerTest })
 
       if (currentServerTest !== '') {
         console.log(`Currently running on the server test: ${ currentServerTest }`);
