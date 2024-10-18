@@ -19,7 +19,6 @@ import {
 } from './socket_file.js';
 import cluster from 'cluster';
 import { execSync } from 'child_process';
-import has from 'lodash.has';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
@@ -622,7 +621,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   };
 
   if (
-    has(additionalStaticJs, pathname) &&
+    pathname in additionalStaticJs &&
     !WebAppInternals.inlineScriptsAllowed()
   ) {
     serveStaticJs(additionalStaticJs[pathname]);

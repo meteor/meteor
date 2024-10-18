@@ -32,9 +32,9 @@
       "integrity": "sha512-fKSWtyNQTclfi1A+s2KU91/r1mfANG1ZibxTdCwJGfV1J9UwcV22plFOm0wkaq4WzqW87zxiAkyp2Ho1Wn1NnA=="
     },
     "caniuse-db": {
-      "version": "1.0.30001640",
-      "resolved": "https://registry.npmjs.org/caniuse-db/-/caniuse-db-1.0.30001640.tgz",
-      "integrity": "sha512-K8/5iWoH/NULlqJz/iaopQJraQCHGcFGvs8dmTpAH7GyvoQu2Xq8ht3jq2c+wNck4bgQu/PHu2GN2mJfUj9qtw=="
+      "version": "1.0.30001669",
+      "resolved": "https://registry.npmjs.org/caniuse-db/-/caniuse-db-1.0.30001669.tgz",
+      "integrity": "sha512-GK+G6CnRZ7IY2J2H3bcm9kshwHcJ4ZWDC5u9WaIh7DQAAHHeuxIPtaZd15GMTmGvGbDx/u1AcQs3MYur9Tem7A=="
     },
     "concat-map": {
       "version": "0.0.1",
@@ -47,9 +47,9 @@
       "integrity": "sha512-OI38lO4JQQX2GSisTqwiSFxiWNmLajXdW4tCCxAuiwGKjusHALQadSHBSxGlU8lrFp47IkLuU2AfSYz31qpETQ=="
     },
     "debug": {
-      "version": "4.3.5",
-      "resolved": "https://registry.npmjs.org/debug/-/debug-4.3.5.tgz",
-      "integrity": "sha512-pt0bNEmneDIvdL1Xsd9oDQ/wrQRkXDT4AUWlNZNPKvW5x/jyO9VFXkJUP07vQ2upmw5PlaITaPKc31jK13V+jg=="
+      "version": "4.3.7",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-4.3.7.tgz",
+      "integrity": "sha512-Er2nc/H7RrMXZBFCEim6TCmMk02Z8vLC2Rbi1KEBggpo0fS6l0S1nnapwmIi3yW/+GOJap1Krg4w0Hg80oCqgQ=="
     },
     "fs.realpath": {
       "version": "1.0.0",
@@ -97,9 +97,9 @@
       "integrity": "sha512-FP+p8RB8OWpF3YZBCrP5gtADmtXApB5AMLn+vdyA+PyxCjrCs00mjyUozssO33cwDeT3wNGdLxJ5M//YqtHAJw=="
     },
     "ms": {
-      "version": "2.1.2",
-      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.2.tgz",
-      "integrity": "sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w=="
+      "version": "2.1.3",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="
     },
     "multi-stage-sourcemap": {
       "version": "0.2.1",
