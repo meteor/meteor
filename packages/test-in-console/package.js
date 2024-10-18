@@ -4,7 +4,9 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.use(['tinytest', 'random', 'ejson', 'check']);
+  api.versionsFrom('3.0.1');
+
+  api.use(['tinytest', 'random', 'ejson', 'check', 'ecmascript']);
   api.use('fetch', 'server');
 
   api.export('TEST_STATUS', 'client');
@@ -13,9 +15,7 @@ Package.onUse(function(api) {
 
   api.addFiles(['reporter.js'], 'server');
 
-  // This is to be run by phantomjs, not as part of normal package code.
-  api.addAssets('phantomRunner.js', 'server');
-  api.addAssets('puppeteerRunner.js', 'server');
+  api.addAssets('puppeteer_runner.js', 'server');
 
   api.export('runTests');
 });
