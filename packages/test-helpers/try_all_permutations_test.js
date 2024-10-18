@@ -61,7 +61,7 @@ Tinytest.add("test-helpers - try_all_permutations", function (test) {
     var seen = {};
 
     for (var i = 0; i < n; i++)
-      fs.push(function (x) { seq += x + "_"; }.bind(null, i));
+      fs.push((function (x) { seq += x + "_"; }).bind(null, i));
     try_all_permutations(
       function () {seq = "";},
       fs,
