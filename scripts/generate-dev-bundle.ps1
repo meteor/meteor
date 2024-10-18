@@ -295,7 +295,7 @@ Function Add-NpmModulesFromJsBundleFile {
   # No bin-links because historically, they weren't used anyway.
 
 
-  Get-Content "$($Commands.npm)"
+  Get-Content "$(Join-Path $Destination 'package.json')"
 
   Write-Host "Run Commands.npm path: $($Commands.npm)" -ForegroundColor Magenta
 
