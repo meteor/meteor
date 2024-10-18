@@ -4,8 +4,6 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('3.0.1');
-
   api.use(['tinytest', 'random', 'ejson', 'check', 'ecmascript']);
   api.use('fetch', 'server');
 
