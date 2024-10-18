@@ -56,6 +56,7 @@ Set the `https_proxy` or `HTTPS_PROXY` environment variable to a valid proxy URL
 
 | NPM Package | Meteor Official Release |
 |-------------|-------------------------|
+| 3.0.4       | 3.0.4                   |
 | 3.0.3       | 3.0.3                   |
 | 3.0.2       | 3.0.2                   |
 | 3.0.1       | 3.0.1                   |

@@ -390,10 +390,6 @@ $npmToolArgs = @{
 }
 Add-NpmModulesFromJsBundleFile @npmToolArgs
 
-# Leaving these probably doesn't hurt, but are removed for consistency w/ Unix.
-Remove-Item $(Join-Path $dirLib 'package.json')
-Remove-Item $(Join-Path $dirLib 'package-lock.json')
-
 Write-Host "Done writing node_modules build(s)..." -ForegroundColor Magenta
 
 Write-Host "Removing temp scratch $dirTemp" -ForegroundColor Magenta
