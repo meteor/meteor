@@ -51,7 +51,6 @@ Package.onUse(function (api) {
   api.use("mongo-decimal", "server");
   //api.use('emitter-promise', 'server');
 
-  api.use("underscore", "server");
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.

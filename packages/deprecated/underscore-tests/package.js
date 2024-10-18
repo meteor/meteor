@@ -3,6 +3,7 @@ Package.describe({
   // Tinytest depends on underscore
   summary: "Tests for the underscore package",
   version: '1.0.10',
+  deprecated: true
 });
 
 Package.onTest(function (api) {

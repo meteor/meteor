@@ -118,7 +118,6 @@ const packages = {
   typescript: {
     serverFiles: ["plugin.js"],
   },
-  underscore: {},
   url: {},
 };
 

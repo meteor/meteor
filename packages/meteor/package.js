@@ -64,7 +64,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['underscore', 'tinytest', 'test-helpers']);
+  api.use(['tinytest', 'test-helpers']);
 
   api.addFiles('browser_environment_test.js', 'web.browser');
   api.addFiles('client_environment_test.js', 'client');
