@@ -183,6 +183,21 @@ issue, since it's unusual for a client to have enough data that an
 index is worthwhile.
 :::
 
+Use the `resolverType` option to determine the default method for resolving the functions of the collection methods. In Meteor 3.x, a distinction exists between stub and server promises on call methods. The former handles client simulation and minimongo population, while the latter solely manages success or error on the server call without populating the data in minimongo. The resolverType option offers `stub` and `server` values.
+
+This option is particularly useful on test environments to maintain isomorphic code without needing to manage different code for the server and stub scenarios.
+
+```javascript
+const Greetings = new Meteor.Collection('greetUser', { resolverType: 'stub' });
+    
+await Greetings.insertAsync({ test: 1 });
+
+// 🔵 Client simulation
+Greetings.findOne({ name: 'John' }); // 🧾 Data is available (Optimistic-UI)
+```
+
+Read more about server and stub promises on calling methods, [please refer to the docs](./meteor.md#Meteor-callAsync).
+
 Read more about collections and how to use them in the [Collections](http://guide.meteor.com/collections.html) article in the Meteor Guide.
 
 

@@ -362,18 +362,19 @@ export class AccountsClient extends AccountsCommon {
       // Note that we need to call this even if _suppressLoggingIn is true,
       // because it could be matching a _setLoggingIn(true) from a
       // half-completed pre-reconnect login method.
-      this._setLoggingIn(false);
       if (error || !result) {
         error = error || new Error(
           `No result from call to ${options.methodName}`
         );
         loginCallbacks({ error });
+        this._setLoggingIn(false);
         return;
       }
       try {
         options.validateResult(result);
       } catch (e) {
         loginCallbacks({ error: e });
+        this._setLoggingIn(false);
         return;
       }
 
@@ -381,13 +382,15 @@ export class AccountsClient extends AccountsCommon {
       this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
 
       // use Tracker to make we sure have a user before calling the callbacks
-      Tracker.autorun(async function (computation) {
+      Tracker.autorun(async (computation) => {
         const user = await Tracker.withComputation(computation, () =>
           Meteor.userAsync(),
         );
 
         if (user) {
-          loginCallbacks({ loginDetails: result })
+          loginCallbacks({ loginDetails: result });
+          this._setLoggingIn(false);
+          computation.stop();
         }
       });
 
@@ -399,7 +402,7 @@ export class AccountsClient extends AccountsCommon {
     this.connection.applyAsync(
       options.methodName,
       options.methodArguments,
-      { wait: true, onResultReceived: onResultReceived },
+      { wait: true, onResultReceived },
       loggedInAndDataReadyCallback);
   }
 
