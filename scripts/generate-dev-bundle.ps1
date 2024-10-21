@@ -360,9 +360,6 @@ $toolCmds = Add-NodeAndNpm
 
 npm config set loglevel verbose
 
-Write-Host "Install Windows essentials: $($Commands.npm)" -ForegroundColor Magenta
-& npm install --global --production windows-build-tools
-
 #
 # Install the npms for the 'server'.
 #
