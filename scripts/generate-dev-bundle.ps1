@@ -185,19 +185,19 @@ Function Add-NodeAndNpm {
 
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-    $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+  $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
         --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
 
-    if ($LASTEXITCODE -ne 0) {
-      Write-Host "Error installing npm@${NPM_VERSION}:" -ForegroundColor Red
-      Write-Host "Last Exit Code: $LASTEXITCODE" -ForegroundColor Red
-      Write-Host "Error details:" -ForegroundColor Red
-      $npmOutput | ForEach-Object { Write-Host $_ -ForegroundColor Red }
-      Write-Host "Current working directory: $PWD" -ForegroundColor Yellow
-      Write-Host "Content of $dirLib:" -ForegroundColor Yellow
-      Get-ChildItem $dirLib | ForEach-Object { Write-Host $_.Name -ForegroundColor Yellow }
-      throw "Couldn't install npm@${NPM_VERSION}. See error details above."
-    }
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error installing npm@${NPM_VERSION}:" -ForegroundColor Red
+    Write-Host "Last Exit Code: $LASTEXITCODE" -ForegroundColor Red
+    Write-Host "Error details:" -ForegroundColor Red
+    $npmOutput | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+    Write-Host "Current working directory: $PWD" -ForegroundColor Yellow
+    Write-Host "Content of $dirLib:" -ForegroundColor Yellow
+    Get-ChildItem $dirLib | ForEach-Object { Write-Host $_.Name -ForegroundColor Yellow }
+    throw "Couldn't install npm@${NPM_VERSION}. See error details above."
+  }
 
 
   # After finishing up with our Node, let's put it in its final home
