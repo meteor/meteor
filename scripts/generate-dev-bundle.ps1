@@ -182,17 +182,13 @@ Function Add-NodeAndNpm {
   #
   # We should now have a fully functionaly local Node with headers to use.
   #
-  try {
+
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
   & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
     --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
       Write-Debug
-   } catch {
-      Write-Host $_.Exception.Message
-      Write-Host $_.Exception
-      exit 1
-    }
+
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm@${NPM_VERSION}."
   }
@@ -291,21 +287,11 @@ Function Add-NpmModulesFromJsBundleFile {
 
   Write-Host "Writing 'package.json' from ${SourceJs} to ${Destination}" `
     -ForegroundColor Magenta
-
-  Write-Host "Run Commands.node path: $($Commands.node)" -ForegroundColor Magenta
   & "$($Commands.node)" $SourceJs |
     Out-File -FilePath $(Join-Path $Destination 'package.json') -Encoding ascii
-  Write-Host "Done running Commands.node" -ForegroundColor Magenta
+
   # No bin-links because historically, they weren't used anyway.
-
-
-  Get-Content "$(Join-Path $Destination 'package.json')"
-
-  Write-Host "Run Commands.npm path: $($Commands.npm)" -ForegroundColor Magenta
-
-  & npm install
-
-  Write-Host "Done running Commands.npm" -ForegroundColor Magenta
+  & "$($Commands.npm)" install
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm packages."
   }
@@ -317,7 +303,7 @@ Function Add-NpmModulesFromJsBundleFile {
       throw "Couldn't make shrinkwrap."
     }
   }
-  Write-Host "cd node_modules" -ForegroundColor Magenta
+
   cd node_modules
 
   cd "$previousCwd"
@@ -391,6 +377,10 @@ $npmToolArgs = @{
   commands = $toolCmds
 }
 Add-NpmModulesFromJsBundleFile @npmToolArgs
+
+# Leaving these probably doesn't hurt, but are removed for consistency w/ Unix.
+Remove-Item $(Join-Path $dirLib 'package.json')
+Remove-Item $(Join-Path $dirLib 'package-lock.json')
 
 Write-Host "Done writing node_modules build(s)..." -ForegroundColor Magenta
 
