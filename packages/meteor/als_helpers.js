@@ -11,7 +11,7 @@ function getAls() {
    */
   if (!global.__METEOR_ASYNC_LOCAL_STORAGE) {
 
-    const { AsyncLocalStorage } = Npm.require('async_hooks');
+    var { AsyncLocalStorage } = Npm.require('async_hooks');
 
     global.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
 
@@ -26,7 +26,7 @@ function getAlsStore() {
     return {};
   }
 
-  const als = getAls();
+  var als = getAls();
 
   return als.getStore() || {};
 }
@@ -40,7 +40,7 @@ function updateAslStore(key, value) {
 }
 
 function runFresh(fn) {
-  const als = getAls();
+  var als = getAls();
   return als.run({}, fn);
 }
 
@@ -51,7 +51,7 @@ Meteor._updateAlsStore = updateAslStore;
 Meteor._runFresh = runFresh;
 
 Meteor._runAsync = function (fn, ctx, store) {
-  const als = getAls();
+  var als = getAls();
 
   return als.run(
     store || Meteor._getAlsStore(),
