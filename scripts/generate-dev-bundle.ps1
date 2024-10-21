@@ -1,22 +1,35 @@
 $ErrorActionPreference = "Stop"
 $DebugPreference = "Continue"
 
+Write-Debug "Script started"
+
 Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
 $PLATFORM = Get-MeteorPlatform
+
+Write-Debug "Platform: $PLATFORM"
 
 $PYTHON_VERSION = "3.9.5" # For node-gyp
 & cmd /c 'du 2>&1'
 
+Write-Debug "Python Version: $PYTHON_VERSION"
+
 $dirCheckout = (Get-Item $PSScriptRoot).parent.FullName
 $shCommon = Join-Path $PSScriptRoot 'build-dev-bundle-common.sh'
+
+Write-Debug "dirCheckout: $dirCheckout"
+Write-Debug "shCommon: $shCommon"
 
 $tempSrcNode = Join-Path $(Join-Path $dirCheckout 'temp_build_src') 'node.7z'
 
 # This will be the temporary directory we build the dev bundle in.
 $DIR = Join-Path $dirCheckout 'gdbXXX'
 
+Write-Debug "DIR: $DIR"
+
 # extract the bundle version from the meteor bash script
 $BUNDLE_VERSION = Read-VariableFromShellScript "${dirCheckout}\meteor" 'BUNDLE_VERSION'
+
+Write-Debug "BUNDLE_VERSION: $BUNDLE_VERSION"
 
 # extract the major package versions from the build-dev-bundle-common script.
 $MONGO_VERSION_64BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_64BIT'
@@ -25,14 +38,24 @@ $NPM_VERSION = Read-VariableFromShellScript $shCommon 'NPM_VERSION'
 
 $NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
 
+Write-Debug "MONGO_VERSION_64BIT: $MONGO_VERSION_64BIT"
+Write-Debug "NPM_VERSION: $NPM_VERSION"
+Write-Debug "NODE_VERSION: $NODE_VERSION"
+
 # 7-zip path.
 $system7zip = "C:\Program Files\7-zip\7z.exe"
+
+Write-Debug "system7zip: $system7zip"
 
 # Required for downloading MongoDB via HTTPS
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+Write-Debug "SecurityProtocol set"
+
 # Since we reuse the same temp directory, cleanup from previous failed runs.
 Remove-DirectoryRecursively $DIR
+
+Write-Debug "Removed directory: $DIR"
 
 # Some commonly used paths in this script.
 $dirBin = Join-Path $DIR 'bin'
@@ -43,6 +66,8 @@ $dirTemp = Join-Path $DIR 'temp'
 # Use a cache just for this build.
 $dirNpmCache = Join-Path $dirTemp 'npm-cache'
 
+Write-Debug "Paths set up"
+
 # Build our directory framework.
 New-Item -ItemType Directory -Force -Path $DIR | Out-Null
 New-Item -ItemType Directory -Force -Path $dirTemp | Out-Null
@@ -50,8 +75,12 @@ New-Item -ItemType Directory -Force -Path $dirBin | Out-Null
 New-Item -ItemType Directory -Force -Path $dirLib | Out-Null
 New-Item -ItemType Directory -Force -Path $dirServerLib | Out-Null
 
+Write-Debug "Directories created"
+
 $webclient = New-Object System.Net.WebClient
 $shell = New-Object -com shell.application
+
+Write-Debug "WebClient and Shell objects created"
 
 Function Invoke-Install7ZipApplication {
   Write-Host "Downloading 7-zip..." -ForegroundColor Magenta
