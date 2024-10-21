@@ -1,10 +1,13 @@
 name: Test Deprecated Packages
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
+# Disabled until we figure out how to fix the error from puppeteer
+# Runs on Travis CI for now
+#
+#on:
+#  push:
+#    branches:
+#      - main
+#  pull_request:
 
 jobs:
   build:
