@@ -113,11 +113,21 @@ Function Add-NodeAndNpm {
   if (!(Get-Command nvm -ErrorAction SilentlyContinue)) {
       Write-Host "NVM is not installed. Installing NVM..." -ForegroundColor Magenta
 
-      # NVM for Windows installation
-      $nvmUrl = "https://github.com/coreybutler/nvm-windows/releases/download/1.1.10/nvm-setup.exe"
-      $nvmInstaller = Join-Path $dirTemp "nvm-setup.exe"
+      # Create a new temporary folder with explicit permissions
+      $tempFolderName = "MeteorNVMInstall_" + [System.Guid]::NewGuid().ToString()
+      $tempFolder = Join-Path $env:TEMP $tempFolderName
 
       try {
+        New-Item -ItemType Directory -Path $tempFolder | Out-Null
+        $acl = Get-Acl $tempFolder
+        $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($env:USERNAME, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+        $acl.SetAccessRule($accessRule)
+        Set-Acl $tempFolder $acl
+
+        # NVM for Windows installation
+        $nvmUrl = "https://github.com/coreybutler/nvm-windows/releases/download/1.1.10/nvm-setup.exe"
+        $nvmInstaller = Join-Path $tempFolder "nvm-setup.exe"
+
         # Download NVM installer
         $webclient.DownloadFile($nvmUrl, $nvmInstaller)
 
@@ -145,6 +155,12 @@ Function Add-NodeAndNpm {
           Write-Host $installOutput -ForegroundColor Red
         }
         throw "NVM installation failed. Please install it manually and try again."
+      }
+      finally {
+        # Clean up the temporary folder
+        if (Test-Path $tempFolder) {
+          Remove-Item -Recurse -Force $tempFolder
+        }
       }
     }
 
