@@ -111,7 +111,30 @@ Function Add-Python {
 Function Add-NodeAndNpm {
   # Ensure NVM is installed
   if (!(Get-Command nvm -ErrorAction SilentlyContinue)) {
-    throw "NVM is not installed. Please install NVM before running this script."
+    Write-Host "NVM is not installed. Installing NVM..." -ForegroundColor Magenta
+
+    # NVM for Windows installation
+    $nvmUrl = "https://github.com/coreybutler/nvm-windows/releases/download/1.1.10/nvm-setup.exe"
+    $nvmInstaller = Join-Path $dirTemp "nvm-setup.exe"
+
+    # Download NVM installer
+    $webclient.DownloadFile($nvmUrl, $nvmInstaller)
+
+    # Run NVM installer silently
+    Start-Process -FilePath $nvmInstaller -Args "/SILENT /NORESTART" -Wait
+
+    # Remove the installer
+    Remove-Item $nvmInstaller
+
+    # Refresh environment variables
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+    # Verify NVM installation
+    if (!(Get-Command nvm -ErrorAction SilentlyContinue)) {
+      throw "Failed to install NVM. Please install it manually and try again."
+    }
+
+    Write-Host "NVM installed successfully." -ForegroundColor Green
   }
 
   Write-Host "Installing Node.js ${NODE_VERSION} using NVM..." -ForegroundColor Magenta
