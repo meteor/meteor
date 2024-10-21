@@ -10,12 +10,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      PUPPETEER_DOWNLOAD_PATH: ~/.npm/chromium
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Install Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+
+      - name: Set PUPPETEER_EXECUTABLE_PATH
+        run: echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser" >> $GITHUB_ENV
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
