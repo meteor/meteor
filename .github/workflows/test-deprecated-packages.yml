@@ -1,0 +1,52 @@
+name: Test Deprecated Packages
+
+# Disabled until we figure out how to fix the error from puppeteer
+# Runs on Travis CI for now
+#
+#on:
+#  push:
+#    branches:
+#      - main
+#  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.head_ref }}-test-deprecated-packages
+      cancel-in-progress: true
+    timeout-minutes: 60
+
+    env:
+      PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
+
+    steps:
+      - name: Update and install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libnss3 g++-12
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.15.1
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            /home/runner/.npm/chromium
+          key: ${{ runner.os }}-node-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: ./packages/test-in-console/run.sh
