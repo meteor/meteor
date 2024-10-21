@@ -190,8 +190,15 @@ Function Add-NodeAndNpm {
   $npmError = $null
 
   try {
+      Write-Host "Current directory: $PWD" -ForegroundColor Yellow
+      Write-Host "tempNpmCmd: $tempNpmCmd" -ForegroundColor Yellow
+      Write-Host "dirLib: $dirLib" -ForegroundColor Yellow
+      Write-Host "dirNpmCache: $dirNpmCache" -ForegroundColor Yellow
+      Write-Host "dirTempNode: $dirTempNode" -ForegroundColor Yellow
+
+      $env:NODE_DEBUG = "npm"
       $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-          --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
+          --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} --verbose 2>&1
 
       if ($LASTEXITCODE -ne 0) {
           throw "npm installation exited with code $LASTEXITCODE"
@@ -207,6 +214,13 @@ Function Add-NodeAndNpm {
           Write-Host $npmError.Exception.Message -ForegroundColor Red
           Write-Host "StackTrace:" -ForegroundColor Red
           Write-Host $npmError.ScriptStackTrace -ForegroundColor Red
+
+          Write-Host "Environment variables:" -ForegroundColor Yellow
+          Get-ChildItem Env: | ForEach-Object { Write-Host "$($_.Name): $($_.Value)" -ForegroundColor Yellow }
+
+          Write-Host "Content of $dirLib:" -ForegroundColor Yellow
+          Get-ChildItem $dirLib -Recurse | ForEach-Object { Write-Host $_.FullName -ForegroundColor Yellow }
+
           throw "Couldn't install npm@${NPM_VERSION}. See error details above."
       }
   }
