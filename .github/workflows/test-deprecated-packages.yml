@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     env:
-      PUPPETEER_DOWNLOAD_PATH: .npm/chromium
+      PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
 
     steps:
       - name: Checkout code
