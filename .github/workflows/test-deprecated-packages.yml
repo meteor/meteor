@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-20.04
+    concurrency:
+      group: ${{ github.head_ref }}
+      cancel-in-progress: true
 
     env:
       PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
