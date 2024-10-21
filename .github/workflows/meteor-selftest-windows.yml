@@ -23,7 +23,7 @@ jobs:
   test:
     runs-on: windows-2019-meteor
     concurrency:
-      group: ${{ github.head_ref }}
+      group: ${{ github.head_ref }}-meteor-selftest-windows
       cancel-in-progress: true
 
     steps:

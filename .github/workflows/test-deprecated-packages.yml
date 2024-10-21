@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-20.04
     concurrency:
-      group: ${{ github.head_ref }}
+      group: ${{ github.head_ref }}-test-deprecated-packages
       cancel-in-progress: true
 
     env:
