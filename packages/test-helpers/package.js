@@ -3,6 +3,10 @@ Package.describe({
   version: "2.0.1",
 });
 
+Npm.depends({
+  'lodash.isequal': '4.5.0',
+})
+
 Package.onUse(function (api) {
   api.use([
     "ecmascript",

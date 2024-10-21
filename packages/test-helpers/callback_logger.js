@@ -1,3 +1,5 @@
+import isEqual from 'lodash.isequal';
+
 // This file allows you to write tests that expect certain callbacks to be
 // called in certain orders, or optionally in groups where the order does not
 // matter.  It can be set up in either a synchronous manner, so that each
@@ -81,7 +83,7 @@ CallbackLogger.prototype.expectResultUnordered = async function (list) {
     var found = false;
     var dequeued = self._log.shift();
     for (var j = 0; j < list.length; j++) {
-      if (list[j] === dequeued) {
+      if (isEqual(list[j], dequeued)) {
         list.splice(j, 1);
         found = true;
         break;
