@@ -185,13 +185,33 @@ Function Add-NodeAndNpm {
 
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
-      Write-Debug
 
-  if ($LASTEXITCODE -ne 0) {
-    throw "Couldn't install npm@${NPM_VERSION}."
+  $npmOutput = $null
+  $npmError = $null
+
+  try {
+      $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+          --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
+
+      if ($LASTEXITCODE -ne 0) {
+          throw "npm installation exited with code $LASTEXITCODE"
+      }
+  } catch {
+      $npmError = $_
+  } finally {
+      Write-Host "npm installation output:" -ForegroundColor Cyan
+      $npmOutput | ForEach-Object { Write-Host $_ -ForegroundColor Cyan }
+
+      if ($npmError) {
+          Write-Host "Error during npm installation:" -ForegroundColor Red
+          Write-Host $npmError.Exception.Message -ForegroundColor Red
+          Write-Host "StackTrace:" -ForegroundColor Red
+          Write-Host $npmError.ScriptStackTrace -ForegroundColor Red
+          throw "Couldn't install npm@${NPM_VERSION}. See error details above."
+      }
   }
+
+  Write-Host "npm installation completed successfully." -ForegroundColor Green
 
   # After finishing up with our Node, let's put it in its final home
   # and abandon this local npm directory.
