@@ -1,4 +1,3 @@
-import isEmpty from 'lodash.isempty';
 import isEqual from 'lodash.isequal';
 
 // This file allows you to write tests that expect certain callbacks to be
@@ -24,11 +23,9 @@ var CallbackLogger = function (test, callbackNames) {
   var self = this;
   self._log = [];
   self._test = test;
-  self._yielded = false;
   callbackNames.forEach(function (callbackName) {
-    self[callbackName] = function () {
-      var args = Array.from(arguments);
-      self._log.push({callback: callbackName, args: args});
+    self[callbackName] = function (...args) {
+      self._log.push({ callback: callbackName, args });
     };
   });
 };
@@ -36,7 +33,7 @@ var CallbackLogger = function (test, callbackNames) {
 CallbackLogger.prototype.expectResult = async function (callbackName, args) {
   var self = this;
   await self._waitForLengthOrTimeout(1);
-  if (isEmpty(self._log)) {
+  if (self._log.length === 0) {
     self._test.fail(["Expected callback " + callbackName + " got none"]);
     return;
   }
@@ -78,8 +75,10 @@ CallbackLogger.prototype.expectResultUnordered = async function (list) {
 
   await self._waitForLengthOrTimeout(list.length);
 
-  list = [...list]; // shallow copy.
+  list = [...list];
+
   var i = list.length;
+
   while (i > 0) {
     var found = false;
     var dequeued = self._log.shift();
