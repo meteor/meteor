@@ -12,6 +12,7 @@ jobs:
     concurrency:
       group: ${{ github.head_ref }}-test-deprecated-packages
       cancel-in-progress: true
+    timeout-minutes: 60
 
     env:
       PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
@@ -35,7 +36,9 @@ jobs:
             ~/.npm
             .meteor
             .babel-cache
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+            dev_bundle
+            /home/runner/.npm/chromium
+          key: ${{ runner.os }}-node-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
