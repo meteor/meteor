@@ -52,32 +52,32 @@ var ExpectationManager = function (test, onComplete) {
   self.outstanding = 0;
 };
 
-_.extend(ExpectationManager.prototype, {
-  expect: function (/* arguments */) {
+Object.assign(ExpectationManager.prototype, {
+  expect: function (...args) {
     var self = this;
 
-    if (typeof arguments[0] === "function")
-      var expected = arguments[0];
+    if (typeof args[0] === "function")
+      var expected = args[0];
     else
-      var expected = _.toArray(arguments);
+      var expected = args;
 
     if (self.closed)
       throw new Error("Too late to add more expectations to the test");
     self.outstanding++;
 
-    return async function (/* arguments */) {
+    return async function (...args) {
       if (self.dead)
         return;
 
       if (typeof expected === "function") {
         try {
-          await expected.apply({}, arguments);
+          await expected.apply({}, args);
         } catch (e) {
           if (self.cancel())
             self.test.exception(e);
         }
       } else {
-        self.test.equal(_.toArray(arguments), expected);
+        self.test.equal(args, expected);
       }
 
       self.outstanding--;
@@ -115,12 +115,12 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
   addFunction(name, function (test, onComplete) {
-    var remaining = _.clone(funcs);
+    var remaining = Object.assign({}, funcs);
     var context = {};
     var i = 0;
 
     var runNext = function () {
-      var func = remaining.shift();
+      var func = Object.values(remaining).shift();
       if (!func) {
         delete test.extraDetails.asyncBlock;
         onComplete();
@@ -142,7 +142,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
         test.extraDetails.asyncBlock = i++;
 
         new Promise(resolve => {
-          const result = func.apply(context, [test, _.bind(em.expect, em)]);
+          const result = func.apply(context, [test, em.expect.bind(em)]);
           if (result && typeof result.then === "function") {
             return result.then((r) => resolve(r))
           }
