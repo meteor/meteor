@@ -17,6 +17,9 @@ jobs:
       PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
 
     steps:
+      - name: Update and install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libnss3 g++-12
+
       - name: Checkout code
         uses: actions/checkout@v3
 
