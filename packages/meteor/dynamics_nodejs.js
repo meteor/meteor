@@ -1,7 +1,7 @@
 const { AsyncLocalStorage } = Npm.require("async_hooks");
 
-let nextSlot = 0;
-let callAsyncMethodRunning = false;
+var nextSlot = 0;
+var callAsyncMethodRunning = false;
 
 const CURRENT_VALUE_KEY = "currentValue";
 
@@ -26,7 +26,13 @@ class EnvironmentVariableAsync {
    * @returns {any} The current value of the variable, or `undefined` if no
    */
   get() {
-    return this.als.getStore()?.[CURRENT_VALUE_KEY];
+    var store = this.als.getStore();
+
+    if (!store) {
+      return undefined;
+    }
+
+    return store[CURRENT_VALUE_KEY];
   }
 
   getOrNullIfOutsideFiber() {
@@ -50,7 +56,7 @@ class EnvironmentVariableAsync {
   }
 
   _setNewContextAndGetCurrent(value) {
-    const saved = this.get()
+    var saved = this.get()
 
     this._set({ [CURRENT_VALUE_KEY]: value });
 
@@ -110,7 +116,7 @@ Meteor.EnvironmentVariable = EnvironmentVariableAsync;
  */
 Meteor.bindEnvironment = (func, onException = null, thisValue = null) => {
   if (!onException || typeof onException === "string") {
-    const description = onException || "callback of async function";
+    var description = onException || "callback of async function";
     onException = function (error) {
       Meteor._debug("Exception in " + description + ":", error);
     };
