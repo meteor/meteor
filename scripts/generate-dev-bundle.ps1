@@ -113,37 +113,31 @@ Function Add-NodeAndNpm {
   if (!(Get-Command nvm -ErrorAction SilentlyContinue)) {
       Write-Host "NVM is not installed. Installing NVM..." -ForegroundColor Magenta
 
-      # Create a new temporary folder with explicit permissions
+      # Create a new temporary folder in the user's home directory
       $tempFolderName = "MeteorNVMInstall_" + [System.Guid]::NewGuid().ToString()
-      $tempFolder = Join-Path $env:TEMP $tempFolderName
+      $tempFolder = Join-Path $env:USERPROFILE $tempFolderName
 
       try {
         New-Item -ItemType Directory -Path $tempFolder | Out-Null
-        $acl = Get-Acl $tempFolder
-        $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-          "Everyone",
-          "FullControl",
-          "ContainerInherit,ObjectInherit",
-          "None",
-          "Allow"
-        )
-        $acl.AddAccessRule($accessRule)
-        Set-Acl $tempFolder $acl
 
         # NVM for Windows installation
         $nvmUrl = "https://github.com/coreybutler/nvm-windows/releases/download/1.1.10/nvm-setup.exe"
         $nvmInstaller = Join-Path $tempFolder "nvm-setup.exe"
 
         # Download NVM installer
-        Write-Host "Downloading NVM installer..." -ForegroundColor Magenta
+        Write-Host "Downloading NVM installer to $nvmInstaller..." -ForegroundColor Magenta
         $webclient.DownloadFile($nvmUrl, $nvmInstaller)
+
+        if (!(Test-Path $nvmInstaller)) {
+          throw "Failed to download NVM installer."
+        }
 
         # Run NVM installer silently and capture output
         Write-Host "Running NVM installer..." -ForegroundColor Magenta
         $installOutput = & $nvmInstaller /SILENT /NORESTART 2>&1
 
         # Remove the installer
-        Remove-Item $nvmInstaller
+        Remove-Item $nvmInstaller -Force
 
         # Refresh environment variables
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
