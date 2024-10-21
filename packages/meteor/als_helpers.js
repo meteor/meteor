@@ -11,7 +11,7 @@ function getAls() {
    */
   if (!global.__METEOR_ASYNC_LOCAL_STORAGE) {
 
-    var { AsyncLocalStorage } = Npm.require('async_hooks');
+    var AsyncLocalStorage = Npm.require('async_hooks').AsyncLocalStorage;
 
     global.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
 

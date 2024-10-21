@@ -6,7 +6,7 @@ var updateAslStore = (key, value) => getAlsStore()[key] = value;
 
 exports.makeGlobalAsyncLocalStorage = () => {
   if (!global.__METEOR_ASYNC_LOCAL_STORAGE) {
-    var { AsyncLocalStorage } = require('async_hooks');
+    var AsyncLocalStorage = require('async_hooks').AsyncLocalStorage;
     global.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
   }
 
