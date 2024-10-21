@@ -189,7 +189,8 @@ Function Add-NodeAndNpm {
     --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
       Write-Debug
    } catch {
-      Write-Error $_.Exception.Message
+      Write-Host $_.Exception.Message
+      Write-Host $_.Exception
       exit 1
     }
   if ($LASTEXITCODE -ne 0) {
