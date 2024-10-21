@@ -362,7 +362,7 @@ $toolCmds = Add-NodeAndNpm
 "Npm 'version':"
 & npm version
 
-npm config set loglevel verbose
+npm config set loglevel error
 
 #
 # Install the npms for the 'server'.
