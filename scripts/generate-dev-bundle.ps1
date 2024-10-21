@@ -109,98 +109,42 @@ Function Add-Python {
 }
 
 Function Add-NodeAndNpm {
-  if ("${NODE_VERSION}" -match "-rc\.\d+$") {
-    $nodeUrlBase = 'https://nodejs.org/download/rc'
-  } else {
-    $nodeUrlBase = 'https://nodejs.org/dist'
+  # Ensure NVM is installed
+  if (!(Get-Command nvm -ErrorAction SilentlyContinue)) {
+    throw "NVM is not installed. Please install NVM before running this script."
   }
 
-  $nodeArchitecture = 'win-x64'
+  Write-Host "Installing Node.js ${NODE_VERSION} using NVM..." -ForegroundColor Magenta
+  nvm install $NODE_VERSION
 
-  # Various variables which are used as part of directory paths and
-  # inside Node release and header archives.
-  $nodeVersionSegment = "v${NODE_VERSION}"
-  $nodeNameVersionSegment = "node-${nodeVersionSegment}"
-  $nodeNameSegment = "${nodeNameVersionSegment}-${nodeArchitecture}"
-
-  # The URL for the Node 7z archive, which includes its shipped version of npm.
-  $nodeUrl = $nodeUrlBase, $nodeVersionSegment,
-    "${nodeNameSegment}.7z" -Join '/'
-
-  $archiveNode = Join-Path $dirTemp 'node.7z'
-  Write-Host "Downloading Node.js from ${nodeUrl}" -ForegroundColor Magenta
-  $webclient.DownloadFile($nodeUrl, $archiveNode)
-
-  Write-Host "Extracting Node 7z file..." -ForegroundColor Magenta
-  & "$system7zip" x $archiveNode -o"$dirTemp" | Out-Null
-
-  # This will be the location of the extracted Node tarball.
-  $dirTempNode = Join-Path $dirTemp $nodeNameSegment
-
-  # Delete the no longer necessary Node archive.
-  Remove-Item $archiveNode
-
-  $tempNodeExe = Join-Path $dirTempNode 'node.exe'
-  $tempNpmCmd = Join-Path $dirTempNode 'npm.cmd'
-
-  # Get additional values we'll need to fetch to complete this release.
-  $nodeProcessRelease = @{
-    headersUrl = & "$tempNodeExe" -p 'process.release.headersUrl'
-    libUrl = & "$tempNodeExe" -p 'process.release.libUrl'
+  if ($LASTEXITCODE -ne 0) {
+    throw "Failed to install Node.js ${NODE_VERSION} using NVM."
   }
 
-  if (!($nodeProcessRelease.headersUrl -And $nodeProcessRelease.libUrl)) {
-    throw "No 'headersUrl' or 'libUrl' in Node.js's 'process.release' output."
+  Write-Host "Setting Node.js ${NODE_VERSION} as the current version..." -ForegroundColor Magenta
+  nvm use $NODE_VERSION
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "Failed to set Node.js ${NODE_VERSION} as the current version."
   }
 
-  $nodeHeadersTarGz = Join-Path $dirTemp 'node-headers.tar.gz'
-  Write-Host "Downloading Node headers from $($nodeProcessRelease.headersUrl)" `
-    -ForegroundColor Magenta
-  $webclient.DownloadFile($nodeProcessRelease.headersUrl, $nodeHeadersTarGz)
+  $nodeExePath = (Get-Command node).Source
+  $npmExePath = (Get-Command npm).Source
 
-  $dirTempNodeHeaders = Join-Path $dirTemp 'node-headers'
-  if (!(Expand-TarGzToDirectory $nodeHeadersTarGz $dirTempNodeHeaders)) {
-    throw "Couldn't extract Node headers."
-  }
-
-  # Move the extracted include directory to the Node dir.
-  $dirTempNodeHeadersInclude = `
-    Join-Path $dirTempNodeHeaders $nodeNameVersionSegment |
-    Join-Path -ChildPath 'include'
-  Move-Item $dirTempNodeHeadersInclude $dirTempNode
-  $dirTempNodeHeadersInclude = Join-Path $dirTempNode 'include'
-
-  # The node.lib goes into a \Release directory.
-  $dirNodeRelease = Join-Path $dirTempNode 'Release'
-  New-Item -ItemType Directory -Force -Path $dirNodeRelease | Out-Null
-
-  Write-Host "Downloading node.lib from $($nodeProcessRelease.libUrl)" `
-    -ForegroundColor Magenta
-  $nodeLibTarget = Join-Path $dirNodeRelease 'node.lib'
-  $webclient.DownloadFile($nodeProcessRelease.libUrl, $nodeLibTarget)
-
-  #
-  # We should now have a fully functionaly local Node with headers to use.
-  #
-
-  # Let's install the npm version we really want.
+  # Install the specific npm version we want
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
-      Write-Debug
+  & $npmExePath install -g npm@$NPM_VERSION
 
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm@${NPM_VERSION}."
   }
 
-  # After finishing up with our Node, let's put it in its final home
-  # and abandon this local npm directory.
+  # Refresh npm path after installation
+  $npmExePath = (Get-Command npm).Source
 
-  # Move exe and cmd files to the \bin directory.
-  Move-Item $(Join-Path $dirTempNode '*.exe') $dirBin
-  # Move-Item $(Join-Path $dirTempNode '*.cmd') $dirBin
-  Move-Item $dirTempNodeHeadersInclude $DIR
-  Move-Item $dirNodeRelease $DIR
+  # Copy Node.js and npm to the bundle directory
+  Copy-Item $nodeExePath $dirBin
+  Copy-Item $npmExePath $dirBin
 
   $finalNodeExe = Join-Path $dirBin 'node.exe'
   $finalNpmCmd = Join-Path $dirBin 'npm.cmd'
@@ -210,9 +154,6 @@ Function Add-NodeAndNpm {
 
   # We use our own npm.cmd.
   Copy-Item "${dirCheckout}\scripts\npm.cmd" $finalNpmCmd
-
-  Remove-DirectoryRecursively $dirTempNodeHeaders
-  Remove-DirectoryRecursively $dirTempNode
 
   return New-Object -Type PSObject -Prop $(@{
     node = $finalNodeExe
