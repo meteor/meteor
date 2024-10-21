@@ -111,31 +111,43 @@ Function Add-Python {
 Function Add-NodeAndNpm {
   # Ensure NVM is installed
   if (!(Get-Command nvm -ErrorAction SilentlyContinue)) {
-    Write-Host "NVM is not installed. Installing NVM..." -ForegroundColor Magenta
+      Write-Host "NVM is not installed. Installing NVM..." -ForegroundColor Magenta
 
-    # NVM for Windows installation
-    $nvmUrl = "https://github.com/coreybutler/nvm-windows/releases/download/1.1.10/nvm-setup.exe"
-    $nvmInstaller = Join-Path $dirTemp "nvm-setup.exe"
+      # NVM for Windows installation
+      $nvmUrl = "https://github.com/coreybutler/nvm-windows/releases/download/1.1.10/nvm-setup.exe"
+      $nvmInstaller = Join-Path $dirTemp "nvm-setup.exe"
 
-    # Download NVM installer
-    $webclient.DownloadFile($nvmUrl, $nvmInstaller)
+      try {
+        # Download NVM installer
+        $webclient.DownloadFile($nvmUrl, $nvmInstaller)
 
-    # Run NVM installer silently
-    Start-Process -FilePath $nvmInstaller -Args "/SILENT /NORESTART" -Wait
+        # Run NVM installer silently and capture output
+        $installOutput = & $nvmInstaller /SILENT /NORESTART 2>&1
 
-    # Remove the installer
-    Remove-Item $nvmInstaller
+        # Remove the installer
+        Remove-Item $nvmInstaller
 
-    # Refresh environment variables
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        # Refresh environment variables
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
-    # Verify NVM installation
-    if (!(Get-Command nvm -ErrorAction SilentlyContinue)) {
-      throw "Failed to install NVM. Please install it manually and try again."
+        # Verify NVM installation
+        if (!(Get-Command nvm -ErrorAction SilentlyContinue)) {
+          throw "NVM command not found after installation."
+        }
+
+        Write-Host "NVM installed successfully." -ForegroundColor Green
+      }
+      catch {
+        Write-Host "Failed to install NVM. Error details:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        if ($installOutput) {
+          Write-Host "Installer output:" -ForegroundColor Red
+          Write-Host $installOutput -ForegroundColor Red
+        }
+        throw "NVM installation failed. Please install it manually and try again."
+      }
     }
 
-    Write-Host "NVM installed successfully." -ForegroundColor Green
-  }
 
   Write-Host "Installing Node.js ${NODE_VERSION} using NVM..." -ForegroundColor Magenta
   nvm install $NODE_VERSION
