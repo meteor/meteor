@@ -120,8 +120,14 @@ Function Add-NodeAndNpm {
       try {
         New-Item -ItemType Directory -Path $tempFolder | Out-Null
         $acl = Get-Acl $tempFolder
-        $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($env:USERNAME, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-        $acl.SetAccessRule($accessRule)
+        $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+          "Everyone",
+          "FullControl",
+          "ContainerInherit,ObjectInherit",
+          "None",
+          "Allow"
+        )
+        $acl.AddAccessRule($accessRule)
         Set-Acl $tempFolder $acl
 
         # NVM for Windows installation
@@ -129,9 +135,11 @@ Function Add-NodeAndNpm {
         $nvmInstaller = Join-Path $tempFolder "nvm-setup.exe"
 
         # Download NVM installer
+        Write-Host "Downloading NVM installer..." -ForegroundColor Magenta
         $webclient.DownloadFile($nvmUrl, $nvmInstaller)
 
         # Run NVM installer silently and capture output
+        Write-Host "Running NVM installer..." -ForegroundColor Magenta
         $installOutput = & $nvmInstaller /SILENT /NORESTART 2>&1
 
         # Remove the installer
