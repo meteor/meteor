@@ -189,7 +189,7 @@ Function Add-NodeAndNpm {
 
   # Let's install the npm version we really want.
   try {
-      # Prepare paths for log files
+      # Define paths for logs
       $logFilePath = "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install.log"
       $errorLogFilePath = "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install-error.log"
 
@@ -197,47 +197,44 @@ Function Add-NodeAndNpm {
       Write-Host "Starting npm installation..." -ForegroundColor Magenta
       "Log for npm installation" | Out-File -FilePath $logFilePath
 
-      # Run npm install and capture both stdout and stderr with real-time logging
-      $npmProcess = Start-Process -FilePath "$tempNpmCmd" `
-                                  -ArgumentList "install --prefix=$dirLib --no-bin-links --save --nodedir=$dirTempNode npm@$NPM_VERSION --loglevel verbose" `
-                                  -RedirectStandardOutput $logFilePath `
-                                  -RedirectStandardError $errorLogFilePath `
-                                  -NoNewWindow -PassThru
+      # Run npm install and capture both stdout and stderr
+      $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+                  --nodedir="$dirTempNode" npm@${NPM_VERSION} --loglevel verbose 2>&1
 
-      # Wait for npm process to exit
-      $npmProcess.WaitForExit()
+      # Write the output to the log file
+      $npmOutput | Out-File -FilePath $logFilePath -Append
 
-      # Capture exit code immediately after the process finishes
-      $exitCode = $npmProcess.ExitCode
-      Write-Host "npm process exited with code $exitCode" -ForegroundColor Green
+      # Output the captured logs to the console for feedback
+      Write-Host $npmOutput -ForegroundColor Green
 
-      # Explicitly check if the exit code is zero (success)
-      if ($exitCode -eq 0) {
+      # Check if npm command was successful
+      if ($LASTEXITCODE -eq 0) {
           Write-Host "npm installation completed successfully." -ForegroundColor Green
           "npm installation completed successfully." | Out-File -FilePath $logFilePath -Append
       } else {
-          Write-Host "npm installation failed with exit code $exitCode" -ForegroundColor Red
-          "npm installation failed with exit code $exitCode" | Out-File -FilePath $errorLogFilePath -Append
+          Write-Host "npm installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
+          "npm installation failed with exit code $LASTEXITCODE" | Out-File -FilePath $errorLogFilePath -Append
           throw "npm installation failed. Check logs for details."
       }
 
   } catch {
-      # Catch unexpected errors and log everything
+      # Catch any unexpected errors and log them
       Write-Host "An unexpected error occurred during npm installation." -ForegroundColor Red
       Write-Host $_.Exception.Message -ForegroundColor Red
       Write-Host $_.ScriptStackTrace -ForegroundColor Red
 
-      # Write the error to both stdout and log files for further analysis
+      # Log the error details
       $_.Exception.Message | Out-File -FilePath $errorLogFilePath -Append
       $_.ScriptStackTrace | Out-File -FilePath $errorLogFilePath -Append
 
-      # Rethrow the exception to exit the script
+      # Exit with failure
       throw $_
   } finally {
-      # Ensure final log entry even if the script fails
+      # Final log entry regardless of success or failure
       Write-Host "npm installation process finished." -ForegroundColor Yellow
       "npm installation process finished" | Out-File -FilePath $logFilePath -Append
   }
+
 
 
 
