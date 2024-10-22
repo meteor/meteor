@@ -207,13 +207,17 @@ Function Add-NodeAndNpm {
       # Wait for npm process to exit
       $npmProcess.WaitForExit()
 
-      # Check if npm process failed
-      if ($npmProcess.ExitCode -eq 0) {
+      # Capture exit code immediately after the process finishes
+      $exitCode = $npmProcess.ExitCode
+      Write-Host "npm process exited with code $exitCode" -ForegroundColor Green
+
+      # Explicitly check if the exit code is zero (success)
+      if ($exitCode -eq 0) {
           Write-Host "npm installation completed successfully." -ForegroundColor Green
           "npm installation completed successfully." | Out-File -FilePath $logFilePath -Append
       } else {
-          Write-Host "npm installation failed with exit code $($npmProcess.ExitCode)" -ForegroundColor Red
-          "npm installation failed with exit code $($npmProcess.ExitCode)" | Out-File -FilePath $errorLogFilePath -Append
+          Write-Host "npm installation failed with exit code $exitCode" -ForegroundColor Red
+          "npm installation failed with exit code $exitCode" | Out-File -FilePath $errorLogFilePath -Append
           throw "npm installation failed. Check logs for details."
       }
 
@@ -234,6 +238,7 @@ Function Add-NodeAndNpm {
       Write-Host "npm installation process finished." -ForegroundColor Yellow
       "npm installation process finished" | Out-File -FilePath $logFilePath -Append
   }
+
 
 
   # After finishing up with our Node, let's put it in its final home
