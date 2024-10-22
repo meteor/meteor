@@ -216,6 +216,10 @@ Function Add-NodeAndNpm {
           throw "npm installation failed. Check logs for details."
       }
 
+      # Log the success to avoid confusion
+      Write-Host "npm installation completed successfully." -ForegroundColor Green
+      "npm installation completed successfully." | Out-File -FilePath $logFilePath -Append
+
   } catch {
       # Catch unexpected errors and log everything
       Write-Host "An unexpected error occurred during npm installation." -ForegroundColor Red
@@ -233,9 +237,6 @@ Function Add-NodeAndNpm {
       Write-Host "npm installation process finished." -ForegroundColor Yellow
       "npm installation process finished" | Out-File -FilePath $logFilePath -Append
   }
-
-
-
 
   # After finishing up with our Node, let's put it in its final home
   # and abandon this local npm directory.
