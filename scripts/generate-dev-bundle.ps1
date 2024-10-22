@@ -185,11 +185,7 @@ Function Add-NodeAndNpm {
 
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-  if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-      Write-Host "You are running as an Administrator."
-  } else {
-      Write-Host "You are running as a Standard User."
-  }
+  Get-Location
   & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
     --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
       Write-Debug
