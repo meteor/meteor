@@ -3,6 +3,9 @@ import { Meteor } from 'meteor/meteor';
 import { CursorDescription } from './cursor_description';
 import { MongoConnection } from './mongo_connection';
 
+import { NpmModuleMongodb } from "meteor/npm-mongo";
+const { Long } = NpmModuleMongodb;
+
 export const OPLOG_COLLECTION = 'oplog.rs';
 
 let TOO_FAR_BEHIND = +(process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000);
