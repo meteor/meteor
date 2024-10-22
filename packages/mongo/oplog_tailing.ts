@@ -50,11 +50,13 @@ export class OplogHandle {
   private _entryQueue: any;
   private _workerActive: boolean;
   private _startTrailingPromise: Promise<void>;
+  private _resolveTimeout: any;
 
   constructor(oplogUrl: string, dbName: string) {
     this._oplogUrl = oplogUrl;
     this._dbName = dbName;
 
+    this._resolveTimeout = null;
     this._oplogLastEntryConnection = null;
     this._oplogTailConnection = null;
     this._oplogOptions = null;
@@ -140,7 +142,7 @@ export class OplogHandle {
 
     while (!this._stopped) {
       try {
-        lastEntry = await this._oplogLastEntryConnection!.findOneAsync(
+        lastEntry = await this._oplogLastEntryConnection.findOneAsync(
           OPLOG_COLLECTION,
           this._baseOplogSelector,
           { projection: { ts: 1 }, sort: { $natural: -1 } }
@@ -149,7 +151,7 @@ export class OplogHandle {
       } catch (e) {
         Meteor._debug("Got exception while reading last entry", e);
         // @ts-ignore
-        await Meteor._sleepForMs(100);
+        await Meteor.sleep(100);
       }
     }
 
@@ -167,13 +169,26 @@ export class OplogHandle {
     }
 
     let insertAfter = this._catchingUpResolvers.length;
+
     while (insertAfter - 1 > 0 && this._catchingUpResolvers[insertAfter - 1].ts.greaterThan(ts)) {
       insertAfter--;
     }
-    let promiseResolver: (() => void) | null = null;
-    const promiseToAwait = new Promise<void>(r => promiseResolver = r);
+
+    let promiseResolver = null;
+
+    const promiseToAwait = new Promise(r => promiseResolver = r);
+
+    clearTimeout(this._resolveTimeout);
+
+    this._resolveTimeout = setTimeout(() => {
+      console.error("Meteor: oplog catching up took too long", { ts });
+    }, 10000);
+
     this._catchingUpResolvers.splice(insertAfter, 0, { ts, resolver: promiseResolver! });
+
     await promiseToAwait;
+
+    clearTimeout(this._resolveTimeout);
   }
 
   async waitUntilCaughtUp(): Promise<void> {
