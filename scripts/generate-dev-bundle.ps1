@@ -188,44 +188,52 @@ Function Add-NodeAndNpm {
   #
 
   # Let's install the npm version we really want.
-    try {
-        Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
+  try {
+      # Prepare paths for log files
+      $logFilePath = "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install.log"
+      $errorLogFilePath = "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install-error.log"
 
-        # Capture all output from the npm install command, including verbose logging
-        $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-                    --nodedir="$dirTempNode" npm@${NPM_VERSION} --loglevel verbose 2>&1
+      # Start logging
+      Write-Host "Starting npm installation..." -ForegroundColor Magenta
+      "Log for npm installation" | Out-File -FilePath $logFilePath
 
-        # Output the result of npm install for debugging
-        Write-Host "After run" -ForegroundColor Magenta
+      # Run npm install and capture both stdout and stderr
+      $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1 | Tee-Object -FilePath $logFilePath
 
-        # Check if the last command (npm install) returned an error
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error installing npm@${NPM_VERSION}:" -ForegroundColor Magenta
-            Write-Host "Last Exit Code: $LASTEXITCODE" -ForegroundColor Magenta
-            Write-Host "Error details:" -ForegroundColor Magenta
-            $npmOutput | ForEach-Object { Write-Host $_ -ForegroundColor Magenta }
-            Write-Host "Current working directory: $PWD" -ForegroundColor Magenta
-            Write-Host "Content of ${dirLib}:" -ForegroundColor Magenta
-            Get-ChildItem $dirLib | ForEach-Object { Write-Host $_.Name -ForegroundColor Magenta }
+      # Output for debugging purposes
+      Write-Host "After npm install command" -ForegroundColor Magenta
 
-            # Write output to a log file for further analysis
-            $npmOutput | Out-File -FilePath "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install.log" -Append
+      # Check if the last command failed and log all details
+      if ($LASTEXITCODE -ne 0) {
+          Write-Host "npm installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
 
-            throw "Couldn't install npm@${NPM_VERSION}. See error details above."
-        }
+          # Log the error details in a dedicated error log file
+          "npm installation failed with exit code $LASTEXITCODE" | Out-File -FilePath $errorLogFilePath -Append
+          "Captured output:" | Out-File -FilePath $errorLogFilePath -Append
+          $npmOutput | Out-File -FilePath $errorLogFilePath -Append
 
-    } catch {
-        Write-Host "An unexpected error occurred during npm installation." -ForegroundColor Red
-        Write-Host $_.Exception.Message -ForegroundColor Red
-        Write-Host $_.ScriptStackTrace -ForegroundColor Red
+          # Throw an error to stop the script execution
+          throw "npm installation failed. Check logs for details."
+      }
 
-        # Write the error details to a log file for further analysis
-        $npmOutput | Out-File -FilePath "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install.log" -Append
-        $_ | Out-File -FilePath "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install-error.log" -Append
+  } catch {
+      # Catch unexpected errors and log everything
+      Write-Host "An unexpected error occurred during npm installation." -ForegroundColor Red
+      Write-Host $_.Exception.Message -ForegroundColor Red
+      Write-Host $_.ScriptStackTrace -ForegroundColor Red
 
-        # Optionally, rethrow the exception to exit the script
-        throw $_
-    }
+      # Write the error to both stdout and log files for further analysis
+      $_.Exception.Message | Out-File -FilePath $errorLogFilePath -Append
+      $_.ScriptStackTrace | Out-File -FilePath $errorLogFilePath -Append
+
+      # Rethrow the exception to exit the script
+      throw $_
+  } finally {
+      # Ensure final log entry even if the script fails
+      Write-Host "npm installation process finished." -ForegroundColor Yellow
+      "npm installation process finished" | Out-File -FilePath $logFilePath -Append
+  }
+
 
 
   # After finishing up with our Node, let's put it in its final home
