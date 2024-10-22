@@ -197,22 +197,22 @@ Function Add-NodeAndNpm {
       Write-Host "Starting npm installation..." -ForegroundColor Magenta
       "Log for npm installation" | Out-File -FilePath $logFilePath
 
-      # Run npm install and capture both stdout and stderr
-      $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1 | Tee-Object -FilePath $logFilePath
+      # Run npm install and capture both stdout and stderr with real-time logging
+      $npmProcess = Start-Process -FilePath "$tempNpmCmd" `
+                                  -ArgumentList "install --prefix=$dirLib --no-bin-links --save --nodedir=$dirTempNode npm@$NPM_VERSION --loglevel verbose" `
+                                  -RedirectStandardOutput $logFilePath `
+                                  -RedirectStandardError $errorLogFilePath `
+                                  -NoNewWindow -PassThru
 
-      # Output for debugging purposes
-      Write-Host "After npm install command" -ForegroundColor Magenta
+      # Wait for npm process to exit
+      $npmProcess.WaitForExit()
 
-      # Check if the last command failed and log all details
-      if ($LASTEXITCODE -ne 0) {
-          Write-Host "npm installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
+      # Check if npm process failed
+      if ($npmProcess.ExitCode -ne 0) {
+          Write-Host "npm installation failed with exit code $($npmProcess.ExitCode)" -ForegroundColor Red
+          "npm installation failed with exit code $($npmProcess.ExitCode)" | Out-File -FilePath $errorLogFilePath -Append
 
-          # Log the error details in a dedicated error log file
-          "npm installation failed with exit code $LASTEXITCODE" | Out-File -FilePath $errorLogFilePath -Append
-          "Captured output:" | Out-File -FilePath $errorLogFilePath -Append
-          $npmOutput | Out-File -FilePath $errorLogFilePath -Append
-
-          # Throw an error to stop the script execution
+          # Throw error to stop execution
           throw "npm installation failed. Check logs for details."
       }
 
@@ -233,6 +233,7 @@ Function Add-NodeAndNpm {
       Write-Host "npm installation process finished." -ForegroundColor Yellow
       "npm installation process finished" | Out-File -FilePath $logFilePath -Append
   }
+
 
 
 
