@@ -755,6 +755,8 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
       try {
         doc = await cursor._nextObjectPromiseWithTimeout(timeoutMS);
       } catch (err) {
+        // We should not ignore errors here unless we want to spend a lot of time debugging
+        console.error(err);
         // There's no good way to figure out if this was actually an error from
         // Mongo, or just client-side (including our own timeout error). Ah
         // well. But either way, we need to retry the cursor (unless the failure

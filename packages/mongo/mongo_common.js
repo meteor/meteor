@@ -1,3 +1,5 @@
+import clone from 'lodash.clone'
+
 /** @type {import('mongodb')} */
 export const MongoDB = NpmModuleMongodb;
 
