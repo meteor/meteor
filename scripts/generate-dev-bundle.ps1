@@ -191,9 +191,9 @@ Function Add-NodeAndNpm {
     try {
         Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
 
-        # Capture all output from the npm install command
+        # Capture all output from the npm install command, including verbose logging
         $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-                    --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
+                    --nodedir="$dirTempNode" npm@${NPM_VERSION} --loglevel verbose 2>&1
 
         # Output the result of npm install for debugging
         Write-Host "After run" -ForegroundColor Magenta
@@ -208,6 +208,9 @@ Function Add-NodeAndNpm {
             Write-Host "Content of ${dirLib}:" -ForegroundColor Magenta
             Get-ChildItem $dirLib | ForEach-Object { Write-Host $_.Name -ForegroundColor Magenta }
 
+            # Write output to a log file for further analysis
+            $npmOutput | Out-File -FilePath "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install.log" -Append
+
             throw "Couldn't install npm@${NPM_VERSION}. See error details above."
         }
 
@@ -216,9 +219,14 @@ Function Add-NodeAndNpm {
         Write-Host $_.Exception.Message -ForegroundColor Red
         Write-Host $_.ScriptStackTrace -ForegroundColor Red
 
+        # Write the error details to a log file for further analysis
+        $npmOutput | Out-File -FilePath "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install.log" -Append
+        $_ | Out-File -FilePath "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install-error.log" -Append
+
         # Optionally, rethrow the exception to exit the script
         throw $_
     }
+
 
   # After finishing up with our Node, let's put it in its final home
   # and abandon this local npm directory.
