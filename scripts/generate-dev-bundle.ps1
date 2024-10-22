@@ -1,5 +1,12 @@
+# At the beginning of the script
 $ErrorActionPreference = "Stop"
+$VerbosePreference = "Continue"
 $DebugPreference = "Continue"
+
+# Redirect all streams to stdout
+$PSDefaultParameterValues['*:ErrorAction'] = 'Continue'
+$PSDefaultParameterValues['*:WarningAction'] = 'Continue'
+$PSDefaultParameterValues['*:InformationAction'] = 'Continue'
 
 Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
 $PLATFORM = Get-MeteorPlatform
@@ -184,14 +191,20 @@ Function Add-NodeAndNpm {
   #
 
   # Let's install the npm version we really want.
-  Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
-      Write-Debug
+    Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
+    $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+        --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
 
-  if ($LASTEXITCODE -ne 0) {
-    throw "Couldn't install npm@${NPM_VERSION}."
-  }
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host "Error installing npm@${NPM_VERSION}:" -ForegroundColor Magenta
+      Write-Host "Last Exit Code: $LASTEXITCODE" -ForegroundColor Magenta
+      Write-Host "Error details:" -ForegroundColor Magenta
+      $npmOutput | ForEach-Object { Write-Host $_ -ForegroundColor Magenta }
+      Write-Host "Current working directory: $PWD" -ForegroundColor Magenta
+      Write-Host "Content of ${dirLib}:" -ForegroundColor Magenta
+      Get-ChildItem $dirLib | ForEach-Object { Write-Host $_.Name -ForegroundColor Magenta }
+      throw "Couldn't install npm@${NPM_VERSION}. See error details above."
+    }
 
   # After finishing up with our Node, let's put it in its final home
   # and abandon this local npm directory.
