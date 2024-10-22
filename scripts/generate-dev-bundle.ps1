@@ -192,7 +192,7 @@ Function Add-NodeAndNpm {
     $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
         --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
 
-    if ($LASTEXITCODE -ne 0) {
+
       Write-Host "Error installing npm@${NPM_VERSION}:" -ForegroundColor Magenta
       Write-Host "Last Exit Code: $LASTEXITCODE" -ForegroundColor Magenta
       Write-Host "Error details:" -ForegroundColor Magenta
@@ -201,7 +201,7 @@ Function Add-NodeAndNpm {
       Write-Host "Content of ${dirLib}:" -ForegroundColor Magenta
       Get-ChildItem $dirLib | ForEach-Object { Write-Host $_.Name -ForegroundColor Magenta }
       throw "Couldn't install npm@${NPM_VERSION}. See error details above."
-    }
+
 
   # After finishing up with our Node, let's put it in its final home
   # and abandon this local npm directory.
