@@ -1,12 +1,5 @@
-# At the beginning of the script
 $ErrorActionPreference = "Stop"
-$VerbosePreference = "Continue"
 $DebugPreference = "Continue"
-
-# Redirect all streams to stdout
-$PSDefaultParameterValues['*:ErrorAction'] = 'Continue'
-$PSDefaultParameterValues['*:WarningAction'] = 'Continue'
-$PSDefaultParameterValues['*:InformationAction'] = 'Continue'
 
 Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
 $PLATFORM = Get-MeteorPlatform
@@ -46,6 +39,9 @@ $dirBin = Join-Path $DIR 'bin'
 $dirLib = Join-Path $DIR 'lib'
 $dirServerLib = Join-Path $DIR 'server-lib'
 $dirTemp = Join-Path $DIR 'temp'
+
+# Use a cache just for this build.
+$dirNpmCache = Join-Path $dirTemp 'npm-cache'
 
 # Build our directory framework.
 New-Item -ItemType Directory -Force -Path $DIR | Out-Null
@@ -188,55 +184,12 @@ Function Add-NodeAndNpm {
   #
 
   # Let's install the npm version we really want.
-  try {
-      # Define paths for logs
-      $logFilePath = "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install.log"
-      $errorLogFilePath = "C:\Users\Administrator\actions-runner\_work\meteor-release-bot\meteor-release-bot\npm-install-error.log"
+  Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
+  cmd.exe /c "$tempNpmCmd install --prefix=$dirLib --no-bin-links --save --cache=$dirNpmCache --nodedir=$dirTempNode npm@$NPM_VERSION"
 
-      # Start logging
-      Write-Host "Starting npm installation..." -ForegroundColor Magenta
-      "Log for npm installation" | Out-File -FilePath $logFilePath
-
-      # Run npm install and capture both stdout and stderr
-      $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-                  --nodedir="$dirTempNode" npm@${NPM_VERSION} --loglevel verbose 2>&1
-
-      # Write the output to the log file
-      $npmOutput | Out-File -FilePath $logFilePath -Append
-
-      # Output the captured logs to the console for feedback
-      Write-Host $npmOutput -ForegroundColor Green
-
-      # Check if npm command was successful
-      if ($LASTEXITCODE -eq 0) {
-          Write-Host "npm installation completed successfully." -ForegroundColor Green
-          "npm installation completed successfully." | Out-File -FilePath $logFilePath -Append
-      } else {
-          Write-Host "npm installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
-          "npm installation failed with exit code $LASTEXITCODE" | Out-File -FilePath $errorLogFilePath -Append
-          throw "npm installation failed. Check logs for details."
-      }
-
-  } catch {
-      # Catch any unexpected errors and log them
-      Write-Host "An unexpected error occurred during npm installation." -ForegroundColor Red
-      Write-Host $_.Exception.Message -ForegroundColor Red
-      Write-Host $_.ScriptStackTrace -ForegroundColor Red
-
-      # Log the error details
-      $_.Exception.Message | Out-File -FilePath $errorLogFilePath -Append
-      $_.ScriptStackTrace | Out-File -FilePath $errorLogFilePath -Append
-
-      # Exit with failure
-      throw $_
-  } finally {
-      # Final log entry regardless of success or failure
-      Write-Host "npm installation process finished." -ForegroundColor Yellow
-      "npm installation process finished" | Out-File -FilePath $logFilePath -Append
+  if ($LASTEXITCODE -ne 0) {
+    throw "Couldn't install npm@${NPM_VERSION}."
   }
-
-
-
 
   # After finishing up with our Node, let's put it in its final home
   # and abandon this local npm directory.
@@ -373,6 +326,7 @@ $env:PYTHON = Add-Python
 # Set additional options for node-gyp
 $env:GYP_MSVS_VERSION = "2015"
 $env:npm_config_nodedir = "$DIR"
+$env:npm_config_cache = "$dirNpmCache"
 
 # Allow running $dirBin commands like node and npm.
 $env:PATH = "$env:PATH;$dirBin"
