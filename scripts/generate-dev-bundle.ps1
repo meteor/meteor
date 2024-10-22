@@ -47,9 +47,6 @@ $dirLib = Join-Path $DIR 'lib'
 $dirServerLib = Join-Path $DIR 'server-lib'
 $dirTemp = Join-Path $DIR 'temp'
 
-# Use a cache just for this build.
-$dirNpmCache = Join-Path $dirTemp 'npm-cache'
-
 # Build our directory framework.
 New-Item -ItemType Directory -Force -Path $DIR | Out-Null
 New-Item -ItemType Directory -Force -Path $dirTemp | Out-Null
@@ -193,7 +190,7 @@ Function Add-NodeAndNpm {
   # Let's install the npm version we really want.
     Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
     $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-        --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
+        --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
 
     if ($LASTEXITCODE -ne 0) {
       Write-Host "Error installing npm@${NPM_VERSION}:" -ForegroundColor Magenta
@@ -341,7 +338,6 @@ $env:PYTHON = Add-Python
 # Set additional options for node-gyp
 $env:GYP_MSVS_VERSION = "2015"
 $env:npm_config_nodedir = "$DIR"
-$env:npm_config_cache = "$dirNpmCache"
 
 # Allow running $dirBin commands like node and npm.
 $env:PATH = "$env:PATH;$dirBin"
