@@ -53,31 +53,31 @@ var ExpectationManager = function (test, onComplete) {
 };
 
 Object.assign(ExpectationManager.prototype, {
-  expect: function (...args) {
+  expect: function (/* arguments */) {
     var self = this;
 
-    if (typeof args[0] === "function")
-      var expected = args[0];
+    if (typeof arguments[0] === "function")
+      var expected = arguments[0];
     else
-      var expected = args;
+      var expected = Array.from(arguments);
 
     if (self.closed)
       throw new Error("Too late to add more expectations to the test");
     self.outstanding++;
 
-    return async function (...args) {
+    return async function (/* arguments */) {
       if (self.dead)
         return;
 
       if (typeof expected === "function") {
         try {
-          await expected.apply({}, args);
+          await expected.apply({}, arguments);
         } catch (e) {
           if (self.cancel())
             self.test.exception(e);
         }
       } else {
-        self.test.equal(args, expected);
+        self.test.equal(Array.from(arguments), expected);
       }
 
       self.outstanding--;
@@ -115,12 +115,12 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
   addFunction(name, function (test, onComplete) {
-    var remaining = Object.assign({}, funcs);
+    var remaining = [...funcs]
     var context = {};
     var i = 0;
 
     var runNext = function () {
-      var func = Object.values(remaining).shift();
+      var func = remaining.shift();
       if (!func) {
         delete test.extraDetails.asyncBlock;
         onComplete();
