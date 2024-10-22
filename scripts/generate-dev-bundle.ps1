@@ -188,20 +188,37 @@ Function Add-NodeAndNpm {
   #
 
   # Let's install the npm version we really want.
-    Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-    $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-        --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
+    try {
+        Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
 
+        # Capture all output from the npm install command
+        $npmOutput = & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+                    --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1
 
-      Write-Host "Error installing npm@${NPM_VERSION}:" -ForegroundColor Magenta
-      Write-Host "Last Exit Code: $LASTEXITCODE" -ForegroundColor Magenta
-      Write-Host "Error details:" -ForegroundColor Magenta
-      $npmOutput | ForEach-Object { Write-Host $_ -ForegroundColor Magenta }
-      Write-Host "Current working directory: $PWD" -ForegroundColor Magenta
-      Write-Host "Content of ${dirLib}:" -ForegroundColor Magenta
-      Get-ChildItem $dirLib | ForEach-Object { Write-Host $_.Name -ForegroundColor Magenta }
-      throw "Couldn't install npm@${NPM_VERSION}. See error details above."
+        # Output the result of npm install for debugging
+        Write-Host "After run" -ForegroundColor Magenta
 
+        # Check if the last command (npm install) returned an error
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error installing npm@${NPM_VERSION}:" -ForegroundColor Magenta
+            Write-Host "Last Exit Code: $LASTEXITCODE" -ForegroundColor Magenta
+            Write-Host "Error details:" -ForegroundColor Magenta
+            $npmOutput | ForEach-Object { Write-Host $_ -ForegroundColor Magenta }
+            Write-Host "Current working directory: $PWD" -ForegroundColor Magenta
+            Write-Host "Content of ${dirLib}:" -ForegroundColor Magenta
+            Get-ChildItem $dirLib | ForEach-Object { Write-Host $_.Name -ForegroundColor Magenta }
+
+            throw "Couldn't install npm@${NPM_VERSION}. See error details above."
+        }
+
+    } catch {
+        Write-Host "An unexpected error occurred during npm installation." -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host $_.ScriptStackTrace -ForegroundColor Red
+
+        # Optionally, rethrow the exception to exit the script
+        throw $_
+    }
 
   # After finishing up with our Node, let's put it in its final home
   # and abandon this local npm directory.
