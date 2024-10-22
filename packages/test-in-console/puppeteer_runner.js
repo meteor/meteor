@@ -5,6 +5,10 @@ let testNumber = 0;
 async function runNextUrl(browser) {
   const page = await browser.newPage();
 
+  // page.on('console', msg => {
+  //   console.log('PAGE LOG:', msg.text());
+  // });
+
   page.on('console', async msg => {
     // this is a way to make sure the travis does not timeout
     // if the test is running for too long without any output to the console (10 minutes)
@@ -58,7 +62,7 @@ async function runNextUrl(browser) {
     }
   }
 
-  poll();
+  await poll();
 }
 
 /**
@@ -130,9 +134,10 @@ async function runTests() {
       '--disable-setuid-sandbox',
       '--disable-web-security',
     ],
+    headless: "new",
   });
   console.log(`Using version: ${await browser.version()}`);
-  runNextUrl(browser);
+  await runNextUrl(browser)
 }
 
 runTests().catch((e) =>
