@@ -185,13 +185,18 @@ Function Add-NodeAndNpm {
 
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-  if ($PSVersionTable) {
-      Write-Host "You are running PowerShell with version: $($PSVersionTable.PSVersion)"
+  if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+      Write-Host "You are running as an Administrator."
   } else {
-      Write-Host "You are running cmd.exe or another shell."
-      ver | Write-Host
+      Write-Host "You are running as a Standard User."
   }
+  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
+      Write-Debug
 
+  if ($LASTEXITCODE -ne 0) {
+    throw "Couldn't install npm@${NPM_VERSION}."
+  }
 
   # After finishing up with our Node, let's put it in its final home
   # and abandon this local npm directory.
