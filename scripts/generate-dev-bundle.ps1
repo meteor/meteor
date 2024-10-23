@@ -215,8 +215,8 @@ Function Add-NodeAndNpm {
   # Uses process.execPath to infer dev_bundle\bin, npm location, &c.
   & "$finalNodeExe" "${dirCheckout}\scripts\windows\link-npm-bin-commands.js"
 
-  # We use our own npm.ps1.
-  Copy-Item "${dirCheckout}\scripts\npm.ps1" $finalNpmCmd
+  # We use our own npm.cmd.
+  Copy-Item "${dirCheckout}\scripts\npm.cmd" $finalNpmCmd
 
   Remove-DirectoryRecursively $dirTempNodeHeaders
   Remove-DirectoryRecursively $dirTempNode
