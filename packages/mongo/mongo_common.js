@@ -149,3 +149,17 @@ export const replaceMongoAtomWithMeteor = function (document) {
 
 const makeMongoLegal = name => "EJSON" + name;
 const unmakeMongoLegal = name => name.substr(5);
+
+export function replaceNames(filter, thing) {
+  if (typeof thing === "object" && thing !== null) {
+    if (Array.isArray(thing)) {
+      return thing.map(replaceNames.bind(null, filter));
+    }
+    var ret = {};
+    Object.entries(thing).forEach(function ([key, value]) {
+      ret[filter(key)] = replaceNames(filter, value);
+    });
+    return ret;
+  }
+  return thing;
+}

@@ -28,19 +28,7 @@ MongoInternals.OplogObserveDriver = OplogObserveDriver;
 
 // This is used to add or remove EJSON from the beginning of everything nested
 // inside an EJSON custom type. It should only be called on pure JSON!
-var replaceNames = function (filter, thing) {
-  if (typeof thing === "object" && thing !== null) {
-    if (Array.isArray(thing)) {
-      return thing.map(replaceNames.bind(null, filter));
-    }
-    var ret = {};
-    Object.entries(thing).forEach(function ([key, value]) {
-      ret[filter(key)] = replaceNames(filter, value);
-    });
-    return ret;
-  }
-  return thing;
-};
+
 
 // Ensure that EJSON.clone keeps a Timestamp as a Timestamp (instead of just
 // doing a structural clone).
