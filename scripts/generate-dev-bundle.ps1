@@ -1,5 +1,6 @@
 $ErrorActionPreference = "Continue"
 $DebugPreference = "Continue"
+$WarningPreference = "Continue"
 
 Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
 $PLATFORM = Get-MeteorPlatform
