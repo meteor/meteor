@@ -192,9 +192,9 @@ Function Add-NodeAndNpm {
   Write-Host (& "$tempNpmCmd" --version 2>&1)
 
   Write-Host (Get-Location)
-  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-    --cache="$dirNpmCache" --nodedir="$dirTempNode" |
-      Write-Host
+
+  Write-Host (& "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION})
 
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm@${NPM_VERSION}."
