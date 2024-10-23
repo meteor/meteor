@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $DebugPreference = "Continue"
 
 Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
