@@ -54,7 +54,10 @@ Object.assign(AsynchronousQueue.prototype, {
   queueTask(task) {
     const self = this;
     self._taskHandles.push({
-      task: task,
+      task: Meteor.bindEnvironment(task, function (e) {
+        Meteor._debug('Exception from task', e);
+        throw e;
+      }),
       name: task.name
     });
     self._scheduleRun();

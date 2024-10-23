@@ -112,6 +112,23 @@ export class OplogHandle {
 
     await this._readyPromise;
 
+    const originalCallback = callback;
+
+    /**
+     * This depends on AsynchronousQueue tasks being wrapped in `bindEnvironment` too.
+     *
+     * @todo Check after we simplify the `bindEnvironment` implementation if we can remove the second wrap.
+     */
+    callback = Meteor.bindEnvironment(
+      function (notification: any) {
+        originalCallback(notification);
+      },
+      // @ts-ignore
+      function (err) {
+        Meteor._debug("Error in oplog callback", err);
+      }
+    );
+
     const listenHandle = this._crossbar.listen(trigger, callback);
     return {
       stop: async function () {
