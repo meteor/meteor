@@ -344,18 +344,16 @@ $env:PATH = "$env:PATH;$dirBin"
 $toolCmds = Add-NodeAndNpm
 
 "Location of node.exe:"
-& Get-Command node | Select-Object -ExpandProperty Definition
+Get-Command node | Select-Object -ExpandProperty Definition
 
 "Node process.versions:"
-& node -p 'process.versions'
+node -p 'process.versions'
 
 "Location of npm.cmd:"
-& Get-Command npm | Select-Object -ExpandProperty Definition
+Get-Command npm | Select-Object -ExpandProperty Definition
 
 "Npm 'version':"
-Write-Host (& npm version 2>&1)
-
-npm config set loglevel error
+Write-Host (npm version 2>&1)
 
 #
 # Install the npms for the 'server'.
@@ -366,12 +364,13 @@ $npmServerArgs = @{
   commands = $toolCmds
   shrinkwrap = $True
 }
+
 Add-NpmModulesFromJsBundleFile @npmServerArgs
 
 # These are used by the Meteor tool bundler and written to the Meteor build.
 # For information, see the 'ServerTarget' class in tools/isobuild/bundler.js,
 # and look for 'serverPkgJson' and 'npm-shrinkwrap.json'
-mkdir -Force "${DIR}\etc"
+Write-Host (mkdir -Force "${DIR}\etc" 2>&1)
 Move-Item $(Join-Path $dirServerLib 'package.json') "${DIR}\etc\"
 Move-Item $(Join-Path $dirServerLib 'npm-shrinkwrap.json') "${DIR}\etc\"
 
