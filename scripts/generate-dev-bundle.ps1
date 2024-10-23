@@ -188,9 +188,13 @@ Function Add-NodeAndNpm {
 
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
+
+  "$tempNpmCmd" --version | Write-Host
+
   Write-Host (Get-Location)
   & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION}
+    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
+      Write-Host
 
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm@${NPM_VERSION}."
