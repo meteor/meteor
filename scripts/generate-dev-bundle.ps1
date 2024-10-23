@@ -353,7 +353,7 @@ $toolCmds = Add-NodeAndNpm
 & Get-Command npm | Select-Object -ExpandProperty Definition
 
 "Npm 'version':"
-& npm version
+Write-Host (& npm version 2>&1)
 
 npm config set loglevel error
 
