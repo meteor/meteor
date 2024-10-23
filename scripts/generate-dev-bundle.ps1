@@ -183,6 +183,8 @@ Function Add-NodeAndNpm {
   # We should now have a fully functionaly local Node with headers to use.
   #
 
+  Write-Host "Pre-enter"
+
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
   & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save --loglevel verbose `
