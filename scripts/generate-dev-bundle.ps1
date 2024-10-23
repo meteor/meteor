@@ -141,7 +141,7 @@ Function Add-NodeAndNpm {
   Remove-Item $archiveNode
 
   $tempNodeExe = Join-Path $dirTempNode 'node.exe'
-  $tempNpmCmd = Join-Path $dirTempNode 'npm.ps1'
+  $tempNpmCmd = Join-Path $dirTempNode 'npm.cmd'
 
   # Get additional values we'll need to fetch to complete this release.
   $nodeProcessRelease = @{
@@ -210,7 +210,7 @@ Function Add-NodeAndNpm {
   Move-Item $dirNodeRelease $DIR
 
   $finalNodeExe = Join-Path $dirBin 'node.exe'
-  $finalNpmCmd = Join-Path $dirBin 'npm.ps1'
+  $finalNpmCmd = Join-Path $dirBin 'npm.cmd'
 
   # Uses process.execPath to infer dev_bundle\bin, npm location, &c.
   & "$finalNodeExe" "${dirCheckout}\scripts\windows\link-npm-bin-commands.js"
@@ -349,7 +349,7 @@ $toolCmds = Add-NodeAndNpm
 "Node process.versions:"
 & node -p 'process.versions'
 
-"Location of npm.ps1:"
+"Location of npm.cmd:"
 & Get-Command npm | Select-Object -ExpandProperty Definition
 
 "Npm 'version':"
