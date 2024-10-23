@@ -189,12 +189,16 @@ Function Add-NodeAndNpm {
     --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
       Write-Debug
 
+  Write-Host "Enter"
+
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm@${NPM_VERSION}."
   }
 
   # After finishing up with our Node, let's put it in its final home
   # and abandon this local npm directory.
+
+  Write-Host "Enter 2"
 
   # Move exe and cmd files to the \bin directory.
   Move-Item $(Join-Path $dirTempNode '*.exe') $dirBin
@@ -205,14 +209,22 @@ Function Add-NodeAndNpm {
   $finalNodeExe = Join-Path $dirBin 'node.exe'
   $finalNpmCmd = Join-Path $dirBin 'npm.cmd'
 
+  Write-Host "Enter 3"
+
   # Uses process.execPath to infer dev_bundle\bin, npm location, &c.
   & "$finalNodeExe" "${dirCheckout}\scripts\windows\link-npm-bin-commands.js"
+
+  Write-Host "Enter 4"
 
   # We use our own npm.cmd.
   Copy-Item "${dirCheckout}\scripts\npm.cmd" $finalNpmCmd
 
+  Write-Host "Enter 5"
+
   Remove-DirectoryRecursively $dirTempNodeHeaders
   Remove-DirectoryRecursively $dirTempNode
+
+  Write-Host "Enter 6"
 
   return New-Object -Type PSObject -Prop $(@{
     node = $finalNodeExe
