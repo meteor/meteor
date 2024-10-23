@@ -183,6 +183,10 @@ Function Add-NodeAndNpm {
   # We should now have a fully functionaly local Node with headers to use.
   #
 
+  Get-ChildItem $dirTempNode
+  Get-Content $tempNpmCmd
+
+
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
   Write-Host (Get-Location)
