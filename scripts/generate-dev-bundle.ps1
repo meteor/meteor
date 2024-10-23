@@ -343,6 +343,8 @@ $env:PATH = "$env:PATH;$dirBin"
 # Install Node.js and npm and get their paths to use from here on.
 $toolCmds = Add-NodeAndNpm
 
+npm config set loglevel warn
+
 "Location of node.exe:"
 Get-Command node | Select-Object -ExpandProperty Definition
 
