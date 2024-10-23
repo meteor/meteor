@@ -301,7 +301,7 @@ Function Add-NpmModulesFromJsBundleFile {
     Out-File -FilePath $(Join-Path $Destination 'package.json') -Encoding ascii
 
   # No bin-links because historically, they weren't used anyway.
-  & "$($Commands.npm)" install 2>&1
+  Write-Host (& "$($Commands.npm)" install 2>&1)
 
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm packages."
