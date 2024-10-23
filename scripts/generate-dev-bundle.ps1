@@ -141,7 +141,7 @@ Function Add-NodeAndNpm {
   Remove-Item $archiveNode
 
   $tempNodeExe = Join-Path $dirTempNode 'node.exe'
-  $tempNpmCmd = Join-Path $dirTempNode 'npm.cmd'
+  $tempNpmCmd = Join-Path $dirTempNode 'npm.ps1'
 
   # Get additional values we'll need to fetch to complete this release.
   $nodeProcessRelease = @{
