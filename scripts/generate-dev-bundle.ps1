@@ -141,7 +141,7 @@ Function Add-NodeAndNpm {
   Remove-Item $archiveNode
 
   $tempNodeExe = Join-Path $dirTempNode 'node.exe'
-  $tempNpmCmd = Join-Path $dirTempNode 'npm.ps1'
+  $tempNpmCmd = Join-Path $dirTempNode 'npm.cmd'
 
   # Get additional values we'll need to fetch to complete this release.
   $nodeProcessRelease = @{
@@ -185,12 +185,12 @@ Function Add-NodeAndNpm {
 
   Write-Host "Pre-enter"
 
-  Write-Host "Pre-enter $dirLib $dirTempNode $dirNpmCache $tempNpmCmd"
-  & "$tempNpmCmd" install --version
+  Write-Host "Pre-enter $dirLib $dirTempNode $dirNpmCache"
 
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save
+  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save --verbose `
+    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION}
 
   Write-Host "Enter"
 
