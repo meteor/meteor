@@ -109,7 +109,7 @@ Package.onTest(function (api) {
   api.use('ecmascript');
   api.use('npm-mongo', 'server');
   api.use(['tinytest', 'test-helpers', 'ejson', 'random',
-           'ddp', 'base64']);
+           'ddp', 'base64', 'typescript']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles("mongo_livedata_tests.js", ["client", "server"]);
