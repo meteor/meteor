@@ -12,7 +12,7 @@ export class ObserveMultiplexer {
   private readonly _ordered: boolean;
   private readonly _onStop: () => void;
   private _queue: any;
-  private _handles: { [key: string]: ObserveHandle };
+  private _handles: { [key: string]: ObserveHandle } | null;
   private _resolver: ((value?: unknown) => void) | null;
   private readonly _readyPromise: Promise<boolean | void>;
   private _isReady: boolean;
@@ -57,7 +57,7 @@ export class ObserveMultiplexer {
       "mongo-livedata", "observe-handles", 1);
 
     await this._queue.runTask(async () => {
-      this._handles[handle._id] = handle;
+      this._handles![handle._id] = handle;
       await this._sendAdds(handle);
       --this._addHandleTasksScheduledButNotPerformed;
     });
@@ -68,7 +68,7 @@ export class ObserveMultiplexer {
     if (!this._ready())
       throw new Error("Can't remove handles until the multiplex is ready");
 
-    delete this._handles[id];
+    delete this._handles![id];
 
     // @ts-ignore
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
@@ -90,7 +90,7 @@ export class ObserveMultiplexer {
     Package['facts-base'] && Package['facts-base']
         .Facts.incrementServerFact("mongo-livedata", "observe-multiplexers", -1);
 
-    this._handles = {};
+    this._handles = null;
   }
 
   async ready(): Promise<void> {
@@ -162,7 +162,7 @@ export class ObserveMultiplexer {
     if (!add) return;
 
     await this._cache.docs.forEachAsync(async (doc: any, id: string) => {
-      if (!(handle._id in this._handles))
+      if (!(handle._id in this._handles!))
         throw Error("handle got removed before sending initial adds!");
 
       const { _id, ...fields } = handle.nonMutatingCallbacks ? doc : EJSON.clone(doc);
