@@ -43,7 +43,7 @@ Meteor.methods({
     const collections = await MongoInternals.defaultRemoteCollectionDriver().mongo.db.collections();
 
     for (const collection of collections) {
-      await collection.drop();
+      await collection.deleteMany({});
     }
 
     this.unblock();
