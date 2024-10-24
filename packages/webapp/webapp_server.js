@@ -29,6 +29,7 @@ const createExpressApp = () => {
   // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
   app.set('x-powered-by', false);
   app.set('etag', false);
+  app.set('query parser', qs.parse);
   return app;
 }
 export const WebApp = {};
@@ -1079,16 +1080,6 @@ async function runWebAppServer() {
     res.writeHead(400);
     res.write('Not a proxy');
     res.end();
-  });
-
-  // Parse the query string into res.query. Used by oauth_server, but it's
-  // generally pretty handy..
-  //
-  // Do this before the next middleware destroys req.url if a path prefix
-  // is set to close #10111.
-  app.use(function(request, response, next) {
-    request.query = qs.parse(parseUrl(request.url).query);
-    next();
   });
 
   function getPathParts(path) {
