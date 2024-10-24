@@ -17,7 +17,7 @@ var packageJson = {
     "@meteorjs/babel": "7.20.0",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
-    "@meteorjs/reify": "0.25.3",
+    "@meteorjs/reify": "0.25.4",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.25.0",
     // For backwards compatibility with isopackets that still depend on
