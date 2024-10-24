@@ -1,11 +1,11 @@
-$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Stop"
 $DebugPreference = "Continue"
-$WarningPreference = "SilentlyContinue"
 
 Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
 $PLATFORM = Get-MeteorPlatform
 
 $PYTHON_VERSION = "3.9.5" # For node-gyp
+& cmd /c 'du 2>&1'
 
 $dirCheckout = (Get-Item $PSScriptRoot).parent.FullName
 $shCommon = Join-Path $PSScriptRoot 'build-dev-bundle-common.sh'
@@ -183,18 +183,10 @@ Function Add-NodeAndNpm {
   # We should now have a fully functionaly local Node with headers to use.
   #
 
-  Write-Host (Get-ChildItem $dirTempNode)
-  Write-Host (Get-Content $tempNpmCmd)
-
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-
-  Write-Host (& "$tempNpmCmd" --version 2>&1)
-
-  Write-Host (Get-Location)
-
   Write-Host (& "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1)
+      --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1)
 
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm@${NPM_VERSION}."
@@ -294,15 +286,11 @@ Function Add-NpmModulesFromJsBundleFile {
 
   Write-Host "Writing 'package.json' from ${SourceJs} to ${Destination}" `
     -ForegroundColor Magenta
-
-  Write-Host (& "$($Commands.node)" $SourceJs)
-
   & "$($Commands.node)" $SourceJs |
     Out-File -FilePath $(Join-Path $Destination 'package.json') -Encoding ascii
 
   # No bin-links because historically, they weren't used anyway.
-  Write-Host (& "$($Commands.npm)" install 2>&1)
-
+  & "$($Commands.npm)" install
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm packages."
   }
@@ -347,19 +335,19 @@ $env:PATH = "$env:PATH;$dirBin"
 # Install Node.js and npm and get their paths to use from here on.
 $toolCmds = Add-NodeAndNpm
 
-npm config set loglevel warn
-
 "Location of node.exe:"
-Get-Command node | Select-Object -ExpandProperty Definition
+& Get-Command node | Select-Object -ExpandProperty Definition
 
 "Node process.versions:"
-node -p 'process.versions'
+& node -p 'process.versions'
 
 "Location of npm.cmd:"
-Get-Command npm | Select-Object -ExpandProperty Definition
+& Get-Command npm | Select-Object -ExpandProperty Definition
 
 "Npm 'version':"
-Write-Host (npm version 2>&1)
+& npm version
+
+npm config set loglevel error
 
 #
 # Install the npms for the 'server'.
@@ -370,13 +358,12 @@ $npmServerArgs = @{
   commands = $toolCmds
   shrinkwrap = $True
 }
-
 Add-NpmModulesFromJsBundleFile @npmServerArgs
 
 # These are used by the Meteor tool bundler and written to the Meteor build.
 # For information, see the 'ServerTarget' class in tools/isobuild/bundler.js,
 # and look for 'serverPkgJson' and 'npm-shrinkwrap.json'
-Write-Host (mkdir -Force "${DIR}\etc" 2>&1)
+mkdir -Force "${DIR}\etc"
 Move-Item $(Join-Path $dirServerLib 'package.json') "${DIR}\etc\"
 Move-Item $(Join-Path $dirServerLib 'npm-shrinkwrap.json') "${DIR}\etc\"
 
