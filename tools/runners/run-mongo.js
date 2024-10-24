@@ -448,11 +448,7 @@ var launchMongo = async function(options) {
   var yieldingMethod = async function(object, methodName, ...args) {
     return await Promise.race([
       stopPromise,
-      new Promise((resolve, reject) => {
-        object[methodName](...args, (err, res) => {
-          err ? reject(err) : resolve(res);
-        });
-      }),
+      object[methodName](...args),
     ]);
   };
 

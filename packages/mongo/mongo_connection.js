@@ -412,7 +412,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
           if (options.upsert && meteorResult.insertedId) {
             if (knownId) {
               meteorResult.insertedId = knownId;
-            } else if (meteorResult.insertedId instanceof MongoDB.ObjectID) {
+            } else if (meteorResult.insertedId instanceof MongoDB.ObjectId) {
               meteorResult.insertedId = new Mongo.ObjectID(meteorResult.insertedId.toHexString());
             }
           }
