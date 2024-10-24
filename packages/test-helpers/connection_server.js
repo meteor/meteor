@@ -13,7 +13,7 @@ makeTestConnection = function (test, succeeded, failed) {
 
   // Add incoming connections to `serverConns`.
   var onConnectionHandle = Meteor.onConnection(function (serverConn) {
-    test.isTrue(_.isString(serverConn.id), "connection handle id exists and is a string");
+    test.isTrue(typeof serverConn.id === 'string', "connection handle id exists and is a string");
     if (serverConns[serverConn.id]) {
       test.fail("onConnection callback called multiple times for same session id");
       failed();

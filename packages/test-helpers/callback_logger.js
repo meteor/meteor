@@ -1,3 +1,5 @@
+import isEqual from 'lodash.isequal';
+
 // This file allows you to write tests that expect certain callbacks to be
 // called in certain orders, or optionally in groups where the order does not
 // matter.  It can be set up in either a synchronous manner, so that each
@@ -21,10 +23,9 @@ var CallbackLogger = function (test, callbackNames) {
   var self = this;
   self._log = [];
   self._test = test;
-  _.each(callbackNames, function (callbackName) {
-    self[callbackName] = function () {
-      var args = _.toArray(arguments);
-      self._log.push({callback: callbackName, args: args});
+  callbackNames.forEach(function (callbackName) {
+    self[callbackName] = function (...args) {
+      self._log.push({ callback: callbackName, args });
     };
   });
 };
@@ -32,7 +33,7 @@ var CallbackLogger = function (test, callbackNames) {
 CallbackLogger.prototype.expectResult = async function (callbackName, args) {
   var self = this;
   await self._waitForLengthOrTimeout(1);
-  if (_.isEmpty(self._log)) {
+  if (self._log.length === 0) {
     self._test.fail(["Expected callback " + callbackName + " got none"]);
     return;
   }
@@ -74,13 +75,15 @@ CallbackLogger.prototype.expectResultUnordered = async function (list) {
 
   await self._waitForLengthOrTimeout(list.length);
 
-  list = _.clone(list); // shallow copy.
+  list = [...list];
+
   var i = list.length;
+
   while (i > 0) {
     var found = false;
     var dequeued = self._log.shift();
     for (var j = 0; j < list.length; j++) {
-      if (_.isEqual(list[j], dequeued)) {
+      if (isEqual(list[j], dequeued)) {
         list.splice(j, 1);
         found = true;
         break;

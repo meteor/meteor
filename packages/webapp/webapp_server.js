@@ -210,12 +210,12 @@ WebApp.categorizeRequest = function(req) {
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
-  _.each(htmlAttributeHooks || [], function(hook) {
+  (htmlAttributeHooks || []).forEach(function(hook) {
     var attributes = hook(request);
     if (attributes === null) return;
     if (typeof attributes !== 'object')
       throw Error('HTML attribute hook must return null or object');
-    _.extend(combinedAttributes, attributes);
+    Object.assign(combinedAttributes, attributes);
   });
   return combinedAttributes;
 };
@@ -298,7 +298,7 @@ WebApp._timeoutAdjustmentRequestCallback = function(req, res) {
   res.on('finish', function() {
     res.setTimeout(SHORT_SOCKET_TIMEOUT);
   });
-  _.each(finishListeners, function(l) {
+  Object.values(finishListeners).forEach(function(l) {
     res.on('finish', l);
   });
 };
@@ -452,13 +452,14 @@ async function getBoilerplateAsync(request, arch) {
     return true;
   });
   runtimeConfig.isUpdatedByArch[arch] = false;
+  const { dynamicHead, dynamicBody } = request;
   const data = Object.assign(
     {},
     boilerplate.baseData,
     {
       htmlAttributes: getHtmlAttributes(request),
     },
-    _.pick(request, 'dynamicHead', 'dynamicBody')
+    { dynamicHead, dynamicBody }
   );
 
   let madeChanges = false;
@@ -542,9 +543,8 @@ WebAppInternals.generateBoilerplateInstance = function(
           return pathJoin(archPath[arch], itemPath);
         },
         baseDataExtension: {
-          additionalStaticJs: _.map(additionalStaticJs || [], function(
-            contents,
-            pathname
+          additionalStaticJs: (Object.entries(additionalStaticJs) || []).map(function(
+            [pathname, contents]
           ) {
             return {
               pathname: pathname,
@@ -621,7 +621,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   };
 
   if (
-    _.has(additionalStaticJs, pathname) &&
+    pathname in additionalStaticJs &&
     !WebAppInternals.inlineScriptsAllowed()
   ) {
     serveStaticJs(additionalStaticJs[pathname]);
@@ -1363,7 +1363,7 @@ async function runWebAppServer() {
   let warnedAboutConnectUsage = false;
 
   // start up app
-  _.extend(WebApp, {
+  Object.assign(WebApp, {
     connectHandlers: packageAndAppHandlers,
     handlers: packageAndAppHandlers,
     rawConnectHandlers: rawExpressHandlers,

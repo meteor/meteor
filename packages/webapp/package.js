@@ -31,14 +31,13 @@ Package.onUse(function (api) {
   api.use("ecmascript");
   api.use(
     [
-      "logging",
-      "underscore",
-      "routepolicy",
-      "modern-browsers",
-      "boilerplate-generator",
-      "webapp-hashing",
-      "inter-process-messaging",
-      "callback-hook",
+      'logging',
+      'routepolicy',
+      'modern-browsers',
+      'boilerplate-generator',
+      'webapp-hashing',
+      'inter-process-messaging',
+      'callback-hook',
     ],
     "server"
   );
@@ -66,7 +65,6 @@ Package.onTest(function (api) {
     "ecmascript",
     "webapp",
     "http",
-    "underscore",
     "fetch",
     "test-helpers",
   ]);
