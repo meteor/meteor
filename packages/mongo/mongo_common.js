@@ -78,7 +78,7 @@ export const replaceMeteorAtomWithMongo = function (document) {
     return document;
   }
   if (document instanceof Mongo.ObjectID) {
-    return new MongoDB.ObjectID(document.toHexString());
+    return new MongoDB.ObjectId(document.toHexString());
   }
   if (document instanceof MongoDB.Timestamp) {
     // For now, the Meteor representation of a Mongo timestamp type (not a date!
@@ -128,7 +128,7 @@ export const replaceMongoAtomWithMeteor = function (document) {
     var buffer = document.value(true);
     return new Uint8Array(buffer);
   }
-  if (document instanceof MongoDB.ObjectID) {
+  if (document instanceof MongoDB.ObjectId) {
     return new Mongo.ObjectID(document.toHexString());
   }
   if (document instanceof MongoDB.Decimal128) {
