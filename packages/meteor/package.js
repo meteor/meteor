@@ -33,10 +33,10 @@ Package.onUse(function (api) {
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);
   api.addFiles('errors.js', ['client', 'server']);
-  api.addFiles('asl-helpers.js', 'server');
+  api.addFiles('als_helpers.js', 'server');
   api.addFiles('async_helpers.js', ['client', 'server']);
   api.addFiles('fiber_stubs_client.js', 'client');
-  api.addFiles('asl-helpers-client.js', 'client');
+  api.addFiles('als_helpers_client.js', 'client');
   api.addFiles('startup_client.js', ['client']);
   api.addFiles('startup_server.js', ['server']);
   api.addFiles('debug.js', ['client', 'server']);
@@ -84,6 +84,5 @@ Package.onTest(function (api) {
 
   api.addFiles('bare_test_setup.js', 'client', {bare: true});
   api.addFiles('bare_tests.js', 'client');
-  //api.addFiles('asl_helpers_test.js', 'server');
   api.addFiles('emitter-promise-tests.js', 'server');
 });

@@ -1,6 +1,6 @@
 // Handles the job of waiting until text is seen that matches a
 // regular expression.
-import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
+import { makeFulfillablePromise } from '../utils/als_helpers.js';
 import TestFailure from './test-failure.js';
 import { Console } from '../console/console.js';
 

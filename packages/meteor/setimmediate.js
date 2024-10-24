@@ -134,7 +134,17 @@ function useTimeout() {
   return setImmediate;
 }
 
-
+/**
+ * setImmediate needs to schedule a macrotask.
+ * The purpose of the api is to schedule some work after any already queued macrotasks,
+ * without adding unnecessary delays like setTimeout would (which is why the browser polyfills usually use postMessage).
+ * Using a microtask would do the opposite - schedule the work to run before any other macrotask.
+ *
+ * For example,
+ * You could use it in one app to break apart a large amount of synchronous work
+ * so it finishes as quickly as possible without making the page unresponsive.
+ * Microtasks would instead block the browser from running event handlers or rendering until it is finished.
+ */
 Meteor._setImmediate =
   useSetImmediate() ||
   usePostMessage() ||

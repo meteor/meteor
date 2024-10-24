@@ -8,7 +8,7 @@ var isopackets = require('../../tool-env/isopackets.js');
 var release = require('../../packaging/release.js');
 var catalog = require('../../packaging/catalog/catalog.js');
 var buildmessage = require('../../utils/buildmessage.js');
-const { makeGlobalAsyncLocalStorage } = require("../../utils/fiber-helpers");
+const { makeGlobalAsyncLocalStorage } = require("../../utils/als_helpers");
 var projectContextModule = require('../../project-context.js');
 var safeWatcher = require("../../fs/safe-watcher");
 

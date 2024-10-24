@@ -1,12 +1,12 @@
 var _ = require("underscore");
 
-const getAslStore = () => global.__METEOR_ASYNC_LOCAL_STORAGE.getStore();
-const getValueFromAslStore = key => getAslStore()[key];
-const updateAslStore = (key, value) => getAslStore()[key] = value;
+var getAlsStore = () => global.__METEOR_ASYNC_LOCAL_STORAGE.getStore();
+var getValueFromAslStore = key => getAlsStore()[key];
+var updateAslStore = (key, value) => getAlsStore()[key] = value;
 
 exports.makeGlobalAsyncLocalStorage = () => {
   if (!global.__METEOR_ASYNC_LOCAL_STORAGE) {
-    const { AsyncLocalStorage } = require('async_hooks');
+    var AsyncLocalStorage = require('async_hooks').AsyncLocalStorage;
     global.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
   }
 
@@ -14,10 +14,10 @@ exports.makeGlobalAsyncLocalStorage = () => {
 };
 
 exports.parallelEach = async function (collection, callback, context) {
-  const errors = [];
+  var errors = [];
   context = context || null;
 
-  const results = await Promise.all(_.map(collection, (...args) => {
+  var results = await Promise.all(_.map(collection, (...args) => {
     async function run() {
       return callback.apply(context, args);
     }
@@ -64,9 +64,9 @@ Object.assign(exports.EnvironmentVariable.prototype, {
    * @returns {any} The current value of the variable, or its default value if
    */
   get() {
-    const self = this;
-    const currentValue = getValueFromAslStore("_meteor_dynamics");
-    let returnValue = currentValue && currentValue[self.slot];
+    var self = this;
+    var currentValue = getValueFromAslStore("_meteor_dynamics");
+    var returnValue = currentValue && currentValue[self.slot];
 
     if (!returnValue) {
       returnValue = self.defaultValue;
@@ -76,10 +76,10 @@ Object.assign(exports.EnvironmentVariable.prototype, {
   },
 
   set(value) {
-    const self = this;
-    const currentValues = getValueFromAslStore("_meteor_dynamics") || {};
+    var self = this;
+    var currentValues = getValueFromAslStore("_meteor_dynamics") || {};
 
-    const saved = _.has(currentValues, self.slot)
+    var saved = _.has(currentValues, self.slot)
       ? currentValues[self.slot]
       : this.defaultValue;
 
@@ -100,7 +100,7 @@ Object.assign(exports.EnvironmentVariable.prototype, {
    * @returns {any} The return value of the function
    */
   async withValue(value, func) {
-    const reset = this.set(value);
+    var reset = this.set(value);
     try {
       return await func();
     } finally {
@@ -116,11 +116,11 @@ exports.bindEnvironment = function (func) {
   var boundValues = Array.isArray(dynamics) ? dynamics.slice() : [];
 
   return function (...args) {
-    const self = this;
+    var self = this;
 
     var runWithEnvironment = async function () {
-      const savedValues = getValueFromAslStore("_meteor_dynamics");
-      let ret;
+      var savedValues = getValueFromAslStore("_meteor_dynamics");
+      var ret;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
@@ -135,7 +135,7 @@ exports.bindEnvironment = function (func) {
       return ret;
     };
 
-    if (getAslStore()) {
+    if (getAlsStore()) {
       return runWithEnvironment();
     }
 

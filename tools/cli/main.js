@@ -14,7 +14,7 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
-const { makeGlobalAsyncLocalStorage } = require("../utils/fiber-helpers");
+const { makeGlobalAsyncLocalStorage } = require("../utils/als_helpers");
 const archinfo = require('../utils/archinfo');
 import { isEmacs } from "../utils/utils.js";
 
