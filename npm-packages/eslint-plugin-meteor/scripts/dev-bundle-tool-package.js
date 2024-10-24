@@ -14,7 +14,7 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
     "node-gyp": "9.4.0",
     "@mapbox/node-pre-gyp": "1.0.11",
-    typescript: "5.6.2",
+    typescript: "5.6.3",
     "@meteorjs/babel": "7.20.0",
     "@meteorjs/reify": "0.25.3",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
