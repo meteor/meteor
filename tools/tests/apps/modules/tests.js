@@ -436,7 +436,6 @@ describe("Meteor packages", () => {
   });
 
   it("should be importable", () => {
-    assert.strictEqual(require("meteor/underscore")._, _);
 
     const Blaze = require("meteor/blaze").Blaze;
     assert.strictEqual(typeof Blaze, "object");

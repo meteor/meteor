@@ -88,7 +88,6 @@ sidebar_categories:
     - packages/server-render
     - packages/spacebars
     - packages/standard-minifier-css
-    - packages/underscore
     - packages/url
     - packages/webapp
     - packages/packages-listing
@@ -393,7 +392,6 @@ redirects:
   /#/full/oauth-encryption: 'packages/oauth-encryption.html'
   /#/full/random: 'packages/random.html'
   /#/full/spiderable: 'packages/spiderable.html'
-  /#/full/underscore: 'packages/underscore.html'
   /#/full/webapp: 'packages/webapp.html'
   '#meteor_isclient': 'api/core.html#Meteor-isClient'
   '#meteor_isserver': 'api/core.html#Meteor-isServer'
@@ -669,6 +667,5 @@ redirects:
   '#oauth-encryption': 'packages/oauth-encryption.html'
   '#random': 'packages/random.html'
   '#spiderable': 'packages/spiderable.html'
-  '#underscore': 'packages/underscore.html'
   '#webapp': 'packages/webapp.html'
   '#pkg_spacebars': 'packages/spacebars.html'

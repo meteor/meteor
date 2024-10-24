@@ -26,7 +26,7 @@ ObserveMultiplexer = class {
     const self = this;
     this.callbackNames().forEach(callbackName => {
       this[callbackName] = function(/* ... */) {
-        self._applyCallback(callbackName, _.toArray(arguments));
+        self._applyCallback(callbackName, [...arguments]);
       };
     });
   }

@@ -43,7 +43,7 @@ PollingObserveDriver = function (options) {
   
 };
 
-_.extend(PollingObserveDriver.prototype, {
+Object.assign(PollingObserveDriver.prototype, {
   _init: async function () {
     const self = this;
     const options = self._options;

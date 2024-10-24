@@ -1,4 +1,3 @@
-var _ = require('underscore');
 var files = require('../fs/files');
 var watch = require('../fs/watch');
 var bundler = require('../isobuild/bundler.js');
@@ -19,7 +18,7 @@ var bashParse = function (s) {
   if (s.search("\"") !== -1 || s.search("'") !== -1) {
     throw new Error("Meteor cannot currently handle quoted SERVER_NODE_OPTIONS");
   }
-  return _.without(s.split(/\s+/), '');
+  return s.split(/\s+/).filter(Boolean);
 };
 
 var getNodeOptionsFromEnvironment = function () {
@@ -238,7 +237,7 @@ Object.assign(AppProcess.prototype, {
       files.pathJoin(self.bundlePath, 'main.js'));
 
     // Setting options
-    var opts = _.clone(self.nodeOptions);
+    var opts = JSON.parse(JSON.stringify(self.nodeOptions));
 
     if (self.inspect) {
       // Always use --inspect rather than --inspect-brk, even when

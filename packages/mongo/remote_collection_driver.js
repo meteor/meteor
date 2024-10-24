@@ -47,11 +47,9 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
     });
 
     CLIENT_ONLY_METHODS.forEach(function (m) {
-      ret[m] = _.bind(self.mongo[m], self.mongo, name);
-
       ret[m] = function (...args) {
         throw new Error(
-          `${m} +  is not available on the server. Please use ${getAsyncMethodName(
+          `${m} is not available on the server. Please use ${getAsyncMethodName(
             m
           )}() instead.`
         );
