@@ -2,9 +2,9 @@
   "lockfileVersion": 4,
   "dependencies": {
     "@types/node": {
-      "version": "22.7.6",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.7.6.tgz",
-      "integrity": "sha512-/d7Rnj0/ExXDMcioS78/kf1lMzYk4BZV8MZGTBKzTGZ6/406ukkbYlIsZmMPhcR5KlkunDHQLrtAVmSq7r+mSw=="
+      "version": "22.7.9",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.7.9.tgz",
+      "integrity": "sha512-jrTfRC7FM6nChvU7X2KqcrgquofrWLFDeYC1hKfwNWomVvrn7JIksqf344WN2X/y8xrgqBd2dJATZV4GbatBfg=="
     },
     "@types/notp": {
       "version": "2.0.5",

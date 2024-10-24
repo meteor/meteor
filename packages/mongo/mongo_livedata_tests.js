@@ -1,6 +1,6 @@
-import isEmpty from 'lodash.isempty';
 import isObject from 'lodash.isobject';
 import times from 'lodash.times';
+import { ObserveMultiplexer } from './observe_multiplex';
 
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
@@ -911,9 +911,10 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
         test.length(o2.output, 0);
         // White-box: ObserveMultiplexer has nulled its _handles so you can't
         // accidentally join to it.
-        test.isNull(observeMultiplexer._handles);
+        test.isNull(observeMultiplexer._handles, '_handles should be null');
         // Start yet another handle on the same query.
         var o3 = await observer();
+
         // Initial adds.
         test.length(o3.output, 2);
         test.include([docId1, docId2], o3.output[0].added);

@@ -585,6 +585,7 @@ if (Meteor.isServer) {
       const promise = new Promise(r => callOnFinish = r);
 
       var environmentVariable = new Meteor.EnvironmentVariable();
+
       await environmentVariable.withValue(true, async function() {
         var handle = await c
           .find({}, { fields: { 'type.name': 1 } })

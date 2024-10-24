@@ -435,7 +435,7 @@ export class TestCase {
         stop_at_offset
       );
 
-      const result = this.func(results, resolve);
+      const result = Meteor._runFresh(() => this.func(results, resolve));
       if (result && typeof result.then === "function") {
         return result.then(resolve, reject);
       }

@@ -4,11 +4,10 @@ import {
   getAsyncMethodName,
   CLIENT_ONLY_METHODS
 } from "meteor/minimongo/constants";
+import { MongoConnection } from './mongo_connection';
 
-MongoInternals.RemoteCollectionDriver = function (
-  mongo_url, options) {
-  var self = this;
-  self.mongo = new MongoConnection(mongo_url, options);
+MongoInternals.RemoteCollectionDriver = function (mongo_url, options) {
+  this.mongo = new MongoConnection(mongo_url, options);
 };
 
 const REMOTE_COLLECTION_METHODS = [

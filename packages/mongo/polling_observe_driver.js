@@ -1,9 +1,10 @@
 import throttle from 'lodash.throttle';
+import { listenAll } from './mongo_driver';
 
 var POLLING_THROTTLE_MS = +process.env.METEOR_POLLING_THROTTLE_MS || 50;
 var POLLING_INTERVAL_MS = +process.env.METEOR_POLLING_INTERVAL_MS || 10 * 1000;
 
-PollingObserveDriver = function (options) {
+export const PollingObserveDriver = function (options) {
   const self = this;
   self._options = options;
 
@@ -14,7 +15,7 @@ PollingObserveDriver = function (options) {
   self._stopCallbacks = [];
   self._stopped = false;
 
-  self._cursor = self._mongoHandle._createSynchronousCursor(
+  self._cursor = self._mongoHandle._createAsynchronousCursor(
     self._cursorDescription);
 
   // previous results snapshot.  on each poll cycle, diffs against

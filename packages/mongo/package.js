@@ -42,6 +42,7 @@ Package.onUse(function (api) {
     "mongo-id",
     "check",
     "ecmascript",
+    "typescript",
     "mongo-dev-server",
     "logging",
   ]);
@@ -86,8 +87,8 @@ Package.onUse(function (api) {
   api.addFiles(
     [
       "mongo_driver.js",
-      "oplog_tailing.js",
-      "observe_multiplex.js",
+      "oplog_tailing.ts",
+      "observe_multiplex.ts",
       "doc_fetcher.js",
       "polling_observe_driver.js",
       "oplog_observe_driver.js",
@@ -108,7 +109,7 @@ Package.onTest(function (api) {
   api.use('ecmascript');
   api.use('npm-mongo', 'server');
   api.use(['tinytest', 'test-helpers', 'ejson', 'random',
-           'ddp', 'base64']);
+           'ddp', 'base64', 'typescript']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles("mongo_livedata_tests.js", ["client", "server"]);
