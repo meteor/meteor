@@ -98,6 +98,9 @@ export namespace Mongo {
       insert?:
         | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
         | undefined;
+      insertAsync?:
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
+        | undefined;
       update?:
         | ((
             userId: string,
@@ -106,8 +109,19 @@ export namespace Mongo {
             modifier: any
           ) => boolean)
         | undefined;
+      updateAsync?:
+        | ((
+            userId: string,
+            doc: DispatchTransform<Fn, T, U>,
+            fieldNames: string[],
+            modifier: any
+          ) => Promise<boolean>|boolean)
+        | undefined;
       remove?:
         | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | undefined;
+      removeAsync?:
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
