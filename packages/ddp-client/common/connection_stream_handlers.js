@@ -73,6 +73,7 @@ export class ConnectionStreamHandlers {
       case 'removed':
       case 'ready':
       case 'updated':
+      case 'addedBatch':
         await this._connection._livedata_data(msg);
         break;
 

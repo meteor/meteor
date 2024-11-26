@@ -1,7 +1,6 @@
-import { MongoID } from 'meteor/mongo-id';
+import { hasOwn, isEmpty } from "meteor/ddp-common/utils";
 import { DiffSequence } from 'meteor/diff-sequence';
-import { hasOwn } from "meteor/ddp-common/utils";
-import { isEmpty } from "meteor/ddp-common/utils";
+import { MongoID } from 'meteor/mongo-id';
 
 export class DocumentProcessors {
   constructor(connection) {
@@ -32,13 +31,18 @@ export class DocumentProcessors {
         // that stub-written values are preserved.
         const currentDoc = await self._stores[msg.collection].getDoc(msg.id);
         if (currentDoc !== undefined) msg.fields = currentDoc;
-
         self._pushUpdate(updates, msg.collection, msg);
       } else if (isExisting) {
         throw new Error('Server sent add for existing id: ' + msg.id);
       }
     } else {
       self._pushUpdate(updates, msg.collection, msg);
+    }
+  }
+
+  async _process_added_batch({ msg, collection, docs }, updates) {
+    for (const doc of docs) {
+      await this._process_added({ msg: 'added', id: doc.id, collection, fields: doc.fields }, updates);
     }
   }
 

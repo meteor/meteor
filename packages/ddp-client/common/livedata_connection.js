@@ -1,22 +1,21 @@
-import { Meteor } from 'meteor/meteor';
 import { DDPCommon } from 'meteor/ddp-common';
-import { Tracker } from 'meteor/tracker';
-import { EJSON } from 'meteor/ejson';
-import { Random } from 'meteor/random';
-import { MongoID } from 'meteor/mongo-id';
-import { DDP } from './namespace.js';
-import { MethodInvoker } from './method_invoker';
 import {
   hasOwn,
-  slice,
-  keys,
   isEmpty,
+  keys,
   last,
+  slice,
 } from "meteor/ddp-common/utils";
+import { EJSON } from 'meteor/ejson';
+import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
+import { Tracker } from 'meteor/tracker';
 import { ConnectionStreamHandlers } from './connection_stream_handlers';
-import { MongoIDMap } from './mongo_id_map';
-import { MessageProcessors } from './message_processors';
 import { DocumentProcessors } from './document_processors';
+import { MessageProcessors } from './message_processors';
+import { MethodInvoker } from './method_invoker';
+import { MongoIDMap } from './mongo_id_map';
+import { DDP } from './namespace.js';
 
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
@@ -288,6 +287,7 @@ export class Connection {
 
     // Expose document processor methods to maintain backward compatibility
     this._process_added = (msg, updates) => this._documentProcessors._process_added(msg, updates);
+    this._process_added_batch = (msg, updates) => this._documentProcessors._process_added_batch(msg, updates);
     this._process_changed = (msg, updates) => this._documentProcessors._process_changed(msg, updates);
     this._process_removed = (msg, updates) => this._documentProcessors._process_removed(msg, updates);
     this._process_ready = (msg, updates) => this._documentProcessors._process_ready(msg, updates);

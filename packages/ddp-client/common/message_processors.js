@@ -1,8 +1,7 @@
 import { DDPCommon } from 'meteor/ddp-common';
+import { hasOwn, isEmpty } from "meteor/ddp-common/utils";
 import { Meteor } from 'meteor/meteor';
 import { DDP } from './namespace.js';
-import { EJSON } from 'meteor/ejson';
-import { isEmpty, hasOwn } from "meteor/ddp-common/utils";
 
 export class MessageProcessors {
   constructor(connection) {
@@ -206,8 +205,11 @@ export class MessageProcessors {
    */
   async _processOneDataMessage(msg, updates) {
     const messageType = msg.msg;
-
+    
     switch (messageType) {
+      case 'addedBatch':
+        await this._connection._process_added_batch(msg, updates);
+        break;
       case 'added':
         await this._connection._process_added(msg, updates);
         break;

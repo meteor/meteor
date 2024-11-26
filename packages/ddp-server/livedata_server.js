@@ -191,11 +191,42 @@ Object.assign(Session.prototype, {
     return this._isSending || !this.server.getPublicationStrategy(collectionName).useCollectionView;
   },
 
+  _batchedAdds: new Map(),
 
   sendAdded(collectionName, id, fields) {
-    if (this._canSend(collectionName)) {
-      this.send({ msg: 'added', collection: collectionName, id, fields });
+    if (!this._canSend(collectionName)) {
+      return;
     }
+
+    if (!this._batchedAdds.has(collectionName)) {
+      this._batchedAdds.set(collectionName, {
+        docs: [],
+        timeoutHandle: null
+      });
+    }
+
+    const batch = this._batchedAdds.get(collectionName);
+
+    batch.docs.push({ id, fields });
+
+    if (batch.timeoutHandle) {
+      clearTimeout(batch.timeoutHandle);
+    }
+
+    const sendBatch = () => {
+      this.sendAddedBatch(collectionName, batch.docs);
+      this._batchedAdds.delete(collectionName);
+    };
+
+    if (batch.docs.length >= 100) {
+      sendBatch();
+    } else {
+      batch.timeoutHandle = setTimeout(sendBatch, 10);
+    }
+  },
+
+  sendAddedBatch(collectionName, docs) {
+    this.send({ msg: 'addedBatch', collection: collectionName, docs });
   },
 
   sendChanged(collectionName, id, fields) {
