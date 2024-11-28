@@ -216,14 +216,21 @@ Object.assign(Session.prototype, {
     }
 
     const sendBatch = () => {
-      this.sendAddedBatch(collectionName, batch.docs);
-      this._batchedAdds.delete(collectionName);
+      try {
+        this.sendAddedBatch(collectionName, batch.docs);
+        this._batchedAdds.delete(collectionName);
+      } catch (e) {
+        console.error('error sending batch', e)
+      }
     };
 
-    if (batch.docs.length >= 100) {
+    if (batch.docs.length >= 20) {
       sendBatch();
     } else {
-      batch.timeoutHandle = setTimeout(sendBatch, 10);
+      batch.timeoutHandle = setTimeout(() => {
+        console.log('send batch timeout', this._batchedAdds.size)
+        sendBatch();
+      }, 5000);
     }
   },
 
