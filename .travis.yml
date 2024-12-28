@@ -3,20 +3,25 @@ os: linux
 dist: jammy
 sudo: required
 services: xvfb
+
 node_js:
   - "22.11.0"
+
 cache:
   directories:
     - ".meteor"
     - ".babel-cache"
+
 script:
   - travis_retry ./packages/test-in-console/run.sh
+
 env:
   global:
     - CXX=g++-12
     - phantom=false
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
     - TEST_PACKAGES_EXCLUDE=stylus
+
 addons:
   apt:
     sources:
