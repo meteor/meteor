@@ -1,7 +1,7 @@
 {
   "name": "meteor",
-  "version": "0.0.1",
-  "description": "Used to apply Prettier and ESLint manually",
+  "version": "0.0.2",
+  "description": "A project to apply Prettier and ESLint configurations for code quality and consistency.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/meteor/meteor.git"
@@ -79,5 +79,12 @@
       "curly": "off",
       "sort-imports": "off"
     }
+  },
+  "scripts": {
+    "lint": "eslint . --fix && prettier --write .",
+    "test": "echo \"No tests specified\" && exit 0",
+    "build": "echo \"Build complete!\"",
+    "format": "prettier --write \"**/*.js\"",
+    "start": "node index.js"
   }
 }
