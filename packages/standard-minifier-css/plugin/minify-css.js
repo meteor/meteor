@@ -1,6 +1,6 @@
 import sourcemap from "source-map";
 import { createHash } from "crypto";
-import LRUCache from "lru-cache";
+import { LRUCache } from "lru-cache"
 import { loadPostCss, watchAndHashDeps, usePostCss } from './postcss.js';
 import { Log } from 'meteor/logging';
 
@@ -21,6 +21,10 @@ class CssToolsMinifier {
   constructor() {
     this.cache = new LRUCache({
       max: 100,
+      // v11 requires explicit maxSize if we want to limit by count
+      maxSize: 100,
+      // v11 requires a size calculator if maxSize is set
+      sizeCalculation: () => 1
     });
 
     this.depsHashCache = Object.create(null);

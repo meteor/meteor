@@ -19,87 +19,79 @@ const missingPostCssError = new Error([
     '',
   ].join('\n'));
 
-export async function loadPostCss() {
-  if (loaded) {
-    return { postcssConfig };
-  }
-
-  let loadConfig;
-  try {
-    loadConfig = require('postcss-load-config');
-  } catch (e) {
-    // The app doesn't have this package installed
-    // Assuming the app doesn't use PostCSS
-    loaded = true;
-
-    return {};
- }
-
-  let config;
-  try {
-    config = await loadConfig({ meteor: true });
-  } catch (e) {
-    if (e.message.includes('No PostCSS Config found in')) {
-      // PostCSS is not used by this app
-      loaded = true;
-
-      return {};
+  export async function loadPostCss() {
+    if (loaded) {
+      return { postcssConfig };
     }
-
-    if (e.message.includes('Cannot find module \'postcss\'')) {
+  
+    const plugins = [];
+    let postcss;
+    
+    // Try to load postcss first
+    try {
+      postcss = require('postcss');
+    } catch (e) {
       return { error: missingPostCssError };
     }
-
-    e.message = `While loading postcss config: ${e.message}`;
-    return {
-      error: e,
-    };
+    
+    // Try to load tailwindcss if it exists
+    try {
+      const tailwind = require('tailwindcss');
+      plugins.push(tailwind());
+    } catch (e) {
+      // Tailwind not found, continue without it
+    }
+  
+    // Try loading from postcss-load-config as fallback
+    try {
+      const loadConfig = require('postcss-load-config');
+      const config = await loadConfig({ meteor: true });
+      plugins.push(...config.plugins);
+    } catch (e) {
+      // If no config found, that's fine - we might have Tailwind
+      if (!plugins.length && !e.message.includes('No PostCSS Config found in')) {
+        if (e.message.includes('Cannot find module \'postcss\'')) {
+          return { error: missingPostCssError };
+        }
+        return { error: e };
+      }
+    }
+  
+    if (plugins.length > 0) {
+      postcssConfig = {
+        postcss,
+        plugins,
+        options: {
+          parser: null
+        },
+        excludedMeteorPackages: []
+      };
+    }
+  
+    loaded = true;
+    return { postcssConfig };
   }
-
-  let postcss;
-  try {
-    postcss = require('postcss');
-  } catch (e) {
-    return { error: missingPostCssError };
+  
+  export function usePostCss(file, postcssConfig) {
+    if (!postcssConfig || !postcssConfig.plugins || !postcssConfig.plugins.length) {
+      return false;
+    }
+  
+    // Skip excluded Meteor packages only if the file is from a package
+    if (postcssConfig.excludedMeteorPackages && 
+        file.getArch().startsWith('web.browser')) {
+      const path = file.getPathInBundle();
+      // Check if the file is from a package (packages are in the format packages/package-name/...)
+      if (path.startsWith('packages/')) {
+        const packagePath = path.split('/')[1]; // Get the package name from the path
+        if (postcssConfig.excludedMeteorPackages.includes(packagePath.replace('_', ':'))) {
+          return false;
+        }
+      }
+    }
+  
+    return true;
   }
-
-  const postcssVersion = require('postcss/package.json').version;
-  const major = parseInt(postcssVersion.split('.')[0], 10);
-  if (major !== 8) {
-    // TODO: should this just be a warning instead?
-    const error = new Error([
-      '',
-      `Found version ${postcssVersion} of postcss in your node_modules`,
-      'directory. standard-minifier-css is only compatible with',
-      'version 8 of PostCSS. Please restart Meteor after installing',
-      'a supported version of PostCSS',
-      '',
-    ].join('\n'));
-
-    return { error };
-  }
-
-  loaded = true;
-  config.postcss = postcss;
-  postcssConfig = config;
-
-  return { postcssConfig };
-}
-
-export function usePostCss(file, postcssConfig) {
-  if (!postcssConfig) {
-    return false;
-  }
-
-  const excludedPackages = postcssConfig.options.excludedMeteorPackages || [];
-  const path = file.getPathInBundle();
-
-  const excluded = excludedPackages.some(name => {
-    return path.includes(`packages/${name.replace(':', '_')}`);
-  });
-
-  return !excluded;
-}
 
 export const watchAndHashDeps = Profile(
   'watchAndHashDeps',

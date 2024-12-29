@@ -4,8 +4,8 @@ Package.describe({
 });
 
 Npm.depends({
-  postcss: '8.4.21',
-  cssnano: '5.1.15'
+  postcss: '8.4.49',
+  cssnano: '7.0.6'
 });
 
 Package.onUse(function (api) {

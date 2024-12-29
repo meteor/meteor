@@ -13,10 +13,10 @@ Package.registerBuildPlugin({
     'logging',
   ],
   npmDependencies: {
-    "@babel/runtime": "7.23.5",
+    "@babel/runtime": "7.26.0",
     "source-map": "0.7.4",
-    "lru-cache": "6.0.0",
-    "micromatch": "4.0.5",
+    "lru-cache": "11.0.0",
+    "micromatch": "4.0.8",
   },
   sources: [
     'plugin/minify-css.js',
