@@ -45,7 +45,6 @@
 ### [callback-hook](https://github.com/meteor/meteor/tree/devel/packages/callback-hook) {#callback-hook}
 ### [check](https://github.com/meteor/meteor/tree/devel/packages/check) {#check}
 ### [constraint-solver](https://github.com/meteor/meteor/tree/devel/packages/constraint-solver) {#constraint-solver}
-### [context](https://github.com/meteor/meteor/tree/devel/packages/context) {#context}
 ### [core-runtime](https://github.com/meteor/meteor/tree/devel/packages/core-runtime) {#core-runtime}
 ### [crosswalk](https://github.com/meteor/meteor/tree/devel/packages/crosswalk) {#crosswalk}
 ### [ddp](https://github.com/meteor/meteor/tree/devel/packages/ddp) {#ddp}

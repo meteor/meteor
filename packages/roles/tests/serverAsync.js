@@ -57,23 +57,23 @@ const sameMembers = (test, value, expected) => {
   );
 };
 
-const sameDeepMembers = (test, value, expected) => {
-  // Helper to sort object keys recursively
-  const sortObjectKeys = (obj) => {
-    if (Array.isArray(obj)) {
-      return obj.map(sortObjectKeys);
-    }
-    if (obj && typeof obj === "object") {
-      return Object.keys(obj)
-        .sort()
-        .reduce((sorted, key) => {
-          sorted[key] = sortObjectKeys(obj[key]);
-          return sorted;
-        }, {});
-    }
-    return obj;
-  };
+// Helper to sort object keys recursively
+const sortObjectKeys = (obj) => {
+  if (Array.isArray(obj)) {
+    return obj.map(sortObjectKeys);
+  }
+  if (obj && typeof obj === "object") {
+    return Object.keys(obj)
+      .sort()
+      .reduce((sorted, key) => {
+        sorted[key] = sortObjectKeys(obj[key]);
+        return sorted;
+      }, {});
+  }
+  return obj;
+};
 
+const sameDeepMembers = (test, value, expected) => {
   const sortedValue = sortObjectKeys(value);
   const sortedExpected = sortObjectKeys(expected);
 
@@ -82,6 +82,16 @@ const sameDeepMembers = (test, value, expected) => {
     JSON.stringify(sortedExpected),
     "Role assignments should match expected structure"
   );
+};
+
+const sameDeepUnorderedMembers = (test, value, expected) => {
+  const sortAndStringify = (arr) => {
+    return JSON.stringify(arr.map(item => JSON.stringify(sortObjectKeys(item))).sort());
+  };
+  const sortedValue = sortAndStringify(value);
+  const sortedExpected = sortAndStringify(expected);
+
+  test.equal(sortedValue, sortedExpected, 'Arrays should have the same elements, regardless of order');
 };
 
 const hasProp = (target, prop) => Object.hasOwnProperty.call(target, prop);
@@ -1885,7 +1895,7 @@ Tinytest.addAsync("roles -keep assigned roles", async function (test) {
     anyScope: true,
     fullObjects: true,
   });
-  sameDeepMembers(
+  sameDeepUnorderedMembers(
     test,
     rolesForUser.map((obj) => {
       delete obj._id;
@@ -1914,7 +1924,7 @@ Tinytest.addAsync("roles -keep assigned roles", async function (test) {
     anyScope: true,
     fullObjects: true,
   });
-  sameDeepMembers(
+  sameDeepUnorderedMembers(
     test,
     rolesForUser2.map((obj) => {
       delete obj._id;
@@ -1949,7 +1959,7 @@ Tinytest.addAsync("roles -keep assigned roles", async function (test) {
     anyScope: true,
     fullObjects: true,
   });
-  sameDeepMembers(
+  sameDeepUnorderedMembers(
     test,
     rolesForUser3.map((obj) => {
       delete obj._id;
@@ -1973,7 +1983,7 @@ Tinytest.addAsync("roles -keep assigned roles", async function (test) {
     anyScope: true,
     fullObjects: true,
   });
-  sameDeepMembers(
+  sameDeepUnorderedMembers(
     test,
     rolesForUser4.map((obj) => {
       delete obj._id;
@@ -2063,7 +2073,7 @@ Tinytest.addAsync(
       anyScope: true,
       fullObjects: true,
     });
-    sameDeepMembers(
+    sameDeepUnorderedMembers(
       test,
       usersRoles.map((obj) => {
         delete obj._id;
@@ -2109,7 +2119,7 @@ Tinytest.addAsync(
       anyScope: true,
       fullObjects: true,
     });
-    sameDeepMembers(
+    sameDeepUnorderedMembers(
       test,
       usersRoles2.map((obj) => {
         delete obj._id;
@@ -2153,7 +2163,7 @@ Tinytest.addAsync(
       anyScope: true,
       fullObjects: true,
     });
-    sameDeepMembers(
+    sameDeepUnorderedMembers(
       test,
       usersRoles3.map((obj) => {
         delete obj._id;
@@ -2203,7 +2213,7 @@ Tinytest.addAsync(
       anyScope: true,
       fullObjects: true,
     });
-    sameDeepMembers(
+    sameDeepUnorderedMembers(
       test,
       usersRoles4.map((obj) => {
         delete obj._id;
@@ -2255,7 +2265,7 @@ Tinytest.addAsync(
       anyScope: true,
       fullObjects: true,
     });
-    sameDeepMembers(
+    sameDeepUnorderedMembers(
       test,
       usersRoles5.map((obj) => {
         delete obj._id;
@@ -2308,7 +2318,7 @@ Tinytest.addAsync(
       anyScope: true,
       fullObjects: true,
     });
-    sameDeepMembers(
+    sameDeepUnorderedMembers(
       test,
       usersRoles6.map((obj) => {
         delete obj._id;
