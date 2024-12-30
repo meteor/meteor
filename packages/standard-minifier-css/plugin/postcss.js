@@ -35,29 +35,35 @@ export async function loadPostCss() {
   }
 
   let config;
+  let tailwindPlugin;
+  
+  // Try to load tailwindcss once
+  try {
+    const tailwind = require('tailwindcss');
+    tailwindPlugin = tailwind();
+  } catch (e) {
+    // Tailwind not found, continue without it
+  }
+
   try {
     config = await loadConfig({ meteor: true });
     
-    // Try to load tailwindcss if it exists
-    try {
-      const tailwind = require('tailwindcss');
+    // Add tailwind if it was found
+    if (tailwindPlugin) {
       if (!config.plugins) {
         config.plugins = [];
       }
-      config.plugins.unshift(tailwind());
-    } catch (e) {
-      // Tailwind not found, continue without it
+      config.plugins.unshift(tailwindPlugin);
     }
   } catch (e) {
     if (e.message.includes('No PostCSS Config found in')) {
-      // Try Tailwind even without PostCSS config
-      try {
-        const tailwind = require('tailwindcss');
+      // If we have Tailwind but no PostCSS config, create minimal config
+      if (tailwindPlugin) {
         config = {
-          plugins: [tailwind()],
+          plugins: [tailwindPlugin],
           options: {}
         };
-      } catch (tailwindError) {
+      } else {
         // Neither PostCSS config nor Tailwind found
         loaded = true;
         return {};
@@ -98,26 +104,26 @@ export async function loadPostCss() {
   return { postcssConfig };
 }
   
-  export function usePostCss(file, postcssConfig) {
-    if (!postcssConfig || !postcssConfig.plugins || !postcssConfig.plugins.length) {
-      return false;
-    }
-  
-    // Skip excluded Meteor packages only if the file is from a package
-    if (postcssConfig.excludedMeteorPackages && 
-        file.getArch().startsWith('web.browser')) {
-      const path = file.getPathInBundle();
-      // Check if the file is from a package (packages are in the format packages/package-name/...)
-      if (path.startsWith('packages/')) {
-        const packagePath = path.split('/')[1]; // Get the package name from the path
-        if (postcssConfig.excludedMeteorPackages.includes(packagePath.replace('_', ':'))) {
-          return false;
-        }
+export function usePostCss(file, postcssConfig) {
+  if (!postcssConfig || !postcssConfig.plugins || !postcssConfig.plugins.length) {
+    return false;
+  }
+
+  // Skip excluded Meteor packages only if the file is from a package
+  if (postcssConfig.excludedMeteorPackages && 
+      file.getArch().startsWith('web.browser')) {
+    const path = file.getPathInBundle();
+    // Check if the file is from a package (packages are in the format packages/package-name/...)
+    if (path.startsWith('packages/')) {
+      const packagePath = path.split('/')[1]; // Get the package name from the path
+      if (postcssConfig.excludedMeteorPackages.includes(packagePath.replace('_', ':'))) {
+        return false;
       }
     }
-  
-    return true;
   }
+
+  return true;
+}
 
 export const watchAndHashDeps = Profile(
   'watchAndHashDeps',
