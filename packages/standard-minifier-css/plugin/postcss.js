@@ -33,6 +33,21 @@ const missingPostCssError = new Error([
     } catch (e) {
       return { error: missingPostCssError };
     }
+  
+    // Check PostCSS version
+    const postcssVersion = require('postcss/package.json').version;
+    const major = parseInt(postcssVersion.split('.')[0], 10);
+    if (major !== 8) {
+      const error = new Error([
+        '',
+        `Found version ${postcssVersion} of postcss in your node_modules`,
+        'directory. standard-minifier-css is only compatible with',
+        'version 8 of PostCSS. Please restart Meteor after installing',
+        'a supported version of PostCSS',
+        '',
+      ].join('\n'));
+      return { error };
+    }
     
     // Try to load tailwindcss if it exists
     try {
@@ -48,13 +63,16 @@ const missingPostCssError = new Error([
       const config = await loadConfig({ meteor: true });
       plugins.push(...config.plugins);
     } catch (e) {
-      // If no config found, that's fine - we might have Tailwind
-      if (!plugins.length && !e.message.includes('No PostCSS Config found in')) {
-        if (e.message.includes('Cannot find module \'postcss\'')) {
-          return { error: missingPostCssError };
-        }
-        return { error: e };
+      if (e.message.includes('No PostCSS Config found in')) {
+        // PostCSS is not used by this app
+        loaded = true;
+        return {};
       }
+      if (e.message.includes('Cannot find module \'postcss\'')) {
+        return { error: missingPostCssError };
+      }
+      e.message = `While loading postcss config: ${e.message}`;
+      return { error: e };
     }
   
     if (plugins.length > 0) {
