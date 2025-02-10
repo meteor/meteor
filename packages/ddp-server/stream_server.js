@@ -1,4 +1,5 @@
 import once from 'lodash.once';
+import zlib from 'node:zlib';
 
 // By default, we use the permessage-deflate extension with default
 // configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
@@ -14,12 +15,18 @@ import once from 'lodash.once';
 var websocketExtensions = once(function () {
   var extensions = [];
 
-  var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION
-        ? JSON.parse(process.env.SERVER_WEBSOCKET_COMPRESSION) : {};
+  var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION ?
+    JSON.parse(process.env.SERVER_WEBSOCKET_COMPRESSION) : {};
+
   if (websocketCompressionConfig) {
-    extensions.push(Npm.require('permessage-deflate').configure(
-      websocketCompressionConfig
-    ));
+    extensions.push(Npm.require('permessage-deflate2').configure({
+      threshold: 1024,
+      level: zlib.constants.Z_BEST_SPEED,
+      memLevel: zlib.constants.Z_MIN_MEMLEVEL,
+      noContextTakeover: true,
+      maxWindowBits: zlib.constants.Z_MIN_WINDOWBITS,
+      ...(websocketCompressionConfig || {})
+    }));
   }
 
   return extensions;

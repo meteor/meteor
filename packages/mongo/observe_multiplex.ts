@@ -1,5 +1,5 @@
-import { ObserveHandle } from './observe_handle';
 import isEmpty from 'lodash.isempty';
+import { ObserveHandle } from './observe_handle';
 
 interface ObserveMultiplexerOptions {
   ordered: boolean;
@@ -34,7 +34,6 @@ export class ObserveMultiplexer {
 
     this._ordered = ordered;
     this._onStop = onStop;
-    // @ts-ignore
     this._queue = new Meteor._AsynchronousQueue();
     this._handles = {};
     this._resolver = null;
@@ -140,7 +139,7 @@ export class ObserveMultiplexer {
     return !!this._isReady;
   }
 
-  _applyCallback(callbackName: string, args: any[]): void {
+  _applyCallback(callbackName: string, args: any[]) {
     this._queue.queueTask(async () => {
       if (!this._handles) return;
 
@@ -152,31 +151,43 @@ export class ObserveMultiplexer {
 
       for (const handleId of Object.keys(this._handles)) {
         const handle = this._handles && this._handles[handleId];
+
         if (!handle) return;
+
         const callback = (handle as any)[`_${callbackName}`];
-        callback && (await callback.apply(
+
+        if (!callback) continue;
+
+        handle.initialAddsSent.then(callback.apply(
           null,
           handle.nonMutatingCallbacks ? args : EJSON.clone(args)
-        ));
+        ))
       }
     });
   }
 
   async _sendAdds(handle: ObserveHandle): Promise<void> {
     const add = this._ordered ? handle._addedBefore : handle._added;
-
     if (!add) return;
 
-    await this._cache.docs.forEachAsync(async (doc: any, id: string) => {
-      if (!(handle._id in this._handles!))
+    const addPromises: Promise<void>[] = [];
+
+    this._cache.docs.forEach((doc: any, id: string) => {
+      if (!(handle._id in this._handles!)) {
         throw Error("handle got removed before sending initial adds!");
+      }
 
       const { _id, ...fields } = handle.nonMutatingCallbacks ? doc : EJSON.clone(doc);
 
-      if (this._ordered)
-        await add(id, fields, null);
-      else
-        await add(id, fields);
+      const promise = this._ordered ?
+        add(id, fields, null) :
+        add(id, fields);
+
+      addPromises.push(promise);
     });
+
+    await Promise.all(addPromises);
+
+    handle.initialAddsSentResolver();
   }
 }

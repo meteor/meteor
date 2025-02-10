@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '2.0.2',
+  version: '2.1.0',
 });
 
 Package.registerBuildPlugin({
@@ -34,12 +34,14 @@ Package.onUse(function (api) {
   api.addFiles('timers.js', ['client', 'server']);
   api.addFiles('errors.js', ['client', 'server']);
   api.addFiles('asl-helpers.js', 'server');
+  api.addFiles('asynchronous_queue.js', 'server');
   api.addFiles('async_helpers.js', ['client', 'server']);
   api.addFiles('fiber_stubs_client.js', 'client');
   api.addFiles('asl-helpers-client.js', 'client');
   api.addFiles('startup_client.js', ['client']);
   api.addFiles('startup_server.js', ['server']);
   api.addFiles('debug.js', ['client', 'server']);
+  api.addFiles('deprecate.js', ['client', 'server']);
   api.addFiles('string_utils.js', ['client', 'server']);
   api.addFiles('test_environment.js', ['client', 'server']);
 

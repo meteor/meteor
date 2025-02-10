@@ -28,6 +28,17 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
   mongodPath = files.convertToOSPath(mongodPath);
   dbPath = files.convertToOSPath(dbPath);
 
+  // Because we're spawning the process with shell: true on win32, the
+  // command string and args array are effectively concatenated to
+  // a single string and passed into the shell. If any of those paths
+  // contain spaces, these will get broken up on white-spaces and treated
+  // as separate tokens. If they are quoted, they will be parsed
+  // correctly by the shell.
+  if (process.platform === 'win32') {
+    mongodPath = '"' + mongodPath + '"'
+    dbPath = '"' + dbPath + '"'
+  }
+
   let args = [
     // nb: cli-test.sh and findMongoPids make strong assumptions about the
     // order of the arguments! Check them before changing any arguments.

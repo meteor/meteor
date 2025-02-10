@@ -34,6 +34,7 @@ const packages = {
     // Ignored server files that has a features > 2016
     ignoredFiles: [
       "async_helpers.js",
+      "asynchronous_queue.js",
     ]
   },
   "accounts-ui": {},

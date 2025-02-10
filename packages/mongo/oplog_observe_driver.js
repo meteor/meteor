@@ -87,6 +87,7 @@ export const OplogObserveDriver = function (options) {
     self._comparator = null;
     self._sorter = null;
     self._unpublishedBuffer = null;
+    // Memory Growth
     self._published = new LocalCollection._IdMap;
   }
 

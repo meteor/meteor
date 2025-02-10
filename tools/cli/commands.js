@@ -1058,7 +1058,7 @@ main.registerCommand({
     process.env.GIT_TERMINAL_PROMPT = 0;
 
     const gitCommand = isWindows
-      ? `git clone --progress ${url} ${files.convertToOSPath(appPath)}`
+      ? `git clone --progress ${url} "${files.convertToOSPath(appPath)}"`
       : `git clone --progress ${url} ${appPath}`;
     const [okClone, errClone] = await bash`${gitCommand}`;
     const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;

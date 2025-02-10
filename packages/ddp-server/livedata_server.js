@@ -1,6 +1,8 @@
 import isEmpty from 'lodash.isempty';
-import isString from 'lodash.isstring';
 import isObject from 'lodash.isobject';
+import isString from 'lodash.isstring';
+import { SessionCollectionView } from './session_collection_view';
+import { SessionDocumentView } from './session_document_view';
 
 DDPServer = {};
 
@@ -55,33 +57,7 @@ DDPServer.publicationStrategies = publicationStrategies;
 // Session and Subscription are file scope. For now, until we freeze
 // the interface, Server is package scope (in the future it should be
 // exported).
-var DummyDocumentView = function () {
-  var self = this;
-  self.existsIn = new Set(); // set of subscriptionHandle
-  self.dataByKey = new Map(); // key-> [ {subscriptionHandle, value} by precedence]
-};
 
-Object.assign(DummyDocumentView.prototype, {
-  getFields: function () {
-    return {}
-  },
-
-  clearField: function (subscriptionHandle, key, changeCollector) {
-    changeCollector[key] = undefined
-  },
-
-  changeField: function (subscriptionHandle, key, value,
-                         changeCollector, isAdd) {
-    changeCollector[key] = value
-  }
-});
-
-// Represents a single document in a SessionCollectionView
-var SessionDocumentView = function () {
-  var self = this;
-  self.existsIn = new Set(); // set of subscriptionHandle
-  self.dataByKey = new Map(); // key-> [ {subscriptionHandle, value} by precedence]
-};
 
 DDPServer._SessionDocumentView = SessionDocumentView;
 
@@ -94,209 +70,8 @@ DDPServer._getCurrentFence = function () {
   return currentInvocation ? currentInvocation.fence : undefined;
 };
 
-Object.assign(SessionDocumentView.prototype, {
-
-  getFields: function () {
-    var self = this;
-    var ret = {};
-    self.dataByKey.forEach(function (precedenceList, key) {
-      ret[key] = precedenceList[0].value;
-    });
-    return ret;
-  },
-
-  clearField: function (subscriptionHandle, key, changeCollector) {
-    var self = this;
-    // Publish API ignores _id if present in fields
-    if (key === "_id")
-      return;
-    var precedenceList = self.dataByKey.get(key);
-
-    // It's okay to clear fields that didn't exist. No need to throw
-    // an error.
-    if (!precedenceList)
-      return;
-
-    var removedValue = undefined;
-    for (var i = 0; i < precedenceList.length; i++) {
-      var precedence = precedenceList[i];
-      if (precedence.subscriptionHandle === subscriptionHandle) {
-        // The view's value can only change if this subscription is the one that
-        // used to have precedence.
-        if (i === 0)
-          removedValue = precedence.value;
-        precedenceList.splice(i, 1);
-        break;
-      }
-    }
-    if (precedenceList.length === 0) {
-      self.dataByKey.delete(key);
-      changeCollector[key] = undefined;
-    } else if (removedValue !== undefined &&
-               !EJSON.equals(removedValue, precedenceList[0].value)) {
-      changeCollector[key] = precedenceList[0].value;
-    }
-  },
-
-  changeField: function (subscriptionHandle, key, value,
-                         changeCollector, isAdd) {
-    var self = this;
-    // Publish API ignores _id if present in fields
-    if (key === "_id")
-      return;
-
-    // Don't share state with the data passed in by the user.
-    value = EJSON.clone(value);
-
-    if (!self.dataByKey.has(key)) {
-      self.dataByKey.set(key, [{subscriptionHandle: subscriptionHandle,
-                                value: value}]);
-      changeCollector[key] = value;
-      return;
-    }
-    var precedenceList = self.dataByKey.get(key);
-    var elt;
-    if (!isAdd) {
-      elt = precedenceList.find(function (precedence) {
-          return precedence.subscriptionHandle === subscriptionHandle;
-      });
-    }
-
-    if (elt) {
-      if (elt === precedenceList[0] && !EJSON.equals(value, elt.value)) {
-        // this subscription is changing the value of this field.
-        changeCollector[key] = value;
-      }
-      elt.value = value;
-    } else {
-      // this subscription is newly caring about this field
-      precedenceList.push({subscriptionHandle: subscriptionHandle, value: value});
-    }
-
-  }
-});
-
-/**
- * Represents a client's view of a single collection
- * @param {String} collectionName Name of the collection it represents
- * @param {Object.<String, Function>} sessionCallbacks The callbacks for added, changed, removed
- * @class SessionCollectionView
- */
-var SessionCollectionView = function (collectionName, sessionCallbacks) {
-  var self = this;
-  self.collectionName = collectionName;
-  self.documents = new Map();
-  self.callbacks = sessionCallbacks;
-};
 
 DDPServer._SessionCollectionView = SessionCollectionView;
-
-
-Object.assign(SessionCollectionView.prototype, {
-
-  isEmpty: function () {
-    var self = this;
-    return self.documents.size === 0;
-  },
-
-  diff: function (previous) {
-    var self = this;
-    DiffSequence.diffMaps(previous.documents, self.documents, {
-      both: self.diffDocument.bind(self),
-
-      rightOnly: function (id, nowDV) {
-        self.callbacks.added(self.collectionName, id, nowDV.getFields());
-      },
-
-      leftOnly: function (id, prevDV) {
-        self.callbacks.removed(self.collectionName, id);
-      }
-    });
-  },
-
-  diffDocument: function (id, prevDV, nowDV) {
-    var self = this;
-    var fields = {};
-    DiffSequence.diffObjects(prevDV.getFields(), nowDV.getFields(), {
-      both: function (key, prev, now) {
-        if (!EJSON.equals(prev, now))
-          fields[key] = now;
-      },
-      rightOnly: function (key, now) {
-        fields[key] = now;
-      },
-      leftOnly: function(key, prev) {
-        fields[key] = undefined;
-      }
-    });
-    self.callbacks.changed(self.collectionName, id, fields);
-  },
-
-  added: function (subscriptionHandle, id, fields) {
-    var self = this;
-    var docView = self.documents.get(id);
-    var added = false;
-    if (!docView) {
-      added = true;
-      if (Meteor.server.getPublicationStrategy(this.collectionName).useDummyDocumentView) {
-        docView = new DummyDocumentView();
-      } else {
-        docView = new SessionDocumentView();
-      }
-
-      self.documents.set(id, docView);
-    }
-    docView.existsIn.add(subscriptionHandle);
-    var changeCollector = {};
-    Object.entries(fields).forEach(function ([key, value]) {
-      docView.changeField(
-        subscriptionHandle, key, value, changeCollector, true);
-    });
-    if (added)
-      self.callbacks.added(self.collectionName, id, changeCollector);
-    else
-      self.callbacks.changed(self.collectionName, id, changeCollector);
-  },
-
-  changed: function (subscriptionHandle, id, changed) {
-    var self = this;
-    var changedResult = {};
-    var docView = self.documents.get(id);
-    if (!docView)
-      throw new Error("Could not find element with id " + id + " to change");
-      Object.entries(changed).forEach(function ([key, value]) {
-      if (value === undefined)
-        docView.clearField(subscriptionHandle, key, changedResult);
-      else
-        docView.changeField(subscriptionHandle, key, value, changedResult);
-    });
-    self.callbacks.changed(self.collectionName, id, changedResult);
-  },
-
-  removed: function (subscriptionHandle, id) {
-    var self = this;
-    var docView = self.documents.get(id);
-    if (!docView) {
-      var err = new Error("Removed nonexistent document " + id);
-      throw err;
-    }
-    docView.existsIn.delete(subscriptionHandle);
-    if (docView.existsIn.size === 0) {
-      // it is gone from everyone
-      self.callbacks.removed(self.collectionName, id);
-      self.documents.delete(id);
-    } else {
-      var changed = {};
-      // remove this subscription from every precedence list
-      // and record the changes
-      docView.dataByKey.forEach(function (precedenceList, key) {
-        docView.clearField(subscriptionHandle, key, changed);
-      });
-
-      self.callbacks.changed(self.collectionName, id, changed);
-    }
-  }
-});
 
 /******************************************************************************/
 /* Session                                                                    */
@@ -636,7 +411,7 @@ Object.assign(Session.prototype, {
           if (!blocked)
             return; // idempotent
           blocked = false;
-          processNext();
+          setImmediate(processNext);
         };
 
         self.server.onMessageHook.each(function (callback) {

@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: "2.0.3",
+  version: "2.1.0",
 });
 
 Npm.depends({
@@ -89,7 +89,7 @@ Package.onUse(function (api) {
       "doc_fetcher.js",
       "polling_observe_driver.ts",
       "oplog_observe_driver.js",
-      "oplog_v2_converter.js",
+      "oplog_v2_converter.ts",
       "cursor_description.ts",
       "mongo_connection.js",
       "mongo_common.js",

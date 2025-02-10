@@ -27,6 +27,10 @@ jobs:
       cancel-in-progress: true
 
     steps:
+      - name: cleanup
+        shell: powershell
+        run: Remove-Item -Recurse -Force ${{ github.workspace }}\*
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -48,7 +52,7 @@ jobs:
           .\scripts\windows\ci\test.ps1
 
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             .\dev_bundle
