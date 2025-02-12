@@ -40,6 +40,37 @@ function log(...args) {
   Console.rawInfo(`%% ${util.format.apply(null, args)}\n`);
 }
 
+function captureLogBuffer(stdoutBuffer, stderrBuffer) {
+  var originalStdoutWrite = process.stdout.write;
+  var originalStderrWrite = process.stderr.write;
+
+  process.stdout.write = (chunk) => {
+    if (stdoutBuffer != null) {
+      stdoutBuffer += chunk;
+    }
+  };
+  process.stderr.write = (chunk) => {
+    if (stderrBuffer != null) {
+      stderrBuffer += chunk;
+    }
+  };
+
+  return {
+    restore: () => {
+      process.stdout.write = originalStdoutWrite;
+      process.stderr.write = originalStderrWrite;
+    },
+    writeStdoutBuffer: () => {
+      process.stdout.write(stdoutBuffer);
+      stdoutBuffer = '';
+    },
+    writeStderrBuffer: () => {
+      process.stderr.write(stderrBuffer);
+      stderrBuffer = '';
+    },
+  };
+}
+
 // We pin platform versions ourselves instead of relying on cordova-lib
 // so we we can update them independently (e.g. use Cordova iOS 4.0.1
 // with Cordova 5.4.1)
@@ -450,7 +481,9 @@ ${displayNamesForPlatforms(platforms)}`, async () => {
 to Cordova project`, async () => {
       let version = pinnedPlatformVersions[platform];
       let platformSpec = version ? `${platform}@${version}` : platform;
-      await cordova_lib.platform('add', platformSpec, this.defaultOptions);
+      await this.applyCordovaPatchWhen(async () => {
+        await cordova_lib.platform('add', platformSpec, this.defaultOptions);
+      });
     });
   }
 
@@ -459,6 +492,41 @@ to Cordova project`, async () => {
 from Cordova project`, async () => {
       await cordova_lib.platform('rm', platform, this.defaultOptions);
     });
+  }
+
+  patchCordova() {
+    this.runCommands(`patching Cordova project`, async () => {
+      var cordovaCommonPatch = files.pathJoin(__dirname, 'patches', 'cordova-common@FileUpdater.js');
+      var cordovaCommonFilePath = files.pathJoin(this.projectRoot, 'node_modules/cordova-common/src/FileUpdater.js');
+      files.copyFile(cordovaCommonPatch, cordovaCommonFilePath);
+    });
+  }
+
+  async applyCordovaPatchWhen(cmd) {
+    var stdoutBuffer = "";
+    var stderrBuffer = "";
+    var buffer = captureLogBuffer(stdoutBuffer, stderrBuffer);
+    this.patchCordova();
+    try {
+      await cmd();
+    } catch(e) {
+      if (e.message.includes('fs.cpSync is not a function')) {
+        try {
+          captureLogBuffer();
+          this.patchCordova();
+          await cmd();
+        } catch(e) {
+          // ignore
+        }
+      } else {
+        buffer.restore();
+        buffer.writeStderrBuffer();
+        throw e;
+      }
+    }
+    buffer.restore();
+    buffer.writeStdoutBuffer();
+    buffer.writeStderrBuffer();
   }
 
   get cordovaPlatformsInApp() {
