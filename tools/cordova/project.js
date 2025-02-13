@@ -481,9 +481,9 @@ ${displayNamesForPlatforms(platforms)}`, async () => {
 to Cordova project`, async () => {
       let version = pinnedPlatformVersions[platform];
       let platformSpec = version ? `${platform}@${version}` : platform;
-      await this.applyCordovaPatchWhen(async () => {
+      await this.executeWithCordovaPatch(async () => {
         await cordova_lib.platform('add', platformSpec, this.defaultOptions);
-      });
+      }, { ignoreRetryErrors: ['already added'] });
     });
   }
 
@@ -494,39 +494,63 @@ from Cordova project`, async () => {
     });
   }
 
-  patchCordova() {
-    this.runCommands(`patching Cordova project`, async () => {
-      var cordovaCommonPatch = files.pathJoin(__dirname, 'patches', 'cordova-common@FileUpdater.js');
-      var cordovaCommonFilePath = files.pathJoin(this.projectRoot, 'node_modules/cordova-common/src/FileUpdater.js');
-      files.copyFile(cordovaCommonPatch, cordovaCommonFilePath);
+  patchCordovaProject() {
+    this.runCommands(`Patching Cordova project`, async () => {
+      const patchSourcePath = files.pathJoin(__dirname, 'patches', 'cordova-common@FileUpdater.js');
+      const patchDestinationPath = files.pathJoin(this.projectRoot, 'node_modules/cordova-common/src/FileUpdater.js');
+      files.copyFile(patchSourcePath, patchDestinationPath);
     });
   }
 
-  async applyCordovaPatchWhen(cmd) {
-    var stdoutBuffer = "";
-    var stderrBuffer = "";
-    var buffer = captureLogBuffer(stdoutBuffer, stderrBuffer);
-    this.patchCordova();
+  async executeWithCordovaPatch(commandFunction, {
+    initialPatchErrors = ['fs.cpSync is not a function'],
+    ignoreRetryErrors = []
+  } = {}) {
+    let stdoutLogs = "";
+    let stderrLogs = "";
+    let logBuffer = captureLogBuffer(stdoutLogs, stderrLogs);
+
+    const executeCommand = async () => {
+      const result = commandFunction();
+      if (result instanceof Promise) {
+        await result;
+      }
+    };
+
     try {
-      await cmd();
-    } catch(e) {
-      if (e.message.includes('fs.cpSync is not a function')) {
+      await executeCommand();
+    } catch (initialError) {
+      var hasInitialPatchError = initialPatchErrors.some(initialPatchError =>
+          initialError.message.includes(initialPatchError)
+      );
+      if (hasInitialPatchError) {
         try {
           captureLogBuffer();
-          this.patchCordova();
-          await cmd();
-        } catch(e) {
-          // ignore
+          this.patchCordovaProject();
+          await executeCommand();
+        } catch (retryError) {
+          logBuffer.restore();
+          logBuffer.writeStdoutBuffer();
+          logBuffer.writeStderrBuffer();
+
+          var isIgnoredError = ignoreRetryErrors.some(ignoredError =>
+              retryError.message.includes(ignoredError)
+          );
+          if (!isIgnoredError) {
+            throw retryError;
+          }
         }
       } else {
-        buffer.restore();
-        buffer.writeStderrBuffer();
-        throw e;
+        logBuffer.restore();
+        logBuffer.writeStdoutBuffer();
+        logBuffer.writeStderrBuffer();
+        throw initialError;
       }
     }
-    buffer.restore();
-    buffer.writeStdoutBuffer();
-    buffer.writeStderrBuffer();
+
+    logBuffer.restore();
+    logBuffer.writeStdoutBuffer();
+    logBuffer.writeStderrBuffer();
   }
 
   get cordovaPlatformsInApp() {
