@@ -1014,14 +1014,18 @@ export class AccountsServer extends AccountsCommon {
 
         this._userObservesForConnections[connection.id] = observe;
 
-        if (! foundMatchingUser) {
-          // We've set up an observe on the user associated with `newToken`,
-          // so if the new token is removed from the database, we'll close
-          // the connection. But the token might have already been deleted
-          // before we set up the observe, which wouldn't have closed the
-          // connection because the observe wasn't running yet.
-          connection.close();
-        }
+        Meteor.setTimeout(() => {
+          if (! foundMatchingUser) {
+            // We've set up an observe on the user associated with `newToken`,
+            // so if the new token is removed from the database, we'll close
+            // the connection. But the token might have already been deleted
+            // before we set up the observe, which wouldn't have closed the
+            // connection because the observe wasn't running yet.
+            // Check this after one second to give Mongo time to replicate 
+            // the added hashedToken to other (read) replicas.
+            connection.close();
+          }
+        }, 1000);
       });
     }
   };
