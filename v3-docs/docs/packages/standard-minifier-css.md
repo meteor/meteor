@@ -24,7 +24,7 @@ module.exports = {
 
 > The example config enables the `autoprefixer` postcss plugin. You can install the plugin by running `meteor npm install -D autoprefixer`.
 
-Learn more about [configuring postcss](https://github.com/postcss/postcss-load-config#packagejson) or find a list of [available plugins](https://www.postcss.parts/).
+Learn more about [configuring postcss](https://github.com/postcss/postcss-load-config#packagejson) or find a list of [available plugins](https://postcss.org/docs/postcss-plugins).
 
 After making changes to the PostCSS Config, `meteor` must be restarted for it to use the new config.
 
