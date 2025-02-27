@@ -74,34 +74,38 @@ Meteor.startup(() => {
 Accounts.oauth.tryLoginAfterPopupClosed = (
   credentialToken,
   callback,
-  shouldRetry = true
+  timeout = 1000
 ) => {
-  const credentialSecret =
-    OAuth._retrieveCredentialSecret(credentialToken);
+  let startTime = Date.now();
+  let calledOnce = false;
+  let intervalId;
+  const checkForCredentialSecret = (clearInterval = false) => {
+    const credentialSecret = OAuth._retrieveCredentialSecret(credentialToken);
+    if (!calledOnce && (credentialSecret || clearInterval)) {
+      calledOnce = true;
+      Meteor.clearInterval(intervalId);
+      Accounts.callLoginMethod({
+        methodArguments: [{ oauth: { credentialToken, credentialSecret } }],
+        userCallback: callback ? err => callback(convertError(err)) : () => {},
+      });
+    } else if (clearInterval) {
+      Meteor.clearInterval(intervalId);
+    }
+  };
 
+  // Check immediately
+  checkForCredentialSecret();
+
+  // Then check on an interval
   // In some case the function OAuth._retrieveCredentialSecret() can return null, because the local storage might not
   // be ready. So we retry after a timeout.
-
-  if (!credentialSecret) {
-    if (!shouldRetry) {
-      return;
+  intervalId = Meteor.setInterval(() => {
+    if (Date.now() - startTime > timeout) {
+      checkForCredentialSecret(true);
+    } else {
+      checkForCredentialSecret();
     }
-    Meteor.setTimeout(
-      () =>
-        Accounts.oauth.tryLoginAfterPopupClosed(
-          credentialToken,
-          callback,
-          false
-        ),
-      500
-    );
-    return;
-  }
-  // continue with the rest of the function
-  Accounts.callLoginMethod({
-    methodArguments: [{ oauth: { credentialToken, credentialSecret } }],
-    userCallback: callback && (err => callback(convertError(err))),
-  });
+  }, 250);
 };
 
 Accounts.oauth.credentialRequestCompleteHandler = callback =>
@@ -112,4 +116,3 @@ Accounts.oauth.credentialRequestCompleteHandler = callback =>
       Accounts.oauth.tryLoginAfterPopupClosed(credentialTokenOrError, callback);
     }
   }
-

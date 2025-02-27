@@ -1,10 +1,12 @@
 <div align="center">
   <a href="https://www.meteor.com" target="_blank">
-    <img align="center" width="225" src="https://user-images.githubusercontent.com/841294/26841702-0902bbee-4af3-11e7-9805-0618da66a246.png">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://dmtgy0px4zdqn.cloudfront.net/images/meteor-logo.webp">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/0467afb6-4f36-4cad-9d78-237150d5d881">
+      <img alt="Meteor logo" src="https://github.com/user-attachments/assets/0467afb6-4f36-4cad-9d78-237150d5d881" width="300">
+    </picture>
   </a>
 </div>
-
-<br>
 
 <div align="center">
 
@@ -54,23 +56,20 @@ How about trying a tutorial to get started with your favorite technology?
 | [<img align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"> React](https://docs.meteor.com/tutorials/react/) |
 | - |
 | [<img align="left" width="25" src="https://progsoft.net/images/blaze-css-icon-3e80acb3996047afd09f1150f53fcd78e98c1e1b.png"> Blaze](https://blaze-tutorial.meteor.com/) |
-| [<img align="left" width="25" src="https://vuejs.org/images/logo.png"> Vue](https://vue-tutorial.meteor.com/) |
-| [<img align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Svelte_Logo.svg/1200px-Svelte_Logo.svg.png"> Svelte](https://svelte-tutorial.meteor.com/) |
-
-Next, read the [documentation](https://docs.meteor.com/) and get some [examples](https://github.com/meteor/examples).
+| [<img align="left" width="25" src="https://vuejs.org/images/logo.png"> Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker.html) |
 
 # 🚀 Quick Start
 
 On your platform, use this line:
 
 ```shell
-> npm install -g meteor
+> npx meteor
 ```
  
 🚀 To create a project:
 
 ```shell
-> meteor create my-app
+> meteor create
 ```
 
 ☄️ Run it:
@@ -84,10 +83,9 @@ meteor
 
 **Building an application with Meteor?**
 
-* Deploy on [Meteor Cloud](https://www.meteor.com/cloud)
+* Deploy on [Galaxy](https://www.meteor.com/cloud)
 * Discuss on [Forums](https://forums.meteor.com/)
 * Join the Meteor Discord by clicking this [invite link](https://discord.gg/hZkTCaVjmT).
-* Announcement list. Subscribe in the [footer](https://www.meteor.com/).
 
 
 Interested in helping or contributing to Meteor?  These resources will help:
@@ -96,15 +94,3 @@ Interested in helping or contributing to Meteor?  These resources will help:
 * [Contribution guidelines](CONTRIBUTING.md)
 * [Feature requests](https://github.com/meteor/meteor/discussions/)
 * [Issue tracker](https://github.com/meteor/meteor/issues)
-
-To uninstall Meteor: 
-  - If installed via npm, run:
-      ```shell
-      meteor-installer uninstall
-      ```
-  - If installed via curl, run:
-    ```shell
-    rm -rf ~/.meteor 
-    sudo rm /usr/local/bin/meteor
-    ```
-To find more information about installation, [read here](https://docs.meteor.com/about/install.html#uninstall).

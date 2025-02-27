@@ -18,7 +18,17 @@ MongoInternals.NpmModules = {
 // MongoInternals.NpmModules.mongodb.module.  It was never documented, but
 // people do use it.
 // XXX COMPAT WITH 1.0.3.2
-MongoInternals.NpmModule = MongoDB;
+MongoInternals.NpmModule = new Proxy(MongoDB, {
+  get(target, propertyKey, receiver) {
+    if (propertyKey === 'ObjectID') {
+      Meteor.deprecate(
+        `Accessing 'MongoInternals.NpmModule.ObjectID' directly is deprecated. ` +
+        `Use 'MongoInternals.NpmModule.ObjectId' instead.`
+      );
+    }
+    return Reflect.get(target, propertyKey, receiver);
+  },
+});
 
 MongoInternals.OplogHandle = OplogHandle;
 

@@ -19,6 +19,8 @@
     "@babel/preset-react": "^7.18.6",
     "@types/lodash.isempty": "^4.4.9",
     "@types/node": "^18.16.18",
+    "@types/sockjs": "^0.3.36",
+    "@types/sockjs-client": "^1.5.4",
     "@typescript-eslint/eslint-plugin": "^5.56.0",
     "@typescript-eslint/parser": "^5.56.0",
     "eslint": "^8.36.0",

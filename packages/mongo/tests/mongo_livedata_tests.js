@@ -3967,6 +3967,11 @@ Meteor.isServer &&
       typeof MongoInternals.NpmModules.mongodb.module.ObjectId,
       'function'
     );
+    test.equal(
+      MongoInternals.NpmModule.ObjectID,
+      MongoInternals.NpmModule.ObjectId,
+      'MongoInternals.ObjectID should be an alias for MongoInternals.ObjectId'
+    );
 
     var c = new Mongo.Collection(Random.id());
     var rawCollection = c.rawCollection();

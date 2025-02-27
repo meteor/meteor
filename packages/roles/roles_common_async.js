@@ -1164,6 +1164,157 @@ Object.assign(Roles, {
   },
 
   /**
+   * Retrieve users scopes, if any.
+   *
+   * @method getScopesForUserAsync
+   * @param {String|Object} user User ID or an actual user object.
+   * @param {Array|String} [roles] Name of roles to restrict scopes to.
+   *
+   * @return {Promise<Array>} Array of user's scopes, unsorted.
+   * @static
+   */
+  getScopesForUserAsync: async function (user, roles) {
+    let id
+
+    if (roles && !Array.isArray(roles)) roles = [roles]
+
+    if (user && typeof user === 'object') {
+      id = user._id
+    } else {
+      id = user
+    }
+
+    if (!id) return []
+
+    const selector = {
+      'user._id': id,
+      scope: { $ne: null }
+    }
+
+    if (roles) {
+      selector['inheritedRoles._id'] = { $in: roles }
+    }
+
+    const scopes = (
+      await Meteor.roleAssignment
+        .find(selector, { fields: { scope: 1 } })
+        .fetchAsync()
+    ).map((obi) => obi.scope)
+
+    return [...new Set(scopes)]
+  },
+
+  /**
+   * Rename a scope.
+   *
+   * Roles assigned with a given scope are changed to be under the new scope.
+   *
+   * @method renameScopeAsync
+   * @param {String} oldName Old name of a scope.
+   * @param {String} newName New name of a scope.
+   * @returns {Promise}
+   * @static
+   */
+  renameScopeAsync: async function (oldName, newName) {
+    let count
+
+    Roles._checkScopeName(oldName)
+    Roles._checkScopeName(newName)
+
+    if (oldName === newName) return
+
+    do {
+      count = await Meteor.roleAssignment.updateAsync(
+        {
+          scope: oldName
+        },
+        {
+          $set: {
+            scope: newName
+          }
+        },
+        { multi: true }
+      )
+    } while (count > 0)
+  },
+
+  /**
+   * Remove a scope.
+   *
+   * Roles assigned with a given scope are removed.
+   *
+   * @method removeScopeAsync
+   * @param {String} name The name of a scope.
+   * @returns {Promise}
+   * @static
+   */
+  removeScopeAsync: async function (name) {
+    Roles._checkScopeName(name)
+
+    await Meteor.roleAssignment.removeAsync({ scope: name })
+  },
+
+  /**
+   * Throw an exception if `roleName` is an invalid role name.
+   *
+   * @method _checkRoleName
+   * @param {String} roleName A role name to match against.
+   * @private
+   * @static
+   */
+  _checkRoleName: function (roleName) {
+    if (
+      !roleName ||
+      typeof roleName !== 'string' ||
+      roleName.trim() !== roleName
+    ) {
+      throw new Error(`Invalid role name '${roleName}'.`)
+    }
+  },
+
+  /**
+   * Find out if a role is an ancestor of another role.
+   *
+   * WARNING: If you check this on the client, please make sure all roles are published.
+   *
+   * @method isParentOfAsync
+   * @param {String} parentRoleName The role you want to research.
+   * @param {String} childRoleName The role you expect to be among the children of parentRoleName.
+   * @returns {Promise}
+   * @static
+   */
+  isParentOfAsync: async function (parentRoleName, childRoleName) {
+    if (parentRoleName === childRoleName) {
+      return true
+    }
+
+    if (parentRoleName == null || childRoleName == null) {
+      return false
+    }
+
+    Roles._checkRoleName(parentRoleName)
+    Roles._checkRoleName(childRoleName)
+
+    let rolesToCheck = [parentRoleName]
+    while (rolesToCheck.length !== 0) {
+      const roleName = rolesToCheck.pop()
+
+      if (roleName === childRoleName) {
+        return true
+      }
+
+      const role = await Meteor.roles.findOneAsync({ _id: roleName })
+
+      // This should not happen, but this is a problem to address at some other time.
+      if (!role) continue
+
+      rolesToCheck = rolesToCheck.concat(role.children.map((r) => r._id))
+    }
+
+    return false
+  },
+
+  /**
    * Normalize options.
    *
    * @method _normalizeOptions

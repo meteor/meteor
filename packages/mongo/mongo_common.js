@@ -1,7 +1,9 @@
 import clone from 'lodash.clone'
 
 /** @type {import('mongodb')} */
-export const MongoDB = NpmModuleMongodb;
+export const MongoDB = Object.assign(NpmModuleMongodb, {
+  ObjectID: NpmModuleMongodb.ObjectId,
+});
 
 // The write methods block until the database has confirmed the write (it may
 // not be replicated or stable on disk, but one server has confirmed it) if no

@@ -1,17 +1,16 @@
 import { Meteor } from 'meteor/meteor';
-import path from 'path';
-import { DocFetcher } from './doc_fetcher';
-import { ObserveMultiplexer } from './observe_multiplex';
-import { ObserveHandle } from './observe_handle';
-import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
 import { CLIENT_ONLY_METHODS, getAsyncMethodName } from 'meteor/minimongo/constants';
-import { OplogObserveDriver } from './oplog_observe_driver';
-import { PollingObserveDriver } from './polling_observe_driver';
-import { replaceMeteorAtomWithMongo, replaceTypes, transformResult } from './mongo_common';
+import path from 'path';
 import { AsynchronousCursor } from './asynchronous_cursor';
-import { MongoDB } from './mongo_common';
 import { Cursor } from './cursor';
 import { CursorDescription } from './cursor_description';
+import { DocFetcher } from './doc_fetcher';
+import { MongoDB, replaceMeteorAtomWithMongo, replaceTypes, transformResult } from './mongo_common';
+import { ObserveHandle } from './observe_handle';
+import { ObserveMultiplexer } from './observe_multiplex';
+import { OplogObserveDriver } from './oplog_observe_driver';
+import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
+import { PollingObserveDriver } from './polling_observe_driver';
 
 const FILE_ASSET_SUFFIX = 'Asset';
 const ASSETS_FOLDER = 'assets';

@@ -3,7 +3,7 @@
 // _methodInvokers map; it removes itself once the method is fully finished and
 // the callback is invoked. This occurs when it has both received a result,
 // and the data written by it is fully visible.
-export default class MethodInvoker {
+export class MethodInvoker {
   constructor(options) {
     // Public (within this file) fields.
     this.methodId = options.methodId;

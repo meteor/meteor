@@ -10,7 +10,127 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.1.2, 2025-02-06
 
+### Highlights
+
+- Node upgrade: v22.13.1
+- Updated Meteor skeletons for Vue and Solid
+- Improved browser detection and related documentation
+- Security updates: nodemailer-openpgp and others in Meteor packages
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 3.1.2
+
+```
+
+#### Bumped Meteor Packages
+
+- email@3.1.2
+- meteor-tool@3.1.2
+- modern-browsers@0.2.0
+- webapp@2.0.5
+
+#### Bumped NPM Packages
+
+N/A
+
+#### Special thanks to
+
+✨✨✨
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@Grubba27](https://github.com/Grubba27)
+- [@perbergland](https://github.com/perbergland)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@julio-rocketchat](https://github.com/julio-rocketchat)
+
+✨✨✨
+
+## v3.1.1, 2025-01-15
+
+### Highlights
+
+- Node upgrade: v22.13.0
+- Real-time Performance Boost: Refactored AsynchronousQueue for parallel processing and optimized MongoDB observers for faster initial document handling.
+- Allow/Deny Rules Update: Deprecated async rules and updated documentation and types.
+- Mongo Driver Downgrade: Reverted to a stable version to prevent issues in Meteor.
+- Support for Meteor.deprecate: Added deprecation warnings with stack trace for outdated code usage.
+- OAuth Fixes: Resolved issues with cancel popup event and callback.
+- Windows Fixes: Fixed issues with running from folders with spaces and post-npm install build errors on Windows.
+- Security Updates: Upgraded json5 and semver from babel compiler.
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 3.1.1
+
+```
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.0.4
+- accounts-oauth@1.4.6
+- accounts-passwordless@3.0.1
+- allow-deny@2.1.0
+- babel-compiler@7.11.3
+- ddp-client@3.1.0
+- ddp-server@3.1.0
+- meteor-tool@3.1.1
+- facebook-oauth@1.11.5
+- meteor@2.1.0
+- meteor-tool@3.1.1
+- mongo@2.1.0
+- npm-mongo@6.10.2
+- oauth@3.0.1
+- roles@@1.0.1
+- socket-stream-client@0.6.0
+
+#### Bumped NPM Packages
+
+N/A
+
+#### Special thanks to
+
+✨✨✨
+
+- [@leonardoventurini](https://github.com/leonardoventurini)
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@Grubba27](https://github.com/Grubba27)
+- [@9Morello](https://github.com/9Morello)
+- [@perbergland](https://github.com/perbergland)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@MrSpark2591](https://github.com/MrSpark2591)
+- [@jstarpl](https://github.com/jstarpl)
+- [@minhna](https://github.com/minhna)
+- [@svolkomorov](https://github.com/svolkomorov)
+- [@quyetdgroup](https://github.com/quyetdgroup)
+
+✨✨✨
 
 ## v3.1.0, 2024-11-20
 

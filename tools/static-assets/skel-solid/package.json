@@ -10,20 +10,21 @@
   "dependencies": {
     "@babel/runtime": "^7.23.9",
     "meteor-node-stubs": "^1.2.12",
-    "solid-js": "^1.8.15"
+    "picocolors": "^1.1.1",
+    "solid-js": "^1.9.4"
   },
   "meteor": {
     "mainModule": {
-      "client": "client/main.jsx",
-      "server": "server/main.js"
+      "client": "client/entry-meteor.js",
+      "server": "server/entry-meteor.js"
     },
     "testModule": "tests/main.js"
   },
   "devDependencies": {
     "babel-preset-solid": "^1.8.15",
-    "meteor-vite": "^1.10.2",
-    "vite": "^4.5.2",
-    "vite-plugin-solid": "^2.10.1",
-    "vite-plugin-solid-svg": "^0.8.0"
+    "meteor-vite": "^3.2.1",
+    "vite": "^6.0.11",
+    "vite-plugin-solid": "^2.11.0",
+    "vite-plugin-solid-svg": "^0.8.1"
   }
 }
