@@ -32,6 +32,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "http-proxy-node16": "1.0.6",
     "prettier": "^2.8.6",
     "typescript": "^5.4.5"
   },
