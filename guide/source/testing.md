@@ -250,7 +250,7 @@ const withDiv = function withDiv(callback) {
 export const withRenderedTemplate = function withRenderedTemplate(template, data, callback) {
   withDiv((el) => {
     const ourTemplate = isString(template) ? Template[template] : template;
-    vonst view = Blaze.renderWithData(ourTemplate, data, el);
+    const view = Blaze.renderWithData(ourTemplate, data, el);
     Tracker.flush();
     callback(el);
     return view
