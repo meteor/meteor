@@ -3234,6 +3234,7 @@ async function bundle({
   allowDelayedClientBuilds = false,
   forceInPlaceBuild,
 }) {
+  console.time('bundle');
   buildOptions = buildOptions || {};
 
   var serverArch = buildOptions.serverArch || archinfo.host();
@@ -3491,6 +3492,7 @@ async function bundle({
     // there were errors
     success = false;
   }
+  console.timeEnd('bundle');
 
   return {
     errors: success ? false : messages,
