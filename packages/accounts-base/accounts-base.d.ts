@@ -188,9 +188,9 @@ export namespace Accounts {
 
   function removeEmail(userId: string, email: string): Promise<void>;
 
-  function onCreateUser(
-    func: (options: { profile?: {} | undefined }, user: Meteor.User) => void
-  ): void;
+  type CreateUserCallback = (options: { profile?: {} | undefined }, user: Meteor.User) => Meteor.User
+
+  function onCreateUser(func: CreateUserCallback): void;
 
   function findUserByEmail(
     email: string,
