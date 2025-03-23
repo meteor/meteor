@@ -207,11 +207,17 @@ export function parseRunTargets(targets) {
   });
 };
 
-const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
-function filterWebArchs(webArchs, excludeArchsOption) {
-  if (excludeArchsOption) {
-    const excludeArchs = excludeArchsOption.trim().split(/\s*,\s*/)
-      .filter(arch => excludableWebArchs.includes(arch));
+function isModernArchsOnlyEnabled(appDir) {
+  const packageJsonPath = files.pathJoin(appDir, 'package.json');
+  const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
+  const packageJson = JSON.parse(packageJsonFile);
+  return packageJson?.meteor?.modernWebArchsOnly === true;
+}
+
+function filterWebArchs(webArchs, excludeArchsOption, appDir) {
+  const automaticallyIgnoredLegacyArchs = (appDir && isModernArchsOnlyEnabled(appDir)) ? ['web.browser.legacy', 'web.cordova'] : [];
+  if (excludeArchsOption || automaticallyIgnoredLegacyArchs.length) {
+    const excludeArchs = [...(excludeArchsOption ? excludeArchsOption.trim().split(/\s*,\s*/) : []), ...automaticallyIgnoredLegacyArchs];
     webArchs = webArchs.filter(arch => !excludeArchs.includes(arch));
   }
   return webArchs;
@@ -455,7 +461,8 @@ async function doRunCommand(options) {
       webArchs.push("web.cordova");
     }
   }
-  webArchs = filterWebArchs(webArchs, options['exclude-archs']);
+
+  webArchs = filterWebArchs(webArchs, options['exclude-archs'], options.appDir);
   const buildMode = options.production ? 'production' : 'development';
 
   let cordovaRunner;
@@ -1337,9 +1344,9 @@ on an OS X system.");
   // For example, if we want to build only android, there is no need to build
   // web.browser.
   let webArchs;
+  const baseWebArchs = projectContext.platformList.getWebArchs();
   if (selectedPlatforms) {
-    const filteredArchs = projectContext.platformList
-      .getWebArchs()
+    const filteredArchs = baseWebArchs
       .filter(arch => selectedPlatforms.includes(arch));
 
     if (
@@ -1350,6 +1357,8 @@ on an OS X system.");
     }
 
     webArchs = filteredArchs.length ? filteredArchs : undefined;
+  } else {
+    webArchs = filterWebArchs(baseWebArchs, options['exclude-archs'], options.appDir);
   }
 
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
@@ -2399,7 +2408,7 @@ var runTestAppForPackages = async function (projectContext, options) {
   if (options.cordovaRunner) {
     webArchs.push("web.cordova");
   }
-  buildOptions.webArchs = filterWebArchs(webArchs, options['exclude-archs']);
+  buildOptions.webArchs = filterWebArchs(webArchs, options['exclude-archs'], projectContext.appDirectory);
 
   if (options.deploy) {
     // Run the constraint solver and build local packages.
