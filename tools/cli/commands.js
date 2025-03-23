@@ -209,6 +209,9 @@ export function parseRunTargets(targets) {
 
 function isModernArchsOnlyEnabled(appDir) {
   const packageJsonPath = files.pathJoin(appDir, 'package.json');
+  if (!files.exists(packageJsonPath)) {
+    return false;
+  }
   const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
   const packageJson = JSON.parse(packageJsonFile);
   return packageJson?.meteor?.modernWebArchsOnly === true;
