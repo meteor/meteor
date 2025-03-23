@@ -18,7 +18,8 @@
       "client": "client/entry-meteor.js",
       "server": "server/entry-meteor.js"
     },
-    "testModule": "tests/main.js"
+    "testModule": "tests/main.js",
+    "modernWebArchsOnly": true
   },
   "devDependencies": {
     "babel-preset-solid": "^1.8.15",
