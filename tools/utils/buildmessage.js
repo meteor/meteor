@@ -319,7 +319,7 @@ async function enterJob(options, f) {
   }
 
   if (typeof options === "string") {
-    options = {title: options};
+    options = {title: `${options} [${Date.now()}]`};
   }
 
   var progress;

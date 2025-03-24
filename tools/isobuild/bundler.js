@@ -166,6 +166,8 @@ var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
+
+const { Worker } = require('worker_threads');
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
@@ -1415,8 +1417,7 @@ class Target {
     const dynamicFiles = [];
     const { arch } = this;
     const inputHashesByJsFile = new Map;
-
-    this.js.forEach(file => {
+    await Promise.all(this.js.map(async file => {
       const jsf = new JsFile(file, { arch });
 
       inputHashesByJsFile.set(jsf, file.hash());
@@ -1426,7 +1427,7 @@ class Target {
       } else {
         staticFiles.push(jsf);
       }
-    });
+    }));
 
     var markedMinifier = buildmessage.markBoundary(
       minifierDef.userPlugin.processFilesForBundle,
@@ -3411,6 +3412,8 @@ async function bundle({
     }
 
     // Client
+    const clientArchsToProcess = [];
+    
     for (const arch of webArchs) {
       if (allowDelayedClientBuilds &&
           hasOwn.call(previousBuilders, arch) &&
@@ -3455,7 +3458,32 @@ async function bundle({
           }
         });
       } else {
-        // Otherwise make the client target now, and write it below.
+        // Add to list of architectures to process now
+        clientArchsToProcess.push(arch);
+      }
+    }
+    
+    // Process client archs in parallel if there are multiple
+    if (clientArchsToProcess.length > 1) {
+      // Use worker threads for parallel processing of targets
+      const clientTargetPromises = [];
+      
+      // First create all targets in the main thread
+      // This is safer than trying to serialize complex objects to workers
+      for (const arch of clientArchsToProcess) {
+        clientTargetPromises.push(makeClientTarget(app, arch, {minifiers}));
+      }
+      
+      // Wait for all targets to be created
+      const createdTargets = await Promise.all(clientTargetPromises);
+      
+      // Assign targets to their architectures
+      clientArchsToProcess.forEach((arch, index) => {
+        targets[arch] = createdTargets[index];
+      });
+    } else {
+      // Process in the main thread for a single client arch
+      for (const arch of clientArchsToProcess) {
         targets[arch] = await makeClientTarget(app, arch, {minifiers});
       }
     }
@@ -3469,19 +3497,76 @@ async function bundle({
       if (hasCachedBundle) {
         // If we already have a cached bundle, just recreate the new targets.
         // XXX This might make the contents of "star.json" out of date.
-        for (const target of Object.values(targets)) {
-          await writeClientTarget(target);
+        const targetsArray = Object.values(targets);
+        
+        // Check if we have multiple targets to process
+        if (targetsArray.length > 1) {
+          // Process targets in parallel
+          await Promise.all(targetsArray.map(target => writeClientTarget(target)));
+        } else {
+          // Single target, process in main thread
+          for (const target of targetsArray) {
+            await writeClientTarget(target);
+          }
         }
       } else {
-        starResult = await writeSiteArchive(targets, outputPath, {
-          buildMode: buildOptions.buildMode,
-          previousBuilders,
-          sourceRoot: packageSource.sourceRoot,
-          ...writeOptions,
-        });
-        serverWatchSet.merge(starResult.serverWatchSet);
-        clientWatchSet.merge(starResult.clientWatchSet);
-        Object.assign(previousBuilders, starResult.builders);
+        // Check if we have multiple targets to process in the non-cached case
+        const targetsArray = Object.values(targets);
+        
+        if (targetsArray.length > 1) {
+          // Process each target individually, but in parallel
+          const targetKeys = Object.keys(targets);
+          const results = await Promise.all(
+            targetKeys.map(key => {
+              // Create a targets object with just this one target
+              const singleTarget = {};
+              singleTarget[key] = targets[key];
+              
+              // Process this target
+              return writeSiteArchive(singleTarget, outputPath, {
+                buildMode: buildOptions.buildMode,
+                previousBuilders,
+                sourceRoot: packageSource.sourceRoot,
+                ...writeOptions,
+              });
+            })
+          );
+          
+          // Combine all results
+          starResult = results.reduce((combined, result) => {
+            // Create a new result for the first iteration
+            if (!combined) {
+              return {
+                serverWatchSet: result.serverWatchSet,
+                clientWatchSet: result.clientWatchSet,
+                builders: result.builders
+              };
+            }
+            
+            // Merge subsequent results
+            combined.serverWatchSet.merge(result.serverWatchSet);
+            combined.clientWatchSet.merge(result.clientWatchSet);
+            Object.assign(combined.builders, result.builders);
+            
+            return combined;
+          }, null);
+          
+          // Update watch sets and builders
+          serverWatchSet.merge(starResult.serverWatchSet);
+          clientWatchSet.merge(starResult.clientWatchSet);
+          Object.assign(previousBuilders, starResult.builders);
+        } else {
+          // Single target or no targets, process in main thread
+          starResult = await writeSiteArchive(targets, outputPath, {
+            buildMode: buildOptions.buildMode,
+            previousBuilders,
+            sourceRoot: packageSource.sourceRoot,
+            ...writeOptions,
+          });
+          serverWatchSet.merge(starResult.serverWatchSet);
+          clientWatchSet.merge(starResult.clientWatchSet);
+          Object.assign(previousBuilders, starResult.builders);
+        }
       }
     }
 
