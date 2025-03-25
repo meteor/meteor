@@ -3460,7 +3460,6 @@ async function bundle({
       previousBuilders[arch] = written.builder;
     }
 
-    // Client
     const clientArchsToProcess = [];
     
     if (!isServerOnlyBundle) {
