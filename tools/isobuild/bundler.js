@@ -167,7 +167,6 @@ var Profile = require('../tool-env/profile').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
 
-const { Worker } = require('worker_threads');
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
@@ -3221,7 +3220,51 @@ Find out more about Meteor at meteor.com.
  */
 
 exports.bundle = Profile("bundler.bundle", function (options) {
-  return files.withCache(() => bundle(options));
+  return files.withCache(async () => {
+
+    const buildCache = new Map();
+    
+    const clientOptions = {
+      ...options,
+      buildOptions: {
+        ...options.buildOptions,
+        webArchs: options.buildOptions?.webArchs || 
+                  options.projectContext.platformList.getWebArchs(),
+        serverArch: undefined,
+      },
+      isClientOnlyBundle: true,
+      buildCache,
+    };
+    
+    const serverOptions = {
+      ...options,
+      buildOptions: {
+        ...options.buildOptions,
+        webArchs: [],
+        serverArch: options.buildOptions?.serverArch || archinfo.host(),
+      },
+      isServerOnlyBundle: true,
+      buildCache,
+    };
+    
+    // TODO: we must to paralelize it in two different threads
+    const clientResult = await bundle(clientOptions);
+    const serverResult = await bundle(serverOptions);
+    
+    const combinedResult = {
+      errors: clientResult.errors || serverResult.errors,
+      warnings: clientResult.warnings || serverResult.warnings,
+      serverWatchSet: serverResult.serverWatchSet,
+      clientWatchSet: clientResult.clientWatchSet,
+      starManifest: serverResult.starManifest,
+      postStartupCallbacks: [
+        ...(clientResult.postStartupCallbacks || []),
+        ...(serverResult.postStartupCallbacks || []),
+      ],
+    };
+    
+    return combinedResult;
+  });
 });
 
 async function bundle({
@@ -3234,8 +3277,10 @@ async function bundle({
   onJsOutputFiles,
   allowDelayedClientBuilds = false,
   forceInPlaceBuild,
+  isClientOnlyBundle = false,
+  isServerOnlyBundle = false,
+  buildCache
 }) {
-  console.time('bundle');
   buildOptions = buildOptions || {};
 
   var serverArch = buildOptions.serverArch || archinfo.host();
@@ -3248,6 +3293,10 @@ async function bundle({
   } else {
     webArchs = projectContext.platformList.getWebArchs();
   }
+  
+  if (isClientOnlyBundle) serverArch = null;
+  if (isServerOnlyBundle) webArchs = [];
+  
   const minifyMode = buildOptions.minifyMode || 'development';
   const buildMode = buildOptions.buildMode || 'production';
 
@@ -3414,62 +3463,58 @@ async function bundle({
     // Client
     const clientArchsToProcess = [];
     
-    for (const arch of webArchs) {
-      if (allowDelayedClientBuilds &&
-          hasOwn.call(previousBuilders, arch) &&
-          projectContext.platformList.canDelayBuildingArch(arch)) {
-        // If delayed client builds are allowed, and we have a previous
-        // builder for this arch, and it's an arch that we can safely
-        // build later (e.g. web.browser.legacy), then schedule it to be
-        // built after the server has started up.
-        postStartupCallbacks.push(async ({
-                                           pauseClient,
-                                           refreshClient,
-                                           runLog,
-                                         }) => {
-          const start = +new Date;
+    if (!isServerOnlyBundle) {
+      for (const arch of webArchs) {
+        if (allowDelayedClientBuilds &&
+            hasOwn.call(previousBuilders, arch) &&
+            projectContext.platformList.canDelayBuildingArch(arch)) {
+          postStartupCallbacks.push(async ({
+                                             pauseClient,
+                                             refreshClient,
+                                             runLog,
+                                           }) => {
+            const start = +new Date;
 
-          // Build the target first.
-          const target = await makeClientTarget(app, arch, { minifiers });
+            // Build the target first.
+            const target = await makeClientTarget(app, arch, { minifiers });
 
-          // Tell the webapp package to pause responding to requests from
-          // clients that use this arch, because we're about to write a
-          // new version of this bundle to disk. If the message fails
-          // because the child process exited, proceed with writing the
-          // target anyway.
-          await pauseClient(arch).catch(ignoreHarmlessErrors);
+            // Tell the webapp package to pause responding to requests from
+            // clients that use this arch, because we're about to write a
+            // new version of this bundle to disk. If the message fails
+            // because the child process exited, proceed with writing the
+            // target anyway.
+            await pauseClient(arch).catch(ignoreHarmlessErrors);
 
-          // Now write the target to disk. Note that we are rewriting the
-          // bundle in place, so this work is not atomic by any means,
-          // which is why we needed to pause the client.
-          await writeClientTarget(target);
+            // Now write the target to disk. Note that we are rewriting the
+            // bundle in place, so this work is not atomic by any means,
+            // which is why we needed to pause the client.
+            await writeClientTarget(target);
 
-          // Refresh and unpause the client, now that writing is finished.
-          // If the child process exited for some reason, don't worry if
-          // this message fails.
-          await refreshClient(arch).catch(ignoreHarmlessErrors);
+            // Refresh and unpause the client, now that writing is finished.
+            // If the child process exited for some reason, don't worry if
+            // this message fails.
+            await refreshClient(arch).catch(ignoreHarmlessErrors);
 
-          // Let the webapp package running in the child process know it
-          // should regenerate the client program for this arch.
-          if (Profile.enabled) {
-            runLog.log(`Finished delayed build of ${arch} in ${
-                new Date - start
-            }ms`, { arrow: true });
-          }
-        });
-      } else {
-        // Add to list of architectures to process now
-        clientArchsToProcess.push(arch);
+            // Let the webapp package running in the child process know it
+            // should regenerate the client program for this arch.
+            if (Profile.enabled) {
+              runLog.log(`Finished delayed build of ${arch} in ${
+                  new Date - start
+              }ms`, { arrow: true });
+            }
+          });
+        } else {
+          // Add to list of architectures to process now
+          clientArchsToProcess.push(arch);
+        }
       }
     }
     
     // Process client archs in parallel if there are multiple
     if (clientArchsToProcess.length > 1) {
-      // Use worker threads for parallel processing of targets
       const clientTargetPromises = [];
       
-      // First create all targets in the main thread
-      // This is safer than trying to serialize complex objects to workers
+      // First create all targets
       for (const arch of clientArchsToProcess) {
         clientTargetPromises.push(makeClientTarget(app, arch, {minifiers}));
       }
@@ -3481,15 +3526,13 @@ async function bundle({
       clientArchsToProcess.forEach((arch, index) => {
         targets[arch] = createdTargets[index];
       });
-    } else {
-      // Process in the main thread for a single client arch
-      for (const arch of clientArchsToProcess) {
-        targets[arch] = await makeClientTarget(app, arch, {minifiers});
-      }
+    } else if (clientArchsToProcess.length === 1) {
+      // Process for a single client arch
+      const arch = clientArchsToProcess[0];
+      targets[arch] = await makeClientTarget(app, arch, {minifiers});
     }
 
-    // Server
-    if (! hasCachedBundle) {
+    if (!isClientOnlyBundle && !hasCachedBundle) {
       targets.server = await makeServerTarget(app, webArchs);
     }
 
@@ -3577,7 +3620,6 @@ async function bundle({
     // there were errors
     success = false;
   }
-  console.timeEnd('bundle');
 
   return {
     errors: success ? false : messages,
