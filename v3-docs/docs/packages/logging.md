@@ -11,29 +11,47 @@ meteor add logging
 ```
 
 You can then import the utility anywhere in you code like this:
+
 ```javascript
-import { Log } from 'meteor/logging'
+import { Log } from "meteor/logging";
 ```
 
 You can then call the logging functions in one of the following ways:
+
 ```javascript
-Log('starting up') // or Log.info('starting up')
-Log.error('error message')
-Log.warn('warning')
-Log.debug('this will show only in development')
+Log("starting up"); // or Log.info('starting up')
+Log.error("error message");
+Log.warn("warning");
+Log.debug("this will show only in development");
 ```
 
 Besides passing in strings, you can also pass in objects. This has few exceptions and special functions associated.
 First in the root of the object the following keys are not allowed:
+
 ```javascript
-'time', 'timeInexact', 'level', 'file', 'line', 'program', 'originApp', 'satellite', 'stderr'
+  "time",
+  "timeInexact",
+  "level",
+  "file",
+  "line",
+  "program",
+  "originApp",
+  "satellite",
+  "stderr";
 ```
 
 On the other hand there is `message` and `app`, which are also reserved, but they will display in more prominent manner:
+
 ```javascript
-Log.info({message: 'warning', app: 'DESKTOP', error: { property1: 'foo', property2: 'bar', property3: { foo: 'bar' }} })
+Log.info({
+  message: "warning",
+  app: "DESKTOP",
+  error: { property1: "foo", property2: "bar", property3: { foo: "bar" } },
+});
 ```
+
 will turn into:
+
 ```shell
 E20200519-17:57:41.655(9) [DESKTOP] (main.js:36) warning {"error":{"property1":"foo","property2":"bar","property3":{"foo":"bar"}}}
 ```
@@ -41,4 +59,24 @@ E20200519-17:57:41.655(9) [DESKTOP] (main.js:36) warning {"error":{"property1":"
 The display of each log is color coded. Info is `blue`, warn is `magenta`, debug is `green` and error is in `red`.
 
 ### Log.debug
+
 The `Log.debug()` logging is different from the other calls as these messages will not be displayed in production.
+
+### Options
+
+You can set the following options:
+
+```javascript
+// Either 'json' or 'colored-text'. Defaults to 'json'.
+//
+// When this is set to 'json', print JSON documents to the console.
+//
+// When this is set to 'colored-text', call 'Log.format' before printing.
+// This should be used for logging to the console in a human-readable format.
+Log.outputFormat = "json";
+
+// Boolean. Defaults to true.
+// for cloud environments is interesting to leave it false as most of them have the timestamp in the console.
+// Only works in server with colored-text output format.
+Log.showTime = true;
+```

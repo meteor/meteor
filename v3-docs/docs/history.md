@@ -10,6 +10,74 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.2.0, 2025-03-18
+
+### Highlights
+
+- Upgrade to Node 22.14.0 & Mongo 7.0.16.
+- Implement `meteor profile` command to show performance metrics of Meteor apps.
+- Fix Meteor profiler to handle promises and display metrics correctly.
+- Support for argon2 to improve password security over bcrypt. [PR #13554](https://github.com/meteor/meteor/pull/13554)
+- Improve and fix package resolution logic. [PR #13604](https://github.com/meteor/meteor/pull/13604)
+- Fix rare oplog issue that could cause data loss for clients. [PR #13603](https://github.com/meteor/meteor/pull/13603)
+
+All detailed PRs can be found here: https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.2
+
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 3.2
+
+```
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.1.0
+- accounts-password@3.1.0
+- ecmascript-runtime-client@0.12.3
+- facebook-oauth@1.11.6
+- fetch@0.1.6
+- logging@1.3.6
+- logic-solver@3.1.0
+- minifier-css@2.0.1
+- meteor-tool@3.2.0
+- modern-browsers@0.2.1
+- mongo@2.1.1
+- oauth@3.0.2
+- test-helpers@2.0.3
+
+#### Bumped NPM Packages
+
+- meteor-node-stubs@1.2.13
+
+#### Special thanks to
+
+✨✨✨
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@Grubba27](https://github.com/Grubba27)
+- [@vparpoil](https://github.com/vparpoil)
+- [@cunneen](https://github.com/cunneen)
+- [@gbuerk](https://github.com/gbuerk)
+- [@julio-rocketchat](https://github.com/julio-rocketchat)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@dr-dimitru](https://github.com/dr-dimitru)
+- [@Seb-Dion](https://github.com/Seb-Dion)
+
+✨✨✨
+
+
 ## v3.1.2, 2025-02-06
 
 ### Highlights
@@ -59,7 +127,6 @@ N/A
 - [@julio-rocketchat](https://github.com/julio-rocketchat)
 
 ✨✨✨
-
 ## v3.1.1, 2025-01-15
 
 ### Highlights
@@ -131,7 +198,6 @@ N/A
 - [@quyetdgroup](https://github.com/quyetdgroup)
 
 ✨✨✨
-
 ## v3.1.0, 2024-11-20
 
 ### Highlights

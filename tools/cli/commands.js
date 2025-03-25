@@ -20,6 +20,7 @@ const {
   yellow
 } = require('../console/console.js').colors;
 const inquirer = require('inquirer');
+const semver = require("semver");
 
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
@@ -27,7 +28,7 @@ var release = require('../packaging/release.js');
 const { Profile } = require("../tool-env/profile");
 const open = require('open')
 
-const { exec } = require("child_process");
+const { exec, spawn } = require("child_process");
 /**
  * Run a command in the shell.
  * @param command
@@ -63,6 +64,59 @@ const tryRun = async (fn) => {
 const bash =
   (text, ...values) =>
     tryRun(() => runCommand(String.raw({ raw: text }, ...values)));
+
+/**
+ * Run a command in the shell and stream output in real-time.
+ * @param {string} command The command to execute.
+ * @param {string[]} args Arguments for the command.
+ * @return {Promise<number>} Resolves with the exit code.
+ */
+const runLiveCommand = (command, args = []) => {
+  return new Promise((resolve, reject) => {
+    const childProcess = spawn(command, args, {
+      shell: true,
+      env: { ...process.env, FORCE_COLOR: "1", TERM: "xterm-256color" },
+      stdio: "inherit",
+    });
+
+    const cleanup = () => {
+      childProcess.removeAllListeners();
+    };
+
+    childProcess.on("close", (code) => {
+      cleanup();
+      resolve(code);
+    });
+
+    childProcess.on("error", (error) => {
+      Console.error(error.message);
+      cleanup();
+      reject(error);
+    });
+  });
+};
+
+/**
+ * Executes an async function and captures success or error.
+ * @param {() => Promise<T>} fn The async function to execute.
+ * @returns {Promise<[T, null] | [null, Error]>} Result or Error tuple.
+ */
+const tryRunLive = async (fn) => {
+  try {
+    return [await fn(), null];
+  } catch (e) {
+    return [null, e];
+  }
+};
+
+/**
+ * Runs a Bash command with live logging.
+ * @param {string} text The bash command to execute.
+ * @param {...string} values Additional arguments.
+ * @returns {Promise<[number, null] | [null, Error]>} Exit code or Error.
+ */
+const bashLive = (text, ...values) =>
+  tryRunLive(() => runLiveCommand(String.raw({ raw: text }, ...values)));
 
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
@@ -1725,6 +1779,7 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     db: { type: Boolean },
+    'skip-cache': { type: Boolean },
   },
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -1751,6 +1806,10 @@ main.registerCommand({
                  "MONGO_URL will NOT be reset.");
   }
 
+  const resetMeteorNmCachePromise = options['skip-cache'] ? Promise.resolve() : files.rm_recursive_async(
+    files.pathJoin(options.appDir, "node_modules", ".cache", "meteor")
+  );
+
   if (options.db) {
     // XXX detect the case where Meteor is running the app, but
     // MONGO_URL was set, so we don't see a Mongo process
@@ -1765,9 +1824,13 @@ main.registerCommand({
       return 1;
     }
 
-    await files.rm_recursive_async(
-      files.pathJoin(options.appDir, '.meteor', 'local')
-    );
+    await Promise.all([
+      files.rm_recursive_async(
+        files.pathJoin(options.appDir, ".meteor", "local")
+      ),
+      resetMeteorNmCachePromise,
+    ]);
+
     Console.info("Project reset.");
     return;
   }
@@ -1779,9 +1842,12 @@ main.registerCommand({
     return !path.includes('.meteor/local/db');
   });
 
-  var allRemovePromises = allExceptDb.map(_path => files.rm_recursive_async(
-    files.pathJoin(options.appDir, _path)
-  ));
+  var allRemovePromises = [
+    ...allExceptDb.map((_path) =>
+      files.rm_recursive_async(files.pathJoin(options.appDir, _path))
+    ),
+    resetMeteorNmCachePromise
+  ];
   await Promise.all(allRemovePromises);
   Console.info("Project reset.");
 });
@@ -3278,3 +3344,84 @@ main.registerCommand({
 }, function () {
   throw new Error("testing stack traces!"); // #StackTraceTest this line is found in tests/source-maps.js
 });
+
+const setupBenchmarkSuite = async (profilingPath) => {
+  if (await files.exists(profilingPath)) {
+    return;
+  }
+  const [okGitVersion, errGitVersion] = await bash`git --version`;
+  if (errGitVersion) throw new Error("git is not installed");
+
+  const parsedGitVersion = semver.coerce(okGitVersion.match(/\d+\.\d+\.\d+/)[0] || '')?.version;
+  const checkInvalidGitVersion = parsedGitVersion == null || semver.lt(parsedGitVersion, '2.25.0');
+  if (checkInvalidGitVersion) {
+    throw new Error("git version is too old. Please upgrade to at least 2.25");
+  }
+
+  // Set GIT_TERMINAL_PROMPT=0 to disable prompting
+  process.env.GIT_TERMINAL_PROMPT = 0;
+
+  const repoUrl = "https://github.com/meteor/performance";
+  const branch = "v3.2.0";
+  const gitCommand = [
+    `mkdir -p ${profilingPath}`,
+    `git clone --no-checkout --depth 1 --filter=tree:0 --sparse --progress --branch ${branch} --single-branch ${repoUrl} ${profilingPath}`,
+    `cd ${profilingPath}`,
+    `git sparse-checkout init --cone`,
+    `git sparse-checkout set scripts`,
+    `git checkout ${branch}`,
+    `find ${profilingPath} -maxdepth 1 -type f -delete`,
+  ].join(" && ");
+  const [, errClone] = await bash`${gitCommand}`;
+  const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
+  if (errorMessage && errorMessage.includes("Cloning into")) {
+    throw new Error("error cloning benchmark");
+  }
+  // remove .git folder from the example
+  await files.rm_recursive_async(files.pathJoin(profilingPath, ".git"));
+  Console.info(
+    "Meteor profiling suite cloned to: " + Console.path(profilingPath),
+  );
+};
+
+async function doBenchmarkCommand(options) {
+  const isWindows = process.platform === "win32";
+  if (isWindows) {
+    throw new Error('Profiling is not supported on Windows');
+  }
+
+  const args = process.argv.slice(3);
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    lintAppAndLocalPackages: !options['no-lint'],
+  });
+  const profilingPath = `${projectContext.projectDir}/node_modules/.cache/meteor/performance`;
+  await setupBenchmarkSuite(profilingPath);
+
+  const meteorSizeEnvs = [
+    !!options['size-only'] && 'METEOR_BUNDLE_SIZE_ONLY=true',
+    !!options['size'] && 'METEOR_BUNDLE_SIZE=true'
+  ].filter(Boolean);
+  const meteorOptions = args.filter(arg => !['--size-only', '--size'].includes(arg));
+
+  const profilingCommand = [
+    `${meteorSizeEnvs.join(' ')} ${profilingPath}/scripts/monitor-bundler.sh ${projectContext.projectDir} ${new Date().getTime()} ${meteorOptions.join(' ')}`.trim(),
+  ].join(" && ");
+  const [, errBenchmark] = await bashLive`${profilingCommand}`;
+  if (errBenchmark) {
+    throw new Error(errBenchmark);
+  }
+}
+
+main.registerCommand(
+{
+  name: 'profile',
+  maxArgs: Infinity,
+  options: {
+    ...runCommandOptions.options || {},
+  'size': { type: Boolean },
+  'size-only': { type: Boolean },
+  },
+  catalogRefresh: new catalog.Refresh.Never(),
+}, doBenchmarkCommand);

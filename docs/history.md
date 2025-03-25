@@ -4651,6 +4651,7 @@ N/A
   setMinimumBrowserVersions({
     chrome: 49,
     firefox: 45,
+    firefoxIOS: 100,
     edge: 12,
     ie: Infinity, // Sorry, IE11.
     mobile_safari: [9, 2], // 9.2.0+

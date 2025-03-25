@@ -1,3 +1,4 @@
+var C_MINISAT = require("./minisat.js");
 MiniSat = function () {
   // A MiniSat object wraps an instance of "native" MiniSat.  You can
   // have as many MiniSat objects as you want, and they are all
@@ -20,13 +21,13 @@ MiniSat = function () {
 
   this._native = {
     getStackPointer: function () {
-      return C.Runtime.stackSave();
+      return C.stackSave();
     },
     setStackPointer: function (ptr) {
-      C.Runtime.stackRestore(ptr);
+      C.stackRestore(ptr);
     },
     allocateBytes: function (len) {
-      return C.allocate(len, 'i8', C.ALLOC_STACK);
+      return C.stackAlloc(len);
     },
     pushString: function (str) {
       return this.allocateBytes(C.intArrayFromString(str));
@@ -66,11 +67,11 @@ MiniSat.prototype.addClause = function (terms) {
   Logic._assertIfEnabled(terms, Logic._isArrayWhere(Logic.isNumTerm));
   this._clauses.push(terms);
   return this._native.savingStack(function (native, C) {
-    var termsPtr = C.allocate((terms.length+1)*4, 'i32', C.ALLOC_STACK);
+    var termsPtr = C.stackAlloc((terms.length + 1) * 4);
     terms.forEach(function (t, i) {
-      C.setValue(termsPtr + i*4, t, 'i32');
+      C.setValue(termsPtr + i * 4, t, 'i32');
     });
-    C.setValue(termsPtr + terms.length*4, 0, 'i32'); // 0-terminate
+    C.setValue(termsPtr + terms.length * 4, 0, 'i32'); // 0-terminate
     return C._addClause(termsPtr) ? true : false;
   });
 };
@@ -94,7 +95,7 @@ MiniSat.prototype.getSolution = function () {
     // true, false, and undetermined.  It doesn't distinguish
     // between "false" and "undetermined" in solutions though
     // (I think it sets undetermined variables to false).
-    solution[i+1] = (C.getValue(solPtr+i, 'i8') === 0);
+    solution[i + 1] = (C.getValue(solPtr + i, 'i8') === 0);
   }
   return solution;
 };
@@ -114,7 +115,7 @@ MiniSat.prototype.getConflictClause = function () {
   var clausePtr = C._getConflictClause();
   var terms = [];
   for (var i = 0; i < numTerms; i++) {
-    var t = C.getValue(clausePtr + i*4, 'i32');
+    var t = C.getValue(clausePtr + i * 4, 'i32');
     var v = (t >>> 1);
     var s = (t & 1) ? -1 : 1;
     terms[i] = v * s;

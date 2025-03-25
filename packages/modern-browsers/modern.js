@@ -29,7 +29,7 @@ const browserAliases = {
     // that logic, because there is no IE12. #9818 #9839
     'ie',
     // Detected by recent useragent-ng as a new browser family when it sees EdgiOS or EdgA in the user agent #13592
-    'edgeMobile'
+    'edgeMobile',
   ],
 
   firefox: ['firefoxMobile'],
@@ -90,15 +90,19 @@ function isModern(browser) {
   if (!lowerCaseName) {
     return false;
   }
-  const entry = hasOwn.call(minimumVersions, lowerCaseName) ? minimumVersions[lowerCaseName] : undefined;
+  const entry = hasOwn.call(minimumVersions, lowerCaseName)
+    ? minimumVersions[lowerCaseName]
+    : undefined;
   if (!entry) {
-    const packageSettings = Meteor.settings.packages ? Meteor.settings.packages["modern-browsers"] : undefined;
+    const packageSettings = Meteor.settings.packages
+      ? Meteor.settings.packages['modern-browsers']
+      : undefined;
     // false if no package setting exists
     return !!(packageSettings && packageSettings.unknownBrowsersAssumedModern);
   }
   return greaterThanOrEqualTo(
-      [~~browser.major, ~~browser.minor, ~~browser.patch],
-      entry.version
+    [~~browser.major, ~~browser.minor, ~~browser.patch],
+    entry.version,
   );
 }
 
@@ -162,7 +166,9 @@ function getCaller(calleeName) {
  * @locus server
  * @return {object}
  */
-function getMinimumBrowserVersions() { return minimumVersions; }
+function getMinimumBrowserVersions() {
+  return minimumVersions;
+}
 
 Object.assign(exports, {
   isModern,
@@ -229,6 +235,7 @@ setMinimumBrowserVersions(
     chrome: 49,
     edge: 12,
     firefox: 45,
+    firefoxIOS: 100,
     mobileSafari: [9, 2],
     opera: 36,
     safari: 9,
@@ -236,7 +243,7 @@ setMinimumBrowserVersions(
     // https://github.com/Kilian/electron-to-chromium/blob/master/full-versions.js
     electron: 1,
   },
-  makeSource('classes')
+  makeSource('classes'),
 );
 
 setMinimumBrowserVersions(
@@ -244,6 +251,7 @@ setMinimumBrowserVersions(
     chrome: 39,
     edge: 13,
     firefox: 26,
+    firefoxIOS: 100,
     mobileSafari: 10,
     opera: 26,
     safari: 10,
@@ -251,7 +259,7 @@ setMinimumBrowserVersions(
     phantomjs: Infinity,
     electron: [0, 20],
   },
-  makeSource('generator functions')
+  makeSource('generator functions'),
 );
 
 setMinimumBrowserVersions(
@@ -259,12 +267,13 @@ setMinimumBrowserVersions(
     chrome: 41,
     edge: 13,
     firefox: 34,
+    firefoxIOS: 100,
     mobileSafari: [9, 2],
     opera: 29,
     safari: [9, 1],
     electron: [0, 24],
   },
-  makeSource('template literals')
+  makeSource('template literals'),
 );
 
 setMinimumBrowserVersions(
@@ -272,10 +281,11 @@ setMinimumBrowserVersions(
     chrome: 38,
     edge: 12,
     firefox: 36,
+    firefoxIOS: 100,
     mobileSafari: 9,
     opera: 25,
     safari: 9,
     electron: [0, 20],
   },
-  makeSource('symbols')
+  makeSource('symbols'),
 );

@@ -24,6 +24,7 @@ export declare function Log(input: LogInput, ...optionalParams: any[]): void;
 
 export declare namespace Log {
   var outputFormat: 'json' | 'colored-text';
+  var showTime: boolean;
   function _intercept(count: number): void;
   function _suppress(count: number): void;
   function _intercepted(): string[];

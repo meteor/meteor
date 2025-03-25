@@ -10,7 +10,7 @@ export default defineConfig({
       serverEntry: 'server/main.js',
       enableExperimentalFeatures: true,
       stubValidation: {
-        warnOnly: true,
+        ignorePackages: ['meteor/mongo'],
       },
     }),
   ],

@@ -22,9 +22,13 @@ export default {
     },
     {
       "version": "v3.1.1",
-      "url": "https://release-3-1-1.docs.meteor.com/",
+      "url": "https://release-3-1-1.docs.meteor.com/"
+    },
+    {
+      "version": "v3.1.2",
+      "url": "https://release-3-1-2.docs.meteor.com/",
       "isCurrent": true
     }
   ],
-  "currentVersion": "v3.1.1"
+  "currentVersion": "v3.1.2"
 }

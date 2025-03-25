@@ -772,10 +772,75 @@ authentication. In addition to the basic username and password-based
 sign-in process, it also supports email-based sign-in including
 address verification and password recovery emails.
 
-The Meteor server stores passwords using the
-[bcrypt](http://en.wikipedia.org/wiki/Bcrypt) algorithm. This helps
+### Password encryption and security
+
+Starting from `accounts-passwords:4.0.0`, you can choose which algorithm is used by the Meteor server to store passwords : either [bcrypt](http://en.wikipedia.org/wiki/Bcrypt) or
+[Argon2](http://en.wikipedia.org/wiki/Argon2) algorithm. Both are robust and contribute to
 protect against embarrassing password leaks if the server's database is
 compromised.
+
+Before version 4.0.0, `bcrypt` was the only available option. argon2 has been introduced because it is  considered the most secure option. This algorithm is specifically designed to resist GPU-based brute force attacks. For more details, see the [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+
+As of January 2025, **`bcrypt` is still the default option** to enable a smooth transition. In the future, `argon2` will replace `bcrypt` as default and `bcrypt` option will be deprecated.
+
+Passwords are hashed on the client using **SHA-256** algorithm before being sent to the server. This ensures that sensitive data is never transmitted in plain text. Once received by the server, the hashed value is further encrypted and securely stored in the `Meteor.users` collection.
+
+
+**About the migration process from `bcrypt` to `argon2`**
+
+The transition from `bcrypt` to `argon2` happens automatically upon user login. If Argon2 encryption is enabled in an existing application, each user's password is re-encrypted during their next successful login.
+- Step 1: The password is first validated against the existing `bcrypt` hash.
+- Step 2: If authentication succeeds, the password is re-encrypted using `Argon2`.
+- Step 3: The new `Argon2` hash replaces the old `bcrypt` hash in the database.
+
+
+To monitor the migration progress, you can count users still using bcrypt:
+```js
+const bcryptUsers = await Meteor.users.find({ "services.password.bcrypt": { $exists: true } }).countAsync();
+const totalUsers = await Meteor.users.find({ "services.password": { $exists: true } }).countAsync();
+console.log("Remaining users to migrate:", bcryptUsers, "/", totalUsers);
+```
+Once `bcryptUsers` reaches 0, the migration is complete.
+
+**Enabling Argon2 encryption**
+
+To enable Argon2 encryption, you need a small configuration change on the server: 
+
+```js
+Accounts.config({
+    argon2Enabled: true,
+});
+```
+
+**Configuring `argon2` parameters**
+
+One enabled, the `accounts-password` package allows customization of Argon2's parameters. The configurable options include:
+
+- `type`: `argon2id` (provides a blend of resistance against GPU and side-channel attacks)
+- `timeCost` (default: 2) – This controls the computational cost of the hashing process, affecting both the security level and performance.
+- `memoryCost`: 19456 (19 MiB) - The amount of memory used by the algorithm in KiB per thread
+- `parallelism`: 1 - The number of threads used by the algorithm
+
+To update the values, use the following configuration:
+```js
+Accounts.config({
+    argon2Enabled: true,
+    argon2Type: "argon2id",
+    argon2TimeCost: 2,
+    argon2MemoryCost: 19456,
+    argon2Parallelism: 1,
+});
+```
+
+Other Argon2 parameters, such as `hashLength`, are kept to default values:
+- `hashLength`: 32 bytes - The length of the hash output in bytes
+
+The default values are the minimum [OWASP recommendations for Argon2 parameters](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#introduction). When updating these values, consider the trade-offs between security and performance on the target infrastructure.
+
+For more information about Argon2's parameters, refer to the [argon2 options documentation](https://github.com/ranisalt/node-argon2/wiki/Options).
+
+
+### Using passwords
 
 To add password support to your application, run this command in your terminal:
 
