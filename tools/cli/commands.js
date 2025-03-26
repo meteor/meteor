@@ -266,8 +266,7 @@ function isModernArchsOnlyEnabled(appDir) {
   if (!files.exists(packageJsonPath)) {
     return false;
   }
-  const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
-  const packageJson = JSON.parse(packageJsonFile);
+  const packageJson = require(packageJsonPath);
   return packageJson?.meteor?.modernWebArchsOnly === true;
 }
 
@@ -1354,7 +1353,7 @@ var buildCommand = async function (options) {
   let selectedPlatforms = null;
   if (options.platforms) {
     const platformsArray = options.platforms.split(",");
-
+    const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
     platformsArray.forEach(plat => {
       if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
         throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
