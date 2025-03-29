@@ -10,10 +10,10 @@ export interface URLS {
 }
 
 export interface EmailFields {
-  from?: ((user: Meteor.User) => string) | undefined;
-  subject?: ((user: Meteor.User) => string) | undefined;
-  text?: ((user: Meteor.User, url: string) => string) | undefined;
-  html?: ((user: Meteor.User, url: string) => string) | undefined;
+  from?: ((user: Meteor.User) => Promise<string>) | undefined;
+  subject?: ((user: Meteor.User) => Promise<string>) | undefined;
+  text?: ((user: Meteor.User, url: string) => Promise<string>) | undefined;
+  html?: ((user: Meteor.User, url: string) => Promise<string>) | undefined;
 }
 
 export interface AccountsClientOptions {
