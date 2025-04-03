@@ -153,6 +153,25 @@ Tinytest.addAsync("webapp - modern/legacy static files", test => {
   return Promise.all(promises);
 });
 
+const specialUserAgent =
+  "Mozilla/5.0 (Linux; Android 5.1.1; MI NOTE Pro Build/LMY47V; wv) " +
+  "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/48.0.2564.116 " +
+  "Mobile Safari/537.36 baidubrowser/7.7.13.0 (Baidu; P1 5.1.1)"
+
+Tinytest.addAsync("webapp - agent identification", async function (test) {
+  const modernBrowser = WebAppInternals.identifyBrowser(modernUserAgent);
+  test.equal(modernBrowser.name, "chrome");
+  test.equal(modernBrowser.major, 68);
+  test.equal(modernBrowser.minor, 0);
+  test.equal(modernBrowser.patch, 3440);
+
+  const specialBrowser = WebAppInternals.identifyBrowser(specialUserAgent);
+  test.equal(specialBrowser.name, "baiduBrowser");
+  test.equal(specialBrowser.major, 7);
+  test.equal(specialBrowser.minor, 7);
+  test.equal(specialBrowser.patch, 13);
+})
+
 Tinytest.addAsync(
   "webapp - additional static javascript",
   async function (test) {
