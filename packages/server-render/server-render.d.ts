@@ -19,9 +19,34 @@ export interface ClientSink {
   getCookies(): { [key: string]: string };
 }
 
+/**
+ * Meteor parses the user agent string in an attempt to identify the browser.
+ * This is used, for example, to determine whether to serve the modern
+ * or the legacy bundle, in case your app uses both..
+ */
+type IdentifiedBrowser = {
+  name: string;
+  major: number;
+  minor: number;
+  patch: number;
+}
+
+/**
+ * A categorized request is an IncomingMessage with a pre-parsed URL,
+ * and additional properties added by Meteor.
+ */
+export type CategorizedRequest = Omit<http.IncomingMessage, 'url'> & {
+  browser: IdentifiedBrowser;
+  dynamicHead: string | undefined;
+  dynamicBody: string | undefined;
+  modern: boolean;
+  path: string;
+  url: URL;
+}
+
 export interface ServerSink extends ClientSink {
   // Server-only:
-  request: http.IncomingMessage;
+  request: CategorizedRequest;
   arch: string;
   head: string;
   body: string;
