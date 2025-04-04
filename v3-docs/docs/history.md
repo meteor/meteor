@@ -10,6 +10,8 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+
+
 ## v3.2.0, 2025-03-18
 
 ### Highlights
@@ -17,9 +19,9 @@ This is a complete history of changes for Meteor releases.
 - Upgrade to Node 22.14.0 & Mongo 7.0.16.
 - Implement `meteor profile` command to show performance metrics of Meteor apps.
 - Fix Meteor profiler to handle promises and display metrics correctly.
-- Support for argon2 to improve password security over bcrypt. [PR #13554](https://github.com/meteor/meteor/pull/13554)
-- Improve and fix package resolution logic. [PR #13604](https://github.com/meteor/meteor/pull/13604)
-- Fix rare oplog issue that could cause data loss for clients. [PR #13603](https://github.com/meteor/meteor/pull/13603)
+- Support for argon2 to improve password security over bcrypt. [PR](https://github.com/meteor/meteor/pull/13554)(https://github.com/meteor/meteor/pull/13554)
+- Improve and fix package resolution logic. [PR](https://github.com/meteor/meteor/pull/13604)(https://github.com/meteor/meteor/pull/13604)
+- Fix rare oplog issue that could cause data loss for clients. [PR](https://github.com/meteor/meteor/pull/13603)(https://github.com/meteor/meteor/pull/13603) 
 
 All detailed PRs can be found here: https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.2
 
@@ -76,8 +78,6 @@ meteor update --release 3.2
 - [@Seb-Dion](https://github.com/Seb-Dion)
 
 ✨✨✨
-
-
 ## v3.1.2, 2025-02-06
 
 ### Highlights
