@@ -226,22 +226,22 @@ Example:
 
 ```js
 // Find all admin users
-const adminUsers = await Roles.getUsersInRoleAsync("admin");
+const adminUsers = await (await Roles.getUsersInRoleAsync("admin")).fetchAsync();
 
 // Find users with specific roles in a scope
-const scopedUsers = await Roles.getUsersInRoleAsync(
+const scopedUsers = await (await Roles.getUsersInRoleAsync(
   ["editor", "writer"],
   "blog"
-);
+)).fetchAsync();
 
 // Find users with custom options
-const users = await Roles.getUsersInRoleAsync("manager", {
+const users = await (await Roles.getUsersInRoleAsync("manager", {
   scope: "department-a",
   queryOptions: {
     sort: { createdAt: -1 },
     limit: 10,
   },
-});
+})).fetchAsync();
 ```
 
 ## Checking Roles
