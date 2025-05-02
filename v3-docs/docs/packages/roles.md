@@ -225,6 +225,9 @@ const customRoles = Roles.getAllRoles({
 Example:
 
 ```js
+// returns a cursor of all admin users
+const adminUsers = await Roles.getUsersInRoleAsync("admin");
+
 // Find all admin users
 const adminUsers = await (await Roles.getUsersInRoleAsync("admin")).fetchAsync();
 
