@@ -7,116 +7,112 @@
 //
 //    NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
-function quote(string) {
-  return JSON.stringify(string);
-}
+// Cached references
+const { hasOwnProperty } = Object.prototype;
+const arrayIsArray = Array.isArray;
+const quote = JSON.stringify;
 
-const str = (key, holder, singleIndent, outerIndent, canonical) => {
-  const value = holder[key];
+function canonicalStringify(value, options = {}) {
+  // Normalize options
+  let { indent = '', canonical = false } = options;
+  if (indent === true) {
+    indent = '  ';
+  } else if (typeof indent === 'number') {
+    indent = ' '.repeat(indent);
+  }
 
-  // What happens next depends on the value's type.
-  switch (typeof value) {
-  case 'string':
-    return quote(value);
-  case 'number':
-    // JSON numbers must be finite. Encode non-finite numbers as null.
-    return isFinite(value) ? String(value) : 'null';
-  case 'boolean':
-    return String(value);
-  // If the type is 'object', we might be dealing with an object or an array or
-  // null.
-  case 'object': {
-    // Due to a specification blunder in ECMAScript, typeof null is 'object',
-    // so watch out for that case.
-    if (!value) {
+  // The main recursive serializer
+  function serialize(val, depth) {
+    const type = typeof val;
+
+    // Primitives
+    if (type === 'string') {
+      return quote(val);
+    }
+    if (type === 'number') {
+      return isFinite(val) ? String(val) : 'null';
+    }
+    if (type === 'boolean') {
+      return String(val);
+    }
+    if (val == null) { // handles null & undefined
       return 'null';
     }
-    // Make an array to hold the partial results of stringifying this object
-    // value.
-    const innerIndent = outerIndent + singleIndent;
-    const partial = [];
-    let v;
 
-    // Is the value an array?
-    if (Array.isArray(value) || ({}).hasOwnProperty.call(value, 'callee')) {
-      // The value is an array. Stringify every element. Use null as a
-      // placeholder for non-JSON values.
-      const length = value.length;
-      for (let i = 0; i < length; i += 1) {
-        partial[i] =
-          str(i, value, singleIndent, innerIndent, canonical) || 'null';
-      }
+    // Objects & Arrays
+    if (type === 'object') {
+      // Array (or old-style arguments object)
+      if (arrayIsArray(val) || hasOwnProperty.call(val, 'callee')) {
+        const len = val.length;
+        if (len === 0) {
+          return '[]';
+        }
 
-      // Join all of the elements together, separated with commas, and wrap
-      // them in brackets.
-      if (partial.length === 0) {
-        v = '[]';
-      } else if (innerIndent) {
-        v = '[\n' +
-          innerIndent +
-          partial.join(',\n' +
-          innerIndent) +
+        // Build each element
+        const items = new Array(len);
+        for (let i = 0; i < len; i++) {
+          const item = serialize(val[i], depth + 1);
+          items[i] = item != null ? item : 'null';
+        }
+
+        // Compact vs. pretty print
+        if (!indent) {
+          return '[' + items.join(',') + ']';
+        }
+
+        const outer = indent.repeat(depth);
+        const inner = indent.repeat(depth + 1);
+        return (
+          '[\n' +
+          inner +
+          items.join(',\n' + inner) +
           '\n' +
-          outerIndent +
-          ']';
-      } else {
-        v = '[' + partial.join(',') + ']';
+          outer +
+          ']'
+        );
       }
-      return v;
-    }
 
-    // Iterate through all of the keys in the object.
-    let keys = Object.keys(value);
-    if (canonical) {
-      keys = keys.sort();
-    }
-    keys.forEach(k => {
-      v = str(k, value, singleIndent, innerIndent, canonical);
-      if (v) {
-        partial.push(quote(k) + (innerIndent ? ': ' : ':') + v);
+      // Plain object
+      let keys = Object.keys(val);
+      if (canonical) {
+        keys.sort();
       }
-    });
 
-    // Join all of the member texts together, separated with commas,
-    // and wrap them in braces.
-    if (partial.length === 0) {
-      v = '{}';
-    } else if (innerIndent) {
-      v = '{\n' +
-        innerIndent +
-        partial.join(',\n' +
-        innerIndent) +
-        '\n' +
-        outerIndent +
-        '}';
-    } else {
-      v = '{' + partial.join(',') + '}';
+      const parts = [];
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        if (!hasOwnProperty.call(val, key)) continue;
+
+        const v = serialize(val[key], depth + 1);
+        if (v != null) {
+          const k = quote(key);
+
+          if (indent) {
+            const inner = indent.repeat(depth + 1);
+            parts.push(inner + k + ': ' + v);
+          } else {
+            parts.push(k + ':' + v);
+          }
+        }
+      }
+
+      if (parts.length === 0) {
+        return '{}';
+      }
+      if (!indent) {
+        return '{' + parts.join(',') + '}';
+      }
+
+      const outer = indent.repeat(depth);
+      return '{\n' + parts.join(',\n') + '\n' + outer + '}';
     }
-    return v;
+
+    // Functions, symbols, etc. are skipped (per JSON spec)
+    return undefined;
   }
 
-  default: // Do nothing
-  }
-};
-
-// If the JSON object does not yet have a stringify method, give it one.
-const canonicalStringify = (value, options) => {
-  // Make a fake root object containing our value under the key of ''.
-  // Return the result of stringifying the value.
-  const allOptions = Object.assign({
-    indent: '',
-    canonical: false,
-  }, options);
-  if (allOptions.indent === true) {
-    allOptions.indent = '  ';
-  } else if (typeof allOptions.indent === 'number') {
-    let newIndent = '';
-    for (let i = 0; i < allOptions.indent; i++) {
-      newIndent += ' ';
-    }
-    allOptions.indent = newIndent;
-  }
-  return str('', {'': value}, allOptions.indent, '', allOptions.canonical);
-};
+  // Kick off serialization at depth 0
+  return serialize(value, 0);
+}
 
 export default canonicalStringify;
