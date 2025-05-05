@@ -1,0 +1,528 @@
+name: Build and Test
+
+# Trigger on any push or pull request
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+# Shared environment variables for every job
+env:
+  TIMEOUT_SCALE_FACTOR: 8
+  METEOR_SELF_TEST_RETRIES: 2
+  METEOR_HEADLESS: true
+  METEOR_PRETTY_OUTPUT: 0
+  METEOR_SAVE_TMPDIRS: 1
+  SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
+  PRE_TEST_COMMANDS: |
+    ulimit -c unlimited;
+    ulimit -a
+  SELF_TEST_TOOL_NODE_FLAGS: " "
+  NUM_GROUPS: 12
+  RUNNING_AVG_LENGTH: 6
+
+################################################################################
+# 1) BUILD ENVIRONMENT PREP (formerly "Get Ready")
+################################################################################
+jobs:
+  build-env:
+    name: 🛠️ Build Environment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4.2.0
+        with:
+          node-version: 22.15.0
+          
+      - name: 🔧 Setup Memory Logging
+        # fire off background memory logger
+        run: |
+          nohup bash -c 'while true; do
+            ps -e -o user,%cpu,%mem,rss:10,vsz:10,command:20 --sort=-%mem \
+              >> /tmp/memuse.txt; echo "----------" >> /tmp/memuse.txt; sleep 1;
+          done' &
+
+      - name: 🌍 Environment Changes
+        run: |
+          sudo mkdir -p /tmp/core_dumps
+          sudo chmod a+rwx /tmp/core_dumps
+          echo "en_US.UTF-8 UTF-8" | sudo tee /etc/locale.gen
+          sudo locale-gen
+
+      # - name: Git Submodules
+      #   run: |
+      #     (git submodule sync && git submodule update --init --recursive) \
+      #       || (rm -fr .git/config .git/modules \
+      #           && git submodule deinit -f . \
+      #           && git submodule update --init --recursive)
+
+      - name: Cache dev_bundle
+        uses: actions/cache@v4
+        with:
+          path: dev_bundle
+          key: v3-dev-bundle-cache-${{ hashFiles('meteor/**') }}
+          restore-keys: v3-dev-bundle-cache-
+
+      - name: Combine NPM Shrinkwrap Files
+        run: |
+          find packages -type f -path '*/.npm/package/npm-shrinkwrap.json' \
+            -exec cat {} + >> shrinkwraps.txt
+
+      - name: Cache npm deps (group1)
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/meteor/.npm/package/node_modules
+            packages/modules-runtime/.npm/package/node_modules
+            packages/modules/.npm/package/node_modules
+            packages/ecmascript-runtime-server/.npm/package/node_modules
+            packages/promise/.npm/package/node_modules
+            packages/babel-compiler/.npm/package/node_modules
+            packages/babel-runtime/.npm/package/node_modules
+            packages/http/.npm/package/node_modules
+            packages/socket-stream-client/.npm/package/node_modules
+            packages/ddp-client/.npm/package/node_modules
+            packages/npm-mongo/.npm/package/node_modules
+            packages/package-version-parser/.npm/package/node_modules
+            packages/boilerplate-generator/.npm/package/node_modules
+          key: package-npm-deps-cache-group1-v3-${{ hashFiles('shrinkwraps.txt') }}
+          restore-keys: package-npm-deps-cache-group1-v3-
+
+      - name: Cache npm deps (group2)
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/xmlbuilder/.npm/package/node_modules
+            packages/logging/.npm/package/node_modules
+            packages/webapp/.npm/package/node_modules
+            packages/ddp-server/.npm/package/node_modules
+            packages/mongo/.npm/package/node_modules
+            packages/npm-bcrypt/.npm/package/node_modules
+            packages/email/.npm/package/node_modules
+            packages/caching-compiler/.npm/package/node_modules
+            packages/less/.npm/plugin/compileLessBatch/node_modules
+            packages/non-core/blaze/packages/spacebars-compiler/.npm/package/node_modules
+            packages/boilerplate-generator-tests/.npm/package/node_modules
+            packages/non-core/bundle-visualizer/.npm/package/node_modules
+            packages/d3-hierarchy/.npm/package/node_modules
+            packages/non-core/coffeescript-compiler/.npm/package/node_modules
+            packages/server-render/.npm/package/node_modules
+            packages/es5-shim/.npm/package/node_modules
+            packages/force-ssl-common/.npm/package/node_modules
+            packages/jshint/.npm/plugin/lintJshint/node_modules
+            packages/minifier-css/.npm/package/node_modules
+            packages/minifier-js/.npm/package/node_modules
+            packages/standard-minifier-css/.npm/plugin/minifyStdCSS/node_modules
+            packages/inter-process-messaging/.npm/package/node_modules
+            packages/fetch/.npm/package/node_modules
+            packages/non-core/mongo-decimal/.npm/package/node_modules
+          key: package-npm-deps-cache-group2-v6-${{ hashFiles('shrinkwraps.txt') }}
+          restore-keys: package-npm-deps-cache-group2-v6-
+
+      - name: Cache other deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            .babel-cache
+            .meteor
+          key: v7-other-deps-cache-${{ github.ref_name }}-${{ hashFiles('meteor/**') }}-${{ github.sha }}
+          restore-keys: |
+            v7-other-deps-cache-${{ github.ref_name }}-${{ hashFiles('meteor/**') }}-
+            v7-other-deps-cache-${{ github.ref_name }}-
+
+      - name: Cache test-groups
+        uses: actions/cache@v4
+        with:
+          path: ./tmp/test-groups
+          key: v4-test-groups-${{ github.ref_name }}
+          restore-keys: v4-test-groups-
+
+      - name: Create Test Results Directory
+        run: |
+          sudo mkdir -p ./tmp/results/junit
+          sudo chmod a+rwx ./tmp/results/junit
+
+      - name: Clear npm cache
+        run: ./meteor npm cache clear --force
+
+      - name: 📝 Log Environment
+        run: |
+          echo "==> LSB Version" && lsb_release -a
+          echo "==> OS Release"      && cat /etc/os-release
+          echo "==> Kernel"          && uname -srm
+          echo "==> Node"            && node --version
+          echo "==> NPM"             && npm --version
+          echo "==> Meteor Node"     && ./meteor node --version
+          echo "==> Meteor NPM"      && ./meteor npm --version
+          echo "==> Dev bundle pkg"  && cat ./dev_bundle/lib/package.json
+          echo "==> Dev bundle mods" && ls -l ./dev_bundle/lib/node_modules
+          
+      - name: 🔧 Ensure Meteor scripts are executable
+        run: |
+          chmod +x meteor
+          chmod +x dev_bundle/bin/node
+          chmod +x dev_bundle/bin/npm
+          
+      - name: 🔄 Get Ready (meteor --get-ready)
+        run: |
+          eval "$PRE_TEST_COMMANDS"
+          cd dev_bundle/lib
+          ../../meteor npm install @types/node@22.7.4 --save-dev
+          ../../meteor npm install -g typescript
+          cd ../../
+          ./meteor --get-ready
+        timeout-minutes: 60
+
+      - name: 💾 Save Node Binary on Failure
+        if: failure()
+        run: |
+          if compgen -G "/tmp/core_dumps/core.*" > /dev/null; then
+            echo "Saving Node binary..."
+            cp dev_bundle/bin/node /tmp/core_dumps/node
+          fi
+
+      - name: List all files in the workspace
+        run: |
+          echo "==> Meteor" && ls -l meteor
+          echo "==> Dev Bundle" && ls -l dev_bundle
+          echo "==> Packages" && ls -l packages
+          echo "==> cwd" && ls -l .
+
+      - name: Tar up workspace so we retain permissions
+        run: |
+          tar -czf ../meteor.tar.gz .
+          mv ../meteor.tar.gz .
+
+      - name: 📁 Upload workspace
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: workspace
+          path: meteor.tar.gz
+
+      - name: 📂 Upload core dumps
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: core-dumps
+          path: /tmp/core_dumps
+
+      - name: 📊 Upload memory log
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: memuse-log
+          path: /tmp/memuse.txt
+
+################################################################################
+# 2) ISOLATED & GROUPED TESTS (formerly "Isolated Tests" + "Test Group 0‒11")
+################################################################################
+# We use a matrix for the test groups, plus one separate "isolated" job.
+################################################################################
+  isolated-tests:
+    name: 🔬 Isolated Tests
+    needs: build-env
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: meteor.tar.gz
+
+      - name: Extract workspace
+        run: |
+          tar -xzf meteor.tar.gz
+
+      - name: 🔧 Setup Memory Logging
+        run: |
+          nohup bash -c 'while true; do
+            ps -e -o user,%cpu,%mem,rss:10,vsz:10,command:20 --sort=-%mem \
+              >> /tmp/memuse.txt; echo "----------" >> /tmp/memuse.txt; sleep 1;
+          done' &
+
+      - name: 🌍 Environment Changes
+        run: |
+          sudo mkdir -p /tmp/core_dumps && sudo chmod a+rwx /tmp/core_dumps
+
+      - name: 📋 Print environment
+        run: printenv
+
+      - name: 🔧 Ensure Meteor scripts are executable
+        run: |
+          chmod +x meteor
+          chmod +x dev_bundle/bin/node
+          chmod +x dev_bundle/bin/npm
+
+      - name: List all files in the workspace
+        run: |
+          echo "==> Meteor" && ls -l meteor
+          echo "==> Dev Bundle" && ls -l dev_bundle
+          echo "==> Packages" && ls -l packages
+
+      - name: 🚀 Self-test package-tests
+        run: |
+          eval "$PRE_TEST_COMMANDS"
+          ./meteor self-test \
+            'add debugOnly and prodOnly packages' \
+            --retries $METEOR_SELF_TEST_RETRIES --headless
+        timeout-minutes: 20
+
+      - name: 📝 Log Environment
+        run: |
+          echo "==> Node $(node --version); npm $(npm --version)"
+
+      - name: 🚀 Self-test Custom Warehouse
+        run: |
+          eval "$PRE_TEST_COMMANDS"
+          ./meteor self-test \
+            --retries $METEOR_SELF_TEST_RETRIES \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --with-tag "custom-warehouse"
+        timeout-minutes: 20
+
+      - name: 💾 Save Node Binary on Failure
+        if: failure()
+        run: |
+          if compgen -G "/tmp/core_dumps/core.*" > /dev/null; then
+            cp dev_bundle/bin/node /tmp/core_dumps/node
+          fi
+
+      - name: 📑 Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: results-isolated
+          path: ./tmp/results
+
+      - name: 📂 Upload core dumps
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: core-dumps
+          path: /tmp/core_dumps
+
+      - name: 📊 Upload memory log
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: memuse-log
+          path: /tmp/memuse.txt
+
+  test-groups:
+    name: 🧪 Test Group ${{ matrix.group }}
+    needs: build-env
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        group: [0,1,2,3,4,5,6,7,8,9,10,11]
+
+    steps:
+      - name: Download workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: meteor.tar.gz
+
+      - name: Extract workspace
+        run: |
+          tar -xzf meteor.tar.gz
+
+      - name: 🔧 Setup Memory Logging
+        run: |
+          nohup bash -c 'while true; do
+            ps -e -o user,%cpu,%mem,rss:10,vsz:10,command:20 --sort=-%mem \
+              >> /tmp/memuse.txt; echo "----------" >> /tmp/memuse.txt; sleep 1;
+          done' &
+
+      - name: 🌍 Environment Changes
+        run: sudo mkdir -p /tmp/core_dumps && sudo chmod a+rwx /tmp/core_dumps
+
+      - name: 📋 Print environment
+        run: printenv
+
+      - name: 📝 Log Environment
+        run: echo "Group ${{ matrix.group }} started..."
+
+      - name: 🔧 Ensure Meteor scripts are executable
+        run: |
+          chmod +x meteor
+          chmod +x dev_bundle/bin/node
+          chmod +x dev_bundle/bin/npm
+
+      - name: 🚀 Self-test (Group ${{ matrix.group }})
+        run: |
+          export N=${{ matrix.group }}
+          if [ -f ./tmp/test-groups/$N.txt ]; then
+            TEST_GROUP=$(<./tmp/test-groups/$N.txt)
+          elif [ -f ./tmp/test-groups/0.txt ]; then
+            TEST_GROUP=XXXXX
+          else
+            # default regex for group ${{ matrix.group }}
+            declare -A regex=(
+              [0]='^[a-b]|^c[a-n]|^co[a-l]|^comm'
+              [1]='^com[n-z]'
+              [2]='^co[n-z]'
+              [3]='^c[p-z]|^h[a-e]'
+              [4]='^h[f-z]|^[i-l]'
+              [5]='^m[a-n]|^mo[a-d]'
+              [6]='^mo[e-z]|^m[p-z]|^[n-o]'
+              [7]='^[p-q]|^r[a-e]'
+              [8]='^r[f-z]'
+              [9]='^s'
+              [10]='^[t-z]'
+              [11]='^[d-g]'
+            )
+            TEST_GROUP=${regex[$N]}
+          fi
+          echo "→ Running tests matching: $TEST_GROUP"
+          eval "$PRE_TEST_COMMANDS"
+          ./meteor self-test "$TEST_GROUP" \
+            --retries $METEOR_SELF_TEST_RETRIES \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/$N.xml \
+            ${N#2 ? "--without-tag \"custom-warehouse\"" : ""}  # skip custom-warehouse only for group2
+        timeout-minutes: 30
+
+      - name: 💾 Save Node Binary on Failure
+        if: failure()
+        run: |
+          if compgen -G "/tmp/core_dumps/core.*" > /dev/null; then
+            cp dev_bundle/bin/node /tmp/core_dumps/node
+          fi
+
+      - name: 📑 Upload test results (Group ${{ matrix.group }})
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: results-group-${{ matrix.group }}
+          path: ./tmp/results
+
+      - name: 📂 Upload core dumps
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: core-dumps
+          path: /tmp/core_dumps
+
+      - name: 📊 Upload memory log
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: memuse-log
+          path: /tmp/memuse.txt
+
+################################################################################
+# 3) DOCS TESTING (formerly "Docs")
+################################################################################
+  docs:
+    name: 📚 Docs JSDoc Tests
+    runs-on: ubuntu-latest
+
+    env:
+      CHECKOUT_METEOR_DOCS: ./test_docs
+
+    steps:
+      - name: Checkout current repo
+        uses: actions/checkout@v4
+
+      - name: Clone meteor/docs
+        run: |
+          mkdir -p "$CHECKOUT_METEOR_DOCS"
+          if [ -n "$GITHUB_HEAD_REF" ]; then
+            PR_NUMBER=${{ github.event.pull_request.number }}
+            PR_BRANCH=$GITHUB_HEAD_REF
+            git clone https://github.com/meteor/meteor.git "$CHECKOUT_METEOR_DOCS"
+            cd "$CHECKOUT_METEOR_DOCS"
+            git fetch origin pull/$PR_NUMBER/head:$PR_BRANCH
+          else
+            BRANCH_NAME=${GITHUB_REF#refs/heads/}
+            git clone --branch "$BRANCH_NAME" https://github.com/meteor/meteor.git "$CHECKOUT_METEOR_DOCS"
+          fi
+
+      - name: Generate & test docs
+        run: |
+          cd "$CHECKOUT_METEOR_DOCS/docs"
+          npm install
+          npm test
+
+################################################################################
+# 4) CLEAN UP & CACHE SAVE (formerly "Clean Up")
+################################################################################
+  clean-up:
+    name: 🧹 Clean Up
+    needs: [isolated-tests, test-groups]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace
+          path: meteor.tar.gz
+
+      - name: Extract workspace
+        run: |
+          tar -xzf meteor.tar.gz
+
+      - name: Create Test Groups Dir
+        run: |
+          sudo mkdir -p ./tmp/test-groups
+          sudo chmod a+rwx ./tmp/test-groups
+
+      - name: Calculate Balanced Test Groups
+        run: |
+          npm install --prefix ./scripts/test-balancer
+          npm start --prefix ./scripts/test-balancer \
+            --num-groups $NUM_GROUPS \
+            --running-avg-length $RUNNING_AVG_LENGTH
+
+      - name: Cache test-groups
+        uses: actions/cache@v4
+        with:
+          path: ./tmp/test-groups
+          key: v1-test-groups-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: v1-test-groups-${{ github.ref_name }}-
+
+      - name: Cache dev_bundle
+        uses: actions/cache@v4
+        with:
+          path: dev_bundle
+          key: v3-dev-bundle-cache-${{ hashFiles('meteor/**') }}
+
+      - name: Cache npm deps (group1)
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/meteor/.npm/package/node_modules
+            # ... same as above
+          key: package-npm-deps-cache-group1-v3-${{ hashFiles('shrinkwraps.txt') }}
+
+      - name: Cache npm deps (group2)
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/xmlbuilder/.npm/package/node_modules
+            # ... same as above
+          key: package-npm-deps-cache-group2-v5-${{ hashFiles('shrinkwraps.txt') }}
+
+      - name: Cache other deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            .babel-cache
+            .meteor
+          key: v7-other-deps-cache-${{ github.ref_name }}-${{ hashFiles('meteor/**') }}-${{ github.sha }}

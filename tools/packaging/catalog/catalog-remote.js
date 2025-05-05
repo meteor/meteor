@@ -813,6 +813,8 @@ Object.assign(RemoteCatalog.prototype, {
   // track, sorted by their orderKey. Returns the empty array if the release
   // track does not exist or does not have any recommended versions.
   getSortedRecommendedReleaseRecords: async function (track, laterThanOrderKey) {
+    Console.debug("getSortedRecommendedReleaseRecords", track, laterThanOrderKey);
+
     var self = this;
     // XXX releaseVersions content objects are kinda big; if we put
     // 'recommended' and 'orderKey' in their own columns this could be faster
@@ -852,6 +854,7 @@ Object.assign(RemoteCatalog.prototype, {
   // Returns the default release version on the DEFAULT_TRACK, or for a
   // given release track.
   getDefaultReleaseVersion: async function (track) {
+    Console.debug("getDefaultReleaseVersion", track);
     var self = this;
     var versionRecord = await self.getDefaultReleaseVersionRecord(track);
     if (! versionRecord)
@@ -863,6 +866,8 @@ Object.assign(RemoteCatalog.prototype, {
   // given release track.
   getDefaultReleaseVersionRecord: async function (track) {
     var self = this;
+
+    Console.debug("getDefaultReleaseVersionRecord", track);
 
     if (!track)
       track = exports.DEFAULT_TRACK;
@@ -999,7 +1004,7 @@ Object.assign(RemoteCatalog.prototype, {
   }
 });
 
-// SQLite has a bizarre philosophy about automaticaly converting between
+// SQLite has a bizarre philosophy about automatically converting between
 // different data types, such as strings and floating point numbers:
 // https://www.sqlite.org/quirks.html#flexible_typing
 //

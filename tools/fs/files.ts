@@ -177,6 +177,10 @@ export function addToGitignore(dirPath: string, entry: string) {
 
 // Are we running Meteor from a git checkout?
 export const inCheckout = _.once(function () {
+  if(process.env.GITHUB_ACTIONS) {
+    return true;
+  }
+
   try {
     if (exists(pathJoin(getCurrentToolsDir(), '.git'))) {
       return true;
