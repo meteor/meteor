@@ -1,5 +1,6 @@
 import { defineConfig } from "vitepress";
 import metadata from "../generators/meteor-versions/metadata.generated";
+import llmstxt from "vitepress-plugin-llms";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -10,9 +11,7 @@ export default defineConfig({
   sitemap: {
     hostname: "https://v3-docs.meteor.com",
   },
-  ignoreDeadLinks: [
-    /^http:\/\/localhost/
-  ],
+  ignoreDeadLinks: [/^http:\/\/localhost/],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -483,5 +482,12 @@ export default defineConfig({
       pattern: "https://github.com/meteor/meteor/edit/devel/v3-docs/docs/:path",
       text: "Edit this page on GitHub",
     },
+  },
+  vite: {
+    plugins: [
+      llmstxt({
+        title: "Meteor.js 3 Docs",
+      }),
+    ],
   },
 });

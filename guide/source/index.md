@@ -3,7 +3,7 @@ title: Introduction
 description: This is the guide for using Meteor, a full-stack JavaScript platform for developing modern web and mobile applications.
 ---
 
-> Meteor 2.x runs on a deprecated Node.js version (14). Meteor 3 has been released with support for the latest Node.js LTS version. For more information, please consult our [migration guide](https://v3-migration-docs.meteor.com/) and the [latest docs](https://v3-docs.meteor.com).
+> Meteor 2.x runs on a deprecated Node.js version (14). Meteor 3.x has been released with support for the latest Node.js LTS version. For more information, please consult our [migration guide](https://v3-migration-docs.meteor.com/) and the [latest docs](https://docs.meteor.com).
 
 <!--  XXX: note that this content is somewhat duplicated on the docs, and should be updated in parallel -->
 <h2 id="what-is-meteor">What is Meteor?</h2>

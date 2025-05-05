@@ -118,6 +118,19 @@ To be able to use the `meteor` command from fish it's needed to include `/home/<
 
 `set PATH /home/<user>/.meteor $PATH`
 
+## Using AI with Meteor docs {#ai-docs}
+
+Meteor docs ships with [llms.txt](https://llmstxt.org/) file, which helps language models use your website
+
+If you have [LM Studio installed](https://lmstudio.ai/docs/app) or any other LLM tool, you can use the llms.txt file to ask questions about Meteor.
+
+```bash
+curl https://docs.meteor.com/llms-full.txt  -o meteor-docs.txt
+```
+
+Then, you can use the file with your LLM tool of choice. For example, if you have LM Studio installed, you can use their [chat with documents feature](https://lmstudio.ai/docs/app/basics/rag)
+to ask questions about Meteor.
+
 ## Uninstalling Meteor {#uninstall}
 
 If you installed Meteor using npx, you can remove it by running:

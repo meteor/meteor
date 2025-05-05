@@ -354,21 +354,21 @@ To learn more about the recommended file structure for Meteor apps, check the [M
 
 ##  meteor generate  {meteorgenerate}
 
-``meteor generate`` is a command for generating scaffolds for your current project. When ran without arguments, it will ask
-you what is the name of the model you want to generate, if you do want methods for your api and publications. It can be
-used as a command line only operation as well.
+``meteor generate`` is a command to generate boilerplate for your current project. `meteor generate` receives a name as a parameter, and generates files containing code to create a [Collection](https://docs.meteor.com/api/collections.html) with that name, [Methods](https://docs.meteor.com/api/meteor.html#methods) to perform basic CRUD operations on that Collection, and a [Subscription](https://docs.meteor.com/api/meteor.html#Meteor-publish) to read its data with reactivity from the client. 
+
+If you run ``meteor generate``  without arguments, it will ask you for a name, and name the auto-generated Collection accordingly. It will also ask if you do want Methods for your API and Publications to be generated as well.
 
 > _Important to note:_
-> By default, the generator will use JavaScript but if it detects that you have a
-``tsconfig.json`` file in your project, it will use TypeScript instead.
+> By default, the generator will generate JavaScript code. If you have a
+``tsconfig.json`` file in your project, it will generate TypeScript code instead.
 
-running
+Example:
 ```bash
 meteor generate customer
-
 ```
 
-It will generate the following code in ``/imports/api``
+Running the command above will generate the following code in ``/imports/api``:
+
 ![Screenshot 2022-11-09 at 11 28 29](https://user-images.githubusercontent.com/70247653/200856551-71c100f5-8714-4b34-9678-4f08780dcc8b.png)
 
 That will have the following code:
@@ -442,12 +442,9 @@ export * from './methods';
 export * from './publications';
 ```
 
-Also, there is the same version of these methods using TypeScript, that will be shown bellow.
-
 ### path option {meteorgenerate-path}
 
-If you want to create in another path, you can use the ``--path`` option in order to select where to place this boilerplate.
-It will generate the model in that path. Note that is used TypeScript in this example.
+If you want the generated files to be placed  in a specific directory, you can use the ``--path`` option to tell `meteor generate` where to place the new files. In the example below, `meteor generate` will create a collection called `another-customer` and place the `collection.ts`, `methods.ts`, `publications.ts` and `index.ts`  files inside the `server/admin` directory. In this example, we will assume the user has a `tsconfig.json` file in their project folder, and generate TypeScript instead.
 
 ```bash
 
@@ -455,7 +452,7 @@ meteor generate another-customer --path=server/admin
 
 ```
 
-It will generate in ``server/admin`` the another-client code:
+It will generate our files in the  ``server/admin`` folder:
 
 ![Screenshot 2022-11-09 at 11 32 39](https://user-images.githubusercontent.com/70247653/200857560-a4874e4c-1078-4b7a-9381-4c6590d2f63b.png)
 
@@ -538,13 +535,12 @@ export * from './publications';
 ###  Using the Wizard   {meteorgenerate-wizard}
 
 
-If you run the following command:
+Running `meteor-generate` without arguments will start a little wizard in your terminal, which will ask you the name of your Collection, and whether you want Methods and Publications to be generated as well.
 
 ```bash
 meteor generate
 ```
 
-It will prompt the following questions.
 
 ![Screenshot 2022-11-09 at 11 38 29](https://user-images.githubusercontent.com/70247653/200859087-a2ef63b6-7ac1-492b-8918-0630cbd30686.png)
 
@@ -555,6 +551,10 @@ It will prompt the following questions.
 
 ###  Using your own template  {meteorgenerate-templating}
 
+You may customize the output of `meteor generate` by providing a directory with a "template". A template directory is just a folder provide by you with `.js`/`.ts` files, which are copied over.
+
+To use an user-provided template, you should pass in a template directory URL so that it can copy it with its changes.
+
 `--templatePath`
 
 ```bash
@@ -562,19 +562,20 @@ meteor generate feed --templatePath=/scaffolds-ts
 ```
 ![Screenshot 2022-11-09 at 11 42 47](https://user-images.githubusercontent.com/70247653/200860178-2341befe-bcfd-422f-a4bd-7c9918abfd97.png)
 
-> Note that this is not a CLI framework inside meteor but just giving some solutions for really common problems out of the box.
+> Note that this is not a full-blown CLI framework inside Meteor. `meteor generate` is just a  command for generating code that is common in Meteor projects.
 > Check out Yargs, Inquirer or Commander for more information about CLI frameworks.
 
 
-You can use your own templates for scaffolding your specific workloads. To do that, you should pass in a template directory URL so that it can copy it with its changes.
 
 ###  How to rename things? {meteorgenerate-template-rename}
 
-Out of the box is provided a few functions such as replacing ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$``
+In addition to your own template folder, you can pass a JavaScript file to `meteor-generate` to perform certain transformations in your template files. That file is just a normal `.js` file that should export two functions: `transformName` and `transformContents`, which are used to modify the file names and contents, respectively.
 
-these replacements come from this function:
+If you don't want to write such a file yourself, a few functions are provided out of the box to replace strings like ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$`` in your template files. The [internal Meteor template files](https://github.com/meteor/meteor/blob/release-3.3/tools/static-assets/scaffolds-js/methods.js) (which is used when you don't pass a template folder through the `--templatePath` option) are implemented this way - they include those special strings which get replaced to generate your files.
 
-_Note that scaffoldName is the name that you have passed as argument_
+These replacements come from this function from Meteor's CLI:
+
+_scaffoldName is a string with the name that you have passed as argument._
 
 ```js
 const transformName = (name) => {
@@ -586,21 +587,22 @@ const transformName = (name) => {
   }
 ```
 
-###  How to bring your own templates?  {meteorgenerate-template-faq}
+###  How to replace things in your own templates?  {meteorgenerate-template-faq}
 
 `--replaceFn`
 
-There is an option called ``--replaceFn`` that when you pass in given a .js file with two functions it will override all templating that we have defaulted to use your given function.
+If you do want to customize how your templates are generated, you can pass a `.js` file with the ``--replaceFn`` option, as described above.  When you pass in given a `.js` file with an implementation for those two functions, Meteor will use your functions instead of the [default ones](https://github.com/meteor/meteor/blob/ae8cf586acc9a4c7bf9a5ab79dc5f8b7ef433a64/tools/cli/commands.js#L3090).
+
 _example of a replacer file_
 ```js
 export function transformFilename(scaffoldName, filename) {
   console.log(scaffoldName, filename);
-  return filename
+  return filename;
 }
 
-export function transformContents(scaffoldName, contents, fileName) {
-  console.log(fileName, contents);
-  return contents
+export function transformContents(scaffoldName, fileContents, filename) {
+  console.log(filename, fileContents);
+  return contents;
 }
 ```
 If you run your command like this:
@@ -608,9 +610,9 @@ If you run your command like this:
 ```bash
  meteor generate feed --replaceFn=/fn/replace.js
 ```
-It will generate files full of ``$$PascalCase$$``using the meteor provided templates.
+It will generate files full of ``$$PascalCase$$`` strings using the Meteor provided templates, ignoring the name provided by the user (`feed`). Since we aren't replacing them with anything in the example above, the Meteor template files are copied [as they are](https://github.com/meteor/meteor/blob/release-3.3/tools/static-assets/scaffolds-js/collection.js).
 
-A better example of this feature would be the following js file:
+A more real-world usage of this feature could be done with the following `.js` file:
 ```js
 const toPascalCase = (str) => {
   if(!str.includes('-')) return str.charAt(0).toUpperCase() + str.slice(1);

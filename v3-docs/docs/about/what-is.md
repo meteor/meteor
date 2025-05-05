@@ -1,14 +1,11 @@
-
-
-
-
 # Introduction {#introduction}
 
 :::info You are reading the Meteor 3 documentation!
 
 - Searching for the Meteor 2 documentation? Access the [Meteor 2 Docs](https://v2-docs.meteor.com/).
 - Upgrading from Meteor 2? Check out the [Migration Guide](https://v3-migration-docs.meteor.com/).
-  :::
+
+:::
 
 Meteor is a full-stack JavaScript platform for developing modern web and mobile applications. Meteor includes a key set of technologies for building connected-client reactive applications, a build tool, and a curated set of packages from the Node.js and general JavaScript community.
 

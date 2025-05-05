@@ -1,12 +1,12 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: "2.0.5",
+  version: "2.0.6",
 });
 
 Npm.depends({
   "cookie-parser": "1.4.6",
-  express: "5.0.1",
-  "@types/express": "5.0.0",
+  express: "5.1.0",
+  "@types/express": "5.0.1",
   compression: "1.7.4",
   errorhandler: "1.5.1",
   parseurl: "1.3.3",
