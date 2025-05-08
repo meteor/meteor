@@ -238,7 +238,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: workspace
-          path: meteor.tar.gz
+          path: .
 
       - name: Extract workspace
         run: |
@@ -334,7 +334,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: workspace
-          path: meteor.tar.gz
+          path: .
 
       - name: Extract workspace
         run: |
@@ -472,7 +472,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: workspace
-          path: meteor.tar.gz
+          path: .
 
       - name: Extract workspace
         run: |
