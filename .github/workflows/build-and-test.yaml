@@ -326,6 +326,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         group: [0,1,2,3,4,5,6,7,8,9,10,11]
 
@@ -423,14 +424,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: core-dumps
+          name: core-dumps-${{ matrix.group }}
           path: /tmp/core_dumps
 
       - name: 📊 Upload memory log
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: memuse-log
+          name: memuse-log-${{ matrix.group }}
           path: /tmp/memuse.txt
 
 ################################################################################
