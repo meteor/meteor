@@ -389,12 +389,20 @@ jobs:
           fi
           echo "→ Running tests matching: $TEST_GROUP"
           eval "$PRE_TEST_COMMANDS"
+          
+          CMD_EXTRA_ARGS=()
+          if [ "$N" -eq 2 ]; then
+            # If N (matrix.group) is 2, add the --without-tag option.
+            # This aligns with the original intent: "skip custom-warehouse only for group2"
+            CMD_EXTRA_ARGS+=(--without-tag "custom-warehouse")
+          fi
+
           ./meteor self-test "$TEST_GROUP" \
             --retries $METEOR_SELF_TEST_RETRIES \
             --exclude "$SELF_TEST_EXCLUDE" \
             --headless \
             --junit ./tmp/results/junit/$N.xml \
-            ${N#2 ? "--without-tag \"custom-warehouse\"" : ""}  # skip custom-warehouse only for group2
+            "${CMD_EXTRA_ARGS[@]}"
         timeout-minutes: 30
 
       - name: 💾 Save Node Binary on Failure
