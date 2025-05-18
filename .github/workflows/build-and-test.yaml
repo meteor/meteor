@@ -228,107 +228,27 @@ jobs:
 ################################################################################
 # We use a matrix for the test groups, plus one separate "isolated" job.
 ################################################################################
-  isolated-tests:
-    name: 🔬 Isolated Tests
+  meteor-tests:
+    name: 🚀 Meteor Tests
     needs: build-env
     runs-on: ubuntu-latest
-
-    steps:
-      - name: Download workspace
-        uses: actions/download-artifact@v4
-        with:
-          name: workspace
-          path: .
-
-      - name: Extract workspace
-        run: |
-          tar -xzf meteor.tar.gz
-
-      - name: 🔧 Setup Memory Logging
-        run: |
-          nohup bash -c 'while true; do
-            ps -e -o user,%cpu,%mem,rss:10,vsz:10,command:20 --sort=-%mem \
-              >> /tmp/memuse.txt; echo "----------" >> /tmp/memuse.txt; sleep 1;
-          done' &
-
-      - name: 🌍 Environment Changes
-        run: |
-          sudo mkdir -p /tmp/core_dumps && sudo chmod a+rwx /tmp/core_dumps
-
-      - name: 📋 Print environment
-        run: printenv
-
-      - name: 🔧 Ensure Meteor scripts are executable
-        run: |
-          chmod +x meteor
-          chmod +x dev_bundle/bin/node
-          chmod +x dev_bundle/bin/npm
-
-      - name: List all files in the workspace
-        run: |
-          echo "==> Meteor" && ls -l meteor
-          echo "==> Dev Bundle" && ls -l dev_bundle
-          echo "==> Packages" && ls -l packages
-
-      - name: 🚀 Self-test package-tests
-        run: |
-          eval "$PRE_TEST_COMMANDS"
-          ./meteor self-test \
-            'add debugOnly and prodOnly packages' \
-            --retries $METEOR_SELF_TEST_RETRIES --headless
-        timeout-minutes: 20
-
-      - name: 📝 Log Environment
-        run: |
-          echo "==> Node $(node --version); npm $(npm --version)"
-
-      - name: 🚀 Self-test Custom Warehouse
-        run: |
-          eval "$PRE_TEST_COMMANDS"
-          ./meteor self-test \
-            --retries $METEOR_SELF_TEST_RETRIES \
-            --exclude "$SELF_TEST_EXCLUDE" \
-            --headless \
-            --with-tag "custom-warehouse"
-        timeout-minutes: 20
-
-      - name: 💾 Save Node Binary on Failure
-        if: failure()
-        run: |
-          if compgen -G "/tmp/core_dumps/core.*" > /dev/null; then
-            cp dev_bundle/bin/node /tmp/core_dumps/node
-          fi
-
-      - name: 📑 Upload test results
-        uses: actions/upload-artifact@v4
-        with:
-          include-hidden-files: true
-          name: results-isolated
-          path: ./tmp/results
-
-      - name: 📂 Upload core dumps
-        uses: actions/upload-artifact@v4
-        with:
-          include-hidden-files: true
-          name: core-dumps
-          path: /tmp/core_dumps
-
-      - name: 📊 Upload memory log
-        uses: actions/upload-artifact@v4
-        with:
-          include-hidden-files: true
-          name: memuse-log
-          path: /tmp/memuse.txt
-
-  test-groups:
-    name: 🧪 Test Group ${{ matrix.group }}
-    needs: build-env
-    runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
-        group: [0,1,2,3,4,5,6,7,8,9,10,11]
+        test:
+          - isolated
+          - group-0
+          - group-1
+          - group-2
+          - group-3
+          - group-4
+          - group-5
+          - group-6
+          - group-7
+          - group-8
+          - group-9
+          - group-10
+          - group-11
 
     steps:
       - name: Download workspace
@@ -354,56 +274,56 @@ jobs:
       - name: 📋 Print environment
         run: printenv
 
-      - name: 📝 Log Environment
-        run: echo "Group ${{ matrix.group }} started..."
-
       - name: 🔧 Ensure Meteor scripts are executable
         run: |
           chmod +x meteor
           chmod +x dev_bundle/bin/node
           chmod +x dev_bundle/bin/npm
 
-      - name: 🚀 Self-test (Group ${{ matrix.group }})
+      - name: 🚀 Run Meteor Tests
         run: |
-          export N=${{ matrix.group }}
-          if [ -f ./tmp/test-groups/$N.txt ]; then
-            TEST_GROUP=$(<./tmp/test-groups/$N.txt)
-          elif [ -f ./tmp/test-groups/0.txt ]; then
-            TEST_GROUP=XXXXX
+          if [[ "${{ matrix.test }}" == "isolated" ]]; then
+            echo "Running Isolated Tests..."
+            eval "$PRE_TEST_COMMANDS"
+            ./meteor self-test 'add debugOnly and prodOnly packages' --retries $METEOR_SELF_TEST_RETRIES --headless
+            eval "$PRE_TEST_COMMANDS"
+            ./meteor self-test --retries $METEOR_SELF_TEST_RETRIES --exclude "$SELF_TEST_EXCLUDE" --headless --with-tag "custom-warehouse"
           else
-            # default regex for group ${{ matrix.group }}
-            declare -A regex=(
-              [0]='^[a-b]|^c[a-n]|^co[a-l]|^comm'
-              [1]='^com[n-z]'
-              [2]='^co[n-z]'
-              [3]='^c[p-z]|^h[a-e]'
-              [4]='^h[f-z]|^[i-l]'
-              [5]='^m[a-n]|^mo[a-d]'
-              [6]='^mo[e-z]|^m[p-z]|^[n-o]'
-              [7]='^[p-q]|^r[a-e]'
-              [8]='^r[f-z]'
-              [9]='^s'
-              [10]='^[t-z]'
-              [11]='^[d-g]'
-            )
-            TEST_GROUP=${regex[$N]}
+            N=$(echo "${{ matrix.test }}" | cut -d'-' -f2)
+            if [ -f ./tmp/test-groups/$N.txt ]; then
+              TEST_GROUP=$(<./tmp/test-groups/$N.txt)
+            elif [ -f ./tmp/test-groups/0.txt ]; then
+              TEST_GROUP=XXXXX
+            else
+              declare -A regex=(
+                [0]='^[a-b]|^c[a-n]|^co[a-l]|^comm'
+                [1]='^com[n-z]'
+                [2]='^co[n-z]'
+                [3]='^c[p-z]|^h[a-e]'
+                [4]='^h[f-z]|^[i-l]'
+                [5]='^m[a-n]|^mo[a-d]'
+                [6]='^mo[e-z]|^m[p-z]|^[n-o]'
+                [7]='^[p-q]|^r[a-e]'
+                [8]='^r[f-z]'
+                [9]='^s'
+                [10]='^[t-z]'
+                [11]='^[d-g]'
+              )
+              TEST_GROUP=${regex[$N]}
+            fi
+            echo "→ Running tests matching: $TEST_GROUP"
+            eval "$PRE_TEST_COMMANDS"
+            CMD_EXTRA_ARGS=()
+            if [ "$N" -eq 2 ]; then
+              CMD_EXTRA_ARGS+=(--without-tag "custom-warehouse")
+            fi
+            ./meteor self-test "$TEST_GROUP" \
+              --retries $METEOR_SELF_TEST_RETRIES \
+              --exclude "$SELF_TEST_EXCLUDE" \
+              --headless \
+              --junit ./tmp/results/junit/$N.xml \
+              "${CMD_EXTRA_ARGS[@]}"
           fi
-          echo "→ Running tests matching: $TEST_GROUP"
-          eval "$PRE_TEST_COMMANDS"
-          
-          CMD_EXTRA_ARGS=()
-          if [ "$N" -eq 2 ]; then
-            # If N (matrix.group) is 2, add the --without-tag option.
-            # This aligns with the original intent: "skip custom-warehouse only for group2"
-            CMD_EXTRA_ARGS+=(--without-tag "custom-warehouse")
-          fi
-
-          ./meteor self-test "$TEST_GROUP" \
-            --retries $METEOR_SELF_TEST_RETRIES \
-            --exclude "$SELF_TEST_EXCLUDE" \
-            --headless \
-            --junit ./tmp/results/junit/$N.xml \
-            "${CMD_EXTRA_ARGS[@]}"
         timeout-minutes: 30
 
       - name: 💾 Save Node Binary on Failure
@@ -413,25 +333,25 @@ jobs:
             cp dev_bundle/bin/node /tmp/core_dumps/node
           fi
 
-      - name: 📑 Upload test results (Group ${{ matrix.group }})
+      - name: 📑 Upload test results
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: results-group-${{ matrix.group }}
+          name: results-${{ matrix.test }}
           path: ./tmp/results
 
       - name: 📂 Upload core dumps
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: core-dumps-${{ matrix.group }}
+          name: core-dumps-${{ matrix.test }}
           path: /tmp/core_dumps
 
       - name: 📊 Upload memory log
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: memuse-log-${{ matrix.group }}
+          name: memuse-log-${{ matrix.test }}
           path: /tmp/memuse.txt
 
 ################################################################################
@@ -473,7 +393,7 @@ jobs:
 ################################################################################
   clean-up:
     name: 🧹 Clean Up
-    needs: [isolated-tests, test-groups]
+    needs: [meteor-tests]
     runs-on: ubuntu-latest
 
     steps:
