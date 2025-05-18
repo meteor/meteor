@@ -767,9 +767,12 @@ jobs:
               PR_BRANCH=$(curl -s https://api.github.com/repos/meteor/meteor/pulls/$PR_NUMBER | jq -r .head.ref)
               git clone https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
               cd ${CHECKOUT_METEOR_DOCS}
-              git fetch origin pull/$PR_NUMBER/head:$PR_BRANCH
+              git fetch origin pull/$PR_NUMBER/head:PR-$PR_NUMBER
+              git checkout PR-$PR_NUMBER
             else
-              git clone --branch $CIRCLE_BRANCH https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
+              git clone https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
+              cd ${CHECKOUT_METEOR_DOCS}
+              git checkout $CIRCLE_BRANCH
             fi
       # Run almost the same steps the meteor/docs repository runs, minus deploy.
       - run:
