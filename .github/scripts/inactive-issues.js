@@ -16,35 +16,67 @@ module.exports = async ({ github, context }) => {
   console.log(`Configuration: Comment after ${daysToComment} days, Label after ${daysToLabel} days`);
   
   console.log('Fetching open issues...');
-  // Get open issues
-  const issues = await github.rest.issues.listForRepo({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    state: 'open',
-    per_page: 100
-  });
   
-  console.log(`Retrieved ${issues.data.length} open issues`);
-  console.log(`Response status: ${issues.status}`);
-  console.log(`Rate limit remaining: ${issues.headers['x-ratelimit-remaining'] || 'unknown'}`);
-  console.log(`Rate limit reset: ${issues.headers['x-ratelimit-reset'] || 'unknown'}`);
+  // Function to fetch all pages of issues
+  async function fetchAllIssues() {
+    let allIssues = [];
+    let page = 1;
+    let hasNextPage = true;
+    
+    console.log('Starting to fetch all pages of issues...');
+    
+    while (hasNextPage) {
+      console.log(`Fetching page ${page} of issues...`);
+      
+      const response = await github.rest.issues.listForRepo({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        state: 'open',
+        per_page: 100,
+        page: page,
+        sort: 'updated',
+        direction: 'asc' // Oldest updated first
+      });
+      
+      console.log(`Retrieved ${response.data.length} issues on page ${page}`);
+      console.log(`Response status: ${response.status}`);
+      console.log(`Rate limit remaining: ${response.headers['x-ratelimit-remaining'] || 'unknown'}`);
+      
+      allIssues = allIssues.concat(response.data);
+      
+      // Check if we have more pages
+      if (response.data.length < 100) {
+        hasNextPage = false;
+        console.log('Reached the last page of issues');
+      } else {
+        page++;
+        // Small delay to avoid hitting rate limits
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    return allIssues;
+  }
   
-  // For testing: Only process issue #11682
-  const testIssueNumber = 11682;
-  console.log(`\n=== 🧪 TEST MODE: Processing only issue #${testIssueNumber} ===`);
+  // Fetch all issues
+  const allIssues = await fetchAllIssues();
   
-  for (const issue of issues.data) {
-    console.log(`\nChecking issue #${issue.number}: "${issue.title}"`);
+  console.log(`Retrieved a total of ${allIssues.length} open issues`);
+  console.log('Issues are sorted by update date (oldest first)');
+  
+  console.log('\n=== Processing all issues sorted by oldest update first ===');
+  
+  let processedCount = 0;
+  let commentedCount = 0;
+  let labeledCount = 0;
+  
+  for (const issue of allIssues) {
+    processedCount++;
+    console.log(`\nChecking issue #${issue.number}: "${issue.title}" (${processedCount}/${allIssues.length})`);
     
     // Skip pull requests
     if (issue.pull_request) {
       console.log(`Issue #${issue.number} is a pull request, skipping`);
-      continue;
-    }
-    
-    // Skip all issues except test issue during testing
-    if (issue.number !== testIssueNumber) {
-      console.log(`Issue #${issue.number} is not our test issue, skipping`);
       continue;
     }
     
@@ -126,6 +158,7 @@ module.exports = async ({ github, context }) => {
           });
           console.log(`Comment created successfully. Status: ${result.status}`);
           console.log(`Comment URL: ${result.data.html_url}`);
+          commentedCount++;
         } catch (error) {
           console.error(`Error adding comment: ${error.message}`);
           console.error(JSON.stringify(error, null, 2));
@@ -162,6 +195,7 @@ module.exports = async ({ github, context }) => {
           });
           console.log(`Comment added successfully. Status: ${commentResult.status}`);
           console.log(`Comment URL: ${commentResult.data.html_url}`);
+          labeledCount++;
         } catch (error) {
           console.error(`Error during labeling: ${error.message}`);
           console.error(JSON.stringify(error, null, 2));
@@ -175,9 +209,14 @@ module.exports = async ({ github, context }) => {
       console.log(`Required for comment: > ${daysToComment} days`);
       console.log(`Required for label: > ${daysToLabel} days`);
     }
+    
+    // Update counters based on actions taken - these will be incremented within the action blocks
   }
   
   console.log('\n=== 🎉 Script execution complete ===');
   console.log(`Time: ${new Date().toISOString()}`);
+  console.log(`Total issues processed: ${processedCount}`);
+  console.log(`Issues commented (60+ days inactive): ${commentedCount}`);
+  console.log(`Issues labeled (90+ days inactive): ${labeledCount}`);
   console.log('See logs above for detailed information about each issue processed');
 };
