@@ -1,0 +1,24 @@
+name: Inactive Issues Management
+
+on:
+  schedule:
+    # Runs at 01:00 UTC every day
+    - cron: '0 1 * * *'
+  # Allows to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  manage-inactive-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      
+      - name: Manage inactive issues
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const script = require('./.github/scripts/inactive-issues.js')
+            await script({github, context})
