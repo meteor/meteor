@@ -10,8 +10,6 @@ on:
 jobs:
   manage-inactive-issues:
     runs-on: ubuntu-latest
-    # Only run this workflow for PR #13775 when triggered by a pull_request event
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.number == 13775 }}
     permissions:
       issues: write
     steps:
