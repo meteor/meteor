@@ -2,16 +2,10 @@ name: Inactive Issues Management
 
 on:
   schedule:
-    # Runs at 01:00 UTC every day
-    - cron: '0 1 * * *'
+    # “At 01:00 on Saturday.”
+    - cron: '0 1 * * 6'
   # Allows to run this workflow manually from the Actions tab
   workflow_dispatch:
-  # Run when there's a push to a pull request
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - '.github/scripts/inactive-issues.js'
-      - '.github/workflows/inactive-issues.yml'
 
 jobs:
   manage-inactive-issues:
