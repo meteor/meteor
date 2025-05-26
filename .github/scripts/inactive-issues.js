@@ -17,13 +17,16 @@ module.exports = async ({ github, context }) => {
   
   console.log('Fetching open issues...');
   
-  // Function to fetch all pages of issues
+  // Function to fetch issues until we find recently updated ones
   async function fetchAllIssues() {
     let allIssues = [];
     let page = 1;
     let hasNextPage = true;
+    const now = new Date();
+    const minInactivity = idleTimeComment; // 60 days in milliseconds
     
-    console.log('Starting to fetch all pages of issues...');
+    console.log('Starting to fetch issues (oldest first)...');
+    console.log(`Will stop fetching when issues are newer than ${daysToComment} days inactive`);
     
     while (hasNextPage) {
       console.log(`Fetching page ${page} of issues...`);
@@ -42,12 +45,43 @@ module.exports = async ({ github, context }) => {
       console.log(`Response status: ${response.status}`);
       console.log(`Rate limit remaining: ${response.headers['x-ratelimit-remaining'] || 'unknown'}`);
       
-      allIssues = allIssues.concat(response.data);
+      // Check if the most recently updated issue on this page is too recent
+      let recentIssueFound = false;
+      if (response.data.length > 0) {
+        // Check the last issue on the page (most recently updated)
+        const lastIssue = response.data[response.data.length - 1];
+        const lastIssueUpdatedAt = new Date(lastIssue.updated_at);
+        const timeSinceLastIssueUpdate = now.getTime() - lastIssueUpdatedAt.getTime();
+        
+        console.log(`Most recent issue on page ${page} was updated ${(timeSinceLastIssueUpdate/(24*60*60*1000)).toFixed(2)} days ago`);
+        
+        if (timeSinceLastIssueUpdate < minInactivity) {
+          // This page already has issues that are too recent, filter them out
+          console.log(`Found issues updated within the last ${daysToComment} days, filtering and stopping pagination`);
+          
+          const filteredIssues = response.data.filter(issue => {
+            const issueUpdatedAt = new Date(issue.updated_at);
+            const timeSinceUpdate = now.getTime() - issueUpdatedAt.getTime();
+            return timeSinceUpdate >= minInactivity;
+          });
+          
+          console.log(`Keeping ${filteredIssues.length} issues from page ${page} that are inactive for at least ${daysToComment} days`);
+          allIssues = allIssues.concat(filteredIssues);
+          recentIssueFound = true;
+          hasNextPage = false;
+        } else {
+          // All issues on this page are old enough, keep them all
+          allIssues = allIssues.concat(response.data);
+        }
+      }
       
-      // Check if we have more pages
-      if (response.data.length < 100) {
+      // Stop if we found recent issues or reached the end of pagination
+      if (recentIssueFound) {
+        console.log('Stopping pagination due to finding recently updated issues');
         hasNextPage = false;
+      } else if (response.data.length < 100) {
         console.log('Reached the last page of issues');
+        hasNextPage = false;
       } else {
         page++;
         // Small delay to avoid hitting rate limits
@@ -79,6 +113,8 @@ module.exports = async ({ github, context }) => {
       console.log(`Issue #${issue.number} is a pull request, skipping`);
       continue;
     }
+
+    if(issue.number != 11682) continue
     
     console.log(`\n=== 📋 Processing test issue #${issue.number} ===`);
     console.log(`Title: "${issue.title}"`);
@@ -161,7 +197,28 @@ module.exports = async ({ github, context }) => {
           commentedCount++;
         } catch (error) {
           console.error(`Error adding comment: ${error.message}`);
-          console.error(JSON.stringify(error, null, 2));
+          console.error(`Error type: ${error.name}`);
+          console.error(`Error stack: ${error.stack}`);
+          
+          // Add retry logic
+          console.log(`Will retry commenting on issue #${issue.number} after a delay...`);
+          try {
+            // Wait for 5 seconds before retrying
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            console.log(`Retrying comment on issue #${issue.number}...`);
+            const retryResult = await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `👋 @${issue.user.login} This issue has been open for 60 days with no activity. Is this issue still relevant? If there is no response or activity within the next 30 days, this issue will be labeled as \`idle\`.`
+            });
+            console.log(`Retry successful! Comment URL: ${retryResult.data.html_url}`);
+            commentedCount++;
+          } catch (retryError) {
+            console.error(`Retry also failed for issue #${issue.number}: ${retryError.message}`);
+            console.error(`Will skip this issue and continue with others`);
+          }
         }
       }
     }
@@ -173,7 +230,14 @@ module.exports = async ({ github, context }) => {
       
       // Check if the issue has the idle label
       if (!issue.labels.some(label => label.name === 'idle')) {
-        console.log(`🏷️ Adding idle label to issue #${issue.number}: "${issue.title}"`);
+        console.log(`\n🚨 ATUALIZANDO LABEL DA ISSUE 🚨`);
+        console.log(`🏷️ Adicionando label 'idle' para issue #${issue.number}`);
+        console.log(`🔗 URL: ${issue.html_url}`);
+        console.log(`📝 Título: "${issue.title}"`);
+        console.log(`👤 Autor: ${issue.user.login}`);
+        console.log(`📅 Criada em: ${new Date(issue.created_at).toISOString()}`);
+        console.log(`⏰ Última atualização: ${new Date(issue.updated_at).toISOString()}`);
+        console.log(`⏳ Dias inativo: ${(timeSinceUpdate/(24*60*60*1000)).toFixed(2)}`);
         
         try {
           // Add the label
@@ -198,7 +262,39 @@ module.exports = async ({ github, context }) => {
           labeledCount++;
         } catch (error) {
           console.error(`Error during labeling: ${error.message}`);
-          console.error(JSON.stringify(error, null, 2));
+          // Use a safer way to log the error without circular references
+          console.error(`Error type: ${error.name}`);
+          console.error(`Error stack: ${error.stack}`);
+          
+          // Add retry logic with exponential backoff
+          console.log(`Will retry labeling issue #${issue.number} after a delay...`);
+          try {
+            // Wait for 5 seconds before retrying
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            console.log(`Retrying adding idle label to issue #${issue.number}...`);
+            const retryLabelResult = await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['idle']
+            });
+            console.log(`Retry successful! Label added with status: ${retryLabelResult.status}`);
+            
+            // Retry adding comment
+            console.log('Retrying adding idle notification comment...');
+            const retryCommentResult = await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `This issue has been automatically labeled as \`idle\` due to 90 days of inactivity. If this issue is still relevant, please comment to reactivate it.`
+            });
+            console.log(`Retry comment successful! URL: ${retryCommentResult.data.html_url}`);
+            labeledCount++;
+          } catch (retryError) {
+            console.error(`Retry also failed for issue #${issue.number}: ${retryError.message}`);
+            console.error(`Will skip this issue and continue with others`);
+          }
         }
       } else {
         console.log('Issue already has idle label (this shouldn\'t happen due to earlier check)');
