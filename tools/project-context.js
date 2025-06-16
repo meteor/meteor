@@ -1664,7 +1664,7 @@ Object.assign(exports.ReleaseFile.prototype, {
     if (this.isCheckout()) {
       // Only create .meteor/local/dev_bundle if .meteor/release refers to
       // an actual release, and remove it otherwise.
-      await files.rm_recursive(devBundleLink);
+      await files.rm_recursive_deferred(devBundleLink);
       return;
     }
 
@@ -1819,14 +1819,16 @@ export class MeteorConfig {
   // TODO Implement an API for setting these values?
   get(...keys) {
     let config = this._ensureInitialized();
+    let filteredConfig = keys.length ? {} : config;
     if (config) {
       keys.every(key => {
         if (config && _.has(config, key)) {
-          config = config[key];
+          filteredConfig = config[key];
           return true;
         }
+        return false;
       });
-      return config;
+      return filteredConfig;
     }
   }
 

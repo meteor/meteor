@@ -115,6 +115,9 @@ build_machine_environment:
     NUM_GROUPS: 12
     RUNNING_AVG_LENGTH: 6
 
+    # Force modern bundler test
+    METEOR_MODERN: true
+
 jobs:
   Get Ready:
     <<: *build_machine_environment

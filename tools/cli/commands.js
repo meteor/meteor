@@ -261,13 +261,94 @@ export function parseRunTargets(targets) {
   });
 };
 
-const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
-function filterWebArchs(webArchs, excludeArchsOption) {
-  if (excludeArchsOption) {
-    const excludeArchs = excludeArchsOption.trim().split(/\s*,\s*/)
-      .filter(arch => excludableWebArchs.includes(arch));
-    webArchs = webArchs.filter(arch => !excludeArchs.includes(arch));
+const DEFAULT_MODERN = {
+    transpiler: true,
+    webArchOnly: true,
+    watcher: true,
+};
+
+const normalizeModern = (r = false) => Object.fromEntries(
+    Object.entries(DEFAULT_MODERN).map(([k, def]) => [
+        k,
+        r === true
+            ? def
+            : r === false || r?.[k] === false
+                ? false
+                : typeof r?.[k] === 'object'
+                    ? { ...r[k] }
+                    : def,
+    ]),
+);
+
+
+let modernForced = JSON.parse(process.env.METEOR_MODERN || "false");
+let meteorConfig;
+
+function getMeteorConfig(appDir) {
+  if (meteorConfig) return meteorConfig;
+  const packageJsonPath = files.pathJoin(appDir, 'package.json');
+  if (!files.exists(packageJsonPath)) {
+    return false;
   }
+  const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
+  const packageJson = JSON.parse(packageJsonFile);
+  meteorConfig = packageJson?.meteor;
+  return meteorConfig;
+}
+
+function isModernArchsOnlyEnabled(appDir) {
+  const meteorConfig = getMeteorConfig(appDir);
+  return normalizeModern(modernForced || meteorConfig?.modern).webArchOnly !== false;
+}
+
+export function isModernWatcherEnabled(appDir) {
+  const meteorConfig = getMeteorConfig(appDir);
+  return normalizeModern(modernForced || meteorConfig?.modern).watcher !== false;
+}
+
+function filterWebArchs(webArchs, excludeArchsOption, appDir, options) {
+  const platforms = (options.platforms || []);
+  const isBuildMode = platforms?.length > 0;
+  if (isBuildMode) {
+    // Build Mode
+    const isModernOnlyPlatform = platforms.includes('modern') && !platforms.includes('legacy');
+    if (isModernOnlyPlatform) {
+      webArchs = webArchs.filter(arch => arch !== 'web.browser.legacy');
+    }
+    const hasCordovaPlatforms = platforms.includes('android') || platforms.includes('ios');
+    if (!hasCordovaPlatforms) {
+      webArchs = webArchs.filter(arch => arch !== 'web.cordova');
+    }
+  } else {
+    // Dev & Test Mode
+    const isCordovaDev = (options.args || []).some(arg => ['ios', 'ios-device', 'android', 'android-device'].includes(arg));
+    if (!isCordovaDev) {
+      const excludeArchsOptions = excludeArchsOption ? excludeArchsOption.trim().split(/\s*,\s*/) : [];
+      const hasExcludeArchsOptions = (excludeArchsOptions?.length || 0) > 0;
+      const hasModernArchsOnlyEnabled = appDir && isModernArchsOnlyEnabled(appDir);
+      if (hasExcludeArchsOptions && hasModernArchsOnlyEnabled) {
+        console.warn('modern.webArchOnly and --exclude-archs are both active. If both are set, --exclude-archs takes priority.');
+      }
+      const automaticallyIgnoredLegacyArchs = (!hasExcludeArchsOptions && hasModernArchsOnlyEnabled) ? ['web.browser.legacy', 'web.cordova'] : [];
+      if (hasExcludeArchsOptions || automaticallyIgnoredLegacyArchs.length) {
+        const excludeArchs = [...excludeArchsOptions, ...automaticallyIgnoredLegacyArchs];
+        webArchs = webArchs.filter(arch => !excludeArchs.includes(arch));
+      }
+    }
+  }
+
+  const forcedInclArchs = process.env.METEOR_FORCE_INCLUDE_ARCHS;
+  if (forcedInclArchs != null) {
+    const nextInclArchs = forcedInclArchs.trim().split(/\s*,\s*/);
+    webArchs = Array.from(new Set([...webArchs, ...nextInclArchs]));
+  }
+
+  const forcedExclArchs = process.env.METEOR_FORCE_EXCLUDE_ARCHS;
+  if (forcedExclArchs != null) {
+    const nextExclArchs = forcedExclArchs.trim().split(/\s*,\s*/);
+    webArchs = webArchs.filter(_webArch => !nextExclArchs.includes(_webArch));
+  }
+
   return webArchs;
 }
 
@@ -509,11 +590,16 @@ async function doRunCommand(options) {
       webArchs.push("web.cordova");
     }
   }
-  webArchs = filterWebArchs(webArchs, options['exclude-archs']);
+
+  webArchs = filterWebArchs(webArchs, options['exclude-archs'], options.appDir, options);
+  // Set the webArchs to include for compilation later
+  global.includedWebArchs = webArchs;
+
   const buildMode = options.production ? 'production' : 'development';
 
   let cordovaRunner;
-  if (!_.isEmpty(runTargets)) {
+  const shouldDisableCordova =  Boolean(JSON.parse(process.env.METEOR_CORDOVA_DISABLE || 'false'));
+  if (!shouldDisableCordova && !_.isEmpty(runTargets)) {
 
     async function prepareCordovaProject() {
       import { CordovaProject } from '../cordova/project.js';
@@ -570,7 +656,7 @@ async function doRunCommand(options) {
           open(`http://localhost:${options.port}`)
         }
       }
-    }, 
+    },
     open: options.open,
   });
 }
@@ -1344,7 +1430,7 @@ var buildCommand = async function (options) {
   let selectedPlatforms = null;
   if (options.platforms) {
     const platformsArray = options.platforms.split(",");
-
+    const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
     platformsArray.forEach(plat => {
       if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
         throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
@@ -1391,9 +1477,9 @@ on an OS X system.");
   // For example, if we want to build only android, there is no need to build
   // web.browser.
   let webArchs;
+  const baseWebArchs = projectContext.platformList.getWebArchs();
   if (selectedPlatforms) {
-    const filteredArchs = projectContext.platformList
-      .getWebArchs()
+    const filteredArchs = baseWebArchs
       .filter(arch => selectedPlatforms.includes(arch));
 
     if (
@@ -1404,6 +1490,11 @@ on an OS X system.");
     }
 
     webArchs = filteredArchs.length ? filteredArchs : undefined;
+  } else {
+    webArchs = filterWebArchs(baseWebArchs, options['exclude-archs'], options.appDir, {
+      ...options,
+      platforms: projectContext.platformList.getPlatforms(),
+    });
   }
 
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
@@ -1561,7 +1652,7 @@ https://guide.meteor.com/cordova.html#submitting-android
     });
   }
 
-  await files.rm_recursive(buildDir);
+  await files.rm_recursive_deferred(buildDir);
 
   const npmShrinkwrapFilePath = files.pathJoin(bundlePath, 'programs/server/npm-shrinkwrap.json');
   if (files.exists(npmShrinkwrapFilePath)) {
@@ -2113,7 +2204,10 @@ testCommandOptions = {
 
     'extra-packages': { type: String },
 
-    'exclude-archs': { type: String }
+    'exclude-archs': { type: String },
+    
+    // Same as TINYTEST_FILTER
+    filter: { type: String, short: 'f' },
   }
 };
 
@@ -2134,6 +2228,9 @@ main.registerCommand(Object.assign(
 });
 
 async function doTestCommand(options) {
+  if (options.filter) {
+    process.env.TINYTEST_FILTER = options.filter;
+  }
   // This "metadata" is accessed in a few places. Using a global
   // variable here was more expedient than navigating the many layers
   // of abstraction across the build process.
@@ -2465,7 +2562,9 @@ var runTestAppForPackages = async function (projectContext, options) {
   if (options.cordovaRunner) {
     webArchs.push("web.cordova");
   }
-  buildOptions.webArchs = filterWebArchs(webArchs, options['exclude-archs']);
+  buildOptions.webArchs = filterWebArchs(webArchs, options['exclude-archs'], projectContext.appDirectory, options);
+  // Set the webArchs to include for compilation later
+  global.includedWebArchs = buildOptions.webArchs;
 
   if (options.deploy) {
     // Run the constraint solver and build local packages.
@@ -3350,7 +3449,7 @@ const setupBenchmarkSuite = async (profilingPath) => {
   process.env.GIT_TERMINAL_PROMPT = 0;
 
   const repoUrl = "https://github.com/meteor/performance";
-  const branch = "v3.2.0";
+  const branch = "v3.3.0";
   const gitCommand = [
     `mkdir -p ${profilingPath}`,
     `git clone --no-checkout --depth 1 --filter=tree:0 --sparse --progress --branch ${branch} --single-branch ${repoUrl} ${profilingPath}`,
@@ -3389,9 +3488,10 @@ async function doBenchmarkCommand(options) {
 
   const meteorSizeEnvs = [
     !!options['size-only'] && 'METEOR_BUNDLE_SIZE_ONLY=true',
-    !!options['size'] && 'METEOR_BUNDLE_SIZE=true'
+    !!options['size'] && 'METEOR_BUNDLE_SIZE=true',
+    !!options['build'] && 'METEOR_BUNDLE_BUILD=true',
   ].filter(Boolean);
-  const meteorOptions = args.filter(arg => !['--size-only', '--size'].includes(arg));
+  const meteorOptions = args.filter(arg => !['--size-only', '--size', '--build'].includes(arg));
 
   const profilingCommand = [
     `${meteorSizeEnvs.join(' ')} ${profilingPath}/scripts/monitor-bundler.sh ${projectContext.projectDir} ${new Date().getTime()} ${meteorOptions.join(' ')}`.trim(),
@@ -3407,9 +3507,11 @@ main.registerCommand(
   name: 'profile',
   maxArgs: Infinity,
   options: {
+    ...buildCommands.options || {},
     ...runCommandOptions.options || {},
-  'size': { type: Boolean },
-  'size-only': { type: Boolean },
+    'size': { type: Boolean },
+    'size-only': { type: Boolean },
+    'build': { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never(),
 }, doBenchmarkCommand);

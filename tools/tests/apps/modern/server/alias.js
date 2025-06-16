@@ -1,0 +1,1 @@
+import '@swcAlias/main';

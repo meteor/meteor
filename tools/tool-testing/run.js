@@ -184,13 +184,20 @@ export default class Run {
   // may be a regular expression or a string. Consume stdout up to
   // that point. If this pattern does not appear after a timeout (or
   // the program exits before emitting the pattern), fail.
-  match(pattern, _strict) {
+  match(pattern, _strict, fullBuffer) {
     this._ensureStarted();
 
     let timeout = this.baseTimeout + this.extraTime;
     timeout *= timeoutScaleFactor;
     this.extraTime = 0;
     Console.simpleDebug('match', pattern);
+    if (fullBuffer) {
+      return this.stdoutMatcher.matchAsync(pattern, {
+        timeout,
+        strict: _strict,
+        matchFullBuffer: fullBuffer,
+      });
+    }
     return this.stdoutMatcher.match(pattern, timeout, _strict);
   }
 

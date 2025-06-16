@@ -175,13 +175,15 @@ This command monitors the bundler process and tracks key performance metrics to 
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
-| `--size` | Monitor both bundle runtime and size |
-| `--size-only` | Monitor only the bundle size |
+| Option        | Description                          |
+|---------------|--------------------------------------|
+| `--size`      | Monitor both bundle runtime and size |
+| `--size-only` | Monitor only the bundle size         |
+| `--build`     | Monitor build time                   |
 
 ::: info
 All other options from `meteor run` are also supported (e.g., `--settings`, `--exclude-archs`).
+If you use the --build option, it also accepts meteor build flags (e.g. `--mobile-settings`, `--architecture`).
 :::
 
 ### Environment Variables
@@ -206,6 +208,9 @@ meteor profile
 # Monitor bundle size only
 meteor profile --size-only
 
+# Monitor build time
+meteor profile --build
+
 # Profile with custom settings and timeout
 METEOR_IDLE_TIMEOUT=120 meteor profile --settings settings.json
 
@@ -214,7 +219,7 @@ METEOR_CLIENT_ENTRYPOINT=client/main.js METEOR_SERVER_ENTRYPOINT=server/main.js 
 ```
 
 ::: details Customizing the Profiling Process
-You can pass any option that works with `meteor run` to customize the profiling process. This allows you to profile your application under specific conditions that match your deployment environment.
+You can pass any option that works with `meteor run` to customize the profiling process. This allows you to profile your application under specific conditions that match your deployment environment. The same applies to the `--build` option, which matches `meteor build` options.
 :::
 
 ## meteor create _app-name_ {#meteorcreate}
@@ -1412,84 +1417,306 @@ This system allows forks of the meteor tool to be published as packages, letting
 :::
 
 
-## meteor test-packages {meteortestpackages}
+## meteor test-packages {#meteortestpackages}
 
-Test Meteor packages, either by name, or by directory. Not specifying an
-argument will run tests for all local packages. The results are displayed in an
-app that runs at `localhost:3000` by default. If you need to, you can pass the
-`--settings` and `--port` arguments.
+Run tests for Meteor packages.
 
+```bash
+meteor test-packages [options] [package...]
+```
 
-## meteor admin {meteoradmin}
+### Description
 
-Catch-all for miscellaneous commands that require authorization to use.
+Runs unit tests for one or more packages. Test results appear in a browser dashboard that updates whenever relevant source files are modified.
 
-Some example uses of `meteor admin` include adding and removing package
-maintainers and setting a homepage for a package. It also includes various
-helpful functions for managing a Meteor release.  Run `meteor help admin` for
-more information.
+::: tip Package Specification
+Packages can be specified by:
+- **Name**: Resolved using the standard package search algorithm
+- **Path**: Any argument containing a '/' is loaded from that directory path
+:::
 
-## meteor shell {meteorshell}
+If no packages are specified, all available packages will be tested.
 
-When `meteor shell` is executed in an application directory where a server
-is already running, it connects to the server and starts an interactive
-shell for evaluating server-side code.
+### Options
 
-Multiple shells can be attached to the same server. If no server is
-currently available, `meteor shell` will keep trying to connect until it
-succeeds.
+| Option                        | Description                                                     |
+|-------------------------------|-----------------------------------------------------------------|
+| `--port`, `-p <port>`         | Port to listen on (default: 3000). Also uses ports N+1 and N+2  |
+| `--open`, `-o`                | Opens a browser window when the app starts                      |
+| `--inspect[-brk][=<port>]`    | Enable server-side debugging (default port: 9229)               |
+| `--settings`, `-s <file>`     | Set optional data for Meteor.settings on the server             |
+| `--production`                | Simulate production mode (minify and bundle CSS, JS files)      |
+| `--driver-package <package>`  | Test driver package to use (e.g., `meteortesting:mocha`)        |
+| `--filter`, `-f`              | Filter the tests by name                                        |
+| `--verbose`                   | Print all output from build logs                                |
+| `--no-lint`                   | Skip running linters on every test app rebuild                  |
+| `--extra-packages <packages>` | Run with additional packages (comma separated)                  |
+| `--test-app-path <path>`      | Set directory for temporary test app (default: system temp dir) |
 
-Exiting the shell does not terminate the server. If the server restarts
-because a change was made in server code, or a fatal exception was
-encountered, the shell will restart along with the server. This behavior
-can be simulated by typing `.reload` in the shell.
+#### Mobile Testing Options
 
-The shell supports tab completion for global variables like `Meteor`,
-`Mongo`, and `Package`. Try typing `Meteor.is` and then pressing tab.
+| Option | Description |
+|--------|-------------|
+| `--ios`, `--android` | Run tests in an emulator |
+| `--ios-device`, `--android-device` | Run tests on a connected device |
+| `--mobile-server <url>` | Server location for mobile builds (default: local IP and port) |
+| `--cordova-server-port <port>` | Local port where Cordova will serve content |
 
-The shell maintains a persistent history across sessions. Previously-run
-commands can be accessed by pressing the up arrow.
+### Examples
 
-## meteor npm {meteornpm}
+#### Test specific packages by name
 
-The `meteor npm` command calls the
-[`npm`](https://docs.npmjs.com/getting-started/what-is-npm) version bundled
-with Meteor itself.
+```bash
+meteor test-packages accounts-base accounts-password
+```
 
-Additional parameters can be passed in the same way as the `npm` command
-(e.g. `meteor npm rebuild`, `meteor npm ls`, etc.) and the
-[npm documentation](https://docs.npmjs.com/) should be consulted for the
-full list of commands and for a better understanding of their usage.
+#### Test a package by path
 
-For example, executing `meteor npm install lodash --save` would install `lodash`
-from npm to your `node_modules` directory and save its usage in your
-[`package.json`](https://docs.npmjs.com/files/package.json) file.
+```bash
+meteor test-packages ./packages/my-package
+```
 
-Using the `meteor npm ...` commands in place of traditional `npm ...` commands
-is particularly important when using Node.js modules that have binary
-dependencies that make native C calls (like [`bcrypt`](https://www.npmjs.com/package/bcrypt))
-because doing so ensures that they are built using the same libraries.
+#### Test with custom settings
 
-Additionally, this access to the npm that comes with Meteor avoids the need to
-download and install npm separately.
+```bash
+meteor test-packages --settings settings.json
+```
 
-## meteor node {meteornode}
+#### Test with Mocha test driver
 
-The `meteor node` command calls the
-[`node`](https://nodejs.org) version bundled with Meteor itself.
+```bash
+meteor test-packages --driver-package meteortesting:mocha
+```
 
-> This is not to be confused with [`meteor shell`](#meteor-shell), which provides
-> an almost identical experience but also gives you access to the "server" context
-> of a Meteor application. Typically, `meteor shell` will be preferred.
+#### Test with filter
 
-Additional parameters can be passed in the same way as the `node` command, and
-the [Node.js documentation](https://nodejs.org/dist/latest-v4.x/docs/api/cli.html)
-should be consulted for the full list of commands and for a better understanding
-of their usage.
+```bash
+meteor test-packages --filter myTestName
+```
 
-For example, executing `meteor node` will enter the Node.js
-[Read-Eval-Print-Loop (REPL)](https://nodejs.org/dist/latest-v4.x/docs/api/repl.html)
-interface and allow you to interactively run JavaScript and see the results.
+Alternatively, you can use the `TINYTEST_FILTER` environment variable to filter:
 
-Executing `meteor node -e "console.log(process.versions)"` would
-run `console.log(process.versions)` in the version of `node` bundled with Meteor.
+```bash
+TINYTEST_FILTER=myTestName meteor test-packages
+```
+
+#### Test on mobile device
+
+```bash
+meteor test-packages --ios-device
+```
+
+## meteor admin {#meteoradmin}
+
+Administrative commands for official Meteor services.
+
+```bash
+meteor admin <command> [args]
+```
+
+::: warning Authorization Required
+These commands require authorization to use.
+:::
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `maintainers` | View or change package maintainers |
+| `recommend-release` | Recommend a previously published release |
+| `change-homepage` | Change the homepage URL of a package |
+| `list-organizations` | List the organizations of which you are a member |
+| `members` | View or change the members of an organization |
+| `get-machine` | Open an SSH shell to a machine in the Meteor build farm |
+
+### Usage Examples
+
+```bash
+# View or change package maintainers
+meteor admin maintainers packagename [add/remove] [username]
+
+# Change a package homepage
+meteor admin change-homepage packagename [url]
+
+# List your organizations
+meteor admin list-organizations
+
+# Manage organization members
+meteor admin members organization-name [add/remove] [username]
+```
+
+::: tip Detailed Help
+For more information on any admin command, run:
+```bash
+meteor help admin <command>
+```
+:::
+
+## meteor shell {#meteorshell}
+
+Start an interactive JavaScript shell for evaluating server-side code.
+
+```bash
+meteor shell
+```
+
+### Description
+
+The `meteor shell` command connects to a running Meteor server and provides an interactive JavaScript REPL (Read-Eval-Print Loop) for executing server-side code.
+
+::: tip Connection Behavior
+- Requires a running Meteor server in the application directory
+- If no server is available, it will keep trying to connect until successful
+- Multiple shells can be attached to the same server simultaneously
+:::
+
+### Features
+
+#### Server Integration
+
+- Exiting the shell does not terminate the server
+- If the server restarts (due to code changes or errors), the shell will automatically restart with it
+- You can manually trigger a reload by typing `.reload` in the shell
+
+#### Developer Experience
+
+| Feature | Description |
+|---------|-------------|
+| **Tab Completion** | Built-in tab completion for global variables like `Meteor`, `Mongo`, and `Package` |
+| **Persistent History** | Command history is maintained across sessions |
+| **Command Recall** | Access previously-run commands using the up arrow key |
+
+### Example Usage
+
+```bash
+# Start a Meteor server in one terminal
+meteor run
+
+# Connect a shell in another terminal
+meteor shell
+
+# Now you can run server-side code interactively:
+> Meteor.users.find().count()
+> Package.mongo.Mongo.Collection.prototype
+> Meteor.isServer
+true
+> .reload  # Manually restart the shell
+```
+
+::: details Advanced Example
+```js
+// Query the database
+> db = Package.mongo.MongoInternals.defaultRemoteCollectionDriver().mongo.db
+> db.collection('users').find().toArray()
+
+// Access Meteor settings
+> Meteor.settings.public
+
+// Inspect publications
+> Object.keys(Meteor.server.publish_handlers)
+```
+:::
+
+## meteor npm {#meteornpm}
+
+Run npm commands using Meteor's bundled npm version.
+
+```bash
+meteor npm <command> [args...]
+```
+
+### Description
+
+The `meteor npm` command executes [npm](https://docs.npmjs.com/) commands using the version bundled with Meteor itself.
+
+::: tip Benefits of Using Meteor's npm
+1. Ensures compatibility with Meteor's Node.js version
+2. Crucial for packages with native dependencies (like `bcrypt`)
+3. No need to install npm separately
+4. Consistent behavior across development environments
+:::
+
+### Common Commands
+
+| Command | Description |
+|---------|-------------|
+| `meteor npm install` | Install all dependencies listed in `package.json` |
+| `meteor npm install <package> --save` | Install and save a package as a dependency |
+| `meteor npm install <package> --save-dev` | Install and save a package as a development dependency |
+| `meteor npm update` | Update all packages to their latest allowed versions |
+| `meteor npm ls` | List installed packages |
+| `meteor npm rebuild` | Rebuild packages that have native dependencies |
+
+### Examples
+
+```bash
+# Install a package and save to dependencies
+meteor npm install lodash --save
+
+# Install packages from package.json
+meteor npm install
+
+# Run an npm script defined in package.json
+meteor npm run start
+
+# View package information
+meteor npm info react
+```
+
+::: warning Native Dependencies
+Using `meteor npm` instead of regular `npm` is especially important when working with packages that have binary dependencies making native C calls (like `bcrypt`). This ensures they're built with the same libraries used by Meteor.
+:::
+
+## meteor node {#meteornode}
+
+Run Node.js commands using Meteor's bundled Node.js version.
+
+```bash
+meteor node [options] [script.js] [arguments]
+```
+
+::: info Alternative
+Consider using [`meteor shell`](#meteorshell) instead, which provides similar functionality plus access to your Meteor application's server context.
+:::
+
+### Description
+
+The `meteor node` command runs [Node.js](https://nodejs.org/) using the version bundled with Meteor itself.
+
+### Common Uses
+
+| Command | Description |
+|---------|-------------|
+| `meteor node` | Start an interactive Node.js REPL |
+| `meteor node script.js` | Execute a JavaScript file |
+| `meteor node -e "<code>"` | Execute a line of JavaScript |
+| `meteor node --version` | Show Node.js version |
+
+### Examples
+
+```bash
+# Start an interactive REPL
+meteor node
+
+# Execute inline JavaScript
+meteor node -e "console.log(process.versions)"
+
+# Run a script with arguments
+meteor node scripts/migrate.js --force
+
+# Check installed Node.js version
+meteor node --version
+```
+
+::: details Running a Simple Script
+Create `hello.js`:
+```js
+console.log('Hello from Node.js version', process.version);
+console.log('Arguments:', process.argv.slice(2));
+```
+
+Run it:
+```bash
+meteor node hello.js arg1 arg2
+```
+:::

@@ -287,7 +287,7 @@ main.captureAndExit = async function (header, title, f) {
 
 // NB: files required up to this point may not define commands
 
-require('./commands.js');
+const { isModernWatcherEnabled } = require('./commands.js');
 require('./commands-packages.js');
 require('./commands-packages-query.js');
 require('./commands-cordova.js');
@@ -865,6 +865,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   var appDir = files.findAppDir();
   if (appDir) {
     appDir = files.pathResolve(appDir);
+    global.modernWatcher = isModernWatcherEnabled(appDir);
   }
 
   await require('../tool-env/isopackets.js').ensureIsopacketsLoadable();
@@ -1542,6 +1543,9 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         await catalogRefreshStrategy.beforeCommand();
       });
     }
+
+    // Set the currentCommand in the global object to spread context
+    global.currentCommand = { name: command.name, options };
 
     var ret = await command.func(options, { rawOptions });
 

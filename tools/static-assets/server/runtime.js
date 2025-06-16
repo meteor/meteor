@@ -47,7 +47,7 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
   };
 
   const reifyVersion = require("@meteorjs/reify/package.json").version;
-  const reifyBabelParse = require("@meteorjs/reify/lib/parsers/babel").parse;
+  const reifyAcornParse = require("@meteorjs/reify/lib/parsers/acorn").parse;
   const reifyCompile = require("@meteorjs/reify/lib/compiler").compile;
 
   function compileContent (content) {
@@ -55,7 +55,7 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
 
     try {
       const result = reifyCompile(content, {
-        parse: reifyBabelParse,
+        parse: reifyAcornParse,
         generateLetDeclarations: false,
         ast: false,
       });

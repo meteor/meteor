@@ -45,7 +45,7 @@ import {
 
 import { wrap } from "optimism";
 const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
-const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
+const { parse: reifyAcornParse } = require("@meteorjs/reify/lib/parsers/acorn");
 
 import Resolver, { Resolution } from "./resolver";
 import LRUCache from 'lru-cache';
@@ -88,7 +88,7 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
 
   const isLegacy = isLegacyArch(bundleArch);
   let result = reifyCompile(stripHashBang(source), {
-    parse: reifyBabelParse,
+    parse: reifyAcornParse,
     generateLetDeclarations: !isLegacy,
     avoidModernSyntax: isLegacy,
     enforceStrictMode: false,
@@ -977,7 +977,7 @@ export default class ImportScanner {
   private async findImportedModuleIdentifiers(
     file: File,
   ): Promise<Record<string, ImportInfo>> {
-    const fileHash = file.hash;
+    const fileHash = file.hash instanceof Promise ? await file.hash : file.hash;
     if (IMPORT_SCANNER_CACHE.has(fileHash)) {
       return IMPORT_SCANNER_CACHE.get(fileHash) as Record<string, ImportInfo>;
     }
@@ -988,8 +988,8 @@ export default class ImportScanner {
     );
 
     // there should always be file.hash, but better safe than sorry
-    if (file.hash) {
-      IMPORT_SCANNER_CACHE.set(file.hash, result);
+    if (fileHash) {
+      IMPORT_SCANNER_CACHE.set(fileHash, result);
     }
 
     return result;

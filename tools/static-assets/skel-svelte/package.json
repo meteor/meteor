@@ -27,6 +27,7 @@
         ]
       }
     },
-    "testModule": "tests/main.js"
+    "testModule": "tests/main.js",
+    "modern": true
   }
 }
