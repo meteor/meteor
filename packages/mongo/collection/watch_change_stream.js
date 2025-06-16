@@ -9,7 +9,7 @@
  * @throws {Error} If called on a client/minimongo collection.
  *
  * @example
- *   const changeStream = MyCollection.watchChangeStream([
+ *   const changeStream = MyCollection.watch([
  *     { $match: { 'operationType': 'insert' } }
  *   ]);
  *   changeStream.on('change', (change) => {
@@ -17,15 +17,15 @@
  *   });
  */
 
-export function watchChangeStream(pipeline = [], options = {}) {
+export function watch(pipeline = [], options = {}) {
   // Only available on server
   if (typeof Package === 'undefined' || !this.rawCollection) {
-    throw new Error('watchChangeStream is only available on server collections');
+    throw new Error('watch is only available on server collections');
   }
   const raw = this.rawCollection();
   if (!raw.watch) {
     throw new Error('Underlying collection does not support watch (Change Streams)');
   }
-  console.log('[watchChangeStream] Chamando raw.watch() com pipeline:', JSON.stringify(pipeline, null, 2), 'e options:', JSON.stringify(options, null, 2));
+  console.log('[watch] raw.watch() pipeline:', JSON.stringify(pipeline, null, 2), ' | options:', JSON.stringify(options, null, 2));
   return raw.watch(pipeline, options);
 }

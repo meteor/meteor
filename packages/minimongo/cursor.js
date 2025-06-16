@@ -240,14 +240,14 @@ export default class Cursor {
     // Support for MongoDB Change Streams via option: changeStreams
     if (options && options.changeStreams) {
       // Only run on server
-      if (typeof Package === 'undefined' || !this.collection.watchChangeStream) {
+      if (typeof Package === 'undefined' || !this.collection.watch) {
         throw new Error('Change Streams are only available on server collections');
       }
 
-      // Prepare pipeline and options for watchChangeStream
+      // Prepare pipeline and options for watch
       const pipeline = options.changeStreamsPipeline || [];
       const watchOptions = options.changeStreamsOptions || {};
-      const changeStream = this.collection.watchChangeStream(pipeline, watchOptions);
+      const changeStream = this.collection.watch(pipeline, watchOptions);
 
       // Map Change Stream events to observeChanges callbacks
       const handle = {

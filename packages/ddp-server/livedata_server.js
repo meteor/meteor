@@ -921,6 +921,15 @@ var Subscription = function (
 };
 
 Object.assign(Subscription.prototype, {
+  stream: function (data) {
+    var self = this;
+    if (self._isDeactivated()) return;
+    self._session.send({
+      msg: "stream",
+      id: self._subscriptionId,
+      data: data
+    });
+  },
   _runHandler: async function() {
     // XXX should we unblock() here? Either before running the publish
     // function, or before running _publishCursor.
@@ -1455,6 +1464,14 @@ Object.assign(Server.prototype, {
    *    that you turn off autopublish).
    */
 
+  stream: function (name, handler) {
+    var self = this;
+    self.publish_handlers[name] = function (...args) {
+      this._isStream = true;
+      return handler.call(this, this, ...args);
+    };
+  },
+
   /**
    * @summary Publish a record set.
    * @memberOf Meteor
@@ -1463,6 +1480,7 @@ Object.assign(Server.prototype, {
    * @param {String|Object} name If String, name of the record set.  If Object, publications Dictionary of publish functions by name.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.
    * @param {Function} func Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments.
    */
+  
   publish: function (name, handler, options) {
     var self = this;
 
