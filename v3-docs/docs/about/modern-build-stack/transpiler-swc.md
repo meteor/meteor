@@ -92,11 +92,11 @@ Or exclude only specific files like `.jsx`:
 }
 ```
 
-You can also use `excludePackages`, `excludeNodeModules`, and `excludeLegacy` for finer control. See the [`modernTranspiler` config docs](#config-api) for more.
+You can also use `excludePackages`, `excludeNodeModules`, and `excludeLegacy` for finer control. See the [`modern.transpiler` config docs](#config-api) for more.
 
 When no plugin exists, these settings let you still get most of SWC’s speed benefits by limiting fallback use.
 
-Most apps will benefit just by enabling `modernTranspiler: true`. Most Meteor packages should work right away, except ones using nested imports. Node modules will mostly work too, since they follow common standards. Most app code should also work unless it depends on Babel-specific behavior.
+Most apps will benefit just by enabling `modern: true`. Most Meteor packages should work right away, except ones using nested imports. Node modules will mostly work too, since they follow common standards. Most app code should also work unless it depends on Babel-specific behavior.
 
 > Remember to turn off verbosity when you're done with optimizations.
 
@@ -110,7 +110,7 @@ You can also configure other options using the `.swcrc` format. One common case 
 {
   "jsc": {
     "parser": {
-      "syntax": "emcascript",
+      "syntax": "ecmascript",
       "jsx": true
     }
   }
@@ -276,6 +276,6 @@ If you run into issues, try `meteor reset` or delete the `.meteor/local` folder 
 
 For help or to report issues, post on [GitHub](https://github.com/meteor/meteor/issues) or the [Meteor forums](https://forums.meteor.com). We’re focused on making Meteor faster and your feedback helps.
 
-You can compare performance before and after enabling `modernTranspiler` by running [`meteor profile`](../../cli/index.md#meteorprofile). Share your results to show progress to others.
+You can compare performance before and after enabling `modern` by running [`meteor profile`](../../cli/index.md#meteorprofile). Share your results to show progress to others.
 
 > **[Check out modern bundler options](bundler.md) to improve performance and access newer build features.**
