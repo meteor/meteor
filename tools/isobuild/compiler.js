@@ -150,6 +150,7 @@ compiler.compile = Profile(function (packageSource, options) {
   // Isopack#initFromPath).
   var isobuildFeatures = [];
   packageSource.architectures.forEach((sourceArch) => {
+    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(sourceArch.arch)) return;
     sourceArch.uses.forEach((use) => {
       if (!use.weak && isIsobuildFeaturePackage(use.package) &&
           isobuildFeatures.indexOf(use.package) === -1) {
@@ -181,6 +182,7 @@ compiler.compile = Profile(function (packageSource, options) {
     if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
       continue;
     }
+    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
 
     // TODO -> Maybe this withCache will bring some problems in other commands.
     await files.withCache(async () => {
@@ -226,6 +228,7 @@ compiler.lint = Profile(function (packageSource, options) {
         && architecture.arch === 'web.cordova') {
       continue;
     }
+    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
 
     const unibuildWarnings = await lintUnibuild({
       isopack: options.isopack,
@@ -246,6 +249,8 @@ compiler.getMinifiers = async function (packageSource, options) {
 
   var minifiers = [];
   for (const architecture of packageSource.architectures) {
+    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
+
     var activePluginPackages = await getActivePluginPackages(options.isopack, {
       isopackCache: options.isopackCache,
       uses: architecture.uses
@@ -791,8 +796,9 @@ async function runLinters({inputSourceArch, isopackCache, sources,
 
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
     const hash = optimisticHashOrNull(absPath);
-    const contents = optimisticReadFile(absPath);
-    watchSet.addFile(absPath, hash);
+    if (!watchSet.hasFile(absPath)) {
+      watchSet.addFile(absPath, hash);
+    }
 
     if (classification.type === "meteor-ignore") {
       // Return after watching .meteorignore files but before adding them
@@ -801,6 +807,7 @@ async function runLinters({inputSourceArch, isopackCache, sources,
       return;
     }
 
+    const contents = optimisticReadFile(absPath);
     const wrappedSource = {
       relPath, contents, hash, fileOptions,
       arch: inputSourceArch.arch,

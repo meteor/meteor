@@ -1,3 +1,5 @@
+import { testExport as oyez } from './runtime-tests.js';
+
 const isNode8OrLater = Meteor.isServer && parseInt(process.versions.node) >= 8;
 
 Tinytest.add('ecmascript - runtime - template literals', test => {
@@ -169,14 +171,12 @@ Tinytest.add('ecmascript - runtime - classes - properties', test => {
     static staticProp = 1234;
 
     check = self => {
-      import { testExport as oyez } from './runtime-tests.js';
       test.equal(oyez, 'oyez');
       test.isTrue(self === this);
       test.equal(this.property, 'property');
     };
 
     method() {
-      import { testExport as oyez } from './runtime-tests.js';
       test.equal(oyez, 'oyez');
     }
   }

@@ -4,7 +4,7 @@ dist: jammy
 sudo: required
 services: xvfb
 node_js:
-  - "22.14.0"
+  - "22.16.0"
 cache:
   directories:
     - ".meteor"
@@ -17,6 +17,7 @@ env:
     - phantom=false
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
     - TEST_PACKAGES_EXCLUDE=stylus
+    - METEOR_MODERN=true
 addons:
   apt:
     sources:

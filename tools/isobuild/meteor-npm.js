@@ -87,7 +87,7 @@ meteorNpm.updateDependencies = async function (packageName,
       // It didn't exist, which is exactly what we wanted.
       return false;
     }
-    await files.rm_recursive(newPackageNpmDir);
+    await files.rm_recursive_deferred(newPackageNpmDir);
     return false;
   }
 
@@ -102,7 +102,7 @@ meteorNpm.updateDependencies = async function (packageName,
     // proceed.
     if (files.exists(packageNpmDir) &&
         ! files.exists(files.pathJoin(packageNpmDir, 'npm-shrinkwrap.json'))) {
-      await files.rm_recursive(packageNpmDir);
+      await files.rm_recursive_deferred(packageNpmDir);
     }
 
     // with the changes on npm 8, where there were changes to how the packages metadata is given
@@ -114,7 +114,7 @@ meteorNpm.updateDependencies = async function (packageName,
           files.pathJoin(packageNpmDir, 'npm-shrinkwrap.json')
         ));
         if (shrinkwrap.lockfileVersion !== LOCK_FILE_VERSION) {
-          await files.rm_recursive(packageNpmDir);
+          await files.rm_recursive_deferred(packageNpmDir);
         }
       } catch (e) {}
     }
@@ -143,7 +143,7 @@ meteorNpm.updateDependencies = async function (packageName,
     throw e;
   } finally {
     if (files.exists(newPackageNpmDir)) {
-      await files.rm_recursive(newPackageNpmDir);
+      await files.rm_recursive_deferred(newPackageNpmDir);
     }
     tmpDirs = _.without(tmpDirs, newPackageNpmDir);
   }
@@ -384,7 +384,7 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
   const rebuildResult = await runNpmCommand(getRebuildArgs(), tempDir);
   if (! rebuildResult.success) {
     buildmessage.error(rebuildResult.error);
-    await files.rm_recursive(tempDir);
+    await files.rm_recursive_deferred(tempDir);
     return false;
   }
 
@@ -420,7 +420,7 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
     await files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
   }
 
-  await files.rm_recursive(tempDir);
+  await files.rm_recursive_deferred(tempDir);
 
   return true;
 });
@@ -644,7 +644,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     }
 
     if (oldNodeVersion !== currentNodeCompatibilityVersion()) {
-      await files.rm_recursive(nodeModulesDir);
+      await files.rm_recursive_deferred(nodeModulesDir);
     }
   }
 

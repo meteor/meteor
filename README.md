@@ -83,9 +83,9 @@ meteor
 
 **Building an application with Meteor?**
 
-* Deploy on [Galaxy](https://www.meteor.com/cloud)
+* Deploy on [Galaxy](https://galaxycloud.app)
 * Discuss on [Forums](https://forums.meteor.com/)
-* Join the Meteor Discord by clicking this [invite link](https://discord.gg/hZkTCaVjmT).
+* Join the [Meteor Discord](https://discord.gg/hZkTCaVjmT)
 
 
 Interested in helping or contributing to Meteor?  These resources will help:
