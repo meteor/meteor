@@ -165,6 +165,87 @@ Object.assign(Mongo.Collection.prototype, {
     return this._connection && this._connection !== Meteor.server;
   },
 
+  /**
+   * @summary Watch MongoDB Change Streams and publish changes via DDP.
+   * @locus Server
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} subscription The DDP subscription object
+   * @param {Array} [pipeline] Optional aggregation pipeline to filter Change Stream events.
+   * @param {Object} [options] Optional settings for the Change Stream.
+   * @returns {Object} Handle with stop() method to stop watching.
+   * @throws {Error} If called on a client/minimongo collection.
+   *
+   * @example
+   *   // In a publish function:
+   *   Meteor.publish('myChanges', function() {
+   *     return MyCollection.watch(this, [
+   *       { $match: { 'operationType': 'insert' } }
+   *     ]);
+   *   });
+   */
+  watch(subscription, pipeline = [], options = {}) {
+    // Only available on server
+    if (typeof Package === 'undefined' || !this.rawCollection) {
+      throw new Error('watch is only available on server collections');
+    }
+ 
+    const raw = this.rawCollection();
+    if (!raw.watch) {
+      throw new Error('Underlying collection does not support watch (Change Streams)');
+    }
+
+    const changeStream = raw.watch(pipeline, options);
+    const collectionName = this._name;
+
+    // Map Change Stream events to DDP events
+    changeStream.on('change', (change) => {
+      const { operationType, documentKey, fullDocument, updateDescription } = change;
+      const id = documentKey && documentKey._id;
+
+      if (!id) return;
+
+      switch (operationType) {
+        case 'insert':
+          subscription.added(collectionName, id, fullDocument);
+          break;
+        case 'replace':
+        case 'update':
+          // For replace, send the full document
+          // For update, send only the changed fields
+          const fields = operationType === 'replace' 
+            ? fullDocument 
+            : (updateDescription && updateDescription.updatedFields) || {};
+          subscription.changed(collectionName, id, fields);
+          break;
+        case 'delete':
+          subscription.removed(collectionName, id);
+          break;
+        // Other types: invalidate, drop, rename, etc. can be handled as needed
+      }
+    });
+
+    // Handle errors
+    changeStream.on('error', (err) => {
+      console.error('Change Stream error:', err);
+      // Optionally call subscription.error(err) if you want to stop the subscription
+    });
+
+    // Automatically call ready() and set up stop handling
+    subscription.ready();
+    subscription.onStop(() => {
+      changeStream.removeAllListeners();
+      changeStream.close();
+    });
+
+    return {
+      stop: () => {
+        changeStream.removeAllListeners();
+        changeStream.close();
+      }
+    };
+  },
+
   async dropCollectionAsync() {
     var self = this;
     if (!self._collection.dropCollectionAsync)

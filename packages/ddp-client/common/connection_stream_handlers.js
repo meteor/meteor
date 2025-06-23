@@ -88,13 +88,6 @@ export class ConnectionStreamHandlers {
         this._connection._livedata_error(msg);
         break;
 
-      case 'stream':
-        // Route stream messages to the stream handler
-        if (this._connection._messageProcessors && typeof this._connection._messageProcessors._livedata_stream === 'function') {
-          this._connection._messageProcessors._livedata_stream(msg);
-        }
-        break;
-
       default:
         Meteor._debug('discarding unknown livedata message type', msg);
     }

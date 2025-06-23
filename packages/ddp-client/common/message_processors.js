@@ -10,21 +10,6 @@ export class MessageProcessors {
   }
 
   /**
-   * @summary Handle custom DDP 'stream' messages for streaming data
-   * @param {Object} msg The stream message
-   */
-  _livedata_stream(msg) {
-    const self = this._connection;
-    if (!msg.id || !self._streamSubscriptions || !self._streamSubscriptions[msg.id]) {
-      return;
-    }
-    const streamSub = self._streamSubscriptions[msg.id];
-    if (!streamSub._stopped) {
-      streamSub._callbacks.forEach(cb => cb(msg.data));
-    }
-  }
-
-  /**
    * @summary Process the connection message and set up the session
    * @param {Object} msg The connection message
    */
@@ -240,9 +225,6 @@ export class MessageProcessors {
         break;
       case 'nosub':
         // ignore this
-        break;
-      case 'stream':
-        // Let the stream handler process this message, do not log as unknown
         break;
       default:
         Meteor._debug('discarding unknown livedata data message type', msg);

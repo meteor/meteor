@@ -26,5 +26,3 @@ Meteor.refresh = async function (notification) {
     Meteor[name] = Meteor.server[name].bind(Meteor.server);
 });
 
-Meteor.publish.stream = Meteor.server.stream.bind(Meteor.server);
-

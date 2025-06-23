@@ -237,66 +237,6 @@ export default class Cursor {
    *                           changes
    */
   observeChanges(options) {
-    // Support for MongoDB Change Streams via option: changeStreams
-    if (options && options.changeStreams) {
-      // Only run on server
-      if (typeof Package === 'undefined' || !this.collection.watch) {
-        throw new Error('Change Streams are only available on server collections');
-      }
-
-      // Prepare pipeline and options for watch
-      const pipeline = options.changeStreamsPipeline || [];
-      const watchOptions = options.changeStreamsOptions || {};
-      const changeStream = this.collection.watch(pipeline, watchOptions);
-
-      // Map Change Stream events to observeChanges callbacks
-      const handle = {
-        collection: this.collection,
-        stop: () => {
-          changeStream.removeAllListeners();
-          changeStream.close();
-        },
-        isReady: true,
-        isReadyPromise: Promise.resolve(),
-      };
-
-      // Map change events
-      changeStream.on('change', (change) => {
-        // Map Change Stream event types to observeChanges callbacks
-        // https://www.mongodb.com/docs/manual/reference/change-events/
-        const { operationType, documentKey, fullDocument, updateDescription } = change;
-        const id = documentKey && documentKey._id;
-        switch (operationType) {
-          case 'insert':
-            if (options.added) options.added(id, fullDocument);
-            break;
-          case 'replace':
-          case 'update':
-            if (options.changed) {
-              // updateDescription.updatedFields contains only changed fields
-              // For replace, fullDocument is the new doc
-              if (operationType === 'replace') {
-                options.changed(id, fullDocument);
-              } else {
-                options.changed(id, updateDescription.updatedFields || {});
-              }
-            }
-            break;
-          case 'delete':
-            if (options.removed) options.removed(id);
-            break;
-          // Other types: invalidate, drop, rename, etc. can be handled as needed
-        }
-      });
-
-      // Optionally, handle errors
-      changeStream.on('error', (err) => {
-        if (options.onError) options.onError(err);
-      });
-
-      return handle;
-    }
-
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with

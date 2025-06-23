@@ -921,15 +921,6 @@ var Subscription = function (
 };
 
 Object.assign(Subscription.prototype, {
-  stream: function (data) {
-    var self = this;
-    if (self._isDeactivated()) return;
-    self._session.send({
-      msg: "stream",
-      id: self._subscriptionId,
-      data: data
-    });
-  },
   _runHandler: async function() {
     // XXX should we unblock() here? Either before running the publish
     // function, or before running _publishCursor.
@@ -1440,36 +1431,6 @@ Object.assign(Server.prototype, {
         callback(socket._meteorSession.connectionHandle);
       return true;
     });
-  },
-  /**
-   * Register a publish handler function.
-   *
-   * @param name {String} identifier for query
-   * @param handler {Function} publish handler
-   * @param options {Object}
-   *
-   * Server will call handler function on each new subscription,
-   * either when receiving DDP sub message for a named subscription, or on
-   * DDP connect for a universal subscription.
-   *
-   * If name is null, this will be a subscription that is
-   * automatically established and permanently on for all connected
-   * client, instead of a subscription that can be turned on and off
-   * with subscribe().
-   *
-   * options to contain:
-   *  - (mostly internal) is_auto: true if generated automatically
-   *    from an autopublish hook. this is for cosmetic purposes only
-   *    (it lets us determine whether to print a warning suggesting
-   *    that you turn off autopublish).
-   */
-
-  stream: function (name, handler) {
-    var self = this;
-    self.publish_handlers[name] = function (...args) {
-      this._isStream = true;
-      return handler.call(this, this, ...args);
-    };
   },
 
   /**

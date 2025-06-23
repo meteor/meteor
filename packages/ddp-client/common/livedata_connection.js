@@ -18,21 +18,6 @@ import { MongoIDMap } from './mongo_id_map';
 import { MessageProcessors } from './message_processors';
 import { DocumentProcessors } from './document_processors';
 
-
-// Native Meteor.subscribeStream API (client only)
-if (Meteor.isClient) {
-  Meteor.subscribeStream = function (name, ...args) {
-    const conn = Meteor.connection || DDP.defaultConnection;
-    const streamSub = new conn.StreamSubscription(conn, name, ...args);
-    // Register callback mapping when subscription is ready
-    Tracker.autorun(() => {
-      if (streamSub._sub.subscriptionId && !conn._streamSubscriptions[streamSub._sub.subscriptionId]) {
-        conn._streamSubscriptions[streamSub._sub.subscriptionId] = streamSub;
-      }
-    });
-    return streamSub;
-  };
-}
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
 // Options:
@@ -238,10 +223,6 @@ export class Connection {
     //     for any reason, with an error argument if an error triggered the stop)
     self._subscriptions = {};
 
-    // Stream subscriptions for native DDP stream support
-    // Map from subscription ID to StreamSubscription instance
-    self._streamSubscriptions = {};
-
     // Reactive userId.
     self._userId = null;
     self._userIdDeps = new Tracker.Dependency();
@@ -318,35 +299,6 @@ export class Connection {
     this._getServerDoc = (collection, id) =>
       this._documentProcessors._getServerDoc(collection, id);
   }
-
-  // StreamSubscription class for native DDP stream support
-  StreamSubscription = class {
-    constructor(connection, name, ...args) {
-      this._callbacks = [];
-      this._sub = connection.subscribe(name, ...args);
-      this._id = null;
-      this._stopped = false;
-
-      // Detect subscriptionId when ready
-      const origReady = this._sub.ready;
-      this._sub.ready = (...a) => {
-        if (!this._id && this._sub.subscriptionId) {
-          this._id = this._sub.subscriptionId;
-        }
-        return origReady.apply(this._sub, a);
-      };
-    }
-
-    onData(cb) {
-      this._callbacks.push(cb);
-    }
-
-    stop() {
-      this._stopped = true;
-      this._callbacks = [];
-      this._sub.stop();
-    }
-  };
 
   // 'name' is the name of the data on the wire that should go in the
   // store. 'wrappedStore' should be an object with methods beginUpdate, update,
