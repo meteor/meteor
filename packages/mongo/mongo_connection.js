@@ -11,7 +11,7 @@ import { ObserveMultiplexer } from './observe_multiplex';
 import { OplogObserveDriver } from './oplog_observe_driver';
 import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
 import { PollingObserveDriver } from './polling_observe_driver';
-import { ChangeStreamObserveDriver } from './changestream_observe_driver';
+// import { ChangeStreamObserveDriver } from './changestream_observe_driver';
 
 const FILE_ASSET_SUFFIX = 'Asset';
 const ASSETS_FOLDER = 'assets';
@@ -139,6 +139,12 @@ MongoConnection.prototype._checkChangeStreamSupport = async function() {
     const isSharded = isMaster.msg === 'isdbgrid';
     
     self._supportsChangeStreams = isReplicaSet || isSharded;
+    
+    if (self._supportsChangeStreams) {
+      console.log('MongoDB Change Streams are available and will be used for real-time updates');
+    } else {
+      console.log('MongoDB Change Streams not available (requires replica set or sharded cluster)');
+    }
     
   } catch (error) {
     console.warn('Error checking Change Streams support:', error.message);
@@ -885,16 +891,16 @@ Object.assign(MongoConnection.prototype, {
       var matcher, sorter;
       
       // Check if Change Streams are available and enabled
-      const canUseChangeStreams = [
-        function () {
-          // Check if change streams are explicitly disabled
-          const mongoSettings = Meteor.settings?.packages?.mongo || {};
-          return mongoSettings.reactivity === 'CHANGE_STREAMS' || process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS';
-        },
+      var canUseChangeStreams = [
         function () {
           // Change Streams require MongoDB 3.6+ and replica set
           return self._supportsChangeStreams && !ordered &&
             !callbacks._testOnlyPollCallback;
+        },
+        function () {
+          // Check if change streams are explicitly disabled
+          const mongoSettings = Meteor.settings?.packages?.mongo || {};
+          return mongoSettings.useChangeStreams !== false;
         },
         function () {
           // We need to be able to compile the selector
@@ -976,6 +982,7 @@ Object.assign(MongoConnection.prototype, {
       if (canUseChangeStreams) {
         // Use dynamic import to avoid circular dependency issues
         try {
+          const { ChangeStreamObserveDriver } = require('./changestream_observe_driver');
           driverClass = ChangeStreamObserveDriver;
         } catch (error) {
           console.warn('Failed to load ChangeStreamObserveDriver, falling back to oplog/polling:', error.message);
