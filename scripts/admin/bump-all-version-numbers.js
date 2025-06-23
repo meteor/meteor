@@ -7,7 +7,7 @@ const packageNames = process.argv.slice(2);
 packageNames.forEach(name => {
   // name = "packages/" + name + "/package.js";
 
-  const content = fs.readFileSync(name, {encoding: "utf-8"});
+  let content = fs.readFileSync(name, {encoding: "utf-8"});
 
   const match = content.match(/\d+\.\d+\.\d+-winr.\d+/);
   if (match) {
