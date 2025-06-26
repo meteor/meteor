@@ -295,9 +295,7 @@ export function Profile<
   bucketName: string | ((...args: TArgs) => string),
   f: (...args: TArgs) => TResult | Promise<TResult>,
 ): typeof f {
-  if (!Profile.enabled) {
-    return f;
-  }
+  return f;
 
   return Object.assign(function profileWrapper(this: any) {
     const args = Array.from(arguments) as TArgs;
