@@ -6,7 +6,6 @@ const inspector = require('inspector');
 const INSPECTOR_CONFIG = {
   enabled: !!process.env.METEOR_INSPECT,
   filter: process.env.METEOR_INSPECT ? process.env.METEOR_INSPECT.split(',') : [],
-  context: process.env.METEOR_INSPECT_CONTEXT || '',
   outputDir: process.env.METEOR_INSPECT_OUTPUT || path.join(process.cwd(), 'profiling'),
   samplingInterval: process.env.METEOR_INSPECT_INTERVAL ? parseInt(process.env.METEOR_INSPECT_INTERVAL || '1000', 10) : undefined
 };
@@ -23,10 +22,6 @@ function shouldRunInspectorProfiling(name) {
 }
 
 function startInspectorProfiling(name) {
-  if (!shouldRunInspectorProfiling(name)) {
-    return false;
-  }
-
   try {
     if (rootSession) {
       return false;
@@ -127,7 +122,7 @@ function saveProfile(profile, name, filename, duration) {
   
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const safeFilename = filename.replace(/[\/\\:]/g, '_');
-  const filepath = path.join(INSPECTOR_CONFIG.outputDir, `${safeFilename}-${INSPECTOR_CONFIG.context}-${timestamp}.cpuprofile`);
+  const filepath = path.join(INSPECTOR_CONFIG.outputDir, `${safeFilename}-${timestamp}.cpuprofile`);
   
   fs.writeFileSync(filepath, JSON.stringify(profile));
   
