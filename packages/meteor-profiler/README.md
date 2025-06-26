@@ -1,113 +1,113 @@
 # Meteor Profiler
 
-Pacote simples para profiling CPU no Meteor usando o Node.js Inspector.
+Simple CPU profiling package for Meteor using Node.js Inspector.
 
-## Instalação
+## Installation
 
 ```bash
 meteor add meteor-profiler
 ```
 
-## Funcionalidades
+## Features
 
-- **Profiling Hierárquico**: Rastreie o tempo gasto em diferentes partes do código com estrutura hierárquica
-- **Profiling de CPU**: Gere arquivos `.cpuprofile` para análise detalhada no Chrome DevTools
-- **Suporte a Async/Await**: Funciona com funções síncronas e assíncronas
-- **Relatórios Detalhados**: Visualize onde o tempo está sendo gasto em sua aplicação
-- **Configuração por Variáveis de Ambiente**: Controle total através de variáveis de ambiente
+- **Hierarchical Profiling**: Track time spent in different parts of code with hierarchical structure
+- **CPU Profiling**: Generate `.cpuprofile` files for detailed analysis in Chrome DevTools
+- **Async/Await Support**: Works with both synchronous and asynchronous functions
+- **Detailed Reports**: Visualize where time is being spent in your application
+- **Environment Variable Configuration**: Full control through environment variables
 
-## Uso Básico
+## Basic Usage
 
-### Profiling Simples
+### Simple Profiling
 
 ```javascript
 import { Profile } from 'meteor/meteor-profiler';
 
-// Envolva uma função para profiling
+// Wrap a function for profiling
 const myFunction = Profile('myFunction', function(data) {
-  // sua lógica aqui
+  // your logic here
   return processData(data);
 });
 
-// Ou use Profile.time para profiling inline
+// Or use Profile.time for inline profiling
 function myMethod() {
   return Profile.time('myMethod', () => {
-    // código a ser perfilado
+    // code to be profiled
     return doSomething();
   });
 }
 ```
 
-### Profiling com Sessão
+### Session Profiling
 
 ```javascript
 import { Profile } from 'meteor/meteor-profiler';
 
-// Execute uma sessão completa de profiling
+// Run a complete profiling session
 Profile.run('myOperation', () => {
-  // Todo código aqui será perfilado
+  // All code here will be profiled
   const result1 = Profile.time('step1', () => step1());
   const result2 = Profile.time('step2', () => step2());
   return combineResults(result1, result2);
 });
 ```
 
-### Nomes Dinâmicos de Bucket
+### Dynamic Bucket Names
 
 ```javascript
 const processUser = Profile(function(userId) {
   return `processUser:${userId}`;
 }, function(userId) {
-  // processa usuário específico
+  // process specific user
   return Users.findOne(userId);
 });
 ```
 
-## Configuração
+## Configuration
 
-### Profiling Básico
+### Basic Profiling
 
-Ative o profiling básico definindo a variável de ambiente:
+Enable basic profiling by setting the environment variable:
 
 ```bash
 METEOR_PROFILE=1 meteor
 ```
 
-### Profiling Avançado com Inspector
+### Advanced Profiling with Inspector
 
-Para gerar arquivos `.cpuprofile` para análise no Chrome DevTools:
+To generate `.cpuprofile` files for analysis in Chrome DevTools:
 
 ```bash
 METEOR_INSPECT=methodName,otherMethod meteor
 ```
 
-### Variáveis de Ambiente Completas
+### Complete Environment Variables
 
 ```bash
-# Ativa profiling básico (tempo mínimo em ms para aparecer nos relatórios)
+# Enable basic profiling (minimum time in ms to appear in reports)
 METEOR_PROFILE=100
 
-# Ativa inspector profiling para métodos específicos
+# Enable inspector profiling for specific methods
 METEOR_INSPECT=bundler.bundle,compile.js
 
-# Define contexto para identificação dos arquivos
+# Set context for file identification
 METEOR_INSPECT_CONTEXT=development
 
-# Define diretório de saída (padrão: .meteor/profiling)
+# Set output directory (default: .meteor/profiling)
 METEOR_INSPECT_OUTPUT=/path/to/profiles
 
-# Intervalo de amostragem em ms (menor = mais detalhes, mais memória)
+# Sampling interval in ms (lower = more details, more memory)
 METEOR_INSPECT_INTERVAL=1000
 
-# Tamanho máximo do profile em MB
+# Maximum profile size in MB
 METEOR_INSPECT_MAX_SIZE=2000
 ```
 
-## Analisando Resultados
+## Analyzing Results
 
-### Relatório Hierárquico
+### Hierarchical Report
 
-O profiler gera um relatório hierárquico mostrando onde o tempo foi gasto:
+The profiler generates a hierarchical report showing where time was spent:
 
 ```
 | myOperation: 1,234 ms (1)
@@ -118,9 +118,9 @@ O profiler gera um relatório hierárquico mostrando onde o tempo foi gasto:
 | └─ other myOperation: 134 ms
 ```
 
-### Relatório de Folhas
+### Leaf Report
 
-Mostra o tempo total gasto em operações específicas:
+Shows total time spent in specific operations:
 
 ```
 | Top leaves:
@@ -129,18 +129,18 @@ Mostra o tempo total gasto em operações específicas:
 | network.request..........................280 ms (5)
 ```
 
-### Arquivos .cpuprofile
+### .cpuprofile Files
 
-Os arquivos gerados podem ser abertos no Chrome DevTools:
+Generated files can be opened in Chrome DevTools:
 
-1. Abra o Chrome DevTools
-2. Vá para a aba "Performance" ou "Profiler"
-3. Clique em "Load Profile"
-4. Selecione o arquivo `.cpuprofile`
+1. Open Chrome DevTools
+2. Go to "Performance" or "Profiler" tab
+3. Click "Load Profile"
+4. Select the `.cpuprofile` file
 
-## Exemplos de Uso
+## Usage Examples
 
-### Em Métodos Meteor
+### In Meteor Methods
 
 ```javascript
 import { Meteor } from 'meteor/meteor';
@@ -165,7 +165,7 @@ Meteor.methods({
 });
 ```
 
-### Em Publications
+### In Publications
 
 ```javascript
 import { Meteor } from 'meteor/meteor';
@@ -178,7 +178,7 @@ Meteor.publish('userData', Profile('pub.userData', function(userId) {
 }));
 ```
 
-### Com Async/Await
+### With Async/Await
 
 ```javascript
 import { Profile } from 'meteor/meteor-profiler';
@@ -194,34 +194,34 @@ const fetchExternalData = Profile('fetchExternal', async function(url) {
 });
 ```
 
-## Dicas de Performance
+## Performance Tips
 
-1. **Use filtros apropriados**: Configure `METEOR_PROFILE` com um valor mínimo adequado (ex: 100ms) para evitar ruído
-2. **Limite o inspector profiling**: Use `METEOR_INSPECT` apenas para métodos específicos que você quer analisar em detalhes
-3. **Ajuste o intervalo**: Para análises de longa duração, aumente `METEOR_INSPECT_INTERVAL` para reduzir uso de memória
-4. **Monitore o tamanho**: Profiles muito grandes podem causar problemas de memória; ajuste `METEOR_INSPECT_MAX_SIZE`
+1. **Use appropriate filters**: Configure `METEOR_PROFILE` with a suitable minimum value (e.g., 100ms) to avoid noise
+2. **Limit inspector profiling**: Use `METEOR_INSPECT` only for specific methods you want to analyze in detail
+3. **Adjust interval**: For long-duration analyses, increase `METEOR_INSPECT_INTERVAL` to reduce memory usage
+4. **Monitor size**: Very large profiles can cause memory issues; adjust `METEOR_INSPECT_MAX_SIZE`
 
-## Limitações
+## Limitations
 
-- O profiling com Inspector (`.cpuprofile`) só funciona no servidor
-- Profiles muito grandes podem consumir muita memória
-- O overhead do profiling pode afetar a performance em loops muito apertados
+- Inspector profiling (`.cpuprofile`) only works on the server
+- Very large profiles can consume a lot of memory
+- Profiling overhead can affect performance in very tight loops
 
-## Desenvolvimento
+## Development
 
-Para contribuir com o pacote:
+To contribute to the package:
 
 ```bash
-# Clone o repositório Meteor
+# Clone the Meteor repository
 git clone https://github.com/meteor/meteor.git
 
-# O pacote está em packages/meteor-profiler
+# The package is in packages/meteor-profiler
 cd meteor/packages/meteor-profiler
 
-# Execute os testes
+# Run tests
 meteor test-packages ./
 ```
 
-## Licença
+## License
 
-Este pacote é parte do projeto Meteor e está licenciado sob a mesma licença MIT.
+This package is part of the Meteor project and is licensed under the same MIT license.
