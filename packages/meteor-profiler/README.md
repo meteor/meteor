@@ -10,15 +10,15 @@ meteor add meteor-profiler
 
 ## Features
 
-- **Hierarchical Profiling**: Track time spent in different parts of code with hierarchical structure
 - **CPU Profiling**: Generate `.cpuprofile` files for detailed analysis in Chrome DevTools
-- **Async/Await Support**: Works with both synchronous and asynchronous functions
-- **Detailed Reports**: Visualize where time is being spent in your application
-- **Environment Variable Configuration**: Full control through environment variables
+- **Environment Variable Configuration**: Control profiling through environment variables
+- **Async/Promise Support**: Works with both synchronous and asynchronous functions
+- **Automatic Cleanup**: Handles profiling session lifecycle automatically
+- **Function Wrapping**: Simple API to wrap existing functions
 
 ## Basic Usage
 
-### Simple Profiling
+### Simple Function Wrapping
 
 ```javascript
 import { Profile } from 'meteor/meteor-profiler';
@@ -29,26 +29,32 @@ const myFunction = Profile('myFunction', function(data) {
   return processData(data);
 });
 
-// Or use Profile.time for inline profiling
-function myMethod() {
-  return Profile.time('myMethod', () => {
-    // code to be profiled
-    return doSomething();
-  });
-}
+// Call the wrapped function normally
+const result = myFunction(someData);
 ```
 
-### Session Profiling
+### In Meteor Methods
+
+```javascript
+import { Meteor } from 'meteor/meteor';
+import { Profile } from 'meteor/meteor-profiler';
+
+Meteor.methods({
+  'processData': Profile('processData', function() {
+    // Your method logic here
+    return expensiveOperation();
+  })
+});
+```
+
+### With Async Functions
 
 ```javascript
 import { Profile } from 'meteor/meteor-profiler';
 
-// Run a complete profiling session
-Profile.run('myOperation', () => {
-  // All code here will be profiled
-  const result1 = Profile.time('step1', () => step1());
-  const result2 = Profile.time('step2', () => step2());
-  return combineResults(result1, result2);
+const fetchExternalData = Profile('fetchExternal', async function(url) {
+  const response = await fetch(url);
+  return await response.json();
 });
 ```
 
@@ -65,149 +71,81 @@ const processUser = Profile(function(userId) {
 
 ## Configuration
 
-### Basic Profiling
+### Enable CPU Profiling
 
-Enable basic profiling by setting the environment variable:
+To generate `.cpuprofile` files, set the `METEOR_INSPECT` environment variable with the function names you want to profile:
 
 ```bash
-METEOR_PROFILE=1 meteor
+METEOR_INSPECT=processData,otherFunction meteor
 ```
 
-### Advanced Profiling with Inspector
-
-To generate `.cpuprofile` files for analysis in Chrome DevTools:
+### Environment Variables
 
 ```bash
-METEOR_INSPECT=methodName,otherMethod meteor
-```
+# Enable inspector profiling for specific functions (comma-separated)
+METEOR_INSPECT=processData,myFunction,anotherFunction
 
-### Complete Environment Variables
-
-```bash
-# Enable basic profiling (minimum time in ms to appear in reports)
-METEOR_PROFILE=100
-
-# Enable inspector profiling for specific methods
-METEOR_INSPECT=bundler.bundle,compile.js
-
-# Set context for file identification
+# Set context for file identification (optional)
 METEOR_INSPECT_CONTEXT=development
 
-# Set output directory (default: .meteor/profiling)
+# Set output directory (default: ./profiling)
 METEOR_INSPECT_OUTPUT=/path/to/profiles
 
-# Sampling interval in ms (lower = more details, more memory)
+# Sampling interval in ms (optional, default: Node.js default)
 METEOR_INSPECT_INTERVAL=1000
-
-# Maximum profile size in MB
-METEOR_INSPECT_MAX_SIZE=2000
 ```
+
+## How It Works
+
+1. **Function Wrapping**: The `Profile` function wraps your existing functions
+2. **Conditional Profiling**: Only functions listed in `METEOR_INSPECT` are actually profiled
+3. **CPU Profile Generation**: When enabled, generates `.cpuprofile` files using Node.js Inspector
+4. **Automatic Cleanup**: Handles starting/stopping profiling sessions automatically
 
 ## Analyzing Results
 
-### Hierarchical Report
-
-The profiler generates a hierarchical report showing where time was spent:
-
-```
-| myOperation: 1,234 ms (1)
-| ├─ step1: 800 ms (1)
-| │  ├─ database.query: 600 ms (3)
-| │  └─ other step1: 200 ms
-| ├─ step2: 300 ms (1)
-| └─ other myOperation: 134 ms
-```
-
-### Leaf Report
-
-Shows total time spent in specific operations:
-
-```
-| Top leaves:
-| database.query...........................600 ms (3)
-| template.render..........................350 ms (12)
-| network.request..........................280 ms (5)
-```
-
 ### .cpuprofile Files
 
-Generated files can be opened in Chrome DevTools:
+Generated files are saved in the `profiling` directory (or custom path) and can be opened in Chrome DevTools:
 
-1. Open Chrome DevTools
-2. Go to "Performance" or "Profiler" tab
-3. Click "Load Profile"
-4. Select the `.cpuprofile` file
+1. Open Chrome DevTools (F12)
+2. Go to "Performance" tab
+3. Click the "Load Profile" button (⬆️ icon)
+4. Select your `.cpuprofile` file
 
-## Usage Examples
+### File Naming Convention
 
-### In Meteor Methods
+Files are named: `{functionName}-{context}-{timestamp}.cpuprofile`
 
-```javascript
-import { Meteor } from 'meteor/meteor';
-import { Profile } from 'meteor/meteor-profiler';
+Example: `processData-development-2025-06-26T15-30-45-123Z.cpuprofile`
 
-Meteor.methods({
-  'users.process': Profile('users.process', function(userId) {
-    const user = Profile.time('users.fetch', () => {
-      return Meteor.users.findOne(userId);
-    });
-    
-    const result = Profile.time('users.calculate', () => {
-      return calculateUserStats(user);
-    });
-    
-    Profile.time('users.save', () => {
-      Meteor.users.update(userId, { $set: { stats: result } });
-    });
-    
-    return result;
-  })
-});
+## Example Output
+
+When profiling is active, you'll see console output like:
+
+```
+[PROFILING_SAVE] Profile for processData saved in: /path/to/profiling/processData-development-2025-06-26T15-30-45-123Z.cpuprofile
+[PROFILING_SAVE] Duration: 1234ms, size: 0.45MB
 ```
 
-### In Publications
+## Important Notes
 
-```javascript
-import { Meteor } from 'meteor/meteor';
-import { Profile } from 'meteor/meteor-profiler';
+### Current Limitations
 
-Meteor.publish('userData', Profile('pub.userData', function(userId) {
-  return Profile.time('userData.query', () => {
-    return Meteor.users.find({ _id: userId });
-  });
-}));
-```
+- **Server-only**: Profiling only works on the server side
+- **Single session**: Only one profiling session can be active at a time
+- **Function-level**: Profiling is per-function, not hierarchical
+- **Manual activation**: Must specify function names in `METEOR_INSPECT`
 
-### With Async/Await
+### Performance Impact
 
-```javascript
-import { Profile } from 'meteor/meteor-profiler';
-
-const fetchExternalData = Profile('fetchExternal', async function(url) {
-  const response = await Profile.time('http.request', async () => {
-    return fetch(url);
-  });
-  
-  return await Profile.time('response.json', async () => {
-    return response.json();
-  });
-});
-```
-
-## Performance Tips
-
-1. **Use appropriate filters**: Configure `METEOR_PROFILE` with a suitable minimum value (e.g., 100ms) to avoid noise
-2. **Limit inspector profiling**: Use `METEOR_INSPECT` only for specific methods you want to analyze in detail
-3. **Adjust interval**: For long-duration analyses, increase `METEOR_INSPECT_INTERVAL` to reduce memory usage
-4. **Monitor size**: Very large profiles can cause memory issues; adjust `METEOR_INSPECT_MAX_SIZE`
-
-## Limitations
-
-- Inspector profiling (`.cpuprofile`) only works on the server
-- Very large profiles can consume a lot of memory
-- Profiling overhead can affect performance in very tight loops
+- **Minimal overhead**: When `METEOR_INSPECT` is not set, there's virtually no performance impact
+- **Memory usage**: Active profiling consumes memory proportional to execution time and sampling rate
+- **CPU overhead**: Inspector profiling adds some CPU overhead during active sessions
 
 ## Development
+
+### Contributing
 
 To contribute to the package:
 
@@ -215,13 +153,39 @@ To contribute to the package:
 # Clone the Meteor repository
 git clone https://github.com/meteor/meteor.git
 
-# The package is in packages/meteor-profiler
+# Navigate to the package
 cd meteor/packages/meteor-profiler
 
-# Run tests
+# Test your changes
 meteor test-packages ./
 ```
 
+### Testing the Package
+
+```bash
+# In a test Meteor app
+meteor add meteor-profiler
+
+# Create a test method and run with profiling
+METEOR_INSPECT=testMethod meteor
+```
+
+## Troubleshooting
+
+### No .cpuprofile files generated
+- Ensure `METEOR_INSPECT` includes the exact function name used in `Profile()`
+- Check that the output directory is writable
+- Verify the function is actually being called
+
+### Memory issues
+- Reduce sampling frequency with `METEOR_INSPECT_INTERVAL`
+- Profile shorter durations
+- Ensure proper cleanup by not interrupting the process abruptly
+
+### Permission errors
+- Check write permissions for the output directory
+- Try specifying a different output path with `METEOR_INSPECT_OUTPUT`
+
 ## License
 
-This package is part of the Meteor project and is licensed under the same MIT license.
+This package is part of the Meteor project and is licensed under the MIT license.
