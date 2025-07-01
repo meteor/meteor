@@ -492,7 +492,7 @@ Note that you must have mongosh installed to use this option.
 Options:
   --url, -U return a Mongo database URL
   --verbose, -v to show the errors that have occurred while connecting to the
-								database
+                database
 
 Currently, this feature can only be used when developing locally.
 The opened Mongo shell connects to the current project's local
@@ -816,7 +816,18 @@ Usage: meteor admin <command> [args]
 Rarely used commands for administering official Meteor services.
 
 Commands:
-{{commands}}
+
+  make-bootstrap-tarballs
+  recommend-release
+  change-homepage
+  set-unmigrated
+  set-banners
+  list-organizations
+  members
+  set-latest-readme
+  get-machine
+
+See 'meteor help admin <command>' for details on an admin command.
 
 See 'meteor help admin <command>' for details on an admin command.
 
@@ -875,12 +886,12 @@ for replacing the names, we offer $$PascalName$$, $$camelName$$, $$name$$.
 This is a MeteorJS project command.
 
 Options:
-	--help          	Show help.
-	--path          	The path to the folder where the files will be generated. Default is the current folder.
-	--templatePath  	Path to the template file check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
-	--replaceFn		 	  Replace function to replace the names in the template. Check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
-	--methods       	Generate methods.
-	--publications  	Generate publications.
+  --help          	Show help.
+  --path          	The path to the folder where the files will be generated. Default is the current folder.
+  --templatePath  	Path to the template file check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
+  --replaceFn		 	  Replace function to replace the names in the template. Check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
+  --methods       	Generate methods.
+  --publications  	Generate publications.
 
 
 >>> publish-release
