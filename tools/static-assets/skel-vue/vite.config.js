@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     vue(),
     meteor({
-      clientEntry: 'imports/ui/main.js',
+      clientEntry: 'client/main.js',
       serverEntry: 'server/main.js',
       enableExperimentalFeatures: true,
       stubValidation: {
