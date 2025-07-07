@@ -56,6 +56,27 @@ const internalLoginWithPassword = ({ selector, password, code, callback }) => {
 Meteor.loginWithPassword = (selector, password, callback) => {
   return internalLoginWithPassword({ selector, password, callback });
 };
+//this is old function around which wrapper is built
+const updatedLoginWithPassword=Meteor.loginWithPassword;
+//this is wrapper function on top of login with password to be comptable with old as well as new login style
+Meteor.loginWithPassword = function (userOrEmail, passwordOrCallback, callback) {
+ let selector, password;
+   if(typeof userOrEmail==='Object')
+   {
+     const {selector,password}=userOrEmail;
+     if(password===undefined)
+     {
+       password= passwordOrCallback;
+     }else{
+       callback=passwordOrCallback;
+     }
+   }
+   else{
+      selector = userOrEmail;
+    password = passwordOrCallback;
+   }
+   return updatedLoginWithPassword(selector, password, callback);
+ };
 
 Accounts._hashPassword = password => ({
   digest: SHA256(password),
