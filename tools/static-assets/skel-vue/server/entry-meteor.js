@@ -7,6 +7,6 @@
  * of Vite's plugin and build system.
  *
  * This can also be a good place to put code that you don't want Vite to
- * process, for example, if you run into a compatability issue or need to use
+ * process, for example, if you run into a compatibility issue or need to use
  * nested imports.
  */
