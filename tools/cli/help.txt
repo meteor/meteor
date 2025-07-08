@@ -829,8 +829,6 @@ Commands:
 
 See 'meteor help admin <command>' for details on an admin command.
 
-See 'meteor help admin <command>' for details on an admin command.
-
 >>> admin make-bootstrap-tarballs
 Makes bootstrap tarballs.
 Usage: meteor admin make-bootstrap-tarballs release@version /tmp/tarballdir
