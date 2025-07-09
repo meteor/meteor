@@ -10,6 +10,7 @@ import {
   setupMutationMethods,
   validateCollectionName
 } from './collection_utils';
+
 import { ReplicationMethods } from './methods_replication';
 
 /**
@@ -164,87 +165,6 @@ Object.assign(Mongo.Collection.prototype, {
     return this._connection && this._connection !== Meteor.server;
   },
 
-  /**
-   * @summary Watch MongoDB Change Streams and publish changes via DDP.
-   * @locus Server
-   * @memberof Mongo.Collection
-   * @instance
-   * @param {Object} subscription The DDP subscription object
-   * @param {Array} [pipeline] Optional aggregation pipeline to filter Change Stream events.
-   * @param {Object} [options] Optional settings for the Change Stream.
-   * @returns {Object} Handle with stop() method to stop watching.
-   * @throws {Error} If called on a client/minimongo collection.
-   *
-   * @example
-   *   // In a publish function:
-   *   Meteor.publish('myChanges', function() {
-   *     return MyCollection.watch(this, [
-   *       { $match: { 'operationType': 'insert' } }
-   *     ]);
-   *   });
-   */
-  watch(subscription, pipeline = [], options = {}) {
-    // Only available on server
-    if (typeof Package === 'undefined' || !this.rawCollection) {
-      throw new Error('watch is only available on server collections');
-    }
- 
-    const raw = this.rawCollection();
-    if (!raw.watch) {
-      throw new Error('Underlying collection does not support watch (Change Streams)');
-    }
-
-    const changeStream = raw.watch(pipeline, options);
-    const collectionName = this._name;
-
-    // Map Change Stream events to DDP events
-    changeStream.on('change', (change) => {
-      const { operationType, documentKey, fullDocument, updateDescription } = change;
-      const id = documentKey && documentKey._id;
-
-      if (!id) return;
-
-      switch (operationType) {
-        case 'insert':
-          subscription.added(collectionName, id, fullDocument);
-          break;
-        case 'replace':
-        case 'update':
-          // For replace, send the full document
-          // For update, send only the changed fields
-          const fields = operationType === 'replace' 
-            ? fullDocument 
-            : (updateDescription && updateDescription.updatedFields) || {};
-          subscription.changed(collectionName, id, fields);
-          break;
-        case 'delete':
-          subscription.removed(collectionName, id);
-          break;
-        // Other types: invalidate, drop, rename, etc. can be handled as needed
-      }
-    });
-
-    // Handle errors
-    changeStream.on('error', (err) => {
-      console.error('Change Stream error:', err);
-      // Optionally call subscription.error(err) if you want to stop the subscription
-    });
-
-    // Automatically call ready() and set up stop handling
-    subscription.ready();
-    subscription.onStop(() => {
-      changeStream.removeAllListeners();
-      changeStream.close();
-    });
-
-    return {
-      stop: () => {
-        changeStream.removeAllListeners();
-        changeStream.close();
-      }
-    };
-  },
-
   async dropCollectionAsync() {
     var self = this;
     if (!self._collection.dropCollectionAsync)
@@ -348,3 +268,164 @@ Meteor.Collection = Mongo.Collection;
 // Allow deny stuff is now in the allow-deny package
 Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
 
+Object.assign(Mongo.Collection.prototype, {
+  /**
+   * @summary Watch for changes in the collection using MongoDB change streams
+   * @locus Server
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {String} eventName The name of the Meteor method to create for watching changes
+   * @param {Object} [options] Options for the change stream
+   * @param {Array} [options.pipeline] Pipeline for the change stream
+   * @param {String} [options.fullDocument='updateLookup'] Full document option
+   */
+  watch(eventName, options = {}) {
+    const changeStream = this.rawCollection().watch(options.pipeline || [], {
+      fullDocument: options.fullDocument || 'updateLookup',
+    });
+
+    Meteor.methods({
+      [eventName]: async function () {
+        return new Promise((resolve) => {
+          changeStream.on('change', (change) => resolve(change));
+        });
+      },
+    });
+  }
+});
+
+/**
+ * MongoDB change stream watcher for Meteor applications.
+ * @namespace Mongo.watcher
+ *
+ * @example
+ * // Example usage:
+ * import { LinkCollection, PostCollection } from '/imports/api/links';
+ *
+ * // Register collections to watch
+ * Mongo.watcher
+ *   .addCollection(LinkCollection, {
+ *     pipeline: [
+ *       { $match: { operationType: { $in: ["update", "insert", "delete"] } } },
+ *     ],
+ *     fullDocument: "updateLookup",
+ *   })
+ *   .addCollection(PostCollection, {
+ *     pipeline: [
+ *       { $match: { operationType: { $in: ["update", "insert", "delete"] } } },
+ *     ],
+ *     fullDocument: "updateLookup",
+ *   })
+ *   // Start watching and expose a Meteor method 'changeStream::links'
+ *   .start('changeStream::links');
+ *
+ * // On the client, you can call the Meteor method to receive the next change event:
+ * Meteor.call('changeStream::links', (err, change) => {
+ *   if (!err) {
+ *     console.log('Change event:', change);
+ *   }
+ * });
+ */
+if (!Mongo.watcher) {
+  Mongo.watcher = {
+    _collections: new Map(),
+    _options: new Map(),
+    _changeStreams: new Map(),
+
+    /**
+     * Registers a MongoDB collection for change stream monitoring.
+     * @param {Mongo.Collection} collection - The MongoDB collection to watch.
+     * @param {Object} [options={ pipeline: [], fullDocument: 'updateLookup' }] - Change stream options.
+     * @param {Array} [options.pipeline=[]] - MongoDB aggregation pipeline stages.
+     * @param {string} [options.fullDocument='updateLookup'] - Full document retrieval option ('default', 'updateLookup', 'whenAvailable').
+     * @returns {Mongo.watcher} Instance for method chaining.
+     * @throws {Error} If collection is not a valid Mongo.Collection instance.
+     */
+    addCollection(collection, options = { pipeline: [], fullDocument: 'updateLookup' }) {
+      if (!(collection instanceof Mongo.Collection)) {
+        throw new Error('Invalid collection: must be a Mongo.Collection instance');
+      }
+      this._collections.set(collection._name, collection);
+      this._options.set(collection._name, { ...options, pipeline: Array.isArray(options.pipeline) ? options.pipeline : [] });
+      return this;
+    },
+
+    /**
+     * Initiates change stream monitoring for all registered collections and exposes a Meteor method.
+     * @param {string} eventName - Unique name for the Meteor method to expose change events.
+     * @param {Object} [globalOptions={}] - Global change stream configuration.
+     * @param {Array} [globalOptions.pipeline=[]] - Additional pipeline stages for the change stream.
+     * @param {string} [globalOptions.fullDocument='updateLookup'] - Full document retrieval option.
+     * @returns {Mongo.watcher} Instance for method chaining.
+     * @throws {Error} If no collections are registered or eventName is invalid.
+     */
+    start(eventName, globalOptions = {}) {
+      if (typeof eventName !== 'string' || !eventName.trim()) {
+        throw new Error('Invalid eventName: must be a non-empty string');
+      }
+
+      if (this._changeStreams.has(eventName)) {
+        this.stop(eventName);
+      }
+
+      const collectionNames = Array.from(this._collections.keys());
+      if (!collectionNames.length) {
+        throw new Error('No collections registered to watch');
+      }
+
+      const pipelines = [{
+        $match: { 'ns.coll': { $in: collectionNames } }
+      }];
+
+      if (Array.isArray(globalOptions.pipeline)) {
+        pipelines.push(...globalOptions.pipeline);
+      }
+
+      const fullDocument = globalOptions.fullDocument || 'updateLookup';
+      const db = this._collections.values().next().value.rawDatabase();
+      const changeStream = db.watch(pipelines, { fullDocument });
+      this._changeStreams.set(eventName, changeStream);
+
+      Meteor.methods({
+        [eventName]: async () => {
+          try {
+            return await new Promise((resolve, reject) => {
+              const onChange = change => {
+                changeStream.removeListener('change', onChange);
+                resolve(change);
+              };
+              changeStream.once('change', onChange);
+              changeStream.once('error', err => {
+                changeStream.removeListener('change', onChange);
+                reject(err);
+              });
+            });
+          } catch (err) {
+            throw new Meteor.Error('change-stream-error', err.message);
+          }
+        }
+      });
+
+      return this;
+    },
+
+    /**
+     * Terminates change stream monitoring for the specified event and cleans up resources.
+     * @param {string} eventName - The Meteor method name to stop.
+     * @returns {Mongo.watcher} Instance for method chaining.
+     */
+    stop(eventName) {
+      if (typeof eventName !== 'string' || !eventName.trim()) {
+        throw new Error('Invalid eventName: must be a non-empty string');
+      }
+
+      const changeStream = this._changeStreams.get(eventName);
+      if (changeStream) {
+        changeStream.close().catch(() => {});
+        this._changeStreams.delete(eventName);
+      }
+
+      return this;
+    }
+  };
+}
