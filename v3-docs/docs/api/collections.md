@@ -914,6 +914,7 @@ const handle = await cursor.observeChangesAsync({
 setTimeout(() => handle.stop(), 5000);
 ```
 
+<ApiBox name="Mongo.getCollection" />
 <ApiBox name="Mongo.ObjectID" />
 
 
