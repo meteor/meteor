@@ -5,7 +5,6 @@ export const hasOwn = Object.prototype.hasOwnProperty;
 export class QueryError extends Error {
   constructor(message) {
     super(message);
-    this.name = 'QueryError';
   }
 }
 
@@ -386,7 +385,7 @@ const VALUE_OPERATORS = {
     const branchedMatchers = operand.map(criterion => {
       // XXX handle $all/$elemMatch combination
       if (isOperatorObject(criterion)) {
-        throw new Error('no $ expressions in $all');
+        throw new QueryError('no $ expressions in $all');
       }
 
       // This is always a regexp or equality selector.
