@@ -411,19 +411,18 @@ Object.assign(Session.prototype, {
     }
 
     if (msg_in.msg === 'disconnect') {
-      if (_.has(self.protocol_handlers, msg_in.msg)) {
-        // we want to pre-empt the queue - a disconnect is imminent.
+      if (Object.hasOwn(self.protocol_handlers, msg_in.msg)) {
+        // we want to pre-empty the queue - a disconnect is imminent.
         return self.protocol_handlers[msg_in.msg].call(self, msg_in, () => {});
       }
     }
 
     self.inQueue.push(msg_in);
-    if (self.workerRunning)
-      return;
+    if (self.workerRunning) return;
     self.workerRunning = true;
 
-    var processNext = function () {
-      var msg = self.inQueue && self.inQueue.shift();
+    const processNext = function () {
+      const msg = self.inQueue && self.inQueue.shift();
 
       if (!msg) {
         self.workerRunning = false;
@@ -431,11 +430,10 @@ Object.assign(Session.prototype, {
       }
 
       function runHandlers() {
-        var blocked = true;
+        let blocked = true;
 
-        var unblock = function () {
-          if (!blocked)
-            return; // idempotent
+        const unblock = function () {
+          if (!blocked) return; // idempotent
           blocked = false;
           setImmediate(processNext);
         };
@@ -445,7 +443,7 @@ Object.assign(Session.prototype, {
           return true;
         });
 
-        if (msg.msg in self.protocol_handlers) {
+        if (Object.hasOwn(self.protocol_handlers, msg.msg)) {
           const result = self.protocol_handlers[msg.msg].call(
             self,
             msg,
@@ -860,7 +858,7 @@ Object.assign(Session.prototype, {
     forwardedFor = forwardedFor.map((ip) => ip.trim());
     return forwardedFor[forwardedFor.length - httpForwardedCount];
   }
-});
+};
 
 /******************************************************************************/
 /* Subscription                                                               */
