@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { CLIENT_ONLY_METHODS, getAsyncMethodName } from 'meteor/minimongo/constants';
-import { QueryError } from 'meteor/minimongo/common';
+import { MiniMongoQueryError } from 'meteor/minimongo/common';
 import path from 'path';
 import { AsynchronousCursor } from './asynchronous_cursor';
 import { Cursor } from './cursor';
@@ -887,7 +887,7 @@ Object.assign(MongoConnection.prototype, {
           } catch (e) {
             // XXX make all compilation errors MinimongoError or something
             //     so that this doesn't ignore unrelated exceptions
-            if (Meteor.isServer && e instanceof QueryError) {
+            if (Meteor.isServer && e instanceof MiniMongoQueryError) {
               throw e;
             }
             return false;

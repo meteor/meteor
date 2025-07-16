@@ -2,7 +2,7 @@ import LocalCollection from './local_collection.js';
 
 export const hasOwn = Object.prototype.hasOwnProperty;
 
-export class QueryError extends Error {
+export class MiniMongoQueryError extends Error {
   constructor(message) {
     super(message);
   }
@@ -30,7 +30,7 @@ export const ELEMENT_OPERATORS = {
       if (!(Array.isArray(operand) && operand.length === 2
             && typeof operand[0] === 'number'
             && typeof operand[1] === 'number')) {
-        throw new QueryError('argument to $mod must be an array of two numbers');
+        throw new MiniMongoQueryError('argument to $mod must be an array of two numbers');
       }
 
       // XXX could require to be ints or round or something
@@ -44,7 +44,7 @@ export const ELEMENT_OPERATORS = {
   $in: {
     compileElementSelector(operand) {
       if (!Array.isArray(operand)) {
-        throw new QueryError('$in needs an array');
+        throw new MiniMongoQueryError('$in needs an array');
       }
 
       const elementMatchers = operand.map(option => {
@@ -53,7 +53,7 @@ export const ELEMENT_OPERATORS = {
         }
 
         if (isOperatorObject(option)) {
-          throw new QueryError('cannot nest $ under $in');
+          throw new MiniMongoQueryError('cannot nest $ under $in');
         }
 
         return equalityElementMatcher(option);
@@ -80,7 +80,7 @@ export const ELEMENT_OPERATORS = {
         // does.
         operand = 0;
       } else if (typeof operand !== 'number') {
-        throw new QueryError('$size needs a number');
+        throw new MiniMongoQueryError('$size needs a number');
       }
 
       return value => Array.isArray(value) && value.length === operand;
@@ -118,16 +118,16 @@ export const ELEMENT_OPERATORS = {
           'maxKey': 127,
         };
         if (!hasOwn.call(operandAliasMap, operand)) {
-          throw new QueryError(`unknown string alias for $type: ${operand}`);
+          throw new MiniMongoQueryError(`unknown string alias for $type: ${operand}`);
         }
         operand = operandAliasMap[operand];
       } else if (typeof operand === 'number') {
         if (operand === 0 || operand < -1
           || (operand > 19 && operand !== 127)) {
-          throw new QueryError(`Invalid numerical $type code: ${operand}`);
+          throw new MiniMongoQueryError(`Invalid numerical $type code: ${operand}`);
         }
       } else {
-        throw new QueryError('argument to $type is not a number or a string');
+        throw new MiniMongoQueryError('argument to $type is not a number or a string');
       }
 
       return value => (
@@ -174,7 +174,7 @@ export const ELEMENT_OPERATORS = {
   $regex: {
     compileElementSelector(operand, valueSelector) {
       if (!(typeof operand === 'string' || operand instanceof RegExp)) {
-        throw new QueryError('$regex has to be a string or RegExp');
+        throw new MiniMongoQueryError('$regex has to be a string or RegExp');
       }
 
       let regexp;
@@ -186,7 +186,7 @@ export const ELEMENT_OPERATORS = {
         // ones (eg, Mongo supports x and s). Ideally we would implement x and s
         // by transforming the regexp, but not today...
         if (/[^gim]/.test(valueSelector.$options)) {
-          throw new QueryError('Only the i, m, and g regexp options are supported');
+          throw new MiniMongoQueryError('Only the i, m, and g regexp options are supported');
         }
 
         const source = operand instanceof RegExp ? operand.source : operand;
@@ -204,7 +204,7 @@ export const ELEMENT_OPERATORS = {
     dontExpandLeafArrays: true,
     compileElementSelector(operand, valueSelector, matcher) {
       if (!LocalCollection._isPlainObject(operand)) {
-        throw new QueryError('$elemMatch need an object');
+        throw new MiniMongoQueryError('$elemMatch need an object');
       }
 
       const isDocMatcher = !isOperatorObject(
@@ -359,7 +359,7 @@ const VALUE_OPERATORS = {
   // $options just provides options for $regex; its logic is inside $regex
   $options(operand, valueSelector) {
     if (!hasOwn.call(valueSelector, '$regex')) {
-      throw new QueryError('$options needs a $regex');
+      throw new MiniMongoQueryError('$options needs a $regex');
     }
 
     return everythingMatcher;
@@ -367,14 +367,14 @@ const VALUE_OPERATORS = {
   // $maxDistance is basically an argument to $near
   $maxDistance(operand, valueSelector) {
     if (!valueSelector.$near) {
-      throw new QueryError('$maxDistance needs a $near');
+      throw new MiniMongoQueryError('$maxDistance needs a $near');
     }
 
     return everythingMatcher;
   },
   $all(operand, valueSelector, matcher) {
     if (!Array.isArray(operand)) {
-      throw new QueryError('$all requires array');
+      throw new MiniMongoQueryError('$all requires array');
     }
 
     // Not sure why, but this seems to be what MongoDB does.
@@ -385,7 +385,7 @@ const VALUE_OPERATORS = {
     const branchedMatchers = operand.map(criterion => {
       // XXX handle $all/$elemMatch combination
       if (isOperatorObject(criterion)) {
-        throw new QueryError('no $ expressions in $all');
+        throw new MiniMongoQueryError('no $ expressions in $all');
       }
 
       // This is always a regexp or equality selector.
@@ -398,7 +398,7 @@ const VALUE_OPERATORS = {
   },
   $near(operand, valueSelector, matcher, isRoot) {
     if (!isRoot) {
-      throw new QueryError('$near can\'t be inside another $ operator');
+      throw new MiniMongoQueryError('$near can\'t be inside another $ operator');
     }
 
     matcher._hasGeoQuery = true;
@@ -439,7 +439,7 @@ const VALUE_OPERATORS = {
       maxDistance = valueSelector.$maxDistance;
 
       if (!isIndexable(operand)) {
-        throw new QueryError('$near argument must be coordinate pair or GeoJSON');
+        throw new MiniMongoQueryError('$near argument must be coordinate pair or GeoJSON');
       }
 
       point = pointToArray(operand);
@@ -555,12 +555,12 @@ const andBranchedMatchers = andSomeMatchers;
 
 function compileArrayOfDocumentSelectors(selectors, matcher, inElemMatch) {
   if (!Array.isArray(selectors) || selectors.length === 0) {
-    throw new QueryError('$and/$or/$nor must be nonempty array');
+    throw new MiniMongoQueryError('$and/$or/$nor must be nonempty array');
   }
 
   return selectors.map(subSelector => {
     if (!LocalCollection._isPlainObject(subSelector)) {
-      throw new QueryError('$or/$and/$nor entries need to be full objects');
+      throw new MiniMongoQueryError('$or/$and/$nor entries need to be full objects');
     }
 
     return compileDocumentSelector(subSelector, matcher, {inElemMatch});
@@ -582,7 +582,7 @@ export function compileDocumentSelector(docSelector, matcher, options = {}) {
       // Outer operators are either logical operators (they recurse back into
       // this function), or $where.
       if (!hasOwn.call(LOGICAL_OPERATORS, key)) {
-        throw new QueryError(`Unrecognized logical operator: ${key}`);
+        throw new MiniMongoQueryError(`Unrecognized logical operator: ${key}`);
       }
 
       matcher._isSimple = false;
@@ -688,7 +688,7 @@ function distanceCoordinatePairs(a, b) {
 // for equality with that thing.
 export function equalityElementMatcher(elementSelector) {
   if (isOperatorObject(elementSelector)) {
-    throw new QueryError('Can\'t create equalityValueSelector for operator object');
+    throw new MiniMongoQueryError('Can\'t create equalityValueSelector for operator object');
   }
 
   // Special-case: null and undefined are equal (if you got undefined in there
@@ -765,7 +765,7 @@ function getOperandBitmask(operand, selector) {
   }
 
   // bad operand
-  throw new QueryError(
+  throw new MiniMongoQueryError(
     `operand to ${selector} must be a numeric bitmask (representable as a ` +
     'non-negative 32-bit signed integer), a bindata bitmask or an array with ' +
     'bit positions (non-negative integers)'
@@ -819,11 +819,11 @@ function insertIntoDocument(document, key, value) {
       (existingKey.length > key.length && existingKey.indexOf(`${key}.`) === 0) ||
       (key.length > existingKey.length && key.indexOf(`${existingKey}.`) === 0)
     ) {
-      throw new QueryError(
+      throw new MiniMongoQueryError(
         `cannot infer query fields to set, both paths '${existingKey}' and '${key}' are matched`
       );
     } else if (existingKey === key) {
-      throw new QueryError(
+      throw new MiniMongoQueryError(
         `cannot infer query fields to set, path '${key}' is matched twice`
       );
     }
@@ -868,7 +868,7 @@ export function isOperatorObject(valueSelector, inconsistentOK) {
       theseAreOperators = thisIsOperator;
     } else if (theseAreOperators !== thisIsOperator) {
       if (!inconsistentOK) {
-        throw new QueryError(
+        throw new MiniMongoQueryError(
           `Inconsistent operator: ${JSON.stringify(valueSelector)}`
         );
       }
@@ -1137,7 +1137,7 @@ function operatorBranchedMatcher(valueSelector, matcher, isRoot) {
       );
     }
 
-    throw new QueryError(`Unrecognized operator: ${operator}`);
+    throw new MiniMongoQueryError(`Unrecognized operator: ${operator}`);
   });
 
   return andBranchedMatchers(operatorMatchers);
@@ -1237,7 +1237,7 @@ function populateDocumentWithObject(document, key, value) {
     // Literal (possibly empty) object ( or empty object )
     // Don't allow mixing '$'-prefixed with non-'$'-prefixed fields
     if (keys.length !== unprefixedKeys.length) {
-      throw new QueryError(`unknown operator: ${unprefixedKeys[0]}`);
+      throw new MiniMongoQueryError(`unknown operator: ${unprefixedKeys[0]}`);
     }
 
     validateObject(value, key);
