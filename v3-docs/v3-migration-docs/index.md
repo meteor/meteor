@@ -1,6 +1,6 @@
 ---
 meteor_version: 3.4.0
-node_version: 24.3.0
+node_version: 24.4.1
 npm_version: 11.4.2
 ---
 # Meteor 3.0 Migration Guide
