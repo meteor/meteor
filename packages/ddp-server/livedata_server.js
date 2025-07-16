@@ -180,6 +180,8 @@ var Session = function (server, version, socket, options) {
     "livedata", "sessions", 1);
 };
 
+const ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
+
 Object.assign(Session.prototype, {
   sendReady: function (subscriptionIds) {
     var self = this;
@@ -274,19 +276,18 @@ Object.assign(Session.prototype, {
   },
 
   startUniversalSubs: function () {
-    var self = this;
+    const self = this;
     // Make a shallow copy of the set of universal handlers and start them. If
     // additional universal publishers start while we're running them (due to
     // yielding), they will run separately as part of Server.publish.
-    var handlers = [...self.server.universal_publish_handlers];
-    handlers.forEach(function (handler) {
+    for (const handler of [...self.server.universal_publish_handlers]) {
       self._startSubscription(handler);
-    });
+    }
   },
 
   // Destroy this session and unregister it at the server.
   close: function () {
-    var self = this;
+    const self = this;
 
     // Destroy this session, even if it's not registered at the
     // server. Stop all processing and tear everything down. If a socket
@@ -334,8 +335,7 @@ Object.assign(Session.prototype, {
   // Send a message (doing nothing if no socket is connected right now).
   // It should be a JSON object (it will be stringified).
   send: function (msg) {
-    var self = this;
-    const ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
+    const self = this;
     const isIgnoredMsg = ignoredMsgsForSessionOutOfDateCheck.includes(msg.msg);
     if (self.messageQueue && !isIgnoredMsg) {
       self.messageQueue.push(msg);
@@ -357,8 +357,8 @@ Object.assign(Session.prototype, {
 
   // Send a connection error.
   sendError: function (reason, offendingMessage) {
-    var self = this;
-    var msg = {msg: 'error', reason: reason};
+    const self = this;
+    const msg = {msg: 'error', reason: reason};
     if (offendingMessage)
       msg.offendingMessage = offendingMessage;
     self.send(msg);
@@ -380,7 +380,7 @@ Object.assign(Session.prototype, {
   // be ordered against sub, methods need to be ordered against each
   // other).
   processMessage: function (msg_in) {
-    var self = this;
+    const self = this;
     if (!self.inQueue) // we have been destroyed.
       return;
 
@@ -398,7 +398,7 @@ Object.assign(Session.prototype, {
     // the client is still alive.
     if (self.heartbeat) {
       self.heartbeat.messageReceived();
-    };
+    }
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)

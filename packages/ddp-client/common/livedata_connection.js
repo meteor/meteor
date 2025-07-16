@@ -106,6 +106,7 @@ export class Connection {
 
     self._heartbeatInterval = options.heartbeatInterval;
     self._heartbeatTimeout = options.heartbeatTimeout;
+    self._ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
 
     // Tracks methods which the user has tried to call but which have not yet
     // called their user callback (ie, they are waiting on their result or for all
@@ -1585,8 +1586,8 @@ export class Connection {
       }
       return;
     }
-    const ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
-    if (!ignoredMsgsForSessionOutOfDateCheck.includes(msg.msg)) {
+
+    if (!this._ignoredMsgsForSessionOutOfDateCheck.includes(msg.msg)) {
       this._receivedCount++;
     }
     if (msg.msg === 'connected') {
