@@ -2,12 +2,7 @@ import LocalCollection from './local_collection.js';
 
 export const hasOwn = Object.prototype.hasOwnProperty;
 
-export class MiniMongoQueryError extends Error {
-  constructor(message) {
-    super(message);
-  }
-}
-
+export class MiniMongoQueryError extends Error {}
 // Each element selector contains:
 //  - compileElementSelector, a function with args:
 //    - operand - the "right hand side" of the operator
