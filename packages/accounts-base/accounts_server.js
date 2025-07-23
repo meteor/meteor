@@ -333,6 +333,30 @@ export class AccountsServer extends AccountsCommon {
     return user;
   }
 
+  /**
+   * @summary Find a user by one of their email addresses.
+   * @locus Server
+   * @param {String} email The email address to look for
+   * @param {Object} [options]
+   * @param {Object} options.fields Limit the fields to return from the user document
+   * @returns {Promise<Object>} A user if found, else null
+   * @importFromPackage accounts-base
+   */
+  findUserByEmail = async (email, options) =>
+    await this._findUserByQuery({ email }, options);
+
+  /**
+   * @summary Find a user by their username.
+   * @locus Server
+   * @param {String} username The username to look for
+   * @param {Object} [options]
+   * @param {Object} options.fields Limit the fields to return from the user document
+   * @returns {Promise<Object>} A user if found, else null
+   * @importFromPackage accounts-base
+   */
+  findUserByUsername = async (username, options) =>
+    await this._findUserByQuery({ username }, options);
+
   ///
   /// LOGIN METHODS
   ///
