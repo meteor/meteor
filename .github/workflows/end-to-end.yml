@@ -1,0 +1,83 @@
+name: End-to-End Testing with TestRigor
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+  push:
+    branches:
+      - devel
+  workflow_dispatch:
+
+env:
+  METEOR_PRETTY_OUTPUT: 0
+  METEOR_HEADLESS: true
+  NODE_VERSION: 18.x
+
+jobs:
+  end-to-end-test:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.head_ref }}-end-to-end-testing
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Meteor
+        run: |
+          curl https://install.meteor.com/ | sh
+
+      - name: Verify Meteor installation
+        run: meteor --version
+
+      - name: Setup Meteor project in end-to-end/test-app
+        working-directory: tools/tests/end-to-end/test-app
+        run: |
+          npm install
+
+      - name: Start Meteor application
+        working-directory: tools/tests/end-to-end/test-app
+        run: |
+          meteor &
+          echo $! > meteor.pid
+          
+          # Wait for Meteor to start
+          timeout 120s bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
+          echo "Meteor application started successfully"
+
+      - name: Install TestRigor CLI globally
+        run: npm install -g testrigor-cli
+
+      - name: Verify TestRigor CLI installation
+        run: testrigor --version
+
+      - name: Run TestRigor tests
+        env:
+          HOME_DIR: ${{ github.workspace }}
+          TESTRIGOR_SUITE_ID: ${{ vars.SUITE_ID }}
+          TESTRIGOR_TOKEN: ${{ secrets.CI_TOKEN }}
+        run: |
+          cd "$HOME_DIR/tools/tests/end-to-end/"
+          testrigor test-suite run "$TESTRIGOR_SUITE_ID" \
+          --token "$TESTRIGOR_TOKEN" \
+          --test-cases-path "./testcases/**/*.txt" \
+          --localhost --url "http://localhost:3000"
+
+      - name: Stop Meteor application
+        if: always()
+        working-directory: tools/tests/end-to-end/test-app
+        run: |
+          if [ -f meteor.pid ]; then
+            kill $(cat meteor.pid) || true
+            rm meteor.pid
+          fi

@@ -1,0 +1,4 @@
+validate that page contains "Welcome to Meteor!" roughly above button "Click Me"
+validate that page contains "You've pressed the button 0 times."
+click button "Click me"
+check that page contains "You've pressed the button 1 times."
