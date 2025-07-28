@@ -4489,6 +4489,103 @@ testAsyncMulti(
 );
 
 
+testAsyncMulti(
+  "mongo-livedata - observeChangesAsync callback errors should not crash the process",
+  [
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_async_error_async_method${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find({}).observeChangesAsync({
+          async added(_id, fields) {
+            throw new Error('Test error in observeChangesAsync');
+          },
+        });
+        try {
+          await Collection.insertAsync({ _id: 'a', foo: { bar: 123 } });
+        } catch (e) {
+          // Expected error from the observeChangesAsync callback
+          test.equal(e.message, 'Test error in observeChangesAsync');
+          resolve();
+        }
+      });
+    },
+
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_async_error_sync_method${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find({}).observeChangesAsync({
+          added(newDocument) {
+            throw new Error('Test error in observeChangesAsync');
+          },
+        });
+        try {
+          await Collection.insertAsync({ _id: 'a', foo: { bar: 123 } });
+        } catch (e) {
+          // Expected error from the observeChangesAsync callback
+          test.equal(e.message, 'Test error in observeChangesAsync');
+          resolve();
+        }
+      });
+    }
+  ]
+);
+
+testAsyncMulti(
+  "mongo-livedata - observeChanges callback errors should not crash the process",
+  [
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_error_async_method${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find({}).observe({
+          async added(_id, fields) {
+            throw new Error('Test error in observeChanges');
+          },
+        });
+        try {
+          await Collection.insertAsync({ _id: 'a', foo: { bar: 123 } });
+        } catch (e) {
+          // Expected error from the observeChanges callback
+          test.equal(e.message, 'Test error in observeChanges');
+          resolve();
+        }
+      });
+    },
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_error_sync_method${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+
+      return new Promise(async (resolve) => {
+        const obs = await Collection.find({}).observe({
+          added(newDocument) {
+            throw new Error('Test error in observeChanges');
+          },
+        });
+        try {
+          await Collection.insertAsync({ _id: 'a', foo: { bar: 123 } });
+        } catch (e) {
+          // Expected error from the observeChanges callback
+          test.equal(e.message, 'Test error in observeChanges');
+          resolve();
+        }
+      });
+    }
+  ]
+);
+
 Meteor.methods({
   [`methodThrowException`]: async () => {
     if (Meteor.isClient) {
