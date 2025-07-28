@@ -1,7 +1,7 @@
 ////
 //// Setup
 ////
-import { diff_match_patch } from './diff_match_patch_uncompressed'
+import { diffChars } from 'diff'
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const arraysEqual = (a, b) => {
@@ -628,10 +628,13 @@ Template.event.events({
 
 // e.g. doDiff('abc', 'bcd') => [[-1, 'a'], [0, 'bc'], [1, 'd']]
 var doDiff = function (str1, str2) {
-  var D = new diff_match_patch();
-  var pieces = D.diff_main(str1, str2, false);
-  D.diff_cleanupSemantic(pieces);
-  return pieces;
+  const diff = diffChars(str1, str2);
+  
+  return diff.map(part => {
+    if (part.added) return [1, part.value];
+    if (part.removed) return [-1, part.value];
+    return [0, part.value];
+  });
 };
 
 Template.event.helpers({

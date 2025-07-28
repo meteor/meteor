@@ -6,6 +6,7 @@ Package.describe({
 
 Npm.depends({
   'bootstrap': '4.3.1',
+  'diff': '8.0.2'
 });
 
 Package.onUse(function (api) {
