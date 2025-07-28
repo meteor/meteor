@@ -4,6 +4,10 @@
 import { diff_match_patch } from './diff_match_patch_uncompressed'
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+const arraysEqual = (a, b) => {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
 // dependency for the count of tests running/passed/failed, etc. drives
 // the navbar and the like.
 var countDep = new Tracker.Dependency;
@@ -57,11 +61,10 @@ var getGroupPathFromURL = function() {
 };
 
 var setGroupPathInURL = function(groupPath, pushState = true) {
-  var newURL;
-  if (groupPath && groupPath.length > 0 && JSON.stringify(groupPath) !== JSON.stringify(["tinytest"])) {
+  var newURL = '/';
+
+  if (!arraysEqual(groupPath, ['tinytest'])) {
     newURL = '/group/' + encodeURIComponent(JSON.stringify(groupPath));
-  } else {
-    newURL = '/';
   }
   
   var historyState = { groupPath: groupPath };
@@ -102,7 +105,7 @@ window.addEventListener('popstate', function(event) {
   var newGroupPath = getGroupPathFromURL();
   var currentGroupPath = Session.get("groupPath");
   
-  if (JSON.stringify(newGroupPath) !== JSON.stringify(currentGroupPath)) {
+  if (!arraysEqual(newGroupPath, currentGroupPath)) {
     // Set navigation flag
     isNavigating = true;
     lastNavigationTime = now;
