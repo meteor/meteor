@@ -637,7 +637,6 @@ export class AccountsServer extends AccountsCommon {
     // this variable is available in their scope.
     const accounts = this;
 
-
     // This object will be populated with methods and then passed to
     // accounts._server.methods further below.
     const methods = {};
@@ -663,6 +662,21 @@ export class AccountsServer extends AccountsCommon {
       if (token && this.userId) {
        await accounts.destroyToken(this.userId, token);
       }
+      await accounts._successfulLogout(this.connection, this.userId);
+      await this.setUserId(null);
+    };
+
+    // Logs out the current user and closes all the connections
+    // associated with the user.
+    //
+    methods.logoutAllClients = async function() {
+      const logoutUserId = this.userId;
+      accounts._setLoginToken(this.userId, this.connection, null);
+      await accounts.users.updateAsync(logoutUserId, {
+        $unset: {
+          'services.resume.loginTokens': '',
+        },
+      });
       await accounts._successfulLogout(this.connection, this.userId);
       await this.setUserId(null);
     };

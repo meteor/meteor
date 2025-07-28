@@ -151,6 +151,30 @@ export class AccountsClient extends AccountsCommon {
   }
 
   /**
+   * @summary Log out all clients logged in as the current user and logs the current user out as well.
+   * @locus Client
+   * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+   */
+  logoutAllClients(callback) {
+    this._loggingOut.set(true);
+
+    this.connection.applyAsync('logoutAllClients', [], {
+      // TODO[FIBERS]: Look this { wait: true } later.
+      wait: true
+    })
+      .then((result) => {
+        this._loggingOut.set(false);
+        this._loginCallbacksCalled = false;
+        this.makeClientLoggedOut();
+        callback && callback();
+      })
+      .catch((e) => {
+        this._loggingOut.set(false);
+        callback && callback(e);
+      });
+  }
+
+  /**
    * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.
    * @locus Client
    * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
@@ -792,6 +816,14 @@ Meteor.loggingOut = () => Accounts.loggingOut();
  * @importFromPackage meteor
  */
 Meteor.logout = callback => Accounts.logout(callback);
+
+/**
+ * @summary Log out all clients logged in as the current user and logs the current user out as well.
+ * @locus Client
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @importFromPackage meteor
+ */
+Meteor.logoutAllClients = callback => Accounts.logoutAllClients(callback);
 
 /**
  * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.
