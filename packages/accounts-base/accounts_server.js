@@ -671,13 +671,9 @@ export class AccountsServer extends AccountsCommon {
     //
     methods.logoutAllClients = async function() {
       const logoutUserId = this.userId;
-      accounts._setLoginToken(this.userId, this.connection, null);
-      await accounts.users.updateAsync(logoutUserId, {
-        $unset: {
-          'services.resume.loginTokens': '',
-        },
-      });
-      await accounts._successfulLogout(this.connection, this.userId);
+      accounts._setLoginToken(logoutUserId, this.connection, null);
+      accounts._clearAllLoginTokens(logoutUserId);
+      await accounts._successfulLogout(this.connection, logoutUserId);
       await this.setUserId(null);
     };
 
@@ -944,8 +940,8 @@ export class AccountsServer extends AccountsCommon {
   _clearAllLoginTokens(userId) {
     this.users.updateAsync(userId, {
       $set: {
-        'services.resume.loginTokens': []
-      }
+        'services.resume.loginTokens': [],
+      },
     });
   };
 
