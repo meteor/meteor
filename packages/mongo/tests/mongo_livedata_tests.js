@@ -4498,7 +4498,7 @@ testAsyncMulti(
       );
 
       return new Promise(async (resolve) => {
-        const obs = await Collection.find({}).observeChangesAsync({
+        await Collection.find({}).observeChangesAsync({
           async added(_id, fields) {
             throw new Error('Test error in observeChangesAsync');
           },
@@ -4516,7 +4516,7 @@ testAsyncMulti(
       );
 
       return new Promise(async (resolve) => {
-        const obs = await Collection.find({}).observeChangesAsync({
+        await Collection.find({}).observeChangesAsync({
           added(newDocument) {
             throw new Error('Test error in observeChangesAsync');
           },
