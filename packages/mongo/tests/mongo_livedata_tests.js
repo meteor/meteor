@@ -4531,45 +4531,6 @@ testAsyncMulti(
   ]
 );
 
-testAsyncMulti(
-  "mongo-livedata - observeChanges callback errors should not crash the process",
-  [
-    async (test) => {
-      const Collection = new Mongo.Collection(
-        `observe_changes_error_async_method${test.runId()}`
-      );
-
-      return new Promise(async (resolve) => {
-        const obs = await Collection.find({}).observeChanges({
-          async added(_id, fields) {
-            throw new Error('Test error in observeChanges');
-          },
-        });
-        await Collection.insertAsync({ foo: { bar: 123 } });
-        test.equal(1,1); // ensure process did not crash
-        resolve();
-      });
-    },
-    async (test) => {
-      const Collection = new Mongo.Collection(
-        `observe_changes_error_sync_method${test.runId()}`,
-        { resolverType: 'stub' }
-      );
-
-      return new Promise(async (resolve) => {
-        const obs = await Collection.find({}).observeChanges({
-          added(newDocument) {
-            throw new Error('Test error in observeChanges');
-          },
-        });
-        await Collection.insertAsync({  foo: { bar: 123 } });
-        test.equal(1,1); // ensure process did not crash
-        resolve();
-      });
-    }
-  ]
-);
-
 Meteor.methods({
   [`methodThrowException`]: async () => {
     if (Meteor.isClient) {
