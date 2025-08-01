@@ -187,12 +187,20 @@ export class ObserveMultiplexer {
 
         if (!callback) continue;
 
-        handle.initialAddsSent.then(
-          callback.apply(
-            null,
-            handle.nonMutatingCallbacks ? args : EJSON.clone(args)
-          )
+        const p = callback.apply(
+          null,
+          handle.nonMutatingCallbacks ? args : EJSON.clone(args)
         );
+
+        if (p && Meteor._isPromise(p)) {
+          p.catch((error) => {
+            console.error(
+              `Error in observeChanges callback ${callbackName}:`,
+              error
+            );
+          });
+        }
+        handle.initialAddsSent.then(p);
       }
     });
   }
@@ -213,7 +221,14 @@ export class ObserveMultiplexer {
         ? doc
         : EJSON.clone(doc);
 
-      const promise = this._ordered ? add(id, fields, null) : add(id, fields);
+      const promise = new Promise<void>((resolve, reject) => {
+        try {
+          const r = this._ordered ? add(id, fields, null) : add(id, fields);
+          resolve(r);
+        } catch (error) {
+          reject(error);
+        }
+      });
 
       addPromises.push(promise);
     });
