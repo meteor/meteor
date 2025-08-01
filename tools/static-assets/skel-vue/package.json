@@ -11,7 +11,7 @@
   "dependencies": {
     "@babel/runtime": "^7.23.5",
     "meteor-node-stubs": "^1.2.12",
-    "vue": "^3.3.9",
+    "vue": "^3.5.18",
     "vue-meteor-tracker": "^3.0.0-beta.7",
     "vue-router": "^4.2.5"
   },
@@ -29,6 +29,6 @@
     "@vitejs/plugin-vue": "^5.2.1",
     "meteor-vite": "^3.2.1",
     "tailwindcss": "^4.1.11",
-    "vite": "^6.0.11"
+    "vite": "^6.3.5"
   }
 }
