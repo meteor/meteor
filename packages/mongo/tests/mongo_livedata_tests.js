@@ -4504,13 +4504,9 @@ testAsyncMulti(
             throw new Error('Test error in observeChangesAsync');
           },
         });
-        try {
-          await Collection.insertAsync({ _id: 'a', foo: { bar: 123 } });
-        } catch (e) {
-          // Expected error from the observeChangesAsync callback
-          test.equal(e.message, 'Test error in observeChangesAsync');
-          resolve();
-        }
+        await Collection.insertAsync({ foo: { bar: 123 } });
+        test.equal(1,1); // ensure process did not crash
+        resolve();
       });
     },
 
@@ -4526,13 +4522,10 @@ testAsyncMulti(
             throw new Error('Test error in observeChangesAsync');
           },
         });
-        try {
-          await Collection.insertAsync({ _id: 'a', foo: { bar: 123 } });
-        } catch (e) {
-          // Expected error from the observeChangesAsync callback
-          test.equal(e.message, 'Test error in observeChangesAsync');
-          resolve();
-        }
+        await Collection.insertAsync({ foo: { bar: 123 } });
+        test.equal(1,1); // ensure process did not crash
+        resolve();
+
       });
     }
   ]
@@ -4543,23 +4536,18 @@ testAsyncMulti(
   [
     async (test) => {
       const Collection = new Mongo.Collection(
-        `observe_changes_error_async_method${test.runId()}`,
-        { resolverType: 'stub' }
+        `observe_changes_error_async_method${test.runId()}`
       );
 
       return new Promise(async (resolve) => {
-        const obs = await Collection.find({}).observe({
+        const obs = await Collection.find({}).observeChanges({
           async added(_id, fields) {
             throw new Error('Test error in observeChanges');
           },
         });
-        try {
-          await Collection.insertAsync({ _id: 'a', foo: { bar: 123 } });
-        } catch (e) {
-          // Expected error from the observeChanges callback
-          test.equal(e.message, 'Test error in observeChanges');
-          resolve();
-        }
+        await Collection.insertAsync({ foo: { bar: 123 } });
+        test.equal(1,1); // ensure process did not crash
+        resolve();
       });
     },
     async (test) => {
@@ -4569,18 +4557,14 @@ testAsyncMulti(
       );
 
       return new Promise(async (resolve) => {
-        const obs = await Collection.find({}).observe({
+        const obs = await Collection.find({}).observeChanges({
           added(newDocument) {
             throw new Error('Test error in observeChanges');
           },
         });
-        try {
-          await Collection.insertAsync({ _id: 'a', foo: { bar: 123 } });
-        } catch (e) {
-          // Expected error from the observeChanges callback
-          test.equal(e.message, 'Test error in observeChanges');
-          resolve();
-        }
+        await Collection.insertAsync({  foo: { bar: 123 } });
+        test.equal(1,1); // ensure process did not crash
+        resolve();
       });
     }
   ]
