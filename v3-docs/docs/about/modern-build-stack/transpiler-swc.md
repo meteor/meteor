@@ -100,6 +100,20 @@ Most apps will benefit just by enabling `modern: true`. Most Meteor packages sho
 
 > Remember to turn off verbosity when you're done with optimizations.
 
+## Externalize SWC Helpers
+
+By default, SWC inlines transformation helpers (e.g. _extends, _objectSpread) into every file that uses them. While this ensures compatibility out of the box, it can lead to duplicated code across your bundles increasing bundle size.
+
+To centralize these helpers and keep your client builds lean, you can add the `@swc/helpers` in your app project.
+
+``` bash
+meteor npm install --save @swc/helpers
+```
+
+> This package is installed by default for new apps.
+
+Meteor’s build tool comes pre-configured to externalize SWC helpers for you, no extra setup or .swcrc tweaks are needed. As soon as you install @swc/helpers, Meteor’s SWC pipeline will automatically emit imports for shared helper functions rather than inlining them, ensuring your app ships each helper just once.
+
 ## Custom .swcrc
 
 You can use `.swcrc` config in the root of your project to describe specific [SWC plugins](https://github.com/swc-project/plugins) there, that will be applied to compile the entire files of your project.
