@@ -5,7 +5,7 @@ Package.describe({
 
 Npm.depends({
   "combined-stream2": "1.1.2",
-  "lodash.template": "4.5.0"
+  "lodash": "4.17.21"
 });
 
 Package.onUse(api => {
