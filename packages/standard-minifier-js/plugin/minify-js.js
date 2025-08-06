@@ -8,7 +8,6 @@ export function getConfig() {
     const meteorConfig = JSON.parse(packageJson).meteor;
     return meteorConfig;
   } catch (error) {
-    console.log(error);
     return {};
   }
 };
