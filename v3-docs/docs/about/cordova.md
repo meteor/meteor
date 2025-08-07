@@ -264,7 +264,7 @@ After building your Cordova project with Meteor, you can use **Android Studio** 
 
 # Legacy device support
 
-Meteor distinguishes between legacy and modern browsers - see the [modern browsers package](../packages/modern-browsers). Web apps include different code bundles for each, but Cordova apps only have a single code bundle. From Meteor 3.4 onwards, the default code bundle changed from legacy to modern.
+Meteor distinguishes between legacy and modern browsers - see the [modern browsers package](../packages/modern-browsers). Web apps include different code bundles for each, but Cordova apps only have a single code bundle. From Meteor 3.3.2 onwards, the default code bundle changed from legacy to modern.
 
 You can force Meteor to use the legacy browser code bundle by setting the environment variable `METEOR_CORDOVA_DISABLE_MODERN_BROWSERS` to `Y` when running or building your app. For example:
 
