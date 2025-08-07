@@ -264,10 +264,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
     } else if (arch === "web.cordova") {
-
-      if (process.env["METEOR_CORDOVA_DISABLE_MODERN_BROWSERS"] != "Y")
-        features.modernBrowsers = true;
-
+      features.modernBrowsers = ! getMeteorConfig()?.cordova?.disableModern;
     }
 
     features.topLevelAwait = inputFile.supportsTopLevelAwait &&
