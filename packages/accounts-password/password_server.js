@@ -287,37 +287,6 @@ Accounts._checkPasswordAsync = checkPasswordAsync;
 ///
 
 
-/**
- * @summary Finds the user asynchronously with the specified username.
- * First tries to match username case sensitively; if that fails, it
- * tries case insensitively; but if more than one user matches the case
- * insensitive search, it returns null.
- * @locus Server
- * @param {String} username The username to look for
- * @param {Object} [options]
- * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
- * @returns {Promise<Object>} A user if found, else null
- * @importFromPackage accounts-base
- */
-Accounts.findUserByUsername =
-  async (username, options) =>
-    await Accounts._findUserByQuery({ username }, options);
-
-/**
- * @summary Finds the user asynchronously with the specified email.
- * First tries to match email case sensitively; if that fails, it
- * tries case insensitively; but if more than one user matches the case
- * insensitive search, it returns null.
- * @locus Server
- * @param {String} email The email address to look for
- * @param {Object} [options]
- * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
- * @returns {Promise<Object>} A user if found, else null
- * @importFromPackage accounts-base
- */
-Accounts.findUserByEmail =
-  async (email, options) =>
-    await Accounts._findUserByQuery({ email }, options);
 
 // XXX maybe this belongs in the check package
 const NonEmptyString = Match.Where(x => {
