@@ -205,12 +205,21 @@ export namespace Accounts {
     options?: { fields?: Mongo.FieldSpecifier | undefined }
   ): Promise<Meteor.User | null | undefined>;
 
+  interface SendEmailOptions {
+    from: string;
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+    headers?: Header | undefined;
+  }
+
   interface SendEmailResult {
     email: string;
-    user: any;
+    user: Meteor.User;
     token: string;
     url: string;
-    options: any;
+    options: SendEmailOptions;
   }
 
   function sendEnrollmentEmail(
