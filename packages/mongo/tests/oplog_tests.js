@@ -1,3 +1,5 @@
+import { MiniMongoQueryError } from 'meteor/minimongo/common';
+
 var randomId = Random.id();
 var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
@@ -9,11 +11,16 @@ Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
 
   var supported = async function(expected, selector, options) {
     var cursor = OplogCollection.find(selector, options);
-    var handle = await cursor.observeChanges({ added: function() {} });
-    // If there's no oplog at all, we shouldn't ever use it.
-    if (!oplogEnabled) expected = false;
-    test.equal(!!handle._multiplexer._observeDriver._usesOplog, expected);
-    handle.stop();
+    try {
+      var handle = await cursor.observeChanges({ added: function() {} });
+      // If there's no oplog at all, we shouldn't ever use it.
+      if (!oplogEnabled) expected = false;
+      test.equal(!!handle._multiplexer._observeDriver._usesOplog, !!expected);
+      handle.stop();
+    } catch(e){
+      if (e instanceof MiniMongoQueryError) return test.isFalse(expected);
+      else test.fail(e.message);
+    }
   };
 
   await supported(true, 'asdf');

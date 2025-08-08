@@ -796,8 +796,9 @@ async function runLinters({inputSourceArch, isopackCache, sources,
 
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
     const hash = optimisticHashOrNull(absPath);
-    const contents = optimisticReadFile(absPath);
-    watchSet.addFile(absPath, hash);
+    if (!watchSet.hasFile(absPath)) {
+      watchSet.addFile(absPath, hash);
+    }
 
     if (classification.type === "meteor-ignore") {
       // Return after watching .meteorignore files but before adding them
@@ -806,6 +807,7 @@ async function runLinters({inputSourceArch, isopackCache, sources,
       return;
     }
 
+    const contents = optimisticReadFile(absPath);
     const wrappedSource = {
       relPath, contents, hash, fileOptions,
       arch: inputSourceArch.arch,

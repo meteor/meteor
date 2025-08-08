@@ -10,8 +10,163 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.3.0, 2025-06-11
+
+### Highlights
+
+- Support SWC transpiler and minifier for faster dev and builds [PR#13657](https://github.com/meteor/meteor/pull/13657),  [PR#13715](https://github.com/meteor/meteor/pull/13715)
+- Switch to `@parcel/watcher` for improved native file watching [PR#13699](https://github.com/meteor/meteor/pull/13699), [#13707](https://github.com/meteor/meteor/pull/13707)
+- Default to modern architecture, skip legacy processing [PR#13665](https://github.com/meteor/meteor/pull/13665), [PR#13698](https://github.com/meteor/meteor/pull/13698)
+- Optimize SQLite for faster startup and better performance [PR#13702](https://github.com/meteor/meteor/pull/13702)
+- Support CPU profiling in Meteor 3 bundler [PR#13650](https://github.com/meteor/meteor/pull/13650)
+- Improve `meteor profile`: show rebuild steps and total, support `--build` [PR#16](https://github.com/meteor/performance/pull/16), [PR#13694](https://github.com/meteor/meteor/pull/13694)
+- Improve `useFind` and `useSubscribe` React hooks
+- Add `replaceEmailAsync` helper to Accounts [PR#13677](https://github.com/meteor/meteor/pull/13677)
+- Fix user agent detection and oplog collection filtering
+- Refine type definitions for Meteor methods and SSR's ServerSink
+- Allow opting out of usage stats with `DO_NOT_TRACK`
+- Update Node to 22.16.0 and Express to 5.1.0
+
+All Merged PRs@[GitHub PRs 3.3](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.3)
+
+React Packages Changelog: [react-meteor-data@4.0.0](https://github.com/meteor/react-packages/tree/master/packages/react-meteor-data/CHANGELOG.md#v400-2025-06-11)
+
+#### Breaking Changes
+
+- File watching strategy switched to `@parcel/watcher`
+    - Most setups should be fine, but if issues appear, like when using WSL with host, volumes, or remote setups—switch to polling.
+    - Set `METEOR_WATCH_FORCE_POLLING=true` to enable polling.
+    - Set `METEOR_WATCH_POLLING_INTERVAL_MS=1000` to adjust the interval.
+
+- `react-meteor-data@4.0.0`
+  - Independent from the core, only applies if upgraded manually.
+  - useFind describes no deps by default [PR#431](https://github.com/meteor/react-packages/pull/431)
+
+####  Internal API changes
+
+- `express@5.1.0` - Depends on Meteor’s `webapp` package.
+  - Deprecates non-native promise usage [#154](https://github.com/pillarjs/router/pull/154)
+  - Use `async/await` or `Promise.resolve` when defining endpoints to avoid deprecation warnings.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.3
+```
+
+To apply react-meteor-data changes:
+
+```bash
+meteor add react-meteor-data@4.0.0
+```
+
+**Add this to your `package.json` to enable the new modern build stack:**
+
+```json
+"meteor": {
+  "modern": true
+}
+```
+
+> These settings are on by default for new apps.
+
+On activate `modern` your app will be updated to use SWC transpiler. It will automatically fallback to Babel if your code can't be transpiled wit SWC.
+
+Check the docs for help with the SWC migration, especially if your project uses many Babel plugins.
+
+[Modern Transpiler: SWC docs](https://docs.meteor.com/about/modern-build-stack/transpiler-swc.html)
+
+If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.1.1
+- accounts-password@3.2.0
+- autoupdate@2.0.1
+- babel-compiler@7.12.0
+- boilerplate-generator@2.0.1
+- ddp-client@3.1.1
+- ecmascript@0.16.11
+- ejson@1.1.5
+- meteor@2.1.1
+- minifier-js@3.0.2
+- modern-browsers@0.2.2
+- mongo@2.1.2
+- server-render@0.4.3
+- socket-stream-client@0.6.1
+- standard-minifier-js@3.1.0
+- typescript@5.6.4
+- webapp@2.0.7
+- meteor-tool@3.3.0
+
+#### Bumped NPM Packages
+
+- meteor-node-stubs@1.2.17
+
+#### Special thanks to
+
+✨✨✨
+
+- [@nachocodoner](https://github.com/nachocodoner)  
+- [@italojs](https://github.com/italojs)
+- [@Grubba27](https://github.com/Grubba27)  
+- [@zodern](https://github.com/zodern)
+- [@9Morello](https://github.com/9Morello)
+- [@welkinwong](https://github.com/welkinwong)
+- [@Poyoman39](https://github.com/Poyoman39)
+- [@PedroMarianoAlmeida](https://github.com/PedroMarianoAlmeida)
+- [@harryadel](https://github.com/harryadel)
+- [@ericm546](https://github.com/ericm546)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+
+✨✨✨ 
+
+## v3.2.2, 2025-05-02
+
+### Highlights
+
+- Improved parsing of `x-forwarded-for` headers in Session._clientAddress:
+  - Changed header splitting method to handle comma-separated values more reliably
+  - Added explicit trimming of IP addresses with map function
+  - Modified validation check to require exact match for httpForwardedCount
 
 
+#### Breaking Changes
+
+N/A
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+
+meteor update --release 3.2.1
+
+```
+
+#### Bumped Meteor Packages
+
+- ddp-server@3.1.1
+
+#### Bumped NPM Packages
+
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs)
+- [@ShiyuBanzhou](https://github.com/ShiyuBanzhou)
+
+
+✨✨✨
 ## v3.2.0, 2025-03-18
 
 ### Highlights

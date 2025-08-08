@@ -497,7 +497,7 @@ Tinytest.addAsync('collection - default idGeneration when not provided', async f
   // Insert a document
   var id = await collection.insertAsync({a: 1});
 
-  // Verify that the _id is a string (since ID_GENERATION_DEFAULT is ID_GENERATORS.STRING)
+  // Verify that the _id is a string
   test.isTrue(typeof id === 'string', 'Document _id should be a string when no idGeneration option is provided');
   test.isFalse(id instanceof Mongo.ObjectID, 'Document _id should not be a Mongo.ObjectID when no idGeneration option is provided');
 
@@ -509,7 +509,7 @@ Tinytest.addAsync('collection - compare default idGeneration with explicit idGen
   if (!Meteor.isServer) {
     return;
   }
-    // Create a collection without specifying idGeneration option (should use ID_GENERATION_DEFAULT)
+    // Create a collection without specifying idGeneration option
   var defaultCollectionName = 'defaultIdGeneration2' + test.id;
   var defaultCollection = new Mongo.Collection(defaultCollectionName, { idGeneration: undefined });
 

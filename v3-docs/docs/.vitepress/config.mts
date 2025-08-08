@@ -172,12 +172,16 @@ export default defineConfig({
             link: "/about/modern-build-stack.md",
             items: [
               {
-                text: "Modern Transpiler: SWC",
-                link: "/about/modern-build-stack/modern-transpiler-swc.md",
+                text: "Transpiler: SWC",
+                link: "/about/modern-build-stack/transpiler-swc.md",
               },
               {
-                text: "Modern Bundler",
-                link: "/about/modern-build-stack/modern-bundler.md",
+                text: "Bundler",
+                link: "/about/modern-build-stack/bundler.md",
+              },
+              {
+                text: "Dev Server",
+                link: "/about/modern-build-stack/dev-server.md",
               },
             ]
           },

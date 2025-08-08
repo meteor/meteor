@@ -73,7 +73,7 @@ $env:PATH += ";%JAVA_HOME%\bin"
 
 For Android builds, you will need the Android SDK. You can install it via [Android Studio](https://developer.android.com/studio).
 
-Once Android Studio is installed, go to **SDK Manager** and install the required SDK packages. The minimum required version is Android SDK 34. Install the `Android SDK Command-line Tools (latest)` as well.
+Once Android Studio is installed, go to **SDK Manager** and install the required SDK packages. The minimum required version is Android SDK 35. Install the `Android SDK Command-line Tools (latest)` as well.
 
 Ensure `ANDROID_HOME` environment variable is set by adding it to `~/.bashrc` or `~/.zshrc` :
 

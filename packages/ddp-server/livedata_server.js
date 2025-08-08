@@ -814,7 +814,7 @@ Object.assign(Session.prototype, {
     var forwardedFor = self.socket.headers["x-forwarded-for"];
     if (!isString(forwardedFor))
       return null;
-    forwardedFor = forwardedFor.trim().split(/\s*,\s*/);
+    forwardedFor = forwardedFor.split(',')
 
     // Typically the first value in the `x-forwarded-for` header is
     // the original IP address of the client connecting to the first
@@ -825,9 +825,9 @@ Object.assign(Session.prototype, {
     // end of the list, we ensure that we get the IP address being
     // reported by *our* first proxy.
 
-    if (httpForwardedCount < 0 || httpForwardedCount > forwardedFor.length)
+    if (httpForwardedCount < 0 || httpForwardedCount !== forwardedFor.length)
       return null;
-
+    forwardedFor = forwardedFor.map((ip) => ip.trim());
     return forwardedFor[forwardedFor.length - httpForwardedCount];
   }
 });

@@ -4,7 +4,7 @@ dist: jammy
 sudo: required
 services: xvfb
 node_js:
-  - "22.15.0"
+  - "22.17.0"
 cache:
   directories:
     - ".meteor"

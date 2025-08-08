@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.23.5",
+    "@swc/helpers": "^0.5.17",
     "meteor-node-stubs": "^1.2.12",
     "vue": "^3.3.9",
     "vue-meteor-tracker": "^3.0.0-beta.7",
     "vue-router": "^4.2.5"
   },
   "meteor": {
+    "modern": true,
     "mainModule": {
       "client": "client/entry-meteor.js",
       "server": "server/entry-meteor.js"
@@ -24,11 +26,10 @@
   },
   "devDependencies": {
     "@types/meteor": "^2.9.7",
+    "@tailwindcss/vite": "^4.1.11",
     "@vitejs/plugin-vue": "^5.2.1",
-    "autoprefixer": "^10.4.16",
     "meteor-vite": "^3.2.1",
-    "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5",
+    "tailwindcss": "^4.1.11",
     "vite": "^6.0.11"
   }
 }

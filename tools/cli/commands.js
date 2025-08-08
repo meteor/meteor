@@ -1,3 +1,5 @@
+import { getMeteorConfig } from "../tool-env/meteor-config";
+
 var main = require('./main.js');
 var _ = require('underscore');
 var files = require('../fs/files');
@@ -261,51 +263,6 @@ export function parseRunTargets(targets) {
   });
 };
 
-const DEFAULT_MODERN = {
-    transpiler: true,
-    webArchOnly: true,
-    watcher: true,
-};
-
-const normalizeModern = (r = false) => Object.fromEntries(
-    Object.entries(DEFAULT_MODERN).map(([k, def]) => [
-        k,
-        r === true
-            ? def
-            : r === false || r?.[k] === false
-                ? false
-                : typeof r?.[k] === 'object'
-                    ? { ...r[k] }
-                    : def,
-    ]),
-);
-
-
-let modernForced = JSON.parse(process.env.METEOR_MODERN || "false");
-let meteorConfig;
-
-function getMeteorConfig(appDir) {
-  if (meteorConfig) return meteorConfig;
-  const packageJsonPath = files.pathJoin(appDir, 'package.json');
-  if (!files.exists(packageJsonPath)) {
-    return false;
-  }
-  const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
-  const packageJson = JSON.parse(packageJsonFile);
-  meteorConfig = packageJson?.meteor;
-  return meteorConfig;
-}
-
-function isModernArchsOnlyEnabled(appDir) {
-  const meteorConfig = getMeteorConfig(appDir);
-  return normalizeModern(modernForced || meteorConfig?.modern).webArchOnly !== false;
-}
-
-export function isModernWatcherEnabled(appDir) {
-  const meteorConfig = getMeteorConfig(appDir);
-  return normalizeModern(modernForced || meteorConfig?.modern).watcher !== false;
-}
-
 function filterWebArchs(webArchs, excludeArchsOption, appDir, options) {
   const platforms = (options.platforms || []);
   const isBuildMode = platforms?.length > 0;
@@ -325,7 +282,7 @@ function filterWebArchs(webArchs, excludeArchsOption, appDir, options) {
     if (!isCordovaDev) {
       const excludeArchsOptions = excludeArchsOption ? excludeArchsOption.trim().split(/\s*,\s*/) : [];
       const hasExcludeArchsOptions = (excludeArchsOptions?.length || 0) > 0;
-      const hasModernArchsOnlyEnabled = appDir && isModernArchsOnlyEnabled(appDir);
+      const hasModernArchsOnlyEnabled = appDir && getMeteorConfig()?.modern?.webArchOnly !== false;
       if (hasExcludeArchsOptions && hasModernArchsOnlyEnabled) {
         console.warn('modern.webArchOnly and --exclude-archs are both active. If both are set, --exclude-archs takes priority.');
       }
@@ -1246,71 +1203,85 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/);
   }
 
-  try {
-    // Prototype option should use local skeleton.
-    // Maybe we should use a different skeleton for prototype
-    if (options.prototype) throw new Error("Using prototype option");
-    // if using the release option we should use the default skeleton
-    // using it as it was before 2.x
-    if (release.explicit) throw new Error("Using release option");
+  const copyFromLocalSkeleton = async () => {
+    await files.cp_r(
+      skeletonPath,
+      appPath,
+      {
+        transformFilename: function (f) {
+          return transform(f);
+        },
+        transformContents: function (contents, f) {
+          // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
+          if (/packages/.test(f)) {
+            const prototypePackages = () =>
+              "autopublish             # Publish all data to the clients (for prototyping)\n" +
+              "insecure                # Allow all DB writes from clients (for prototyping)";
 
-    await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`);
-  } catch (e) {
+            // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
+            if (options.prototype) {
+              return Buffer.from(
+                contents.toString().replace(/~prototype~/g, prototypePackages())
+              );
+            } else {
+              return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
+            }
+          }
+          if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+            return Buffer.from(transform(contents.toString()));
+          } else {
+            return contents;
+          }
+        },
+        ignore: toIgnore,
+        preserveSymlinks: true,
+      }
+    );
+  };
 
-    if (
-      e.message !== "Using prototype option" &&
-      e.message !== "Using release option"
-    ) {
-      // something has happened while creating the app using git clone
-      Console.error(
-        `Something has happened while creating your app using git clone.
+  // Check if the local skeleton path exists
+  const skeletonPath = files.pathJoin(
+    __dirnameConverted,
+    "..",
+    "static-assets",
+    `skel-${skeleton}`
+  );
+
+  const useLocalSkeleton = files.exists(skeletonPath) ||
+    options.prototype ||
+    release.explicit;
+  if (useLocalSkeleton) {
+    // Use local skeleton
+    await copyFromLocalSkeleton();
+  } else {
+    try {
+      // Prototype option should use local skeleton.
+      // Maybe we should use a different skeleton for prototype
+      if (options.prototype) throw new Error("Using prototype option");
+      // if using the release option we should use the default skeleton
+      // using it as it was before 2.x
+      if (release.explicit) throw new Error("Using release option");
+
+      // If local skeleton doesn't exist, use setupExampleByURL
+      await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`);
+    } catch (e) {
+      if (
+        e.message !== "Using prototype option" &&
+        e.message !== "Using release option"
+      ) {
+        // something has happened while creating the app using git clone
+        Console.error(
+          `Something has happened while creating your app using git clone.
          Will use cached version of skeletons.
          Error message: `,
-        e.message
-      );
+          e.message
+        );
+      }
+      // For prototype or release options, use local skeleton
+      await copyFromLocalSkeleton();
     }
-
-       // TODO: decide if this should stay here or not.
-       await files.cp_r(
-        files.pathJoin(
-          __dirnameConverted,
-          "..",
-          "static-assets",
-          `skel-${skeleton}`
-        ),
-        appPath,
-        {
-          transformFilename: function (f) {
-            return transform(f);
-          },
-          transformContents: function (contents, f) {
-            // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
-            if (/packages/.test(f)) {
-              const prototypePackages = () =>
-                "autopublish             # Publish all data to the clients (for prototyping)\n" +
-                "insecure                # Allow all DB writes from clients (for prototyping)";
-
-              // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
-              if (options.prototype) {
-                return Buffer.from(
-                  contents.toString().replace(/~prototype~/g, prototypePackages())
-                );
-              } else {
-                return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
-              }
-            }
-            if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
-              return Buffer.from(transform(contents.toString()));
-            } else {
-              return contents;
-            }
-          },
-          ignore: toIgnore,
-          preserveSymlinks: true,
-        }
-      );
-      await setupMessages();
   }
+  await setupMessages();
 
   Console.info("");
 });
@@ -3436,20 +3407,58 @@ const setupBenchmarkSuite = async (profilingPath) => {
   if (await files.exists(profilingPath)) {
     return;
   }
+
+  // Check git availability and version
   const [okGitVersion, errGitVersion] = await bash`git --version`;
   if (errGitVersion) throw new Error("git is not installed");
 
-  const parsedGitVersion = semver.coerce(okGitVersion.match(/\d+\.\d+\.\d+/)[0] || '')?.version;
-  const checkInvalidGitVersion = parsedGitVersion == null || semver.lt(parsedGitVersion, '2.25.0');
-  if (checkInvalidGitVersion) {
+  const parsedGitVersion = semver.coerce(okGitVersion.match(/\d+\.\d+\.\d+/)?.[0] || '')?.version;
+  if (!parsedGitVersion || semver.lt(parsedGitVersion, '2.25.0')) {
     throw new Error("git version is too old. Please upgrade to at least 2.25");
   }
 
-  // Set GIT_TERMINAL_PROMPT=0 to disable prompting
+  // Check tar availability
+  const [okTar, errTar] = await bash`tar --version`;
+  const hasTar = !errTar;
+
+  // Disable interactive git prompts
   process.env.GIT_TERMINAL_PROMPT = 0;
 
   const repoUrl = "https://github.com/meteor/performance";
   const branch = "v3.3.0";
+
+  let tarFailed = false;
+
+  // If tar is available, prefer tar-based extraction
+  if (hasTar) {
+    const tempDir = "/tmp/meteor-performance-benchmark-suite";
+    const tarCommand = [
+      `rm -rf ${tempDir}`,
+      `git clone --no-checkout --depth 1 --filter=tree:0 --sparse --progress --branch ${branch} --single-branch ${repoUrl} ${tempDir}`,
+      `cd ${tempDir}`,
+      `git sparse-checkout init --cone`,
+      `git sparse-checkout set scripts`,
+      `git checkout ${branch}`,
+      `mkdir -p ${profilingPath}/scripts`,
+      `tar -czf /tmp/scripts.tar.gz -C ./scripts .`,
+      `tar -xzf /tmp/scripts.tar.gz -C ${profilingPath}/scripts`,
+      `rm -rf ${tempDir}`,
+      `rm -f /tmp/scripts.tar.gz`
+    ].join(" && ");
+
+    const [okTarClone, errTarClone] = await bash`${tarCommand}`;
+    if (!errTarClone) {
+      Console.info("Meteor profiling suite cloned to: " + Console.path(profilingPath));
+      return;
+    } else {
+      Console.warn("Tar-based cloning failed. Will attempt standard git clone...");
+      tarFailed = errTarClone;
+    }
+  } else {
+    Console.warn("Tar not available. Will use standard git clone...");
+  }
+
+  // Fallback to plain git clone
   const gitCommand = [
     `mkdir -p ${profilingPath}`,
     `git clone --no-checkout --depth 1 --filter=tree:0 --sparse --progress --branch ${branch} --single-branch ${repoUrl} ${profilingPath}`,
@@ -3457,18 +3466,22 @@ const setupBenchmarkSuite = async (profilingPath) => {
     `git sparse-checkout init --cone`,
     `git sparse-checkout set scripts`,
     `git checkout ${branch}`,
-    `find ${profilingPath} -maxdepth 1 -type f -delete`,
+    `find ${profilingPath} -maxdepth 1 -type f -delete`
   ].join(" && ");
-  const [, errClone] = await bash`${gitCommand}`;
-  const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
-  if (errorMessage && errorMessage.includes("Cloning into")) {
-    throw new Error("error cloning benchmark");
+
+  const [okClone, errClone] = await bash`${gitCommand}`;
+  if (errClone) {
+    let combinedMessage = "Git clone failed.";
+    if (tarFailed) {
+      combinedMessage = `Tar-based cloning also failed:\n${tarFailed}\n\nGit fallback failed:\n${errClone}`;
+    }
+    throw new Error(combinedMessage);
   }
-  // remove .git folder from the example
+
+  // Remove .git folder if present
   await files.rm_recursive_async(files.pathJoin(profilingPath, ".git"));
-  Console.info(
-    "Meteor profiling suite cloned to: " + Console.path(profilingPath),
-  );
+
+  Console.info("Meteor profiling suite cloned to: " + Console.path(profilingPath));
 };
 
 async function doBenchmarkCommand(options) {
@@ -3507,6 +3520,7 @@ main.registerCommand(
   name: 'profile',
   maxArgs: Infinity,
   options: {
+    ...buildCommands.options || {},
     ...runCommandOptions.options || {},
     'size': { type: Boolean },
     'size-only': { type: Boolean },
