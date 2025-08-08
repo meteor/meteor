@@ -715,7 +715,7 @@ Accounts.sendResetPasswordEmail =
   async (userId, email, extraTokenData, extraParams) => {
     const { email: realEmail, user, token } =
       await Accounts.generateResetToken(userId, email, 'resetPassword', extraTokenData);
-    const url = Accounts.urls.resetPassword(token, extraParams);
+    const url = await Accounts._resolvePromise(Accounts.urls.resetPassword(token, extraParams));
     const options = await Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
     await Email.sendAsync(options);
 
@@ -749,7 +749,7 @@ Accounts.sendEnrollmentEmail =
     const { email: realEmail, user, token } =
       await Accounts.generateResetToken(userId, email, 'enrollAccount', extraTokenData);
 
-    const url = Accounts.urls.enrollAccount(token, extraParams);
+    const url = await Accounts._resolvePromise(Accounts.urls.enrollAccount(token, extraParams));
 
     const options =
       await Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
@@ -938,7 +938,7 @@ Accounts.sendVerificationEmail =
 
     const { email: realEmail, user, token } =
       await Accounts.generateVerificationToken(userId, email, extraTokenData);
-    const url = Accounts.urls.verifyEmail(token, extraParams);
+    const url = await Accounts._resolvePromise(Accounts.urls.verifyEmail(token, extraParams));
     const options = await Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
     await Email.sendAsync(options);
     if (Meteor.isDevelopment && !Meteor.isPackageTest) {
@@ -1345,4 +1345,3 @@ await Meteor.users.createIndexAsync('services.password.reset.token',
   { unique: true, sparse: true });
 await Meteor.users.createIndexAsync('services.password.enroll.token',
   { unique: true, sparse: true });
-

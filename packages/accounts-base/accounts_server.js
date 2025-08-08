@@ -84,6 +84,11 @@ export class AccountsServer extends AccountsCommon {
 
     this._skipCaseInsensitiveChecksForTest = {};
 
+    // Helper function to resolve promises if needed
+    this._resolvePromise = async (value) => {
+      return value instanceof Promise ? await value : value;
+    };
+
     this.urls = {
       resetPassword: (token, extraParams) => this.buildEmailUrl(`#/reset-password/${token}`, extraParams),
       verifyEmail: (token, extraParams) => this.buildEmailUrl(`#/verify-email/${token}`, extraParams),
