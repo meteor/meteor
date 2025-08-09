@@ -36,9 +36,9 @@ Each of these points will have their own section below.
 
 <h3 id="allow-deny">Avoid allow/deny</h3>
 
-In this guide, we're going to take a strong position that using [allow](http://docs.meteor.com/#/full/allow) or [deny](http://docs.meteor.com/#/full/deny) to run MongoDB queries directly from the client is not a good idea. The main reason is that it is hard to follow the principles outlined above. It's extremely difficult to validate the complete space of possible MongoDB operators, which could potentially grow over time with new versions of MongoDB.
+In this guide, we're going to take a strong position that using [allow](https://docs.meteor.com/api/collections.html#Mongo-Collection-allow) or [deny](https://docs.meteor.com/api/collections.html#Mongo-Collection-deny) to run MongoDB queries directly from the client is not a good idea. The main reason is that it is hard to follow the principles outlined above. It's extremely difficult to validate the complete space of possible MongoDB operators, which could potentially grow over time with new versions of MongoDB.
 
-There have been several articles about the potential pitfalls of accepting MongoDB update operators from the client, in particular the [Allow & Deny Security Challenge](https://www.discovermeteor.com/blog/allow-deny-security-challenge/) and its [results](https://www.discovermeteor.com/blog/allow-deny-challenge-results/), both on the Discover Meteor blog.
+There have been several articles about the potential pitfalls of accepting MongoDB update operators from the client, in particular the [Allow & Deny Security Challenge](https://web.archive.org/web/20220705130732/https://www.discovermeteor.com/blog/allow-deny-security-challenge/) and its [results](https://web.archive.org/web/20220819163744/https://www.discovermeteor.com/blog/allow-deny-challenge-results/), both on the Discover Meteor blog.
 
 Given the points above, we recommend that all Meteor apps should use Methods to accept data input from the client, and restrict the arguments accepted by each Method as tightly as possible.
 
@@ -116,25 +116,25 @@ The _only_ times you should be passing any user ID as an argument are the follow
 The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
 
 ```js
-export const makePrivate = new ValidatedMethod({
+export const makePrivate = new createMethod({
   name: 'lists.makePrivate',
   validate: new SimpleSchema({
     listId: { type: String }
   }).validator(),
-  run({ listId }) {
+  async run({ listId }) {
     if (!this.userId) {
       throw new Meteor.Error('lists.makePrivate.notLoggedIn',
         'Must be logged in to make private lists.');
     }
 
-    const list = Lists.findOne(listId);
+    const list = await Lists.findOneAsync(listId);
 
     if (list.isLastPublicList()) {
       throw new Meteor.Error('lists.makePrivate.lastPublicList',
         'Cannot make the last public list private.');
     }
 
-    Lists.update(listId, {
+    await Lists.updateAsync(listId, {
       $set: { userId: this.userId }
     });
 
@@ -148,16 +148,16 @@ You can see that this Method does a _very specific thing_ - it makes a single li
 However, this doesn't mean you can't have any flexibility in your Methods. Let's look at an example:
 
 ```js
-Meteor.users.methods.setUserData = new ValidatedMethod({
+Meteor.users.methods.setUserData = new createMethod({
   name: 'Meteor.users.methods.setUserData',
   validate: new SimpleSchema({
     fullName: { type: String, optional: true },
     dateOfBirth: { type: Date, optional: true },
   }).validator(),
-  run(fieldsToSet) {
-    Meteor.users.update(this.userId, {
+  async run(fieldsToSet) {
+    return (await Meteor.users.updateAsync(this.userId, {
       $set: fieldsToSet
-    });
+    }));
   }
 });
 ```
@@ -275,10 +275,10 @@ Publications are not reactive, and they only re-run when the currently logged in
 
 ```js
 // #1: Bad! If the owner of the list changes, the old owner will still see it
-Meteor.publish('list', function (listId) {
+Meteor.publish('list', async function (listId) {
   check(listId, String);
 
-  const list = Lists.findOne(listId);
+  const list = await Lists.findOneAsync(listId);
 
   if (list.userId !== this.userId) {
     throw new Meteor.Error('list.unauthorized',
