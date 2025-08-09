@@ -352,7 +352,7 @@ export const MMR = {
 
 ```js
 // In a file loaded on client and server
-Meteor.users.methods.updateMMR = new ValidatedMethod({
+Meteor.users.methods.updateMMR = new createMethod({
   name: 'Meteor.users.methods.updateMMR',
   validate: null,
   run() {
