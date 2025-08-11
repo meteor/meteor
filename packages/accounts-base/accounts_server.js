@@ -6,6 +6,7 @@ import {
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
 import { check, Match } from 'meteor/check';
+import { Hook } from 'meteor/callback-hook';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -105,6 +106,8 @@ export class AccountsServer extends AccountsCommon {
       }
       return url.toString();
     };
+
+    this.afterCreateUserHook = new Hook({ bindEnvironment: false });
   }
 
   ///
@@ -1541,6 +1544,10 @@ export class AccountsServer extends AccountsCommon {
         throw e;
       }
     }
+
+    this.afterCreateUserHook.forEachAsync((hook) => {
+      hook({ ...newUser, _id: userId });
+    });
 
     return userId;
   }

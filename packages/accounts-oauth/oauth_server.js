@@ -1,4 +1,6 @@
 import { Meteor } from 'meteor/meteor';
+import { check, Match } from 'meteor/check';
+import { Accounts } from 'meteor/accounts-base';
 
 // Listen to calls to `login` with an oauth option set. This is where
 // users actually get logged in to meteor via oauth.
