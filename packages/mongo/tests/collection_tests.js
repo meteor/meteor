@@ -485,3 +485,58 @@ Meteor.isServer && Tinytest.addAsync('collection - simple add', async function(t
   test.equal((await collection.findOneAsync(id)).a, 2);
   await collection.removeAsync({});
 });
+
+Tinytest.addAsync('collection - default idGeneration when not provided', async function(test) {
+  if (!Meteor.isServer) {
+    return;
+  }
+  // Create a collection without specifying idGeneration option
+  var collectionName = 'defaultIdGeneration' + test.id;
+  var collection = new Mongo.Collection(collectionName, { idGeneration: undefined });
+
+  // Insert a document
+  var id = await collection.insertAsync({a: 1});
+
+  // Verify that the _id is a string
+  test.isTrue(typeof id === 'string', 'Document _id should be a string when no idGeneration option is provided');
+  test.isFalse(id instanceof Mongo.ObjectID, 'Document _id should not be a Mongo.ObjectID when no idGeneration option is provided');
+
+  // Clean up
+  await collection.removeAsync({});
+});
+
+Tinytest.addAsync('collection - compare default idGeneration with explicit idGeneration', async function(test) {
+  if (!Meteor.isServer) {
+    return;
+  }
+    // Create a collection without specifying idGeneration option
+  var defaultCollectionName = 'defaultIdGeneration2' + test.id;
+  var defaultCollection = new Mongo.Collection(defaultCollectionName, { idGeneration: undefined });
+
+  // Create a collection with explicit STRING idGeneration
+  var stringCollectionName = 'stringIdGeneration' + test.id;
+  var stringCollection = new Mongo.Collection(stringCollectionName, { idGeneration: 'STRING' });
+
+  // Create a collection with MONGO idGeneration
+  var mongoCollectionName = 'mongoIdGeneration' + test.id;
+  var mongoCollection = new Mongo.Collection(mongoCollectionName, { idGeneration: 'MONGO' });
+
+  // Insert documents
+  var defaultId = await defaultCollection.insertAsync({a: 1});
+  var stringId = await stringCollection.insertAsync({a: 1});
+  var mongoId = await mongoCollection.insertAsync({a: 1});
+
+  // Verify default behaves like STRING
+  test.isTrue(typeof defaultId === 'string', 'Default idGeneration should produce string IDs');
+  test.isTrue(typeof stringId === 'string', 'STRING idGeneration should produce string IDs');
+  test.isFalse(defaultId instanceof Mongo.ObjectID, 'Default idGeneration should not produce Mongo.ObjectID');
+  test.isFalse(stringId instanceof Mongo.ObjectID, 'STRING idGeneration should not produce Mongo.ObjectID');
+
+  // Verify MONGO produces ObjectIDs
+  test.isTrue(mongoId instanceof Mongo.ObjectID, 'MONGO idGeneration should produce Mongo.ObjectID');
+
+  // Clean up
+  await defaultCollection.removeAsync({});
+  await stringCollection.removeAsync({});
+  await mongoCollection.removeAsync({});
+});
