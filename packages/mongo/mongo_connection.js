@@ -880,6 +880,18 @@ Object.assign(MongoConnection.prototype, {
           return true;
         },
         function () {
+          // We need to be able to compile the selector. Fall back to polling for
+          // some newfangled $selector that minimongo doesn't support yet.
+          try {
+            matcher = new Minimongo.Matcher(cursorDescription.selector);
+            return true;
+          } catch (e) {
+            // XXX make all compilation errors MinimongoError or something
+            //     so that this doesn't ignore unrelated exceptions
+            return false;
+          }
+        },
+        function () {
           // ... and the selector itself needs to support oplog.
           return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
         },
