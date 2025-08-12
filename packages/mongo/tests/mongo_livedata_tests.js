@@ -4298,9 +4298,10 @@ Tinytest.addAsync(
     await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
     await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
 
+    if(Meteor.isClient) Meteor._sleepForMs(100); // wait for async operations to complete 
     items = await Collection.find().fetchAsync();
     itemIds = items.map(_item => _item.num);
-
+    
     test.equal(itemIds, [1, 2]);
 
     await Collection.removeAsync({ _id: 'a' });

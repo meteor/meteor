@@ -1,12 +1,14 @@
-import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
 import { meteor } from 'meteor-vite/plugin';
 
 export default defineConfig({
   plugins: [
     vue(),
+    tailwindcss(),
     meteor({
-      clientEntry: 'imports/ui/main.js',
+      clientEntry: 'client/main.js',
       serverEntry: 'server/main.js',
       enableExperimentalFeatures: true,
       stubValidation: {

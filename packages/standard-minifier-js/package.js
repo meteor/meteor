@@ -1,6 +1,6 @@
 Package.describe({
   name: 'standard-minifier-js',
-  version: '3.1.0',
+  version: '3.1.1',
   summary: 'Standard javascript minifiers used with Meteor apps by default.',
   documentation: 'README.md',
 });
@@ -12,7 +12,7 @@ Package.registerBuildPlugin({
     'ecmascript'
   ],
   npmDependencies: {
-    '@meteorjs/swc-core': '1.1.3',
+    '@meteorjs/swc-core': '1.12.14',
     'acorn': '8.10.0',
     "@babel/runtime": "7.18.9",
     '@babel/parser': '7.22.7',
