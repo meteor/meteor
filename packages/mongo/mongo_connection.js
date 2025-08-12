@@ -850,8 +850,6 @@ Object.assign(MongoConnection.prototype, {
     const oplogOptions = self?._oplogHandle?._oplogOptions || {};
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
-      // Validate query selector to catch MongoDB errors early
-      new Minimongo.Matcher(cursorDescription.selector);
 
       var matcher, sorter;
       var canUseOplog = [
