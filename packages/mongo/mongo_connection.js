@@ -850,6 +850,9 @@ Object.assign(MongoConnection.prototype, {
     const oplogOptions = self?._oplogHandle?._oplogOptions || {};
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
+      // Validate query selector to catch MongoDB errors early
+      new Minimongo.Matcher(cursorDescription.selector);
+
       var matcher, sorter;
       var canUseOplog = [
         function () {
@@ -877,21 +880,6 @@ Object.assign(MongoConnection.prototype, {
             return false;
           }
           return true;
-        },
-        function () {
-          // We need to be able to compile the selector. Fall back to polling for
-          // some newfangled $selector that minimongo doesn't support yet.
-          try {
-            matcher = new Minimongo.Matcher(cursorDescription.selector);
-            return true;
-          } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
-            if (e instanceof MiniMongoQueryError) {
-              throw e;
-            }
-            return false;
-          }
         },
         function () {
           // ... and the selector itself needs to support oplog.
