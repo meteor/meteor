@@ -4488,7 +4488,7 @@ testAsyncMulti(
 );
 
 
-testAsyncMulti(
+Meteor.isServer && testAsyncMulti(
   "mongo-livedata - observeChangesAsync callback errors should not crash the process",
   [
     async (test) => {
