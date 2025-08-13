@@ -187,20 +187,20 @@ export class ObserveMultiplexer {
 
         if (!callback) continue;
 
-        const p = callback.apply(
+        const result = callback.apply(
           null,
           handle.nonMutatingCallbacks ? args : EJSON.clone(args)
         );
 
-        if (p && Meteor._isPromise(p)) {
-          p.catch((error) => {
+        if (result && Meteor._isPromise(result)) {
+          result.catch((error) => {
             console.error(
               `Error in observeChanges callback ${callbackName}:`,
               error
             );
           });
         }
-        handle.initialAddsSent.then(p);
+        handle.initialAddsSent.then(result);
       }
     });
   }
