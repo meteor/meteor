@@ -4517,17 +4517,17 @@ testAsyncMulti(
         { resolverType: 'stub' }
       );
 
-      return new Promise(async (resolve) => {
-        await Collection.find({}).observeChangesAsync({
-          added(newDocument) {
-            throw new Error('Test error in observeChangesAsync');
-          },
-        });
-        await Collection.insertAsync({ foo: { bar: 123 } });
-        test.equal(1,1); // ensure process did not crash
-        resolve();
-
+      let insertId;
+      await Collection.find({}).observeChangesAsync({
+        added(id) {
+          insertId = _id;
+          throw new Error('Test error in sync added observeChangesAsync');
+        },
       });
+
+      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id, bad) => {
+        test.equal(insertId, id);
+      })
     }
   ]
 );
