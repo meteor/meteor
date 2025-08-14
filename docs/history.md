@@ -8,6 +8,123 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.3.1, 05-08-2025
+
+### Highlights
+
+- **MongoDB Driver Upgrades**
+  - Upgraded core MongoDB driver to `6.16.0` to address latest issues reported [#13710](https://github.com/meteor/meteor/pull/13710)
+  - Introduced `npm-mongo-legacy` to maintain compatibility with MongoDB 3.6 via `mongodb@6.9.0` [#13736](https://github.com/meteor/meteor/pull/13736)
+  - Mitigated a cursor leak issue by synchronizing `next()` and `close()` operations [#13786](https://github.com/meteor/meteor/pull/13786)
+
+- **Improved SWC integration**
+  - Fixed edge cases in config cache invalidation [#13809](https://github.com/meteor/meteor/pull/13809)
+  - Ensured `@swc/helpers` is consistently used for better bundle size and performance [#13820](https://github.com/meteor/meteor/pull/13820)
+  - Updated to SWC `1.12.14` [#13851](https://github.com/meteor/meteor/pull/13851)
+
+- **Tooling and Build System**
+  - Fixed regression affecting rebuild behavior [#13810](https://github.com/meteor/meteor/pull/13810)
+  - Addressed issues getting performance profiles in mounted volumes [#13827](https://github.com/meteor/meteor/pull/13827)
+  - Fallback to Babel parser when Acorn fails to parse source code [#13844](https://github.com/meteor/meteor/pull/13844)
+
+- **Mobile Support**
+  - Upgraded Cordova platform to version 14 [#13837](https://github.com/meteor/meteor/pull/13837)
+
+- **Developer Experience**
+  - Added TypeScript types for `isModern` and `getMinimumBrowserVersions` functions [#13704](https://github.com/meteor/meteor/pull/13704)
+  - Enhanced CLI help output and documented admin commands [#13826](https://github.com/meteor/meteor/pull/13826)
+
+- **Vite Tooling**
+  - Updated official Meteor + Vite skeletons [#13835](https://github.com/meteor/meteor/pull/13835)
+
+- **Runtime & Dependencies**
+  - Updated to Node.js `22.18.0` and NPM `10.9.3` [#13877](https://github.com/meteor/meteor/pull/13877)
+  - Bumped `meteor-node-stubs` to `1.2.21` [#13825](https://github.com/meteor/meteor/pull/13825)
+
+All Merged PRs@[GitHub PRs 3.3.1](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.3.1)
+
+#### Breaking Changes
+
+##### MongoDB Driver Upgrades
+
+If you're using MongoDB 3.6 or earlier, install the new legacy package:
+
+```bash
+meteor add npm-mongo-legacy
+```
+This will pin the MongoDB driver to 6.9.0 for compatibility.
+
+If you’re on MongoDB 4+, the default [MongoDB driver 6.16.0](https://github.com/mongodb/node-mongodb-native/releases/tag/v6.16.0) is applied automatically.
+
+Please migrate your database as soon as possible to MongoDB 5 onward, as [MongoDB driver 6.17.0](https://github.com/mongodb/node-mongodb-native/releases/tag/v6.17.0) will drop MongoDB 4 support. We’ll keep offering `npm-mongo-legacy` so you can keep getting Meteor updates with your existing MongoDB legacy version.
+
+##### Cordova Upgrade
+
+The Cordova platform has been upgraded to version 14. Refer to the [Cordova Changelog](https://cordova.apache.org/announcements/2025/03/26/cordova-android-14.0.0.html) for more details on the changes and migration steps.
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.3.1
+```
+
+---
+
+While this is a patch release, Meteor 3.3, a recent minor update, introduced a modern build stack that’s now the default for new apps. Here’s how you can migrate to it.
+
+**Add this to your `package.json` to enable the new modern build stack:**
+
+```json
+"meteor": {
+  "modern": true
+}
+```
+
+Check the docs for help with the SWC migration, especially if your project uses many Babel plugins.
+
+[Modern Transpiler: SWC docs](https://docs.meteor.com/about/modern-build-stack/transpiler-swc.html)
+
+If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
+
+#### Bumped Meteor Packages
+
+- babel-compiler@7.12.1
+- callback-hook@1.6.1
+- ecmascript@0.16.12
+- minifier-js@3.0.3
+- minimongo@2.0.3
+- modern-browsers@0.2.3
+- mongo@2.1.3
+- npm-mongo-legacy@6.9.0
+- npm-mongo@6.16.0
+- standard-minifier-js@3.1.1
+- tinytest@1.3.2
+- typescript@5.6.5
+- meteor-tool@3.3.1
+
+#### Bumped NPM Packages
+
+- meteor-node-stubs@1.2.21
+
+#### Special thanks to
+
+✨✨✨
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@italojs](https://github.com/italojs)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@JorgenVatle](https://github.com/JorgenVatle)
+- [@welkinwong](https://github.com/welkinwong)
+- [@Saksham-Goel1107](https://github.com/Saksham-Goel1107)
+
+✨✨✨
+
 ## v3.3.0, 2025-06-11
 
 ### Highlights

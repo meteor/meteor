@@ -88,12 +88,17 @@ export function normalizeOptions(options) {
     options.connection = options.manager;
   }
 
+  const cleanedOptions = Object.fromEntries(
+    Object.entries(options || {}).filter(([_, v]) => v !== undefined),
+  );
+
+  // 2) Spread defaults first, then only the defined overrides
   return {
     connection: undefined,
     idGeneration: 'STRING',
     transform: null,
     _driver: undefined,
     _preventAutopublish: false,
-    ...options,
+    ...cleanedOptions,
   };
 }
