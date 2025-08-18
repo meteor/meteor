@@ -58,3 +58,31 @@ Tinytest.add('minimongo - wrapTransform', test => {
   });
   handle.stop();
 });
+
+if (Meteor.isClient) {
+  Tinytest.add('minimongo - $geoIntersects should throw error', function(test) {
+    const collection = new LocalCollection();
+    collection.insert({ _id: 'a', loc: { type: 'Point', coordinates: [0, 0] } });
+
+    const query = {
+      loc: {
+        $geoIntersects: {
+          $geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [0, 0], [0, 1], [1, 1], [1, 0], [0, 0]
+              ]
+            ]
+          }
+        }
+      }
+    };
+
+    test.throws(
+      () => collection.findOne(query),
+      /Unrecognized operator: \$geoIntersects/,
+      'Should throw error for $geoIntersects in Minimongo'
+    );
+  });
+}

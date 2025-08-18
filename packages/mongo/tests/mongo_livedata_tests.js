@@ -4559,3 +4559,57 @@ Tinytest.addAsync(
     }
   },
 );
+
+const geoPolygonSchema = {
+  type: 'Polygon',
+  coordinates: Match.Where(coords =>
+    Array.isArray(coords) &&
+    coords.length > 0 &&
+    coords.every(
+      ring => Array.isArray(ring) && ring.every(
+        point => Array.isArray(point) && point.length === 2 &&
+          typeof point[0] === 'number' && typeof point[1] === 'number'
+      )
+    )
+  )
+};
+
+if(Meteor.isServer) {
+  Meteor.publish('testGeoPolygon', function(viewport) {
+    check(viewport, Match.ObjectIncluding({ bounds: geoPolygonSchema }));
+    // return an empty collection for the test
+    return new Mongo.Collection('test').find();
+  });
+}
+
+Tinytest.addAsync('mongo-livedata - publish with geoPolygonSchema does not throw', async function(test, onComplete) {
+    if (Meteor.isClient) {
+      // Simulate valid viewport
+      const viewport = {
+        bounds: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [0, 0], [0, 1], [1, 1], [1, 0], [0, 0]
+            ]
+          ]
+        }
+      };
+      let error = null;
+      try {
+        await new Promise((resolve) => {
+          Meteor.subscribe('testGeoPolygon', viewport, {
+            onReady: resolve,
+            onError: function(e) {
+              error = e;
+              resolve();
+            }
+          });
+        });
+      } catch (e) {
+        error = e;
+      }
+      test.isNull(error, 'shouldnt throw error for valid viewport');
+    }
+    onComplete();
+});
