@@ -181,7 +181,7 @@ process.env.MONGO_OPLOG_URL &&
 const defaultOplogHandle = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
 let previousMongoPackageSettings = {};
 
-async function oplogOptionsTest({
+export async function oplogOptionsTest({
   test,
   includeCollectionName,
   excludeCollectionName,
@@ -192,7 +192,9 @@ async function oplogOptionsTest({
     if (!Meteor.settings.packages) Meteor.settings.packages = {};
     Meteor.settings.packages.mongo = mongoPackageSettings;
 
-    const myOplogHandle = new MongoInternals.OplogHandle(process.env.MONGO_OPLOG_URL, 'meteor');
+    const OplogHandle = mongoPackageSettings.useNewOplogTailing ? MongoInternals.NewOplogHandle : MongoInternals.OplogHandle;
+    const myOplogHandle = new OplogHandle(process.env.MONGO_OPLOG_URL, 'meteor');
+
     await myOplogHandle._startTrailingPromise;
     MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(myOplogHandle);
 

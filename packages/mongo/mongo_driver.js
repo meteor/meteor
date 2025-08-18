@@ -1,4 +1,5 @@
 import { OplogHandle } from './oplog_tailing';
+import { NewOplogTailing } from './new-oplog-driver/new_oplog_tailing'
 import { MongoConnection } from './mongo_connection';
 import { OplogObserveDriver } from './oplog_observe_driver';
 import { MongoDB } from './mongo_common';
@@ -31,6 +32,7 @@ MongoInternals.NpmModule = new Proxy(MongoDB, {
 });
 
 MongoInternals.OplogHandle = OplogHandle;
+MongoInternals.NewOplogHandle = NewOplogTailing
 
 MongoInternals.Connection = MongoConnection;
 
