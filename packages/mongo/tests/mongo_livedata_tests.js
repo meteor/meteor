@@ -4607,10 +4607,9 @@ Tinytest.addAsync('mongo-livedata - publish with geoPolygonSchema does not throw
           });
         });
       } catch (e) {
-        console.log('ERRO-DEBUG]', e);
         error = e;
       }
-      test.isNull(error, 'shouldnt throw error for valid viewport');
+      test.equal(error, null)
     }
     onComplete();
 });
