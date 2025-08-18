@@ -18,7 +18,7 @@ Accounts.init().then();
  * @memberof Accounts
  * @importFromPackage accounts-base
  */
-Accounts.findUserByEmail = Accounts.findUserByEmail;
+Accounts.findUserByEmail = AccountsServer.findUserByEmail;
 
 /**
  * @summary Find a user by their username.
