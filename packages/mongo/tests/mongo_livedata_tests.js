@@ -4574,16 +4574,6 @@ const geoPolygonSchema = {
   )
 };
 
-if (Meteor.isServer) {
-  Meteor.publish('testGeoIntersects', function(viewport) {
-    check(viewport, Match.ObjectIncluding({ bounds: geoPolygonSchema }));
-    const Features = new Mongo.Collection('Features_' + this.connection.id);
-    return Features.find({
-      hull: { $geoIntersects: { $geometry: viewport.bounds } },
-    });
-  });
-}
-
 Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct docs', async function(test, onComplete) {
   if (Meteor.isServer) {
     const Features = new Mongo.Collection('Features_' + Random.id());
