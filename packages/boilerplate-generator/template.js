@@ -41,9 +41,7 @@ function escapeStringChar(match) { return '\\' + escapes[match]; }
 
 // Basic Object helpers ------------------------------------------------------
 function isObject(value) { return value != null && typeof value === 'object'; }
-function isFunction(value) { return typeof value === 'function'; }
 function toStringSafe(value) { return value == null ? '' : (value + ''); }
-function keys(obj) { return Object.keys(obj); }
 function baseValues(object, props) { return props.map(k => object[k]); }
 
 // assignInWith/customDefaultsAssignIn replicate lodash merge behavior for template
@@ -70,23 +68,7 @@ function attempt(fn) {
 }
 function isError(value) { return value instanceof Error || (isObject(value) && value.name === 'Error'); }
 
-// Simple iteratee call guard detection (lightweight approximation)
-function isIterateeCall(value, index, object) {
-  if (!isObject(object)) return false;
-  const type = typeof index;
-  if (type === 'number') {
-    return Array.isArray(object) && index < object.length && object[index] === value;
-  }
-  if (type === 'string' && index in object) {
-    return object[index] === value;
-  }
-  return false;
-}
-
-// ---------------------------------------------------------------------------
-// templateSettings (exportable & mutable like lodash)
-// ---------------------------------------------------------------------------
-export const templateSettings = {
+const templateSettings = {
   escape: reEscape,
   evaluate: reEvaluate,
   interpolate: /<%=([\s\S]+?)%>/g,
@@ -99,19 +81,16 @@ export const templateSettings = {
 // ---------------------------------------------------------------------------
 let templateCounter = -1; // used for sourceURL generation
 
-export default function template(string, options, guard) {
+function _template(string, options) {
   const settings = templateSettings;
 
-  if (guard && isIterateeCall(string, options, guard)) {
-    options = undefined;
-  }
   string = toStringSafe(string);
 
   options = assignInWith({}, options || {}, settings, customDefaultsAssignIn);
 
   // Merge imports
   const imports = assignInWith({}, options.imports || {}, settings.imports, customDefaultsAssignIn);
-  const importKeys = keys(imports);
+  const importKeys = Object.keys(imports);
   const importValues = baseValues(imports, importKeys);
 
   let index = 0;
@@ -196,5 +175,6 @@ export default function template(string, options, guard) {
   return result;
 }
 
-// Provide _.escape equivalent via templateSettings.imports._.escape
-// Already supplied above. If external code mutates templateSettings, we honor it.
+export default function template(text) {
+  return _template(text, null);
+}
