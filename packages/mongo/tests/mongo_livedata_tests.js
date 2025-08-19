@@ -4578,7 +4578,8 @@ if(Meteor.isServer) {
   Meteor.publish('testGeoPolygon', function(viewport) {
     check(viewport, Match.ObjectIncluding({ bounds: geoPolygonSchema }));
     // return an empty collection for the test
-    return new Mongo.Collection('test').find();
+    const randomId = Random.id();
+    return new Mongo.Collection(randomId).find();
   });
 }
 
