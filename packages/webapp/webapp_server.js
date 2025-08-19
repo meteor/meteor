@@ -132,7 +132,7 @@ var identifyBrowser = function(userAgentString) {
       patch: 0
     };
   }
-  var userAgent = lookupUserAgent(userAgentString.substring(0, 150));
+  var userAgent = lookupUserAgent(userAgentString);
   return {
     name: camelCase(userAgent.family),
     major: +userAgent.major,

@@ -474,7 +474,7 @@ var launchMongo = async function(options) {
     if (options.multiple) {
       // This is only for testing, so we're OK with incurring the replset
       // setup on each startup.
-      await files.rm_recursive(dbPath);
+      await files.rm_recursive_deferred(dbPath);
       files.mkdir_p(dbPath, 0o755);
     } else if (portFile) {
       var portFileExists = false;

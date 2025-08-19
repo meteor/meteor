@@ -188,6 +188,8 @@ export namespace Accounts {
 
   function removeEmail(userId: string, email: string): Promise<void>;
 
+  function replaceEmailAsync(userId: string, oldEmail: string, newEmail: string, verified?: boolean): Promise<void>;
+
   function onCreateUser(
     func: (options: { profile?: {} | undefined }, user: Meteor.User) => void
   ): void;

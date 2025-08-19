@@ -4,7 +4,7 @@ Describes the high-level features and actions for the Meteor project in the near
 
 ## Introduction
 
-**Last updated: March 31th, 2025.**
+**Last updated: June 16, 2025.**
 
 The description of many items includes sentences and ideas from Meteor community members.
 
@@ -34,26 +34,42 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 **Goal:** Add a command([meteor profile](/cli/#meteorprofile)) to measure if our changes are actually making our builds faster and smaller.
 
 
-#### Phase 2: External Transpiler Integration & Bundler Improvements
+#### Phase 2: External Transpiler Integration
 
-**Target Release:** 3.3 ⏳
+**Target Release:** 3.3 ✅
 
 **Goal:** For this phase we want:
  - Improve our current bundler performance, via optimizations so that any meteor user can get benefits from it; And an external bundler could get
    the same benefits.
  - To have an external transpiler working with Meteor and producing a bundle that is smaller or faster than the current Meteor bundle.
 
+
 #### Phase 3: HMR Improvements
 
-**Target Release:** 3.3.x ⏳
+**Target Release:** 3.3 ✅
 
 **Goal:** Improve the HMR performance, so that it is faster and more reliable on what needs to be changed.
 
-#### Phase 4: Build Process Optimization
+#### Phase 4: Bundler Improvements & feedback
+
+**Target Release:** 3.3.x ⏳
+
+**Goal:** Improve the build size and make meteor use less resources for building, decreasing even more build and rebuild time.
+- Expanding compatibility and updates based on the feedback from the community, so that we can have a better experience with our new build tools, in this case SWC
+
+#### Phase 5: External Bundler integration
 
 **Target Release:** 3.4 ⏳
 
+**Goal:**  And an external bundler (like RSPack, ESBuild, or Rollup) working with Meteor and producing a bundle that is smaller or faster than the current Meteor bundle.
+- This will also allow Meteor to have features like tree-shaking, code-splitting, and other optimizations that will make our apps leaner and faster.
+
+#### Phase 6: Build Process Optimization
+
+**Target Release:** 3.4.x ⏳
+
 **Goal:** Improve the build size and make meteor use less resources for building, decreasing even more build and rebuild time.
+- Expanding compatibility and updates based on the feedback from the community, so that we can have a better experience with our new build tools
 
 
 #### Documentation Strategy

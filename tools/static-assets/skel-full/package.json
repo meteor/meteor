@@ -7,10 +7,18 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.23.5",
+    "@swc/helpers": "^0.5.17",
     "jquery": "^3.7.1",
     "meteor-node-stubs": "^1.2.12"
   },
   "devDependencies": {
     "chai": "^4.2.0"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "modern": true
   }
 }

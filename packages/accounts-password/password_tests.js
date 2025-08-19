@@ -1789,7 +1789,30 @@ if (Meteor.isServer) (() => {
       ]);
     });
 
-  Tinytest.addAsync("passwords - remove email",
+    
+
+Tinytest.addAsync("accounts emails - replace email", async test => {
+  const origEmail = `originalemail@test.com`;
+  const userId = await Accounts.createUserAsync({
+    email: origEmail,
+    password: 'password'
+  });
+
+  const newEmail = `newemail@test.com`;
+
+  const u1 = await Accounts._findUserByQuery({ id: userId })
+  test.equal(u1.emails, [
+    { address: origEmail, verified: false }
+  ]);
+
+  await Accounts.replaceEmailAsync(userId, origEmail, newEmail);
+  const u2 = await Accounts._findUserByQuery({ id: userId })
+  test.equal(u2.emails, [
+    { address: newEmail, verified: false }
+  ]);
+})
+  
+    Tinytest.addAsync("passwords - remove email",
     async test => {
       const origEmail = `${ Random.id() }@turing.com`;
       const userId = await Accounts.createUser({

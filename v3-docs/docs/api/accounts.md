@@ -533,7 +533,8 @@ password-based users or from an external service login flow. `options` may come
 from an untrusted client so make sure to validate any values you read from
 it. The `user` argument is created on the server and contains a
 proposed user object with all the automatically generated fields
-required for the user to log in, including the `_id`.
+required for the user to log in, including a temporary `_id` (the final _id is
+generated upon document insertion and not available in this function).
 
 The function should return the user document (either the one passed in or a
 newly-created object) with whatever modifications are desired. The returned
@@ -887,6 +888,8 @@ By default, an email address is added with `{ verified: false }`. Use
 email with a link the user can use to verify their email address.
 
 <ApiBox name="Accounts.removeEmail" />
+
+<ApiBox name="Accounts.replaceEmailAsync" />
 
 <ApiBox name="Accounts.verifyEmail" />
 

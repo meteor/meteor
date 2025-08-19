@@ -1022,6 +1022,52 @@ Meteor.methods(
     }
   });
 
+
+/**
+ * @summary Asynchronously replace an email address for a user. Use this instead of directly
+ * updating the database. The operation will fail if there is a different user
+ * with an email only differing in case. If the specified user has an existing
+ * email only differing in case however, we replace it.
+ * @locus Server
+ * @param {String} userId The ID of the user to update.
+ * @param {String} oldEmail The email address to replace.
+ * @param {String} newEmail The new email address to use.
+ * @param {Boolean} [verified] Optional - whether the new email address should
+ * be marked as verified. Defaults to false.
+ * @importFromPackage accounts-base
+ */
+Accounts.replaceEmailAsync = async (userId, oldEmail, newEmail, verified) => {
+  check(userId, NonEmptyString);
+  check(oldEmail, NonEmptyString);
+  check(newEmail, NonEmptyString);
+  check(verified, Match.Optional(Boolean));
+
+  if (verified === void 0) {
+    verified = false;
+  }
+
+  const user = await getUserById(userId, { fields: { _id: 1 } });
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
+
+  // Ensure no user already has this new email
+  await Accounts._checkForCaseInsensitiveDuplicates(
+    "emails.address",
+    "Email",
+    newEmail,
+    user._id
+  );
+
+  const result = await Meteor.users.updateAsync(
+    { _id: user._id, 'emails.address': oldEmail },
+    { $set: { 'emails.$.address': newEmail, 'emails.$.verified': verified } }
+  );
+  
+  if (result.modifiedCount === 0) {
+    throw new Meteor.Error(404, "No user could be found with old email");
+  }
+};
+
 /**
  * @summary Asynchronously add an email address for a user. Use this instead of directly
  * updating the database. The operation will fail if there is a different user

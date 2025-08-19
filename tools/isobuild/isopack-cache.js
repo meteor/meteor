@@ -83,19 +83,19 @@ export class IsopackCache {
       // Wipe specific packages.
       for (const packageName of packages) {
         if (self.cacheDir) {
-          await files.rm_recursive(self._isopackDir(packageName));
+          await files.rm_recursive_deferred(self._isopackDir(packageName));
         }
         if (self._pluginCacheDirRoot) {
-          await files.rm_recursive(self._pluginCacheDirForPackage(packageName));
+          await files.rm_recursive_deferred(self._pluginCacheDirForPackage(packageName));
         }
       }
     } else {
       // Wipe all packages.
       if (self.cacheDir) {
-        await files.rm_recursive(self.cacheDir);
+        await files.rm_recursive_deferred(self.cacheDir);
       }
       if (self._pluginCacheDirRoot) {
-        await files.rm_recursive(self._pluginCacheDirRoot);
+        await files.rm_recursive_deferred(self._pluginCacheDirRoot);
       }
     }
   }
@@ -351,7 +351,7 @@ export class IsopackCache {
         } else {
           // Nope! Compile it again. Give it a fresh plugin cache.
           if (pluginCacheDir) {
-            await files.rm_recursive(pluginCacheDir);
+            await files.rm_recursive_deferred(pluginCacheDir);
             files.mkdir_p(pluginCacheDir);
           }
 
