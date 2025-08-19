@@ -4574,15 +4574,6 @@ const geoPolygonSchema = {
   )
 };
 
-if(Meteor.isServer) {
-  Meteor.publish('testGeoPolygon', function(viewport) {
-    check(viewport, Match.ObjectIncluding({ bounds: geoPolygonSchema }));
-    // return an empty collection for the test
-    const randomId = Random.id();
-    return new Mongo.Collection(randomId).find();
-  });
-}
-
 if (Meteor.isServer) {
   Meteor.publish('testGeoIntersects', function(viewport) {
     check(viewport, Match.ObjectIncluding({ bounds: geoPolygonSchema }));
@@ -4634,35 +4625,4 @@ Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct 
   if (Meteor.isClient) {
     onComplete();
   }
-});
-
-Tinytest.addAsync('mongo-livedata - publish with geoPolygonSchema does not throw', async function(test, onComplete) {
-    if (Meteor.isClient) {
-      const viewport = {
-        bounds: {
-          type: 'Polygon',
-          coordinates: [
-            [
-              [0, 0], [0, 1], [1, 1], [1, 0], [0, 0]
-            ]
-          ]
-        }
-      };
-      let error = null;
-      try {
-        await new Promise((resolve) => {
-          Meteor.subscribe('testGeoPolygon', viewport, {
-            onReady: resolve,
-            onError: function(e) {
-              error = e;
-              resolve();
-            }
-          });
-        });
-      } catch (e) {
-        error = e;
-      }
-      test.equal(error, null)
-    }
-    onComplete();
 });
