@@ -63,7 +63,7 @@ const templateSettings = {
 // ---------------------------------------------------------------------------
 let templateCounter = -1; // used for sourceURL generation
 
-function _template(string, options) {
+function _template(string) {
   const settings = templateSettings;
 
   string = toStringSafe(string);
@@ -147,5 +147,5 @@ function _template(string, options) {
 }
 
 export default function template(text) {
-  return _template(text, null);
+  return _template(text);
 }
