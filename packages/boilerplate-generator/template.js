@@ -44,24 +44,6 @@ function isObject(value) { return value != null && typeof value === 'object'; }
 function toStringSafe(value) { return value == null ? '' : (value + ''); }
 function baseValues(object, props) { return props.map(k => object[k]); }
 
-// assignInWith/customDefaultsAssignIn replicate lodash merge behavior for template
-function customDefaultsAssignIn(objValue, srcValue, key, object) {
-  if (objValue === undefined || (objValue === Object.prototype[key] && !Object.prototype.hasOwnProperty.call(object, key))) {
-    return srcValue;
-  }
-  return objValue;
-}
-function assignInWith(object, ...sources) {
-  const customizer = sources.pop();
-  for (const src of sources) {
-    if (!isObject(src)) continue;
-    for (const k of Object.keys(src)) {
-      const newVal = customizer(object[k], src[k], k, object, src);
-      if (newVal !== undefined) object[k] = newVal;
-    }
-  }
-  return object;
-}
 
 function attempt(fn) {
   try { return fn(); } catch (e) { return e; }
@@ -86,10 +68,8 @@ function _template(string, options) {
 
   string = toStringSafe(string);
 
-  options = assignInWith({}, options || {}, settings, customDefaultsAssignIn);
-
-  // Merge imports
-  const imports = assignInWith({}, options.imports || {}, settings.imports, customDefaultsAssignIn);
+  // Since options is always null, use settings directly
+  const imports = settings.imports;
   const importKeys = Object.keys(imports);
   const importValues = baseValues(imports, importKeys);
 
@@ -98,21 +78,17 @@ function _template(string, options) {
   let isEvaluating;
   let source = "__p += '";
 
-  const interpolate = options.interpolate || reNoMatch;
+  const interpolate = settings.interpolate;
 
   // Build combined regex of delimiters
   const reDelimiters = RegExp(
-    (options.escape || reNoMatch).source + '|' +
+    settings.escape.source + '|' +
     interpolate.source + '|' +
     (interpolate === reInterpolate ? reEsTemplate : reNoMatch).source + '|' +
-    (options.evaluate || reNoMatch).source + '|$'
+    settings.evaluate.source + '|$'
   , 'g');
 
-  const sourceURL = '//# sourceURL=' + (
-    Object.prototype.hasOwnProperty.call(options, 'sourceURL')
-      ? (options.sourceURL + '').replace(/\s/g, ' ')
-      : ('lodash.templateSources[' + (++templateCounter) + ']')
-  ) + '\n';
+  const sourceURL = '//# sourceURL=' + ('lodash.templateSources[' + (++templateCounter) + ']') + '\n';
 
   // Tokenize
   string.replace(reDelimiters, function(match, escapeValue, interpolateValue, esTemplateValue, evaluateValue, offset) {
@@ -136,13 +112,8 @@ function _template(string, options) {
 
   source += "';\n";
 
-  const variable = Object.prototype.hasOwnProperty.call(options, 'variable') && options.variable;
-  if (!variable) {
-    // Wrap with(obj) for implicit data object
-    source = 'with (obj) {\n' + source + '\n}\n';
-  } else if (reForbiddenIdentifierChars.test(variable)) {
-    throw new Error(INVALID_TEMPL_VAR_ERROR_TEXT);
-  }
+  // Since options is always null, variable is always empty, so always wrap with(obj)
+  source = 'with (obj) {\n' + source + '\n}\n';
 
   // Remove unnecessary concatenations
   source = (isEvaluating ? source.replace(reEmptyStringLeading, '') : source)
@@ -150,8 +121,8 @@ function _template(string, options) {
     .replace(reEmptyStringTrailing, '$1;');
 
   // Frame as function body
-  source = 'function(' + (variable || 'obj') + ') {\n' +
-    (variable ? '' : 'obj || (obj = {});\n') +
+  source = 'function(obj) {\n' +
+    'obj || (obj = {});\n' +
     "var __t, __p = ''" +
     (isEscaping ? ', __e = _.escape' : '') +
     (isEvaluating
