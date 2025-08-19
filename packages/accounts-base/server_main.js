@@ -8,29 +8,6 @@ Accounts = new AccountsServer(Meteor.server, { ...Meteor.settings.packages?.acco
 // TODO[FIBERS]: I need TLA
 Accounts.init().then();
 
-/**
- * @summary Find a user by one of their email addresses.
- * @locus Server
- * @param {String} email The email address to look for
- * @param {Object} [options]
- * @param {Object} options.fields Limit the fields to return from the user document
- * @returns {Promise<Object>} A user if found, else null
- * @memberof Accounts
- * @importFromPackage accounts-base
- */
-Accounts.findUserByEmail = AccountsServer.findUserByEmail;
-
-/**
- * @summary Find a user by their username.
- * @locus Server
- * @param {String} username The username to look for
- * @param {Object} [options]
- * @param {Object} options.fields Limit the fields to return from the user document
- * @returns {Promise<Object>} A user if found, else null
- * @memberof Accounts
- * @importFromPackage accounts-base
- */
-Accounts.findUserByUsername = Accounts.findUserByUsername;
 // Users table. Don't use the normal autopublish, since we want to hide
 // some fields. Code to autopublish this is in accounts_server.js.
 // XXX Allow users to configure this collection name.
