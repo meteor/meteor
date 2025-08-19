@@ -18,16 +18,11 @@ const reEscape = /<%-([\s\S]+?)%>/g;              // escape delimiter
 const reEvaluate = /<%([\s\S]+?)%>/g;              // evaluate delimiter
 const reInterpolate = /<%=([\s\S]+?)%>/g;          // interpolate delimiter
 const reEsTemplate = /\$\{([^\\}]*(?:\\.[^\\}]*)*)\}/g; // ES6 template literal capture
-const reNoMatch = /($^)/;                            // matches nothing
 const reUnescapedString = /['\\\n\r\u2028\u2029]/g; // string literal escapes
-const reForbiddenIdentifierChars = /[()=,{}\[\]\/\s]/; // variable name safety
 
 // HTML escape
 const htmlEscapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const reHasUnescapedHtml = /[&<>"']/;
-
-// Placeholder for undefined hash value (mirrors lodash constant)
-const INVALID_TEMPL_VAR_ERROR_TEXT = 'Invalid `variable` option passed into `_.template`';
 
 function escapeHtml(string) {
   return string && reHasUnescapedHtml.test(string)
@@ -50,13 +45,6 @@ function attempt(fn) {
 }
 function isError(value) { return value instanceof Error || (isObject(value) && value.name === 'Error'); }
 
-const templateSettings = {
-  escape: reEscape,
-  evaluate: reEvaluate,
-  interpolate: /<%=([\s\S]+?)%>/g,
-  imports: { '_': { escape: escapeHtml } },
-  variable: ''
-};
 
 // ---------------------------------------------------------------------------
 // Main template implementation
@@ -64,12 +52,9 @@ const templateSettings = {
 let templateCounter = -1; // used for sourceURL generation
 
 function _template(string) {
-  const settings = templateSettings;
-
   string = toStringSafe(string);
 
-  // Since options is always null, use settings directly
-  const imports = settings.imports;
+  const imports = { '_': { escape: escapeHtml } };
   const importKeys = Object.keys(imports);
   const importValues = baseValues(imports, importKeys);
 
@@ -78,17 +63,16 @@ function _template(string) {
   let isEvaluating;
   let source = "__p += '";
 
-  const interpolate = settings.interpolate;
 
   // Build combined regex of delimiters
   const reDelimiters = RegExp(
-    settings.escape.source + '|' +
-    interpolate.source + '|' +
-    (interpolate === reInterpolate ? reEsTemplate : reNoMatch).source + '|' +
-    settings.evaluate.source + '|$'
+    reEscape.source + '|' +
+    reInterpolate.source + '|' +
+    reEsTemplate.source + '|' +
+    reEvaluate.source + '|$'
   , 'g');
 
-  const sourceURL = '//# sourceURL=' + ('lodash.templateSources[' + (++templateCounter) + ']') + '\n';
+  const sourceURL = `//# sourceURL=lodash.templateSources[${++templateCounter}]\n`;
 
   // Tokenize
   string.replace(reDelimiters, function(match, escapeValue, interpolateValue, esTemplateValue, evaluateValue, offset) {
@@ -112,7 +96,6 @@ function _template(string) {
 
   source += "';\n";
 
-  // Since options is always null, variable is always empty, so always wrap with(obj)
   source = 'with (obj) {\n' + source + '\n}\n';
 
   // Remove unnecessary concatenations
