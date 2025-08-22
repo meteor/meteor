@@ -86,7 +86,7 @@ export class AccountsServer extends AccountsCommon {
 
     // Helper function to resolve promises if needed
     this._resolvePromise = async (value) => {
-      return value instanceof Promise ? await value : value;
+      return Meteor._isPromise(value) ? await value : value;
     };
 
     this.urls = {
