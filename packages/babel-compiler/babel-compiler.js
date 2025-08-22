@@ -263,6 +263,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       features.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
+    } else if (arch === "web.cordova") {
+      features.modernBrowsers = ! getMeteorConfig()?.cordova?.disableModern;
     }
 
     features.topLevelAwait = inputFile.supportsTopLevelAwait &&
