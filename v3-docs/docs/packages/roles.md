@@ -83,6 +83,30 @@ await Roles.addUsersToRolesAsync(userId, "super-admin", null);
 await Roles.userIsInRoleAsync(userId, ["manage-team", "super-admin"], "team-b"); // true
 ```
 
+## Configuration
+Roles packages allows you to set two configuration options that help you get started with the administration.
+You can set the options in your `settings.json` file as follows:
+
+```json
+{
+  "packages": {
+    "roles": {
+      "adminRole": "admin",
+      "addFirstUserAsAdmin": true
+    }
+  }
+}
+```
+
+### Default admin role
+If you set this option to a role name, the package will create this admin role at the start of the application.
+Name the desired admin role in your `settings.json` file at the following route: `packages.roles.adminRole`
+
+### First user as admin
+If you have set the default admin role, then this option will add that role to the first user that registers. This is useful if you want to easily designate the first user as admin.
+Once your application is running and the first user has registered it is advised to turn this option off.
+Set this boolean value in your `settings.json` file at the following route: `packages.roles.addFirstUserAsAdmin`
+
 ## Role Management
 
 <ApiBox name="Roles.createRoleAsync" hasCustomExample/>
