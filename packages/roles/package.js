@@ -31,7 +31,7 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   const both = ["client", "server"];
 
-  api.use(["tinytest", "ecmascript", "mongo", "roles"], both);
+  api.use(["tinytest", "accounts-base", "accounts-password", "ecmascript", "mongo", "roles"], both);
 
   api.addFiles("tests/serverAsync.js", "server");
   api.addFiles("tests/client.js", "client");
