@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { OAuth2FA } from './oauth_2fa_pending_credentials.js';
-import {Random} from 'meteor/random';
+import { Random } from 'meteor/random';
+
 // Listen to calls to `login` with an oauth option set. This is where
 // users actually get logged in to meteor via oauth.
 Accounts.registerLoginHandler(async options => {
@@ -44,46 +45,50 @@ Accounts.registerLoginHandler(async options => {
     // We tried to login, but there was a fatal error. Report it back
     // to the user.
     throw result;
-  else {
-    if (! Accounts.oauth.serviceNames().includes(result.serviceName)) {
-      // serviceName was not found in the registered services list.
-      // This could happen because the service never registered itself or
-      // unregisterService was called on it.
-      return { type: "oauth",
-               error: new Meteor.Error(
-                 Accounts.LoginCancelledError.numericError,
-                 `No registered oauth service found for: ${result.serviceName}`) };
 
-    }
-   const userResult = await Accounts.updateOrCreateUserFromExternalService(result.serviceName, result.serviceData, result.options);
-
-    // Check for 2FA and store in MongoDB
-    if (userResult.userId) {
-      const user = await Meteor.users.findOneAsync({ _id: userResult.userId });
-      console.log(Accounts._check2faEnabled(user));
-      if (Accounts._check2faEnabled(user)) {
-        const credentialToken = Random.secret();
-        
-        const challengeData = {
-          userId: userResult.userId,
-          serviceName: result.serviceName,
-          connectionId: this.connection?.id,  // Optional: for additional security
-          ip: this.connection?.clientAddress   // Optional: for logging
-        };
-        
-        await OAuth2FA._storePending2FACredential(credentialToken, challengeData);
-        
-        return { 
-          type: "oauth",
-          error: new Meteor.Error("[2fa enabled]", "2fa is enabled", credentialToken) 
-        }; 
-      }
-    }
-
-    return userResult;
-  
-  
+  if (!Accounts.oauth.serviceNames().includes(result.serviceName)) {
+    // serviceName was not found in the registered services list.
+    // This could happen because the service never registered itself or
+    // unregisterService was called on it.
+    return { type: "oauth",
+             error: new Meteor.Error(
+               Accounts.LoginCancelledError.numericError,
+               `No registered oauth service found for: ${result.serviceName}`) };
   }
+
+  const userResult = await Accounts.updateOrCreateUserFromExternalService(
+    result.serviceName, 
+    result.serviceData, 
+    result.options
+  );
+
+  // Early return pattern - inverted conditionals to reduce nesting
+  if (!userResult.userId) {
+    return userResult;
+  }
+
+  const user = await Meteor.users.findOneAsync({ _id: userResult.userId });
+  
+  if (!Accounts._check2faEnabled(user)) {
+    return userResult;
+  }
+
+  // 2FA is enabled - create challenge
+  const credentialToken = Random.secret();
+  
+  const challengeData = {
+    userId: userResult.userId,
+    serviceName: result.serviceName,
+    connectionId: this.connection?.id,  // Optional: for additional security
+    ip: this.connection?.clientAddress   // Optional: for logging
+  };
+  
+  await OAuth2FA._storePending2FACredential(credentialToken, challengeData);
+  
+  return { 
+    type: "oauth",
+    error: new Meteor.Error("[2fa enabled]", "2fa is enabled", credentialToken) 
+  };
 });
 
 Accounts.registerLoginHandler('verify2FA', async function(loginRequest) {
@@ -103,6 +108,7 @@ Accounts.registerLoginHandler('verify2FA', async function(loginRequest) {
       error: new Meteor.Error("invalid-token", "Invalid or expired 2FA challenge") 
     };
   }
+  
   const userId = challengeData.userId;
   
   const user = await Meteor.users.findOneAsync(
@@ -127,21 +133,21 @@ Accounts.registerLoginHandler('verify2FA', async function(loginRequest) {
   }
 
   // Verify the OTP
-  if (Accounts._isTokenValid(user.services.twoFactorAuthentication.secret, otp)) {
-    // Success! Remove the challenge from MongoDB
-    await OAuth2FA._removePending2FACredential(credentialToken);
-    
-    return { 
-      type: challengeData.serviceName,
-      userId: userId 
-    };
-  } else {
+  if (!Accounts._isTokenValid(user.services.twoFactorAuthentication.secret, otp)) {
     // Failed OTP - don't remove challenge, let them retry until expiry
     return { 
       type: "verify2FA",
       error: new Meteor.Error("invalid-2fa-code", "Invalid verification code") 
     };
   }
+
+  // Success! Remove the challenge from MongoDB
+  await OAuth2FA._removePending2FACredential(credentialToken);
+  
+  return { 
+    type: challengeData.serviceName,
+    userId: userId 
+  };
 });
 
 ///
@@ -164,7 +170,7 @@ const usingOAuthEncryption = () => {
 // block.  Perhaps we need a post-startup callback?
 
 Meteor.startup(() => {
-  if (! usingOAuthEncryption()) {
+  if (!usingOAuthEncryption()) {
     return;
   }
 

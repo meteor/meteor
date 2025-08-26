@@ -4,7 +4,6 @@ import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { check, Match } from 'meteor/check';
 
-
 // When an oauth request with 2FA is made, Meteor receives oauth credentials
 // and determines 2FA is required. It temporarily persists the 2FA challenge
 // while the user completes 2FA verification.
@@ -22,23 +21,20 @@ OAuth2FA._pending2FACredentials = new Mongo.Collection(
   }
 );
 
-// Create indexes
+// Create indexes with TTL for automatic expiration
 async function init() {
   await OAuth2FA._pending2FACredentials.createIndexAsync('credentialToken', { unique: true });
   await OAuth2FA._pending2FACredentials.createIndexAsync('credentialSecret');
-  await OAuth2FA._pending2FACredentials.createIndexAsync('createdAt');
+  // TTL index - documents expire after 600 seconds (10 minutes)
+  await OAuth2FA._pending2FACredentials.createIndexAsync(
+    'createdAt',
+    { expireAfterSeconds: 600 }
+  );
 }
 init();
 
-// Periodically clear old 2FA challenges that were never completed
-const _cleanStale2FAResults = async () => {
-  // Remove 2FA challenges older than 10 minutes
-  const timeCutoff = new Date();
-  timeCutoff.setMinutes(timeCutoff.getMinutes() - 10);
-  await OAuth2FA._pending2FACredentials.removeAsync({ createdAt: { $lt: timeCutoff } });
-};
-
-const _cleanup2FAHandle = Meteor.setInterval(_cleanStale2FAResults, 5 * 60 * 1000);
+// Note: Manual cleanup is no longer needed thanks to TTL index
+// Removed _cleanStale2FAResults and _cleanup2FAHandle
 
 // Stores the 2FA challenge data in the _pending2FACredentials collection.
 // Will throw an exception if `credentialToken` is not a string.
@@ -51,8 +47,8 @@ OAuth2FA._storePending2FACredential =
     check(credentialToken, String);
     check(credentialSecret, Match.Maybe(String));
 
-    // Upsert to handle duplicate tokens
-    await OAuth2FA._pending2FACredentials.upsertAsync({
+    // Return the promise directly to avoid unnecessary await overhead
+    return OAuth2FA._pending2FACredentials.upsertAsync({
       credentialToken,
     }, {
       credentialToken,
@@ -78,9 +74,9 @@ OAuth2FA._retrievePending2FACredential =
 
     if (pending2FACredential) {
       return pending2FACredential.challengeData;
-    } else {
-      return undefined;
     }
+    
+    return undefined;
   };
 
 // Removes a 2FA challenge after successful completion or cancellation
@@ -91,16 +87,12 @@ OAuth2FA._removePending2FACredential =
   async (credentialToken, credentialSecret = null) => {
     check(credentialToken, String);
 
-    await OAuth2FA._pending2FACredentials.removeAsync({
+    // Return the promise directly to avoid unnecessary await overhead
+    return OAuth2FA._pending2FACredentials.removeAsync({
       credentialToken,
       credentialSecret,
     });
   };
 
-
-
 // Export for server-side usage
-OAuth2FA._cleanStale2FAResults = _cleanStale2FAResults;
-OAuth2FA._cleanup2FAHandle = _cleanup2FAHandle;
-
 export { OAuth2FA };
