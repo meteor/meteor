@@ -116,3 +116,15 @@ Accounts.oauth.credentialRequestCompleteHandler = callback =>
       Accounts.oauth.tryLoginAfterPopupClosed(credentialTokenOrError, callback);
     }
   }
+if(Meteor.isClient){
+    Meteor.loginWithExternalServiceAnd2fa = function (credentialToken, otp, callback) {
+      Accounts.callLoginMethod({
+        methodArguments: [{
+          credentialToken,
+          otp,
+          method: 'verify2FA'
+        }],
+        userCallback: callback
+      });
+    };
+  }

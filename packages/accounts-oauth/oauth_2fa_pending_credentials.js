@@ -33,8 +33,6 @@ async function init() {
 }
 init();
 
-// Note: Manual cleanup is no longer needed thanks to TTL index
-// Removed _cleanStale2FAResults and _cleanup2FAHandle
 
 // Stores the 2FA challenge data in the _pending2FACredentials collection.
 // Will throw an exception if `credentialToken` is not a string.
