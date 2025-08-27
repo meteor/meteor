@@ -388,7 +388,7 @@ export default defineConfig({
             text: "Maintained Packages",
           },
           {
-            link: "packages/community-packages",
+            link: "/community-packages/index",
             text: "Community Packages",
           },
         ],
@@ -401,6 +401,30 @@ export default defineConfig({
           {
             text: "Meteor RPC",
             link: "/community-packages/meteor-rpc",
+          },
+          {
+            text: "jam:method",
+            link: "/community-packages/jam-method",
+          },
+          {
+            text: "jam:pub-sub",
+            link: "/community-packages/pub-sub",
+          },
+          {
+            text: "jam:mongo-transactions",
+            link: "/community-packages/mongo-transactions",
+          },
+          {
+            text: "jam:soft-delete",
+            link: "/community-packages/soft-delete",
+          },
+          {
+            text: "jam:archive",
+            link: "/community-packages/archive",
+          },
+          {
+            text: "jam:offline",
+            link: "/community-packages/offline",
           },
         ],
         collapsed: true,
