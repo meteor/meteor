@@ -87,7 +87,7 @@ Accounts.registerLoginHandler(async options => {
   
   return { 
     type: "oauth",
-    error: new Meteor.Error("[2fa enabled]", "2fa is enabled", credentialToken) 
+    error: new Meteor.Error("[2fa enabled]", "2fa is enabled", {credentialToken:credentialToken}) 
   };
 });
 
