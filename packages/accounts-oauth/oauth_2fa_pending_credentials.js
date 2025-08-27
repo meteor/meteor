@@ -1,6 +1,3 @@
-// Similar to oauth_pending_credentials.js but for 2FA challenges
-
-import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { check, Match } from 'meteor/check';
 
