@@ -122,7 +122,7 @@ if(Meteor.isClient){
         methodArguments: [{
           credentialToken,
           otp,
-          method: 'verify2FA'
+          method: 'loginWithExternalServiceAnd2fa'
         }],
         userCallback: callback
       });

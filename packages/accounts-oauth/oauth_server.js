@@ -91,7 +91,7 @@ Accounts.registerLoginHandler(async options => {
   };
 });
 
-Accounts.registerLoginHandler('verify2FA', async function(loginRequest) {
+Accounts.registerLoginHandler('loginWithExternalServiceAnd2fa', async function(loginRequest) {
   const { credentialToken, otp } = loginRequest;
 
   check(credentialToken, String);
