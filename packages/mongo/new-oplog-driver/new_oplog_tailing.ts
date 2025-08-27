@@ -171,6 +171,20 @@ export class NewOplogTailing {
       return;
     }
     const collectionName = oplogDocument.ns.slice(this._dbName.length + 1);
+    if (oplogDocument.o.drop) {
+      for (const subscribers of Object.values(this.store)) {
+        for (const subscriber of subscribers) {
+          if (
+            !subscriber._stopped &&
+            subscriber.observableCollection?.collectionName ===
+              oplogDocument.o.drop
+          ) {
+            await subscriber.reload();
+          }
+        }
+      }
+      return;
+    }
 
     const id = oplogDocument.o?._id ?? oplogDocument.o2?._id;
     if (!collectionName || !id) {
@@ -200,9 +214,8 @@ export class NewOplogTailing {
       return;
     }
 
-    const collection = subscribers[0].observableCollection!.collection;
 
-    const doc = await this.getDoc(collection, subscribers, id, eventType);
+    const doc = await this.getDoc( subscribers, id, eventType);
     if (!doc) {
       return;
     }
@@ -230,7 +243,6 @@ export class NewOplogTailing {
 
   queueGetDoc: Promise<any> = Promise.resolve();
   async getDoc(
-    collection: any,
     subscribers: NewOplogObserveDriver[],
     id: any,
     eventType: OplogEventType
@@ -238,12 +250,14 @@ export class NewOplogTailing {
     const stringifiedId = MongoID.idStringify(id);
     if (eventType === "REMOVE") {
       this.queueGetDoc = this.queueGetDoc.then(() => {
-        return { _id: stringifiedId };
+        return { _id: id };
       });
       return this.queueGetDoc;
     }
+    const observableCollection = subscribers[0].observableCollection!;
+    const mongoHandle = observableCollection.mongoHandle
 
-    const collectionName = collection._name;
+    const collectionName = observableCollection.collectionName;
 
     const fieldsOfInterest = getFieldsOfInterestFromAll(subscribers);
     this.documentsToFetch.set(stringifiedId, {
@@ -276,8 +290,8 @@ export class NewOplogTailing {
           count++;
         }
       }
-      const items = await collection
-        .find(
+      const items = await mongoHandle.
+        find(collectionName,
           { _id: { $in: documentIds } },
           {
             projection:

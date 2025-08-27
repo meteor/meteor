@@ -22,6 +22,7 @@ export class NewOplogObserveDriver {
     limit?: number;
     sort?: any;
   };
+  _usesOplog = true
   oplogHandle: NewOplogTailing;
   observableCollection: ObservableCollection | null = null;
   private _id: number;
@@ -32,6 +33,15 @@ export class NewOplogObserveDriver {
   _stopped = false;
   strategy: StrategyType;
   channels: string[];
+  wrapWithInitialEnvironment =  Meteor.bindEnvironment(
+      function (callback) {
+        return callback();
+      },
+      function (err) {
+        Meteor._debug("Error in NewOplogObserveDriver Callback", err);
+      }
+    );
+
 
   constructor(options: any) {
     this._id = currentId;
@@ -97,7 +107,6 @@ export class NewOplogObserveDriver {
         // This fence cannot fire until we've caught up to "this point" in the
         // oplog, and all observers made it back to the steady state.
         await this.oplogHandle.waitUntilCaughtUp();
-
         for (const driver of Object.values(drivers)) {
           if (driver._stopped) continue;
 
@@ -141,6 +150,11 @@ export class NewOplogObserveDriver {
   }
 
   processFromOplog(eventType: OplogEventType, doc: any) {
+    return this.wrapWithInitialEnvironment(() => 
+      this._processFromOplog(eventType, doc)
+    );
+  }
+  _processFromOplog(eventType: OplogEventType, doc: any) {
     if (this._stopped) {
       return;
     }
@@ -207,8 +221,9 @@ export class NewOplogObserveDriver {
     const { store, selector, options } = observableCollection;
 
     const newStore = new MongoIDMap();
-    const freshIds = await observableCollection.collection
-      .find(selector, { ...options, fields: { _id: 1 } })
+    const collectionName = observableCollection.collectionName
+    const freshIds = await observableCollection.mongoHandle
+      .find(collectionName,selector, { ...options, fields: { _id: 1 } })
       .fetchAsync();
 
     freshIds.forEach((d: any) => newStore.set(d._id, d));

@@ -4,6 +4,8 @@ import { EJSON } from 'meteor/ejson';
 import { Meteor } from 'meteor/meteor';
 import { LocalCollection } from 'meteor/minimongo';
 import { MongoIDMap } from './mongo_id_map';
+import  { MongoConnection } from '../mongo_connection';
+import { CursorDescription } from '../cursor_description';
 
 const allowedOptions = ['limit', 'skip', 'sort', 'fields', 'projection'];
 
@@ -13,7 +15,6 @@ export default class ObservableCollection {
   sorter: any;
   cursorDescription: any;
   collectionName: string;
-  collection: Mongo.Collection;
   cursor: Mongo.Cursor;
   store!: MongoIDMap;
   selector: any;
@@ -26,47 +27,42 @@ export default class ObservableCollection {
   private _projectionFn: any;
   private _sharedProjection: any;
   private _sharedProjectionFn: any;
+  mongoHandle: MongoConnection
 
   constructor({
     multiplexer,
     matcher,
     sorter,
     cursorDescription,
+    mongoHandle,
   }: {
     multiplexer: any;
     matcher: any;
     sorter: any;
     cursorDescription: any;
+    mongoHandle:any
   }) {
     this.multiplexer = multiplexer;
     this.matcher = matcher;
     this.sorter = sorter;
     this.cursorDescription = cursorDescription;
+    this.mongoHandle = mongoHandle
 
     this.collectionName = this.cursorDescription.collectionName;
-    this.collection = Mongo.getCollection(cursorDescription.collectionName);
-
-    if (!this.collection) {
-      throw new Meteor.Error(
-        `We could not find the collection instance by name: "${
-          this.collectionName
-        }", the cursor description was: ${JSON.stringify(cursorDescription)}`
-      );
-    }
   }
 
   setupCollection() {
-    if (!this.collection) {
-      throw new Meteor.Error(
-        'We could not properly identify the collection by its name: ' +
-          this.collectionName +
-          '. Make sure you added redis-oplog package before any package that instantiates a collection.'
+      const  options = Object.assign({}, this.cursorDescription.options);
+      delete options.transform;
+      const  description = new CursorDescription(
+        this.cursorDescription.collectionName,
+        this.cursorDescription.selector,
+        options
       );
-    }
 
-    this.cursor = this.collection.find(
-      this.cursorDescription.selector,
-      this.cursorDescription.options
+    this.cursor = this.mongoHandle.find(this.collectionName,
+      description.selector,
+      description.options
     );
 
     this.store = new MongoIDMap();
@@ -133,7 +129,7 @@ export default class ObservableCollection {
 
   async isEligibleByDB(_id: any) {
     if (this.matcher) {
-      return !!(await this.collection.findOneAsync(
+      return !!(await this.mongoHandle.findOneAsync(this.collectionName,
         Object.assign({}, this.selector, { _id }),
         { fields: { _id: 1 } }
       ));
@@ -179,12 +175,12 @@ export default class ObservableCollection {
   /* We use this method when we receive updates for a document that is not yet in the observable collection store */
   async addByIds(docIds: string[]) {
     const { limit, skip, ...cleanedOptions } = this.options;
-    const docs = await this.collection
-      .find({ _id: { $in: docIds } }, cleanedOptions)
+    const docs = await this.mongoHandle
+      .find(this.collectionName, { _id: { $in: docIds } }, cleanedOptions)
       .fetchAsync();
-
+      
     for (const docId of docIds) {
-      const doc = docs.find((d) => d._id === docId);
+      const doc = docs.find((d) => EJSON.equals(docId, d._id));
       this.store.set(docId, doc);
       if (doc) {
         const fields = {...doc};
