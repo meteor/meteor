@@ -73,10 +73,6 @@ export default defineConfig({
                 link: "https://atmospherejs.com/",
               },
               {
-                text: "VS Code Extension",
-                link: "https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox",
-              },
-              {
                 text: "DevTools - Chrome Extension",
                 link: "https://chromewebstore.google.com/detail/ibniinmoafhgbifjojidlagmggecmpgf",
               },
