@@ -1,12 +1,17 @@
-import isEmpty from 'lodash.isempty';
-import { ObserveHandle } from './observe_handle';
+import isEmpty from "lodash.isempty";
+import { ObserveHandle } from "./observe_handle";
 
 interface ObserveMultiplexerOptions {
   ordered: boolean;
   onStop?: () => void;
 }
 
-export type ObserveHandleCallback = 'added' | 'addedBefore' | 'changed' | 'movedBefore' | 'removed';
+export type ObserveHandleCallback =
+  | "added"
+  | "addedBefore"
+  | "changed"
+  | "movedBefore"
+  | "removed";
 
 /**
  * Allows multiple identical ObserveHandles to be driven by a single observe driver.
@@ -29,8 +34,12 @@ export class ObserveMultiplexer {
     if (ordered === undefined) throw Error("must specify ordered");
 
     // @ts-ignore
-    Package['facts-base'] && Package['facts-base']
-        .Facts.incrementServerFact("mongo-livedata", "observe-multiplexers", 1);
+    Package["facts-base"] &&
+      Package["facts-base"].Facts.incrementServerFact(
+        "mongo-livedata",
+        "observe-multiplexers",
+        1
+      );
 
     this._ordered = ordered;
     this._onStop = onStop;
@@ -38,12 +47,14 @@ export class ObserveMultiplexer {
     this._handles = {};
     this._resolver = null;
     this._isReady = false;
-    this._readyPromise = new Promise(r => this._resolver = r).then(() => this._isReady = true);
+    this._readyPromise = new Promise((r) => (this._resolver = r)).then(
+      () => (this._isReady = true)
+    );
     // @ts-ignore
     this._cache = new LocalCollection._CachingChangeObserver({ ordered });
     this._addHandleTasksScheduledButNotPerformed = 0;
 
-    this.callbackNames().forEach(callbackName => {
+    this.callbackNames().forEach((callbackName) => {
       (this as any)[callbackName] = (...args: any[]) => {
         this._applyCallback(callbackName, args);
       };
@@ -58,14 +69,19 @@ export class ObserveMultiplexer {
     ++this._addHandleTasksScheduledButNotPerformed;
 
     // @ts-ignore
-    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
-      "mongo-livedata", "observe-handles", 1);
+    Package["facts-base"] &&
+      Package["facts-base"].Facts.incrementServerFact(
+        "mongo-livedata",
+        "observe-handles",
+        1
+      );
 
     await this._queue.runTask(async () => {
       this._handles![handle._id] = handle;
       await this._sendAdds(handle);
       --this._addHandleTasksScheduledButNotPerformed;
     });
+
     await this._readyPromise;
   }
 
@@ -76,11 +92,17 @@ export class ObserveMultiplexer {
     delete this._handles![id];
 
     // @ts-ignore
-    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
-      "mongo-livedata", "observe-handles", -1);
+    Package["facts-base"] &&
+      Package["facts-base"].Facts.incrementServerFact(
+        "mongo-livedata",
+        "observe-handles",
+        -1
+      );
 
-    if (isEmpty(this._handles) &&
-      this._addHandleTasksScheduledButNotPerformed === 0) {
+    if (
+      isEmpty(this._handles) &&
+      this._addHandleTasksScheduledButNotPerformed === 0
+    ) {
       await this._stop();
     }
   }
@@ -92,8 +114,12 @@ export class ObserveMultiplexer {
     await this._onStop();
 
     // @ts-ignore
-    Package['facts-base'] && Package['facts-base']
-        .Facts.incrementServerFact("mongo-livedata", "observe-multiplexers", -1);
+    Package["facts-base"] &&
+      Package["facts-base"].Facts.incrementServerFact(
+        "mongo-livedata",
+        "observe-multiplexers",
+        -1
+      );
 
     this._handles = null;
   }
@@ -144,8 +170,11 @@ export class ObserveMultiplexer {
       if (!this._handles) return;
 
       await this._cache.applyChange[callbackName].apply(null, args);
-      if (!this._ready() &&
-        (callbackName !== 'added' && callbackName !== 'addedBefore')) {
+      if (
+        !this._ready() &&
+        callbackName !== "added" &&
+        callbackName !== "addedBefore"
+      ) {
         throw new Error(`Got ${callbackName} during initial adds`);
       }
 
@@ -158,10 +187,20 @@ export class ObserveMultiplexer {
 
         if (!callback) continue;
 
-        handle.initialAddsSent.then(callback.apply(
+        const result = callback.apply(
           null,
           handle.nonMutatingCallbacks ? args : EJSON.clone(args)
-        ))
+        );
+
+        if (result && Meteor._isPromise(result)) {
+          result.catch((error) => {
+            console.error(
+              `Error in observeChanges callback ${callbackName}:`,
+              error
+            );
+          });
+        }
+        handle.initialAddsSent.then(result);
       }
     });
   }
@@ -170,23 +209,37 @@ export class ObserveMultiplexer {
     const add = this._ordered ? handle._addedBefore : handle._added;
     if (!add) return;
 
-    const addPromises: Promise<void>[] = [];
+    const addPromises: (Promise<void> | void)[] = [];
 
+    // note: docs may be an _IdMap or an OrderedDict
     this._cache.docs.forEach((doc: any, id: string) => {
       if (!(handle._id in this._handles!)) {
         throw Error("handle got removed before sending initial adds!");
       }
 
-      const { _id, ...fields } = handle.nonMutatingCallbacks ? doc : EJSON.clone(doc);
+      const { _id, ...fields } = handle.nonMutatingCallbacks
+        ? doc
+        : EJSON.clone(doc);
 
-      const promise = this._ordered ?
-        add(id, fields, null) :
-        add(id, fields);
+      const promise = new Promise<void>((resolve, reject) => {
+        try {
+          const r = this._ordered ? add(id, fields, null) : add(id, fields);
+          resolve(r);
+        } catch (error) {
+          reject(error);
+        }
+      });
 
       addPromises.push(promise);
     });
 
-    await Promise.all(addPromises);
+    await Promise.allSettled(addPromises).then((p) => {
+      p.forEach((result) => {
+        if (result.status === "rejected") {
+          console.error(`Error in adds for handle: ${result.reason}`);
+        }
+      });
+    });
 
     handle.initialAddsSentResolver();
   }

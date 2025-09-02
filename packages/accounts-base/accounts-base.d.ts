@@ -6,6 +6,7 @@ import { DDP } from 'meteor/ddp';
 export interface URLS {
   resetPassword: (token: string) => string;
   verifyEmail: (token: string) => string;
+  loginToken: (token: string) => string;
   enrollAccount: (token: string) => string;
 }
 
@@ -204,26 +205,43 @@ export namespace Accounts {
     options?: { fields?: Mongo.FieldSpecifier | undefined }
   ): Promise<Meteor.User | null | undefined>;
 
+  interface SendEmailOptions {
+    from: string;
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+    headers?: Header | undefined;
+  }
+
+  interface SendEmailResult {
+    email: string;
+    user: Meteor.User;
+    token: string;
+    url: string;
+    options: SendEmailOptions;
+  }
+
   function sendEnrollmentEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): Promise<void>;
+  ): Promise<SendEmailResult>;
 
   function sendResetPasswordEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): Promise<void>;
+  ): Promise<SendEmailResult>;
 
   function sendVerificationEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): Promise<void>;
+  ): Promise<SendEmailResult>;
 
   function setUsername(userId: string, newUsername: string): Promise<void>;
 
