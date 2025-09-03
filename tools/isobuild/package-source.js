@@ -907,13 +907,13 @@ Object.assign(PackageSource.prototype, {
 
     const projectWatchSet = projectContext.getProjectWatchSet();
 
-    const mainModulesByArch =
+    let mainModulesByArch =
       projectContext.meteorConfig.getMainModulesByArch();
 
-    const testModulesByArch =
+    let testModulesByArch =
       projectContext.meteorConfig.getTestModulesByArch();
 
-    const nodeModulesToRecompileByArch =
+    let nodeModulesToRecompileByArch =
       projectContext.meteorConfig.getNodeModulesToRecompileByArch();
 
     projectWatchSet.merge(projectContext.meteorConfig.watchSet);
@@ -926,14 +926,34 @@ Object.assign(PackageSource.prototype, {
         return;
       }
 
-      const mainModule = projectContext.meteorConfig
+      let mainModule = projectContext.meteorConfig
         .getMainModule(arch, mainModulesByArch);
 
-      const testModule = projectContext.meteorConfig
+      let testModule = projectContext.meteorConfig
         .getTestModule(arch, testModulesByArch);
 
-      const nodeModulesToRecompile = projectContext.meteorConfig
+      let nodeModulesToRecompile = projectContext.meteorConfig
         .getNodeModulesToRecompile(arch, nodeModulesToRecompileByArch);
+
+      // If the config is reinitialized dynamically, reload needs to happen
+      // in order to get the new mainModule, testModule, and nodeModulesToRecompile
+      // for the build process. We ensure to compute the new values once.
+      function tryReloadMeteorConfig() {
+        if (projectContext.meteorConfig?._needReload?.[arch]) {
+          mainModulesByArch =
+            projectContext.meteorConfig.getMainModulesByArch();
+          testModulesByArch =
+            projectContext.meteorConfig.getTestModulesByArch();
+          mainModule = projectContext.meteorConfig
+            .getMainModule(arch, mainModulesByArch);
+          testModule = projectContext.meteorConfig
+            .getTestModule(arch, testModulesByArch);
+          nodeModulesToRecompile = projectContext.meteorConfig
+            .getNodeModulesToRecompile(arch, nodeModulesToRecompileByArch);
+
+          projectContext.meteorConfig._needReload[arch] = false;
+        }
+      }
 
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
@@ -945,6 +965,8 @@ Object.assign(PackageSource.prototype, {
         sourceRoot: self.sourceRoot,
         uses: uses,
         getFiles(sourceProcessorSet, watchSet) {
+          tryReloadMeteorConfig();
+          
           sourceProcessorSet.watchSet = watchSet;
 
           const findOptions = {

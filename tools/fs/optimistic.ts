@@ -353,7 +353,8 @@ export const optimisticReadMeteorIgnore = wrap((dir: string) => {
   const customMeteorIgnore = process.env.METEOR_IGNORE;
   if (customMeteorIgnore != null) {
     ignoreConfig = ignoreConfig || ignore();
-    ignoreConfig = ignoreConfig.add(customMeteorIgnore);
+    const allCustomMeteorIgnores = customMeteorIgnore.trim().split(/\s+/);
+    ignoreConfig = ignoreConfig.add(allCustomMeteorIgnores);
   }
 
   return ignoreConfig;

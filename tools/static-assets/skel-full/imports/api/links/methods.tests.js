@@ -9,16 +9,16 @@ import './methods.js';
 
 if (Meteor.isServer) {
   describe('links methods', function () {
-    beforeEach(function () {
-      Links.remove({});
+    beforeEach(async function () {
+      await Links.removeAsync({});
     });
 
-    it('can add a new link', function () {
+    it('can add a new link', async function () {
       const addLink = Meteor.server.method_handlers['links.insert'];
 
       addLink.apply({}, ['meteor.com', 'https://www.meteor.com']);
 
-      assert.equal(Links.find().count(), 1);
+      assert.equal(await Links.find().countAsync(), 1);
     });
   });
 }

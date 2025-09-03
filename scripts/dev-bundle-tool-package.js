@@ -49,7 +49,7 @@ var packageJson = {
     "moment": "2.30.1",
     "rimraf": "2.6.2",
     "glob": "7.1.6",
-    ignore: "5.3.2",
+    ignore: "7.0.5",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.

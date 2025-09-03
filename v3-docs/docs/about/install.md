@@ -141,5 +141,7 @@ npx meteor uninstall
 
 If you installed Meteor using curl or as a fallback solution, run:
 
-`rm -rf ~/.meteor`
-`sudo rm /usr/local/bin/meteor`
+```bash
+rm -rf ~/.meteor
+sudo rm /usr/local/bin/meteor
+```

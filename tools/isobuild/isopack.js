@@ -1,3 +1,5 @@
+import { getMeteorConfig } from "../tool-env/meteor-config";
+
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo');
 var _ = require('underscore');
@@ -19,6 +21,8 @@ var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 import { Unibuild } from "./unibuild.js";
+import rspackHelpers from "../tool-env/rspack";
+import { getCurrentNodeBinDir, getDevBundle } from "../fs/files";
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./)) {
@@ -513,6 +517,16 @@ Object.assign(Isopack.prototype, {
      */
     var Plugin = {
       name: pluginName,
+
+      // Share the meteorConfig object as part of plugin API
+      getMeteorConfig: getMeteorConfig,
+
+      // Share functions to get the dev bundle context
+      getDevBundle,
+      getCurrentNodeBinDir,
+
+      // Share the rspackHelpers as part of plugin API
+      rspackHelpers,
 
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')

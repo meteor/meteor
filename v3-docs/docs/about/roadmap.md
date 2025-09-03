@@ -18,7 +18,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 
 > We need to improve the bundle size and performance of Meteor apps. We should consider tree-shaking, code-splitting,
 > and other optimizations to make our apps leaner and faster.
-> To achieve that we plan to integrate or have an easy way to integrate with modern bundlers like RSPack, ESBuild, or Rollup.
+> To achieve that we plan to integrate or have an easy way to integrate with modern bundlers like Rspack, ESBuild, or Rollup.
 
 **Discussion links:**
 
@@ -61,7 +61,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 
 **Target Release:** 3.4 ⏳
 
-**Goal:**  And an external bundler (like RSPack, ESBuild, or Rollup) working with Meteor and producing a bundle that is smaller or faster than the current Meteor bundle.
+**Goal:**  And an external bundler (like Rspack, ESBuild, or Rollup) working with Meteor and producing a bundle that is smaller or faster than the current Meteor bundle.
 - This will also allow Meteor to have features like tree-shaking, code-splitting, and other optimizations that will make our apps leaner and faster.
 
 #### Phase 6: Build Process Optimization

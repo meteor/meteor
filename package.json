@@ -12,6 +12,10 @@
     "url": "https://github.com/meteor/meteor/issues"
   },
   "homepage": "https://github.com/meteor/meteor#readme",
+  "scripts": {
+    "install:modern": "cd tools/modern-tests && npm install && npx playwright install && npx playwright install --with-deps",
+    "test:modern": "cd tools/modern-tests && npm test -- "
+  },
   "devDependencies": {
     "@babel/core": "^7.27.1",
     "@babel/eslint-parser": "^7.27.1",

@@ -17,6 +17,7 @@ shell-server            # Server-side component of the `meteor shell` command
 
 ~prototype~
 static-html             # Define static page content in .html files
-zodern:melte            # Meteor package to allow us to create files with the .svelte extension
 hot-module-replacement  # Update client in development without reloading the page
 zodern:types            # Enable types from meteor/atmosphere packages
+
+rspack

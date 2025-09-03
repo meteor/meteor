@@ -27,6 +27,7 @@ import {
   writeFileAtomically,
   readFile,
 } from "../fs/files";
+import rspackHelpers from "../tool-env/rspack";
 
 const { SourceNode, SourceMapConsumer } = require("source-map");
 
@@ -46,6 +47,7 @@ import {
 import { wrap } from "optimism";
 const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
 const { parse: reifyAcornParse } = require("@meteorjs/reify/lib/parsers/acorn");
+const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
 import Resolver, { Resolution } from "./resolver";
 import LRUCache from 'lru-cache';
@@ -87,14 +89,32 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
   }
 
   const isLegacy = isLegacyArch(bundleArch);
-  let result = reifyCompile(stripHashBang(source), {
-    parse: reifyAcornParse,
+  const reifyOptions = {
     generateLetDeclarations: !isLegacy,
     avoidModernSyntax: isLegacy,
     enforceStrictMode: false,
     dynamicImport: true,
     ast: false,
-  }).code;
+  };
+
+  let result;
+  try {
+    // First attempt: use Acorn
+    result = reifyCompile(stripHashBang(source), {
+      ...reifyOptions,
+      parse: reifyAcornParse,
+    }).code;
+  } catch (acornError) {
+    // Fallback: use Babel parser
+    // acorn may throw SyntaxError due to the lack of support for
+    // some features, but babel should still be able to parse the file
+    // For example, acorn don’t support JSX, only with acorn-jsx,
+    // but it isn’t included in Reify.
+    result = reifyCompile(stripHashBang(source), {
+      ...reifyOptions,
+      parse: reifyBabelParse,
+    }).code;
+  }
 
   if (cacheFilePath) {
     Promise.resolve().then(
@@ -978,6 +998,12 @@ export default class ImportScanner {
     file: File,
   ): Promise<Record<string, ImportInfo>> {
     const fileHash = file.hash instanceof Promise ? await file.hash : file.hash;
+
+    // Ignore rspack output files
+    if (rspackHelpers.isRspackOutputFile(file.sourcePath)) {
+      return {};
+    }
+
     if (IMPORT_SCANNER_CACHE.has(fileHash)) {
       return IMPORT_SCANNER_CACHE.get(fileHash) as Record<string, ImportInfo>;
     }

@@ -1,0 +1,1 @@
+Tinytest.add('rspack', () => {});
