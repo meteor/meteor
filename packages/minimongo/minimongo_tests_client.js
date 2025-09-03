@@ -4010,3 +4010,55 @@ Tinytest.addAsync('minimongo - asyncIterator', async (test) => {
   test.equal(itemIds.length, 2);
   test.equal(itemIds, ['a', 'b']);
 });
+
+Tinytest.add('minimongo - operation result fields (sync)', test => {
+  const c = new LocalCollection();
+
+  // Test insert
+  const insertedId = c.insert({name: 'doc1'});
+  test.isTrue(insertedId !== undefined, 'insert should return an ID');
+
+  // Test update
+  const updateResult = c.update({name: 'doc1'}, {$set: {value: 1}});
+  test.equal(updateResult, 1, 'update should return affected count');
+
+  // Test upsert (update case)
+  const upsertUpdateResult = c.upsert({name: 'doc1'}, {$set: {value: 2}});
+  test.equal(upsertUpdateResult.numberAffected, 1);
+  test.isFalse(upsertUpdateResult.hasOwnProperty('insertedId'));
+
+  // Test upsert (insert case)
+  const upsertInsertResult = c.upsert({name: 'doc2'}, {$set: {value: 3}});
+  test.equal(upsertInsertResult.numberAffected, 1);
+  test.isTrue(upsertInsertResult.hasOwnProperty('insertedId'));
+
+  // Test remove
+  const removeResult = c.remove({name: 'doc1'});
+  test.equal(removeResult, 1, 'remove should return removed count');
+});
+
+Tinytest.addAsync('minimongo - operation result fields (async)', async test => {
+  const c = new LocalCollection();
+
+  // Test insert
+  const insertedId = await c.insertAsync({name: 'doc1'});
+  test.isTrue(insertedId !== undefined, 'insert should return an ID');
+
+  // Test update
+  const updateResult = await c.updateAsync({name: 'doc1'}, {$set: {value: 1}});
+  test.equal(updateResult, 1, 'update should return affected count');
+
+  // Test upsert (update case)
+  const upsertUpdateResult = await c.upsertAsync({name: 'doc1'}, {$set: {value: 2}});
+  test.equal(upsertUpdateResult.numberAffected, 1);
+  test.isFalse(upsertUpdateResult.hasOwnProperty('insertedId'));
+
+  // Test upsert (insert case)
+  const upsertInsertResult = await c.upsertAsync({name: 'doc2'}, {$set: {value: 3}});
+  test.equal(upsertInsertResult.numberAffected, 1);
+  test.isTrue(upsertInsertResult.hasOwnProperty('insertedId'));
+
+  // Test remove
+  const removeResult = await c.removeAsync({name: 'doc1'});
+  test.equal(removeResult, 1, 'remove should return removed count');
+});
