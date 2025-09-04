@@ -678,6 +678,7 @@ export default class LocalCollection {
 
     return this.finishUpdate({
       options,
+      insertedId,
       updateCount,
       callback,
       selector,

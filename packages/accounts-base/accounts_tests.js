@@ -775,8 +775,8 @@ if (Meteor.isServer) {
     });
   });
 
-  Tinytest.add(
-    'accounts - make sure that extra params to accounts urls are added',
+  Tinytest.addAsync(
+    'accounts - urls work with sync resolution',
     async test => {
       // No extra params
       const verifyEmailURL = new URL(Accounts.urls.verifyEmail('test'));
@@ -788,6 +788,49 @@ if (Meteor.isServer) {
       test.equal(resetPasswordURL.searchParams.get('test'), extraParams.test);
       const enrollAccountURL = new URL(Accounts.urls.enrollAccount('test', extraParams));
       test.equal(enrollAccountURL.searchParams.get('test'), extraParams.test);
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - urls work with async resolution',
+    async test => {
+      // Save original urls
+      const originalUrls = Accounts.urls;
+      try {
+        // Override urls methods to return Promises
+        Accounts.urls = {
+          resetPassword: (token, extraParams) =>
+            new Promise(resolve => resolve(originalUrls.resetPassword(token, extraParams))),
+          verifyEmail: (token, extraParams) =>
+            new Promise(resolve => resolve(originalUrls.verifyEmail(token, extraParams))),
+          loginToken: (selector, token, extraParams) =>
+            new Promise(resolve => resolve(originalUrls.loginToken(selector, token, extraParams))),
+          enrollAccount: (token, extraParams) =>
+            new Promise(resolve => resolve(originalUrls.enrollAccount(token, extraParams))),
+        };
+
+        // Test with no extra params
+        const verifyEmailUrl = await Accounts.urls.verifyEmail('test');
+        const verifyEmailURL = new URL(verifyEmailUrl);
+        test.equal(verifyEmailURL.searchParams.toString(), "");
+
+        // Test with extra params
+        const extraParams = { test: 'async-success' };
+        const resetPasswordUrl = await Accounts.urls.resetPassword('test', extraParams);
+        const resetPasswordURL = new URL(resetPasswordUrl);
+        test.equal(resetPasswordURL.searchParams.get('test'), extraParams.test);
+
+        const enrollAccountUrl = await Accounts.urls.enrollAccount('test', extraParams);
+        const enrollAccountURL = new URL(enrollAccountUrl);
+        test.equal(enrollAccountURL.searchParams.get('test'), extraParams.test);
+
+        const loginTokenUrl = await Accounts.urls.loginToken('email', 'token', extraParams);
+        const loginTokenURL = new URL(loginTokenUrl);
+        test.equal(loginTokenURL.searchParams.get('test'), extraParams.test);
+      } finally {
+        // Restore original urls
+        Accounts.urls = originalUrls;
+      }
     }
   );
 }

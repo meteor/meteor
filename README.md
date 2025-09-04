@@ -12,7 +12,7 @@
 
 [![Travis CI Status](https://api.travis-ci.com/meteor/meteor.svg?branch=devel)](https://app.travis-ci.com/github/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor.svg?style=svg)](https://app.circleci.com/pipelines/github/meteor/meteor?branch=devel)
-[![built with Meteor](https://img.shields.io/badge/Meteor-3.0.3-green?logo=meteor&logoColor=white)](https://meteor.com)
+[![built with Meteor](https://img.shields.io/badge/Meteor-3.2.2-green?logo=meteor&logoColor=white)](https://meteor.com)
 ![node-current](https://img.shields.io/node/v/meteor)
 ![Discord](https://img.shields.io/discord/1247973371040239676)
 ![Twitter Follow](https://img.shields.io/twitter/follow/meteorjs?style=social)
@@ -83,9 +83,9 @@ meteor
 
 **Building an application with Meteor?**
 
-* Deploy on [Galaxy](https://www.meteor.com/cloud)
+* Deploy on [Galaxy](https://galaxycloud.app)
 * Discuss on [Forums](https://forums.meteor.com/)
-* Join the Meteor Discord by clicking this [invite link](https://discord.gg/hZkTCaVjmT).
+* Join the [Meteor Discord](https://discord.gg/hZkTCaVjmT)
 
 
 Interested in helping or contributing to Meteor?  These resources will help:

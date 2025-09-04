@@ -10,7 +10,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "10.9.2",
+    npm: "10.9.3",
     "node-gyp": "10.2.0",
     "@mapbox/node-pre-gyp": "1.0.11",
     typescript: "5.6.3",
@@ -59,6 +59,7 @@ var packageJson = {
     multipipe: "2.0.1",
     pathwatcher: "8.1.2",
     "vscode-nsfw": "2.1.8",
+    "@parcel/watcher": "2.5.1",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
     optimism: "0.16.1",
@@ -67,7 +68,8 @@ var packageJson = {
     "anser": "2.1.1",
     'xmlbuilder2': '1.8.1',
     "ws": "7.4.5",
-    "open":"8.4.2"
+    "open":"8.4.2",
+    "acorn": "8.14.1",
   }
 };
 

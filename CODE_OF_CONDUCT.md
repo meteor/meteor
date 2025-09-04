@@ -19,7 +19,7 @@ To report an issue in one of the projects listed below, please email code-of-con
 The Code of Conduct panel is a moderation team that handle code of conduct issues. The makeup of this team is as follows:
 
 * CEO at Meteor Software - Frederico Maia Arantes
-* Software Engineer at Meteor Software - Denilson Silva
+* CTO at Meteor Software - Henrique Albert
 * CEO at High Impact Tech - Alim S. Gafar
 
 Members of the CoCP team will be added for a 1-year term and will be re-confirmed on a yearly basis.

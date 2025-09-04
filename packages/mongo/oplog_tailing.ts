@@ -37,13 +37,15 @@ export class OplogHandle {
   public _dbName: string;
   private _oplogLastEntryConnection: MongoConnection | null;
   private _oplogTailConnection: MongoConnection | null;
-  private _oplogOptions: { excludeCollections?: string[]; includeCollections?: string[] } | null;
+  private _oplogOptions: {
+    excludeCollections?: string[];
+    includeCollections?: string[];
+  };
   private _stopped: boolean;
   private _tailHandle: any;
   private _readyPromiseResolver: (() => void) | null;
   private _readyPromise: Promise<void>;
   public _crossbar: any;
-  private _baseOplogSelector: any;
   private _catchingUpResolvers: CatchingUpResolver[];
   private _lastProcessedTS: any;
   private _onSkippedEntriesHook: any;
@@ -61,29 +63,24 @@ export class OplogHandle {
     this._resolveTimeout = null;
     this._oplogLastEntryConnection = null;
     this._oplogTailConnection = null;
-    this._oplogOptions = null;
     this._stopped = false;
     this._tailHandle = null;
     this._readyPromiseResolver = null;
-    this._readyPromise = new Promise(r => this._readyPromiseResolver = r);
+    this._readyPromise = new Promise(r => this._readyPromiseResolver = r); 
     this._crossbar = new DDPServer._Crossbar({
       factPackage: "mongo-livedata", factName: "oplog-watchers"
     });
-    this._baseOplogSelector = {
-      ns: new RegExp("^(?:" + [
-        // @ts-ignore
-        Meteor._escapeRegExp(this._dbName + "."),
-        // @ts-ignore
-        Meteor._escapeRegExp("admin.$cmd"),
-      ].join("|") + ")"),
 
-      $or: [
-        { op: { $in: ['i', 'u', 'd'] } },
-        { op: 'c', 'o.drop': { $exists: true } },
-        { op: 'c', 'o.dropDatabase': 1 },
-        { op: 'c', 'o.applyOps': { $exists: true } },
-      ]
-    };
+    const includeCollections =
+      Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
+    const excludeCollections =
+      Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
+    if (includeCollections?.length && excludeCollections?.length) {
+      throw new Error(
+        "Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time."
+      );
+    }
+    this._oplogOptions = { includeCollections, excludeCollections };
 
     this._catchingUpResolvers = [];
     this._lastProcessedTS = null;
@@ -93,6 +90,67 @@ export class OplogHandle {
     });
 
     this._startTrailingPromise = this._startTailing();
+  }
+
+  private _getOplogSelector(lastProcessedTS?: any): any {
+    const oplogCriteria: any = [
+      {
+        $or: [
+          { op: { $in: ["i", "u", "d"] } },
+          { op: "c", "o.drop": { $exists: true } },
+          { op: "c", "o.dropDatabase": 1 },
+          { op: "c", "o.applyOps": { $exists: true } },
+        ],
+      },
+    ];
+
+    const nsRegex = new RegExp(
+      "^(?:" +
+        [
+          // @ts-ignore
+          Meteor._escapeRegExp(this._dbName + "."),
+          // @ts-ignore
+          Meteor._escapeRegExp("admin.$cmd"),
+        ].join("|") +
+        ")"
+    );
+
+    if (this._oplogOptions.excludeCollections?.length) {
+      oplogCriteria.push({
+        ns: {
+          $regex: nsRegex,
+          $nin: this._oplogOptions.excludeCollections.map(
+            (collName: string) => `${this._dbName}.${collName}`
+          ),
+        },
+      });
+    } else if (this._oplogOptions.includeCollections?.length) {
+      oplogCriteria.push({
+        $or: [
+          { ns: /^admin\.\$cmd/ },
+          {
+            ns: {
+              $in: this._oplogOptions.includeCollections.map(
+                (collName: string) => `${this._dbName}.${collName}`
+              ),
+            },
+          },
+        ],
+      });
+    } else {
+      oplogCriteria.push({
+        ns: nsRegex,
+      });
+    }
+    if(lastProcessedTS) {
+      oplogCriteria.push({
+        ts: { $gt: lastProcessedTS },
+      });
+    }
+
+    return {
+      $and: oplogCriteria,
+    };
   }
 
   async stop(): Promise<void> {
@@ -156,10 +214,11 @@ export class OplogHandle {
     let lastEntry: OplogEntry | null = null;
 
     while (!this._stopped) {
+      const oplogSelector = this._getOplogSelector();
       try {
         lastEntry = await this._oplogLastEntryConnection.findOneAsync(
           OPLOG_COLLECTION,
-          this._baseOplogSelector,
+          oplogSelector,
           { projection: { ts: 1 }, sort: { $natural: -1 } }
         );
         break;
@@ -238,39 +297,9 @@ export class OplogHandle {
         { sort: { $natural: -1 }, projection: { ts: 1 } }
       );
 
-      let oplogSelector: any = { ...this._baseOplogSelector };
+      const oplogSelector = this._getOplogSelector(lastOplogEntry?.ts);
       if (lastOplogEntry) {
-        oplogSelector.ts = { $gt: lastOplogEntry.ts };
         this._lastProcessedTS = lastOplogEntry.ts;
-      }
-
-      const includeCollections = Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
-      const excludeCollections = Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
-
-      if (includeCollections?.length && excludeCollections?.length) {
-        throw new Error("Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time.");
-      }
-
-      if (excludeCollections?.length) {
-        oplogSelector.ns = {
-          $regex: oplogSelector.ns,
-          $nin: excludeCollections.map((collName: string) => `${this._dbName}.${collName}`)
-        };
-        this._oplogOptions = { excludeCollections };
-      } else if (includeCollections?.length) {
-        oplogSelector = {
-          $and: [
-            {
-              $or: [
-                { ns: /^admin\.\$cmd/ },
-                { ns: { $in: includeCollections.map((collName: string) => `${this._dbName}.${collName}`) } }
-              ]
-            },
-            { $or: oplogSelector.$or },
-            { ts: oplogSelector.ts }
-          ]
-        };
-        this._oplogOptions = { includeCollections };
       }
 
       const cursorDescription = new CursorDescription(

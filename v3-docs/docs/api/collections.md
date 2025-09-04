@@ -698,7 +698,7 @@ topPosts.forEach((post) => {
 
 ::: warning
 Client only.
-For server/isomorphic usage see [removeAsync](#Mongo-Cursor-forEachAsync).
+For server/isomorphic usage see [forEachAsync](#Mongo-Cursor-forEachAsync).
 :::
 
 <ApiBox name="Mongo.Cursor#forEachAsync" instanceName="Cursor"/>
@@ -914,6 +914,7 @@ const handle = await cursor.observeChangesAsync({
 setTimeout(() => handle.stop(), 5000);
 ```
 
+<ApiBox name="Mongo.getCollection" />
 <ApiBox name="Mongo.ObjectID" />
 
 

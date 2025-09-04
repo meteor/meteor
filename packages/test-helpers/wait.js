@@ -5,7 +5,8 @@ function isPromise(obj) {
 waitUntil = function _waitUntil(checkFunction, { timeout = 15_000, interval = 200, leading = true, description = '' } = {}) {
   let waitTime = interval;
   return new Promise((resolve, reject) => {
-    if (leading && checkFunction()) {
+    const shouldWait = checkFunction();
+    if (leading && !isPromise(shouldWait) && shouldWait) {
       resolve();
       return;
     }
