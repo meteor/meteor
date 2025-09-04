@@ -93,7 +93,7 @@ Accounts.registerLoginHandler(async options => {
 
 Accounts.registerLoginHandler('loginWithExternalServiceAnd2fa', async function(loginRequest) {
 //observed that is confusing with Meteor.loginPasswordlessAnd2fa cause they both have same number of parameters
-if(loginRequest.credentialToken && loginRequest.otp) {
+if(loginRequest.credentialToken && loginRequest.otp && loginRequest.method === 'loginWithExternalServiceAnd2fa')  {
   const { credentialToken, otp } = loginRequest;
 
   check(credentialToken, String);
