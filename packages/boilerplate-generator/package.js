@@ -1,11 +1,10 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '2.0.1',
+  version: '2.0.2',
 });
 
 Npm.depends({
-  "combined-stream2": "1.1.2",
-  "lodash.template": "4.5.0"
+  "combined-stream2": "1.1.2"
 });
 
 Package.onUse(api => {
