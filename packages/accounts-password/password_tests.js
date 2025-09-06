@@ -955,6 +955,194 @@ if (Meteor.isClient) (() => {
     validateLoginsStep
   ]);
 
+testAsyncMulti("loginWithPassword - new API with email object", [
+  function (test, expect) {
+    // setup
+    this.username = Random.id();
+    this.email = `${Random.id()}-intercept@example.com`;
+    this.password = 'password123';
+    
+    Accounts.createUser(
+      { username: this.username, email: this.email, password: this.password },
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep,
+  function (test, expect) {
+    // Test new API: Meteor.loginWithPassword({email, password}, callback)
+    Meteor.loginWithPassword(
+      { email: this.email, password: this.password },
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep
+  ]);
+
+  testAsyncMulti("loginWithPassword - new API with username object", [
+  function (test, expect) {
+    // setup
+    this.username = Random.id();
+    this.email = `${Random.id()}-intercept@example.com`;
+    this.password = 'password123';
+    
+    Accounts.createUser(
+      { username: this.username, email: this.email, password: this.password },
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep,
+  function (test, expect) {
+    // Test new API: Meteor.loginWithPassword({username, password}, callback)
+    Meteor.loginWithPassword(
+      { username: this.username, password: this.password },
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep
+  ]);
+
+  testAsyncMulti("loginWithPassword - new API fallback with separate password param", [
+  function (test, expect) {
+    // setup
+    this.username = Random.id();
+    this.email = `${Random.id()}-intercept@example.com`;
+    this.password = 'password123';
+    
+    Accounts.createUser(
+      { username: this.username, email: this.email, password: this.password },
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep,
+  function (test, expect) {
+    // Test fallback: Meteor.loginWithPassword({email}, password, callback)
+    Meteor.loginWithPassword(
+      { email: this.email },
+      this.password,
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep,
+  function (test, expect) {
+    // Test fallback: Meteor.loginWithPassword({username}, password, callback)
+    Meteor.loginWithPassword(
+      { username: this.username },
+      this.password,
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep
+  ]);
+
+  testAsyncMulti("loginWithPassword - error handling wrong password", [
+  function (test, expect) {
+    // setup
+    this.username = Random.id();
+    this.email = `${Random.id()}-intercept@example.com`;
+    this.password = 'password123';
+    
+    Accounts.createUser(
+      { username: this.username, email: this.email, password: this.password },
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep,
+  function (test, expect) {
+    // Test old API with wrong password
+    Meteor.loginWithPassword(
+      this.email,
+      'wrongPassword',
+      expect(error => {
+        test.isTrue(error);
+        test.equal(error.error, 403);
+        test.isFalse(Meteor.user());
+      })
+    );
+  },
+  function (test, expect) {
+    // Test new API with wrong password
+    Meteor.loginWithPassword(
+      { email: this.email, password: 'wrongPassword' },
+      expect(error => {
+        test.isTrue(error);
+        test.equal(error.error, 403);
+        test.isFalse(Meteor.user());
+      })
+    );
+  }
+  ]);
+
+  testAsyncMulti("loginWithPassword - error handling non-existent user", [
+  function (test, expect) {
+    // Test old API with non-existent user
+    Meteor.loginWithPassword(
+      'nonexistent@example.com',
+      'anyPassword',
+      expectUserNotFound(test, expect)
+    );
+  },
+  function (test, expect) {
+    // Test new API with non-existent user
+    Meteor.loginWithPassword(
+      { email: 'nonexistent@example.com', password: 'anyPassword' },
+      expectUserNotFound(test, expect)
+    );
+  }
+]);
+
+  testAsyncMulti("loginWithPassword - comprehensive backwards compatibility", [
+  function (test, expect) {
+    // setup
+    this.username = Random.id();
+    this.email = `${Random.id()}-intercept@example.com`;
+    this.password = 'password123';
+    
+    Accounts.createUser(
+      { username: this.username, email: this.email, password: this.password },
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep,
+  // Test all old API variations still work
+  function (test, expect) {
+    Meteor.loginWithPassword(this.username, this.password,
+      loggedInAs(this.username, test, expect));
+  },
+  logoutStep,
+  function (test, expect) {
+    Meteor.loginWithPassword(this.email, this.password,
+      loggedInAs(this.username, test, expect));
+  },
+  logoutStep,
+  function (test, expect) {
+    Meteor.loginWithPassword({ username: this.username }, this.password,
+      loggedInAs(this.username, test, expect));
+  },
+  logoutStep,
+  function (test, expect) {
+    Meteor.loginWithPassword({ email: this.email }, this.password,
+      loggedInAs(this.username, test, expect));
+  },
+  logoutStep,
+  
+  // Test all new API variations work
+  function (test, expect) {
+    Meteor.loginWithPassword(
+      { username: this.username, password: this.password },
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep,
+  function (test, expect) {
+    Meteor.loginWithPassword(
+      { email: this.email, password: this.password },
+      loggedInAs(this.username, test, expect)
+    );
+  },
+  logoutStep
+]);
+
+
   testAsyncMulti("passwords - server onLogin hook", [
     function (test, expect) {
       Meteor.call("testCaptureLogins", expect(error => test.isFalse(error)));
