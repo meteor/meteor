@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var sqlite3 = require('sqlite3');
+var zlib = require('zlib');
 
 var files = require('../../fs/files');
 var utils = require('../../utils/utils.js');
@@ -420,6 +421,9 @@ var Table = function (name, jsonFields, options) {
   self.name = name;
   self.jsonFields = jsonFields;
   self.noContentColumn = options.noContentColumn;
+  // Enable compression by default, can be disabled via environment variable or option
+  self._compressContent = options.compress !== false && 
+                         !process.env.METEOR_DISABLE_CATALOG_COMPRESSION;
 
   self._buildStatements();
 };
@@ -433,6 +437,41 @@ Object.assign(Table.prototype, {
     self._selectQuery = "SELECT * FROM " + self.name + " WHERE _id=?";
     self._insertQuery = "INSERT INTO " + self.name + " VALUES " + queryParams;
     self._deleteQuery = "DELETE FROM " + self.name + " WHERE _id=?";
+  },
+
+  // Compress a JSON string for storage
+  _compressString: function(str) {
+    var self = this;
+    if (!self._compressContent) {
+      return str;
+    }
+    
+    try {
+      var compressed = zlib.gzipSync(Buffer.from(str, 'utf8'));
+      // Mark as compressed with a prefix to distinguish from uncompressed data
+      return 'GZIP:' + compressed.toString('base64');
+    } catch (e) {
+      // If compression fails, fall back to uncompressed
+      Console.debug('Catalog compression failed, using uncompressed data:', e.message);
+      return str;
+    }
+  },
+
+  // Decompress a string that might be compressed
+  _decompressString: function(str) {
+    if (typeof str === 'string' && str.startsWith('GZIP:')) {
+      try {
+        var compressedData = str.substring(5);
+        var compressed = Buffer.from(compressedData, 'base64');
+        return zlib.gunzipSync(compressed).toString('utf8');
+      } catch (e) {
+        // If decompression fails, log warning and return as-is
+        Console.debug('Catalog decompression failed, using data as-is:', e.message);
+        return str;
+      }
+    }
+    // Not compressed or legacy uncompressed data
+    return str;
   },
 
   // Generate a string of the form (?, ?) where the n is the number of question
@@ -473,7 +512,9 @@ Object.assign(Table.prototype, {
         row.push(o[jsonField]);
       });
       if (! self.noContentColumn) {
-        row.push(JSON.stringify(o));
+        var contentString = JSON.stringify(o);
+        var finalContent = self._compressString(contentString);
+        row.push(finalContent);
       }
       await txn.execute(self._insertQuery, row);
     }
@@ -708,13 +749,30 @@ Object.assign(RemoteCatalog.prototype, {
 
     await self.db.init();
 
-    self.tableVersions = new Table('versions', ['packageName', 'version', '_id']);
-    self.tableBuilds = new Table('builds', ['versionId', '_id']);
-    self.tableReleaseTracks = new Table('releaseTracks', ['name', '_id']);
-    self.tableReleaseVersions = new Table('releaseVersions', ['track', 'version', '_id']);
-    self.tablePackages = new Table('packages', ['name', '_id']);
-    self.tableSyncToken = new Table('syncToken', ['_id']);
-    self.tableMetadata = new Table('metadata', ['_id']);
+    // Enable compression for tables that store large JSON content
+    // The sync token and metadata tables are small, so compression isn't needed
+    // The bannersShown table has no content column, so compression doesn't apply
+    var compressionEnabled = !process.env.METEOR_DISABLE_CATALOG_COMPRESSION;
+    
+    if (compressionEnabled) {
+      Console.debug('Catalog compression is enabled');
+    } else {
+      Console.debug('Catalog compression is disabled via METEOR_DISABLE_CATALOG_COMPRESSION');
+    }
+    
+    self.tableVersions = new Table('versions', ['packageName', 'version', '_id'], 
+                                  { compress: compressionEnabled });
+    self.tableBuilds = new Table('builds', ['versionId', '_id'], 
+                                { compress: compressionEnabled });
+    self.tableReleaseTracks = new Table('releaseTracks', ['name', '_id'], 
+                                       { compress: compressionEnabled });
+    self.tableReleaseVersions = new Table('releaseVersions', ['track', 'version', '_id'], 
+                                         { compress: compressionEnabled });
+    self.tablePackages = new Table('packages', ['name', '_id'], 
+                                  { compress: compressionEnabled });
+    // Don't compress small tables
+    self.tableSyncToken = new Table('syncToken', ['_id'], { compress: false });
+    self.tableMetadata = new Table('metadata', ['_id'], { compress: false });
     self.tableBannersShown = new Table(
       'bannersShown', ['_id', 'lastShown'], { noContentColumn: true });
 
@@ -885,8 +943,16 @@ Object.assign(RemoteCatalog.prototype, {
     var self = this;
     var rows = await self._columnsQuery(query, params);
     return _.map(rows, function(entity) {
-      return JSON.parse(entity.content);
+      // Decompress content before parsing JSON
+      var decompressed = self._decompressString(entity.content);
+      return JSON.parse(decompressed);
     });
+  },
+
+  // Helper method to decompress content (delegates to table method)
+  _decompressString: function(str) {
+    // Use any table's decompression method (they're all the same)
+    return this.tableVersions._decompressString(str);
   },
 
   // Executes a query, returning an array of maps from column name to data.
