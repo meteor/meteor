@@ -1,3 +1,4 @@
+import { normalizeModernConfig, setMeteorConfig } from "./tool-env/meteor-config";
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -492,6 +493,8 @@ Object.assign(ProjectContext.prototype, {
       self.meteorConfig = new MeteorConfig({
         appDirectory: self.projectDir,
       });
+      self.meteorConfig._ensureInitialized();
+
       if (buildmessage.jobHasMessages()) {
         return;
       }
@@ -1217,7 +1220,16 @@ Object.assign(exports.ProjectConstraintsFile.prototype, {
           constraint: constraintToAdd,
           trailingSpaceAndComment: ''
         };
-        self._constraintLines.push(lineRecord);
+        if (constraintToAdd.package === 'npm-mongo-legacy') {
+          const mongoIdx = self._constraintLines.findIndex(lr => lr.constraint && lr.constraint.package === 'mongo');
+          if (mongoIdx > -1) {
+            self._constraintLines.splice(mongoIdx, 0, lineRecord);
+          } else {
+            self._constraintLines.push(lineRecord);
+          }
+        } else {
+          self._constraintLines.push(lineRecord);
+        }
         self._constraintMap[constraintToAdd.package] = lineRecord;
         self._modified = true;
         return;
@@ -1811,6 +1823,13 @@ export class MeteorConfig {
             },
           }),
         } : this._config;
+    const modernForced = JSON.parse(process.env.METEOR_MODERN || "false");
+    // Reinitialize meteorConfig globally for project context
+    // Updates config when package.json changes trigger rebuilds
+    setMeteorConfig({
+      ...(this._config || {}),
+      modern: normalizeModernConfig(modernForced || this._config?.modern || false),
+    });
 
     return this._config;
   }
@@ -1818,18 +1837,14 @@ export class MeteorConfig {
   // General utility for querying the "meteor" section of package.json.
   // TODO Implement an API for setting these values?
   get(...keys) {
-    let config = this._ensureInitialized();
-    let filteredConfig = keys.length ? {} : config;
-    if (config) {
-      keys.every(key => {
-        if (config && _.has(config, key)) {
-          filteredConfig = config[key];
-          return true;
-        }
-        return false;
-      });
-      return filteredConfig;
-    }
+    const config = this._ensureInitialized();
+    if (!config) return undefined;
+
+    return keys.reduce((cur, key) => {
+      return (cur != null && _.has(cur, key))
+        ? cur[key]
+        : undefined;
+    }, config);
   }
 
   getNodeModulesToRecompileByArch() {

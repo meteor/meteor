@@ -8,7 +8,7 @@ export default defineConfig({
     solidPlugin(),
     solidSvg({ defaultExport: 'component' }),
     meteor({
-      clientEntry: 'imports/ui/main.jsx',
+      clientEntry: 'client/main.js',
       serverEntry: 'server/main.js',
       enableExperimentalFeatures: true,
       stubValidation: {
