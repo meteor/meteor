@@ -29,7 +29,6 @@ var packageJson = {
       "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     "@types/semver": "7.5.8",
     semver: "7.6.3",
-    axios: "1.6.8",
     uuid: "9.0.1",
     "graceful-fs": "4.2.11",
     fstream:
