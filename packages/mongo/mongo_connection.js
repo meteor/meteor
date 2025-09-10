@@ -856,6 +856,7 @@ Object.assign(MongoConnection.prototype, {
     const oplogOptions = self?._oplogHandle?._oplogOptions || {};
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
+
       var matcher, sorter;
       var canUseOplog = [
         function () {
@@ -893,7 +894,7 @@ Object.assign(MongoConnection.prototype, {
           } catch (e) {
             // XXX make all compilation errors MinimongoError or something
             //     so that this doesn't ignore unrelated exceptions
-            if (e instanceof MiniMongoQueryError) {
+            if (Meteor.isClient && e instanceof MiniMongoQueryError) {
               throw e;
             }
             return false;

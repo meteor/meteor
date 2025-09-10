@@ -1789,7 +1789,7 @@ if (Meteor.isServer) (() => {
       ]);
     });
 
-    
+
 
 Tinytest.addAsync("accounts emails - replace email", async test => {
   const origEmail = `originalemail@test.com`;
@@ -1811,7 +1811,7 @@ Tinytest.addAsync("accounts emails - replace email", async test => {
     { address: newEmail, verified: false }
   ]);
 })
-  
+
     Tinytest.addAsync("passwords - remove email",
     async test => {
       const origEmail = `${ Random.id() }@turing.com`;
@@ -1946,5 +1946,106 @@ Tinytest.addAsync("accounts emails - replace email", async test => {
         password: password
       });
     }, 'already exists');
+  });
+
+  Tinytest.addAsync('passwords - send email functions', async test => {
+    // Create a user with an unverified email
+    const username = Random.id();
+    const email = `${username}-intercept@example.com`;
+    const password = 'password';
+
+    const userId = await Accounts.createUserAsync({
+      username: username,
+      email: email,
+      password: password
+    });
+
+    test.isTrue(userId, 'User ID should be returned');
+
+    // Mock Email.sendAsync to track if it was called
+    const originalSendAsync = Email.sendAsync;
+    let emailSent = 0;
+    Email.sendAsync = async (options) => {
+      emailSent++;
+      return originalSendAsync(options);
+    };
+
+    try {
+      // Test sendVerificationEmail
+      const verificationResult = await Accounts.sendVerificationEmail(userId, email);
+
+      // Verify the result contains expected properties
+      test.isTrue(verificationResult, 'Result should be returned for verification email');
+      test.equal(verificationResult.email, email, 'Email in verification result should match');
+      test.isTrue(verificationResult.user, 'User object should be in verification result');
+      test.isTrue(verificationResult.token, 'Token should be in verification result');
+      test.isTrue(verificationResult.url, 'URL should be in verification result');
+      test.isTrue(verificationResult.options, 'Email options should be in verification result');
+
+      // Test sendEnrollmentEmail
+      const enrollmentResult = await Accounts.sendEnrollmentEmail(userId, email);
+
+      // Verify the result contains expected properties
+      test.isTrue(enrollmentResult, 'Result should be returned for enrollment email');
+      test.equal(enrollmentResult.email, email, 'Email in enrollment result should match');
+      test.isTrue(enrollmentResult.user, 'User object should be in enrollment result');
+      test.isTrue(enrollmentResult.token, 'Token should be in enrollment result');
+      test.isTrue(enrollmentResult.url, 'URL should be in enrollment result');
+      test.isTrue(enrollmentResult.options, 'Email options should be in enrollment result');
+
+      // Test sendResetPasswordEmail
+      const resetResult = await Accounts.sendResetPasswordEmail(userId, email);
+
+      // Verify the result contains expected properties
+      test.isTrue(resetResult, 'Result should be returned for reset password email');
+      test.equal(resetResult.email, email, 'Email in reset result should match');
+      test.isTrue(resetResult.user, 'User object should be in reset result');
+      test.isTrue(resetResult.token, 'Token should be in reset result');
+      test.isTrue(resetResult.url, 'URL should be in reset result');
+      test.isTrue(resetResult.options, 'Email options should be in reset result');
+
+      // Verify Email.sendAsync was called for all three emails
+      test.equal(emailSent, 3, 'Email.sendAsync should have been called three times');
+
+      // Get the intercepted emails
+      const interceptedEmails = await Meteor.callAsync("getInterceptedEmails", email);
+      test.equal(interceptedEmails.length, 3, 'Three emails should have been intercepted');
+
+      // Verify the verification email content
+      const verificationEmailOptions = interceptedEmails[0];
+      test.isTrue(verificationEmailOptions, 'Verification email should have been intercepted');
+      const verificationRe = new RegExp(`${Meteor.absoluteUrl()}#/verify-email/(\\S*)`);
+      const verificationMatch = verificationEmailOptions.text.match(verificationRe);
+      test.isTrue(verificationMatch, 'Verification email should contain verification URL');
+      const verificationTokenFromUrl = verificationMatch[1];
+      test.isTrue(verificationResult.url.includes(verificationTokenFromUrl), 'Verification URL in result should contain the token');
+
+      // Verify the enrollment email content
+      const enrollmentEmailOptions = interceptedEmails[1];
+      test.isTrue(enrollmentEmailOptions, 'Enrollment email should have been intercepted');
+      const enrollmentRe = new RegExp(`${Meteor.absoluteUrl()}#/enroll-account/(\\S*)`);
+      const enrollmentMatch = enrollmentEmailOptions.text.match(enrollmentRe);
+      test.isTrue(enrollmentMatch, 'Enrollment email should contain enrollment URL');
+      const enrollmentTokenFromUrl = enrollmentMatch[1];
+      test.isTrue(enrollmentResult.url.includes(enrollmentTokenFromUrl), 'Enrollment URL in result should contain the token');
+
+      // Verify the reset password email content
+      const resetEmailOptions = interceptedEmails[2];
+      test.isTrue(resetEmailOptions, 'Reset password email should have been intercepted');
+      const resetRe = new RegExp(`${Meteor.absoluteUrl()}#/reset-password/(\\S*)`);
+      const resetMatch = resetEmailOptions.text.match(resetRe);
+      test.isTrue(resetMatch, 'Reset password email should contain reset URL');
+      const resetTokenFromUrl = resetMatch[1];
+      test.isTrue(resetResult.url.includes(resetTokenFromUrl), 'Reset URL in result should contain the token');
+
+      // Verify email headers and from address for all emails
+      for (const emailOptions of interceptedEmails) {
+        test.equal(emailOptions.from, 'test@meteor.com', 'From address should match');
+        test.equal(emailOptions.headers['My-Custom-Header'], 'Cool', 'Custom header should be present');
+      }
+    } finally {
+      // Restore the original Email.sendAsync
+      Email.sendAsync = originalSendAsync;
+    }
   });
 })();

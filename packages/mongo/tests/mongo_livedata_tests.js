@@ -4489,6 +4489,49 @@ testAsyncMulti(
 );
 
 
+Meteor.isServer && testAsyncMulti(
+  "mongo-livedata - observeChangesAsync callback errors should not crash the process",
+  [
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_async_error_async_method${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+
+      let insertId;
+      await Collection.find({}).observeChangesAsync({
+        async added(_id, fields) {
+          insertId = _id;
+          throw new Error('Test error in async added observeChangesAsync');
+        },
+      });
+
+      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id, bad) => {
+        test.equal(insertId, id);
+      })
+    },
+
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_async_error_sync_method${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+
+      let insertId;
+      await Collection.find({}).observeChangesAsync({
+        added(id) {
+          insertId = _id;
+          throw new Error('Test error in sync added observeChangesAsync');
+        },
+      });
+
+      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id, bad) => {
+        test.equal(insertId, id);
+      })
+    }
+  ]
+);
+
 Meteor.methods({
   [`methodThrowException`]: async () => {
     if (Meteor.isClient) {
@@ -4516,3 +4559,60 @@ Tinytest.addAsync(
     }
   },
 );
+
+const geoPolygonSchema = {
+  type: 'Polygon',
+  coordinates: Match.Where(coords =>
+    Array.isArray(coords) &&
+    coords.length > 0 &&
+    coords.every(
+      ring => Array.isArray(ring) && ring.every(
+        point => Array.isArray(point) && point.length === 2 &&
+          typeof point[0] === 'number' && typeof point[1] === 'number'
+      )
+    )
+  )
+};
+
+Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct docs', async function(test, onComplete) {
+  if (Meteor.isServer) {
+    const Features = new Mongo.Collection('Features_' + Random.id());
+    const insidePoly = {
+      _id: 'inside',
+      hull: {
+        type: 'Polygon',
+        coordinates: [
+          [ [0.2,0.2], [0.2,0.8], [0.8,0.8], [0.8,0.2], [0.2,0.2] ]
+        ]
+      }
+    };
+    const outsidePoly = {
+      _id: 'outside',
+      hull: {
+        type: 'Polygon',
+        coordinates: [
+          [ [2,2], [2,3], [3,3], [3,2], [2,2] ]
+        ]
+      }
+    };
+    await Features.insertAsync(insidePoly);
+    await Features.insertAsync(outsidePoly);
+
+    const viewport = {
+      bounds: {
+        type: 'Polygon',
+        coordinates: [
+          [ [0,0], [0,1], [1,1], [1,0], [0,0] ]
+        ]
+      }
+    };
+    const cursor = Features.find({ hull: { $geoIntersects: { $geometry: viewport.bounds } } });
+    const docs = await cursor.fetchAsync();
+    test.equal(docs.length, 1);
+    test.equal(docs[0]._id, 'inside');
+    onComplete();
+  }
+  if (Meteor.isClient) {
+    onComplete();
+  }
+});
