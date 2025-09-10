@@ -199,3 +199,71 @@ selftest.define("testModule", async function () {
 
   await run.stop();
 });
+
+async function writeModernConfig(s, run, modernConfig, errorPattern) {
+  const json = JSON.parse(s.read("package.json"));
+
+  json.meteor = {
+    // Make sure the tests.js module is always loaded eagerly.
+    testModule: "tests.js"
+  };
+
+  if (typeof modernConfig === "undefined") {
+    delete json.meteor.modern;
+  } else {
+    json.meteor.modern = modernConfig;
+  }
+
+  s.write("package.json", JSON.stringify(json, null, 2) + "\n");
+
+  run.waitSecs(10);
+
+  if (errorPattern instanceof RegExp) {
+    await run.match(errorPattern);
+  } else {
+    run.forbid(" 0 passing ");
+    await run.match("SERVER FAILURES: 0");
+    await run.match("CLIENT FAILURES: 0");
+  }
+}
+
+selftest.define("modernConfig", async function () {
+  const s = new Sandbox();
+  await s.init();
+
+  await s.createApp("app-config-modernConfig", "app-config");
+  await s.cd("app-config-modernConfig");
+
+  // For meteortesting:mocha to work we must set test broswer driver
+  // See https://github.com/meteortesting/meteor-mocha
+  s.set("TEST_BROWSER_DRIVER", "puppeteer");
+
+  const run = s.run(
+    "test",
+    "--full-app",
+    "--driver-package", "meteortesting:mocha"
+  );
+
+  run.waitSecs(60);
+  await run.match("App running at");
+
+  function check(modernConfig) {
+    return writeModernConfig(s, run, modernConfig);
+  }
+
+  // Test with modern disabled
+  await check(false);
+
+  // Test with modern enabled
+  await check(true);
+
+  // Test with combined options
+  await check({
+    transpiler: true,
+    watcher: true,
+    webArchOnly: true,
+    minifier: true,
+  });
+
+  await run.stop();
+});

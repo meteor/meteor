@@ -188,8 +188,34 @@ selftest.define("modern build stack - transpiler boolean-like options", async fu
   const s = new Sandbox();
   await s.init();
 
+  s.mkdir("config-package");
+  s.cd("config-package");
+
+  s.write(
+    "package.json",
+    JSON.stringify({
+      name: "config",
+      version: "1.2.3",
+      "private": true,
+      main: "index.js"
+    }, null, 2) + "\n"
+  );
+
+  s.write(
+    "index.js",
+    "exports.id = module.id;\n"
+  );
+
+  s.cd(s.home);
+
   await s.createApp("modern", "modern");
   await s.cd("modern");
+
+  s.append(
+    "server/main.js",
+    `if (require('config')) {
+  console.log('Loaded NPM package "config"', require('config').id);
+}`);
 
   process.env.METEOR_DISABLE_COLORS = true;
 
@@ -204,14 +230,18 @@ selftest.define("modern build stack - transpiler boolean-like options", async fu
   run.waitSecs(waitToStart);
   await run.match("App running at");
 
+  /* check appended NPM package require */
+  await run.match(/Loaded NPM package "config"/, false, true);
+
   /* check verbose logs */
-  await run.match(/SWC Config/, false, true);
+  await run.match(/SWC Custom Config/, false, true);
   await run.match(/SWC Legacy Config/, false, true);
   await run.match(/Meteor Config/, false, true);
 
   /* check transpiler options */
   await run.match(/\[Transpiler] Used SWC.*\(app\)/, false, true);
   await run.match(/\[Transpiler] Used SWC.*\(package\)/, false, true);
+  run.forbid(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
 
   await writeModernConfig(s, {
     transpiler: {
@@ -229,6 +259,20 @@ selftest.define("modern build stack - transpiler boolean-like options", async fu
   });
   await run.match(/\[Transpiler] Used Babel.*\(package\)/, false, true);
 
+  await writeConfig(s, {
+    modern: {
+      transpiler: {
+        verbose: true,
+      },
+    },
+    nodeModules: {
+      recompile: {
+        config: true,
+      },
+    },
+  });
+  await run.match(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
+
   await run.stop();
 
   process.env.METEOR_MODERN = currentMeteorModern;
@@ -241,8 +285,33 @@ selftest.define("modern build stack - transpiler string-like options", async fun
   const s = new Sandbox();
   await s.init();
 
+  s.mkdir("config-package");
+  s.cd("config-package");
+
+  s.write(
+    "package.json",
+    JSON.stringify({
+      name: "config",
+      version: "1.2.3",
+      "private": true,
+      main: "index.js"
+    }, null, 2) + "\n"
+  );
+
+  s.write(
+    "index.js",
+    "exports.id = module.id;\n"
+  );
+
+  s.cd(s.home);
+
   await s.createApp("modern", "modern");
   await s.cd("modern");
+
+  s.append(
+    "server/main.js",
+    `import { id } from 'config';
+console.log('Loaded NPM package "config"', require('config').id);`);
 
   process.env.METEOR_DISABLE_COLORS = true;
 
@@ -257,14 +326,18 @@ selftest.define("modern build stack - transpiler string-like options", async fun
   run.waitSecs(waitToStart);
   await run.match("App running at");
 
+  /* check appended NPM package imported */
+  await run.match(/Loaded NPM package "config"/, false, true);
+
   /* check verbose logs */
-  await run.match(/SWC Config/, false, true);
+  await run.match(/SWC Custom Config/, false, true);
   await run.match(/SWC Legacy Config/, false, true);
   await run.match(/Meteor Config/, false, true);
 
   /* check transpiler options */
   await run.match(/\[Transpiler] Used SWC.*\(app\)/, false, true);
   await run.match(/\[Transpiler] Used SWC.*\(package\)/, false, true);
+  run.forbid(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
 
   await writeModernConfig(s, {
     transpiler: {
@@ -281,6 +354,20 @@ selftest.define("modern build stack - transpiler string-like options", async fun
     },
   });
   await run.match(/\[Transpiler] Used Babel.*\(package\)/, false, true);
+
+  await writeConfig(s, {
+    modern: {
+      transpiler: {
+        verbose: true,
+      },
+    },
+    nodeModules: {
+      recompile: {
+        config: true,
+      },
+    },
+  });
+  await run.match(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
 
   await run.stop();
 

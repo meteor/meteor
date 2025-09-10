@@ -4,8 +4,7 @@ In this tutorial, we will create a simple To-Do app using [Vue 3](https://vuejs.
 
 Vue.js is a powerful JavaScript framework for making user interfaces. It helps you build interactive applications by using templates that connect to data and update automatically when the data changes. Vue.js templates use a simple syntax similar to HTML and work with Vue’s reactivity system to show components in the browser.
 
-To start building your Vue.js app, you'll need a code editor. If you're unsure which one to choose, [Visual Studio Code](https://code.visualstudio.com/) is a good option. After installing it, you can enhance your experience by adding extensions like [Meteor Toolbox](https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox) and [Vue Language Features](https://marketplace.visualstudio.com/items?itemName=Vue.volar).
-
+To start building your Vue.js app, you'll need a code editor. If you're unsure which one to choose, [Visual Studio Code](https://code.visualstudio.com/) is a good option.
 :::warning
 This tutorial uses the `vue-meteor-tracker` package, which is currently in beta and does not support async calls yet. However, it is still a valuable package, and we hope it will be updated soon. We are also working on a new tutorial that will use Meteor core packages instead.
 :::
@@ -206,7 +205,7 @@ Before creating our collection, let's remove the `links.js` file from the `impor
 ::: code-group
 ```javascript [imports/api/tasksCollection.js]
 import { Mongo } from 'meteor/mongo';
- 
+
 export const TasksCollection = new Mongo.Collection('tasks');
 ```
 :::
@@ -259,7 +258,7 @@ Meteor works with Meteor packages and NPM packages, usually Meteor packages are 
 
 The `vue-meteor-tracker` package is already included in the Vue skeleton, so you don’t need to add it.
 
-When importing code from a Meteor package the only difference from NPM modules is that you need to prepend `meteor/` in the from part of your import.  
+When importing code from a Meteor package the only difference from NPM modules is that you need to prepend `meteor/` in the from part of your import.
 First we need to implement a subscription at the `App` component to get the tasks updated from the server. It can be done simply by using the `subscribe` and `autorun` functions from `vue-meteor-tracker`.
 
 ::: info
@@ -500,7 +499,7 @@ Until now, you have only inserted documents to our collection. Let’s see how y
 ### 4.1: Add Checkbox
 
 
-First, you need to add a `checkbox` element to your `Task` component, and we need to add the `v-model` directive to the checkbox. This will allow us to bind the value of the checkbox to the `checked` field of the task document.  
+First, you need to add a `checkbox` element to your `Task` component, and we need to add the `v-model` directive to the checkbox. This will allow us to bind the value of the checkbox to the `checked` field of the task document.
 To do this, we need to add a `ref` to the task document. This will allow us to access the task document in the template. And add a computed property `isChecked` for the state management of the checkbox.
 
 We also have a prop called `task` that is passed to the component. This prop is an object that represents the task document.
@@ -604,7 +603,7 @@ const isChecked = computed(() => taskRef.value.checked);
 const handleCheckboxChange = async (event) => {
     const newCheckedValue = event.target.checked;
     taskRef.value.checked = newCheckedValue;
-    
+
     try {
       await Meteor.callAsync('setIsCheckedTask', taskRef.value._id, newCheckedValue);
     } catch (error) {
@@ -644,9 +643,9 @@ First add a button after the text in your `Task` component and receive a callbac
   {{ task.text }}
 </span>
 
-<button 
+<button
     class="ml-auto bg-red-500 hover:bg-red-600 text-white font-bold py-0.5 px-2 rounded"
-    @click="deleteTask"> &times; 
+    @click="deleteTask"> &times;
 </button>
 ...
 ```
@@ -829,7 +828,7 @@ You should avoid adding zero to your app bar when there are no pending tasks.
 ::: code-group
 ```vue [imports/ui/App.vue]
 <script setup>
-... 
+...
 const incompleteTasksCount = autorun(() => {
   return TasksCollection.find({ checked: { $ne: true } }).count();
 }).result;
@@ -1235,7 +1234,7 @@ async function setIsCheckedTask(taskId, checked) {
     if (!Meteor.userId()) {
         throw new Meteor.Error('Not authorized.');
     }
-    
+
     await TasksCollection.updateAsync(taskId, {
         $set: {
             checked
@@ -1329,13 +1328,13 @@ Make sure you replace `vue3-meteor-3` by a custom name that you want as subdomai
 ```shell
 meteor deploy vue3-meteor-3.meteorapp.com --settings private/settings.json
 Talking to Galaxy servers at https://us-east-1.galaxy-deploy.meteor.com
-Preparing to build your app...                
-Preparing to upload your app... 
+Preparing to build your app...
+Preparing to upload your app...
 Uploaded app bundle for new app at vue-tutorial.meteorapp.com.
 Galaxy is building the app into a native image.
-Waiting for deployment updates from Galaxy... 
-Building app image...                         
-Deploying app...                              
+Waiting for deployment updates from Galaxy...
+Building app image...
+Deploying app...
 You have successfully deployed the first version of your app.
 For details, visit https://galaxy.meteor.com/app/vue3-meteor-3.meteorapp.com
 ```

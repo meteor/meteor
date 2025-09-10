@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.23.9",
+    "@swc/helpers": "^0.5.17",
     "meteor-node-stubs": "^1.2.12",
     "picocolors": "^1.1.1",
     "solid-js": "^1.9.4"
