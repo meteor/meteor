@@ -396,19 +396,6 @@ export default defineConfig({
             ]
           },
           {
-            text:"Deprecated",
-            items:[
-              {
-                text: "appcache",
-                link: "/packages/appcache",
-              },
-              {
-                text: "markdown",
-                link: "/packages/markdown",
-              },
-            ],
-          },
-          {
             link: "/packages/packages-listing",
             text: "Maintained Packages",
           },
