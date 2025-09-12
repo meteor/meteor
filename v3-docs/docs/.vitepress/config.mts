@@ -40,10 +40,6 @@ export default defineConfig({
                 text: "Meteor + Vue + vue-meteor-tracker",
                 link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
               },
-              {
-                text: "Atmosphere packages",
-                link: "/tutorials/packages/index",
-              },
             ],
           },
         ],
@@ -471,10 +467,6 @@ export default defineConfig({
           {
             link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
             text: "Meteor + Vue + vue-meteor-tracker",
-          },
-          {
-            text: "Atmosphere packages",
-            link: "/tutorials/packages/index",
           },
         ],
         collapsed: true,
