@@ -352,3 +352,6 @@ accounts2.loginWithToken(token);
 ```
 
 You can see a proof of concept of this architecture in an [example repository](https://github.com/tmeasday/multi-app-accounts).
+
+
+Another pattern is to have another app which acts as identity provider for your apps. The [leaonline:oauth2-server](https://atmospherejs.com/leaonline/oauth2-server) package can be used to create an OAuth2 server in one Meteor app, and then other apps can use the standard `accounts-oauth` packages to authenticate users against it.
