@@ -10,7 +10,7 @@ After reading this article, you'll know:
 
 ## Universal JavaScript
 
-Meteor is a *full-stack* framework for building JavaScript applications. This means Meteor applications differ from most applications in that they include code that runs on the client, inside a web browser or Cordova mobile app, code that runs on the server, inside a [Node.js](http://nodejs.org/) container, and _common_ code that runs in both environments. The [Meteor build tool](https://guide.meteor.com/build-tool) allows you to specify what JavaScript code, including any supporting UI templates, CSS rules, and static assets, to run in each environment using a combination of ES2015 `import` and `export` and the Meteor build system [default file load order](#load-order) rules.
+Meteor is a *full-stack* framework for building JavaScript applications. This means Meteor applications differ from most applications in that they include code that runs on the client, inside a web browser or Cordova mobile app, code that runs on the server, inside a [Node.js](http://nodejs.org/) container, and _common_ code that runs in both environments. The [Meteor build tool](https://guide.meteor.com/build-tool) allows you to specify what JavaScript code, including any supporting UI templates, CSS rules, and static assets, to run in each environment using a combination of ES2015 `import` and `export` and the Meteor build system [default file load order](#default-file-load-order) rules.
 
 ### ES2015 modules
 
@@ -53,7 +53,7 @@ import moment from 'moment';          // default import from npm
 import { HTTP } from 'meteor/http';   // named import from Atmosphere
 ```
 
-For more details using `imports` with packages see [Using Packages](../packages/#using-atmosphere-packages) in the Meteor Guide.
+For more details using `imports` with packages see [Using Packages](../packages/#using-atmosphere-packages) tutorial.
 
 ### Using `require`
 
@@ -180,25 +180,15 @@ import '/imports/startup/client';
 On the server, we use the same technique of importing all the startup code in `imports/startup/server/index.js`:
 
 ```js
-// This defines a starting set of data to be loaded if the app is loaded with an empty db.
-import '../imports/startup/server/fixtures.js';
-
-// This file configures the Accounts package to define the UI of the reset password email.
-import '../imports/startup/server/reset-password-email.js';
-
-// Set up some rate limiting and other important security settings.
-import '../imports/startup/server/security.js';
-
-// This defines all the collections, publications and methods that the application provides
-// as an API to the client.
-import '../imports/api/api.js';
+import './fixtures.js';
+import './register-api.js';
 ```
 
 Our main server entry point `server/main.js` then imports this startup module. You can see that here we don't actually import any variables from these files - we import them so that they execute in this order.
 
 ### Importing Meteor "pseudo-globals"
 
-For backwards compatibility Meteor 1.3 still provides Meteor's global namespacing for the Meteor core package as well as for other Meteor packages you include in your application. You can also still directly call functions such as [`Meteor.publish`](http://docs.meteor.com/#/full/meteor_publish), as in previous versions of Meteor, without first importing them. However, it is recommended best practice that you first load all the Meteor "pseudo-globals" using the `import { Name } from 'meteor/package'` syntax before using them. For instance:
+For backwards compatibility Meteor still provides Meteor's global namespacing for the Meteor core package as well as for other Meteor packages you include in your application. You can also still directly call functions such as [`Meteor.publish`](https://docs.meteor.com/api/Meteor#Meteor-publish), as in previous versions of Meteor, without first importing them. However, it is recommended best practice that you first load all the Meteor "pseudo-globals" using the `import { Name } from 'meteor/package'` syntax before using them. For instance:
 
 ```js
 import { Meteor } from 'meteor/meteor';
@@ -207,7 +197,7 @@ import { EJSON } from 'meteor/ejson';
 
 ## Default file load order
 
-Even though it is recommended that you write your application to use ES2015 modules and the `imports/` directory, Meteor 1.3 continues to support eager evaluation of files, using these default load order rules, to provide backwards compatibility with applications written for Meteor 1.2 and earlier. For a description of the difference between eager evaluation, lazy evaluation, and lazy loading, please see this Stack Overflow [article](https://stackoverflow.com/a/51158735/219238).
+Even though it is recommended that you write your application to use ES2015 modules and the `imports/` directory, Meteor continues to support eager evaluation of files, using these default load order rules, to provide backwards compatibility with applications written for Meteor 1.2 and earlier. For a description of the difference between eager evaluation, lazy evaluation, and lazy loading, please see this Stack Overflow [article](https://stackoverflow.com/a/51158735/219238).
 
 You may combine both eager evaluation and lazy loading using `import` in a single app. Any import statements are evaluated in the order they are listed in a file when that file is loaded and evaluated using these rules.
 
@@ -235,7 +225,7 @@ For example, the files above are arranged in the correct load order. `main.html`
 
 `client/lib/styles.js` and `lib/feature/styles.js` have identical load order up to rule 4; however, since `client` comes before `lib` alphabetically, it will be loaded first.
 
-> You can also use [Meteor.startup](http://docs.meteor.com/#/full/meteor_startup) to control when run code is run on both the server and the client.
+> You can also use [Meteor.startup](https://docs.meteor.com/api/Meteor#Meteor-startup) to control when run code is run on both the server and the client.
 
 ### Special directories
 
@@ -267,7 +257,7 @@ By default, any JavaScript files in your Meteor application folder are bundled a
 
 - **private**
 
-  All files inside a top-level directory called `private/` are only accessible from server code and can be loaded via the [`Assets`](http://docs.meteor.com/#/full/assets_getText) API. This can be used for private data files and any files that are in your project directory that you don't want to be accessible from the outside.
+  All files inside a top-level directory called `private/` are only accessible from server code and can be loaded via the [`Assets`](https://docs.meteor.com/api/Assets#Assets-getTextAsync) API. This can be used for private data files and any files that are in your project directory that you don't want to be accessible from the outside.
 
 - **client/compatibility**
 
@@ -288,7 +278,7 @@ The following directories are also not loaded as part of your app code:
 
 ### Files outside special directories
 
-All JavaScript files outside special directories are loaded on both the client and the server. Meteor provides the variables [`Meteor.isClient`](http://docs.meteor.com/#/full/meteor_isserver) and [`Meteor.isServer`](http://docs.meteor.com/#/full/meteor_isserver) so that your code can alter its behavior depending on whether it's running on the client or the server.
+All JavaScript files outside special directories are loaded on both the client and the server. Meteor provides the variables [`Meteor.isClient`](https://docs.meteor.com/api/Meteor#Meteor-isClient) and [`Meteor.isServer`](https://docs.meteor.com/api/Meteor#Meteor-isServer) so that your code can alter its behavior depending on whether it's running on the client or the server.
 
 CSS and HTML files outside special directories are loaded on the client only and cannot be used from server code.
 
