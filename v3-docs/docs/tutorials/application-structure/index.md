@@ -316,7 +316,22 @@ The simplest approach is to point both applications at the same `MONGO_URL` and 
 
 However, in some cases it's better to allow one application to be the master and control access to the data for other applications via an API. This can help if you want to deploy the different applications on different schedules and need to be conservative about how the data changes.
 
-The simplest way to provide a server-server API is to use Meteor's built-in DDP protocol directly. This is the same way your Meteor client gets data from your server, but you can also use it to communicate between different applications. You can use [`DDP.connect()`](http://docs.meteor.com/#/full/ddp_connect) to connect from a "client" server to the master server, and then use the connection object returned to make method calls and read from publications.
+The simplest way to provide a server-server API is to use Meteor's built-in DDP protocol directly. This is the same way your Meteor client gets data from your server, but you can also use it to communicate between different applications. You can use [`DDP.connect()`](https://docs.meteor.com/api/meteor#DDP-connect) to connect from a "client" server to the master server, and then use the connection object returned to make method calls and read from publications.
+
+If you need a more traditional API, you can use the bundled `express` available in Meteor. See the [documentation of WebApp](https://docs.meteor.com/packages/webapp#webapp)
+
+```js
+import { Meteor } from "meteor/meteor";
+import { WebApp } from "meteor/webapp";
+import bodyParser from "body-parser";
+
+const app = WebApp.handlers;
+app.use(bodyParser.json());
+app.use("/hello", (req, res, next) => {
+  res.writeHead(200);
+  res.end(`Hello world from: ${Meteor.release}`);
+});
+```
 
 ### Sharing accounts
 
