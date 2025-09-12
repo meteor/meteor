@@ -8,6 +8,8 @@ import { replaceMongoAtomWithMeteor, replaceTypes } from './mongo_common';
  * This is an internal implementation detail and is created lazily by the main Cursor class.
  */
 export class AsynchronousCursor {
+  _closing = false;
+  _pendingNext = null;
   constructor(dbCursor, cursorDescription, options) {
     this._dbCursor = dbCursor;
     this._cursorDescription = cursorDescription;
@@ -36,10 +38,19 @@ export class AsynchronousCursor {
   // Returns a Promise for the next object from the underlying cursor (before
   // the Mongo->Meteor type replacement).
   async _rawNextObjectPromise() {
+    if (this._closing) {
+      // Prevent next() after close is called
+      return null;
+    }
     try {
-      return this._dbCursor.next();
+      this._pendingNext = this._dbCursor.next();
+      const result = await this._pendingNext;
+      this._pendingNext = null;
+      return result;
     } catch (e) {
       console.error(e);
+    } finally {
+      this._pendingNext = null;
     }
   }
 
@@ -74,24 +85,24 @@ export class AsynchronousCursor {
   // _nextObjectPromise) or rejected if the cursor doesn't return within
   // timeoutMS ms.
   _nextObjectPromiseWithTimeout(timeoutMS) {
-    if (!timeoutMS) {
-      return this._nextObjectPromise();
-    }
     const nextObjectPromise = this._nextObjectPromise();
-    const timeoutErr = new Error('Client-side timeout waiting for next object');
-    const timeoutPromise = new Promise((resolve, reject) => {
-      setTimeout(() => {
-        reject(timeoutErr);
+    if (!timeoutMS) {
+      return nextObjectPromise;
+    }
+
+    const timeoutPromise = new Promise(resolve => {
+      // On timeout, close the cursor.
+      const timeoutId = setTimeout(() => {
+        resolve(this.close());
       }, timeoutMS);
-    });
-    return Promise.race([nextObjectPromise, timeoutPromise])
-      .catch((err) => {
-        if (err === timeoutErr) {
-          this.close();
-          return;
-        }
-        throw err;
+
+      // If the `_nextObjectPromise` returned first, cancel the timeout.
+      nextObjectPromise.finally(() => {
+        clearTimeout(timeoutId);
       });
+    });
+
+    return Promise.race([nextObjectPromise, timeoutPromise]);
   }
 
   async forEach(callback, thisArg) {
@@ -123,7 +134,16 @@ export class AsynchronousCursor {
   }
 
   // Mostly usable for tailable cursors.
-  close() {
+  async close() {
+    this._closing = true;
+    // If there's a pending next(), wait for it to finish or abort
+    if (this._pendingNext) {
+      try {
+        await this._pendingNext;
+      } catch (e) {
+        // ignore
+      }
+    }
     this._dbCursor.close();
   }
 
