@@ -1,8 +1,4 @@
----
-title: Application Structure
-description: How to structure your Meteor app with ES2015 modules, ship code to the client and server, and split your code into multiple apps.
-discourseTopicId: 20187
----
+# Application Structure
 
 After reading this article, you'll know:
 
@@ -10,11 +6,13 @@ After reading this article, you'll know:
 2. How to organize your application both for small and larger applications.
 3. How to format your code and name the parts of your application in consistent and maintainable ways.
 
-<h2 id="meteor-structure">Universal JavaScript</h2>
+[[toc]]
 
-Meteor is a *full-stack* framework for building JavaScript applications. This means Meteor applications differ from most applications in that they include code that runs on the client, inside a web browser or Cordova mobile app, code that runs on the server, inside a [Node.js](http://nodejs.org/) container, and _common_ code that runs in both environments. The [Meteor build tool](build-tool.html) allows you to specify what JavaScript code, including any supporting UI templates, CSS rules, and static assets, to run in each environment using a combination of ES2015 `import` and `export` and the Meteor build system [default file load order](#load-order) rules.
+## Universal JavaScript
 
-<h3 id="es2015-modules">ES2015 modules</h3>
+Meteor is a *full-stack* framework for building JavaScript applications. This means Meteor applications differ from most applications in that they include code that runs on the client, inside a web browser or Cordova mobile app, code that runs on the server, inside a [Node.js](http://nodejs.org/) container, and _common_ code that runs in both environments. The [Meteor build tool](https://guide.meteor.com/build-tool) allows you to specify what JavaScript code, including any supporting UI templates, CSS rules, and static assets, to run in each environment using a combination of ES2015 `import` and `export` and the Meteor build system [default file load order](#load-order) rules.
+
+### ES2015 modules
 
 As of version 1.3, Meteor ships with full support for [ES2015 modules](https://developer.mozilla.org/en/docs/web/javascript/reference/statements/import). The ES2015 module standard is the replacement for [CommonJS](http://requirejs.org/docs/commonjs.html) and [AMD](https://github.com/amdjs/amdjs-api), which are commonly used JavaScript module format and loading systems.
 
@@ -24,7 +22,7 @@ Since this is a new feature introduced in Meteor 1.3, you will find a lot of cod
 
 You can read about the module system in detail in the [`modules` package README](https://docs.meteor.com/#/full/modules). This package is automatically included in every new Meteor app as part of the [`ecmascript` meta-package](https://docs.meteor.com/#/full/ecmascript), so most apps won't need to do anything to start using modules right away.
 
-<h3 id="intro-to-import-export">Introduction to using `import` and `export`</h3>
+### Introduction to using `import` and `export`
 
 Meteor allows you to `import` not only JavaScript in your application, but also CSS and HTML to control load order:
 
@@ -35,7 +33,7 @@ import './loading.html';              // import Blaze compiled HTML from relativ
 import '/imports/ui/style.css';       // import CSS from absolute path
 ```
 
-> For more ways to import styles, see the [Build System](build-tool.html#css-importing) article.
+> For more ways to import styles, see the [Build System](https://guide.meteor.com/build-tool#css-importing) article.
 
 Meteor also supports the standard ES2015 modules `export` syntax:
 
@@ -46,7 +44,7 @@ export default Lists;                               // default export
 export default new Collection('lists');             // default export
 ```
 
-<h3 id="importing-from-packages">Importing from packages</h3>
+### Importing from packages
 
 In Meteor, it is also simple and straightforward to use the `import` syntax to load npm packages on the client or server and access the package's exported symbols as you would with any other module. You can also import from Meteor Atmosphere packages, but the import path must be prefixed with `meteor/` to avoid conflict with the npm package namespace. For example, to import `moment` from npm and `HTTP` from Atmosphere:
 
@@ -55,9 +53,9 @@ import moment from 'moment';          // default import from npm
 import { HTTP } from 'meteor/http';   // named import from Atmosphere
 ```
 
-For more details using `imports` with packages see [Using Packages](using-packages.html) in the Meteor Guide.
+For more details using `imports` with packages see [Using Packages](../packages/#using-atmosphere-packages) in the Meteor Guide.
 
-<h3 id="using-require">Using `require`</h3>
+### Using `require`
 
 In Meteor, `import` statements compile to CommonJS `require` syntax. However, as a convention we encourage you to use `import`.
 
@@ -73,9 +71,9 @@ Note that dynamic calls to `require()` (where the name being required can change
 
 If you need to `require` from an ES2015 module with a `default` export, you can grab the export with `require("package").default`.
 
-<h3 id="exporting-from-coffeescript">Using CoffeeScript</h3>
+### Using CoffeeScript
 
-See the Docs: [Modules » Syntax » CoffeeScript](https://docs.meteor.com/packages/modules.html#CoffeeScript)
+See the Docs: [CoffeeScript](https://docs.meteor.com/packages/coffeescript.html#coffeescript)
 
 ```cs
 // lists.coffee
@@ -87,7 +85,7 @@ export Lists = new Collection 'lists'
 import { Lists } from './lists.coffee'
 ```
 
-<h2 id="javascript-structure">File structure</h2>
+## File structure
 
 To fully use the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed inside the `imports/` directory. This means that the Meteor build system will only bundle and include that file if it is referenced from another file using an `import` (also called "lazy evaluation or loading").
 
@@ -95,7 +93,7 @@ Meteor will load all files outside of any directory named `imports/` in the appl
 
 These `main.js` files won't do anything themselves, but they should import some _startup_ modules which will run immediately, on client and server respectively, when the app loads. These modules should do any configuration necessary for the packages you are using in your app, and import the rest of your app's code.
 
-<h3 id="example-app-structure">Example directory layout</h3>
+### Example directory layout
 
 To start, let's look at our [Todos example application](https://github.com/meteor/todos), which is a great example to follow when structuring your app. Below is an overview of its directory structure. You can generate a new app with this structure using the command `meteor create appName --full`.
 
@@ -133,7 +131,7 @@ server/
   main.js                      # server entry point, imports all server code
 ```
 
-<h3 id="structuring-imports">Structuring imports</h3>
+### Structuring imports
 
 Now that we have placed all files inside the `imports/` directory, let's think about how best to organize our code using modules. It makes sense to put all code that runs when your app starts in an `imports/startup` directory. Another good idea is splitting data and business logic from UI rendering code. We suggest using directories called `imports/api` and `imports/ui` for this logical split.
 
@@ -145,9 +143,9 @@ Within the `imports/ui` directory it typically makes sense to group files into d
 
 For each module defined above, it makes sense to co-locate the various auxiliary files with the base JavaScript file. For instance, a Blaze UI component should have its template HTML, JavaScript logic, and CSS rules in the same directory. A JavaScript module with some business logic should be co-located with the unit tests for that module.
 
-<h3 id="startup-files">Startup files</h3>
+### Startup files
 
-Some of your code isn't going to be a unit of business logic or UI, it's some setup or configuration code that needs to run in the context of the app when it starts up. In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client:
+Some of your code isn't going to be a unit of business logic or UI, it's some setup or configuration code that needs to run in the context of the app when it starts up. In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates (see the [Accounts](https://guide.meteor.com/accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client:
 
 ```js
 import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
@@ -198,7 +196,7 @@ import '../imports/api/api.js';
 
 Our main server entry point `server/main.js` then imports this startup module. You can see that here we don't actually import any variables from these files - we import them so that they execute in this order.
 
-<h3 id="importing-meteor-globals">Importing Meteor "pseudo-globals"</h3>
+### Importing Meteor "pseudo-globals"
 
 For backwards compatibility Meteor 1.3 still provides Meteor's global namespacing for the Meteor core package as well as for other Meteor packages you include in your application. You can also still directly call functions such as [`Meteor.publish`](http://docs.meteor.com/#/full/meteor_publish), as in previous versions of Meteor, without first importing them. However, it is recommended best practice that you first load all the Meteor "pseudo-globals" using the `import { Name } from 'meteor/package'` syntax before using them. For instance:
 
@@ -207,7 +205,7 @@ import { Meteor } from 'meteor/meteor';
 import { EJSON } from 'meteor/ejson';
 ```
 
-<h2 id="load-order">Default file load order</h2>
+## Default file load order
 
 Even though it is recommended that you write your application to use ES2015 modules and the `imports/` directory, Meteor 1.3 continues to support eager evaluation of files, using these default load order rules, to provide backwards compatibility with applications written for Meteor 1.2 and earlier. For a description of the difference between eager evaluation, lazy evaluation, and lazy loading, please see this Stack Overflow [article](https://stackoverflow.com/a/51158735/219238).
 
@@ -239,7 +237,7 @@ For example, the files above are arranged in the correct load order. `main.html`
 
 > You can also use [Meteor.startup](http://docs.meteor.com/#/full/meteor_startup) to control when run code is run on both the server and the client.
 
-<h3 id="special-directories">Special directories</h3>
+### Special directories
 
 By default, any JavaScript files in your Meteor application folder are bundled and loaded on both the client and the server. However, the names of the files and directories inside your project can affect their load order, where they are loaded, and some other characteristics. Here is a list of file and directory names that are treated specially by Meteor:
 
@@ -279,22 +277,22 @@ By default, any JavaScript files in your Meteor application folder are bundled a
 
 - **tests**
 
-  Any directory named `tests/` is not loaded anywhere. Use this for any test code you want to run using a test runner outside of [Meteor's built-in test tools](testing.html).
+  Any directory named `tests/` is not loaded anywhere. Use this for any test code you want to run using a test runner outside of [Meteor's built-in test tools](https://guide.meteor.com/testing.html).
 
 The following directories are also not loaded as part of your app code:
 
 - Files/directories whose names start with a dot, like `.meteor` and `.git`
 - `packages/`: Used for local packages
-- `cordova-build-override/`: Used for [advanced mobile build customizations](mobile.html#advanced-build)
+- `cordova-build-override/`: Used for [advanced mobile build customizations](https://guide.meteor.com/mobile.html#advanced-build)
 - `programs`: For legacy reasons
 
-<h3 id="files-outside">Files outside special directories</h3>
+### Files outside special directories
 
 All JavaScript files outside special directories are loaded on both the client and the server. Meteor provides the variables [`Meteor.isClient`](http://docs.meteor.com/#/full/meteor_isserver) and [`Meteor.isServer`](http://docs.meteor.com/#/full/meteor_isserver) so that your code can alter its behavior depending on whether it's running on the client or the server.
 
 CSS and HTML files outside special directories are loaded on the client only and cannot be used from server code.
 
-<h2 id="splitting-your-app">Splitting into multiple apps</h2>
+## Splitting into multiple apps
 
 If you are writing a sufficiently complex system, there can come a time where it makes sense to split your code up into multiple applications. For example you may want to create a separate application for the administration UI (rather than checking permissions all through the admin part of your site, you can check once), or separate the code for the mobile and desktop versions of your app.
 
@@ -310,11 +308,11 @@ There are some advantages of splitting your application in this way:
 
 However there are some challenges to splitting your code in this way that should be considered before jumping in.
 
-<h3 id="sharing-code">Sharing code</h3>
+### Sharing code
 
-The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to deploy the *same* application on different web servers, controlling the behavior via different [settings](deployment.html#environment). This approach allows you to deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
+The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to deploy the *same* application on different web servers, controlling the behavior via different [settings](https://guide.meteor.com/deployment.html#environment). This approach allows you to deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
 
-If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](writing-packages.html), either npm or Atmosphere, depending on whether the code is Meteor-specific or otherwise.
+If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](../packages/#writing-atmosphere-packages), either npm or Atmosphere, depending on whether the code is Meteor-specific or otherwise.
 
 If the code is private, or of no interest to others, it typically makes sense to include the same module in both applications (you *can* do this with [private npm modules](https://docs.npmjs.com/about-private-packages)). There are several ways to do this:
 
@@ -322,7 +320,7 @@ If the code is private, or of no interest to others, it typically makes sense to
 
 - alternatively, if you include both applications in a single repository, you can use symbolic links to include the common module inside both apps.
 
-<h3 id="sharing-data">Sharing data</h3>
+### Sharing data
 
 Another important consideration is how you'll share the data between your different applications.
 
@@ -332,7 +330,7 @@ However, in some cases it's better to allow one application to be the master and
 
 The simplest way to provide a server-server API is to use Meteor's built-in DDP protocol directly. This is the same way your Meteor client gets data from your server, but you can also use it to communicate between different applications. You can use [`DDP.connect()`](http://docs.meteor.com/#/full/ddp_connect) to connect from a "client" server to the master server, and then use the connection object returned to make method calls and read from publications.
 
-<h3 id="sharing-accounts">Sharing accounts</h3>
+### Sharing accounts
 
 If you have two servers that access the same database and you want authenticated users to make DDP calls across the both of them, you can use the *resume token* set on one connection to login on the other.
 
