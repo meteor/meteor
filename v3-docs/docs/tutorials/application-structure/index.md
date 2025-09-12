@@ -18,8 +18,6 @@ As of version 1.3, Meteor ships with full support for [ES2015 modules](https://d
 
 In ES2015, you can make variables available outside a file using the `export` keyword. To use the variables somewhere else, you must `import` them using the path to the source. Files that export some variables are called "modules", because they represent a unit of reusable code. Explicitly importing the modules and packages you use helps you write your code in a modular way, avoiding the introduction of global symbols and "action at a distance".
 
-Since this is a new feature introduced in Meteor 1.3, you will find a lot of code online that uses the older, more centralized conventions built around packages and apps declaring global symbols. This old system still works, so to opt-in to the new module system, code must be placed inside the `imports/` directory in your application. We expect a future release of Meteor will turn on modules by default for all code, because this is more aligned with how developers in the wider JavaScript community write their code.
-
 You can read about the module system in detail in the [`modules` package README](https://docs.meteor.com/#/full/modules). This package is automatically included in every new Meteor app as part of the [`ecmascript` meta-package](https://docs.meteor.com/#/full/ecmascript), so most apps won't need to do anything to start using modules right away.
 
 ### Introduction to using `import` and `export`
@@ -89,24 +87,29 @@ import { Lists } from './lists.coffee'
 
 To fully use the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed inside the `imports/` directory. This means that the Meteor build system will only bundle and include that file if it is referenced from another file using an `import` (also called "lazy evaluation or loading").
 
-Meteor will load all files outside of any directory named `imports/` in the application using the [default file load order](#load-order) rules (also called "eager evaluation or loading"). It is recommended that you create exactly two eagerly loaded files, `client/main.js` and `server/main.js`, in order to define explicit entry points for both the client and the server. Meteor ensures that any file in any directory named `server/` will only be available on the server, and likewise for files in any directory named `client/`. This also precludes trying to `import` a file to be used on the server from any directory named `client/` even if it is nested in an `imports/` directory and vice versa for importing client files from `server/`.
+Meteor will load all files outside of any directory named `imports/` in the application using the [default file load order](#default-file-load-order) rules (also called "eager evaluation or loading"). It is recommended that you create exactly two eagerly loaded files, `client/main.js` and `server/main.js`, in order to define explicit entry points for both the client and the server. Meteor ensures that any file in any directory named `server/` will only be available on the server, and likewise for files in any directory named `client/`. This also precludes trying to `import` a file to be used on the server from any directory named `client/` even if it is nested in an `imports/` directory and vice versa for importing client files from `server/`.
 
 These `main.js` files won't do anything themselves, but they should import some _startup_ modules which will run immediately, on client and server respectively, when the app loads. These modules should do any configuration necessary for the packages you are using in your app, and import the rest of your app's code.
 
 ### Example directory layout
 
-To start, let's look at our [Todos example application](https://github.com/meteor/todos), which is a great example to follow when structuring your app. Below is an overview of its directory structure. You can generate a new app with this structure using the command `meteor create appName --full`.
+To start, one can have a look to the [example applications](https://github.com/meteor/examples) provided. They are great examples to follow when structuring your app. 
+
+Below is an overview of an exemple directory structure. You can generate a new app with this structure using the command `meteor create appName --full`. The default frontend is Blaze, but you can change it later. Or use [another create option](https://docs.meteor.com/cli/#meteorcreate)
+
 
 ```sh
 imports/
   startup/
+    both/
+      index.js                 # single entry point to import isomorphic modules for client and server 
     client/
       index.js                 # import client startup through a single index entry point
       routes.js                # set up all routes in the app
-      useraccounts-configuration.js # configure login templates
     server/
       fixtures.js              # fill the DB with example data on startup
       index.js                 # import server startup through a single index entry point
+      register-api.js          # dedicated file to import server code for api
 
   api/
     lists/                     # a unit of domain logic
@@ -123,6 +126,10 @@ imports/
                                # can be split by domain if there are many
     layouts/                   # wrapper components for behaviour and visuals
     pages/                     # entry points for rendering used by the router
+    stylesheets/               # global stylesheets  
+
+private/                       # to store private assets for the server 
+public/                        # to store public assets (pictures)
 
 client/
   main.js                      # client entry point, imports all client code
@@ -135,7 +142,7 @@ server/
 
 Now that we have placed all files inside the `imports/` directory, let's think about how best to organize our code using modules. It makes sense to put all code that runs when your app starts in an `imports/startup` directory. Another good idea is splitting data and business logic from UI rendering code. We suggest using directories called `imports/api` and `imports/ui` for this logical split.
 
-Within the `imports/api` directory, it's sensible to split the code into directories based on the domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, we have the `imports/api/lists` and `imports/api/todos` domains. Inside each directory we define the collections, publications and methods used to manipulate the relevant domain data.
+Within the `imports/api` directory, it's sensible to split the code into directories based on the domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, we have the `imports/api/lists` and `imports/api/todos` domains. Inside each directory we define the collections, publications and methods used to manipulate the relevant domain data. Each API folder typically has different files for isomorphic code and server-specific code. To ensure good isolation, server-specific code is put into a `server` folder. 
 
 > Note: in a larger application, given that the todos themselves are a part of a list, it might make sense to group both of these domains into a single larger "list" module. The Todos example is small enough that we need to separate these only to demonstrate modularity.
 
@@ -145,29 +152,20 @@ For each module defined above, it makes sense to co-locate the various auxiliary
 
 ### Startup files
 
-Some of your code isn't going to be a unit of business logic or UI, it's some setup or configuration code that needs to run in the context of the app when it starts up. In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates (see the [Accounts](https://guide.meteor.com/accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client:
+Some of your code isn't going to be a unit of business logic or UI, it's some setup or configuration code that needs to run in the context of the app when it starts up. In the above example, the `imports/startup/client/routes.js` configures all the routes and then imports *all* other code that is required on the client:   
 
 ```js
 import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
-import { BlazeLayout } from 'meteor/kadira:blaze-layout';
-import { AccountsTemplates } from 'meteor/useraccounts:core';
 
-// Import to load these templates
-import '../../ui/layouts/app-body.js';
-import '../../ui/pages/root-redirector.js';
-import '../../ui/pages/lists-show-page.js';
-import '../../ui/pages/app-not-found.js';
-
-// Import to override accounts templates
-import '../../ui/accounts/accounts-templates.js';
-
-// Below here are the route definitions
+// Import needed templates
+import '../../ui/layouts/body/body.js';
+import '../../ui/pages/home/home.js';
+import '../../ui/pages/not-found/not-found.js';
 ```
 
 We then import both of these files in `imports/startup/client/index.js`:
 
 ```js
-import './useraccounts-configuration.js';
 import './routes.js';
 ```
 
