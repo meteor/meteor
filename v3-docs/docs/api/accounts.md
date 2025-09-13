@@ -1015,6 +1015,7 @@ Set the fields of the object by assigning to them:
   returns the body text for a reset password email.
 - `html`: An optional `Function` that takes a user object and a
   url, and returns the body html for a reset password email.
+
 - `enrollAccount`: Same as `resetPassword`, but for initial password setup for
   new accounts.
 - `verifyEmail`: Same as `resetPassword`, but for verifying the users email
@@ -1022,7 +1023,10 @@ Set the fields of the object by assigning to them:
 
 Example:
 
+
 ```js
+
+
 import { Accounts } from "meteor/accounts-base";
 
 Accounts.emailTemplates.siteName = "AwesomeSite";
