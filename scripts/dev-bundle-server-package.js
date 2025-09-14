@@ -23,7 +23,7 @@ var packageJson = {
   // These are only used in dev mode (by shell.js) so end-users can avoid
   // needing to install them if they use `npm install --production`.
   devDependencies: {
-    "@types/underscore": "1.11.2",
+    "@types/underscore": "1.11.9",
     split2: "3.2.2",
     multipipe: "2.0.1",
     chalk: "4.1.2"
