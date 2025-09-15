@@ -174,7 +174,8 @@ Meteor.users.deny({ update: () => true });
 ```
 
 <ApiBox name="Meteor.loggingIn" />
--For example, [the `accounts-ui` package](../packages/accounts-ui.md) uses this to display an
+
+For example, [the `accounts-ui` package](../packages/accounts-ui.md) uses this to display an
  
 
 -animation while the login request is being processed.
