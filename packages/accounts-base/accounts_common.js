@@ -24,6 +24,7 @@ const VALID_CONFIG_KEYS = [
   'loginTokenExpirationHours',
   'tokenSequenceLength',
   'clientStorage',
+  'useHttpOnlyCookies',
   'ddpUrl',
   'connection',
 ];
