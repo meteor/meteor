@@ -17,27 +17,27 @@
     "test:modern": "cd tools/modern-tests && npm test -- "
   },
   "devDependencies": {
-    "@babel/core": "^7.27.1",
-    "@babel/eslint-parser": "^7.27.1",
+    "@babel/core": "^7.28.4",
+    "@babel/eslint-parser": "^7.28.4",
     "@babel/eslint-plugin": "^7.27.1",
     "@babel/preset-react": "^7.27.1",
     "@types/lodash.isempty": "^4.4.9",
-    "@types/node": "^22.15.18",
+    "@types/node": "^24.4.0",
     "@types/sockjs": "^0.3.36",
     "@types/sockjs-client": "^1.5.4",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "eslint": "^8.57.1",
-    "eslint-config-prettier": "^8.10.0",
+    "eslint-config-prettier": "^8.10.2",
     "eslint-config-vazco": "^7.4.0",
     "eslint-plugin-eslint-comments": "^3.2.0",
-    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-prettier": "^4.2.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
     "prettier": "^2.8.8",
-    "typescript": "^5.6.3"
+    "typescript": "^5.7.3"
   },
   "jshintConfig": {
     "esversion": 11
