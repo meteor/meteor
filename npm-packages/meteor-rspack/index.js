@@ -1,5 +1,5 @@
-import { defineConfig as rspackDefineConfig } from '@rspack/cli';
-import HtmlRspackPlugin from './plugins/HtmlRspackPlugin.js';
+const { defineConfig: rspackDefineConfig } = require('@rspack/cli');
+const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 
 /**
  * @typedef {import('rspack').Configuration & {
@@ -16,12 +16,13 @@ import HtmlRspackPlugin from './plugins/HtmlRspackPlugin.js';
  * @param {ConfigFactory} factory
  * @returns {ReturnType<typeof rspackDefineConfig>}
  */
-export function defineConfig(factory) {
+function defineConfig(factory) {
   return rspackDefineConfig(factory);
 }
 
-// Export our helper plus passthrough
-export default defineConfig;
+// Export our helper plus passthrough as default export
+module.exports = defineConfig;
 
-// Export the HtmlRspackPlugin
-export { HtmlRspackPlugin };
+// Export the HtmlRspackPlugin and defineConfig as named exports
+module.exports.defineConfig = defineConfig;
+module.exports.HtmlRspackPlugin = HtmlRspackPlugin;

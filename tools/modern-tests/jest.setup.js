@@ -1,6 +1,11 @@
 // jest.setup.js
 import chalk from 'chalk';
 
+// Set fixed ports for all tests
+process.env.RSPACK_DEVSERVER_PORT = '8080';
+process.env.RSDOCTOR_CLIENT_PORT = '8888';
+process.env.RSDOCTOR_SERVER_PORT = '8889';
+
 // This runs before each test
 beforeEach(() => {
   const name = expect.getState().currentTestName;

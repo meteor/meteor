@@ -30,6 +30,14 @@ export function getMeteorAppConfig() {
 }
 
 /**
+ * Get Meteor's app port
+ * @returns {false|*}
+ */
+export function getMeteorAppPort() {
+  return Package?.meteor?.global?.currentCommand?.options?.['port'] || process.env.PORT || '3000';
+}
+
+/**
  * Retrieves the modern configuration from the application's package.json.
  * @returns {Object|undefined} The modern configuration object or undefined if not found.
  */
@@ -44,6 +52,15 @@ export function getMeteorAppConfigModern() {
 export function isMeteorAppConfigModernVerbose() {
   return getMeteorAppConfigModern()?.verbose ||
     getMeteorAppConfigModern()?.transpiler?.verbose || false;
+}
+
+/**
+ * Retrieves the auto install deps flag from the app's package.json.
+ * @returns {Boolean|*}
+ */
+export function hasMeteorAppConfigAutoInstallDeps() {
+  const { autoInstallDeps = true } = getMeteorAppConfig() || {};
+  return !!autoInstallDeps;
 }
 
 /**
@@ -402,6 +419,14 @@ export function isMeteorScssProject() {
  */
 export function isMeteorBundleVisualizerProject() {
   return getMeteorAppPackages().includes('bundle-visualizer');
+}
+
+/**
+ * Checks if the Meteor application is a Typescript project.
+ * @returns {boolean} True if the application is a Typescript project, false otherwise.
+ */
+export function isMeteorTypescriptProject() {
+  return getMeteorAppPackages().includes('typescript');
 }
 
 /**

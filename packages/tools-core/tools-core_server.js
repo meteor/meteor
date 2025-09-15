@@ -5,3 +5,4 @@ export * from './lib/process';
 export * from './lib/global-state';
 export * from './lib/git';
 export * from './lib/string';
+export * from './lib/ignore';

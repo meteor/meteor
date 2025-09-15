@@ -1,10 +1,11 @@
-import RspackMeteorHtmlPlugin, { loadHtmlRspackPluginFromHost } from './RspackMeteorHtmlPlugin.js';
+const RspackMeteorHtmlPlugin = require('./RspackMeteorHtmlPlugin.js');
+const { loadHtmlRspackPluginFromHost } = RspackMeteorHtmlPlugin;
 
 /**
  * A plugin that composes the original HtmlRspackPlugin from @rspack/core
  * and RspackMeteorHtmlPlugin, in that order.
  */
-export default class HtmlRspackPlugin {
+class HtmlRspackPlugin {
   constructor(options = {}) {
     this.options = options;
   }
@@ -26,3 +27,5 @@ export default class HtmlRspackPlugin {
     meteorPlugin.apply(compiler);
   }
 }
+
+module.exports = HtmlRspackPlugin;

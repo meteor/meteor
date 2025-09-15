@@ -1,16 +1,13 @@
-import { DefinePlugin, BannerPlugin } from '@rspack/core';
-import fs from 'fs';
-import { createRequire } from 'module';
-import { inspect } from 'node:util';
-import path from 'path';
-import { merge } from 'webpack-merge';
+const { DefinePlugin, BannerPlugin } = require('@rspack/core');
+const fs = require('fs');
+const { inspect } = require('node:util');
+const path = require('path');
+const { merge } = require('webpack-merge');
 
-import { cleanOmittedPaths, mergeSplitOverlap } from "./lib/mergeRulesSplitOverlap.js";
-import { getMeteorAppSwcConfig } from './lib/swc.js';
-import HtmlRspackPlugin from './plugins/HtmlRspackPlugin.js';
-import { RequireExternalsPlugin } from './plugins/RequireExtenalsPlugin.js';
-
-const require = createRequire(import.meta.url);
+const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
+const { getMeteorAppSwcConfig } = require('./lib/swc.js');
+const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
+const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -71,8 +68,20 @@ function createSwcConfig({
       externalHelpers,
     },
   };
+
+  // Swcrc config not customizable
+  const omitPaths = [
+    'jsc.target',
+  ];
+  // Define warning function
+  const warningFn = path => {
+    console.warn(
+      `[.swcrc] Ignored custom "${path}" — reserved for Meteor-Rspack integration.`,
+    );
+  };
   const customConfig = getMeteorAppSwcConfig() || {};
-  const swcConfig = merge(defaultConfig, customConfig);
+  const cleanedCustomConfig = cleanOmittedPaths(customConfig, { omitPaths, warningFn });
+  const swcConfig = merge(defaultConfig, cleanedCustomConfig);
   return {
     test: /\.(?:[mc]?js|jsx|[mc]?ts|tsx)$/i,
     exclude: /node_modules|\.meteor\/local/,
@@ -102,7 +111,7 @@ const defaultWatchOptions = {
  * @param {{ mode?: string; clientEntry?: string; serverEntry?: string; clientOutputFolder?: string; serverOutputFolder?: string; chunksContext?: string; assetsContext?: string; serverAssetsContext?: string }} argv
  * @returns {import('@rspack/cli').Configuration[]}
  */
-export default function (inMeteor = {}, argv = {}) {
+module.exports = function (inMeteor = {}, argv = {}) {
   // Transform Meteor env properties to proper boolean values
   const Meteor = { ...inMeteor };
   // Convert string boolean values to actual booleans
@@ -118,7 +127,9 @@ export default function (inMeteor = {}, argv = {}) {
   const isDev = !!Meteor.isDevelopment || !isProd;
   const isTest = !!Meteor.isTest;
   const isClient = !!Meteor.isClient;
+  const isServer = !!Meteor.isServer;
   const isRun = !!Meteor.isRun;
+  const isBuild = !!Meteor.isBuild;
   const isReactEnabled = !!Meteor.isReactEnabled;
   const isTestModule = !!Meteor.isTestModule;
   const isTestEager = !!Meteor.isTestEager;
@@ -147,7 +158,7 @@ export default function (inMeteor = {}, argv = {}) {
   const runPath = Meteor.runPath;
 
   // Determine banner
-  const bannerOutput = JSON.parse(Meteor.bannerOutput || '');
+  const bannerOutput = JSON.parse(Meteor.bannerOutput || process.env.RSPACK_BANNER || '""');
 
   // Determine output directories
   const clientOutputDir = path.resolve(process.cwd(), 'public');
@@ -203,12 +214,13 @@ export default function (inMeteor = {}, argv = {}) {
     console.log('[i] Meteor flags:', Meteor);
   }
 
+  const enableSwcExternalHelpers = !!swcExternalHelpers;
   const isDevEnvironment = isRun && isDev && !isTest && !isNative;
   const swcConfigRule = createSwcConfig({
     isTypescriptEnabled,
     isJsxEnabled,
     isTsxEnabled,
-    externalHelpers: swcExternalHelpers,
+    externalHelpers: enableSwcExternalHelpers,
     isDevEnvironment,
   });
   // Expose swc config to use in custom configs
@@ -217,6 +229,7 @@ export default function (inMeteor = {}, argv = {}) {
   const externals = [
     /^meteor.*/,
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
+    ...(isServer ? [/^bcrypt$/] : []),
   ];
   const alias = {
     '/': path.resolve(process.cwd()),
@@ -248,7 +261,7 @@ export default function (inMeteor = {}, argv = {}) {
         lastImports: [`./${outputFilename}`],
       }),
     }),
-    enableGlobalPolyfill: isDevEnvironment,
+    enableGlobalPolyfill: isDevEnvironment && !isServer,
   });
 
   const rsdoctorModule = isBundleVisualizerEnabled
@@ -257,7 +270,17 @@ export default function (inMeteor = {}, argv = {}) {
   const doctorPluginConfig = isBundleVisualizerEnabled && rsdoctorModule?.RsdoctorRspackPlugin
     ? [
         new rsdoctorModule.RsdoctorRspackPlugin({
-          port: isClient ? 8081 : 8082,
+          port: isClient
+            ? (parseInt(Meteor.rsdoctorClientPort || '8888', 10))
+            : (parseInt(Meteor.rsdoctorServerPort || '8889', 10)),
+        }),
+      ]
+    : [];
+  const bannerPluginConfig = !isBuild
+    ? [
+        new BannerPlugin({
+          banner: bannerOutput,
+          entryOnly: true,
         }),
       ]
     : [];
@@ -269,7 +292,7 @@ export default function (inMeteor = {}, argv = {}) {
   let clientConfig = {
     name: clientNameConfig,
     target: 'web',
-    mode: 'development',
+    mode,
     entry: path.resolve(process.cwd(), buildContext, entryPath),
     output: {
       path: clientOutputDir,
@@ -322,10 +345,7 @@ export default function (inMeteor = {}, argv = {}) {
         'Meteor.isDevelopment': JSON.stringify(isDev),
         'Meteor.isProduction': JSON.stringify(isProd),
       }),
-      new BannerPlugin({
-        banner: bannerOutput,
-        entryOnly: true,
-      }),
+      ...bannerPluginConfig,
       Meteor.HtmlRspackPlugin(),
       ...doctorPluginConfig,
     ],
@@ -349,9 +369,9 @@ export default function (inMeteor = {}, argv = {}) {
 
   const serverEntry =
     isTest && isTestEager && isTestFullApp
-      ? path.resolve(process.cwd(), 'node_modules/@meteorjs/rspack/entries/eager-app-tests.js')
+      ? path.resolve(process.cwd(), 'node_modules/@meteorjs/rspack/entries/eager-app-tests.mjs')
       : isTest && isTestEager
-      ? path.resolve(process.cwd(), 'node_modules/@meteorjs/rspack/entries/eager-tests.js')
+      ? path.resolve(process.cwd(), 'node_modules/@meteorjs/rspack/entries/eager-tests.mjs')
       : path.resolve(process.cwd(), buildContext, entryPath);
   const serverNameConfig = `[${(isTest && 'test-') || ''}${
     (isTestModule && 'module') || 'server'
@@ -404,11 +424,8 @@ export default function (inMeteor = {}, argv = {}) {
               'Meteor.isProduction': JSON.stringify(isProd),
             },
       ),
-      new BannerPlugin({
-        banner: bannerOutput,
-        entryOnly: true,
-      }),
-      isTestModule && requireExternalsPlugin,
+      ...bannerPluginConfig,
+      requireExternalsPlugin,
       ...doctorPluginConfig,
     ],
     watchOptions,

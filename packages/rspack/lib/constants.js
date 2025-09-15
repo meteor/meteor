@@ -3,9 +3,9 @@
  * @description Constants and global state keys for Rspack plugin
  */
 
-export const DEFAULT_RSPACK_VERSION = '1.5.0';
+export const DEFAULT_RSPACK_VERSION = '1.5.3';
 
-export const DEFAULT_METEOR_RSPACK_VERSION = '0.0.36';
+export const DEFAULT_METEOR_RSPACK_VERSION = '0.0.48';
 
 export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '1.4.3';
 
@@ -36,17 +36,12 @@ export const GLOBAL_STATE_KEYS = {
   RSPACK_REACT_INSTALLATION_CHECKED: 'rspack.rspackReactInstallationChecked',
   RSPACK_DOCTOR_INSTALLATION_CHECKED: 'rspack.rspackDoctorInstallationChecked',
   REACT_CHECKED: 'rspack.reactChecked',
+  TYPESCRIPT_CHECKED: 'rspack.typescriptChecked',
   INITIAL_ENTRYPONTS: 'meteor.initialEntrypoints',
   CLIENT_FIRST_COMPILE: 'rspack.clientFirstCompile',
   SERVER_FIRST_COMPILE: 'rspack.serverFirstCompile',
   BUILD_CONTEXT_FILES_CLEANED: 'rspack.buildContextFilesCleaned',
 };
-
-/**
- * Default port for Rspack dev server
- * @type {string|any|number}
- */
-export const RSPACK_DEVSERVER_PORT = process.env.RSPACK_DEVSERVER_PORT || 8080;
 
 /**
  * Directory name for Rspack build context

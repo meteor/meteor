@@ -6,6 +6,7 @@
 
 
 import { testMeteorSkeleton } from "./test-helpers";
+import { assertStyles } from "./assertions";
 
 describe('Meteor Skeletons /', () => {
   describe('Apollo Skeleton /', testMeteorSkeleton({
@@ -87,6 +88,20 @@ describe('Meteor Skeletons /', () => {
       server: 'server/main.ts',
       test: 'tests/main.ts',
     },
+    customAssertions: {
+      afterRun: async ({ port }) => {
+        // Verify Tailwind styles for ".bg-gray-100" element
+        await assertStyles('.bg-gray-100', {
+          ['background-color']: 'oklch(0.967 0.003 264.542)',
+        });
+      },
+      afterRunProduction: async ({ port }) => {
+        // Verify Tailwind styles for ".bg-gray-100" element
+        await assertStyles('.bg-gray-100', {
+          ['background-color']: 'lab(96.1596 -0.0823438 -1.13575)',
+        });
+      }
+    }
   }));
 
   describe('Typescript Skeleton /', testMeteorSkeleton({

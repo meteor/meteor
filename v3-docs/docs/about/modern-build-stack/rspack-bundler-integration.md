@@ -18,7 +18,7 @@ Starting with Meteor 3.4
 Add this Atmosphere package to your app:
 
 ``` bash
-meteor add rspack
+meteor add rspack@1.0.0-beta340.8
 ```
 
 On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
@@ -75,6 +75,24 @@ Attempts were made to reuse the existing `.meteor/local` cache context instead o
 Use `.meteor/local` or folders that suggest internals or hidden content (e.g., starting with a dot). These affect debug visibility, file watching, final compilation, and inclusion in the Cordova bundle.
 :::
 
+### Replace build plugins
+
+Meteor build plugins extend the Meteor bundler by letting you handle new file types and process them for the final app bundle. They’ve commonly handled HTML templating, style files for Less or SCSS, CoffeeScript, and more, since the system allows third-party customization.
+
+However, Meteor’s build system solves the same problems as other bundlers, including Rspack. Build plugins are largely deprecated in favor of Rspack alternatives. Some plugins may still be useful if they don’t act directly on app files and do something Meteor-specific that can be preserved.
+
+Among the compatible plugins:
+- [`zodern:types`](https://packosphere.com/zodern/types). Still compatible, automatically providing Meteor types for core and community packages.
+
+For others, please refer to the migration topics.
+- [CSS, Less, and SCSS](#css-less-and-scss) (when using [`less`](https://packosphere.com/meteor/less), [`fourseven:scss`](https://packosphere.com/fourseven/scss))
+- [Coffeescript](#coffeescript) (when using [`coffeescript`](https://packosphere.com/meteor/coffeescript))
+- [Svelte](#svelte) (when using [`zodern:melte`](https://packosphere.com/zodern/melte))
+
+You can still use these plugins to handle files inside Meteor atmosphere packages. You only need consider Rspack alternative when it’s required for your app code, which will usually be the case.
+
+Please report your plugin usage as [GitHub issues](https://github.com/meteor/meteor/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen) or [forum posts](https://forums.meteor.com/), so we can suggest an Rspack alternative or assess compatibility.
+
 ## Custom `rspack.config.js`
 
 Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package.
@@ -107,16 +125,18 @@ export default defineConfig(Meteor => {
 
 You can use flags to control the final configuration based on the environment. The available flags are passed in the `Meteor` parameter.
 
-| Flag            | Type    | Description                                        |
-| --------------- | ------- | -------------------------------------------------- |
-| `isDevelopment` | boolean | True when running in development mode              |
-| `isProduction`  | boolean | True when running in production mode               |
-| `isClient`      | boolean | True when building or running client code          |
-| `isServer`      | boolean | True when building or running server code          |
-| `isTest`        | boolean | True when running in test mode                     |
-| `isDebug`       | boolean | True when debug mode is enabled                    |
-| `isRun`         | boolean | True when running the project with `meteor run`    |
-| `isBuild`       | boolean | True when building the project with `meteor build` |
+| Flag               | Type     | Description                                               |
+| ------------------ | -------- |-----------------------------------------------------------|
+| `isDevelopment`    | boolean  | True when running in development mode                     |
+| `isProduction`     | boolean  | True when running in production mode                      |
+| `isClient`         | boolean  | True when building or running client code                 |
+| `isServer`         | boolean  | True when building or running server code                 |
+| `isTest`           | boolean  | True when running in test mode                            |
+| `isDebug`          | boolean  | True when debug mode is enabled                           |
+| `isRun`            | boolean  | True when running the project with `meteor run`           |
+| `isBuild`          | boolean  | True when building the project with `meteor build`        |
+| `swcConfigOptions` | object   | Project-level SWC config available for reusing            |
+| `HtmlRspackPlugin` | function | Custom HtmlRspackPlugin function for extending the config |
 
 Some configurations in the Rspack config are reserved for the Meteor-Rspack setup to work, such as Rspack options inside the `entry` and `output` objects. These will trigger warnings if modified. All other settings can be overridden, giving you the flexibility to make any setup compatible with the modern bundler.
 
@@ -153,6 +173,20 @@ Learn more in [“Modular application structure” in Meteor](https://docs.meteo
 Ensure your app defines these entry files with the correct paths where each module is expected to load. Organize your app so the loading order of modules is clear.
 
 Defining entry points improves performance even with the Meteor bundler, as Meteor stops scanning and eagerly loading unnecessary files. For Meteor-Rspack integration, this is required, since it does not support automatic code discovery for efficiency.
+
+In Meteor-Rspack integration, all app code is ignored by Meteor and handled by Rspack. By default, Meteor still processes eagerly CSS and HTML files in the entry folder (e.g. `client/`).
+
+If you need Meteor to handle CSS or HTML files outside the main entry folder, add them to the `modules` field. This field accepts an array of strings, each pointing to a file or folder.
+
+``` json
+{
+  "meteor": {
+    "modules": ["styles/main.css"]
+  }
+}
+```
+
+With this, Meteor will process these files, merge stylesheets, generate the final HTML, and support files a Meteor plugin may use, except for JS or script code now handled by Rspack. You can also process CSS and HTML files directly with Rspack using loaders from imports in your app code, as mentioned in ["CSS, Less and SCSS"](#css-less-and-scss) or ["HtmlRspackPlugin"](#htmlrspackplugin). If you prefer Meteor's loading approach, you can still rely on it.
 
 ### Nested Imports
 
@@ -286,6 +320,47 @@ Previous official support in the Meteor bundler was through [jorgenvatle:vite](h
 With Meteor-Rspack integration, you no longer need vite-related packages, so you should remove them from your project.
 :::
 
+### Coffeescript
+
+Meteor-Rspack supports CoffeeScript projects out of the box. To enable it, install the needed dependencies and add the configuration to Meteor’s rspack.config.js.
+
+[See the official Webpack and CoffeeScript integration guide](https://webpack.js.org/loaders/coffee-loader/#getting-started). Since Rspack is based on Webpack, the same setup applies.
+
+If you want to use SWC with CoffeeScript, combine `swc-loader` with `coffee-loader`.
+
+```bash
+npm install --save-dev coffeescript swc-loader coffee-loader
+```
+
+In your `rspack.config.js` you would add something like:
+
+``` javascript
+export default defineConfig(Meteor => {
+  return {
+    module: {
+      rules: [
+        {
+          test: /\.coffee$/i,
+          use: [
+            {
+              loader: 'swc-loader',
+              // perserve SWC config in the Meteor project level
+              options: Meteor.swcConfigOptions,
+            },
+            {
+              loader: 'coffee-loader',
+            },
+          ],
+        },
+      ],
+    },
+    resolve: {
+      extensions: ['.coffee'],
+    },
+  };
+});
+```
+
 ### Svelte
 
 Meteor-Rspack supports Svelte projects out of the box. To enable it, install the required dependencies and add the new configuration to Meteor’s `rspack.config.js` file.
@@ -302,9 +377,43 @@ With the Meteor–Rspack integration, `zodern:melte` no longer works. Use the of
 
 ### Tailwind
 
-Meteor-Rspack supports Tailwind projects out of the box. For details, check [the official Rspack and Tailwind guide](https://rspack.rs/guide/tech/css#tailwind-css).
+Meteor-Rspack supports Tailwind projects out of the box. For details, check [the official Rspack and Tailwind guide](https://tailwindcss.com/docs/installation/framework-guides/rspack/react).
 
 > Use `meteor create --tailwind` to start with a preconfigured Rspack Tailwind app.
+
+### HtmlRspackPlugin
+
+Meteor-Rspack includes its own HtmlRspackPlugin, enabled by default to attach chunks and assets to the HTML skeleton. Meteor then uses this HTML to generate the final index file.
+
+If you want to customize HtmlRspackPlugin, add it to your `rspack.config.js` file:
+
+```javascript
+export default defineConfig(Meteor => {
+  return {
+    plugins: [
+      Meteor.HtmlRspackPlugin({
+        meta: {
+          // Will generate: <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+          viewport: 'width=device-width, initial-scale=1, shrink-to-fit=no',
+          // Will generate: <meta name="theme-color" content="#4285f4">
+          'theme-color': '#4285f4',
+          // Will generate:  <meta http-equiv="Content-Security-Policy" content="default-src https:">
+          'Content-Security-Policy': {
+            'http-equiv': 'Content-Security-Policy',
+            content: 'default-src https:',
+          },
+        },
+      }),
+    ],
+  };
+});
+```
+
+This example adds meta tags to the HTML. For more options, see the [official Rspack and HTML integration guide](https://rspack.rs/plugins/rspack/html-rspack-plugin).
+
+:::warning
+You can still use HTML files near your Meteor client entry point to define customizations (for example, `./client/main.html` will generate correctly and apply the contents you add).
+:::
 
 ## Benefits
 

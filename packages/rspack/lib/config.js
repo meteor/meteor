@@ -4,6 +4,7 @@
  */
 import { glob } from 'glob';
 import path from 'path';
+import fs from 'fs';
 
 const { logInfo } = require('meteor/tools-core/lib/log');
 const {
@@ -21,12 +22,62 @@ const {
   isMeteorLessProject,
   isMeteorScssProject,
   getMeteorEnvPackageDirs,
+  getMeteorAppConfig,
+  getMeteorAppDir,
 } = require('meteor/tools-core/lib/meteor');
+const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
 
 import { getInitialEntrypoints } from './build-context';
 
 const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
 const { RSPACK_BUILD_CONTEXT, FILE_ROLE } = require('./constants');
+
+/**
+ * Checks if exact entries exist in the .meteorignore file
+ * @param {string[]} entries - Array of exact entries to check for
+ * @returns {Object} Object with keys corresponding to each entry and values as booleans
+ */
+function checkMeteorIgnoreExactEntries(entries) {
+  const meteorIgnorePath = path.join(getMeteorAppDir(), '.meteorignore');
+  const results = {};
+
+  // Initialize results object with false for each entry
+  entries.forEach(entry => {
+    results[entry] = false;
+  });
+
+  // Check if .meteorignore file exists
+  if (!fs.existsSync(meteorIgnorePath)) {
+    return results;
+  }
+
+  // Read the .meteorignore file
+  try {
+    const content = fs.readFileSync(meteorIgnorePath, 'utf8');
+    const lines = content.split('\n');
+
+    // Check each line against all entries
+    lines.forEach(line => {
+      // Skip empty lines and comments
+      if (!line.trim() || line.trim().startsWith('#')) {
+        return;
+      }
+
+      const trimmedLine = line.trim();
+
+      // Check for exact matches
+      entries.forEach(entry => {
+        if (trimmedLine === entry) {
+          results[entry] = true;
+        }
+      });
+    });
+  } catch (error) {
+    // If there's an error reading the file, return the initialized results
+  }
+
+  return results;
+}
 
 /**
  * Gets the list of file extensions to ignore based on project type
@@ -92,6 +143,7 @@ function getFileExtensionsToIgnore() {
  * @returns {void}
  */
 export function configureMeteorForRspack() {
+  const meteorAppConfig = getMeteorAppConfig();
   const initialEntrypoints = getInitialEntrypoints();
 
   // Ignore node_modules to prevent Meteor from processing them
@@ -141,10 +193,31 @@ export function configureMeteorForRspack() {
   // Skip immediate html and css children from intial entrypoint contexts
   extraFilesToIgnore = [
     ...extraFilesToIgnore,
-    ...initialEntrypointContexts.flatMap(entrypoint => [
-      `!${entrypoint}/*.html`,
-      `!${entrypoint}/*.css`,
-    ]),
+    ...initialEntrypointContexts.flatMap(entrypoint => {
+      // Create exact entries to check for
+      const cssEntry = `${entrypoint}/*.css`;
+      const htmlEntry = `${entrypoint}/*.html`;
+
+      // Check all entries at once
+      const entryResults = checkMeteorIgnoreExactEntries([cssEntry, htmlEntry]);
+      const hasMatchingCssEntry = entryResults[cssEntry];
+      const hasMatchingHtmlEntry = entryResults[htmlEntry];
+
+      // Prepare the result array
+      const result = [];
+
+      // Only add the HTML ignore pattern if there's no matching HTML entry in .meteorignore
+      if (!hasMatchingHtmlEntry) {
+        result.push(`!${htmlEntry}`);
+      }
+
+      // Only add the CSS ignore pattern if there's no matching CSS entry in .meteorignore
+      if (!hasMatchingCssEntry) {
+        result.push(`!${cssEntry}`);
+      }
+
+      return result;
+    }),
   ];
 
   const testIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
@@ -180,9 +253,13 @@ export function configureMeteorForRspack() {
     ),
   ];
   const filesToIgnore = [...rootFilesToIgnore, ...extraFilesToIgnore];
+  const unignoredFilesAndFolders = buildUnignorePatterns(
+    meteorAppConfig?.modules || [],
+    { skipLevel: 1 },
+  );
   const meteorAppIgnores = `${foldersToIgnore.join(' ')} ${filesToIgnore.join(
     ' ',
-  )}`;
+  )} ${unignoredFilesAndFolders.join(' ')}`.trim();
   setMeteorAppIgnore(meteorAppIgnores);
 
   if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {

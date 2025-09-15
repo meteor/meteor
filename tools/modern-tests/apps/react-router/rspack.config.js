@@ -17,6 +17,7 @@ export default defineConfig(Meteor => {
         '@helper/alias': '/imports/helpers/alias.js',
         '@react/alias': '/node_modules/react',
       },
+      extensions: ['.jsx'],
     },
     module: {
       rules: [

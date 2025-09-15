@@ -8,12 +8,11 @@ import {
   RSPACK_HOT_UPDATE_REGEX,
   RSPACK_BUNDLES_REGEX,
   RSPACK_ASSETS_REGEX,
-  RSPACK_DEVSERVER_PORT,
 } from "./lib/constants";
 
 if (Meteor.isDevelopment) {
   // Target URL for the Rspack dev server
-  const target = `http://localhost:${RSPACK_DEVSERVER_PORT}`;
+  const target = `http://localhost:${process.env.RSPACK_DEVSERVER_PORT}`;
 
   // Proxy HMR websocket upgrade requests
   WebApp.connectHandlers.use('/ws',

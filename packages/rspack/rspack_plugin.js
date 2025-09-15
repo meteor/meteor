@@ -22,8 +22,8 @@ const {
 const {
   ensureRspackInstalled,
   checkReactInstalled,
+  checkTypescriptInstalled,
   ensureRspackReactInstalled,
-  ensureRspackDoctorInstalled,
 } = require('./lib/dependencies');
 
 const {
@@ -37,6 +37,9 @@ const {
   startRspackServerWatch,
   runRspackBuild,
   cleanup,
+  calculateDevServerPort,
+  calculateRsdoctorClientPort,
+  calculateRsdoctorServerPort,
 } = require('./lib/processes');
 
 const {
@@ -66,6 +69,7 @@ const {
   isMeteorAppDebug,
   isMeteorAppConfigModernVerbose,
   isMeteorAppNative,
+  isMeteorBundleVisualizerProject,
 } = require('meteor/tools-core/lib/meteor');
 
 const {
@@ -76,17 +80,29 @@ const {
 const {
   getNpxCommand,
   getNpmCommand,
+  getYarnCommand,
+  isYarnProject,
 } = require('meteor/tools-core/lib/npm');
+const { getMeteorAppConfig, hasMeteorAppConfigAutoInstallDeps } = require("../tools-core/lib/meteor");
 
 if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
   // Get entry points from Meteor configuration
   setGlobalState(GLOBAL_STATE_KEYS.INITIAL_ENTRYPONTS, getMeteorAppEntrypoints());
 
+  let isYarnProj = process.env.YARN_ENABLED === 'true';
   // Main entry point - using top-level await
   try {
+    // Check if the project is a Yarn project and store the result in environment variable if not already set
+    if (process.env.YARN_ENABLED === undefined) {
+      isYarnProj = isYarnProject();
+      process.env.YARN_ENABLED = isYarnProj ? 'true' : 'false';
+    }
     if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
       logInfo(`[i] Meteor Npx prefix: ${getNpxCommand([])?.prefix}`);
       logInfo(`[i] Meteor Npm prefix: ${getNpmCommand([])?.prefix}`);
+      if (isYarnProj) {
+        logInfo(`[i] Meteor Yarn prefix: ${getYarnCommand([])?.prefix}`);
+      }
     }
 
     // Clean build context files only if they haven't been cleaned yet
@@ -95,13 +111,22 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
       setGlobalState(GLOBAL_STATE_KEYS.BUILD_CONTEXT_FILES_CLEANED, true);
     }
 
-    // Ensure Rspack is installed
-    await ensureRspackInstalled();
+    // Auto install deps (by default enabled)
+    if (hasMeteorAppConfigAutoInstallDeps()) {
+      // Ensure Rspack is installed
+      await ensureRspackInstalled();
+    }
 
     // Check if Rspack React is installed
     if (checkReactInstalled()) {
-      await ensureRspackReactInstalled();
+      // Auto install deps (by default enabled)
+      if (hasMeteorAppConfigAutoInstallDeps()) {
+        await ensureRspackReactInstalled();
+      }
     }
+
+    // Check if TypeScript is installed
+    checkTypescriptInstalled();
 
     // Ensure the Rspack build context directory exists
     ensureRspackBuildContextExists();
@@ -111,6 +136,31 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
 
     // Configure Meteor settings for Rspack
     configureMeteorForRspack();
+
+    // Calculate and set the devServerPort at boot
+    if (!process.env.RSPACK_DEVSERVER_PORT) {
+      process.env.RSPACK_DEVSERVER_PORT = calculateDevServerPort();
+      if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
+        logInfo(`[i] Rspack DevServer Port: ${process.env.RSPACK_DEVSERVER_PORT}`);
+      }
+    }
+
+    // Calculate and set the Rsdoctor client and server ports at boot only if bundle visualizer is enabled
+    if (isMeteorBundleVisualizerProject()) {
+      if (!process.env.RSDOCTOR_CLIENT_PORT) {
+        process.env.RSDOCTOR_CLIENT_PORT = calculateRsdoctorClientPort();
+        if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
+          logInfo(`[i] Rsdoctor Client Port: ${process.env.RSDOCTOR_CLIENT_PORT}`);
+        }
+      }
+
+      if (!process.env.RSDOCTOR_SERVER_PORT) {
+        process.env.RSDOCTOR_SERVER_PORT = calculateRsdoctorServerPort();
+        if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
+          logInfo(`[i] Rsdoctor Server Port: ${process.env.RSDOCTOR_SERVER_PORT}`);
+        }
+      }
+    }
 
     // Register cleanup handler
     process.on('exit', cleanup);
