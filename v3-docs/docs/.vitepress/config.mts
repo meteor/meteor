@@ -276,108 +276,120 @@ export default defineConfig({
         text: "Packages",
         items: [
           {
-            text: "accounts-ui",
-            link: "/packages/accounts-ui",
+            text: "Overview",
+            link: "/packages/index",
           },
           {
-            text: "accounts-passwordless",
-            link: "/packages/accounts-passwordless",
+            text: "Accounts and security",
+            items: [
+              {
+                text: "accounts-ui",
+                link: "/packages/accounts-ui",
+              },
+              {
+                text: "accounts-passwordless",
+                link: "/packages/accounts-passwordless",
+              },
+              {
+                text: "accounts-2fa",
+                link: "/packages/accounts-2fa",
+              },
+              {
+                text: "roles",
+                link: "/packages/roles",
+              },
+              {
+                text: "oauth-encryption",
+                link: "/packages/oauth-encryption",
+              },
+              {
+                text: "browser-policy",
+                link: "/packages/browser-policy",
+              },
+            ]
           },
           {
-            text: "accounts-2fa",
-            link: "/packages/accounts-2fa",
+            text: "Developer tools",
+            items: [
+              {
+                text: "audit-arguments-checks",
+                link: "/packages/audit-argument-checks",
+              },
+              {
+                text: "bundler-visualizer",
+                link: "/packages/bundle-visualizer",
+              },
+              {
+                text: "hot-module-replacement",
+                link: "/packages/hot-module-replacement",
+              },
+              {
+                text: "fetch",
+                link: "/packages/fetch",
+              },
+              {
+                text: "logging",
+                link: "/packages/logging",
+              },
+              {
+                text: "underscore",
+                link: "/packages/underscore",
+              },
+              {
+                text: "autoupdate",
+                link: "/packages/autoupdate",
+              },
+              {
+                text: "modern-browsers",
+                link: "/packages/modern-browsers",
+              },
+              {
+                text: "modules",
+                link: "/packages/modules",
+              },
+              {
+                text: "random",
+                link: "/packages/random",
+              },
+
+              {
+                text: "server-render",
+                link: "/packages/server-render",
+              },
+              {
+                text: "standard-minifier-css",
+                link: "/packages/standard-minifier-css",
+              },
+              {
+                text: "url",
+                link: "/packages/url",
+              },
+              {
+                text: "webapp",
+                link: "/packages/webapp",
+              },
+            ]
           },
           {
-            text: "appcache",
-            link: "/packages/appcache",
-          },
-          {
-            text: "audit-arguments-checks",
-            link: "/packages/audit-argument-checks",
-          },
-          {
-            text: "autoupdate",
-            link: "/packages/autoupdate",
-          },
-          {
-            text: "browser-policy",
-            link: "/packages/browser-policy",
-          },
-          {
-            text: "bundler-visualizer",
-            link: "/packages/bundle-visualizer",
-          },
-          {
-            text: "coffeescript",
-            link: "/packages/coffeescript",
-          },
-          {
-            text: "ecmascript",
-            link: "/packages/ecmascript",
-          },
-          {
-            text: "fetch",
-            link: "/packages/fetch",
-          },
-          {
-            text: "hot-module-replacement",
-            link: "/packages/hot-module-replacement",
-          },
-          {
-            text: "roles",
-            link: "/packages/roles",
-          },
-          {
-            text: "less",
-            link: "/packages/less",
-          },
-          {
-            text: "logging",
-            link: "/packages/logging",
-          },
-          {
-            text: "markdown",
-            link: "/packages/markdown",
-          },
-          {
-            text: "modern-browsers",
-            link: "/packages/modern-browsers",
-          },
-          {
-            text: "modules",
-            link: "/packages/modules",
-          },
-          {
-            text: "oauth-encryption",
-            link: "/packages/oauth-encryption",
-          },
-          {
-            text: "random",
-            link: "/packages/random",
-          },
-          {
-            text: "react-meteor-data",
-            link: "/packages/react-meteor-data",
-          },
-          {
-            text: "server-render",
-            link: "/packages/server-render",
-          },
-          {
-            text: "standard-minifier-css",
-            link: "/packages/standard-minifier-css",
-          },
-          {
-            text: "underscore",
-            link: "/packages/underscore",
-          },
-          {
-            text: "url",
-            link: "/packages/url",
-          },
-          {
-            text: "webapp",
-            link: "/packages/webapp",
+            text: "Framework compatibility",
+            items: [
+              {
+                text: "coffeescript",
+                link: "/packages/coffeescript",
+              },
+              {
+                text: "ecmascript",
+                link: "/packages/ecmascript",
+              },
+              {
+                text: "less",
+                link: "/packages/less",
+              },
+              {
+                text: "react-meteor-data",
+                link: "/packages/react-meteor-data",
+              },
+            ]
           },
           {
             link: "/packages/packages-listing",
@@ -386,41 +398,37 @@ export default defineConfig({
           {
             link: "/community-packages/index",
             text: "Community Packages",
-          },
-        ],
-        collapsed: true,
-      },
-      {
-        text: "Community Packages",
-        link: "/community-packages/index",
-        items: [
-          {
-            text: "Meteor RPC",
-            link: "/community-packages/meteor-rpc",
-          },
-          {
-            text: "jam:method",
-            link: "/community-packages/jam-method",
-          },
-          {
-            text: "jam:pub-sub",
-            link: "/community-packages/pub-sub",
-          },
-          {
-            text: "jam:mongo-transactions",
-            link: "/community-packages/mongo-transactions",
-          },
-          {
-            text: "jam:soft-delete",
-            link: "/community-packages/soft-delete",
-          },
-          {
-            text: "jam:archive",
-            link: "/community-packages/archive",
-          },
-          {
-            text: "jam:offline",
-            link: "/community-packages/offline",
+            items: [
+              {
+                text: "Meteor RPC",
+                link: "/community-packages/meteor-rpc",
+              },
+              {
+                text: "jam:method",
+                link: "/community-packages/jam-method",
+              },
+              {
+                text: "jam:pub-sub",
+                link: "/community-packages/pub-sub",
+              },
+              {
+                text: "jam:mongo-transactions",
+                link: "/community-packages/mongo-transactions",
+              },
+              {
+                text: "jam:soft-delete",
+                link: "/community-packages/soft-delete",
+              },
+              {
+                text: "jam:archive",
+                link: "/community-packages/archive",
+              },
+              {
+                text: "jam:offline",
+                link: "/community-packages/offline",
+              },
+            ],
+            collapsed: true,
           },
         ],
         collapsed: true,
