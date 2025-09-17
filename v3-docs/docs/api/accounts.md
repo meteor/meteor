@@ -178,7 +178,7 @@ Meteor.users.deny({ update: () => true });
 For example, [the `accounts-ui` package](../packages/accounts-ui.md) uses this to display an
  
 
--animation while the login request is being processed.
+animation while the login request is being processed.
 
 <ApiBox name="Meteor.loggingOut" />
 
