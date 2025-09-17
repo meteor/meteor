@@ -4,6 +4,7 @@ import { watch as watchLegacy, addWatchRoot as addWatchRootLegacy, closeAllWatch
 
 import { Profile } from "../tool-env/profile";
 import { statOrNull, lstat, toPosixPath, convertToOSPath, pathRelative, watchFile, unwatchFile, pathResolve, pathDirname } from "./files";
+import { getMeteorConfig } from "../tool-env/meteor-config";
 
 // Register process exit handlers to ensure subscriptions are properly cleaned up
 const registerExitHandlers = () => {
@@ -380,7 +381,7 @@ function startNewEntry(absPath: string): Entry {
  */
 export function watch (absPath: string, callback: ChangeCallback): SafeWatcher {
   // @ts-ignore
-  if (!global.modernWatcher) {
+  if (!getMeteorConfig()?.modern?.watcher) {
     // @ts-ignore
     return watchLegacy(absPath, callback);
   }
@@ -444,7 +445,7 @@ const watchModern =
  */
 export function addWatchRoot(absPath: string) {
   // @ts-ignore
-  if (!global.modernWatcher) {
+  if (!getMeteorConfig()?.modern?.watcher) {
     // @ts-ignore
     return addWatchRootLegacy(absPath);
   }
@@ -477,7 +478,7 @@ async function safeUnsubscribeSub(root: string) {
 
 export async function closeAllWatchers() {
   // @ts-ignore
-  if (!global.modernWatcher) {
+  if (!getMeteorConfig()?.modern?.watcher) {
     // @ts-ignore
     return closeAllWatchersLegacy();
   }

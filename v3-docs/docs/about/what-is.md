@@ -39,8 +39,6 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 - Explore and contribute to our [GitHub repository](https://github.com/meteor). You can access our code, request new features, and start contributing.
 
-- Enhance your coding experience with the [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox), which provides IntelliSense support for Meteor's core and packages.
-
 - Use the [Chrome Extension](https://chrome.google.com/webstore/detail/meteor-devtools-evolved/ibniinmoafhgbifjojidlagmggecmpgf) or [Firefox Extension](https://addons.mozilla.org/en-US/firefox/addon/meteor-devtools-evolved/) for insights into your app's performance and to understand what is going on under the hood of your application.
 
 - Discover [Meteor Examples](https://github.com/meteor/examples) to see a range of projects built with Meteor.
