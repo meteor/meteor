@@ -118,6 +118,7 @@ export function testMeteorRspackBundler(options) {
   const { 
     appName, 
     port, 
+    isMonorepo = false,
     filePaths = { 
       client: 'client/main.jsx',
       server: 'server/main.js',
@@ -168,20 +169,22 @@ export function testMeteorRspackBundler(options) {
       await killProcessByPort('8080');
 
       // Setup the Meteor app
-      tempDir = (await setupMeteorApp(appName))?.tempDir;
+      tempDir = (await setupMeteorApp(appName, { isMonorepo }))?.tempDir;
 
       // Add Rspack package
-      await runMeteorCommand('add', ['rspack'], tempDir, { checkExitCode: true });
+      const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+      await runMeteorCommand('add', ['rspack'], appDir, { checkExitCode: true });
 
       // Set meteor.modern.verbose to true
       if (verbose) {
-        await execa('npm', ['pkg', 'delete', 'meteor.modern'], { cwd: tempDir });
-        await execa('npm', ['pkg', 'set', 'meteor.modern.verbose=true'], { cwd: tempDir });
+        await execa('npm', ['pkg', 'delete', 'meteor.modern'], { cwd: appDir });
+        await execa('npm', ['pkg', 'set', 'meteor.modern.verbose=true'], { cwd: appDir });
       }
 
       // Run the Meteor app to install Rspack
       const result = await runMeteorApp(tempDir, port, {
         waitForOutput: "=> App running at:",
+        isMonorepo
       });
       meteorProcess = result.meteorProcess;
 
@@ -189,8 +192,8 @@ export function testMeteorRspackBundler(options) {
       await wait(1000);
 
       // Assert that the config files exists
-      await assertFileExist(tempDir, '.gitignore', { content: '_build' });
-      await assertFileExist(tempDir, 'rspack.config.js', { content: '@meteorjs/rspack' });
+      await assertFileExist(appDir, '.gitignore', { content: '_build' });
+      await assertFileExist(appDir, 'rspack.config.js', { content: '@meteorjs/rspack' });
 
       // Kill the meteor process
       await killMeteorProcess(meteorProcess);
@@ -214,6 +217,7 @@ export function testMeteorRspackBundler(options) {
       // Run the Meteor app and wait for "restarted at" output
       const result = await runMeteorApp(tempDir, port, {
         waitForOutput: "=> App running at:",
+        isMonorepo
       });
       meteorProcess = result.meteorProcess;
 
@@ -303,6 +307,7 @@ export function testMeteorRspackBundler(options) {
       const result = await runMeteorApp(tempDir, port, {
         waitForOutput: "=> App running at:",
         commandOptions: ['--production'],
+        isMonorepo
       });
       meteorProcess = result.meteorProcess;
 
@@ -318,7 +323,7 @@ export function testMeteorRspackBundler(options) {
       await assertFileExist(tempDir, '_build/main-prod/server-meteor.js');
       await assertFileExist(tempDir, '_build/main-prod/index.html');
 
-      await assertFileExist(tempDir, filePaths.server);
+      await assertFileExist(appDir, isMonorepo ? filePaths.server.replace('app/', '') : filePaths.server);
 
       // Assert that the Meteor app is running correctly
       await assertMeteorReactApp(port, { title: appName });
@@ -397,6 +402,7 @@ export function testMeteorRspackBundler(options) {
         const result = await runMeteorApp(tempDir, port, {
           waitForOutput: "=> App running at:",
           commandOptions: ['--extra-packages', 'bundle-visualizer', '--production'],
+          isMonorepo
         });
         meteorProcess = result.meteorProcess;
 
@@ -455,6 +461,7 @@ export function testMeteorRspackBundler(options) {
         waitForOutput: "=> App running at:",
         commandOptions: testFullApp ? ['--full-app'] : [],
         checkTestResults: false,
+        isMonorepo
       });
       meteorProcess = result.meteorProcess;
 
@@ -538,6 +545,7 @@ export function testMeteorRspackBundler(options) {
         waitForOutput: "=> App running at:",
         commandOptions: testFullApp ? ['--full-app', '--once'] : ['--once'],
         checkTestResults: true,
+        isMonorepo
       });
 
       // Wait for a margin
@@ -583,7 +591,8 @@ export function testMeteorRspackBundler(options) {
       // Build the app with Rspack
       const { buildOutputDir, processResult: result } = await buildMeteorApp(tempDir, {
         commandOptions: ['--directory'],
-        captureOutput: true
+        captureOutput: true,
+        isMonorepo
       });
 
       // Wait for a margin
