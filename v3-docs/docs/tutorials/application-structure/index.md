@@ -51,7 +51,7 @@ import moment from 'moment';          // default import from npm
 import { HTTP } from 'meteor/http';   // named import from Atmosphere
 ```
 
-For more details using `imports` with packages see [Using Packages](../packages/#using-atmosphere-packages) tutorial.
+For more details using `imports` with packages see [Using Packages](../../packages/#using-atmosphere-packages) tutorial.
 
 ### Using `require`
 
@@ -300,7 +300,7 @@ However there are some challenges to splitting your code in this way that should
 
 The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to deploy the *same* application on different web servers, controlling the behavior via different [settings](https://guide.meteor.com/deployment.html#environment). This approach allows you to deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
 
-If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](../packages/#writing-atmosphere-packages), either npm or Atmosphere, depending on whether the code is Meteor-specific or otherwise.
+If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](../../packages/#writing-atmosphere-packages), either npm or Atmosphere, depending on whether the code is Meteor-specific or otherwise.
 
 If the code is private, or of no interest to others, it typically makes sense to include the same module in both applications (you *can* do this with [private npm modules](https://docs.npmjs.com/about-private-packages)). There are several ways to do this:
 
