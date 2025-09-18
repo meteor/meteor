@@ -476,6 +476,15 @@ export default defineConfig({
             link: "/tutorials/application-structure/index",
             text: "Application structure",
           },
+          {
+            text: "Production",
+            items:[
+              {
+                text: "Security",
+                link: "/tutorials/security/security",
+              }
+            ]
+          },
         ],
         collapsed: true,
       },

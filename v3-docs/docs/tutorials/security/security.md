@@ -34,7 +34,7 @@ Each of these points will have their own section below.
 
 #### Avoid allow/deny
 
-In this guide, we're going to take a strong position that using [allow](https://docs.meteor.com/api/collections.html#Mongo-Collection-allow) or [deny](https://docs.meteor.com/api/collections.html#Mongo-Collection-deny) to run MongoDB queries directly from the client is not a good idea. The main reason is that it is hard to follow the principles outlined above. It's extremely difficult to validate the complete space of possible MongoDB operators, which could potentially grow over time with new versions of MongoDB.
+In this guide, we're going to take a strong position that using [allow](/api/collections.html#Mongo-Collection-allow) or [deny](/api/collections.html#Mongo-Collection-deny) to run MongoDB queries directly from the client is not a good idea. The main reason is that it is hard to follow the principles outlined above. It's extremely difficult to validate the complete space of possible MongoDB operators, which could potentially grow over time with new versions of MongoDB.
 
 There have been several articles about the potential pitfalls of accepting MongoDB update operators from the client, in particular the [Allow & Deny Security Challenge](https://web.archive.org/web/20220705130732/https://www.discovermeteor.com/blog/allow-deny-security-challenge/) and its [results](https://web.archive.org/web/20220819163744/https://www.discovermeteor.com/blog/allow-deny-challenge-results/), both on the Discover Meteor blog.
 
@@ -84,7 +84,7 @@ To help you write good Methods that exhaustively validate their arguments, you c
 
 ### Never pass userId from the client
 
-The `this` context inside every Meteor Method has some useful information about the current connection, and the most useful is [`this.userId`](http://docs.meteor.com/#/full/method_userId). This property is managed by the DDP login system, and is guaranteed by the framework itself to be secure following widely-used best practices.
+The `this` context inside every Meteor Method has some useful information about the current connection, and the most useful is [`this.userId`](/api/meteor.html#methods-userId). This property is managed by the DDP login system, and is guaranteed by the framework itself to be secure following widely-used best practices.
 
 Given that the user ID of the current user is available through this context, you should never pass the ID of the current user as an argument to a Method. This would allow any client of your app to pass any user ID they want. Let's look at an example:
 
@@ -146,12 +146,12 @@ You can see that this Method does a _very specific thing_ - it makes a single li
 However, this doesn't mean you can't have any flexibility in your Methods. Let's look at an example:
 
 ```js
-Meteor.users.methods.setUserData = new createMethod({
+Meteor.users.methods.setUserData = createMethod({
   name: 'Meteor.users.methods.setUserData',
-  validate: new SimpleSchema({
+  schema: new SimpleSchema({
     fullName: { type: String, optional: true },
     dateOfBirth: { type: Date, optional: true },
-  }).validator(),
+  }),
   async run(fieldsToSet) {
     return (await Meteor.users.updateAsync(this.userId, {
       $set: fieldsToSet
@@ -198,7 +198,7 @@ if (Meteor.isServer) {
 
 This will make every Method only callable 5 times per second per connection. This is a rate limit that shouldn't be noticeable by the user at all, but will prevent a malicious script from totally flooding the server with requests. You will need to tune the limit parameters to match your app's needs.
 
-If you're using `jam:method`, it comes with built in [rate-limiting](https://github.com/jamauro/method#rate-limiting).
+If you're using `jam:method`, it comes with built-in [rate-limiting](https://github.com/jamauro/method#rate-limiting).
 
 
 ## Publications
@@ -220,7 +220,7 @@ All of the points above about Methods apply to publications as well:
 
 ### Always restrict fields
 
-[`Mongo.Collection#find` has an option called `fields`](http://docs.meteor.com/#/full/find) which lets you filter the fields on the fetched documents. You should always use this in publications to make sure you don't accidentally publish secret fields.
+[`Mongo.Collection#find` has an option called `projection`](/api/collections.html#Mongo-Collection-find) which lets you filter the fields on the fetched documents. You should always use this in publications to make sure you don't accidentally publish secret fields.
 
 For example, you could write a publication, then later add a secret field to the published collection. Now, the publication would be sending that secret to the client. If you filter the fields on every publication when you first write it, then adding another field won't automatically publish it.
 
@@ -235,7 +235,7 @@ Meteor.publish('lists.public', function () {
 // will only publish it if we add it to the list of fields
 Meteor.publish('lists.public', function () {
   return Lists.find({userId: {$exists: false}}, {
-    fields: {
+    projection: {
       name: 1,
       incompleteCount: 1,
       userId: 1
@@ -260,7 +260,7 @@ Now your code becomes a bit simpler:
 ```js
 Meteor.publish('lists.public', function () {
   return Lists.find({userId: {$exists: false}}, {
-    fields: Lists.publicFields
+    projection: Lists.publicFields
   });
 });
 ```
@@ -284,7 +284,7 @@ Meteor.publish('list', async function (listId) {
   }
 
   return Lists.find(listId, {
-    fields: {
+    projection: {
       name: 1,
       incompleteCount: 1,
       userId: 1
@@ -300,7 +300,7 @@ Meteor.publish('list', function (listId) {
     _id: listId,
     userId: this.userId
   }, {
-    fields: {
+    projection: {
       name: 1,
       incompleteCount: 1,
       userId: 1
@@ -311,7 +311,7 @@ Meteor.publish('list', function (listId) {
 
 In the first example, if the `userId` property on the selected list changes, the query in the publication will still return the data, since the security check in the beginning will not re-run. In the second example, we have fixed this by putting the security check in the returned query itself.
 
-Unfortunately, not all publications are as simple to secure as the example above. For more tips on how to use `reywood:publish-composite` to handle reactive changes in publications, see the [data loading article](data-loading.html#complex-auth).
+Unfortunately, not all publications are as simple to secure as the example above. For more tips on how to use `reywood:publish-composite` to handle reactive changes in publications, see the [data loading article](https://guide.meteor.com/data-loading#complex-auth).
 
 ### Passing options
 
@@ -364,7 +364,9 @@ Meteor.users.methods.updateMMR = new createMethod({
 });
 ```
 
+::: warning
 Note that while the Method is defined on the client, the actual secret logic is only accessible from the server and the code will **not** be included in the client bundle. Keep in mind that code inside `if (Meteor.isServer)` and `if (!this.isSimulation)` blocks is still sent to the client, it is just not executed. So don't put any secret code in there.
+:::
 
 Secret API keys should never be stored in your source code at all, the next section will talk about how to handle them.
 
@@ -400,7 +402,7 @@ Here's what a settings file with some API keys might look like:
 
 In your app's JavaScript code, these settings can be accessed from the variable `Meteor.settings`.
 
-[Read more about managing keys and settings in the Deployment article.](deployment.html#environment)
+[Read more about managing keys and settings in the Deployment article.](https://guide.meteor.com/deployment)
 
 ### Settings on the client
 
@@ -412,18 +414,18 @@ It's ok if you want to make some properties of your settings file accessible to 
 
 ```javascript
 {
-"public": {"publicKey": "xxxxx"},
-"private": {"privateKey": "xxxxx"}
+   "public": {"publicKey": "xxxxx"}, 
+   "private": {"privateKey": "xxxxx"}
 }
 ```
 or
 ```javascript
 {
-"public": {"publicKey": "xxxxx"},
-"privateKey": "xxxxx"
+    "public": {"publicKey": "xxxxx"},
+    "privateKey": "xxxxx"
 }
 ```
-#### API keys for OAuth
+#### Example: API keys for OAuth
 
 For the `accounts-facebook` package to pick up these keys, you need to add them to the service configuration collection in the database. Here's how you do that:
 
@@ -433,16 +435,16 @@ First, add the `service-configuration` package:
 meteor add service-configuration
 ```
 
-Then, upsert into the `ServiceConfiguration` collection:
+Then, upsert into the `ServiceConfiguration` collection using private settings:
 
 ```js
 ServiceConfiguration.configurations.upsert({
   service: "facebook"
 }, {
   $set: {
-    appId: Meteor.settings.facebook.appId,
+    appId: Meteor.settings.private.facebook.appId,
     loginStyle: "popup",
-    secret: Meteor.settings.facebook.secret
+    secret: Meteor.settings.private.facebook.secret
   }
 });
 ```
@@ -459,8 +461,8 @@ Yes, Meteor does hash your password or login token on the client before sending 
 
 #### Setting up SSL
 
-* On [Galaxy](deployment.html#galaxy), configuration of SSL is automatic. [See the help article about SSL on Galaxy](http://galaxy-guide.meteor.com/encryption.html).
-* If you are running on your own [infrastructure](deployment.html#custom-deployment), there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
+* On [Galaxy](https://guide.meteor.com/deployment#galaxy), configuration of SSL is automatic. [See the help article about SSL on Galaxy](https://help.galaxycloud.app/en/article/encryption-pt8wbl/).
+* If you are running on your own [infrastructure](https://guide.meteor.com/deployment#custom-deployment), there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
 
 #### Forcing SSL
 
@@ -468,7 +470,7 @@ Generally speaking, all production HTTP requests should go over HTTPS, and all W
 
 It's best to handle the redirection from HTTP to HTTPS on the platform which handles the SSL certificates and termination.
 
-* On [Galaxy](deployment.html#galaxy), enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
+* On [Galaxy](https://guide.meteor.com/deployment#galaxy), enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
 * Other deployments *may* have control panel options or may need to be manually configured on the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
 
 In the event that a platform does not offer the ability to configure this, the `force-ssl` package can be added to the project and Meteor will attempt to intelligently redirect based on the presence of the `x-forwarded-for` header.
@@ -706,15 +708,15 @@ This is a collection of points to check about your app that might catch common e
 1. Make sure your app doesn't have the `insecure` or `autopublish` packages.
 1. Validate all Method and publication arguments, and include the `audit-argument-checks` to check this automatically.
 1. Apply rate limiting to your application to prevent DDoS attacks.
-1. [Deny writes to the `profile` field on user documents.](accounts.html#dont-use-profile)
-1. [Use Methods instead of client-side insert/update/remove and allow/deny.](security.html#allow-deny)
-1. Use specific selectors and [filter fields](http://guide.meteor.com/security.html#fields) in publications.
+1. [Deny writes to the `profile` field on user documents.](https://guide.meteor.com/accounts#dont-use-profile)
+1. [Use Methods instead of client-side insert/update/remove and allow/deny.](#avoid-allow-deny)
+1. Use specific selectors and [filter fields](#always-restrict-fields) in publications.
 1. Don't use [raw HTML inclusion in Blaze](http://blazejs.org/guide/spacebars.html#Rendering-raw-HTML) unless you really know what you are doing.
-1. [Make sure secret API keys and passwords aren't in your source code.](security.html#api-keys)
-1. [Never store valuable information in `public` property of Meteor settings file.](security.html#meteor-settings) 
+1. [Make sure secret API keys and passwords aren't in your source code.](#securing-api-keys)
+1. [Never store valuable information in `public` property of Meteor settings file.](#settings-on-the-client) 
 1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's a nice UX feature.
-1. [Don't ever trust user IDs passed from the client.](http://guide.meteor.com/security.html#user-id-client) Use `this.userId` inside Methods and publications.
-1. Set up secure [HTTP headers](https://guide.meteor.com/security.html#httpheaders) using [Helmet](https://www.npmjs.com/package/helmet), but know that not all browsers support it so it provides an extra layer of security to users with modern browsers.
+1. [Don't ever trust user IDs passed from the client.](#never-pass-userid-from-the-client) Use `this.userId` inside Methods and publications.
+1. Set up secure [HTTP headers](#http-headers) using [Helmet](https://www.npmjs.com/package/helmet), but know that not all browsers support it so it provides an extra layer of security to users with modern browsers.
 1. At the end of the day, Meteor is a Node.js app so make sure to also follow the [best practises](https://cheatsheetseries.owasp.org/cheatsheets/Nodejs_Security_Cheat_Sheet.html) to ensure maximum security.
 
 ## App Protection
@@ -724,4 +726,4 @@ If a type of request is classified as abusive (we’re not going to go into the 
 
 Although not all attacks are preventable, our App Protection functionality, along with standard AWS protection in front of our servers, will provide a greater level of security for all applications deployed to Galaxy moving forward.
 
-For additional security, it is best to configure your app to limit the messages received via WebSockets, as our proxy servers are only acting in the first connection and not in the WebSocket messages after the connection is established. Meteor has the DDP Rate Limiter configuration already available, find out more [here](https://docs.meteor.com/api/methods.html#ddpratelimiter).
+For additional security, it is best to configure your app to limit the messages received via WebSockets, as our proxy servers are only acting in the first connection and not in the WebSocket messages after the connection is established. Meteor has the DDP Rate Limiter configuration already available, find out more [here](/api/DDPRateLimiter.html#ddpratelimiter).
