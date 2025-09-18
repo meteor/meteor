@@ -10,7 +10,7 @@ export const SyncMethods = {
    * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
    * @param {Number} options.skip Number of results to skip at the beginning
    * @param {Number} options.limit Maximum number of results to return
-   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   * @param {MongoFieldSpecifier} options.projection Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
    * @param {Boolean} options.disableOplog (Server only) Pass true to disable oplog-tailing on this query. This affects the way server processes calls to `observe` on this query. Disabling the oplog can be useful when working with data that updates in large batches.
@@ -41,7 +41,7 @@ export const SyncMethods = {
    * @param {Object} [options]
    * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
    * @param {Number} options.skip Number of results to skip at the beginning
-   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   * @param {MongoFieldSpecifier} options.projection Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
    * @param {String} options.readPreference (Server only) Specifies a custom MongoDB [`readPreference`](https://docs.mongodb.com/manual/core/read-preference) for fetching the document. Possible values are `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred` and `nearest`.
