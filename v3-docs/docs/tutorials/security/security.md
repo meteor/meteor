@@ -82,7 +82,7 @@ If someone comes along and passes a non-ID selector like `{}`, they will end up 
 
 To help you write good Methods that exhaustively validate their arguments, you can use a community package for Methods that enforces argument validation. Read more about how to use it in the [documentation for jam:method](/community-packages/jam-method.html). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
 
-### Don't pass userId from the client
+### Never pass userId from the client
 
 The `this` context inside every Meteor Method has some useful information about the current connection, and the most useful is [`this.userId`](http://docs.meteor.com/#/full/method_userId). This property is managed by the DDP login system, and is guaranteed by the framework itself to be secure following widely-used best practices.
 
@@ -90,15 +90,15 @@ Given that the user ID of the current user is available through this context, yo
 
 ```js
 // #1: Bad! The client could pass any user ID and set someone else's name
-setName({ userId, newName }) {
-  Meteor.users.update(userId, {
+async run({ userId, newName }) {
+  await Meteor.users.updateAsync(userId, {
     $set: { name: newName }
   });
 }
 
 // #2: Good, the client can only set the name on the currently logged in user
-setName({ newName }) {
-  Meteor.users.update(this.userId, {
+async run({ newName }) {
+  await Meteor.users.updateAsync(this.userId, {
     $set: { name: newName }
   });
 }
@@ -106,7 +106,7 @@ setName({ newName }) {
 
 The _only_ times you should be passing any user ID as an argument are the following:
 
-1. This is a Method only accessible by admin users, who are allowed to edit other users. See the section about [user roles](accounts.html##roles-and-permissions) to learn how to check that a user is in a certain role.
+1. This is a Method only accessible by admin users, who are allowed to edit other users. See the section about [user roles](/packages/roles) to learn how to define roles and check that a user is in a certain role.
 2. This Method doesn't modify the other user, but uses it as a target; for example, it could be a Method for sending a private message, or adding a user as a friend.
 
 ### One Method per action
@@ -114,11 +114,11 @@ The _only_ times you should be passing any user ID as an argument are the follow
 The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
 
 ```js
-export const makePrivate = new createMethod({
+export const makePrivate = createMethod({
   name: 'lists.makePrivate',
-  validate: new SimpleSchema({
+  schema: new SimpleSchema({
     listId: { type: String }
-  }).validator(),
+  }),
   async run({ listId }) {
     if (!this.userId) {
       throw new Meteor.Error('lists.makePrivate.notLoggedIn',
