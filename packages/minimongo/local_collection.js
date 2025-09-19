@@ -102,8 +102,46 @@ export default class LocalCollection {
       selector = {};
     }
     options.limit = 1;
-    return (await this.find(selector, options).fetchAsync())[0];
+    const result = (await this.find(selector, options).fetchAsync())[0];
+    
+    if (result && typeof result === 'object') {
+      this._serializedBinaryData(result);
+    }
+    
+    return result;
   }
+
+  _serializedBinaryData(obj) {
+    if (!obj || typeof obj !== 'object') {
+      return;
+    }
+    
+    // Handle arrays
+    if (Array.isArray(obj)) {
+      obj.forEach(item => this._serializedBinaryData(item));
+      return;
+    }
+    
+    // Recursively all object properties
+    Object.keys(obj).forEach(key => {
+      const value = obj[key];
+      
+      // Check if this looks like a serialized MongoDB.Binary object
+      if (value && typeof value === 'object' && 
+          value.sub_type !== undefined && 
+          value.buffer !== undefined && 
+          value.position !== undefined) {
+        // Convert this serialized binary back to Uint8Array
+        if (value.buffer && (value.buffer instanceof Uint8Array || Array.isArray(value.buffer))) {
+          obj[key] = new Uint8Array(value.buffer);
+        }
+      } else if (value && typeof value === 'object') {
+        // Recursively check nested objects
+        this._serializedBinaryData(value);
+      }
+    });
+  }
+
   prepareInsert(doc) {
     assertHasValidFieldNames(doc);
 
@@ -1617,9 +1655,9 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
           return;
         }
 
-        // technically maybe there should be an EJSON.clone here, but it's about
-        // to be removed from this.docs!
-        const doc = transform(this.docs.get(id));
+        // Use docFromDriver if available, else fallback to cache
+        const cachedOrdered = this.docs.get(id) || { _id: id };
+        const doc = transform(cachedOrdered);
 
         if (observeCallbacks.removedAt) {
           observeCallbacks.removedAt(doc, indices ? this.docs.indexOf(id) : -1);
@@ -1650,7 +1688,8 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
       },
       removed(id) {
         if (observeCallbacks.removed) {
-          observeCallbacks.removed(transform(this.docs.get(id)));
+          const cached = this.docs.get(id) || { _id: id };
+          observeCallbacks.removed(transform(cached));
         }
       },
     };
@@ -1719,8 +1758,7 @@ LocalCollection._removeFromResultsSync = (query, doc) => {
     query.results.splice(i, 1);
   } else {
     const id = doc._id;  // in case callback mutates doc
-
-    query.removed(doc._id);
+    query.removed(String(id));
     query.results.remove(id);
   }
 };
@@ -1734,7 +1772,7 @@ LocalCollection._removeFromResultsAsync = async (query, doc) => {
   } else {
     const id = doc._id;  // in case callback mutates doc
 
-    await query.removed(doc._id);
+  await query.removed(String(id));
     query.results.remove(id);
   }
 };

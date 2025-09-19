@@ -55,6 +55,9 @@ if (Meteor.isClient) (() => {
     Meteor.call('removeSkipCaseInsensitiveChecksForTest', value);
 
   const createUserStep = function (test, expect) {
+    Meteor.logout(expect(_ => {
+      test.equal(Meteor.user(), null);
+    }));
     // Hack because Tinytest does not clean the database between tests/runs
     this.randomSuffix = Random.id(10);
     this.username = `AdaLovelace${ this.randomSuffix }`;
@@ -1300,6 +1303,7 @@ if (Meteor.isServer) (() => {
           await Meteor.callAsync("resetPassword", resetPasswordToken, hashPasswordWithSha("new-password")),
         /Token has invalid email address/
       );
+      Accounts._options.ambiguousErrorMessages = true;
       await test.throwsAsync(
         async () =>
           await Meteor.callAsync(
@@ -1379,6 +1383,8 @@ if (Meteor.isServer) (() => {
           throw e;
         })
       }
+
+      Accounts._options.ambiguousErrorMessages = true;
 
       await test.throwsAsync(
         async () => await Meteor.callAsync(
@@ -1669,6 +1675,7 @@ if (Meteor.isServer) (() => {
       test.isTrue(userId1);
       test.isTrue(userId2);
 
+      Accounts._options.ambiguousErrorMessages = false;
       await test.throwsAsync(
         async () => await Accounts.setUsername(userId2, usernameUpper),
         /Username already exists/

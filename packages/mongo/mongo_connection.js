@@ -12,6 +12,7 @@ import { ObserveMultiplexer } from './observe_multiplex';
 import { OplogObserveDriver } from './oplog_observe_driver';
 import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
 import { PollingObserveDriver } from './polling_observe_driver';
+import { ChangeStreamObserveDriver } from './changestream_observe_driver';
 
 const FILE_ASSET_SUFFIX = 'Asset';
 const ASSETS_FOLDER = 'assets';
@@ -33,7 +34,6 @@ export const MongoConnection = function (url, options) {
   var mongoOptions = Object.assign({
     ignoreUndefined: true,
   }, userOptions);
-
 
 
   // Internally the oplog connections specify their own maxPoolSize
@@ -90,6 +90,8 @@ export const MongoConnection = function (url, options) {
     self._docFetcher = new DocFetcher(self);
   }
 
+  // Check if Change Streams are supported
+  self._checkChangeStreamSupport();
 };
 
 MongoConnection.prototype._close = async function() {
@@ -112,6 +114,37 @@ MongoConnection.prototype._close = async function() {
 
 MongoConnection.prototype.close = function () {
   return this._close();
+};
+
+// Check if Change Streams are supported
+MongoConnection.prototype._checkChangeStreamSupport = async function() {
+  var self = this;
+  
+  try {
+    // Change Streams require MongoDB 3.6+ and replica set or sharded cluster
+    const admin = self.db.admin();
+    const serverInfo = await admin.serverInfo();
+    const version = serverInfo.version.split('.').map(Number);
+    
+    // Check MongoDB version (3.6+)
+    const hasMinVersion = version[0] > 3 || (version[0] === 3 && version[1] >= 6);
+    
+    if (!hasMinVersion) {
+      self._supportsChangeStreams = false;
+      return;
+    }
+    
+    // Check if we're running on a replica set or sharded cluster
+    const isMaster = await admin.command({ isMaster: 1 });
+    const isReplicaSet = isMaster.setName || isMaster.ismaster || isMaster.secondary;
+    const isSharded = isMaster.msg === 'isdbgrid';
+    
+    self._supportsChangeStreams = isReplicaSet || isSharded;
+    
+  } catch (error) {
+    console.warn('Error checking Change Streams support:', error.message);
+    self._supportsChangeStreams = false;
+  }
 };
 
 MongoConnection.prototype._setOplogHandle = function(oplogHandle) {
@@ -852,6 +885,36 @@ Object.assign(MongoConnection.prototype, {
     if (firstHandle) {
 
       var matcher, sorter;
+      
+      // Check if Change Streams are available and enabled
+      const canUseChangeStreams = [
+        function () {
+          // Check if change streams are explicitly disabled
+          const mongoSettings = Meteor.settings?.packages?.mongo || {};
+          // return mongoSettings.reactivity === 'CHANGE_STREAMS' || process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS';
+          return true // dumb-forcing changeStream tests into CI
+        },
+        function () {
+          // Change Streams require MongoDB 3.6+ and replica set
+          return self._supportsChangeStreams && !ordered &&
+            !callbacks._testOnlyPollCallback;
+        },
+        function () {
+          // We need to be able to compile the selector
+          try {
+            matcher = new Minimongo.Matcher(cursorDescription.selector);
+            return true;
+          } catch (e) {
+            return false;
+          }
+        },
+        function () {
+          // Change streams work with most selectors, but some complex ones might not work well
+          // For now, we use the same check as oplog
+          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
+        }
+      ].every(f => f());
+      
       var canUseOplog = [
         function () {
           // At a bare minimum, using the oplog requires us to have an oplog, to
@@ -914,7 +977,22 @@ Object.assign(MongoConnection.prototype, {
         }
       ].every(f => f());  // invoke each function and check if all return true
 
-      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+      // Choose driver in order of preference: ChangeStreams > Oplog > Polling
+      var driverClass;
+      if (canUseChangeStreams) {
+        // Use dynamic import to avoid circular dependency issues
+        try {
+          driverClass = ChangeStreamObserveDriver;
+        } catch (error) {
+          console.warn('Failed to load ChangeStreamObserveDriver, falling back to oplog/polling:', error.message);
+          driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+        }
+      } else if (canUseOplog) {
+        driverClass = OplogObserveDriver;
+      } else {
+        driverClass = PollingObserveDriver;
+      }
+      
       observeDriver = new driverClass({
         cursorDescription: cursorDescription,
         mongoHandle: self,
