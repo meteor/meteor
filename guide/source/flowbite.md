@@ -131,12 +131,12 @@ import { Dropdown } from 'flowbite-react';
 </Dropdown>;
 ```
 
-Finally, another example on how you can use the navbar component:
+Finally, another example on how you can use the navbar component with a fixed position:
 
 ```javascript
 import { Navbar } from 'flowbite-react';
 
-<Navbar fluid={true} rounded={true}>
+<Navbar fluid={true} className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900">
   <Navbar.Brand href="https://flowbite.com/">
     <img
       src="https://flowbite.com/docs/images/logo.svg"
@@ -159,6 +159,8 @@ import { Navbar } from 'flowbite-react';
   </Navbar.Collapse>
 </Navbar>;
 ```
+
+Note: When using a fixed navbar, make sure to add `padding-top` to your main content container to prevent it from being hidden behind the navbar. For example, add `pt-16` (or the height of your navbar) to the body or main element.
 
 To learn more about Flowbite React make sure to check out to the [repository](https://github.com/themesberg/flowbite-react) and the [main website](https://flowbite-react.com/).
 
