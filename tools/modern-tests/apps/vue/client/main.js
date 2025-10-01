@@ -1,1 +1,2 @@
-import '../imports/ui/main'
+import './main.css';
+import '../imports/ui/main';

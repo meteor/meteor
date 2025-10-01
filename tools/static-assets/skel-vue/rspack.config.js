@@ -1,5 +1,5 @@
-import { defineConfig } from '@meteorjs/rspack';
-import { VueLoaderPlugin } from 'vue-loader';
+const { defineConfig } = require('@meteorjs/rspack');
+const { VueLoaderPlugin } = require('vue-loader');
 
 /**
  * Rspack configuration for Meteor projects.
@@ -11,7 +11,7 @@ import { VueLoaderPlugin } from 'vue-loader';
  *
  * Use these flags to adjust your build settings based on environment.
  */
-export default defineConfig(Meteor => {
+module.exports = defineConfig(Meteor => {
   return {
     ...Meteor.isClient && {
       plugins: [new VueLoaderPlugin()],

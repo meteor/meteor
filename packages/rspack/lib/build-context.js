@@ -7,6 +7,8 @@ import { RSPACK_DOCTOR_CONTEXT } from "./constants";
 const fs = require('fs');
 const path = require('path');
 
+const { getCustomConfigFilePath } = require('./processes');
+
 const { logError } = require('meteor/tools-core/lib/log');
 
 const { capitalizeFirstLetter } = require('meteor/tools-core/lib/string');
@@ -577,13 +579,22 @@ export function cleanBuildContextFiles() {
 /**
  * Ensures the rspack.config.js file exists at the project level
  * Creates the file if it doesn't exist with the required template
- * @returns {string} Path to the rspack.config.js file
+ * Will not create a new file if rspack.config.mjs or rspack.config.cjs exists
+ * @returns {string} Path to the rspack.config file (.js, .mjs, or .cjs)
  */
 export function ensureRspackConfigExists() {
   const appDir = getMeteorAppDir();
-  const configPath = path.join(appDir, 'rspack.config.js');
 
-  const configTemplate = `import { defineConfig } from '@meteorjs/rspack';
+  // Check if any config file already exists using the helper function
+  const existingConfigPath = getCustomConfigFilePath(appDir);
+  if (existingConfigPath) {
+    return existingConfigPath;
+  }
+
+  // If no config file exists, we'll create a .js one
+  const jsConfigPath = path.join(appDir, 'rspack.config.js');
+
+  const configTemplate = `const { defineConfig } = require('@meteorjs/rspack');
 
 /**
  * Rspack configuration for Meteor projects.
@@ -595,19 +606,19 @@ export function ensureRspackConfigExists() {
  *
  * Use these flags to adjust your build settings based on environment.
  */
-export default defineConfig(Meteor => {
+module.exports = defineConfig(Meteor => {
   return {};
 });
 `;
 
-  if (!fs.existsSync(configPath)) {
+  if (!fs.existsSync(jsConfigPath)) {
     try {
-      fs.writeFileSync(configPath, configTemplate, 'utf8');
+      fs.writeFileSync(jsConfigPath, configTemplate, 'utf8');
     } catch (error) {
       logError(`Failed to create rspack.config.js file: ${error.message}`);
       throw error;
     }
   }
 
-  return configPath;
+  return jsConfigPath;
 }

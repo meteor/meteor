@@ -12,7 +12,7 @@ Package.registerBuildPlugin({
     'ecmascript'
   ],
   npmDependencies: {
-    '@meteorjs/swc-core': '1.12.14',
+    '@meteorjs/swc-core': '1.13.5',
     'acorn': '8.10.0',
     "@babel/runtime": "7.18.9",
     '@babel/parser': '7.22.7',

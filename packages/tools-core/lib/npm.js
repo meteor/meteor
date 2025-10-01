@@ -420,3 +420,68 @@ export function getYarnCommand(args) {
     prefix: `yarn`,
   };
 }
+
+/**
+ * Gets the path to the monorepo root by checking for common monorepo indicators.
+ * Traverses up the directory tree until it finds a monorepo indicator or reaches the root.
+ * 
+ * @param {Object} [options] - Options for the detection
+ * @param {string} [options.cwd] - Current working directory (defaults to process.cwd())
+ * @returns {string|null} Path to the monorepo root if found, null otherwise
+ */
+export function getMonorepoPath(options = {}) {
+  const cwd = options.cwd || process.cwd();
+  let currentDir = cwd;
+
+  // Function to check if directory has monorepo indicators
+  const hasMonorepoIndicators = (dir) => {
+    try {
+      // Check for npm/yarn workspaces in package.json
+      const packageJsonPath = path.join(dir, 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        if (packageJson.workspaces) {
+          return true;
+        }
+      }
+
+      // Check for Lerna
+      const lernaJsonPath = path.join(dir, 'lerna.json');
+      if (fs.existsSync(lernaJsonPath)) {
+        return true;
+      }
+
+      // Check for pnpm workspaces
+      const pnpmWorkspacePath = path.join(dir, 'pnpm-workspace.yaml');
+      if (fs.existsSync(pnpmWorkspacePath)) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // Traverse up the directory tree
+  while (currentDir !== path.dirname(currentDir)) { // Stop when we reach the root directory
+    if (hasMonorepoIndicators(currentDir)) {
+      return currentDir;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+
+  // Check the root directory as well
+  return hasMonorepoIndicators(currentDir) ? currentDir : null;
+}
+
+/**
+ * Detects if a directory is within a monorepo by checking for common monorepo indicators.
+ *
+ * @param {Object} [options] - Options for the detection
+ * @param {string} [options.cwd] - Current working directory (defaults to process.cwd())
+ * @returns {boolean} True if the directory is within a monorepo, false otherwise
+ */
+export function isMonorepo(options = {}) {
+  return getMonorepoPath(options) !== null;
+}

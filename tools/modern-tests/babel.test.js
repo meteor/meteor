@@ -12,6 +12,7 @@ describe('Babel App Bundling /', () => {
       server: 'server/main.js',
       test: 'tests/main.js'
     },
+    configFile: 'rspack.config.mjs',
     customAssertions: {
       afterRun: async ({ result }) => {
         await assertFileExtensionModuleRules(result.outputLines);

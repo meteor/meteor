@@ -13,9 +13,13 @@ const METEOR_EXECUTABLE = path.join(REPO_ROOT, 'meteor');
  * Helper function to set up a Meteor app in a temporary directory
  * Copies the app and runs npm install
  * @param {string} appName - Name of the app in the apps directory
+ * @param {Object} options - Additional options
+ * @param {boolean} options.isMonorepo - Whether the app is a monorepo
  * @returns {string} - Path to the temporary directory containing the app
  */
-export async function setupMeteorApp(appName) {
+export async function setupMeteorApp(appName, options = {}) {
+  const { isMonorepo = false } = options;
+
   // Create a unique temporary directory
   const randomSuffix = Math.random().toString(36).substring(2, 10);
   const tempDir = path.join(os.tmpdir(), `meteortest-${appName}-${randomSuffix}`);
@@ -42,13 +46,30 @@ export async function setupMeteorApp(appName) {
     console.error('Error during copy:', err);
   }
 
-  // Run npm install in the temporary directory
-  console.log('Running npm install...');
-  await execa.command('npm install', {
-    cwd: tempDir,
-    stdio: 'inherit',
-    shell: true,
-  });
+  if (isMonorepo) {
+    // For monorepo, install dependencies at both root and app level
+    console.log('Running npm install at root level...');
+    await execa.command('npm install', {
+      cwd: tempDir,
+      stdio: 'inherit',
+      shell: true,
+    });
+
+    console.log('Running npm install at app level...');
+    await execa.command('npm install', {
+      cwd: path.join(tempDir, 'app'),
+      stdio: 'inherit',
+      shell: true,
+    });
+  } else {
+    // For regular apps, just install at the root
+    console.log('Running npm install...');
+    await execa.command('npm install', {
+      cwd: tempDir,
+      stdio: 'inherit',
+      shell: true,
+    });
+  }
 
   return { tempDir };
 }
@@ -61,9 +82,12 @@ export async function setupMeteorApp(appName) {
  * @param {string|RegExp} options.waitForOutput - Output pattern to wait for
  * @param {Object} options.waitOptions - Options for waitForMeteorOutput
  * @param {string[]} options.commandOptions - Additional command line options for the run command (e.g. ['--production'])
+ * @param {boolean} options.isMonorepo - Whether the app is a monorepo
  * @returns {Object} - The meteor process and output lines
  */
 export async function runMeteorApp(tempDir, port, options = {}) {
+  const { isMonorepo = false } = options;
+
   // Start Meteor CLI in dev mode
   console.log(`Starting Meteor app on port ${port}...`);
 
@@ -76,11 +100,14 @@ export async function runMeteorApp(tempDir, port, options = {}) {
     args.push(...options.commandOptions);
   }
 
+  // For monorepo, run the meteor command from the app subdirectory
+  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+
   // Run the meteor command
   const { meteorProcess, outputLines } = await runMeteorCommand(
     'run', 
     args, 
-    tempDir,
+    appDir,
     {
       captureOutput
     }
@@ -476,9 +503,12 @@ export async function appendFileContent(tempDir, filePath, options = {}) {
  * @param {Object} options.waitOptions - Options for waitForMeteorOutput
  * @param {string[]} options.commandOptions - Additional command line options for the test command
  * @param {boolean} options.checkTestResults - Whether to check test results and propagate failures to Jest
+ * @param {boolean} options.isMonorepo - Whether the app is a monorepo
  * @returns {Object} - The meteor process and output lines
  */
 export async function runMeteorTests(tempDir, port, options = {}) {
+  const { isMonorepo = false } = options;
+
   // Start Meteor tests
   console.log(`Starting Meteor tests on port ${port}...`);
 
@@ -491,11 +521,14 @@ export async function runMeteorTests(tempDir, port, options = {}) {
     args.push(...options.commandOptions);
   }
 
+  // For monorepo, run the meteor command from the app subdirectory
+  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+
   // Run the meteor test command
   const { meteorProcess, outputLines, processResult } = await runMeteorCommand(
     'test', 
     args, 
-    tempDir,
+    appDir,
     {
       execaOptions: {
         env: {
@@ -647,9 +680,12 @@ export async function waitForPlaywrightConsole(pattern, options = {}) {
  * @param {Object} options - Additional options
  * @param {string[]} options.commandOptions - Additional command line options for the build command
  * @param {boolean} options.captureOutput - Whether to capture the command's output
+ * @param {boolean} options.isMonorepo - Whether the app is a monorepo
  * @returns {Object} - The build output directory and the meteor process result
  */
 export async function buildMeteorApp(tempDir, options = {}) {
+  const { isMonorepo = false } = options;
+
   // Create a unique temporary directory for the build output
   const randomSuffix = Math.random().toString(36).substring(2, 10);
   const buildOutputDir = path.join(os.tmpdir(), `meteor-build-${randomSuffix}`);
@@ -667,11 +703,14 @@ export async function buildMeteorApp(tempDir, options = {}) {
     args.push(...options.commandOptions);
   }
 
+  // For monorepo, run the meteor command from the app subdirectory
+  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+
   // Run the meteor build command with automatic exit code checking
   const result = await runMeteorCommand(
     'build', 
     args, 
-    tempDir,
+    appDir,
     {
       execaOptions: options.execaOptions || {},
       captureOutput: options.captureOutput !== undefined ? options.captureOutput : true,

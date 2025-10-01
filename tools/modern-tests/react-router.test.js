@@ -19,9 +19,13 @@ describe('ReactRouter App Bundling /', () => {
       process.env.METEOR_PACKAGE_DIRS = '';
     },
     customAssertions: {
+      afterInit: async ({ result }) => {
+        await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
+      },
       afterRun: async ({ result, port }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
-        await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
+        // negated as cached output (babel.config.js)
+        await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/, { negate: true });
         await assert404Page(port);
         // Less styles support
         await assertBodyStyles({

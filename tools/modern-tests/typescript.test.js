@@ -2,7 +2,7 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
-import { assertFileExist } from "./assertions";
+import { assertBodyStyles, assertFileExist } from "./assertions";
 
 describe('TypeScript App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
@@ -14,8 +14,14 @@ describe('TypeScript App Bundling /', () => {
       testClient: 'tests/client.ts',
       testServer: 'tests/server.ts',
     },
+    buildDir: 'build',
+    configFile: 'rspack.config.cjs',
     customAssertions: {
       afterRun: async ({ result, tempDir }) => {
+        // SCSS styles support
+        await assertBodyStyles({
+          'white-space': 'break-spaces',
+        });
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
         await waitForTypeScriptErrorFree(result.outputLines);
         await assertFileExist(tempDir, '.meteor/local/types');
@@ -25,6 +31,10 @@ describe('TypeScript App Bundling /', () => {
         await waitForMeteorOutput(allConsoleLogs, /.*HMR.*Updated modules:.*/);
       },
       afterRunProduction: async ({ result }) => {
+        // SCSS styles support
+        await assertBodyStyles({
+          'white-space': 'break-spaces',
+        });
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
       },
       afterRunProductionRebuildClient: async ({ allConsoleLogs }) => {

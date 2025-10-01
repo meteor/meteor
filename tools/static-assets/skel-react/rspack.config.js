@@ -1,4 +1,4 @@
-import { defineConfig } from '@meteorjs/rspack';
+const { defineConfig } = require('@meteorjs/rspack');
 
 /**
  * Rspack configuration for Meteor projects.
@@ -10,6 +10,6 @@ import { defineConfig } from '@meteorjs/rspack';
  *
  * Use these flags to adjust your build settings based on environment.
  */
-export default defineConfig(Meteor => {
+module.exports = defineConfig(Meteor => {
   return {};
 });

@@ -33,9 +33,9 @@ const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
 const { RSPACK_BUILD_CONTEXT, FILE_ROLE } = require('./constants');
 
 /**
- * Checks if exact entries exist in the .meteorignore file
- * @param {string[]} entries - Array of exact entries to check for
- * @returns {Object} Object with keys corresponding to each entry and values as booleans
+ * Checks if entries exist in .meteorignore file
+ * @param {string[]} entries - Entries to check
+ * @returns {Object} Results with entry keys and boolean values
  */
 function checkMeteorIgnoreExactEntries(entries) {
   const meteorIgnorePath = path.join(getMeteorAppDir(), '.meteorignore');
@@ -190,30 +190,55 @@ export function configureMeteorForRspack() {
     extraFoldersToIgnore = [];
   }
 
-  // Skip immediate html and css children from intial entrypoint contexts
+  // Skip CSS/HTML files in entrypoint contexts
   extraFilesToIgnore = [
     ...extraFilesToIgnore,
     ...initialEntrypointContexts.flatMap(entrypoint => {
-      // Create exact entries to check for
-      const cssEntry = `${entrypoint}/*.css`;
-      const htmlEntry = `${entrypoint}/*.html`;
+      const cssPattern = `${entrypoint}/*.css`;
+      const htmlPattern = `${entrypoint}/*.html`;
 
-      // Check all entries at once
-      const entryResults = checkMeteorIgnoreExactEntries([cssEntry, htmlEntry]);
-      const hasMatchingCssEntry = entryResults[cssEntry];
-      const hasMatchingHtmlEntry = entryResults[htmlEntry];
+      const cssFiles = glob.sync(cssPattern);
+      const htmlFiles = glob.sync(htmlPattern);
 
-      // Prepare the result array
+      const entriesToCheck = [
+        cssPattern,
+        htmlPattern,
+        ...cssFiles,
+        ...htmlFiles
+      ];
+
+      const entryResults = checkMeteorIgnoreExactEntries(entriesToCheck);
+      const hasMatchingCssPattern = entryResults[cssPattern];
+      const hasMatchingHtmlPattern = entryResults[htmlPattern];
+      const hasAnyCssFileInMeteorIgnore = cssFiles.some(file => entryResults[file]);
+      const hasAnyHtmlFileInMeteorIgnore = htmlFiles.some(file => entryResults[file]);
+
       const result = [];
 
-      // Only add the HTML ignore pattern if there's no matching HTML entry in .meteorignore
-      if (!hasMatchingHtmlEntry) {
-        result.push(`!${htmlEntry}`);
+      // Handle HTML files
+      if (hasAnyHtmlFileInMeteorIgnore) {
+        // Add individual HTML files that are not in meteorignore
+        htmlFiles.forEach(file => {
+          if (!entryResults[file]) {
+            result.push(`!${file}`);
+          }
+        });
+      } else if (!hasMatchingHtmlPattern) {
+        // Skip HTML pattern if not in meteorignore
+        result.push(`!${htmlPattern}`);
       }
 
-      // Only add the CSS ignore pattern if there's no matching CSS entry in .meteorignore
-      if (!hasMatchingCssEntry) {
-        result.push(`!${cssEntry}`);
+      // Handle CSS files
+      if (hasAnyCssFileInMeteorIgnore) {
+        // Add individual CSS files that are not in meteorignore
+        cssFiles.forEach(file => {
+          if (!entryResults[file]) {
+            result.push(`!${file}`);
+          }
+        });
+      } else if (!hasMatchingCssPattern) {
+        // Skip CSS pattern if not in meteorignore
+        result.push(`!${cssPattern}`);
       }
 
       return result;
@@ -249,7 +274,14 @@ export function configureMeteorForRspack() {
   ].filter(Boolean);
   const rootFilesToIgnore = [
     ...projectRootFilesAndFolders.files.filter(
-      file => !['package.json', '.meteorignore', 'tsconfig.json'].includes(file),
+      file =>
+        ![
+          'package.json',
+          '.meteorignore',
+          'tsconfig.json',
+          'postcss.config.js',
+          'scss-config.json',
+        ].includes(file),
     ),
   ];
   const filesToIgnore = [...rootFilesToIgnore, ...extraFilesToIgnore];

@@ -367,6 +367,7 @@ if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath)) {
             tsx: hasTSXSupport,
           },
           ...(hasSwcHelpersAvailable &&
+            !isNodeTarget &&
             (packageName == null ||
               !['core-runtime', 'modules', 'modules-runtime'].includes(
                 packageName,

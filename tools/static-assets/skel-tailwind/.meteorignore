@@ -1,2 +1,2 @@
 # Ignore Meteor CSS handling; let Rspack resolve Tailwind styles
-client/*.css
+client/main.css

@@ -44,9 +44,9 @@
   "exclude": [
     "./.meteor/**",
     "./packages/**",
-    "./_build/**",
-    "./public/build-chunks/**",
-    "./public/build-assets/**",
-    "./private/build-assets/**"
+    "./build/**",
+    "./public/chunks/**",
+    "./public/assets/**",
+    "./private/assets/**"
   ]
 }
