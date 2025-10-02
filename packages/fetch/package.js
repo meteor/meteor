@@ -27,8 +27,10 @@ Package.onUse(function(api) {
 
 Package.onTest(function(api) {
   api.use("ecmascript");
+  api.use("typescript");
   api.use("tinytest");
   api.use("fetch");
   api.mainModule("tests/main.js");
+  api.mainModule("tests/main.ts");
   api.addAssets("tests/asset.json", ["client", "server"]);
 });

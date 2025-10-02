@@ -20,6 +20,7 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use("email", "server");
-  api.use(["tinytest", "ecmascript"]);
+  api.use(["tinytest", "ecmascript", "typescript"]);
   api.addFiles("email_tests.js", "server");
+  api.mainModule("email_tests.ts", "server");
 });
