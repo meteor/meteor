@@ -1401,6 +1401,28 @@ export class AccountsServer extends AccountsCommon {
       // XXX Maybe we should re-use the selector above and notice if the update
       //     touches nothing?
       setAttrs = { ...setAttrs, ...opts };
+
+      // Sync email from OAuth service data to user.emails array if present
+      if (serviceData.email) {
+        const emailAddress = serviceData.email;
+        const emailVerified = serviceData.verified_email || serviceData.verified || false;
+
+        // Check if the email already exists in user.emails
+        const existingUser = await this.users.findOneAsync(user._id, {
+          fields: { emails: 1 }
+        });
+        const existingEmails = existingUser?.emails || [];
+        const emailExists = existingEmails.some(e => e.address === emailAddress);
+
+        if (!emailExists) {
+          // Add the email to the user.emails array
+          setAttrs = {
+            ...setAttrs,
+            emails: [...existingEmails, { address: emailAddress, verified: emailVerified }]
+          };
+        }
+      }
+
       await this.users.updateAsync(user._id, {
         $set: setAttrs
       });
@@ -1413,6 +1435,14 @@ export class AccountsServer extends AccountsCommon {
       // Create a new user with the service data.
       user = {services: {}};
       user.services[serviceName] = serviceData;
+
+      // Sync email from OAuth service data to user.emails array if present
+      if (serviceData.email) {
+        const emailAddress = serviceData.email;
+        const emailVerified = serviceData.verified_email || serviceData.verified || false;
+        user.emails = [{ address: emailAddress, verified: emailVerified }];
+      }
+
       const userId = await this.insertUserDoc(opts, user);
       return {
         type: serviceName,

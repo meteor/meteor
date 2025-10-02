@@ -957,3 +957,72 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // cleanup
   await Meteor.users.removeAsync(u1.id);
 });
+
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - OAuth email sync', async test => {
+  const googleId = Random.id();
+  const testEmail = 'test@example.com';
+
+  // Create an account with Google OAuth including email
+  const u1 = await Accounts.updateOrCreateUserFromExternalService(
+    'google',
+    { id: googleId, email: testEmail, verified_email: true },
+    { profile: { name: 'Test User' } }
+  );
+
+  // Verify the user was created
+  const user1 = await Meteor.users.findOneAsync(u1.userId);
+  test.isTrue(!!user1, 'User should be created');
+
+  // Verify email is stored in both places
+  test.equal(user1.services.google.email, testEmail, 'Email should be in services.google.email');
+  test.isTrue(!!user1.emails, 'User should have emails array');
+  test.length(user1.emails, 1, 'User should have exactly one email');
+  test.equal(user1.emails[0].address, testEmail, 'Email address should match');
+  test.equal(user1.emails[0].verified, true, 'Email should be marked as verified');
+
+  // Verify findUserByEmail now works
+  const foundUser = await Accounts.findUserByEmail(testEmail);
+  test.isTrue(!!foundUser, 'findUserByEmail should find the user');
+  test.equal(foundUser._id, user1._id, 'Found user should match created user');
+
+  // Update the user with the same email again (simulating re-login)
+  await Accounts.updateOrCreateUserFromExternalService(
+    'google',
+    { id: googleId, email: testEmail, verified_email: true },
+    {}
+  );
+
+  const user2 = await Meteor.users.findOneAsync(u1.userId);
+  test.length(user2.emails, 1, 'User should still have exactly one email after update');
+  test.equal(user2.emails[0].address, testEmail, 'Email should remain the same');
+
+  // Test OAuth provider without email (like Twitter)
+  const twitterId = Random.id();
+  const u2 = await Accounts.updateOrCreateUserFromExternalService(
+    'twitter',
+    { id: twitterId, screenName: 'testuser' },
+    { profile: { name: 'Twitter User' } }
+  );
+
+  const twitterUser = await Meteor.users.findOneAsync(u2.userId);
+  test.equal(twitterUser.emails, undefined, 'Twitter user without email should not have emails array');
+
+  // Test unverified email from OAuth provider
+  const facebookId = Random.id();
+  const facebookEmail = 'facebook@example.com';
+  const u3 = await Accounts.updateOrCreateUserFromExternalService(
+    'facebook',
+    { id: facebookId, email: facebookEmail },
+    { profile: { name: 'Facebook User' } }
+  );
+
+  const facebookUser = await Meteor.users.findOneAsync(u3.userId);
+  test.isTrue(!!facebookUser.emails, 'Facebook user should have emails array');
+  test.equal(facebookUser.emails[0].address, facebookEmail, 'Facebook email should match');
+  test.equal(facebookUser.emails[0].verified, false, 'Facebook email should be unverified by default');
+
+  // cleanup
+  await Meteor.users.removeAsync(u1.userId);
+  await Meteor.users.removeAsync(u2.userId);
+  await Meteor.users.removeAsync(u3.userId);
+});
