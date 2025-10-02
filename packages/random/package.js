@@ -14,6 +14,8 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use('random');
   api.use('ecmascript');
+  api.use('typescript');
   api.use('tinytest');
   api.mainModule('random_tests.js');
+  api.mainModule('random_tests.ts');
 });

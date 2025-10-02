@@ -15,5 +15,8 @@ Package.onTest(function (api) {
   api.use('tinytest');
   api.use('test-helpers');
   api.use('tracker');
+  api.use('ecmascript');
+  api.use('typescript');
   api.addFiles('tracker_tests.js', 'client');
+  api.mainModule('tracker_tests.ts');
 });
