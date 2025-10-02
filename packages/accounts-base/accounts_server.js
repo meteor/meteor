@@ -1403,29 +1403,18 @@ export class AccountsServer extends AccountsCommon {
       setAttrs = { ...setAttrs, ...opts };
 
       // Sync email from OAuth service data to user.emails array if present
+      const updateQuery = { $set: setAttrs };
       if (serviceData.email) {
         const emailAddress = serviceData.email;
         const emailVerified = serviceData.verified_email || serviceData.verified || false;
 
-        // Check if the email already exists in user.emails
-        const existingUser = await this.users.findOneAsync(user._id, {
-          fields: { emails: 1 }
-        });
-        const existingEmails = existingUser?.emails || [];
-        const emailExists = existingEmails.some(e => e.address === emailAddress);
-
-        if (!emailExists) {
-          // Add the email to the user.emails array
-          setAttrs = {
-            ...setAttrs,
-            emails: [...existingEmails, { address: emailAddress, verified: emailVerified }]
-          };
-        }
+        // Use $addToSet to add email to user.emails array if it doesn't exist
+        updateQuery.$addToSet = {
+          emails: { address: emailAddress, verified: emailVerified }
+        };
       }
 
-      await this.users.updateAsync(user._id, {
-        $set: setAttrs
-      });
+      await this.users.updateAsync(user._id, updateQuery);
 
       return {
         type: serviceName,
