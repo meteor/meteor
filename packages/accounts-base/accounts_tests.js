@@ -1007,7 +1007,7 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - OAuth emai
   const twitterUser = await Meteor.users.findOneAsync(u2.userId);
   test.equal(twitterUser.emails, undefined, 'Twitter user without email should not have emails array');
 
-  // Test unverified email from OAuth provider
+  // Test OAuth provider with email (Facebook)
   const facebookId = Random.id();
   const facebookEmail = 'facebook@example.com';
   const u3 = await Accounts.updateOrCreateUserFromExternalService(
@@ -1019,7 +1019,7 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - OAuth emai
   const facebookUser = await Meteor.users.findOneAsync(u3.userId);
   test.isTrue(!!facebookUser.emails, 'Facebook user should have emails array');
   test.equal(facebookUser.emails[0].address, facebookEmail, 'Facebook email should match');
-  test.equal(facebookUser.emails[0].verified, false, 'Facebook email should be unverified by default');
+  test.equal(facebookUser.emails[0].verified, true, 'OAuth emails are always verified');
 
   // cleanup
   await Meteor.users.removeAsync(u1.userId);

@@ -1405,12 +1405,9 @@ export class AccountsServer extends AccountsCommon {
       // Sync email from OAuth service data to user.emails array if present
       const updateQuery = { $set: setAttrs };
       if (serviceData.email) {
-        const emailAddress = serviceData.email;
-        const emailVerified = serviceData.verified_email || serviceData.verified || false;
-
         // Use $addToSet to add email to user.emails array if it doesn't exist
         updateQuery.$addToSet = {
-          emails: { address: emailAddress, verified: emailVerified }
+          emails: { address: serviceData.email, verified: true }
         };
       }
 
@@ -1427,9 +1424,7 @@ export class AccountsServer extends AccountsCommon {
 
       // Sync email from OAuth service data to user.emails array if present
       if (serviceData.email) {
-        const emailAddress = serviceData.email;
-        const emailVerified = serviceData.verified_email || serviceData.verified || false;
-        user.emails = [{ address: emailAddress, verified: emailVerified }];
+        user.emails = [{ address: serviceData.email, verified: true }];
       }
 
       const userId = await this.insertUserDoc(opts, user);
