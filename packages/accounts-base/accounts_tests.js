@@ -995,6 +995,36 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - OAuth emai
   const user2 = await Meteor.users.findOneAsync(u1.userId);
   test.length(user2.emails, 1, 'User should still have exactly one email after update');
   test.equal(user2.emails[0].address, testEmail, 'Email should remain the same');
+  test.equal(user2.emails[0].verified, true, 'Email should still be verified after update');
+
+  // Test case-insensitive email matching to prevent duplicates
+  await Accounts.updateOrCreateUserFromExternalService(
+    'google',
+    { id: googleId, email: 'Test@Example.com', verified_email: true },
+    {}
+  );
+
+  const user3 = await Meteor.users.findOneAsync(u1.userId);
+  test.length(user3.emails, 1, 'User should still have exactly one email after case-insensitive update');
+  test.equal(user3.emails[0].verified, true, 'Email should remain verified');
+
+  // Test updating verified flag: manually set to false, then login via OAuth should set to true
+  await Meteor.users.updateAsync(u1.userId, {
+    $set: { 'emails.0.verified': false }
+  });
+
+  const userBeforeOAuth = await Meteor.users.findOneAsync(u1.userId);
+  test.equal(userBeforeOAuth.emails[0].verified, false, 'Email verified should be false before OAuth login');
+
+  await Accounts.updateOrCreateUserFromExternalService(
+    'google',
+    { id: googleId, email: testEmail, verified_email: true },
+    {}
+  );
+
+  const userAfterOAuth = await Meteor.users.findOneAsync(u1.userId);
+  test.length(userAfterOAuth.emails, 1, 'User should still have exactly one email');
+  test.equal(userAfterOAuth.emails[0].verified, true, 'Email verified should be updated to true after OAuth login');
 
   // Test OAuth provider without email (like Twitter)
   const twitterId = Random.id();

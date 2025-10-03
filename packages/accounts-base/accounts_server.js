@@ -1405,10 +1405,23 @@ export class AccountsServer extends AccountsCommon {
       // Sync email from OAuth service data to user.emails array if present
       const updateQuery = { $set: setAttrs };
       if (serviceData.email) {
-        // Use $addToSet to add email to user.emails array if it doesn't exist
-        updateQuery.$addToSet = {
-          emails: { address: serviceData.email, verified: true }
-        };
+        // Normalize email to lowercase for case-insensitive comparison
+        const normalizedEmail = serviceData.email.toLowerCase();
+
+        // Check if the email address already exists in the user's emails array
+        const existingEmailIndex = (user.emails || []).findIndex(
+          e => e.address.toLowerCase() === normalizedEmail
+        );
+
+        if (existingEmailIndex === -1) {
+          // Email doesn't exist, add it with $push
+          updateQuery.$push = {
+            emails: { address: serviceData.email, verified: true }
+          };
+        } else {
+          // Email exists, update verified to true
+          updateQuery.$set[`emails.${existingEmailIndex}.verified`] = true;
+        }
       }
 
       await this.users.updateAsync(user._id, updateQuery);
