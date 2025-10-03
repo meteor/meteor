@@ -28,11 +28,10 @@ var binDir = path.dirname(process.execPath);
 process.env.PATH = binDir + path.delimiter + process.env.PATH;
 
 var npmCmd = "npm";
+var shell = false;
 if (process.platform === "win32") {
-  var npmCmdPath = path.join(binDir, "npm.cmd");
-  if (fs.existsSync(npmCmdPath)) {
-    npmCmd = npmCmdPath;
-  }
+  npmCmd = "npm.cmd";
+  shell = true;
 }
 
 function rebuild(i) {
@@ -41,7 +40,8 @@ function rebuild(i) {
   if (! dir) {
     // Print Node/V8/etc. versions for diagnostic purposes.
     spawn(npmCmd, ["version", "--json"], {
-      stdio: "inherit"
+      stdio: "inherit",
+      shell,
     });
 
     return;
@@ -49,7 +49,8 @@ function rebuild(i) {
 
   spawn(npmCmd, rebuildArgs, {
     cwd: path.join(__dirname, dir),
-    stdio: "inherit"
+    stdio: "inherit",
+    shell,
   }).on("exit", function (code) {
     if (code !== 0) {
       process.exit(code);

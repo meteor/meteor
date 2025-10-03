@@ -1,3 +1,7 @@
+v1.2.13 - 2025-02-27
+
+* Update `elliptic` to v6.6.1 to address a security vulnerability.
+
 v1.2.12 - 2024-10-31
 
 * Update `elliptic` to v6.6.0 to address a security vulnerability.

@@ -21,7 +21,7 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 
 There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://forums.meteor.com/c/meetups) and events and helping to moderate our [forums](https://forums.meteor.com/).
 
-If you can think of any changes to the project, [documentation](https://github.com/meteor/meteor/tree/devel/docs), or [guide](https://github.com/meteor/meteor/tree/devel/guide) that would improve the contributor experience, let us know by opening an issue!
+If you can think of any changes to the project, [documentation](https://github.com/meteor/meteor/tree/devel/v3-docs), or [guide](https://github.com/meteor/meteor/tree/devel/guide) that would improve the contributor experience, let us know by opening an issue!
 
 ### Finding work
 
@@ -43,15 +43,14 @@ Reviewers are members of the community who help with Pull Requests reviews.
 
 Current Reviewers:
 - [meteor](https://github.com/meteor/meteor)
-  - [@denihs](https://github.com/denihs)
   - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
   - [@henriquealbert](https://github.com/henriquealbert)
   - [@aquinoit](https://github.com/aquinoit)
   - [@Grubba27](https://github.com/Grubba27)
-- [@filipenevola](https://github.com/filipenevola)
+  - [@italojs](https://github.com/italojs)
+  - [@nachocodoner](https://github.com/nachocodoner)
 - [@StorytellerCZ](https://github.com/StorytellerCZ)
 - [@zodern](https://github.com/zodern)
-- [@CaptainN](https://github.com/CaptainN)
 - [@radekmie](https://github.com/radekmie)
 
 #### Core Committer
@@ -59,16 +58,15 @@ Current Reviewers:
 The contributors with commit access to meteor/meteor are employees of Meteor Software LP or community members who have distinguished themselves in other contribution areas or members of partner companies. If you want to become a core committer, please start writing PRs.
 
 Current Core Team:
-- [@denihs](https://github.com/denihs)
-- [@zodern](https://github.com/zodern)
-- [@filipenevola](https://github.com/filipenevola)
-- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
-- [@henriquealbert](https://github.com/henriquealbert)
-- [@Grubba27](https://github.com/Grubba27)
+- [meteor](https://github.com/meteor/meteor)
+  - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+  - [@henriquealbert](https://github.com/henriquealbert)
+  - [@Grubba27](https://github.com/Grubba27)
+  - [@italojs](https://github.com/italojs)
+  - [@nachocodoner](https://github.com/nachocodoner)
 - [@StorytellerCZ](https://github.com/StorytellerCZ)
-- [@CaptainN](https://github.com/CaptainN)
+- [@zodern](https://github.com/zodern)
 - [@radekmie](https://github.com/radekmie)
-- [@matheusccastroo](https://github.com/matheusccastroo)
 
 ### Tracking project work
 

@@ -1,5 +1,7 @@
-import { DDP } from '../common/namespace.js';
+import { Meteor } from 'meteor/meteor';
 import { Connection } from '../common/livedata_connection.js';
+import { DDP } from '../common/namespace.js';
+import { FlickerCollection, FlickerCollectionName } from './allow_deny_setup.js';
 
 const callWhenSubReady = async (subName, handle, cb = () => {}) => {
   let control = 0;
@@ -1293,6 +1295,66 @@ if (Meteor.isClient) {
       sub.stop();
     }
   });
+}
+
+if (Meteor.isClient) {
+  testAsyncMulti('livedata - allow/deny - no flicker with isomorphic calls', [
+    async function(test, expect) {
+      const docId = await FlickerCollection.insertAsync({
+        value: ['initial'],
+        test: test.runId()
+      });
+
+      let changeCount = 0;
+      const messages = [];
+
+      const handle = await FlickerCollection.find({ _id: docId }).observeChanges({
+        added(id, fields) {
+          messages.push(['added', id, fields]);
+        },
+        changed(id, fields) {
+          changeCount++;
+          messages.push(['changed', id, fields]);
+          
+          if (changeCount > 1) {
+            test.fail('Multiple changes detected - flicker occurred');
+          }
+
+          test.equal(fields.value.length, 2);
+          test.isTrue(fields.value.includes('updated'));
+        }
+      });
+
+      const sub = Meteor.subscribe(`pub-${FlickerCollectionName}`);
+      
+      await new Promise(resolve => {
+        const checkReady = setInterval(() => {
+          console.log('sub.ready()', sub.ready());
+          if (sub.ready()) {
+            clearInterval(checkReady);
+            resolve();
+          }
+        }, 10);
+      });
+
+      await FlickerCollection.updateAsync(docId, {
+        $addToSet: {
+          value: 'updated'
+        }
+      });
+
+      await Meteor._sleepForMs(200);
+
+      handle.stop();
+      sub.stop();
+      
+      test.equal(changeCount, 1, 'Expected exactly one change notification');
+      
+      test.equal(messages.length, 2);
+      test.equal(messages[0][0], 'added');
+      test.equal(messages[1][0], 'changed');
+    }
+  ]);
 }
 
 // TODO [FIBERS] - check if this still makes sense to have

@@ -47,14 +47,27 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
   };
 
   const reifyVersion = require("@meteorjs/reify/package.json").version;
+  const reifyAcornParse = require("@meteorjs/reify/lib/parsers/acorn").parse;
   const reifyBabelParse = require("@meteorjs/reify/lib/parsers/babel").parse;
   const reifyCompile = require("@meteorjs/reify/lib/compiler").compile;
 
   function compileContent (content) {
     let identical = true;
 
+    let result;
     try {
-      const result = reifyCompile(content, {
+      result = reifyCompile(content, {
+        parse: reifyAcornParse,
+        generateLetDeclarations: false,
+        ast: false,
+      });
+      if (!result.identical) {
+        identical = false;
+        content = result.code;
+      }
+    } catch (acornError) {
+      // Fallback: Babel
+      result = reifyCompile(content, {
         parse: reifyBabelParse,
         generateLetDeclarations: false,
         ast: false,
@@ -63,9 +76,9 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
         identical = false;
         content = result.code;
       }
-    } finally {
-      return { content, identical };
     }
+
+    return { content, identical };
   }
 
   const _compile = Mp._compile;

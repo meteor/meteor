@@ -1,3 +1,5 @@
+import { MiniMongoQueryError } from 'meteor/minimongo/common';
+
 var randomId = Random.id();
 var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
@@ -9,11 +11,16 @@ Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
 
   var supported = async function(expected, selector, options) {
     var cursor = OplogCollection.find(selector, options);
-    var handle = await cursor.observeChanges({ added: function() {} });
-    // If there's no oplog at all, we shouldn't ever use it.
-    if (!oplogEnabled) expected = false;
-    test.equal(!!handle._multiplexer._observeDriver._usesOplog, expected);
-    handle.stop();
+    try {
+      var handle = await cursor.observeChanges({ added: function() {} });
+      // If there's no oplog at all, we shouldn't ever use it.
+      if (!oplogEnabled) expected = false;
+      test.equal(!!handle._multiplexer._observeDriver._usesOplog, !!expected);
+      handle.stop();
+    } catch(e){
+      if (e instanceof MiniMongoQueryError) return test.isFalse(expected);
+      else test.fail(e.message);
+    }
   };
 
   await supported(true, 'asdf');
@@ -280,6 +287,68 @@ process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
     }
   }
 );
+
+process.env.MONGO_OPLOG_URL &&
+  Tinytest.addAsync(
+    "mongo-livedata - oplog - oplogSettings - oplog doesn't get stuck on waitUntilCaughtUp",
+    async (test) => {
+      try {
+        const includeCollectionName = "oplog-a-" + Random.id();
+        const excludeCollectionName = "oplog-b-" + Random.id();
+        const mongoPackageSettings = {
+          oplogIncludeCollections: [includeCollectionName],
+        };
+
+        previousMongoPackageSettings = {
+          ...(Meteor.settings?.packages?.mongo || {}),
+        };
+        if (!Meteor.settings.packages) Meteor.settings.packages = {};
+        Meteor.settings.packages.mongo = mongoPackageSettings;
+
+        const myOplogHandle = new MongoInternals.OplogHandle(
+          process.env.MONGO_OPLOG_URL,
+          "meteor"
+        );
+        await myOplogHandle._startTrailingPromise;
+        MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(
+          myOplogHandle
+        );
+
+        const IncludeCollection = new Mongo.Collection(includeCollectionName);
+        const ExcludeCollection = new Mongo.Collection(excludeCollectionName);
+        await IncludeCollection.rawCollection().insertOne({
+          include: "yes",
+          foo: "bar",
+        });
+      
+        // Previously, when the last document inserted in the oplog was excluded from the oplog tailing,
+        // waitUntilCaughtUp would hang until an oplog-tracked document was inserted.
+        // This was preventing the observeChange callbacks from being called.
+        await ExcludeCollection.rawCollection().insertOne({
+          include: "no",
+          foo: "bar",
+        });
+        const shouldBeTracked = Promise.race([
+          new Promise((resolve) => {
+            IncludeCollection.find({ include: "yes" }).observeChanges({
+              added() {
+                resolve(true);
+              },
+            });
+          }),
+          new Promise((resolve) => setTimeout(() => resolve(false), 2000)),
+        ]);
+
+        test.equal(await shouldBeTracked, true);
+      } finally {
+        // Reset:
+        Meteor.settings.packages.mongo = { ...previousMongoPackageSettings };
+        MongoInternals.defaultRemoteCollectionDriver().mongo._setOplogHandle(
+          defaultOplogHandle
+        );
+      }
+    }
+  );
 
 // TODO this is commented for now, but we need to find out the cause
 // PR: https://github.com/meteor/meteor/pull/12057

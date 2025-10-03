@@ -4,24 +4,30 @@ let nextObserveHandleId = 1;
 
 export type ObserveHandleCallbackInternal = '_added' | '_addedBefore' | '_changed' | '_movedBefore' | '_removed';
 
+
+export type Callback<T = any> = (...args: T[]) => Promise<void> | void;
+
 /**
  * The "observe handle" returned from observeChanges.
  * Contains a reference to an ObserveMultiplexer.
  * Used to stop observation and clean up resources.
  */
-export class ObserveHandle {
+export class ObserveHandle<T = any> {
   _id: number;
   _multiplexer: ObserveMultiplexer;
   nonMutatingCallbacks: boolean;
   _stopped: boolean;
 
-  _added?: (...args: any[]) => void;
-  _addedBefore?: (...args: any[]) => void;
-  _changed?: (...args: any[]) => void;
-  _movedBefore?: (...args: any[]) => void;
-  _removed?: (...args: any[]) => void;
+  public initialAddsSentResolver: (value: void) => void = () => {};
+  public initialAddsSent: Promise<void>
 
-  constructor(multiplexer: any, callbacks: Record<ObserveHandleCallback, any>, nonMutatingCallbacks: boolean) {
+  _added?: Callback<T>;
+  _addedBefore?: Callback<T>;
+  _changed?: Callback<T>;
+  _movedBefore?: Callback<T>;
+  _removed?: Callback<T>;
+
+  constructor(multiplexer: ObserveMultiplexer, callbacks: Record<ObserveHandleCallback, Callback<T>>, nonMutatingCallbacks: boolean) {
     this._multiplexer = multiplexer;
 
     multiplexer.callbackNames().forEach((name: ObserveHandleCallback) => {
@@ -40,9 +46,26 @@ export class ObserveHandle {
     this._stopped = false;
     this._id = nextObserveHandleId++;
     this.nonMutatingCallbacks = nonMutatingCallbacks;
+
+    this.initialAddsSent = new Promise(resolve => {
+      const ready = () => {
+        resolve();
+        this.initialAddsSent = Promise.resolve();
+      }
+
+      const timeout = setTimeout(ready, 30000)
+
+      this.initialAddsSentResolver = () => {
+        ready();
+        clearTimeout(timeout);
+      };
+    });
   }
 
-  async stop() {
+  /**
+   * Using property syntax and arrow function syntax to avoid binding the wrong context on callbacks.
+   */
+  stop = async () => {
     if (this._stopped) return;
     this._stopped = true;
     await this._multiplexer.removeHandle(this._id);
