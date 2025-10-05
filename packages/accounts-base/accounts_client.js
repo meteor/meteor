@@ -384,7 +384,7 @@ export class AccountsClient extends AccountsCommon {
       // use Tracker to make we sure have a user before calling the callbacks
       Tracker.autorun(async (computation) => {
         const user = await Tracker.withComputation(computation, () =>
-          Meteor.userAsync(),
+          this.userAsync(),
         );
 
         if (user) {
