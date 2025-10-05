@@ -66,7 +66,7 @@ You can use let to handle async state while loading and iterating lists:
     We are fetching your list...
   {{/if}}
   {{#if @rejected 'users'}}
-    Sorry, an error occured!
+    Sorry, an error occurred!
   {{/if}}
   {{if @resolved 'users'}}
     {{#each user in users}}

@@ -770,7 +770,7 @@ const waitForSubscriptions = () => new Promise(resolve => {
 });
 
 // Tracker.afterFlush runs code when all consequent of a tracker based change
-//   (such as a route change) have occured. This makes it a promise.
+//   (such as a route change) have occurred. This makes it a promise.
 const afterFlushPromise = denodeify(Tracker.afterFlush);
 
 if (Meteor.isClient) {
