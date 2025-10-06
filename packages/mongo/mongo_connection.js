@@ -2,17 +2,19 @@ import { Meteor } from 'meteor/meteor';
 import { CLIENT_ONLY_METHODS, getAsyncMethodName } from 'meteor/minimongo/constants';
 import { MiniMongoQueryError } from 'meteor/minimongo/common';
 import path from 'path';
+import { EventEmitter } from 'events';
 import { AsynchronousCursor } from './asynchronous_cursor';
 import { Cursor } from './cursor';
 import { CursorDescription } from './cursor_description';
 import { DocFetcher } from './doc_fetcher';
-import { MongoDB, replaceMeteorAtomWithMongo, replaceTypes, transformResult } from './mongo_common';
+import { MongoDB, replaceMeteorAtomWithMongo, replaceMongoAtomWithMeteor, replaceTypes, transformResult } from './mongo_common';
 import { ObserveHandle } from './observe_handle';
 import { ObserveMultiplexer } from './observe_multiplex';
 import { OplogObserveDriver } from './oplog_observe_driver';
 import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
 import { PollingObserveDriver } from './polling_observe_driver';
 import { ChangeStreamObserveDriver } from './changestream_observe_driver';
+import { EventObserveDriver } from './event_observe_driver';
 
 const FILE_ASSET_SUFFIX = 'Asset';
 const ASSETS_FOLDER = 'assets';
@@ -69,6 +71,11 @@ export const MongoConnection = function (url, options) {
 
   self.client = new MongoDB.MongoClient(url, mongoOptions);
   self.db = self.client.db();
+
+  self._observeEventEmitter = new EventEmitter();
+  self._observeEventEmitter.setMaxListeners(0);
+  self._observeEventSequence = 0;
+  self._activeEventObservers = 0;
 
   self.client.on('serverDescriptionChanged', Meteor.bindEnvironment(event => {
     // When the connection is no longer against the primary node, execute all
@@ -188,6 +195,43 @@ MongoConnection.prototype._maybeBeginWrite = function () {
   }
 };
 
+MongoConnection.prototype._getObserveEventEmitter = function () {
+  return this._observeEventEmitter;
+};
+
+MongoConnection.prototype._getCurrentEventSequence = function () {
+  return this._observeEventSequence;
+};
+
+MongoConnection.prototype._registerEventObserver = function () {
+  this._activeEventObservers = (this._activeEventObservers || 0) + 1;
+};
+
+MongoConnection.prototype._unregisterEventObserver = function () {
+  if (this._activeEventObservers > 0) {
+    this._activeEventObservers -= 1;
+  }
+};
+
+MongoConnection.prototype._emitObserveEvent = function (event) {
+  if (!this._observeEventEmitter) {
+    return;
+  }
+
+  this._observeEventSequence += 1;
+  const sequence = this._observeEventSequence;
+  const payload = {
+    ...event,
+    sequence,
+  };
+
+  this._observeEventEmitter.emit('change', payload);
+};
+
+MongoConnection.prototype._shouldEmitObserveEvents = function () {
+  return (this._activeEventObservers || 0) > 0;
+};
+
 // Internal interface: adds a callback which is called when the Mongo primary
 // changes. Returns a stop handle.
 MongoConnection.prototype._onFailover = function (callback) {
@@ -212,12 +256,27 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
   var refresh = async function () {
     await Meteor.refresh({collection: collection_name, id: document._id });
   };
-  return self.rawCollection(collection_name).insertOne(
+  const collection = self.rawCollection(collection_name);
+
+  return collection.insertOne(
     replaceTypes(document, replaceMeteorAtomWithMongo),
     {
       safe: true,
     }
   ).then(async ({insertedId}) => {
+    if (self._shouldEmitObserveEvents()) {
+      const insertedDocMongo = await collection.findOne({ _id: insertedId });
+      if (insertedDocMongo) {
+        const fullDocument = replaceTypes(insertedDocMongo, replaceMongoAtomWithMeteor);
+        self._emitObserveEvent({
+          collectionName: collection_name,
+          operationType: 'insert',
+          documentKey: { _id: fullDocument?._id ?? insertedId },
+          fullDocument,
+          fullDocumentBeforeChange: null,
+        });
+      }
+    }
     await refresh();
     await write.committed();
     return insertedId;
@@ -260,11 +319,33 @@ MongoConnection.prototype.removeAsync = async function (collection_name, selecto
     await self._refresh(collection_name, selector);
   };
 
-  return self.rawCollection(collection_name)
-    .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
+  const collection = self.rawCollection(collection_name);
+  const mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
+
+  let docsBeforeDelete = null;
+  if (self._shouldEmitObserveEvents()) {
+    const docs = await collection.find(mongoSelector).toArray();
+    if (docs.length > 0) {
+      docsBeforeDelete = docs.map(doc => replaceTypes(doc, replaceMongoAtomWithMeteor));
+    }
+  }
+
+  return collection
+    .deleteMany(mongoSelector, {
       safe: true,
     })
     .then(async ({ deletedCount }) => {
+      if (docsBeforeDelete?.length) {
+        for (const docBefore of docsBeforeDelete) {
+          self._emitObserveEvent({
+            collectionName: collection_name,
+            operationType: 'delete',
+            documentKey: { _id: docBefore._id },
+            fullDocument: null,
+            fullDocumentBeforeChange: docBefore,
+          });
+        }
+      }
       await refresh();
       await write.committed();
       return transformResult({ result : {modifiedCount : deletedCount} }).numberAffected;
@@ -373,6 +454,96 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
 
   var isModify = LocalCollection._isModificationMod(mongoMod);
 
+  const shouldEmitEvents = self._shouldEmitObserveEvents();
+  let docsBeforeUpdate = [];
+  if (shouldEmitEvents) {
+    const docs = await collection.find(mongoSelector).toArray();
+    if (docs.length > 0) {
+      docsBeforeUpdate = docs.map(doc => replaceTypes(doc, replaceMongoAtomWithMeteor));
+    }
+  }
+
+  const normalizeInsertedId = (id) => {
+    if (!id) {
+      return null;
+    }
+    if (typeof Mongo !== 'undefined' && id instanceof Mongo.ObjectID) {
+      return id;
+    }
+    if (id instanceof MongoDB.ObjectId) {
+      return typeof Mongo !== 'undefined'
+        ? new Mongo.ObjectID(id.toHexString())
+        : id;
+    }
+    return id;
+  };
+
+  const emitUpdateEvents = async (extraInsertedIds = []) => {
+    if (!shouldEmitEvents) {
+      return;
+    }
+
+    const entries = new Map();
+
+    for (const beforeDoc of docsBeforeUpdate) {
+      const idKey = EJSON.stringify(beforeDoc._id);
+      entries.set(idKey, { id: beforeDoc._id, before: beforeDoc });
+    }
+
+    for (const rawId of extraInsertedIds) {
+      const normalizedId = normalizeInsertedId(rawId);
+      if (!normalizedId) {
+        continue;
+      }
+      const idKey = EJSON.stringify(normalizedId);
+      if (!entries.has(idKey)) {
+        entries.set(idKey, { id: normalizedId, before: null });
+      }
+    }
+
+    if (entries.size === 0) {
+      return;
+    }
+
+    const mongoIds = Array.from(entries.values()).map(entry =>
+      replaceTypes({_id: entry.id}, replaceMeteorAtomWithMongo)._id
+    );
+
+    const docsAfterMongo = await collection.find({
+      _id: { $in: mongoIds }
+    }).toArray();
+
+    const afterDocsMap = new Map();
+    for (const doc of docsAfterMongo) {
+      const meteorDoc = replaceTypes(doc, replaceMongoAtomWithMeteor);
+      afterDocsMap.set(EJSON.stringify(meteorDoc._id), meteorDoc);
+    }
+
+    for (const { id, before } of entries.values()) {
+      const key = EJSON.stringify(id);
+      const afterDoc = afterDocsMap.get(key) || null;
+
+      let operationType;
+      if (!before && afterDoc) {
+        operationType = 'insert';
+      } else if (before && afterDoc) {
+        operationType = isModify ? 'update' : 'replace';
+      } else if (before && !afterDoc) {
+        operationType = 'delete';
+      } else {
+        continue;
+      }
+
+      self._emitObserveEvent({
+        collectionName: collection_name,
+        operationType,
+        documentKey: { _id: id },
+        fullDocument: afterDoc,
+        fullDocumentBeforeChange: before,
+      });
+    }
+  };
+
   if (options._forbidReplace && !isModify) {
     var err = new Error("Invalid modifier. Replacements are forbidden.");
     throw err;
@@ -411,6 +582,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     //     then we can just let Mongo generate the id
     return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options)
       .then(async result => {
+        await emitUpdateEvents(result?.insertedId ? [result.insertedId] : []);
         await refresh();
         await write.committed();
         if (result && ! options._returnObject) {
@@ -438,6 +610,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
       .bind(collection)(mongoSelector, mongoMod, mongoOpts)
       .then(async result => {
         var meteorResult = transformResult({result});
+        let insertedIdsForEvents = [];
         if (meteorResult && options._returnObject) {
           // If this was an upsertAsync() call, and we ended up
           // inserting a new doc and we know its id, then
@@ -449,10 +622,18 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
               meteorResult.insertedId = new Mongo.ObjectID(meteorResult.insertedId.toHexString());
             }
           }
+          if (meteorResult.insertedId) {
+            insertedIdsForEvents = [meteorResult.insertedId];
+          }
+          await emitUpdateEvents(insertedIdsForEvents);
           await refresh();
           await write.committed();
           return meteorResult;
         } else {
+          if (meteorResult && meteorResult.insertedId) {
+            insertedIdsForEvents = [normalizeInsertedId(meteorResult.insertedId)];
+          }
+          await emitUpdateEvents(insertedIdsForEvents);
           await refresh();
           await write.committed();
           return meteorResult.numberAffected;
@@ -880,19 +1061,40 @@ Object.assign(MongoConnection.prototype, {
       nonMutatingCallbacks,
     );
 
+    const mongoSettings = Meteor.settings?.packages?.mongo || {};
     const oplogOptions = self?._oplogHandle?._oplogOptions || {};
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
 
       var matcher, sorter;
+
+      const canUseEventDriver = [
+        function () {
+          return (mongoSettings.reactivity?.eventEmitter|| process.env.METEOR_REACTIVITY === 'EVENT_EMITTER') &&
+            !!self._observeEventEmitter &&
+            !ordered &&
+            !callbacks._testOnlyPollCallback;
+        },
+        function () {
+          if (!matcher) {
+            try {
+              matcher = new Minimongo.Matcher(cursorDescription.selector);
+            } catch (e) {
+              return false;
+            }
+          }
+          return true;
+        },
+        function () {
+          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
+        }
+      ].every(f => f());
       
       // Check if Change Streams are available and enabled
       const canUseChangeStreams = [
         function () {
           // Check if change streams are explicitly disabled
-          const mongoSettings = Meteor.settings?.packages?.mongo || {};
-          // return mongoSettings.reactivity === 'CHANGE_STREAMS' || process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS';
-          return true // dumb-forcing changeStream tests into CI
+          return mongoSettings.reactivity?.changeStreams || process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS';
         },
         function () {
           // Change Streams require MongoDB 3.6+ and replica set
@@ -901,12 +1103,14 @@ Object.assign(MongoConnection.prototype, {
         },
         function () {
           // We need to be able to compile the selector
-          try {
-            matcher = new Minimongo.Matcher(cursorDescription.selector);
-            return true;
-          } catch (e) {
-            return false;
+          if (!matcher) {
+            try {
+              matcher = new Minimongo.Matcher(cursorDescription.selector);
+            } catch (e) {
+              return false;
+            }
           }
+          return true;
         },
         function () {
           // Change streams work with most selectors, but some complex ones might not work well
@@ -921,7 +1125,7 @@ Object.assign(MongoConnection.prototype, {
           // want unordered callbacks, and to not want a callback on the polls
           // that won't happen.
           return self._oplogHandle && !ordered &&
-            !callbacks._testOnlyPollCallback;
+            !callbacks._testOnlyPollCallback && mongoSettings.reactivity?.oplog;
         },
         function () {
           // We also need to check, if the collection of this Cursor is actually being "watched" by the Oplog handle
@@ -945,17 +1149,19 @@ Object.assign(MongoConnection.prototype, {
         function () {
           // We need to be able to compile the selector. Fall back to polling for
           // some newfangled $selector that minimongo doesn't support yet.
-          try {
-            matcher = new Minimongo.Matcher(cursorDescription.selector);
-            return true;
-          } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
-            if (Meteor.isClient && e instanceof MiniMongoQueryError) {
-              throw e;
+          if (!matcher) {
+            try {
+              matcher = new Minimongo.Matcher(cursorDescription.selector);
+            } catch (e) {
+              // XXX make all compilation errors MinimongoError or something
+              //     so that this doesn't ignore unrelated exceptions
+              if (Meteor.isClient && e instanceof MiniMongoQueryError) {
+                throw e;
+              }
+              return false;
             }
-            return false;
           }
+          return true;
         },
         function () {
           // ... and the selector itself needs to support oplog.
@@ -977,9 +1183,11 @@ Object.assign(MongoConnection.prototype, {
         }
       ].every(f => f());  // invoke each function and check if all return true
 
-      // Choose driver in order of preference: ChangeStreams > Oplog > Polling
+      // Choose driver in order of preference: EventEmitter > ChangeStreams > Oplog > Polling
       var driverClass;
-      if (canUseChangeStreams) {
+      if (canUseEventDriver) {
+        driverClass = EventObserveDriver;
+      } else if (canUseChangeStreams) {
         // Use dynamic import to avoid circular dependency issues
         try {
           driverClass = ChangeStreamObserveDriver;
@@ -992,7 +1200,23 @@ Object.assign(MongoConnection.prototype, {
       } else {
         driverClass = PollingObserveDriver;
       }
-      
+
+      if (
+        ordered &&
+        cursorDescription.options.sort &&
+        !sorter &&
+        driverClass === EventObserveDriver
+      ) {
+        // Ensure the event-based driver can compute reordering callbacks
+        try {
+          sorter = new Minimongo.Sorter(cursorDescription.options.sort);
+        } catch (error) {
+          driverClass = PollingObserveDriver;
+          sorter = null;
+        }
+      }
+
+      console.log("✅ Using", driverClass.name, "for", observeKey);
       observeDriver = new driverClass({
         cursorDescription: cursorDescription,
         mongoHandle: self,
@@ -1000,6 +1224,8 @@ Object.assign(MongoConnection.prototype, {
         ordered: ordered,
         matcher: matcher,  // ignored by polling
         sorter: sorter,  // ignored by polling
+        eventEmitter: self._getObserveEventEmitter(),
+        eventDriverSettings: {}, // ignored by non-event driver
         _testOnlyPollCallback: callbacks._testOnlyPollCallback
       });
 
