@@ -35,6 +35,9 @@
     "prettier": "^2.8.8",
     "typescript": "^5.4.5"
   },
+  "scripts": {
+    "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js"
+  },
   "jshintConfig": {
     "esversion": 11
   },
