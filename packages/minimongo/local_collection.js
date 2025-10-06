@@ -265,6 +265,7 @@ export default class LocalCollection {
       if (matcher.documentMatches(doc).result) {
         remove.push(id);
       }
+      return true;
     });
 
     const queriesToRecompute = [];
