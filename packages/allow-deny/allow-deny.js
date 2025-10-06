@@ -117,6 +117,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
       'insertAsync',
       'updateAsync',
       'removeAsync',
+      'upsertAsync',
       'insert',
       'update',
       'remove',
@@ -203,6 +204,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
               insert: "insertAsync",
               update: "updateAsync",
               remove: "removeAsync",
+              upsert: "upsertAsync",
             };
 
 

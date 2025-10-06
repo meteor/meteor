@@ -4062,3 +4062,30 @@ Tinytest.addAsync('minimongo - operation result fields (async)', async test => {
   const removeResult = await c.removeAsync({name: 'doc1'});
   test.equal(removeResult, 1, 'remove should return removed count');
 });
+
+Tinytest.addAsync('minimongo - upsertAsync insertedId consistency (issue #13883)', async test => {
+  const c = new LocalCollection();
+
+  // Test that upsertAsync consistently returns insertedId on client-side when inserting
+  // This is a regression test for GitHub issue #13883
+  
+  // First upsert - should insert and return insertedId
+  const result1 = await c.upsertAsync({name: 'test'}, {$set: {value: 1}});
+  test.equal(result1.numberAffected, 1);
+  test.isTrue(result1.hasOwnProperty('insertedId'), 'First upsert should return insertedId');
+  test.isTrue(result1.insertedId !== undefined, 'insertedId should be defined');
+  
+  // Second upsert on same document - should update, no insertedId
+  const result2 = await c.upsertAsync({name: 'test'}, {$set: {value: 2}});
+  test.equal(result2.numberAffected, 1);
+  test.isFalse(result2.hasOwnProperty('insertedId'), 'Update upsert should not return insertedId');
+  
+  // Third upsert on new document - should insert and return insertedId again
+  const result3 = await c.upsertAsync({name: 'test2'}, {$set: {value: 3}});
+  test.equal(result3.numberAffected, 1);
+  test.isTrue(result3.hasOwnProperty('insertedId'), 'Second insert upsert should return insertedId');
+  test.isTrue(result3.insertedId !== undefined, 'insertedId should be defined for second insert');
+  
+  // Verify different insertedIds for different documents
+  test.notEqual(result1.insertedId, result3.insertedId, 'Different documents should have different insertedIds');
+});
