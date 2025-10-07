@@ -150,3 +150,106 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports
     await OAuth._endOfLoginResponse(res, details);
   }
 );
+
+
+Tinytest.add("oauth - OAuth.getError returns null when no error",
+  test => {
+    // Clear any existing error state
+    const errorKey = OAuth._storageTokenPrefix + "error";
+    const errorDescriptionKey = OAuth._storageTokenPrefix + "error_description";
+    Meteor._localStorage.removeItem(errorKey);
+    Meteor._localStorage.removeItem(errorDescriptionKey);
+    
+    const result = OAuth.getError();
+    test.isNull(result);
+  });
+
+Tinytest.add("oauth - OAuth.getError retrieves and clears error information",
+  test => {
+    const errorKey = OAuth._storageTokenPrefix + "error";
+    const errorDescriptionKey = OAuth._storageTokenPrefix + "error_description";
+    
+    // Store test error information
+    Meteor._localStorage.setItem(errorKey, "access_denied");
+    Meteor._localStorage.setItem(errorDescriptionKey, "User is not assigned to the client application");
+    
+    const result = OAuth.getError();
+    test.isNotNull(result);
+    test.equal(result.error, "access_denied");
+    test.equal(result.error_description, "User is not assigned to the client application");
+    
+    // Verify that error information is cleared after retrieval
+    const resultAfterClear = OAuth.getError();
+    test.isNull(resultAfterClear);
+  });
+
+Tinytest.add("oauth - OAuth.getError handles error without description",
+  test => {
+    const errorKey = OAuth._storageTokenPrefix + "error";
+    const errorDescriptionKey = OAuth._storageTokenPrefix + "error_description";
+    
+    // Clean state
+    Meteor._localStorage.removeItem(errorKey);
+    Meteor._localStorage.removeItem(errorDescriptionKey);
+    
+    // Store only error, no description
+    Meteor._localStorage.setItem(errorKey, "invalid_request");
+    
+    const result = OAuth.getError();
+    test.isNotNull(result);
+    test.equal(result.error, "invalid_request");
+    test.isUndefined(result.error_description);
+    
+    // Verify cleanup
+    const resultAfterClear = OAuth.getError();
+    test.isNull(resultAfterClear);
+  });
+
+Tinytest.addAsync("oauth - _endOfLoginResponse includes error in config for popup",
+  async test => {
+    let capturedContent;
+    const res = {
+      writeHead: () => {},
+      end: content => {
+        capturedContent = content;
+      }
+    };
+    const details = {
+      error: "access_denied",
+      error_description: "User is not assigned to the client application",
+      loginStyle: "popup"
+    };
+    
+    await OAuth._endOfLoginResponse(res, details);
+    
+    // Verify that error information is included in the response
+    test.matches(capturedContent, /access_denied/);
+    test.matches(capturedContent, /User is not assigned to the client application/);
+  });
+
+Tinytest.addAsync("oauth - _endOfLoginResponse includes error in config for redirect",
+  async test => {
+    let capturedContent;
+    const res = {
+      writeHead: () => {},
+      end: content => {
+        capturedContent = content;
+      }
+    };
+    const details = {
+      error: "invalid_scope",
+      error_description: "The requested scope is invalid",
+      loginStyle: "redirect",
+      query: {
+        state: Buffer.from(JSON.stringify({
+          redirectUrl: __meteor_runtime_config__.ROOT_URL
+        }), "binary").toString("base64")
+      }
+    };
+    
+    await OAuth._endOfLoginResponse(res, details);
+    
+    // Verify that error information is included in the response
+    test.matches(capturedContent, /invalid_scope/);
+    test.matches(capturedContent, /The requested scope is invalid/);
+  });
