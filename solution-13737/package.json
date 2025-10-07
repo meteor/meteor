@@ -1,0 +1,17 @@
+{
+  "name": "solution-13737",
+  "version": "1.0.0",
+  "description": "Module imports fail in test environment due to non-deterministic loading of Top-Level Await (TLA) modules. The issue manifests as:\r - Schema validation errors in tests\r - Undefined module references  \r - Inconsistent import behavior between development and test modes",
+  "type": "module",
+  "main": "common-fix.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "chai": "^6.2.0",
+    "mocha": "^11.7.4"
+  }
+}
