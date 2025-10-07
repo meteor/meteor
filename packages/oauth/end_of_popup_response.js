@@ -45,12 +45,11 @@
             window.opener.localStorage[config.storagePrefix + "error_description"] = config.error_description;
           }
         } catch (err) {
-          // If we can't access opener's localStorage, the local storage above should work
+         
         }
       }
     } catch (err) {
-      // We can't do much else, but at least close the popup instead
-      // of having it hang around on a blank page.
+      
     }
   }
 
