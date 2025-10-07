@@ -466,7 +466,7 @@ exports.handlePackageServerConnectionError = function (error) {
 };
 
 
-// Update the package metdata in the server catalog. Chane the docs,
+// Update the package metadata in the server catalog. Change the docs,
 // descriptions and the Git URL to new values.
 //
 // options:
@@ -537,7 +537,7 @@ exports.updatePackageMetadata = async function (options) {
 
   // Upload the new Readme.
   await buildmessage.enterJob('uploading documentation', async function () {
-    var readmePath = saveReadmeToTmp(readmeInfo);
+    var readmePath = await saveReadmeToTmp(readmeInfo);
     var uploadInfo =
       await callPackageServerBM(conn, "createReadme", versionIdentifier);
     if (!uploadInfo) {

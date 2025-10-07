@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=20.15.1.1
-
+BUNDLE_VERSION=22.18.0.3
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -123,6 +122,7 @@ fi
 
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 METEOR="$SCRIPT_DIR/tools/index.js"
+PROCESS_REQUIRES="$SCRIPT_DIR/tools/node-process-warnings.js"
 
 # Set the nofile ulimit as high as permitted by the hard-limit/kernel
 if [ "$(ulimit -Sn)" != "unlimited" ]; then
@@ -148,5 +148,6 @@ fi
 exec "$DEV_BUNDLE/bin/node" \
      --max-old-space-size=4096 \
      --no-wasm-code-gc \
+     --require="$PROCESS_REQUIRES"\
      ${TOOL_NODE_FLAGS} \
      "$METEOR" "$@"

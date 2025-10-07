@@ -14,11 +14,18 @@ const VALID_CONFIG_KEYS = [
   'passwordEnrollTokenExpiration',
   'ambiguousErrorMessages',
   'bcryptRounds',
+  'argon2Enabled',
+  'argon2Type',
+  'argon2TimeCost',
+  'argon2MemoryCost',
+  'argon2Parallelism',
   'defaultFieldSelector',
   'collection',
   'loginTokenExpirationHours',
   'tokenSequenceLength',
   'clientStorage',
+  'ddpUrl',
+  'connection',
 ];
 
 /**
@@ -37,8 +44,7 @@ export class AccountsCommon {
     // Validate config options keys
     for (const key of Object.keys(options)) {
       if (!VALID_CONFIG_KEYS.includes(key)) {
-        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
+        console.error(`Accounts.config: Invalid key: ${key}`);
       }
     }
 
@@ -163,6 +169,14 @@ export class AccountsCommon {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    */
   user(options) {
+    if (Meteor.isServer) {
+      console.warn([
+        "`Meteor.user()` is deprecated on the server side.",
+        "    To fetch the current user record on the server,",
+        "    use `Meteor.userAsync()` instead.",
+      ].join("\n"));
+    }
+
     const self = this;
     const userId = self.userId();
     const findOne = (...args) => Meteor.isClient
@@ -185,41 +199,6 @@ export class AccountsCommon {
       ? this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
       : null;
   }
-  // Set up config for the accounts system. Call this on both the client
-  // and the server.
-  //
-  // Note that this method gets overridden on AccountsServer.prototype, but
-  // the overriding method calls the overridden method.
-  //
-  // XXX we should add some enforcement that this is called on both the
-  // client and the server. Otherwise, a user can
-  // 'forbidClientAccountCreation' only on the client and while it looks
-  // like their app is secure, the server will still accept createUser
-  // calls. https://github.com/meteor/meteor/issues/828
-  //
-  // @param options {Object} an object with fields:
-  // - sendVerificationEmail {Boolean}
-  //     Send email address verification emails to new users created from
-  //     client signups.
-  // - forbidClientAccountCreation {Boolean}
-  //     Do not allow clients to create accounts directly.
-  // - restrictCreationByEmailDomain {Function or String}
-  //     Require created users to have an email matching the function or
-  //     having the string as domain.
-  // - loginExpirationInDays {Number}
-  //     Number of days since login until a user is logged out (login token
-  //     expires).
-  // - collection {String|Mongo.Collection}
-  //     A collection name or a Mongo.Collection object to hold the users.
-  // - passwordResetTokenExpirationInDays {Number}
-  //     Number of days since password reset token creation until the
-  //     token can't be used any longer (password reset token expires).
-  // - ambiguousErrorMessages {Boolean}
-  //     Return ambiguous error messages from login failures to prevent
-  //     user enumeration.
-  // - bcryptRounds {Number}
-  //     Allows override of number of bcrypt rounds (aka work factor) used
-  //     to store passwords.
 
   /**
    * @summary Set global accounts options. You can also set these in `Meteor.settings.packages.accounts` without the need to call this function.
@@ -235,8 +214,13 @@ export class AccountsCommon {
    * @param {Number} options.passwordResetTokenExpiration The number of milliseconds from when a link to reset password is sent until token expires and user can't reset password with the link anymore. If `passwordResetTokenExpirationInDays` is set, it takes precedent.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set initial password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
-   * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to `false`, but in production environments it is recommended it defaults to `true`.
+   * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to `true`.
    * @param {Number} options.bcryptRounds Allows override of number of bcrypt rounds (aka work factor) used to store passwords. The default is 10.
+   * @param {Boolean} options.argon2Enabled Enable argon2 algorithm usage in replacement for bcrypt. The default is `false`.
+   * @param {'argon2id' | 'argon2i' | 'argon2d'} options.argon2Type Allows override of the argon2 algorithm type. The default is `argon2id`.
+   * @param {Number} options.argon2TimeCost Allows override of number of argon2 iterations (aka time cost) used to store passwords. The default is 2.
+   * @param {Number} options.argon2MemoryCost Allows override of the amount of memory (in KiB) used by the argon2 algorithm. The default is 19456 (19MB).
+   * @param {Number} options.argon2Parallelism Allows override of the number of threads used by the argon2 algorithm. The default is 1.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`. Beware when using this. If, for instance, you do not include `email` when excluding the fields, you can have problems with functions like `forgotPassword` that will break because they won't have the required data available. It's recommend that you always keep the fields `_id`, `username`, and `email`.
    * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
@@ -284,8 +268,7 @@ export class AccountsCommon {
     // Validate config options keys
     for (const key of Object.keys(options)) {
       if (!VALID_CONFIG_KEYS.includes(key)) {
-        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
+        console.error(`Accounts.config: Invalid key: ${key}`);
       }
     }
 

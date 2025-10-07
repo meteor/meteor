@@ -44,6 +44,11 @@ Log._intercepted = () => {
 // other process that will be reading its standard output.
 Log.outputFormat = 'json';
 
+// Defaults to true for local development and for backwards compatibility.
+// for cloud environments is interesting to leave it false as most of them have the timestamp in the console.
+// Only works in server with colored-text
+Log.showTime = true;
+
 const LEVEL_COLORS = {
   debug: 'green',
   // leave info as the default color
@@ -296,13 +301,15 @@ Log.format = (obj, options = {}) => {
 
   const stderrIndicator = stderr ? '(STDERR) ' : '';
 
+  const timeString = Log.showTime
+    ? `${dateStamp}-${timeStamp}${utcOffsetStr}${timeInexact ? '? ' : ' '}`
+    : ' ';
+
+
+
   const metaPrefix = [
     level.charAt(0).toUpperCase(),
-    dateStamp,
-    '-',
-    timeStamp,
-    utcOffsetStr,
-    timeInexact ? '? ' : ' ',
+    timeString,
     appInfo,
     sourceInfo,
     stderrIndicator].join('');

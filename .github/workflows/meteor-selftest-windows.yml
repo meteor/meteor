@@ -6,11 +6,10 @@ on:
       - opened
       - reopened
       - synchronize
-    branches:
-      - release-3.0
   push:
     branches:
-      - release-3.0
+      - devel
+      - 2.x.x
 
 env:
   METEOR_PRETTY_OUTPUT: 0
@@ -19,19 +18,27 @@ env:
   TIMEOUT_SCALE_FACTOR: 20
   METEOR_HEADLESS: true
   SELF_TEST_EXCLUDE: '^NULL-LEAVE-THIS-HERE-NULL$'
+  METEOR_MODERN: true
 
 jobs:
   test:
     runs-on: windows-2019-meteor
+    concurrency:
+      group: ${{ github.head_ref }}-meteor-selftest-windows
+      cancel-in-progress: true
 
     steps:
+      - name: cleanup
+        shell: powershell
+        run: Remove-Item -Recurse -Force ${{ github.workspace }}\*
+
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Install dependencies
         shell: pwsh
@@ -46,7 +53,7 @@ jobs:
           .\scripts\windows\ci\test.ps1
 
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             .\dev_bundle

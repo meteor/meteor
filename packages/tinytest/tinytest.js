@@ -74,7 +74,7 @@ export class TestCaseResults {
         var frame = stack[i];
         // Heuristic: use the OUTERMOST line which is in a :tests.js
         // file (this is less likely to be a test helper function).
-        const fileName = frame.getFileName();
+        const fileName = frame?.getFileName ? frame.getFileName() : null;
         if (fileName && fileName.match(/:tests\.js/)) {
           doc.filename = fileName;
           doc.line = frame.getLineNumber();
@@ -435,7 +435,7 @@ export class TestCase {
         stop_at_offset
       );
 
-      const result = this.func(results, resolve);
+      const result = Meteor._runFresh(() => this.func(results, resolve));
       if (result && typeof result.then === "function") {
         return result.then(resolve, reject);
       }

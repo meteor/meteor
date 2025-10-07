@@ -113,9 +113,13 @@
   --vc-c-orange-3: #b35e00;
   --vc-c-orange-soft: rgba(255, 126, 23, 0.16);
 
-  --vc-c-meteor-red-1: #BF212E;
-  --vc-c-meteor-red-2: #A01A24;
-  --vc-c-meteor-red-3: #7F141D;
+  --vp-c-meteor-red-1: #E9A0A7;
+  --vp-c-meteor-red-2: #e9b4b8;
+  --vp-c-meteor-red-3: #f0c8cb;
+
+  --vc-c-meteor-red-1: #E9A0A7;
+  --vc-c-meteor-red-2: #e9b4b8;
+  --vc-c-meteor-red-3: #f0c8cb;
   --vc-c-meteor-red-soft: rgba(191, 33, 46, 0.16);
 
   --vp-c-yellow-1: #f9b44e;

@@ -399,7 +399,11 @@ exports.run = async function (options) {
   var runner = new Runner(runOptions);
   await runner.init();
   // don't wait this on to finish
-  setTimeout(() => runner.start(), 0);
+  if (runOptions.open) {
+    await runner.start();
+  } else {
+    setTimeout(() => runner.start(), 0);
+  }
   onBuilt && onBuilt();
   var result = await promise;
   await runner.stop();

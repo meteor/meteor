@@ -1223,13 +1223,16 @@ class Target {
           continue;
         }
 
+        var data = await resource.data;
+        var hash = await resource.hash;
+
         const fileOptions = {
           info: 'unbuild ' + resource,
           arch: this.arch,
-          data: await resource.data,
+          data,
           cacheable: false,
-          hash: await resource.hash,
-          skipSri: !!await resource.hash
+          hash,
+          skipSri: !!hash
         };
 
         const file = new File(fileOptions);
@@ -1290,15 +1293,17 @@ class Target {
             continue;
           }
 
+          var data = await resource.data;
+          var hash = await resource.hash;
           let sourcePath;
-          if ((await resource.data) && resource.sourceRoot && resource.sourcePath) {
+          if (data && resource.sourceRoot && resource.sourcePath) {
             sourcePath = files.pathJoin(resource.sourceRoot, resource.sourcePath);
           }
           const f = new File({
             info: 'resource ' + resource.servePath,
             arch: this.arch,
-            data: await resource.data,
-            hash: await resource.hash,
+            data,
+            hash,
             cacheable: false,
             replaceable: resource.type === 'js' && sourceBatch.hmrAvailable,
             sourcePath
@@ -1323,14 +1328,15 @@ class Target {
             });
           }
 
+          var sourceMap = await resource.sourceMap;
           // Both CSS and JS files can have source maps
-          if (await resource.sourceMap) {
+          if (sourceMap) {
             // XXX we used to set sourceMapRoot to
             // files.pathDirname(relPath) but it's unclear why.  With the
             // currently generated source map file names, it works without it
             // and doesn't work well with it... maybe?  we were getting
             // 'packages/packages/foo/bar.js'
-            f.setSourceMap(await resource.sourceMap, null);
+            f.setSourceMap(sourceMap, null);
           }
 
           this[resource.type].push(f);
@@ -1540,6 +1546,9 @@ class Target {
   // with the original sources.
   rewriteSourceMaps() {
     const rewriteSourceMap = function (sm) {
+      if (!sm.sources) {
+        return sm;
+      }
       sm.sources = sm.sources.map(function (path) {
         const prefix = SOURCE_URL_PREFIX;
         if (path.slice(0, prefix.length) === prefix) {

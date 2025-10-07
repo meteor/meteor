@@ -202,7 +202,7 @@ exports.sleepMs = function (ms) {
 // Return a short, high entropy string without too many funny
 // characters in it.
 exports.randomToken = function () {
-  return (Math.random() * 0x100000000 + 1).toString(36);
+  return (Math.random() * 0x100000000 + 1).toString(36).replace('.', '');
 };
 
 // Like utils.randomToken, except a legal variable name, i.e. the first

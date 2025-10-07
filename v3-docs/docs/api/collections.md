@@ -183,6 +183,21 @@ issue, since it's unusual for a client to have enough data that an
 index is worthwhile.
 :::
 
+Use the `resolverType` option to determine the default method for resolving the functions of the collection methods. In Meteor 3.x, a distinction exists between stub and server promises on call methods. The former handles client simulation and minimongo population, while the latter solely manages success or error on the server call without populating the data in minimongo. The resolverType option offers `stub` and `server` values.
+
+This option is particularly useful on test environments to maintain isomorphic code without needing to manage different code for the server and stub scenarios.
+
+```javascript
+const Greetings = new Meteor.Collection('greetUser', { resolverType: 'stub' });
+    
+await Greetings.insertAsync({ test: 1 });
+
+// 🔵 Client simulation
+Greetings.findOne({ name: 'John' }); // 🧾 Data is available (Optimistic-UI)
+```
+
+Read more about server and stub promises on calling methods, [please refer to the docs](./meteor.md#Meteor-callAsync).
+
 Read more about collections and how to use them in the [Collections](http://guide.meteor.com/collections.html) article in the Meteor Guide.
 
 
@@ -511,8 +526,8 @@ restrictions. That includes methods that are called with `Meteor.call`
 relying on `allow` and `deny`.
 
 You can call `allow` as many times as you like, and each call can
-include any combination of `insert`/`insertAsync`, `update`/`updateAsync`,
-and `remove`/`removeAsync` functions. The functions should return `true`
+include any combination of `insert`, `update`,
+and `remove` functions. The functions should return `true`
 if they think the operation should be allowed. Otherwise they should
 return `false`, or nothing at all (`undefined`). In that case Meteor
 will continue searching through any other `allow` rules on the collection.
@@ -521,18 +536,18 @@ The available callbacks are:
 
 ### Callbacks
 
-- `insert(userId, doc)`/`insertAsync(userId, doc)` - The user `userId` wants to insert the
+- `insert(userId, doc)` - The user `userId` wants to insert the
   document `doc` into the collection. Return `true` if this should be
-  allowed.
+  allowed. Supports async validations.
 
   `doc` will contain the `_id` field if one was explicitly set by the client, or
   if there is an active `transform`. You can use this to prevent users from
   specifying arbitrary `_id` fields.
 
-- `update(userId, doc, fieldNames, modifier)`/`updateAsync(userId, doc, fieldNames, modifier)` - The user `userId`
+- `update(userId, doc, fieldNames, modifier)` - The user `userId`
   wants to update a document `doc` in the database. (`doc` is the
   current version of the document from the database, without the
-  proposed update.) Return `true` to permit the change.
+  proposed update.) Return `true` to permit the change. Supports async validations.
 
   `fieldNames` is an array of the (top-level) fields in `doc` that the
   client wants to modify, for example
@@ -547,8 +562,8 @@ The available callbacks are:
   \$-modifiers, the request will be denied without checking the `allow`
   functions.
 
-- `remove(userId, doc)`/`removeAsync(userId, doc)` - the user `userId` wants to remove `doc` from the database. Return
-  `true` to permit this.
+- `remove(userId, doc)` - the user `userId` wants to remove `doc` from the database. Return
+  `true` to permit this. Supports async validations.
 
 
 When calling `update`/`updateAsync` or `remove`/`removeAsync` Meteor will by default fetch the
@@ -578,27 +593,11 @@ Posts.allow({
     return doc.owner === userId;
   },
 
-  remove(userId, doc) {
+  async remove(userId, doc) {
+    // Any custom async validation is supported
+    await Meteor.sleep(100);
     // Can only remove your own documents.
     return doc.owner === userId;
-  },
-  
-  async insertAsync(userId, doc) {
-    // Any custom async validation is supported
-    const allowed = await allowInsertAsync(userId, doc);
-    return userId && allowed;
-  },
-
-  async updateAsync(userId, doc, fields, modifier) {
-    // Any custom async validation is supported
-    const allowed = await allowUpdateAsync(userId, doc);
-    return userId && allowed;
-  },
-
-  async removeAsync(userId, doc) {
-    // Any custom async validation is supported
-    const allowed = await allowRemoveAsync(userId, doc);
-    return userId && allowed;
   },
 
   fetch: ["owner"],
@@ -610,21 +609,11 @@ Posts.deny({
     return _.contains(fields, "owner");
   },
 
-  remove(userId, doc) {
+  async remove(userId, doc) {
+    // Any custom async validation is supported
+    await Meteor.sleep(100);
     // Can't remove locked documents.
     return doc.locked;
-  },
-  
-  async updateAsync(userId, doc, fields, modifier) {
-    // Any custom async validation is supported
-    const denied = await denyUpdateAsync(userId, doc);
-    return userId && denied;
-  },
-
-  async removeAsync(userId, doc) {
-    // Any custom async validation is supported
-    const denied = await denyRemoveAsync(userId, doc);
-    return userId && denied;
   },
 
   fetch: ["locked"], // No need to fetch `owner`
@@ -709,7 +698,7 @@ topPosts.forEach((post) => {
 
 ::: warning
 Client only.
-For server/isomorphic usage see [removeAsync](#Mongo-Cursor-forEachAsync).
+For server/isomorphic usage see [forEachAsync](#Mongo-Cursor-forEachAsync).
 :::
 
 <ApiBox name="Mongo.Cursor#forEachAsync" instanceName="Cursor"/>
@@ -925,6 +914,7 @@ const handle = await cursor.observeChangesAsync({
 setTimeout(() => handle.stop(), 5000);
 ```
 
+<ApiBox name="Mongo.getCollection" />
 <ApiBox name="Mongo.ObjectID" />
 
 
@@ -1175,11 +1165,16 @@ option:
 You can pass any MongoDB valid option, these are just examples using
 certificates configurations.
 
+If you're using a certificate and having authentication errors when trying to connect to a database other than `admin`, make sure to provide the flags `&ssl=true&authSource=admin`. You MONGO_URL string should look like this:
+
+```
+mongodb://<username>:<password>@[server-1],[server-2],[server-3]/my-database?replicaSet=my-replica&ssl=true&authSource=admin
+```
 
 ### Mongo Oplog Options {#mongo-oplog-options}
 
 > Oplog options were introduced in Meteor 2.15.1
-If you set the [`MONGO_OPLOG_URL`](https://docs.meteor.com/environment-variables.html#MONGO-OPLOG-URL) env var, Meteor will use MongoDB's Oplog to show efficient, real time updates to your users via your subscriptions.
+If you set the [`MONGO_OPLOG_URL`](/cli/environment-variables.html#mongo-oplog-url) env var, Meteor will use MongoDB's Oplog to show efficient, real time updates to your users via your subscriptions.
 
 Due to how Meteor's Oplog implementation is built behind the scenes, if you have certain collections where you expect **big amounts of write operations**, this might lead to **big CPU spikes on your meteor app server, even if you have no publications/subscriptions on any data/documents of these collections**. For more information on this, please have a look into [this blog post from 2016](https://blog.meteor.com/tuning-meteor-mongo-livedata-for-scalability-13fe9deb8908), [this github discussion from 2022](https://github.com/meteor/meteor/discussions/11842) or [this meteor forums post from 2023](https://forums.meteor.com/t/cpu-spikes-due-to-oplog-updates-without-subscriptions/60028).
 

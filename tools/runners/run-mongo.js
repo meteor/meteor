@@ -1,3 +1,4 @@
+import { loadIsopackage } from '../tool-env/isopackets.js';
 import { MongoExitCodes } from '../utils/mongo-exit-codes';
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
@@ -5,7 +6,6 @@ var fiberHelpers = require('../utils/fiber-helpers.js');
 var runLog = require('./run-log.js');
 var child_process = require('child_process');
 var _ = require('underscore');
-import { loadIsopackage } from '../tool-env/isopackets.js';
 var Console = require('../console/console.js').Console;
 
 // Given a Mongo URL, open an interactive Mongo shell on this terminal
@@ -27,6 +27,17 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
 
   mongodPath = files.convertToOSPath(mongodPath);
   dbPath = files.convertToOSPath(dbPath);
+
+  // Because we're spawning the process with shell: true on win32, the
+  // command string and args array are effectively concatenated to
+  // a single string and passed into the shell. If any of those paths
+  // contain spaces, these will get broken up on white-spaces and treated
+  // as separate tokens. If they are quoted, they will be parsed
+  // correctly by the shell.
+  if (process.platform === 'win32') {
+    mongodPath = '"' + mongodPath + '"'
+    dbPath = '"' + dbPath + '"'
+  }
 
   let args = [
     // nb: cli-test.sh and findMongoPids make strong assumptions about the
@@ -51,11 +62,6 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     args.push('--storageEngine', 'mmapv1', '--smallfiles');
   }
 
-  // run with rosetta on mac m1
-  if (process.platform === 'darwin' && process.arch === 'arm64') {
-    args = ['-x86_64', mongodPath, ...args];
-    mongodPath = 'arch';
-  }
   return child_process.spawn(mongodPath, args, {
     // Apparently in some contexts, Mongo crashes if your locale isn't set up
     // right. I wasn't able to reproduce it, but many people on #4019
@@ -448,11 +454,7 @@ var launchMongo = async function(options) {
   var yieldingMethod = async function(object, methodName, ...args) {
     return await Promise.race([
       stopPromise,
-      new Promise((resolve, reject) => {
-        object[methodName](...args, (err, res) => {
-          err ? reject(err) : resolve(res);
-        });
-      }),
+      object[methodName](...args),
     ]);
   };
 
@@ -472,7 +474,7 @@ var launchMongo = async function(options) {
     if (options.multiple) {
       // This is only for testing, so we're OK with incurring the replset
       // setup on each startup.
-      await files.rm_recursive(dbPath);
+      await files.rm_recursive_deferred(dbPath);
       files.mkdir_p(dbPath, 0o755);
     } else if (portFile) {
       var portFileExists = false;

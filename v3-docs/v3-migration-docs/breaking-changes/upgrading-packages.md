@@ -12,7 +12,7 @@ The migration will look like this:
 ```js
 // in you package.js
 Package.onUse((api) => {
-  api.versionsFrom(['1.10', '2.3', '3.0-rc.2']);
+  api.versionsFrom(['1.10', '2.3', '3.0']);
   //                               ^^^^^^^ for testing your package with meteor 3.0
 
   api.versionsFrom(['1.10', '2.3', '3.0']);
@@ -20,7 +20,7 @@ Package.onUse((api) => {
 });
 ```
 
-Then you can publish your package and test it with Meteor 3.0, by running `meteor publish --release=3.0-rc.2`.
+Then you can publish your package and test it with Meteor 3.0, by running `meteor publish --release=3.0.4`.
 
 
 ## Changes for packages that do not use Meteor packages that had breaking change
@@ -33,7 +33,7 @@ by adding the following line to your `package.js`:
 ```js
 // in you package.js
 Package.onUse((api) => {
-  api.versionsFrom(['1.10', '2.3', '3.0-rc.2']);
+  api.versionsFrom(['1.10', '2.3', '3.0']);
   //                               ^^^^^^^ for testing your package with meteor 3.0
 
   api.versionsFrom(['1.10', '2.3', '3.0']);

@@ -84,6 +84,11 @@ export class AccountsServer extends AccountsCommon {
 
     this._skipCaseInsensitiveChecksForTest = {};
 
+    // Helper function to resolve promises if needed
+    this._resolvePromise = async (value) => {
+      return Meteor._isPromise(value) ? await value : value;
+    };
+
     this.urls = {
       resetPassword: (token, extraParams) => this.buildEmailUrl(`#/reset-password/${token}`, extraParams),
       verifyEmail: (token, extraParams) => this.buildEmailUrl(`#/verify-email/${token}`, extraParams),
@@ -333,6 +338,32 @@ export class AccountsServer extends AccountsCommon {
     return user;
   }
 
+  /**
+   * @summary Find a user by one of their email addresses.
+   * @locus Server
+   * @param {String} email The email address to look for
+   * @param {Object} [options]
+   * @param {Object} options.fields Limit the fields to return from the user document
+   * @returns {Promise<Object>} A user if found, else null
+   * @memberof Accounts
+   * @importFromPackage accounts-base
+   */
+  findUserByEmail = async (email, options) =>
+    await this._findUserByQuery({ email }, options);
+
+  /**
+   * @summary Find a user by their username.
+   * @locus Server
+   * @param {String} username The username to look for
+   * @param {Object} [options]
+   * @param {Object} options.fields Limit the fields to return from the user document
+   * @returns {Promise<Object>} A user if found, else null
+   * @memberof Accounts
+   * @importFromPackage accounts-base
+   */
+  findUserByUsername = async (username, options) =>
+    await this._findUserByQuery({ username }, options);
+
   ///
   /// LOGIN METHODS
   ///
@@ -422,7 +453,7 @@ export class AccountsServer extends AccountsCommon {
       )
     );
 
-    methodInvocation.setUserId(userId);
+    await methodInvocation.setUserId(userId);
 
     return {
       id: userId,
@@ -664,7 +695,7 @@ export class AccountsServer extends AccountsCommon {
        await accounts.destroyToken(this.userId, token);
       }
       await accounts._successfulLogout(this.connection, this.userId);
-      this.setUserId(null);
+      await this.setUserId(null);
     };
 
     // Generates a new login token with the same expiration as the
@@ -1519,11 +1550,11 @@ export class AccountsServer extends AccountsCommon {
   }
 
   _handleError = (msg, throwError = true, errorCode = 403) => {
-    const isErrorAmbiguous = this._options.ambiguousErrorMessages ?? Meteor.isProduction;
+    const isErrorAmbiguous = this._options.ambiguousErrorMessages ?? true;
     const error = new Meteor.Error(
       errorCode,
       isErrorAmbiguous
-        ? "Something went wrong. Please check your credentials."
+        ? 'Something went wrong. Please check your credentials.'
         : msg
     );
     if (throwError) {
@@ -1806,21 +1837,6 @@ const setupUsersCollection = async users => {
 
       return true;
     },
-    updateAsync: (userId, user, fields, modifier) => {
-      // make sure it is our record
-      if (user._id !== userId) {
-        return false;
-      }
-
-      // user can only modify the 'profile' field. sets to multiple
-      // sub-keys (eg profile.foo and profile.bar) are merged into entry
-      // in the fields list.
-      if (fields.length !== 1 || fields[0] !== 'profile') {
-        return false;
-      }
-
-      return true;
-    },
     fetch: ['_id'] // we only look at _id.
   });
 
@@ -1861,4 +1877,3 @@ const generateCasePermutationsForString = string => {
   }
   return permutations;
 }
-

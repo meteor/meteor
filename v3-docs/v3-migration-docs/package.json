@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "docs:dev": "vitepress dev",
-    "docs:build": "vitepress build",
-    "docs:preview": "vitepress preview",
+    "generators:versions": "node ./versions-generator.js",
+    "docs:dev": "npm run generators:versions && vitepress dev",
+    "docs:build": "npm run generators:versions && vitepress build",
+    "docs:preview": "npm run generators:versions && vitepress preview",
     "deploy:preview": "npm run docs:build && npm run docs:preview"
   },
   "repository": {

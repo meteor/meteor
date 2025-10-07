@@ -5,7 +5,7 @@ const Seven = require('node-7z');
 const { resolve, dirname } = require('path');
 const tar = require('tar');
 
-const { isMac } = require('./config.js');
+const { isLinux } = require('./config.js');
 
 function extractWith7Zip(tarPath, destination, onProgress) {
   return new Promise((resolve, reject) => {
@@ -49,7 +49,7 @@ function createSymlinks(symlinks, baseDir) {
 function extractWithNativeTar(tarPath, destination) {
   child_process.execSync(
     `tar -xf "${tarPath}" ${
-      !isMac() ? `--checkpoint-action=ttyout="#%u: %T \r"` : ``
+      isLinux() ? `--checkpoint-action=ttyout="#%u: %T \r"` : ``
     } -C "${destination}"`,
     {
       cwd: process.cwd(),

@@ -1,4 +1,4 @@
-﻿# For now, we only have one script.
+# For now, we only have one script.
 $jUnit = Join-Path $env:TEMP 'self-test-junit-0.xml'
 
 $tests = @(

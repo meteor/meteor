@@ -185,9 +185,8 @@ Function Add-NodeAndNpm {
 
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
-      Write-Debug
+  Write-Host (& "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+      --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1)
 
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm@${NPM_VERSION}."
@@ -377,10 +376,6 @@ $npmToolArgs = @{
   commands = $toolCmds
 }
 Add-NpmModulesFromJsBundleFile @npmToolArgs
-
-# Leaving these probably doesn't hurt, but are removed for consistency w/ Unix.
-Remove-Item $(Join-Path $dirLib 'package.json')
-Remove-Item $(Join-Path $dirLib 'package-lock.json')
 
 Write-Host "Done writing node_modules build(s)..." -ForegroundColor Magenta
 

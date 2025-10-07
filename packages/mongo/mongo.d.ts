@@ -83,11 +83,20 @@ export namespace Mongo {
         defineMutationMethods?: boolean | undefined;
       }
     ): Collection<T, U>;
+
+    /**
+     * Retrieve a previously defined Mongo.Collection instance by its name. The collection must already have been defined with `new Mongo.Collection(name, ...)`.
+     * Plain MongoDB collections are not available by this method.
+     * @param name The name of the collection instance.
+     */
+    getCollection<
+        TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
+    >(name: string): TCollection;
   }
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       update?:
         | ((
@@ -95,10 +104,10 @@ export namespace Mongo {
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
             modifier: any
-          ) => boolean)
+          ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
@@ -122,7 +131,7 @@ export namespace Mongo {
     ): Promise<void>;
     deny<Fn extends Transform<T> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       update?:
         | ((
@@ -130,10 +139,10 @@ export namespace Mongo {
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
             modifier: any
-          ) => boolean)
+          ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;

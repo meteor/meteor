@@ -55,16 +55,15 @@ const asyncGet =
       ));
 Tinytest.addAsync("webapp - content-type header", async function (test) {
   const staticFiles = WebAppInternals.staticFilesByArch["web.browser"];
+  const staticFilesKeys = Object.keys(staticFiles);
 
-  const cssResource = _.find(
-    _.keys(staticFiles),
+  const cssResource = staticFilesKeys.find(
     function (url) {
       return staticFiles[url].type === "css";
     }
   );
 
-  const jsResource = _.find(
-    _.keys(staticFiles),
+  const jsResource = staticFilesKeys.find(
     function (url) {
       return staticFiles[url].type === "js";
     }
@@ -154,6 +153,25 @@ Tinytest.addAsync("webapp - modern/legacy static files", test => {
   return Promise.all(promises);
 });
 
+const specialUserAgent =
+  "Mozilla/5.0 (Linux; Android 5.1.1; MI NOTE Pro Build/LMY47V; wv) " +
+  "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/48.0.2564.116 " +
+  "Mobile Safari/537.36 baidubrowser/7.7.13.0 (Baidu; P1 5.1.1)"
+
+Tinytest.addAsync("webapp - agent identification", async function (test) {
+  const modernBrowser = WebAppInternals.identifyBrowser(modernUserAgent);
+  test.equal(modernBrowser.name, "chrome");
+  test.equal(modernBrowser.major, 68);
+  test.equal(modernBrowser.minor, 0);
+  test.equal(modernBrowser.patch, 3440);
+
+  const specialBrowser = WebAppInternals.identifyBrowser(specialUserAgent);
+  test.equal(specialBrowser.name, "baiduBrowser");
+  test.equal(specialBrowser.major, 7);
+  test.equal(specialBrowser.minor, 7);
+  test.equal(specialBrowser.patch, 13);
+})
+
 Tinytest.addAsync(
   "webapp - additional static javascript",
   async function (test) {
@@ -203,7 +221,6 @@ Tinytest.addAsync(
 
     {
       const { stream }  = await WebAppInternals.getBoilerplate({
-        browser: "doesn't-matter",
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
       }, "web.browser");
@@ -342,7 +359,7 @@ __meteor_runtime_config__.WEBAPP_TEST_B = '</script>';
 
 Tinytest.add("webapp - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(WebAppInternals.NpmModules.express.version, /^4\.(\d+)\.(\d+)/);
+  test.matches(WebAppInternals.NpmModules.express.version, /^5\.(\d+)\.(\d+)/);
   test.equal(typeof(WebAppInternals.NpmModules.express.module), 'function');
 });
 
@@ -365,3 +382,53 @@ Tinytest.addAsync(
     test.isTrue(/__meteor_runtime_config__ = (.*customKey[^"].*customValue.*)/.test(html));
   }
 );
+
+Tinytest.addAsync("webapp - parse url queries", async function (test) {
+  WebApp.handlers.get("/queries", async (req, res) => {
+    res.json(req.query);
+  });
+
+  const queriesTestCases = [
+    'planet=Mars',
+    'galaxy=Andromeda&star=Betelgeuse',
+    'spacecraft=Voyager%202',
+    'meteor=Perseid&meteor=Leonid',
+    'astronaut[name]=Neil&astronaut[mission]=Apollo%2011',
+    'galaxy[name]=Milky%20Way&galaxy[diameter]=105700',
+    'constellation[name]=Orion&constellation[stars][]=Betelgeuse&constellation[stars][]=Rigel',
+    'galaxy[name]=Andromeda&galaxy[age]=10&meteors[]=Perseid&meteors[]=Geminid',
+    'astronaut[name]=Buzz&astronaut[missions][first]=Apollo%2011&astronaut[missions][second]=Apollo%2022',
+    'spacecraft[]=Voyager&spacecraft[]=Pioneer&spacecraft[0][type]=orbiter',
+    'comet=Halley&status=active%20comet',
+    'planet=&galaxy='
+  ];
+  const queryResults = [
+    { planet: 'Mars' },
+    { galaxy: 'Andromeda', star: 'Betelgeuse' },
+    { spacecraft: 'Voyager 2' },
+    { meteor: ['Perseid', 'Leonid'] },
+    { astronaut: { name: 'Neil', mission: 'Apollo 11' } },
+    { galaxy: { name: 'Milky Way', diameter: '105700' } },
+    { constellation: { name: 'Orion', stars: ['Betelgeuse', 'Rigel'] } },
+    {
+      galaxy: { name: 'Andromeda', age: '10' },
+      meteors: ['Perseid', 'Geminid']
+    },
+    {
+      astronaut: {
+        name: 'Buzz',
+        missions: { first: 'Apollo 11', second: 'Apollo 22' }
+      }
+    },
+    { spacecraft: ['Voyager', 'Pioneer', { type: 'orbiter' }] },
+    { comet: 'Halley', status: 'active comet' },
+    { planet: '', galaxy: '' }
+  ];
+  let i = 0;
+  for await (const queriesTestCase of queriesTestCases) {
+    const resp = await asyncGet(`${Meteor.absoluteUrl()}/queries?${queriesTestCase}`);
+    const queryParsed = JSON.parse(resp.content);
+    test.equal(queryParsed, queryResults[i]);
+    i++;
+  }
+});

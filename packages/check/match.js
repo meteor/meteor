@@ -482,13 +482,18 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
 
   const keys = Object.keys(requiredPatterns);
   if (keys.length) {
-    const result = {
-      message: `Missing key '${keys[0]}'`,
-      path: '',
-    };
+    const createMissingError = key => ({
+      message: `Missing key '${key}'`,
+      path: collectErrors ? path : '',
+    });
 
-    if (!collectErrors) return result;
-    errors.push(result);
+    if (!collectErrors) {
+      return createMissingError(keys[0]);
+    }
+
+    for (const key of keys) {
+      errors.push(createMissingError(key));
+    }
   }
 
   if (!collectErrors) return false;
