@@ -344,20 +344,23 @@ function createTestUser(test, expect) {
   const username = Random.id();
   const email = `${Random.id()}-intercept@example.com`;
   const password = 'password';
+  const ret = { username, email, password }
 
-  Accounts.createUser(
-    {
-      username,
-      email,
-      password,
-    },
-    expect((error) => {
+  const doCreate = () => {
+    Accounts.createUser(ret);
+  };
+
+  if (Meteor.userId()) {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
-      test.notEqual(Meteor.userId(), null);
-    }),
-  );
+      test.equal(Meteor.user(), null);
+      doCreate();
+    }));
+  } else {
+    doCreate();
+  }
 
-  return { username, email, password };
+  return ret;
 }
 
 /**

@@ -169,7 +169,7 @@ Tinytest.addAsync('livedata server - async publish cursor', function(
     });
     clientConn.subscribe('asyncPublishCursor', async () => {
       const actual = await remoteCollection.find().fetch();
-      test.equal(actual[0].name, 'async');
+      test.equal(actual[0]?.name, 'async');
       onComplete();
     });
   });
