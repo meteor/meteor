@@ -24,8 +24,7 @@
       try {
         localStorage[config.storagePrefix + credentialToken] = credentialSecret;
       } catch (err) {
-        // We can't do much else, but at least close the popup instead
-        // of having it hang around on a blank page.
+        
       }
     }
   }
@@ -44,7 +43,7 @@
           window.opener.localStorage[config.storagePrefix + "error_description"] = config.error_description;
         }
       } catch (err) {
-        // Cross-origin access may fail, but local storage above should work
+       
       }
     }
   }
