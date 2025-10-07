@@ -8,7 +8,7 @@
       sessionStorage[config.storagePrefix + config.credentialToken] =
         config.credentialSecret;
     } catch (err) {
-      // We can't do much else, but at least the redirects goes on.
+      
     }
   }
 
@@ -19,7 +19,7 @@
         localStorage[config.storagePrefix + "error_description"] = config.error_description;
       }
     } catch (err) {
-      // We can't do much else, but at least the redirect goes on.
+      
     }
   }
 
