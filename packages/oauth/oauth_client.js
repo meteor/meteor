@@ -155,3 +155,25 @@ OAuth._retrieveCredentialSecret = credentialToken => {
   }
   return secret;
 };
+
+OAuth.getError = () => {
+  const errorKey = OAuth._storageTokenPrefix + "error";
+  const errorDescriptionKey = OAuth._storageTokenPrefix + "error_description";
+  
+  const error = Meteor._localStorage.getItem(errorKey);
+  const error_description = Meteor._localStorage.getItem(errorDescriptionKey);
+  
+  if (error) {
+    Meteor._localStorage.removeItem(errorKey);
+    if (error_description) {
+      Meteor._localStorage.removeItem(errorDescriptionKey);
+    }
+    
+    return {
+      error: error,
+      error_description: error_description
+    };
+  }
+  
+  return null;
+};

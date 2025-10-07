@@ -275,6 +275,7 @@ OAuth._renderOauthResults = async (res, query, credentialSecret) => {
     };
     if (query.error) {
       details.error = query.error;
+      details.error_description = query.error_description;
     } else {
       const token = OAuth._credentialTokenFromQuery(query);
       const secret = credentialSecret;
@@ -342,7 +343,9 @@ const renderEndOfLoginResponse = async options => {
     credentialSecret: escape(options.credentialSecret),
     storagePrefix: escape(OAuth._storageTokenPrefix),
     redirectUrl: escape(options.redirectUrl),
-    isCordova: !! options.isCordova
+    isCordova: !! options.isCordova,
+    error: escape(options.error),
+    error_description: escape(options.error_description)
   };
 
   let template;
@@ -419,6 +422,8 @@ OAuth._endOfLoginResponse = async (res, details) => {
       setCredentialToken: false,
       redirectUrl,
       isCordova,
+      error: details.error,
+      error_description: details.error_description,
     }), "utf-8");
     return;
   }

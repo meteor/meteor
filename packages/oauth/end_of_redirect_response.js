@@ -12,6 +12,17 @@
     }
   }
 
+  if (config.error) {
+    try {
+      localStorage[config.storagePrefix + "error"] = config.error;
+      if (config.error_description) {
+        localStorage[config.storagePrefix + "error_description"] = config.error_description;
+      }
+    } catch (err) {
+      // We can't do much else, but at least the redirect goes on.
+    }
+  }
+
   window.location =
     config.redirectUrl
       ? config.redirectUrl.replace(/&amp;/g, "&")
