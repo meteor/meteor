@@ -13,13 +13,9 @@
   }
 
   if (config.error) {
-    try {
-      localStorage[config.storagePrefix + "error"] = config.error;
-      if (config.error_description) {
-        localStorage[config.storagePrefix + "error_description"] = config.error_description;
-      }
-    } catch (err) {
-      
+    localStorage[config.storagePrefix + "error"] = config.error;
+    if (config.error_description) {
+      localStorage[config.storagePrefix + "error_description"] = config.error_description;
     }
   }
 

@@ -31,25 +31,21 @@
   }
 
   if (config.error) {
-    try {
-      localStorage[config.storagePrefix + "error"] = config.error;
-      if (config.error_description) {
-        localStorage[config.storagePrefix + "error_description"] = config.error_description;
-      }
-      
-      if (window.opener && window.opener.Package &&
-          window.opener.Package.oauth && window.opener.Package.oauth.OAuth._handleCredentialSecret) {
-        try {
-          window.opener.localStorage[config.storagePrefix + "error"] = config.error;
-          if (config.error_description) {
-            window.opener.localStorage[config.storagePrefix + "error_description"] = config.error_description;
-          }
-        } catch (err) {
-         
+    localStorage[config.storagePrefix + "error"] = config.error;
+    if (config.error_description) {
+      localStorage[config.storagePrefix + "error_description"] = config.error_description;
+    }
+    
+    if (window.opener && window.opener.Package &&
+        window.opener.Package.oauth && window.opener.Package.oauth.OAuth._handleCredentialSecret) {
+      try {
+        window.opener.localStorage[config.storagePrefix + "error"] = config.error;
+        if (config.error_description) {
+          window.opener.localStorage[config.storagePrefix + "error_description"] = config.error_description;
         }
+      } catch (err) {
+        // Cross-origin access may fail, but local storage above should work
       }
-    } catch (err) {
-      
     }
   }
 
