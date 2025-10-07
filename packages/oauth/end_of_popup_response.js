@@ -37,13 +37,9 @@
     
     if (window.opener && window.opener.Package &&
         window.opener.Package.oauth && window.opener.Package.oauth.OAuth._handleCredentialSecret) {
-      try {
-        window.opener.localStorage[config.storagePrefix + "error"] = config.error;
-        if (config.error_description) {
-          window.opener.localStorage[config.storagePrefix + "error_description"] = config.error_description;
-        }
-      } catch (err) {
-       
+      window.opener.localStorage[config.storagePrefix + "error"] = config.error;
+      if (config.error_description) {
+        window.opener.localStorage[config.storagePrefix + "error_description"] = config.error_description;
       }
     }
   }

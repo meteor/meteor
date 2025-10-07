@@ -4,12 +4,8 @@
   var config = JSON.parse(document.getElementById("config").innerHTML);
 
   if (config.setCredentialToken) {
-    try {
-      sessionStorage[config.storagePrefix + config.credentialToken] =
-        config.credentialSecret;
-    } catch (err) {
-      
-    }
+    sessionStorage[config.storagePrefix + config.credentialToken] =
+      config.credentialSecret;
   }
 
   if (config.error) {
