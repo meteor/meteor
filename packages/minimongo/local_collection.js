@@ -2293,11 +2293,12 @@ const NO_CREATE_MODIFIERS = {
 };
 
 // Make sure field names do not contain Mongo restricted
-// characters ('.', '$', '\0').
+// characters ('$', '\0') or invalid dot usage (leading/trailing/consecutive '.').
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
 const invalidCharMsg = {
   $: 'start with \'$\'',
-  '.': 'contain \'.\'',
+  '.': 'start or end with \'.\'',
+  '..': 'contain consecutive dots',
   '\0': 'contain null bytes'
 };
 
@@ -2313,7 +2314,7 @@ function assertHasValidFieldNames(doc) {
 
 function assertIsValidFieldName(key) {
   let match;
-  if (typeof key === 'string' && (match = key.match(/^\$|\.|\0/))) {
+  if (typeof key === 'string' && (match = key.match(/^\$|^\.|\.\.|\.$|^\.$|\0/))) {
     throw MinimongoError(`Key ${key} must not ${invalidCharMsg[match[0]]}`);
   }
 }
