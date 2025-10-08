@@ -21,11 +21,7 @@
       window.opener.Package.oauth.OAuth._handleCredentialSecret(
         credentialToken, credentialSecret);
     } else {
-      try {
-        localStorage[config.storagePrefix + credentialToken] = credentialSecret;
-      } catch (err) {
-        
-      }
+      localStorage[config.storagePrefix + credentialToken] = credentialSecret;
     }
   }
 
