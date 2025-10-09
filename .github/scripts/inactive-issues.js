@@ -1,190 +1,200 @@
+/**
+* Mark issues as idle after a period of inactivity
+* and post reminders after a shorter period of inactivity.
+*
+* 1. Issues with no human activity for 60 days get a reminder comment.
+* 2. Issues with no human activity for 90 days get labeled as "idle" and get a comment.
+*
+* Human activity is defined as any comment from a non-bot user.
+*
+* This script is intended to be run as a GitHub Action on a schedule (e.g., daily).
+ */
 module.exports = async ({ github, context }) => {
   const daysToComment = 60;
   const daysToLabel = 90;
+
+  const idleTimeComment = daysToComment * 24 * 60 * 60 * 1000;
+  const idleTimeLabel = daysToLabel * 24 * 60 * 60 * 1000;
   const now = new Date();
-  const idleTimeComment = daysToComment * 24 * 60 * 60 * 1000; // 60 days in milliseconds
-  const idleTimeLabel = daysToLabel * 24 * 60 * 60 * 1000; // 90 days in milliseconds
-  
-  // Function to fetch issues until we find recently updated ones
+
+  const BOT_LOGIN = 'github-actions[bot]';
+  const REMINDER_PHRASE = 'Is this issue still relevant?';
+
+  const COMMENT_60_TEMPLATE = (login) =>
+    `👋 @${login} This issue has been open with no human activity for ${daysToComment} days. Is this issue still relevant? If there is no human response or activity within the next ${daysToLabel - daysToComment} days, this issue will be labeled as \`idle\`.`;
+
+  const COMMENT_90_TEXT =
+    'This issue has been automatically labeled as `idle` due to 90 days of inactivity (no human interaction). If this is still relevant, please comment to reactivate it.';
+
+  // Fetch all open issues
   async function fetchAllIssues() {
-    let allIssues = [];
     let page = 1;
-    let hasNextPage = true;
-    const now = new Date();
-    const minInactivity = idleTimeComment; // 60 days in milliseconds
-    
-    while (hasNextPage) {
-      const response = await github.rest.issues.listForRepo({
+    const per_page = 100;
+    const results = [];
+    let keepGoing = true;
+
+    while (keepGoing) {
+      const { data } = await github.rest.issues.listForRepo({
         owner: context.repo.owner,
         repo: context.repo.repo,
         state: 'open',
-        per_page: 100,
-        page: page,
+        per_page,
+        page,
         sort: 'updated',
-        direction: 'asc' // Oldest updated first
+        direction: 'asc'
       });
-      
-      // Check if the most recently updated issue on this page is too recent
-      let recentIssueFound = false;
-      if (response.data.length > 0) {
-        // Check the last issue on the page (most recently updated)
-        const lastIssue = response.data[response.data.length - 1];
-        const lastIssueUpdatedAt = new Date(lastIssue.updated_at);
-        const timeSinceLastIssueUpdate = now.getTime() - lastIssueUpdatedAt.getTime();
-        
-        if (timeSinceLastIssueUpdate < minInactivity) {
-          // This page already has issues that are too recent, filter them out
-          const filteredIssues = response.data.filter(issue => {
-            const issueUpdatedAt = new Date(issue.updated_at);
-            const timeSinceUpdate = now.getTime() - issueUpdatedAt.getTime();
-            return timeSinceUpdate >= minInactivity;
-          });
-          
-          allIssues = allIssues.concat(filteredIssues);
-          recentIssueFound = true;
-          hasNextPage = false;
-        } else {
-          // All issues on this page are old enough, keep them all
-          allIssues = allIssues.concat(response.data);
-        }
-      }
-      
-      // Stop if we found recent issues or reached the end of pagination
-      if (recentIssueFound) {
-        hasNextPage = false;
-      } else if (response.data.length < 100) {
-        hasNextPage = false;
+
+      if (!data.length) break;
+      results.push(...data);
+
+      if (data.length < per_page) {
+        keepGoing = false;
       } else {
         page++;
-        // Small delay to avoid hitting rate limits
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((r) => setTimeout(r, 120));
       }
     }
-    
-    return allIssues;
+    return results;
   }
-  
-  // Fetch all issues
-  const allIssues = await fetchAllIssues();
-  
-  let processedCount = 0;
-  let commentedCount = 0;
-  let labeledCount = 0;
-  
-  for (const issue of allIssues) {
-    processedCount++;
-    
-    // Skip pull requests
-    if (issue.pull_request) {
-      continue;
-    }
-    
-    // Skip issues that already have the idle label
-    if (issue.labels.some(label => label.name === 'idle')) {
-      continue;
-    }
-    
-    // Get latest comment or update date
-    const issueUpdatedAt = new Date(issue.updated_at);
-    const timeSinceUpdate = now.getTime() - issueUpdatedAt.getTime();
-    
-    // Handle 60-day idle issues (comment)
-    if (timeSinceUpdate > idleTimeComment && timeSinceUpdate <= idleTimeLabel) {
-      // Check if bot already commented to avoid duplicate comments
-      const comments = await github.rest.issues.listComments({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        issue_number: issue.number,
-        per_page: 100
-      });
-      
-      // Check if there's a recent bot comment
-      const botCommented = comments.data.some(comment => {
-        const commentDate = new Date(comment.created_at);
-        const timeSinceComment = now.getTime() - commentDate.getTime();
-        const isBot = comment.user.login === 'github-actions[bot]';
-        const isRecent = timeSinceComment < idleTimeComment;
-        const hasRightContent = comment.body.includes('Is this issue still relevant?');
-        
-        return isBot && isRecent && hasRightContent;
-      });
-      
-      if (!botCommented) {
-        try {
-          const result = await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: issue.number,
-            body: `👋 @${issue.user.login} This issue has been open for 60 days with no activity. Is this issue still relevant? If there is no response or activity within the next 30 days, this issue will be labeled as \`idle\`.`
-          });
-          commentedCount++;
-        } catch (error) {
-          // Add retry logic
-          try {
-            // Wait for 5 seconds before retrying
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            
-            const retryResult = await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              body: `👋 @${issue.user.login} This issue has been open for 60 days with no activity. Is this issue still relevant? If there is no response or activity within the next 30 days, this issue will be labeled as \`idle\`.`
-            });
-            commentedCount++;
-          } catch (retryError) {
-            // Failed retry, continue with other issues
-          }
-        }
+  // analyse comments to find last human activity and if a reminder was already posted after that
+  async function analyzeComments(issueNumber, issueCreatedAt) {
+    const commentsResp = await github.rest.issues.listComments({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      issue_number: issueNumber,
+      per_page: 100
+    });
+
+    const comments = commentsResp.data;
+    let lastHumanActivity = null;
+
+    for (let i = comments.length - 1; i >= 0; i--) {
+      const c = comments[i];
+      const isBot = c.user?.type === 'Bot' || c.user?.login === BOT_LOGIN;
+      if (!isBot) {
+        lastHumanActivity = new Date(c.created_at);
+        break;
       }
     }
-    
-    // Handle 90-day idle issues (add label)
-    else if (timeSinceUpdate > idleTimeLabel) {
-      // Check if the issue has the idle label
-      if (!issue.labels.some(label => label.name === 'idle')) {
+
+    if (!lastHumanActivity) {
+      lastHumanActivity = new Date(issueCreatedAt);
+    }
+
+    const hasReminderAfterLastHuman = comments.some(
+      (c) =>
+        c.user?.login === BOT_LOGIN &&
+        c.body?.includes(REMINDER_PHRASE) &&
+        new Date(c.created_at) > lastHumanActivity
+    );
+
+    return { lastHumanActivity, hasReminderAfterLastHuman };
+  }
+
+  const issues = await fetchAllIssues();
+
+  let processed = 0;
+  let commented = 0;
+  let labeled = 0;
+  let skippedPR = 0;
+
+  for (const issue of issues) {
+    processed++;
+
+    if (issue.pull_request) {
+      skippedPR++;
+      continue;
+    }
+
+    if (issue.labels.some((l) => l.name === 'idle')) {
+      continue;
+    }
+
+    let analysis;
+    try {
+      analysis = await analyzeComments(issue.number, issue.created_at);
+    } catch (err) {
+      continue; // fail to get comments, skip
+    }
+
+    const { lastHumanActivity, hasReminderAfterLastHuman } = analysis;
+    const inactivityMs = now.getTime() - lastHumanActivity.getTime();
+
+    // 90+ days => label + comment
+    if (inactivityMs >= idleTimeLabel) {
+      try {
+        await github.rest.issues.addLabels({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          issue_number: issue.number,
+          labels: ['idle']
+        });
+        await github.rest.issues.createComment({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          issue_number: issue.number,
+          body: COMMENT_90_TEXT
+        });
+        labeled++;
+        continue;
+      } catch (err) {
+        // retry simples
         try {
-          // Add the label
-          const labelResult = await github.rest.issues.addLabels({
+          await new Promise((r) => setTimeout(r, 5000));
+          await github.rest.issues.addLabels({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: issue.number,
             labels: ['idle']
           });
-          
-          // Add a comment when labeling as idle
-          const commentResult = await github.rest.issues.createComment({
+          await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: issue.number,
-            body: `This issue has been automatically labeled as \`idle\` due to 90 days of inactivity. If this issue is still relevant, please comment to reactivate it.`
+            body: COMMENT_90_TEXT
           });
-          labeledCount++;
-        } catch (error) {
-          // Add retry logic with exponential backoff
-          try {
-            // Wait for 5 seconds before retrying
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            
-            const retryLabelResult = await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              labels: ['idle']
-            });
-            
-            // Retry adding comment
-            const retryCommentResult = await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              body: `This issue has been automatically labeled as \`idle\` due to 90 days of inactivity. If this issue is still relevant, please comment to reactivate it.`
-            });
-            labeledCount++;
-          } catch (retryError) {
-            // Continue with other issues if retry fails
-          }
-        }
+          labeled++;
+        } catch {}
+        continue;
+      }
+    }
+
+    // 60-89 days => comment (once)
+    if (
+      inactivityMs >= idleTimeComment &&
+      inactivityMs < idleTimeLabel &&
+      !hasReminderAfterLastHuman
+    ) {
+      const body = COMMENT_60_TEMPLATE(issue.user.login);
+      try {
+        await github.rest.issues.createComment({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          issue_number: issue.number,
+          body
+        });
+        commented++;
+      } catch (err) {
+        try {
+          await new Promise((r) => setTimeout(r, 5000));
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue.number,
+            body
+          });
+          commented++;
+        } catch {}
       }
     }
   }
+
+  // Log summary for CI
+  console.log(
+    JSON.stringify(
+      { processed, commented, labeled, skippedPR },
+      null,
+      2
+    )
+  );
 };
