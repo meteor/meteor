@@ -1,6 +1,15 @@
 // NOTE: This file is added to the client as asset and hence ecmascript package has no effect here.
 (function() {
 
+  function storeOAuthError(storage, config) {
+    if (config.error) {
+      storage[config.storagePrefix + "error"] = config.error;
+      if (config.error_description) {
+        storage[config.storagePrefix + "error_description"] = config.error_description;
+      }
+    }
+  }
+
   var config = JSON.parse(document.getElementById("config").innerHTML);
 
   if (config.setCredentialToken) {
@@ -25,19 +34,11 @@
     }
   }
 
-  if (config.error) {
-    localStorage[config.storagePrefix + "error"] = config.error;
-    if (config.error_description) {
-      localStorage[config.storagePrefix + "error_description"] = config.error_description;
-    }
-    
-    if (window.opener && window.opener.Package &&
-        window.opener.Package.oauth && window.opener.Package.oauth.OAuth._handleCredentialSecret) {
-      window.opener.localStorage[config.storagePrefix + "error"] = config.error;
-      if (config.error_description) {
-        window.opener.localStorage[config.storagePrefix + "error_description"] = config.error_description;
-      }
-    }
+  storeOAuthError(localStorage, config);
+  
+  if (config.error && window.opener && window.opener.Package &&
+      window.opener.Package.oauth && window.opener.Package.oauth.OAuth._handleCredentialSecret) {
+    storeOAuthError(window.opener.localStorage, config);
   }
 
   if (! config.isCordova) {
