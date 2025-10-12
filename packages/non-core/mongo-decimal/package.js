@@ -9,7 +9,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use('ecmascript@0.16.9');
-  api.use('ejson@1.1.4');
+  api.use('harry97:cbor@1.1.16');
   api.mainModule('decimal.js');
   api.export('Decimal');
 });

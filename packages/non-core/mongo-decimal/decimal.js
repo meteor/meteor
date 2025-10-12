@@ -13,7 +13,7 @@ Decimal.prototype.clone = function () {
   return Decimal(this.toString());
 };
 
-EJSON.addType('Decimal', function (str) {
+CBOR.addType('Decimal', function (str) {
   return Decimal(str);
 });
 
