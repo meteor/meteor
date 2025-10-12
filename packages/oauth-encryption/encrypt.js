@@ -60,7 +60,7 @@ OAuthEncryption.seal = (data, userId) => {
     throw new Error("No OAuth encryption key loaded");
   }
 
-  const plaintext = Buffer.from(EJSON.stringify({
+  const plaintext = Buffer.from(CBOR.stringify({
     data,
     userId,
   }));
@@ -116,7 +116,7 @@ OAuthEncryption.open = (ciphertext, userId) => {
     let data;
 
     try {
-      data = EJSON.parse(plaintext);
+      data = CBOR.parse(plaintext);
     } catch (e) {
       err = new Error();
     }
