@@ -14,7 +14,7 @@ Meteor.startup(function () {
   Tinytest._runTests(function (results) {
     var name = getName(results);
     if (!has(resultSet, name)) {
-      var testPath = EJSON.clone(results.groupPath);
+      var testPath = CBOR.clone(results.groupPath);
       testPath.push(results.test);
       resultSet[name] = {
         name: name,
