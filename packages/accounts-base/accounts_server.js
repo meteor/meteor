@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Meteor } from 'meteor/meteor';
+import { CBOR } from 'meteor/harry97:cbor';
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
@@ -1580,7 +1581,7 @@ export class AccountsServer extends AccountsCommon {
 // object, but don't clone the connection.
 //
 const cloneAttemptWithConnection = (connection, attempt) => {
-  const clonedAttempt = EJSON.clone(attempt);
+  const clonedAttempt = CBOR.clone(attempt);
   clonedAttempt.connection = connection;
   return clonedAttempt;
 };
