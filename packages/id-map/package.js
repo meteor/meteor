@@ -5,7 +5,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use('ecmascript');
-  api.use('ejson');
+  api.use('harry97:cbor@1.1.16');
   api.mainModule('id-map.js');
   api.export('IdMap');
 });

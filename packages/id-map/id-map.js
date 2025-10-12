@@ -86,7 +86,7 @@ export class IdMap {
     const clone = new IdMap(this._idStringify, this._idParse);
     // copy directly to avoid stringify/parse overhead
     this._map.forEach(function(value, key){
-      clone._map.set(key, EJSON.clone(value));
+      clone._map.set(key, CBOR.clone(value));
     });
     return clone;
   }
