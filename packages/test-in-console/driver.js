@@ -97,7 +97,7 @@ var report = function (name, last) {
       data.end = new Date();
     else
       data.start = new Date();
-    toReport.push(EJSON.toJSONValue(data));
+    toReport.push(CBOR.toJSONValue(data));
   }
 };
 var sendReports = function (callback) {
@@ -119,7 +119,7 @@ runTests = function () {
     function (results) {
       var name = getName(results);
       if (!(name in resultSet)) {
-        var testPath = EJSON.clone(results.groupPath);
+        var testPath = CBOR.clone(results.groupPath);
         testPath.push(results.test);
         resultSet[name] = {
           name: name,
