@@ -18,9 +18,9 @@ Package.onUse(function (api) {
     [
       "check",
       "random",
-      "harry97:cbor@1.1.16",
+      "harry97:cbor@1.1.17",
       "retry",
-      "mongo-id",
+      "harry97:mongo-id@0.2.0",
       "diff-sequence",
       "ecmascript",
       "typescript",
@@ -61,7 +61,7 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use("ecmascript", ["client", "server"]);
-  api.use("harry97:cbor@1.1.16", ["client", "server"]);
+  api.use("harry97:cbor@1.1.17", ["client", "server"]);
   api.use("livedata", ["client", "server"]);
   api.use("mongo", ["client", "server"]);
   api.use("test-helpers", ["client", "server"]);

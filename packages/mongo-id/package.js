@@ -7,6 +7,6 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.export('MongoID');
-  api.use(['ejson@1.1.5', 'harry97:cbor@1.1.16', 'random@1.2.2', 'ecmascript@0.16.13']);
+  api.use(['ejson@1.1.5', 'harry97:cbor@1.1.17', 'random@1.2.2', 'ecmascript@0.16.13']);
   api.mainModule('id.js');
 });

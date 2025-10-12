@@ -15,7 +15,7 @@ Package.onUse(function (api) {
     'ddp',
     'mongo',
     'check',
-    'harry97:cbor@1.1.16'
+    'harry97:cbor@1.1.17'
   ]);
 
   api.mainModule('tinytest_client.js', 'client');

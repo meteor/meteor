@@ -8,7 +8,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use(['tinytest', 'harry97:cbor@1.1.16'], 'server');
+  api.use(['tinytest', 'harry97:cbor@1.1.17'], 'server');
 
   api.addFiles(['server.js'], "server");
 });

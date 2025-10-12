@@ -33,12 +33,12 @@ Package.onUse(function (api) {
 
   api.use([
     "random",
-    "harry97:cbor@1.1.16",
+    "harry97:cbor@1.1.17",
     "minimongo",
     "ddp",
     "tracker",
     "diff-sequence",
-    "mongo-id",
+    "harry97:mongo-id@0.2.0",
     "check",
     "ecmascript",
     "typescript",
@@ -116,7 +116,7 @@ Package.onTest(function (api) {
   api.use([
     "tinytest",
     "test-helpers",
-    "harry97:cbor@1.1.16",
+    "harry97:cbor@1.1.17",
     "random",
     "ddp",
     "base64",

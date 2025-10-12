@@ -930,6 +930,174 @@ CBOR._isCustomType = function(obj) {
          CBOR._customTypes.has(obj.constructor.name);
 };
 
+// Helper function to check if a value needs conversion to JSON format
+// Returns the converted value, or undefined if no conversion is needed
+const toJSONValueHelper = function(item) {
+  // Handle null
+  if (item === null) {
+    return null;
+  }
+
+  // Handle custom types with typeName and toJSONValue methods
+  if (item && typeof item === 'object' &&
+      typeof item.typeName === 'function' &&
+      typeof item.toJSONValue === 'function') {
+    return {
+      $type: item.typeName(),
+      $value: CBOR.toJSONValue(item.toJSONValue())
+    };
+  }
+
+  // Handle binary data
+  if (isServer && typeof Buffer !== 'undefined' && Buffer.isBuffer(item)) {
+    return { $binary: Base64.encode(item) };
+  }
+  if (item instanceof Uint8Array) {
+    return { $binary: Base64.encode(item) };
+  }
+
+  // Handle Date
+  if (item instanceof Date) {
+    return { $date: item.getTime() };
+  }
+
+  // No conversion needed
+  return undefined;
+};
+
+// Helper function to check if a value is Inf or NaN
+const isInfOrNaN = function(value) {
+  return typeof value === 'number' && (isNaN(value) || !isFinite(value));
+};
+
+// Helper function to check if a value is an object (not null, not primitive)
+const isObject = function(value) {
+  return value !== null && typeof value === 'object';
+};
+
+// Helper function to get keys of an object
+const keysOf = function(obj) {
+  if (Array.isArray(obj)) {
+    return Array.from({ length: obj.length }, (_, i) => i);
+  }
+  return Object.keys(obj);
+};
+
+// In-place mutation to convert nested custom types to JSON format
+// This is used by DDP's stringifyDDP function
+const adjustTypesToJSONValue = function(obj) {
+  // Is it an atom that we need to adjust?
+  if (obj === null) {
+    return null;
+  }
+
+  const maybeChanged = toJSONValueHelper(obj);
+  if (maybeChanged !== undefined) {
+    return maybeChanged;
+  }
+
+  // Other atoms are unchanged
+  if (!isObject(obj)) {
+    return obj;
+  }
+
+  // Iterate over array or object structure
+  keysOf(obj).forEach(key => {
+    const value = obj[key];
+    if (!isObject(value) && value !== undefined && !isInfOrNaN(value)) {
+      return; // continue
+    }
+
+    const changed = toJSONValueHelper(value);
+    if (changed) {
+      obj[key] = changed;
+      return; // on to the next key
+    }
+    // if we get here, value is an object but not adjustable
+    // at this level. recurse.
+    adjustTypesToJSONValue(value);
+  });
+  return obj;
+};
+
+// Export the in-place mutation function for DDP compatibility
+CBOR._adjustTypesToJSONValue = adjustTypesToJSONValue;
+
+// Helper to convert from JSON format back to custom types
+// Returns the reconstructed value, or the original value if no conversion needed
+const fromJSONValueHelper = function(value) {
+  if (isObject(value) && value !== null) {
+    const keys = keysOf(value);
+
+    // Check if this looks like a special EJSON type (keys starting with $)
+    if (keys.length <= 2 &&
+        keys.every(k => typeof k === 'string' && k.substr(0, 1) === '$')) {
+
+      // Handle custom types ($type and $value)
+      if (value.$type && value.$value !== undefined) {
+        const typeName = value.$type;
+        const processedValue = CBOR.fromJSONValue(value.$value);
+
+        // Look up the factory function for this custom type
+        if (CBOR._customTypes && CBOR._customTypes.has(typeName)) {
+          const factory = CBOR._customTypes.get(typeName);
+          return factory(processedValue);
+        }
+
+        // If no factory is registered, return the value as-is
+        return processedValue;
+      }
+
+      // Handle binary data ($binary)
+      if (value.$binary) {
+        return Base64.decode(value.$binary);
+      }
+
+      // Handle dates ($date)
+      if (value.$date) {
+        return new Date(value.$date);
+      }
+    }
+  }
+  return value;
+};
+
+// In-place mutation to convert JSON format back to custom types
+// This is used by DDP's parseDDP function
+const adjustTypesFromJSONValue = function(obj) {
+  if (obj === null) {
+    return null;
+  }
+
+  const maybeChanged = fromJSONValueHelper(obj);
+  if (maybeChanged !== obj) {
+    return maybeChanged;
+  }
+
+  // Other atoms are unchanged
+  if (!isObject(obj)) {
+    return obj;
+  }
+
+  keysOf(obj).forEach(key => {
+    const value = obj[key];
+    if (isObject(value)) {
+      const changed = fromJSONValueHelper(value);
+      if (value !== changed) {
+        obj[key] = changed;
+        return;
+      }
+      // if we get here, value is an object but not adjustable
+      // at this level. recurse.
+      adjustTypesFromJSONValue(value);
+    }
+  });
+  return obj;
+};
+
+// Export the in-place mutation function for DDP compatibility
+CBOR._adjustTypesFromJSONValue = adjustTypesFromJSONValue;
+
 // EJSON compatibility - migration helpers
 CBOR.fromEJSON = function(ejsonValue) {
   // Convert from EJSON format to CBOR-compatible format
