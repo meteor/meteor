@@ -1,4 +1,5 @@
 import {hasOwn} from './common';
+import { CBOR } from 'meteor/harry97:cbor';
 
 // Hack to make LocalCollection generate ObjectIDs by default.
 LocalCollection._useOID = true;
@@ -44,24 +45,24 @@ const assert_ordering = (test, f, values) => {
 const log_callbacks = operations => ({
   addedAt(obj, idx, before) {
     delete obj._id;
-    operations.push(EJSON.clone(['added', obj, idx, before]));
+    operations.push(CBOR.clone(['added', obj, idx, before]));
   },
 
   changedAt(obj, old_obj, at) {
     delete obj._id;
     delete old_obj._id;
-    operations.push(EJSON.clone(['changed', obj, at, old_obj]));
+    operations.push(CBOR.clone(['changed', obj, at, old_obj]));
   },
 
   movedTo(obj, old_at, new_at, before) {
     delete obj._id;
-    operations.push(EJSON.clone(['moved', obj, old_at, new_at, before]));
+    operations.push(CBOR.clone(['moved', obj, old_at, new_at, before]));
   },
 
   removedAt(old_obj, at) {
     const id = old_obj._id;
     delete old_obj._id;
-    operations.push(EJSON.clone(['removed', id, at, old_obj]));
+    operations.push(CBOR.clone(['removed', id, at, old_obj]));
   },
 });
 
@@ -327,7 +328,7 @@ Tinytest.add('minimongo - misc', test => {
   // deepcopy
   let a = {a: [1, 2, 3], b: 'x', c: true, d: {x: 12, y: [12]},
     f: null, g: new Date()};
-  let b = EJSON.clone(a);
+  let b = CBOR.clone(a);
   test.equal(a, b);
   test.isTrue(LocalCollection._f._equal(a, b));
   a.a.push(4);
@@ -344,7 +345,7 @@ Tinytest.add('minimongo - misc', test => {
   test.notEqual(a.g, b.g);
 
   a = {x() {}};
-  b = EJSON.clone(a);
+  b = CBOR.clone(a);
   a.x.a = 14;
   test.equal(b.x.a, 14); // just to document current behavior
 });
@@ -831,9 +832,12 @@ Tinytest.add('minimongo - selector_compiler', test => {
   matchCount({a: {$bitsAllClear: 16}}, 2);
   matchCount({a: {$bitsAllClear: 129}}, 3);
   matchCount({a: {$bitsAllClear: 255}}, 1);
+
   matchCount({a: {$bitsAnySet: 0}}, 0);
+
   matchCount({a: {$bitsAnySet: 9}}, 3);
   matchCount({a: {$bitsAnySet: 255}}, 4);
+
   matchCount({a: {$bitsAnyClear: 0}}, 0);
   matchCount({a: {$bitsAnyClear: 18}}, 3);
   matchCount({a: {$bitsAnyClear: 24}}, 3);
@@ -866,10 +870,13 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // Tests on negative numbers
 
   c.remove({});
+
   c.insert({a: -0});
   c.insert({a: -1});
   c.insert({a: -54});
 
+  const matchingDocs = c.find({a: {$bitsAllSet: 0}}).fetch();
+  
   // Tests with bitmask.
   matchCount({a: {$bitsAllSet: 0}}, 3);
   matchCount({a: {$bitsAllSet: 2}}, 2);
@@ -878,9 +885,12 @@ Tinytest.add('minimongo - selector_compiler', test => {
   matchCount({a: {$bitsAllClear: 0}}, 3);
   matchCount({a: {$bitsAllClear: 53}}, 2);
   matchCount({a: {$bitsAllClear: 127}}, 1);
+
   matchCount({a: {$bitsAnySet: 0}}, 0);
+
   matchCount({a: {$bitsAnySet: 2}}, 2);
   matchCount({a: {$bitsAnySet: 127}}, 2);
+
   matchCount({a: {$bitsAnyClear: 0}}, 0);
   matchCount({a: {$bitsAnyClear: 53}}, 2);
   matchCount({a: {$bitsAnyClear: 127}}, 2);
@@ -911,34 +921,37 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // Tests on BinData.
 
   c.remove({});
-  c.insert({a: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')});
-  c.insert({a: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')});
-  c.insert({a: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')});
-  c.insert({a: EJSON.parse('{"$binary": "////////////////////////////"}')});
+
+  c.insert({a: CBOR.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')});
+  c.insert({a: CBOR.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')});
+  c.insert({a: CBOR.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')});
+  c.insert({a: CBOR.parse('{"$binary": "////////////////////////////"}')});
+
 
   // Tests with binary string bitmask.
-  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4);
-  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 3);
-  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')}}, 2);
-  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 1);
-  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4);
-  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "AAyfAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 3);
-  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "JAyfqwetkqwklEWRbWERKKJREtbq"}')}}, 2);
-  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 1);
-  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 0);
-  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "AAyfAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 1);
-  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "JAyfqwetkqwklEWRbWERKKJREtbq"}')}}, 2);
-  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 3);
-  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 0);
-  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 1);
-  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')}}, 2);
-  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 3);
+  const mask1 = CBOR.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}');
+  matchCount({a: {$bitsAllSet: CBOR.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4);
+  matchCount({a: {$bitsAllSet: CBOR.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 3);
+  matchCount({a: {$bitsAllSet: CBOR.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')}}, 2);
+  matchCount({a: {$bitsAllSet: CBOR.parse('{"$binary": "////////////////////////////"}')}}, 1);
+  matchCount({a: {$bitsAllClear: CBOR.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4);
+  matchCount({a: {$bitsAllClear: CBOR.parse('{"$binary": "AAyfAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 3);
+  matchCount({a: {$bitsAllClear: CBOR.parse('{"$binary": "JAyfqwetkqwklEWRbWERKKJREtbq"}')}}, 2);
+  matchCount({a: {$bitsAllClear: CBOR.parse('{"$binary": "////////////////////////////"}')}}, 1);
+  matchCount({a: {$bitsAnySet: CBOR.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 0);
+  matchCount({a: {$bitsAnySet: CBOR.parse('{"$binary": "AAyfAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 1);
+  matchCount({a: {$bitsAnySet: CBOR.parse('{"$binary": "JAyfqwetkqwklEWRbWERKKJREtbq"}')}}, 2);
+  matchCount({a: {$bitsAnySet: CBOR.parse('{"$binary": "////////////////////////////"}')}}, 3);
+  matchCount({a: {$bitsAnyClear: CBOR.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 0);
+  matchCount({a: {$bitsAnyClear: CBOR.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 1);
+  matchCount({a: {$bitsAnyClear: CBOR.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')}}, 2);
+  matchCount({a: {$bitsAnyClear: CBOR.parse('{"$binary": "////////////////////////////"}')}}, 3);
 
   // Tests with multiple predicates.
   matchCount({
     a: {
-      $bitsAllSet: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}'),
-      $bitsAllClear: EJSON.parse('{"$binary": "//yf////////////////////////"}'),
+      $bitsAllSet: CBOR.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}'),
+      $bitsAllClear: CBOR.parse('{"$binary": "//yf////////////////////////"}'),
     },
   }, 1);
 
@@ -985,9 +998,9 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({a: {$type: 3}}, {a: []});
   nomatch({a: {$type: 3}}, {a: [1]});
   nomatch({a: {$type: 3}}, {a: null});
-  match({a: {$type: 5}}, {a: EJSON.newBinary(0)});
-  match({a: {$type: 'binData'}}, {a: EJSON.newBinary(0)});
-  match({a: {$type: 5}}, {a: EJSON.newBinary(4)});
+  match({a: {$type: 5}}, {a: CBOR.newBinary(0)});
+  match({a: {$type: 'binData'}}, {a: CBOR.newBinary(0)});
+  match({a: {$type: 5}}, {a: CBOR.newBinary(4)});
   nomatch({a: {$type: 5}}, {a: []});
   nomatch({a: {$type: 5}}, {a: [42]});
   match({a: {$type: 7}}, {a: new MongoID.ObjectID()});
@@ -1576,7 +1589,7 @@ Tinytest.add('minimongo - projection_compiler', test => {
   const testProjection = (projection, tests) => {
     const projection_f = LocalCollection._compileProjection(projection);
     const equalNonStrict = (a, b, desc) => {
-      test.isTrue(EJSON.equals(a, b), desc);
+      test.isTrue(CBOR.equals(a, b), desc);
     };
 
     tests.forEach(testCase => {
@@ -1814,7 +1827,7 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
   });
 
   const equalNonStrict = (a, b, desc) => {
-    test.isTrue(EJSON.equals(a, b), desc);
+    test.isTrue(CBOR.equals(a, b), desc);
   };
 
   const testForProjection = (projection, expected) => {
@@ -1976,11 +1989,11 @@ Tinytest.addAsync('minimongo - observe ordered with projection', async test => {
 
 
 Tinytest.add('minimongo - ordering', test => {
-  const shortBinary = EJSON.newBinary(1);
+  const shortBinary = CBOR.newBinary(1);
   shortBinary[0] = 128;
-  const longBinary1 = EJSON.newBinary(2);
+  const longBinary1 = CBOR.newBinary(2);
   longBinary1[1] = 42;
-  const longBinary2 = EJSON.newBinary(2);
+  const longBinary2 = CBOR.newBinary(2);
   longBinary2[1] = 50;
 
   const date1 = new Date;
@@ -2284,7 +2297,7 @@ Tinytest.add('minimongo - sort keys', test => {
   const keyListToObject = keyList => {
     const obj = {};
     keyList.forEach(key => {
-      obj[EJSON.stringify(key)] = true;
+      obj[CBOR.stringify(key)] = true;
     });
     return obj;
   };
@@ -2434,9 +2447,9 @@ Tinytest.addAsync('minimongo - modify', async test => {
     }
 
     if (typeof expected === 'function') {
-      expected(actual, EJSON.stringify({input: doc, mod}));
+      expected(actual, CBOR.stringify({input: doc, mod}));
     } else {
-      test.equal(actual, expected, EJSON.stringify({input: doc, mod}));
+      test.equal(actual, expected, CBOR.stringify({input: doc, mod}));
     }
   };
   const modify = async (doc, mod, expected) => {

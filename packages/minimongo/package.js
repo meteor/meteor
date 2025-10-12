@@ -14,11 +14,11 @@ Package.onUse((api) => {
     // This package is used to get diff results on arrays and objects
     "diff-sequence",
     "ecmascript",
-    "ejson",
+    "harry97:cbor@1.1.16",
     // This package is used for geo-location queries such as $near
     "geojson-utils",
     "id-map",
-    "mongo-id",
+    "harry97:mongo-id@0.2.0",
     "ordered-dict",
     "random",
     "tracker",
@@ -36,8 +36,8 @@ Package.onTest((api) => {
   api.use("minimongo");
   api.use([
     "ecmascript",
-    "ejson",
-    "mongo-id",
+    "harry97:cbor@1.1.16",
+    "harry97:mongo-id@0.2.0",
     "ordered-dict",
     "random",
     "reactive-var",

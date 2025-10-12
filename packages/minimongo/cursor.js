@@ -1,6 +1,7 @@
 import LocalCollection from './local_collection.js';
 import { hasOwn } from './common.js';
 import { ASYNC_CURSOR_METHODS, getAsyncMethodName } from './constants';
+import { CBOR } from 'meteor/harry97:cbor';
 
 // Cursor: a specification for a particular subset of documents, w/ a defined
 // order, limit, and offset.  creating a Cursor with LocalCollection.find(),
@@ -240,7 +241,7 @@ export default class Cursor {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with
-    // unordered observe.  eg, update's EJSON.clone, and the "there are several"
+    // unordered observe.  eg, update's CBOR.clone, and the "there are several"
     // comment in _modifyAndNotify
     // XXX allow skip/limit with unordered observe
     if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {
@@ -324,7 +325,7 @@ export default class Cursor {
 
     if (!options._suppress_initial && !this.collection.paused) {
       const handler = (doc) => {
-        const fields = EJSON.clone(doc);
+        const fields = CBOR.clone(doc);
 
         delete fields._id;
 

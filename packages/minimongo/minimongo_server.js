@@ -6,6 +6,7 @@ import {
   pathsToTree,
   projectionDetails,
 } from './common.js';
+import { CBOR } from 'meteor/harry97:cbor';
 
 Minimongo._pathsElidingNumericKeys = paths => paths.map(path =>
   path.split('.').filter(part => !isNumericKey(part)).join('.')
@@ -117,7 +118,7 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function(modifier) {
   // See if we can apply the modifier on the ideally matching object. If it
   // still matches the selector, then the modifier could have turned the real
   // object in the database into something matching.
-  const matchingDocument = EJSON.clone(this.matchingDocument());
+  const matchingDocument = CBOR.clone(this.matchingDocument());
 
   // The selector is too complex, anything can happen.
   if (matchingDocument === null) {
