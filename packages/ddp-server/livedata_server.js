@@ -942,7 +942,7 @@ Object.assign(Subscription.prototype, {
           maybeAuditArgumentChecks(
             self._handler,
             self,
-            EJSON.clone(self._params),
+            CBOR.clone(self._params),
             // It's OK that this would look weird for universal subscriptions,
             // because they have no arguments so there can never be an
             // audit-argument-checks failure.
@@ -1658,7 +1658,7 @@ Object.assign(Server.prototype, {
           maybeAuditArgumentChecks(
             handler,
             invocation,
-            EJSON.clone(args),
+            CBOR.clone(args),
             "internal call to '" + name + "'"
           )
         );
@@ -1669,7 +1669,7 @@ Object.assign(Server.prototype, {
         return resolve(result);
       }
       result.then(r => resolve(r)).catch(reject);
-    }).then(EJSON.clone);
+    }).then(CBOR.clone);
   },
 
   _urlForSession: function (sessionId) {

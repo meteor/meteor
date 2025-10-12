@@ -46,7 +46,7 @@ export class SessionCollectionView {
     
     DiffSequence.diffObjects(prevDV.getFields(), nowDV.getFields(), {
       both: (key: string, prev: any, now: any) => {
-        if (!EJSON.equals(prev, now)) {
+        if (!CBOR.equals(prev, now)) {
           fields[key] = now;
         }
       },
