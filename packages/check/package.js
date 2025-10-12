@@ -5,7 +5,7 @@ Package.describe({
 
 Package.onUse(api => {
   api.use('ecmascript');
-  api.use('ejson');
+  api.use('harry97:cbor@1.1.16');
 
   api.addAssets('check.d.ts', 'server');
 
@@ -16,7 +16,7 @@ Package.onUse(api => {
 });
 
 Package.onTest(api => {
-  api.use(['check', 'tinytest', 'ejson', 'ecmascript'], ['client', 'server']);
+  api.use(['check', 'tinytest', 'harry97:cbor@1.1.16', 'ecmascript'], ['client', 'server']);
 
   api.addFiles('match_test.js', ['client', 'server']);
 });

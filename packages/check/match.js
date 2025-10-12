@@ -1,3 +1,4 @@
+import { CBOR } from 'meteor/harry97:cbor';
 // XXX docs
 import { isPlainObject } from './isPlainObject';
 
@@ -187,7 +188,7 @@ const stringForErrorMessage = (value, options = {}) => {
 
   // Your average non-object things.  Saves from doing the try/catch below for.
   if ( typeof value !== 'object' ) {
-    return EJSON.stringify(value)
+    return CBOR.stringify(value)
   }
 
   try {
@@ -201,7 +202,7 @@ const stringForErrorMessage = (value, options = {}) => {
     }
   }
 
-  return EJSON.stringify(value);
+  return CBOR.stringify(value);
 };
 
 const typeofChecks = [
