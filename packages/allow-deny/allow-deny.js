@@ -529,7 +529,7 @@ function transformDoc(validator, doc) {
 function docToValidate(validator, doc, generatedId) {
   let ret = doc;
   if (validator.transform) {
-    ret = EJSON.clone(doc);
+    ret = CBOR.clone(doc);
     // If you set a server-side transform on your collection, then you don't get
     // to tell the difference between "client specified the ID" and "server
     // generated the ID", because transforms expect to get _id.  If you want to

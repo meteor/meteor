@@ -15,7 +15,7 @@ Package.onUse(function(api) {
     'ecmascript',
     'minimongo', // Just for LocalCollection.wrapTransform :[
     'check',
-    'ejson',
+    'harry97:cbor@1.0.1',
     'ddp',
   ]);
 
