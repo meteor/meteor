@@ -6,14 +6,14 @@ function stringify(value) {
   if (value === undefined) {
     return 'undefined';
   }
-  return EJSON.stringify(value);
+  return CBOR.stringify(value);
 }
 
 function parse(serialized) {
   if (serialized === undefined || serialized === 'undefined') {
     return undefined;
   }
-  return EJSON.parse(serialized);
+  return CBOR.parse(serialized);
 }
 
 function changed(v) {
@@ -213,7 +213,7 @@ export class ReactiveDict {
     if (hasOwn.call(this.keys, key)) {
       oldValue = parse(this.keys[key]);
     }
-    return EJSON.equals(oldValue, value);
+    return CBOR.equals(oldValue, value);
   }
 
   /**
