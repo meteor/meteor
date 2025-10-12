@@ -242,7 +242,7 @@ Object.assign(OplogObserveDriver.prototype, {
         var overflowingDocId = self._published.maxElementId();
         var overflowingDoc = self._published.get(overflowingDocId);
 
-        if (EJSON.equals(overflowingDocId, id)) {
+        if (CBOR.equals(overflowingDocId, id)) {
           throw new Error("The document just added is overflowing the published set");
         }
 
@@ -674,7 +674,7 @@ Object.assign(OplogObserveDriver.prototype, {
           // this directly.
           var newDoc = self._published.has(id)
             ? self._published.get(id) : self._unpublishedBuffer.get(id);
-          newDoc = EJSON.clone(newDoc);
+          newDoc = CBOR.clone(newDoc);
 
           newDoc._id = id;
           try {

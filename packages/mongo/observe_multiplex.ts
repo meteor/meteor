@@ -189,7 +189,7 @@ export class ObserveMultiplexer {
 
         const result = callback.apply(
           null,
-          handle.nonMutatingCallbacks ? args : EJSON.clone(args)
+          handle.nonMutatingCallbacks ? args : CBOR.clone(args)
         );
 
         if (result && Meteor._isPromise(result)) {
@@ -219,7 +219,7 @@ export class ObserveMultiplexer {
 
       const { _id, ...fields } = handle.nonMutatingCallbacks
         ? doc
-        : EJSON.clone(doc);
+        : CBOR.clone(doc);
 
       const promise = new Promise<void>((resolve, reject) => {
         try {

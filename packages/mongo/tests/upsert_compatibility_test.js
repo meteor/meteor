@@ -16,7 +16,7 @@ Tinytest.addAsync(
     test.isTrue(updated._id instanceof Mongo.ObjectID);
 
     delete updated['_id'];
-    test.equal(EJSON.equals(updated, { foo: 2 }), true);
+    test.equal(CBOR.equals(updated, { foo: 2 }), true);
   }
 );
 
@@ -38,7 +38,7 @@ Tinytest.addAsync(
     test.equal(inserted._id, result.insertedId);
 
     delete inserted['_id'];
-    test.equal(EJSON.equals(inserted, { foo: 1, bar: 2 }), true);
+    test.equal(CBOR.equals(inserted, { foo: 1, bar: 2 }), true);
   }
 );
 
@@ -60,7 +60,7 @@ Tinytest.addAsync(
     test.isTrue(updated._id instanceof Mongo.ObjectID);
 
     delete updated['_id'];
-    test.equal(EJSON.equals(updated, { bar: 2 }), true);
+    test.equal(CBOR.equals(updated, { bar: 2 }), true);
   }
 );
 
@@ -83,7 +83,7 @@ Tinytest.addAsync(
     test.equal(inserted._id, result.insertedId);
 
     delete inserted['_id'];
-    test.equal(EJSON.equals(inserted, { bar: 2 }), true);
+    test.equal(CBOR.equals(inserted, { bar: 2 }), true);
   }
 );
 
@@ -105,7 +105,7 @@ Tinytest.addAsync(
     test.isTrue(typeof updated._id === 'string');
 
     delete updated['_id'];
-    test.equal(EJSON.equals(updated, { foo: 2 }), true);
+    test.equal(CBOR.equals(updated, { foo: 2 }), true);
   }
 );
 
@@ -127,7 +127,7 @@ Tinytest.addAsync(
     test.equal(inserted._id, result.insertedId);
 
     delete inserted['_id'];
-    test.equal(EJSON.equals(inserted, { foo: 1, bar: 2 }), true);
+    test.equal(CBOR.equals(inserted, { foo: 1, bar: 2 }), true);
   }
 );
 
@@ -149,7 +149,7 @@ Tinytest.addAsync(
     test.isTrue(typeof updated._id === 'string');
 
     delete updated['_id'];
-    test.equal(EJSON.equals(updated, { bar: 2 }), true);
+    test.equal(CBOR.equals(updated, { bar: 2 }), true);
   }
 );
 
@@ -171,7 +171,7 @@ Tinytest.addAsync(
     test.equal(inserted._id, result.insertedId);
 
     delete inserted['_id'];
-    test.equal(EJSON.equals(inserted, { bar: 2 }), true);
+    test.equal(CBOR.equals(inserted, { bar: 2 }), true);
   }
 );
 
@@ -191,6 +191,6 @@ Tinytest.addAsync(
 
     test.isTrue(typeof inserted._id === 'string');
 
-    test.equal(EJSON.equals(inserted, { _id: 'meu id' }), true);
+    test.equal(CBOR.equals(inserted, { _id: 'meu id' }), true);
   }
 );

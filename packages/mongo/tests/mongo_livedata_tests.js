@@ -153,7 +153,7 @@ const upsertTestMethodImpl = async function(coll, useUpdate, test) {
   if (!test) {
     test = {
       equal: function(a, b) {
-        if (!EJSON.equals(a, b))
+        if (!CBOR.equals(a, b))
           throw new Error(
             'Not equal: ' + JSON.stringify(a) + ', ' + JSON.stringify(b)
           );
@@ -214,13 +214,13 @@ Object.assign(Dog.prototype, {
   getColor: function () { return this.name;},
   equals: function (other) { return other.name === this.name &&
     other.color === this.color &&
-    EJSON.equals(other.actions, this.actions);},
+    CBOR.equals(other.actions, this.actions);},
   toJSONValue: function () { return {color: this.color, name: this.name, actions: this.actions};},
   typeName: function () { return "dog"; },
   clone: function () { return new Dog(this.name, this.color); },
   speak: function () { return "woof"; }
 });
-EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);});
+CBOR.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);});
 
 
 // Parameterize tests.
@@ -1010,8 +1010,8 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
 
   // compares arrays a and b w/o looking at order
 const setsEqual = function (a, b) {
-    a = a.map(EJSON.stringify);
-    b = b.map(EJSON.stringify);
+    a = a.map(CBOR.stringify);
+    b = b.map(CBOR.stringify);
 
   const difference = (arr1, arr2) => arr1.filter(x => !arr2.includes(x));
 
@@ -1893,7 +1893,7 @@ const setsEqual = function (a, b) {
         const cursor = coll.find();
         test.equal(await cursor.countAsync(), 1);
         const inColl = await coll.findOneAsync();
-        test.isTrue(EJSON.isBinary(inColl.b));
+        test.isTrue(CBOR.isBinary(inColl.b));
         test.equal(inColl.b, bin);
       },
     ]
@@ -3676,8 +3676,8 @@ Object.assign(TestCustomType.prototype, {
   },
   equals: function (other) {
     return other instanceof TestCustomType
-      && EJSON.equals(this.myHead, other.myHead)
-      && EJSON.equals(this.myTail, other.myTail);
+      && CBOR.equals(this.myHead, other.myHead)
+      && CBOR.equals(this.myTail, other.myTail);
   },
   typeName: function () {
     return 'someCustomType';
@@ -3687,7 +3687,7 @@ Object.assign(TestCustomType.prototype, {
   }
 });
 
-EJSON.addType('someCustomType', function (json) {
+CBOR.addType('someCustomType', function (json) {
   return new TestCustomType(json.head, json.tail);
 });
 

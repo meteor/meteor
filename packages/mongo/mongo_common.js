@@ -70,7 +70,7 @@ export const transformResult = function (driverResult) {
 };
 
 export const replaceMeteorAtomWithMongo = function (document) {
-  if (EJSON.isBinary(document)) {
+  if (CBOR.isBinary(document)) {
     // This does more copies than we'd like, but is necessary because
     // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
     // serialize it correctly).
@@ -95,8 +95,8 @@ export const replaceMeteorAtomWithMongo = function (document) {
   if (document instanceof Decimal) {
     return MongoDB.Decimal128.fromString(document.toString());
   }
-  if (EJSON._isCustomType(document)) {
-    return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));
+  if (CBOR._isCustomType(document)) {
+    return replaceNames(makeMongoLegal, CBOR.toJSONValue(document));
   }
   // It is not ordinarily possible to stick dollar-sign keys into mongo
   // so we don't bother checking for things that need escaping at this time.
@@ -140,7 +140,7 @@ export const replaceMongoAtomWithMeteor = function (document) {
     return Decimal(document.toString());
   }
   if (document["EJSON$type"] && document["EJSON$value"] && Object.keys(document).length === 2) {
-    return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
+    return CBOR.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
   if (document instanceof MongoDB.Timestamp) {
     // For now, the Meteor representation of a Mongo timestamp type (not a date!

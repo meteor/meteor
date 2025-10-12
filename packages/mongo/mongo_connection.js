@@ -171,7 +171,7 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
   }
 
   if (!(LocalCollection._isPlainObject(document) &&
-    !EJSON._isCustomType(document))) {
+    !CBOR._isCustomType(document))) {
     throw new Error("Only plain objects may be inserted into MongoDB");
   }
 
@@ -308,7 +308,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     throw error;
   }
 
-  if (!(LocalCollection._isPlainObject(mod) && !EJSON._isCustomType(mod))) {
+  if (!(LocalCollection._isPlainObject(mod) && !CBOR._isCustomType(mod))) {
     const error = new Error(
       "Only plain objects may be used as replacement" +
       " documents in MongoDB");
@@ -819,7 +819,7 @@ Object.assign(MongoConnection.prototype, {
       throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
-    var observeKey = EJSON.stringify(
+    var observeKey = CBOR.stringify(
       Object.assign({ordered: ordered}, cursorDescription));
 
     var multiplexer, observeDriver;
