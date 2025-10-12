@@ -1,4 +1,4 @@
-import { MongoID } from 'meteor/mongo-id';
+import { MongoID } from 'meteor/harry97:mongo-id';
 
 export class MongoIDMap extends IdMap {
   constructor() {

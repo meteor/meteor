@@ -1220,7 +1220,7 @@ if (Meteor.isClient) {
   Tinytest.addAsync('livedata - method updated message with subscriptions', async function (test) {
     let messages = [];
 
-    const onMessage = message => messages.push(EJSON.parse(message));
+    const onMessage = message => messages.push(CBOR.parse(message));
 
     Meteor.connection._stream.on('message', onMessage);
 

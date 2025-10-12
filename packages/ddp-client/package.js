@@ -15,7 +15,7 @@ Package.onUse((api) => {
     [
       "check",
       "random",
-      "ejson",
+      "harry97:cbor@1.1.16",
       "tracker",
       "retry",
       "id-map",
@@ -29,7 +29,7 @@ Package.onUse((api) => {
       "diff-sequence",
 
       // _idParse, _idStringify.
-      "mongo-id",
+      "harry97:mongo-id@0.2.0",
     ],
     ["client", "server"]
   );
@@ -52,9 +52,9 @@ Package.onTest((api) => {
     'random',
     'tracker',
     'reactive-var',
-    'mongo-id',
+    'harry97:mongo-id@0.2.0',
     'diff-sequence',
-    'ejson',
+    'harry97:cbor@1.1.16',
     'ddp-common',
     'check'
   ]);

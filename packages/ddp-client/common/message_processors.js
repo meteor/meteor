@@ -1,7 +1,7 @@
 import { DDPCommon } from 'meteor/ddp-common';
 import { Meteor } from 'meteor/meteor';
 import { DDP } from './namespace.js';
-import { EJSON } from 'meteor/ejson';
+import { CBOR } from 'meteor/harry97:cbor';
 import { isEmpty, hasOwn } from "meteor/ddp-common/utils";
 
 export class MessageProcessors {

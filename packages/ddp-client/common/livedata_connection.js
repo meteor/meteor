@@ -1,9 +1,9 @@
 import { Meteor } from 'meteor/meteor';
 import { DDPCommon } from 'meteor/ddp-common';
 import { Tracker } from 'meteor/tracker';
-import { EJSON } from 'meteor/ejson';
+import { CBOR } from 'meteor/harry97:cbor';
 import { Random } from 'meteor/random';
-import { MongoID } from 'meteor/mongo-id';
+import { MongoID } from 'meteor/harry97:mongo-id';
 import { DDP } from './namespace.js';
 import { MethodInvoker } from './method_invoker';
 import {
@@ -421,7 +421,7 @@ export class Connection {
     // being invalidated, we will require N matching subscribe calls to keep
     // them all active.
     const existing = Object.values(self._subscriptions).find(
-      sub => (sub.inactive && sub.name === name && EJSON.equals(sub.params, params))
+      sub => (sub.inactive && sub.name === name && CBOR.equals(sub.params, params))
     );
 
     let id;
@@ -463,7 +463,7 @@ export class Connection {
       self._subscriptions[id] = {
         id: id,
         name: name,
-        params: EJSON.clone(params),
+        params: CBOR.clone(params),
         inactive: false,
         ready: false,
         readyDeps: new Tracker.Dependency(),
@@ -620,7 +620,7 @@ export class Connection {
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
   apply(name, args, options, callback) {
-    const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
+    const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, CBOR.clone(args));
 
     if (stubOptions.hasStub) {
       if (
@@ -688,7 +688,7 @@ export class Connection {
     return promise;
   }
   async _applyAsyncStubInvocation(name, args, options) {
-    const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args), options);
+    const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, CBOR.clone(args), options);
     if (stubOptions.hasStub) {
       if (
         !this._getIsSimulation({
@@ -758,7 +758,7 @@ export class Connection {
 
     // Keep our args safe from mutation (eg if we don't send the message for a
     // while because of a wait method).
-    args = EJSON.clone(args);
+    args = CBOR.clone(args);
     // If we're in a simulation, stop and return the result we have,
     // rather than going on to do an RPC. If there was no stub,
     // we'll end up returning undefined.
@@ -948,10 +948,10 @@ export class Connection {
           // don't allow stubs to yield.
           return Meteor._noYieldsAllowed(() => {
             // re-clone, so that the stub can't affect our caller's values
-            return stub.apply(invocation, EJSON.clone(args));
+            return stub.apply(invocation, CBOR.clone(args));
           });
         } else {
-          return stub.apply(invocation, EJSON.clone(args));
+          return stub.apply(invocation, CBOR.clone(args));
         }
     };
     return { ...defaultReturn, hasStub: true, stubInvocation, invocation };

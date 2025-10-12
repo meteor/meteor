@@ -1,4 +1,4 @@
-import { MongoID } from 'meteor/mongo-id';
+import { MongoID } from 'meteor/harry97:mongo-id';
 import { DiffSequence } from 'meteor/diff-sequence';
 import { hasOwn } from "meteor/ddp-common/utils";
 import { isEmpty } from "meteor/ddp-common/utils";
