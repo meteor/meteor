@@ -193,12 +193,12 @@ Log._getCallerDetails = () => {
   }
 
   if (intercepted) {
-    interceptedLines.push(EJSON.stringify(obj));
+    interceptedLines.push(CBOR.stringify(obj));
   } else if (Meteor.isServer) {
     if (Log.outputFormat === 'colored-text') {
       console.log(Log.format(obj, {color: true}));
     } else if (Log.outputFormat === 'json') {
-      console.log(EJSON.stringify(obj));
+      console.log(CBOR.stringify(obj));
     } else {
       throw new Error(`Unknown logging output format: ${Log.outputFormat}`);
     }
@@ -209,11 +209,11 @@ Log._getCallerDetails = () => {
 });
 
 
-// tries to parse line as EJSON. returns object if parse is successful, or null if not
+// tries to parse line as CBOR. returns object if parse is successful, or null if not
 Log.parse = (line) => {
   let obj = null;
   if (line && line.startsWith('{')) { // might be json generated from calling 'Log'
-    try { obj = EJSON.parse(line); } catch (e) {}
+    try { obj = CBOR.parse(line); } catch (e) {}
   }
 
   // XXX should probably check fields other than 'time'
@@ -251,7 +251,7 @@ Log.format = (obj, options = {}) => {
     if (message) {
       message += ' ';
     }
-    message += EJSON.stringify(obj);
+    message += CBOR.stringify(obj);
   }
 
   const pad2 = n => n.toString().padStart(2, '0');

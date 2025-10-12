@@ -18,7 +18,7 @@ Package.onUse(function (api) {
   // here due to this package's dependency on
   // `String.prototype.padRight` which is polyfilled only in
   // `ecmascript-runtime-client@0.6.2` or newer.
-  api.use(['ejson', 'ecmascript', 'typescript', 'ecmascript-runtime-client']);
+  api.use(['harry97:cbor@1.1.16', 'ecmascript', 'typescript', 'ecmascript-runtime-client']);
   api.mainModule('logging.js');
   api.addFiles('logging_server.js', 'server');
   api.addFiles('logging_browser.js', 'client');
@@ -27,7 +27,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['tinytest', 'ejson', 'ecmascript']);
+  api.use(['tinytest', 'harry97:cbor@1.1.16', 'ecmascript']);
   api.use('logging', ['client', 'server']);
   api.mainModule('logging_test.js', ['server', 'client']);
 });
