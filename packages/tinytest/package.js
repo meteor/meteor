@@ -14,7 +14,8 @@ Package.onUse(function (api) {
     'random',
     'ddp',
     'mongo',
-    'check'
+    'check',
+    'harry97:cbor@1.1.16'
   ]);
 
   api.mainModule('tinytest_client.js', 'client');
