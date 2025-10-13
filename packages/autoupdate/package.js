@@ -10,7 +10,7 @@ Package.onUse(function(api) {
 
   api.use('reload', 'client', { weak: true });
 
-  api.use(['ecmascript', 'ddp'], ['client', 'server']);
+  api.use(['ecmascript', 'ddp', 'ddp-common'], ['client', 'server']);
 
   api.mainModule('autoupdate_server.js', 'server');
   api.mainModule('autoupdate_client.js', 'client');

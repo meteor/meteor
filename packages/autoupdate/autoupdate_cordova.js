@@ -7,14 +7,14 @@ var autoupdateVersionsCordova =
 
 export const Autoupdate = {};
 
-// Stores acceptable client versions.
+
 const clientVersions = new ClientVersions();
 
-// Used by hot-module-replacement
+
 Autoupdate._clientVersions = clientVersions;
 
 
-// TODO[fibers]: make it's fine to call registerStoreClient here
+
 Meteor.connection.registerStoreClient(
   "meteor_autoupdate_clientVersions",
   clientVersions.createStore()
@@ -44,6 +44,10 @@ var retry = new Retry({
 let failures = 0;
 
 Autoupdate._retrySubscription = () => {
+  if (typeof DDPCommon !== 'undefined' && DDPCommon.isDDPServerDifferent && DDPCommon.isDDPServerDifferent()) {
+    return;
+  }
+
   const { appId } = __meteor_runtime_config__;
 
   Meteor.subscribe("meteor_autoupdate_clientVersions", appId, {

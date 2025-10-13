@@ -16,6 +16,7 @@ Package.onUse(function (api) {
   api.addFiles("utils.js", ["client", "server"]);
   api.addFiles("method_invocation.js", ["client", "server"]);
   api.addFiles("random_stream.js", ["client", "server"]);
+  api.addFiles("cross_server_utils.js", ["client", "server"]);
 
   api.export("DDPCommon");
 });
