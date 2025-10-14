@@ -143,13 +143,26 @@ OAuth._handleCredentialSecret = (credentialToken, secret) => {
 // corresponding to credential secret to call the `login` method over DDP.
 OAuth._retrieveCredentialSecret = credentialToken => {
   // First check the secrets collected by OAuth._handleCredentialSecret,
-  // then check localStorage. This matches what we do in
+  // then check sessionStorage and localStorage. This matches what we do in
   // end_of_login_response.html.
   let secret = credentialSecrets[credentialToken];
   if (! secret) {
-    const localStorageKey = OAuth._storageTokenPrefix + credentialToken;
-    secret = Meteor._localStorage.getItem(localStorageKey);
-    Meteor._localStorage.removeItem(localStorageKey);
+    const storageKey = OAuth._storageTokenPrefix + credentialToken;
+    // Check sessionStorage first (used by popup and redirect flows)
+    try {
+      secret = sessionStorage.getItem(storageKey);
+      if (secret) {
+        sessionStorage.removeItem(storageKey);
+      }
+    } catch (e) {
+      // sessionStorage may not be available in some environments
+    }
+    
+    if (!secret) {
+      // Fallback to localStorage for backwards compatibility
+      secret = Meteor._localStorage.getItem(storageKey);
+      Meteor._localStorage.removeItem(storageKey);
+    }
   } else {
     delete credentialSecrets[credentialToken];
   }

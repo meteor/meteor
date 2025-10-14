@@ -222,6 +222,59 @@ if (Meteor.isClient) {
       test.isNull(resultAfterClear);
     });
 
+  Tinytest.add("oauth - Post-login consistency test: consecutive login attempts",
+    test => {
+      const keys = {
+        error: OAuth._storageTokenPrefix + "error",
+        errorDescription: OAuth._storageTokenPrefix + "error_description"
+      };
+      
+      // Ensure clean initial state
+      Meteor._localStorage.removeItem(keys.error);
+      Meteor._localStorage.removeItem(keys.errorDescription);
+      
+      // Verify initial clean state
+      const initialResult = OAuth.getError();
+      test.isNull(initialResult);
+      
+      // Simulate first login attempt failure
+      Meteor._localStorage.setItem(keys.error, "access_denied");
+      Meteor._localStorage.setItem(keys.errorDescription, "User denied access");
+      
+      // Retrieve and verify the first error
+      const firstError = OAuth.getError();
+      test.isNotNull(firstError);
+      test.equal(firstError.error, "access_denied");
+      test.equal(firstError.error_description, "User denied access");
+      
+      // Verify first error is cleared
+      const clearedResult = OAuth.getError();
+      test.isNull(clearedResult);
+      
+      // Simulate second login attempt failure with different error
+      Meteor._localStorage.setItem(keys.error, "invalid_scope");
+      Meteor._localStorage.setItem(keys.errorDescription, "Requested scope is invalid");
+      
+      // Retrieve and verify the second error
+      const secondError = OAuth.getError();
+      test.isNotNull(secondError);
+      test.equal(secondError.error, "invalid_scope");
+      test.equal(secondError.error_description, "Requested scope is invalid");
+      
+      // Clear second error
+      const clearedSecondResult = OAuth.getError();
+      test.isNull(clearedSecondResult);
+      
+      // Simulate successful login (no error stored)
+      // Verify that calling OAuth.getError() after successful login returns null
+      const successResult = OAuth.getError();
+      test.isNull(successResult, "After successful login, OAuth.getError should return null");
+      
+      // Double-check that no error persists
+      const finalResult = OAuth.getError();
+      test.isNull(finalResult, "Multiple calls to OAuth.getError after success should return null");
+    });
+
   Tinytest.add("oauth - OAuth.getError handles error without description",
     test => {
       // Ensure clean state
