@@ -343,10 +343,16 @@ const renderEndOfLoginResponse = async options => {
     credentialSecret: escape(options.credentialSecret),
     storagePrefix: escape(OAuth._storageTokenPrefix),
     redirectUrl: escape(options.redirectUrl),
-    isCordova: !! options.isCordova,
-    error: escape(options.error),
-    error_description: escape(options.error_description)
+    isCordova: !! options.isCordova
   };
+  
+  // Only include error fields if they exist
+  if (options.error) {
+    config.error = escape(options.error);
+  }
+  if (options.error_description) {
+    config.error_description = escape(options.error_description);
+  }
 
   let template;
   if (options.loginStyle === 'popup') {
@@ -513,4 +519,9 @@ OAuth._fetch = async (
     ...options,
   };
   return fetch(urlWithParams.toString(), requestOptions);
+};
+
+// Server-side stub for OAuth.getError
+OAuth.getError = function() {
+  return null;
 };

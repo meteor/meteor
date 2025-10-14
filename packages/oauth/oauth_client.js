@@ -176,15 +176,13 @@ OAuth.getError = () => {
   const error = Meteor._localStorage.getItem(errorKey);
   const error_description = Meteor._localStorage.getItem(errorDescriptionKey);
   
-  if (error) {
+  if (error && error !== "undefined") {
     Meteor._localStorage.removeItem(errorKey);
-    if (error_description) {
-      Meteor._localStorage.removeItem(errorDescriptionKey);
-    }
+    Meteor._localStorage.removeItem(errorDescriptionKey);
     
     return {
       error: error,
-      error_description: error_description
+      error_description: error_description && error_description !== "undefined" ? error_description : undefined
     };
   }
   

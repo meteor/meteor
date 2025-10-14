@@ -3,7 +3,7 @@
 
 window.OAuthUtils = {
   storeOAuthError: function(storage, config) {
-    if (config.error) {
+    if (config && config.error) {
       storage[config.storagePrefix + "error"] = config.error;
       if (config.error_description) {
         storage[config.storagePrefix + "error_description"] = config.error_description;
