@@ -1,6 +1,6 @@
 import React from 'react';
 import { InMemoryCache, ApolloProvider, ApolloClient, ApolloLink, HttpLink } from '@apollo/client';
-// import { MeteorAccountsLink } from 'meteor/apollo'
+import { MeteorAccountsLink } from 'meteor/apollo'
 import { Hello } from './Hello.jsx';
 import { Info } from './Info.jsx';
 

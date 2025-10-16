@@ -2,22 +2,21 @@ import { Meteor } from 'meteor/meteor';
 import { LinksCollection } from '/imports/api/links';
 import { startApolloServer } from './apollo';
 
-async function insertLink({ title, url }) {
-  await LinksCollection.insertAsync({ title, url, createdAt: new Date() });
+interface LinkInput {
+  title: string;
+  url: string;
 }
 
-try {
-  startApolloServer().then();
-} catch (e) {
-  console.error(e.reason);
+async function insertLink({ title, url }: LinkInput): Promise<void> {
+  await LinksCollection.insertAsync({ title, url, createdAt: new Date() });
 }
 
 Meteor.startup(async () => {
   // If the Links collection is empty, add some data.
-  if (await LinksCollection.find().countAsync() === 0) {
+  if ((await LinksCollection.find().countAsync()) === 0) {
     await insertLink({
       title: 'Do the Tutorial',
-      url: 'https://react-tutorial.meteor.com/simple-todos/01-creating-app.html',
+      url: 'https://www.meteor.com/tutorials/react/creating-an-app',
     });
 
     await insertLink({
@@ -35,5 +34,6 @@ Meteor.startup(async () => {
       url: 'https://forums.meteor.com',
     });
   }
-});
 
+  await startApolloServer();
+});

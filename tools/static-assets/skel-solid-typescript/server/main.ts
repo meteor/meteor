@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor';
+import '/imports/api/links';
 import { LinksCollection } from '/imports/api/links';
 
 async function insertLink({ title, url }) {
