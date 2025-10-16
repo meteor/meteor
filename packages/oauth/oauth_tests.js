@@ -150,3 +150,45 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports
     await OAuth._endOfLoginResponse(res, details);
   }
 );
+
+Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle propagates error details",
+  async test => {
+    const testError = 'access_denied';
+    const testErrorDescription = 'User did not grant permission';
+
+    const res = {
+      writeHead: () => {},
+      end: content => {
+        try {
+          const match = content.match(/<script id="config" type="text\/json">([\s\S]*?)<\/script>/);
+          if (!match || !match[1]) {
+            test.fail("Could not find the config JSON in the response HTML.");
+            return;
+          }
+
+          const config = JSON.parse(match[1]);
+
+          test.equal(config.error, testError, "The error property was not set correctly.");
+          test.equal(config.error_description, testErrorDescription, "The error_description was not set correctly.");
+        } catch (e) {
+          test.fail(`An error occurred while parsing the response: ${e.message}`);
+        }
+      }
+    };
+
+    const details = {
+      credentials: {},
+      loginStyle: 'redirect',
+      query: {
+        state: Buffer.from(JSON.stringify({
+          redirectUrl: __meteor_runtime_config__.ROOT_URL
+        }), 'binary').toString('base64'),
+        error: testError,
+        error_description: testErrorDescription
+      }
+    };
+
+    await OAuth._endOfLoginResponse(res, details);
+  }
+);
+

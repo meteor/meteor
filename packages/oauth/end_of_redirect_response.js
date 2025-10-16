@@ -14,10 +14,10 @@
 
   if (config.error) {
     try {
-      localStorage[config.storagePrefix + "error"] = config.error;
-      localStorage[config.storagePrefix + "error_description"] = config.error_description;
+      sessionStorage[config.storagePrefix + "error"] = config.error;
+      sessionStorage[config.storagePrefix + "error_description"] = config.error_description;
     } catch (err) {
-      console.log("Error storing OAuth error in localStorage", err);
+      Log.warn("Error storing OAuth error in sessionStorage", err);
     }
   }
 
