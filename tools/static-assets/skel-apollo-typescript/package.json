@@ -1,0 +1,35 @@
+{
+  "name": "~name~",
+  "private": true,
+  "scripts": {
+    "start": "meteor run --open",
+    "test": "meteor test --once --driver-package meteortesting:mocha",
+    "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
+    "visualize": "meteor --production --extra-packages bundle-visualizer"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.9.2",
+    "@apollo/server": "^4.10.0",
+    "@babel/runtime": "^7.23.9",
+    "@swc/helpers": "^0.5.17",
+    "graphql": "^16.8.1",
+    "meteor-node-stubs": "^1.2.12",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+  "@types/mocha": "^8.2.3",
+  "@types/node": "^22.10.6",
+  "@types/react": "^18.2.5",
+  "@types/react-dom": "^18.2.4",
+  "typescript": "^5.4.5"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.tsx",
+      "server": "server/main.ts"
+    },
+    "testModule": "tests/main.ts",
+    "modern": true
+  }
+}

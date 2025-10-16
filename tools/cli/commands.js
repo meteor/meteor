@@ -690,57 +690,73 @@ function getExamplesJSON(){
 const DEFAULT_SKELETON = "react";
 export const AVAILABLE_SKELETONS = [
   "apollo",
+  "apollo-typescript",
   "bare",
   "blaze",
+  "blaze-typescript",
   "full",
   "minimal",
   DEFAULT_SKELETON,
   "typescript",
   "vue",
+  "vue-typescript",
   "svelte",
+  "svelte-typescript",
   "tailwind",
   "chakra-ui",
   "solid",
+  "solid-typescript",
 ];
 
 const SKELETON_INFO = {
   "apollo": "To create a basic Apollo + React app",
+  "apollo-typescript": "To create a basic Apollo + React app with TypeScript",
   "bare": "To create an empty app",
   "blaze": "To create an app using Blaze",
+  "blaze-typescript": "To create an app using Blaze with TypeScript",
   "full": "To create a more complete scaffolded app",
   "minimal": "To create an app with as few Meteor packages as possible",
   "react": "To create a basic React-based app",
   "typescript": "To create an app using TypeScript and React",
   "vue": "To create a basic Vue3-based app",
+  "vue-typescript": "To create a basic Vue3-based app with TypeScript",
   "svelte": "To create a basic Svelte app",
+  "svelte-typescript": "To create a basic Svelte app with TypeScript",
   "tailwind": "To create an app using React and Tailwind",
   "chakra-ui": "To create an app Chakra UI and React",
-  "solid": "To create a basic Solid app"
+  "solid": "To create a basic Solid app",
+  "solid-typescript": "To create a basic Solid app with TypeScript"
 }
 
 main.registerCommand({
   name: 'create',
   maxArgs: 1,
   minArgs: 0,
-  options: {
-    list: { type: Boolean },
-    example: { type: String },
-    package: { type: Boolean },
-    bare: { type: Boolean },
-    minimal: { type: Boolean },
-    full: { type: Boolean },
-    blaze: { type: Boolean },
-    react: { type: Boolean },
-    vue: { type: Boolean },
-    typescript: { type: Boolean },
-    apollo: { type: Boolean },
-    svelte: { type: Boolean },
-    tailwind: { type: Boolean },
-    'chakra-ui': { type: Boolean },
-    solid: { type: Boolean },
-    prototype: { type: Boolean },
-    from: { type: String },
-  },
+options: {
+  list: { type: Boolean },
+  example: { type: String },
+  package: { type: Boolean },
+  bare: { type: Boolean },
+  minimal: { type: Boolean },
+  full: { type: Boolean },
+  blaze: { type: Boolean },
+  react: { type: Boolean },
+  vue: { type: Boolean },
+  typescript: { type: Boolean },
+  apollo: { type: Boolean },
+  svelte: { type: Boolean },
+  tailwind: { type: Boolean },
+  'chakra-ui': { type: Boolean },
+  solid: { type: Boolean },
+  // TypeScript framework combinations
+  'apollo-typescript': { type: Boolean },
+  'blaze-typescript': { type: Boolean },
+  'vue-typescript': { type: Boolean },
+  'solid-typescript': { type: Boolean },
+  'svelte-typescript': { type: Boolean },
+  prototype: { type: Boolean },
+  from: { type: String },
+},
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
@@ -915,11 +931,26 @@ main.registerCommand({
     // meteor create app-name
     if (options.args.length === 1) {
       const appPathAsEntered = options.args[0];
-      const skeletonExplicitOption =
-        AVAILABLE_SKELETONS.find(skeleton => !!options[skeleton]);
-
-      const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
-
+      
+      // Check for TypeScript + Framework combinations first
+      let skeleton;
+      if (options.typescript && options.vue) {
+        skeleton = 'vue-typescript';
+      } else if (options.typescript && options.apollo) {
+        skeleton = 'apollo-typescript';
+      } else if (options.typescript && options.blaze) {
+        skeleton = 'blaze-typescript';
+      } else if (options.typescript && options.solid) {
+        skeleton = 'solid-typescript';
+      } else if (options.typescript && options.svelte) {
+        skeleton = 'svelte-typescript';
+      } else {
+        // Check for explicit skeleton option or use default
+        const skeletonExplicitOption =
+          AVAILABLE_SKELETONS.find(skeleton => !!options[skeleton]);
+        skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
+      }
+      
       console.log(`Using ${green`${skeleton}`} skeleton`);
       return {
         appPathAsEntered,
