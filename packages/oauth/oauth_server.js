@@ -342,7 +342,9 @@ const renderEndOfLoginResponse = async options => {
     credentialSecret: escape(options.credentialSecret),
     storagePrefix: escape(OAuth._storageTokenPrefix),
     redirectUrl: escape(options.redirectUrl),
-    isCordova: !! options.isCordova
+    isCordova: !! options.isCordova,
+    error: escape(options.error),
+    error_description: escape(options.error_description)
   };
 
   let template;
@@ -419,6 +421,8 @@ OAuth._endOfLoginResponse = async (res, details) => {
       setCredentialToken: false,
       redirectUrl,
       isCordova,
+      error: details.query?.error, 
+      error_description: details.query?.error_description,
     }), "utf-8");
     return;
   }

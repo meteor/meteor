@@ -12,6 +12,15 @@
     }
   }
 
+  if (config.error) {
+    try {
+      localStorage[config.storagePrefix + "error"] = config.error;
+      localStorage[config.storagePrefix + "error_description"] = config.error_description;
+    } catch (err) {
+      console.log("Error storing OAuth error in localStorage", err);
+    }
+  }
+
   window.location =
     config.redirectUrl
       ? config.redirectUrl.replace(/&amp;/g, "&")
