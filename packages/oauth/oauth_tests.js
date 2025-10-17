@@ -151,8 +151,14 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports
   }
 );
 
+
 Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle propagates error details",
   async test => {
+    let done;
+    const promise = new Promise((resolve, reject) => {
+      done = resolve;
+    });
+
     const testError = 'access_denied';
     const testErrorDescription = 'User did not grant permission';
 
@@ -163,6 +169,7 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle propagat
           const match = content.match(/<script id="config" type="text\/json">([\s\S]*?)<\/script>/);
           if (!match || !match[1]) {
             test.fail("Could not find the config JSON in the response HTML.");
+            done();
             return;
           }
 
@@ -172,6 +179,8 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle propagat
           test.equal(config.error_description, testErrorDescription, "The error_description was not set correctly.");
         } catch (e) {
           test.fail(`An error occurred while parsing the response: ${e.message}`);
+        } finally {
+          done();
         }
       }
     };
@@ -189,6 +198,7 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle propagat
     };
 
     await OAuth._endOfLoginResponse(res, details);
+
+    return promise;
   }
 );
-
