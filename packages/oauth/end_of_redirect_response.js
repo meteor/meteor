@@ -4,21 +4,13 @@
   var config = JSON.parse(document.getElementById("config").innerHTML);
 
   if (config.setCredentialToken) {
-    try {
-      sessionStorage[config.storagePrefix + config.credentialToken] =
+    sessionStorage[config.storagePrefix + config.credentialToken] =
         config.credentialSecret;
-    } catch (err) {
-      // We can't do much else, but at least the redirects goes on.
-    }
   }
 
   if (config.error) {
-    try {
-      sessionStorage[config.storagePrefix + "error"] = config.error;
-      sessionStorage[config.storagePrefix + "error_description"] = config.error_description;
-    } catch (err) {
-      Log.warn("Error storing OAuth error in sessionStorage", err);
-    }
+    sessionStorage[config.storagePrefix + "error"] = config.error;
+    sessionStorage[config.storagePrefix + "error_description"] = config.error_description;
   }
 
   window.location =
