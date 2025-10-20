@@ -1,4 +1,4 @@
-import { EJSON } from 'meteor/ejson';
+import { CBOR } from 'meteor/harry97:cbor';
 import { Decimal } from 'decimal.js';
 
 Decimal.prototype.typeName = function() {
