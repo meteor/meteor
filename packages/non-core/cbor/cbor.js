@@ -481,24 +481,24 @@ async function processAsyncTypes(obj) {
   if (typeof File !== 'undefined' && obj instanceof File) {
     const arrayBuffer = await obj.arrayBuffer();
     const data = new Uint8Array(arrayBuffer);
-    
+
     return {
       _meteorTag: METEOR_TAGS.FILE,
-      data: Base64.encode(data),
+      data: data,  // Keep as Uint8Array, CBOR will handle it natively
       name: obj.name,
       type: obj.type,
       size: obj.size,
       lastModified: obj.lastModified
     };
   }
-  
+
   if (typeof Blob !== 'undefined' && obj instanceof Blob) {
     const arrayBuffer = await obj.arrayBuffer();
     const data = new Uint8Array(arrayBuffer);
-    
+
     return {
       _meteorTag: METEOR_TAGS.BLOB,
-      data: Base64.encode(data),
+      data: data,  // Keep as Uint8Array, CBOR will handle it natively
       type: obj.type,
       size: obj.size
     };
@@ -629,8 +629,9 @@ function postprocessValue(obj) {
 }
 
 function reconstructFileObject(fileData) {
-  const data = Base64.decode(fileData.data);
-  
+  // fileData.data is already a Uint8Array (from CBOR decoding)
+  const data = fileData.data;
+
   if (typeof File !== 'undefined') {
     // Browser environment - create real File object
     return new File([data], fileData.name, {
@@ -646,12 +647,12 @@ function reconstructFileObject(fileData) {
       size: fileData.size,
       lastModified: fileData.lastModified,
       _isFileProxy: true,
-      
+
       // Add File-like methods
       arrayBuffer() {
         return Promise.resolve(this.data.buffer || this.data);
       },
-      
+
       text() {
         const decoder = new TextDecoder();
         return Promise.resolve(decoder.decode(this.data));
@@ -670,8 +671,9 @@ function reconstructBufferObject(bufferData) {
 }
 
 function reconstructBlobObject(blobData) {
-  const data = Base64.decode(blobData.data);
-  
+  // blobData.data is already a Uint8Array (from CBOR decoding)
+  const data = blobData.data;
+
   if (typeof Blob !== 'undefined') {
     return new Blob([data], { type: blobData.type });
   } else {
@@ -681,11 +683,11 @@ function reconstructBlobObject(blobData) {
       type: blobData.type,
       size: blobData.size,
       _isBlobProxy: true,
-      
+
       arrayBuffer() {
         return Promise.resolve(this.data.buffer || this.data);
       },
-      
+
       text() {
         const decoder = new TextDecoder();
         return Promise.resolve(decoder.decode(this.data));

@@ -1,6 +1,6 @@
 Package.describe({
   name: 'harry97:cbor',
-  version: '1.1.17',
+  version: '1.2.1',
   summary: 'CBOR (Concise Binary Object Representation) with native File/Buffer/Blob support',
   git: '',
   documentation: 'README.md'
