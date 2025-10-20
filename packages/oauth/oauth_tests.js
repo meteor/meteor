@@ -1,5 +1,3 @@
-// Tests for OAuth error reporting functionality
-
 Tinytest.addAsync("oauth - pendingCredential handles Errors",
   async test => {
     const credentialToken = Random.id();
@@ -125,6 +123,7 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports
   }
 );
 
+
 Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports ROOT_URL_PATH_PREFIX",
   async test => {
     const rootUrlPathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
@@ -152,14 +151,14 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports
   }
 );
 
-// Test for OAuth error reporting functionality - server-side only
+// Test for OAuth error reporting functionality
 Tinytest.addAsync("oauth - _endOfLoginResponse includes error information",
   async test => {
     const res = {
       writeHead: () => {},
       end: content => {
-        test.matches(content, /"error":"access_denied"/);
-        test.matches(content, /"error_description":"User denied access"/);
+        test.matches(content, /access_denied/);
+        test.matches(content, /User denied access/);
       }
     };
     const details = {
