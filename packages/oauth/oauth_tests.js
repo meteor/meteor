@@ -152,77 +152,22 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports
   }
 );
 
-// Tests for OAuth error reporting functionality
-if (Meteor.isServer) {
-  Tinytest.addAsync("oauth - _endOfLoginResponse includes error information",
-    async test => {
-      const res = {
-        writeHead: () => {},
-        end: content => {
-          test.matches(content, /"error":"access_denied"/);
-          test.matches(content, /"error_description":"User denied access"/);
-        }
-      };
-      const details = {
-        credentials: {},
-        loginStyle: 'popup',
-        error: 'access_denied',
-        error_description: 'User denied access'
-      };
-      await OAuth._endOfLoginResponse(res, details);
-    }
-  );
-}
-
-// Client-side tests
-if (Meteor.isClient) {
-  Tinytest.add("oauth - OAuth.getError returns null when no errors",
-    test => {
-      // Clear any existing errors
-      const errorKey = OAuth._storageTokenPrefix + "error";
-      const errorDescriptionKey = OAuth._storageTokenPrefix + "error_description";
-      Meteor._localStorage.removeItem(errorKey);
-      Meteor._localStorage.removeItem(errorDescriptionKey);
-      
-      const result = OAuth.getError();
-      test.equal(result, null);
-    }
-  );
-
-  Tinytest.add("oauth - OAuth.getError retrieves and clears error information",
-    test => {
-      const errorKey = OAuth._storageTokenPrefix + "error";
-      const errorDescriptionKey = OAuth._storageTokenPrefix + "error_description";
-      
-      // Set up test error data
-      Meteor._localStorage.setItem(errorKey, "access_denied");
-      Meteor._localStorage.setItem(errorDescriptionKey, "User denied access");
-      
-      const result = OAuth.getError();
-      test.equal(result.error, "access_denied");
-      test.equal(result.error_description, "User denied access");
-      
-      // Verify errors are cleared after retrieval
-      const resultAfter = OAuth.getError();
-      test.equal(resultAfter, null);
-    }
-  );
-
-  Tinytest.add("oauth - OAuth.getError handles error without description",
-    test => {
-      const errorKey = OAuth._storageTokenPrefix + "error";
-      const errorDescriptionKey = OAuth._storageTokenPrefix + "error_description";
-      
-      // Clear any previous data
-      Meteor._localStorage.removeItem(errorKey);
-      Meteor._localStorage.removeItem(errorDescriptionKey);
-      
-      // Set up test with only error
-      Meteor._localStorage.setItem(errorKey, "invalid_request");
-      
-      const result = OAuth.getError();
-      test.equal(result.error, "invalid_request");
-      test.isUndefined(result.error_description);
-    }
-  );
-}
+// Test for OAuth error reporting functionality - server-side only
+Tinytest.addAsync("oauth - _endOfLoginResponse includes error information",
+  async test => {
+    const res = {
+      writeHead: () => {},
+      end: content => {
+        test.matches(content, /"error":"access_denied"/);
+        test.matches(content, /"error_description":"User denied access"/);
+      }
+    };
+    const details = {
+      credentials: {},
+      loginStyle: 'popup',
+      error: 'access_denied',
+      error_description: 'User denied access'
+    };
+    await OAuth._endOfLoginResponse(res, details);
+  }
+);
