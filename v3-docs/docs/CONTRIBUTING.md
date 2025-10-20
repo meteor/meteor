@@ -25,6 +25,6 @@ You must test your contibution locally before submitting a pull request. To do s
 1. `cd v3-docs/docs && npm run docs:dev` will run the docs locally at [http://localhost:5173/](http://localhost:5173/)
 2. Make your changes and verify them in the browser.
 3. run `npm run docs:build` to ensure the build works correctly.
-4. Push your work and submit à documented pull request to the `devel` branch.
+4. Push your work and submit a documented pull request to the `devel` branch.
 
 If you add a new page to the documentation, please make sure the configuration creates a link to access it (see [.vitepress/config.mts](https://github.com/meteor/meteor/blob/devel/v3-docs/docs/.vitepress/config.mts)).
