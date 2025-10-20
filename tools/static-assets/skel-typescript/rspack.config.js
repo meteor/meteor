@@ -1,5 +1,5 @@
-import { defineConfig } from '@meteorjs/rspack';
-import { TsCheckerRspackPlugin } from 'ts-checker-rspack-plugin';
+const { defineConfig } = require('@meteorjs/rspack');
+const { TsCheckerRspackPlugin } = require('ts-checker-rspack-plugin');
 
 /**
  * Rspack configuration for Meteor projects.
@@ -11,7 +11,7 @@ import { TsCheckerRspackPlugin } from 'ts-checker-rspack-plugin';
  *
  * Use these flags to adjust your build settings based on environment.
  */
-export default defineConfig(Meteor => {
+module.exports = defineConfig(Meteor => {
   return {
     plugins: [
       new TsCheckerRspackPlugin(),

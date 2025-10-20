@@ -15,10 +15,10 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^0.0.36",
+    "@meteorjs/rspack": "^0.0.60",
     "@rsdoctor/rspack-plugin": "^1.2.3",
-    "@rspack/cli": "^1.5.0",
-    "@rspack/core": "^1.5.0",
+    "@rspack/cli": "^1.5.3",
+    "@rspack/core": "^1.5.3",
     "@rspack/plugin-react-refresh": "^1.4.3",
     "@types/meteor": "^2.9.9",
     "@types/mocha": "^8.2.3",

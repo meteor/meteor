@@ -690,6 +690,7 @@ function getExamplesJSON(){
 const DEFAULT_SKELETON = "react";
 export const AVAILABLE_SKELETONS = [
   "apollo",
+  "babel",
   "bare",
   "blaze",
   "full",
@@ -702,6 +703,7 @@ export const AVAILABLE_SKELETONS = [
   "chakra-ui",
   "solid",
   "legacy",
+  "coffeescript"
 ];
 
 const SKELETON_INFO = {
@@ -716,8 +718,10 @@ const SKELETON_INFO = {
   "svelte": "To create a basic Svelte app",
   "tailwind": "To create an app using React and Tailwind",
   "chakra-ui": "To create an app Chakra UI and React",
-  "solid": "To create a basic Solid app"
-}
+  "solid": "To create a basic Solid app",
+  "coffeescript": "To create a basic CoffeeScript app",
+  "babel": "To create a React app with Babel support",
+};
 
 main.registerCommand({
   name: 'create',
@@ -727,6 +731,7 @@ main.registerCommand({
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean },
+    babel: { type: Boolean },
     bare: { type: Boolean },
     minimal: { type: Boolean },
     full: { type: Boolean },
@@ -738,6 +743,7 @@ main.registerCommand({
     svelte: { type: Boolean },
     tailwind: { type: Boolean },
     'chakra-ui': { type: Boolean },
+    coffeescript: { type: Boolean },
     solid: { type: Boolean },
     legacy: { type: Boolean },
     prototype: { type: Boolean },
@@ -842,7 +848,7 @@ main.registerCommand({
             return transform(f);
           },
           transformContents: async function (contents, f) {
-            if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+            if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
               return Buffer.from(await transform(contents.toString()));
             } else {
               return contents;
@@ -1227,7 +1233,7 @@ main.registerCommand({
               return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
             }
           }
-          if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+          if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;

@@ -19,13 +19,21 @@ describe('ReactRouter App Bundling /', () => {
       process.env.METEOR_PACKAGE_DIRS = '';
     },
     customAssertions: {
-      afterRun: async ({ result, port }) => {
-        await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
+      afterInit: async ({ result }) => {
         await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
+      },
+      afterRun: async ({ result, port }) => {
+        await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
+        // negated as cached output (babel.config.js)
+        await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/, { negate: true });
         await assert404Page(port);
         // Less styles support
         await assertBodyStyles({
           'white-space': 'break-spaces',
+        });
+        // Meteor modules config
+        await assertBodyStyles({
+          'align-content': 'center',
         });
         // Custom html rspack plugin options
         await assertMetaTags({
@@ -35,18 +43,24 @@ describe('ReactRouter App Bundling /', () => {
         await waitForMeteorOutput(result.outputLines, /.*default-package loaded.*/);
         // custom-package loading
         await waitForMeteorOutput(result.outputLines, /.*custom-package loaded.*/);
+        // resolve.extensions loading
+        await waitForMeteorOutput(result.outputLines, /.*first\.jsx loaded.*/);
       },
       afterRunRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR output as enabled by default
         await waitForMeteorOutput(allConsoleLogs, /.*HMR.*Updated modules:.*/);
       },
       afterRunProduction: async ({ result, port }) => {
-        await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
+        await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
         await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
         await assert404Page(port, { isProductionMode: true });
         // Less styles support
         await assertBodyStyles({
           'white-space': 'break-spaces',
+        });
+        // Meteor modules config
+        await assertBodyStyles({
+          'align-content': 'center',
         });
         // Custom html rspack plugin options
         await assertMetaTags({
@@ -64,7 +78,7 @@ describe('ReactRouter App Bundling /', () => {
         await waitForReactEnvs(result.outputLines);
       },
       afterBuild: async ({ result }) => {
-        await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
+        await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
         await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
       },
     }
@@ -85,10 +99,10 @@ export async function waitForReactEnvs(outputLines, options = {}) {
     /.*isReactEnabled:.*true.*/,
     options
   );
-  if (options.isJsxEnabled) {
+  if (options.isTsxEnabled) {
     await waitForMeteorOutput(
       outputLines,
-      /.*isJsxEnabled:.*true.*/,
+      /.*isTsxEnabled:.*true.*/,
       options
     );
   }

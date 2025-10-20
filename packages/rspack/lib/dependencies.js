@@ -81,13 +81,25 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
       logInfo(`  • ${dep}`);
     });
 
+    // Check if this is a Yarn project
+    const isYarnProj = process.env.YARN_ENABLED === 'true';
+
     // Install dev dependencies
     const devDepsToInstall = allDepsToInstall.filter(dep => dep.dev === true || dep.dev == null);
     if (devDepsToInstall.length > 0) {
       const devDepsStrings = devDepsToInstall.map(dep => `${dep.name}@${dep.version}`);
+
+      // Log progress for dev dependencies
+      logProgress(
+        `🔧 Installing ${devDepsToInstall.length} dev dependenc${
+          devDepsToInstall.length === 1 ? "y" : "ies"
+        }...`
+      );
+
       success = await installNpmDependency(devDepsStrings, {
         cwd: appDir,
         dev: true,
+        yarn: isYarnProj,
       });
     }
 
@@ -95,22 +107,37 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
     const depsToInstall = allDepsToInstall.filter(dep => dep.dev === false);
     if (depsToInstall.length > 0) {
       const depsStrings = depsToInstall.map(dep => `${dep.name}@${dep.version}`);
-      const depsSuccess = await installNpmDependency(depsStrings, {
+
+      // Log progress for regular dependencies
+      logProgress(
+        `🔧 Installing ${depsToInstall.length} dependenc${
+          devDepsToInstall.length === 1 ? "y" : "ies"
+        }...`
+      );
+
+      let depsSuccess;
+      depsSuccess = await installNpmDependency(depsStrings, {
         cwd: appDir,
         dev: false,
+        yarn: isYarnProj,
       });
 
       success = success && depsSuccess;
     }
 
     if (!success) {
+      const isYarnProj = process.env.YARN_ENABLED === 'true';
+      const installCommand = isYarnProj 
+        ? `yarn add --dev ${dependencyStrings.join(' ').trim()}`
+        : `meteor npm install -D ${dependencyStrings.join(' ').trim()}`;
+
       logError(`\n┌─────────────────────────────────────────────────`);
       logError(`│ ❌ ${packageName} Installation Failed`);
       logError(`└─────────────────────────────────────────────────`);
-      logError(`Run: meteor npm install -D ${joinWithAnd(dependencyStrings)}`);
+      logError(`Run: ${installCommand}`);
 
       throw new Error(
-        `Failed to install ${packageName} dependencies. Please install them manually with: meteor npm install -D ${joinWithAnd(dependencyStrings)}`
+        `Failed to install ${packageName} dependencies. Please install them manually with: ${installCommand}`
       );
     }
 
@@ -198,4 +225,32 @@ export async function ensureRspackDoctorInstalled() {
     GLOBAL_STATE_KEYS.RSPACK_DOCTOR_INSTALLATION_CHECKED,
     'Rspack Doctor'
   );
+}
+
+/**
+ * Checks if TypeScript is installed and sets global state accordingly
+ * Sets global state and environment variables based on TypeScript detection
+ * @returns {boolean} Whether TypeScript is installed
+ */
+export function checkTypescriptInstalled() {
+  // Skip if already checked
+  if (getGlobalState(GLOBAL_STATE_KEYS.TYPESCRIPT_CHECKED, false)) {
+    return;
+  }
+
+  const appDir = getMeteorAppDir();
+  // Check if TypeScript is a dependency in the project
+  const isTypescriptInstalled = checkNpmDependencyExists('typescript', { cwd: appDir });
+
+  if (isTypescriptInstalled) {
+    // Set environment variable to indicate TypeScript is enabled
+    process.env.METEOR_TYPESCRIPT_ENABLED = 'true';
+  } else {
+    process.env.METEOR_TYPESCRIPT_ENABLED = 'false';
+  }
+
+  // Mark as checked
+  setGlobalState(GLOBAL_STATE_KEYS.TYPESCRIPT_CHECKED, true);
+
+  return isTypescriptInstalled;
 }

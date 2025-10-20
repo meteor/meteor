@@ -7,10 +7,10 @@
 // the externalMap function if provided.
 // Used for Blaze to translate require of html files to require of js files bundled by Meteor.
 
-import fs from 'fs';
-import path from 'path';
+const fs = require('fs');
+const path = require('path');
 
-export class RequireExternalsPlugin {
+class RequireExternalsPlugin {
   constructor({
     filePath,
     // Externals can be:
@@ -487,3 +487,5 @@ export class RequireExternalsPlugin {
     return existing;
   }
 }
+
+module.exports = { RequireExternalsPlugin };

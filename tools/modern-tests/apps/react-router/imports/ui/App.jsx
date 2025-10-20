@@ -9,7 +9,7 @@ import "./Global.less";
 
 // Dynamically import components
 const Home = lazy(() =>
-  import("./Home.jsx").then((module) => ({ default: module.Home }))
+  import(/* webpackPrefetch: true */ "./Home.jsx").then((module) => ({ default: module.Home }))
 );
 const NotFound = lazy(() =>
   import("./NotFound.jsx").then((module) => ({ default: module.NotFound }))

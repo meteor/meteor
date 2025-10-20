@@ -215,18 +215,40 @@ export async function assertConsoleEval(code, expectedResult, options = {}) {
 }
 
 /**
- * Helper function to assert that the body element has the expected CSS styles
+ * Helper function to assert that an element has the expected CSS styles
+ * @param {string} selector - CSS selector string (e.g., 'body', '.my-class') or a string representing a DOM element (e.g., 'document.body')
  * @param {Object} expectedStyles - Expected CSS styles as key-value pairs
  * @param {Object} options - Additional options for assertConsoleEval
  * @returns {Promise<Object>} - A promise that resolves with the computed styles
  */
-export async function assertBodyStyles(expectedStyles, options = {}) {
-  console.log(`Asserting body styles: ${JSON.stringify(expectedStyles)}`);
+export async function assertStyles(selector, expectedStyles, options = {}) {
+  // Determine if the selector is a CSS selector or a DOM element reference
+  const isCssSelector = selector.startsWith('.') || 
+    selector.startsWith('#') ||
+    selector.startsWith('[') ||
+    selector === 'body' ||
+    selector.includes(' ');
+
+  console.log(`Asserting styles for ${selector}: ${JSON.stringify(expectedStyles)}`);
 
   // Create a JavaScript code string that evaluates the computed styles
   const code = `
     (() => {
-      const computedStyle = getComputedStyle(document.body);
+      let element;
+
+      // Handle the selector based on its type
+      ${isCssSelector 
+        ? `element = document.querySelector('${selector}');
+           if (!element) {
+             throw new Error('Element not found with selector: ${selector}');
+           }`
+        : `element = ${selector};
+           if (!element) {
+             throw new Error('Element not found: ${selector}');
+           }`
+      }
+
+      const computedStyle = getComputedStyle(element);
       const result = {};
       ${Object.keys(expectedStyles).map(prop => 
         `result['${prop}'] = computedStyle.getPropertyValue('${prop}');`
@@ -236,10 +258,21 @@ export async function assertBodyStyles(expectedStyles, options = {}) {
   `;
 
   // Use assertConsoleEval to evaluate the code and check the result
-  return await assertConsoleEval(code, expectedStyles, { 
+  return assertConsoleEval(code, expectedStyles, {
     exactMatch: false,
     ...options
   });
+}
+
+/**
+ * Helper function to assert that the body element has the expected CSS styles
+ * @param {Object} expectedStyles - Expected CSS styles as key-value pairs
+ * @param {Object} options - Additional options for assertConsoleEval
+ * @returns {Promise<Object>} - A promise that resolves with the computed styles
+ */
+export async function assertBodyStyles(expectedStyles, options = {}) {
+  // Use assertStyles with document.body as the selector
+  return assertStyles('document.body', expectedStyles, options);
 }
 
 /**

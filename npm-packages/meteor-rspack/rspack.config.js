@@ -1,16 +1,22 @@
-import { DefinePlugin, BannerPlugin } from '@rspack/core';
-import fs from 'fs';
-import { createRequire } from 'module';
-import { inspect } from 'node:util';
-import path from 'path';
-import { merge } from 'webpack-merge';
+const { DefinePlugin, BannerPlugin, NormalModuleReplacementPlugin } = require('@rspack/core');
+const fs = require('fs');
+const { inspect } = require('node:util');
+const path = require('path');
+const { merge } = require('webpack-merge');
 
-import { cleanOmittedPaths, mergeSplitOverlap } from "./lib/mergeRulesSplitOverlap.js";
-import { getMeteorAppSwcConfig } from './lib/swc.js';
-import HtmlRspackPlugin from './plugins/HtmlRspackPlugin.js';
-import { RequireExternalsPlugin } from './plugins/RequireExtenalsPlugin.js';
-
-const require = createRequire(import.meta.url);
+const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
+const { getMeteorAppSwcConfig } = require('./lib/swc.js');
+const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
+const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
+const { generateEagerTestFile } = require("./lib/test.js");
+const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
+const { mergeMeteorRspackFragments } = require("./lib/meteorRspackConfigFactory.js");
+const {
+  compileWithMeteor,
+  compileWithRspack,
+  setCache,
+  makeWebNodeBuiltinsAlias,
+} = require('./lib/meteorRspackHelpers.js');
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -28,17 +34,52 @@ function safeRequire(moduleName) {
 }
 
 // Persistent filesystem cache strategy
-function createCacheStrategy(mode) {
+function createCacheStrategy(mode, side, { projectConfigPath, configPath } = {}) {
+  // Check for configuration files
+  const tsconfigPath = path.join(process.cwd(), 'tsconfig.json');
+  const hasTsconfig = fs.existsSync(tsconfigPath);
+  const babelRcConfig = path.join(process.cwd(), '.babelrc');
+  const hasBabelRcConfig = fs.existsSync(babelRcConfig);
+  const babelJsConfig = path.join(process.cwd(), 'babel.config.js');
+  const hasBabelJsConfig = fs.existsSync(babelJsConfig);
+  const swcrcPath = path.join(process.cwd(), '.swcrc');
+  const hasSwcrcConfig = fs.existsSync(swcrcPath);
+  const swcJsPath = path.join(process.cwd(), 'swc.config.js');
+  const hasSwcJsConfig = fs.existsSync(swcJsPath);
+  const postcssConfigPath = path.join(process.cwd(), 'postcss.config.js');
+  const hasPostcssConfig = fs.existsSync(postcssConfigPath);
+  const packageLockPath = path.join(process.cwd(), 'package-lock.json');
+  const hasPackageLock = fs.existsSync(packageLockPath);
+  const yarnLockPath = path.join(process.cwd(), 'yarn.lock');
+  const hasYarnLock = fs.existsSync(yarnLockPath);
+
+  // Build dependencies array
+  const buildDependencies = [
+    ...(projectConfigPath ? [projectConfigPath] : []),
+    ...(configPath ? [configPath] : []),
+    ...(hasTsconfig ? [tsconfigPath] : []),
+    ...(hasBabelRcConfig ? [babelRcConfig] : []),
+    ...(hasBabelJsConfig ? [babelJsConfig] : []),
+    ...(hasSwcrcConfig ? [swcrcPath] : []),
+    ...(hasSwcJsConfig ? [swcJsPath] : []),
+    ...(hasPostcssConfig ? [postcssConfigPath] : []),
+    ...(hasPackageLock ? [packageLockPath] : []),
+    ...(hasYarnLock ? [yarnLockPath] : []),
+  ].filter(Boolean);
+
   return {
     cache: true,
     experiments: {
       cache: {
-        version: `swc-${mode}`,
-        type: 'persistent',
+        version: `cache-${mode}${(side && `-${side}`) || ""}`,
+        type: "persistent",
         storage: {
-          type: 'filesystem',
-          directory: 'node_modules/.cache/rspack',
+          type: "filesystem",
+          directory: `node_modules/.cache/rspack${(side && `/${side}`) || ""}`,
         },
+        ...(buildDependencies.length > 0 && {
+          buildDependencies: buildDependencies,
+        })
       },
     },
   };
@@ -47,32 +88,48 @@ function createCacheStrategy(mode) {
 // SWC loader rule (JSX/JS)
 function createSwcConfig({
   isTypescriptEnabled,
+  isReactEnabled,
   isJsxEnabled,
   isTsxEnabled,
   externalHelpers,
   isDevEnvironment,
+  isClient,
 }) {
   const defaultConfig = {
     jsc: {
       baseUrl: process.cwd(),
-      paths: { '/*': ['*'] },
+      paths: { '/*': ['*', '/*'] },
       parser: {
         syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
         ...(isTsxEnabled && { tsx: true }),
         ...(isJsxEnabled && { jsx: true }),
       },
       target: 'es2015',
-      transform: {
-        react: {
-          development: isDevEnvironment,
-          refresh: isDevEnvironment,
+      ...(isReactEnabled && {
+        transform: {
+          react: {
+            development: isDevEnvironment,
+            ...(isClient && { refresh: isDevEnvironment }),
+          },
         },
-      },
+      }),
       externalHelpers,
     },
   };
+
+  // Swcrc config not customizable
+  const omitPaths = [
+    'jsc.target',
+  ];
+  // Define warning function
+  const warningFn = path => {
+    console.warn(
+      `[.swcrc] Ignored custom "${path}" — reserved for Meteor-Rspack integration.`,
+    );
+  };
   const customConfig = getMeteorAppSwcConfig() || {};
-  const swcConfig = merge(defaultConfig, customConfig);
+  const cleanedCustomConfig = cleanOmittedPaths(customConfig, { omitPaths, warningFn });
+  const swcConfig = merge(defaultConfig, cleanedCustomConfig);
   return {
     test: /\.(?:[mc]?js|jsx|[mc]?ts|tsx)$/i,
     exclude: /node_modules|\.meteor\/local/,
@@ -81,6 +138,43 @@ function createSwcConfig({
   };
 }
 
+function createRemoteDevServerConfig() {
+  const rootUrl = process.env.ROOT_URL;
+  let hostname;
+  let protocol;
+  let port;
+
+  if (rootUrl) {
+    try {
+      const url = new URL(rootUrl);
+      // Detect if it's remote (not localhost or 127.x)
+      const isLocal =
+        url.hostname.includes('localhost') ||
+        url.hostname.startsWith('127.') ||
+        url.hostname.endsWith('.local');
+      if (!isLocal) {
+        hostname = url.hostname;
+        protocol = url.protocol === 'https:' ? 'wss' : 'ws';
+        port = url.port ? Number(url.port) : (url.protocol === 'https:' ? 443 : 80);
+
+        return {
+          client: {
+            webSocketURL: {
+              hostname,
+              port,
+              protocol,
+            },
+          },
+        };
+      }
+    } catch (err) {
+      console.warn(`Invalid ROOT_URL "${rootUrl}", falling back to localhost`);
+    }
+  }
+
+  // If local doesn't provide any extra config
+  return {};
+}
 
 // Keep files outside of build folders
 function keepOutsideBuild() {
@@ -92,17 +186,12 @@ function keepOutsideBuild() {
   };
 }
 
-// Watch options shared across both builds
-const defaultWatchOptions = {
-  ignored: ['**/.meteor/local/**', '**/dist/**'],
-};
-
 /**
  * @param {{ isClient: boolean; isServer: boolean; isDevelopment?: boolean; isProduction?: boolean; isTest?: boolean }} Meteor
  * @param {{ mode?: string; clientEntry?: string; serverEntry?: string; clientOutputFolder?: string; serverOutputFolder?: string; chunksContext?: string; assetsContext?: string; serverAssetsContext?: string }} argv
- * @returns {import('@rspack/cli').Configuration[]}
+ * @returns {Promise<import('@rspack/cli').Configuration[]>}
  */
-export default function (inMeteor = {}, argv = {}) {
+module.exports = async function (inMeteor = {}, argv = {}) {
   // Transform Meteor env properties to proper boolean values
   const Meteor = { ...inMeteor };
   // Convert string boolean values to actual booleans
@@ -118,7 +207,9 @@ export default function (inMeteor = {}, argv = {}) {
   const isDev = !!Meteor.isDevelopment || !isProd;
   const isTest = !!Meteor.isTest;
   const isClient = !!Meteor.isClient;
+  const isServer = !!Meteor.isServer;
   const isRun = !!Meteor.isRun;
+  const isBuild = !!Meteor.isBuild;
   const isReactEnabled = !!Meteor.isReactEnabled;
   const isTestModule = !!Meteor.isTestModule;
   const isTestEager = !!Meteor.isTestEager;
@@ -126,6 +217,9 @@ export default function (inMeteor = {}, argv = {}) {
   const swcExternalHelpers = !!Meteor.swcExternalHelpers;
   const isNative = !!Meteor.isNative;
   const mode = isProd ? 'production' : 'development';
+  const projectDir = process.cwd();
+  const projectConfigPath = Meteor.projectConfigPath || path.resolve(projectDir, 'rspack.config.js');
+  const configPath = Meteor.configPath;
 
   const isTypescriptEnabled = Meteor.isTypescriptEnabled || false;
   const isJsxEnabled =
@@ -147,11 +241,11 @@ export default function (inMeteor = {}, argv = {}) {
   const runPath = Meteor.runPath;
 
   // Determine banner
-  const bannerOutput = JSON.parse(Meteor.bannerOutput || '');
+  const bannerOutput = JSON.parse(Meteor.bannerOutput || process.env.RSPACK_BANNER || '""');
 
   // Determine output directories
-  const clientOutputDir = path.resolve(process.cwd(), 'public');
-  const serverOutputDir = path.resolve(process.cwd(), 'private');
+  const clientOutputDir = path.resolve(projectDir, 'public');
+  const serverOutputDir = path.resolve(projectDir, 'private');
 
   // Determine context for bundles and assets
   const buildContext = Meteor.buildContext || '_build';
@@ -159,8 +253,26 @@ export default function (inMeteor = {}, argv = {}) {
   const chunksContext = Meteor.chunksContext || 'build-chunks';
 
   // Determine build output and pass to Meteor
-  const buildOutputDir = path.resolve(process.cwd(), buildContext, outputDir);
+  const buildOutputDir = path.resolve(projectDir, buildContext, outputDir);
   Meteor.buildOutputDir = buildOutputDir;
+
+  const cacheStrategy = createCacheStrategy(
+    mode,
+    (Meteor.isClient && 'client') || 'server',
+    { projectConfigPath, configPath }
+  );
+
+  // Expose Meteor's helpers to expand Rspack configs
+  Meteor.compileWithMeteor = deps => compileWithMeteor(deps);
+  Meteor.compileWithRspack = deps =>
+    compileWithRspack(deps, {
+      options: Meteor.swcConfigOptions,
+    });
+  Meteor.setCache = enabled =>
+    setCache(
+      !!enabled,
+      enabled === 'memory' ? undefined : cacheStrategy
+    );
 
   // Add HtmlRspackPlugin function to Meteor
   Meteor.HtmlRspackPlugin = (options = {}) => {
@@ -184,18 +296,26 @@ export default function (inMeteor = {}, argv = {}) {
     });
   };
 
-  // Set watch options
+  // Get Meteor ignore entries
+  const meteorIgnoreEntries = getMeteorIgnoreEntries(projectDir);
+
+  // Additional ignore entries
+  const additionalEntries = [
+    "**/.meteor/local/**",
+    "**/dist/**",
+    ...(isTest && isTestEager
+      ? [`**/${buildContext}/**`, "**/.meteor/local/**", "node_modules/**"]
+      : []),
+  ];
+
+  // Set default watch options
   const watchOptions = {
-    ...defaultWatchOptions,
-    ...(isTest &&
-      isTestEager && {
-        ignored: [
-          ...defaultWatchOptions.ignored,
-          '**/_build/**',
-          '**/.meteor/local/**',
-          '**/node_modules/**',
-        ],
-      }),
+    ignored: [
+      ...createIgnoreGlobConfig([
+        ...meteorIgnoreEntries,
+        ...additionalEntries,
+      ]),
+    ],
   };
 
   if (Meteor.isDebug || Meteor.isVerbose) {
@@ -203,13 +323,16 @@ export default function (inMeteor = {}, argv = {}) {
     console.log('[i] Meteor flags:', Meteor);
   }
 
+  const enableSwcExternalHelpers = !isServer && swcExternalHelpers;
   const isDevEnvironment = isRun && isDev && !isTest && !isNative;
   const swcConfigRule = createSwcConfig({
     isTypescriptEnabled,
+    isReactEnabled,
     isJsxEnabled,
     isTsxEnabled,
-    externalHelpers: swcExternalHelpers,
+    externalHelpers: enableSwcExternalHelpers,
     isDevEnvironment,
+    isClient,
   });
   // Expose swc config to use in custom configs
   Meteor.swcConfigOptions = swcConfigRule.options;
@@ -217,9 +340,13 @@ export default function (inMeteor = {}, argv = {}) {
   const externals = [
     /^meteor.*/,
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
+    ...(isServer ? [/^bcrypt$/] : []),
   ];
   const alias = {
     '/': path.resolve(process.cwd()),
+  };
+  const fallback = {
+    ...(isClient && makeWebNodeBuiltinsAlias()),
   };
   const extensions = [
     '.ts',
@@ -248,16 +375,26 @@ export default function (inMeteor = {}, argv = {}) {
         lastImports: [`./${outputFilename}`],
       }),
     }),
-    enableGlobalPolyfill: isDevEnvironment,
+    enableGlobalPolyfill: isDevEnvironment && !isServer,
   });
 
   const rsdoctorModule = isBundleVisualizerEnabled
     ? safeRequire('@rsdoctor/rspack-plugin')
     : null;
-  const doctorPluginConfig = isBundleVisualizerEnabled && rsdoctorModule?.RsdoctorRspackPlugin
+  const doctorPluginConfig = isRun && isBundleVisualizerEnabled && rsdoctorModule?.RsdoctorRspackPlugin
     ? [
         new rsdoctorModule.RsdoctorRspackPlugin({
-          port: isClient ? 8081 : 8082,
+          port: isClient
+            ? (parseInt(Meteor.rsdoctorClientPort || '8888', 10))
+            : (parseInt(Meteor.rsdoctorServerPort || '8889', 10)),
+        }),
+      ]
+    : [];
+  const bannerPluginConfig = !isBuild
+    ? [
+        new BannerPlugin({
+          banner: bannerOutput,
+          entryOnly: true,
         }),
       ]
     : [];
@@ -269,13 +406,24 @@ export default function (inMeteor = {}, argv = {}) {
   let clientConfig = {
     name: clientNameConfig,
     target: 'web',
-    mode: 'development',
+    mode,
     entry: path.resolve(process.cwd(), buildContext, entryPath),
     output: {
       path: clientOutputDir,
-      filename: () =>
-        isDevEnvironment ? outputFilename : `../${buildContext}/${outputPath}`,
-      libraryTarget: 'commonjs',
+      filename: (_module) => {
+        const chunkName = _module.chunk?.name;
+        const isMainChunk = !chunkName || chunkName === "main";
+        const chunkSuffix = `${chunksContext}/[id]${
+          isProd ? '.[chunkhash]' : ''
+        }.js`;
+        if (isDevEnvironment) {
+          if (isMainChunk) return outputFilename;
+          return chunkSuffix;
+        }
+        if (isMainChunk) return `../${buildContext}/${outputPath}`;
+        return chunkSuffix;
+      },
+      libraryTarget: 'commonjs2',
       publicPath: '/',
       chunkFilename: `${chunksContext}/[id]${isProd ? '.[chunkhash]' : ''}.js`,
       assetModuleFilename: `${assetsContext}/[hash][ext][query]`,
@@ -305,7 +453,7 @@ export default function (inMeteor = {}, argv = {}) {
         ...extraRules,
       ],
     },
-    resolve: { extensions, alias },
+    resolve: { extensions, alias, fallback },
     externals,
     plugins: [
       ...[
@@ -322,17 +470,18 @@ export default function (inMeteor = {}, argv = {}) {
         'Meteor.isDevelopment': JSON.stringify(isDev),
         'Meteor.isProduction': JSON.stringify(isProd),
       }),
-      new BannerPlugin({
-        banner: bannerOutput,
-        entryOnly: true,
-      }),
+      ...bannerPluginConfig,
       Meteor.HtmlRspackPlugin(),
       ...doctorPluginConfig,
+      new NormalModuleReplacementPlugin(/^node:(.*)$/, (res) => {
+        res.request = res.request.replace(/^node:/, '');
+      }),
     ],
     watchOptions,
     devtool: isDevEnvironment || isNative || isTest ? 'source-map' : 'hidden-source-map',
     ...(isDevEnvironment && {
       devServer: {
+        ...createRemoteDevServerConfig(),
         static: { directory: clientOutputDir, publicPath: '/__rspack__/' },
         hot: true,
         liveReload: true,
@@ -344,15 +493,26 @@ export default function (inMeteor = {}, argv = {}) {
         },
       },
     }),
-    experiments: { css: true },
+    ...merge(cacheStrategy, { experiments: { css: true } })
   };
+
 
   const serverEntry =
     isTest && isTestEager && isTestFullApp
-      ? path.resolve(process.cwd(), 'node_modules/@meteorjs/rspack/entries/eager-app-tests.js')
+      ? generateEagerTestFile({
+          isAppTest: true,
+          projectDir,
+          buildContext,
+          entries: meteorIgnoreEntries,
+        })
       : isTest && isTestEager
-      ? path.resolve(process.cwd(), 'node_modules/@meteorjs/rspack/entries/eager-tests.js')
-      : path.resolve(process.cwd(), buildContext, entryPath);
+      ? generateEagerTestFile({
+          isAppTest: false,
+          projectDir,
+          buildContext,
+          entries: meteorIgnoreEntries,
+        })
+      : path.resolve(projectDir, buildContext, entryPath);
   const serverNameConfig = `[${(isTest && 'test-') || ''}${
     (isTestModule && 'module') || 'server'
   }-rspack]`;
@@ -365,12 +525,16 @@ export default function (inMeteor = {}, argv = {}) {
     output: {
       path: serverOutputDir,
       filename: () => `../${buildContext}/${outputPath}`,
-      libraryTarget: 'commonjs',
+      libraryTarget: 'commonjs2',
       chunkFilename: `${chunksContext}/[id]${isProd ? '.[chunkhash]' : ''}.js`,
       assetModuleFilename: `${assetsContext}/[hash][ext][query]`,
       ...(isProd && { clean: { keep: keepOutsideBuild() } }),
     },
-    optimization: { usedExports: true },
+    optimization: {
+      usedExports: true,
+      splitChunks: false,
+      runtimeChunk: false,
+    },
     module: {
       rules: [swcConfigRule, ...extraRules],
       parser: {
@@ -383,10 +547,11 @@ export default function (inMeteor = {}, argv = {}) {
     resolve: {
       extensions,
       alias,
-      modules: ['node_modules', path.resolve(process.cwd())],
+      modules: ['node_modules', path.resolve(projectDir)],
       conditionNames: ['import', 'require', 'node', 'default'],
     },
     externals,
+    externalsPresets: { node: true },
     plugins: [
       new DefinePlugin(
         isTest && (isTestModule || isTestEager)
@@ -404,27 +569,47 @@ export default function (inMeteor = {}, argv = {}) {
               'Meteor.isProduction': JSON.stringify(isProd),
             },
       ),
-      new BannerPlugin({
-        banner: bannerOutput,
-        entryOnly: true,
-      }),
-      isTestModule && requireExternalsPlugin,
+      ...bannerPluginConfig,
+      requireExternalsPlugin,
       ...doctorPluginConfig,
     ],
     watchOptions,
     devtool: isDevEnvironment || isNative || isTest ? 'source-map' : 'hidden-source-map',
     ...((isDevEnvironment || (isTest && !isTestEager) || isNative) &&
-      createCacheStrategy(mode)),
+      cacheStrategy),
   };
 
   // Load and apply project-level overrides for the selected build
-  const projectConfigPath = path.resolve(process.cwd(), 'rspack.config.js');
-
   // Check if we're in a Meteor package directory by looking at the path
-  const isMeteorPackageConfig = process.cwd().includes('/packages/rspack');
+  const isMeteorPackageConfig = projectDir.includes('/packages/rspack');
   if (fs.existsSync(projectConfigPath) && !isMeteorPackageConfig) {
-    const projectConfig =
-      require(projectConfigPath)?.default || require(projectConfigPath);
+    // Check if there's a .mjs or .cjs version of the config file
+    const mjsConfigPath = projectConfigPath.replace(/\.js$/, '.mjs');
+    const cjsConfigPath = projectConfigPath.replace(/\.js$/, '.cjs');
+
+    let configPath = projectConfigPath;
+    if (fs.existsSync(mjsConfigPath)) {
+      configPath = mjsConfigPath;
+    } else if (fs.existsSync(cjsConfigPath)) {
+      configPath = cjsConfigPath;
+    }
+
+    // Use require for CommonJS modules and dynamic import for ES modules
+    let projectConfig;
+    try {
+      if (path.extname(configPath) === '.mjs') {
+        // For ESM modules, we need to use dynamic import
+        const fileUrl = `file://${configPath}`;
+        const module = await import(fileUrl);
+        projectConfig = module.default || module;
+      } else {
+        // For CommonJS modules, we can use require
+        projectConfig = require(configPath)?.default || require(configPath);
+      }
+    } catch (error) {
+      console.error(`Error loading rspack config from ${configPath}:`, error);
+      throw error;
+    }
 
     const userConfig =
       typeof projectConfig === 'function'
@@ -432,29 +617,38 @@ export default function (inMeteor = {}, argv = {}) {
         : projectConfig;
 
     const omitPaths = [
-      'name',
-      'target',
-      'entry',
-      'output.path',
-      'output.filename',
-      'output.publicPath',
-    ];
+      "name",
+      "target",
+      "entry",
+      "output.path",
+      "output.filename",
+      "output.publicPath",
+      ...(Meteor.isServer
+        ? ["optimization.splitChunks", "optimization.runtimeChunk"]
+        : []),
+    ].filter(Boolean);
     const warningFn = path => {
       console.warn(
         `[rspack.config.js] Ignored custom "${path}" — reserved for Meteor-Rspack integration.`,
       );
     };
 
+    let nextUserConfig = cleanOmittedPaths(userConfig, {
+      omitPaths,
+      warningFn,
+    });
+    nextUserConfig = mergeMeteorRspackFragments(nextUserConfig);
+
     if (Meteor.isClient) {
       clientConfig = mergeSplitOverlap(
         clientConfig,
-        cleanOmittedPaths(userConfig, { omitPaths, warningFn }),
+        nextUserConfig
       );
     }
     if (Meteor.isServer) {
       serverConfig = mergeSplitOverlap(
         serverConfig,
-        cleanOmittedPaths(userConfig, { omitPaths, warningFn }),
+        nextUserConfig
       );
     }
   }

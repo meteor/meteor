@@ -1,7 +1,7 @@
-import path from 'node:path';
-import { createRequire } from 'node:module';
+const path = require('node:path');
+const { createRequire } = require('node:module');
 
-export function loadHtmlRspackPluginFromHost(compiler) {
+function loadHtmlRspackPluginFromHost(compiler) {
   // Prefer the compiler's context; fall back to process.cwd()
   const ctx = compiler.options?.context || compiler.context || process.cwd();
   const requireFromHost = createRequire(path.join(ctx, 'package.json'));
@@ -16,7 +16,7 @@ export function loadHtmlRspackPluginFromHost(compiler) {
  * 1. Remove the injected `*-rspack.js` script tags
  * 2. Strip <!doctype> and <html>…</html> wrappers from the final HTML
  */
-export default class RspackMeteorHtmlPlugin {
+class RspackMeteorHtmlPlugin {
   apply(compiler) {
     const HtmlRspackPlugin = loadHtmlRspackPluginFromHost(compiler);
     if (!HtmlRspackPlugin?.getCompilationHooks) {
@@ -45,3 +45,6 @@ export default class RspackMeteorHtmlPlugin {
     });
   }
 }
+
+module.exports = RspackMeteorHtmlPlugin;
+module.exports.loadHtmlRspackPluginFromHost = loadHtmlRspackPluginFromHost;

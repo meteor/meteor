@@ -11,6 +11,7 @@ Package.describe({
 Npm.depends({
   bcrypt: "5.0.1",
   argon2: "0.41.1",
+  "node-gyp-build": "4.8.4",
 });
 
 Package.onUse((api) => {

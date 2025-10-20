@@ -1,9 +1,6 @@
-import { defineConfig } from '@meteorjs/rspack';
-import path from 'path';
-import sveltePreprocess from 'svelte-preprocess';
-import { createRequire } from 'node:module';
-
-const require = createRequire(import.meta.url);
+const { defineConfig } = require('@meteorjs/rspack');
+const path = require('path');
+const sveltePreprocess = require('svelte-preprocess');
 
 /**
  * Rspack configuration for Meteor projects.
@@ -15,7 +12,7 @@ const require = createRequire(import.meta.url);
  *
  * Use these flags to adjust your build settings based on environment.
  */
-export default defineConfig(Meteor => {
+module.exports = defineConfig(Meteor => {
   return {
     ...Meteor.isClient && {
       resolve: {

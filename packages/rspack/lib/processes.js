@@ -2,8 +2,9 @@
  * @module processes
  * @description Functions for managing Rspack processes
  */
-import { checkNpmDependencyExists, getNpxCommand } from 'meteor/tools-core/lib/npm';
-import { RSPACK_DEVSERVER_PORT } from "./constants";
+
+import fs from 'fs';
+import path from 'path';
 
 const {
   spawnProcess,
@@ -31,7 +32,14 @@ const {
   getMeteorInitialAppEntrypoints,
   isMeteorAppConfigModernVerbose,
   isMeteorBundleVisualizerProject,
+  getMeteorAppPort,
 } = require('meteor/tools-core/lib/meteor');
+
+const {
+  checkNpmDependencyExists,
+  getNpxCommand,
+  getMonorepoPath,
+} = require('meteor/tools-core/lib/npm');
 
 const {
   getGlobalState,
@@ -51,19 +59,114 @@ const {
 } = require('./build-context');
 
 /**
- * Gets the appropriate config file name based on environment
- * @returns {string} The name of the Rspack config file
+ * Calculates the devServerPort based on process.env.PORT
+ * Base port is 8077, and we add the sum of the digits of process.env.PORT
+ * @returns {number} The calculated devServerPort
  */
-export function getConfigFileName() {
-  return `${process.cwd()}/node_modules/@meteorjs/rspack/rspack.config.js`;
+export function calculateDevServerPort() {
+  const port = getMeteorAppPort();
+  const basePort = 8077;
+
+  // Sum the digits of the port
+  const digitSum = port.split('').reduce((sum, digit) => sum + parseInt(digit, 10), 0);
+
+  return basePort + digitSum;
 }
 
 /**
- * Gets the appropriate Rspack environment variables
+ * Calculates the Rsdoctor client port based on process.env.PORT
+ * Base port is 8885, and we add the sum of the digits of process.env.PORT
+ * @returns {number} The calculated Rsdoctor client port
+ */
+export function calculateRsdoctorClientPort() {
+  const port = getMeteorAppPort();
+  const basePort = 8885;
+
+  // Sum the digits of the port
+  const digitSum = port.split('').reduce((sum, digit) => sum + parseInt(digit, 10), 0);
+
+  return basePort + digitSum;
+}
+
+/**
+ * Calculates the Rsdoctor server port based on process.env.PORT
+ * Base port is 8885, and we add the sum of the digits of process.env.PORT + 1
+ * @returns {number} The calculated Rsdoctor server port
+ */
+export function calculateRsdoctorServerPort() {
+  const port = getMeteorAppPort();
+  const basePort = 8885;
+
+  // Sum the digits of the port
+  const digitSum = port.split('').reduce((sum, digit) => sum + parseInt(digit, 10), 0);
+
+  // Add 1 to differentiate from client port
+  return basePort + digitSum + 1;
+}
+
+/**
+ * Helper function to check for a file with different extensions in order of priority
+ * @param {string} basePath - The base directory path (without 'rspack.config' and extension)
+ * @returns {string|null} The full path with extension if found, null otherwise
+ */
+export function getCustomConfigFilePath(basePath = getMeteorAppDir()) {
+  const configBasePath = path.join(basePath, 'rspack.config');
+
+  // Check for .js extension first (highest priority)
+  const jsPath = `${configBasePath}.js`;
+  if (fs.existsSync(jsPath)) {
+    return jsPath;
+  }
+
+  // Check for .mjs extension next
+  const mjsPath = `${configBasePath}.mjs`;
+  if (fs.existsSync(mjsPath)) {
+    return mjsPath;
+  }
+
+  // Check for .cjs extension last
+  const cjsPath = `${configBasePath}.cjs`;
+  if (fs.existsSync(cjsPath)) {
+    return cjsPath;
+  }
+
+  // No valid config file found with any extension
+  return null;
+}
+
+/**
+ * Gets the appropriate config file name based on environment
+ * @returns {string} The name of the Rspack config file
+ * @throws {Error} If no valid config file is found
+ */
+export function getConfigFilePath() {
+  // Check if the config file exists at the current path with any of the supported extensions
+  const defaultConfigBasePath = path.join(process.cwd(), 'node_modules/@meteorjs/rspack');
+  const defaultConfigPath = getCustomConfigFilePath(defaultConfigBasePath);
+  if (defaultConfigPath) {
+    return defaultConfigPath;
+  }
+
+  // If not found, check if we're in a monorepo and look for alternative config
+  const monorepoPath = getMonorepoPath();
+  if (monorepoPath) {
+    const alternativeConfigBasePath = path.join(monorepoPath, 'node_modules/@meteorjs/rspack');
+    const alternativeConfigPath = getCustomConfigFilePath(alternativeConfigBasePath);
+    if (alternativeConfigPath) {
+      return alternativeConfigPath;
+    }
+  }
+
+  // If no config file is found, throw an error
+  throw new Error('Could not find rspack.config.js, rspack.config.mjs, or rspack.config.cjs. Make sure @meteorjs/rspack is installed correctly.');
+}
+
+/**
+ * Gets the appropriate Rspack environment variables and command line arguments
  * @param {Object} options - Options for environment variables
  * @param {boolean} options.isClient - Whether this is for client-side build
  * @param {boolean} options.isServer - Whether this is for server-side build
- * @returns {string[]} Array of command line arguments for Rspack
+ * @returns {Object} Object containing params (command line arguments) and envs (environment variables)
  */
 export function getRspackEnv({ isClient, isServer, isTest: inIsTest }) {
   const RSPACK_BUILD_CONTEXT = require('./constants').RSPACK_BUILD_CONTEXT;
@@ -90,16 +193,22 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest }) {
 
   const entryKey = `${isTest && isTestModule ? 'test' : 'main'}${isClient ? 'Client' : 'Server'}`;
   const inputFilePath = isTest && isTestModule ? initialEntrypoints.testModule : initialEntrypoints[entryKey];
-  const isTypescriptEnabled = inputFilePath?.endsWith('.ts') || inputFilePath?.endsWith('.tsx');
-  const isTsxEnabled = inputFilePath?.endsWith('.tsx');
-  const isJsxEnabled = inputFilePath?.endsWith('.jsx');
+  const isTypescriptEnabled = process.env.METEOR_TYPESCRIPT_ENABLED === 'true' ||
+    inputFilePath?.endsWith('.ts') ||
+    inputFilePath?.endsWith('.tsx');
 
-  const isReactEnabled = !!process.env.METEOR_REACT_ENABLED;
+  const isReactEnabled = process.env.METEOR_REACT_ENABLED === 'true';
+  const isTsxEnabled = isTypescriptEnabled && (inputFilePath?.endsWith('.tsx') || isReactEnabled);
+  const isJsxEnabled = !isTypescriptEnabled && (inputFilePath?.endsWith('.jsx') || isReactEnabled);
+
   const isBlazeEnabled = isMeteorBlazeProject();
   const isBlazeHotEnabled = isMeteorBlazeHotProject();
   const isBundleVisualizerEnabled = isMeteorBundleVisualizerProject();
 
   const swcExternalHelpers = checkNpmDependencyExists('@swc/helpers');
+
+  const configPath = getConfigFilePath();
+  const projectConfigPath = getCustomConfigFilePath();
 
   const pairs = [
     ['isDevelopment', isMeteorAppDevelopment()],
@@ -127,11 +236,12 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest }) {
       }),
     ],
     ['runPath', getBuildFilePath({ ...module, ...env, ...side, ...commandRole }) ],
-    ['bannerOutput', JSON.stringify(getBuildFileContent({ ...module, ...env, ...side, role: FILE_ROLE.output }))],
     ['buildContext', RSPACK_BUILD_CONTEXT],
     ['chunksContext', RSPACK_CHUNKS_CONTEXT],
     ['assetsContext', RSPACK_ASSETS_CONTEXT],
-    ['devServerPort', RSPACK_DEVSERVER_PORT],
+    ['devServerPort', process.env.RSPACK_DEVSERVER_PORT],
+    ['projectConfigPath', projectConfigPath],
+    ['configPath', configPath],
     ...(swcExternalHelpers &&  [['swcExternalHelpers', swcExternalHelpers]] || []),
     ...(isReactEnabled &&  [['isReactEnabled', isReactEnabled]] || []),
     ...(isBlazeEnabled &&  [['isBlazeEnabled', isBlazeEnabled]] || []),
@@ -139,13 +249,26 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest }) {
     ...(isTypescriptEnabled &&  [['isTypescriptEnabled', isTypescriptEnabled]] || []),
     ...(isTsxEnabled &&  [['isTsxEnabled', isTsxEnabled]] || []),
     ...(isJsxEnabled &&  [['isJsxEnabled', isJsxEnabled]] || []),
-    ...(isBundleVisualizerEnabled &&  [['isBundleVisualizerEnabled', isBundleVisualizerEnabled]] || []),
+    ...(isBundleVisualizerEnabled &&  [
+      ['isBundleVisualizerEnabled', isBundleVisualizerEnabled],
+      ['rsdoctorClientPort', process.env.RSDOCTOR_CLIENT_PORT],
+      ['rsdoctorServerPort', process.env.RSDOCTOR_SERVER_PORT],
+    ] || []),
 
   ].filter(Boolean);
-  return pairs.flatMap(([key, val]) => [
+
+  // Create environment variables object with bannerOutput
+  const envs = {
+    RSPACK_BANNER: JSON.stringify(getBuildFileContent({ ...module, ...env, ...side, role: FILE_ROLE.output }))
+  };
+
+  // Create params from pairs
+  const params = pairs.flatMap(([key, val]) => [
     '--env',
     `${key}=${val}`
   ]);
+
+  return { params, envs };
 }
 
 /**
@@ -165,12 +288,14 @@ export function startRspackClientServe(options = {}) {
   }
 
   const appDir = getMeteorAppDir();
-  const configFile = getConfigFileName();
-  const { command, args } = getNpxCommand(['rspack', 'serve', '--config', configFile, ...getRspackEnv({ isClient: true, isServer: false })]);
+  const configFile = getConfigFilePath();
+  const { params, envs } = getRspackEnv({ isClient: true, isServer: false });
+  const { command, args } = getNpxCommand(['rspack', 'serve', '--config', configFile, ...params]);
   const newClientProcess = spawnProcess(
     command,
     args, {
       cwd: appDir,
+      env: { ...process.env, ...envs },
       onStdout: (data) => {
         logInfo(`[Rspack Client] ${data}`);
         if (onCompile && data.trim().includes("compiled")) {
@@ -187,11 +312,19 @@ export function startRspackClientServe(options = {}) {
         if (data.includes('Loopback:') || data.includes('Project is running at:')) {
           logInfo(`[Rspack Client] ${data}`);
         } else {
+          // Check if this is the "npm error could not determine executable to run" error
+          if (data.includes('npm error could not determine executable to run')) {
+            const errorMsg = '[Rspack Client Error] Try running "meteor npm install" to ensure rspack is available';
+            logError(errorMsg);
+            throw new Error(errorMsg);
+          }
           logError(`[Rspack Client Error] ${data}`);
         }
       },
       onError: (err) => {
-        logError(`Rspack Error: ${err.message}`);
+        const errorMsg = `Rspack Error: ${err.message}`;
+        logError(errorMsg);
+        throw new Error(errorMsg);
       }
     });
 
@@ -218,12 +351,14 @@ export function startRspackServerWatch(options = {}) {
   }
 
   const appDir = getMeteorAppDir();
-  const configFile = getConfigFileName();
-  const { command, args } = getNpxCommand(['rspack', 'build', '--watch', '--config', configFile, ...getRspackEnv({ isClient: false, isServer: true })]);
+  const configFile = getConfigFilePath();
+  const { params, envs } = getRspackEnv({ isClient: false, isServer: true });
+  const { command, args } = getNpxCommand(['rspack', 'build', '--watch', '--config', configFile, ...params]);
   const newServerProcess = spawnProcess(
     command,
     args, {
     cwd: appDir,
+    env: { ...process.env, ...envs },
     onStdout: (data) => {
       logInfo(`[Rspack Server] ${data}`);
       if (onCompile && data.trim().includes("compiled")) {
@@ -235,11 +370,19 @@ export function startRspackServerWatch(options = {}) {
       if (data.includes('Project is running at:')) {
         logInfo(`[Rspack Server] ${data}`);
       } else {
+        // Check if this is the "npm error could not determine executable to run" error
+        if (data.includes('npm error could not determine executable to run')) {
+          const errorMsg = '[Rspack Server Error] Try running "meteor npm install" to ensure rspack is available';
+          logError(errorMsg);
+          throw new Error(errorMsg);
+        }
         logError(`[Rspack Server Error] ${data}`);
       }
     },
     onError: (err) => {
-      logError(`Rspack Error: ${err.message}`);
+      const errorMsg = `Rspack Error: ${err.message}`;
+      logError(errorMsg);
+      throw new Error(errorMsg);
     }
   });
 
@@ -262,18 +405,19 @@ export function startRspackServerWatch(options = {}) {
  */
 export async function runRspackBuild({ isClient, isServer, isTest, isTestModule, onCompile, watch, label = 'Build' } = {}) {
   const appDir = getMeteorAppDir();
-  const configFile = getConfigFileName();
+  const configFile = getConfigFilePath();
 
   const endpoint = isTestModule ? 'Module' : isClient ? 'Client' : 'Server';
   // Use a promise to ensure Meteor waits until Rspack finishes
   return new Promise((resolve, reject) => {
+    const { params, envs } = getRspackEnv({ isClient, isServer, isTest, isTestModule });
     const rspackArgs = [
       'rspack',
       'build',
       '--config',
       configFile,
       ...(watch && ['--watch']) || [],
-      ...getRspackEnv({ isClient, isServer, isTest, isTestModule }),
+      ...params,
     ].filter(Boolean);
     const { command, args } = getNpxCommand(rspackArgs);
     spawnProcess(
@@ -281,6 +425,7 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
       args,
       {
       cwd: appDir,
+      env: { ...process.env, ...envs },
       onStdout: (data) => {
         logInfo(`[Rspack ${label} ${endpoint}] ${data}`);
         if (onCompile && data.trim().includes("compiled")) {
@@ -292,6 +437,12 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
         if (data.includes('Project is running at:')) {
           logInfo(`[Rspack ${label} ${endpoint}] ${data}`);
         } else {
+          // Check if this is the "npm error could not determine executable to run" error
+          if (data.includes('npm error could not determine executable to run')) {
+            const errorMsg = `[Rspack ${label} Error ${endpoint}] Try running "meteor npm install" to ensure rspack is available`;
+            logError(errorMsg);
+            throw new Error(errorMsg);
+          }
           logError(`[Rspack ${label} Error ${endpoint}] ${data}`);
         }
       },

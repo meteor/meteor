@@ -1,14 +1,17 @@
 // Helper functions for Rspack integration
 const files = require('../fs/files');
+const { getMeteorConfig } = require("./meteor-config");
+
+const config = getMeteorConfig();
 
 // Get the build context from environment variable or use default "_build"
-const rspackBuildContext = process.env.RSPACK_BUILD_CONTEXT || "_build";
+const rspackBuildContext = config?.buildContext || process.env.RSPACK_BUILD_CONTEXT || "_build";
 
 // Get the assets context from environment variable or use default "build-assets"
-const rspackAssetsContext = process.env.RSPACK_ASSETS_CONTEXT || "build-assets";
+const rspackAssetsContext = config?.assetsContext || process.env.RSPACK_ASSETS_CONTEXT || "build-assets";
 
 // Get the bundles context from environment variable or use default "build-chunks"
-const rspackChunksContext = process.env.RSPACK_CHUNKS_CONTEXT || "build-chunks";
+const rspackChunksContext = config?.chunksContext || process.env.RSPACK_CHUNKS_CONTEXT || "build-chunks";
 
 // Cache the regex pattern for performance
 const rspackFilePattern = new RegExp(`^${rspackBuildContext}\\/.*\\/[^\\/]*-rspack\\.js$`);

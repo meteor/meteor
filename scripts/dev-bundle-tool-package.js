@@ -12,6 +12,7 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "10.9.3",
     "node-gyp": "10.2.0",
+    "node-gyp-build": "4.8.4",
     "@mapbox/node-pre-gyp": "1.0.11",
     typescript: "5.6.3",
     "@meteorjs/babel": "7.20.0",

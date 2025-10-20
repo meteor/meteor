@@ -1,12 +1,12 @@
-import fs from 'fs';
-import vm from 'vm';
+const fs = require('fs');
+const vm = require('vm');
 
 /**
  * Reads and parses the SWC configuration file.
  * @param {string} file - The name of the SWC configuration file (default: '.swcrc')
  * @returns {Object|undefined} The parsed SWC configuration or undefined if an error occurs
  */
-export function getMeteorAppSwcrc(file = '.swcrc') {
+function getMeteorAppSwcrc(file = '.swcrc') {
   try {
     const filePath = `${process.cwd()}/${file}`;
     if (file.endsWith('.js')) {
@@ -42,7 +42,7 @@ export function getMeteorAppSwcrc(file = '.swcrc') {
  * If the configuration has a baseUrl property, it will be set to process.cwd().
  * @returns {Object|undefined} The SWC configuration or undefined if no configuration exists
  */
-export function getMeteorAppSwcConfig() {
+function getMeteorAppSwcConfig() {
   const hasSwcRc = fs.existsSync(`${process.cwd()}/.swcrc`);
   const hasSwcJs = !hasSwcRc && fs.existsSync(`${process.cwd()}/swc.config.js`);
 
@@ -60,3 +60,8 @@ export function getMeteorAppSwcConfig() {
 
   return config;
 }
+
+module.exports = {
+  getMeteorAppSwcrc,
+  getMeteorAppSwcConfig
+};

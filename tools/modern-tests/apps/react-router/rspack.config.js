@@ -1,4 +1,4 @@
-import { defineConfig } from '@meteorjs/rspack';
+const { defineConfig } = require('@meteorjs/rspack');
 
 /**
  * Rspack configuration for Meteor projects.
@@ -10,13 +10,14 @@ import { defineConfig } from '@meteorjs/rspack';
  *
  * Use these flags to adjust your build settings based on environment.
  */
-export default defineConfig(Meteor => {
+module.exports = defineConfig(Meteor => {
   return {
     resolve: {
       alias: {
         '@helper/alias': '/imports/helpers/alias.js',
         '@react/alias': '/node_modules/react',
       },
+      extensions: ['.jsx'],
     },
     module: {
       rules: [
@@ -42,6 +43,22 @@ export default defineConfig(Meteor => {
         },
       ],
     },
+    ...(Meteor.isClient && {
+      optimization: {
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            reactRouter: {
+              test: /[\\/]node_modules[\\/](react-router|react-router-dom)[\\/]/,
+              name: 'react-router',
+              priority: 40,
+              enforce: true,
+            },
+            vendor: { test: /node_modules/, name: 'vendors' },
+          },
+        },
+      },
+    }),
     plugins: [
       Meteor.HtmlRspackPlugin({
         title: 'react-router',

@@ -246,7 +246,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
   // Check if the file is a Rspack output file
   // If it is, bypass SWC/Babel and just read the file and its map file
   // as the contents are already transpiled by Rspack.
-  if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath)) {
+if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath)) {
     try {
       // Get the full path to the file
       const fullPath = inputFile.getPathInPackage();
@@ -258,6 +258,17 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       if (fs.existsSync(mapPath)) {
         const mapContent = fs.readFileSync(mapPath, 'utf8');
         toBeAdded.sourceMap = JSON.parse(mapContent);
+      }
+
+      if (this.isVerbose()) {
+        const arch = inputFile.getArch();
+        logTranspilation({
+          usedRspack: true,
+          inputFilePath,
+          packageName,
+          cacheHit: true,
+          arch,
+        });
       }
 
       return toBeAdded;
@@ -281,7 +292,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     const features = Object.assign({}, this.extraFeatures);
     const arch = inputFile.getArch();
 
-    if (arch.startsWith("os.")) {
+    const isNodeTarget = arch.startsWith("os.");
+    if (isNodeTarget) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
       features.nodeMajorVersion = parseInt(process.versions.node, 10);
@@ -355,8 +367,11 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             tsx: hasTSXSupport,
           },
           ...(hasSwcHelpersAvailable &&
+            !isNodeTarget &&
             (packageName == null ||
-              !['modules-runtime'].includes(packageName)) && {
+              !['core-runtime', 'modules', 'modules-runtime'].includes(
+                packageName,
+              )) && {
               externalHelpers: true,
             }),
         },
@@ -373,6 +388,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // Merge with app-level SWC config
       if (lastModifiedSwcConfig) {
         swcOptions = deepMerge(swcOptions, lastModifiedSwcConfig, [
+          'jsc.target',
           'env.targets',
           'module.type',
         ]);
@@ -1120,14 +1136,16 @@ function logTranspilation({
   packageName,
   inputFilePath,
   usedSwc,
+  usedRspack,
   cacheHit,
   isNodeModulesCode,
   arch,
   errorMessage = '',
   tip = '',
 }) {
-  const transpiler = usedSwc ? 'SWC' : 'Babel';
-  const transpilerColor = usedSwc ? 32 : 33;
+  let transpiler = usedSwc ? 'SWC' : 'Babel';
+  transpiler = usedRspack ? 'Rspack' : transpiler;
+  const transpilerColor = usedSwc || usedRspack ? 32 : 33;
   const label = color('[Transpiler]', 36);
   const transpilerPart = `${label} Used ${color(
     transpiler,
@@ -1150,7 +1168,7 @@ function logTranspilation({
     : color(originPaddedRaw, 35);
   const cacheStatus = errorMessage
     ? color('⚠️  Fallback', 33)
-    : usedSwc
+    : usedSwc || usedRspack
     ? cacheHit
       ? color('🟢 Cache hit', 32)
       : color('🔴 Cache miss', 31)

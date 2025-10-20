@@ -137,6 +137,37 @@ function buildNpmInstallArgs(dependencies, options = {}) {
 }
 
 /**
+ * Builds yarn install arguments based on options and dependencies
+ * 
+ * @param {string|string[]} dependencies - The npm dependency or dependencies to install
+ * @param {Object} [options] - Options for the installation
+ * @param {boolean} [options.dev=false] - If true, install as a dev dependency
+ * @param {boolean} [options.exact=false] - If true, install with exact version
+ * @returns {string[]} Array of arguments for the yarn add command
+ */
+function buildYarnInstallArgs(dependencies, options = {}) {
+  const args = ['add'];
+
+  // Add flags based on options
+  if (options.dev) {
+    args.push('--dev');
+  }
+
+  if (options.exact) {
+    args.push('--exact');
+  }
+
+  // Add dependencies to the command
+  if (Array.isArray(dependencies)) {
+    args.push(...dependencies);
+  } else {
+    args.push(dependencies);
+  }
+
+  return args;
+}
+
+/**
  * Executes a command and returns a promise that resolves to true if successful
  * 
  * @param {string} command - The command to execute
@@ -161,16 +192,25 @@ function executeCommand(command, args, options) {
 
 /**
  * Installs a npm dependency using direct npm binary if available, otherwise falls back to `meteor npm install`.
+ * If yarn option is true, uses yarn instead.
  * 
  * @param {string|string[]} dependencies - The npm dependency or dependencies to install
  * @param {Object} [options] - Options for the installation
  * @param {string} [options.cwd] - Current working directory (defaults to process.cwd())
  * @param {boolean} [options.dev=false] - If true, install as a dev dependency
  * @param {boolean} [options.exact=false] - If true, install with exact version
+ * @param {boolean} [options.yarn=false] - If true, use yarn instead of npm
  * @returns {Promise<boolean>} A promise that resolves to true if installation succeeded, false otherwise
  */
 export function installNpmDependency(dependencies, options = {}) {
   const cwd = options.cwd || process.cwd();
+
+  // If yarn option is true, use yarn
+  if (options.yarn) {
+    const { command, args: baseArgs } = getYarnCommand([]);
+    const args = buildYarnInstallArgs(dependencies, options);
+    return executeCommand(command, [...baseArgs, ...args], { cwd });
+  }
 
   // Try to get the npm binary path
   const npmBinaryPath = getNodeBinaryPath('npm');
@@ -318,4 +358,130 @@ export function getNpxCommand(args) {
     args: ['npx', ...args],
     prefix: `meteor npx`,
   };
+}
+
+/**
+ * Checks if the current project is a Yarn project.
+ * Looks for yarn.lock file in the current working directory and checks packageManager in package.json.
+ * 
+ * @param {Object} [options] - Options for the check
+ * @param {string} [options.cwd] - Current working directory (defaults to process.cwd())
+ * @returns {boolean} True if it's a Yarn project, false otherwise
+ */
+export function isYarnProject(options = {}) {
+  const cwd = options.cwd || process.cwd();
+
+  // Check if yarn.lock exists
+  const yarnLockPath = path.join(cwd, 'yarn.lock');
+  if (fs.existsSync(yarnLockPath)) {
+    return true;
+  }
+
+  // Check packageManager field in package.json
+  try {
+    const packageJsonPath = path.join(cwd, 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+      // Check if packageManager contains "yarn"
+      if (packageJson.packageManager && packageJson.packageManager.includes('yarn')) {
+        return true;
+      }
+    }
+  } catch (error) {
+    // If there's an error reading or parsing package.json, continue
+  }
+
+  return false;
+}
+
+/**
+ * Gets the yarn command and arguments
+ * @param {string[]} args - The arguments to pass to yarn
+ * @returns {Object} An object with command, args, and base properties
+ */
+export function getYarnCommand(args) {
+  // Try to get the yarn binary path
+  const yarnBinaryPath = getNodeBinaryPath('yarn');
+
+  // If we have a direct path to yarn, use it
+  if (yarnBinaryPath && fs.existsSync(yarnBinaryPath)) {
+    return {
+      command: yarnBinaryPath,
+      args,
+      prefix: `${yarnBinaryPath}`,
+    };
+  }
+
+  // Fall back to using 'yarn' directly
+  return {
+    command: 'yarn',
+    args,
+    prefix: `yarn`,
+  };
+}
+
+/**
+ * Gets the path to the monorepo root by checking for common monorepo indicators.
+ * Traverses up the directory tree until it finds a monorepo indicator or reaches the root.
+ * 
+ * @param {Object} [options] - Options for the detection
+ * @param {string} [options.cwd] - Current working directory (defaults to process.cwd())
+ * @returns {string|null} Path to the monorepo root if found, null otherwise
+ */
+export function getMonorepoPath(options = {}) {
+  const cwd = options.cwd || process.cwd();
+  let currentDir = cwd;
+
+  // Function to check if directory has monorepo indicators
+  const hasMonorepoIndicators = (dir) => {
+    try {
+      // Check for npm/yarn workspaces in package.json
+      const packageJsonPath = path.join(dir, 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        if (packageJson.workspaces) {
+          return true;
+        }
+      }
+
+      // Check for Lerna
+      const lernaJsonPath = path.join(dir, 'lerna.json');
+      if (fs.existsSync(lernaJsonPath)) {
+        return true;
+      }
+
+      // Check for pnpm workspaces
+      const pnpmWorkspacePath = path.join(dir, 'pnpm-workspace.yaml');
+      if (fs.existsSync(pnpmWorkspacePath)) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // Traverse up the directory tree
+  while (currentDir !== path.dirname(currentDir)) { // Stop when we reach the root directory
+    if (hasMonorepoIndicators(currentDir)) {
+      return currentDir;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+
+  // Check the root directory as well
+  return hasMonorepoIndicators(currentDir) ? currentDir : null;
+}
+
+/**
+ * Detects if a directory is within a monorepo by checking for common monorepo indicators.
+ *
+ * @param {Object} [options] - Options for the detection
+ * @param {string} [options.cwd] - Current working directory (defaults to process.cwd())
+ * @returns {boolean} True if the directory is within a monorepo, false otherwise
+ */
+export function isMonorepo(options = {}) {
+  return getMonorepoPath(options) !== null;
 }

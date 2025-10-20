@@ -47,7 +47,7 @@ export const normalizeModernConfig = (r = false) => Object.fromEntries(
  * @param {string|null} appDir - The application directory path. If null, only environment variables are used.
  * @returns {Object} - The initialized Meteor configuration object.
  */
-export function initMeteorConfig(appDir) {
+export function initMeteorConfig(appDir = process.cwd()) {
   const modernForced = JSON.parse(process.env.METEOR_MODERN || "false");
   let packageJson;
   if (appDir) {

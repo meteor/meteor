@@ -25,6 +25,7 @@ export function spawnProcess(command, args, options = {}) {
     cwd: options.cwd || process.cwd(),
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: options.detached || false,
+    ...(process.platform === 'win32' && { shell: true }),
   });
 
   // Add a reference to track if the process is running

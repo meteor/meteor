@@ -3,9 +3,9 @@
  * @description Constants and global state keys for Rspack plugin
  */
 
-export const DEFAULT_RSPACK_VERSION = '1.5.0';
+export const DEFAULT_RSPACK_VERSION = '1.5.3';
 
-export const DEFAULT_METEOR_RSPACK_VERSION = '0.0.36';
+export const DEFAULT_METEOR_RSPACK_VERSION = '0.0.60';
 
 export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '1.4.3';
 
@@ -36,38 +36,50 @@ export const GLOBAL_STATE_KEYS = {
   RSPACK_REACT_INSTALLATION_CHECKED: 'rspack.rspackReactInstallationChecked',
   RSPACK_DOCTOR_INSTALLATION_CHECKED: 'rspack.rspackDoctorInstallationChecked',
   REACT_CHECKED: 'rspack.reactChecked',
+  TYPESCRIPT_CHECKED: 'rspack.typescriptChecked',
   INITIAL_ENTRYPONTS: 'meteor.initialEntrypoints',
   CLIENT_FIRST_COMPILE: 'rspack.clientFirstCompile',
   SERVER_FIRST_COMPILE: 'rspack.serverFirstCompile',
   BUILD_CONTEXT_FILES_CLEANED: 'rspack.buildContextFilesCleaned',
 };
 
-/**
- * Default port for Rspack dev server
- * @type {string|any|number}
- */
-export const RSPACK_DEVSERVER_PORT = process.env.RSPACK_DEVSERVER_PORT || 8080;
+const meteorConfig = typeof Plugin !== 'undefined' ? Plugin?.getMeteorConfig() : null;
 
 /**
  * Directory name for Rspack build context
  * Can be overridden with RSPACK_BUILD_CONTEXT environment variable
  * @constant {string}
  */
-export const RSPACK_BUILD_CONTEXT = process.env.RSPACK_BUILD_CONTEXT || '_build';
+export const RSPACK_BUILD_CONTEXT =
+  meteorConfig?.buildContext ||
+  process.env.RSPACK_BUILD_CONTEXT ||
+  '_build';
+
+process.env.RSPACK_BUILD_CONTEXT = RSPACK_BUILD_CONTEXT;
 
 /**
  * Directory name for Rspack assets context
  * Can be overridden with RSPACK_ASSETS_CONTEXT environment variable
  * @constant {string}
  */
-export const RSPACK_ASSETS_CONTEXT = process.env.RSPACK_ASSETS_CONTEXT || 'build-assets';
+export const RSPACK_ASSETS_CONTEXT =
+  meteorConfig?.assetsContext ||
+  process.env.RSPACK_ASSETS_CONTEXT ||
+  'build-assets';
+
+process.env.RSPACK_ASSETS_CONTEXT = RSPACK_ASSETS_CONTEXT;
 
 /**
  * Directory name for Rspack bundles context
  * Can be overridden with RSPACK_ASSETS_CONTEXT environment variable
  * @constant {string}
  */
-export const RSPACK_CHUNKS_CONTEXT = process.env.RSPACK_CHUNKS_CONTEXT || 'build-chunks';
+export const RSPACK_CHUNKS_CONTEXT =
+  meteorConfig?.chunksContext ||
+  process.env.RSPACK_CHUNKS_CONTEXT ||
+  'build-chunks';
+
+process.env.RSPACK_CHUNKS_CONTEXT = RSPACK_CHUNKS_CONTEXT;
 
 /**
  * Directory name for Rspack doctor context
@@ -80,18 +92,6 @@ export const RSPACK_DOCTOR_CONTEXT = '.rsdoctor';
  * @constant {RegExp}
  */
 export const RSPACK_HOT_UPDATE_REGEX = /^\/(.+\.hot-update\.(?:json|js))$/;
-
-/**
- * Regex pattern for rspack bundles
- * @constant {RegExp}
- */
-export const RSPACK_BUNDLES_REGEX = new RegExp(`^\/${RSPACK_CHUNKS_CONTEXT}\/(.+)$`);
-
-/**
- * Regex pattern for rspack assets
- * @constant {RegExp}
- */
-export const RSPACK_ASSETS_REGEX = new RegExp(`^\/${RSPACK_ASSETS_CONTEXT}\/(.+)$`);
 
 export const FILE_ROLE = {
   build: 'build',
