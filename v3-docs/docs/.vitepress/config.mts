@@ -140,19 +140,21 @@ export default defineConfig({
           {
             text: "What is Meteor?",
             link: "/about/what-is#introduction",
-          },
-          {
-            text: "Meteor resources",
-            link: "/about/what-is#learning-more",
+            items:[
+              {
+                text: "Meteor resources",
+                link: "/about/what-is#learning-more",
+              },
+            ],
           },
           {
             text: "Roadmap",
             link: "/about/roadmap",
           },
-          {
-            text: "Contributing",
-            link: "/about/what-is#contributing",
-          },
+              {
+                text: "Contributing",
+                link: "/about/contributing",
+              }
         ],
         collapsed: true,
       },
