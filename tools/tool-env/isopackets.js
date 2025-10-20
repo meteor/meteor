@@ -59,7 +59,7 @@ export const ISOPACKETS = {
     // mongo
     'npm-mongo',
     // ejson
-    'ejson',
+    // 'ejson',
     // constraint-solver
     'constraint-solver',
     // cordova-support
