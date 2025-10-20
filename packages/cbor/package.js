@@ -12,8 +12,6 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom(['3.0.1']);
-  
   // Core dependencies
   api.use(['ecmascript', 'base64']);
   
@@ -32,8 +30,6 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use(['ecmascript', 'tinytest', 'harry97:cbor',
-     'ejson' // For comparison tests
-    ]);
+  api.use(['ecmascript', 'tinytest', 'harry97:cbor']);
   api.addFiles('cbor_tests.js');
 });

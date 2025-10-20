@@ -1,6 +1,13 @@
 import { Tinytest } from 'meteor/tinytest';
 import { CBOR } from 'meteor/harry97:cbor';
-import { EJSON } from 'meteor/ejson';
+
+// EJSON is optional - only for comparison tests
+let EJSON;
+try {
+  EJSON = Package['ejson'] && Package['ejson'].EJSON;
+} catch (e) {
+  // EJSON not available in core package tests
+}
 
 // Basic CBOR functionality tests
 Tinytest.add('CBOR - Basic encoding/decoding', function (test) {
@@ -53,11 +60,13 @@ Tinytest.add('CBOR - Binary data efficiency', function (test) {
   test.equal(cborDecoded.data.length, 1000);
   
   // Compare with EJSON (should be much larger due to base64)
-  const ejsonString = EJSON.stringify(testObject);
-  const cborString = CBOR.stringify(testObject);
-  
-  console.log(`EJSON size: ${ejsonString.length}, CBOR size: ${cborString.length}`);
-  test.isTrue(cborString.length < ejsonString.length, "CBOR should be more efficient than EJSON for binary data");
+  if (EJSON) {
+    const ejsonString = EJSON.stringify(testObject);
+    const cborString = CBOR.stringify(testObject);
+
+    console.log(`EJSON size: ${ejsonString.length}, CBOR size: ${cborString.length}`);
+    test.isTrue(cborString.length < ejsonString.length, "CBOR should be more efficient than EJSON for binary data");
+  }
 });
 
 // File object test (browser only)
