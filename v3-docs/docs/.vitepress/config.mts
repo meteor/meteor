@@ -149,6 +149,10 @@ export default defineConfig({
             text: "Roadmap",
             link: "/about/roadmap",
           },
+          {
+            text: "Contributing",
+            link: "/about/what-is#contributing",
+          },
         ],
         collapsed: true,
       },

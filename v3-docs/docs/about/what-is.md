@@ -52,3 +52,10 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 - Join the discussion and live streams on the official [Meteor Lounge Discord](https://discord.gg/hZkTCaVjmT).
 
 - Engage with peers in the [Meteor Slack Community](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
+
+## Contributing to Meteor {#contributing}
+
+Ongoing Meteor development takes place in the open [on GitHub](https://github.com/meteor/meteor). We encourage pull requests and issues to discuss problems with any changes that could be made to the content. The contribution guidelines are available in the [Meteor GitHub repository](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md).
+
+To contribute to this documentation, please refer to the [documentation contribution guidelines](https://github.com/meteor/meteor/blob/devel/v3-docs/docs/CONTRIBUTING.md).
+
