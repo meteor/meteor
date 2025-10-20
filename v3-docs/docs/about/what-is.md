@@ -57,5 +57,9 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 Ongoing Meteor development takes place in the open [on GitHub](https://github.com/meteor/meteor). We encourage pull requests and issues to discuss problems with any changes that could be made to the content. The contribution guidelines are available in the [Meteor GitHub repository](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md).
 
+A great start to understand how to contribute to Meteor Core is this video from Meteor Impact 2025:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/-EZtClGGmP8?si=LcuhDNrgmcLaNIbH" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
 To contribute to this documentation, please refer to the [documentation contribution guidelines](https://github.com/meteor/meteor/blob/devel/v3-docs/docs/CONTRIBUTING.md).
 
