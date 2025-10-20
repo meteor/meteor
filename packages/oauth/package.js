@@ -29,7 +29,6 @@ Package.onUse(api => {
   ], 'server');
 
   api.addAssets([
-    'oauth_utils.js',
     'end_of_popup_response.js',
     'end_of_redirect_response.js'
   ], 'client');

@@ -4,11 +4,25 @@
   var config = JSON.parse(document.getElementById("config").innerHTML);
 
   if (config.setCredentialToken) {
-    sessionStorage[config.storagePrefix + config.credentialToken] =
-      config.credentialSecret;
+    try {
+      sessionStorage[config.storagePrefix + config.credentialToken] =
+        config.credentialSecret;
+    } catch (err) {
+      // We can't do much else, but at least the redirects goes on.
+    }
   }
 
-  OAuthUtils.storeOAuthError(localStorage, config);
+  // Store OAuth error information if present
+  if (config.error && typeof localStorage !== 'undefined') {
+    try {
+      localStorage[config.storagePrefix + "error"] = config.error;
+      if (config.error_description) {
+        localStorage[config.storagePrefix + "error_description"] = config.error_description;
+      }
+    } catch (err) {
+      // Storage not available, ignore
+    }
+  }
 
   window.location =
     config.redirectUrl

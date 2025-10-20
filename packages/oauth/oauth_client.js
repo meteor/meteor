@@ -169,7 +169,13 @@ OAuth._retrieveCredentialSecret = credentialToken => {
   return secret;
 };
 
+// Client-side OAuth error retrieval function
 OAuth.getError = () => {
+  // Only available in browser environment
+  if (typeof Meteor === 'undefined' || !Meteor._localStorage) {
+    return null;
+  }
+  
   const errorKey = OAuth._storageTokenPrefix + "error";
   const errorDescriptionKey = OAuth._storageTokenPrefix + "error_description";
   

@@ -21,15 +21,25 @@
       window.opener.Package.oauth.OAuth._handleCredentialSecret(
         credentialToken, credentialSecret);
     } else {
-      sessionStorage[config.storagePrefix + credentialToken] = credentialSecret;
+      try {
+        sessionStorage[config.storagePrefix + credentialToken] = credentialSecret;
+      } catch (err) {
+        // We can't do much else, but at least close the popup instead
+        // of having it hang around on a blank page.
+      }
     }
   }
 
-  OAuthUtils.storeOAuthError(localStorage, config);
-  
-  if (config.error && window.opener && window.opener.Package &&
-      window.opener.Package.oauth && window.opener.Package.oauth.OAuth._handleCredentialSecret) {
-    OAuthUtils.storeOAuthError(window.opener.localStorage, config);
+  // Store OAuth error information if present
+  if (config.error && typeof localStorage !== 'undefined') {
+    try {
+      localStorage[config.storagePrefix + "error"] = config.error;
+      if (config.error_description) {
+        localStorage[config.storagePrefix + "error_description"] = config.error_description;
+      }
+    } catch (err) {
+      // Storage not available, ignore
+    }
   }
 
   if (! config.isCordova) {
