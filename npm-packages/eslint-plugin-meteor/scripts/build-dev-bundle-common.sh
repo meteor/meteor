@@ -5,10 +5,10 @@ set -u
 
 UNAME=$(uname)
 ARCH=$(uname -m)
-NODE_VERSION=24.8.0
+NODE_VERSION=24.10.0
 MONGO_VERSION_64BIT=7.0.16
 MONGO_VERSION_32BIT=3.2.22
-NPM_VERSION=11.6.0
+NPM_VERSION=11.6.2
 
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
