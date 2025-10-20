@@ -350,7 +350,7 @@ console.log('Loaded NPM package "config"', require('config').id);`);
   await writeModernConfig(s, {
     transpiler: {
       verbose: true,
-      excludePackages: ['ejson'],
+      excludePackages: ['harry97:cbor'],
     },
   });
   await run.match(/\[Transpiler] Used Babel.*\(package\)/, false, true);

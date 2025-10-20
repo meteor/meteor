@@ -110,10 +110,10 @@ var formatHiddenVersions = function (hiddenVersions, oldestShownVersion) {
   }
 };
 
-// Converts an object to an EJSON string with the right spacing.
+// Converts an object to a CBOR JSON string with the right spacing.
 async function formatEJSON(data) {
-  const { EJSON } = await loadIsopackage('ejson');
-  return EJSON.stringify(data, { indent: true }) + "\n";
+  const { CBOR } = await loadIsopackage('harry97:cbor');
+  return CBOR.stringify(data, { indent: true }) + "\n";
 }
 
 // Takes in a string and pads it with whitespace to the length of the longest
