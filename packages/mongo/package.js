@@ -38,7 +38,7 @@ Package.onUse(function (api) {
     "ddp",
     "tracker",
     "diff-sequence",
-    "harry97:mongo-id@0.3.0",
+    "mongo-id",
     "check",
     "ecmascript",
     "typescript",

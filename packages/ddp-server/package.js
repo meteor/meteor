@@ -20,7 +20,7 @@ Package.onUse(function (api) {
       "random",
       "harry97:cbor@1.2.1",
       "retry",
-      "harry97:mongo-id@0.3.0",
+      "mongo-id",
       "diff-sequence",
       "ecmascript",
       "typescript",

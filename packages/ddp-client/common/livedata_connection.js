@@ -3,7 +3,7 @@ import { DDPCommon } from 'meteor/ddp-common';
 import { Tracker } from 'meteor/tracker';
 import { CBOR } from 'meteor/harry97:cbor';
 import { Random } from 'meteor/random';
-import { MongoID } from 'meteor/harry97:mongo-id';
+import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
 import { MethodInvoker } from './method_invoker';
 import {
