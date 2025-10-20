@@ -12,7 +12,7 @@ Are you new here? Please check our [documentation issues](https://github.com/met
 
 If in doubt about the best way to implement something, please create additional conversation on the issue.
 
-Issues are not assigned, so feel free to pick any that you find interesting.
+Issues are not assigned, you don’t need to wait for approval before contributing. Jump right in and open a PR — this increases your chances of getting your work merged, since issues can be claimed fast.
 
 
 ### Do the changes and share them 
