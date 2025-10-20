@@ -1029,7 +1029,8 @@ export class Connection {
 
   // Sends the DDP stringification of the given message object
   _send(obj) {
-    this._stream.send(DDPCommon.stringifyDDP(obj));
+    const supportsBinary = this._stream._supportsBinary || false;
+    this._stream.send(DDPCommon.stringifyDDP(obj, { supportsBinary }));
   }
 
   // Always queues the call before sending the message

@@ -165,14 +165,26 @@ export class ClientStream extends StreamClientCommon {
     const hasSockJS = typeof SockJS === "function";
     const disableSockJS = __meteor_runtime_config__.DISABLE_SOCKJS;
 
-    this.socket = hasSockJS && !disableSockJS
+    // Determine if we're using native WebSocket or SockJS
+    const useNativeWebSocket = !hasSockJS || disableSockJS;
+
+    this.socket = useNativeWebSocket
+      ? new WebSocket(toWebsocketUrl(this.rawUrl))
       // Convert raw URL to SockJS URL each time we open a connection, so
       // that we can connect to random hostnames and get around browser
       // per-host connection limits.
-      ? new SockJS(toSockjsUrl(this.rawUrl), undefined, options)
-      : new WebSocket(toWebsocketUrl(this.rawUrl));
+      : new SockJS(toSockjsUrl(this.rawUrl), undefined, options);
 
-    this.socket.onopen = data => {
+    // Mark if this connection supports binary frames
+    // Native WebSocket supports binary, SockJS does not
+    this._supportsBinary = useNativeWebSocket;
+
+    // For native WebSocket, set binary type to arraybuffer
+    if (useNativeWebSocket && this.socket.binaryType !== undefined) {
+      this.socket.binaryType = 'arraybuffer';
+    }
+
+    this.socket.onopen = () => {
       this.lastError = null;
       this._connected();
     };

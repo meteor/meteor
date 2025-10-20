@@ -46,32 +46,52 @@ DDPCommon.SUPPORTED_DDP_VERSIONS = [ '1', 'pre2', 'pre1' ];
 DDPCommon.parseDDP = function (stringMessage) {
   var msg;
 
-  // Try to detect if this is binary CBOR (base64-encoded) or JSON
-  // Binary CBOR messages won't start with '{' or '['
-  const isBinaryCBOR = stringMessage && stringMessage[0] !== '{' && stringMessage[0] !== '[';
-
-  if (isBinaryCBOR && DDPCommon._useBinaryCBOR()) {
-    // Try to parse as base64-encoded CBOR
+  // Handle native binary frames (ArrayBuffer or Uint8Array from native WebSocket)
+  if (stringMessage instanceof ArrayBuffer || stringMessage instanceof Uint8Array) {
     try {
-      const binaryData = Base64.decode(stringMessage);
+      const binaryData = stringMessage instanceof ArrayBuffer
+        ? new Uint8Array(stringMessage)
+        : stringMessage;
       msg = CBOR.decode(binaryData);
     } catch (e) {
-      // Fallback to JSON parsing
+      Meteor._debug("Discarding message with invalid binary CBOR", e);
+      return null;
+    }
+  }
+  // Handle string messages (JSON or Base64-wrapped CBOR)
+  else if (typeof stringMessage === 'string') {
+    // Try to detect if this is binary CBOR (base64-encoded) or JSON
+    // Binary CBOR messages won't start with '{' or '['
+    const isBinaryCBOR = stringMessage[0] !== '{' && stringMessage[0] !== '[';
+
+    if (isBinaryCBOR && DDPCommon._useBinaryCBOR()) {
+      // Try to parse as base64-encoded CBOR
+      try {
+        const binaryData = Base64.decode(stringMessage);
+        msg = CBOR.decode(binaryData);
+      } catch (e) {
+        // Fallback to JSON parsing
+        try {
+          msg = JSON.parse(stringMessage);
+        } catch (jsonError) {
+          Meteor._debug("Discarding message with invalid CBOR and JSON", stringMessage);
+          return null;
+        }
+      }
+    } else {
+      // Standard JSON parsing
       try {
         msg = JSON.parse(stringMessage);
-      } catch (jsonError) {
-        Meteor._debug("Discarding message with invalid CBOR and JSON", stringMessage);
+      } catch (e) {
+        Meteor._debug("Discarding message with invalid JSON", stringMessage);
         return null;
       }
     }
-  } else {
-    // Standard JSON parsing
-    try {
-      msg = JSON.parse(stringMessage);
-    } catch (e) {
-      Meteor._debug("Discarding message with invalid JSON", stringMessage);
-      return null;
-    }
+  }
+  // Unknown message type
+  else {
+    Meteor._debug("Discarding message with unknown type", typeof stringMessage);
+    return null;
   }
 
   // DDP messages must be objects.
@@ -112,7 +132,7 @@ DDPCommon._useBinaryCBOR = function() {
   return false;
 };
 
-DDPCommon.stringifyDDP = function (msg) {
+DDPCommon.stringifyDDP = function (msg, options) {
   const copy = CBOR.clone(msg);
 
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
@@ -153,7 +173,14 @@ DDPCommon.stringifyDDP = function (msg) {
   if (DDPCommon._useBinaryCBOR()) {
     try {
       const binaryCBOR = CBOR.encode(copy);
-      return Base64.encode(binaryCBOR);
+
+      // If connection supports native binary frames, return Uint8Array directly
+      // Otherwise, wrap in Base64 for text-only transports (SockJS)
+      if (options && options.supportsBinary) {
+        return binaryCBOR;  // Return Uint8Array for native WebSocket
+      } else {
+        return Base64.encode(binaryCBOR);  // Return base64 string for SockJS
+      }
     } catch (e) {
       // Fallback to JSON on error
       console.error('Binary CBOR encoding failed, falling back to JSON:', e);
