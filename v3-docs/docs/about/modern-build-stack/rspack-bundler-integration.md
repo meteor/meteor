@@ -130,25 +130,28 @@ module.exports = defineConfig(Meteor => {
       Meteor.isClient && new rspack.ProvidePlugin({ _: 'lodash' }),
       Meteor.isServer && new NodePolyfillPlugin(),
       new rspack.ProgressPlugin()
-    ].filter(Boolean)
+    ].filter(Boolean),
   };
 });
 ```
 
 You can use flags to control the final configuration based on the environment. The available flags are passed in the `Meteor` parameter.
 
-| Flag               | Type     | Description                                               |
-| ------------------ | -------- |-----------------------------------------------------------|
-| `isDevelopment`    | boolean  | True when running in development mode                     |
-| `isProduction`     | boolean  | True when running in production mode                      |
-| `isClient`         | boolean  | True when building or running client code                 |
-| `isServer`         | boolean  | True when building or running server code                 |
-| `isTest`           | boolean  | True when running in test mode                            |
-| `isDebug`          | boolean  | True when debug mode is enabled                           |
-| `isRun`            | boolean  | True when running the project with `meteor run`           |
-| `isBuild`          | boolean  | True when building the project with `meteor build`        |
-| `swcConfigOptions` | object   | Project-level SWC config available for reusing            |
-| `HtmlRspackPlugin` | function | Custom HtmlRspackPlugin function for extending the config |
+| Flag                | Type     | Description                                                                 |
+|---------------------| -------- |-----------------------------------------------------------------------------|
+| `isDevelopment`     | boolean  | True when running in development mode                                       |
+| `isProduction`      | boolean  | True when running in production mode                                        |
+| `isClient`          | boolean  | True when building or running client code                                   |
+| `isServer`          | boolean  | True when building or running server code                                   |
+| `isTest`            | boolean  | True when running in test mode                                              |
+| `isDebug`           | boolean  | True when debug mode is enabled                                             |
+| `isRun`             | boolean  | True when running the project with `meteor run`                             |
+| `isBuild`           | boolean  | True when building the project with `meteor build`                          |
+| `swcConfigOptions`  | object   | Project-level SWC config available for reusing                              |
+| `HtmlRspackPlugin`  | function | Custom HtmlRspackPlugin function for extending the config                   |
+| `compileWithMeteor` | function | Forces given npm deps (string[]) to be compiled by Meteor                   |
+| `compileWithRspack` | function | Forces given npm deps (string[]) to be compiled by Rspack                   |
+| `setCache`          | function | Enables or disables cache. Accepts true (persistent, default), false, or 'memory' |
 
 Some configurations in the Rspack config are reserved for the Meteor-Rspack setup to work, such as Rspack options inside the `entry` and `output` objects. These will trigger warnings if modified. All other settings can be overridden, giving you the flexibility to make any setup compatible with the modern bundler.
 
@@ -438,6 +441,46 @@ This example adds meta tags to the HTML. For more options, see the [official Rsp
 :::warning
 You can still use HTML files near your Meteor client entry point to define customizations (for example, `./client/main.html` will generate correctly and apply the contents you add).
 :::
+
+### `compileWithRspack` and `compileWithMeteor`
+
+Meteor provides two helpers to control how specific npm dependencies are handled by Rspack during the build.
+
+They let you force or skip compilation for selected packages, which is useful in monorepos or when dealing with untranspiled or native modules.
+
+Available helpers in your `rspack.config.js`:
+
+🔹 **Meteor.compileWithRspack(deps: string[])**
+Forces Rspack (via SWC) to parse and transpile the listed npm packages.
+
+Use this when a dependency:
+
+* Uses modern syntax (ESM, TypeScript, etc.) not compatible with your target,
+* Lives inside a monorepo and isn’t precompiled,
+* Needs to be reprocessed according to your SWC config.
+
+🔹 **Meteor.compileWithMeteor(deps: string[])**
+Marks the listed npm packages as externals, so they are skipped by Rspack and handled by Meteor/Node during build and runtime.
+
+Use this when facing issues and for:
+
+* Native or binary modules (e.g. `sharp`),
+* npm dependencies used inside Meteor atmosphere packages that keep internal state,
+* Large or precompiled modules you prefer to offload to Meteor’s cache.
+
+``` json
+const { defineConfig } = require('@meteorjs/rspack');
+const { rspack } = require('@rspack/core');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+
+module.exports = defineConfig(Meteor => ({
+  // Exclude native modules from the bundle (use Meteor runtime)
+  ...(Meteor.isServer ? Meteor.compileWithMeteor(['sharp']) : {}),
+
+  // Force-compile modern or local packages via SWC
+  ...Meteor.compileWithRspack(['grubba-rpc']),
+}));
+```
 
 ## Benefits
 

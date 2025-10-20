@@ -1,4 +1,4 @@
-const { DefinePlugin, BannerPlugin } = require('@rspack/core');
+const { DefinePlugin, BannerPlugin, NormalModuleReplacementPlugin } = require('@rspack/core');
 const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
@@ -10,6 +10,13 @@ const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
 const { generateEagerTestFile } = require("./lib/test.js");
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
+const { mergeMeteorRspackFragments } = require("./lib/meteorRspackConfigFactory.js");
+const {
+  compileWithMeteor,
+  compileWithRspack,
+  setCache,
+  makeWebNodeBuiltinsAlias,
+} = require('./lib/meteorRspackHelpers.js');
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -131,6 +138,43 @@ function createSwcConfig({
   };
 }
 
+function createRemoteDevServerConfig() {
+  const rootUrl = process.env.ROOT_URL;
+  let hostname;
+  let protocol;
+  let port;
+
+  if (rootUrl) {
+    try {
+      const url = new URL(rootUrl);
+      // Detect if it's remote (not localhost or 127.x)
+      const isLocal =
+        url.hostname.includes('localhost') ||
+        url.hostname.startsWith('127.') ||
+        url.hostname.endsWith('.local');
+      if (!isLocal) {
+        hostname = url.hostname;
+        protocol = url.protocol === 'https:' ? 'wss' : 'ws';
+        port = url.port ? Number(url.port) : (url.protocol === 'https:' ? 443 : 80);
+
+        return {
+          client: {
+            webSocketURL: {
+              hostname,
+              port,
+              protocol,
+            },
+          },
+        };
+      }
+    } catch (err) {
+      console.warn(`Invalid ROOT_URL "${rootUrl}", falling back to localhost`);
+    }
+  }
+
+  // If local doesn't provide any extra config
+  return {};
+}
 
 // Keep files outside of build folders
 function keepOutsideBuild() {
@@ -212,6 +256,24 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const buildOutputDir = path.resolve(projectDir, buildContext, outputDir);
   Meteor.buildOutputDir = buildOutputDir;
 
+  const cacheStrategy = createCacheStrategy(
+    mode,
+    (Meteor.isClient && 'client') || 'server',
+    { projectConfigPath, configPath }
+  );
+
+  // Expose Meteor's helpers to expand Rspack configs
+  Meteor.compileWithMeteor = deps => compileWithMeteor(deps);
+  Meteor.compileWithRspack = deps =>
+    compileWithRspack(deps, {
+      options: Meteor.swcConfigOptions,
+    });
+  Meteor.setCache = enabled =>
+    setCache(
+      !!enabled,
+      enabled === 'memory' ? undefined : cacheStrategy
+    );
+
   // Add HtmlRspackPlugin function to Meteor
   Meteor.HtmlRspackPlugin = (options = {}) => {
     return new HtmlRspackPlugin({
@@ -283,6 +345,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const alias = {
     '/': path.resolve(process.cwd()),
   };
+  const fallback = {
+    ...(isClient && makeWebNodeBuiltinsAlias()),
+  };
   const extensions = [
     '.ts',
     '.tsx',
@@ -345,9 +410,20 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     entry: path.resolve(process.cwd(), buildContext, entryPath),
     output: {
       path: clientOutputDir,
-      filename: () =>
-        isDevEnvironment ? outputFilename : `../${buildContext}/${outputPath}`,
-      libraryTarget: 'commonjs',
+      filename: (_module) => {
+        const chunkName = _module.chunk?.name;
+        const isMainChunk = !chunkName || chunkName === "main";
+        const chunkSuffix = `${chunksContext}/[id]${
+          isProd ? '.[chunkhash]' : ''
+        }.js`;
+        if (isDevEnvironment) {
+          if (isMainChunk) return outputFilename;
+          return chunkSuffix;
+        }
+        if (isMainChunk) return `../${buildContext}/${outputPath}`;
+        return chunkSuffix;
+      },
+      libraryTarget: 'commonjs2',
       publicPath: '/',
       chunkFilename: `${chunksContext}/[id]${isProd ? '.[chunkhash]' : ''}.js`,
       assetModuleFilename: `${assetsContext}/[hash][ext][query]`,
@@ -377,7 +453,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...extraRules,
       ],
     },
-    resolve: { extensions, alias },
+    resolve: { extensions, alias, fallback },
     externals,
     plugins: [
       ...[
@@ -397,11 +473,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ...bannerPluginConfig,
       Meteor.HtmlRspackPlugin(),
       ...doctorPluginConfig,
+      new NormalModuleReplacementPlugin(/^node:(.*)$/, (res) => {
+        res.request = res.request.replace(/^node:/, '');
+      }),
     ],
     watchOptions,
     devtool: isDevEnvironment || isNative || isTest ? 'source-map' : 'hidden-source-map',
     ...(isDevEnvironment && {
       devServer: {
+        ...createRemoteDevServerConfig(),
         static: { directory: clientOutputDir, publicPath: '/__rspack__/' },
         hot: true,
         liveReload: true,
@@ -413,7 +493,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         },
       },
     }),
-    ...merge(createCacheStrategy(mode, "client", { projectConfigPath, configPath }), { experiments: { css: true } })
+    ...merge(cacheStrategy, { experiments: { css: true } })
   };
 
 
@@ -445,12 +525,16 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     output: {
       path: serverOutputDir,
       filename: () => `../${buildContext}/${outputPath}`,
-      libraryTarget: 'commonjs',
+      libraryTarget: 'commonjs2',
       chunkFilename: `${chunksContext}/[id]${isProd ? '.[chunkhash]' : ''}.js`,
       assetModuleFilename: `${assetsContext}/[hash][ext][query]`,
       ...(isProd && { clean: { keep: keepOutsideBuild() } }),
     },
-    optimization: { usedExports: true },
+    optimization: {
+      usedExports: true,
+      splitChunks: false,
+      runtimeChunk: false,
+    },
     module: {
       rules: [swcConfigRule, ...extraRules],
       parser: {
@@ -467,6 +551,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       conditionNames: ['import', 'require', 'node', 'default'],
     },
     externals,
+    externalsPresets: { node: true },
     plugins: [
       new DefinePlugin(
         isTest && (isTestModule || isTestEager)
@@ -491,7 +576,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     watchOptions,
     devtool: isDevEnvironment || isNative || isTest ? 'source-map' : 'hidden-source-map',
     ...((isDevEnvironment || (isTest && !isTestEager) || isNative) &&
-      createCacheStrategy(mode, "server", { projectConfigPath, configPath })),
+      cacheStrategy),
   };
 
   // Load and apply project-level overrides for the selected build
@@ -532,29 +617,38 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         : projectConfig;
 
     const omitPaths = [
-      'name',
-      'target',
-      'entry',
-      'output.path',
-      'output.filename',
-      'output.publicPath',
-    ];
+      "name",
+      "target",
+      "entry",
+      "output.path",
+      "output.filename",
+      "output.publicPath",
+      ...(Meteor.isServer
+        ? ["optimization.splitChunks", "optimization.runtimeChunk"]
+        : []),
+    ].filter(Boolean);
     const warningFn = path => {
       console.warn(
         `[rspack.config.js] Ignored custom "${path}" — reserved for Meteor-Rspack integration.`,
       );
     };
 
+    let nextUserConfig = cleanOmittedPaths(userConfig, {
+      omitPaths,
+      warningFn,
+    });
+    nextUserConfig = mergeMeteorRspackFragments(nextUserConfig);
+
     if (Meteor.isClient) {
       clientConfig = mergeSplitOverlap(
         clientConfig,
-        cleanOmittedPaths(userConfig, { omitPaths, warningFn }),
+        nextUserConfig
       );
     }
     if (Meteor.isServer) {
       serverConfig = mergeSplitOverlap(
         serverConfig,
-        cleanOmittedPaths(userConfig, { omitPaths, warningFn }),
+        nextUserConfig
       );
     }
   }

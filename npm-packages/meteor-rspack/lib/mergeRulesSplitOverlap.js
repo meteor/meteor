@@ -4,6 +4,7 @@
  */
 
 const { mergeWithCustomize } = require('webpack-merge');
+const isEqual = require('fast-deep-equal');
 
 /**
  * File extensions to check when determining rule overlaps.
@@ -86,6 +87,10 @@ function splitOverlapRulesMerge(aRules, bRules) {
 
     for (let i = 0; i < result.length; i++) {
       const aRule = result[i];
+
+
+      const isMergeableRule = isEqual(aRule?.include || [], bRule?.include || []);
+      if (!isMergeableRule) continue;
 
       // Determine which extensions each rule matches (within our catalog)
       const aExts = EXT_CATALOG.filter(ext => ruleMatchesExt(aRule, ext));

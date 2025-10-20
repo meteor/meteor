@@ -1,8 +1,32 @@
 import { Meteor } from 'meteor/meteor';
+import pino from 'pino';
+import { createClient } from 'grubba-rpc';
+
 import { LinksCollection } from '/imports/api/links';
 import { TestEmail } from '/imports/emails/TestEmail';
 
 console.log('-> TestEmail loaded', !!TestEmail);
+
+const logger = pino({
+  transport: {
+    target: "pino-pretty",
+    options: {
+      colorize: true,
+      levelFirst: true,
+      translateTime: "UTC:yyyy-mm-dd HH:MM:ss.l o",
+      ignore: "pid,hostname"
+    }
+  },
+  browser: { asObject: true }
+});
+
+// Issue with thread-stream "Cannot find module '/_build/main-dev/lib/worker.js'"
+// Ensure `Meteor.compileWithMeteor(["thread-stream"])` works
+console.log("logger loaded", !!logger);
+
+// Issue with npm deps that require compilation as not transpiled
+// Ensure `Meteor.compileWithRspack(["grubba-rpc"])` works
+console.log("grubba-rpc's createClient", !!createClient);
 
 async function insertLink({ title, url }) {
   await LinksCollection.insertAsync({ title, url, createdAt: new Date() });

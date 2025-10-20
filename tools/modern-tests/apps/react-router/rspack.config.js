@@ -43,6 +43,22 @@ module.exports = defineConfig(Meteor => {
         },
       ],
     },
+    ...(Meteor.isClient && {
+      optimization: {
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            reactRouter: {
+              test: /[\\/]node_modules[\\/](react-router|react-router-dom)[\\/]/,
+              name: 'react-router',
+              priority: 40,
+              enforce: true,
+            },
+            vendor: { test: /node_modules/, name: 'vendors' },
+          },
+        },
+      },
+    }),
     plugins: [
       Meteor.HtmlRspackPlugin({
         title: 'react-router',

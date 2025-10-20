@@ -1,21 +1,16 @@
 {
   "name": "meteor",
   "version": "0.0.1",
-  "description": "Used to apply Prettier and ESLint manually",
+  "description": "Meteor's main repository, containing the Meteor tool, core packages, and documentation.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/meteor/meteor.git"
   },
-  "author": "Filipe Névola",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/meteor/meteor/issues"
   },
-  "homepage": "https://github.com/meteor/meteor#readme",
-  "scripts": {
-    "install:modern": "cd tools/modern-tests && npm install && npx playwright install && npx playwright install --with-deps",
-    "test:modern": "cd tools/modern-tests && npm test -- "
-  },
+  "homepage": "https://www.meteor.com/",
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/eslint-parser": "^7.28.4",
@@ -38,6 +33,11 @@
     "eslint-plugin-react-hooks": "^4.6.2",
     "prettier": "^2.8.8",
     "typescript": "^5.7.3"
+  },
+  "scripts": {
+    "install:modern": "cd tools/modern-tests && npm install && npx playwright install && npx playwright install --with-deps",
+    "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
+    "test:modern": "cd tools/modern-tests && npm test -- "
   },
   "jshintConfig": {
     "esversion": 11
