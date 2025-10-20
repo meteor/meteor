@@ -6,7 +6,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use(
-    ["check", "random", "ecmascript", "harry97:cbor@1.1.17", "tracker", "retry", "base64"],
+    ["check", "random", "ecmascript", "harry97:cbor@1.2.1", "tracker", "retry", "base64"],
     ["client", "server"]
   );
 

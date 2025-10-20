@@ -10,6 +10,6 @@ Package.onUse(api => {
 });
 
 Package.onTest(api => {
-  api.use(['ecmascript', 'tinytest', 'harry97:cbor@1.1.17']);
+  api.use(['ecmascript', 'tinytest', 'harry97:cbor@1.2.1']);
   api.addFiles('base64_test.js', ['client', 'server']);
 });

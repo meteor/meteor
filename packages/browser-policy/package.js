@@ -11,6 +11,6 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(["tinytest", "browser-policy", "harry97:cbor@1.1.17"], "server");
+  api.use(["tinytest", "browser-policy", "harry97:cbor@1.2.1"], "server");
   api.addFiles("browser-policy-tests.js", "server");
 });

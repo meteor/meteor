@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.use(['tinytest', 'random', 'harry97:cbor@1.1.17', 'check', 'ecmascript']);
+  api.use(['tinytest', 'random', 'harry97:cbor@1.2.1', 'check', 'ecmascript']);
   api.use('fetch', 'server');
 
   api.export('TEST_STATUS', 'client');

@@ -11,7 +11,7 @@ Package.onUse(function (api) {
   api.use([
     "ecmascript",
     "tracker",
-    "harry97:cbor@1.1.17",
+    "harry97:cbor@1.2.1",
     "tinytest",
     "random",
     "blaze",

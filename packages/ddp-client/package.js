@@ -15,7 +15,7 @@ Package.onUse((api) => {
     [
       "check",
       "random",
-      "harry97:cbor@1.1.17",
+      "harry97:cbor@1.2.1",
       "tracker",
       "retry",
       "id-map",
@@ -54,7 +54,7 @@ Package.onTest((api) => {
     'reactive-var',
     'harry97:mongo-id@0.2.0',
     'diff-sequence',
-    'harry97:cbor@1.1.17',
+    'harry97:cbor@1.2.1',
     'ddp-common',
     'check'
   ]);
