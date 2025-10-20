@@ -18,7 +18,7 @@ Package.onUse((api) => {
     // This package is used for geo-location queries such as $near
     "geojson-utils",
     "id-map",
-    "harry97:mongo-id@0.2.0",
+    "harry97:mongo-id@0.3.0",
     "ordered-dict",
     "random",
     "tracker",
@@ -37,7 +37,7 @@ Package.onTest((api) => {
   api.use([
     "ecmascript",
     "harry97:cbor@1.2.1",
-    "harry97:mongo-id@0.2.0",
+    "harry97:mongo-id@0.3.0",
     "ordered-dict",
     "random",
     "reactive-var",

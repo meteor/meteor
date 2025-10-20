@@ -29,7 +29,7 @@ Package.onUse((api) => {
       "diff-sequence",
 
       // _idParse, _idStringify.
-      "harry97:mongo-id@0.2.0",
+      "harry97:mongo-id@0.3.0",
     ],
     ["client", "server"]
   );
@@ -52,7 +52,7 @@ Package.onTest((api) => {
     'random',
     'tracker',
     'reactive-var',
-    'harry97:mongo-id@0.2.0',
+    'harry97:mongo-id@0.3.0',
     'diff-sequence',
     'harry97:cbor@1.2.1',
     'ddp-common',
