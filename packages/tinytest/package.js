@@ -10,12 +10,11 @@ Npm.depends({
 Package.onUse(function (api) {
   api.use([
     'ecmascript',
-    'ejson',
+    'harry97:cbor',
     'random',
     'ddp',
     'mongo',
-    'check',
-    'harry97:cbor@1.2.1'
+    'check'
   ]);
 
   api.mainModule('tinytest_client.js', 'client');
