@@ -928,8 +928,11 @@ CBOR.fromJSONValue = function(value) {
 
 CBOR._isCustomType = function(obj) {
   if (!CBOR._customTypes) return false;
-  return obj && typeof obj === 'object' && obj.constructor &&
-         CBOR._customTypes.has(obj.constructor.name);
+  // Check if the object has a typeName() method and if that type is registered
+  if (obj && typeof obj === 'object' && typeof obj.typeName === 'function') {
+    return CBOR._customTypes.has(obj.typeName());
+  }
+  return false;
 };
 
 // Helper function to check if a value needs conversion to JSON format
