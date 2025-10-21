@@ -418,6 +418,7 @@ meteorNpm.rebuildIfNonPortable = Profile(
           symlinkNodeModulesDir
         );
       }
+
       try {
         const cwd = files.pathResolve(process.cwd());
         const resolvedPkgPath = files.pathResolve(pkgPath);
