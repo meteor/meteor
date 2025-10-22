@@ -33,7 +33,7 @@ If you encounter any issues, please refer to the requirements and details in [ou
 To set up Meteor with Vue easily, run the following command, replacing `simple-todos-vue` with your chosen project name:
 
 ```shell
-meteor create --vue simple-todos-vue --release=3.0.2
+meteor create --vue simple-todos-vue
 ```
 
 ::: info
@@ -133,7 +133,7 @@ import Task from './components/Task.vue'
 
 const getTasks = () => {
     return [
-      { _id: 1, text: 'Install Node.js 20' },
+      { _id: 1, text: 'Install Node.js' },
       { _id: 2, text: 'Install Meteor 3' },
       { _id: 3, text: 'Create and run your project' },
     ];
@@ -163,7 +163,7 @@ import Task from './components/Task.vue'
 
 const getTasks = () => {
     return [
-      { _id: 1, text: 'Install Node.js 20' },
+      { _id: 1, text: 'Install Node.js' },
       { _id: 2, text: 'Install Meteor 3' },
       { _id: 3, text: 'Create and run your project' },
     ];
