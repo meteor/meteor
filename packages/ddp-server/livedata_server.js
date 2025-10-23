@@ -825,7 +825,7 @@ Object.assign(Session.prototype, {
     // end of the list, we ensure that we get the IP address being
     // reported by *our* first proxy.
 
-    if (httpForwardedCount < 0 || httpForwardedCount !== forwardedFor.length)
+    if (httpForwardedCount < 0 || httpForwardedCount !== forwardedFor.length - 1)
       return null;
     forwardedFor = forwardedFor.map((ip) => ip.trim());
     return forwardedFor[forwardedFor.length - httpForwardedCount];
