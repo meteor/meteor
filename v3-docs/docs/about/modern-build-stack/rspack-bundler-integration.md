@@ -18,7 +18,7 @@ Starting with Meteor 3.4
 Add this Atmosphere package to your app:
 
 ``` bash
-meteor add rspack@1.0.0-beta340.11
+meteor add rspack@1.0.0-beta340.12
 ```
 
 On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
@@ -287,14 +287,6 @@ If you use TypeScript, also update your `tsconfig.json` to support IDE autocompl
 
 You can also [configure aliases at the transpiler level](meteor-bundler-optimizations.md#import-aliases). For SWC, enable it through the `.swcrc` file (note that SWC aliases have some limitations when resolving files or `node_modules`). If you use Babel, you can rely on the [module-resolver plugin](https://www.npmjs.com/package/babel-plugin-module-resolver).
 
-### CSS, Less and SCSS
-
-Meteor-Rspack comes with built-in CSS support. You can import any CSS file into your code, and it will be processed and included in your HTML skeleton automatically. In addition, any CSS file placed in the same folder as your Meteor entry point will be processed and added as global styles without the need for explicit imports.
-
-Less support in Meteor-Rspack is limited. The [Meteor `less` package](https://github.com/meteor/meteor/tree/master/packages/non-core/less) compiles `.less` files automatically and merges them into the CSS bundle. With Rspack, you should configure Less directly and consider as replacement of the Meteor package. For details, check the [Rspack and Less guide](https://rspack.rs/guide/tech/css#less).
-
-SCSS support is available in Meteor-Rspack. You may need to replace the existing Meteor [`fourseven:scss` package](https://github.com/Meteor-Community-Packages/meteor-scss) or similar with the Rspack configuration. For details, check [the official Rspack and SCSS guide](https://rspack.rs/guide/tech/css#sass).
-
 ### React
 
 Meteor-Rspack supports React projects out of the box. Just install the `rspack` package and run your app. Meteor will detect it and automatically add the needed Rspack dependencies, including `react-refresh` for a full development experience.
@@ -394,7 +386,79 @@ Official Svelte support in the Meteor bundler was via [zodern:melte](https://git
 With the Meteor–Rspack integration, `zodern:melte` no longer works. Use the official Rspack Svelte integration instead. If you relied on melte-specific features like `$` or `$m`, you may need to update parts of your code. Create your own abstractions or migrate them to standard npm package.
 :::
 
-### Tailwind
+### CSS
+
+Meteor-Rspack comes with built-in CSS support. You can import any CSS file into your code, and it will be processed and included in your HTML skeleton automatically. In addition, any CSS file placed in the same folder as your Meteor entry point will be processed and added as global styles without the need for explicit imports.
+
+### Less
+
+Less support is available in Meteor-Rspack. You need to replace the existing [Meteor `less` package](https://github.com/meteor/meteor/tree/master/packages/non-core/less) or similar with the Rspack configuration.
+
+#### Install
+
+``` bash
+npm i -D less less-loader
+```
+
+#### Config
+
+``` js
+module.exports = defineConfig(Meteor => ({
+  module: {
+    rules: [
+      {
+        test: /\.less$/,
+        use: [
+          {
+            loader: 'less-loader',
+          },
+        ],
+        type: 'css/auto',
+      },
+    ],
+  },
+}));
+```
+
+For details, check [the official Rspack and Less guide](https://rspack.rs/guide/tech/css#less).
+
+### SCSS
+
+SCSS support is available in Meteor-Rspack. You need to replace the existing Meteor [`fourseven:scss`package](https://github.com/Meteor-Community-Packages/meteor-scss) or similar with the Rspack configuration.
+
+#### Install
+
+``` bash
+npm i -D sass-embedded sass-loader
+```
+
+#### Config
+
+``` js
+module.exports = defineConfig(Meteor => ({
+  module: {
+    rules: [
+      {
+        test: /\.scss$/i,
+        use: [
+          {
+            loader: 'sass-loader',
+            options: {
+              api: 'modern-compiler',
+              implementation: require.resolve('sass-embedded'),
+            },
+          },
+        ],
+        type: 'css/auto',
+      },
+    ],
+  },
+}));
+```
+
+For more details, check [the official Rspack and SCSS guide](https://rspack.rs/guide/tech/css#sass).
+
+### Tailwind & PostCSS
 
 Meteor-Rspack supports Tailwind projects out of the box. For details, check [the official Rspack and Tailwind guide](https://tailwindcss.com/docs/installation/framework-guides/rspack/react).
 
@@ -480,6 +544,68 @@ module.exports = defineConfig(Meteor => ({
   // Force-compile modern or local packages via SWC
   ...Meteor.compileWithRspack(['grubba-rpc']),
 }));
+```
+
+### Cache
+
+Meteor cache remains active and continues to handle Atmosphere packages and intermediate builds. There’s an additional cache layer managed by Rspack to speed up rebuilds for your app code.
+
+This Rspack cache is enabled by default in persistent mode. If you [encounter issues](https://github.com/web-infra-dev/rspack/issues/11804) or prefer to disable it, you can do so in your `rspack.config.js` using the helper:
+
+```json
+const { defineConfig } = require('@meteorjs/rspack');
+const { rspack } = require('@rspack/core');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+
+module.exports = defineConfig(Meteor => ({
+  // Disable cache, or use 'memory' to switch to in-memory cache
+  ...Meteor.setCache(false),
+}));
+
+
+```
+
+This helper provide a shortcut to apply the needed Rspack configuration and safely override defaults, so you don’t have to handle it manually.
+
+### Service Worker
+
+Rspack lets you use standard plugins to manage Service Workers, such as Workbox, so you don’t need to maintain your own setup. You can follow the Webpack guide for integrating Workbox with [`workbox-webpack-plugin`](https://developer.chrome.com/docs/workbox/modules/workbox-webpack-plugin) (it should be compatible), or try the Rspack-specific version [`@aaroon/workbox-rspack-plugin`](https://github.com/Clarkkkk/workbox-rspack-plugin).
+
+Whether you use a managed tool or a custom setup, ensure that only the Rspack dev server endpoints are treated as network-only for proper development. Otherwise, you may end up with infinite reload loops that only clear after removing the Service Worker. Skip caching of `__rspack__` endpoints.
+
+If you use a custom implementation in your `sw.js`, intercept fetch requests to ignore Rspack contexts like this:
+
+```js
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  const sameOrigin = url.origin === self.location.origin;
+  // Skip Rspack  devServer
+  if (sameOrigin && url.pathname.includes('/__rspack__/')) {
+    // Never cache ignores and hot updates; hit the network every time
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
+
+  // ...
+});
+```
+
+When using Workbox, the equivalent with `GenerateSW` might look like this:
+
+```js
+new GenerateSW({
+  // ...
+  runtimeCaching: [
+    {
+      urlPattern: ({ url }) => url.pathname.includes('/__rspack__/'),
+      handler: 'NetworkOnly',
+    },
+    // ...
+  ],
+  // ...
+})
 ```
 
 ## Benefits
