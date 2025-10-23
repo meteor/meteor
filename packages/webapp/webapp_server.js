@@ -1441,7 +1441,7 @@ async function runWebAppServer() {
       }
 
       const unixSocketGroup = (process.env.UNIX_SOCKET_GROUP || '').trim();
-      if (unixSocketGroup) {
+      if (unixSocketGroup && process.getuid() === 0) {
         const unixSocketGroupInfo = getGroupInfo(unixSocketGroup);
         if (unixSocketGroupInfo === null) {
           throw new Error('Invalid UNIX_SOCKET_GROUP name specified');
