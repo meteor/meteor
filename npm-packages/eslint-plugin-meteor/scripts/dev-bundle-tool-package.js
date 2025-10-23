@@ -39,7 +39,7 @@ var packageJson = {
     "source-map": "0.7.3",
     chalk: "4.1.2",
     sqlite3: "5.1.6",
-    "http-proxy-3": "1.21.0",
+    "http-proxy-3": "1.22.0",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
     "moment": "2.29.1",

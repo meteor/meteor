@@ -44,7 +44,7 @@ var packageJson = {
     // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
     sqlite3: "5.1.7",
     inquirer: "8.2.6",
-    "http-proxy-3": "1.21.0",
+    "http-proxy-3": "1.22.0",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
     "moment": "2.30.1",
