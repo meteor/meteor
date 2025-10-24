@@ -1440,15 +1440,20 @@ async function runWebAppServer() {
       }
 
       const unixSocketGroup = (process.env.UNIX_SOCKET_GROUP || '').trim();
-      if (
-        unixSocketGroup &&
-        process.getuid?.() === 0
-      ) {
+      if (unixSocketGroup) {
         const unixSocketGroupInfo = getGroupInfo(unixSocketGroup);
         if (unixSocketGroupInfo === null) {
           throw new Error('Invalid UNIX_SOCKET_GROUP name specified');
         }
-        chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        try {
+          chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        } catch (error) {
+          if (error.code === 'EPERM' || error.code === 'EACCES') {
+            console.error(`Skipping UNIX_SOCKET_GROUP change for "${unixSocketGroup}" because current user lacks permission.`);
+          } else {
+            throw error;
+          }
+        }
       }
 
       registerSocketFileCleanup(unixSocketPath);
