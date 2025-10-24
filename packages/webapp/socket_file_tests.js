@@ -140,9 +140,7 @@ testAsyncMulti(
       const result = await main({ httpServer });
 
       test.equal(result, "DAEMON");
-      const currentGid = userInfo({ encoding: "utf8" })?.gid;
-      const expectedGid = process.getuid() === 0 ? getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid : currentGid;
-      test.equal((await getChownInfo(testSocketFile))?.gid, expectedGid);
+      test.equal((await getChownInfo(testSocketFile))?.gid, getGroupInfo(process.env.UNIX_SOCKET_GROUP)?.gid);
 
       return closeServer({ httpServer, server });
     },
