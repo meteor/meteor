@@ -19,6 +19,7 @@ import {
 } from './socket_file.js';
 import cluster from 'cluster';
 import { execSync } from 'child_process';
+import { onMessage } from 'meteor/inter-process-messaging';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
@@ -795,8 +796,6 @@ WebAppInternals.parsePort = port => {
   return parsedPort;
 };
 
-import { onMessage } from 'meteor/inter-process-messaging';
-
 onMessage('webapp-pause-client', async ({ arch }) => {
   await WebAppInternals.pauseClient(arch);
 });
@@ -1441,7 +1440,10 @@ async function runWebAppServer() {
       }
 
       const unixSocketGroup = (process.env.UNIX_SOCKET_GROUP || '').trim();
-      if (unixSocketGroup) {
+      if (
+        unixSocketGroup &&
+        process.getuid?.() === 0
+      ) {
         const unixSocketGroupInfo = getGroupInfo(unixSocketGroup);
         if (unixSocketGroupInfo === null) {
           throw new Error('Invalid UNIX_SOCKET_GROUP name specified');
