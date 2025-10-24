@@ -49,6 +49,10 @@ export default defineConfig({
                 link: "/tutorials/svelte/index",
               },
               {
+                text: "Meteor.js 3 + Solid",
+                link: "/tutorials/solid/index",
+              },
+              {
                 link: "/tutorials/application-structure/index",
                 text: "Application structure",
               },
@@ -487,6 +491,10 @@ export default defineConfig({
           {
             text: "Meteor.js 3 + Svelte",
             link: "/tutorials/svelte/index",
+          },
+          {
+            text: "Meteor.js 3 + Solid",
+            link: "/tutorials/solid/index",
           },
           {
             link: "/tutorials/application-structure/index",
