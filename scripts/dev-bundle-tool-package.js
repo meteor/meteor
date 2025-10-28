@@ -25,19 +25,21 @@ var packageJson = {
     "babel-runtime": "7.0.0-beta.3",
     "@types/underscore": "1.11.15",
     underscore: "1.13.7",
-    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
+    "source-map-support":
+      "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     "@types/semver": "7.5.8",
     semver: "7.6.3",
-    request: "2.88.2",
-    uuid: "3.4.0",
+    uuid: "9.0.1",
     "graceful-fs": "4.2.11",
-    fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
+    fstream:
+      "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "6.1.11",
-    'tar-fs': "2.1.1",
+    "tar-fs": "2.1.1",
     // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38
-    kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
+    kexec:
+      "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.7.4",
     chalk: "4.1.2",
     // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
@@ -45,15 +47,15 @@ var packageJson = {
     inquirer: "8.2.6",
     "http-proxy": "1.18.1",
     "is-reachable": "3.1.0",
-    "wordwrap": "1.0.0",
-    "moment": "2.30.1",
-    "rimraf": "2.6.2",
-    "glob": "7.1.6",
+    wordwrap: "1.0.0",
+    moment: "2.30.1",
+    rimraf: "5.0.5",
+    glob: "10.3.10",
     ignore: "5.3.2",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
-    "commonmark": "0.15.0",
+    commonmark: "0.15.0",
     escope: "3.6.0",
     split2: "3.2.2",
     multipipe: "2.0.1",
@@ -64,19 +66,19 @@ var packageJson = {
     // version constraint imposed by optimism/package.json.
     optimism: "0.16.1",
     "@wry/context": "0.6.0",
-    'lru-cache': '6.0.0',
-    "anser": "2.1.1",
-    'xmlbuilder2': '1.8.1',
-    "ws": "7.4.5",
-    "open":"8.4.2",
-    "acorn": "8.14.1",
-  }
+    "lru-cache": "6.0.0",
+    anser: "2.1.1",
+    xmlbuilder2: "1.8.1",
+    ws: "7.4.5",
+    open: "8.4.2",
+    acorn: "8.14.1",
+  },
 };
 
-if (process.platform === 'win32') {
+if (process.platform === "win32") {
   // Remove dependencies that do not work on Windows
   delete packageJson.dependencies.netroute;
   delete packageJson.dependencies.kexec;
 }
 
-process.stdout.write(JSON.stringify(packageJson, null, 2) + '\n');
+process.stdout.write(JSON.stringify(packageJson, null, 2) + "\n");
