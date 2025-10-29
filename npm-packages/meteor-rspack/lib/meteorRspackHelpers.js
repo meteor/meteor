@@ -64,17 +64,17 @@ function compileWithRspack(deps, { options = {} } = {}) {
  */
 function setCache(
   enabled,
-  cacheConfig = { cache: true, experiments: { cache: true } },
+  cacheConfig = { cache: true, experiments: { cache: true } }
 ) {
   return prepareMeteorRspackConfig(
     enabled
       ? cacheConfig
       : {
-        cache: false, // disable cache
-        experiments: {
-          cache: false, // disable persistent cache (experimental flag)
-        },
-      },
+          cache: false, // disable cache
+          experiments: {
+            cache: false, // disable persistent cache (experimental flag)
+          },
+        }
   );
 }
 
@@ -89,7 +89,7 @@ function makeWebNodeBuiltinsAlias(extras = []) {
 
   const names = new Set();
   for (const m of core) {
-    names.add(m);           // e.g. 'fs'
+    names.add(m); // e.g. 'fs'
     names.add(`node:${m}`); // e.g. 'node:fs'
   }
   for (const x of extras) names.add(x);
@@ -98,9 +98,35 @@ function makeWebNodeBuiltinsAlias(extras = []) {
   return Object.fromEntries([...names].map((m) => [m, false]));
 }
 
+/**
+ * Enable Rspack split vendor chunk config
+ * Usage: splitVendorChunk()
+ *
+ * @returns {Record<string, object>} `{ meteorRspackConfigX: { optimization: { ... } } }`
+ */
+function splitVendorChunk() {
+  return prepareMeteorRspackConfig({
+    optimization: {
+      splitChunks: {
+        chunks: "all", // split both sync and async imports
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: "vendor",
+            enforce: true,
+            priority: 10,
+            chunks: "all",
+          },
+        },
+      },
+    },
+  });
+}
+
 module.exports = {
   compileWithMeteor,
   compileWithRspack,
   setCache,
+  splitVendorChunk,
   makeWebNodeBuiltinsAlias,
 };
