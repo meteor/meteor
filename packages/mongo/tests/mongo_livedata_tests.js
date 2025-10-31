@@ -10,8 +10,8 @@ var TRANSFORMS = {};
 // We keep track of the collections, so we can refer to them by name
 var COLLECTIONS = {};
 
-// dumb-forcing changeStream tests only into CI
-var testingChangeStream = true // process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS'
+// Change Stream driver removed; keep flag false so change stream-specific branches stay disabled
+var testingChangeStream = false;
 
 if (Meteor.isServer) {
   Meteor.methods({
