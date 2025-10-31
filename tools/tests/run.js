@@ -403,7 +403,7 @@ selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure
   await s.createApp("myapp", "app-prints-pid");
   s.cd("myapp");
 
-  run = s.run();
+  run = s.run("run", "--timestamps");
   run.waitSecs(30);
   var match = await run.match(/My pid is (\d+)/);
   var childPid;
@@ -434,7 +434,8 @@ selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure
   // Test that passing a bad pid in $METEOR_PARENT_PID logs an error and exits
   // immediately.
   s.set("METEOR_BAD_PARENT_PID_FOR_TEST", "t");
-  run = s.run();
+  run = s.run("run", "--timestamps");
+
   run.waitSecs(120);
   await run.match("must be a valid process ID");
   await run.match("Your application is crashing");
