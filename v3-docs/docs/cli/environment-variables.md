@@ -31,6 +31,15 @@ In the event that your own deployment platform does not support WebSockets, or y
 
 Set `DISABLE_SOCKJS=1` if you want to use the native WebSocket implementation instead of SockJS on the client side, for example, if you want to use a custom WebSocket implementation (e.g. [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/)) on the server side.
 
+## DO_NOT_TRACK
+(_development, production_)
+
+Meteor automatically sends usage statistics about which Meteor packages your app uses by default. This behavior can be disabled by setting `DO_NOT_TRACK` to any truthy value (for example, `DO_NOT_TRACK=1`).
+
+Having this variable set globally (say, by adding it to your `.bashrc` file) would disable statistics for all Meteor projects in your computer, and do the same for other programs that respect this flag (like [FerretDB](https://www.ferretdb.com/) or [Bun](https://bun.sh/)).
+
+Alternatively, you can install the `package-stats-opt-out` package by calling `meteor add package-stats-opt-out` inside your Meteor project folder. Having this package installed in your project disables usage statistics being sent to the Meteor project, regardless of whether the `DO_NOT_TRACK` environment variable is set or not.
+
 ## HTTP_FORWARDED_COUNT
 (_production_)
 

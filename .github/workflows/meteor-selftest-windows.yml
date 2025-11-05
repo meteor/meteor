@@ -18,6 +18,7 @@ env:
   TIMEOUT_SCALE_FACTOR: 20
   METEOR_HEADLESS: true
   SELF_TEST_EXCLUDE: '^NULL-LEAVE-THIS-HERE-NULL$'
+  METEOR_MODERN: true
 
 jobs:
   test:
@@ -27,6 +28,10 @@ jobs:
       cancel-in-progress: true
 
     steps:
+      - name: cleanup
+        shell: powershell
+        run: Remove-Item -Recurse -Force ${{ github.workspace }}\*
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -48,7 +53,7 @@ jobs:
           .\scripts\windows\ci\test.ps1
 
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             .\dev_bundle

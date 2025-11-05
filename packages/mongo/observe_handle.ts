@@ -27,7 +27,7 @@ export class ObserveHandle<T = any> {
   _movedBefore?: Callback<T>;
   _removed?: Callback<T>;
 
-  constructor(multiplexer: any, callbacks: Record<ObserveHandleCallback, Callback<T>>, nonMutatingCallbacks: boolean) {
+  constructor(multiplexer: ObserveMultiplexer, callbacks: Record<ObserveHandleCallback, Callback<T>>, nonMutatingCallbacks: boolean) {
     this._multiplexer = multiplexer;
 
     multiplexer.callbackNames().forEach((name: ObserveHandleCallback) => {
@@ -62,7 +62,10 @@ export class ObserveHandle<T = any> {
     });
   }
 
-  async stop() {
+  /**
+   * Using property syntax and arrow function syntax to avoid binding the wrong context on callbacks.
+   */
+  stop = async () => {
     if (this._stopped) return;
     this._stopped = true;
     await this._multiplexer.removeHandle(this._id);

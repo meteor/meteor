@@ -96,7 +96,7 @@ export namespace Mongo {
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       update?:
         | ((
@@ -104,10 +104,10 @@ export namespace Mongo {
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
             modifier: any
-          ) => boolean)
+          ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
@@ -131,7 +131,7 @@ export namespace Mongo {
     ): Promise<void>;
     deny<Fn extends Transform<T> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       update?:
         | ((
@@ -139,10 +139,10 @@ export namespace Mongo {
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
             modifier: any
-          ) => boolean)
+          ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;

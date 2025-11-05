@@ -49,7 +49,7 @@ const CollectionPrototype = AllowDeny.CollectionPrototype;
  * @memberOf Mongo.Collection
  * @instance
  * @param {Object} options
- * @param {Function} options.insertAsync,updateAsync,removeAsync Functions that look at a proposed modification to the database and return true if it should be allowed.
+ * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be allowed.
  * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
  * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
  */
@@ -64,7 +64,7 @@ CollectionPrototype.allow = function(options) {
  * @memberOf Mongo.Collection
  * @instance
  * @param {Object} options
- * @param {Function} options.insertAsync,updateAsync,removeAsync Functions that look at a proposed modification to the database and return true if it should be denied, even if an [allow](#allow) rule says otherwise.
+ * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be denied, even if an [allow](#allow) rule says otherwise.
  * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
  * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
  */
@@ -554,7 +554,7 @@ function addValidator(collection, allowOrDeny, options) {
     const isAsyncKey = key.includes('Async');
     if (isAsyncKey) {
       const syncKey = key.replace('Async', '');
-      console.warn(allowOrDeny + `: The "${key}" key is deprecated. Use "${syncKey}" instead.`);
+      Meteor.deprecate(allowOrDeny + `: The "${key}" key is deprecated. Use "${syncKey}" instead.`);
     }
   });
 

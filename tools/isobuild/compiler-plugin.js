@@ -1832,7 +1832,7 @@ export class PackageSourceBatch {
       if (cacheFilename) {
         // Write asynchronously.
         try {
-          await files.rm_recursive(wildcardCacheFilename);
+          await files.rm_recursive_deferred(wildcardCacheFilename);
         } finally {
           await files.writeFileAtomically(cacheFilename, retAsJSON);
         }
