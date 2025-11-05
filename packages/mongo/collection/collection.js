@@ -3,7 +3,8 @@ import { AsyncMethods } from './methods_async';
 import { SyncMethods } from './methods_sync';
 import { IndexMethods } from './methods_index';
 import {
-  ID_GENERATORS, normalizeOptions,
+  ID_GENERATORS,
+  normalizeOptions,
   setupAutopublish,
   setupConnection,
   setupDriver,
@@ -263,6 +264,6 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
  */
 Meteor.Collection = Mongo.Collection;
 
+
 // Allow deny stuff is now in the allow-deny package
 Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
-

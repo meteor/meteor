@@ -1546,6 +1546,9 @@ class Target {
   // with the original sources.
   rewriteSourceMaps() {
     const rewriteSourceMap = function (sm) {
+      if (!sm.sources) {
+        return sm;
+      }
       sm.sources = sm.sources.map(function (path) {
         const prefix = SOURCE_URL_PREFIX;
         if (path.slice(0, prefix.length) === prefix) {

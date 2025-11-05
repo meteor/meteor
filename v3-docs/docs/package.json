@@ -10,7 +10,8 @@
   "devDependencies": {
     "canonical-json": "^0.0.4",
     "jsdoc": "^4.0.4",
-    "vitepress": "1.6.3"
+    "vitepress": "1.6.3",
+    "vitepress-plugin-llms": "^0.0.22"
   },
   "dependencies": {
     "vue-collapsed": "^1.3.4"
