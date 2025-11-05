@@ -41,6 +41,18 @@ export default defineConfig({
                 link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
               },
               {
+                text: "Meteor.js 3 + Solid",
+                link: "/tutorials/solid/index",
+              },
+              {
+                text: "Meteor.js 3 + Blaze",
+                link: "/tutorials/blaze/index",
+              },
+              {
+                text: "Meteor.js 3 + Svelte",
+                link: "/tutorials/svelte/index",
+              },
+              {
                 link: "/tutorials/application-structure/index",
                 text: "Application structure",
               },
@@ -140,15 +152,21 @@ export default defineConfig({
           {
             text: "What is Meteor?",
             link: "/about/what-is#introduction",
-          },
-          {
-            text: "Meteor resources",
-            link: "/about/what-is#learning-more",
+            items:[
+              {
+                text: "Meteor resources",
+                link: "/about/what-is#learning-more",
+              },
+            ],
           },
           {
             text: "Roadmap",
             link: "/about/roadmap",
           },
+              {
+                text: "Contributing",
+                link: "/about/contributing",
+              }
         ],
         collapsed: true,
       },
@@ -471,6 +489,18 @@ export default defineConfig({
           {
             link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
             text: "Meteor + Vue + vue-meteor-tracker",
+          },
+          {           
+            text: "Meteor.js 3 + Solid",
+            link: "/tutorials/solid/index",
+          },
+          { 
+            text: "Meteor.js 3 + Blaze",
+            link: "/tutorials/blaze/index",
+          },
+          {
+            text: "Meteor.js 3 + Svelte",
+            link: "/tutorials/svelte/index",
           },
           {
             link: "/tutorials/application-structure/index",
