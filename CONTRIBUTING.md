@@ -155,7 +155,7 @@ Learn how we use GitHub labels [here](LABELS.md)
 
 ## Documentation
 
-If you'd like to contribute to Meteor's documentation, head over to https://docs.meteor.com or https://guide.meteor.com and if you find something that could be better click in "Edit on GitHub" footer to edit and submit a PR.
+If you'd like to contribute to Meteor's documentation, head over to https://docs.meteor.com/about/contributing.html for guidelines.
 
 ## Blaze
 
