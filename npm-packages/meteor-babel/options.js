@@ -197,8 +197,8 @@ function getDefaultsForNode8(features) {
         },
       ]);
     }
-    // Enable async generator functions proposal.
-    combined.plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
+    // Enable async generator functions.
+    combined.plugins.push(require("@babel/plugin-transform-async-generator-functions"));
   }
 
   if (! compileModulesOnly) {
