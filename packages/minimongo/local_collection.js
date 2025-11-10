@@ -102,44 +102,7 @@ export default class LocalCollection {
       selector = {};
     }
     options.limit = 1;
-    const result = (await this.find(selector, options).fetchAsync())[0];
-    
-    if (result && typeof result === 'object') {
-      this._serializedBinaryData(result);
-    }
-    
-    return result;
-  }
-
-  _serializedBinaryData(obj) {
-    if (!obj || typeof obj !== 'object') {
-      return;
-    }
-    
-    // Handle arrays
-    if (Array.isArray(obj)) {
-      obj.forEach(item => this._serializedBinaryData(item));
-      return;
-    }
-    
-    // Recursively all object properties
-    Object.keys(obj).forEach(key => {
-      const value = obj[key];
-      
-      // Check if this looks like a serialized MongoDB.Binary object
-      if (value && typeof value === 'object' && 
-          value.sub_type !== undefined && 
-          value.buffer !== undefined && 
-          value.position !== undefined) {
-        // Convert this serialized binary back to Uint8Array
-        if (value.buffer && (value.buffer instanceof Uint8Array || Array.isArray(value.buffer))) {
-          obj[key] = new Uint8Array(value.buffer);
-        }
-      } else if (value && typeof value === 'object') {
-        // Recursively check nested objects
-        this._serializedBinaryData(value);
-      }
-    });
+    return (await this.find(selector, options).fetchAsync())[0];
   }
 
   prepareInsert(doc) {
