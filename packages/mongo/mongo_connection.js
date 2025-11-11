@@ -142,7 +142,7 @@ MongoConnection.prototype._checkChangeStreamSupport = async function() {
     self._supportsChangeStreams = isReplicaSet || isSharded;
     
   } catch (error) {
-    console.warn('Error checking Change Streams support:', error.message);
+    Meteor._debug('Error checking Change Streams support:', error.message);
     self._supportsChangeStreams = false;
   }
 };
@@ -908,11 +908,6 @@ Object.assign(MongoConnection.prototype, {
             return false;
           }
         },
-        function () {
-          // Change streams work with most selectors, but some complex ones might not work well
-          // For now, we use the same check as oplog
-          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
-        }
       ].every(f => f());
       
       var canUseOplog = [
@@ -928,14 +923,14 @@ Object.assign(MongoConnection.prototype, {
           // if not, we have to fallback to long polling
           if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
             if (!oplogCollectionWarnings.includes(collectionName)) {
-              console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
+              Meteor._debug(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
               oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
             }
             return false;
           }
           if (includeCollections?.length && !includeCollections.includes(collectionName)) {
             if (!oplogCollectionWarnings.includes(collectionName)) {
-              console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
+              Meteor._debug(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
               oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
             }
             return false;
@@ -984,7 +979,7 @@ Object.assign(MongoConnection.prototype, {
         try {
           driverClass = ChangeStreamObserveDriver;
         } catch (error) {
-          console.warn('Failed to load ChangeStreamObserveDriver, falling back to oplog/polling:', error.message);
+          Meteor._debug('Failed to load ChangeStreamObserveDriver, falling back to oplog/polling:', error.message);
           driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
         }
       } else if (canUseOplog) {

@@ -1735,7 +1735,7 @@ LocalCollection._removeFromResultsAsync = async (query, doc) => {
   } else {
     const id = doc._id;  // in case callback mutates doc
 
-  await query.removed(String(id));
+    await query.removed(String(id));
     query.results.remove(id);
   }
 };
