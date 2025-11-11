@@ -444,9 +444,6 @@ export class ChangeStreamObserveDriver {
             case 'replace':
               this._handleUpdate(id, fullDocument, fullDocumentBeforeChange);
               break;
-            case 'replace':
-              this._handleReplace(id, fullDocument, fullDocumentBeforeChange);
-              break;
             case 'delete':
               this._handleDelete(id, change);
               break;
@@ -530,11 +527,6 @@ export class ChangeStreamObserveDriver {
       this._multiplexer.removed(id);
     }
     // Otherwise the document didn't match before or after, so no-op
-  }
-
-  _handleReplace(id, newDoc, oldDoc) {
-    // Handle replace similar to update
-    this._handleUpdate(id, newDoc, oldDoc);
   }
 
   _handleDelete(id) {
