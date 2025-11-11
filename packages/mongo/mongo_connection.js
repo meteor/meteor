@@ -124,10 +124,13 @@ MongoConnection.prototype._checkChangeStreamSupport = async function() {
     // Change Streams require MongoDB 3.6+ and replica set or sharded cluster
     const admin = self.db.admin();
     const serverInfo = await admin.serverInfo();
-    const version = serverInfo.version.split('.').map(Number);
+    const versionString = serverInfo.version || 'unknown';
+    const versionParts = versionString.split('.').map(Number);
+    const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
+    const minor = Number.isFinite(versionParts[1]) ? versionParts[1] : 0;
     
     // Check MongoDB version (3.6+)
-    const hasMinVersion = version[0] >= 3 && version[1] >= 6;
+    const hasMinVersion = major > 3 || (major === 3 && minor >= 6);
     
     if (!hasMinVersion) {
       self._supportsChangeStreams = false;
@@ -136,13 +139,12 @@ MongoConnection.prototype._checkChangeStreamSupport = async function() {
     
     // Check if we're running on a replica set or sharded cluster
     const isMaster = await admin.command({ isMaster: 1 });
-    const isReplicaSet = isMaster.setName || isMaster.ismaster || isMaster.secondary;
+    const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
     const isSharded = isMaster.msg === 'isdbgrid';
     
     self._supportsChangeStreams = isReplicaSet || isSharded;
     
   } catch (error) {
-    Meteor._debug('Error checking Change Streams support:', error.message);
     self._supportsChangeStreams = false;
   }
 };
@@ -892,12 +894,11 @@ Object.assign(MongoConnection.prototype, {
           // Check if change streams are explicitly disabled
           const mongoSettings = Meteor.settings?.packages?.mongo || {};
           // return mongoSettings.reactivity === 'CHANGE_STREAMS' || process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS';
-          return true // dumb-forcing changeStream tests into CI
+          return true && self._supportsChangeStreams  // dumb-forcing changeStream tests into CI
         },
         function () {
-          // Change Streams require MongoDB 3.6+ and replica set
           return self._supportsChangeStreams && !ordered &&
-            !callbacks._testOnlyPollCallback;
+            !callbacks._testOnlyPollCallback;;
         },
         function () {
           // We need to be able to compile the selector
@@ -905,6 +906,7 @@ Object.assign(MongoConnection.prototype, {
             matcher = new Minimongo.Matcher(cursorDescription.selector);
             return true;
           } catch (e) {
+            console.log(`Failed to compile selector for Change Streams: `, e);
             return false;
           }
         },

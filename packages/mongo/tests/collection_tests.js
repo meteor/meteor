@@ -148,8 +148,7 @@ Tinytest.addAsync('collection - calling native find with $reverse hint should re
   }
 );
 
-// TODO: temporarily removed
-if(false) Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs should succeed',
+Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs should succeed',
   async function(test, done) {
     var collectionName = 'findOptions3' + test.id;
     var collection = new Mongo.Collection(collectionName);

@@ -3015,7 +3015,6 @@ Object.entries({
   functionChain2Insert: functionChain2Insert,
   functionChain2Upsert: functionChain2Upsert
 }).forEach(function([name, fn]) {
-  return
   [1, 3].forEach(function(repetitions) {
       [1, 3].forEach(function(collectionCount) {
           ['STRING', 'MONGO'].forEach(function(idGeneration) {

@@ -35,6 +35,10 @@ export class ChangeStreamObserveDriver {
     this._resolveTimeout = null;
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
+
+    if (options.ordered) {
+      throw Error("ChangeStreamObserveDriver only supports unordered observeChanges");
+    }
     
     // Projection function similar to oplog driver
     const projection = this._cursorDescription.options.projection || this._cursorDescription.options.fields;
@@ -62,7 +66,11 @@ export class ChangeStreamObserveDriver {
   _sendMultiplexerAdded(id, projectedDoc) {
      // Apply EJSON transformation before sending to client
      projectedDoc = replaceTypes(projectedDoc, replaceMongoAtomWithMeteor);
-     this._multiplexer.added(id, projectedDoc);
+     try {
+       this._multiplexer.added(id, projectedDoc);
+     } catch (error) {
+       console.error('[ChangeStreams] Error sending added document:', error);
+     }
   }
   
   async _startListening() {
@@ -377,25 +385,42 @@ export class ChangeStreamObserveDriver {
   }
 
   async _getServerOperationTime() {
-    try {
-      // Prefer a cheap ping which usually returns $clusterTime
-      const res = await this._mongoHandle.db.command({ ping: 1 });
-      return res?.operationTime || res?.$clusterTime?.clusterTime || null;
-    } catch (e) {
-      // Fallback to admin hello/ismaster
-      try {
-        const admin = this._mongoHandle.db.admin();
-        const hello = await admin.command({ hello: 1 });
-        return hello?.operationTime || hello?.$clusterTime?.clusterTime || null;
-      } catch (e2) {
-        try {
-          const admin = this._mongoHandle.db.admin();
-          const im = await admin.command({ ismaster: 1 });
-          return im?.operationTime || im?.$clusterTime?.clusterTime || null;
-        } catch (e3) {
-          return null;
-        }
+    const db = this._mongoHandle.db;
+    const admin = db.admin();
+
+    const commands = [
+      () => db.command({ ping: 1 }),
+      () => admin.command({ hello: 1 }),
+      () => admin.command({ ismaster: 1 })
+    ];
+
+    const runCommandRecursive = async (index = 0) => {
+      if (index >= commands.length) {
+        return null;
       }
+
+      try {
+        const res = await commands[index]();
+        return res?.operationTime || res?.$clusterTime?.clusterTime || null;
+      } catch (error) {
+          if (!error) {
+          return false;
+        }
+
+        // CommandNotFound https://www.mongodb.com/pt-br/docs/manual/reference/error-codes/
+        const isUnsupportedCommandError = error.code === 59;
+        if (isUnsupportedCommandError) {
+          return runCommandRecursive(index + 1);
+        }
+        throw error;
+      }
+    };
+
+    try {
+      return await runCommandRecursive();
+    } catch (error) {
+      console.error(`[ChangeStream ${this._id}] Failed to fetch server operation time:`, error);
+      return null;
     }
   }
 
@@ -443,7 +468,7 @@ export class ChangeStreamObserveDriver {
 
   _handleInsert(id, doc) {
     // Apply projection and check if document matches our criteria
-    const matches = this._matcher ? this._matcher.documentMatches(doc).result : true;
+    const matches = this._matcher.documentMatches(doc).result;
     if (matches) {
       const projectedDoc = this._projectionFn ? this._projectionFn(doc) : doc;
       this._sendMultiplexerAdded(id, projectedDoc);
@@ -452,15 +477,13 @@ export class ChangeStreamObserveDriver {
 
   _handleUpdate(id, newDoc, oldDoc) {
     // Determine which state (before/after) matches the cursor selector
-    const matchesAfter = this._matcher
-      ? this._matcher.documentMatches(newDoc || {}).result
-      : true;
+    const matchesAfter = this._matcher.documentMatches(newDoc || {}).result;
 
     // If MongoDB delivers the pre-image we can rely on it. Otherwise fall back to
     // the multiplexer cache to infer whether we were previously tracking the doc.
     const cachedDoc = this._multiplexer?._cache?.docs?.get?.(id);
     const matchesBefore = oldDoc
-      ? (this._matcher ? this._matcher.documentMatches(oldDoc).result : true)
+      ? (this._matcher.documentMatches(oldDoc).result)
       : !!cachedDoc;
 
     if (matchesAfter) {
@@ -502,12 +525,7 @@ export class ChangeStreamObserveDriver {
   }
 
   _handleDelete(id) {
-    const docs = this._multiplexer?._cache?.docs;
-    const hasDoc = typeof docs?.has === 'function'
-      ? docs.has(id)
-      : typeof docs?.get === 'function' && docs.get(id) !== undefined;
-
-    if (hasDoc) {
+    if (this._multiplexer._cache?.docs.has(id)) {
       this._multiplexer.removed(id);
     }
   }
