@@ -127,7 +127,7 @@ MongoConnection.prototype._checkChangeStreamSupport = async function() {
     const version = serverInfo.version.split('.').map(Number);
     
     // Check MongoDB version (3.6+)
-    const hasMinVersion = version[0] > 3 || (version[0] === 3 && version[1] >= 6);
+    const hasMinVersion = version[0] >= 3 && version[1] >= 6;
     
     if (!hasMinVersion) {
       self._supportsChangeStreams = false;
