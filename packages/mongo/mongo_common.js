@@ -134,17 +134,6 @@ export const replaceMongoAtomWithMeteor = function (document) {
     return new Uint8Array(buffer);
   }
   
-  // Check for serialized MongoDB.Binary objects (plain objects with binary-like structure)
-  if (document && typeof document === 'object' && 
-      document.sub_type !== undefined && 
-      document.buffer !== undefined && 
-      document.position !== undefined) {
-    // Convert this serialized binary back to Uint8Array
-    if (document.buffer && (document.buffer instanceof Uint8Array || Array.isArray(document.buffer))) {
-      return new Uint8Array(document.buffer);
-    }
-  }
-  
   if (document instanceof MongoDB.ObjectId) {
     return new Mongo.ObjectID(document.toHexString());
   }
