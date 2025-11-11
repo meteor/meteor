@@ -70,7 +70,7 @@ export class ChangeStreamObserveDriver {
     this._startWatching();
   }
 
-  async _sendMultiplexerAdded(id, projectedDoc) {
+  _sendMultiplexerAdded(id, projectedDoc) {
      // Apply EJSON transformation before sending to client
      projectedDoc = replaceTypes(projectedDoc, replaceMongoAtomWithMeteor);
      this._multiplexer.added(id, projectedDoc);
@@ -306,7 +306,7 @@ export class ChangeStreamObserveDriver {
       if (this._changeStream) {
         // Find and execute the change stream stop callback
         const changeStreamCallback = this._stopCallbacks.find(cb => 
-          cb.toString().includes('_changeStream')
+          typeof cb._changeStream === 'function' 
         );
         if (changeStreamCallback) {
           await changeStreamCallback();
@@ -350,7 +350,10 @@ export class ChangeStreamObserveDriver {
       return; // Ignore unsupported operations
     }
 
-    const id = typeof documentKey._id !== 'string' ? new MongoID.ObjectID(documentKey._id.toHexString()) : documentKey._id;
+    let id = documentKey._id;
+    if (typeof documentKey._id?.toHexString === 'function') {
+      id = new MongoID.ObjectID(documentKey._id.toHexString());
+    }
     
     // Update last processed operation time (redundant with early update, but safe)
     if (clusterTime) {
@@ -438,6 +441,7 @@ export class ChangeStreamObserveDriver {
               this._handleInsert(id, fullDocument);
               break;
             case 'update':
+            case 'replace':
               this._handleUpdate(id, fullDocument, fullDocumentBeforeChange);
               break;
             case 'replace':
