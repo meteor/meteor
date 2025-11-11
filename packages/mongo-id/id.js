@@ -75,7 +75,7 @@ MongoID.idStringify = (id) => {
   } else if (id === undefined) {
     return '-';
   } else if (typeof id === 'object' && id !== null) {
-    if (typeof id.toHexString === 'function') {
+    if (MongoID._looksLikeObjectID(id)) {
       return id.toHexString();
     }
     if (typeof id.toString === 'function') {

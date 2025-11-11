@@ -33,18 +33,7 @@ export class ChangeStreamObserveDriver {
     this._lastProcessedOperationTime = null;
     this._catchingUpResolvers = [];
     this._resolveTimeout = null;
-    
-    // Use the matcher passed from mongo_connection.js
     this._matcher = options.matcher;
-    
-    // Fallback: create matcher if not provided
-    if (!this._matcher) {
-      // Import Minimongo locally to avoid circular dependencies
-      const { Minimongo } = require('meteor/minimongo');
-      this._matcher = new Minimongo.Matcher(this._cursorDescription.selector);
-    }
-    
-    // For debugging
     this._id = options.id || Random.id();
     
     // Projection function similar to oplog driver
@@ -371,23 +360,6 @@ export class ChangeStreamObserveDriver {
     };
     
     this._pendingWrites.push(callbackData);
-  }
-
-  // Compare two MongoDB Timestamps (clusterTime). Returns -1, 0, 1
-  _compareOperationTimes(a, b) {
-    if (!a && !b) return 0;
-    if (!a) return -1;
-    if (!b) return 1;
-    // Support different BSON Timestamp shapes
-    const aHigh = typeof a.getHighBits === 'function' ? a.getHighBits() : (a.t ?? a.seconds ?? a.time ?? 0);
-    const aLow  = typeof a.getLowBits === 'function' ? a.getLowBits()  : (a.i ?? a.increment ?? 0);
-    const bHigh = typeof b.getHighBits === 'function' ? b.getHighBits() : (b.t ?? b.seconds ?? b.time ?? 0);
-    const bLow  = typeof b.getLowBits === 'function' ? b.getLowBits()  : (b.i ?? b.increment ?? 0);
-    if (aHigh > bHigh) return 1;
-    if (aHigh < bHigh) return -1;
-    if (aLow > bLow) return 1;
-    if (aLow < bLow) return -1;
-    return 0;
   }
 
   _setLastProcessedOperationTime(ts) {

@@ -987,7 +987,7 @@ Object.assign(MongoConnection.prototype, {
       } else {
         driverClass = PollingObserveDriver;
       }
-      
+      console.log(`✅ Using ${driverClass.name} for observing changes on collection ${collectionName}`);
       observeDriver = new driverClass({
         cursorDescription: cursorDescription,
         mongoHandle: self,
