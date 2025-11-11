@@ -1619,8 +1619,7 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
         }
 
         // Use docFromDriver if available, else fallback to cache
-        const cachedOrdered = this.docs.get(id) || { _id: id };
-        const doc = transform(cachedOrdered);
+        const doc = transform(this.docs.get(id));
 
         if (observeCallbacks.removedAt) {
           observeCallbacks.removedAt(doc, indices ? this.docs.indexOf(id) : -1);

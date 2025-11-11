@@ -124,6 +124,7 @@ MongoConnection.prototype._checkChangeStreamSupport = async function() {
     // Change Streams require MongoDB 3.6+ and replica set or sharded cluster
     const admin = self.db.admin();
     const serverInfo = await admin.serverInfo();
+    const isMasterPromise = admin.command({ isMaster: 1 });
     const versionString = serverInfo.version || 'unknown';
     const versionParts = versionString.split('.').map(Number);
     const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
@@ -138,7 +139,7 @@ MongoConnection.prototype._checkChangeStreamSupport = async function() {
     }
     
     // Check if we're running on a replica set or sharded cluster
-    const isMaster = await admin.command({ isMaster: 1 });
+    const isMaster = await isMasterPromise;
     const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
     const isSharded = isMaster.msg === 'isdbgrid';
     
@@ -989,7 +990,6 @@ Object.assign(MongoConnection.prototype, {
       } else {
         driverClass = PollingObserveDriver;
       }
-      console.log(`✅ Using ${driverClass.name} for observing changes on collection ${collectionName}`);
       observeDriver = new driverClass({
         cursorDescription: cursorDescription,
         mongoHandle: self,

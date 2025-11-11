@@ -6,9 +6,24 @@ import { DDPServer } from 'meteor/ddp-server';
 import { DiffSequence } from 'meteor/diff-sequence';
 import { listenAll } from './mongo_driver';
 import { replaceTypes, replaceMongoAtomWithMeteor } from './mongo_common';
-import { compareOperationTimes } from './mongo_utils';
+import { MongoDB } from './mongo_common';
 
 const SUPPORTED_OPERATIONS = ['insert', 'update', 'replace', 'delete'];
+
+function compareOperationTimes(ts1, ts2) {
+  if (typeof MongoDB.Timestamp.compare === 'function') {
+    return MongoDB.Timestamp.compare(ts1, ts2);
+  }
+
+  // TODO: remove this fallback when we fix the compare method above
+  // fallback: for some reason, compare is not available but we can fall back to manual comparison
+  const highDiff = ts1.getHighBits() - ts2.getHighBits();
+  if (highDiff !== 0) {
+    return highDiff;
+  }
+  return ts1.getLowBits() - ts2.getLowBits();
+}
+
 
 /**
  * ChangeStreamObserveDriver - MongoDB Change Streams based observe driver
