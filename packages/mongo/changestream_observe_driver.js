@@ -6,6 +6,7 @@ import { DDPServer } from 'meteor/ddp-server';
 import { DiffSequence } from 'meteor/diff-sequence';
 import { listenAll } from './mongo_driver';
 import { replaceTypes, replaceMongoAtomWithMeteor } from './mongo_common';
+import { compareOperationTimes } from './mongo_utils';
 
 const SUPPORTED_OPERATIONS = ['insert', 'update', 'replace', 'delete'];
 
@@ -391,7 +392,7 @@ export class ChangeStreamObserveDriver {
     // Resolve any waiters whose target is <= current processed time
     while (this._catchingUpResolvers.length > 0) {
       const first = this._catchingUpResolvers[0];
-      if (this._compareOperationTimes(ts, first.ts) >= 0) {
+      if (compareOperationTimes(ts, first.ts) >= 0) {
         this._catchingUpResolvers.shift();
         try { first.resolver(); } catch (e) { /* ignore resolver errors */ }
       } else {
@@ -555,13 +556,13 @@ export class ChangeStreamObserveDriver {
       return;
     }
 
-    if (this._lastProcessedOperationTime && this._compareOperationTimes(this._lastProcessedOperationTime, targetTs) >= 0) {
+    if (this._lastProcessedOperationTime && compareOperationTimes(this._lastProcessedOperationTime, targetTs) >= 0) {
       return;
     }
 
     // Insert in order so we can resolve from the front efficiently
     let insertIdx = this._catchingUpResolvers.length;
-    while (insertIdx - 1 >= 0 && this._compareOperationTimes(this._catchingUpResolvers[insertIdx - 1]?.ts, targetTs) > 0) {
+    while (insertIdx - 1 >= 0 && compareOperationTimes(this._catchingUpResolvers[insertIdx - 1]?.ts, targetTs) > 0) {
       insertIdx--;
     }
 

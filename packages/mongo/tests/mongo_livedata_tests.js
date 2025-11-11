@@ -11,7 +11,7 @@ var TRANSFORMS = {};
 var COLLECTIONS = {};
 
 // dumb-forcing changeStream tests only into CI
-var testingChangeStream = true // process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS'
+var testingOplog = false // process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS'
 
 if (Meteor.isServer) {
   Meteor.methods({
@@ -79,9 +79,6 @@ const runInFence = async function (f) {
     const fence = new DDPServer._WriteFence;
     await DDPServer._CurrentWriteFence.withValue(fence, f);
     await fence.armAndWait();
-  }
-  if(testingChangeStream) { // TODO: we should remove it
-    await new Promise(resolve => setTimeout(resolve, 100));
   }
 };
 
@@ -1024,7 +1021,7 @@ const setsEqual = function (a, b) {
   return difference(a, b).length === 0 && difference(b, a).length === 0;
   };
 
-    if (!testingChangeStream) {
+    if (testingOplog) {
       // This test mainly checks the correctness of oplog code dealing with limited
       // queries. Compitablity with poll-diff is added as well.
       Tinytest.addAsync(
@@ -3474,7 +3471,7 @@ if (Meteor.isServer) {
   );
 }
 
-if (!testingChangeStream) {
+if (testingOplog) {
   Meteor.isServer &&
     Tinytest.addAsync('mongo-livedata - oplog - _disableOplog', async function(test) {
       var collName = Random.id();
@@ -3493,7 +3490,7 @@ if (!testingChangeStream) {
       await observeWithoutOplog.stop();
     });
 
-  Meteor.isServer && !testingChangeStream &&
+  Meteor.isServer && testingOplog &&
     Tinytest.addAsync(
       'mongo-livedata - oplog - include selector fields',
       async function(test) {
@@ -3541,7 +3538,7 @@ if (!testingChangeStream) {
       }
     );
 
-  Meteor.isServer && !testingChangeStream &&
+  Meteor.isServer && testingOplog &&
     Tinytest.addAsync('mongo-livedata - oplog - transform', async function(test) {
       var collName = 'oplogTransform' + Random.id();
       var coll = new Mongo.Collection(collName);
@@ -3587,7 +3584,7 @@ if (!testingChangeStream) {
     });
 
 
-  Meteor.isServer && !testingChangeStream &&
+  Meteor.isServer && testingOplog &&
     Tinytest.addAsync('mongo-livedata - oplog - drop collection/db', async function(test) {
       // This test uses a random database, so it can be dropped without affecting
       // anything else.
@@ -3700,7 +3697,7 @@ EJSON.addType('someCustomType', function (json) {
   return new TestCustomType(json.head, json.tail);
 });
 
-if(!testingChangeStream) {
+if(testingOplog) {
   testAsyncMulti('mongo-livedata - oplog - update EJSON', [
     async function(test, expect) {
       var self = this;
@@ -3872,7 +3869,7 @@ testAsyncMulti('mongo-livedata - undefined find options', [
 ]);
 
 // Regression test for #2274.
-Meteor.isServer && !testingChangeStream &&
+Meteor.isServer && testingOplog &&
   testAsyncMulti('mongo-livedata - observe limit bug', [
     async function(test, expect) {
       var self = this;
