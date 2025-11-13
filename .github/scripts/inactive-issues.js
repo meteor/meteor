@@ -24,7 +24,7 @@ module.exports = async ({ github, context }) => {
     `👋 @${login} This issue has been open with no human activity for ${daysToComment} days. Is this issue still relevant? If there is no human response or activity within the next ${daysToLabel - daysToComment} days, this issue will be labeled as \`idle\`.`;
 
   const COMMENT_90_TEXT =
-    'This issue has been automatically labeled as `idle` due to 90 days of inactivity (no human interaction). If this is still relevant, please comment to reactivate it.';
+    'This issue has been automatically labeled as `idle` due to 90 days of inactivity (no human interaction). If this is still relevant or if someone is working on it, please comment or add `in-development` label.';
 
   // Fetch all open issues
   async function fetchAllIssues() {
@@ -106,7 +106,7 @@ module.exports = async ({ github, context }) => {
       continue;
     }
 
-    if (issue.labels.some((l) => l.name === 'idle')) {
+    if (issue.labels.some((l) => l.name === 'idle' || l.name === 'in-development')) {
       continue;
     }
 
