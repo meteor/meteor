@@ -162,16 +162,6 @@ more information is published for the currently logged in user,
 including access tokens. This allows making API calls directly from
 the client for services that allow this.
 
-Users are by default allowed to specify their own `profile` field with
-[`Accounts.createUser`](#Accounts-createUser) and modify it with
-`Meteor.users.update`. To allow users to edit additional fields, use
-[`Meteor.users.allow`](./collections.md#Mongo-Collection-allow). To forbid users from making any modifications to
-their user document:
-
-```js
-import { Meteor } from "meteor/meteor";
-Meteor.users.deny({ update: () => true });
-```
 
 <ApiBox name="Meteor.loggingIn" />
 
