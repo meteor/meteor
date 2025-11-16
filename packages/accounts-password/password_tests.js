@@ -731,7 +731,7 @@ if (Meteor.isClient) (() => {
     }
   ]);
 
-  testAsyncMulti("passwords - allow rules", [
+  testAsyncMulti("passwords - deny all updates by default", [
     // create a second user to have an id for in a later test
     function (test, expect) {
       this.otherUsername = Random.id();
@@ -757,42 +757,46 @@ if (Meteor.isClient) (() => {
         },
         loggedInAs(this.username, test, expect));
     },
-    // test the default Meteor.users allow rule. This test properly belongs in
-    // accounts-base/accounts_tests.js, but this is where the tests that
-    // actually log in are.
+    // Test that Meteor.users updates are denied by default (secure by default).
+    // This test properly belongs in accounts-base/accounts_tests.js, but this
+    // is where the tests that actually log in are.
     async function (test, expect) {
       this.userId = Meteor.userId();
       test.notEqual(this.userId, null);
       test.notEqual(this.userId, this.otherUserId);
-      // Can't update fields other than profile.
-      await Meteor.users
-        .updateAsync(this.userId, {
+      // Can't update any fields.
+      try {
+        await Meteor.users.updateAsync(this.userId, {
           $set: { disallowed: true, "profile.updated": 42 },
-        })
-        .catch((err) => {
-          test.isTrue(err);
-          test.equal(err.error, 403);
-          test.isFalse(
-            Object.prototype.hasOwnProperty.call(Meteor.user(), "disallowed")
-          );
-          test.isFalse(
-            Object.prototype.hasOwnProperty.call(
-              Meteor.user().profile,
-              "updated"
-            )
-          );
         });
+        test.fail("Expected update to be denied");
+      } catch (err) {
+        test.isTrue(err);
+        test.equal(err.error, 403);
+        test.isFalse(
+          Object.prototype.hasOwnProperty.call(Meteor.user(), "disallowed")
+        );
+        test.isFalse(
+          Object.prototype.hasOwnProperty.call(
+            Meteor.user().profile,
+            "updated"
+          )
+        );
+      }
+      expect(() => {})();
     },
     async function (test, expect) {
       // Can't update another user.
-      await Meteor.users
-        .updateAsync(this.otherUserId, { $set: { "profile.updated": 42 } })
-        .catch(
-          expect((err) => {
-            test.isTrue(err);
-            test.equal(err.error, 403);
-          })
-        );
+      try {
+        await Meteor.users.updateAsync(this.otherUserId, {
+          $set: { "profile.updated": 42 }
+        });
+        test.fail("Expected update to be denied");
+      } catch (err) {
+        test.isTrue(err);
+        test.equal(err.error, 403);
+      }
+      expect(() => {})();
     },
     async function (test, expect) {
       // Can't update using a non-ID selector. (This one is thrown client-side.)
@@ -800,6 +804,7 @@ if (Meteor.isClient) (() => {
         { username: this.username }, { $set: { 'profile.updated': 42 } }
       ));
       test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
+      expect(() => {})();
     },
     async function (test) {
       // Can't update own profile using ID.
