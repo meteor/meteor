@@ -2,7 +2,7 @@ const assert = require('assert');
 const getExecutorsFromTest = require('../../../../lib/util/executors/getExecutorsFromTest');
 
 describe('getExecutorsFromTest', () => {
-  it('throws for unkown type', () => {
+  it('throws for unknown type', () => {
     assert.throws(() => {
       getExecutorsFromTest({
         type: 'Identifier',
@@ -58,7 +58,7 @@ describe('getExecutorsFromTest', () => {
       assert.equal(result.size, 1);
       assert.ok(result.has('cordova'));
     });
-    it('throws on unkown Meteor prop', () => {
+    it('throws on unknown Meteor prop', () => {
       assert.throws(() => {
         getExecutorsFromTest({
           type: 'MemberExpression',
@@ -139,7 +139,7 @@ describe('getExecutorsFromTest', () => {
       assert.ok(result.has('cordova'));
     });
 
-    it('throws for unkown operator in LogicalExpression', () => {
+    it('throws for unknown operator in LogicalExpression', () => {
       assert.throws(() => {
         getExecutorsFromTest({
           type: 'LogicalExpression',
