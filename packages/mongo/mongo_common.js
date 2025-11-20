@@ -169,3 +169,7 @@ export function replaceNames(filter, thing) {
   }
   return thing;
 }
+
+export function compareOperationTimes(opTime1, opTime2) {
+  return (new MongoDB.Timestamp(opTime1)).compare(opTime2);
+}
