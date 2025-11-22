@@ -86,24 +86,51 @@ export function getMeteorAppEntrypoints() {
  * Retrieves the initial entry points for the Meteor application from the package.json.
  * @returns {Object} An object containing the main and test entry points for client and server.
  * @returns {string|undefined} mainClient - The client main module path.
+ * @returns {string|undefined} mainClientHtml - The client main html path.
  * @returns {string|undefined} mainServer - The server main module path.
  * @returns {string|undefined} testClient - The client test module path.
  * @returns {string|undefined} testServer - The server test module path.
  */
 export function getMeteorInitialAppEntrypoints() {
   const meteorConfig = getMeteorAppPackageJson()?.meteor;
+  const mainClient = meteorConfig?.mainModule?.client;
+
+  let mainClientHtml;
+  if (mainClient) {
+    const clientDir = path.dirname(mainClient);
+    const clientBasename = path.basename(mainClient, path.extname(mainClient));
+    const htmlPath = path.join(
+      getMeteorAppDir(),
+      clientDir,
+      `${clientBasename}.html`
+    );
+
+    if (fs.existsSync(htmlPath)) {
+      mainClientHtml = path.join(clientDir, `${clientBasename}.html`);
+    } else {
+      // Find first html in entry folder
+      const files = fs.readdirSync(path.join(getMeteorAppDir(), clientDir));
+      const htmlFile = files.find((file) => path.extname(file) === ".html");
+      if (htmlFile) {
+        mainClientHtml = path.join(clientDir, htmlFile);
+      }
+    }
+  }
+
   return {
-    mainClient: meteorConfig?.mainModule?.client,
+    mainClient,
+    mainClientHtml,
     mainServer: meteorConfig?.mainModule?.server,
-    ...meteorConfig?.testModule?.client && {
+    ...(meteorConfig?.testModule?.client && {
       testClient: meteorConfig?.testModule?.client,
-    },
-    ...meteorConfig?.testModule?.server && {
+    }),
+    ...(meteorConfig?.testModule?.server && {
       testServer: meteorConfig?.testModule?.server,
-    },
-    ...!meteorConfig?.testModule?.client && !meteorConfig?.testModule?.server && {
-      testModule: meteorConfig?.testModule,
-    },
+    }),
+    ...(!meteorConfig?.testModule?.client &&
+      !meteorConfig?.testModule?.server && {
+        testModule: meteorConfig?.testModule,
+      }),
   };
 }
 

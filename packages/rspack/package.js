@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Integrate rspack into the Meteor lifecycle to run the bundler independently",
-  version: '1.0.0-beta340.12',
+  version: '1.0.0-beta340.14',
 });
 
 Package.registerBuildPlugin({
@@ -16,7 +16,7 @@ Package.registerBuildPlugin({
   use: ['modules@0.8.2', 'ecmascript', 'tools-core'],
 });
 
-Npm.depends({
+Npm.devDepends({
   'http-proxy-middleware': '3.0.5',
 });
 

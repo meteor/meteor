@@ -5,7 +5,7 @@ import {
   defineConfig as _rspackDefineConfig,
   Configuration as _RspackConfig,
 } from '@rspack/cli';
-import { HtmlRspackPluginOptions } from '@rspack/core';
+import { HtmlRspackPluginOptions, RuleSetConditions, SwcLoaderOptions } from '@rspack/core';
 
 export interface MeteorRspackConfig extends _RspackConfig {
   meteor?: {
@@ -31,6 +31,36 @@ type MeteorEnv = Record<string, any> & {
    * @returns An instance of HtmlRspackPlugin
    */
   HtmlRspackPlugin: (options?: HtmlRspackPluginOptions) => HtmlRspackPlugin;
+  /**
+   * Wrap externals for Meteor runtime.
+   * @param deps - Package names or module IDs
+   * @returns A config object with externals configuration
+   */
+  compileWithMeteor: (deps: RuleSetConditions) => Record<string, object>;
+  /**
+   * Add SWC transpilation rules limited to specific deps (monorepo-friendly).
+   * @param deps - Package names to include in SWC loader
+   * @param options - Optional configuration options
+   * @returns A config object with module rules configuration
+   */
+  compileWithRspack: (deps: RuleSetConditions) => Record<string, object>;
+  /**
+   * Enable or disable Rspack cache config.
+   * @param enabled - Whether to enable caching
+   * @param cacheConfig - Optional cache configuration
+   * @returns A config object with cache configuration
+   */
+  setCache: (enabled: boolean | 'memory') => Record<string, object>;
+  /**
+   * Enable Rspack split vendor chunk.
+   * @returns A config object with optimization configuration
+   */
+  splitVendorChunk: () => Record<string, object>;
+  /**
+   * Extend Rspack SWC loader config.
+   * @returns A config object with SWC loader config
+   */
+  extendSwcConfig: (swcConfig: SwcLoaderOptions) => Record<string, object>;
 }
 
 export type ConfigFactory = (

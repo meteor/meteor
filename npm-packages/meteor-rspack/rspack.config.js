@@ -3,6 +3,7 @@ const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
 const { merge } = require('webpack-merge');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
@@ -15,6 +16,8 @@ const {
   compileWithMeteor,
   compileWithRspack,
   setCache,
+  splitVendorChunk,
+  extendSwcConfig,
   makeWebNodeBuiltinsAlias,
 } = require('./lib/meteorRspackHelpers.js');
 
@@ -94,6 +97,7 @@ function createSwcConfig({
   externalHelpers,
   isDevEnvironment,
   isClient,
+  isAngularEnabled,
 }) {
   const defaultConfig = {
     jsc: {
@@ -103,6 +107,7 @@ function createSwcConfig({
         syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
         ...(isTsxEnabled && { tsx: true }),
         ...(isJsxEnabled && { jsx: true }),
+        ...(isAngularEnabled && { decorators: true }),
       },
       target: 'es2015',
       ...(isReactEnabled && {
@@ -133,7 +138,7 @@ function createSwcConfig({
   return {
     test: /\.(?:[mc]?js|jsx|[mc]?ts|tsx)$/i,
     exclude: /node_modules|\.meteor\/local/,
-    loader: 'builtin:swc-loader',
+    loader: "builtin:swc-loader",
     options: swcConfig,
   };
 }
@@ -214,12 +219,16 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTestModule = !!Meteor.isTestModule;
   const isTestEager = !!Meteor.isTestEager;
   const isTestFullApp = !!Meteor.isTestFullApp;
+  const isTestLike = !!Meteor.isTestLike;
   const swcExternalHelpers = !!Meteor.swcExternalHelpers;
   const isNative = !!Meteor.isNative;
   const mode = isProd ? 'production' : 'development';
   const projectDir = process.cwd();
   const projectConfigPath = Meteor.projectConfigPath || path.resolve(projectDir, 'rspack.config.js');
   const configPath = Meteor.configPath;
+  const testEntry = Meteor.testEntry;
+  const testClientEntry = Meteor.testClientEntry;
+  const testServerEntry = Meteor.testServerEntry;
 
   const isTypescriptEnabled = Meteor.isTypescriptEnabled || false;
   const isJsxEnabled =
@@ -227,6 +236,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTsxEnabled =
     Meteor.isTsxEnabled || (isTypescriptEnabled && isReactEnabled) || false;
   const isBundleVisualizerEnabled = Meteor.isBundleVisualizerEnabled || false;
+  const isAngularEnabled = Meteor.isAngularEnabled || false;
 
   // Determine entry points
   const entryPath = Meteor.entryPath;
@@ -273,6 +283,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       !!enabled,
       enabled === 'memory' ? undefined : cacheStrategy
     );
+  Meteor.splitVendorChunk = () => splitVendorChunk();
+  Meteor.extendSwcConfig = (customSwcConfig) => extendSwcConfig(customSwcConfig);
 
   // Add HtmlRspackPlugin function to Meteor
   Meteor.HtmlRspackPlugin = (options = {}) => {
@@ -333,12 +345,13 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     externalHelpers: enableSwcExternalHelpers,
     isDevEnvironment,
     isClient,
+    isAngularEnabled,
   });
   // Expose swc config to use in custom configs
   Meteor.swcConfigOptions = swcConfigRule.options;
 
   const externals = [
-    /^meteor.*/,
+    /^meteor\/.*/,
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
     ...(isServer ? [/^bcrypt$/] : []),
   ];
@@ -399,15 +412,36 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ]
     : [];
 
-  const clientNameConfig = `[${(isTest && 'test-') || ''}${
-    (isTestModule && 'module') || 'client'
-  }-rspack]`;
+  const clientEntry =
+    isTest && isTestEager && isTestFullApp
+      ? generateEagerTestFile({
+          isAppTest: true,
+          projectDir,
+          buildContext,
+          ignoreEntries: [...meteorIgnoreEntries, "**/server/**"],
+          prefix: "client",
+        })
+      : isTest && isTestEager
+      ? generateEagerTestFile({
+          isAppTest: false,
+          isClient: true,
+          projectDir,
+          buildContext,
+          ignoreEntries: [...meteorIgnoreEntries, "**/server/**"],
+          prefix: "client",
+        })
+      : isTest && testEntry
+      ? path.resolve(process.cwd(), testEntry)
+      : isTest && testClientEntry
+      ? path.resolve(process.cwd(), testClientEntry)
+      : path.resolve(process.cwd(), buildContext, entryPath);
+  const clientNameConfig = `[${(isTest && 'test-') || ''}client-rspack]`;
   // Base client config
   let clientConfig = {
     name: clientNameConfig,
     target: 'web',
     mode,
-    entry: path.resolve(process.cwd(), buildContext, entryPath),
+    entry: clientEntry,
     output: {
       path: clientOutputDir,
       filename: (_module) => {
@@ -465,8 +499,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       new DefinePlugin({
         'Meteor.isClient': JSON.stringify(true),
         'Meteor.isServer': JSON.stringify(false),
-        'Meteor.isTest': JSON.stringify(isTest && !isTestFullApp),
-        'Meteor.isAppTest': JSON.stringify(isTest && isTestFullApp),
+        'Meteor.isTest': JSON.stringify(isTestLike && !isTestFullApp),
+        'Meteor.isAppTest': JSON.stringify(isTestLike && isTestFullApp),
         'Meteor.isDevelopment': JSON.stringify(isDev),
         'Meteor.isProduction': JSON.stringify(isProd),
       }),
@@ -496,26 +530,29 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...merge(cacheStrategy, { experiments: { css: true } })
   };
 
-
   const serverEntry =
     isTest && isTestEager && isTestFullApp
       ? generateEagerTestFile({
           isAppTest: true,
           projectDir,
           buildContext,
-          entries: meteorIgnoreEntries,
+          ignoreEntries: [...meteorIgnoreEntries, "**/client/**"],
+          prefix: "server",
         })
       : isTest && isTestEager
       ? generateEagerTestFile({
           isAppTest: false,
           projectDir,
           buildContext,
-          entries: meteorIgnoreEntries,
+          ignoreEntries: [...meteorIgnoreEntries, "**/client/**"],
+          prefix: "server",
         })
+      : isTest && testEntry
+      ? path.resolve(process.cwd(), testEntry)
+      : isTest && testServerEntry
+      ? path.resolve(process.cwd(), testServerEntry)
       : path.resolve(projectDir, buildContext, entryPath);
-  const serverNameConfig = `[${(isTest && 'test-') || ''}${
-    (isTestModule && 'module') || 'server'
-  }-rspack]`;
+  const serverNameConfig = `[${(isTest && 'test-') || ''}server-rspack]`;
   // Base server config
   let serverConfig = {
     name: serverNameConfig,
@@ -563,8 +600,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           : {
               'Meteor.isClient': JSON.stringify(false),
               'Meteor.isServer': JSON.stringify(true),
-              'Meteor.isTest': JSON.stringify(isTest && !isTestFullApp),
-              'Meteor.isAppTest': JSON.stringify(isTest && isTestFullApp),
+              'Meteor.isTest': JSON.stringify(isTestLike && !isTestFullApp),
+              'Meteor.isAppTest': JSON.stringify(isTestLike && isTestFullApp),
               'Meteor.isDevelopment': JSON.stringify(isDev),
               'Meteor.isProduction': JSON.stringify(isProd),
             },
@@ -579,6 +616,61 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       cacheStrategy),
   };
 
+  // Helper function to load and process config files
+  async function loadAndProcessConfig(configPath, configType, Meteor, argv, isAngularEnabled) {
+    try {
+      // Load the config file
+      let config;
+      if (path.extname(configPath) === '.mjs') {
+        // For ESM modules, we need to use dynamic import
+        const fileUrl = `file://${configPath}`;
+        const module = await import(fileUrl);
+        config = module.default || module;
+      } else {
+        // For CommonJS modules, we can use require
+        config = require(configPath)?.default || require(configPath);
+      }
+
+      // Process the config
+      const rawConfig = typeof config === 'function' ? config(Meteor, argv) : config;
+      const resolvedConfig = await Promise.resolve(rawConfig);
+      const userConfig = resolvedConfig && '0' in resolvedConfig ? resolvedConfig[0] : resolvedConfig;
+
+      // Define omitted paths and warning function
+      const omitPaths = [
+        "name",
+        "target",
+        "entry",
+        "output.path",
+        "output.filename",
+        "output.publicPath",
+        ...(Meteor.isServer ? ["optimization.splitChunks", "optimization.runtimeChunk"] : []),
+      ].filter(Boolean);
+
+      const warningFn = path => {
+        if (isAngularEnabled) return;
+        console.warn(
+          `[${configType}] Ignored custom "${path}" — reserved for Meteor-Rspack integration.`,
+        );
+      };
+
+      // Clean omitted paths and merge Meteor Rspack fragments
+      let nextConfig = cleanOmittedPaths(userConfig, {
+        omitPaths,
+        warningFn,
+      });
+      nextConfig = mergeMeteorRspackFragments(nextConfig);
+
+      return nextConfig;
+    } catch (error) {
+      console.error(`Error loading ${configType} from ${configPath}:`, error);
+      if (configType === 'rspack.config.js') {
+        throw error; // Only rethrow for project config
+      }
+      return null;
+    }
+  }
+
   // Load and apply project-level overrides for the selected build
   // Check if we're in a Meteor package directory by looking at the path
   const isMeteorPackageConfig = projectDir.includes('/packages/rspack');
@@ -587,73 +679,92 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     const mjsConfigPath = projectConfigPath.replace(/\.js$/, '.mjs');
     const cjsConfigPath = projectConfigPath.replace(/\.js$/, '.cjs');
 
-    let configPath = projectConfigPath;
+    let projectConfigPathToUse = projectConfigPath;
     if (fs.existsSync(mjsConfigPath)) {
-      configPath = mjsConfigPath;
+      projectConfigPathToUse = mjsConfigPath;
     } else if (fs.existsSync(cjsConfigPath)) {
-      configPath = cjsConfigPath;
+      projectConfigPathToUse = cjsConfigPath;
     }
 
-    // Use require for CommonJS modules and dynamic import for ES modules
-    let projectConfig;
-    try {
-      if (path.extname(configPath) === '.mjs') {
-        // For ESM modules, we need to use dynamic import
-        const fileUrl = `file://${configPath}`;
-        const module = await import(fileUrl);
-        projectConfig = module.default || module;
-      } else {
-        // For CommonJS modules, we can use require
-        projectConfig = require(configPath)?.default || require(configPath);
+    const nextUserConfig = await loadAndProcessConfig(
+      projectConfigPathToUse, 
+      'rspack.config.js', 
+      Meteor, 
+      argv, 
+      isAngularEnabled
+    );
+
+    if (nextUserConfig) {
+      if (Meteor.isClient) {
+        clientConfig = mergeSplitOverlap(clientConfig, nextUserConfig);
       }
-    } catch (error) {
-      console.error(`Error loading rspack config from ${configPath}:`, error);
-      throw error;
-    }
-
-    const userConfig =
-      typeof projectConfig === 'function'
-        ? projectConfig(Meteor, argv)
-        : projectConfig;
-
-    const omitPaths = [
-      "name",
-      "target",
-      "entry",
-      "output.path",
-      "output.filename",
-      "output.publicPath",
-      ...(Meteor.isServer
-        ? ["optimization.splitChunks", "optimization.runtimeChunk"]
-        : []),
-    ].filter(Boolean);
-    const warningFn = path => {
-      console.warn(
-        `[rspack.config.js] Ignored custom "${path}" — reserved for Meteor-Rspack integration.`,
-      );
-    };
-
-    let nextUserConfig = cleanOmittedPaths(userConfig, {
-      omitPaths,
-      warningFn,
-    });
-    nextUserConfig = mergeMeteorRspackFragments(nextUserConfig);
-
-    if (Meteor.isClient) {
-      clientConfig = mergeSplitOverlap(
-        clientConfig,
-        nextUserConfig
-      );
-    }
-    if (Meteor.isServer) {
-      serverConfig = mergeSplitOverlap(
-        serverConfig,
-        nextUserConfig
-      );
+      if (Meteor.isServer) {
+        serverConfig = mergeSplitOverlap(serverConfig, nextUserConfig);
+      }
     }
   }
 
-  const config = isClient ? clientConfig : serverConfig;
+  // Establish Angular overrides to ensure proper integration
+  const angularExpandConfig = isAngularEnabled
+    ? {
+        mode: isProd ? "production" : "development",
+        devServer: { port: Meteor.devServerPort },
+        stats: { preset: "normal" },
+        infrastructureLogging: { level: "info" },
+        ...(isProd && isClient && { output: { module: false } }),
+      }
+    : {};
+
+  // Establish test client overrides to ensure proper running
+  const testClientExpandConfig =
+    isTest && isClient
+      ? {
+          module: {
+            parser: {
+              javascript: {
+                dynamicImportMode: "eager",
+                dynamicImportPrefetch: true,
+                dynamicImportPreload: true,
+              },
+            },
+          },
+          optimization: {
+            splitChunks: false,
+          },
+          plugins: [new NodePolyfillPlugin()],
+        }
+      : {};
+
+  let config = mergeSplitOverlap(
+    isClient ? clientConfig : serverConfig,
+    angularExpandConfig
+  );
+  config = mergeSplitOverlap(config, testClientExpandConfig);
+
+  // Check for override config file (extra file to override everything)
+  if (projectConfigPath) {
+    const configDir = path.dirname(projectConfigPath);
+    const configFileName = path.basename(projectConfigPath);
+    const configExt = path.extname(configFileName);
+    const configNameWithoutExt = configFileName.replace(configExt, '');
+    const configNameFull = `${configNameWithoutExt}.override${configExt}`;
+    const overrideConfigPath = path.join(configDir, configNameFull);
+
+    if (fs.existsSync(overrideConfigPath)) {
+      const nextOverrideConfig = await loadAndProcessConfig(
+        overrideConfigPath,
+        configNameFull,
+        Meteor, 
+        argv, 
+        isAngularEnabled
+      );
+
+      if (nextOverrideConfig) {
+        // Apply override config as the last step
+        config = mergeSplitOverlap(config, nextOverrideConfig);
+      }
+    }
+  }
 
   if (Meteor.isDebug || Meteor.isVerbose) {
     console.log('Config:', inspect(config, { depth: null, colors: true }));

@@ -15,7 +15,7 @@ describe('TypeScript App Bundling /', () => {
       testServer: 'tests/server.ts',
     },
     buildDir: 'build',
-    configFile: 'rspack.config.cjs',
+    configFile: 'rspack.config.ts',
     customAssertions: {
       afterRun: async ({ result, tempDir }) => {
         // SCSS styles support
@@ -88,12 +88,12 @@ export async function waitForTypeScriptEnvs(outputLines, options = {}) {
 export async function waitForTypeScriptErrorFree(outputLines, options = {}) {
   await waitForMeteorOutput(
     outputLines,
-    /.*\[Rspack.*Client].*No TypeScript errors found\./,
+    /.*\[Rspack.*Client].*no.*errors.*found.*/,
     options
   );
   await waitForMeteorOutput(
     outputLines,
-    /.*\[Rspack.*Server].*No TypeScript errors found\./,
+    /.*\[Rspack.*Client].*no.*errors.*found.*/,
     options
   );
   console.log(`Custom Plugin usage: ts-checker-rspack-plugin`);

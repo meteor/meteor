@@ -254,3 +254,31 @@ export function checkTypescriptInstalled() {
 
   return isTypescriptInstalled;
 }
+
+/**
+ * Checks if Angular is installed and sets global state accordingly
+ * Sets global state and environment variables based on Angular detection
+ * @returns {boolean} Whether Angular is installed
+ */
+export function checkAngularInstalled() {
+  // Skip if already checked
+  if (getGlobalState(GLOBAL_STATE_KEYS.ANGULAR_CHECKED, false)) {
+    return;
+  }
+
+  const appDir = getMeteorAppDir();
+  // Check if @nx/angular-rspack is a dependency in the project
+  const isAngularInstalled = checkNpmDependencyExists('@nx/angular-rspack', { cwd: appDir });
+
+  if (isAngularInstalled) {
+    // Set environment variable to indicate Angular is enabled
+    process.env.METEOR_ANGULAR_ENABLED = 'true';
+  } else {
+    process.env.METEOR_ANGULAR_ENABLED = 'false';
+  }
+
+  // Mark as checked
+  setGlobalState(GLOBAL_STATE_KEYS.ANGULAR_CHECKED, true);
+
+  return isAngularInstalled;
+}

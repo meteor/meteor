@@ -18,7 +18,7 @@ Starting with Meteor 3.4
 Add this Atmosphere package to your app:
 
 ``` bash
-meteor add rspack@1.0.0-beta340.12
+meteor add rspack@1.0.0-beta340.14
 ```
 
 On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
@@ -105,6 +105,10 @@ You can still use these plugins to handle files inside Meteor atmosphere package
 
 Please report your plugin usage as [GitHub issues](https://github.com/meteor/meteor/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen) or [forum posts](https://forums.meteor.com/), so we can suggest an Rspack alternative or assess compatibility.
 
+### Further migration
+
+Refer to the [Migration Topics](#migration-topics) section for more details on other specific requirements your app might have.
+
 ## Custom `rspack.config.js`
 
 Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package. You can also use `rspack.config.mjs` or `rspack.config.cjs` if you prefer strict ESM or CommonJS formats.
@@ -137,21 +141,23 @@ module.exports = defineConfig(Meteor => {
 
 You can use flags to control the final configuration based on the environment. The available flags are passed in the `Meteor` parameter.
 
-| Flag                | Type     | Description                                                                 |
-|---------------------| -------- |-----------------------------------------------------------------------------|
-| `isDevelopment`     | boolean  | True when running in development mode                                       |
-| `isProduction`      | boolean  | True when running in production mode                                        |
-| `isClient`          | boolean  | True when building or running client code                                   |
-| `isServer`          | boolean  | True when building or running server code                                   |
-| `isTest`            | boolean  | True when running in test mode                                              |
-| `isDebug`           | boolean  | True when debug mode is enabled                                             |
-| `isRun`             | boolean  | True when running the project with `meteor run`                             |
-| `isBuild`           | boolean  | True when building the project with `meteor build`                          |
-| `swcConfigOptions`  | object   | Project-level SWC config available for reusing                              |
-| `HtmlRspackPlugin`  | function | Custom HtmlRspackPlugin function for extending the config                   |
-| `compileWithMeteor` | function | Forces given npm deps (string[]) to be compiled by Meteor                   |
-| `compileWithRspack` | function | Forces given npm deps (string[]) to be compiled by Rspack                   |
-| `setCache`          | function | Enables or disables cache. Accepts true (persistent, default), false, or 'memory' |
+| Flag                | Type     | Description                                                                                               |
+|---------------------| -------- |-----------------------------------------------------------------------------------------------------------|
+| `isDevelopment`     | boolean  | True when running in development mode                                                                     |
+| `isProduction`      | boolean  | True when running in production mode                                                                      |
+| `isClient`          | boolean  | True when building or running client code                                                                 |
+| `isServer`          | boolean  | True when building or running server code                                                                 |
+| `isTest`            | boolean  | True when running in test mode                                                                            |
+| `isDebug`           | boolean  | True when debug mode is enabled                                                                           |
+| `isRun`             | boolean  | True when running the project with `meteor run`                                                           |
+| `isBuild`           | boolean  | True when building the project with `meteor build`                                                        |
+| `swcConfigOptions`  | object   | Project-level SWC config available for reusing                                                            |
+| `HtmlRspackPlugin`  | function | Custom HtmlRspackPlugin function for extending the config                                                 |
+| `compileWithMeteor` | function | Forces given npm deps ([Condition](https://rspack.rs/config/module#condition)[]) to be compiled by Meteor |
+| `compileWithRspack` | function | Forces given npm deps ([Condition](https://rspack.rs/config/module#condition)[]) to be compiled by Rspack |
+| `setCache`          | function | Enables or disables cache. Accepts true (persistent, default), false, or 'memory'                         |
+| `splitVendorChunk`  | function | Splits vendor libraries so they are automatically served from a separate chunk                            |
+| `extendSwcConfig`   | function | Extends the [SWC loader configuration](https://rspack.rs/guide/features/builtin-swc-loader#options) to apply only to the app code                                    |
 
 Some configurations in the Rspack config are reserved for the Meteor-Rspack setup to work, such as Rspack options inside the `entry` and `output` objects. These will trigger warnings if modified. All other settings can be overridden, giving you the flexibility to make any setup compatible with the modern bundler.
 
@@ -472,6 +478,12 @@ Meteor-Rspack supports Babel projects as an alternative to default SWC.
 
 Using Babel will increase build times. Prefer SWC. If you need Babel for specific files, limit Babel to those files, or use a hybrid with SWC and Babel. For example, [enabling React Compiler is available only via Babel using module rules](https://rspack.rs/guide/tech/react#react-compiler).
 
+### Angular
+
+Meteor-Rspack supports Angular projects. It’s experimental, but it already works in development, production, and with Meteor testing. We still need to refine it and add the Angular test suite and other details.
+
+> Use `meteor create --angular` to start with a preconfigured Rspack Angular app.
+
 ### HtmlRspackPlugin
 
 Meteor-Rspack includes its own HtmlRspackPlugin, enabled by default to attach chunks and assets to the HTML skeleton. Meteor then uses this HTML to generate the final index file.
@@ -506,45 +518,170 @@ This example adds meta tags to the HTML. For more options, see the [official Rsp
 You can still use HTML files near your Meteor client entry point to define customizations (for example, `./client/main.html` will generate correctly and apply the contents you add).
 :::
 
-### `compileWithRspack` and `compileWithMeteor`
+### Delegating Dependencies to Rspack
 
-Meteor provides two helpers to control how specific npm dependencies are handled by Rspack during the build.
+**Meteor.compileWithRspack(deps: [Condition](https://rspack.rs/config/module#condition)[])**
 
-They let you force or skip compilation for selected packages, which is useful in monorepos or when dealing with untranspiled or native modules.
-
-Available helpers in your `rspack.config.js`:
-
-🔹 **Meteor.compileWithRspack(deps: string[])**
-Forces Rspack (via SWC) to parse and transpile the listed npm packages.
+This helper forces **Rspack (via SWC and custom loaders)** to parse and transpile specific npm dependencies during the build.
 
 Use this when a dependency:
 
-* Uses modern syntax (ESM, TypeScript, etc.) not compatible with your target,
+* Uses modern syntax (ESM, TypeScript, etc.)
 * Lives inside a monorepo and isn’t precompiled,
-* Needs to be reprocessed according to your SWC config.
+* Needs to be reprocessed according to your SWC config
 
-🔹 **Meteor.compileWithMeteor(deps: string[])**
-Marks the listed npm packages as externals, so they are skipped by Rspack and handled by Meteor/Node during build and runtime.
+```js
+const { defineConfig } = require('@meteorjs/rspack');
 
-Use this when facing issues and for:
+module.exports = defineConfig(Meteor => ({
+  // Force-compile modern or local packages via SWC
+  ...Meteor.compileWithRspack(['grubba-rpc']),
+}));
+```
 
-* Native or binary modules (e.g. `sharp`),
-* npm dependencies used inside Meteor atmosphere packages that keep internal state,
-* Large or precompiled modules you prefer to offload to Meteor’s cache.
+### Delegating Dependencies to Meteor
 
-``` json
+**Meteor.compileWithMeteor(deps: [Condition](https://rspack.rs/config/module#condition)[])**
+
+This helper marks specific npm dependencies as externals, meaning they are skipped by Rspack and instead handled by Meteor/Node at runtime.
+
+Use this when a dependency:
+
+* Contains native or binary code (e.g. sharp)
+* Belongs to a Meteor Atmosphere package that maintains internal state
+* Comes precompiled or is large enough to run better outside the bundle
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  // Exclude native modules from the bundle (use Meteor runtime)
+  ...(Meteor.isServer ? Meteor.compileWithMeteor(['sharp']) : {}),
+}));
+```
+
+---
+
+A reported use case for this is with the `thread-stream` dependency, a transitive dependency of Mongo packages. If you get this error:
+
+``` shell
+Error: Cannot find module '/_build/main-dev/lib/worker.js'
+```
+
+It means the worker can’t be found. Let the Node/Meteor ecosystem handle this dependency so it can automatically pick the right worker.
+
+``` js
+module.exports = defineConfig((Meteor) => {
+  return {
+     // ..
+    ...Meteor.compileWithMeteor([
+      // ..
+      "thread-stream"
+    ]),
+  };
+});
+```
+
+More info in [this forum post](https://forums.meteor.com/t/new-3-4-beta-12-release-faster-builds-smaller-bundles-and-modern-setups-with-the-rspack-integration/64124/94).
+
+### Cache
+
+Meteor cache remains active and continues to handle Atmosphere packages and intermediate builds. There’s an additional cache layer managed by Rspack to speed up rebuilds for your app code.
+
+This Rspack cache is enabled by default in persistent mode. If you [encounter issues](https://github.com/web-infra-dev/rspack/issues/11804) or prefer to disable it, you can do so in your `rspack.config.js` using the helper:
+
+```json
 const { defineConfig } = require('@meteorjs/rspack');
 const { rspack } = require('@rspack/core');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 module.exports = defineConfig(Meteor => ({
-  // Exclude native modules from the bundle (use Meteor runtime)
-  ...(Meteor.isServer ? Meteor.compileWithMeteor(['sharp']) : {}),
+  // Disable cache, or use 'memory' to switch to in-memory cache
+  ...Meteor.setCache(false),
+}));
 
-  // Force-compile modern or local packages via SWC
-  ...Meteor.compileWithRspack(['grubba-rpc']),
+
+```
+
+This helper provide a shortcut to apply the needed Rspack configuration and safely override defaults, so you don’t have to handle it manually.
+
+### Split Vendor Chunk
+
+When using dynamic imports (`import()`), you might unintentionally include libraries like React, Mantine, or date utilities in multiple async chunks. To avoid this, it's best to define a stable `vendor` chunk for shared dependencies.
+
+We provide a helper to easily configure this in your `rspack.config.js`:
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  // Split vendor chunk
+  ...Meteor.splitVendorChunk(),
 }));
 ```
+
+This is a quick configuration for split chunks all within `node_modules` as a `vendor` chunk, if you need more control you can use the [official Rspack split chunks integration guide](https://rspack.rs/guide/optimization/code-splitting#splitchunksplugin).
+
+### Extending SWC config
+
+Rspack uses the SWC configuration to transpile your app code. By default, it inherits any settings from the `.swcrc` file, which also [impacts how Meteor transpiles core and package code](meteor-bundler-optimizations.md#custom-swcrc).
+
+If you want a configuration to apply only to your app code, you can extend the SWC setup using the `Meteor.extendSwcConfig` helper:
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  // Extend SWC config
+  ...Meteor.extendSwcConfig({
+    jsc: {
+      parser: {
+        syntax: 'typescript',
+      },
+    },
+  }),
+}));
+```
+
+### Interop for Default Imports
+
+Meteor originally handled default imports from CommonJS modules automatically. This allowed you to write:
+```js
+import all from 'some-commonjs-lib';
+```
+even when the library used module.exports = ... under the hood.
+
+With Rspack and SWC, that behavior no longer happens by default, you now need to use:
+
+```js
+import * as all from 'some-commonjs-lib';
+```
+unless you re-enable interop support.
+
+If you prefer to restore Meteor’s earlier behavior, you can configure SWC like this in your `.swcrc`:
+
+``` json
+{
+  "jsx": { ... },
+  "module": {
+    "type": "commonjs",
+    "noInterop": false,
+    "importInterop": "node"
+  }
+}
+```
+
+* `"type": "commonjs"` tells SWC to emit CommonJS output (require, module.exports, etc.).
+* `"noInterop": false` injects interop helpers so default imports from CommonJS modules work properly.
+* `"importInterop": "node"` aligns behavior with how Node handles ESM and CJS interop.
+
+This configuration ensures compatibility for mixed module imports, allowing default imports from CommonJS packages to behave as the old Meteor-style import behavior.
+
+However, enabling this globally means SWC will convert all `import`/`export` statements into `require` calls. Rspack then loses access to ES module boundaries, preventing optimizations like tree-shaking and static analysis.
+
+In short, this option trades runtime compatibility for build-time optimization.
+
+We recommend migrating away from this pattern and using standard named or namespace imports (`import { ... }` or `import * as`...) for long-term compatibility and better build performance.
 
 ### Cache
 
@@ -607,6 +744,19 @@ new GenerateSW({
   // ...
 })
 ```
+
+### Dev Server
+
+You can customize the Rspack dev server much like you would when using meteor run. Any [devServer option listed in the official Rspack guide](https://rspack.rs/config/dev-server) can be applied in your app’s [`rspack.config.js`](./rspack-bundler-integration.md#custom-rspackconfigjs).
+
+The only exception is the port configuration. To set a specific port for the Rspack dev server, use the `RSPACK_DEVSERVER_PORT` environment variable:
+
+```bash
+# Assign a specific port for the Rspack dev server
+RSPACK_DEVSERVER_PORT=3232 meteor run
+```
+
+The reason is that the Rspack dev server is handled by the Meteor so it can make both dev server works together, and the info of the port needs to be properly shared via the env.
 
 ## Benefits
 

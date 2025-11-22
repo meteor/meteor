@@ -244,38 +244,172 @@ Object.assign(Proxy.prototype, {
 });
 
 function showErrorPage(res) {
-  // XXX serve an app that shows the logs nicely and that also
-  // knows how to reload when the server comes back up
+  // TODO: reload when the server comes back up
   res.writeHead(200, {'Content-Type': 'text/html'});
   res.write(`
 <!DOCTYPE html>
 <html>
   <head>
-    <title>App crashing</title>
+    <title>Meteor App - Error</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style type='text/css'>
-      body { margin: 0; }
-      h3 {
-        margin: 0;
-        font-family: sans-serif;
-        padding: 20px 10px 10px 10px;
-        background: #eee;
+      :root {
+        --bg-color: #ffffff;
+        --text-color: #333333;
+        --header-bg: #f4f4f5;
+        --header-color: #333333;
+        --border-color: #e2e2e2;
+        --accent-color: #de4f4f;
+        --code-bg: #f7f7f7;
       }
-      pre { margin: 20px; }
+      
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #1a1a1a;
+          --text-color: #e0e0e0;
+          --header-bg: #2a2a2a;
+          --header-color: #ffffff;
+          --border-color: #444444;
+          --accent-color: #ff6b6b;
+          --code-bg: #2c2c2c;
+        }
+      }
+      
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        line-height: 1.6;
+      }
+      
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+      
+      header {
+        background: var(--header-bg);
+        color: var(--header-color);
+        padding: 20px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      
+      h1 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+      
+      .subtitle {
+        font-size: 16px;
+        opacity: 0.8;
+      }
+      
+      .log-container {
+        margin: 20px 0;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      
+      .log-header {
+        padding: 10px 15px;
+        background-color: var(--header-bg);
+        border-bottom: 1px solid var(--border-color);
+        font-weight: 600;
+      }
+      
+      .log-content {
+        background-color: var(--code-bg);
+        padding: 15px;
+        overflow-x: auto;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        width: 100%;
+        display: block;
+      }
+      
+      .meteor-logo {
+        color: var(--accent-color);
+        font-weight: bold;
+      }
+      
+      .hint, .links {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: var(--header-bg);
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      
+      .links {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        padding: 20px 15px;
+      }
+      
+      .links a {
+        color: var(--accent-color);
+        text-decoration: none;
+        font-weight: 500;
+        padding: 8px 16px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border-color);
+        background-color: var(--bg-color);
+      }
+      
+      .links a:hover {
+        background-color: var(--accent-color);
+        color: white;
+        border-color: var(--accent-color);
+      }
     </style>
   </head>
 
   <body>
-    <h3>Your app is crashing. Here's the latest log:</h3>
+    <header>
+      <div class="container">
+        <h1><span class="meteor-logo">Meteor</span> App Error</h1>
+        <div class="subtitle">Your application server has encountered an error</div>
+      </div>
+    </header>
+    
+    <div class="container">
+      <div class="log-container">
+        <div class="log-header">Server Log</div>
+        <code class="log-content">`);
 
-    <pre>`);
+  for (const item of runLog.getLog()) {
+    res.write(Anser.ansiToHtml(Anser.escapeForHtml(item.message)) + "\n");
+  }
 
-  runLog.getLog().forEach(function (item) {
-        res.write(Anser.ansiToHtml(Anser.escapeForHtml(item.message)) + "\n");
-      });
-
-      res.write(`</pre>
+  res.write(`</code>
+      </div>
+      
+      <div class="hint">
+        Fix the error in your code and save your files. Once your server is running without errors, then reload this page.
+      </div>
+      <div class="links">
+        <a href="https://docs.meteor.com" target="_blank" rel="noreferrer noopener">Docs</a>
+        <a href="https://guide.meteor.com" target="_blank" rel="noreferrer noopener">Guide</a>
+        <a href="https://forums.meteor.com" target="_blank" rel="noreferrer noopener">Forums</a>
+        <a href="https://discord.com/invite/3w7EKdpghq" target="_blank" rel="noreferrer noopener">Discord</a>
+      </div>
+    </div>
   </body>
-</html>`)
+</html>`);
 
   res.end();
 }

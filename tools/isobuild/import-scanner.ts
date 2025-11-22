@@ -470,6 +470,14 @@ export default class ImportScanner {
       const old = this.outputFiles[
         this.absPathToOutputIndex[absLowerPath]];
 
+      // Check if this is a case-sensitivity conflict (same path when lowercased, but different actual paths)
+      if (old.absPath && old.absPath !== absPath) {
+        throw new Error(
+          `Filename collision detected: "${old.sourcePath}" and "${file.sourcePath}" resolve to the same path when case is ignored. ` +
+          `Please ensure file names have consistent casing to avoid conflicts.`
+        );
+      }
+
       // If the old file is just an empty stub, let the new file take
       // precedence over it.
       if (old.implicit === true) {

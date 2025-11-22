@@ -318,17 +318,18 @@ export function configureMeteorForRspack() {
     ...commandRole,
     isServer: true,
   });
-  const testClientModule = getBuildFilePath({
-    isTest: true,
-    ...env,
-    ...commandRole,
-    isClient: true,
-  });
   const isTestEager =
     initialEntrypoints.testModule == null &&
     initialEntrypoints.testClient == null &&
     initialEntrypoints.testServer == null;
   const isTestModule = initialEntrypoints.testModule != null || isTestEager;
+  const testClientModule = getBuildFilePath({
+    isTest: true,
+    ...env,
+    ...commandRole,
+    isTestModule,
+    isClient: true,
+  });
   const testServerModule = getBuildFilePath({
     isTest: true,
     ...env,
@@ -341,7 +342,8 @@ export function configureMeteorForRspack() {
     mainClient: `${RSPACK_BUILD_CONTEXT}/${mainClientModule}`,
     mainServer: `${RSPACK_BUILD_CONTEXT}/${mainServerModule}`,
     ...((isTestModule && {
-      testModule: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
+      testClient: `${RSPACK_BUILD_CONTEXT}/${testClientModule}`,
+      testServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     }) || {
       testClient: `${RSPACK_BUILD_CONTEXT}/${testClientModule}`,
       testServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,

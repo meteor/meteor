@@ -118,6 +118,12 @@ export function getCustomConfigFilePath(basePath = getMeteorAppDir()) {
     return jsPath;
   }
 
+  // Check for .ts extension next
+  const tsPath = `${configBasePath}.ts`;
+  if (fs.existsSync(tsPath)) {
+    return tsPath;
+  }
+
   // Check for .mjs extension next
   const mjsPath = `${configBasePath}.mjs`;
   if (fs.existsSync(mjsPath)) {
@@ -158,7 +164,7 @@ export function getConfigFilePath() {
   }
 
   // If no config file is found, throw an error
-  throw new Error('Could not find rspack.config.js, rspack.config.mjs, or rspack.config.cjs. Make sure @meteorjs/rspack is installed correctly.');
+  throw new Error('Could not find rspack.config.js, rspack.config.ts, rspack.config.mjs, or rspack.config.cjs. Make sure @meteorjs/rspack is installed correctly.');
 }
 
 /**
@@ -166,13 +172,16 @@ export function getConfigFilePath() {
  * @param {Object} options - Options for environment variables
  * @param {boolean} options.isClient - Whether this is for client-side build
  * @param {boolean} options.isServer - Whether this is for server-side build
+ * @param {boolean} options.isTest - Whether this is for test build
+ * @param {boolean} options.isTestLike - Whether test envs should be inherited
  * @returns {Object} Object containing params (command line arguments) and envs (environment variables)
  */
-export function getRspackEnv({ isClient, isServer, isTest: inIsTest }) {
+export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike: inIsTestLike }) {
   const RSPACK_BUILD_CONTEXT = require('./constants').RSPACK_BUILD_CONTEXT;
 
   const initialEntrypoints = getMeteorInitialAppEntrypoints();
   const isTest = inIsTest != null ? inIsTest : isMeteorAppTest();
+  const isTestLike = isTest || inIsTestLike;
   const isTestEager =
     initialEntrypoints.testModule == null &&
     initialEntrypoints.testClient == null &&
@@ -184,7 +193,7 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest }) {
   const env = isMeteorAppDevelopment()
     ? { isDevelopment: true }
     : { isProduction: true };
-  const side = isTest && isTestModule ? { isTestModule: true } : isClient ? { isClient: true } : { isServer: true };
+  const side = isClient ? { isClient: true } : { isServer: true };
   const commandRole = isMeteorAppRun()
     ? { role: FILE_ROLE.run }
     : isMeteorAppBuild()
@@ -192,12 +201,13 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest }) {
       : { role: FILE_ROLE.run };
 
   const entryKey = `${isTest && isTestModule ? 'test' : 'main'}${isClient ? 'Client' : 'Server'}`;
-  const inputFilePath = isTest && isTestModule ? initialEntrypoints.testModule : initialEntrypoints[entryKey];
+  const inputFilePath = initialEntrypoints[entryKey];
   const isTypescriptEnabled = process.env.METEOR_TYPESCRIPT_ENABLED === 'true' ||
     inputFilePath?.endsWith('.ts') ||
     inputFilePath?.endsWith('.tsx');
 
   const isReactEnabled = process.env.METEOR_REACT_ENABLED === 'true';
+  const isAngularEnabled = process.env.METEOR_ANGULAR_ENABLED === 'true';
   const isTsxEnabled = isTypescriptEnabled && (inputFilePath?.endsWith('.tsx') || isReactEnabled);
   const isJsxEnabled = !isTypescriptEnabled && (inputFilePath?.endsWith('.jsx') || isReactEnabled);
 
@@ -216,16 +226,17 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest }) {
     ['isDebug', isMeteorAppDebug()],
     ['isVerbose', isMeteorAppConfigModernVerbose()],
     ['isTest', isTest],
-    ...(isTest && isTestModule &&  [['isTestModule', isTestModule]] || []),
-    ...(isTest && isTestEager &&  [['isTestEager', isTestEager]] || []),
-    ...(isTest && isTestFullApp &&  [['isTestFullApp', isTestFullApp]] || []),
+    ...(isTestLike ? [['isTestLike', isTestLike || isTest]] : []),
+    ...(isTestLike && isTestFullApp &&  [['isTestFullApp', isTestFullApp]] || []),
+    ...(isTestLike && isTestModule &&  [['isTestModule', isTestModule]] || []),
+    ...(isTestLike && isTestEager &&  [['isTestEager', isTestEager]] || []),
     ['isRun', isMeteorAppRun()],
     ['isBuild', isMeteorAppBuild()],
     ['isNative', isMeteorAppNative()],
     ['isClient', isClient],
     ['isServer', isServer],
-    ['entryPath', getBuildFilePath({ ...module, ...env, ...side, role: FILE_ROLE.entry }) ],
-    ['outputPath', getBuildFilePath({ ...module, ...env, ...side, role: FILE_ROLE.output }) ],
+    ['entryPath', getBuildFilePath({ ...module, ...env, ...side, isTestModule, role: FILE_ROLE.entry }) ],
+    ['outputPath', getBuildFilePath({ ...module, ...env, ...side, isTestModule, role: FILE_ROLE.output }) ],
     ['outputFilename',
       getBuildFilePath({
         ...env,
@@ -242,11 +253,26 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest }) {
     ['devServerPort', process.env.RSPACK_DEVSERVER_PORT],
     ['projectConfigPath', projectConfigPath],
     ['configPath', configPath],
+    ...((isTest &&
+      initialEntrypoints.testClient &&
+      initialEntrypoints.testServer && [
+        ['testClientEntry', initialEntrypoints.testClient],
+        ['testServerEntry', initialEntrypoints.testServer],
+      ]) ||
+      (isTest &&
+        initialEntrypoints.testModule && [
+          ['testEntry', initialEntrypoints.testModule],
+      ]) || [
+        ['mainClientEntry', initialEntrypoints.mainClient],
+        ['mainClientHtmlEntry', initialEntrypoints.mainClientHtml],
+        ['mainServerEntry', initialEntrypoints.mainServer],
+    ]),
     ...(swcExternalHelpers &&  [['swcExternalHelpers', swcExternalHelpers]] || []),
     ...(isReactEnabled &&  [['isReactEnabled', isReactEnabled]] || []),
     ...(isBlazeEnabled &&  [['isBlazeEnabled', isBlazeEnabled]] || []),
     ...(isBlazeHotEnabled &&  [['isBlazeHotEnabled', isBlazeHotEnabled]] || []),
     ...(isTypescriptEnabled &&  [['isTypescriptEnabled', isTypescriptEnabled]] || []),
+    ...(isAngularEnabled &&  [['isAngularEnabled', isAngularEnabled]] || []),
     ...(isTsxEnabled &&  [['isTsxEnabled', isTsxEnabled]] || []),
     ...(isJsxEnabled &&  [['isJsxEnabled', isJsxEnabled]] || []),
     ...(isBundleVisualizerEnabled &&  [
@@ -403,14 +429,14 @@ export function startRspackServerWatch(options = {}) {
  * @returns {Promise<void>} A promise that resolves when the build is complete
  * @throws {Error} If the build process fails
  */
-export async function runRspackBuild({ isClient, isServer, isTest, isTestModule, onCompile, watch, label = 'Build' } = {}) {
+export async function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTestLike, onCompile, watch, label = 'Build' } = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
 
-  const endpoint = isTestModule ? 'Module' : isClient ? 'Client' : 'Server';
+  const endpoint = isClient ? 'Client' : 'Server';
   // Use a promise to ensure Meteor waits until Rspack finishes
   return new Promise((resolve, reject) => {
-    const { params, envs } = getRspackEnv({ isClient, isServer, isTest, isTestModule });
+    const { params, envs } = getRspackEnv({ isClient, isServer, isTest, isTestModule, isTestLike });
     const rspackArgs = [
       'rspack',
       'build',

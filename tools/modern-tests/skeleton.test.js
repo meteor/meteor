@@ -9,6 +9,16 @@ import { testMeteorSkeleton } from "./test-helpers";
 import { assertStyles } from "./assertions";
 
 describe('Meteor Skeletons /', () => {
+  describe('Angular Skeleton /', testMeteorSkeleton({
+    skeletonName: 'angular',
+    port: 3213,
+    filePaths: {
+      client: 'client/main.ts',
+      server: 'server/main.ts',
+      test: 'tests/main.ts'
+    },
+  }));
+
   describe('Apollo Skeleton /', testMeteorSkeleton({
     skeletonName: 'apollo',
     port: 3201,

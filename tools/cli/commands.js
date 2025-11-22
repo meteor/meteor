@@ -703,7 +703,8 @@ export const AVAILABLE_SKELETONS = [
   "chakra-ui",
   "solid",
   "legacy",
-  "coffeescript"
+  "coffeescript",
+  "angular"
 ];
 
 const SKELETON_INFO = {
@@ -721,6 +722,7 @@ const SKELETON_INFO = {
   "solid": "To create a basic Solid app",
   "coffeescript": "To create a basic CoffeeScript app",
   "babel": "To create a React app with Babel support",
+  "angular": "To create a basic Angular app",
 };
 
 main.registerCommand({
@@ -745,6 +747,7 @@ main.registerCommand({
     'chakra-ui': { type: Boolean },
     coffeescript: { type: Boolean },
     solid: { type: Boolean },
+    angular: { type: Boolean },
     legacy: { type: Boolean },
     prototype: { type: Boolean },
     from: { type: String },

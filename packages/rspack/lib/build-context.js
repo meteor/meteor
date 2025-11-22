@@ -126,17 +126,13 @@ export function ensureModuleFilesExist() {
     initialEntrypoints.testClient == null &&
     initialEntrypoints.testServer == null;
   const isTestModule = initialEntrypoints.testModule != null || isTestEager;
-  const testModuleFiles = {
-    entryFile: initialEntrypoints.testModule || '',
-    outputFile: getBuildFilePath({ isTest: true, isTestModule: true, role: FILE_ROLE.output, onlyFilename: true }),
-  };
-  const testClientFiles = isTestModule ? null : {
+  const testClientFiles = {
     entryFile: initialEntrypoints.testClient || '',
-    outputFile: getBuildFilePath({ isTest: true, isClient: true, role: FILE_ROLE.output, onlyFilename: true }),
+    outputFile: getBuildFilePath({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.output, onlyFilename: true }),
   };
-  const testServerFiles = isTestModule ? null : {
+  const testServerFiles = {
     entryFile: initialEntrypoints.testServer || '',
-    outputFile: getBuildFilePath({ isTest: true, isServer: true, role: FILE_ROLE.output, onlyFilename: true }),
+    outputFile: getBuildFilePath({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.output, onlyFilename: true }),
   };
 
   const moduleFiles = {
@@ -153,28 +149,19 @@ export function ensureModuleFilesExist() {
       getBuildFileContent({ isMain: true, isServer: true, ...env, role: FILE_ROLE.entry, ...mainServerFiles }),
     [getBuildFilePath({ isMain: true, isServer: true, ...env, role: FILE_ROLE.output })]:
       getBuildFileContent({ isMain: true, isServer: true, ...env, role: FILE_ROLE.output, ...mainServerFiles }),
-    /* Test module files when just test module or test module files for client and server are present */
-    ...(isTestModule && {
-      [getBuildFilePath({ isTest: true, isTestModule: true, ...commandRole })]:
-        getBuildFileContent({ isTest: true, isTestModule: true, ...commandRole, ...testModuleFiles }),
-      [getBuildFilePath({ isTest: true, isTestModule: true, role: FILE_ROLE.entry })]:
-        getBuildFileContent({ isTest: true, isTestModule: true, role: FILE_ROLE.entry, ...testModuleFiles }),
-      [getBuildFilePath({ isTest: true, isTestModule: true, role: FILE_ROLE.output })]:
-        getBuildFileContent({ isTest: true, isTestModule: true, role: FILE_ROLE.output, ...testModuleFiles }),
-    } || {
-      [getBuildFilePath({ isTest: true, isClient: true, ...commandRole })]:
-        getBuildFileContent({ isTest: true, isClient: true, ...commandRole, ...testClientFiles }),
-      [getBuildFilePath({ isTest: true, isClient: true, role: FILE_ROLE.entry })]:
-        getBuildFileContent({ isTest: true, isClient: true, role: FILE_ROLE.entry, ...testClientFiles }),
-      [getBuildFilePath({ isTest: true, isClient: true, role: FILE_ROLE.output })]:
-        getBuildFileContent({ isTest: true, isClient: true, role: FILE_ROLE.output, ...testClientFiles }),
-      [getBuildFilePath({ isTest: true, isServer: true, ...commandRole })]:
-        getBuildFileContent({ isTest: true, isServer: true, ...commandRole, ...testServerFiles }),
-      [getBuildFilePath({ isTest: true, isServer: true, role: FILE_ROLE.entry })]:
-        getBuildFileContent({ isTest: true, isServer: true, role: FILE_ROLE.entry, ...testServerFiles }),
-      [getBuildFilePath({ isTest: true, isServer: true, role: FILE_ROLE.output })]:
-        getBuildFileContent({ isTest: true, isServer: true, role: FILE_ROLE.output, ...testServerFiles }),
-    }),
+    /* Test module files when test module, test module files for client and server are present or eager discovery */
+    [getBuildFilePath({ isTest: true, isTestModule, isClient: true, ...commandRole })]:
+      getBuildFileContent({ isTest: true, isTestModule, isClient: true, ...commandRole, ...testClientFiles }),
+    [getBuildFilePath({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.entry })]:
+      getBuildFileContent({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.entry, ...testClientFiles }),
+    [getBuildFilePath({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.output })]:
+      getBuildFileContent({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.output, ...testClientFiles }),
+    [getBuildFilePath({ isTest: true, isTestModule, isServer: true, ...commandRole })]:
+      getBuildFileContent({ isTest: true, isTestModule, isServer: true, ...commandRole, ...testServerFiles }),
+    [getBuildFilePath({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.entry })]:
+      getBuildFileContent({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.entry, ...testServerFiles }),
+    [getBuildFilePath({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.output })]:
+      getBuildFileContent({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.output, ...testServerFiles }),
   };
 
   Object.entries(moduleFiles).forEach(([filename, defaultContent]) => {
@@ -236,9 +223,7 @@ export function getBuildFilePath(config) {
 
   // Determine the side part (first part of filename)
   let side = '';
-  if (config?.isTestModule) {
-    side = 'test';
-  } else if (config?.isServer) {
+  if (config?.isServer) {
     side = 'server';
   } else if (config?.isClient) {
     side = 'client';

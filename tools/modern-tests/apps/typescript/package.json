@@ -25,7 +25,7 @@
     "sass": "^1.92.1",
     "sass-embedded": "^1.92.1",
     "sass-loader": "^16.0.5",
-    "ts-checker-rspack-plugin": "^1.1.5",
+    "ts-checker-rspack-plugin": "1.1.6",
     "typescript": "^5.4.5"
   },
   "meteor": {

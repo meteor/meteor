@@ -16,7 +16,7 @@ if (Meteor.isServer) {
     it('can add a new link', async function () {
       const addLink = Meteor.server.method_handlers['links.insert'];
 
-      addLink.apply({}, ['meteor.com', 'https://www.meteor.com']);
+      await addLink.apply({}, ['meteor.com', 'https://www.meteor.com']);
 
       assert.equal(await Links.find().countAsync(), 1);
     });

@@ -49,3 +49,12 @@ Meteor.startup(async () => {
 
 console.log("--> S3mini imported: ", !!S3mini);
 console.log("--> StreamableHTTPClientTransport imported: ", !!StreamableHTTPClientTransport);
+
+if (Meteor.isAppTest) {
+  let isAppTest = Meteor.isAppTest;
+  Meteor.methods({
+    "test.method": () => {
+      return { isAppTestInitial: isAppTest, isAppTestNow: Meteor.isAppTest };
+    }
+  });
+}

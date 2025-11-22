@@ -328,6 +328,9 @@ var PackageSource = function () {
   // as a string.
   self.npmDependencies = {};
 
+  // npm packages used for development of this package.
+  self.npmDevDependencies = {};
+
   // Files to be stripped from the installed NPM dependency tree. See the
   // Npm.strip comment below for further usage information.
   self.npmDiscards = null;
@@ -437,6 +440,9 @@ Object.assign(PackageSource.prototype, {
 
     utils.ensureOnlyValidVersions(options.npmDependencies, {forCordova: false});
     self.npmDependencies = options.npmDependencies;
+
+    utils.ensureOnlyValidVersions(options.npmDevDependencies, {forCordova: false});
+    self.npmDevDependencies = options.npmDevDependencies;
 
     // If options.npmDir is a string, make sure it contains no colons.
     self.npmCacheDirectory = _.isString(options.npmDir)
@@ -772,7 +778,10 @@ Object.assign(PackageSource.prototype, {
     // dirs for use vs test?
     self.npmCacheDirectory =
       files.pathResolve(files.pathJoin(self.sourceRoot, '.npm', 'package'));
+    self.npmDevCacheDirectory =
+        files.pathResolve(files.pathJoin(self.sourceRoot, '.npm', 'devPackage'));
     self.npmDependencies = Npm._dependencies;
+    self.npmDevDependencies = Npm._devDependencies;
     self.npmDiscards = Npm._discards;
 
     self.cordovaDependencies = Cordova._dependencies;

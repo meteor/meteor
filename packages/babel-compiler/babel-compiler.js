@@ -300,7 +300,7 @@ if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath)) {
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
     } else if (arch === "web.cordova") {
-      features.modernBrowsers = ! getMeteorConfig()?.cordova?.disableModern;
+      features.modernBrowsers = ! getMeteorConfig()?.modern?.cordova === false;
     }
 
     features.topLevelAwait = inputFile.supportsTopLevelAwait &&
