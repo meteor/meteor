@@ -139,9 +139,10 @@ MongoConnection.prototype._checkChangeStreamSupport = async function() {
     const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
     const isSharded = isMaster.msg === 'isdbgrid';
     
-    this._supportsChangeStreams = isReplicaSet || isSharded;
+    this._supportsChangeStreams = isReplicaSet || isSharded || process.env.METEOR_REACTIVITY === 'changeStreams';
     
   } catch (error) {
+    Meteor._debug("Error checking Change Stream support:", error);
     this._supportsChangeStreams = false;
   }
 };
@@ -899,16 +900,26 @@ Object.assign(MongoConnection.prototype, {
         pooling: PollingObserveDriver,
       };
 
-      const configuredOrder = hasCustomDriverOrder
-        ? (isStringSetting
-          ? [reactivitySetting]
-          : reactivitySetting.reduce((acc, name) => {
-            if (!acc.includes(name)) {
-              acc.push(name);
+      let configuredOrder;
+      if (hasCustomDriverOrder) {
+        if (isStringSetting) {
+          configuredOrder = [reactivitySetting];
+        } else {
+          configuredOrder = [];
+          for (const name of reactivitySetting) {
+            if (!configuredOrder.includes(name)) {
+              configuredOrder.push(name);
             }
-            return acc;
-          }, []))
-        : DEFAULT_REACTIVITY_ORDER;
+          }
+        }
+      } else {
+        configuredOrder = DEFAULT_REACTIVITY_ORDER;
+      }
+
+      if (process.env.METEOR_REACTIVITY) {
+        configuredOrder = [process.env.METEOR_REACTIVITY];
+      }
+
 
       const invalidDriverNames = configuredOrder.filter(name => !driverClasses[name]);
       if (invalidDriverNames.length) {
@@ -929,9 +940,9 @@ Object.assign(MongoConnection.prototype, {
           if (!self._supportsChangeStreams) {
             reasons.push('Change Streams not supported by MongoDB deployment');
           }
-          if (ordered) {
-            reasons.push('Change Streams only supports unordered observeChanges');
-          }
+          // if (ordered) {
+          //   reasons.push('Change Streams only supports unordered observeChanges');
+          // }
           if (callbacks._testOnlyPollCallback) {
             reasons.push('Change Streams cannot be used with _testOnlyPollCallback');
           }
