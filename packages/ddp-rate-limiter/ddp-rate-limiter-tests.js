@@ -343,24 +343,21 @@ testAsyncMulti('ddp rate limiter - test removing rule with rateLimited ' +
 function createTestUser(test, expect) {
   const username = Random.id();
   const email = `${Random.id()}-intercept@example.com`;
-  const password = 'password';
-  const ret = { username, email, password }
+  const password = 'password';  
 
-  const doCreate = () => {
-    Accounts.createUser(ret);
-  };
-
-  if (Meteor.userId()) {
-    Meteor.logout(expect((error) => {
+  Accounts.createUser(
+    {
+      username,
+      email,
+      password,
+    },
+    expect((error) => {
       test.equal(error, undefined);
-      test.equal(Meteor.user(), null);
-      doCreate();
-    }));
-  } else {
-    doCreate();
-  }
+      test.notEqual(Meteor.userId(), null);
+    }),
+  );
 
-  return ret;
+  return { username, email, password };
 }
 
 /**

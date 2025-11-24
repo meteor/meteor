@@ -104,7 +104,6 @@ export default class LocalCollection {
     options.limit = 1;
     return (await this.find(selector, options).fetchAsync())[0];
   }
-
   prepareInsert(doc) {
     assertHasValidFieldNames(doc);
 
