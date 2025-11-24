@@ -49,6 +49,6 @@ If you want detailed help about a specific command, run `meteor help <command>`.
 
 ## Next Steps
 
-- Follow the [React](/tutorials/react/index.html) or [Vue](/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker.html) tutorials. New tutorials are coming soon.
+- Follow our tutorials for [Blaze](/tutorials/blaze/index.html), [React](/tutorials/react/index.html), [Vue](/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker.html), or [Svelte](/tutorials/svelte/index.html). New tutorials are coming soon.
 - Read about [Cordova for Mobile Apps](/about/cordova.html).
 - Explore the [Meteor Guide](https://guide.meteor.com/).
