@@ -19,8 +19,8 @@ const ASSETS_FOLDER = 'assets';
 const APP_FOLDER = 'app';
 
 const oplogCollectionWarnings = [];
-const DEFAULT_REACTIVITY_ORDER = ['oplog', 'changeStreams', 'pooling'];
-
+// TODO: we should setup change stream support as first option only in the CI, the correct option here is [ 'oplog', 'changeStreams', 'pooling'] for the release 3.4
+const DEFAULT_REACTIVITY_ORDER = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : ['changeStreams', 'oplog', 'pooling'];
 export const MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
@@ -139,7 +139,7 @@ MongoConnection.prototype._checkChangeStreamSupport = async function() {
     const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
     const isSharded = isMaster.msg === 'isdbgrid';
     
-    this._supportsChangeStreams = isReplicaSet || isSharded || process.env.METEOR_REACTIVITY === 'changeStreams';
+    this._supportsChangeStreams = isReplicaSet || isSharded
     
   } catch (error) {
     Meteor._debug("Error checking Change Stream support:", error);
@@ -916,11 +916,6 @@ Object.assign(MongoConnection.prototype, {
         configuredOrder = DEFAULT_REACTIVITY_ORDER;
       }
 
-      if (process.env.METEOR_REACTIVITY) {
-        configuredOrder = [process.env.METEOR_REACTIVITY];
-      }
-
-
       const invalidDriverNames = configuredOrder.filter(name => !driverClasses[name]);
       if (invalidDriverNames.length) {
         throw new Error(`Invalid Mongo reactivity driver(s): ${invalidDriverNames.join(', ')}`);
@@ -940,9 +935,9 @@ Object.assign(MongoConnection.prototype, {
           if (!self._supportsChangeStreams) {
             reasons.push('Change Streams not supported by MongoDB deployment');
           }
-          // if (ordered) {
-          //   reasons.push('Change Streams only supports unordered observeChanges');
-          // }
+          if (ordered) {
+            reasons.push('Change Streams only supports unordered observeChanges');
+          }
           if (callbacks._testOnlyPollCallback) {
             reasons.push('Change Streams cannot be used with _testOnlyPollCallback');
           }
@@ -1062,14 +1057,14 @@ Object.assign(MongoConnection.prototype, {
         throw new Error(`Unable to select a Mongo reactivity driver from configuration [${configuredOrder.join(', ')}].${errorDetails}`);
       }
 
-      console.log(`Using ${selectedDriverName || driverClass.name} for observing changes on collection ${collectionName} (configured order: ${configuredOrder.join(', ')})`);
+      Meteor._debug(`Using ${selectedDriverName || driverClass.name} for observing changes on collection ${collectionName} (configured order: ${configuredOrder.join(', ')})`);
       observeDriver = new driverClass({
-        cursorDescription: cursorDescription,
+        cursorDescription,
         mongoHandle: self,
-        multiplexer: multiplexer,
-        ordered: ordered,
-        matcher: matcher,  // ignored by polling
-        sorter: sorter,  // ignored by polling
+        multiplexer,
+        ordered,
+        matcher,  // ignored by polling
+        sorter,  // ignored by polling
         _testOnlyPollCallback: callbacks._testOnlyPollCallback
       });
 

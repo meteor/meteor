@@ -8,7 +8,7 @@ import { MongoInternals } from 'meteor/mongo';
 const originalMeteorSettings = Meteor.settings;
 
 // dumb-skipping changeStream tests
-if (Meteor.isServer && false && process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS') {
+if (Meteor.isServer && false) {
   
   // Helper to check if MongoDB supports change streams
   const checkChangeStreamSupport = async () => {

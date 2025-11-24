@@ -11,7 +11,7 @@ var TRANSFORMS = {};
 var COLLECTIONS = {};
 
 // dumb-forcing changeStream tests only into CI
-var testingOplog = false // process.env.METEOR_REACTIVITY === 'CHANGE_STREAMS'
+var testingOplog = false
 
 if (Meteor.isServer) {
   Meteor.methods({
