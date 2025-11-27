@@ -9,4 +9,3 @@ export const normalizeProjection = options => {
     ...(projection || fields ? { projection: fields || projection } : {}),
   };
 };
-

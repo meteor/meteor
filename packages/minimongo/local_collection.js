@@ -1719,7 +1719,7 @@ LocalCollection._removeFromResultsSync = (query, doc) => {
     query.results.splice(i, 1);
   } else {
     const id = doc._id;  // in case callback mutates doc
-    query.removed(String(id));
+    query.removed(id);
     query.results.remove(id);
   }
 };

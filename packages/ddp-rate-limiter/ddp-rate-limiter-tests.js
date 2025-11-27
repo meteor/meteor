@@ -343,7 +343,7 @@ testAsyncMulti('ddp rate limiter - test removing rule with rateLimited ' +
 function createTestUser(test, expect) {
   const username = Random.id();
   const email = `${Random.id()}-intercept@example.com`;
-  const password = 'password';  
+  const password = 'password';
 
   Accounts.createUser(
     {

@@ -133,7 +133,6 @@ export const replaceMongoAtomWithMeteor = function (document) {
     var buffer = document.value(true);
     return new Uint8Array(buffer);
   }
-  
   if (document instanceof MongoDB.ObjectId) {
     return new Mongo.ObjectID(document.toHexString());
   }

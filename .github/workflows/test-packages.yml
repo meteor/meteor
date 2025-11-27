@@ -1,4 +1,6 @@
 
+name: Test Packages
+
 on:
   pull_request:
 
@@ -16,6 +18,7 @@ jobs:
       TEST_PACKAGES_EXCLUDE: stylus
       METEOR_MODERN: true
       NODE_ENV: CI
+      METEOR_REACTIVITY_ORDER: changeStreams,pooling
 
     steps:
       - name: Checkout repository
