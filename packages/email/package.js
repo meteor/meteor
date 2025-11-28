@@ -4,9 +4,9 @@ Package.describe({
 });
 
 Npm.depends({
-  nodemailer: "6.9.10",
-  "stream-buffers": "3.0.2",
-  "@types/nodemailer": "6.4.14",
+  nodemailer: "6.10.1",
+  "stream-buffers": "3.0.3",
+  "@types/nodemailer": "6.4.17",
   "nodemailer-openpgp": "2.2.1",
 });
 
