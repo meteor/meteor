@@ -1057,7 +1057,7 @@ Object.assign(MongoConnection.prototype, {
         throw new Error(`Unable to select a Mongo reactivity driver from configuration [${configuredOrder.join(', ')}].${errorDetails}`);
       }
 
-      Meteor._debug(`Using ${selectedDriverName || driverClass.name} for observing changes on collection ${collectionName} (configured order: ${configuredOrder.join(', ')})`);
+      // Meteor._debug(`Using ${selectedDriverName || driverClass.name} for observing changes on collection ${collectionName} (configured order: ${configuredOrder.join(', ')})`);
       observeDriver = new driverClass({
         cursorDescription,
         mongoHandle: self,

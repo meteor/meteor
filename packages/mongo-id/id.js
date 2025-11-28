@@ -75,12 +75,6 @@ MongoID.idStringify = (id) => {
   } else if (id === undefined) {
     return '-';
   } else if (typeof id === 'object' && id !== null) {
-    if (MongoID._looksLikeObjectID(id)) {
-      return id.toHexString();
-    }
-    if (typeof id.toString === 'function') {
-      return id.toString();
-    }
     throw new Error('Meteor does not currently support objects other than ObjectID as ids');
   } else { // Numbers, true, false, null
     return `~${JSON.stringify(id)}`;

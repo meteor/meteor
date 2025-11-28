@@ -6,6 +6,12 @@ on:
 
 jobs:
   test-packages:
+    strategy:
+      fail-fast: false
+      matrix:
+        reactivity_order:
+          - 'changeStreams,pooling'
+          - 'oplog,pooling'
     runs-on: ubuntu-22.04
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,7 +24,7 @@ jobs:
       TEST_PACKAGES_EXCLUDE: stylus
       METEOR_MODERN: true
       NODE_ENV: CI
-      METEOR_REACTIVITY_ORDER: changeStreams,pooling
+      METEOR_REACTIVITY_ORDER: ${{ matrix.reactivity_order }}
 
     steps:
       - name: Checkout repository
