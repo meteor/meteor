@@ -126,7 +126,7 @@ export default defineConfig({
         ],
       },
       { text: "API", link: "/api/" },
-      { text: "Galaxy Cloud", link: "https://www.meteor.com/cloud" },
+      { text: "Galaxy Cloud", link: "https://galaxycloud.app" },
       {
         text: metadata.currentVersion,
         items: metadata.versions.reverse().map((v) => {
@@ -152,15 +152,21 @@ export default defineConfig({
           {
             text: "What is Meteor?",
             link: "/about/what-is#introduction",
-          },
-          {
-            text: "Meteor resources",
-            link: "/about/what-is#learning-more",
+            items:[
+              {
+                text: "Meteor resources",
+                link: "/about/what-is#learning-more",
+              },
+            ],
           },
           {
             text: "Roadmap",
             link: "/about/roadmap",
           },
+              {
+                text: "Contributing",
+                link: "/about/contributing",
+              }
         ],
         collapsed: true,
       },
@@ -484,11 +490,11 @@ export default defineConfig({
             link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
             text: "Meteor + Vue + vue-meteor-tracker",
           },
-          {           
+          {
             text: "Meteor.js 3 + Solid",
             link: "/tutorials/solid/index",
           },
-          { 
+          {
             text: "Meteor.js 3 + Blaze",
             link: "/tutorials/blaze/index",
           },
