@@ -482,7 +482,7 @@ export class ChangeStreamObserveDriver {
 
     // If MongoDB delivers the pre-image we can rely on it. Otherwise fall back to
     // the multiplexer cache to infer whether we were previously tracking the doc.
-    const cachedDoc = this._multiplexer?._cache?.docs?.get?.(id);
+    const cachedDoc = this._multiplexer?._cache?.docs.get(id);
     const matchesBefore = oldDoc
       ? (this._matcher.documentMatches(oldDoc).result)
       : !!cachedDoc;

@@ -188,6 +188,7 @@ Tinytest.addAsync('observeChanges - unordered - basics', async function(
       ]);
 
       await c.updateAsync(fooid, { noodles: 'alright', potatoes: 'tasty', apples: 'ok' });
+      await Meteor._sleepForMs(100); // changeStream is faster than oplog, so we need to wait a bit to update the internal multiplexer.cache
       await c.updateAsync(fooid, { noodles: 'alright', potatoes: 'tasty', apples: 'ok' });
       await logger.expectResultOnly('changed', [
         fooid,
