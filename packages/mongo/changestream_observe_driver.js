@@ -500,6 +500,7 @@ export class ChangeStreamObserveDriver {
 
           if (Object.keys(changedFields).length > 0) {
             const transformedDoc = replaceTypes(changedFields, replaceMongoAtomWithMeteor);
+            this._multiplexer?._cache?.docs.set(id, newDoc);
             this._multiplexer.changed(id, transformedDoc);
           }
           return;
