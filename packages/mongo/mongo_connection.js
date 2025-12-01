@@ -114,39 +114,6 @@ MongoConnection.prototype.close = function () {
   return this._close();
 };
 
-// Check if Change Streams are supported
-MongoConnection.prototype._checkChangeStreamSupport = async function() {
-  try {
-    // Change Streams require MongoDB 3.6+ and replica set or sharded cluster
-    const admin = this.db.admin();
-    const serverInfo = await admin.serverInfo();
-    const isMasterPromise = admin.command({ isMaster: 1 });
-    const versionString = serverInfo.version || 'unknown';
-    const versionParts = versionString.split('.').map(Number);
-    const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
-    const minor = Number.isFinite(versionParts[1]) ? versionParts[1] : 0;
-    
-    // Check MongoDB version (3.6+)
-    const hasMinVersion = major > 3 || (major === 3 && minor >= 6);
-    
-    if (!hasMinVersion) {
-      this._supportsChangeStreams = false;
-      return;
-    }
-    
-    // Check if we're running on a replica set or sharded cluster
-    const isMaster = await isMasterPromise;
-    const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
-    const isSharded = isMaster.msg === 'isdbgrid';
-    
-    this._supportsChangeStreams = isReplicaSet || isSharded
-    
-  } catch (error) {
-    Meteor._debug("Error checking Change Stream support:", error);
-    this._supportsChangeStreams = false;
-  }
-};
-
 MongoConnection.prototype._setOplogHandle = function(oplogHandle) {
   this._oplogHandle = oplogHandle;
   return this;
@@ -927,36 +894,85 @@ Object.assign(MongoConnection.prototype, {
 
       const driverChecks = {
         changeStreams: async () => {
-          const reasons = [];
           let localMatcher;
+          const reasons = [];
 
-          if(self._supportsChangeStreams === undefined) await self._checkChangeStreamSupport();
-          
-          if (!self._supportsChangeStreams) {
-            reasons.push('Change Streams not supported by MongoDB deployment');
+          if (self._supportsChangeStreams === undefined) {
+            const serverReasons = [];
+
+            try {
+              // Change Streams require MongoDB 3.6+ and replica set or sharded cluster
+              const admin = self.db.admin();
+              const serverInfo = await admin.serverInfo();
+              const isMasterPromise = admin.command({ isMaster: 1 });
+              const versionString = serverInfo.version || 'unknown';
+              const versionParts = versionString.split('.').map(Number);
+              const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
+              const minor = Number.isFinite(versionParts[1]) ? versionParts[1] : 0;
+
+              // Check MongoDB version (3.6+)
+              const hasMinVersion = major > 3 || (major === 3 && minor >= 6);
+
+              if (!hasMinVersion) {
+                serverReasons.push(`Change Streams require MongoDB 3.6+ (current ${versionString})`);
+              } else {
+                // Check if we're running on a replica set or sharded cluster
+                const isMaster = await isMasterPromise;
+                const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
+                const isSharded = isMaster.msg === 'isdbgrid';
+
+                if (!(isReplicaSet || isSharded)) {
+                  serverReasons.push('Change Streams require a replica set or sharded cluster');
+                }
+              }
+            } catch (error) {
+              Meteor._debug("Error checking Change Stream support:", error);
+              serverReasons.push(`Error checking Change Stream support: ${error.message}`);
+            }
+
+            self._changeStreamServerReasons = serverReasons;
+            self._supportsChangeStreams = serverReasons.length === 0;
           }
+
+          if (!self._supportsChangeStreams) {
+            if (self._changeStreamServerReasons?.length) {
+              reasons.push(...self._changeStreamServerReasons);
+            } else {
+              reasons.push('Change Streams not supported by MongoDB deployment');
+            }
+          }
+
           if (ordered) {
             reasons.push('Change Streams only supports unordered observeChanges');
           }
+
           if (callbacks._testOnlyPollCallback) {
             reasons.push('Change Streams cannot be used with _testOnlyPollCallback');
           }
 
-          if (!reasons.length) {
-            try {
-              localMatcher = new Minimongo.Matcher(cursorDescription.selector);
-            } catch (e) {
-              if (Meteor.isClient && e instanceof MiniMongoQueryError) {
-                throw e;
-              }
-              reasons.push(`Selector not supported for Change Streams: ${e.message}`);
+          if (reasons.length) {
+            return {
+              available: false,
+              reason: reasons.join('; '),
+            };
+          }
+
+          try {
+            localMatcher = new Minimongo.Matcher(cursorDescription.selector);
+          } catch (e) {
+            if (Meteor.isClient && e instanceof MiniMongoQueryError) {
+              throw e;
             }
+
+            return {
+              available: false,
+              reason: `Selector not supported for Change Streams: ${e.message}`,
+            };
           }
 
           return {
-            available: reasons.length === 0,
+            available: true,
             matcher: localMatcher,
-            reason: reasons.join('; ')
           };
         },
         oplog: () => {

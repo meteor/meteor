@@ -14,7 +14,35 @@ if (Meteor.isServer && false) {
   const checkChangeStreamSupport = async () => {
     try {
       const mongoHandle = MongoInternals.defaultRemoteCollectionDriver().mongo;
-      await mongoHandle._checkChangeStreamSupport();
+      if (mongoHandle._supportsChangeStreams !== undefined) {
+        return mongoHandle._supportsChangeStreams;
+      }
+
+      const admin = mongoHandle.db.admin();
+      const serverInfo = await admin.serverInfo();
+      const isMaster = await admin.command({ isMaster: 1 });
+      const versionString = serverInfo.version || 'unknown';
+      const versionParts = versionString.split('.').map(Number);
+      const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
+      const minor = Number.isFinite(versionParts[1]) ? versionParts[1] : 0;
+      const reasons = [];
+
+      const hasMinVersion = major > 3 || (major === 3 && minor >= 6);
+
+      if (!hasMinVersion) {
+        reasons.push(`Change Streams require MongoDB 3.6+ (current ${versionString})`);
+      } else {
+        const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
+        const isSharded = isMaster.msg === 'isdbgrid';
+
+        if (!(isReplicaSet || isSharded)) {
+          reasons.push('Change Streams require a replica set or sharded cluster');
+        }
+      }
+
+      mongoHandle._changeStreamServerReasons = reasons;
+      mongoHandle._supportsChangeStreams = reasons.length === 0;
+
       return mongoHandle._supportsChangeStreams;
     } catch (error) {
       return false;
