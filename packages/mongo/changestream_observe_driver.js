@@ -24,7 +24,6 @@ export class ChangeStreamObserveDriver {
     this._cursorDescription = options.cursorDescription;
     this._mongoHandle = options.mongoHandle;
     this._multiplexer = options.multiplexer;
-    this._ordered = options.ordered;
     this._changeStream = null;
     this._stopped = false;
     this._stopCallbacks = [];
@@ -36,10 +35,6 @@ export class ChangeStreamObserveDriver {
     this._resolveTimeout = null;
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
-
-    if (options.ordered) {
-      throw Error("ChangeStreamObserveDriver only supports unordered observeChanges");
-    }
     
     // Projection function similar to oplog driver
     const projection = this._cursorDescription.options.projection || this._cursorDescription.options.fields;

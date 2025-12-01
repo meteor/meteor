@@ -4,7 +4,10 @@ var randomId = Random.id();
 var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
 // dumb-forcing changeStream tests only into CI
-if(false) {
+const DEFAULT_REACTIVITY = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : undefined;
+var IS_OPLOG = DEFAULT_REACTIVITY && DEFAULT_REACTIVITY[0] === 'oplog';
+
+if(IS_OPLOG) {
   Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
     test
   ) {

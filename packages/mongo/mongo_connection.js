@@ -19,8 +19,8 @@ const ASSETS_FOLDER = 'assets';
 const APP_FOLDER = 'app';
 
 const oplogCollectionWarnings = [];
-// TODO: we should setup change stream support as first option only in the CI, the correct option here is [ 'oplog', 'changeStreams', 'pooling'] for the release 3.4
-const DEFAULT_REACTIVITY_ORDER = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : ['changeStreams', 'oplog', 'pooling'];
+// Oplog continues to be the default when we do not have a specific preference; we expect to change it in the future before an oplog deprecation.
+const DEFAULT_REACTIVITY_ORDER = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : ['oplog', 'changeStreams', 'pooling'];
 export const MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
