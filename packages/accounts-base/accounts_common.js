@@ -205,7 +205,7 @@ export class AccountsCommon {
    * @locus Anywhere
    * @param {Object} options
    * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.
-   * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available.
+   * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available. **Important**: This option must be set on both the client and server to take full effect. If only set on the server, account creation will be blocked but the UI will still show the "Create account" link.
    * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.
    * @param {Number} options.loginExpiration The number of milliseconds from when a user logs in until their token expires and they are logged out, for a more granular control. If `loginExpirationInDays` is set, it takes precedent.
    * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
@@ -226,6 +226,19 @@ export class AccountsCommon {
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
+   * 
+   * @example
+   * // For UI-related options like forbidClientAccountCreation, call Accounts.config on both client and server
+   * // Create a shared configuration file (e.g., lib/accounts-config.js):
+   * import { Accounts } from 'meteor/accounts-base';
+   * 
+   * Accounts.config({
+   *   forbidClientAccountCreation: true,
+   *   sendVerificationEmail: true,
+   * });
+   * 
+   * // Then import this file in both client/main.js and server/main.js:
+   * // import '../lib/accounts-config.js';
    */
   config(options) {
     // We don't want users to accidentally only call Accounts.config on the
