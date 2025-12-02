@@ -90,7 +90,8 @@ Options:
                    Meteor app source code as by default the port is generated
                    using the id inside .meteor/.id file.
   --production     Simulate production mode. Minify and bundle CSS and JS files.
-  --raw-logs       Run without parsing logs from stdout and stderr.
+  --raw-logs       Run without parsing logs from stdout and stderr (default: true).
+  --timestamps     Run with timestamps in logs, the same as passing `--raw-logs=false`.
   --settings, -s   Set optional data for Meteor.settings on the server.
   --release        Specify the release of Meteor to use.
   --verbose        Print all output from builds logs.
@@ -747,7 +748,9 @@ Options:
                     important when multiple Cordova apps are build from the same
                     Meteor app source code as by default the port is generated
                     using the id inside .meteor/.id file.
-  --raw-logs        Run without parsing logs from stdout and stderr.
+  --raw-logs        Run without parsing logs from stdout and stderr (default: true).
+  --timestamps      Run with timestamps in logs, the same as passing `--raw-logs=false`.
+
   --settings, -s    Set optional data for Meteor.settings on the server
 
   --ios,            Run tests in an emulator or on a mobile device. All of
