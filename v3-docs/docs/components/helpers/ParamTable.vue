@@ -44,6 +44,9 @@ const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props
 
 </script>
 
+
+
+
 <template>
   <div v-if="localArr.length > 0">
     <header>
@@ -81,8 +84,9 @@ const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props
         </tr>
       </tbody>
     </table>
-    <Collapse v-if="hasOptions(props) && props.options && props.options?.length > 0" :when="isOptionsTableOpen"
-      class="options-table">
+
+
+    <Collapse :when ="isOptionsTableOpen" class ="options-table" v-show="hasOptions(props) && props.options && props.options?.length>0">
       <h4>Options:</h4>
       <table>
         <thead>
@@ -103,6 +107,7 @@ const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props
         </tbody>
       </table>
     </Collapse>
+
   </div>
 </template>
 
