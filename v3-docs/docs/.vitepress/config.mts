@@ -126,7 +126,7 @@ export default defineConfig({
         ],
       },
       { text: "API", link: "/api/" },
-      { text: "Galaxy Cloud", link: "https://www.meteor.com/cloud" },
+      { text: "Galaxy Cloud", link: "https://galaxycloud.app" },
       {
         text: metadata.currentVersion,
         items: metadata.versions.reverse().map((v) => {
@@ -490,11 +490,11 @@ export default defineConfig({
             link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
             text: "Meteor + Vue + vue-meteor-tracker",
           },
-          {           
+          {
             text: "Meteor.js 3 + Solid",
             link: "/tutorials/solid/index",
           },
-          { 
+          {
             text: "Meteor.js 3 + Blaze",
             link: "/tutorials/blaze/index",
           },
