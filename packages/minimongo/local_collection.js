@@ -1649,8 +1649,7 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
       },
       removed(id) {
         if (observeCallbacks.removed) {
-          const cached = this.docs.get(id) || { _id: id };
-          observeCallbacks.removed(transform(cached));
+          observeCallbacks.removed(transform(this.docs.get(id)));
         }
       },
     };
@@ -1734,7 +1733,7 @@ LocalCollection._removeFromResultsAsync = async (query, doc) => {
   } else {
     const id = doc._id;  // in case callback mutates doc
 
-    await query.removed(String(id));
+    await query.removed(id);
     query.results.remove(id);
   }
 };
