@@ -1617,7 +1617,8 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
           return;
         }
 
-        // Use docFromDriver if available, else fallback to cache
+        // technically maybe there should be an EJSON.clone here, but it's about
+        // to be removed from this.docs!
         const doc = transform(this.docs.get(id));
 
         if (observeCallbacks.removedAt) {
