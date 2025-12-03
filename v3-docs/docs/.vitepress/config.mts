@@ -529,6 +529,10 @@ export default defineConfig({
         text: "Performance",
         items: [
           {
+            text: "Change Streams Observer Driver",
+            link: "/performance/change-streams-observer-driver",
+          },
+          {
             text: "WebSocket Compression",
             link: "/performance/websocket-compression",
           },
