@@ -10,6 +10,7 @@ import {
   pathDirname,
   pathIsAbsolute,
   pathJoin,
+  pathRelative,
   statOrNull,
   lstat,
   readFile,
@@ -338,6 +339,10 @@ makeOptimistic("readJsonOrNull", (
   }
 });
 
+// Registry of .meteorignore patterns keyed by directory path.
+// This is populated as .meteorignore files are read during the build process.
+const meteorIgnoreRegistry = new Map<string, ReturnType<typeof ignore>>();
+
 export const optimisticReadMeteorIgnore = wrap((dir: string) => {
   const meteorIgnorePath = pathJoin(dir, ".meteorignore");
   const meteorIgnoreStat = optimisticStatOrNull(meteorIgnorePath);
@@ -356,8 +361,56 @@ export const optimisticReadMeteorIgnore = wrap((dir: string) => {
     ignoreConfig = ignoreConfig.add(customMeteorIgnore);
   }
 
+  // Update the registry with this directory's ignore config
+  if (ignoreConfig) {
+    meteorIgnoreRegistry.set(dir, ignoreConfig);
+  } else {
+    meteorIgnoreRegistry.delete(dir);
+  }
+
   return ignoreConfig;
 });
+
+/**
+ * Check if a path should be ignored based on .meteorignore patterns.
+ * This function checks all registered .meteorignore files to see if the given
+ * absolute path matches any ignore patterns.
+ * 
+ * @param absPath - Absolute path to check
+ * @returns true if the path should be ignored, false otherwise
+ */
+export function shouldIgnorePathFromMeteorIgnore(absPath: string): boolean {
+  if (!pathIsAbsolute(absPath)) {
+    return false;
+  }
+
+  // Don't ignore .meteorignore files themselves - changes to them should trigger rebuilds
+  if (pathBasename(absPath) === ".meteorignore") {
+    return false;
+  }
+
+  // Check each directory's ignore patterns
+  for (const [dir, ignoreConfig] of meteorIgnoreRegistry.entries()) {
+    // Calculate relative path from the directory containing the .meteorignore file
+    const relPath = pathRelative(dir, absPath);
+    
+    // Only check if the file is within this directory
+    // pathRelative returns a path starting with '..' if absPath is outside dir
+    // Skip empty strings and "." (the directory itself)
+    if (!relPath || relPath === "." || relPath.startsWith("..")) {
+      continue;
+    }
+    
+    // The ignore library expects forward slashes and handles directories with trailing slashes
+    const normalizedRelPath = relPath.split(pathSep).join("/");
+    
+    if (ignoreConfig.ignores(normalizedRelPath)) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 type LookupPkgJsonType = OptimisticWrapperFunction<
   [string, string],
