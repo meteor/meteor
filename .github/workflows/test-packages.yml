@@ -1,9 +1,7 @@
-name: Meteor test packages
+name: Package tests
 
 on:
-  push:
-    branches:
-      - ci/removing-travis
+  pull_request:
 
 jobs:
   test-packages:
