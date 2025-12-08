@@ -176,7 +176,7 @@ export default class LocalCollection {
     const queriesToRecompute = [];
 
     // trigger live queries that match
-    for (const qid of Object.keys(this.queries)) {
+    for (const qid in this.queries) {
       const query = this.queries[qid];
 
       if (query.dirty) {
@@ -743,7 +743,7 @@ export default class LocalCollection {
       for (const id of specificIds) {
         const doc = this._docs.get(id);
 
-        if (doc && !fn(doc, id)) {
+        if (doc && fn(doc, id) === false) {
           break
         }
       }
@@ -828,7 +828,7 @@ export default class LocalCollection {
     LocalCollection._modify(doc, mod, {arrayIndices});
 
     const recomputeQids = {};
-    for (const qid of Object.keys(this.queries)) {
+    for (const qid in this.queries) {
       const query = this.queries[qid];
 
       if (query.dirty) {

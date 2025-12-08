@@ -13,6 +13,13 @@
     "jquery": "^3.7.1",
     "meteor-node-stubs": "^1.2.12"
   },
+  "devDependencies": {
+    "@meteorjs/rspack": "^0.2.54",
+    "@rsdoctor/rspack-plugin": "^1.2.3",
+    "@rspack/cli": "^1.6.5",
+    "@rspack/core": "^1.6.5",
+    "@rspack/plugin-react-refresh": "^1.4.3"
+  },
   "meteor": {
     "mainModule": {
       "client": "client/main.js",
