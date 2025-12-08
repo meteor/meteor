@@ -34,11 +34,7 @@ exports.parseUrl = function (str, defaults) {
   }
 
   var hasScheme = exports.hasScheme(str);
-  if (! hasScheme) {
-    str = "http://" + str;
-  }
-
-  var parsed = url.parse(str);
+  const parsed = url.parse(hasScheme ? str : `http://${str}`);
 
   // for consistency remove colon at the end of protocol
   parsed.protocol = parsed.protocol.replace(/\:$/, '');
@@ -59,10 +55,7 @@ exports.parseUrl = function (str, defaults) {
 exports.formatUrl = function (options) {
   // For consistency with `Meteor.absoluteUrl`, add a trailing slash to make
   // this a valid URL
-  if (!options.pathname)
-    options.pathname = "/";
-
-  return url.format(options);
+  return url.format({ ...options, pathname: options.pathname || "/" });
 };
 
 exports.ipAddress = function () {
@@ -92,11 +85,6 @@ exports.hasScheme = function (str) {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
 };
 
-
-exports.hasScheme = function (str) {
-  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
-};
-
 exports.isIPv4Address = function (str) {
   return str.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/);
 }
@@ -105,20 +93,8 @@ exports.isIPv4Address = function (str) {
 // Prints a package list in a nice format.
 // Input is an array of objects with keys 'name' and 'description'.
 exports.printPackageList = function (items, options) {
-  options = options || {};
-
-  var rows = _.map(items, function (item) {
-    var name = item.name;
-    var description = item.description || 'No description';
-    return [name, description];
-  });
-
-  var alphaSort = function (row) {
-    return row[0];
-  };
-  rows = _.sortBy(rows, alphaSort);
-
-  var Console = require('../console/console.js').Console;
+  const rows = _.sortBy(items.map(item => [item.name, item.description || 'No description']), row => row[0]);
+  const Console = require('../console/console.js').Console;
   return Console.printTwoColumns(rows, options);
 };
 
@@ -773,3 +749,4 @@ export function isEmacs() {
   emacsDetected = !! (process.env.EMACS === "t" || process.env.INSIDE_EMACS);
   return emacsDetected;
 }
+

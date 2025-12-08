@@ -50,5 +50,6 @@ If you want detailed help about a specific command, run `meteor help <command>`.
 ## Next Steps
 
 - Follow the [React](/tutorials/react/index.html) or [Vue](/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker.html) tutorials. New tutorials are coming soon.
+- Learn about [Modern Build Stack](/about/modern-build-stack.md) for faster development, smaller bundle sizes, and more.
 - Read about [Cordova for Mobile Apps](/about/cordova.html).
 - Explore the [Meteor Guide](https://guide.meteor.com/).
