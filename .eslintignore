@@ -2,9 +2,7 @@ android_bundle/
 dev_bundle/
 docs/
 examples/
-packages/
 scripts/
-tools/
 !tools/*.js
 !tools/isobuild/*.js
 !tools/catalog/*.js

@@ -99,7 +99,7 @@ If you are hosting a webfont as part of your application and serving it via a CD
 ```js
 import { WebApp } from 'meteor/webapp';
 
-WebApp.rawConnectHandlers.use(function(req, res, next) {
+WebApp.rawHandlers.use(function(req, res, next) {
   if (req._parsedUrl.pathname.match(/\.(ttf|ttc|otf|eot|woff|woff2|font\.css|css)$/)) {
     res.setHeader('Access-Control-Allow-Origin', /* your hostname, or just '*' */);
   }
@@ -194,7 +194,7 @@ MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=3000 n
 ```
 
 * `ROOT_URL` is the base URL for your Meteor project
-* `PORT` is the port at which the application is running 
+* `PORT` is the port at which the application is running
 * `MONGO_URL` is a [Mongo connection string URI](https://docs.mongodb.com/manual/reference/connection-string/) supplied by the MongoDB provider.
 
 
@@ -322,7 +322,7 @@ Galaxy's UI provides a detailed logging system, which can be invaluable to deter
 
 If you really want to understand the ins and outs of running your Meteor application, you should use an Application Performance Monitoring (APM) service. There are multiple services designed for Meteor apps:
 
-- [Meteor APM](https://www.meteor.com/cloud)
+- [Meteor APM](https://galaxycloud.app/)
 - [Monti APM](https://montiapm.com/)
 - [Meteor Elastic APM](https://github.com/Meteor-Community-Packages/meteor-elastic-apm)
 

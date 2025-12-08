@@ -4,15 +4,17 @@ var Sandbox = selftest.Sandbox;
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
 
-selftest.define("ddp-heartbeat", function () {
+selftest.define("ddp-heartbeat", async function () {
   var s = new Sandbox({ fakeMongo: true });
+  await s.init();
+
   var run;
 
-  s.createApp("ddpapp", "ddp-heartbeat");
+  await s.createApp("ddpapp", "ddp-heartbeat");
   s.cd("ddpapp");
 
   var run = s.run("--once", "--raw-logs");
-  run.tellMongo(MONGO_LISTENING);
+  await run.tellMongo(MONGO_LISTENING);
   run.waitSecs(120);
-  run.expectExit(0);
+  await run.expectExit(0);
 });

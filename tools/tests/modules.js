@@ -6,18 +6,23 @@ var MONGO_LISTENING = {
   stdout: ' [initandlisten] waiting for connections on port',
 };
 
-function startRun(sandbox) {
+async function startRun(sandbox) {
   var run = sandbox.run();
-  run.match('myapp');
-  run.match('proxy');
-  run.tellMongo(MONGO_LISTENING);
+  await run.match('myapp');
+  await run.match('proxy');
+  await run.tellMongo(MONGO_LISTENING);
   run.waitSecs(20);
-  run.match('MongoDB');
+  await run.match('MongoDB');
   return run;
 }
 
-selftest.define('modules - test app', function() {
+selftest.define('modules - test legacy app', async function() {
+  // Enable legacy transpiler for testing as babel compiler is used.
+  const currentMeteorModern = process.env.METEOR_MODERN;
+  process.env.METEOR_MODERN = '{ "transpiler": false }';
+
   const s = new Sandbox();
+  await s.init();
 
   // Make sure we use the right "env" section of .babelrc.
   s.set('NODE_ENV', 'development');
@@ -26,31 +31,68 @@ selftest.define('modules - test app', function() {
   // See https://github.com/meteortesting/meteor-mocha
   s.set('TEST_BROWSER_DRIVER', 'puppeteer');
 
-  s.createApp('modules-test-app', 'modules');
-  s.cd('modules-test-app', function() {
+  await s.createApp('modules-test-app', 'modules');
+  await s.cd('modules-test-app', async function() {
     const run = s.run(
       'test',
       '--once',
       '--full-app',
       '--driver-package',
-      'meteortesting:mocha'
+      // Not running with the --full-app option here, in order to exercise
+      // the normal `meteor test` behavior.
+      "meteortesting:mocha"
     );
 
     run.waitSecs(60);
-    run.match('App running at');
-    run.match('SERVER FAILURES: 0');
-    run.match('CLIENT FAILURES: 0');
-    run.expectExit(0);
+    await run.match('App running at');
+    await run.match('SERVER FAILURES: 0');
+    await run.match('CLIENT FAILURES: 0');
+    await run.expectExit(0);
+  });
+
+  process.env.METEOR_MODERN = currentMeteorModern;
+});
+
+selftest.define('modules - test modern app', async function() {
+  const s = new Sandbox();
+  await s.init();
+
+  // Make sure we use the right "env" section of .babelrc.
+  s.set('NODE_ENV', 'development');
+
+  // For meteortesting:mocha to work we must set test browser driver
+  // See https://github.com/meteortesting/meteor-mocha
+  s.set('TEST_BROWSER_DRIVER', 'puppeteer');
+
+  await s.createApp('modules-modern-test-app', 'modules-modern');
+  await s.cd('modules-modern-test-app', async function() {
+    const run = s.run(
+        'test',
+        '--once',
+        '--full-app',
+        '--driver-package',
+        // Not running with the --full-app option here, in order to exercise
+        // the normal `meteor test` behavior.
+        "meteortesting:mocha"
+    );
+
+    run.waitSecs(60);
+    await run.match('App running at');
+    await run.match('SERVER FAILURES: 0');
+    await run.match('CLIENT FAILURES: 0');
+    await run.expectExit(0);
   });
 });
 
-selftest.define('modules - unimported lazy files', function() {
+selftest.define('modules - unimported lazy files', async function() {
   const s = new Sandbox();
-  s.createApp('myapp', 'app-with-unimported-lazy-file');
-  s.cd('myapp', function() {
+  await s.init();
+
+  await s.createApp('myapp', 'app-with-unimported-lazy-file');
+  await s.cd('myapp', async function() {
     const run = s.run('--once');
     run.waitSecs(30);
-    run.expectExit(1);
+    await run.expectExit(1);
     run.forbid("This file shouldn't be loaded");
   });
 });
@@ -58,10 +100,15 @@ selftest.define('modules - unimported lazy files', function() {
 // Checks that `import X from 'meteor/package'` will import (and re-export) the
 // mainModule if one exists, otherwise will simply export Package['package'].
 // Overlaps with compiler-plugin.js's "install-packages.js" code.
-selftest.define('modules - import chain for packages', () => {
-  const s = new Sandbox({ fakeMongo: true });
+selftest.define('modules - import chain for packages', async () => {
+  // Enable legacy transpiler for testing as babel compiler is used.
+  const currentMeteorModern = process.env.METEOR_MODERN;
+  process.env.METEOR_MODERN = '{ "webArchOnly": false }';
 
-  s.createApp('myapp', 'package-tests');
+  const s = new Sandbox({ fakeMongo: true });
+  await s.init();
+
+  await s.createApp('myapp', 'package-tests');
   s.cd('myapp');
 
   s.write(
@@ -83,16 +130,16 @@ selftest.define('modules - import chain for packages', () => {
     ].join('\n')
   );
 
-  const run = startRun(s);
+  const run = await startRun(s);
 
   run.waitSecs(30);
 
   // On the server, we just check that importing *works*, not *how* it works
-  run.match('with-add-files: with-add-files');
-  run.match('with-main-module: with-main-module');
+  await run.match('with-add-files: with-add-files');
+  await run.match('with-main-module: with-main-module');
 
   // On the client, we just check that install() is called correctly
-  checkModernAndLegacyUrls('/packages/modules.js', body => {
+  await checkModernAndLegacyUrls('/packages/modules.js', body => {
     selftest.expectTrue(body.includes('\ninstall("with-add-files");'));
     selftest.expectTrue(
       body.includes(
@@ -102,13 +149,15 @@ selftest.define('modules - import chain for packages', () => {
     );
   });
 
-  run.stop();
+  await run.stop();
+
+  process.env.METEOR_MODERN = currentMeteorModern;
 });
 
-function checkModernAndLegacyUrls(path, test) {
+async function checkModernAndLegacyUrls(path, test) {
   if (!path.startsWith('/')) {
     path = '/' + path;
   }
-  test(getUrl('http://localhost:3000' + path));
-  test(getUrl('http://localhost:3000/__browser.legacy' + path));
+  test(await getUrl('http://localhost:3000' + path));
+  test(await getUrl('http://localhost:3000/__browser.legacy' + path));
 }

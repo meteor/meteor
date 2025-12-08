@@ -2,7 +2,7 @@ var selftest = require('../tool-testing/selftest.js');
 var files = require('../fs/files');
 var expectEqual = selftest.expectEqual;
 
-selftest.define("create and extract tarball with long paths", function () {
+selftest.define("create and extract tarball with long paths", async function () {
   var STAMP = "stamp";
 
   // Create a directory with a single file in a long subdirectory, to
@@ -19,12 +19,12 @@ selftest.define("create and extract tarball with long paths", function () {
   // Make the tarball
   var tarballOutputDir = files.mkdtemp("tarball");
   var tarballOutputFile = files.pathJoin(tarballOutputDir, "out.tar.gz");
-  files.createTarball(tarballInputDir, tarballOutputFile);
+  await files.createTarball(tarballInputDir, tarballOutputFile);
 
   // Extract the tarball and verify that the single file we created is
   // present with the expected contents.
   var tarballExtractedDir = files.mkdtemp("tarball-extracted");
-  files.extractTarGz(files.readFile(tarballOutputFile), tarballExtractedDir);
+  await files.extractTarGz(files.readFile(tarballOutputFile), tarballExtractedDir);
   var extractedStampedFile = inputStampedFile.replace(tarballInputDir, tarballExtractedDir);
   expectEqual(files.readFile(extractedStampedFile, "utf-8"), STAMP);
 });

@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.2.3',
+  version: '1.2.6',
   summary: 'Meteor bundle analysis and visualization.',
   documentation: 'README.md',
 });
@@ -16,10 +16,10 @@ Npm.depends({
 Package.onUse(function(api) {
   api.use('isobuild:dynamic-import@1.5.0');
   api.use([
-    'ecmascript',
-    'dynamic-import',
-    'fetch',
-    'webapp',
+    'ecmascript@0.16.9',
+    'dynamic-import@0.7.4',
+    'fetch@0.1.5',
+    'webapp@2.0.1',
   ]);
   api.mainModule('server.js', 'server');
   api.mainModule('client.js', 'client');

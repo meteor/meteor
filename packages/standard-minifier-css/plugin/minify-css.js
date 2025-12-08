@@ -1,6 +1,6 @@
 import sourcemap from "source-map";
 import { createHash } from "crypto";
-import LRU from "lru-cache";
+import LRUCache from "lru-cache";
 import { loadPostCss, watchAndHashDeps, usePostCss } from './postcss.js';
 import { Log } from 'meteor/logging';
 
@@ -19,7 +19,7 @@ Plugin.registerMinifier({
 
 class CssToolsMinifier {
   constructor() {
-    this.cache = new LRU({
+    this.cache = new LRUCache({
       max: 100,
     });
 

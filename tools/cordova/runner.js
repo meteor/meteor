@@ -20,15 +20,15 @@ export class CordovaRunner {
     return _.uniq(this.runTargets.map((runTarget) => runTarget.platform));
   }
 
-  checkPlatformsForRunTargets() {
-    this.cordovaProject.ensurePlatformsAreSynchronized();
+  async checkPlatformsForRunTargets() {
+    await this.cordovaProject.ensurePlatformsAreSynchronized();
 
     let satisfied = true;
-    const messages = buildmessage.capture(
-      { title: `checking platform requirements` }, () => {
+    const messages = await buildmessage.capture(
+      { title: `checking platform requirements` }, async () => {
       for (const platform of this.platformsForRunTargets) {
         satisfied =
-          this.cordovaProject.checkPlatformRequirements(platform) &&
+          await this.cordovaProject.checkPlatformRequirements(platform) &&
           satisfied;
       }
     });
@@ -69,11 +69,11 @@ export class CordovaRunner {
     }
   }
 
-  prepareProject(bundlePath, pluginVersions, options) {
+  async prepareProject(bundlePath, pluginVersions, options) {
     buildmessage.assertInCapture();
 
-    buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
-      this.cordovaProject.prepareFromAppBundle(bundlePath,
+    await buildmessage.enterJob({ title: "preparing Cordova project" }, async () => {
+      await this.cordovaProject.prepareFromAppBundle(bundlePath,
         pluginVersions, options);
 
       if (buildmessage.jobHasMessages()) {
@@ -81,20 +81,23 @@ export class CordovaRunner {
       }
 
       for (let platform of this.platformsForRunTargets) {
-        this.cordovaProject.prepareForPlatform(platform, options);
+        await this.cordovaProject.prepareForPlatform(platform, options);
       }
     });
 
     this.pluginVersions = pluginVersions;
   }
 
-  startRunTargets() {
+  async startRunTargets() {
     this.started = false;
 
-    for (let runTarget of this.runTargets) {
-      const messages = buildmessage.capture({ title: `starting ${runTarget.title}` }, () => {
-        Promise.await(runTarget.start(this.cordovaProject));
-      });
+    for (const runTarget of this.runTargets) {
+      const messages = await buildmessage.capture(
+        { title: `starting ${runTarget.title}` },
+        async () => {
+          await runTarget.start(this.cordovaProject);
+        }
+      );
       if (messages.hasMessages()) {
         Console.printMessages(messages);
       } else {

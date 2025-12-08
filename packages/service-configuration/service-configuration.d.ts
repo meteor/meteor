@@ -5,12 +5,12 @@ export interface Configuration {
   secret: string;
 }
 
-class ConfigError extends Error {
+declare class ConfigError extends Error {
   constructor(serviceName?: string);
   message: string;
 }
 
-export declare var ServiceConfiguration: {
+export var ServiceConfiguration: {
   configurations: Mongo.Collection<Configuration>;
   ConfigError: typeof ConfigError
 };

@@ -1,18 +1,11 @@
 let terser;
 
-const terserMinify = async (source, options, callback) => {
+const terserMinify = async (source, options) => {
   terser = terser || Npm.require("terser");
-  try {
-    const result = await terser.minify(source, options);
-    callback(null, result);
-    return result;
-  } catch (e) {
-    callback(e);
-    return e;
-  }
+  return await terser.minify(source, options);
 };
 
-export const meteorJsMinify = function (source) {
+export const meteorJsMinify = async function (source) {
   const result = {};
   const NODE_ENV = process.env.NODE_ENV || "development";
 
@@ -33,13 +26,7 @@ export const meteorJsMinify = function (source) {
     safari10: true,          // set this option to true to work around the Safari 10/11 await bug
   };
 
-  const terserJsMinify = Meteor.wrapAsync(terserMinify);
-  let terserResult;
-  try {
-    terserResult = terserJsMinify(source, options);
-  } catch (e) {
-    throw e;
-  }
+  const terserResult = await terserMinify(source, options);
 
   // this is kept to maintain backwards compatability
   result.code = terserResult.code;

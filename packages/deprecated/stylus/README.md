@@ -1,5 +1,5 @@
 # stylus
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/stylus) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/stylus)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/deprecated/stylus) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/deprecated/stylus)
 ***
 
 **DEPRECATED:** This package is no longer supported/maintained as part of the

@@ -171,35 +171,35 @@ updateText.run.call({ userId: 'abcd' }, {
 
 As you can see, this approach to calling Methods results in a better development workflow - you can more easily deal with the different parts of the Method separately and test your code without having to deal with Meteor internals. But this approach requires you to write a lot of boilerplate on the Method definition side.
 
-<h3 id="validated-method">Advanced Methods with mdg:validated-method</h3>
+<h3 id="jam-method">Advanced Methods with jam:method</h3>
 
-To alleviate some of the boilerplate that's involved in correct Method definitions, we've published a wrapper package called `mdg:validated-method` that does most of this for you. Here's the same Method as above, but defined with the package:
+To alleviate some of the boilerplate that's involved in correct Method definitions, you can use a package called `jam:method` that does most of this for you. Here's the same Method as above, but defined with the package:
 
 ```js
-import { ValidatedMethod } from 'meteor/mdg:validated-method';
+import { createMethod } from 'meteor/jam:method';
 
-export const updateText = new ValidatedMethod({
+export const updateText = createMethod({
   name: 'todos.updateText',
-  validate: new SimpleSchema({
+  schema: new SimpleSchema({
     todoId: { type: String },
     newText: { type: String }
-  }).validator(),
-  run({ todoId, newText }) {
-    const todo = Todos.findOne(todoId);
-
+  }),
+  async run({ todoId, newText }) {
+    const todo = await Todos.findOneAsync(todoId);
+ 
     if (!todo.editableBy(this.userId)) {
       throw new Meteor.Error('todos.updateText.unauthorized',
         'Cannot edit todos in a private list that is not yours');
     }
 
-    Todos.update(todoId, {
+    Todos.updateAsync(todoId, {
       $set: { text: newText }
     });
   }
 });
 ```
 
-You call it the same way you call the advanced Method above, but the Method definition is significantly simpler. We believe this style of Method lets you clearly see the important parts - the name of the Method sent over the wire, the format of the expected arguments, and the JavaScript namespace by which the Method can be referenced. Validated methods only accept a single argument and a callback function.
+You call it the same way you call the advanced Method above, but the Method definition is significantly simpler. We believe this style of Method lets you clearly see the important parts - the name of the Method sent over the wire, the format of the expected arguments, and the JavaScript namespace by which the Method can be referenced. 
 
 <h2 id="errors">Error handling</h2>
 
@@ -227,17 +227,13 @@ When the server was not able to complete the user's desired action because of a 
 
 When a Method call fails because the arguments are of the wrong type, it's good to throw a `ValidationError`. This works like `Meteor.Error`, but is a custom constructor that enforces a standard error format that can be read by different form and validation libraries. In particular, if you are calling this Method from a form, throwing a `ValidationError` will make it possible to display nice error messages next to particular fields in the form.
 
-When you use `mdg:validated-method` with `simpl-schema` as demonstrated above, this type of error is thrown for you.
-
-Read more about the error format in the [`mdg:validation-error` docs](https://atmospherejs.com/mdg/validation-error).
-
 <h3 id="handling-errors">Handling errors</h3>
 
 When you call a Method, any errors thrown by it will be returned in the callback. At this point, you should identify which error type it is and display the appropriate message to the user. In this case, it is unlikely that the Method will throw a `ValidationError` or an internal server error, so we will only handle the unauthorized error:
 
 ```js
 // Call the Method
-updateText.call({
+updateText({
   todoId: '12345',
   newText: 'This is a todo item.'
 }, (err, res) => {
@@ -261,7 +257,7 @@ We'll talk about how to handle the `ValidationError` in the section on forms bel
 
 <h3 id="throw-stub-exceptions">Errors in Method simulation</h3>
 
-When a Method is called, it usually runs twice---once on the client to simulate the result for Optimistic UI, and again on the server to make the actual change to the database. This means that if your Method throws an error, it will likely fail on the client _and_ the server. For this reason, `ValidatedMethod` turns on undocumented option in Meteor to avoid calling the server-side implementation if the simulation throws an error.
+When a Method is called, it usually runs twice---once on the client to simulate the result for Optimistic UI, and again on the server to make the actual change to the database. This means that if your Method throws an error, it will likely fail on the client _and_ the server. For this reason, `jam:method` turns on [an option](https://github.com/jamauro/method#options-for-meteorapplyasync) in Meteor to avoid calling the server-side implementation if the simulation throws an error.
 
 While this behavior is good for saving server resources in cases where a Method will certainly fail, it's important to make sure that the simulation doesn't throw an error in cases where the server Method would have succeeded (for example, if you didn't load some data on the client that the Method needs to do the simulation properly). In this case, you can wrap server-side-only logic in a block that checks for a method simulation:
 
@@ -283,13 +279,13 @@ const amountRegEx = /^\d*\.(\d\d)?$/;
 // This Method encodes the form validation requirements.
 // By defining them in the Method, we do client and server-side
 // validation in one place.
-export const insert = new ValidatedMethod({
+export const insert = createMethod({
   name: 'Invoices.methods.insert',
-  validate: new SimpleSchema({
+  schema: new SimpleSchema({
     email: { type: String, regEx: emailRegEx },
     description: { type: String, min: 5 },
     amount: { type: String, regEx: amountRegEx }
-  }).validator(),
+  }),
   run(newInvoice) {
     // In here, we can be sure that the newInvoice argument is
     // validated.
@@ -299,7 +295,7 @@ export const insert = new ValidatedMethod({
         'Must be logged in to create an invoice.');
     }
 
-    Invoices.insert(newInvoice)
+    Invoices.insertAsync(newInvoice)
   }
 });
 ```
@@ -355,7 +351,7 @@ Template.Invoices_newInvoice.events({
       amount: event.target.amount.value
     };
 
-    insert.call(data, (err, res) => {
+    insert(data, (err, res) => {
       if (err) {
         if (err.error === 'validation-error') {
           // Initialize error object
@@ -434,9 +430,9 @@ If we defined this Method in client and server code, as all Methods should be, a
 
 The client enters a special mode where it tracks all changes made to client-side collections, so that they can be rolled back later. When this step is complete, the user of your app sees their UI update instantly with the new content of the client-side database, but the server hasn't received any data yet.
 
-If an exception is thrown from the Method simulation, then by default Meteor ignores it and continues to step (2). If you are using `ValidatedMethod` or pass a special `throwStubExceptions` option to `Meteor.apply`, then an exception thrown from the simulation will stop the server-side Method from running at all.
+If an exception is thrown from the Method simulation, then by default Meteor ignores it and continues to step (2). If you are using `jam:method` or pass a special `throwStubExceptions` [option](https://github.com/jamauro/method#options-for-meteorapplyasync) to `Meteor.apply`, then an exception thrown from the simulation will stop the server-side Method from running at all.
 
-The return value of the Method simulation is discarded, unless the `returnStubValue` option is passed when calling the Method, in which case it is returned to the Method caller. ValidatedMethod passes this option by default.
+The return value of the Method simulation is discarded, unless the `returnStubValue` option is passed when calling the Method, in which case it is returned to the Method caller. `jam:method` passes this option by default.
 
 <h4 id="lifecycle-ddp-message">2. A `method` DDP message is sent to the server</h4>
 

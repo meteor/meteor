@@ -80,13 +80,17 @@ export namespace Match {
 /**
  * Check that a value matches a pattern.
  * If the value does not match the pattern, throw a `Match.Error`.
+ * By default, it will throw immediately at the first error encountered. Pass in { throwAllErrors: true } to throw all errors.
  *
  * Particularly useful to assert that arguments to a function have the right
  * types and structure.
  * @param value The value to check
  * @param pattern The pattern to match `value` against
+ * @param {Object} [options={}] Additional options for check
+ * @param {Boolean} [options.throwAllErrors=false] If true, throw all errors
  */
 export declare function check<T extends Match.Pattern>(
   value: any,
-  pattern: T
+  pattern: T,
+  options?: { throwAllErrors?: boolean }
 ): asserts value is Match.PatternMatch<T>;

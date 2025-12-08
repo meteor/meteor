@@ -69,6 +69,9 @@ export namespace Meteor {
   function user(options?: {
     fields?: Mongo.FieldSpecifier | undefined;
   }): User | null;
+  function userAsync(options?: {
+    fields?: Mongo.FieldSpecifier | undefined;
+  }): Promise<Meteor.User | null>;
 
   function userId(): string | null;
   var users: Mongo.Collection<User>;
@@ -159,14 +162,26 @@ export namespace Meteor {
    * @param name Name of method to invoke
    * @param args Optional method arguments
    */
-  function call(name: string, ...args: any[]): any;
+  function call<
+    Result extends
+      | EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(name: string, ...args: any[]): Result;
 
   /**
    * Invokes a method with an async stub, passing any number of arguments.
    * @param name Name of method to invoke
    * @param args Optional method arguments
    */
-  function callAsync(name: string, ...args: any[]): Promise<any>;
+  function callAsync<
+    Result extends
+      | EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(name: string, ...args: any[]): Promise<Result> & { stubPromise: Promise<Result>, serverPromise: Promise<Result> };
 
   interface MethodApplyOptions<
     Result extends
@@ -223,7 +238,7 @@ export namespace Meteor {
       error: global_Error | Meteor.Error | undefined,
       result?: Result
     ) => void
-  ): any;
+  ): Result;
 
   /**
    * Invokes a method with an async stub, passing any number of arguments.
@@ -246,7 +261,7 @@ export namespace Meteor {
       error: global_Error | Meteor.Error | undefined,
       result?: Result
     ) => void
-  ): Promise<Result>;
+  ): Promise<Result> & { stubPromise: Promise<Result>, serverPromise: Promise<Result> };
   /** Method **/
 
   /** Url **/

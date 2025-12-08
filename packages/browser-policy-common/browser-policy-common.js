@@ -10,7 +10,7 @@ BrowserPolicy._setRunningTest = function () {
   inTest = true;
 };
 
-WebApp.connectHandlers.use(function (req, res, next) {
+WebApp.handlers.use(function (req, res, next) {
   // Never set headers inside tests because they could break other tests.
   if (BrowserPolicy._runningTest())
     return next();
@@ -28,13 +28,13 @@ WebApp.connectHandlers.use(function (req, res, next) {
   next();
 });
 
-// We use `rawConnectHandlers` to set X-Content-Type-Options on all
+// We use `rawHandlers` to set X-Content-Type-Options on all
 // requests, including static files.
-// XXX We should probably use `rawConnectHandlers` for X-Frame-Options
+// XXX We should probably use `rawHandlers` for X-Frame-Options
 // and Content-Security-Policy too, but let's make sure that doesn't
 // break anything first (e.g. the OAuth popup flow won't work well with
 // a CSP that disallows inline scripts).
-WebApp.rawConnectHandlers.use(function (req, res, next) {
+WebApp.rawHandlers.use(function (req, res, next) {
   if (BrowserPolicy._runningTest())
     return next();
 

@@ -8,18 +8,18 @@ All recipients of reports commit to maintain the confidentiality with regard to 
 
 ## Report an issue
 
-To report an issue in one of the projects listed below, please send an email to code-of-conduct@meteor.com.
+To report an issue in one of the projects listed below, please email code-of-conduct@meteor.com.
 
 * [OSS Meteor Projects](https://github.com/meteor)
 * [Meteor Forum](https://forums.meteor.com/)
+* [Meteor Lounge on Discord](https://discord.gg/hZkTCaVjmT)
 
 ## Code of Conduct panel
 
 The Code of Conduct panel is a moderation team that handle code of conduct issues. The makeup of this team is as follows:
 
 * CEO at Meteor Software - Frederico Maia Arantes
-* DevRel Manager at Meteor Software - Tatiana Barros
-* Software Engineer at Meteor Software - Denilson Silva
+* CTO at Meteor Software - Henrique Albert
 * CEO at High Impact Tech - Alim S. Gafar
 
 Members of the CoCP team will be added for a 1-year term and will be re-confirmed on a yearly basis.

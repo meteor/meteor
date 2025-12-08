@@ -1,5 +1,5 @@
 # jshint
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/jshint) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/jshint)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/deprecated/jshint) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/deprecated/jshint)
 ***
 
 JSHint for Meteor
