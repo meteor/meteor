@@ -259,6 +259,20 @@ Email.sendAsync = async function (options) {
     );
   }
 
+  // Check if 'from' address is still the unconfigured default.
+  // The default "example.com" domain (RFC 2606) will always fail to send emails
+  // since no SPF/DKIM/DMARC records can exist for it.
+  const isDefaultFrom = !email.from ||
+    email.from === 'Accounts Example <no-reply@example.com>';
+
+  if (isDefaultFrom) {
+    console.warn(
+      '[Email] Warning: "from" address is not configured. ' +
+      'Using default "example.com" which will fail in production. ' +
+      'Set Accounts.emailTemplates.from to a valid email address.'
+    );
+  }
+
   if (mailUrlEnv || mailUrlSettings) {
     return getTransport().sendMail(email);
   }
