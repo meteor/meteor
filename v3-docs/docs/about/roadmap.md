@@ -4,7 +4,7 @@ Describes the high-level features and actions for the Meteor project in the near
 
 ## Introduction
 
-**Last updated: August 22nd, 2024.**
+**Last updated: June 16, 2025.**
 
 The description of many items includes sentences and ideas from Meteor community members.
 
@@ -14,53 +14,106 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 
 > If you have new feature requests or ideas, you should open a new [discussion](https://github.com/meteor/meteor/discussions/new).
 
-### Next releases
+## Current project: Bundle optimization
 
-- Improve TypeScript support for Meteor and packages ([Discussion](https://github.com/meteor/meteor/discussions/12080))
-> Should be an ongoing effort to improve the TypeScript support in Meteor and packages, as we write new code in TypeScript and get more skin in the game, it should naturally improve. This doesn’t mean we will actively refactor working code.
+> We need to improve the bundle size and performance of Meteor apps. We should consider tree-shaking, code-splitting,
+> and other optimizations to make our apps leaner and faster.
+> To achieve that we plan to integrate or have an easy way to integrate with modern bundlers like RSPack, ESBuild, or Rollup.
 
-- Performance improvements for Meteor 3.0
-> After removing fibers, we became heavily reliant on async resources and consequently Async Hooks/Async Local Storage, which has a performance cost, we need to optimize that.
+**Discussion links:**
 
-- Bringing community packages to the core
-> Some packages are widely used and should be part of the core, which involves identifying and moving them to the core.
+- [GitHub discussion](https://github.com/meteor/meteor/discussions/11587)
+- [forums discussion](https://forums.meteor.com/t/join-the-effort-to-speed-up-meteor-bundler/63406/17)
 
-- MongoDB Change Streams support ([Discussion](https://github.com/meteor/meteor/discussions/11842))
-> Change Streams is the official way to listen to changes in MongoDB. We should provide a way to use it seamlessly in Meteor. It has been planned for a long time, and now we’re in a position to do it.
+### Implementation plan:
 
-- Integrated support for Vite (Client Bundler, [Discussion](https://github.com/meteor/meteor/discussions/11587))
-> Vite is a fast and modern client bundler with an amazing ecosystem. It has many potential benefits for Meteor: build performance, tree-shaking, making our codebase leaner, and focusing on what we do best.
+#### Phase 1: Profiling
 
-- Replace Babel with ESBuild, Rollup, SWC, or another tool for the server bundle ([Discussion](https://github.com/meteor/meteor/discussions/11587))
-> Babel is a great tool, but it's slow and has some limitations; we should consider replacing it with a faster and more modern tool for the server bundle. We could potentially use the same tools Vite uses.
+**Target Release:** 3.2 ✅
+
+**Goal:** Add a command([meteor profile](/cli/#meteorprofile)) to measure if our changes are actually making our builds faster and smaller.
+
+
+#### Phase 2: External Transpiler Integration
+
+**Target Release:** 3.3 ✅
+
+**Goal:** For this phase we want:
+ - Improve our current bundler performance, via optimizations so that any meteor user can get benefits from it; And an external bundler could get
+   the same benefits.
+ - To have an external transpiler working with Meteor and producing a bundle that is smaller or faster than the current Meteor bundle.
+
+
+#### Phase 3: HMR Improvements
+
+**Target Release:** 3.3 ✅
+
+**Goal:** Improve the HMR performance, so that it is faster and more reliable on what needs to be changed.
+
+#### Phase 4: Bundler Improvements & feedback
+
+**Target Release:** 3.3.x ⏳
+
+**Goal:** Improve the build size and make meteor use less resources for building, decreasing even more build and rebuild time.
+- Expanding compatibility and updates based on the feedback from the community, so that we can have a better experience with our new build tools, in this case SWC
+
+#### Phase 5: External Bundler integration
+
+**Target Release:** 3.4 ⏳
+
+**Goal:**  And an external bundler (like RSPack, ESBuild, or Rollup) working with Meteor and producing a bundle that is smaller or faster than the current Meteor bundle.
+- This will also allow Meteor to have features like tree-shaking, code-splitting, and other optimizations that will make our apps leaner and faster.
+
+#### Phase 6: Build Process Optimization
+
+**Target Release:** 3.4.x ⏳
+
+**Goal:** Improve the build size and make meteor use less resources for building, decreasing even more build and rebuild time.
+- Expanding compatibility and updates based on the feedback from the community, so that we can have a better experience with our new build tools
+
+
+#### Documentation Strategy
+
+We plan to document the changes in the Meteor documentation, including:
+- How to use the new features
+- How to integrate with the new bundler
+- How the meteor bundler pipeline works for future contributors
+- Examples and guides on how to integrate with the new bundler
+
+## Next releases
 
 - Support package.json exports fields ([Discussion](https://github.com/meteor/meteor/discussions/11727))
 - Tree-shaking
 
-> Tree sharking and exports fields may be implemented by integrating with more modern build tools, see previous items.
+  > Tree-shaking and exports fields may be implemented by integrating with more modern build tools.
+
+- Capacitor support
+
+  > Capacitor is a modern alternative to Cordova; we should provide an easy way to build mobile apps using Capacitor.
+
+- MongoDB Change Streams support ([Discussion](https://github.com/meteor/meteor/discussions/11842))
+
+  > Change Streams is the official way to listen to changes in MongoDB. We should provide a way to use it seamlessly in Meteor. It has been planned for a long time, and now we’re in a position to do it.
+
+- Improve TypeScript support for Meteor and packages ([Discussion](https://github.com/meteor/meteor/discussions/12080))
+
+  > Should be an ongoing effort to improve the TypeScript support in Meteor and packages. We should provide a better experience for TypeScript users, including better type definitions and support for TypeScript features.
 
 - Improve release CI/CD speed and reliability (optimized build times will help)
-> Sometimes our CI/CD takes too long to run, causing long queues and delays in our release process and feedback loop, we need to improve that.
-
-- Improve support for Windows 11
-> We had many complaints in the past, we need to research and make architectural improvements to make it easier to support Windows, not just punctual fixes.
-
-- Document better Windows with WSL
-> It's already possible to use Meteor on Windows with WSL, but we need to document it better
-
-- HTTP/3 Support
-> HTTP/3 is the next version of the HTTP protocol. We should support it in Meteor to leverage its performance and security benefits.
+  > Our CI/CD takes too long to run, causing long queues and delays in our release process and feedback loop; we need to improve that.
 
 ### Candidate items
 
 We need to discuss further to decide whether to proceed with these implementations.
 
+- Performance improvements (Async Hooks/Async Local Storage optimization)
+- HTTP/3 Support
 - Improve DDP Client
 - Improve Passwordless package ([Discussion](https://github.com/meteor/meteor/discussions/12075))
 - Integrate with Tauri, it might replace Cordova and Electron in a single tool
-- Support building mobile apps using CapacitorJS
 - Bring Redis-oplog to core ([Repository](https://github.com/Meteor-Community-Packages/redis-oplog))
 - Better file upload support via DDP ([Discussion](https://github.com/meteor/meteor/discussions/11523))
+- Improve usage in Windows environments
 
 ### Finished items
 
@@ -77,6 +130,6 @@ We need to discuss further to decide whether to proceed with these implementatio
 - Run Meteor on Node.js v20
 - Change web engine from Connect to Express
 
------------
+---
 
 For more completed items, refer to our [changelog](https://docs.meteor.com/history.html).

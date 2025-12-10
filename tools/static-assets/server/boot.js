@@ -498,12 +498,10 @@ var runMain = Profile("Run main()", async function () {
     global.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
   }
 
-  await Profile.run('Server startup', function() {
-    return global.__METEOR_ASYNC_LOCAL_STORAGE.run({}, async () => {
-      await loadServerBundles();
-      await callStartupHooks();
-      await runMain();
-    });
+  await Profile.run('Server startup', async function() {
+    await loadServerBundles();
+    await callStartupHooks();
+    await runMain();
   });
 })().catch(e => {
   console.log('error on boot.js',  e )
