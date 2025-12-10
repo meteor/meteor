@@ -8,21 +8,27 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.23.5",
-    "meteor-node-stubs": "^1.2.7",
-    "solid-js": "^1.8.6"
+    "@babel/runtime": "^7.23.9",
+    "@swc/helpers": "^0.5.17",
+    "meteor-node-stubs": "^1.2.12",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@meteorjs/rspack": "^0.2.54",
+    "@rsdoctor/rspack-plugin": "^1.2.3",
+    "@rspack/cli": "^1.6.5",
+    "@rspack/core": "^1.6.5",
+    "babel-loader": "10.0.0",
+    "babel-preset-solid": "^1.8.15",
+    "solid-js": "^1.9.4",
+    "solid-refresh": "0.7.5"
   },
   "meteor": {
     "mainModule": {
-      "client": "client/main.jsx",
+      "client": "client/main.js",
       "server": "server/main.js"
     },
-    "testModule": "tests/main.js"
-  },
-  "devDependencies": {
-    "babel-preset-solid": "^1.5.4",
-    "vite": "^3.0.9",
-    "vite-plugin-solid": "^2.3.0",
-    "vite-plugin-solid-svg": "^0.4.1"
+    "testModule": "tests/main.js",
+    "modern": true
   }
 }

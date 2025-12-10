@@ -46,6 +46,11 @@ this error gets sent over the wire to the client, it will appear only as
 `Meteor.Error(400, 'Match Failed')`. The failure details will be written to the
 server logs but not revealed to the client.
 
+By default, `check` will throw immediately at the first error encountered. Pass in `{ throwAllErrors: true }` to throw an array of all errors. For example:
+```js
+check(message, {/* ... */}, {throwAllErrors: true})
+```
+
 {% apibox "Match.test" %}
 
 `Match.test` can be used to identify if a variable has a certain structure.
@@ -80,6 +85,10 @@ Matches a primitive of the given type.
 
 {% dtdd name:"<code>Match.Integer</code>" %}
 Matches a signed 32-bit integer. Doesn't match `Infinity`, `-Infinity`, or `NaN`.
+{% enddtdd %}
+
+{% dtdd name:"<code>Match.NonEmptyString</code>" %}
+Matches a non-empty string.
 {% enddtdd %}
 
 {% dtdd name:"<code>[<em>pattern</em>]</code>" %}
@@ -155,12 +164,13 @@ from the call to `check` or `Match.test`. Examples:
 {% codeblock lang:js %}
 check(buffer, Match.Where(EJSON.isBinary));
 
-const NonEmptyString = Match.Where((x) => {
-  check(x, String);
-  return x.length > 0;
+// Example: creating a custom pattern for positive numbers
+const PositiveNumber = Match.Where((x) => {
+  check(x, Number);
+  return x > 0;
 });
 
-check(arg, NonEmptyString);
+check(arg, PositiveNumber);
 {% endcodeblock %}
 {% enddtdd %}
 </dl>

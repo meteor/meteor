@@ -5,6 +5,7 @@ edit_branch: 'devel'
 edit_path: 'guide'
 content_root: 'source'
 versions:
+  - '2.16'
   - '2.15'
   - '2.14'
   - '2.13'

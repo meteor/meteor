@@ -24,7 +24,7 @@ The peer dependencies can be installed manually by following the `package.json` 
 $ # Install `install-peerdeps` within the current Meteor tool version.
 $ meteor npm install --global install-peerdeps
 $ # Run the newly installed `install-peerdeps` to install this package and its dependencies.
-$ meteor install-peerdeps --dev @meteorjs/eslint-config-meteor
+$ meteor npx install-peerdeps --dev @meteorjs/eslint-config-meteor
 ```
 
 ## Configure

@@ -1,4 +1,4 @@
-const has = Npm.require('lodash.has');
+const has = require('lodash.has');
 
 var PV = PackageVersion;
 var CS = ConstraintSolver;
@@ -53,16 +53,16 @@ var convertDeps = function (catalogDeps) {
 
 // Since we don't fetch different versions of a package independently
 // at the moment, this helper is where we get our data.
-CS.CatalogLoader.prototype._getSortedVersionRecords = function (pkg) {
+CS.CatalogLoader.prototype._getSortedVersionRecords = async function (pkg) {
   if (!has(this._sortedVersionRecordsCache, pkg)) {
     this._sortedVersionRecordsCache[pkg] =
-      this.catalog.getSortedVersionRecords(pkg);
+      await this.catalog.getSortedVersionRecords(pkg);
   }
 
   return this._sortedVersionRecordsCache[pkg];
 };
 
-CS.CatalogLoader.prototype.loadSingleVersion = function (pkg, version) {
+CS.CatalogLoader.prototype.loadSingleVersion = async function (pkg, version) {
   var self = this;
   var cache = self.catalogCache;
   if (! cache.hasPackageVersion(pkg, version)) {
@@ -73,7 +73,7 @@ CS.CatalogLoader.prototype.loadSingleVersion = function (pkg, version) {
                      return r.version === version;
                    });
     } else {
-      rec = self.catalog.getVersion(pkg, version);
+      rec = await self.catalog.getVersion(pkg, version);
     }
     if (rec) {
       var deps = convertDeps(rec.dependencies);
@@ -82,10 +82,10 @@ CS.CatalogLoader.prototype.loadSingleVersion = function (pkg, version) {
   }
 };
 
-CS.CatalogLoader.prototype.loadAllVersions = function (pkg) {
+CS.CatalogLoader.prototype.loadAllVersions = async function (pkg) {
   var self = this;
   var cache = self.catalogCache;
-  var versionRecs = self._getSortedVersionRecords(pkg);
+  var versionRecs = await self._getSortedVersionRecords(pkg);
   versionRecs.forEach(function (rec) {
     var version = rec.version;
     if (! cache.hasPackageVersion(pkg, version)) {
@@ -97,7 +97,7 @@ CS.CatalogLoader.prototype.loadAllVersions = function (pkg) {
 
 // Takes an array of package names.  Loads all versions of them and their
 // (strong) dependencies.
-CS.CatalogLoader.prototype.loadAllVersionsRecursive = function (packageList) {
+CS.CatalogLoader.prototype.loadAllVersionsRecursive = async function (packageList) {
   var self = this;
 
   // Within a call to loadAllVersionsRecursive, we only visit each package
@@ -118,7 +118,7 @@ CS.CatalogLoader.prototype.loadAllVersionsRecursive = function (packageList) {
 
   while (loadQueue.length) {
     var pkg = loadQueue.pop();
-    self.loadAllVersions(pkg);
+    await self.loadAllVersions(pkg);
     self.catalogCache.getPackageVersions(pkg).forEach(function (v) {
       var depMap = self.catalogCache.getDependencyMap(pkg, v);
       Object.entries(depMap).forEach(function ([package2, dep]) {

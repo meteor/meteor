@@ -797,7 +797,7 @@ $.layout.defaults = {
  *	PANE-SPECIFIC SETTINGS
  *	- options listed below MUST be specified per-pane - they CANNOT be set under 'panes'
  *	- all options under the 'panes' key can also be set specifically for any pane
- *	- most options under the 'panes' key apply only to 'border-panes' - NOT the the center-pane
+ *	- most options under the 'panes' key apply only to 'border-panes' - NOT the center-pane
  */
 ,	north: {
 		paneSelector:			".ui-layout-north"
@@ -978,7 +978,7 @@ $.layout.backwardCompatibility = {
 			$.extend(true, opts.panes, opts.defaults);
 			delete opts.defaults;
 		}
-		// rename options in the the options.panes key
+		// rename options in the options.panes key
 		if (opts.panes) ren( opts.panes );
 		// rename options inside *each pane key*, eg: options.west
 		$.each($.layout.config.allPanes, function (i, pane) {

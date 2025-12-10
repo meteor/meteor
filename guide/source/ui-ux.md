@@ -11,9 +11,9 @@ Meteor supports many view layers.
 The most popular are:
 - [React](react.html): official [page](http://reactjs.org/)
 - [Blaze](blaze.html): official [page](http://blazejs.org/)
-- [Angular](http://www.angular-meteor.com): official [page](https://angular.io/)
+- [Angular](angular.html): official [page](https://angular.io/)
 - [Vue](vue.html): official [page](https://vuejs.org/)
-- [Svelte](https://www.meteor.com/tutorials/svelte/creating-an-app): official [page](https://svelte.dev/)
+- [Svelte](svelte.html): official [page](https://svelte.dev/)
 
 If you are starting with web development we recommend that you use Blaze as it's very simple to learn.
 

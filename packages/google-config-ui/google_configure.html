@@ -4,28 +4,37 @@
   </p>
   <ol>
     <li>
-      Visit <a href="https://console.developers.google.com/" target="blank">https://console.developers.google.com/</a>
+      Visit <a href="https://console.cloud.google.com/" target="blank">https://console.cloud.google.com/</a>
     </li>
     <li>
-      "Create Project", if needed. Wait for Google to finish provisioning.
+      Create a new project or select an existing one.
     </li>
     <li>
-      On the left sidebar, go to "Credentials" and, on the right, "OAuth consent screen". Make sure to enter an email address and a product name, and save.
+      In the left sidebar, go to "APIs & Services" > "OAuth consent screen".
     </li>
     <li>
-      On the left sidebar, go to "Credentials". Click the "Create credentials" button, then select "OAuth client ID" as the type.
+      Configure the consent screen: select "External" user type, enter your app name, user support email, and developer contact email, then click "Save and Continue".
     </li>
     <li>
-      Select "Web application" as your application type.
+      Skip the "Scopes" step (or add scopes if needed) and click "Save and Continue".
     </li>
     <li>
-     Set Authorized Javascript Origins to: <span class="url">{{siteUrl}}</span>
+      Add test users if needed, then click "Save and Continue".
     </li>
     <li>
-      Set Authorized Redirect URI to: <span class="url">{{siteUrl}}_oauth/google?close</span>
+      In the left sidebar, go to "Credentials" and click "Create Credentials" > "OAuth client ID".
     </li>
     <li>
-      Finish by clicking "Create".
+      Select "Web application" as the application type.
+    </li>
+    <li>
+      Add your site URL to "Authorized JavaScript origins": <span class="url">{{siteUrl}}</span>
+    </li>
+    <li>
+      Add to "Authorized redirect URIs": <span class="url">{{siteUrl}}_oauth/google</span>
+    </li>
+    <li>
+      Click "Create" and note down your "Client ID" and "Client Secret" from the popup.
     </li>
   </ol>
 </template>

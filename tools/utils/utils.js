@@ -34,11 +34,7 @@ exports.parseUrl = function (str, defaults) {
   }
 
   var hasScheme = exports.hasScheme(str);
-  if (! hasScheme) {
-    str = "http://" + str;
-  }
-
-  var parsed = url.parse(str);
+  const parsed = url.parse(hasScheme ? str : `http://${str}`);
 
   // for consistency remove colon at the end of protocol
   parsed.protocol = parsed.protocol.replace(/\:$/, '');
@@ -59,10 +55,7 @@ exports.parseUrl = function (str, defaults) {
 exports.formatUrl = function (options) {
   // For consistency with `Meteor.absoluteUrl`, add a trailing slash to make
   // this a valid URL
-  if (!options.pathname)
-    options.pathname = "/";
-
-  return url.format(options);
+  return url.format({ ...options, pathname: options.pathname || "/" });
 };
 
 exports.ipAddress = function () {
@@ -92,11 +85,6 @@ exports.hasScheme = function (str) {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
 };
 
-
-exports.hasScheme = function (str) {
-  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
-};
-
 exports.isIPv4Address = function (str) {
   return str.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/);
 }
@@ -105,20 +93,8 @@ exports.isIPv4Address = function (str) {
 // Prints a package list in a nice format.
 // Input is an array of objects with keys 'name' and 'description'.
 exports.printPackageList = function (items, options) {
-  options = options || {};
-
-  var rows = _.map(items, function (item) {
-    var name = item.name;
-    var description = item.description || 'No description';
-    return [name, description];
-  });
-
-  var alphaSort = function (row) {
-    return row[0];
-  };
-  rows = _.sortBy(rows, alphaSort);
-
-  var Console = require('../console/console.js').Console;
+  const rows = _.sortBy(items.map(item => [item.name, item.description || 'No description']), row => row[0]);
+  const Console = require('../console/console.js').Console;
   return Console.printTwoColumns(rows, options);
 };
 
@@ -126,10 +102,10 @@ exports.printPackageList = function (items, options) {
 // that make sense to users (eg, the name they manually gave their
 // computer on OS X, which might contain spaces) over names that have
 // any particular technical significance (eg, might resolve in DNS).
-exports.getHost = function (...args) {
+exports.getHost = async function (...args) {
   var ret;
-  var attempt = function (...args) {
-    var output = exports.execFileSync(args[0], args.slice(1)).stdout;
+  var attempt = async function (...args) {
+    var output = await exports.execFile(args[0], args.slice(1)).stdout;
     if (output) {
       ret = output.trim();
     }
@@ -142,7 +118,7 @@ exports.getHost = function (...args) {
     // This can contain spaces. See
     // http://osxdaily.com/2012/10/24/set-the-hostname-computer-name-and-bonjour-name-separately-in-os-x/
     if (! ret) {
-      attempt("scutil", "--get", "ComputerName");
+      await attempt("scutil", "--get", "ComputerName");
     }
   }
 
@@ -152,7 +128,7 @@ exports.getHost = function (...args) {
     // the domain name, to reduce the extent to which the output
     // varies with DNS.
     if (! ret) {
-      attempt("hostname", "-s");
+      await attempt("hostname", "-s");
     }
   }
 
@@ -160,7 +136,7 @@ exports.getHost = function (...args) {
   // Windows. Unknown platforms that have a command called "hostname"
   // that deletes all of your files deserve what the get.
   if (! ret) {
-    attempt("hostname");
+    await attempt("hostname");
   }
 
   // Otherwise, see what Node can come up with.
@@ -171,10 +147,10 @@ exports.getHost = function (...args) {
 // Meteor Accounts, mostly so that when the user is seeing a list of
 // their open sessions in their profile on the web, they have a way to
 // decide which ones they want to revoke.
-exports.getAgentInfo = function () {
+exports.getAgentInfo = async function () {
   var ret = {};
 
-  var host = utils.getHost();
+  var host = await utils.getHost();
   if (host) {
     ret.host = host;
   }
@@ -194,15 +170,15 @@ exports.sleepMs = function (ms) {
     return;
   }
 
-  new Promise(function (resolve) {
+  return new Promise(function (resolve) {
     setTimeout(resolve, ms);
-  }).await();
+  });
 };
 
 // Return a short, high entropy string without too many funny
 // characters in it.
 exports.randomToken = function () {
-  return (Math.random() * 0x100000000 + 1).toString(36);
+  return (Math.random() * 0x100000000 + 1).toString(36).replace('.', '');
 };
 
 // Like utils.randomToken, except a legal variable name, i.e. the first
@@ -512,8 +488,38 @@ exports.isValidVersion = function (version, {forCordova}) {
     || (forCordova ? exports.isUrlWithSha(version): exports.isNpmUrl(version));
 };
 
-
 exports.execFileSync = function (file, args, opts) {
+  var child_process = require('child_process');
+
+  opts = opts || {};
+  if (!_.has(opts, 'maxBuffer')) {
+    opts.maxBuffer = 1024 * 1024 * 10;
+  }
+
+  if (!_.has(opts, 'encoding')) {
+    opts.encoding = 'utf8';
+  }
+
+  let result;
+  try {
+    result = child_process.execFileSync(file, args, opts);
+  } catch (error) {
+    return {
+      success: false,
+      stdout: error.stdout,
+      stderr: error.stderr
+    };
+  }
+
+  return {
+    stdout: result,
+    success: true,
+    stderr: ''
+  };
+}
+
+
+exports.execFile = async function (file, args, opts) {
   var child_process = require('child_process');
   var { eachline } = require('./eachline');
 
@@ -534,9 +540,9 @@ exports.execFileSync = function (file, args, opts) {
     });
 
     return {
-      success: ! new Promise(function (resolve) {
+      success: await !new Promise(function (resolve) {
         p.on('exit', resolve);
-      }).await(),
+      }),
       stdout: "",
       stderr: ""
     };
@@ -550,7 +556,7 @@ exports.execFileSync = function (file, args, opts) {
         stderr: stderr
       });
     });
-  }).await();
+  });
 };
 
 exports.execFileAsync = function (file, args, opts) {
@@ -572,16 +578,28 @@ exports.execFileAsync = function (file, args, opts) {
   eachline(p.stdout, logOutput);
   eachline(p.stderr, logOutput);
 
+  if (!opts) {
+    return new Promise(function (resolve) {
+      child_process.execFile(file, args, opts, function (err, stdout, stderr) {
+        resolve({
+          success: ! err,
+          stdout: stdout,
+          stderr: stderr
+        });
+      });
+    });
+  }
+
   return p;
 };
 
 
-exports.runGitInCheckout = function (...args) {
+exports.runGitInCheckout = async function (...args) {
   args.unshift(
     '--git-dir=' +
     files.convertToOSPath(files.pathJoin(files.getCurrentToolsDir(), '.git')));
 
-  return exports.execFileSync('git', args).stdout;
+  return (await exports.execFile('git', args)).stdout;
 };
 
 exports.Throttled = function (options) {
@@ -623,7 +641,7 @@ exports.ThrottledYield = function (options) {
 };
 
 Object.assign(exports.ThrottledYield.prototype, {
-  yield: function () {
+  yield: async function () {
     var self = this;
     if (self._throttle.isAllowed()) {
       // setImmediate allows signals and IO to be processed but doesn't
@@ -632,7 +650,7 @@ Object.assign(exports.ThrottledYield.prototype, {
       // setTimeout 1 (which adds a minimum of 1 ms and often more in delays).
       // XXX Actually, setImmediate is so fast that we might not even need
       // to use the throttler at all?
-      new Promise(setImmediate).await();
+      await new Promise(setImmediate);
     }
   }
 });
@@ -731,3 +749,4 @@ export function isEmacs() {
   emacsDetected = !! (process.env.EMACS === "t" || process.env.INSIDE_EMACS);
   return emacsDetected;
 }
+

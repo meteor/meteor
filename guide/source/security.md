@@ -36,9 +36,9 @@ Each of these points will have their own section below.
 
 <h3 id="allow-deny">Avoid allow/deny</h3>
 
-In this guide, we're going to take a strong position that using [allow](http://docs.meteor.com/#/full/allow) or [deny](http://docs.meteor.com/#/full/deny) to run MongoDB queries directly from the client is not a good idea. The main reason is that it is hard to follow the principles outlined above. It's extremely difficult to validate the complete space of possible MongoDB operators, which could potentially grow over time with new versions of MongoDB.
+In this guide, we're going to take a strong position that using [allow](https://docs.meteor.com/api/collections.html#Mongo-Collection-allow) or [deny](https://docs.meteor.com/api/collections.html#Mongo-Collection-deny) to run MongoDB queries directly from the client is not a good idea. The main reason is that it is hard to follow the principles outlined above. It's extremely difficult to validate the complete space of possible MongoDB operators, which could potentially grow over time with new versions of MongoDB.
 
-There have been several articles about the potential pitfalls of accepting MongoDB update operators from the client, in particular the [Allow & Deny Security Challenge](https://www.discovermeteor.com/blog/allow-deny-security-challenge/) and its [results](https://www.discovermeteor.com/blog/allow-deny-challenge-results/), both on the Discover Meteor blog.
+There have been several articles about the potential pitfalls of accepting MongoDB update operators from the client, in particular the [Allow & Deny Security Challenge](https://web.archive.org/web/20220705130732/https://www.discovermeteor.com/blog/allow-deny-security-challenge/) and its [results](https://web.archive.org/web/20220819163744/https://www.discovermeteor.com/blog/allow-deny-challenge-results/), both on the Discover Meteor blog.
 
 Given the points above, we recommend that all Meteor apps should use Methods to accept data input from the client, and restrict the arguments accepted by each Method as tightly as possible.
 
@@ -80,9 +80,9 @@ Meteor.methods({
 
 If someone comes along and passes a non-ID selector like `{}`, they will end up deleting the entire collection.
 
-<h3 id="validated-method">mdg:validated-method</h3>
+<h3 id="jam-method">jam:method</h3>
 
-To help you write good Methods that exhaustively validate their arguments, we've written a wrapper package for Methods that enforces argument validation. Read more about how to use it in the [Methods article](methods.html#validated-method). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
+To help you write good Methods that exhaustively validate their arguments, you can use a community package for Methods that enforces argument validation. Read more about how to use it in the [Methods article](methods.html#jam-method). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
 
 <h3 id="user-id-client">Don't pass userId from the client</h3>
 
@@ -116,25 +116,25 @@ The _only_ times you should be passing any user ID as an argument are the follow
 The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
 
 ```js
-export const makePrivate = new ValidatedMethod({
+export const makePrivate = new createMethod({
   name: 'lists.makePrivate',
   validate: new SimpleSchema({
     listId: { type: String }
   }).validator(),
-  run({ listId }) {
+  async run({ listId }) {
     if (!this.userId) {
       throw new Meteor.Error('lists.makePrivate.notLoggedIn',
         'Must be logged in to make private lists.');
     }
 
-    const list = Lists.findOne(listId);
+    const list = await Lists.findOneAsync(listId);
 
     if (list.isLastPublicList()) {
       throw new Meteor.Error('lists.makePrivate.lastPublicList',
         'Cannot make the last public list private.');
     }
 
-    Lists.update(listId, {
+    await Lists.updateAsync(listId, {
       $set: { userId: this.userId }
     });
 
@@ -148,16 +148,16 @@ You can see that this Method does a _very specific thing_ - it makes a single li
 However, this doesn't mean you can't have any flexibility in your Methods. Let's look at an example:
 
 ```js
-Meteor.users.methods.setUserData = new ValidatedMethod({
+Meteor.users.methods.setUserData = new createMethod({
   name: 'Meteor.users.methods.setUserData',
   validate: new SimpleSchema({
     fullName: { type: String, optional: true },
     dateOfBirth: { type: Date, optional: true },
   }).validator(),
-  run(fieldsToSet) {
-    Meteor.users.update(this.userId, {
+  async run(fieldsToSet) {
+    return (await Meteor.users.updateAsync(this.userId, {
       $set: fieldsToSet
-    });
+    }));
   }
 });
 ```
@@ -200,7 +200,8 @@ if (Meteor.isServer) {
 
 This will make every Method only callable 5 times per second per connection. This is a rate limit that shouldn't be noticeable by the user at all, but will prevent a malicious script from totally flooding the server with requests. You will need to tune the limit parameters to match your app's needs.
 
-If you're using validated methods, there's an available [ddp-rate-limiter-mixin](https://github.com/nlhuykhang/ddp-rate-limiter-mixin).
+If you're using `jam:method`, it comes with built in [rate-limiting](https://github.com/jamauro/method#rate-limiting).
+
 
 <h2 id="publications">Publications</h2>
 
@@ -274,10 +275,10 @@ Publications are not reactive, and they only re-run when the currently logged in
 
 ```js
 // #1: Bad! If the owner of the list changes, the old owner will still see it
-Meteor.publish('list', function (listId) {
+Meteor.publish('list', async function (listId) {
   check(listId, String);
 
-  const list = Lists.findOne(listId);
+  const list = await Lists.findOneAsync(listId);
 
   if (list.userId !== this.userId) {
     throw new Meteor.Error('list.unauthorized',
@@ -351,7 +352,7 @@ export const MMR = {
 
 ```js
 // In a file loaded on client and server
-Meteor.users.methods.updateMMR = new ValidatedMethod({
+Meteor.users.methods.updateMMR = new createMethod({
   name: 'Meteor.users.methods.updateMMR',
   validate: null,
   run() {
@@ -470,7 +471,7 @@ Generally speaking, all production HTTP requests should go over HTTPS, and all W
 It's best to handle the redirection from HTTP to HTTPS on the platform which handles the SSL certificates and termination.
 
 * On [Galaxy](deployment.html#galaxy), enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
-* Other deployments *may* have control panel options or may need to be manually configured on the the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
+* Other deployments *may* have control panel options or may need to be manually configured on the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
 
 In the event that a platform does not offer the ability to configure this, the `force-ssl` package can be added to the project and Meteor will attempt to intelligently redirect based on the presence of the `x-forwarded-for` header.
 
@@ -497,7 +498,7 @@ By default, Helmet can be used to set various HTTP headers (see link above). The
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.connectHandlers.use(helmet())
+WebApp.handlers.use(helmet())
 ```
 
 At a minimum, Meteor recommends users to set the following headers. Note that code examples shown below are specific to Helmet.
@@ -517,7 +518,7 @@ By default, Meteor recommends unsafe inline scripts and styles are allowed, sinc
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.connectHandlers.use(
+WebApp.handlers.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
@@ -696,7 +697,7 @@ With Helmet, Frameguard sets the X-Frame-Options header.
 import helmet from "helmet";
 
 // Within server side Meter.startup()
-WebApp.connectHandlers.use(helmet.frameguard());  // defaults to sameorigin
+WebApp.handlers.use(helmet.frameguard());  // defaults to sameorigin
 ```
 For more detail please read the following guide: [Frameguard](https://helmetjs.github.io/docs/frameguard/).
 

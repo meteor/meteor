@@ -6,32 +6,32 @@ var Sandbox = selftest.Sandbox;
 
 var DEFAULT_RELEASE_TRACK = catalogRemote.DEFAULT_TRACK;
 
-var getCatalog = function (sandbox) {
+var getCatalog = async function (sandbox) {
   var dataFile = config.getPackageStorage({ root: sandbox.warehouse });
   var catalog = new catalogRemote.RemoteCatalog();
-  catalog.initialize( {packageStorage: dataFile});
+  await catalog.initialize( {packageStorage: dataFile});
   return catalog;
 };
 
-var setBanner = function (sandbox, version, banner) {
-  var messages = buildmessage.capture(function () {
-    var catalog = getCatalog(sandbox);
-    var release = catalog.getReleaseVersion(DEFAULT_RELEASE_TRACK, version);
+var setBanner = async function (sandbox, version, banner) {
+  var messages = await buildmessage.capture(async function () {
+    var catalog = await getCatalog(sandbox);
+    var release = await catalog.getReleaseVersion(DEFAULT_RELEASE_TRACK, version);
     release.banner = { text: banner, lastUpdated: new Date };
-    catalog._insertReleaseVersions([release]); //This is a hack
+    await catalog._insertReleaseVersions([release]); //This is a hack
   });
 };
 
-var recommend = function (sandbox, version) {
-  var messages = buildmessage.capture(function () {
-    var catalog = getCatalog(sandbox);
-    var release = catalog.getReleaseVersion(DEFAULT_RELEASE_TRACK, version);
+var recommend = async function (sandbox, version) {
+  var messages = await buildmessage.capture(async function () {
+    var catalog = await getCatalog(sandbox);
+    var release = await catalog.getReleaseVersion(DEFAULT_RELEASE_TRACK, version);
     release.recommended = true;
-    catalog._insertReleaseVersions([release]);
+    await catalog._insertReleaseVersions([release]);
   });
 };
 
-selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
+selftest.define("autoupdate", ['checkout', 'custom-warehouse'], async function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true },
@@ -40,6 +40,7 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
       v4: { }
     }
   });
+  await s.init();
   var run;
 
   // These tests involve running an app, but only because we want to
@@ -47,9 +48,9 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
   // manages to run. So stop mongo from starting so that it goes faster.
   s.set("MONGO_URL", "whatever");
 
-  s.createApp('myapp', 'packageless', { release: DEFAULT_RELEASE_TRACK + '@v2' });
-  s.cd('myapp', function () {
-    setBanner(s, "v2", "=> New hotness v2 being downloaded.\n");
+  await s.createApp('myapp', 'packageless', { release: DEFAULT_RELEASE_TRACK + '@v2' });
+  await s.cd('myapp', async function () {
+    await setBanner(s, "v2", "=> New hotness v2 being downloaded.\n");
 
     // console.log("WE ARE READY NOW", s.warehouse, s.cwd)
     // require('../utils/utils.js').sleepMs(1000*10000)
@@ -61,19 +62,19 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
     // We're not sure in which order these messages will arrive, but we
     // expect to see them both (and we're not worried about either message
     // being printed more than once).
-    run.match(runningHotnessPattern);
-    run.match(runningHotnessPattern);
-    require('../utils/utils.js').sleepMs(500);
-    run.stop();
+    await run.match(runningHotnessPattern);
+    await run.match(runningHotnessPattern);
+    await require('../utils/utils.js').sleepMs(500);
+    await run.stop();
 
     // We won't see the banner a second time, or any other message about
     // updating since we are at the latest recommended release.
     run = s.run("--port", "21000");
     run.waitSecs(5);
-    run.match("running at");
+    await run.match("running at");
     run.forbidAll("hotness");
     run.forbidAll("meteor update");
-    run.stop();
+    await run.stop();
 
     // If we are not at the latest version of Meteor, at startup, we get a
     // boring prompt to update (not a banner since we didn't set one for v1).
@@ -82,30 +83,30 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
     // We don't see any information if we run a simple command like list.
     run = s.run("list");
     run.forbidAll("New hotness v2 being downloaded");
-    run.expectExit(0);
-    run.stop();
+    await run.expectExit(0);
+    await run.stop();
 
     run = s.run("--version");
-    run.read("Meteor v1\n");
-    run.expectEnd();
-    run.expectExit(0);
+    await run.read("Meteor v1\n");
+    await run.expectEnd();
+    await run.expectExit(0);
 
     // We do see a boring prompt though.
     run = s.run("--port", "22000");
     run.waitSecs(5);
-    run.match("v2");
+    await run.match("v2");
     run.forbidAll("hotness");
-    run.match("meteor update");
-    run.stop();
+    await run.match("meteor update");
+    await run.stop();
 
     // .. unless we explicitly forced this release. Then, no prompt.
     s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@somethingelse');
     run = s.run("--release", "v1", "--port", "23000");
     run.waitSecs(5);
-    run.match("running at");
+    await run.match("running at");
     run.forbidAll("hotness");
     run.forbidAll("meteor update");
-    run.stop();
+    await run.stop();
 
     // XXX figure out about the UI of being offline. the old warehouse
     //     banner code actually printed out that it was downloading stuff,
@@ -119,12 +120,12 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
     // s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
     // setManifest(s, "test-junk", "=> New hotness test-junk being downloaded.\n");
     // run = s.run("--port", "24000");
-    // run.match("New hotness test-junk");
+    // await run.match("New hotness test-junk");
     // run.stop();
 
     // // But we only print the banner once.
     // run = s.run("--port", "25000");
-    // run.match("Meteor test-junk is being downloaded");
+    // await run.match("Meteor test-junk is being downloaded");
     // run.stop();
     // run.forbidAll("hotness");
 
@@ -135,66 +136,65 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
     // manifest, not if we actually have the version in the manifest;
     // and the downloading code turns out to be a noop if we already
     // have that version).
-    recommend(s, "v3");
+    await recommend(s, "v3");
     s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
     run = s.run("--port", "26000");
-    run.match("Meteor v3 is available");
-    run.match("meteor update");
-    run.stop();
+    await run.match("Meteor v3 is available");
+    await run.match("meteor update");
+    await run.stop();
 
     run = s.run("update");
-    run.match("myapp: updated to Meteor v3.\n");
-    run.match("Your top-level dependencies are at their latest compatible " +
+    await run.match("myapp: updated to Meteor v3.\n");
+    await run.match("Your top-level dependencies are at their latest compatible " +
               "versions.\n");
-    run.expectExit(0);
+    await run.expectExit(0);
 
     run = s.run("--version");
-    run.read("Meteor v3\n");
-    run.expectEnd();
-    run.expectExit(0);
+    await run.read("Meteor v3\n");
+    await run.expectEnd();
+    await run.expectExit(0);
 
     run = s.run("update");
-    run.match("already at Meteor v3, the latest release");
-    run.expectExit(0);
+    await run.match("already at Meteor v3, the latest release");
+    await run.expectExit(0);
 
     // Update the app back to an older version.
     run = s.run("update", "--release", "v2");
-    run.read("myapp: updated to Meteor v2.\n");
-    run.expectEnd();
-    run.expectExit(0);
+    await run.read("myapp: updated to Meteor v2.\n");
+    await run.expectEnd();
+    await run.expectExit(0);
 
     run = s.run("--version");
-    run.read("Meteor v2\n");
-    run.expectEnd();
-    run.expectExit(0);
+    await run.read("Meteor v2\n");
+    await run.expectEnd();
+    await run.expectExit(0);
 
     run = s.run("update", "--release", "v2");
-    run.match("already at Meteor v2");
+    await run.match("already at Meteor v2");
     run.forbidAll("the latest release");
-    run.expectExit(0);
+    await run.expectExit(0);
 
     // Update explicitly to v3.
     run = s.run("update", "--release", "v3");
-    run.read("myapp: updated to Meteor v3.\n");
+    await run.read("myapp: updated to Meteor v3.\n");
     // We *don't* print "All your package dependencies are already up to date"
     // here, because we don't try to additionally update packages when you
     // request a specific release.
-    run.expectEnd();
-    run.expectExit(0);
+    await run.expectEnd();
+    await run.expectExit(0);
   });
 
   // The latest version has been updated globally too.
   run = s.run("--version");
-  run.read("Meteor v3\n");
-  run.expectEnd();
-  run.expectExit(0);
+  await run.read("Meteor v3\n");
+  await run.expectEnd();
+  await run.expectExit(0);
 
   // Recommend v4 and watch --version update.
   // XXX: Not sure if this is desired behavior.
-  recommend(s, "v4");
+  await recommend(s, "v4");
   run = s.run("--version");
-  run.match("Meteor v4\n");
-  run.expectEnd();
-  run.expectExit(0);
-
+  await run.match("Meteor v4\n");
+  await run.expectEnd();
+  await run.expectExit(0);
 });

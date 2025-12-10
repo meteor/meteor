@@ -342,14 +342,22 @@ export const optimisticReadMeteorIgnore = wrap((dir: string) => {
   const meteorIgnorePath = pathJoin(dir, ".meteorignore");
   const meteorIgnoreStat = optimisticStatOrNull(meteorIgnorePath);
 
+  let ignoreConfig = null;
   if (meteorIgnoreStat &&
       meteorIgnoreStat.isFile()) {
-    return ignore().add(
-      optimisticReadFile(meteorIgnorePath).toString("utf8")
+    ignoreConfig = ignore().add(
+        optimisticReadFile(meteorIgnorePath).toString("utf8")
     );
   }
 
-  return null;
+  const customMeteorIgnore = process.env.METEOR_IGNORE;
+  if (customMeteorIgnore != null) {
+    ignoreConfig = ignoreConfig || ignore();
+    const allCustomMeteorIgnores = customMeteorIgnore.trim().split(/\s+/);
+    ignoreConfig = ignoreConfig.add(allCustomMeteorIgnores);
+  }
+
+  return ignoreConfig;
 });
 
 type LookupPkgJsonType = OptimisticWrapperFunction<

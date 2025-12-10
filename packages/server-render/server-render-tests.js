@@ -51,7 +51,7 @@ Tinytest.addAsync(
     });
 
     try {
-      const { stream } = WebAppInternals.getBoilerplate({
+      const { stream } = await WebAppInternals.getBoilerplate({
         isServerRenderTest: true,
         browser: { name: "fake" },
         url: "/server-render/test",

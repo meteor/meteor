@@ -1,26 +1,31 @@
 <template name="configureLoginServiceDialogForTwitter">
   <p>
-    First, you'll need to register your app on Twitter. Follow these steps:
+    First, you'll need to register your app on X/Twitter. Follow these steps:
   </p>
   <ol>
     <li>
-      Visit <a href="https://apps.twitter.com/app/new" target="_blank">https://apps.twitter.com/app/new</a>
+      Visit <a href="https://developer.x.com/en/portal/dashboard" target="_blank">https://developer.x.com/en/portal/dashboard</a> and sign in.
     </li>
     <li>
-      Set Website to: <span class="url">{{siteUrl}}</span>
+      Create a new project and app (or select an existing one).
     </li>
     <li>
-      Set Callback URL to: <span class="url">{{siteUrl}}_oauth/twitter</span>
+      In your app settings, click on "Set up" under "User authentication settings".
     </li>
     <li>
-      Select "Create your Twitter application".
+      Enable "OAuth 1.0a" (required for Meteor).
     </li>
     <li>
-      On the Settings tab, enable "Allow this application to be used to Sign in with Twitter" and click
-      "Update settings".
+      Set "Callback URI / Redirect URL" to: <span class="url">{{siteUrl}}_oauth/twitter</span>
     </li>
     <li>
-      Switch to the "Keys and Access Tokens" tab.
+      Set "Website URL" to: <span class="url">{{siteUrl}}</span>
+    </li>
+    <li>
+      Click "Save".
+    </li>
+    <li>
+      Go to the "Keys and tokens" tab and note down your "API Key" (Consumer Key) and "API Key Secret" (Consumer Secret).
     </li>
   </ol>
 </template>

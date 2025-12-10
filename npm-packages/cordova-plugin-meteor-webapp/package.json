@@ -31,7 +31,7 @@
     "xcode": "^2.0.0"
   },
   "devDependencies": {
-    "cordova": "^9.0.0",
+    "cordova": "^12.0.0",
     "cordova-paramedic": "github:meteor/cordova-paramedic#40df66c3efc2f0db4d66b8c172174a68c031c114",
     "ios-deploy": "^1.10.0-beta.3",
     "ios-sim": "^8.0.2"

@@ -58,3 +58,61 @@ Tinytest.add('minimongo - wrapTransform', test => {
   });
   handle.stop();
 });
+
+Tinytest.add('minimongo - bulk remove with $in operator removes all matching documents', function(test) {
+  const coll = new LocalCollection();
+  
+  // Insert multiple documents
+  const ids = ['id1', 'id2', 'id3', 'id4'];
+  ids.forEach(id => {
+    coll.insert({ _id: id, value: `item-${id}` });
+  });
+  
+  // Verify we have 4 documents
+  test.equal(coll.find().count(), 4);
+  
+  // Remove 2 documents using $in operator
+  const removedCount = coll.remove({ _id: { $in: ['id1', 'id2'] } });
+  
+  // This should remove 2 documents, not just 1
+  test.equal(removedCount, 2);
+  
+  // Verify only 2 documents remain
+  test.equal(coll.find().count(), 2);
+  
+  // Verify the correct documents were removed
+  test.isUndefined(coll.findOne('id1'));
+  test.isUndefined(coll.findOne('id2'));
+  
+  // Verify the other documents still exist
+  test.isNotUndefined(coll.findOne('id3'));
+  test.isNotUndefined(coll.findOne('id4'));
+});
+
+if (Meteor.isClient) {
+  Tinytest.add('minimongo - $geoIntersects should throw error', function(test) {
+    const collection = new LocalCollection();
+    collection.insert({ _id: 'a', loc: { type: 'Point', coordinates: [0, 0] } });
+
+    const query = {
+      loc: {
+        $geoIntersects: {
+          $geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [0, 0], [0, 1], [1, 1], [1, 0], [0, 0]
+              ]
+            ]
+          }
+        }
+      }
+    };
+
+    test.throws(
+      () => collection.findOne(query),
+      /Unrecognized operator: \$geoIntersects/,
+      'Should throw error for $geoIntersects in Minimongo'
+    );
+  });
+}

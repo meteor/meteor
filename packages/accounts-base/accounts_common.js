@@ -4,19 +4,28 @@ import { Meteor } from 'meteor/meteor';
 const VALID_CONFIG_KEYS = [
   'sendVerificationEmail',
   'forbidClientAccountCreation',
-  'passwordEnrollTokenExpiration',
-  'passwordEnrollTokenExpirationInDays',
   'restrictCreationByEmailDomain',
-  'loginExpirationInDays',
   'loginExpiration',
+  'loginExpirationInDays',
+  'oauthSecretKey',
   'passwordResetTokenExpirationInDays',
   'passwordResetTokenExpiration',
+  'passwordEnrollTokenExpirationInDays',
+  'passwordEnrollTokenExpiration',
   'ambiguousErrorMessages',
   'bcryptRounds',
+  'argon2Enabled',
+  'argon2Type',
+  'argon2TimeCost',
+  'argon2MemoryCost',
+  'argon2Parallelism',
   'defaultFieldSelector',
+  'collection',
   'loginTokenExpirationHours',
   'tokenSequenceLength',
-  'collection',
+  'clientStorage',
+  'ddpUrl',
+  'connection',
 ];
 
 /**
@@ -32,9 +41,16 @@ const VALID_CONFIG_KEYS = [
  */
 export class AccountsCommon {
   constructor(options) {
+    // Validate config options keys
+    for (const key of Object.keys(options)) {
+      if (!VALID_CONFIG_KEYS.includes(key)) {
+        console.error(`Accounts.config: Invalid key: ${key}`);
+      }
+    }
+
     // Currently this is read directly by packages like accounts-password
     // and accounts-ui-unstyled.
-    this._options = {};
+    this._options = options || {};
 
     // Note that setting this.connection = null causes this.users to be a
     // LocalCollection, which is not what we want.
@@ -147,15 +163,27 @@ export class AccountsCommon {
   }
 
   /**
-   * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+   * @summary Get the current user record, or `null` if no user is logged in. A reactive data source. In the server this fuction returns a promise.
    * @locus Anywhere
    * @param {Object} [options]
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    */
   user(options) {
-    const userId = this.userId();
+    if (Meteor.isServer) {
+      console.warn([
+        "`Meteor.user()` is deprecated on the server side.",
+        "    To fetch the current user record on the server,",
+        "    use `Meteor.userAsync()` instead.",
+      ].join("\n"));
+    }
+
+    const self = this;
+    const userId = self.userId();
+    const findOne = (...args) => Meteor.isClient
+      ? self.users.findOne(...args)
+      : self.users.findOneAsync(...args);
     return userId
-      ? this.users.findOne(userId, this._addDefaultFieldSelector(options))
+      ? findOne(userId, this._addDefaultFieldSelector(options))
       : null;
   }
 
@@ -171,61 +199,46 @@ export class AccountsCommon {
       ? this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
       : null;
   }
-  // Set up config for the accounts system. Call this on both the client
-  // and the server.
-  //
-  // Note that this method gets overridden on AccountsServer.prototype, but
-  // the overriding method calls the overridden method.
-  //
-  // XXX we should add some enforcement that this is called on both the
-  // client and the server. Otherwise, a user can
-  // 'forbidClientAccountCreation' only on the client and while it looks
-  // like their app is secure, the server will still accept createUser
-  // calls. https://github.com/meteor/meteor/issues/828
-  //
-  // @param options {Object} an object with fields:
-  // - sendVerificationEmail {Boolean}
-  //     Send email address verification emails to new users created from
-  //     client signups.
-  // - forbidClientAccountCreation {Boolean}
-  //     Do not allow clients to create accounts directly.
-  // - restrictCreationByEmailDomain {Function or String}
-  //     Require created users to have an email matching the function or
-  //     having the string as domain.
-  // - loginExpirationInDays {Number}
-  //     Number of days since login until a user is logged out (login token
-  //     expires).
-  // - collection {String|Mongo.Collection}
-  //     A collection name or a Mongo.Collection object to hold the users.
-  // - passwordResetTokenExpirationInDays {Number}
-  //     Number of days since password reset token creation until the
-  //     token cannt be used any longer (password reset token expires).
-  // - ambiguousErrorMessages {Boolean}
-  //     Return ambiguous error messages from login failures to prevent
-  //     user enumeration.
-  // - bcryptRounds {Number}
-  //     Allows override of number of bcrypt rounds (aka work factor) used
-  //     to store passwords.
 
   /**
    * @summary Set global accounts options. You can also set these in `Meteor.settings.packages.accounts` without the need to call this function.
    * @locus Anywhere
    * @param {Object} options
    * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.
-   * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available.
+   * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available. **Important**: This option must be set on both the client and server to take full effect. If only set on the server, account creation will be blocked but the UI will still show the "Create account" link.
    * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.
-   * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
    * @param {Number} options.loginExpiration The number of milliseconds from when a user logs in until their token expires and they are logged out, for a more granular control. If `loginExpirationInDays` is set, it takes precedent.
+   * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
    * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specified on the server.  See packages/oauth-encryption/README.md for details.
    * @param {Number} options.passwordResetTokenExpirationInDays The number of days from when a link to reset password is sent until token expires and user can't reset password with the link anymore. Defaults to 3.
    * @param {Number} options.passwordResetTokenExpiration The number of milliseconds from when a link to reset password is sent until token expires and user can't reset password with the link anymore. If `passwordResetTokenExpirationInDays` is set, it takes precedent.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set initial password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
-   * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
+   * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to `true`.
+   * @param {Number} options.bcryptRounds Allows override of number of bcrypt rounds (aka work factor) used to store passwords. The default is 10.
+   * @param {Boolean} options.argon2Enabled Enable argon2 algorithm usage in replacement for bcrypt. The default is `false`.
+   * @param {'argon2id' | 'argon2i' | 'argon2d'} options.argon2Type Allows override of the argon2 algorithm type. The default is `argon2id`.
+   * @param {Number} options.argon2TimeCost Allows override of number of argon2 iterations (aka time cost) used to store passwords. The default is 2.
+   * @param {Number} options.argon2MemoryCost Allows override of the amount of memory (in KiB) used by the argon2 algorithm. The default is 19456 (19MB).
+   * @param {Number} options.argon2Parallelism Allows override of the number of threads used by the argon2 algorithm. The default is 1.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`. Beware when using this. If, for instance, you do not include `email` when excluding the fields, you can have problems with functions like `forgotPassword` that will break because they won't have the required data available. It's recommend that you always keep the fields `_id`, `username`, and `email`.
    * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
+   * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
+   * 
+   * @example
+   * // For UI-related options like forbidClientAccountCreation, call Accounts.config on both client and server
+   * // Create a shared configuration file (e.g., lib/accounts-config.js):
+   * import { Accounts } from 'meteor/accounts-base';
+   * 
+   * Accounts.config({
+   *   forbidClientAccountCreation: true,
+   *   sendVerificationEmail: true,
+   * });
+   * 
+   * // Then import this file in both client/main.js and server/main.js:
+   * // import '../lib/accounts-config.js';
    */
   config(options) {
     // We don't want users to accidentally only call Accounts.config on the
@@ -266,24 +279,23 @@ export class AccountsCommon {
     }
 
     // Validate config options keys
-    Object.keys(options).forEach(key => {
+    for (const key of Object.keys(options)) {
       if (!VALID_CONFIG_KEYS.includes(key)) {
-        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
+        console.error(`Accounts.config: Invalid key: ${key}`);
       }
-    });
+    }
 
     // set values in Accounts._options
-    VALID_CONFIG_KEYS.forEach(key => {
+    for (const key of VALID_CONFIG_KEYS) {
       if (key in options) {
         if (key in this._options) {
-          if (key !== 'collection') {
+          if (key !== 'collection' && (Meteor.isTest && key !== 'clientStorage')) {
             throw new Meteor.Error(`Can't set \`${key}\` more than once`);
           }
         }
         this._options[key] = options[key];
       }
-    });
+    }
 
     if (options.collection && options.collection !== this.users._name && options.collection !== this.users) {
       this.users = this._initializeCollection(options);
@@ -415,14 +427,14 @@ export class AccountsCommon {
 
 /**
  * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
+ * @locus Anywhere
  * @importFromPackage meteor
  */
 Meteor.userId = () => Accounts.userId();
 
 /**
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
+ * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
@@ -431,7 +443,7 @@ Meteor.user = options => Accounts.user(options);
 
 /**
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
+ * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.

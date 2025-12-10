@@ -15,7 +15,14 @@ describe("dynamic import(...)", function () {
   maybeClearDynamicImportCache();
 
   it("ignores bad __meteor__/dynamic-import/fetch requests (#10147)", function () {
-    return fetch(Meteor.absoluteUrl("/__meteor__/dynamic-import/fetch"), {
+    // using localhost gives an issue on Windows
+    // https://github.com/node-fetch/node-fetch/issues/1624
+    // will replace with localhost once the issue is resolved
+    // workaround is to use 127.0.0.1 instead of localhost
+    const localhost = Meteor.absoluteUrl("/__meteor__/dynamic-import/fetch", {
+      replaceLocalhost: true // https://docs.meteor.com/api/core.html#Meteor-absoluteUrl
+    });
+    return fetch(localhost, {
       // POST request with empty body.
       method: "POST"
     }).then(async (res) => {
@@ -136,7 +143,7 @@ describe("dynamic import(...)", function () {
         assert.strictEqual(lazy.name, requiredName);
       }),
 
-      import("meteor/lazy-test-package/dynamic").then(dynamic => {
+      import("meteor/lazy-test-package/dynamic").then(async dynamic => {
         assert.strictEqual(
           dynamic.name,
           "/node_modules/meteor/lazy-test-package/dynamic.js"
@@ -145,7 +152,7 @@ describe("dynamic import(...)", function () {
         // Now the synchronous dynamic require succeeds because the module
         // has been fetched dynamically.
         assert.strictEqual(
-          require(dynamicId).name,
+          (await require(dynamicId)).name,
           dynamic.name
         );
       })

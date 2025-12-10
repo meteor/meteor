@@ -3,13 +3,13 @@ import { inCheckout } from "../fs/files";
 import buildmessage from "../utils/buildmessage.js";
 import packageVersionParser from "../packaging/package-version-parser.js";
 
-export class PackageNamespace {
   /**
    * @summary Class of the 'Package' object visible in package.js
    * @locus package.js
    * @instanceName Package
    * @showInstanceName true
    */
+export class PackageNamespace {
   constructor(packageSource) {
     this._packageSource = packageSource;
     this._fileAndDepLoader = null;
@@ -46,6 +46,9 @@ export class PackageNamespace {
    * @param {String} options.documentation Optional Filepath to
    * documentation. Set to 'README.md' by default. Set this to null to submit
    * no documentation.
+   * @param {Boolean} options.devOnly A package with this flag set to true
+   * will ONLY be bundled as part of `meteor run`, and completely excluded
+   * from production builds with `meteor build`.
    * @param {Boolean} options.debugOnly A package with this flag set to true
    * will not be bundled into production builds. This is useful for packages
    * meant to be used in development only.
@@ -141,6 +144,8 @@ export class PackageNamespace {
         source.prodOnly = !!value;
       } else if (key === "testOnly") {
         source.testOnly = !!value;
+      } else if (key === "devOnly") {
+        source.devOnly = !!value;
       } else if (key === "deprecated") {
         if (typeof(value) === "string") {
           source.deprecatedMessage = value;
@@ -150,9 +155,9 @@ export class PackageNamespace {
         // Do nothing. We might want to add some keys later, and we should err
         // on the side of backwards compatibility.
       }
-      if (size(compact([source.debugOnly, source.prodOnly, source.testOnly])) > 1) {
+      if (size(compact([source.debugOnly, source.prodOnly, source.testOnly, source.devOnly])) > 1) {
         buildmessage.error(
-          "Package can't have more than one of: debugOnly, prodOnly, testOnly.");
+          "Package can't have more than one of: debugOnly, prodOnly, testOnly or devOnly.");
       }
     });
   }

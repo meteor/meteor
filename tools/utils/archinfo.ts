@@ -1,6 +1,7 @@
 import { max } from 'underscore';
 import os from 'os';
 const utils = require('./utils');
+import { getMeteorConfig } from '../tool-env/meteor-config.js';
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by
@@ -132,11 +133,12 @@ export const VALID_ARCHITECTURES: Record<string, boolean> = {
   "os.osx.arm64": true,
   "os.linux.x86_64": true,
   "os.windows.x86_64": true,
+  "os.linux.aarch64": true,
 };
 
 // Returns the fully qualified arch of this host -- something like
-// "os.linux.x86_32" or "os.osx.x86_64". Must be called inside
-// a fiber. Throws an error if it's not a supported architecture.
+// "os.linux.x86_32" or "os.osx.x86_64".
+// Throws an error if it's not a supported architecture.
 //
 // If you change this, also change scripts/admin/launch-meteor
 let _host: string | null = null; // memoize
@@ -150,7 +152,7 @@ export function host() {
         throw new Error(`Can't get arch with ${args.join(" ")}?`);
       }
 
-      return result.replace(/\s*$/, ''); // trailing whitespace
+      return result.replace(/\s*$/, ''); // remove trailing whitespace
     };
 
     const platform = os.platform();
@@ -161,7 +163,7 @@ export function host() {
       const arch = run('uname', '-p');
 
       if ((arch !== "i386" && arch !== "arm") ||
-          run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
+         run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel and M1 processors are supported on OS X");
       }
       if(arch === "arm"){
@@ -173,6 +175,8 @@ export function host() {
       const machine = run('uname', '-m');
       if (["x86_64", "amd64", "ia64"].includes(machine)) {
         _host = "os.linux.x86_64";
+      } else if(machine === "aarch64") {
+        _host = "os.linux.aarch64";
       } else {
         throw new Error(`Unsupported architecture: ${machine}`);
       }
@@ -232,33 +236,49 @@ export function matches(host: string, program: string): boolean {
      host.substr(program.length, 1) === ".");
 }
 
-const legacyArches = [
-  "web.browser.legacy",
-  // It's important to include web.browser.legacy resources in the Cordova
-  // bundle, since Cordova bundles are built into the mobile application,
-  // rather than being downloaded from a web server at runtime. This means
-  // we can't distinguish between clients at runtime, so we have to use
-  // code that works for all clients.
-  "web.cordova",
-];
+
+function getLegacyArches(): string[] {
+  const arches = ["web.browser.legacy"];
+  
+  // Check if cordova should use legacy mode
+  // This needs to access the meteor config at runtime
+  try {
+    const meteorConfig = getMeteorConfig();
+
+    if (meteorConfig?.modern?.cordova === false) {
+      arches.push("web.cordova");
+    }
+  } catch (e) {
+    // If config is not available, default to modern (don't add web.cordova)
+  }
+  
+  return arches;
+}
 
 export function isLegacyArch(arch: string): boolean {
+  const legacyArches = getLegacyArches();
   return legacyArches.some(la => matches(arch, la));
 }
 
 export function mapWhereToArches(where: string) {
   const arches: string[] = [];
+  const legacyArches = getLegacyArches();
 
   // Shorthands for common arch prefixes:
   // "server" => os.*
   // "client" => web.*
-  // "legacy" => web.browser.legacy, web.cordova
+  // "modern" => web.browser, web.cordova (unless modern.cordova is set to false)
+  // "legacy" => web.browser.legacy, web.cordova (if modern.cordova is false)
   if (where === "server") {
     arches.push("os");
   } else if (where === "client") {
     arches.push("web");
   } else if (where === "modern") {
     arches.push("web.browser");
+    // Only add web.cordova to modern if it's not in legacy mode
+    if (!legacyArches.includes("web.cordova")) {
+      arches.push("web.cordova");
+    }
   } else if (where === "legacy") {
     arches.push(...legacyArches);
   } else {
