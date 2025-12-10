@@ -56,7 +56,7 @@ This is similar to test mode, with key differences:
 
 This means that the entirety of your application (including for instance the web server and client side router) is loaded and will run as normal. This enables you to write much more [complex integration tests](#full-app-integration-test) and also load additional files for [acceptance tests](#acceptance-testing).
 
-Note that there is another test command in the Meteor tool; `meteor test-packages` is a way of testing Atmosphere packages, which is discussed in the [Writing Packages article](writing-packages.html#testing).
+Note that there is another test command in the Meteor tool; `meteor test-packages` is a way of testing Atmosphere packages, which is discussed in the [Writing Packages article](https://guide.meteor.com/writing-atmosphere-packages.html).
 
 <h3 id="driver-packages">Driver packages</h3>
 
@@ -238,9 +238,11 @@ import { Tracker } from 'meteor/tracker';
 const withDiv = function withDiv(callback) {
   const el = document.createElement('div');
   document.body.appendChild(el);
+  let view = null
   try {
-    callback(el);
+    view = callback(el);
   } finally {
+    if (view) Blaze.remove(view)
     document.body.removeChild(el);
   }
 };
@@ -248,9 +250,10 @@ const withDiv = function withDiv(callback) {
 export const withRenderedTemplate = function withRenderedTemplate(template, data, callback) {
   withDiv((el) => {
     const ourTemplate = isString(template) ? Template[template] : template;
-    Blaze.renderWithData(ourTemplate, data, el);
+    const view = Blaze.renderWithData(ourTemplate, data, el);
     Tracker.flush();
     callback(el);
+    return view
   });
 };
 ```

@@ -80,7 +80,6 @@ Accounts.registerLoginHandler(async (request) => {
   if (request.googleSignIn !== true) {
     return;
   }
-  console.log({ request });
   const tokens = {
     accessToken: request.accessToken,
     refreshToken: request.refreshToken,
@@ -107,7 +106,6 @@ Accounts.registerLoginHandler(async (request) => {
       { response: err.response }
     );
   }
-  console.log({ result });
   return Accounts.updateOrCreateUserFromExternalService(
     'google',
     {
@@ -127,7 +125,7 @@ Accounts.registerLoginHandler(async (request) => {
 // - expiresIn: lifetime of token in seconds
 // - refreshToken, if this is the first authorization request
 const getTokens = async (query, callback) => {
-  const config = ServiceConfiguration.configurations.findOne({
+  const config = await ServiceConfiguration.configurations.findOneAsync({
     service: 'google',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();
@@ -139,8 +137,7 @@ const getTokens = async (query, callback) => {
     redirect_uri: OAuth._redirectUri('google', config),
     grant_type: 'authorization_code',
   });
-  const request = await fetch('https://accounts.google.com/o/oauth2/token', {
-    method: 'POST',
+  const request = await OAuth._fetch('https://accounts.google.com/o/oauth2/token', 'POST', {
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -176,10 +173,10 @@ const getIdentity = async (accessToken, callback) => {
   const content = new URLSearchParams({ access_token: accessToken });
   let response;
   try {
-    const request = await fetch(
+    const request = await OAuth._fetch(
       `https://www.googleapis.com/oauth2/v1/userinfo?${content.toString()}`,
+      'GET',
       {
-        method: 'GET',
         headers: { Accept: 'application/json' },
       }
     );
@@ -196,10 +193,10 @@ const getScopes = async (accessToken, callback) => {
   const content = new URLSearchParams({ access_token: accessToken });
   let response;
   try {
-    const request = await fetch(
+    const request = await OAuth._fetch(
       `https://www.googleapis.com/oauth2/v1/tokeninfo?${content.toString()}`,
+      'GET',
       {
-        method: 'GET',
         headers: { Accept: 'application/json' },
       }
     );

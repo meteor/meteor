@@ -28,59 +28,61 @@ Tinytest.add(
   }
 );
 
-Tinytest.add('minifier-css - simple CSS minification', (test) => {
-  const checkMinified = (css, expected, desc) => {
-    test.equal(CssTools.minifyCss(css)[0], expected, desc);
-  };
+Tinytest.addAsync('minifier-css - simple CSS minification', async (test) => {
+  const checkMinified =
+    async (css, expected, desc) => {
+      const minified = await CssTools.minifyCss(css);
+      test.equal(minified[0], expected, desc);
+    };
 
-  checkMinified(
+  await checkMinified(
     'a \t\n{ color: red } \n',
     'a{color:red}',
     'whitespace check',
   );
-  checkMinified(
+  await checkMinified(
     'a \t\n{ color: red; margin: 1; } \n',
     'a{color:red;margin:1}',
     'only last one loses semicolon',
   );
-  checkMinified(
+  await checkMinified(
     'a \t\n{ color: red;;; margin: 1;;; } \n',
     'a{color:red;margin:1}',
     'more semicolons than needed',
   );
-  checkMinified(
+  await checkMinified(
     'a , p \t\n{ color: red; } \n',
     'a,p{color:red}',
     'multiple selectors',
   );
-  checkMinified(
+  await checkMinified(
     'body {}',
     '',
     'removing empty rules',
   );
-  checkMinified(
+  await checkMinified(
     '*.my-class { color: #fff; }',
     '.my-class{color:#fff}',
     'removing universal selector',
   );
-  checkMinified(
+  await checkMinified(
     'p > *.my-class { color: #fff; }',
     'p>.my-class{color:#fff}',
     'removing optional whitespace around ">" in selector',
   );
-  checkMinified(
+  await checkMinified(
     'p +  *.my-class { color: #fff; }',
     'p+.my-class{color:#fff}',
     'removing optional whitespace around "+" in selector',
   );
-  checkMinified(
+  await checkMinified(
     'a {\n\
     font:12px \'Helvetica\',"Arial",\'Nautica\';\n\
     background:url("/some/nice/picture.png");\n}',
-    'a{font:12px Helvetica,Arial,Nautica;background:url(/some/nice/picture.png)}',
+    'a{background:url(/some/nice/picture.png);font:12px Helvetica,Arial,Nautica}',
     'removing quotes in font and url (if possible)',
   );
-  checkMinified(
+  await checkMinified(
     '/* no comments */ a { color: red; }',
     'a{color:red}',
     'remove comments',

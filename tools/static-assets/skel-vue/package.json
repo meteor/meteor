@@ -9,25 +9,27 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.17.9",
-    "meteor-node-stubs": "^1.2.1",
-    "vue": "^3.2.45",
+    "@babel/runtime": "^7.23.5",
+    "@swc/helpers": "^0.5.17",
+    "meteor-node-stubs": "^1.2.12",
+    "vue": "^3.3.9",
     "vue-meteor-tracker": "^3.0.0-beta.7",
-    "vue-router": "^4.1.6"
+    "vue-router": "^4.2.5"
   },
   "meteor": {
+    "modern": true,
     "mainModule": {
-      "client": "client/main.js",
-      "server": "server/main.js"
+      "client": "client/entry-meteor.js",
+      "server": "server/entry-meteor.js"
     },
     "testModule": "tests/main.js"
   },
   "devDependencies": {
-    "@types/meteor": "^2.8.1",
-    "@vitejs/plugin-vue": "^3.2.0",
-    "autoprefixer": "^10.4.13",
-    "postcss": "^8.4.19",
-    "tailwindcss": "^3.2.4",
-    "vite": "^3.2.3"
+    "@types/meteor": "^2.9.7",
+    "@tailwindcss/vite": "^4.1.11",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "meteor-vite": "^3.2.1",
+    "tailwindcss": "^4.1.11",
+    "vite": "^6.0.11"
   }
 }

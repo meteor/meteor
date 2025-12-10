@@ -8,16 +8,18 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.17.9",
-    "meteor-node-stubs": "^1.2.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "@babel/runtime": "^7.23.5",
+    "@swc/helpers": "^0.5.17",
+    "meteor-node-stubs": "^1.2.12",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "meteor": {
     "mainModule": {
       "client": "client/main.jsx",
       "server": "server/main.js"
     },
-    "testModule": "tests/main.js"
+    "testModule": "tests/main.js",
+    "modern": true
   }
 }

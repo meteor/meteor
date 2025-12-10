@@ -1,60 +1,60 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 4,
   "dependencies": {
     "arson": {
       "version": "0.2.3",
       "resolved": "https://registry.npmjs.org/arson/-/arson-0.2.3.tgz",
-      "integrity": "sha1-o9jAuQk0DQSDFGFwA+xuASzzi5U="
+      "integrity": "sha512-ji2VdOrAlglFvQ3BPIxD9HnoWsJTigg/aVLONK9Q5zBn8KIi44SWCaGl+6La+3ZCwMvaLC4nKijhFUIixazceQ=="
     },
     "babel-plugin-syntax-class-properties": {
       "version": "6.13.0",
       "resolved": "https://registry.npmjs.org/babel-plugin-syntax-class-properties/-/babel-plugin-syntax-class-properties-6.13.0.tgz",
-      "integrity": "sha1-1+sjt5oxf4VDlixQW4J8fWysJ94="
+      "integrity": "sha512-chI3Rt9T1AbrQD1s+vxw3KcwC9yHtF621/MacuItITfZX344uhQoANjpoSJZleAmW2tjlolqB/f+h7jIqXa7pA=="
     },
     "babel-plugin-transform-class-properties": {
       "version": "6.9.0",
       "resolved": "https://registry.npmjs.org/babel-plugin-transform-class-properties/-/babel-plugin-transform-class-properties-6.9.0.tgz",
-      "integrity": "sha1-DxgxuPeNcuT4FqC4vVk0Yj5RJms="
+      "integrity": "sha512-o9LPoLeuPMsJsotlQ8nhdH0OQKEqew1lq3jD7uBEfPk4GKNEDVt9DIM8fbuY/BSSDg5dzYsu2XnO3IutiVjjvg=="
     },
     "babel-plugin-transform-strict-mode": {
       "version": "6.8.0",
       "resolved": "https://registry.npmjs.org/babel-plugin-transform-strict-mode/-/babel-plugin-transform-strict-mode-6.8.0.tgz",
-      "integrity": "sha1-wM5mIMtfLB+xArIPZXQRVcq8REo="
+      "integrity": "sha512-nQXiqomWlfzYwxmiiSqyVo2xs73tX2V8+QyL+Arm1xtAJWsArk+LbYhIIcMrMLHcttKDt07OcbmJxRqYPSspKA=="
     },
     "babel-runtime": {
       "version": "6.26.0",
       "resolved": "https://registry.npmjs.org/babel-runtime/-/babel-runtime-6.26.0.tgz",
-      "integrity": "sha1-llxwWGaOgrVde/4E/yM3vItWR/4="
+      "integrity": "sha512-ITKNuq2wKlW1fJg9sSW52eepoYgZBggvOAHC0u/CYu/qxQ9EVzThCgR69BnSXLHjy2f7SY5zaQ4yt7H9ZVxY2g=="
     },
     "babel-types": {
       "version": "6.26.0",
       "resolved": "https://registry.npmjs.org/babel-types/-/babel-types-6.26.0.tgz",
-      "integrity": "sha1-o7Bz+Uq0nrb6Vc1lInozQ4BjJJc="
+      "integrity": "sha512-zhe3V/26rCWsEZK8kZN+HaQj5yQ1CilTObixFzKW1UWjqG7618Twz6YEsCnjfg5gBcJh02DrpCkS9h98ZqDY+g=="
     },
     "core-js": {
-      "version": "2.5.6",
-      "resolved": "https://registry.npmjs.org/core-js/-/core-js-2.5.6.tgz",
-      "integrity": "sha512-lQUVfQi0aLix2xpyjrrJEvfuYCqPc/HwmTKsC/VNf8q0zsjX7SQZtp4+oRONN5Tsur9GDETPjj+Ub2iDiGZfSQ=="
+      "version": "2.6.12",
+      "resolved": "https://registry.npmjs.org/core-js/-/core-js-2.6.12.tgz",
+      "integrity": "sha512-Kb2wC0fvsWfQrgk8HU5lW6U/Lcs8+9aaYcy4ZFc6DDlo4nZ7n70dEgE5rtR0oG6ufKDUnrwfWL1mXR5ljDatrQ=="
     },
     "de-indent": {
       "version": "1.0.2",
       "resolved": "https://registry.npmjs.org/de-indent/-/de-indent-1.0.2.tgz",
-      "integrity": "sha1-sgOOhG3DO6pXlhKNCAS0VbjB4h0="
+      "integrity": "sha512-e/1zu3xH5MQryN2zdVaF0OrdNLUbvWxzMbi+iNA6Bky7l1RoP8a2fIbRocyHclXt/arDrrR6lL3TqFD9pMQTsg=="
     },
     "esutils": {
-      "version": "2.0.2",
-      "resolved": "https://registry.npmjs.org/esutils/-/esutils-2.0.2.tgz",
-      "integrity": "sha1-Cr9PHKpbyx96nYrMbepPqqBLrJs="
+      "version": "2.0.3",
+      "resolved": "https://registry.npmjs.org/esutils/-/esutils-2.0.3.tgz",
+      "integrity": "sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g=="
     },
     "he": {
-      "version": "1.1.1",
-      "resolved": "https://registry.npmjs.org/he/-/he-1.1.1.tgz",
-      "integrity": "sha1-k0EP0hsAlzUVH4howvJx80J+I/0="
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/he/-/he-1.2.0.tgz",
+      "integrity": "sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw=="
     },
     "lodash": {
-      "version": "4.17.10",
-      "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.10.tgz",
-      "integrity": "sha512-UejweD1pDoXu+AD825lWwp4ZGtSwgnpZxb3JDViD7StjQz+Nb/6l093lx4OQ0foGWNRoc19mWy7BzL+UAK2iVg=="
+      "version": "4.17.21",
+      "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz",
+      "integrity": "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg=="
     },
     "regenerator-runtime": {
       "version": "0.11.1",
@@ -64,7 +64,7 @@
     "to-fast-properties": {
       "version": "1.0.3",
       "resolved": "https://registry.npmjs.org/to-fast-properties/-/to-fast-properties-1.0.3.tgz",
-      "integrity": "sha1-uDVx+k2MJbguIxsG46MFXeTKGkc="
+      "integrity": "sha512-lxrWP8ejsq+7E3nNjwYmUBMAgjMTZoTI+sdBOpvNyijeDLa29LUn9QaoXAHv4+Z578hbmHHJKZknzxVtvo77og=="
     },
     "vue-template-compiler": {
       "version": "2.5.16",

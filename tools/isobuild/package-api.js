@@ -103,6 +103,7 @@ export class PackageAPI {
     });
 
     this.releaseRecords = [];
+    this.pendingPromises = [];
   }
 
   // Called when this package wants to make another package be
@@ -548,15 +549,27 @@ export class PackageAPI {
                            { useMyCaller: true });
         return;
       }
-      var releaseRecord = catalog.official.getReleaseVersion(
-        relInf[0], relInf[1]);
-      if (!releaseRecord) {
-        buildmessage.error("Unknown release "+ release,
-                           { tags: { refreshCouldHelp: true } });
-      } else {
-        self.releaseRecords.push(releaseRecord);
-      }
+
+      let promise = catalog.official.getReleaseVersion(relInf[0], relInf[1])
+        .then(releaseRecord => {
+          if (!releaseRecord) {
+            buildmessage.error("Unknown release "+ release,
+                               { tags: { refreshCouldHelp: true } });
+          } else {
+            self.releaseRecords.push(releaseRecord);
+          }
+        });
+
+      this.pendingPromises.push(promise);
     }
+  }
+
+  // Internal method used by the meteor-tool
+  _waitForAsyncWork() {
+    let promises = this.pendingPromises;
+    this.pendingPromises = [];
+
+    return Promise.all(promises);
   }
 
   // Export symbols from this package.

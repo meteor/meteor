@@ -167,6 +167,94 @@ The Profiler is activated using `Profile.run(.)`, which will cause a report to b
 
 In addition to tool code, you can also use `Profile` in compiler plugins.  If you want to use `Profile` in packages that are loaded into the tool (e.g. packages depended on by compiler plugins, or specially loaded into the tool as isopackets), you should always test `(typeof Profile !== 'undefined')` before accessing `Profile`, or pass it in from the tool as an option.
 
+## Inspector Profiling
+
+In addition to the standard profiler, Meteor includes a more advanced profiling system based on Node.js's `inspector` module. This system generates `.cpuprofile` files that provide much more detailed performance data.
+
+### How to Use Inspector Profiling
+
+To enable inspector profiling, you need to specify which functions you want to profile through the `METEOR_INSPECT` environment variable:
+
+```bash
+# Profile multiple functions
+METEOR_INSPECT=bundler.bundle,compiler.compile meteor build ./output-build
+```
+
+Complete list for METEOR_INSPECT:
+- bundler.bundle
+- compiler.compile
+- Babel.compile
+- _readProjectMetadata
+- initializeCatalog
+- _downloadMissingPackages
+- _saveChangeMetadata
+- _realpath
+- package-client
+
+
+### Additional Configuration Options
+
+You can customize the inspector profiling behavior with the following environment variables:
+
+```bash
+# Identifier for profile files
+METEOR_INSPECT_CONTEXT=context_name
+
+# Directory where .cpuprofile files will be saved (default: ./profiling)
+METEOR_INSPECT_OUTPUT=/path/to/directory
+
+# Sampling interval in ms - lower values = more details but uses more memory
+METEOR_INSPECT_INTERVAL=500
+
+# Maximum profile size in MB (default: 2000)
+METEOR_INSPECT_MAX_SIZE=1000
+```
+
+### Viewing the Results
+
+#### Chrome DevTools
+The generated `.cpuprofile` files can be visualized in Chrome DevTools:
+
+1. Open Chrome DevTools
+2. Go to the "Performance" or "Profiler" tab
+3. Click "Load Profile" and select the generated .cpuprofile file
+
+#### Discoveryjs cpupro 
+
+For a opensource interactive analysis of your `.cpuprofile` files, you can use [cpupro](https://discoveryjs.github.io/cpupro/), an open-source CPU profile viewer:
+
+1. Visit https://discoveryjs.github.io/cpupro/ in your browser
+2. Drag and drop your `.cpuprofile` file onto the interface
+3. Use the interactive visualization to explore your profile data
+
+cpupro offers several advantages over Chrome DevTools:
+- Better handling of large profiles
+- More flexible filtering options
+- Advanced search capabilities
+- Multiple visualization modes
+- Ability to compare different profiles
+
+You can also run cpupro locally by installing it via npm:
+
+
+### Important Considerations
+
+- Inspector profiling consumes more memory than the standard profiler
+- To avoid out-of-memory (OOM) errors, consider increasing Node's memory limit:
+  ```bash
+  NODE_OPTIONS="--max-old-space-size=4096" METEOR_INSPECT=bundler.bundle meteor ...
+  ```
+- Very large profiles (>2GB) will be automatically truncated to avoid OOM errors
+
+### When to Use Inspector Profiling
+
+Use inspector profiling when:
+- You need more detailed analysis than the standard profiler provides
+- You're investigating complex performance issues
+- You want to identify specific bottlenecks in heavy functions like bundler or compiler
+
+The standard profiler (`METEOR_PROFILE`) remains the best option for quick and general analyses, while inspector profiling is more suitable for detailed diagnostics.
+
 ## Known Areas for Improvement
 
 These are areas to improve or investigate, along with what's known, in no

@@ -1,6 +1,6 @@
-const runtime = require('react-refresh/runtime');
+var runtime = require('react-refresh/runtime');
 
-let timeout = null;
+var timeout = null;
 function scheduleRefresh() {
   if (!timeout) {
     timeout = setTimeout(function () {
@@ -32,7 +32,7 @@ function registerExportsForReactRefresh(moduleId, moduleExports) {
     var typeID = moduleId + ' %exports% ' + key;
     runtime.register(exportValue, typeID);
   }
-};
+}
 
 // Modules that only export components become React Refresh boundaries.
 function isReactRefreshBoundary(moduleExports) {
@@ -79,7 +79,7 @@ function isReactRefreshBoundary(moduleExports) {
   }
 
   return hasExports && onlyExportComponents;
-};
+}
 
 runtime.injectIntoGlobalHook(window);
 
@@ -88,14 +88,14 @@ window.$RefreshSig$ = function () {
   return function (type) { return type; };
 };
 
-const moduleInitialState = new WeakMap();
+var moduleInitialState = new WeakMap();
 
 module.hot.onRequire({
   after: function (module) {
     // TODO: handle modules with errors
 
-    const beforeStates = moduleInitialState.get(module);
-    const beforeState = beforeStates && beforeStates.pop();
+    var beforeStates = moduleInitialState.get(module);
+    var beforeState = beforeStates && beforeStates.pop();
     if (!beforeState) {
       return;
     }
@@ -117,7 +117,7 @@ module.exports = function setupModule (module) {
     return;
   }
 
-  let beforeStates = moduleInitialState.get(module);
+  var beforeStates = moduleInitialState.get(module);
 
   if (beforeStates === undefined) {
     beforeStates = [];
@@ -129,13 +129,13 @@ module.exports = function setupModule (module) {
 
   window.RefreshRuntime = runtime;
   window.$RefreshReg$ = function (type, _id) {
-    const fullId = module.id + ' ' + _id;
+    var fullId = module.id + ' ' + _id;
     RefreshRuntime.register(type, fullId);
-  }
+  };
   window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
 
   beforeStates.push({
     prevRefreshReg: prevRefreshReg,
     prevRefreshSig: prevRefreshSig
   });
-}
+};

@@ -1,27 +1,24 @@
-// A hacky way to extract the phantom runner script from the package.
-if (process.env.WRITE_RUNNER_JS) {
-  Npm.require('fs').writeFileSync(
-    process.env.WRITE_RUNNER_JS, Buffer.from(Assets.getBinary('runner.js')));
-}
+let url = null;
 
-var url =  null;
-if (Meteor.settings &&
-    Meteor.settings.public &&
-    Meteor.settings.public.runId &&
-    Meteor.settings.public.reportTo) {
+if (Meteor.settings?.public?.runId &&
+    Meteor.settings?.public?.reportTo) {
   url = Meteor.settings.public.reportTo +
       "/report/" +
       Meteor.settings.public.runId;
 }
 
 Meteor.methods({
-  report: function (reports) {
+  report: async function (reports) {
     // XXX Could do a more precise validation here; reports are complex!
     check(reports, [Object]);
     if (url) {
-      HTTP.post(url, {
-        data: reports
-      });
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reports),
+       });
     }
     return null;
   }

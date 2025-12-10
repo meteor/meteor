@@ -80,6 +80,12 @@ with this ID has already been made.  Alternatively, you can use
 
 Read more about methods and how to use them in the [Methods](http://guide.meteor.com/methods.html) article in the Meteor Guide.
 
+{% apibox "Meteor.isAsyncCall" %}
+
+This method can be used to determine if the current method invocation is
+asynchronous.  It returns true if the method is running on the server and came from
+an async call(`Meteor.callAsync`)
+
 {% apibox "DDPCommon.MethodInvocation#userId" %}
 
 The user id is an arbitrary string &mdash; typically the id of the user record
@@ -249,3 +255,35 @@ DDPRateLimiter.addRule(loginRule, 5, 1000);
 ```
 {% apibox "DDPRateLimiter.removeRule" nested:true instanceDelimiter:. %}
 {% apibox "DDPRateLimiter.setErrorMessage" nested:true instanceDelimiter:. %}
+{% apibox "DDPRateLimiter.setErrorMessageOnRule" nested:true instanceDelimiter:. %}
+
+Allows developers to specify custom error messages for each rule instead of being
+limited to one global error message for every rule.
+It adds some clarity to what rules triggered which errors, allowing for better UX 
+and also opens the door for i18nable error messages per rule instead of the
+default English error message.
+
+Here is an example with a custom error message:
+```js
+const setupGoogleAuthenticatorRule = {
+  userId(userId) {
+    const user = Meteor.users.findOne(userId);
+    return user;
+  },
+  type: 'method',
+  name: 'Users.setupGoogleAuthenticator',
+};
+
+// Add the rule, allowing up to 1 google auth setup message every 60 seconds
+const ruleId = DDPRateLimiter.addRule(setupGoogleAuthenticatorRule, 1, 60000);
+DDPRateLimiter.setErrorMessageOnRule(ruleId, function (data) {
+  return `You have reached the maximum number of Google Authenticator attempts. Please try again in ${Math.ceil(data.timeToReset / 1000)} seconds.`;
+});
+```
+
+Or a more simple approach:
+
+```js
+const ruleId = DDPRateLimiter.addRule(setupGoogleAuthenticatorRule, 1, 60000);
+DDPRateLimiter.setErrorMessageOnRule(ruleId, 'Example as a single string error message');
+```

@@ -104,6 +104,8 @@ This example from the Todos app defines a schema with a few simple rules:
 3. We specify the `incompleteCount` is a number, which on insertion is set to `0` if not otherwise specified.
 4. We specify that the `userId`, which is optional, must be a string that looks like the ID of a user document.
 
+We're using the SimpleSchema for Meteor related functionality, like IDs, but we encourage you to create custom regEx expressions for security reasons, for fields like `email` or `name`. Check out the [Simple Schema docs](https://github.com/longshotlabs/simpl-schema#regex) for more information.
+
 We attach the schema to the namespace of `Lists` directly, which allows us to check objects against this schema directly whenever we want, such as in a form or [Method](methods.html). In the [next section](#schemas-on-write) we'll see how to use this schema automatically when writing to the collection.
 
 You can see that with relatively little code we've managed to restrict the format of a list significantly. You can read more about more complex things that can be done with schemas in the [Simple Schema docs](https://www.npmjs.com/package/simpl-schema).

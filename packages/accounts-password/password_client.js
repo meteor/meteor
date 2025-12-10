@@ -23,7 +23,7 @@ const internalLoginWithPassword = ({ selector, password, code, callback }) => {
       if (error) {
         reportError(error, callback);
       } else {
-        callback && callback();
+        callback && callback(error, result);
       }
     },
   });
@@ -121,6 +121,29 @@ Accounts.createUser = (options, callback) => {
   });
 };
 
+
+/**
+ * @summary Create a new user and returns a promise of its result.
+ * @locus Anywhere
+ * @param {Object} options
+ * @param {String} options.username A unique name for this user.
+ * @param {String} options.email The user's email address.
+ * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
+ * @param {Object} options.profile The user's profile, typically including the `name` field.
+ * @importFromPackage accounts-base
+ */
+Accounts.createUserAsync = (options) => {
+  return new Promise((resolve, reject) =>
+    Accounts.createUser(options, (e) => {
+      if (e) {
+        reject(e);
+      } else {
+        resolve();
+      }
+    })
+  );
+};
+
 // Change password. Must be logged in.
 //
 // @param oldPassword {String|null} By default servers no longer allow
@@ -142,7 +165,7 @@ Accounts.changePassword = (oldPassword, newPassword, callback) => {
     return reportError(new Error("Must be logged in to change password."), callback);
   }
 
-  if (!newPassword instanceof String) {
+  if (!(typeof newPassword === "string" || newPassword instanceof String)) {
     return reportError(new Meteor.Error(400, "Password must be a string"), callback);
   }
 
@@ -209,11 +232,11 @@ Accounts.forgotPassword = (options, callback) => {
  * @importFromPackage accounts-base
  */
 Accounts.resetPassword = (token, newPassword, callback) => {
-  if (!token instanceof String) {
+  if (!(typeof token === "string" || token instanceof String)) {
     return reportError(new Meteor.Error(400, "Token must be a string"), callback);
   }
 
-  if (!newPassword instanceof String) {
+  if (!(typeof newPassword === "string" || newPassword instanceof String)) {
     return reportError(new Meteor.Error(400, "Password must be a string"), callback);
   }
 

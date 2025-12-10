@@ -11,7 +11,7 @@ are using to render your interface, and want to use that familiar API.
 
 Minimongo is used as a temporary data cache in the standard Meteor stack, to
 learn more about mini-databases and what they can do, see [the project page on
-www.meteor.com](https://www.meteor.com/mini-databases)
+www.meteor.com](https://docs.meteor.com/api/collections.html)
 
 ## Internals
 

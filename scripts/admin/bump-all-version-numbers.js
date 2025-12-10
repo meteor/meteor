@@ -1,21 +1,20 @@
 // run as node scripts/admin/bump-all-version-numbers.js <packageNames>
 
-var fs = require("fs");
-var _ = require("../../packages/underscore/underscore.js")._;
+const fs = require("fs");
 
-var packageNames = _.rest(process.argv, 2);
+const packageNames = process.argv.slice(2);
 
-_.each(packageNames, function (name) {
+packageNames.forEach(name => {
   // name = "packages/" + name + "/package.js";
 
-  var content = fs.readFileSync(name, {encoding: "utf-8"});
+  const content = fs.readFileSync(name, {encoding: "utf-8"});
 
-  var match = content.match(/\d+\.\d+\.\d+-winr.\d+/);
+  const match = content.match(/\d+\.\d+\.\d+-winr.\d+/);
   if (match) {
-    var versionNumber = match[0];
-    var s = versionNumber.split(".");
-    s[3] = (parseInt(s[3], 10) + 1);
-    var incremented = s.join(".");
+    const versionNumber = match[0];
+    const s = versionNumber.split(".");
+    s[3] = (parseInt(s[3], 10) + 1).toString();
+    const incremented = s.join(".");
 
     content = content.replace(versionNumber, incremented);
     console.log(match[0], match[1], incremented);

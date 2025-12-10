@@ -1,3 +1,5 @@
+const has = Npm.require('lodash.has');
+
 var passed = 0;
 var failed = 0;
 var expected = 0;
@@ -11,7 +13,7 @@ Meteor.startup(function () {
   console.log("running server-side tests");
   Tinytest._runTests(function (results) {
     var name = getName(results);
-    if (!_.has(resultSet, name)) {
+    if (!has(resultSet, name)) {
       var testPath = EJSON.clone(results.groupPath);
       testPath.push(results.test);
       resultSet[name] = {
@@ -21,7 +23,7 @@ Meteor.startup(function () {
         testPath: testPath
       };
     }
-    _.each(results.events, function (event) {
+    results.events.forEach(function (event) {
       resultSet[name].events.push(event);
       switch (event.type) {
       case "ok":
@@ -68,7 +70,7 @@ Meteor.startup(function () {
     });
   }, function () {
     console.log("passed/expected/failed/total",
-                passed, "/", expected, "/", failed, "/", _.size(resultSet));
+                passed, "/", expected, "/", failed, "/", Object.keys(resultSet).length);
     if (failed > 0) {
       console.log("TESTS FAILED");
     } else {

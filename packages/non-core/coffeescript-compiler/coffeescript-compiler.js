@@ -2,16 +2,6 @@ import { BabelCompiler } from 'meteor/babel-compiler';
 import CoffeeScript from 'coffeescript';
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map';
 
-
-// The CoffeeScript compiler overrides Error.prepareStackTrace, mostly for the
-// use of coffee.run which we don't use. This conflicts with the tool's use of
-// Error.prepareStackTrace to properly show error messages in linked code.
-// Restore the tool's one after CoffeeScript clobbers it at import time.
-if (Error.METEOR_prepareStackTrace) {
-  Error.prepareStackTrace = Error.METEOR_prepareStackTrace;
-}
-
-
 // The CompileResult for this CachingCompiler is a {source, sourceMap} object.
 export class CoffeeScriptCompiler {
   constructor() {

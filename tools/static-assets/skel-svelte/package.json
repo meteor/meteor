@@ -8,9 +8,10 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.20.6",
-    "meteor-node-stubs": "^1.2.5",
-    "svelte": "^3.54.0"
+    "@babel/runtime": "^7.23.5",
+    "@swc/helpers": "^0.5.17",
+    "meteor-node-stubs": "^1.2.12",
+    "svelte": "^3.59.2"
   },
   "devDependencies": {
     "svelte-preprocess": "^5.0.0"
@@ -27,6 +28,7 @@
         ]
       }
     },
-    "testModule": "tests/main.js"
+    "testModule": "tests/main.js",
+    "modern": true
   }
 }

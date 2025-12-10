@@ -1,0 +1,8 @@
+{
+    "jsc": {
+        "baseUrl": "./",
+        "paths": {
+            "@swcAlias/*": ["swcAlias/*"]
+        }
+    }
+}

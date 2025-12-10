@@ -1,8 +1,9 @@
 {
   "name": "meteor-promise",
   "author": "Ben Newman <ben@meteor.com>",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "ES6 Promise polyfill with Fiber support",
+  "type": "commonjs",
   "keywords": [
     "meteor",
     "promise",
@@ -14,9 +15,6 @@
   "main": "promise_server.js",
   "browser": "promise_client.js",
   "typings": "promise.d.ts",
-  "scripts": {
-    "test": "test/run.sh"
-  },
   "homepage": "https://github.com/meteor/promise",
   "repository": {
     "type": "git",

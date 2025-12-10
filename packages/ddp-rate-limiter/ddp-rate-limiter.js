@@ -10,14 +10,29 @@ let errorMessage = (rateLimitResult) => {
     'trying again.';
 };
 
+// Store rule specific error messages.
+const errorMessageByRule = new Map();
+
 const rateLimiter = new RateLimiter();
 
 DDPRateLimiter.getErrorMessage = (rateLimitResult) => {
+  // If there is a specific error message for this rule, use it.
+  if (errorMessageByRule.has(rateLimitResult.ruleId)) {
+    const message = errorMessageByRule.get(rateLimitResult.ruleId);
+    // if it's a function, we need to call it
+    if (typeof message === 'function') {
+      // call the function with the rateLimitResult
+      return message(rateLimitResult);
+    }
+    // otherwise, just return the string
+    return message;
+ }
+
+  // Otherwise, use the default error message.
   if (typeof errorMessage === 'function') {
     return errorMessage(rateLimitResult);
-  } else {
-    return errorMessage;
   }
+  return errorMessage;
 };
 
 /**
@@ -34,6 +49,20 @@ DDPRateLimiter.setErrorMessage = (message) => {
 };
 
 /**
+ * @summary Set error message text when method or subscription rate limit
+ * exceeded for a specific rule.
+ * @param {string} ruleId The ruleId returned from `addRule`
+ * @param {string|function} message Functions are passed in an object with a
+ * `timeToReset` field that specifies the number of milliseconds until the next
+ * method or subscription is allowed to run. The function must return a string
+ * of the error message.
+ * @locus Server
+ */
+DDPRateLimiter.setErrorMessageOnRule = (ruleId, message) => {
+  errorMessageByRule.set(ruleId, message);
+};
+
+/**
  * @summary
  * Add a rule that matches against a stream of events describing method or
  * subscription attempts. Each event is an object with the following
@@ -45,7 +74,7 @@ DDPRateLimiter.setErrorMessage = (message) => {
  * - `connectionId`: A string representing the user's DDP connection
  * - `clientAddress`: The IP address of the user
  *
- * Returns unique `ruleId` that can be passed to `removeRule`.
+ * Returns unique `ruleId` that can be passed to `removeRule` and `setErrorMessageOnRule`
  *
  * @param {Object} matcher
  *   Matchers specify which events are counted towards a rate limit. A matcher

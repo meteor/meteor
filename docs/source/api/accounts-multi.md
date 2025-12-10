@@ -69,6 +69,11 @@ client, no arguments are passed.
   The `connection` object the request came in on. See
   [`Meteor.onConnection`](#meteor_onconnection) for details.
 {% enddtdd %}
+
+{% dtdd name:"collection" type:"Object" %}
+  The `collection` The name of the Mongo.Collection
+  or the Mongo.Collection object to hold the users.
+{% enddtdd %}
 </dl>
 
 {% apibox "AccountsClient" %}
@@ -146,7 +151,8 @@ password-based users or from an external service login flow. `options` may come
 from an untrusted client so make sure to validate any values you read from
 it. The `user` argument is created on the server and contains a
 proposed user object with all the automatically generated fields
-required for the user to log in, including the `_id`.
+required for the user to log in, including a temporary `_id` (the final _id is
+generated upon document insertion and not available in this function).
 
 The function should return the user document (either the one passed in or a
 newly-created object) with whatever modifications are desired. The returned
@@ -210,6 +216,11 @@ are called with a single argument, the attempt info object:
 {% dtdd name:"connection" type:"Object" %}
   The `connection` object the request came in on. See
   [`Meteor.onConnection`](#meteor_onconnection) for details.
+{% enddtdd %}
+
+{% dtdd name:"collection" type:"Object" %}
+  The `collection` The name of the Mongo.Collection
+  or the Mongo.Collection object to hold the users.
 {% enddtdd %}
 
 {% dtdd name:"methodName" type:"String" %}
@@ -287,7 +298,7 @@ The function will be called with a single argument, the info object:
 {% enddtdd %}
 
 {% dtdd name:"options" type:"Exception" %}
-  An optional arugment passed down from the oauth service that may contain
+  An optional argument passed down from the oauth service that may contain
   additional user profile information. As the data in `options` comes from an
   external source, make sure you validate any values you read from it.
 {% enddtdd %}
@@ -336,3 +347,7 @@ of legitimate users by attempting all possible passwords.
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the
 [`DDPRateLimiter`](#ddpratelimiter) docs for more information.
+
+{% apibox "AccountsServer#addDefaultRateLimit" %}
+
+{% apibox "AccountsServer#removeDefaultRateLimit" %}

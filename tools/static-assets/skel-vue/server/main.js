@@ -10,7 +10,7 @@ Meteor.startup(async () => {
   if ((await LinksCollection.find().countAsync()) === 0) {
     await insertLink({
       title: 'Do the Tutorial',
-      url: 'https://www.solidjs.com/tutorial/introduction_basics',
+      url: 'https://vuejs.org/guide/quick-start.html',
     })
 
     await insertLink({

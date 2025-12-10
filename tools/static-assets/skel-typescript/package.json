@@ -8,23 +8,25 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.17.9",
-    "meteor-node-stubs": "^1.2.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "@babel/runtime": "^7.23.5",
+    "@swc/helpers": "^0.5.17",
+    "meteor-node-stubs": "^1.2.12",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@types/meteor": "^1.4.87",
     "@types/mocha": "^8.2.3",
-    "@types/react": "^17.0.43",
-    "@types/react-dom": "^17.0.14",
-    "typescript": "^4.6.4"
+    "@types/node": "^22.10.6",
+    "@types/react": "^18.2.5",
+    "@types/react-dom": "^18.2.4",
+    "typescript": "^5.4.5"
   },
   "meteor": {
     "mainModule": {
       "client": "client/main.tsx",
       "server": "server/main.ts"
     },
-    "testModule": "tests/main.ts"
+    "testModule": "tests/main.ts",
+    "modern": true
   }
 }

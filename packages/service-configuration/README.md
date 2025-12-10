@@ -13,4 +13,4 @@ ServiceConfiguration.configurations.upsert(
 
 Read more in the [Meteor
 docs](http://docs.meteor.com/#meteor_loginwithexternalservice) and the
-Meteor Accounts [project page](https://www.meteor.com/accounts).
+Meteor Accounts [project page](https://docs.meteor.com/api/accounts).

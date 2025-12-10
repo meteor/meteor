@@ -11,7 +11,7 @@ package and at least one login provider package:
 
 Then simply add the `{{> loginButtons}}` helper to an HTML file.
 
-See the Meteor Accounts [project page](https://www.meteor.com/accounts) for more info.
+See the Meteor Accounts [project page](https://docs.meteor.com/api/accounts) for more info.
 
 ## Details
 
@@ -33,4 +33,4 @@ and [`sendEnrollmentEmail`](http://docs.meteor.com/#accounts_sendenrollmentemail
 do not have to be manually placed in HTML: they are automatically activated
 when the URLs are loaded.
 
-See the Meteor Accounts [project page](https://www.meteor.com/accounts) for more info.
+See the Meteor Accounts [project page](https://docs.meteor.com/api/accounts) for more info.

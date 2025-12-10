@@ -1,13 +1,6 @@
-import * as MongoNpmModule from 'mongodb';
-import {
-  Collection as MongoCollection,
-  CreateIndexesOptions,
-  Db as MongoDb,
-  Hint,
-  IndexSpecification,
-  MongoClient,
-} from 'mongodb';
+import { NpmModuleMongodb } from 'meteor/npm-mongo';
 import { Meteor } from 'meteor/meteor';
+import { DDP } from 'meteor/ddp';
 
 // Based on https://github.com/microsoft/TypeScript/issues/28791#issuecomment-443520161
 export type UnionOmit<T, K extends keyof any> = T extends T
@@ -15,165 +8,37 @@ export type UnionOmit<T, K extends keyof any> = T extends T
   : never;
 
 export namespace Mongo {
-  // prettier-ignore
-  type BsonType = 1 | "double" |
-            2 | "string" |
-            3 | "object" |
-            4 | "array" |
-            5 | "binData" |
-            6 | "undefined" |
-            7 | "objectId" |
-            8 | "bool" |
-            9 | "date" |
-            10 | "null" |
-            11 | "regex" |
-            12 | "dbPointer" |
-            13 | "javascript" |
-            14 | "symbol" |
-            15 | "javascriptWithScope" |
-            16 | "int" |
-            17 | "timestamp" |
-            18 | "long" |
-            19 | "decimal" |
-            -1 | "minKey" |
-            127 | "maxKey" | "number";
 
-  type FieldExpression<T> = {
-    $eq?: T | undefined;
-    $gt?: T | undefined;
-    $gte?: T | undefined;
-    $lt?: T | undefined;
-    $lte?: T | undefined;
-    $in?: T[] | undefined;
-    $nin?: T[] | undefined;
-    $ne?: T | undefined;
-    $exists?: boolean | undefined;
-    $type?: BsonType[] | BsonType | undefined;
-    $not?: FieldExpression<T> | undefined;
-    $expr?: FieldExpression<T> | undefined;
-    $jsonSchema?: any;
-    $mod?: number[] | undefined;
-    $regex?: RegExp | string | undefined;
-    $options?: string | undefined;
-    $text?:
-      | {
-          $search: string;
-          $language?: string | undefined;
-          $caseSensitive?: boolean | undefined;
-          $diacriticSensitive?: boolean | undefined;
-        }
-      | undefined;
-    $where?: string | Function | undefined;
-    $geoIntersects?: any;
-    $geoWithin?: any;
-    $near?: any;
-    $nearSphere?: any;
-    $all?: T[] | undefined;
-    $elemMatch?: T extends {} ? Query<T> : FieldExpression<T> | undefined;
-    $size?: number | undefined;
-    $bitsAllClear?: any;
-    $bitsAllSet?: any;
-    $bitsAnyClear?: any;
-    $bitsAnySet?: any;
-    $comment?: string | undefined;
-  };
+  export type Selector<T> = NpmModuleMongodb.Filter<T>;
 
-  type Flatten<T> = T extends any[] ? T[0] : T;
+  type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
 
-  type Query<T> = {
-    [P in keyof T]?: Flatten<T[P]> | RegExp | FieldExpression<Flatten<T[P]>>;
-  } & {
-    $or?: Query<T>[] | undefined;
-    $and?: Query<T>[] | undefined;
-    $nor?: Query<T>[] | undefined;
-  } & Dictionary<any>;
+  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: any };
 
-  type QueryWithModifiers<T> = {
-    $query: Query<T>;
-    $comment?: string | undefined;
-    $explain?: any;
-    $hint?: Hint;
-    $maxScan?: any;
-    $max?: any;
-    $maxTimeMS?: any;
-    $min?: any;
-    $orderby?: any;
-    $returnKey?: any;
-    $showDiskLoc?: any;
-    $natural?: any;
-  };
+  type SortSpecifier = NpmModuleMongodb.Sort;
 
-  type Selector<T> = Query<T> | QueryWithModifiers<T>;
-
-  type Dictionary<T> = { [key: string]: T };
-  type PartialMapTo<T, M> = Partial<Record<keyof T, M>>;
-  type OnlyArrays<T> = T extends any[] ? T : never;
-  type OnlyElementsOfArrays<T> = T extends any[] ? Partial<T[0]> : never;
-  type ElementsOf<T> = {
-    [P in keyof T]?: OnlyElementsOfArrays<T[P]>;
-  };
-  type PushModifier<T> = {
-    [P in keyof T]?:
-      | OnlyElementsOfArrays<T[P]>
-      | {
-          $each?: T[P] | undefined;
-          $position?: number | undefined;
-          $slice?: number | undefined;
-          $sort?: 1 | -1 | Dictionary<number> | undefined;
-        };
-  };
-  type ArraysOrEach<T> = {
-    [P in keyof T]?: OnlyElementsOfArrays<T[P]> | { $each: T[P] };
-  };
-  type CurrentDateModifier = { $type: 'timestamp' | 'date' } | true;
-  type Modifier<T> =
-    | T
-    | {
-        $currentDate?:
-          | (Partial<Record<keyof T, CurrentDateModifier>> &
-              Dictionary<CurrentDateModifier>)
-          | undefined;
-        $inc?: (PartialMapTo<T, number> & Dictionary<number>) | undefined;
-        $min?:
-          | (PartialMapTo<T, Date | number> & Dictionary<Date | number>)
-          | undefined;
-        $max?:
-          | (PartialMapTo<T, Date | number> & Dictionary<Date | number>)
-          | undefined;
-        $mul?: (PartialMapTo<T, number> & Dictionary<number>) | undefined;
-        $rename?: (PartialMapTo<T, string> & Dictionary<string>) | undefined;
-        $set?: (Partial<T> & Dictionary<any>) | undefined;
-        $setOnInsert?: (Partial<T> & Dictionary<any>) | undefined;
-        $unset?:
-          | (PartialMapTo<T, string | boolean | 1 | 0> & Dictionary<any>)
-          | undefined;
-        $addToSet?: (ArraysOrEach<T> & Dictionary<any>) | undefined;
-        $push?: (PushModifier<T> & Dictionary<any>) | undefined;
-        $pull?: (ElementsOf<T> & Dictionary<any>) | undefined;
-        $pullAll?: (Partial<T> & Dictionary<any>) | undefined;
-        $pop?: (PartialMapTo<T, 1 | -1> & Dictionary<1 | -1>) | undefined;
-      };
-
-  type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: any };
-
-  interface SortSpecifier {}
-  interface FieldSpecifier {
+  export interface FieldSpecifier {
     [id: string]: Number;
   }
 
-  type Transform<T> = ((doc: T) => any) | null | undefined;
+  export type Transform<T> = ((doc: T) => any) | null | undefined;
 
-  type Options<T> = {
+  export type Options<T> = {
     /** Sort order (default: natural order) */
     sort?: SortSpecifier | undefined;
     /** Number of results to skip at the beginning */
     skip?: number | undefined;
     /** Maximum number of results to return */
     limit?: number | undefined;
-    /** Dictionary of fields to return or exclude. */
+    /**
+     * Dictionary of fields to return or exclude.
+     * @deprecated use projection instead
+     */
     fields?: FieldSpecifier | undefined;
+    /** Dictionary of fields to return or exclude. */
+    projection?: FieldSpecifier | undefined;
     /** (Server only) Overrides MongoDB's default index selection and query optimization process. Specify an index to force its use, either by its name or index specification. */
-    hint?: Hint | undefined;
+    hint?: NpmModuleMongodb.Hint | undefined;
     /** (Client only) Default `true`; pass `false` to disable reactivity */
     reactive?: boolean | undefined;
     /**  Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation. */
@@ -194,14 +59,14 @@ export namespace Mongo {
      * Constructor for a Collection
      * @param name The name of the collection. If null, creates an unmanaged (unsynchronized) local collection.
      */
-    new <T extends MongoNpmModule.Document, U = T>(
+    new <T extends NpmModuleMongodb.Document, U = T>(
       name: string | null,
       options?: {
         /**
          * The server connection that will manage this collection. Uses the default connection if not specified. Pass the return value of calling `DDP.connect` to specify a different
          * server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection.
          */
-        connection?: Object | null | undefined;
+        connection?: DDP.DDPStatic | null | undefined;
         /** The method of generating the `_id` fields of new documents in this collection.  Possible values:
          * - **`'STRING'`**: random strings
          * - **`'MONGO'`**:  random [`Mongo.ObjectID`](#mongo_object_id) values
@@ -218,11 +83,20 @@ export namespace Mongo {
         defineMutationMethods?: boolean | undefined;
       }
     ): Collection<T, U>;
+
+    /**
+     * Retrieve a previously defined Mongo.Collection instance by its name. The collection must already have been defined with `new Mongo.Collection(name, ...)`.
+     * Plain MongoDB collections are not available by this method.
+     * @param name The name of the collection instance.
+     */
+    getCollection<
+        TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
+    >(name: string): TCollection;
   }
-  interface Collection<T extends MongoNpmModule.Document, U = T> {
+  interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       update?:
         | ((
@@ -230,10 +104,10 @@ export namespace Mongo {
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
             modifier: any
-          ) => boolean)
+          ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
@@ -242,17 +116,22 @@ export namespace Mongo {
       byteSize?: number,
       maxDocuments?: number
     ): Promise<void>;
+
+    /**
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see createIndexAsync
+     */
     createIndex(
-      indexSpec: IndexSpecification,
-      options?: CreateIndexesOptions
+      indexSpec: NpmModuleMongodb.IndexSpecification,
+      options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     createIndexAsync(
-      indexSpec: IndexSpecification,
-      options?: CreateIndexesOptions
+      indexSpec: NpmModuleMongodb.IndexSpecification,
+      options?: NpmModuleMongodb.CreateIndexesOptions
     ): Promise<void>;
     deny<Fn extends Transform<T> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       update?:
         | ((
@@ -260,16 +139,16 @@ export namespace Mongo {
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
             modifier: any
-          ) => boolean)
+          ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
     }): boolean;
     dropCollectionAsync(): Promise<void>;
-    dropIndexAsync(indexName: string): void;
+    dropIndexAsync(indexName: string): Promise<void>;
     /**
      * Find the documents in a collection that match the selector.
      * @param selector A query describing the documents to find
@@ -285,11 +164,15 @@ export namespace Mongo {
     ): Cursor<T, DispatchTransform<O['transform'], T, U>>;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see findOneAsync
      * @param selector A query describing the documents to find
      */
     findOne(selector?: Selector<T> | ObjectID | string): U | undefined;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see findOneAsync
      * @param selector A query describing the documents to find
      */
     findOne<O extends Omit<Options<T>, 'limit'>>(
@@ -312,7 +195,20 @@ export namespace Mongo {
       options?: O
     ): Promise<DispatchTransform<O['transform'], T, U> | undefined>;
     /**
+     * Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
+     * @param selector The query for filtering the set of documents to count
+     * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
+     */
+    countDocuments(selector?: Selector<T> | ObjectID | string, options?: NpmModuleMongodb.CountDocumentsOptions): Promise<number>;
+    /**
+     * Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
+     * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
+     */
+    estimatedDocumentCount(options?: NpmModuleMongodb.EstimatedDocumentCountOptions): Promise<number>;
+    /**
      * Insert a document in the collection.  Returns its unique _id.
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see insertAsync
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
@@ -327,14 +223,16 @@ export namespace Mongo {
      * Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
      */
-    rawCollection(): MongoCollection<T>;
+    rawCollection(): NpmModuleMongodb.Collection<T>;
     /**
      * Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/3.0/api/Db.html) object corresponding to this collection's database connection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
      */
-    rawDatabase(): MongoDb;
+    rawDatabase(): NpmModuleMongodb.Db;
     /**
      * Remove documents from the collection
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see removeAsync
      * @param selector Specifies which documents to remove
      * @param callback If present, called with an error object as its argument.
      */
@@ -353,6 +251,8 @@ export namespace Mongo {
     ): Promise<number>;
     /**
      * Modify one or more documents in the collection. Returns the number of matched documents.
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see updateAsync
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
      * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
@@ -398,6 +298,8 @@ export namespace Mongo {
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
      * `insertedId` (the unique _id of the document that was inserted, if any).
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see upsertAsync
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
      * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
@@ -436,10 +338,14 @@ export namespace Mongo {
     _createCappedCollection(byteSize?: number, maxDocuments?: number): void;
     /** @deprecated */
     _ensureIndex(
-      indexSpec: IndexSpecification,
-      options?: CreateIndexesOptions
+      indexSpec: NpmModuleMongodb.IndexSpecification,
+      options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     _dropCollection(): Promise<void>;
+    /**
+     * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
+     * @see dropIndexAsync
+     */
     _dropIndex(indexName: string): void;
   }
 
@@ -534,6 +440,11 @@ export namespace Mongo {
      */
     observe(callbacks: ObserveCallbacks<U>): Meteor.LiveQueryHandle;
     /**
+     * Watch a query. Receive callbacks as the result set changes.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     */
+    observeAsync(callbacks: ObserveCallbacks<U>): Promise<Meteor.LiveQueryHandle>;
+    /**
      * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
      * @param callbacks Functions to call to deliver the result set as it changes
      */
@@ -541,8 +452,17 @@ export namespace Mongo {
       callbacks: ObserveChangesCallbacks<T>,
       options?: { nonMutatingCallbacks?: boolean | undefined }
     ): Meteor.LiveQueryHandle;
-    [Symbol.iterator](): Iterator<T, never, never>;
-    [Symbol.asyncIterator](): AsyncIterator<T, never, never>;
+    [Symbol.iterator](): Iterator<T>;
+    [Symbol.asyncIterator](): AsyncIterator<T>;
+    /**
+     * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
+     * @param callbacks Functions to call to deliver the result set as it changes
+     * @param options { nonMutatingCallbacks: boolean }
+     */
+    observeChangesAsync(
+      callbacks: ObserveChangesCallbacks<T>,
+      options?: { nonMutatingCallbacks?: boolean | undefined }
+    ): Promise<Meteor.LiveQueryHandle>;
   }
 
   var ObjectID: ObjectIDStatic;
@@ -581,8 +501,8 @@ export namespace Mongo {
 
 export declare module MongoInternals {
   interface MongoConnection {
-    db: MongoDb;
-    client: MongoClient;
+    db: NpmModuleMongodb.Db;
+    client: NpmModuleMongodb.MongoClient;
   }
 
   function defaultRemoteCollectionDriver(): {
@@ -592,7 +512,7 @@ export declare module MongoInternals {
   var NpmModules: {
     mongodb: {
       version: string;
-      module: typeof MongoNpmModule;
+      module: typeof NpmModuleMongodb;
     };
   };
 }

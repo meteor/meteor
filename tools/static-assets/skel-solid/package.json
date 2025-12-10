@@ -8,21 +8,25 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.17.9",
-    "meteor-node-stubs": "^1.2.1",
-    "solid-js": "^1.5.4"
+    "@babel/runtime": "^7.23.9",
+    "@swc/helpers": "^0.5.17",
+    "meteor-node-stubs": "^1.2.12",
+    "picocolors": "^1.1.1",
+    "solid-js": "^1.9.4"
   },
   "meteor": {
     "mainModule": {
-      "client": "client/main.jsx",
-      "server": "server/main.js"
+      "client": "client/entry-meteor.js",
+      "server": "server/entry-meteor.js"
     },
-    "testModule": "tests/main.js"
+    "testModule": "tests/main.js",
+    "modern": true
   },
   "devDependencies": {
-    "babel-preset-solid": "^1.5.4",
-    "vite": "^3.0.9",
-    "vite-plugin-solid": "^2.3.0",
-    "vite-plugin-solid-svg": "^0.4.1"
+    "babel-preset-solid": "^1.8.15",
+    "meteor-vite": "^3.2.1",
+    "vite": "^6.0.11",
+    "vite-plugin-solid": "^2.11.0",
+    "vite-plugin-solid-svg": "^0.8.1"
   }
 }

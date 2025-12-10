@@ -1,6 +1,12 @@
 title: Meteor API Docs
 subtitle: API Docs
 versions:
+  - '2.16'
+  - '2.14'
+  - '2.13'
+  - '2.12'
+  - '2.11'
+  - '2.10'
   - '2.9'
   - '2.8'
   - '2.7'
@@ -25,8 +31,8 @@ versioned-netlify-redirects:
   netlify_site_id: meteor-docs
 
 logo:
-  title:
-  subtitle: Docs
+  title: Meteor
+  subtitle: API Docs
 
 sidebar_categories:
   null:
@@ -58,6 +64,7 @@ sidebar_categories:
     - api/packagejs
     - api/mobile-config
     - api/environment
+    - api/top-level-await
   Packages:
     - packages/accounts-ui
     - packages/accounts-passwordless
@@ -81,9 +88,9 @@ sidebar_categories:
     - packages/server-render
     - packages/spacebars
     - packages/standard-minifier-css
-    - packages/underscore
     - packages/url
     - packages/webapp
+    - packages/packages-listing
   Command Line:
     - commandline
     - environment-variables
@@ -91,6 +98,7 @@ sidebar_categories:
   Troubleshooting:
     - expired-certificate
     - windows
+    - known-issues
 github_repo: 'meteor/meteor'
 edit_branch: 'devel'
 edit_path: 'docs'
@@ -205,6 +213,7 @@ redirects:
   /#/full/accounts-setusername: 'api/passwords.html#accounts-setusername'
   /#/full/accounts-addemail: 'api/passwords.html#accounts-addemail'
   /#/full/accounts-removeemail: 'api/passwords.html#accounts-removeemail'
+  /#/full/accounts_replaceemail: 'api/passwords.html#Accounts-replaceEmail'
   /#/full/accounts_verifyemail: 'api/passwords.html#Accounts-verifyEmail'
   /#/full/accounts-finduserbyusername: 'api/passwords.html#accounts-finduserbyusername'
   /#/full/accounts-finduserbyemail: 'api/passwords.html#accounts-finduserbyemail'
@@ -384,7 +393,6 @@ redirects:
   /#/full/oauth-encryption: 'packages/oauth-encryption.html'
   /#/full/random: 'packages/random.html'
   /#/full/spiderable: 'packages/spiderable.html'
-  /#/full/underscore: 'packages/underscore.html'
   /#/full/webapp: 'packages/webapp.html'
   '#meteor_isclient': 'api/core.html#Meteor-isClient'
   '#meteor_isserver': 'api/core.html#Meteor-isServer'
@@ -660,6 +668,5 @@ redirects:
   '#oauth-encryption': 'packages/oauth-encryption.html'
   '#random': 'packages/random.html'
   '#spiderable': 'packages/spiderable.html'
-  '#underscore': 'packages/underscore.html'
   '#webapp': 'packages/webapp.html'
   '#pkg_spacebars': 'packages/spacebars.html'

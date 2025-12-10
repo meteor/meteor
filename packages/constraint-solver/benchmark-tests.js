@@ -118,7 +118,7 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
   r.resolve(args.dependencies, args.constraints);
 });
 
-runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq, additions to the existing smaller solution", function (test) {
+runBenchmarks && Tinytest.addAsync("constraint solver - benchmark on gems - rails, gitlabhq, additions to the existing smaller solution", async function (test) {
   var r = new ConstraintSolver.PackagesResolver(railsCatalog);
 
   var args = splitArgs({
@@ -270,10 +270,11 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
     "warden": "1.2.3"
   };
 
-  var solution = r.resolve(args.dependencies, args.constraints, { previousSolution: previousSolution }).answer;
+  const resolved = await r.resolve(args.dependencies, args.constraints, { previousSolution: previousSolution });
+  var solution = resolved.answer;
 
   // check that root deps are the same
-  _.each(args.dependencies, function (dep) {
+  args.dependencies.forEach(function (dep) {
     if (previousSolution[dep])
       test.equal(solution[dep], previousSolution[dep], dep);
   });
@@ -284,17 +285,17 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
 function getCatalogStub (gems) {
   return {
     getSortedVersionRecords(name) {
-      var versions = _.chain(gems)
-        .filter(function (pv) { return pv.name === name; })
-        .pluck('number')
+      var versions = Object.values(gems.filter(function (pv) { return pv.name === name; })
+        .map(function(gem) {
+          return gem.number
+        })
         .filter(function (v) {
           return PackageVersion.getValidServerVersion(v);
         })
-        .sort(PackageVersion.compare)
-        .uniq(true)
-        .value();
-      return _.map(versions, function (version) {
-        var gem = _.find(gems, function (pv) {
+        .sort(PackageVersion.compare));
+        
+      return versions.map(function (version) {
+        var gem = gems.find(function (pv) {
           return pv.name === name && pv.number === version;
         });
 
@@ -304,7 +305,7 @@ function getCatalogStub (gems) {
           dependencies: {}
         };
 
-        _.each(gem.dependencies, function (dep) {
+        gem.dependencies.forEach(function (dep) {
           var name = dep[0];
           var constraint = dep[1];
 

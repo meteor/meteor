@@ -1,3 +1,5 @@
+const memoize = require('lodash.memoize');
+
 var CS = ConstraintSolver;
 var PV = PackageVersion;
 
@@ -9,7 +11,7 @@ CS.VersionPricer = function () {
   //
   // The VersionPricer instance stores a memoization table for
   // efficiency.
-  self.getVersionInfo = _.memoize(PV.parse);
+  self.getVersionInfo = memoize(PV.parse);
 };
 
 CS.VersionPricer.MODE_UPDATE = 1;

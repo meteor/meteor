@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const command = process.argv[2];
+const command = process.argv[2] || 'install';
 
 if (!command) {
   console.log(`
-  Usage: meteor-installer <command>
+  Usage: npx meteor@<version> <command>
 
   Commands:
     install
@@ -14,7 +14,7 @@ if (!command) {
 }
 
 if (command === 'install') {
-  require('./install.js');
+  require('./install');
 } else if (command === 'uninstall') {
   const { uninstall } = require('./uninstall');
   uninstall();

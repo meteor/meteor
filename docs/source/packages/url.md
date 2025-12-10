@@ -3,7 +3,7 @@ title: url
 description: Isomorphic modern/legacy/Node polyfill for WHATWG URL/URLSearchParams.
 ---
 
-`url` package provides polyfill for the [WHATWG url specification](https://url.spec.whatwg.org/) for legacy browsers or defaults to the global class which is available in modern browsers and Node. It is recomended that you use this package for compatibility with non-modern browsers.
+`url` package provides polyfill for the [WHATWG url specification](https://url.spec.whatwg.org/) for legacy browsers or defaults to the global class which is available in modern browsers and Node. It is recommended that you use this package for compatibility with non-modern browsers.
 
 For more information we recommend [reading the MDN articles](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) about it and looking over the [Node API documentation](https://nodejs.org/api/url.html#url_the_whatwg_url_api) for more details as this article covers only basic usage in Meteor.
 

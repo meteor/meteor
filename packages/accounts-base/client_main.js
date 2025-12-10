@@ -7,7 +7,7 @@ import {
  * @namespace Accounts
  * @summary The namespace for all client-side accounts-related methods.
  */
-Accounts = new AccountsClient();
+Accounts = new AccountsClient(Meteor.settings?.public?.packages?.accounts || {});
 
 /**
  * @summary A [Mongo.Collection](#collections) containing user documents.

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '1.7.1'
+  version: '2.0.2',
 });
 
 Npm.depends({
@@ -9,7 +9,6 @@ Npm.depends({
 
 Package.onUse(api => {
   api.use('ecmascript');
-  api.use('underscore', 'server');
   api.mainModule('generator.js', 'server');
   api.export('Boilerplate', 'server');
 });

@@ -185,9 +185,8 @@ Function Add-NodeAndNpm {
 
   # Let's install the npm version we really want.
   Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
-  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
-    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
-      Write-Debug
+  Write-Host (& "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+      --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} 2>&1)
 
   if ($LASTEXITCODE -ne 0) {
     throw "Couldn't install npm@${NPM_VERSION}."
@@ -253,8 +252,8 @@ Function Add-Mongo {
 
   Write-Host "Putting MongoDB mongod.exe in mongodb\bin" -ForegroundColor Magenta
   cp "$DIR\mongodb\$mongo_zip_name\bin\mongod.exe" $DIR\mongodb\bin
-  Write-Host "Putting MongoDB mongo.exe in mongodb\bin" -ForegroundColor Magenta
-  cp "$DIR\mongodb\$mongo_zip_name\bin\mongo.exe" $DIR\mongodb\bin
+  Write-Host "Putting MongoDB mongos.exe in mongodb\bin" -ForegroundColor Magenta
+  cp "$DIR\mongodb\$mongo_zip_name\bin\mongos.exe" $DIR\mongodb\bin
 
   Write-Host "Removing the old Mongo zip..." -ForegroundColor Magenta
   rm -Recurse -Force $mongo_zip
@@ -305,13 +304,6 @@ Function Add-NpmModulesFromJsBundleFile {
   }
 
   cd node_modules
-
-  # Since we install a patched version of pacote in $Destination\lib\node_modules,
-  # we need to remove npm's bundled version to make it use the new one.
-  if (Test-Path "pacote") {
-    Remove-DirectoryRecursively "npm\node_modules\pacote"
-    & "$($Commands.node)" -e "require('fs').renameSync('pacote', 'npm\\node_modules\\pacote')"
-  }
 
   cd "$previousCwd"
 }
@@ -384,10 +376,6 @@ $npmToolArgs = @{
   commands = $toolCmds
 }
 Add-NpmModulesFromJsBundleFile @npmToolArgs
-
-# Leaving these probably doesn't hurt, but are removed for consistency w/ Unix.
-Remove-Item $(Join-Path $dirLib 'package.json')
-Remove-Item $(Join-Path $dirLib 'package-lock.json')
 
 Write-Host "Done writing node_modules build(s)..." -ForegroundColor Magenta
 

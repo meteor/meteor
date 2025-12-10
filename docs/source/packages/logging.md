@@ -3,7 +3,7 @@ title: logging
 description: Documentation of Meteor's logging utility
 ---
 
-The `logging` package provides a standartised way for you to log and display in console various message from your application.
+The `logging` package provides a standardised way for you to log and display in console various message from your application.
 The added benefit is that among other data it will show you the location where the log was fired,
 this is useful during debugging to quickly locate where the message is coming from.
 

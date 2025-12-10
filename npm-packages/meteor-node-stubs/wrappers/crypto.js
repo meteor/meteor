@@ -1,2 +1,2 @@
 global.Buffer = global.Buffer || require("buffer").Buffer;
-module.exports = require("crypto-browserify");
+module.exports = require("@meteorjs/crypto-browserify");

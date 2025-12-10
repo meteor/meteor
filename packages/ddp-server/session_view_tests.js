@@ -1,3 +1,5 @@
+import isEmpty from 'lodash.isempty';
+
 var newView = function(test) {
   var results = [];
   var view = new DDPServer._SessionCollectionView('test', {
@@ -5,7 +7,7 @@ var newView = function(test) {
       results.push({fun: 'added', id: id, fields: fields});
     },
     changed: function (collection, id, changed) {
-      if (_.isEmpty(changed))
+      if (isEmpty(changed))
         return;
       results.push({fun: 'changed', id: id, changed: changed});
     },
@@ -17,8 +19,8 @@ var newView = function(test) {
     view: view,
     results: results
   };
-  _.each(["added", "changed", "removed"], function (it) {
-    v[it] = _.bind(view[it], view);
+  ["added", "changed", "removed"].forEach(function (it) {
+    v[it] = view[it].bind(view);
   });
   v.expectResult = function (result) {
     test.equal(results.shift(), result);
@@ -182,7 +184,7 @@ Tinytest.add('livedata - sessionview - change to canonical value produces no cha
   v.added("B",  "A1", {foo: "baz"});
   var canon = "bar";
   var maybeResults = v.drain();
-  if (!_.isEmpty(maybeResults)) {
+  if (!isEmpty(maybeResults)) {
     // if something happened, it was a change message to baz.
     // if nothing did, canon is still bar.
     test.length(maybeResults, 1);

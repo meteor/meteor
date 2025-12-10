@@ -54,16 +54,7 @@ App.launchScreens({
     'Default@2x~ipad~comany': 'Default@2xipadcomany.png', // (1278x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9" - portrait mode
     
     // Android
-    'android_mdpi_portrait': 'splash/android_mdpi_portrait.png', // (320x480)
-    'android_mdpi_landscape': { src: 'splash/android_mdpi_landscape.png', srcDarkMode: 'splash/android_mdpi_landscape-night.png' }, // (480x320)
-    'android_hdpi_portrait': 'splash/android_hdpi_portrait.png', // (480x800)
-    'android_hdpi_landscape': 'splash/android_hdpi_landscape.png', // (800x480)
-    'android_xhdpi_portrait': 'splash/android_xhdpi_portrait.png', // (720x1280)
-    'android_xhdpi_landscape': 'splash/android_xhdpi_landscape.png', // (1280x720)
-    'android_xxhdpi_portrait': { src: 'splash/android_xxhdpi_portrait.png', srcDarkMode: 'splash/android_xxhdpi_portrait-night.png'}, // (960x1600)
-    'android_xxhdpi_landscape': 'splash/android_xxhdpi_landscape.png', // (1600x960)
-    'android_xxxhdpi_portrait': 'splash/android_xxxhdpi_portrait.png', // (1280x1920)
-    'android_xxxhdpi_landscape': 'splash/android_xxxhdpi_landscape.png', // (1920x1280)
+    'android_universal': 'splash/android_universal.png', // (320x480)
 });
 
 // Set PhoneGap/Cordova preferences.

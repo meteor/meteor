@@ -27,13 +27,13 @@ Package.describe({
 // This defines your actual package:
 Package.onUse((api) => {
   // If no version is specified for an `api.use` dependency, use the one defined
-  // in Meteor 1.4.3.1.
-  api.versionsFrom('1.4.3.1');
+  // in Meteor 1.12.1.
+  api.versionsFrom('1.12.1');
   // Use the `underscore` package, but only on the server. Version not
-  // specified, so it will be as of Meteor 1.4.3.1.
+  // specified, so it will be as of Meteor 1.12.1.
   api.use('underscore', 'server');
-  // Use `kadira:flow-router`, version 2.12.1 or newer.
-  api.use('kadira:flow-router@2.12.1');
+  // Use `ostrio:flow-router-extra`, version 3.9.0 or newer.
+  api.use('ostrio:flow-router-extra@3.9.0');
   // Give users of this package access to active-route's JavaScript helpers.
   api.imply('zimme:active-route@2.3.2')
   // Export the object `Email` to packages or apps that use this package.
@@ -50,7 +50,7 @@ Package.onTest((api) => {
   // Sets up a dependency on this package.
   api.use('username:package-name');
   // Use the Mocha test framework.
-  api.use('practicalmeteor:mocha@2.4.5_2');
+  api.use('practicalmeteor:mocha@2.4.5_6');
   // Specify the source code for the package tests.
   api.addFiles('email_tests.js', 'server');
 });
@@ -80,7 +80,7 @@ package) so that Meteor will pick up the local dependency.
 > In a lifecycle of a package there might come time to end the development for various reasons, or
 it gets superseded. In either case Meteor allows you to easily notify the users of the package by
 setting the deprecated flag to true: `deprecated: true` in the package description. In addition, you
-replace it with a string that tells the users where to find replacement or what to do. 
+replace it with a string that tells the users where to find replacement or what to do.
 
 Provide basic package information with `Package.describe(options)`. To publish a
 package, you must define `summary` and `version`.
@@ -95,6 +95,16 @@ package is exported to.
 {% apibox "PackageNamespace#onUse" nested: %}
 
 {% apibox "PackageAPI#versionsFrom" %}
+
+> Choose Meteor versions carefully. First determine the minimum version of Meteor you need for the API you use in your package.
+ This should be based on specific needs of your package like needed the *Async calls, which would require minimum version to be
+ at least 2.8. Another example are where packages had a major version bump, for example this has happened with the accounts packages
+ in Meteor 2.3. If you want to be backward and forward compatible it is good to include Meteor version before 2.3 and then 2.3.6 in the array.
+ A general recommendation for most compatibility for accounts packages (unless you need API that was affected in Meteor 2.3) is to have the following
+ array in `versionsFrom`: `['1.12.1', '2.3.6', '2.8.1']`, this gives us the widest range. For general packages you can leave out version `2.3.6`.
+ If you want the widest compatibility range it is recommended that the lowest be `1.12.1` and that you also include another
+ version near the current version of Meteor.
+
 {% apibox "PackageAPI#use" %}
 {% apibox "PackageAPI#imply" %}
 {% apibox "PackageAPI#export" %}
@@ -305,7 +315,7 @@ methods are available:
  - `addAsset` - Add a file to serve as-is to the browser or to include on the
    browser, depending on the target. On the web, it will be served at the exact
    path requested. For server targets, it can be retrieved using
-   `Assets.getText` or `Assets.getBinary`.
+   `Assets.getTextAsync` or `Assets.getBinaryAsync`.
  - `addHtml` - Works in web targets only. Add markup to the `head` or `body`
    section of the document.
  - `hmrAvailable` - Returns true if the file can be updated with HMR. Among other things,
