@@ -11,6 +11,7 @@ import { Profile } from '../tool-env/profile';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
 import { execFileAsync } from '../utils/processes';
+var meteorNpm = require('../isobuild/meteor-npm');
 
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
@@ -21,6 +22,8 @@ import PluginInfoProvider from 'cordova-common/src/PluginInfo/PluginInfoProvider
 import { CORDOVA_PLATFORMS, CORDOVA_PLATFORM_VERSIONS, displayNameForPlatform, displayNamesForPlatforms,
   newPluginId, convertPluginVersions, convertToGitUrl } from './index.js';
 import { CordovaBuilder } from './builder.js';
+
+const cordovaPackagesFile = 'cordova-packages.json';
 
 cordova_events.on('verbose', logIfVerbose);
 cordova_events.on('log', logIfVerbose);
@@ -429,13 +432,15 @@ to build apps for ${displayNameForPlatform(platform)}.`);
   }
 
   async installedVersionForPlatform(platform) {
-    const command = files.convertToOSPath(files.pathJoin(
+    const file = files.convertToOSPath(files.pathJoin(
       this.projectRoot, 'platforms', platform, 'cordova', 'version'));
+    const command = process.platform === "win32" ? process.execPath : file;
+    const args = process.platform === "win32" ? [file] : [];
     // Make sure the command exists before trying to execute it
     if (files.exists(command)) {
       return this.runCommands(
         `getting installed version for platform ${platform} in Cordova project`,
-        execFileAsync(command, {
+        execFileAsync(command, args, {
           env: this.defaultEnvWithPathsAdded(),
           cwd: this.projectRoot}), null, null);
     } else {
@@ -458,30 +463,41 @@ to Cordova project`, async () => {
       let platformSpec = version ? `${platform}@${version}` : platform;
       await cordova_lib.platform('add', platformSpec, this.defaultOptions);
 
+      const installedPlugins = this.listInstalledPluginVersions();
+
       // As per Npm 8, we need now do inject a package.json file
       // with the dependencies so that when running any npm command
       // it keeps the dependencies installed.
-      const packageLock = JSON.parse(files.readFile(
-        files.pathJoin(self.projectRoot, 'node_modules/.package-lock.json')
-      ));
+      const packageLock = files.exists('node_modules/.package-lock.json') ? JSON.parse(files.readFile(
+          files.pathJoin(self.projectRoot, 'node_modules/.package-lock.json')
+      )) : { packages: { [`cordova-${platform}`]: { version }  } };
+      // Accumulated dependencies from plugins
+      const cordovaPackagesPath = files.pathJoin(self.projectRoot, cordovaPackagesFile);
+      const cordovaPackageLock = files.exists(cordovaPackagesPath) ? JSON.parse(files.readFile(cordovaPackagesPath)) : {};
+
+      // Ensure all packages are kept installed
+      const packages = { ...(cordovaPackageLock?.packages || {}), ...(packageLock?.packages || {}) };
       const getPackageName = (pkgPath) => {
         const split = pkgPath.split("node_modules/");
         return split[split.length - 1];
       };
 
-      const packageJsonObj = Object.entries(packageLock.packages).reduce((acc, [key, value]) => {
+      const packageJsonObj = Object.entries(packages).reduce((acc, [key, value]) => {
         const name = getPackageName(key);
+        const originalPluginVersion = installedPlugins[name];
         return ({
           dependencies: {
             ...acc.dependencies,
-            [name]: value.version,
+            [name]: originalPluginVersion || value.version,
           }
         });
-      }, { dependencies: {} });
+      }, { dependencies: { [`cordova-${platform}`]: version  } });
       files.writeFile(
         files.pathJoin(self.projectRoot, "package.json"),
         JSON.stringify(packageJsonObj, null, 2) + "\n"
       );
+
+      await meteorNpm.runNpmCommand(["install"], self.projectRoot);
     });
   }
 
@@ -625,6 +641,26 @@ from Cordova project`, async () => {
         await this.runCommands(`adding plugin ${target} \
 to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target],
           commandOptions));
+
+        // Accumulate dependencies from plugins to later installation
+        const cordovaPackagesPath = files.pathJoin(this.projectRoot, cordovaPackagesFile);
+        const packageLock = JSON.parse(files.readFile(
+            files.pathJoin(this.projectRoot, 'node_modules/.package-lock.json')
+        ));
+        const existingPackageLock = files.exists(cordovaPackagesPath) ?
+            JSON.parse(files.readFile(cordovaPackagesPath))
+            : {};
+        const accumulatedCordovaPackages = {
+          packages: {
+            ...existingPackageLock.packages,
+            ...packageLock.packages,
+          }
+        };
+        files.writeFile(
+            cordovaPackagesPath,
+            JSON.stringify(accumulatedCordovaPackages, null, 2) + "\n"
+        );
+
       } catch (error) {
         if (retry && utils.isUrlWithSha(version)) {
           Console.warn(`Cordova plugin add for ${id} failed with plugin id 

@@ -2851,7 +2851,7 @@ main.registerCommand({
   }
 
   try {
-    var conn = packageClient.loggedInPackagesConnection();
+    var conn = await packageClient.loggedInPackagesConnection();
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;
@@ -2961,16 +2961,16 @@ main.registerCommand({
   try {
     var status = options.success ? "successfully" : "unsuccessfully";
     // XXX: This should probably use progress bars instead.
-    _.each(versions, function (version) {
+    for (const version of versions) {
       Console.rawInfo(
         "Setting " + name + "@" + version + " as " +
          status + " migrated ...\n");
-      packageClient.callPackageServer(
+      await packageClient.callPackageServer(
         conn,
         '_changeVersionMigrationStatus',
         name, version, !options.success);
       Console.info("done.");
-    });
+    }
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;

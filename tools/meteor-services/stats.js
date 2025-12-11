@@ -22,7 +22,7 @@ var packageList = function (projectContext) {
       name: name,
       version: info.version,
       local: info.kind === 'local',
-      direct: !! projectContext.projectConstraintsFile.getConstraint(name)
+      direct: !!projectContext.projectConstraintsFile.getConstraint(name)
     });
   });
   return versions;
@@ -39,7 +39,8 @@ var recordPackages = async function (options) {
   // Before doing anything, look at the app's dependencies to see if the
   // opt-out package is there; if present, we don't record any stats.
   var packages = packageList(options.projectContext);
-  if (_.findWhere(packages, { name: OPT_OUT_PACKAGE_NAME })) {
+  if (_.findWhere(packages, { name: OPT_OUT_PACKAGE_NAME }) ||
+    process.env.DO_NOT_TRACK) {
     // Print some output for the 'report-stats' self-test.
     if (process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
       process.stdout.write("PACKAGE STATS NOT SENT\n");
@@ -86,9 +87,9 @@ var recordPackages = async function (options) {
     }
 
     var result = await conn.call("recordAppPackages",
-                           appIdentifier,
-                           packages,
-                           details);
+      appIdentifier,
+      packages,
+      details);
 
     // If the stats server sent us a new session, save it for use on
     // subsequent requests.
@@ -112,7 +113,7 @@ var recordPackages = async function (options) {
 
 var logErrorIfInCheckout = function (err) {
   if ((Console.isInteractive() && files.inCheckout())
-      || process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
+    || process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
     Console.warn("Failed to record package usage.");
     Console.warn(
       "(This error is hidden when you are not running Meteor from a",
@@ -145,8 +146,8 @@ var getPackagesForAppIdInTest = function (projectContext) {
 
 var connectToPackagesStatsServer = async function () {
   const sc = new ServiceConnection(
-      config.getPackageStatsServerUrl(),
-      {_dontPrintErrors: true}
+    config.getPackageStatsServerUrl(),
+    { _dontPrintErrors: true }
   );
 
   await sc.init();

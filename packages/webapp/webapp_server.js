@@ -10,7 +10,7 @@ import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
 import parseRequest from 'parseurl';
-import { lookup as lookupUserAgent } from 'useragent';
+import { lookup as lookupUserAgent } from 'useragent-ng';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
 import {
@@ -29,6 +29,7 @@ const createExpressApp = () => {
   // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
   app.set('x-powered-by', false);
   app.set('etag', false);
+  app.set('query parser', qs.parse);
   return app;
 }
 export const WebApp = {};
@@ -117,12 +118,20 @@ var camelCase = function(name) {
   var parts = name.split(' ');
   parts[0] = parts[0].toLowerCase();
   for (var i = 1; i < parts.length; ++i) {
-    parts[i] = parts[i].charAt(0).toUpperCase() + parts[i].substr(1);
+    parts[i] = parts[i].charAt(0).toUpperCase() + parts[i].substring(1);
   }
   return parts.join('');
 };
 
 var identifyBrowser = function(userAgentString) {
+  if (!userAgentString) {
+    return {
+      name: 'unknown',
+      major: 0,
+      minor: 0,
+      patch: 0
+    };
+  }
   var userAgent = lookupUserAgent(userAgentString);
   return {
     name: camelCase(userAgent.family),
@@ -202,12 +211,12 @@ WebApp.categorizeRequest = function(req) {
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
-  _.each(htmlAttributeHooks || [], function(hook) {
+  (htmlAttributeHooks || []).forEach(function(hook) {
     var attributes = hook(request);
     if (attributes === null) return;
     if (typeof attributes !== 'object')
       throw Error('HTML attribute hook must return null or object');
-    _.extend(combinedAttributes, attributes);
+    Object.assign(combinedAttributes, attributes);
   });
   return combinedAttributes;
 };
@@ -290,7 +299,7 @@ WebApp._timeoutAdjustmentRequestCallback = function(req, res) {
   res.on('finish', function() {
     res.setTimeout(SHORT_SOCKET_TIMEOUT);
   });
-  _.each(finishListeners, function(l) {
+  Object.values(finishListeners).forEach(function(l) {
     res.on('finish', l);
   });
 };
@@ -428,7 +437,7 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
-async function getBoilerplateAsync(request, arch) {
+async function getBoilerplateAsync(request, arch, response) {
   let boilerplate = boilerplateByArch[arch];
   await runtimeConfig.hooks.forEachAsync(async hook => {
     const meteorRuntimeConfig = await hook({
@@ -444,13 +453,14 @@ async function getBoilerplateAsync(request, arch) {
     return true;
   });
   runtimeConfig.isUpdatedByArch[arch] = false;
+  const { dynamicHead, dynamicBody } = request;
   const data = Object.assign(
     {},
     boilerplate.baseData,
     {
       htmlAttributes: getHtmlAttributes(request),
     },
-    _.pick(request, 'dynamicHead', 'dynamicBody')
+    { dynamicHead, dynamicBody }
   );
 
   let madeChanges = false;
@@ -460,7 +470,7 @@ async function getBoilerplateAsync(request, arch) {
     promise = promise
       .then(() => {
         const callback = boilerplateDataCallbacks[key];
-        return callback(request, data, arch);
+        return callback(request, data, arch, response);
       })
       .then(result => {
         // Callbacks should return false if they did not make any changes.
@@ -534,9 +544,8 @@ WebAppInternals.generateBoilerplateInstance = function(
           return pathJoin(archPath[arch], itemPath);
         },
         baseDataExtension: {
-          additionalStaticJs: _.map(additionalStaticJs || [], function(
-            contents,
-            pathname
+          additionalStaticJs: (Object.entries(additionalStaticJs) || []).map(function(
+            [pathname, contents]
           ) {
             return {
               pathname: pathname,
@@ -613,7 +622,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   };
 
   if (
-    _.has(additionalStaticJs, pathname) &&
+    pathname in additionalStaticJs &&
     !WebAppInternals.inlineScriptsAllowed()
   ) {
     serveStaticJs(additionalStaticJs[pathname]);
@@ -1073,16 +1082,6 @@ async function runWebAppServer() {
     res.end();
   });
 
-  // Parse the query string into res.query. Used by oauth_server, but it's
-  // generally pretty handy..
-  //
-  // Do this before the next middleware destroys req.url if a path prefix
-  // is set to close #10111.
-  app.use(function(request, response, next) {
-    request.query = qs.parse(parseUrl(request.url).query);
-    next();
-  });
-
   function getPathParts(path) {
     const parts = path.split('/');
     while (parts[0] === '') parts.shift();
@@ -1223,6 +1222,7 @@ async function runWebAppServer() {
       }
 
       var request = WebApp.categorizeRequest(req);
+      var response = res;
 
       if (request.url.query && request.url.query['meteor_css_resource']) {
         // In this case, we're requesting a CSS resource in the meteor-specific
@@ -1282,7 +1282,7 @@ async function runWebAppServer() {
       // Promise that will be resolved when the program is unpaused.
       await WebApp.clientPrograms[arch].paused;
 
-      return getBoilerplateAsync(request, arch)
+      return getBoilerplateAsync(request, arch, response)
         .then(({ stream, statusCode, headers: newHeaders }) => {
           if (!statusCode) {
             statusCode = res.statusCode ? res.statusCode : 200;
@@ -1294,10 +1294,12 @@ async function runWebAppServer() {
 
           res.writeHead(statusCode, headers);
 
-          stream.pipe(res, {
-            // End the response when the stream ends.
-            end: true,
-          });
+          if (!disableBoilerplateResponse) {
+            stream.pipe(res, {
+              // End the response when the stream ends.
+              end: true,
+            });
+          }
         })
         .catch(error => {
           Log.error('Error running template: ' + error.stack);
@@ -1355,7 +1357,7 @@ async function runWebAppServer() {
   let warnedAboutConnectUsage = false;
 
   // start up app
-  _.extend(WebApp, {
+  Object.assign(WebApp, {
     connectHandlers: packageAndAppHandlers,
     handlers: packageAndAppHandlers,
     rawConnectHandlers: rawExpressHandlers,
@@ -1551,6 +1553,11 @@ var additionalStaticJs = {};
 WebAppInternals.addStaticJs = function(contents) {
   additionalStaticJs['/' + sha1(contents) + '.js'] = contents;
 };
+
+var disableBoilerplateResponse = false;
+WebAppInternals.disableBoilerplateResponse = function() {
+  disableBoilerplateResponse = true;
+}
 
 // Exported for tests
 WebAppInternals.getBoilerplate = getBoilerplate;

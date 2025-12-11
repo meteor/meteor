@@ -1720,21 +1720,21 @@ export class PackageSourceBatch {
     const fileHashes = [];
     const cacheKeyPrefix = sha1(JSON.stringify({
       linkerOptions,
-      files: await jsResources.reduce(async (acc, inputFile) => {
-        const resolvedAcc = await acc;
-
-        fileHashes.push(await inputFile.hash);
-        return [...resolvedAcc, {
-          meteorInstallOptions: inputFile.meteorInstallOptions,
-          absModuleId: inputFile.absModuleId,
-          sourceMap: !! await inputFile.sourceMap,
-          mainModule: inputFile.mainModule,
-          imported: inputFile.imported,
-          alias: inputFile.alias,
-          lazy: inputFile.lazy,
-          bare: inputFile.bare,
-        }];
-      }, Promise.resolve([]))
+      files: await Promise.all(
+        jsResources.map(async (inputFile) => {
+          fileHashes.push(await inputFile.hash);
+          return {
+            meteorInstallOptions: inputFile.meteorInstallOptions,
+            absModuleId: inputFile.absModuleId,
+            sourceMap: !!(await inputFile.sourceMap),
+            mainModule: inputFile.mainModule,
+            imported: inputFile.imported,
+            alias: inputFile.alias,
+            lazy: inputFile.lazy,
+            bare: inputFile.bare,
+          };
+        })
+      )
     }));
     const cacheKeySuffix = sha1(JSON.stringify({
       LINKER_CACHE_SALT,
@@ -1832,7 +1832,7 @@ export class PackageSourceBatch {
       if (cacheFilename) {
         // Write asynchronously.
         try {
-          await files.rm_recursive(wildcardCacheFilename);
+          await files.rm_recursive_deferred(wildcardCacheFilename);
         } finally {
           await files.writeFileAtomically(cacheFilename, retAsJSON);
         }

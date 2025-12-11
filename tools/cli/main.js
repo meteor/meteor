@@ -2,6 +2,10 @@ var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile) {
   require('../tool-env/profile-require.js').start();
 }
+const { initMeteorConfig } = require('../tool-env/meteor-config');
+
+// Initialize meteorConfig globally
+initMeteorConfig();
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -865,6 +869,9 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   var appDir = files.findAppDir();
   if (appDir) {
     appDir = files.pathResolve(appDir);
+
+    // Renitialize meteorConfig globally when having appDir context
+    initMeteorConfig(appDir);
   }
 
   await require('../tool-env/isopackets.js').ensureIsopacketsLoadable();
@@ -1542,6 +1549,9 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         await catalogRefreshStrategy.beforeCommand();
       });
     }
+
+    // Set the currentCommand in the global object to spread context
+    global.currentCommand = { name: command.name, options };
 
     var ret = await command.func(options, { rawOptions });
 

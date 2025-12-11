@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: '3.0.0',
+  version: '3.0.2',
 });
 
 Package.onUse(api => {
@@ -37,7 +37,7 @@ Package.onUse(api => {
 });
 
 Npm.depends({
-  'body-parser': '1.19.0',
+  'body-parser': '1.20.3',
 });
 
 Package.onTest(api => {

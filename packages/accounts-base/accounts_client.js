@@ -151,6 +151,30 @@ export class AccountsClient extends AccountsCommon {
   }
 
   /**
+   * @summary Log out all clients logged in as the current user and logs the current user out as well.
+   * @locus Client
+   * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+   */
+  logoutAllClients(callback) {
+    this._loggingOut.set(true);
+
+    this.connection.applyAsync('logoutAllClients', [], {
+      // TODO[FIBERS]: Look this { wait: true } later.
+      wait: true
+    })
+      .then((result) => {
+        this._loggingOut.set(false);
+        this._loginCallbacksCalled = false;
+        this.makeClientLoggedOut();
+        callback && callback();
+      })
+      .catch((e) => {
+        this._loggingOut.set(false);
+        callback && callback(e);
+      });
+  }
+
+  /**
    * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.
    * @locus Client
    * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
@@ -362,18 +386,19 @@ export class AccountsClient extends AccountsCommon {
       // Note that we need to call this even if _suppressLoggingIn is true,
       // because it could be matching a _setLoggingIn(true) from a
       // half-completed pre-reconnect login method.
-      this._setLoggingIn(false);
       if (error || !result) {
         error = error || new Error(
           `No result from call to ${options.methodName}`
         );
         loginCallbacks({ error });
+        this._setLoggingIn(false);
         return;
       }
       try {
         options.validateResult(result);
       } catch (e) {
         loginCallbacks({ error: e });
+        this._setLoggingIn(false);
         return;
       }
 
@@ -381,13 +406,15 @@ export class AccountsClient extends AccountsCommon {
       this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
 
       // use Tracker to make we sure have a user before calling the callbacks
-      Tracker.autorun(async function (computation) {
+      Tracker.autorun(async (computation) => {
         const user = await Tracker.withComputation(computation, () =>
           Meteor.userAsync(),
         );
 
         if (user) {
-          loginCallbacks({ loginDetails: result })
+          loginCallbacks({ loginDetails: result });
+          this._setLoggingIn(false);
+          computation.stop();
         }
       });
 
@@ -399,7 +426,7 @@ export class AccountsClient extends AccountsCommon {
     this.connection.applyAsync(
       options.methodName,
       options.methodArguments,
-      { wait: true, onResultReceived: onResultReceived },
+      { wait: true, onResultReceived },
       loggedInAndDataReadyCallback);
   }
 
@@ -686,7 +713,7 @@ export class AccountsClient extends AccountsCommon {
   /**
    * @summary Register a function to call when a reset password link is clicked
    * in an email sent by
-   * [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail).
+   * [`Accounts.sendResetPasswordEmail`](#Accounts-sendResetPasswordEmail).
    * This function should be called in top-level code, not inside
    * `Meteor.startup()`.
    * @memberof! Accounts
@@ -694,7 +721,7 @@ export class AccountsClient extends AccountsCommon {
    * @param  {Function} callback The function to call. It is given two arguments:
    *
    * 1. `token`: A password reset token that can be passed to
-   * [`Accounts.resetPassword`](#accounts_resetpassword).
+   * [`Accounts.resetPassword`](#Accounts-resetPassword).
    * 2. `done`: A function to call when the password reset UI flow is complete. The normal
    * login process is suspended until this function is called, so that the
    * password for user A can be reset even if user B was logged in.
@@ -712,7 +739,7 @@ export class AccountsClient extends AccountsCommon {
   /**
    * @summary Register a function to call when an email verification link is
    * clicked in an email sent by
-   * [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail).
+   * [`Accounts.sendVerificationEmail`](#Accounts-sendVerificationEmail).
    * This function should be called in top-level code, not inside
    * `Meteor.startup()`.
    * @memberof! Accounts
@@ -720,7 +747,7 @@ export class AccountsClient extends AccountsCommon {
    * @param  {Function} callback The function to call. It is given two arguments:
    *
    * 1. `token`: An email verification token that can be passed to
-   * [`Accounts.verifyEmail`](#accounts_verifyemail).
+   * [`Accounts.verifyEmail`](#Accounts-verifyEmail).
    * 2. `done`: A function to call when the email verification UI flow is complete.
    * The normal login process is suspended until this function is called, so
    * that the user can be notified that they are verifying their email before
@@ -739,7 +766,7 @@ export class AccountsClient extends AccountsCommon {
   /**
    * @summary Register a function to call when an account enrollment link is
    * clicked in an email sent by
-   * [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).
+   * [`Accounts.sendEnrollmentEmail`](#Accounts-sendEnrollmentEmail).
    * This function should be called in top-level code, not inside
    * `Meteor.startup()`.
    * @memberof! Accounts
@@ -747,7 +774,7 @@ export class AccountsClient extends AccountsCommon {
    * @param  {Function} callback The function to call. It is given two arguments:
    *
    * 1. `token`: A password reset token that can be passed to
-   * [`Accounts.resetPassword`](#accounts_resetpassword) to give the newly
+   * [`Accounts.resetPassword`](#Accounts-resetPassword) to give the newly
    * enrolled account a password.
    * 2. `done`: A function to call when the enrollment UI flow is complete.
    * The normal login process is suspended until this function is called, so that
@@ -789,6 +816,14 @@ Meteor.loggingOut = () => Accounts.loggingOut();
  * @importFromPackage meteor
  */
 Meteor.logout = callback => Accounts.logout(callback);
+
+/**
+ * @summary Log out all clients logged in as the current user and logs the current user out as well.
+ * @locus Client
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @importFromPackage meteor
+ */
+Meteor.logoutAllClients = callback => Accounts.logoutAllClients(callback);
 
 /**
  * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.

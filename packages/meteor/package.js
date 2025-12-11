@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '2.0.0',
+  version: '2.2.0-rc340.1',
 });
 
 Package.registerBuildPlugin({
@@ -34,12 +34,14 @@ Package.onUse(function (api) {
   api.addFiles('timers.js', ['client', 'server']);
   api.addFiles('errors.js', ['client', 'server']);
   api.addFiles('asl-helpers.js', 'server');
+  api.addFiles('asynchronous_queue.js', 'server');
   api.addFiles('async_helpers.js', ['client', 'server']);
   api.addFiles('fiber_stubs_client.js', 'client');
   api.addFiles('asl-helpers-client.js', 'client');
   api.addFiles('startup_client.js', ['client']);
   api.addFiles('startup_server.js', ['server']);
   api.addFiles('debug.js', ['client', 'server']);
+  api.addFiles('deprecate.js', ['client', 'server']);
   api.addFiles('string_utils.js', ['client', 'server']);
   api.addFiles('test_environment.js', ['client', 'server']);
 
@@ -64,7 +66,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['underscore', 'tinytest', 'test-helpers']);
+  api.use(['tinytest', 'test-helpers']);
 
   api.addFiles('browser_environment_test.js', 'web.browser');
   api.addFiles('client_environment_test.js', 'client');

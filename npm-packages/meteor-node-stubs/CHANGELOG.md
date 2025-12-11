@@ -1,3 +1,15 @@
+v1.2.13 - 2025-02-27
+
+* Update `elliptic` to v6.6.1 to address a security vulnerability.
+
+v1.2.12 - 2024-10-31
+
+* Update `elliptic` to v6.6.0 to address a security vulnerability.
+
+v1.2.11 - 2024-10-25
+
+* Update `rimraf` to v5 to remove vulnerable `inflight` dependency.
+
 v1.2.8 - 2024-04-01
 * Add new dependency `@meteorjs/crypto-browserify` to replace `crypto-browserify` as it had unsafe dependencies.
 

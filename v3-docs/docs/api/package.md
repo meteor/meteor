@@ -57,6 +57,11 @@ Npm.depends({
   simplesmtp: '0.3.10',
   'stream-buffers': '0.2.5'
 });
+
+// This lets you use npm packages for development only in your package
+Npm.devDepends({
+  eslint: "8.36.0"
+});
 ```
 
 `api.mainModule` is documented in the [modules](../packages/modules.md#modular-application-structure) section.
@@ -124,6 +129,7 @@ Meteor packages can include NPM packages and Cordova plugins by using
 `Npm.depends` and `Cordova.depends` in the `package.js` file.
 
 <ApiBox name="PackageNpm#depends"  instanceName="api"/>
+<ApiBox name="PackageNpm#devDepends"  instanceName="api"/>
 <ApiBox name="Npm.require" />
 <ApiBox name="PackageCordova#depends"  instanceName="api"/>
 <ApiBox name="PackageNamespace#registerBuildPlugin"  instanceName="api"/>

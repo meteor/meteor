@@ -121,7 +121,7 @@ Accounts.config({
 Meteor.methods(
   {
     testMeteorUser:
-      async () => await Meteor.user(),
+      async () => await Meteor.userAsync(),
 
     clearUsernameAndProfile:
       async function () {

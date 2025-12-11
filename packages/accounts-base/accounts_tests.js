@@ -10,14 +10,6 @@ Meteor.methods({
   }
 });
 
-// XXX it'd be cool to also test that the right thing happens if options
-// *are* validated, but Accounts._options is global state which makes this hard
-// (impossible?)
-Tinytest.add(
-  'accounts - config - validates keys',
-  test => test.throws(() => Accounts.config({ foo: "bar" }))
-);
-
 Tinytest.addAsync('accounts - config - token lifetime', async test => {
   const { loginExpirationInDays } = Accounts._options;
   Accounts._options.loginExpirationInDays = 2;
@@ -487,28 +479,28 @@ Tinytest.addAsync(
     Accounts._options = {};
 
     // test the field is included by default
-    let user = await Meteor.user();
+    let user = await Meteor.userAsync();
     test.isNotUndefined(user[ignoreFieldName], 'included by default');
 
     // test the field is excluded
     Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
-    user = await Meteor.user();
+    user = await Meteor.userAsync();
     test.isUndefined(user[ignoreFieldName], 'excluded');
-    user = await Meteor.user({});
+    user = await Meteor.userAsync({});
     test.isUndefined(user[ignoreFieldName], 'excluded {}');
 
     // test the field can still be retrieved if required
-    user = await Meteor.user({ fields: { [ignoreFieldName]: 1 } });
+    user = await Meteor.userAsync({ fields: { [ignoreFieldName]: 1 } });
     test.isNotUndefined(user[ignoreFieldName], 'field can be retrieved');
     test.isUndefined(user.username, 'field can be retrieved username');
 
     // test a combined negative field specifier
-    user = await Meteor.user({ fields: { username: 0 } });
+    user = await Meteor.userAsync({ fields: { username: 0 } });
     test.isUndefined(user[ignoreFieldName], 'combined field selector');
     test.isUndefined(user.username, 'combined field selector username');
 
     // test an explicit request for the full user object
-    user = await Meteor.user({ fields: {} });
+    user = await Meteor.userAsync({ fields: {} });
     test.isNotUndefined(user[ignoreFieldName], 'full selector');
     test.isNotUndefined(user.username, 'full selector username');
 
@@ -516,7 +508,7 @@ Tinytest.addAsync(
 
     // Test that a custom field gets retrieved properly
     Accounts.config({ defaultFieldSelector: { [customField]: 1 } });
-    user = await Meteor.user()
+    user = await Meteor.userAsync()
     test.isNotUndefined(user[customField]);
     test.isUndefined(user.username);
     test.isUndefined(user[ignoreFieldName]);
@@ -738,7 +730,7 @@ if (Meteor.isServer) {
     // create same user in two different collections - should pass
     const email = "test-collection@testdomain.com"
 
-    const collection0 = new Mongo.Collection('test1');
+    const collection0 = new Mongo.Collection(`test1_${Random.id()}`);
 
     Accounts.config({
       collection: collection0,
@@ -746,7 +738,7 @@ if (Meteor.isServer) {
     const uid0 = await Accounts.createUser({email})
     await Meteor.users.removeAsync(uid0);
 
-    const collection1 = new Mongo.Collection('test2');
+    const collection1 = new Mongo.Collection(`test2_${Random.id()}`);
     Accounts.config({
       collection: collection1,
     })
@@ -765,13 +757,13 @@ if (Meteor.isServer) {
     const email = "test-collection@testdomain.com"
 
     Accounts.config({
-      collection: 'collection0',
+       collection: `collection0_${Random.id()}`,
     })
     const uid0 = await Accounts.createUser({email})
     await Meteor.users.removeAsync(uid0);
 
     Accounts.config({
-      collection: 'collection1',
+       collection: `collection1_${Random.id()}`,
     })
     const uid1 = await Accounts.createUser({email})
     await Meteor.users.removeAsync(uid1);
@@ -783,8 +775,8 @@ if (Meteor.isServer) {
     });
   });
 
-  Tinytest.add(
-    'accounts - make sure that extra params to accounts urls are added',
+  Tinytest.addAsync(
+    'accounts - urls work with sync resolution',
     async test => {
       // No extra params
       const verifyEmailURL = new URL(Accounts.urls.verifyEmail('test'));
@@ -796,6 +788,49 @@ if (Meteor.isServer) {
       test.equal(resetPasswordURL.searchParams.get('test'), extraParams.test);
       const enrollAccountURL = new URL(Accounts.urls.enrollAccount('test', extraParams));
       test.equal(enrollAccountURL.searchParams.get('test'), extraParams.test);
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - urls work with async resolution',
+    async test => {
+      // Save original urls
+      const originalUrls = Accounts.urls;
+      try {
+        // Override urls methods to return Promises
+        Accounts.urls = {
+          resetPassword: (token, extraParams) =>
+            new Promise(resolve => resolve(originalUrls.resetPassword(token, extraParams))),
+          verifyEmail: (token, extraParams) =>
+            new Promise(resolve => resolve(originalUrls.verifyEmail(token, extraParams))),
+          loginToken: (selector, token, extraParams) =>
+            new Promise(resolve => resolve(originalUrls.loginToken(selector, token, extraParams))),
+          enrollAccount: (token, extraParams) =>
+            new Promise(resolve => resolve(originalUrls.enrollAccount(token, extraParams))),
+        };
+
+        // Test with no extra params
+        const verifyEmailUrl = await Accounts.urls.verifyEmail('test');
+        const verifyEmailURL = new URL(verifyEmailUrl);
+        test.equal(verifyEmailURL.searchParams.toString(), "");
+
+        // Test with extra params
+        const extraParams = { test: 'async-success' };
+        const resetPasswordUrl = await Accounts.urls.resetPassword('test', extraParams);
+        const resetPasswordURL = new URL(resetPasswordUrl);
+        test.equal(resetPasswordURL.searchParams.get('test'), extraParams.test);
+
+        const enrollAccountUrl = await Accounts.urls.enrollAccount('test', extraParams);
+        const enrollAccountURL = new URL(enrollAccountUrl);
+        test.equal(enrollAccountURL.searchParams.get('test'), extraParams.test);
+
+        const loginTokenUrl = await Accounts.urls.loginToken('email', 'token', extraParams);
+        const loginTokenURL = new URL(loginTokenUrl);
+        test.equal(loginTokenURL.searchParams.get('test'), extraParams.test);
+      } finally {
+        // Restore original urls
+        Accounts.urls = originalUrls;
+      }
     }
   );
 }
@@ -922,4 +957,3 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // cleanup
   await Meteor.users.removeAsync(u1.id);
 });
-
