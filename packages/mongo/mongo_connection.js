@@ -20,7 +20,18 @@ const APP_FOLDER = 'app';
 
 const oplogCollectionWarnings = [];
 // Oplog continues to be the default when we do not have a specific preference; we expect to change it in the future before an oplog deprecation.
-const DEFAULT_REACTIVITY_ORDER = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : ['oplog', 'changeStreams', 'pooling'];
+const availableDrivers = ['oplog', 'polling', 'changeStreams']
+const DEFAULT_REACTIVITY_ORDER = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : availableDrivers;
+
+const reactivitySetting = Meteor.settings?.packages?.mongo?.reactivity;
+if (Array.isArray(reactivitySetting)) {
+  for (const method of reactivitySetting) {
+    if (!availableDrivers.includes(method)) {  
+      throw new Error(`Invalid Mongo reactivity method in settings: ${method}`);
+    }
+  }
+}
+
 export const MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
@@ -800,22 +811,96 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   };
 };
 
-Object.assign(MongoConnection.prototype, {
-  _observeChanges: async function (
+const driverClasses = {
+  changeStreams: ChangeStreamObserveDriver,
+  oplog: OplogObserveDriver,
+  polling: PollingObserveDriver,
+};
+
+function _getConfiguredReactivityOrder () {
+  const reactivitySetting = Meteor.settings?.packages?.mongo?.reactivity;
+  const isArraySetting = Array.isArray(reactivitySetting);
+  const isStringSetting = typeof reactivitySetting === 'string';
+  const hasCustomDriverOrder = isArraySetting || isStringSetting;
+
+  if (reactivitySetting && !hasCustomDriverOrder) {
+    throw new Error('Meteor.settings.packages.mongo.reactivity must be a string or an array of observer drivers');
+  }
+
+  let configuredOrder = DEFAULT_REACTIVITY_ORDER;
+  if (hasCustomDriverOrder) {
+    if (isStringSetting) {
+      configuredOrder = [reactivitySetting];
+    } else {
+      configuredOrder = [];
+      for (const name of reactivitySetting) {
+        if (!configuredOrder.includes(name)) {
+          configuredOrder.push(name);
+        }
+      }
+    }
+  }
+
+  const invalidDriverNames = configuredOrder.filter(name => !driverClasses[name]);
+  if (invalidDriverNames.length) {
+    throw new Error(`Invalid Mongo reactivity driver(s): ${invalidDriverNames.join(', ')}`);
+  }
+
+  if (hasCustomDriverOrder && configuredOrder.length === 0) {
+    throw new Error('Meteor.settings.packages.mongo.reactivity must specify at least one observer driver');
+  }
+
+  return configuredOrder;
+};
+
+MongoConnection.prototype._selectReactivityDriver = async function (configuredOrder, driverChecks) {
+  const availabilityErrors = [];
+  let driverClass;
+  let matcher;
+  let sorter;
+
+  for (const driverName of configuredOrder) {
+    const checker = driverChecks[driverName];
+
+    if (!checker) {
+      availabilityErrors.push(`Unknown driver "${driverName}"`);
+      continue;
+    }
+
+    const result = await checker();
+
+    if (result.available) {
+      matcher = result.matcher;
+      sorter = result.sorter;
+      driverClass = driverClasses[driverName];
+      break;
+    }
+
+    if (result.reason) {
+      availabilityErrors.push(`${driverName}: ${result.reason}`);
+    }
+  }
+
+  return {
+    driverClass,
+    matcher,
+    sorter,
+  };
+};
+
+MongoConnection.prototype._observeChanges = async function (
     cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
-    var self = this;
     const collectionName = cursorDescription.collectionName;
 
     if (cursorDescription.options.tailable) {
-      return self._observeChangesTailable(cursorDescription, ordered, callbacks);
+      return this._observeChangesTailable(cursorDescription, ordered, callbacks);
     }
 
     // You may not filter out _id when observing changes, because the id is a core
     // part of the observeChanges API.
     const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
-    if (fieldsOptions &&
-      (fieldsOptions._id === 0 ||
-        fieldsOptions._id === false)) {
+    if (fieldsOptions?._id === 0 ||
+        fieldsOptions?._id === false) {
       throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
@@ -828,15 +913,15 @@ Object.assign(MongoConnection.prototype, {
     // Find a matching ObserveMultiplexer, or create a new one. This next block is
     // guaranteed to not yield (and it doesn't call anything that can observe a
     // new query), so no other calls to this function can interleave with it.
-    if (observeKey in self._observeMultiplexers) {
-      multiplexer = self._observeMultiplexers[observeKey];
+    if (observeKey in this._observeMultiplexers) {
+      multiplexer = this._observeMultiplexers[observeKey];
     } else {
       firstHandle = true;
       // Create a new ObserveMultiplexer.
       multiplexer = new ObserveMultiplexer({
         ordered: ordered,
-        onStop: function () {
-          delete self._observeMultiplexers[observeKey];
+        onStop: () => {
+          delete this._observeMultiplexers[observeKey];
           return observeDriver.stop();
         }
       });
@@ -847,62 +932,23 @@ Object.assign(MongoConnection.prototype, {
       nonMutatingCallbacks,
     );
 
-    const oplogOptions = self?._oplogHandle?._oplogOptions || {};
+    const oplogOptions = (this._oplogHandle && this._oplogHandle._oplogOptions) || {};
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
       var matcher, sorter;
-      const reactivitySetting = Meteor.settings?.packages?.mongo?.reactivity;
-      const isArraySetting = Array.isArray(reactivitySetting);
-      const isStringSetting = typeof reactivitySetting === 'string';
-      const hasCustomDriverOrder = isArraySetting || isStringSetting;
-
-      if (reactivitySetting && !hasCustomDriverOrder) {
-        throw new Error('Meteor.settings.packages.mongo.reactivity must be a string or an array of observer drivers');
-      }
-
-      const driverClasses = {
-        changeStreams: ChangeStreamObserveDriver,
-        oplog: OplogObserveDriver,
-        polling: PollingObserveDriver,
-        pooling: PollingObserveDriver,
-      };
-
-      let configuredOrder;
-      if (hasCustomDriverOrder) {
-        if (isStringSetting) {
-          configuredOrder = [reactivitySetting];
-        } else {
-          configuredOrder = [];
-          for (const name of reactivitySetting) {
-            if (!configuredOrder.includes(name)) {
-              configuredOrder.push(name);
-            }
-          }
-        }
-      } else {
-        configuredOrder = DEFAULT_REACTIVITY_ORDER;
-      }
-
-      const invalidDriverNames = configuredOrder.filter(name => !driverClasses[name]);
-      if (invalidDriverNames.length) {
-        throw new Error(`Invalid Mongo reactivity driver(s): ${invalidDriverNames.join(', ')}`);
-      }
-
-      if (hasCustomDriverOrder && configuredOrder.length === 0) {
-        throw new Error('Meteor.settings.packages.mongo.reactivity must specify at least one observer driver');
-      }
+      const configuredOrder = _getConfiguredReactivityOrder();
 
       const driverChecks = {
         changeStreams: async () => {
           let localMatcher;
           const reasons = [];
 
-          if (self._supportsChangeStreams === undefined) {
+          if (this._supportsChangeStreams === undefined) {
             const serverReasons = [];
 
             try {
               // Change Streams require MongoDB 3.6+ and replica set or sharded cluster
-              const admin = self.db.admin();
+              const admin = this.db.admin();
               const serverInfo = await admin.serverInfo();
               const isMasterPromise = admin.command({ isMaster: 1 });
               const versionString = serverInfo.version || 'unknown';
@@ -930,13 +976,13 @@ Object.assign(MongoConnection.prototype, {
               serverReasons.push(`Error checking Change Stream support: ${error.message}`);
             }
 
-            self._changeStreamServerReasons = serverReasons;
-            self._supportsChangeStreams = serverReasons.length === 0;
+            this._changeStreamServerReasons = serverReasons;
+            this._supportsChangeStreams = serverReasons.length === 0;
           }
 
-          if (!self._supportsChangeStreams) {
-            if (self._changeStreamServerReasons?.length) {
-              reasons.push(...self._changeStreamServerReasons);
+          if (!this._supportsChangeStreams) {
+            if (this._changeStreamServerReasons?.length) {
+              reasons.push(...this._changeStreamServerReasons);
             } else {
               reasons.push('Change Streams not supported by MongoDB deployment');
             }
@@ -980,7 +1026,7 @@ Object.assign(MongoConnection.prototype, {
           let localMatcher;
           let localSorter;
 
-          if (!(self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback)) {
+          if (!(this._oplogHandle && !ordered && !callbacks._testOnlyPollCallback)) {
             reasons.push('Oplog tailing not available for this cursor');
           }
 
@@ -1035,48 +1081,20 @@ Object.assign(MongoConnection.prototype, {
           };
         },
         polling: () => ({ available: true }),
-        pooling: () => ({ available: true }),
       };
 
-      const availabilityErrors = [];
-      var driverClass;
-      var selectedDriverName;
+      const {
+        driverClass,
+        matcher: selectedMatcher,
+        sorter: selectedSorter,
+      } = await this._selectReactivityDriver(configuredOrder, driverChecks);
 
-      for (const driverName of configuredOrder) {
-        const checker =  driverChecks[driverName];
+      matcher = selectedMatcher;
+      sorter = selectedSorter;
 
-        if (!checker) {
-          availabilityErrors.push(`Unknown driver "${driverName}"`);
-          continue;
-        }
-
-        const result = await checker();
-
-        if (result.available) {
-          selectedDriverName = driverName;
-          matcher = result.matcher;
-          sorter = result.sorter;
-          driverClass = driverClasses[driverName];
-          break;
-        }
-
-        if (result.reason) {
-          availabilityErrors.push(`${driverName}: ${result.reason}`);
-        }
-      }
-
-      if (!driverClass) {
-        const errorDetails = availabilityErrors.length
-          ? ` Reasons: ${availabilityErrors.join(' | ')}`
-          : '';
-
-        throw new Error(`Unable to select a Mongo reactivity driver from configuration [${configuredOrder.join(', ')}].${errorDetails}`);
-      }
-
-      // Meteor._debug(`Using ${selectedDriverName || driverClass.name} for observing changes on collection ${collectionName} (configured order: ${configuredOrder.join(', ')})`);
       observeDriver = new driverClass({
         cursorDescription,
-        mongoHandle: self,
+        mongoHandle: this,
         multiplexer,
         ordered,
         matcher,  // ignored by polling
@@ -1091,11 +1109,9 @@ Object.assign(MongoConnection.prototype, {
       // This field is only set for use in tests.
       multiplexer._observeDriver = observeDriver;
     }
-    self._observeMultiplexers[observeKey] = multiplexer;
+    this._observeMultiplexers[observeKey] = multiplexer;
     // Blocks until the initial adds have been sent.
     await multiplexer.addHandleAndSendInitialAdds(observeHandle);
 
     return observeHandle;
-  },
-
-});
+  }

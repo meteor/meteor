@@ -10,8 +10,8 @@ jobs:
       fail-fast: false
       matrix:
         reactivity_order:
-          - 'changeStreams,pooling'
-          - 'oplog,pooling'
+          - 'changeStreams,polling'
+          - 'oplog,polling'
     runs-on: ubuntu-22.04
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}

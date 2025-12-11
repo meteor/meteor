@@ -169,6 +169,33 @@ export function replaceNames(filter, thing) {
   return thing;
 }
 
+
+/**
+ * Compares two MongoDB operation times.
+ * @param {MongoDB.Timestamp|object} opTime1 - The first operation time to compare.
+ * @param {MongoDB.Timestamp|object} opTime2 - The second operation time to compare.
+ * @returns {number} - Returns a number indicating the comparison result:
+ *   - A negative number if opTime1 is less than opTime2.
+ *   - Zero if opTime1 is equal to opTime2.
+ *   - A positive number if opTime1 is greater than opTime2.
+ */
+/**
+ * Compares two MongoDB operation times (opTimes).
+ *
+ * Both parameters accept any value accepted by the `MongoDB.Timestamp` constructor:
+ *   - a `Long` (e.g., `new Timestamp(Long)`),
+ *   - an object of the form `{ t: number, i: number }`,
+ *   - or the legacy two-number form `low, high` (via `Timestamp(low, high)`), which is deprecated;
+ *     prefer `{ t, i }` or a `Long`.
+ *
+ * The function constructs a `MongoDB.Timestamp` from `opTime1` and compares it to `opTime2`
+ * using `Timestamp#compare`.
+ *
+ * @param {MongoDB.Long|{t:number,i:number}|Array<number>|number} opTime1 - Operation time 1; any value accepted by `MongoDB.Timestamp`.
+ *     For the two-number form you may provide an array `[low, high]`, but passing two separate numbers to the constructor is deprecated.
+ * @param {MongoDB.Long|{t:number,i:number}|Array<number>|number} opTime2 - Operation time 2; same accepted forms as `opTime1`.
+ * @returns {number} Comparison result: negative if `opTime1` < `opTime2`, zero if equal, positive if `opTime1` > `opTime2`.
+ */
 export function compareOperationTimes(opTime1, opTime2) {
   return (new MongoDB.Timestamp(opTime1)).compare(opTime2);
 }

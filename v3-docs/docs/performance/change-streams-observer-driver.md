@@ -15,16 +15,16 @@ Before moving production traffic to Change Streams, validate that your MongoDB d
 
 ## Choosing the Reactivity Driver Order
 
-Meteor picks the first available driver from the configured list. The default order is `oplog`, then `changeStreams`, then `pooling` (long polling). You can change this globally:
+Meteor picks the first available driver from the configured list. The default order is `oplog`, then `changeStreams`, then `polling` (long polling). You can change this globally:
 
-- Environment variable: `METEOR_REACTIVITY_ORDER=changeStreams,oplog,pooling`
+- Environment variable: `METEOR_REACTIVITY_ORDER=changeStreams,oplog,polling`
 - Settings file:
 
 ```json
 {
   "packages": {
     "mongo": {
-      "reactivity": ["changeStreams", "oplog", "pooling"]
+      "reactivity": ["changeStreams", "oplog", "polling"]
     }
   }
 }
@@ -33,7 +33,7 @@ Meteor picks the first available driver from the configured list. The default or
 Tips:
 - Put `changeStreams` first when you cannot or do not want to tail the oplog (e.g., Atlas Serverless).
 - Remove `changeStreams` from the list if you want to disable it.
-- Valid entries are `oplog`, `changeStreams`, and `polling`/`pooling` (alias).
+- Valid entries are `oplog`, `changeStreams`, and `polling`/`polling` (alias).
 
 ## Change Stream Driver Settings
 
