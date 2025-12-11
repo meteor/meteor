@@ -1,8 +1,9 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("typescript template works", function () {
-  const s = new Sandbox;
+selftest.define("typescript template works", async function () {
+  const s = new Sandbox; 
+  await s.init();
 
   let run = s.run("create", "--typescript", "typescript");
 
