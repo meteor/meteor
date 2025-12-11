@@ -1,5 +1,6 @@
 import crypto from 'crypto';
-import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor'
+import { check, Match } from 'meteor/check';
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
@@ -7,13 +8,6 @@ import {
 import { URL } from 'meteor/url';
 
 const hasOwn = Object.prototype.hasOwnProperty;
-
-// XXX maybe this belongs in the check package
-const NonEmptyString = Match.Where(x => {
-  check(x, String);
-  return x.length > 0;
-});
-
 
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
@@ -83,6 +77,11 @@ export class AccountsServer extends AccountsCommon {
     this._deleteSavedTokensForAllUsersOnStartup();
 
     this._skipCaseInsensitiveChecksForTest = {};
+
+    // Helper function to resolve promises if needed
+    this._resolvePromise = async (value) => {
+      return Meteor._isPromise(value) ? await value : value;
+    };
 
     this.urls = {
       resetPassword: (token, extraParams) => this.buildEmailUrl(`#/reset-password/${token}`, extraParams),
@@ -333,6 +332,32 @@ export class AccountsServer extends AccountsCommon {
     return user;
   }
 
+  /**
+   * @summary Find a user by one of their email addresses.
+   * @locus Server
+   * @param {String} email The email address to look for
+   * @param {Object} [options]
+   * @param {Object} options.fields Limit the fields to return from the user document
+   * @returns {Promise<Object>} A user if found, else null
+   * @memberof Accounts
+   * @importFromPackage accounts-base
+   */
+  findUserByEmail = async (email, options) =>
+    await this._findUserByQuery({ email }, options);
+
+  /**
+   * @summary Find a user by their username.
+   * @locus Server
+   * @param {String} username The username to look for
+   * @param {Object} [options]
+   * @param {Object} options.fields Limit the fields to return from the user document
+   * @returns {Promise<Object>} A user if found, else null
+   * @memberof Accounts
+   * @importFromPackage accounts-base
+   */
+  findUserByUsername = async (username, options) =>
+    await this._findUserByQuery({ username }, options);
+
   ///
   /// LOGIN METHODS
   ///
@@ -506,7 +531,7 @@ export class AccountsServer extends AccountsCommon {
     type,
     fn
   ) {
-    return await this._attemptLogin(
+    return this._attemptLogin(
       methodInvocation,
       methodName,
       methodArgs,
@@ -637,7 +662,6 @@ export class AccountsServer extends AccountsCommon {
     // this variable is available in their scope.
     const accounts = this;
 
-
     // This object will be populated with methods and then passed to
     // accounts._server.methods further below.
     const methods = {};
@@ -654,7 +678,7 @@ export class AccountsServer extends AccountsCommon {
       const result = await accounts._runLoginHandlers(this, options);
       //console.log({result});
 
-      return await accounts._attemptLogin(this, "login", arguments, result);
+      return accounts._attemptLogin(this, "login", arguments, result);
     };
 
     methods.logout = async function () {
@@ -664,6 +688,17 @@ export class AccountsServer extends AccountsCommon {
        await accounts.destroyToken(this.userId, token);
       }
       await accounts._successfulLogout(this.connection, this.userId);
+      await this.setUserId(null);
+    };
+
+    // Logs out the current user and closes all the connections
+    // associated with the user.
+    //
+    methods.logoutAllClients = async function() {
+      const logoutUserId = this.userId;
+      accounts._setLoginToken(logoutUserId, this.connection, null);
+      accounts._clearAllLoginTokens(logoutUserId);
+      await accounts._successfulLogout(this.connection, logoutUserId);
       await this.setUserId(null);
     };
 
@@ -696,7 +731,7 @@ export class AccountsServer extends AccountsCommon {
       const newStampedToken = accounts._generateStampedLoginToken();
       newStampedToken.when = currentStampedToken.when;
       await accounts._insertLoginToken(this.userId, newStampedToken);
-      return await accounts._loginUser(this, this.userId, newStampedToken);
+      return accounts._loginUser(this, this.userId, newStampedToken);
     };
 
     // Removes all tokens except the token associated with the current
@@ -930,8 +965,8 @@ export class AccountsServer extends AccountsCommon {
   _clearAllLoginTokens(userId) {
     this.users.updateAsync(userId, {
       $set: {
-        'services.resume.loginTokens': []
-      }
+        'services.resume.loginTokens': [],
+      },
     });
   };
 
@@ -1534,9 +1569,9 @@ export class AccountsServer extends AccountsCommon {
 
   _userQueryValidator = Match.Where(user => {
     check(user, {
-      id: Match.Optional(NonEmptyString),
-      username: Match.Optional(NonEmptyString),
-      email: Match.Optional(NonEmptyString)
+      id: Match.Optional(Match.NonEmptyString),
+      username: Match.Optional(Match.NonEmptyString),
+      email: Match.Optional(Match.NonEmptyString)
     });
     if (Object.keys(user).length !== 1)
       throw new Match.Error("User property must have exactly one field");

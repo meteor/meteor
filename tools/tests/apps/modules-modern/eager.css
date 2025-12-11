@@ -1,0 +1,7 @@
+.app-eager-css {
+  display: none;
+}
+
+.app-lazy-css {
+  padding: 0;
+}

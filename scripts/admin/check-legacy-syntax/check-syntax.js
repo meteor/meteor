@@ -42,6 +42,7 @@ const packages = {
   autopublish: {},
   "babel-compiler": {
     serverFiles: ["babel.js", "babel-compiler.js"],
+    ignoredFiles: ["babel-compiler.js"],
   },
   "babel-runtime": {},
   "browser-policy": {},

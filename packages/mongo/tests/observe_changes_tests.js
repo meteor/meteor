@@ -519,8 +519,8 @@ if (Meteor.isServer) {
       const [resolver1, promise1] = getPromiseAndResolver();
       const [resolver2, promise2] = getPromiseAndResolver();
 
-      await self.insert({x: 2, y: 3});
       self.expects.push(resolver1, resolver2);
+      await self.insert({x: 2, y: 3});
       await self.insert({x: 3, y: 7});  // filtered out by the query
       await self.insert({x: 4});
       // Expect two added calls to happen.
@@ -545,6 +545,7 @@ if (Meteor.isServer) {
 }
 
 
+// Those errors should throw since mongo doent support {$in: null}
 testAsyncMulti("observeChanges - bad query", [
   async function (test, expect) {
     var c = makeCollection();
@@ -563,15 +564,9 @@ testAsyncMulti("observeChanges - bad query", [
       return;
     }
 
-    const p1 = new Promise(r => {
-      observeThrows().finally(() => r());
-    });
-    const p2 = new Promise(r => {
-      observeThrows().finally(() => r());
-    });
-
-    await p1;
-    await p2;
+    await test.throwsAsync(async function () {
+        await c.find({__id: {$in: null}}).countAsync();
+    }, '$in needs an array');
   }
 ]);
 

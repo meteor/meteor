@@ -93,7 +93,13 @@ function isModern(browser) {
   const entry = hasOwn.call(minimumVersions, lowerCaseName)
     ? minimumVersions[lowerCaseName]
     : undefined;
-  if (!entry) {
+    if (
+      !entry ||
+      // When all version numbers are 0, this typically comes from in-app WebView UAs (e.g., iOS WKWebView).
+      // We can let users decide whether to treat it as a modern browser
+      // via the packageSettings.unknownBrowsersAssumedModern option.
+      (browser.major === 0 && browser.minor === 0 && browser.patch === 0)
+    ) {
     const packageSettings = Meteor.settings.packages
       ? Meteor.settings.packages['modern-browsers']
       : undefined;

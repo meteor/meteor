@@ -2776,6 +2776,53 @@ const setsEqual = function (a, b) {
     });
   });
 
+  // Test operation result fields with allow/deny rules (similar to issue #12159)
+  if (Meteor.isServer) {
+    testAsyncMulti('mongo-livedata - operation result fields with allow/deny, ' + idGeneration, [
+      async function(test, expect) {
+        var collectionName = 'test_operation_results_' + Random.id();
+        var coll = new Mongo.Collection(collectionName, { idGeneration: idGeneration });
+        
+        // Set up allow rules for all operations
+        coll.allow({
+          insert: function() { return true; },
+          update: function() { return true; },
+          remove: function() { return true; }
+        });
+        
+        // Test insert
+        var insertedId = await coll.insertAsync({name: 'doc1'});
+        test.isTrue(insertedId !== undefined, 'insert should return an ID');
+        
+        // Test update
+        var updateResult = await coll.updateAsync({name: 'doc1'}, {$set: {value: 1}});
+        test.equal(updateResult, 1, 'update should return affected count');
+        
+        // Test upsert (update case)
+        var upsertUpdateResult = await coll.upsertAsync({name: 'doc1'}, {$set: {value: 2}});
+        test.equal(upsertUpdateResult.numberAffected, 1);
+        test.isFalse(upsertUpdateResult.hasOwnProperty('insertedId'));
+        
+        // Test upsert (insert case)
+        var upsertInsertResult = await coll.upsertAsync({name: 'doc2'}, {$set: {value: 3}});
+        test.equal(upsertInsertResult.numberAffected, 1);
+        test.isTrue(upsertInsertResult.hasOwnProperty('insertedId'));
+        
+        // Test remove
+        var removeResult = await coll.removeAsync({name: 'doc1'});
+        test.equal(removeResult, 1, 'remove should return removed count');
+        
+        // Test insert with explicit ID
+        var explicitId = idGeneration === 'MONGO' ? new Mongo.ObjectID() : 'explicit-test-id';
+        var insertExplicitResult = await coll.insertAsync({_id: explicitId, name: 'explicit-doc'});
+        test.equal(insertExplicitResult, explicitId, 'insert with explicit ID should return that ID');
+        
+        // Clean up
+        await coll.dropCollectionAsync();
+      }
+    ]);
+  }
+
 });  // end idGeneration parametrization
 
 Tinytest.add('mongo-livedata - rewrite selector', function(test) {
@@ -4298,9 +4345,10 @@ Tinytest.addAsync(
     await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
     await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
 
+    if(Meteor.isClient) Meteor._sleepForMs(100); // wait for async operations to complete 
     items = await Collection.find().fetchAsync();
     itemIds = items.map(_item => _item.num);
-
+    
     test.equal(itemIds, [1, 2]);
 
     await Collection.removeAsync({ _id: 'a' });
@@ -4488,6 +4536,49 @@ testAsyncMulti(
 );
 
 
+Meteor.isServer && testAsyncMulti(
+  "mongo-livedata - observeChangesAsync callback errors should not crash the process",
+  [
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_async_error_async_method${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+
+      let insertId;
+      await Collection.find({}).observeChangesAsync({
+        async added(_id, fields) {
+          insertId = _id;
+          throw new Error('Test error in async added observeChangesAsync');
+        },
+      });
+
+      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id, bad) => {
+        test.equal(insertId, id);
+      })
+    },
+
+    async (test) => {
+      const Collection = new Mongo.Collection(
+        `observe_changes_async_error_sync_method${test.runId()}`,
+        { resolverType: 'stub' }
+      );
+
+      let insertId;
+      await Collection.find({}).observeChangesAsync({
+        added(id) {
+          insertId = _id;
+          throw new Error('Test error in sync added observeChangesAsync');
+        },
+      });
+
+      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id, bad) => {
+        test.equal(insertId, id);
+      })
+    }
+  ]
+);
+
 Meteor.methods({
   [`methodThrowException`]: async () => {
     if (Meteor.isClient) {
@@ -4515,3 +4606,60 @@ Tinytest.addAsync(
     }
   },
 );
+
+const geoPolygonSchema = {
+  type: 'Polygon',
+  coordinates: Match.Where(coords =>
+    Array.isArray(coords) &&
+    coords.length > 0 &&
+    coords.every(
+      ring => Array.isArray(ring) && ring.every(
+        point => Array.isArray(point) && point.length === 2 &&
+          typeof point[0] === 'number' && typeof point[1] === 'number'
+      )
+    )
+  )
+};
+
+Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct docs', async function(test, onComplete) {
+  if (Meteor.isServer) {
+    const Features = new Mongo.Collection('Features_' + Random.id());
+    const insidePoly = {
+      _id: 'inside',
+      hull: {
+        type: 'Polygon',
+        coordinates: [
+          [ [0.2,0.2], [0.2,0.8], [0.8,0.8], [0.8,0.2], [0.2,0.2] ]
+        ]
+      }
+    };
+    const outsidePoly = {
+      _id: 'outside',
+      hull: {
+        type: 'Polygon',
+        coordinates: [
+          [ [2,2], [2,3], [3,3], [3,2], [2,2] ]
+        ]
+      }
+    };
+    await Features.insertAsync(insidePoly);
+    await Features.insertAsync(outsidePoly);
+
+    const viewport = {
+      bounds: {
+        type: 'Polygon',
+        coordinates: [
+          [ [0,0], [0,1], [1,1], [1,0], [0,0] ]
+        ]
+      }
+    };
+    const cursor = Features.find({ hull: { $geoIntersects: { $geometry: viewport.bounds } } });
+    const docs = await cursor.fetchAsync();
+    test.equal(docs.length, 1);
+    test.equal(docs[0]._id, 'inside');
+    onComplete();
+  }
+  if (Meteor.isClient) {
+    onComplete();
+  }
+});
