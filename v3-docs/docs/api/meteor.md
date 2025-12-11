@@ -30,7 +30,7 @@ Meteor.startup(async () => {
   if ((await LinksCollection.find().countAsync()) === 0) {
     await LinksCollection.insertAsync({
       title: "Do the Tutorial",
-      url: "https://www.meteor.com/tutorials/react/creating-an-app",
+      url: "https://docs.meteor.com/tutorials/react",
     });
   }
 });
@@ -148,10 +148,7 @@ import { Meteor } from "meteor/meteor";
 
 function Component() {
   const addLink = () =>
-    Meteor.callAsync(
-      "addLink",
-      "https://www.meteor.com/tutorials/react/creating-an-app"
-    );
+    Meteor.callAsync("addLink", "https://docs.meteor.com/tutorials/react/");
 
   return (
     <div>
@@ -398,7 +395,6 @@ even if the method's writes are not available yet, you can specify an
 Use `Meteor.call` only to call methods that do not have a stub, or have a sync stub. If you want to call methods with an async stub, `Meteor.callAsync` can be used with any method.
 :::
 
-
 <ApiBox name="Meteor.callAsync" />
 
 `Meteor.callAsync` is just like `Meteor.call`, except that it'll return a promise that you need to solve to get the server result. Along with the promise returned by `callAsync`, you can also handle `stubPromise` and `serverPromise` for managing client-side simulation and server response.
@@ -409,63 +405,62 @@ The following sections guide you in understanding these promises and how to mana
 
 ```javascript
 try {
-	await Meteor.callAsync('greetUser', 'John');
-	// 🟢 Server ended with success
-} catch(e) {
-	console.error("Error:", error.reason); // 🔴 Server ended with error
+  await Meteor.callAsync("greetUser", "John");
+  // 🟢 Server ended with success
+} catch (e) {
+  console.error("Error:", error.reason); // 🔴 Server ended with error
 }
 
-Greetings.findOne({ name: 'John' }); // 🗑️ Data is NOT available
+Greetings.findOne({ name: "John" }); // 🗑️ Data is NOT available
 ```
 
 #### stubPromise
 
 ```javascript
-await Meteor.callAsync('greetUser', 'John').stubPromise;
+await Meteor.callAsync("greetUser", "John").stubPromise;
 
 // 🔵 Client simulation
-Greetings.findOne({ name: 'John' }); // 🧾 Data is available (Optimistic-UI)
+Greetings.findOne({ name: "John" }); // 🧾 Data is available (Optimistic-UI)
 ```
 
 #### stubPromise and serverPromise
 
 ```javascript
-const { stubPromise, serverPromise } = Meteor.callAsync('greetUser', 'John');
+const { stubPromise, serverPromise } = Meteor.callAsync("greetUser", "John");
 
 await stubPromise;
 
 // 🔵 Client simulation
-Greetings.findOne({ name: 'John' }); // 🧾 Data is available (Optimistic-UI)
+Greetings.findOne({ name: "John" }); // 🧾 Data is available (Optimistic-UI)
 
 try {
   await serverPromise;
   // 🟢 Server ended with success
-} catch(e) {
+} catch (e) {
   console.error("Error:", error.reason); // 🔴 Server ended with error
 }
 
-Greetings.findOne({ name: 'John' }); // 🗑️ Data is NOT available
+Greetings.findOne({ name: "John" }); // 🗑️ Data is NOT available
 ```
 
 #### Meteor 2.x contrast
 
 For those familiar with legacy Meteor 2.x, the handling of client simulation and server response was managed using fibers, as explained in the following section. This comparison illustrates how async inclusion with standard promises has transformed the way Meteor operates in modern versions.
 
-``` javascript
-Meteor.call('greetUser', 'John', function(error, result) {
+```javascript
+Meteor.call("greetUser", "John", function (error, result) {
   if (error) {
     console.error("Error:", error.reason); // 🔴 Server ended with error
   } else {
     console.log("Result:", result); // 🟢 Server ended with success
   }
 
-  Greetings.findOne({ name: 'John' }); // 🗑️ Data is NOT available
+  Greetings.findOne({ name: "John" }); // 🗑️ Data is NOT available
 });
 
 // 🔵 Client simulation
-Greetings.findOne({ name: 'John' }); // 🧾 Data is available (Optimistic-UI)
+Greetings.findOne({ name: "John" }); // 🧾 Data is available (Optimistic-UI)
 ```
-
 
 <ApiBox name="Meteor.apply" />
 
@@ -503,8 +498,6 @@ different collections. We hope to lift this restriction in a future release.
 :::
 
 </ApiBox>
-
-
 
 ```js
 import { Meteor } from "meteor/meteor";

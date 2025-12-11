@@ -1,4 +1,4 @@
-name: Meteor Selftest Windows
+name: Windows Selftest
 
 on:
   pull_request:
@@ -6,10 +6,19 @@ on:
       - opened
       - reopened
       - synchronize
+    paths:
+      - 'meteor'
+      - 'meteor.bat'
+      - 'tools/**'
+      - 'packages/babel-compiler/**'
+      - 'packages/dynamic-import/**'
+      - 'packages/meteor/**'
+      - 'packages/meteor-tool/**'
+      - '.github/workflows/windows-selftest.yml'
+
   push:
     branches:
       - devel
-      - 2.x.x
 
 env:
   METEOR_PRETTY_OUTPUT: 0
@@ -28,10 +37,6 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - name: cleanup
-        shell: powershell
-        run: Remove-Item -Recurse -Force ${{ github.workspace }}\*
-
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -40,23 +45,37 @@ jobs:
         with:
           node-version: 22.x
 
+      - name: Cache dependencies
+        id: meteor-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            dev_bundle/
+            .babel-cache/
+            .meteor/
+            ~/.npm
+            node_modules/
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-${{ hashFiles('**/package-lock.json', 'meteor', 'meteor.bat') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-
+
       - name: Install dependencies
         shell: pwsh
         run: |
           $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
           .\scripts\windows\ci\install.ps1
 
+      # Run ONLY when the cache was NOT restored
+      - name: Prepare Meteor (cache miss)
+        if: steps.meteor-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
+          .\meteor.bat --get-ready
+
       - name: Run tests
         shell: pwsh
         run: |
           $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
           .\scripts\windows\ci\test.ps1
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            .\dev_bundle
-            .\.babel-cache
-            .\.meteor
-          key: ${{ runner.os }}-meteor-${{ hashFiles('**/package-lock.json') }}

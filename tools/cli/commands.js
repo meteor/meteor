@@ -451,7 +451,8 @@ var runCommandOptions = {
     ...inspectOptions,
     'no-release-check': { type: Boolean },
     production: { type: Boolean },
-    'raw-logs': { type: Boolean },
+    'raw-logs': { type: Boolean, default: true },
+    timestamps: { type: Boolean, default: false }, // opposite of --raw-logs
     settings: { type: String, short: "s" },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
@@ -535,10 +536,7 @@ async function doRunCommand(options) {
     );
   }
 
-  if (options['raw-logs']) {
-    runLog.setRawLogs(true);
-  }
-
+  runLog.setRawLogs(options['raw-logs'] && !options.timestamps);
 
   let webArchs = projectContext.platformList.getWebArchs();
   if (! _.isEmpty(runTargets) ||
@@ -1127,7 +1125,7 @@ main.registerCommand({
       "If you are new to Meteor, try some of the learning resources here:"
     );
     Console.info(
-      Console.url("https://www.meteor.com/tutorials"),
+      Console.url("https://docs.meteor.com/"),
       Console.options({ indent: 2 })
     );
 
@@ -1136,7 +1134,7 @@ main.registerCommand({
       "When you’re ready to deploy and host your new Meteor application, check out Cloud:"
     );
     Console.info(
-      Console.url("https://www.meteor.com/cloud"),
+      Console.url("https://galaxycloud.app/"),
       Console.options({ indent: 2 })
     );
 
@@ -2125,7 +2123,8 @@ testCommandOptions = {
     // like progress bars and spinners are unimportant.
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
-    'raw-logs': { type: Boolean },
+    'raw-logs': { type: Boolean, default: true },
+    timestamps: { type: Boolean, default: false }, // opposite of --raw-logs
 
     // Undocumented. See #Once
     once: { type: Boolean },
@@ -2176,7 +2175,7 @@ testCommandOptions = {
     'extra-packages': { type: String },
 
     'exclude-archs': { type: String },
-    
+
     // Same as TINYTEST_FILTER
     filter: { type: String, short: 'f' },
   }
@@ -2260,9 +2259,8 @@ async function doTestCommand(options) {
     serverArchitectures.push(DEPLOY_ARCH);
   }
 
-  if (options['raw-logs']) {
-    runLog.setRawLogs(true);
-  }
+  runLog.setRawLogs(options['raw-logs'] && !options.timestamps);
+
 
   var includePackages = [];
   if (options['extra-packages']) {
