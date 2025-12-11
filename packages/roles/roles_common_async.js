@@ -1040,7 +1040,7 @@ Object.assign(Roles, {
   },
 
   /**
-   * @summary Retrieve all users who are in target role.
+   * @summary Retrieve a cursor of all users who are in the target role.
    * @memberof Roles
    * @locus Anywhere
    * @param {Array|String} roles Name of role or an array of roles.
@@ -1052,8 +1052,13 @@ Object.assign(Roles, {
    * @return {Promise<Cursor>} Cursor of users in roles.
    */
   getUsersInRoleAsync: async function (roles, options, queryOptions) {
+    options = Roles._normalizeOptions(options)
+    
+    const assignmentOptions = { ...options }
+   assignmentOptions.queryOptions = undefined 
+
     const ids = (
-      await Roles.getUserAssignmentsForRole(roles, options).fetchAsync()
+      await Roles.getUserAssignmentsForRole(roles, assignmentOptions).fetchAsync()
     ).map((a) => a.user._id)
 
     return Meteor.users.find(

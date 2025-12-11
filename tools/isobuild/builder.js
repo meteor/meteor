@@ -1,7 +1,7 @@
 import assert from "assert";
 import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
 import files, {
-  symlinkWithOverwrite, realpath,
+  symlinkWithOverwrite, realpath, rm_recursive_deferred,
 } from '../fs/files';
 import NpmDiscards from './npm-discards';
 import {Profile} from '../tool-env/profile';
@@ -126,7 +126,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   async init() {
     // Build the output from scratch
     if (this.resetBuildPath) {
-      await files.rm_recursive(this.buildPath);
+      await files.rm_recursive_deferred(this.buildPath);
+      // Create the new build directory immediately without waiting for deletion
       await files.mkdir_p(this.buildPath, 0o755);
     }
     this.watchSet = new WatchSet();
@@ -881,7 +882,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           removed[path] = true;
         } else {
           // directory
-          await files.rm_recursive(absPath);
+          await files.rm_recursive_deferred(absPath);
 
           // mark all sub-paths as removed, too
           paths.forEach((anotherPath) => {
@@ -904,7 +905,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
   // Delete the partially-completed bundle. Do not disturb outputPath.
   abort() {
-    return files.rm_recursive(this.buildPath);
+    return files.rm_recursive_deferred(this.buildPath);
   }
 
   // Returns a WatchSet representing all files that were read from disk by the
@@ -936,7 +937,7 @@ async function atomicallyRewriteFile(path, data, options) {
       // replacing a directory with a file; this is rare (so it can
       // be a slow path) but can legitimately happen if e.g. a developer
       // puts a file where there used to be a directory in their app.
-      await files.rm_recursive(path);
+      await files.rm_recursive_deferred(path);
       files.rename(rpath, path);
     } else {
       throw e;

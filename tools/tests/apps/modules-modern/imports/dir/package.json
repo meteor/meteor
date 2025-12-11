@@ -1,0 +1,5 @@
+{
+  "name": "package-json-with-no-main",
+  "version": "1.2.3",
+  "description": "https://github.com/meteor/meteor/issues/6589"
+}
