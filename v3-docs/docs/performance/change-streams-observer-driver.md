@@ -55,10 +55,5 @@ Optional tuning is available via `Meteor.settings`:
 - `delay.error`: Milliseconds to wait before restarting the stream after an error (default: `100`).
 - `delay.close`: Milliseconds to wait before restarting after an unexpected close (default: `100`).
 - `waitUntilCaughtUpTimeoutMs`: Upper bound for waiting until the stream catches up to the server's current operation time when coordinating with DDP fences (default: `1000`).
+  - If this timeout elapses, the driver stops waiting and lets the fence continue; the change stream will catch up later, so data is not lost, but clients can temporarily miss read-your-writes (a publication may become ready before the client's own writes appear).
 
-## Performance Notes
-
-- The driver requests `fullDocument: 'updateLookup'`, so updates trigger an extra read; keep indexes healthy to avoid slow lookups.
-- Enabling MongoDB `changeStreamPreAndPostImages` on a collection lets the driver diff updates more efficiently; without it, some updates may send the full document.
-- The Change Stream pipeline currently filters only by operation type; the app-side matcher applies your selector. Very high-write collections with broad selectors may produce more events than oplog tailing.
-- Change Streams are a strong option when oplog tailing is not possible, providing realtime updates without falling back to long polling.

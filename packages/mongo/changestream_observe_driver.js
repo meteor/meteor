@@ -138,25 +138,6 @@ export class ChangeStreamObserveDriver {
     
     try {
 
-    // const collectionName = this._cursorDescription.collectionName;
-
-    // const collections = await this._mongoHandle.db.listCollections({ name: collectionName }).toArray();
-    // const exists = collections.length > 0;
-    // const preAndPostImagesEnabled = exists &&
-    //   collections[0]?.options?.changeStreamPreAndPostImages?.enabled === true;
-
-    // if (!exists) {
-    //   await this._mongoHandle.db.createCollection(collectionName);
-    // }
-
-    // if (!preAndPostImagesEnabled) {
-    //   await this._mongoHandle.db.command({
-    //     collMod: collectionName,
-    //     changeStreamPreAndPostImages: { enabled: true }
-    //   });
-    // }
-
-
       const collection = this._mongoHandle.rawCollection(this._cursorDescription.collectionName);
 
       // First, get all existing documents that match our selector
