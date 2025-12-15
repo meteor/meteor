@@ -153,7 +153,7 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
+Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid|--babel|--coffeescript|--angular] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
        meteor create [--release <release>] --from <git_url> [<path>]
        meteor create --list
@@ -195,7 +195,10 @@ Options:
   --blaze       Create a basic blaze-based app.
   --tailwind    Create a basic react-based app, with tailwind configured.
   --chakra-ui   Create a basic react-based app, with chakra-ui configured.
+  --coffeescript Create a basic coffescript app, with react.
+  --babel       Create a React app with Babel support.
   --solid       Create a basic solid-based app.
+  --angular       Create a basic Angular app.
   --prototype Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
 
 

@@ -2,6 +2,10 @@ var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile) {
   require('../tool-env/profile-require.js').start();
 }
+const { initMeteorConfig } = require('../tool-env/meteor-config');
+
+// Initialize meteorConfig globally
+initMeteorConfig();
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -287,15 +291,11 @@ main.captureAndExit = async function (header, title, f) {
 
 // NB: files required up to this point may not define commands
 
-const { initMeteorConfig } = require('../tool-env/meteor-config');
 require('./commands.js');
 require('./commands-packages.js');
 require('./commands-packages-query.js');
 require('./commands-cordova.js');
 require('./commands-aliases.js');
-
-// Initialize meteorConfig globally
-initMeteorConfig();
 
 ///////////////////////////////////////////////////////////////////////////////
 // Record all the top-level commands as JSON

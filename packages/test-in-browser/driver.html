@@ -44,12 +44,15 @@
     <ul class="navbar-nav mr-auto">
       {{#each groupPaths}}
         <li class="nav-item"><span class="nav-link">&nbsp;-&nbsp;</span></li>
-        <li class="nav-item"><a class="nav-link" href="#">{{name}}</a></li>
+        <li class="nav-item"><a class="nav-link group" href="#">{{name}}</a></li>
       {{/each}}
     </ul>
 
     <form class="navbar-form pull-right">
       <span id="current-client-test"></span>
+      {{#if isFiltered}}
+        <button class="btn btn-secondary run-all">Run All Tests</button>
+      {{/if}}
       <button class="btn btn-primary rerun">
         {{#if rerunScheduled}}
         Rerun scheduled...

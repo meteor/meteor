@@ -21,6 +21,8 @@ var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 import { Unibuild } from "./unibuild.js";
+import rspackHelpers from "../tool-env/rspack";
+import { getCurrentNodeBinDir, getDevBundle } from "../fs/files";
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./)) {
@@ -56,6 +58,7 @@ var Isopack = function () {
   self.debugOnly = false;
   self.prodOnly = false;
   self.testOnly = false;
+  self.devOnly = false;
 
   // Unibuilds, an array of class Unibuild.
   self.unibuilds = [];
@@ -267,6 +270,7 @@ Object.assign(Isopack.prototype, {
     self.debugOnly = options.debugOnly;
     self.prodOnly = options.prodOnly;
     self.testOnly = options.testOnly;
+    self.devOnly = options.devOnly;
     self.pluginCacheDir = options.pluginCacheDir || null;
     self.isobuildFeatures = options.isobuildFeatures;
   },
@@ -518,6 +522,13 @@ Object.assign(Isopack.prototype, {
 
       // Share the meteorConfig object as part of plugin API
       getMeteorConfig: getMeteorConfig,
+
+      // Share functions to get the dev bundle context
+      getDevBundle,
+      getCurrentNodeBinDir,
+
+      // Share the rspackHelpers as part of plugin API
+      rspackHelpers,
 
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
@@ -909,6 +920,7 @@ Object.assign(Isopack.prototype, {
       self.debugOnly = !!mainJson.debugOnly;
       self.prodOnly = !!mainJson.prodOnly;
       self.testOnly = !!mainJson.testOnly;
+      self.devOnly = !!mainJson.devOnly;
     }
     for (const pluginMeta of mainJson.plugins) {
       rejectBadPath(pluginMeta.path);
@@ -1059,6 +1071,9 @@ Object.assign(Isopack.prototype, {
       }
       if (self.testOnly) {
         mainJson.testOnly = true;
+      }
+      if (self.devOnly) {
+        mainJson.devOnly = true;
       }
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
