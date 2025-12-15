@@ -47,7 +47,7 @@ jobs:
 
       - name: Cache dependencies
         id: meteor-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             dev_bundle/
