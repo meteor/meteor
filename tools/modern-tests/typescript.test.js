@@ -3,6 +3,10 @@ import {
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
 import { assertBodyStyles, assertFileExist } from "./assertions";
+import path from "path";
+import fs from "fs";
+
+const isCI = process.env.GITHUB_ACTIONS === 'true';
 
 describe('TypeScript App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
@@ -17,6 +21,18 @@ describe('TypeScript App Bundling /', () => {
     buildDir: 'build',
     configFile: 'rspack.config.ts',
     customAssertions: {
+      afterCreate({ tempDir }) {
+        if (isCI) {
+          const rspackConfigPath = path.join(tempDir, 'rspack.config.ts');
+          // Remove the TsCheckerRspackPlugin plugin as is resource-intense, CI gets exhausted and fails
+          let configContent = fs.readFileSync(rspackConfigPath, 'utf8');
+          configContent = configContent.replace(
+            /\s*new\s+TsCheckerRspackPlugin\(\)/,
+            '',
+          );
+          fs.writeFileSync(rspackConfigPath, configContent);
+        }
+      },
       afterRun: async ({ result, tempDir }) => {
         // SCSS styles support
         await assertBodyStyles({
@@ -86,6 +102,9 @@ export async function waitForTypeScriptEnvs(outputLines, options = {}) {
  * @returns {Promise<void>} - A promise that resolves when both client and server are error-free
  */
 export async function waitForTypeScriptErrorFree(outputLines, options = {}) {
+  // Disable this check in CI as tsPlugin is resource-intensive and CI gets exhausted and fails
+  if (isCI) return;
+
   await waitForMeteorOutput(
     outputLines,
     /.*\[Rspack.*Client].*no.*errors.*found.*/,

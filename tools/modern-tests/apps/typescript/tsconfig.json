@@ -8,6 +8,8 @@
     "checkJs": false,
     "jsx": "preserve",
     "incremental": true,
+    "composite": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
     "noEmit": true,
 
     /* Strict Type-Checking Options */

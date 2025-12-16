@@ -30,6 +30,10 @@ import path from "path";
 import execa from "execa";
 import waitOn from "wait-on";
 
+const isCI = process.env.GITHUB_ACTIONS === "true";
+
+const WAIT_ON = isCI ? 2000 : 500;
+
 /**
  * Helper function to set up and run tests for the Meteor Bundler
  * @param {Object} options - Options for the test
@@ -68,6 +72,11 @@ export function testMeteorBundler(options) {
       if (afterAllBehavior) {
         await afterAllBehavior({ tempDir, port });
       }
+    });
+
+    beforeEach(async () => {
+      // Ensure any process on the port is killed
+      await killProcessByPort([port, '8080']);
     });
 
     test(`"meteor run" / should start the app`, async () => {
@@ -173,11 +182,18 @@ export function testMeteorRspackBundler(options) {
       }
 
       // Ensure any process on the port is killed
-      await killProcessByPort(port);
-      await killProcessByPort('8080');
+      await killProcessByPort([port, '8080']);
 
       // Setup the Meteor app
       tempDir = (await setupMeteorApp(appName, { isMonorepo }))?.tempDir;
+
+      // Wait for a margin
+      await wait(WAIT_ON);
+
+      // Run custom assertions if provided
+      if (customAssertions.afterCreate) {
+        await customAssertions.afterCreate({ tempDir });
+      }
 
       // Add Rspack package
       appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
@@ -197,7 +213,7 @@ export function testMeteorRspackBundler(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(1000);
+      await wait(WAIT_ON);
 
       // Assert that the config files exists
       await assertFileExist(appDir, '.gitignore', { content: buildDir });
@@ -212,8 +228,7 @@ export function testMeteorRspackBundler(options) {
       await killMeteorProcess(meteorProcess);
 
       // Ensure any process on the port is killed
-      await killProcessByPort(port);
-      await killProcessByPort('8080');
+      await killProcessByPort([port, '8080']);
     });
 
     afterAll(async () => {
@@ -226,6 +241,11 @@ export function testMeteorRspackBundler(options) {
       }
     });
 
+    beforeEach(async () => {
+      // Ensure any process on the port is killed
+      await killProcessByPort([port, '8080']);
+    });
+
     test(`"meteor run" / should run and rebuild the app with Rspack`, async () => {
       // Run the Meteor app and wait for "restarted at" output
       const result = await runMeteorApp(tempDir, port, {
@@ -235,7 +255,7 @@ export function testMeteorRspackBundler(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Assert that the app files exists
       await assertFileExist(appDir, `${buildDir}/main-dev/client-entry.js`);
@@ -305,14 +325,13 @@ export function testMeteorRspackBundler(options) {
       }
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Kill the meteor process
       await killMeteorProcess(meteorProcess);
 
       // Ensure any process on the port is killed
-      await killProcessByPort(port);
-      await killProcessByPort('8080');
+      await killProcessByPort([port, '8080']);
     });
 
     test(`"meteor run --production" / should run and rebuild the app with Rspack in production`, async () => {
@@ -325,7 +344,7 @@ export function testMeteorRspackBundler(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Assert that the app files exists
       await assertFileExist(appDir, `${buildDir}/main-prod/client-entry.js`);
@@ -398,14 +417,13 @@ export function testMeteorRspackBundler(options) {
       }
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Kill the meteor process
       await killMeteorProcess(meteorProcess);
 
       // Ensure any process on the port is killed
-      await killProcessByPort(port);
-      await killProcessByPort('8080');
+      await killProcessByPort([port, '8080']);
     });
 
     // Conditional test for bundle-visualizer in production mode
@@ -420,7 +438,7 @@ export function testMeteorRspackBundler(options) {
         meteorProcess = result.meteorProcess;
 
         // Wait for a margin
-        await wait(500);
+        await wait(WAIT_ON);
 
         // Assert that the app files exists
         await assertFileExist(appDir, `${buildDir}/main-prod/client-entry.js`);
@@ -456,16 +474,13 @@ export function testMeteorRspackBundler(options) {
         }
 
         // Wait for a margin
-        await wait(500);
+        await wait(WAIT_ON);
 
         // Kill the meteor process
         await killMeteorProcess(meteorProcess);
 
         // Ensure any process on the port is killed
-        await killProcessByPort(port);
-        await killProcessByPort('8080');
-        // await killProcessByPort('8081');
-        // await killProcessByPort('8082');
+        await killProcessByPort([port, '8080']);
       });
     }
 
@@ -479,7 +494,7 @@ export function testMeteorRspackBundler(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       const isTestModule = filePaths.test && !filePaths.testClient && !filePaths.testServer;
 
@@ -553,7 +568,7 @@ export function testMeteorRspackBundler(options) {
       });
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Assert that the app files exists
       await assertFileExist(appDir, `${buildDir}/test/client-entry.js`);
@@ -592,7 +607,7 @@ export function testMeteorRspackBundler(options) {
       });
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       if (verbose) {
         await waitForMeteorOutput(
@@ -730,6 +745,11 @@ export function testMeteorSkeleton(options) {
       }
     });
 
+    beforeEach(async () => {
+      // Ensure any process on the port is killed
+      await killProcessByPort([port, '8080']);
+    });
+
     test(`"meteor create --${skeletonName}" / should create a new Meteor ${skeletonName} app`, async () => {
       // Create a new Meteor app with the specified skeleton
       const result = await createMeteorApp(skeletonName, skeletonName);
@@ -762,7 +782,7 @@ export function testMeteorSkeleton(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Assert that the Meteor app is running correctly
       await assertMeteorApp(port, { title });
@@ -796,7 +816,7 @@ export function testMeteorSkeleton(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Assert that the Meteor app is running correctly
       await assertMeteorApp(port, { title });
@@ -824,7 +844,9 @@ export function testMeteorSkeleton(options) {
     test(`"meteor test --once" / should run tests once for the ${skeletonName} app`, async () => {
       // Install playwright as a dev dependency
       console.log("Installing playwright as a dev dependency...");
-      await execa.command("meteor npm i --save-dev playwright", {
+      const repoRoot = path.resolve(process.cwd(), "..", "..");
+      const meteorBin = path.join(repoRoot, "meteor");
+      await execa.command(`${meteorBin} npm i --save-dev playwright`, {
         cwd: tempDir,
         stdio: "inherit",
         shell: true
@@ -838,7 +860,7 @@ export function testMeteorSkeleton(options) {
       });
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Run custom assertions if provided
       if (customAssertions.afterTestOnce) {
@@ -857,7 +879,7 @@ export function testMeteorSkeleton(options) {
       });
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       try {
         // Assert that the build output directory exists
