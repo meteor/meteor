@@ -2,7 +2,7 @@ import { waitForMeteorOutput } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
 import { assertBodyStyles, assertMetaTags } from "./assertions";
 
-describe('ReactRouter App Bundling /', () => {
+describe('R.Router App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'react-router',
     port: 3142,
