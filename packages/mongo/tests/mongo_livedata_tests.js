@@ -2776,6 +2776,53 @@ const setsEqual = function (a, b) {
     });
   });
 
+  // Test operation result fields with allow/deny rules (similar to issue #12159)
+  if (Meteor.isServer) {
+    testAsyncMulti('mongo-livedata - operation result fields with allow/deny, ' + idGeneration, [
+      async function(test, expect) {
+        var collectionName = 'test_operation_results_' + Random.id();
+        var coll = new Mongo.Collection(collectionName, { idGeneration: idGeneration });
+        
+        // Set up allow rules for all operations
+        coll.allow({
+          insert: function() { return true; },
+          update: function() { return true; },
+          remove: function() { return true; }
+        });
+        
+        // Test insert
+        var insertedId = await coll.insertAsync({name: 'doc1'});
+        test.isTrue(insertedId !== undefined, 'insert should return an ID');
+        
+        // Test update
+        var updateResult = await coll.updateAsync({name: 'doc1'}, {$set: {value: 1}});
+        test.equal(updateResult, 1, 'update should return affected count');
+        
+        // Test upsert (update case)
+        var upsertUpdateResult = await coll.upsertAsync({name: 'doc1'}, {$set: {value: 2}});
+        test.equal(upsertUpdateResult.numberAffected, 1);
+        test.isFalse(upsertUpdateResult.hasOwnProperty('insertedId'));
+        
+        // Test upsert (insert case)
+        var upsertInsertResult = await coll.upsertAsync({name: 'doc2'}, {$set: {value: 3}});
+        test.equal(upsertInsertResult.numberAffected, 1);
+        test.isTrue(upsertInsertResult.hasOwnProperty('insertedId'));
+        
+        // Test remove
+        var removeResult = await coll.removeAsync({name: 'doc1'});
+        test.equal(removeResult, 1, 'remove should return removed count');
+        
+        // Test insert with explicit ID
+        var explicitId = idGeneration === 'MONGO' ? new Mongo.ObjectID() : 'explicit-test-id';
+        var insertExplicitResult = await coll.insertAsync({_id: explicitId, name: 'explicit-doc'});
+        test.equal(insertExplicitResult, explicitId, 'insert with explicit ID should return that ID');
+        
+        // Clean up
+        await coll.dropCollectionAsync();
+      }
+    ]);
+  }
+
 });  // end idGeneration parametrization
 
 Tinytest.add('mongo-livedata - rewrite selector', function(test) {

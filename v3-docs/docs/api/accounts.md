@@ -184,6 +184,8 @@ animation while the login request is being processed.
 
 <ApiBox name="Meteor.logout" />
 
+<ApiBox name="Meteor.logoutAllClients" />
+
 <ApiBox name="Meteor.logoutOtherClients" />
 
 For example, when called in a user's browser, connections in that browser
