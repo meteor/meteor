@@ -1069,3 +1069,29 @@ Accounts.emailTemplates.verifyEmail = {
 You can add 2FA to your login flow by
 using the package [accounts-2fa](../packages/accounts-2fa.md).
 You can find an example showing how this would look like [here](../packages/accounts-2fa.md#working-with-accounts-password).
+<!-- Add an ApiBox and a small API section for loginWithToken -->
+<ApiBox name="Meteor.loginWithToken" />
+
+### Meteor.loginWithToken(token, [callback]) {#Meteor-loginWithToken}
+
+Resume a previous login session using a resume token.
+
+**Client use** — call this on the client to re-authenticate with a token previously issued by the server.
+
+**Parameters**
+- `token` — *String* or an object containing the token (for example `{ loginToken: "..." }`).
+- `callback` — *Function (optional)* called as `callback(error)` when login completes. If login failed, `error` is a `Meteor.Error`.
+
+**Example**
+```js
+import { Accounts } from 'meteor/accounts-base';
+
+// get stored token (internal helper)
+const token = Accounts._storedLoginToken();
+Accounts.loginWithToken(token, (err) => {
+  if (err) {
+    console.error('resume failed', err);
+  } else {
+    console.log('logged in');
+  }
+});
