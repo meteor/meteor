@@ -3,7 +3,7 @@ import assert from "assert";
 describe("chakra-template", function () {
   it("package.json has correct name", async function () {
     const { name } = await import("../package.json");
-    assert.strictEqual(name, "chakra-template");
+    assert.strictEqual(name, "~name~");
   });
 
   if (Meteor.isClient) {

@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    /* Basic Options */
+    "target": "es2022",
+    "lib": ["es2020", "dom"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": false,
+
+    /* Module Resolution Options */
+    "module": "preserve",
+    "types": ["node", "mocha"],
+    "baseUrl": ".",
+    "paths": {
+      /* Support absolute /imports/* with a leading '/' */
+      "/*": ["*"],
+      /* Pull in type declarations for Meteor packages */
+      "meteor/*": [
+        "node_modules/@types/meteor/*",
+        ".meteor/local/types/packages.d.ts"
+      ]
+    },
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    }
+  ],
+  "exclude": [
+    "./.meteor/**",
+    "./packages/**",
+    "./_build/**",
+    "./public/build-chunks/**",
+    "./public/build-assets/**"
+  ]
+}
