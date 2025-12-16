@@ -13,13 +13,13 @@ const { createIgnoreRegex, createIgnoreGlobConfig } = require("./ignore.js");
  * @returns {string} The path to the generated file
  */
 const generateEagerTestFile = ({
-  isAppTest,
-  projectDir,
-  buildContext,
-  ignoreEntries: inIgnoreEntries = [],
-  prefix: inPrefix = '',
-  extraEntry,
-}) => {
+                                 isAppTest,
+                                 projectDir,
+                                 buildContext,
+                                 ignoreEntries: inIgnoreEntries = [],
+                                 prefix: inPrefix = '',
+                                 extraEntry,
+                               }) => {
   const distDir = path.resolve(projectDir, ".meteor/local/test");
   if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir, { recursive: true });
@@ -60,8 +60,8 @@ const generateEagerTestFile = ({
   ${
     extraEntry
       ? `const extra = import.meta.webpackContext('${path.dirname(
-          extraEntry
-        )}', {
+        extraEntry
+      )}', {
     recursive: false,
     regExp: ${new RegExp(`${path.basename(extraEntry)}$`).toString()},
     mode: 'eager',

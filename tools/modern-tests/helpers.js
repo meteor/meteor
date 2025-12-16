@@ -149,11 +149,32 @@ export async function killMeteorProcess(meteorProcess) {
 }
 
 /**
- * Kills any process running on the specified port
- * @param {number} port - The port to kill processes on
+ * Kills any process running on the specified port(s)
+ * @param {number|number[]} port - The port or array of ports to kill processes on
  * @returns {Promise<void>}
  */
 export async function killProcessByPort(port) {
+  // If port is an array, kill processes on each port
+  if (Array.isArray(port)) {
+    console.log(`Killing processes on multiple ports: ${port.join(', ')}...`);
+    // Process each port sequentially
+    for (const singlePort of port) {
+      await killSingleProcessByPort(singlePort);
+    }
+    return;
+  }
+
+  // Handle single port case
+  await killSingleProcessByPort(port);
+}
+
+/**
+ * Helper function to kill a process on a single port
+ * @param {number} port - The port to kill processes on
+ * @returns {Promise<void>}
+ * @private
+ */
+async function killSingleProcessByPort(port) {
   try {
     // Different commands based on OS
     const command = process.platform === 'win32'

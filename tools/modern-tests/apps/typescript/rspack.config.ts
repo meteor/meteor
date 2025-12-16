@@ -1,6 +1,6 @@
-import { defineConfig } from "@meteorjs/rspack";
-import { TsCheckerRspackPlugin } from "ts-checker-rspack-plugin";
+import { defineConfig } from '@meteorjs/rspack';
 import { createRequire } from 'node:module';
+import { TsCheckerRspackPlugin } from 'ts-checker-rspack-plugin';
 
 const require = createRequire(import.meta.url);
 
