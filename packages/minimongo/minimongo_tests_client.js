@@ -65,6 +65,58 @@ const log_callbacks = operations => ({
   },
 });
 
+Tinytest.addAsync('minimongo - remove $in', async test => {
+
+  const c = new LocalCollection();
+
+  await c.insert({type: 'kitten', name: 'snookums'});
+  await c.insert({type: 'cryptographer', name: 'alice'});
+  await c.insert({type: 'cryptographer', name: 'bob'});
+  await c.insert({type: 'cryptographer', name: 'cara'});
+
+  test.equal(c.find().count(), 4);
+
+  await c.removeAsync({name: 'cara'});
+
+  test.equal(c.find().count(), 3);
+
+  await c.removeAsync({
+    _id: { $in: c.find().fetch().map(({_id}) => _id) }
+  })
+
+  test.equal(c.find().count(), 0);
+
+});
+
+
+Tinytest.addAsync('minimongo - updateAsync multiple using query operator', async test => {
+
+  const c = new LocalCollection();
+
+  await c.insert({type: 'cryptographer', name: 'alice'});
+  await c.insert({type: 'cryptographer', name: 'bob'});
+  await c.insert({type: 'cryptographer', name: 'cara'});
+
+  test.equal(c.find().count(), 3);
+
+  await c.removeAsync({name: 'cara'});
+
+  test.equal(c.find().count(), 2);
+
+  await c.updateAsync({
+    _id: { $in: c.find().fetch().map(({_id}) => _id) }
+  }, {
+    type: 'test'
+  })
+
+  test.equal(c.find({
+    type: 'test'
+  }).count(), 2);
+
+});
+
+
+
 // XXX test shared structure in all MM entrypoints
 Tinytest.addAsync('minimongo - basics', async test => {
   const c = new LocalCollection();
