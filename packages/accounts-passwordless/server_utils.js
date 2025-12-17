@@ -1,5 +1,5 @@
 import { Accounts } from 'meteor/accounts-base';
-import { check, Match } from 'meteor/check';
+import { Match } from 'meteor/check';
 import { SHA256 } from 'meteor/sha';
 
 const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
@@ -15,11 +15,6 @@ export const tokenValidator = () => {
     str => Match.test(str, String) && str.length <= tokenLength
   );
 };
-
-export const NonEmptyString = Match.Where(x => {
-  check(x, String);
-  return x.length > 0;
-});
 
 export const checkToken = ({
   user,

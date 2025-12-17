@@ -14,6 +14,8 @@ const getTokenFromSecret = async ({ selector, secret: secretParam }) => {
   return token;
 };
 
+Accounts.config({ ambiguousErrorMessages: false });
+
 Meteor.methods({
   async removeAccountsTestUser(username) {
     await Meteor.users.removeAsync({ username });
@@ -30,7 +32,7 @@ Meteor.methods({
         },
       }
     );
-    return await getTokenFromSecret({ selector, secret });
+    return getTokenFromSecret({ selector, secret });
   },
   getTokenFromSecret,
 });

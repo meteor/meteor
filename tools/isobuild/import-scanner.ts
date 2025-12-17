@@ -27,6 +27,7 @@ import {
   writeFileAtomically,
   readFile,
 } from "../fs/files";
+import rspackHelpers from "../tool-env/rspack";
 
 const { SourceNode, SourceMapConsumer } = require("source-map");
 
@@ -468,6 +469,14 @@ export default class ImportScanner {
     if (has(this.absPathToOutputIndex, absLowerPath)) {
       const old = this.outputFiles[
         this.absPathToOutputIndex[absLowerPath]];
+
+      // Check if this is a case-sensitivity conflict (same path when lowercased, but different actual paths)
+      if (old.absPath && old.absPath !== absPath) {
+        throw new Error(
+          `Filename collision detected: "${old.sourcePath}" and "${file.sourcePath}" resolve to the same path when case is ignored. ` +
+          `Please ensure file names have consistent casing to avoid conflicts.`
+        );
+      }
 
       // If the old file is just an empty stub, let the new file take
       // precedence over it.
@@ -997,6 +1006,12 @@ export default class ImportScanner {
     file: File,
   ): Promise<Record<string, ImportInfo>> {
     const fileHash = file.hash instanceof Promise ? await file.hash : file.hash;
+
+    // Ignore rspack output files
+    if (rspackHelpers.isRspackOutputFile(file.sourcePath)) {
+      return {};
+    }
+
     if (IMPORT_SCANNER_CACHE.has(fileHash)) {
       return IMPORT_SCANNER_CACHE.get(fileHash) as Record<string, ImportInfo>;
     }
