@@ -11,6 +11,8 @@ import { ObserveHandle } from './observe_handle';
 import { ObserveMultiplexer } from './observe_multiplex';
 import { OplogObserveDriver } from './oplog_observe_driver';
 import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
+import { NewOplogTailing } from './new-oplog-driver/new_oplog_tailing'
+import { NewOplogObserveDriver } from './new-oplog-driver/new_oplog_observe_driver';
 import { PollingObserveDriver } from './polling_observe_driver';
 
 const FILE_ASSET_SUFFIX = 'Asset';
@@ -86,8 +88,12 @@ export const MongoConnection = function (url, options) {
   }));
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
-    self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
-    self._docFetcher = new DocFetcher(self);
+    if(Meteor.settings?.packages?.mongo?.useNewOplogTailing){
+      self._oplogHandle = new NewOplogTailing(options.oplogUrl, self.db.databaseName);
+    } else {
+      self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
+      self._docFetcher = new DocFetcher(self);
+    }
   }
 
 };
@@ -914,7 +920,17 @@ Object.assign(MongoConnection.prototype, {
         }
       ].every(f => f());  // invoke each function and check if all return true
 
-      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+      const useNewOplogTailing = Meteor.settings?.packages?.mongo?.useNewOplogTailing;
+      let driverClass;
+      if(canUseOplog && useNewOplogTailing) {
+        driverClass = NewOplogObserveDriver;
+      }
+      else if (canUseOplog) {
+        driverClass = OplogObserveDriver;
+      } else {
+        driverClass = PollingObserveDriver;
+      }
+
       observeDriver = new driverClass({
         cursorDescription: cursorDescription,
         mongoHandle: self,
