@@ -11,10 +11,10 @@ export interface URLS {
 }
 
 export interface EmailFields {
-  from?: ((user: Meteor.User) => string) | undefined;
-  subject?: ((user: Meteor.User) => string) | undefined;
-  text?: ((user: Meteor.User, url: string) => string) | undefined;
-  html?: ((user: Meteor.User, url: string) => string) | undefined;
+  from?: ((user: Meteor.User) => string | Promise<string>) | undefined;
+  subject?: ((user: Meteor.User) => string | Promise<string>) | undefined;
+  text?: ((user: Meteor.User, url: string) => string | Promise<string>) | undefined;
+  html?: ((user: Meteor.User, url: string) => string | Promise<string>) | undefined;
 }
 
 export interface AccountsClientOptions {
@@ -362,11 +362,11 @@ export namespace Accounts {
    * - a login method result object
    **/
   function registerLoginHandler(
-    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
+    handler: (options: any) => undefined | LoginMethodResult | Promise<LoginMethodResult | undefined>
   ): void;
   function registerLoginHandler(
     name: string,
-    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
+    handler: (options: any) => undefined | LoginMethodResult | Promise<LoginMethodResult | undefined>
   ): void;
 
   type Password =
