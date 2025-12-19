@@ -263,7 +263,7 @@ Email.sendAsync = async function (options) {
   // The default "example.com" domain (RFC 2606) will always fail to send emails
   // since no SPF/DKIM/DMARC records can exist for it.
   const isDefaultFrom = !email.from ||
-    email.from === 'Accounts Example <no-reply@example.com>';
+    email.from.includes('@example.com');
 
   if (isDefaultFrom) {
     console.warn(
