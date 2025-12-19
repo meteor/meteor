@@ -44,7 +44,7 @@ export namespace Accounts {
     options: {
       username?: string | undefined;
       email?: string | undefined;
-      password?: string | undefined;
+      password?: Password | undefined;
       profile?: Meteor.UserProfile | undefined;
     },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
@@ -54,7 +54,7 @@ export namespace Accounts {
     options: {
       username?: string | undefined;
       email?: string | undefined;
-      password?: string | undefined;
+      password?: Password | undefined;
       profile?: Meteor.UserProfile | undefined;
     },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
@@ -265,9 +265,7 @@ export namespace Accounts {
     stop: () => void;
   };
 
-  function _hashPassword(
-    password: string
-  ): { digest: string; algorithm: string };
+  function _hashPassword(password: string): HashedPassword;
 
   interface IValidateLoginAttemptCbOpts {
     type: string;
@@ -375,12 +373,11 @@ export namespace Accounts {
     handler: (options: any) => undefined | LoginMethodResult | Promise<LoginMethodResult | undefined>
   ): void;
 
-  type Password =
-    | string
-    | {
-      digest: string;
-      algorithm: 'sha-256';
-    };
+  interface HashedPassword {
+    digest: string;
+    algorithm: "sha-256";
+  }
+  type Password = string | HashedPassword;
 
   /**
    *
