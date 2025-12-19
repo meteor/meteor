@@ -95,6 +95,12 @@ export namespace Accounts {
     clientStorage?: 'session' | 'local';
   }): void;
 
+  function removeDefaultRateLimit(): void;
+
+  function setDefaultPublishFields(
+    fields: Partial<Record<keyof Meteor.User, 1 | 0>>
+  ): void;
+
   function onLogin(
     func: Function
   ): {
