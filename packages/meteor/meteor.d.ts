@@ -604,3 +604,15 @@ export namespace Meteor {
   var isPackageTest: boolean;
   /** Global props **/
 }
+
+declare global {
+  // The Assets namespace is ambiently available in the global namespace, rather
+  // than as an importable module
+  namespace Assets {
+    function getTextAsync(assetPath: string): Promise<string>;
+    function getTextAsync(assetPath: string, callback: (err: global_Error | null, result?: string) => void): void;
+    function getBinaryAsync(assetPath: string): Promise<Uint8Array>;
+    function getBinaryAsync(assetPath: string, callback: (err: global_Error | null, result?: Uint8Array) => void): void;
+    function absoluteFilePath(assetPath: string): string;
+  }
+}
