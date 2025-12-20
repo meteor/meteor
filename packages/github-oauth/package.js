@@ -15,6 +15,8 @@ Package.onUse(api => {
   api.addFiles('github_client.js', 'client');
   api.addFiles('github_server.js', 'server');
 
+  api.addAssets('github-oauth.d.ts', 'server');
+
   api.export('Github');
 });
 
