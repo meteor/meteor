@@ -701,7 +701,7 @@ Tinytest.addAsync(
   "livedata server - DDP resumption: server-initiated close removes session immediately",
   async function (test) {
     await withTestGracePeriod(async () => {
-      const { clientConn, serverConn } = await getTestConnections(test);
+      const { serverConn } = await getTestConnections(test);
       const originalSessionId = serverConn.id;
 
       // Verify the session exists

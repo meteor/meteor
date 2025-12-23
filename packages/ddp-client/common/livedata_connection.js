@@ -1091,6 +1091,7 @@ export class Connection {
   }
 
   close() {
+    // _permanent is used by the underlying stream to prevent reconnection attempts
     return this.disconnect({ _permanent: true });
   }
 
