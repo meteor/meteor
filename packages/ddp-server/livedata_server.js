@@ -287,6 +287,14 @@ Object.assign(Session.prototype, {
     }
   },
 
+  // Stop heartbeat if running
+  _stopHeartbeat: function () {
+    if (this.heartbeat) {
+      this.heartbeat.stop();
+      this.heartbeat = null;
+    }
+  },
+
   // Destroy this session and unregister it at the server.
   close: function () {
     const self = this;
@@ -314,10 +322,7 @@ Object.assign(Session.prototype, {
 
     // Stop heartbeat immediately - we don't need it during the grace period
     // since we have no socket to send pings on anyway.
-    if (self.heartbeat) {
-      self.heartbeat.stop();
-      self.heartbeat = null;
-    }
+    self._stopHeartbeat();
 
     self.server._removeSession(self, () => {
       Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
@@ -326,10 +331,7 @@ Object.assign(Session.prototype, {
       self.inQueue = null;
       self.collectionViews = new Map();
 
-      if (self.heartbeat) {
-        self.heartbeat.stop();
-        self.heartbeat = null;
-      }
+      self._stopHeartbeat();
 
       Meteor.defer(function () {
         // stop callbacks can yield, so we defer this on close.
@@ -425,10 +427,8 @@ Object.assign(Session.prototype, {
     }
 
     if (msg_in.msg === 'disconnect') {
-      if (msg_in.msg in self.protocol_handlers) {
-        // we want to pre-empt the queue - a disconnect is imminent.
-        return self.protocol_handlers[msg_in.msg].call(self, msg_in, () => {});
-      }
+      // Pre-empt the queue - a disconnect is imminent.
+      return self.protocol_handlers.disconnect.call(self, msg_in, () => {});
     }
 
     self.inQueue.push(msg_in);
@@ -1296,7 +1296,7 @@ Server = function (options = {}) {
     respondToPings: true,
     defaultPublicationStrategy: publicationStrategies.SERVER_MERGE,
     /**
-     * @summary How many messages should we queue during a non-graceful disconnect before we kill the session (to insure against memory leaks).
+     * @summary How many messages should we queue during a non-graceful disconnect before we destroy the session, to help prevent memory leaks.
      * @type {Number}
      * @locus Server
      */
@@ -1477,7 +1477,7 @@ Object.assign(Server.prototype, {
       return;
     }
 
-    // Yay, version matches! Create a new session.
+    // Yay, version matches! Resume existing session if possible, otherwise create a new one.
     // Note: Troposphere depends on the ability to mutate
     // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
     const existingSession = self.sessions.get(msg.session);
@@ -1488,12 +1488,12 @@ Object.assign(Server.prototype, {
     // was disconnected and hasn't been reconnected to yet.
     if (existingSession && existingSession.sentCount === msg.receivedCount && existingSession._removeTimeoutHandle) {
       Meteor.clearTimeout(existingSession._removeTimeoutHandle);
-      delete existingSession._removeTimeoutHandle;
-      delete existingSession._pendingRemoveFunction;
+      existingSession._removeTimeoutHandle = undefined;
+      existingSession._pendingRemoveFunction = undefined;
       existingSession._isClosing = false; // Reset so session can be closed again later
       socket._meteorSession = existingSession;
       const messageQueue = existingSession.messageQueue;
-      delete existingSession.messageQueue;
+      existingSession.messageQueue = undefined;
       existingSession.socket = socket;
 
       // Restart heartbeat for the resumed session
