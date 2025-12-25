@@ -508,6 +508,18 @@ export class AccountsClient extends AccountsCommon {
     });
   };
 
+  loginWithTokenAsync(token) {
+    return new Promise((resolve, reject) => {
+      this.loginWithToken(token, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  };
+
   // Semi-internal API. Call this function to re-enable auto login after
   // if it was disabled at startup.
   _enableAutoLogin() {
@@ -812,6 +824,17 @@ Meteor.logoutOtherClients = callback => Accounts.logoutOtherClients(callback);
  */
 Meteor.loginWithToken = (token, callback) =>
   Accounts.loginWithToken(token, callback);
+
+/**
+ * @summary Login with a Meteor access token. Returns a Promise.
+ * @locus Client
+ * @param {String} token Local storage token for use with login across
+ * multiple tabs in the same browser.
+ * @returns {Promise<void>} Resolves on success, rejects with error on failure.
+ * @importFromPackage meteor
+ */
+Meteor.loginWithTokenAsync = (token) =>
+  Accounts.loginWithTokenAsync(token);
 
 ///
 /// HANDLEBARS HELPERS
