@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@angular/compiler-cli": "^20.0.0",
-    "@meteorjs/rspack": "^0.2.54",
+    "@meteorjs/rspack": "^0.3.54",
     "@nx/angular-rspack": "^21.1.0",
     "@rsdoctor/rspack-plugin": "^1.2.3",
     "@rspack/cli": "^1.6.5",

@@ -507,6 +507,7 @@ Meteor.methods({forgotPassword: async options => {
   const user = await Accounts.findUserByEmail(options.email, { fields: { emails: 1 } });
 
   if (!user) {
+    if (Accounts._options.ambiguousErrorMessages) return;
     Accounts._handleError("User not found");
   }
 

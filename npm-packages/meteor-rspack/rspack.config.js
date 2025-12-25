@@ -9,6 +9,7 @@ const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitO
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
 const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
+const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
 const { generateEagerTestFile } = require("./lib/test.js");
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const { mergeMeteorRspackFragments } = require("./lib/meteorRspackConfigFactory.js");
@@ -19,7 +20,9 @@ const {
   splitVendorChunk,
   extendSwcConfig,
   makeWebNodeBuiltinsAlias,
+  disablePlugins,
 } = require('./lib/meteorRspackHelpers.js');
+const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -286,6 +289,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   Meteor.splitVendorChunk = () => splitVendorChunk();
   Meteor.extendSwcConfig = (customSwcConfig) => extendSwcConfig(customSwcConfig);
   Meteor.extendConfig = (...configs) => mergeSplitOverlap(...configs);
+  Meteor.disablePlugins = matchers => prepareMeteorRspackConfig({
+    disablePlugins: matchers,
+  });
 
   // Add HtmlRspackPlugin function to Meteor
   Meteor.HtmlRspackPlugin = (options = {}) => {
@@ -392,6 +398,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     enableGlobalPolyfill: isDevEnvironment && !isServer,
   });
 
+  // Handle assets
+  const assetExternalsPlugin = new AssetExternalsPlugin();
+  const assetModuleFilename = _fileInfo => {
+    const filename = _fileInfo.filename;
+    const isPublic = filename.startsWith('/') || filename.startsWith('public');
+    if (isPublic) return `[name][ext][query]`;
+    return `${assetsContext}/[hash][ext][query]`;
+  };
+
   const rsdoctorModule = isBundleVisualizerEnabled
     ? safeRequire('@rsdoctor/rspack-plugin')
     : null;
@@ -462,7 +477,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       libraryTarget: 'commonjs2',
       publicPath: '/',
       chunkFilename: `${chunksContext}/[id]${isProd ? '.[chunkhash]' : ''}.js`,
-      assetModuleFilename: `${assetsContext}/[hash][ext][query]`,
+      assetModuleFilename,
       cssFilename: `${chunksContext}/[name]${
         isProd ? '.[contenthash]' : ''
       }.css`,
@@ -497,6 +512,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           ? [new reactRefreshModule()]
           : []),
         requireExternalsPlugin,
+        assetExternalsPlugin,
       ].filter(Boolean),
       new DefinePlugin({
         'Meteor.isClient': JSON.stringify(true),
@@ -566,7 +582,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       filename: () => `../${buildContext}/${outputPath}`,
       libraryTarget: 'commonjs2',
       chunkFilename: `${chunksContext}/[id]${isProd ? '.[chunkhash]' : ''}.js`,
-      assetModuleFilename: `${assetsContext}/[hash][ext][query]`,
+      assetModuleFilename,
       ...(isProd && { clean: { keep: keepOutsideBuild() } }),
     },
     optimization: {
@@ -610,6 +626,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ),
       ...bannerPluginConfig,
       requireExternalsPlugin,
+      assetExternalsPlugin,
       ...doctorPluginConfig,
     ],
     watchOptions,
@@ -645,7 +662,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         "entry",
         "output.path",
         "output.filename",
-        "output.publicPath",
         ...(Meteor.isServer ? ["optimization.splitChunks", "optimization.runtimeChunk"] : []),
       ].filter(Boolean);
 
@@ -766,6 +782,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         config = mergeSplitOverlap(config, nextOverrideConfig);
       }
     }
+  }
+
+  const shouldDisablePlugins = config?.disablePlugins != null;
+  if (shouldDisablePlugins) {
+    config = disablePlugins(config, config.disablePlugins);
+    delete config.disablePlugins;
   }
 
   if (Meteor.isDebug || Meteor.isVerbose) {

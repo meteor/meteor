@@ -25,4 +25,5 @@ less                     # Leaner CSS language
 
 meteortesting:mocha               # A package for writing and running your meteor app and package tests with mocha
 communitypackages:publication-collector@2.0.0-rc.1  # Test a Meteor publication by collecting its output
-rspack
+
+rspack                  # Integrate Rspack into Meteor for client and server app bundling

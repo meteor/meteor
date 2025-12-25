@@ -66,7 +66,7 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
-    'ChakraUI Library Skeleton /',
+    'ChakraUI Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'chakra-ui',
       port: 3203,

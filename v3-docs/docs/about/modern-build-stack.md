@@ -46,7 +46,7 @@ Starting with Meteor 3.4
 Add this Atmosphere package to your app:
 
 ``` bash
-meteor add rspack@1.0.0-rc340.1
+meteor add rspack@1.0.0-rc340.2
 ```
 
 On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
