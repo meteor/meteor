@@ -427,6 +427,13 @@ export namespace Meteor {
     callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
+  function loginWithPasswordAsync(
+    user: { username: string } | { email: string } | { id: string } | string,
+    password: string
+  ): Promise<void>;
+
+  function loginWithTokenAsync(token: string): Promise<void>;
+
   function loggingIn(): boolean;
 
   function loggingOut(): boolean;

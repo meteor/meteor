@@ -112,6 +112,8 @@ export namespace Accounts {
   function loginServicesConfigured(): boolean;
 
   function onPageLoadLogin(func: Function): void;
+
+  function loginWithTokenAsync(token: string): Promise<void>;
 }
 
 export namespace Accounts {
