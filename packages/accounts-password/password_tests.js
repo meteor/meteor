@@ -809,18 +809,20 @@ if (Meteor.isClient) (() => {
       expect(() => {})();
     },
     async function (test, expect) {
-      // Can't update own profile using ID - without allow/deny rules, updates fail silently.
+      // Can't update own profile using ID - without allow/deny rules, updates are denied.
+      // The server will reject the update with a 403 error.
+      const updatePromise = Meteor.users.updateAsync(
+        this.userId, { $set: { 'profile.updated': 42 } }
+      );
       try {
-        await Meteor.users.updateAsync(
-          this.userId, { $set: { 'profile.updated': 42 } }
-        );
-        // Update may appear to succeed client-side but shouldn't persist
+        // Wait for the server result, not just the stub
+        await updatePromise.serverPromise;
+        test.fail("Expected update to be denied");
       } catch (err) {
-        // Or it might throw an error - both are acceptable
         test.isTrue(err);
         test.equal(err.error, 403);
       }
-      // The key test: verify the update didn't actually persist
+      // Verify the update didn't actually persist
       test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
       expect(() => {})();
     },
