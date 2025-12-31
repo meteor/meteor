@@ -14,5 +14,22 @@ import { TsCheckerRspackPlugin } from "ts-checker-rspack-plugin";
 export default defineConfig((/* Meteor */) => {
   return {
     plugins: [new TsCheckerRspackPlugin()],
+    module: {
+      rules: [
+        {
+          test: /\.ts$/,
+          exclude: [/node_modules/],
+          loader: "builtin:swc-loader",
+          options: {
+            jsc: {
+              parser: {
+                syntax: "typescript",
+              },
+            },
+          },
+          type: "javascript/auto",
+        },
+      ],
+    },
   };
 });
