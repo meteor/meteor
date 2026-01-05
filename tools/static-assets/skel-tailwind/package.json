@@ -12,11 +12,21 @@
     "@swc/helpers": "^0.5.17",
     "autoprefixer": "^10.4.4",
     "meteor-node-stubs": "^1.2.12",
-    "postcss": "^8.4.12",
-    "postcss-load-config": "^3.1.4",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "tailwindcss": "^3.0.23"
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@meteorjs/rspack": "^0.3.54",
+    "@rsdoctor/rspack-plugin": "^1.2.3",
+    "@rspack/cli": "^1.6.5",
+    "@rspack/core": "^1.6.5",
+    "@rspack/plugin-react-refresh": "^1.4.3",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@types/meteor": "^2.9.7",
+    "postcss": "^8.5.6",
+    "postcss-loader": "^8.1.1",
+    "react-refresh": "^0.17.0",
+    "tailwindcss": "^4.1.12"
   },
   "meteor": {
     "mainModule": {

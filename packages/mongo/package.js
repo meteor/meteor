@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: "2.1.4",
+  version: "2.2.0-rc340.2",
 });
 
 Npm.depends({
@@ -79,6 +79,7 @@ Package.onUse(function (api) {
   api.export("MongoInternals", "server");
 
   api.export("Mongo");
+  api.export("CollectionExtensions");
   api.export("ObserveMultiplexer", "server", { testOnly: true });
 
   api.addFiles(
@@ -100,6 +101,7 @@ Package.onUse(function (api) {
   );
   api.addFiles("local_collection_driver.js", ["client", "server"]);
   api.addFiles("remote_collection_driver.ts", "server");
+  api.addFiles("collection/collection_extensions.js", ["client", "server"]);
   api.addFiles("collection/collection.js", ["client", "server"]);
   api.addFiles("connection_options.ts", "server");
   // For zodern:types to pick up our published types.
@@ -130,6 +132,7 @@ Package.onTest(function (api) {
   api.addFiles("tests/collection_tests.js", ["client", "server"]);
   api.addFiles("tests/collection_async_tests.js", ["client", "server"]);
   api.addFiles("tests/observe_changes_tests.js", ["client", "server"]);
+  api.addFiles("tests/collection_extensions_tests.js", ["client", "server"]);
   api.addFiles("tests/oplog_tests.js", "server");
   api.addFiles("tests/oplog_v2_converter_tests.js", "server");
   api.addFiles("tests/doc_fetcher_tests.js", "server");

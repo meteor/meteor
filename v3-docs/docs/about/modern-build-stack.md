@@ -1,31 +1,54 @@
+---
+outline:
+  level: [2, 3]
+---
+
 # Modern Build Stack
 
-The Meteor bundler is made up of several key components that enhance your experience both during development and when deploying to production. These include:
+**Meteor’s modern build stack** delivers better speed and productivity, plus new features and plugins that follow current bundler standards.
 
-- **Transpiler**: Responsible for converting each file into a syntax compatible across different browsers and runtime environments.
-- **Bundler**: Handles discovering your app’s files and dependencies, including Meteor packages and core modules, then links them into production-ready bundles. It also applies optimizations to produce lighter builds and faster processes.
-- **Dev Server**: During development, it watches for file changes, and supports fast feedback via HMR, bundle visualizers, debug tools, and more. At runtime, it provides a full-featured server environment with support for SSR and modern APIs powered by Express.
+**Two major overhauls** make this possible:
 
-To improve the development and deployment experience for all Meteor projects, we’re revamping each of these components with a focus on better performance, smarter tooling, and leaner bundle sizes:
+1. **Meteor Bundler Optimizations.** Meteor builds the final bundle with Atmosphere packages built in and Meteor specifics. We reviewed key components to get the most performance gains and speed up builds and the dev experience, mainly with SWC integration.
 
-- **Modern Transpiler**: Meteor is adopting **SWC** as a faster alternative to Babel.
-- **Modern Bundler**: A new bundler will handle only your app’s code, supporting tree-shaking, popular plugins, and better features for both development and production. Meanwhile, Meteor’s core bundler will continue handling Meteor-specific tasks, such as compiling Atmosphere packages, with optimized workflows.
-- **Modern Dev Server**: The dev server remains a core part of Meteor, now with ongoing improvements in performance and developer features. A new bundler will complement the dev server, providing additional enhancements.
+2. **Rspack Bundler Integration.** Rspack bundles your app code only. Meteor Bundler then builds the final bundle, preserving compatibility with Meteor specifics like Atmosphere packages. We reviewed Meteor Bundler to ensure it delegates app code to Rspack, unlocking more speed, tree shaking, full ESM support, and compatibility with standard plugins and modern project configurations.
 
 ## Quick start
 
-Start using the new build stack by creating a Meteor app, or add this to your `package.json` in an existing one:
+**New Meteor apps enable the modern build stack by default**, with both **Meteor Bundler optimizations** and **Rspack Bundler integration**.
 
-```json
+For existing apps, you can enable one or both. If your app relies heavily on Meteor specifics like nested imports, use Meteor Bundler optimizations. If it follows a standard syntax without nested imports, you can also enable Rspack Bundler integration for greater benefits.
+
+### Meteor Bundler Optimizations
+
+:::info
+Starting with Meteor 3.3
+:::
+
+Add this to your app’s `package.json`:
+
+``` json
 "meteor": {
   "modern": true
 }
 ```
 
-With this configuration, you enable all improvements from the modern build stack in your Meteor app.
+This enables all Meteor bundler optimizations, with SWC adoption as the main highlight.
 
-See the following sections to learn about each component and its settings:
+> See the [**"Meteor Bundler Optimizations"** section](./modern-build-stack/meteor-bundler-optimizations.md) for migration requirements and config customization.
 
-- [Transpiler](modern-build-stack/transpiler-swc.md)
-- [Bundler](modern-build-stack/bundler.md)
-- [Dev Server](modern-build-stack/dev-server.md)
+### Rspack Bundler Integration
+
+:::info
+Starting with Meteor 3.4
+:::
+
+Add this Atmosphere package to your app:
+
+``` bash
+meteor add rspack@1.0.0-rc340.2
+```
+
+On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
+
+> See the [**"Rspack Bundler Integration"** section](./modern-build-stack/rspack-bundler-integration.md) for migration requirements and config customization.

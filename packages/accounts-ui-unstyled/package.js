@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Unstyled version of login widgets',
-  version: '1.7.2',
+  version: '1.8.0-rc340.2',
 });
 
 Package.onUse(function(api) {
@@ -10,7 +10,7 @@ Package.onUse(function(api) {
       'service-configuration',
       'accounts-base',
       'ecmascript',
-      'templating@1.4.1',
+      'templating@1.4.4',
       'session',
     ],
     'client'
@@ -45,12 +45,11 @@ Package.onUse(function(api) {
     'client'
   );
 
-  // The less source defining the default style for accounts-ui. Just adding
+  // The CSS source defining the default style for accounts-ui. Just adding
   // this package doesn't actually apply these styles; they need to be
-  // `@import`ed from some non-import less file.  The accounts-ui package does
+  // imported from another CSS file. The accounts-ui package does
   // that for you, or you can do it in your app.
-  api.use('less@3.0.2 || 4.0.0');
-  api.addFiles('login_buttons.import.less');
+  api.addFiles('login_buttons.import.css');
 });
 
 Package.onTest(api => {

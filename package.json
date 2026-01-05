@@ -35,7 +35,9 @@
     "typescript": "^5.4.5"
   },
   "scripts": {
-    "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js"
+    "install:modern": "cd tools/modern-tests && npm install && npx playwright install && npx playwright install --with-deps",
+    "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
+    "test:modern": "cd tools/modern-tests && npm test -- "
   },
   "jshintConfig": {
     "esversion": 11
