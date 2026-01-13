@@ -20,9 +20,9 @@
   "devDependencies": {
     "@graphql-tools/webpack-loader": "^7.0.0",
     "@rsdoctor/rspack-plugin": "^1.2.3",
-    "@meteorjs/rspack": "^0.0.60",
-    "@rspack/cli": "^1.5.3",
-    "@rspack/core": "^1.5.3",
+    "@meteorjs/rspack": "^0.3.56",
+    "@rspack/cli": "^1.7.1",
+    "@rspack/core": "^1.7.1",
     "@rspack/plugin-react-refresh": "^1.4.3",
     "react-refresh": "^0.17.0"
   },

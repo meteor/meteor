@@ -1,7 +1,5 @@
 import { Meteor } from 'meteor/meteor';
 import { WebApp, WebAppInternals } from 'meteor/webapp';
-import { shuffleString } from 'meteor/tools-core/lib/string';
-import { createProxyMiddleware } from 'http-proxy-middleware';
 import path from 'path';
 import { parse as parseUrl } from 'url';
 import {
@@ -31,6 +29,9 @@ const RSPACK_ASSETS_REGEX = new RegExp(
 );
 
 if (Meteor.isDevelopment) {
+  const { shuffleString } = require('meteor/tools-core/lib/string');
+  const { createProxyMiddleware } = require('http-proxy-middleware');
+
   // Target URL for the Rspack dev server
   const target = `http://localhost:${process.env.RSPACK_DEVSERVER_PORT}`;
 

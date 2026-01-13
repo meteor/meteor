@@ -730,7 +730,7 @@ if (Meteor.isServer) {
     // create same user in two different collections - should pass
     const email = "test-collection@testdomain.com"
 
-    const collection0 = new Mongo.Collection('test1');
+    const collection0 = new Mongo.Collection(`test1_${Random.id()}`);
 
     Accounts.config({
       collection: collection0,
@@ -738,7 +738,7 @@ if (Meteor.isServer) {
     const uid0 = await Accounts.createUser({email})
     await Meteor.users.removeAsync(uid0);
 
-    const collection1 = new Mongo.Collection('test2');
+    const collection1 = new Mongo.Collection(`test2_${Random.id()}`);
     Accounts.config({
       collection: collection1,
     })
@@ -757,13 +757,13 @@ if (Meteor.isServer) {
     const email = "test-collection@testdomain.com"
 
     Accounts.config({
-      collection: 'collection0',
+       collection: `collection0_${Random.id()}`,
     })
     const uid0 = await Accounts.createUser({email})
     await Meteor.users.removeAsync(uid0);
 
     Accounts.config({
-      collection: 'collection1',
+       collection: `collection1_${Random.id()}`,
     })
     const uid1 = await Accounts.createUser({email})
     await Meteor.users.removeAsync(uid1);

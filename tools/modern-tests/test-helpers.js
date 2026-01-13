@@ -30,6 +30,10 @@ import path from "path";
 import execa from "execa";
 import waitOn from "wait-on";
 
+const isCI = process.env.GITHUB_ACTIONS === "true";
+
+const WAIT_ON = isCI ? 2000 : 500;
+
 /**
  * Helper function to set up and run tests for the Meteor Bundler
  * @param {Object} options - Options for the test
@@ -68,6 +72,11 @@ export function testMeteorBundler(options) {
       if (afterAllBehavior) {
         await afterAllBehavior({ tempDir, port });
       }
+    });
+
+    beforeEach(async () => {
+      // Ensure any process on the port is killed
+      await killProcessByPort([port, '8080']);
     });
 
     test(`"meteor run" / should start the app`, async () => {
@@ -110,6 +119,7 @@ export function testMeteorBundler(options) {
  * @param {boolean} options.verbose - Whether to enable verbose output (default: true)
  * @param {boolean} options.testFullApp - Whether to run tests with the --full-app flag (default: false)
  * @param {boolean} options.testBundleVisualizer - Whether to run tests with bundle-visualizer in production mode (default: false)
+ * @param {string[]} options.checkBundleFilePaths - Array of file paths to check for existence in the bundle
  * @param {Function} options.beforeAllBehavior - Additional behavior to run in beforeAll
  * @param {Function} options.afterAllBehavior - Additional behavior to run in afterAll
  * @returns {Function} - Jest test function
@@ -149,6 +159,8 @@ export function testMeteorRspackBundler(options) {
     testFullApp = false,
     // Option to test with bundle-visualizer in production mode
     testBundleVisualizer = false,
+    // Array of file paths to check for existence in the bundle
+    checkBundleFilePaths = [],
     // Additional behavior for beforeAll and afterAll
     beforeAllBehavior,
     afterAllBehavior,
@@ -170,11 +182,18 @@ export function testMeteorRspackBundler(options) {
       }
 
       // Ensure any process on the port is killed
-      await killProcessByPort(port);
-      await killProcessByPort('8080');
+      await killProcessByPort([port, '8080']);
 
       // Setup the Meteor app
       tempDir = (await setupMeteorApp(appName, { isMonorepo }))?.tempDir;
+
+      // Wait for a margin
+      await wait(WAIT_ON);
+
+      // Run custom assertions if provided
+      if (customAssertions.afterCreate) {
+        await customAssertions.afterCreate({ tempDir });
+      }
 
       // Add Rspack package
       appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
@@ -194,7 +213,7 @@ export function testMeteorRspackBundler(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(1000);
+      await wait(WAIT_ON);
 
       // Assert that the config files exists
       await assertFileExist(appDir, '.gitignore', { content: buildDir });
@@ -209,8 +228,7 @@ export function testMeteorRspackBundler(options) {
       await killMeteorProcess(meteorProcess);
 
       // Ensure any process on the port is killed
-      await killProcessByPort(port);
-      await killProcessByPort('8080');
+      await killProcessByPort([port, '8080']);
     });
 
     afterAll(async () => {
@@ -223,6 +241,11 @@ export function testMeteorRspackBundler(options) {
       }
     });
 
+    beforeEach(async () => {
+      // Ensure any process on the port is killed
+      await killProcessByPort([port, '8080']);
+    });
+
     test(`"meteor run" / should run and rebuild the app with Rspack`, async () => {
       // Run the Meteor app and wait for "restarted at" output
       const result = await runMeteorApp(tempDir, port, {
@@ -232,7 +255,7 @@ export function testMeteorRspackBundler(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Assert that the app files exists
       await assertFileExist(appDir, `${buildDir}/main-dev/client-entry.js`);
@@ -302,14 +325,13 @@ export function testMeteorRspackBundler(options) {
       }
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Kill the meteor process
       await killMeteorProcess(meteorProcess);
 
       // Ensure any process on the port is killed
-      await killProcessByPort(port);
-      await killProcessByPort('8080');
+      await killProcessByPort([port, '8080']);
     });
 
     test(`"meteor run --production" / should run and rebuild the app with Rspack in production`, async () => {
@@ -322,7 +344,7 @@ export function testMeteorRspackBundler(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Assert that the app files exists
       await assertFileExist(appDir, `${buildDir}/main-prod/client-entry.js`);
@@ -395,14 +417,13 @@ export function testMeteorRspackBundler(options) {
       }
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Kill the meteor process
       await killMeteorProcess(meteorProcess);
 
       // Ensure any process on the port is killed
-      await killProcessByPort(port);
-      await killProcessByPort('8080');
+      await killProcessByPort([port, '8080']);
     });
 
     // Conditional test for bundle-visualizer in production mode
@@ -417,7 +438,7 @@ export function testMeteorRspackBundler(options) {
         meteorProcess = result.meteorProcess;
 
         // Wait for a margin
-        await wait(500);
+        await wait(WAIT_ON);
 
         // Assert that the app files exists
         await assertFileExist(appDir, `${buildDir}/main-prod/client-entry.js`);
@@ -453,16 +474,13 @@ export function testMeteorRspackBundler(options) {
         }
 
         // Wait for a margin
-        await wait(500);
+        await wait(WAIT_ON);
 
         // Kill the meteor process
         await killMeteorProcess(meteorProcess);
 
         // Ensure any process on the port is killed
-        await killProcessByPort(port);
-        await killProcessByPort('8080');
-        // await killProcessByPort('8081');
-        // await killProcessByPort('8082');
+        await killProcessByPort([port, '8080']);
       });
     }
 
@@ -476,23 +494,17 @@ export function testMeteorRspackBundler(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       const isTestModule = filePaths.test && !filePaths.testClient && !filePaths.testServer;
 
       // Assert that the app files exists
-      if (isTestModule) {
-        await assertFileExist(appDir, `${buildDir}/test/test-entry.js`);
-        await assertFileExist(appDir, `${buildDir}/test/test-rspack.js`);
-        await assertFileExist(appDir, `${buildDir}/test/test-meteor.js`);
-      } else {
-        await assertFileExist(appDir, `${buildDir}/test/client-entry.js`);
-        await assertFileExist(appDir, `${buildDir}/test/client-rspack.js`);
-        await assertFileExist(appDir, `${buildDir}/test/client-meteor.js`);
-        await assertFileExist(appDir, `${buildDir}/test/server-entry.js`);
-        await assertFileExist(appDir, `${buildDir}/test/server-rspack.js`);
-        await assertFileExist(appDir, `${buildDir}/test/server-meteor.js`);
-      }
+      await assertFileExist(appDir, `${buildDir}/test/client-entry.js`);
+      await assertFileExist(appDir, `${buildDir}/test/client-rspack.js`);
+      await assertFileExist(appDir, `${buildDir}/test/client-meteor.js`);
+      await assertFileExist(appDir, `${buildDir}/test/server-entry.js`);
+      await assertFileExist(appDir, `${buildDir}/test/server-rspack.js`);
+      await assertFileExist(appDir, `${buildDir}/test/server-meteor.js`);
 
       // Run custom assertions if provided
       if (customAssertions && customAssertions.afterTest) {
@@ -504,10 +516,7 @@ export function testMeteorRspackBundler(options) {
         await appendFileContent(tempDir, filePaths.test, {
           content: customUpdates.test(customMessages.test),
         });
-        await waitForMeteorOutput(
-          result.outputLines,
-          customMessages.test
-        );
+        await waitForMeteorOutput(result.outputLines, customMessages.test);
       } else {
         await appendFileContent(tempDir, filePaths.testClient, {
           content: customUpdates.test(customMessages.testClient),
@@ -559,23 +568,15 @@ export function testMeteorRspackBundler(options) {
       });
 
       // Wait for a margin
-      await wait(500);
-
-      const isTestModule = filePaths.test && !filePaths.testClient && !filePaths.testServer;
+      await wait(WAIT_ON);
 
       // Assert that the app files exists
-      if (isTestModule) {
-        await assertFileExist(appDir, `${buildDir}/test/test-entry.js`);
-        await assertFileExist(appDir, `${buildDir}/test/test-rspack.js`);
-        await assertFileExist(appDir, `${buildDir}/test/test-meteor.js`);
-      } else {
-        await assertFileExist(appDir, `${buildDir}/test/client-entry.js`);
-        await assertFileExist(appDir, `${buildDir}/test/client-rspack.js`);
-        await assertFileExist(appDir, `${buildDir}/test/client-meteor.js`);
-        await assertFileExist(appDir, `${buildDir}/test/server-entry.js`);
-        await assertFileExist(appDir, `${buildDir}/test/server-rspack.js`);
-        await assertFileExist(appDir, `${buildDir}/test/server-meteor.js`);
-      }
+      await assertFileExist(appDir, `${buildDir}/test/client-entry.js`);
+      await assertFileExist(appDir, `${buildDir}/test/client-rspack.js`);
+      await assertFileExist(appDir, `${buildDir}/test/client-meteor.js`);
+      await assertFileExist(appDir, `${buildDir}/test/server-entry.js`);
+      await assertFileExist(appDir, `${buildDir}/test/server-rspack.js`);
+      await assertFileExist(appDir, `${buildDir}/test/server-meteor.js`);
 
       if (verbose) {
         await waitForMeteorOutput(
@@ -606,7 +607,7 @@ export function testMeteorRspackBundler(options) {
       });
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       if (verbose) {
         await waitForMeteorOutput(
@@ -647,9 +648,30 @@ export function testMeteorRspackBundler(options) {
         // Check if the npm install command was successful
         expect(npmInstallResult.exitCode).toBe(0);
 
+        // Check for the existence of specified file paths in the bundle
+        const fileCheckResults = {};
+        if (checkBundleFilePaths.length > 0) {
+          console.log(`Checking for existence of ${checkBundleFilePaths.length} file paths in the bundle...`);
+
+          // Check each file path
+          for (const filePath of checkBundleFilePaths) {
+            const fullPath = path.join(buildOutputDir, 'bundle', filePath);
+            try {
+              const exists = await fs.pathExists(fullPath);
+              fileCheckResults[filePath] = exists;
+              console.log(`Checking file ${filePath}: ${exists ? 'exists' : 'does not exist'}`);
+              expect(exists).toBe(true);
+            } catch (error) {
+              console.error(`Error checking file ${filePath}:`, error);
+              fileCheckResults[filePath] = false;
+              expect(false).toBe(true); // This will fail the test
+            }
+          }
+        }
+
         // Run custom assertions if provided
         if (customAssertions && customAssertions.afterBuild) {
-          await customAssertions.afterBuild({ tempDir, buildOutputDir, result });
+          await customAssertions.afterBuild({ tempDir, buildOutputDir, result, fileCheckResults });
         }
       } finally {
         // Clean up the build output directory
@@ -675,6 +697,7 @@ export function testMeteorRspackBundler(options) {
  * @param {Function} options.customAssertions.afterRunProduction - Custom assertions to run after running the app in production mode
  * @param {Function} options.customAssertions.afterTestOnce - Custom assertions to run after running tests once
  * @param {Function} options.customAssertions.afterBuild - Custom assertions to run after building the app
+ * @param {string[]} options.checkBundleFilePaths - Array of file paths to check for existence in the bundle
  * @param {Function} options.beforeAllBehavior - Additional behavior to run in beforeAll
  * @param {Function} options.afterAllBehavior - Additional behavior to run in afterAll
  * @returns {Function} - Jest test function
@@ -691,6 +714,8 @@ export function testMeteorSkeleton(options) {
     },
     customAssertions = {},
     checkBodyStyles = true,
+    bodyStyles,
+    checkBundleFilePaths = [],
     beforeAllBehavior,
     afterAllBehavior,
   } = options;
@@ -719,6 +744,11 @@ export function testMeteorSkeleton(options) {
       if (afterAllBehavior) {
         await afterAllBehavior({ tempDir, port });
       }
+    });
+
+    beforeEach(async () => {
+      // Ensure any process on the port is killed
+      await killProcessByPort([port, '8080']);
     });
 
     test(`"meteor create --${skeletonName}" / should create a new Meteor ${skeletonName} app`, async () => {
@@ -753,14 +783,14 @@ export function testMeteorSkeleton(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Assert that the Meteor app is running correctly
       await assertMeteorApp(port, { title });
 
       if (checkBodyStyles) {
         // Assert that the body has the expected CSS styles
-        await assertBodyStyles({
+        await assertBodyStyles(bodyStyles || {
           "padding": "10px",
           "font-family": "sans-serif"
         });
@@ -787,14 +817,14 @@ export function testMeteorSkeleton(options) {
       meteorProcess = result.meteorProcess;
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Assert that the Meteor app is running correctly
       await assertMeteorApp(port, { title });
 
       if (checkBodyStyles) {
         // Assert that the body has the expected CSS styles
-        await assertBodyStyles({
+        await assertBodyStyles(bodyStyles || {
           "padding": "10px",
           "font-family": "sans-serif"
         });
@@ -815,7 +845,9 @@ export function testMeteorSkeleton(options) {
     test(`"meteor test --once" / should run tests once for the ${skeletonName} app`, async () => {
       // Install playwright as a dev dependency
       console.log("Installing playwright as a dev dependency...");
-      await execa.command("meteor npm i --save-dev playwright", {
+      const repoRoot = path.resolve(process.cwd(), "..", "..");
+      const meteorBin = path.join(repoRoot, "meteor");
+      await execa.command(`${meteorBin} npm i --save-dev playwright`, {
         cwd: tempDir,
         stdio: "inherit",
         shell: true
@@ -829,7 +861,7 @@ export function testMeteorSkeleton(options) {
       });
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       // Run custom assertions if provided
       if (customAssertions.afterTestOnce) {
@@ -848,7 +880,7 @@ export function testMeteorSkeleton(options) {
       });
 
       // Wait for a margin
-      await wait(500);
+      await wait(WAIT_ON);
 
       try {
         // Assert that the build output directory exists
@@ -866,9 +898,30 @@ export function testMeteorSkeleton(options) {
         expect(await fs.pathExists(`${buildOutputDir}/bundle/programs/web.browser/program.json`)).toBe(true);
         expect(await fs.pathExists(`${buildOutputDir}/bundle/programs/web.browser.legacy/program.json`)).toBe(true);
 
+        // Check for the existence of specified file paths in the bundle
+        const fileCheckResults = {};
+        if (checkBundleFilePaths.length > 0) {
+          console.log(`Checking for existence of ${checkBundleFilePaths.length} file paths in the bundle...`);
+
+          // Check each file path
+          for (const filePath of checkBundleFilePaths) {
+            const fullPath = path.join(buildOutputDir, 'bundle', filePath);
+            try {
+              const exists = await fs.pathExists(fullPath);
+              fileCheckResults[filePath] = exists;
+              console.log(`Checking file ${filePath}: ${exists ? 'exists' : 'does not exist'}`);
+              expect(exists).toBe(true);
+            } catch (error) {
+              console.error(`Error checking file ${filePath}:`, error);
+              fileCheckResults[filePath] = false;
+              expect(false).toBe(true); // This will fail the test
+            }
+          }
+        }
+
         // Run custom assertions if provided
         if (customAssertions.afterBuild) {
-          await customAssertions.afterBuild({ tempDir, buildOutputDir, result });
+          await customAssertions.afterBuild({ tempDir, buildOutputDir, result, fileCheckResults });
         }
       } finally {
         // Clean up the build output directory

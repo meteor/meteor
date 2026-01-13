@@ -28,6 +28,7 @@
     "less": "^4.4.0",
     "less-loader": "^12.3.0",
     "playwright": "^1.54.2",
+    "puppeteer": "^24.31.0",
     "typescript": "^5.9.2"
   },
   "meteor": {

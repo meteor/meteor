@@ -3,18 +3,6 @@ const { prepareMeteorRspackConfig } = require("./meteorRspackConfigFactory");
 const { builtinModules } = require("module");
 
 /**
- * Resolve a package directory from node resolution.
- * @param {string} pkg
- * @returns {string} absolute directory of the package
- */
-function pkgDir(pkg) {
-  const resolved = require.resolve(`${pkg}/package.json`, {
-    paths: [process.cwd()],
-  });
-  return path.dirname(resolved);
-}
-
-/**
  * Wrap externals for Meteor runtime (marks deps as externals).
  * Usage: compileWithMeteor(["sharp", "vimeo", "fs"])
  *
@@ -38,7 +26,11 @@ function compileWithMeteor(deps) {
  * @returns {Record<string, object>} `{ meteorRspackConfigX: { module: { rules: [...] } } }`
  */
 function compileWithRspack(deps, { options = {} } = {}) {
-  const includeDirs = deps.flat().filter(Boolean).map(pkgDir);
+  const includeDirs = deps.flat().filter(Boolean)
+      .map(pkg => typeof pkg === 'string' && !pkg.includes('node_modules')
+          ? path.join(process.cwd(), 'node_modules', pkg)
+          : pkg
+      );
 
   return prepareMeteorRspackConfig({
     module: {
@@ -84,18 +76,34 @@ function setCache(
  * - Optional extras let you block non-core modules too
  */
 function makeWebNodeBuiltinsAlias(extras = []) {
-  // Strip potential 'node:' prefixes then add both forms
+  // Node core list, normalized (strip `node:` prefix)
   const core = new Set(builtinModules.map((m) => m.replace(/^node:/, "")));
+
+  // browser-safe allowlist (these we *don't* mark as false)
+  const allowlist = new Set([
+    "process",
+    "util",
+    "events",
+    "path",
+    "stream",
+    "assert",
+    "assert/strict",
+  ]);
 
   const names = new Set();
   for (const m of core) {
-    names.add(m); // e.g. 'fs'
-    names.add(`node:${m}`); // e.g. 'node:fs'
+    // Add both 'fs' and 'node:fs' variants
+    names.add(m);
+    names.add(`node:${m}`);
   }
   for (const x of extras) names.add(x);
 
-  // Map every name to false (causes hard error if imported)
-  return Object.fromEntries([...names].map((m) => [m, false]));
+  // ❌ Everything except the allowlist gets mapped to false
+  const entries = [...names]
+    .filter((m) => !allowlist.has(m.replace(/^node:/, "")))
+    .map((m) => [m, false]);
+
+  return Object.fromEntries(entries);
 }
 
 /**
@@ -123,10 +131,83 @@ function splitVendorChunk() {
   });
 }
 
+/**
+ * Extend SWC loader config
+ * Usage: extendSwcConfig()
+ *
+ * @returns {Record<string, object>} `{ meteorRspackConfigX: { optimization: { ... } } }`
+ */
+function extendSwcConfig(swcConfig) {
+  return prepareMeteorRspackConfig({
+    module: {
+      rules: [
+        {
+          test: /\.(?:[mc]?js|jsx|[mc]?ts|tsx)$/i,
+          exclude: /node_modules|\.meteor\/local/,
+          loader: 'builtin:swc-loader',
+          options: swcConfig,
+        },
+      ],
+    },
+  });
+}
+
+/**
+ * Remove plugins from a Rspack config by name, RegExp, predicate, or array of them.
+ * When using a function predicate, it receives both the plugin and its index in the plugins array.
+ *
+ * @param {object} config Rspack config object
+ * @param {string | RegExp | ((plugin: any, index: number) => boolean) | Array<string|RegExp|Function>} matchers
+ * @returns {object} The modified config object
+ */
+function disablePlugins(config, matchers) {
+  if (!config || typeof config !== "object") {
+    throw new TypeError("disablePlugins: `config` must be an object");
+  }
+
+  const plugins = Array.isArray(config.plugins) ? config.plugins : [];
+  const kept = [];
+
+  const list = Array.isArray(matchers) ? matchers : [matchers];
+
+  const getPluginName = (p) => {
+    if (!p) return "";
+    return (
+      (p.constructor && typeof p.constructor.name === "string" && p.constructor.name) ||
+      (typeof p.name === "string" && p.name) ||
+      (typeof p.pluginName === "string" && p.pluginName) ||
+      (typeof p.__pluginName === "string" && p.__pluginName) ||
+      ""
+    );
+  };
+
+  const predicates = list.map((m) => {
+    if (typeof m === "function") return m;
+    if (m instanceof RegExp) {
+      return (p) => m.test(getPluginName(p));
+    }
+    if (typeof m === "string") {
+      return (p) => getPluginName(p) === m;
+    }
+    throw new TypeError(
+      "disablePlugins: matchers must be string, RegExp, function, or array of them"
+    );
+  });
+
+  config.plugins = plugins.filter((p, index) => {
+    const matches = predicates.some(fn => fn(p, index));
+    return !matches;
+  });
+
+  return config;
+}
+
 module.exports = {
   compileWithMeteor,
   compileWithRspack,
   setCache,
   splitVendorChunk,
+  extendSwcConfig,
   makeWebNodeBuiltinsAlias,
+  disablePlugins,
 };

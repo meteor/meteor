@@ -798,6 +798,7 @@ exports.publishPackage = async function (options) {
         debugOnly: packageSource.debugOnly,
         prodOnly: packageSource.prodOnly,
         testOnly: packageSource.testOnly,
+        devOnly: packageSource.devOnly,
 
         deprecated: packageSource.deprecated,
         deprecatedMessage: packageSource.deprecatedMessage,

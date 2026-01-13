@@ -22,6 +22,7 @@ const {
 const {
   ensureRspackInstalled,
   checkReactInstalled,
+  checkAngularInstalled,
   checkTypescriptInstalled,
   ensureRspackReactInstalled,
 } = require('./lib/dependencies');
@@ -61,6 +62,7 @@ const {
 const {
   isMeteorAppRun,
   isMeteorAppBuild,
+  isMeteorAppUpdate,
   getMeteorInitialAppEntrypoints,
   getMeteorAppEntrypoints,
   isMeteorAppTest,
@@ -85,10 +87,36 @@ const {
   getYarnCommand,
   isYarnProject,
 } = require('meteor/tools-core/lib/npm');
-const { getMeteorAppConfig, hasMeteorAppConfigAutoInstallDeps } = require("../tools-core/lib/meteor");
+const { hasMeteorAppConfigAutoInstallDeps } = require("../tools-core/lib/meteor");
 
-if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
+if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest() || isMeteorAppUpdate()) {
   // Get entry points from Meteor configuration
+  const initialEntrypoints = getMeteorInitialAppEntrypoints();
+
+  // Check if mainClient and mainServer exist
+  if (!initialEntrypoints.mainClient || !initialEntrypoints.mainServer) {
+    logError(`\n┌─────────────────────────────────────────────────`);
+    logError(`│ ❌ Missing Required Entry Points`);
+    logError(`└─────────────────────────────────────────────────`);
+    logError(`Your project is missing the required entry points for Rspack.`);
+    logError(`Please add the following to your package.json file:`);
+    logError(`
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    }
+  }
+}
+`);
+    logError(`Make sure to replace the paths with your actual entry point files.`);
+
+    throw new Error(
+      "Missing required entry points. Please add meteor.mainModule.client and meteor.mainModule.server in your package.json file."
+    );
+  }
+
   setGlobalState(GLOBAL_STATE_KEYS.INITIAL_ENTRYPONTS, getMeteorAppEntrypoints());
 
   let isYarnProj = process.env.YARN_ENABLED === 'true';
@@ -126,6 +154,16 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
         await ensureRspackReactInstalled();
       }
     }
+  } catch (error) {
+    logError(`Rspack plugin error: ${error.message}`);
+    throw error;
+  }
+}
+
+if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
+  try {
+    // Check if Angular is installed
+    checkAngularInstalled();
 
     // Check if TypeScript is installed
     checkTypescriptInstalled();
@@ -227,9 +265,11 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
       } = setupCompilationTracking();
 
       // When run test for full app, run Rspack app server as well
+      // isTestLike ensures the app runtime environment inherit test envs
       if (isMeteorAppTestFullApp()) {
         await runRspackBuild({
           isTest: false,
+          isTestLike: true,
           isServer: true,
           isClient: false,
         });
@@ -239,6 +279,7 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
             isServer: true,
             isClient: false,
             isTest: false,
+            isTestLike: true,
             watch: true,
           });
         }
@@ -269,6 +310,15 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
 
         // When testModule is specified as a single file or not specified
       } else {
+        runRspackBuild({
+          isTest: true,
+          isTestModule: true,
+          isClient: true,
+          isServer: false,
+          watch: isMeteorAppTestWatch(),
+          onCompile: onCompileClient,
+          label: 'Test',
+        });
         runRspackBuild({
           isTest: true,
           isTestModule: true,

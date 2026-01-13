@@ -21,5 +21,3 @@ typescript              # Enable TypeScript syntax in .ts and .tsx modules
 shell-server            # Server-side component of the `meteor shell` command
 less
 ostrio:flow-router-extra # FlowRouter is a very simple router for Meteor
-
-meteortesting:mocha               # A package for writing and running your meteor app and package tests with mocha

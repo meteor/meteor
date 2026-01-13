@@ -13,12 +13,14 @@ export let meteorConfig;
  * @property {boolean} minifier - Whether to use the modern minifier.
  * @property {boolean} webArchOnly - Whether to use modern features only for web architecture.
  * @property {boolean} watcher - Whether to use the modern watcher.
+ * @property {boolean} cordova - Whether to use modern bundle for Cordova.
  */
 const DEFAULT_MODERN = {
   transpiler: true,
   minifier: true,
   webArchOnly: true,
   watcher: true,
+  cordova: true,
 };
 
 /**

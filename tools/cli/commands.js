@@ -703,7 +703,8 @@ export const AVAILABLE_SKELETONS = [
   "chakra-ui",
   "solid",
   "legacy",
-  "coffeescript"
+  "coffeescript",
+  "angular"
 ];
 
 const SKELETON_INFO = {
@@ -721,6 +722,7 @@ const SKELETON_INFO = {
   "solid": "To create a basic Solid app",
   "coffeescript": "To create a basic CoffeeScript app",
   "babel": "To create a React app with Babel support",
+  "angular": "To create a basic Angular app",
 };
 
 main.registerCommand({
@@ -745,6 +747,7 @@ main.registerCommand({
     'chakra-ui': { type: Boolean },
     coffeescript: { type: Boolean },
     solid: { type: Boolean },
+    angular: { type: Boolean },
     legacy: { type: Boolean },
     prototype: { type: Boolean },
     from: { type: String },
@@ -1133,7 +1136,7 @@ main.registerCommand({
       "If you are new to Meteor, try some of the learning resources here:"
     );
     Console.info(
-      Console.url("https://www.meteor.com/tutorials"),
+      Console.url("https://docs.meteor.com/"),
       Console.options({ indent: 2 })
     );
 
@@ -1142,7 +1145,7 @@ main.registerCommand({
       "When you’re ready to deploy and host your new Meteor application, check out Cloud:"
     );
     Console.info(
-      Console.url("https://www.meteor.com/cloud"),
+      Console.url("https://galaxycloud.app/"),
       Console.options({ indent: 2 })
     );
 

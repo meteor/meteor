@@ -14,10 +14,10 @@
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^0.0.60",
+    "@meteorjs/rspack": "^0.3.56",
     "@rsdoctor/rspack-plugin": "^1.2.3",
-    "@rspack/cli": "^1.5.3",
-    "@rspack/core": "^1.5.3",
+    "@rspack/cli": "^1.7.1",
+    "@rspack/core": "^1.7.1",
     "babel-loader": "10.0.0",
     "babel-preset-solid": "^1.8.15",
     "solid-js": "^1.9.4",

@@ -2,7 +2,7 @@ import { waitForMeteorOutput } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
 import { assertBodyStyles, assertMetaTags } from "./assertions";
 
-describe('ReactRouter App Bundling /', () => {
+describe('R.Router App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'react-router',
     port: 3142,
@@ -12,6 +12,14 @@ describe('ReactRouter App Bundling /', () => {
       test: 'tests/main.app-test.js',
     },
     testFullApp: true,
+    checkBundleFilePaths: [
+      'programs/web.browser/app/1x1.png',
+      'programs/web.browser/app/images/1x1.png',
+      'programs/web.browser/app/docs/text.md',
+      'programs/web.browser.legacy/app/1x1.png',
+      'programs/web.browser.legacy/app/images/1x1.png',
+      'programs/web.browser.legacy/app/docs/text.md',
+    ],
     beforeAllBehavior: async () => {
       process.env.METEOR_PACKAGE_DIRS = './my-packages';
     },
@@ -45,6 +53,8 @@ describe('ReactRouter App Bundling /', () => {
         await waitForMeteorOutput(result.outputLines, /.*custom-package loaded.*/);
         // resolve.extensions loading
         await waitForMeteorOutput(result.outputLines, /.*first\.jsx loaded.*/);
+        // Check custom plugin gets loaded from rspack.config.override.js file
+        await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
       },
       afterRunRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR output as enabled by default
@@ -73,6 +83,8 @@ describe('ReactRouter App Bundling /', () => {
       },
       afterTest: async ({ result }) => {
         await waitForReactEnvs(result.outputLines);
+        // Check custom plugin gets loaded from rspack.config.override.js file
+        await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
       },
       afterTestOnce: async ({ result }) => {
         await waitForReactEnvs(result.outputLines);
@@ -80,6 +92,8 @@ describe('ReactRouter App Bundling /', () => {
       afterBuild: async ({ result }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
         await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
+        // Check custom plugin gets loaded from rspack.config.override.js file
+        await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
       },
     }
   }));
