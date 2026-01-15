@@ -79,6 +79,23 @@ DDPCommon.MethodInvocation = class MethodInvocation {
     this.randomStream = null;
 
     this.fence = options.fence;
+
+    // Internal references used for tracing/instrumentation.
+    // Stored as non-enumerable properties to avoid changing the public API
+    // surface of MethodInvocation while still exposing the data when needed.
+    Object.defineProperty(this, '_session', {
+      value: options.session || null,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+
+    Object.defineProperty(this, '_messageId', {
+      value: options.messageId || null,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
   }
 
   /**
