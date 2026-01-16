@@ -83,6 +83,7 @@ initOtel({
 });
 ```
 
+// TODO: we need to import otel before http to enalbe auto-instrumentation of http module, mongo, etc.
 ### Custom Instrumentations
 
 You can add OpenTelemetry instrumentations for popular libraries. Install them via npm and pass to `initOtel`:
