@@ -1,5 +1,6 @@
 import crypto from 'crypto';
-import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor'
+import { check, Match } from 'meteor/check';
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
@@ -7,13 +8,6 @@ import {
 import { URL } from 'meteor/url';
 
 const hasOwn = Object.prototype.hasOwnProperty;
-
-// XXX maybe this belongs in the check package
-const NonEmptyString = Match.Where(x => {
-  check(x, String);
-  return x.length > 0;
-});
-
 
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
@@ -668,7 +662,6 @@ export class AccountsServer extends AccountsCommon {
     // this variable is available in their scope.
     const accounts = this;
 
-
     // This object will be populated with methods and then passed to
     // accounts._server.methods further below.
     const methods = {};
@@ -695,6 +688,17 @@ export class AccountsServer extends AccountsCommon {
        await accounts.destroyToken(this.userId, token);
       }
       await accounts._successfulLogout(this.connection, this.userId);
+      await this.setUserId(null);
+    };
+
+    // Logs out the current user and closes all the connections
+    // associated with the user.
+    //
+    methods.logoutAllClients = async function() {
+      const logoutUserId = this.userId;
+      accounts._setLoginToken(logoutUserId, this.connection, null);
+      accounts._clearAllLoginTokens(logoutUserId);
+      await accounts._successfulLogout(this.connection, logoutUserId);
       await this.setUserId(null);
     };
 
@@ -961,8 +965,8 @@ export class AccountsServer extends AccountsCommon {
   _clearAllLoginTokens(userId) {
     this.users.updateAsync(userId, {
       $set: {
-        'services.resume.loginTokens': []
-      }
+        'services.resume.loginTokens': [],
+      },
     });
   };
 
@@ -1565,9 +1569,9 @@ export class AccountsServer extends AccountsCommon {
 
   _userQueryValidator = Match.Where(user => {
     check(user, {
-      id: Match.Optional(NonEmptyString),
-      username: Match.Optional(NonEmptyString),
-      email: Match.Optional(NonEmptyString)
+      id: Match.Optional(Match.NonEmptyString),
+      username: Match.Optional(Match.NonEmptyString),
+      email: Match.Optional(Match.NonEmptyString)
     });
     if (Object.keys(user).length !== 1)
       throw new Match.Error("User property must have exactly one field");

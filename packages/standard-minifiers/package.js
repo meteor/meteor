@@ -1,8 +1,9 @@
 Package.describe({
   name: 'standard-minifiers',
-  version: '1.1.1',
+  version: '1.2.0-rc340.3',
   summary: 'Standard minifiers used with Meteor apps by default.',
-  documentation: 'README.md'
+  documentation: 'README.md',
+  devOnly: true,
 });
 
 Package.onUse(function(api) {

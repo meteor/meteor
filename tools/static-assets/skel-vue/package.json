@@ -16,20 +16,24 @@
     "vue-meteor-tracker": "^3.0.0-beta.7",
     "vue-router": "^4.2.5"
   },
+  "devDependencies": {
+    "@meteorjs/rspack": "^0.3.56",
+    "@rsdoctor/rspack-plugin": "^1.2.3",
+    "@rspack/cli": "^1.7.1",
+    "@rspack/core": "^1.7.1",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@types/meteor": "^2.9.7",
+    "postcss": "^8.5.6",
+    "postcss-loader": "^8.1.1",
+    "tailwindcss": "^4.1.12",
+    "vue-loader": "^17.4.2"
+  },
   "meteor": {
     "modern": true,
     "mainModule": {
-      "client": "client/entry-meteor.js",
-      "server": "server/entry-meteor.js"
+      "client": "client/main.js",
+      "server": "server/main.js"
     },
     "testModule": "tests/main.js"
-  },
-  "devDependencies": {
-    "@types/meteor": "^2.9.7",
-    "@tailwindcss/vite": "^4.1.11",
-    "@vitejs/plugin-vue": "^5.2.1",
-    "meteor-vite": "^3.2.1",
-    "tailwindcss": "^4.1.11",
-    "vite": "^6.0.11"
   }
 }

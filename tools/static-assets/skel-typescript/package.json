@@ -15,11 +15,19 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@meteorjs/rspack": "^0.3.56",
+    "@rsdoctor/rspack-plugin": "^1.2.3",
+    "@rspack/cli": "^1.7.1",
+    "@rspack/core": "^1.7.1",
+    "@rspack/plugin-react-refresh": "^1.4.3",
+    "@types/meteor": "^2.9.9",
     "@types/mocha": "^8.2.3",
     "@types/node": "^22.10.6",
     "@types/react": "^18.2.5",
     "@types/react-dom": "^18.2.4",
-    "typescript": "^5.4.5"
+    "react-refresh": "^0.17.0",
+    "ts-checker-rspack-plugin": "^1.1.5",
+    "typescript": "^5.9.3"
   },
   "meteor": {
     "mainModule": {
