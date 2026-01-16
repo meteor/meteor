@@ -63,7 +63,7 @@ function buildMethodAttributes(context, methodName, args = []) {
   };
 
   return {
-    ...filterDefined(base),
+    ...base,
     ...extractConnectionAttributes(context?.connection, session),
   };
 }
