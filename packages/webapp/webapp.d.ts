@@ -104,7 +104,7 @@ export declare module WebAppInternals {
   var staticFiles: StaticFiles;
   function inlineScriptsAllowed(): boolean;
   function setInlineScriptsAllowed(inlineScriptsAllowed: boolean): void;
-
+  function enableSubresourceIntegrity(use_credentials?: boolean): void;
   function setBundledJsCssUrlRewriteHook(hookFn: (url: string) => string): void;
   function setBundledJsCssPrefix(bundledJsCssPrefix: string): void;
   function addStaticJs(): void;
