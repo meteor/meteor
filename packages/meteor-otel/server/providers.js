@@ -90,6 +90,8 @@ export function initOtel(options = {}) {
   }
 
   // Add any custom instrumentations passed in options
+  // TODO: instrumentations like HTTP, MongoDB, etc
+  // can't work since modules like http or mongo is loaded before opentelemetry
   if (options.instrumentations) {
     instrumentations.push(...options.instrumentations);
   }

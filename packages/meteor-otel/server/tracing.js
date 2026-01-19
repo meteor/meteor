@@ -407,7 +407,7 @@ export function runWithTraceContext(headers, fn) {
  * @param {string} spanName - Span name
  * @param {Array<Object>} links - Array of trace contexts to link to
  * @param {Object} attributes - Optional span attributes
- * @returns {Object} Span handle similar to createChildSpan
+ * @returns {Object} Span handle with methods: addEvent, setAttribute, setAttributes, end, fail, run, runAsync, getSpan
  *
  * @example
  * // Process multiple orders in batch, linking to each original trace

@@ -431,54 +431,6 @@ Meteor.methods({
 }, { otel: true });
 ```
 
-### Creating Child Spans
-
-Use `createChildSpan` to create sub-spans for tracking individual operations:
-
-```javascript
-import { createChildSpan, addEvent } from 'meteor/meteor-otel';
-
-Meteor.methods({
-  async 'orders.process'(orderId) {
-    addEvent('order.processing.start');
-
-    // Create a child span for payment processing
-    const paymentSpan = createChildSpan('process.payment', {
-      'order.id': orderId
-    });
-
-    try {
-      paymentSpan.addEvent('payment.charge.start');
-      const paymentResult = await chargeCustomer(orderId);
-      paymentSpan.setAttribute('payment.id', paymentResult.id);
-      paymentSpan.setAttribute('payment.amount', paymentResult.amount);
-      paymentSpan.addEvent('payment.charge.complete');
-      paymentSpan.end(); // Mark as successful
-    } catch (error) {
-      paymentSpan.fail(error); // Mark as failed
-      throw error;
-    }
-
-    // Create another child span for shipping
-    const shippingSpan = createChildSpan('process.shipping', {
-      'order.id': orderId
-    });
-
-    try {
-      const tracking = await createShipment(orderId);
-      shippingSpan.setAttribute('shipping.tracking', tracking.number);
-      shippingSpan.end();
-    } catch (error) {
-      shippingSpan.fail(error);
-      throw error;
-    }
-
-    addEvent('order.processing.complete');
-    return { success: true };
-  }
-}, { otel: true });
-```
-
 ### Getting the Active Span Directly
 
 For advanced use cases, you can get the raw OpenTelemetry span:
@@ -515,7 +467,6 @@ Meteor.methods({
 | `setAttributes(attributes)` | Set multiple attributes on the active span |
 | `recordException(error)` | Record an exception without failing the span |
 | `setSpanError(messageOrError)` | Mark the span as failed with an error |
-| `createChildSpan(name, attributes?)` | Create a child span linked to the current span |
 
 ## Roundtrip Tracing
 
@@ -1126,7 +1077,6 @@ import {
   setAttributes,
   recordException,
   setSpanError,
-  createChildSpan,
 } from 'meteor/meteor-otel';
 ```
 
@@ -1142,7 +1092,6 @@ import {
 | `setAttributes(attrs)` | Set multiple attributes on active span |
 | `recordException(error)` | Record exception on active span |
 | `setSpanError(msgOrErr)` | Mark active span as failed |
-| `createChildSpan(name, attrs?)` | Create a child span |
 
 ### Tracing Utilities
 
@@ -1298,15 +1247,19 @@ setAttribute('user.plan', user.planType); // e.g., 'free', 'pro', 'enterprise'
 #### 5. Avoid Tracing Hot Paths
 
 ```javascript
+import { createSpanBuilder, addEvent } from 'meteor/meteor-otel';
+
+const builder = createSpanBuilder('my-service');
+
 // BAD - Tracing every iteration
 for (const item of largeArray) {
-  const span = createChildSpan('process.item'); // 10,000 spans!
+  const span = builder.start('process.item'); // 10,000 spans!
   processItem(item);
-  span.end();
+  span.success();
 }
 
 // GOOD - Trace the batch, add events for checkpoints
-const batchSpan = createChildSpan('process.batch', {
+const batchSpan = builder.start('process.batch', {
   'batch.size': largeArray.length,
 });
 for (let i = 0; i < largeArray.length; i++) {
@@ -1315,7 +1268,7 @@ for (let i = 0; i < largeArray.length; i++) {
     batchSpan.addEvent('progress', { processed: i });
   }
 }
-batchSpan.end();
+batchSpan.success();
 ```
 
 #### 6. Use Selective Tracing

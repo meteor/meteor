@@ -89,7 +89,6 @@ export {
   setAttributes,
   recordException,
   setSpanError,
-  createChildSpan,
 } from './ddp-instrumentation.js';
 
 // Tracing utilities
