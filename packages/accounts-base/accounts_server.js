@@ -6,6 +6,7 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
+import { createWebAppAuthMiddleware, _CurrentEndpointInvocation } from "./accounts_server_auth.js";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -104,6 +105,23 @@ export class AccountsServer extends AccountsCommon {
       }
       return url.toString();
     };
+
+    // Expose the _CurrentEndpointInvocation to be used in the webapp auth middleware
+    this._CurrentEndpointInvocation = _CurrentEndpointInvocation;
+  }
+
+  /**
+   * @summary Express middleware for authentication
+   * @locus Server
+   * @param {Object} options - Options for the middleware
+   * @param {boolean} options.required - Whether authentication is required (true) or optional (false)
+   * @returns {Function} Express middleware function
+   */
+  auth(options = {}) {
+    return createWebAppAuthMiddleware({
+      ...options,
+      hashLoginTokenFn: this._hashLoginToken,
+    });
   }
 
   ///
@@ -118,9 +136,12 @@ export class AccountsServer extends AccountsCommon {
     // runs. This is likely not what the user expects. The way to make this work
     // in a method or publish function is to do Meteor.find(this.userId).observe
     // and recompute when the user record changes.
-    const currentInvocation = DDP._CurrentMethodInvocation.get() || DDP._CurrentPublicationInvocation.get();
+    const currentInvocation =
+      DDP._CurrentMethodInvocation.get() ||
+      DDP._CurrentPublicationInvocation.get() ||
+      this._CurrentEndpointInvocation.get();
     if (!currentInvocation)
-      throw new Error("Meteor.userId can only be invoked in method calls or publications.");
+      throw new Error("Meteor.userId can only be invoked in method, publications or webapp endpoints calls.");
     return currentInvocation.userId;
   }
 

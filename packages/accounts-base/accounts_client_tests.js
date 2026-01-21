@@ -386,7 +386,7 @@ Tinytest.addAsync('accounts - should only start subscription when connected', as
 
   acc.callLoginMethod()
 
-  await Meteor._sleepForMs(100);
+  await Meteor._sleepForMs(500);
 
   // The sub call needs to come right after `connect` since this is when `status().connected` gets to be true and
   // not after `connected` as it is based on the socket connection status.
