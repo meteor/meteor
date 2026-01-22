@@ -3,13 +3,6 @@ import { Accounts } from 'meteor/accounts-base';
 
 export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
-/**
- * @summary Express middleware for authentication
- * @param hashLoginTokenFn
- * @param {Object} options - Options for the middleware
- * @param {boolean} options.required - Whether authentication is required (true) or optional (false)
- * @returns {(function(*, *, *): Promise<*|undefined>)|*}
- */
 export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false }) {
   return async function meteorWebAppAuthMiddleware(req, res, next) {
     const authHeader = req.headers.authorization;

@@ -106,7 +106,7 @@ export class AccountsServer extends AccountsCommon {
       return url.toString();
     };
 
-    // Expose the _CurrentEndpointInvocation to be used in the webapp auth middleware
+    // Expose the _CurrentEndpointInvocation
     this._CurrentEndpointInvocation = _CurrentEndpointInvocation;
   }
 
@@ -140,8 +140,11 @@ export class AccountsServer extends AccountsCommon {
       DDP._CurrentMethodInvocation.get() ||
       DDP._CurrentPublicationInvocation.get() ||
       this._CurrentEndpointInvocation.get();
-    if (!currentInvocation)
-      throw new Error("Meteor.userId can only be invoked in method, publications or webapp endpoints calls.");
+    if (!currentInvocation) {
+      throw new Error(
+        "Meteor.userId can only be invoked in method, publications or WebApp endpoints calls."
+      );
+    }
     return currentInvocation.userId;
   }
 
