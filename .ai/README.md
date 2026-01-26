@@ -74,10 +74,10 @@ packages/example/
 ```
 tools/
 ├── cli/               # Command-line interface
-│   ├── main.js        # Entry point (3.5K lines)
+│   ├── main.js        # Entry point
 │   └── commands.js    # Command implementations
 ├── isobuild/          # Build system
-│   ├── bundler.js     # High-level bundling (128KB)
+│   ├── bundler.js     # High-level bundling
 │   ├── compiler.js    # Package compilation
 │   └── linker.js      # Module linking
 ├── runners/           # App execution
@@ -86,7 +86,7 @@ tools/
 ├── modern-tests/      # E2E tests for modern integrations (Jest + Playwright)
 ├── fs/                # File operations
 ├── packaging/         # Package management
-└── project-context.js # Dependency resolution (72KB)
+└── project-context.js # Dependency resolution
 ```
 
 ## Common Modifications

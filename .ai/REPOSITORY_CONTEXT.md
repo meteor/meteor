@@ -16,7 +16,6 @@
 - [CI/CD Configuration](#cicd-configuration)
 - [Configuration Files](#configuration-files)
 - [Architecture Overview](#architecture-overview)
-- [Key Statistics](#key-statistics)
 - [Development Conventions](#development-conventions)
 - [Common Patterns](#common-patterns)
 
@@ -592,7 +591,7 @@ tools/
 
 | File | Description |
 |------|-------------|
-| `main.js` | CLI entry point and command dispatcher (3,547 lines) |
+| `main.js` | CLI entry point and command dispatcher |
 | `commands.js` | Main command implementations |
 | `commands-packages.js` | Package management commands |
 | `commands-packages-query.js` | Package query functionality |
@@ -614,7 +613,7 @@ The core build system that compiles packages and applications.
 
 | File | Description |
 |------|-------------|
-| `bundler.js` | High-level bundling orchestration (128KB) |
+| `bundler.js` | High-level bundling orchestration |
 | `compiler.js` | Package compilation |
 | `builder.js` | File system output |
 | `isopack.js` | Package format handling |
@@ -632,7 +631,7 @@ The core build system that compiles packages and applications.
 
 | File | Description |
 |------|-------------|
-| `package-client.js` | Package server client (31KB) |
+| `package-client.js` | Package server client |
 | `catalog/catalog.js` | Package catalog interface |
 | `tropohouse.js` | Package repository management |
 | `warehouse.js` | Package warehouse |
@@ -654,7 +653,7 @@ The core build system that compiles packages and applications.
 
 | File | Description |
 |------|-------------|
-| `files.ts` | File operation helpers (54KB) |
+| `files.ts` | File operation helpers |
 | `watch.ts` | File watching/monitoring |
 | `safe-watcher.ts` | Safe file watcher |
 | `optimistic.ts` | Optimistic I/O caching |
@@ -692,7 +691,7 @@ Available project templates via `meteor create --<template>`:
 
 #### Project Context (`project-context.js`)
 
-The 72KB ProjectContext class manages:
+The ProjectContext class manages:
 - Package version resolution
 - Dependency graph construction
 - Catalog management
@@ -793,7 +792,7 @@ These directories contain Meteor 2.x documentation and are maintained for histor
 
 ### CircleCI (`/.circleci/config.yml`)
 
-Comprehensive CI/CD pipeline configuration (31KB+).
+Comprehensive CI/CD pipeline configuration.
 
 ---
 
@@ -874,24 +873,6 @@ Comprehensive CI/CD pipeline configuration (31KB+).
 5. **Linker** wraps modules and sets up import/export relationships
 6. **Runners** start the application with MongoDB and HMR support
 7. **DDP** enables real-time data synchronization between server and client
-
----
-
-## Key Statistics
-
-| Metric | Value |
-|--------|-------|
-| Core Packages | 144 |
-| Deprecated Packages | 40+ |
-| Auth/Accounts Packages | 14 |
-| Package.js Files | 203 |
-| CLI Main File | 3,547 lines |
-| Bundler Size | 128KB |
-| ProjectContext Size | 72KB |
-| Project Templates | 20+ |
-| NPM Packages | 9 |
-| tools-core Modules | 8 |
-| Rspack Build Contexts | 4 |
 
 ---
 
