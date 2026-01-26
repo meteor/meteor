@@ -200,7 +200,7 @@ This section covers utility packages designed for modern bundler integrations (R
 
 ### tools-core (`/packages/tools-core`)
 
-**Central utility package** providing helpers for npm, logging, process management, and Meteor configuration. This is the foundation for modern bundler integrations.
+**Central utility package** providing helpers for npm, logging, process management, and Meteor configuration. This is the foundation for modern tool integrations using Meteor build plugin lifecycle to manage new tools. 
 
 #### Logging Module (`lib/log.js`)
 
