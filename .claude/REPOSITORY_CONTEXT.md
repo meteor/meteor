@@ -1130,10 +1130,8 @@ class MyCompiler extends CachingCompiler {
 
 | Variable | Description |
 |----------|-------------|
-| `METEOR_DISABLE_COLORS` | Disable ANSI color output |
 | `METEOR_PACKAGE_DIRS` | Additional package directories |
 | `METEOR_PROFILE` | Enable profiling output |
-| `METEOR_DEBUG_BUILD` | Verbose build logging |
 | `METEOR_WATCH_FORCE_POLLING` | Force polling file watcher |
 
 ### Testing

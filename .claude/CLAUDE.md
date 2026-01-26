@@ -42,7 +42,7 @@ meteor-3/
 | **Web** | `webapp`, `autoupdate`, `reload`, `browser-policy` |
 | **Reactivity** | `tracker`, `reactive-var`, `reactive-dict` |
 | **Utilities** | `check`, `random`, `ejson`, `fetch` |
-| **Modern Tools** | `tools-core`, `rspack`, `hot-module-replacement` |
+| **Modern Tools** | `tools-core`, `rspack` |
 | **Testing** | `tinytest`, `test-helpers` |
 
 ### tools-core (Modern Utilities Hub)
@@ -155,10 +155,8 @@ npm run test:modern -- -t="React"            # Run specific test
 
 | Variable | Purpose |
 |----------|---------|
-| `METEOR_DEBUG_BUILD` | Verbose build output |
 | `METEOR_PROFILE` | Build profiling |
 | `METEOR_PACKAGE_DIRS` | Additional package paths |
-| `METEOR_DISABLE_COLORS` | No ANSI colors |
 
 ## Quick Troubleshooting
 
