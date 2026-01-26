@@ -25,7 +25,7 @@
 
 Meteor is a full-stack JavaScript platform for developing modern web and mobile applications. This monorepo contains:
 
-- **144 core packages** providing Meteor's functionality
+- **Core packages** providing Meteor's functionality
 - **Build system (Isobuild)** for compiling and bundling applications
 - **CLI tool** for project management and development
 - **Multiple UI framework integrations** (React, Vue, Svelte, Angular, Blaze)
@@ -38,7 +38,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 ## Top-Level Directory Structure
 
 ```
-meteor-3/
+meteor/
 ├── packages/              # Core Meteor packages
 ├── tools/                 # Meteor CLI tool & build system (Isobuild)
 ├── npm-packages/          # Published npm packages
@@ -882,7 +882,7 @@ Comprehensive CI/CD pipeline configuration.
 
 ```bash
 # Clone and enter the repository
-cd meteor-3
+cd meteor
 
 # Run Meteor CLI from source
 ./meteor --help

@@ -6,7 +6,7 @@
 ## Repository Structure
 
 ```
-meteor-3/
+meteor/
 ├── packages/          # Core Meteor packages
 ├── tools/             # CLI tool & build system (Isobuild)
 ├── npm-packages/      # Published npm packages (@meteorjs/*)
