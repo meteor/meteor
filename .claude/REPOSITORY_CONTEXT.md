@@ -1136,13 +1136,6 @@ class MyCompiler extends CachingCompiler {
 | `METEOR_DEBUG_BUILD` | Verbose build logging |
 | `METEOR_WATCH_FORCE_POLLING` | Force polling file watcher |
 
-### Modern Bundler Integration
-
-| Variable | Description |
-|----------|-------------|
-| `METEOR_MODERN_BUNDLER` | Enable modern bundler (rspack/vite) |
-| `METEOR_RSPACK_VERBOSE` | Verbose Rspack output |
-
 ### Testing
 
 | Variable | Description |

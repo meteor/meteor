@@ -24,6 +24,7 @@ meteor-3/
 | Build system | `tools/isobuild/bundler.js` |
 | Package lookup | `packages/<name>/package.js` |
 | Modern bundler | `packages/rspack/`, `packages/tools-core/` |
+| Modern E2E tests | `tools/modern-tests/` |
 | Authentication | `packages/accounts-base/` |
 | HTTP server | `packages/webapp/` |
 | Database | `packages/mongo/`, `packages/minimongo/` |
@@ -82,6 +83,7 @@ tools/
 ├── runners/           # App execution
 │   ├── run-app.js     # Web app runner
 │   └── run-mongo.js   # MongoDB runner
+├── modern-tests/      # E2E tests for modern integrations (Jest + Playwright)
 ├── fs/                # File operations
 ├── packaging/         # Package management
 └── project-context.js # Dependency resolution (72KB)
@@ -136,6 +138,18 @@ WebApp.connectHandlers.use('/api', middleware);
 ./meteor self-test "test name"               # Specific test
 ./meteor test-packages ./packages/my-pkg     # Package tests
 ```
+
+### Modern E2E Tests (`tools/modern-tests/`)
+
+Jest + Playwright suite for verifying modern bundler integrations (rspack). Tests cover framework skeletons and build scenarios.
+
+```bash
+npm run install:modern                       # Install dependencies
+npm run test:modern                          # Run all E2E tests
+npm run test:modern -- -t="React"            # Run specific test
+```
+
+**Test apps:** `apps/{react,vue,svelte,solid,blaze,typescript,babel,coffeescript,monorepo}`
 
 ## Environment Variables
 
