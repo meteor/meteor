@@ -35,7 +35,8 @@ can run Meteor directly from a Git checkout using these steps:
 
     > **Note for Windows (PowerShell):**
     >
-    > * In PowerShell, use `.\meteor` (not `./meteor`).
+    * In PowerShell, use `.\meteor.bat` (or `.\meteor`, which resolves to the `.bat` file), not `./meteor`.
+
     > * Meteor may need `7z.exe` available in your `PATH` to download/extract binaries (dev_bundle).
     >   * Verify: `where.exe 7z`
     >   * If missing, install 7-Zip and ensure it is on your PATH (for example via `choco install 7zip -y` or `scoop install 7zip`).
