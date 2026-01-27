@@ -33,6 +33,14 @@ can run Meteor directly from a Git checkout using these steps:
     $ ./meteor --help
     ```
 
+    > **Note for Windows (PowerShell):**
+    >
+    > * In PowerShell, use `.\meteor` (not `./meteor`).
+    > * Meteor may need `7z.exe` available in your `PATH` to download/extract binaries (dev_bundle).
+    >   * Verify: `where.exe 7z`
+    >   * If missing, install 7-Zip and ensure it is on your PATH (for example via `choco install 7zip -y` or `scoop install 7zip`).
+
+
 3. **Ready to Go!**
 
     Your local Meteor checkout is now ready to use!  You can use this `./meteor`
