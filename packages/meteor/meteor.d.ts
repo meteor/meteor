@@ -567,3 +567,56 @@ export namespace Meteor {
   var isPackageTest: boolean;
   /** Global props **/
 }
+
+/**
+ * Currently, it is not possible to import Assets as an ES6 module. Any of the Assets methods below can simply be called directly in any Meteor server code.
+ *
+ * Assets allows server code in a Meteor application to access static server assets, which are located in the private subdirectory of an application's tree. Assets are not processed as source files and are copied directly into your application's bundle.
+ *
+ * @see https://docs.meteor.com/api/assets.html
+ */
+declare global {
+  /**
+   * The global Assets object, available in Meteor server code.
+   */
+  var Assets: {
+    /**
+     * Retrieve the contents of the static server asset as a UTF8-encoded string.
+     *
+     * @locus Server only
+     * @param assetPath The path of the asset, relative to the application's private subdirectory.
+     * @param asyncCallback Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
+     * @returns If asyncCallback is not provided, a Promise resolving to the file contents as a UTF-8 string.
+     * @see https://docs.meteor.com/api/assets.html#Assets-getTextAsync
+     */
+    getTextAsync(
+      assetPath: string,
+      asyncCallback?: (error: Error | null, result?: string) => void
+    ): Promise<string>;
+
+    /**
+     * Retrieve the contents of the static server asset as an EJSON Binary.
+     *
+     * @locus Server only
+     * @param assetPath The path of the asset, relative to the application's private subdirectory.
+     * @param asyncCallback Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
+     * @returns If asyncCallback is not provided, a Promise resolving to the file contents as an ArrayBuffer.
+     * @see https://docs.meteor.com/api/assets.html#Assets-getBinaryAsync
+     */
+    getBinaryAsync(
+      assetPath: string,
+      asyncCallback?: (error: Error | null, result?: Uint8Array) => void
+    ): Promise<Uint8Array>;
+
+    /**
+     * Get the absolute path to the static server asset. Note that assets are read-only.
+     *
+     * @summary Get the absolute path to the static server asset. Note that assets are read-only.
+     * @locus Server [Not in build plugins] only
+     * @param assetPath The path of the asset, relative to the application's private subdirectory.
+     * @returns The absolute file path on the server.
+     * @see https://docs.meteor.com/api/assets.html#Assets-absoluteFilePath
+     */
+    absoluteFilePath(assetPath: string): string;
+  };
+}
