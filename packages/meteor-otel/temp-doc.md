@@ -175,7 +175,18 @@ docker compose version
 
 To quickly set up the observability infrastructure, you can use the provided [Docker Compose file](https://github.com/meteor/performance/blob/otel/otel/docker-compose.yaml) and [configuration files](https://github.com/meteor/performance/tree/otel/otel/infra) we have in our github. This setup is intended for local development and testing.
 
-above you can se the details about this infra setup.
+Bring the `infra` folder and the `docker-compose.yaml` file to your Meteor project root folder. Then run:
+
+```bash
+docker compose up -d
+```
+
+Ensure all services are running by accessing:
+- Grafana: `http://localhost:3000` (default user: `admin`, password: `admin`)
+- Prometheus: `http://localhost:9090`
+- Tempo: `http://localhost:3200/ready`
+
+Bellow you can se the details about this infra setup.
 
 ## Project Structure
 
