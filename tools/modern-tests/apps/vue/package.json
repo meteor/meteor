@@ -17,14 +17,14 @@
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^0.3.56",
+    "@meteorjs/rspack": "^1.0.0",
     "@rspack/cli": "^1.4.8",
     "@rspack/core": "^1.4.8",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/meteor": "^2.9.7",
     "postcss": "^8.5.6",
     "postcss-loader": "^8.1.1",
-    "playwright": "^1.54.2",
+    "playwright": "1.58.0",
     "tailwindcss": "^4.1.12",
     "vue-loader": "^17.4.2"
   },
