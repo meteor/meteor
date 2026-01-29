@@ -28,3 +28,17 @@ Package.onUse(function (api) {
 
   api.mainModule('server/index.js', 'server');
 });
+
+Package.onTest(function (api) {
+  api.use([
+    'meteor-otel',
+    'tinytest',
+    'ecmascript',
+    'test-helpers',
+  ]);
+
+  api.addFiles('tests/config_tests.js', 'server');
+  api.addFiles('tests/tracing_tests.js', 'server');
+  api.addFiles('tests/metrics_tests.js', 'server');
+  api.addFiles('tests/ddp_instrumentation_tests.js', 'server');
+});

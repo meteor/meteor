@@ -63,7 +63,7 @@ function buildMethodAttributes(context, methodName, args = []) {
   };
 
   return {
-    ...filterDefined(base),
+    ...base,
     ...extractConnectionAttributes(context?.connection, session),
   };
 }
@@ -369,4 +369,122 @@ export function wrapPublication(pubName, fn) {
       throw error;
     }
   };
+}
+
+// ============================================================================
+// Active span utilities
+// ============================================================================
+
+/**
+ * Get the currently active span, if any.
+ *
+ * @returns {Span|undefined} The active span or undefined
+ *
+ * @example
+ * const span = getActiveSpan();
+ * if (span) {
+ *   span.setAttribute('custom.key', 'value');
+ * }
+ */
+export function getActiveSpan() {
+  return trace.getSpan(context.active());
+}
+
+/**
+ * Add an event to the active span.
+ *
+ * @param {string} name - Event name
+ * @param {Object} attributes - Event attributes
+ *
+ * @example
+ * addEvent('user.validated', { userId: '123' });
+ */
+export function addEvent(name, attributes = {}) {
+  const span = getActiveSpan();
+  if (span) {
+    span.addEvent(name, attributes);
+  }
+}
+
+/**
+ * Set an attribute on the active span.
+ *
+ * @param {string} key - Attribute key
+ * @param {*} value - Attribute value
+ *
+ * @example
+ * setAttribute('user.id', '123');
+ */
+export function setAttribute(key, value) {
+  const span = getActiveSpan();
+  if (span) {
+    span.setAttribute(key, value);
+  }
+}
+
+/**
+ * Set multiple attributes on the active span.
+ *
+ * @param {Object} attributes - Object with key-value pairs
+ *
+ * @example
+ * setAttributes({ 'user.id': '123', 'user.role': 'admin' });
+ */
+export function setAttributes(attributes) {
+  const span = getActiveSpan();
+  if (span && attributes) {
+    Object.entries(attributes).forEach(([key, value]) => {
+      span.setAttribute(key, value);
+    });
+  }
+}
+
+/**
+ * Record an exception on the active span.
+ *
+ * @param {Error} exception - The exception to record
+ *
+ * @example
+ * try {
+ *   await riskyOperation();
+ * } catch (error) {
+ *   recordException(error);
+ *   throw error;
+ * }
+ */
+export function recordException(exception) {
+  const span = getActiveSpan();
+  if (span && exception) {
+    span.recordException(exception);
+  }
+}
+
+/**
+ * Set the active span status to error.
+ *
+ * @param {Error|string} error - The error or error message
+ *
+ * @example
+ * setSpanError(new Error('Operation failed'));
+ * // or
+ * setSpanError('Operation failed');
+ */
+export function setSpanError(error) {
+  const span = getActiveSpan();
+  if (span) {
+    if (error instanceof Error) {
+      span.recordException(error);
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error.message || 'Operation failed',
+      });
+    } else if (typeof error === 'string') {
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error,
+      });
+    } else {
+      span.setStatus({ code: SpanStatusCode.ERROR });
+    }
+  }
 }
