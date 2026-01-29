@@ -131,6 +131,8 @@ Events appear in the trace detail view in Grafana. When you click on a span, you
 2. All events with their timestamps
 3. Event attributes
 
+// TODO: add image of events in Grafana trace view
+
 ## Custom Spans with withSpan
 
 While automatic tracing captures method and publication calls, and events mark moments within a span, sometimes you need to trace a specific operation as a separate span with its own duration. The `withSpan()` function creates child spans within your traced methods.
@@ -333,6 +335,8 @@ Custom spans appear as children of the parent span in Grafana's trace view:
 2. Find a trace for your method
 3. Expand the trace to see the span hierarchy
 4. Click on individual spans to see their attributes and duration
+
+// TODO: add image of nested spans in Grafana
 
 ## Custom Metrics with createMetricsRecorder
 

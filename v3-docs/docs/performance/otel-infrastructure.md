@@ -424,6 +424,8 @@ overrides:
 
 1. **service-graphs**: Generates a graph of service dependencies based on trace data. This powers the "Service Graph" view in Grafana.
 
+//TODO: insert an image of the service graph in Grafana
+
 2. **span-metrics**: Generates RED (Rate, Errors, Duration) metrics from spans:
    - `traces_spanmetrics_calls_total` - Request rate
    - `traces_spanmetrics_latency_bucket` - Latency histogram
@@ -785,6 +787,8 @@ providers:
 ```
 
 This tells Grafana to load dashboard JSON files from the provisioning directory. You can add dashboard JSON files to this folder, and they'll be automatically imported on startup.
+
+// TODO: add example dashboard JSON files for Meteor app monitoring
 
 ### Grafana Environment Variables
 

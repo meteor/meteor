@@ -236,6 +236,8 @@ Once `initOtel()` is called, several things happen automatically:
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+// TODO: add images
+
 ### Verifying the Connection
 
 Start your Meteor application and check that telemetry is being received:
@@ -451,6 +453,8 @@ Or search for a specific method:
 { span.meteor.method.name = "links.insert" }
 ```
 
+// TODO: add image of a trace in Grafana
+
 ### Error Handling in Traces
 
 When a method throws an error, the span automatically:
@@ -476,6 +480,8 @@ In Grafana, you can search for failed spans:
 ```
 { status = error }
 ```
+
+//TODO: add image of error span in Grafana
 
 ### What You Have Now
 
