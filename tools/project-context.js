@@ -95,6 +95,7 @@ import {
 
 import Resolver from "./isobuild/resolver";
 import { addWatchRoot } from './fs/safe-watcher';
+import compiler from "./isobuild/compiler";
 
 const CAN_DELAY_LEGACY_BUILD = ! JSON.parse(
   process.env.METEOR_DISALLOW_DELAYED_LEGACY_BUILD || "false"
@@ -477,6 +478,9 @@ Object.assign(ProjectContext.prototype, {
       if (buildmessage.jobHasMessages())
         return;
 
+      if (buildmessage.jobHasMessages())
+        return;
+
       // Read .meteor/.id, creating it if necessary.
       await self._ensureAppIdentifier();
       if (buildmessage.jobHasMessages())
@@ -494,6 +498,17 @@ Object.assign(ProjectContext.prototype, {
         appDirectory: self.projectDir,
       });
       self.meteorConfig._ensureInitialized();
+
+      // Reinitialize the config
+      // The new config object is marked to be reloaded,
+      // so it will be reloaded on the next build.
+      global.reinitializeMeteorConfig = () => {
+        self.meteorConfig._ensureInitialized();
+        self.meteorConfig._needReload = {};
+        _.each(compiler.ALL_ARCHES, function (arch) {
+          self.meteorConfig._needReload[arch] = true;
+        });
+      };
 
       if (buildmessage.jobHasMessages()) {
         return;
@@ -541,7 +556,7 @@ Object.assign(ProjectContext.prototype, {
       self.platformList, self.cordovaPluginsFile].forEach(
       function (metadataFile) {
         metadataFile && watchSet.merge(metadataFile.watchSet);
-    });
+      });
 
     if (self.localCatalog) {
       watchSet.merge(self.localCatalog.packageLocationWatchSet);
@@ -692,6 +707,9 @@ Object.assign(ProjectContext.prototype, {
         self.packageMap = new packageMapModule.PackageMap(solution.answer, {
           localCatalog: self.localCatalog
         });
+
+        // Provide the packageVersionMap to plugins via global scope
+        global.packageVersionMap = self.packageMap.toVersionMap();
 
         self.packageMapDelta = new packageMapModule.PackageMapDelta({
           cachedVersions: cachedVersions,
@@ -1718,7 +1736,6 @@ Object.assign(exports.ReleaseFile.prototype, {
   }
 });
 
-
 // Represents .meteor/.finished-upgraders.
 // This is only used in a few places, so we don't cache its value in memory;
 // we just read it when we need it. There's also no need to add it to a
@@ -1828,7 +1845,10 @@ export class MeteorConfig {
     // Updates config when package.json changes trigger rebuilds
     setMeteorConfig({
       ...(this._config || {}),
-      modern: normalizeModernConfig(modernForced || this._config?.modern || false),
+      modern: {
+        ...normalizeModernConfig(modernForced || this._config?.modern || false),
+        ...(this._config?.verbose || this._config?.modern?.verbose) && { verbose: true },
+      },
     });
 
     return this._config;
