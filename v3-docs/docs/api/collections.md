@@ -669,6 +669,89 @@ The methods (like `update` or `insert`) you call on the resulting _raw_ collecti
 
 <ApiBox name="Mongo.Collection#rawDatabase" instanceName="Collection"/>
 
+## Collection Extensions
+
+Meteor provides a powerful Collection Extensions API that allows you to extend the functionality of all collection instances. These static methods on `Mongo.Collection` let you add constructor extensions, prototype methods, and static methods to customize collection behavior. These very same APIs are exported under `CollectionExtensions` for backwards compatibility with [lai:collection-extensions](https://github.com/Meteor-Community-Packages/meteor-collection-extensions). 
+
+<ApiBox name="Mongo.Collection.addExtension" />
+
+Add a constructor extension function that runs when collections are created. The extension function is called with `(name, options)` and `this` bound to the collection instance.
+
+Example:
+```js
+Mongo.Collection.addExtension(function(name, options) {
+  this._customProperty = 'value';
+  console.log(`Collection ${name} was created`);
+});
+```
+
+<ApiBox name="Mongo.Collection.addPrototypeMethod" />
+
+Add a prototype method to all collection instances. The method is bound to the collection instance and available on all collections.
+
+Example:
+```js
+Mongo.Collection.addPrototypeMethod('customMethod', function() {
+  return `${this._name} is awesome`;
+});
+
+// Now available on all collections
+const Users = new Mongo.Collection('users');
+console.log(Users.customMethod()); // "users is awesome"
+```
+
+<ApiBox name="Mongo.Collection.addStaticMethod" />
+
+Add a static method to the `Mongo.Collection` constructor itself.
+
+Example:
+```js
+Mongo.Collection.addStaticMethod('getAllCollections', function() {
+  return Array.from(Mongo._collections.values());
+});
+
+// Now available as static method
+const allCollections = Mongo.Collection.getAllCollections();
+```
+
+<ApiBox name="Mongo.Collection.removeExtension" />
+
+Remove a constructor extension (useful for testing).
+
+<ApiBox name="Mongo.Collection.removePrototypeMethod" />
+
+Remove a prototype method from all collection instances.
+
+<ApiBox name="Mongo.Collection.removeStaticMethod" />
+
+Remove a static method from the `Mongo.Collection` constructor.
+
+<ApiBox name="Mongo.Collection.clearExtensions" />
+
+Clear all extensions, prototype methods, and static methods. This is useful for testing to ensure a clean state.
+
+<ApiBox name="Mongo.Collection.getExtensions" />
+
+Get all registered constructor extensions. Returns an array of extension functions. Useful for debugging.
+
+<ApiBox name="Mongo.Collection.getPrototypeMethods" />
+
+Get all registered prototype methods. Returns a Map of method names to functions. Useful for debugging.
+
+<ApiBox name="Mongo.Collection.getStaticMethods" />
+
+Get all registered static methods. Returns a Map of method names to functions. Useful for debugging.
+
+### Legacy Aliases
+
+<ApiBox name="Mongo.Collection.addPrototype" />
+
+Backwards compatibility alias for `addPrototypeMethod`. **Deprecated** - use `addPrototypeMethod` instead.
+
+<ApiBox name="Mongo.Collection.removePrototype" />
+
+Backwards compatibility alias for `removePrototypeMethod`. **Deprecated** - use `removePrototypeMethod` instead.
+
 
 ## Cursors {#mongo_cursor}
 

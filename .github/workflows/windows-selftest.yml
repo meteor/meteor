@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: 22.x
 
@@ -60,15 +60,9 @@ jobs:
             ~/.npm
             node_modules/
             packages/**/.npm
-          key: ${{ runner.os }}-meteor-${{ hashFiles('**/package-lock.json', 'meteor', 'meteor.bat') }}
+          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', 'meteor.bat') }}
           restore-keys: |
             ${{ runner.os }}-meteor-
-
-      - name: Reset submodules (force refetch)
-        shell: pwsh
-        run: |
-          git submodule deinit -f --all
-          if (Test-Path ".git/modules") { Remove-Item -Recurse -Force ".git/modules" }
 
       - name: Install dependencies
         shell: pwsh
