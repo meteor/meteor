@@ -1,0 +1,12 @@
+node_modules/
+
+# Meteor Modern-Tools build context directories
+_build
+*/build-assets
+*/build-chunks
+.rsdoctor
+
+# Meteor Angular specific ignores
+.nx
+public/main.html
+*.tsbuildinfo

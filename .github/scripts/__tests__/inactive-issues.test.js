@@ -127,6 +127,29 @@ test('90 days inactivity -> label + comment', async () => {
   assert.match(botComments[0].body, /90 days/i);
 });
 
+test('90 days inactivity but already labeled -> no action', async () => {
+  const issue = makeIssue({ daysSinceHumanActivity: 100, labels: ['idle'] });
+  const issues = [issue];
+  const commentsByIssue = { [issue.number]: [] };
+
+  await runScript({ issues, commentsByIssue });
+
+  const botComments = commentsByIssue[issue.number].filter(c => c.user.login === 'github-actions[bot]');
+  assert.equal(botComments.length, 0, 'Should not comment again');
+});
+
+test('90 days inactivity but already labeled `in-development` -> no action', async () => {
+  const issue = makeIssue({ daysSinceHumanActivity: 100, labels: ['in-development'] });
+  const issues = [issue];
+  const commentsByIssue = { [issue.number]: [] };
+
+  await runScript({ issues, commentsByIssue });
+
+  const botComments = commentsByIssue[issue.number].filter(c => c.user.login === 'github-actions[bot]');
+  assert.equal(botComments.length, 0, 'Should not comment again');
+});
+
+
 test('Human reply after reminder resets cycle (no immediate labeling)', async () => {
   // Scenario: last human activity 10 days ago, bot commented 40 days ago (which was 50 days after original). Should NOT comment again or label.
   const issue = makeIssue({ daysSinceHumanActivity: 10 });
