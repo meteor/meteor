@@ -10,23 +10,23 @@
   "dependencies": {
     "@babel/runtime": "^7.23.5",
     "@swc/helpers": "^0.5.17",
-    "meteor-node-stubs": "^1.2.12",
-    "svelte": "^3.59.2"
+    "meteor-node-stubs": "^1.2.12"
   },
   "devDependencies": {
-    "svelte-preprocess": "^5.0.0"
+    "@meteorjs/rspack": "^1.0.0",
+    "@rsdoctor/rspack-plugin": "^1.2.3",
+    "@rspack/cli": "^1.7.1",
+    "@rspack/core": "^1.7.1",
+    "postcss-load-config": "^5.1.0",
+    "svelte": "^5.38.2",
+    "svelte-check": "^4.3.1",
+    "svelte-loader": "^3.2.4",
+    "svelte-preprocess": "^6.0.3"
   },
   "meteor": {
     "mainModule": {
       "client": "client/main.js",
       "server": "server/main.js"
-    },
-    "nodeModules": {
-      "recompile": {
-        "svelte": [
-          "legacy"
-        ]
-      }
     },
     "testModule": "tests/main.js",
     "modern": true
