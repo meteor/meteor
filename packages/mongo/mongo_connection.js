@@ -1083,11 +1083,17 @@ MongoConnection.prototype._observeChanges = async function (
         polling: () => ({ available: true }),
       };
 
-      const {
+      let {
         driverClass,
         matcher: selectedMatcher,
         sorter: selectedSorter,
       } = await this._selectReactivityDriver(configuredOrder, driverChecks);
+
+      // Fallback to polling if no driver is available
+      if (!driverClass) {
+        Meteor._debug('No reactivity driver available for cursor, falling back to polling');
+        driverClass = PollingObserveDriver;
+      }
 
       matcher = selectedMatcher;
       sorter = selectedSorter;
