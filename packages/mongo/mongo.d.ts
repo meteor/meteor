@@ -63,7 +63,7 @@ export namespace Mongo {
      * no connection. Unmanaged (`name` is null) collections cannot specify a connection.
      */
     connection?: DDP.DDPStatic | null | undefined;
-    
+
     /** 
      * The method of generating the `_id` fields of new documents in this collection. Possible values:
      * - **`'STRING'`**: random strings
@@ -72,7 +72,7 @@ export namespace Mongo {
      * The default id generation technique is `'STRING'`.
      */
     idGeneration?: string | undefined;
-    
+
     /**
      * An optional transformation function. Documents will be passed through this function before being 
      * returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, 
@@ -80,18 +80,18 @@ export namespace Mongo {
      * or to cursors returned from publish functions.
      */
     transform?: (doc: T) => U;
-    
+
     /** 
      * Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. 
      * Default `true`. 
      */
     defineMutationMethods?: boolean | undefined;
-    
+
     /** @internal */
     _driver?: Record<string, unknown>;
     /** @internal */
     _preventAutopublish?: boolean;
-    
+
     // Allow additional properties for extensibility
     [key: string]: unknown;
   }
@@ -113,7 +113,7 @@ export namespace Mongo {
      * @param name The name of the collection instance.
      */
     getCollection<
-        TCollection extends Collection<NpmModuleMongodb.Document> | undefined = Collection<NpmModuleMongodb.Document> | undefined
+      TCollection extends Collection<NpmModuleMongodb.Document> | undefined = Collection<NpmModuleMongodb.Document> | undefined
     >(name: string): TCollection;
 
     // Collection Extensions API
@@ -121,14 +121,14 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+    addExtension<T extends NpmModuleMongodb.Document = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
 
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T = NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: unknown[]) => unknown): void;
+    addPrototypeMethod<T extends NpmModuleMongodb.Document = NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.
@@ -181,19 +181,19 @@ export namespace Mongo {
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T, U> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
-        | undefined;
+      | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean> | boolean)
+      | undefined;
       update?:
-        | ((
-            userId: string,
-            doc: DispatchTransform<Fn, T, U>,
-            fieldNames: string[],
-            modifier: Modifier<T>
-          ) => Promise<boolean>|boolean)
-        | undefined;
+      | ((
+        userId: string,
+        doc: DispatchTransform<Fn, T, U>,
+        fieldNames: string[],
+        modifier: Modifier<T>
+      ) => Promise<boolean> | boolean)
+      | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
-        | undefined;
+      | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean> | boolean)
+      | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
     }): boolean;
@@ -216,19 +216,19 @@ export namespace Mongo {
     ): Promise<void>;
     deny<Fn extends Transform<T, U> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
-        | undefined;
+      | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean> | boolean)
+      | undefined;
       update?:
-        | ((
-            userId: string,
-            doc: DispatchTransform<Fn, T, U>,
-            fieldNames: string[],
-            modifier: Modifier<T>
-          ) => Promise<boolean>|boolean)
-        | undefined;
+      | ((
+        userId: string,
+        doc: DispatchTransform<Fn, T, U>,
+        fieldNames: string[],
+        modifier: Modifier<T>
+      ) => Promise<boolean> | boolean)
+      | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
-        | undefined;
+      | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean> | boolean)
+      | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
     }): boolean;
@@ -557,7 +557,7 @@ export namespace Mongo {
 
              * @param hexString The 24-character hexadecimal contents of the ObjectID to create
              */
-    new (hexString?: string): ObjectID;
+    new(hexString?: string): ObjectID;
   }
   interface ObjectID {
     toHexString(): string;
@@ -572,14 +572,14 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
-    
+    addExtension<T extends NpmModuleMongodb.Document = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T = NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: unknown[]) => unknown): void;
+    addPrototypeMethod<T extends NpmModuleMongodb.Document = NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.
@@ -652,13 +652,13 @@ export namespace Mongo {
   interface AllowDenyOptions<T = NpmModuleMongodb.Document> {
     insert?: ((userId: string, doc: T) => boolean) | undefined;
     update?:
-      | ((
-          userId: string,
-          doc: T,
-          fieldNames: string[],
-          modifier: Modifier<T>
-        ) => boolean)
-      | undefined;
+    | ((
+      userId: string,
+      doc: T,
+      fieldNames: string[],
+      modifier: Modifier<T>
+    ) => boolean)
+    | undefined;
     remove?: ((userId: string, doc: T) => boolean) | undefined;
     fetch?: string[] | undefined;
     transform?: ((doc: T) => unknown) | null | undefined;

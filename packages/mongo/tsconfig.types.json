@@ -1,0 +1,29 @@
+// This tsconfig is used only during development and testing to validate
+// the mongo.d.ts type definitions. It is not used at runtime or by consumers
+// of the package. Run: npx tsc --project tsconfig.types.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "module": "commonjs",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": false,
+    "declaration": true,
+    "esModuleInterop": true,
+    "baseUrl": "..",
+    "paths": {
+      "meteor/npm-mongo": ["./npm-mongo/index.d.ts"],
+      "meteor/meteor": ["./meteor/meteor.d.ts"],
+      "meteor/ddp": ["./ddp/ddp.d.ts"],
+      "meteor/ejson": ["./ejson/ejson.d.ts"],
+      "meteor/mongo": ["./mongo/mongo.d.ts"],
+      "mongodb": ["./npm-mongo/.npm/package/node_modules/mongodb"]
+    },
+    "typeRoots": [
+      "../../node_modules/@types"
+    ],
+    "types": ["node"]
+  },
+  "include": ["mongo.d.ts"]
+}
