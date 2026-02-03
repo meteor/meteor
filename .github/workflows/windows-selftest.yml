@@ -60,7 +60,7 @@ jobs:
             ~/.npm
             node_modules/
             packages/**/.npm
-          key: ${{ runner.os }}-meteor-${{ hashFiles('**/package-lock.json', 'meteor', 'meteor.bat') }}
+          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', 'meteor.bat') }}
           restore-keys: |
             ${{ runner.os }}-meteor-
 

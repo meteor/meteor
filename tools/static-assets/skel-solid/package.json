@@ -11,22 +11,24 @@
     "@babel/runtime": "^7.23.9",
     "@swc/helpers": "^0.5.17",
     "meteor-node-stubs": "^1.2.12",
-    "picocolors": "^1.1.1",
-    "solid-js": "^1.9.4"
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@meteorjs/rspack": "^1.0.0",
+    "@rsdoctor/rspack-plugin": "^1.2.3",
+    "@rspack/cli": "^1.7.1",
+    "@rspack/core": "^1.7.1",
+    "babel-loader": "10.0.0",
+    "babel-preset-solid": "^1.8.15",
+    "solid-js": "^1.9.4",
+    "solid-refresh": "0.7.5"
   },
   "meteor": {
     "mainModule": {
-      "client": "client/entry-meteor.js",
-      "server": "server/entry-meteor.js"
+      "client": "client/main.js",
+      "server": "server/main.js"
     },
     "testModule": "tests/main.js",
     "modern": true
-  },
-  "devDependencies": {
-    "babel-preset-solid": "^1.8.15",
-    "meteor-vite": "^3.2.1",
-    "vite": "^6.0.11",
-    "vite-plugin-solid": "^2.11.0",
-    "vite-plugin-solid-svg": "^0.8.1"
   }
 }

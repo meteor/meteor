@@ -37,8 +37,8 @@ export default defineConfig({
                 link: "/tutorials/react/index",
               },
               {
-                text: "Meteor + Vue + vue-meteor-tracker",
-                link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
+                text: "Meteor.js 3 + Vue",
+                link: "/tutorials/vue/meteorjs3-vue3",
               },
               {
                 text: "Meteor.js 3 + Solid",
@@ -182,26 +182,22 @@ export default defineConfig({
             link: "/about/web-apps",
           },
           {
-            text: "Cordova",
-            link: "/about/cordova",
-          },
-          {
             text: "Modern Build Stack",
             link: "/about/modern-build-stack.md",
             items: [
               {
-                text: "Transpiler: SWC",
-                link: "/about/modern-build-stack/transpiler-swc.md",
+                text: "Meteor Bundler",
+                link: "/about/modern-build-stack/meteor-bundler-optimizations.md",
               },
               {
-                text: "Bundler",
-                link: "/about/modern-build-stack/bundler.md",
-              },
-              {
-                text: "Dev Server",
-                link: "/about/modern-build-stack/dev-server.md",
+                text: "Rspack Bundler",
+                link: "/about/modern-build-stack/rspack-bundler-integration.md",
               },
             ]
+          },
+          {
+            text: "Cordova",
+            link: "/about/cordova",
           },
         ],
         collapsed: true,
@@ -491,8 +487,8 @@ export default defineConfig({
             link: "/tutorials/react/index",
           },
           {
-            link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
-            text: "Meteor + Vue + vue-meteor-tracker",
+            text: "Meteor.js 3 + Vue",
+            link: "/tutorials/vue/meteorjs3-vue3",
           },
           {
             text: "Meteor.js 3 + Solid",
