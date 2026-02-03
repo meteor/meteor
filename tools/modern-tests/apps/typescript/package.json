@@ -21,7 +21,7 @@
     "@types/react": "^18.2.5",
     "@types/react-dom": "^18.2.4",
     "assert": "^2.1.0",
-    "playwright": "^1.54.2",
+    "playwright": "1.58.0",
     "sass": "^1.92.1",
     "sass-embedded": "^1.92.1",
     "sass-loader": "^16.0.5",
