@@ -321,6 +321,10 @@ export default defineConfig({
                 link: "/packages/roles",
               },
               {
+                text: "service-configuration",
+                link: "/packages/service-configuration",
+              },
+              {
                 text: "oauth-encryption",
                 link: "/packages/oauth-encryption",
               },
@@ -505,6 +509,15 @@ export default defineConfig({
           {
             link: "/tutorials/application-structure/index",
             text: "Application structure",
+          },
+          {
+            text: "Production",
+            items:[
+              {
+                text: "Security",
+                link: "/tutorials/security/security",
+              }
+            ]
           },
         ],
         collapsed: true,
