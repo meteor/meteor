@@ -115,6 +115,11 @@ describe('Meteor Skeletons /', () => {
         server: 'server/main.js',
         test: 'tests/main.js',
       },
+      bodyStyles: {
+        'font-family':
+          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        padding: '10px',
+      },
     }),
   );
 

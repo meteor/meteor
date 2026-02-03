@@ -714,6 +714,7 @@ export function testMeteorSkeleton(options) {
     },
     customAssertions = {},
     checkBodyStyles = true,
+    bodyStyles,
     checkBundleFilePaths = [],
     beforeAllBehavior,
     afterAllBehavior,
@@ -789,7 +790,7 @@ export function testMeteorSkeleton(options) {
 
       if (checkBodyStyles) {
         // Assert that the body has the expected CSS styles
-        await assertBodyStyles({
+        await assertBodyStyles(bodyStyles || {
           "padding": "10px",
           "font-family": "sans-serif"
         });
@@ -823,7 +824,7 @@ export function testMeteorSkeleton(options) {
 
       if (checkBodyStyles) {
         // Assert that the body has the expected CSS styles
-        await assertBodyStyles({
+        await assertBodyStyles(bodyStyles || {
           "padding": "10px",
           "font-family": "sans-serif"
         });

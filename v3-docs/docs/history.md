@@ -10,7 +10,152 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.4.0, 30-01-2026
 
+### Highlights
+
+- **Meteor-Rspack Integration**, [PR#13910](https://github.com/meteor/meteor/pull/13910)
+  - ⚡ New `rspack` atmosphere package (requires at least rspack@1.7.1)
+    Orchestrates the full Rspack setup, including the development server and production builds.
+  - 📦 New `@meteorjs/rspack` npm package
+    Provides a default rspack.config.js. Applications can extend or override this configuration with their own.
+  - 🛠️ New `tools-core` package
+    Supplies runtime utilities for Meteor, designed to support this integration and future tool integrations.
+  - 🔑 Core updates
+    Enhanced Meteor’s core to support the Rspack integration.
+  - ✅ Test suite additions
+    Introduced tests for app skeletons and Meteor-Rspack features to ensure quality and reliability.
+  - 📃 [Documentation](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/rspack-bundler-integration.html)
+    Complete documentation section covering all details of the Meteor-Rspack integration, including migration guides, configuration helpers and more.
+  - Adopting Rspack gives you a faster build experience
+  - Adopting Rspack produces smaller bundle sizes through advanced tree shaking
+  - Adopting Rspack lets you extend your app with modern setups and tooling
+- Support for `devOnly` packages and `Npm.devDepends` to optimize production builds, [PR#13797](https://github.com/meteor/meteor/pull/13797)
+- Introduced `Meteor.deferDev` to optimize server startup during development, [PR#14006](https://github.com/meteor/meteor/pull/14006)
+- Optimize react-meteor-data Suspense hooks and isEqual checks, [PR#456](https://github.com/meteor/react-packages/pull/456)
+- Meteor runtime now shows `--raw-logs` by default, use `--timestamps` to keep timestamps, [PR#13944](https://github.com/meteor/meteor/pull/13944)
+- Integrate `collection-extensions` into core, [PR#13830](https://github.com/meteor/meteor/pull/13830)
+- Fix OPLOG includeCollections/excludeCollections when admin.$cmd happens, [PR#13949](https://github.com/meteor/meteor/pull/13949)
+- Report Mongo SIGILL crash errors, [PR#13930](https://github.com/meteor/meteor/pull/13930)
+- Fix bulk remove in LocalCollection to remove all items, [PR#13965](https://github.com/meteor/meteor/pull/13965)
+- Treat web.cordova as a modern architecture, [PR#13983](https://github.com/meteor/meteor/pull/13983)
+- Improve and beautify server error messages, [PR#13848](https://github.com/meteor/meteor/pull/13848)
+- Upgrade Accounts UI CSS (breaking visual change for accounts-ui users), [PR#13840](https://github.com/meteor/meteor/pull/13840)
+- Support NonEmptyString to check package, [#12852](https://github.com/meteor/meteor/pull/12852)
+- Update TypeScript definitions for async support in accounts-base, [PR#13987](https://github.com/meteor/meteor/pull/13987)
+- Fix an error when files have identical names with different cases, [PR#13958](https://github.com/meteor/meteor/pull/13958)
+- Add experimental config disableBoilerplateResponse to improve React SSR, [PR#13855](https://github.com/meteor/meteor/pull/13855)
+- Upgrade to Node v22.22.0, TypeScript 5.9.2 and SWC 1.15.3, [PR#13997](https://github.com/meteor/meteor/pull/13997) and [PR#13760](https://github.com/meteor/meteor/pull/13760)
+
+All Merged PRs@[GitHub PRs 3.4](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.4)
+
+React Packages:
+- [react-meteor-data@4.0.1](https://github.com/meteor/react-packages/blob/master/packages/react-meteor-data/CHANGELOG.md#v401-2026-1-30)
+- [react-template-helper@0.4.0](https://github.com/meteor/react-packages/blob/master/packages/react-template-helper/CHANGELOG.md#v040-2026-1-30)
+
+#### Breaking Changes
+
+- `accounts-ui` CSS has changed, [PR#13840](https://github.com/meteor/meteor/pull/13840)
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.4-rc.3
+```
+
+To apply `react-meteor-data` changes:
+
+```bash
+meteor add react-meteor-data@4.0.1
+```
+
+---
+
+**Add this to your `package.json` to enable the new modern build stack:**
+
+```json
+"meteor": {
+  "modern": true
+}
+```
+
+Check out [the requirements for Meteor Bundler optimizations](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/meteor-bundler-optimizations.html#requirements) on existing apps.
+
+**Add `rspack` package to enable the Rspack Bundler integration:**
+
+```bash
+meteor add rspack
+```
+
+> This package is added by default for new apps.
+
+Check out [the requirements for Rspack Bundler integration](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/rspack-bundler-integration.html#requirements) on existing apps.
+
+### [📃 Modern Build Stack docs](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack.html)
+
+### [☄️ Meteor Bundler optimizations docs](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/meteor-bundler-optimizations.html)
+
+### [⚡ Rspack Bundler integration docs](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/rspack-bundler-integration.html)
+
+If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.2.0
+- accounts-password@3.2.2
+- accounts-ui-unstyled@1.8.0
+- accounts-ui@1.5.0
+- babel-compiler@7.13.0
+- boilerplate-generator@2.1.0
+- ecmascript@0.17.0
+- meteor@2.2.0
+- minifier-js@3.1.0
+- minimongo@2.0.5
+- mongo@2.2.0
+- react-fast-refresh@0.3.0
+- rspack@1.0.0
+- shell-server@0.7.0
+- standard-minifier-css@1.10.0
+- standard-minifier-js@3.2.0
+- standard-minifiers@1.2.0
+- static-html@1.5.0
+- test-in-browser@1.5.0
+- tools-core@1.0.0
+- typescript@5.9.3
+- webapp@2.1.0
+- meteor-tool@3.4.0
+
+#### Bumped NPM Packages
+
+- @meteorjs/rspack@1.0.0
+
+#### Special thanks to
+
+✨✨✨
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@italojs](https://github.com/italojs)
+- [@Grubba27](https://github.com/Grubba27)
+- [@welkinwong](https://github.com/welkinwong)
+- [@harryadel](https://github.com/harryadel)
+- [@vparpoil](https://github.com/vparpoil)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@turoar23](https://github.com/turoar23)
+- [@DipakHalkude](https://github.com/DipakHalkude)
+- [@sanki92](https://github.com/sanki92)
+- [@evolross](https://github.com/evolross)
+- [@malua](https://github.com/malua)
+- [@tmeyer24](https://github.com/tmeyer24)
+- [@jeetburman](https://github.com/jeetburman)
+- [@copleykj](https://github.com/copleykj)
+
+  ✨✨✨
 
 ## v3.3.2, 01-09-2025
 
@@ -81,6 +226,7 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@copleykj](https://github.com/copleykj)
 
 ✨✨✨
+
 ## v3.3.1, 05-08-2025
 
 ### Highlights

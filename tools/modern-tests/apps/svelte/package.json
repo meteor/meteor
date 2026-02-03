@@ -16,7 +16,7 @@
     "@meteorjs/rspack": "^0.0.28",
     "@rspack/cli": "^1.4.8",
     "@rspack/core": "^1.4.8",
-    "playwright": "^1.54.2",
+    "playwright": "1.58.0",
     "postcss-load-config": "^5.1.0",
     "svelte": "^5.38.2",
     "svelte-check": "^4.3.1",

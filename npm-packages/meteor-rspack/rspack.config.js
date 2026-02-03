@@ -427,6 +427,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         }),
       ]
     : [];
+  // Not supported in Meteor yet (Rspack 1.7+ is enabled by default)
+  const lazyCompilationConfig = { lazyCompilation: false };
 
   const clientEntry =
     isTest && isTestEager && isTestFullApp
@@ -545,7 +547,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         },
       },
     }),
-    ...merge(cacheStrategy, { experiments: { css: true } })
+    ...merge(cacheStrategy, { experiments: { css: true } }),
+    ...lazyCompilationConfig,
   };
 
   const serverEntry =
@@ -633,6 +636,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     devtool: isDevEnvironment || isNative || isTest ? 'source-map' : 'hidden-source-map',
     ...((isDevEnvironment || (isTest && !isTestEager) || isNative) &&
       cacheStrategy),
+    ...lazyCompilationConfig,
   };
 
   // Helper function to load and process config files
@@ -705,10 +709,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     }
 
     const nextUserConfig = await loadAndProcessConfig(
-      projectConfigPathToUse, 
-      'rspack.config.js', 
-      Meteor, 
-      argv, 
+      projectConfigPathToUse,
+      'rspack.config.js',
+      Meteor,
+      argv,
       isAngularEnabled
     );
 
@@ -772,8 +776,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       const nextOverrideConfig = await loadAndProcessConfig(
         overrideConfigPath,
         configNameFull,
-        Meteor, 
-        argv, 
+        Meteor,
+        argv,
         isAngularEnabled
       );
 
@@ -792,6 +796,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   if (Meteor.isDebug || Meteor.isVerbose) {
     console.log('Config:', inspect(config, { depth: null, colors: true }));
+  }
+
+  // Check if lazyCompilation is enabled and warn the user
+  if (config.lazyCompilation === true || typeof config.lazyCompilation === 'object') {
+    console.warn(
+      '\n⚠️  Warning: lazyCompilation may not work correctly in the current Meteor-Rspack integration.\n' +
+        '   This feature will be evaluated for support in future Meteor versions.\n' +
+        '   If you encounter any issues, please disable it in your rspack config.\n',
+    );
   }
 
   return [config];
