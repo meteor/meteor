@@ -272,7 +272,13 @@ EXPERIMENTAL way to compare two strings that results in a nicer display in the t
 
 ### Assertions without optional fail messages
 
-`test.throws(func, expected);`
+`test.throws(func, expected[, message]);`
+
+`test.throwsAsync(func, expected[, message]);`
+
+`test.doesNotThrows(func[, failureMessage]);`
+
+`test.doesNotThrowsAsync(func[, failureMessage]);`
 
 `expected` can be:
 
@@ -280,6 +286,8 @@ EXPERIMENTAL way to compare two strings that results in a nicer display in the t
 - `string`: pass if the string is a substring of the exception message.
 - `regexp`: pass if the exception message passes the regexp.
 - `function`: call the function as a predicate with the exception.
+
+`doesNotThrows` and `doesNotThrowsAsync` assert that the function does not throw. If the function throws, the assertion fails. The optional `failureMessage` is only used to annotate the failure.
 
 Note: Node's `assert.throws` also accepts a constructor to test whether the error is of the expected class.  But since JavaScript can't distinguish between constructors and plain functions and Node's `assert.throws` also accepts a predicate function, if the error fails the `instanceof` test with the constructor then the constructor is then treated as a predicate and called (!)
 
