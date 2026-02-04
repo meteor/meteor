@@ -11,16 +11,16 @@
 // ============================================================================
 
 /**
- * The Assets namespace provides methods to access static server assets.
+ * The Assets interface describes the global object for accessing static server assets.
  * Assets are files in the `private` subdirectory of the application.
  */
-export namespace Assets {
+export interface Assets {
   /**
    * Retrieve the contents of the static server asset as a UTF8-encoded string.
    * @param assetPath The path of the asset, relative to the application's `private` subdirectory.
    * @param callback Optional callback for async usage. If not provided, returns a Promise.
    */
-  function getTextAsync(
+  getTextAsync(
     assetPath: string,
     callback?: (error: Error | null, result?: string) => void
   ): Promise<string>;
@@ -30,7 +30,7 @@ export namespace Assets {
    * @param assetPath The path of the asset, relative to the application's `private` subdirectory.
    * @param callback Optional callback for async usage. If not provided, returns a Promise.
    */
-  function getBinaryAsync(
+  getBinaryAsync(
     assetPath: string,
     callback?: (error: Error | null, result?: Uint8Array) => void
   ): Promise<Uint8Array>;
@@ -39,12 +39,12 @@ export namespace Assets {
    * Get the absolute path to the static server asset. Note that assets are read-only.
    * @param assetPath The path of the asset, relative to the application's `private` subdirectory.
    */
-  function absoluteFilePath(assetPath: string): string;
+  absoluteFilePath(assetPath: string): string;
 
   /**
    * Get the server directory path.
    */
-  function getServerDir(): string;
+  getServerDir(): string;
 }
 
 // ============================================================================
@@ -52,20 +52,20 @@ export namespace Assets {
 // ============================================================================
 
 /**
- * The Npm namespace provides methods to manage npm dependencies in packages.
+ * The Npm interface describes the build-time global for managing npm dependencies.
  */
-export namespace Npm {
+export interface Npm {
   /**
    * Specify which npm packages your Meteor package depends on.
    * @param dependencies An object where keys are package names and values are version constraints or URLs.
    */
-  function depends(dependencies: { [packageName: string]: string }): void;
+  depends(dependencies: { [packageName: string]: string }): void;
 
   /**
    * Require a npm module from within a package.
    * @param moduleName The name of the npm module to require.
    */
-  function require(moduleName: string): any;
+  require(moduleName: string): any;
 }
 
 // ============================================================================
@@ -109,32 +109,32 @@ export interface BuildPluginOptions {
 }
 
 /**
- * The Package namespace provides methods for defining Meteor packages.
+ * The Package interface describes the build-time global for defining Meteor packages.
  */
-export namespace Package {
+export interface Package {
   /**
    * Provide basic package information.
    * @param options Package metadata options.
    */
-  function describe(options: PackageDescribeOptions): void;
+  describe(options: PackageDescribeOptions): void;
 
   /**
    * Define package dependencies and add source files.
    * @param func A function that receives a PackageAPI object.
    */
-  function onUse(func: (api: PackageAPI) => void): void;
+  onUse(func: (api: PackageAPI) => void): void;
 
   /**
    * Define dependencies and source files for tests.
    * @param func A function that receives a PackageAPI object.
    */
-  function onTest(func: (api: PackageAPI) => void): void;
+  onTest(func: (api: PackageAPI) => void): void;
 
   /**
    * Register a build plugin.
    * @param options Build plugin configuration.
    */
-  function registerBuildPlugin(options: BuildPluginOptions): void;
+  registerBuildPlugin(options: BuildPluginOptions): void;
 }
 
 // ============================================================================
@@ -267,14 +267,14 @@ export interface AppAccessRuleOptions {
 }
 
 /**
- * The App namespace provides methods for mobile app configuration.
+ * The App interface describes the build-time global for mobile app configuration.
  */
-export namespace App {
+export interface App {
   /**
    * Set app metadata.
    * @param options App information options.
    */
-  function info(options: AppInfoOptions): void;
+  info(options: AppInfoOptions): void;
 
   /**
    * Set a preference value for the Cordova config.xml.
@@ -282,33 +282,33 @@ export namespace App {
    * @param value The preference value.
    * @param platform Optional platform: 'android', 'ios'.
    */
-  function setPreference(name: string, value: string, platform?: string): void;
+  setPreference(name: string, value: string, platform?: string): void;
 
   /**
    * Configure a Cordova plugin.
    * @param id The plugin ID.
    * @param config Configuration object for the plugin.
    */
-  function configurePlugin(id: string, config: { [key: string]: any }): void;
+  configurePlugin(id: string, config: { [key: string]: any }): void;
 
   /**
    * Specify app icons.
    * @param icons Object mapping size strings to icon file paths.
    */
-  function icons(icons: { [size: string]: string }): void;
+  icons(icons: { [size: string]: string }): void;
 
   /**
    * Specify launch screen images.
    * @param launchScreens Object mapping size/orientation strings to image file paths.
    */
-  function launchScreens(launchScreens: { [size: string]: string }): void;
+  launchScreens(launchScreens: { [size: string]: string }): void;
 
   /**
    * Define URL access rules for the app.
    * @param pattern The URL pattern to allow.
    * @param options Optional access rule options.
    */
-  function accessRule(pattern: string, options?: AppAccessRuleOptions): void;
+  accessRule(pattern: string, options?: AppAccessRuleOptions): void;
 }
 
 // ============================================================================
@@ -316,14 +316,14 @@ export namespace App {
 // ============================================================================
 
 /**
- * The Cordova namespace provides methods for Cordova plugin dependencies.
+ * The Cordova interface describes the build-time global for Cordova plugin dependencies.
  */
-export namespace Cordova {
+export interface Cordova {
   /**
    * Specify Cordova plugin dependencies.
    * @param dependencies Object mapping plugin IDs to version constraints or URLs.
    */
-  function depends(dependencies: { [pluginId: string]: string }): void;
+  depends(dependencies: { [pluginId: string]: string }): void;
 }
 
 // ============================================================================
@@ -331,9 +331,9 @@ export namespace Cordova {
 // ============================================================================
 
 declare global {
-  const Assets: typeof import("meteor/tools").Assets;
-  const Npm: typeof import("meteor/tools").Npm;
-  const Package: typeof import("meteor/tools").Package;
-  const App: typeof import("meteor/tools").App;
-  const Cordova: typeof import("meteor/tools").Cordova;
+  const Assets: Assets;
+  const Npm: Npm;
+  const Package: Package;
+  const App: App;
+  const Cordova: Cordova;
 }
