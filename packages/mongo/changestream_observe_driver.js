@@ -35,7 +35,7 @@ export class ChangeStreamObserveDriver {
     this._resolveTimeout = null;
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
-    
+
     // Projection function similar to oplog driver
     const projection = this._cursorDescription.options.projection || this._cursorDescription.options.fields;
     if (projection) {
@@ -409,7 +409,7 @@ export class ChangeStreamObserveDriver {
       for (const callbackData of callbacksToFlush) {
         try {
           const { operationType, id, fullDocument, fullDocumentBeforeChange, change } = callbackData;
-          
+
           switch (operationType) {
             case 'insert':
               this._handleInsert(id, fullDocument);
@@ -456,8 +456,7 @@ export class ChangeStreamObserveDriver {
     // Determine which state (before/after) matches the cursor selector
     const matchesAfter = this._matcher.documentMatches(newDoc || {}).result;
 
-    // If MongoDB delivers the pre-image we can rely on it. Otherwise fall back to
-    // the multiplexer cache to infer whether we were previously tracking the doc.
+    // Use the multiplexer cache (now updated synchronously) to check if we've seen this doc
     const cachedDoc = this._multiplexer?._cache?.docs.get(id);
     const matchesBefore = oldDoc
       ? (this._matcher.documentMatches(oldDoc).result)
@@ -481,7 +480,6 @@ export class ChangeStreamObserveDriver {
 
           if (Object.keys(changedFields).length > 0) {
             const transformedDoc = replaceTypes(changedFields, replaceMongoAtomWithMeteor);
-            this._multiplexer?._cache?.docs.set(id, newDoc);
             this._multiplexer.changed(id, transformedDoc);
           }
           return;
