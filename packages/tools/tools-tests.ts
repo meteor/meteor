@@ -2,22 +2,24 @@ import { Tinytest } from "meteor/tinytest";
 
 // Type compilation tests for meteor/tools
 
-Tinytest.add("tools types - Assets.getTextAsync is a function", (test) => {
+Tinytest.addAsync("tools types - Assets.getTextAsync returns string", async (test) => {
+  const result = await Assets.getTextAsync("tools-tests.ts");
   test.isTrue(
-    typeof Assets.getTextAsync === "function",
-    "Assets.getTextAsync should be a function"
+    typeof result === "string",
+    "Assets.getTextAsync should return a string"
   );
 });
 
-Tinytest.add("tools types - Assets.getBinaryAsync is a function", (test) => {
+Tinytest.addAsync("tools types - Assets.getBinaryAsync returns Uint8Array", async (test) => {
+  const result = await Assets.getBinaryAsync("tools-tests.ts");
   test.isTrue(
-    typeof Assets.getBinaryAsync === "function",
-    "Assets.getBinaryAsync should be a function"
+    result instanceof Uint8Array,
+    "Assets.getBinaryAsync should return a Uint8Array"
   );
 });
 
 Tinytest.add("tools types - Assets.absoluteFilePath returns string", (test) => {
-  const result = Assets.absoluteFilePath("test.txt");
+  const result = Assets.absoluteFilePath("tools-tests.ts");
   test.isTrue(
     typeof result === "string",
     "Assets.absoluteFilePath should return a string"
