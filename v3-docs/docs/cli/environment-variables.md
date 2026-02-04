@@ -59,6 +59,42 @@ When running `meteor build` or `meteor deploy` you can set `METEOR_DISABLE_OPTIM
 
 Since optimistic in-memory caching is one of the more memory-intensive parts of the build system, setting the environment variable `METEOR_DISABLE_OPTIMISTIC_CACHING=1` can help improve memory usage during meteor build, which seems to improve the total build times. This configuration is perfectly safe because the whole point of optimistic caching is to keep track of previous results for future rebuilds, but in the case of meteor `build` or `deploy` there's only ever one initial build, so the extra bookkeeping is unnecessary.
 
+## METEOR_IGNORE
+(_development_)
+
+An alternative way to exclude files and directories from the Meteor bundler, working similarly to a [`.meteorignore`](../about/modern-build-stack/meteor-bundler-optimizations.md#meteorignore) file but configured through an environment variable. This is useful when you want to ignore certain paths without modifying your project files.
+
+The value should be a space-delimited list of patterns (following the same syntax as `.meteorignore`), for example: `METEOR_IGNORE="tests/* private/drafts"`.
+
+When both `METEOR_IGNORE` and a `.meteorignore` file are present, their patterns are combined, so you can use the environment variable to complement your existing `.meteorignore` rules.
+
+An interesting use case is to define different `METEOR_IGNORE` patterns per command. Since the variable is set per process, you can tailor what the bundler sees depending on whether you are running the app or running tests:
+
+```bash
+# When developing, ignore test folders to speed up rebuilds
+METEOR_IGNORE="tests" meteor run
+
+# When testing, ignore folders only needed for the running app
+# e.g. public/ assets that are not consumed by tests
+METEOR_IGNORE="public" meteor test --driver-package meteor/meteortesting:mocha
+```
+
+You can also exclude heavy `node_modules` sub-dependencies that are only relevant to one workflow. For example, ignore test-only packages when running the app, or ignore app-only packages when running tests:
+
+```bash
+# Ignore test-only dependencies when running the app
+METEOR_IGNORE="node_modules/puppeteer node_modules/playwright-core" meteor run
+
+# Ignore heavy app-only dependencies when running tests
+METEOR_IGNORE="node_modules/pdfkit node_modules/sharp" meteor test --driver-package meteor/meteortesting:mocha
+```
+
+This way each command only processes the files it actually needs, reducing build times on both workflows without requiring changes to your project's `.meteorignore` file.
+
+::: info
+`METEOR_IGNORE` is automatically set when using the [Rspack bundler integration](../about/modern-build-stack/rspack-bundler-integration.md). Since Rspack handles the client and server app bundling, Meteor's bundler should only worry about what it strictly needs for the Meteor-Rspack integration. By using `METEOR_IGNORE` to exclude folders and dependencies that Rspack already manages or that are irrelevant to Meteor's side of the build, you ensure the most speed is gained from the Rspack delegation.
+:::
+
 ## METEOR_PROFILE
 (_development_)
 
@@ -127,4 +163,3 @@ Configure Meteor's HTTP server to listen on a UNIX socket file path (e.g. `UNIX_
 (_production_)
 
 This overrides the default UNIX file permissions on the UNIX socket file configured in `UNIX_SOCKET_PATH`. For example, `UNIX_SOCKET_PERMISSIONS=660` would set read/write permissions for both the user and group.
-

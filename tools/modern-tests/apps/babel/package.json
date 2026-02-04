@@ -1,0 +1,36 @@
+{
+  "name": "babel",
+  "private": true,
+  "scripts": {
+    "start": "meteor run --open",
+    "test": "meteor test --once --driver-package meteortesting:mocha",
+    "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
+    "visualize": "meteor --production --extra-packages bundle-visualizer"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.9.2",
+    "@apollo/server": "^4.10.0",
+    "@babel/runtime": "^7.23.9",
+    "@swc/helpers": "^0.5.17",
+    "graphql": "^16.8.1",
+    "meteor-node-stubs": "^1.2.12",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-react": "^7.23.3",
+    "@graphql-tools/webpack-loader": "^7.0.0",
+    "babel-loader": "^9.1.3",
+    "babel-plugin-module-resolver": "^5.0.0",
+    "playwright": "1.58.0"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.jsx",
+      "server": "server/main.js"
+    },
+    "testModule": "tests/main.js",
+    "modern": true
+  }
+}
