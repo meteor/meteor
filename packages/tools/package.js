@@ -10,9 +10,7 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use('ecmascript');
-  api.use('typescript');
   api.use('tinytest');
-  api.use('tools');
+  api.use('typescript');
   api.mainModule('tools-tests.ts', 'server');
 });

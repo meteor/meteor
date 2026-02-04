@@ -9,7 +9,6 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "meteor/tools": ["./tools.d.ts"],
       "meteor/tinytest": ["./tinytest.d.ts"]
     }
   },
