@@ -114,7 +114,20 @@ function generateSequence() {
 }
 
 Meteor.methods({
-  requestLoginTokenForUser: ({ selector, userData, options = {} }) => {
+  requestLoginTokenForUser: (args) => {
+    check(args, Match.ObjectIncluding({
+      selector: Accounts._userQueryValidator,
+      userData: Match.Optional(Match.ObjectIncluding({
+        username: Match.Optional(NonEmptyString),
+        email: Match.Optional(NonEmptyString),
+      })),
+      options: Match.Optional(Match.ObjectIncluding({
+        userCreationDisabled: Match.Optional(Boolean),
+        extra: Match.Optional(Object),
+      })),
+    }));
+
+    const { selector, userData, options } = args;
     let user = Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
