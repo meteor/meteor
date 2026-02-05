@@ -148,6 +148,110 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'accounts - onLogin non-async callback works correctly',
+  (test, done) => {
+    const onLogin = Accounts.onLogin((loginDetails) => {
+      // Non-async callback — should still work with forEachAsync
+      test.isTrue(loginDetails !== undefined);
+      test.equal('password', loginDetails.type);
+      onLogin.stop();
+      removeTestUser(done);
+    });
+    logoutAndCreateUser(test, done, () => {
+      Meteor.loginWithPassword(username, password, (err) => {
+        test.isFalse(!!err);
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - onLogin async callback works correctly',
+  (test, done) => {
+    const onLogin = Accounts.onLogin(async (loginDetails) => {
+      const user = await Meteor.userAsync();
+      test.isTrue(user !== undefined);
+      test.equal('password', loginDetails.type);
+      onLogin.stop();
+      removeTestUser(done);
+    });
+    logoutAndCreateUser(test, done, () => {
+      Meteor.loginWithPassword(username, password, (err) => {
+        test.isFalse(!!err);
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - onLoginFailure non-async callback works correctly',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      Meteor.logout(() => {
+        const onLoginFailure = Accounts.onLoginFailure(({ error }) => {
+          test.isTrue(error !== undefined);
+          onLoginFailure.stop();
+          removeTestUser(done);
+        });
+        Meteor.loginWithPassword(username, 'wrongpassword', (err) => {
+          test.isTrue(!!err);
+        });
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - onLoginFailure async callback works correctly',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      Meteor.logout(async () => {
+        const onLoginFailure = Accounts.onLoginFailure(async ({ error }) => {
+          test.isTrue(error !== undefined);
+          const user = await Meteor.userAsync();
+          test.isFalse(!!user);
+          onLoginFailure.stop();
+          removeTestUser(done);
+        });
+        Meteor.loginWithPassword(username, 'wrongpassword', (err) => {
+          test.isTrue(!!err);
+        });
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - onLogout non-async callback works correctly',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      const onLogout = Accounts.onLogout(() => {
+        // callback fired — logout hook works with sync function
+        onLogout.stop();
+        removeTestUser(done);
+      });
+      Meteor.logout();
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - onLogout async callback works correctly',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      const onLogout = Accounts.onLogout(async () => {
+        // onLogout fires before setUserId(null), so user is still available
+        const user = await Meteor.userAsync();
+        test.isTrue(!!user);
+        onLogout.stop();
+        removeTestUser(done);
+      });
+      Meteor.logout();
+    });
+  }
+);
+
+Tinytest.addAsync(
   'accounts - onLogin callback receives { type: "resume" } param on ' +
   'reconnect, if already logged in',
   (test, done) => {
