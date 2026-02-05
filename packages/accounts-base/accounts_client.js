@@ -162,10 +162,10 @@ export class AccountsClient extends AccountsCommon {
       // TODO[FIBERS]: Look this { wait: true } later.
       wait: true
     })
-      .then((result) => {
+      .then(async (result) => {
         this._loggingOut.set(false);
         this._loginCallbacksCalled = false;
-        this.makeClientLoggedOut();
+        await this.makeClientLoggedOut();
         callback && callback();
       })
       .catch((e) => {
