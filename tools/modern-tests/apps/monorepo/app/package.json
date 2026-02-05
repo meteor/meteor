@@ -1,0 +1,33 @@
+{
+  "name": "app",
+  "private": true,
+  "scripts": {
+    "start": "meteor run",
+    "test": "meteor test --once --driver-package meteortesting:mocha",
+    "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
+    "visualize": "meteor --production --extra-packages bundle-visualizer"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.23.5",
+    "@react-email/components": "0.5.3",
+    "@swc/helpers": "^0.5.17",
+    "grubba-rpc": "^0.12.8",
+    "meteor-node-stubs": "^1.2.12",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "thread-stream": "^3.1.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "playwright": "1.58.0"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.jsx",
+      "server": "server/main.js"
+    },
+    "modern": true
+  }
+}

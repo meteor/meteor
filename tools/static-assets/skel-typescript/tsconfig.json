@@ -40,6 +40,9 @@
   },
   "exclude": [
     "./.meteor/**",
-    "./packages/**"
+    "./packages/**",
+    "./_build/**",
+    "./public/build-chunks/**",
+    "./public/build-assets/**"
   ]
 }

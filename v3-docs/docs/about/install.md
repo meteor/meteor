@@ -6,6 +6,14 @@ You need to install the Meteor command line tool to create, run, and manage your
 npx meteor
 ```
 
+To create your meteor project you can run:
+
+```bash
+meteor create
+```
+
+And it will prompt you to choose a project name and frontend framework.
+
 ## Prerequisites {#prereqs}
 
 ### Operating System (OS) {#prereqs-os}
@@ -141,5 +149,7 @@ npx meteor uninstall
 
 If you installed Meteor using curl or as a fallback solution, run:
 
-`rm -rf ~/.meteor`
-`sudo rm /usr/local/bin/meteor`
+```bash
+rm -rf ~/.meteor
+sudo rm /usr/local/bin/meteor
+```

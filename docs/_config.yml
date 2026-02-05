@@ -213,6 +213,7 @@ redirects:
   /#/full/accounts-setusername: 'api/passwords.html#accounts-setusername'
   /#/full/accounts-addemail: 'api/passwords.html#accounts-addemail'
   /#/full/accounts-removeemail: 'api/passwords.html#accounts-removeemail'
+  /#/full/accounts_replaceemail: 'api/passwords.html#Accounts-replaceEmail'
   /#/full/accounts_verifyemail: 'api/passwords.html#Accounts-verifyEmail'
   /#/full/accounts-finduserbyusername: 'api/passwords.html#accounts-finduserbyusername'
   /#/full/accounts-finduserbyemail: 'api/passwords.html#accounts-finduserbyemail'

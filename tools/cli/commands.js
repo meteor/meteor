@@ -1,3 +1,5 @@
+import { getMeteorConfig } from "../tool-env/meteor-config";
+
 var main = require('./main.js');
 var _ = require('underscore');
 var files = require('../fs/files');
@@ -261,13 +263,49 @@ export function parseRunTargets(targets) {
   });
 };
 
-const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
-function filterWebArchs(webArchs, excludeArchsOption) {
-  if (excludeArchsOption) {
-    const excludeArchs = excludeArchsOption.trim().split(/\s*,\s*/)
-      .filter(arch => excludableWebArchs.includes(arch));
-    webArchs = webArchs.filter(arch => !excludeArchs.includes(arch));
+function filterWebArchs(webArchs, excludeArchsOption, appDir, options) {
+  const platforms = (options.platforms || []);
+  const isBuildMode = platforms?.length > 0;
+  if (isBuildMode) {
+    // Build Mode
+    const isModernOnlyPlatform = platforms.includes('modern') && !platforms.includes('legacy');
+    if (isModernOnlyPlatform) {
+      webArchs = webArchs.filter(arch => arch !== 'web.browser.legacy');
+    }
+    const hasCordovaPlatforms = platforms.includes('android') || platforms.includes('ios');
+    if (!hasCordovaPlatforms) {
+      webArchs = webArchs.filter(arch => arch !== 'web.cordova');
+    }
+  } else {
+    // Dev & Test Mode
+    const isCordovaDev = (options.args || []).some(arg => ['ios', 'ios-device', 'android', 'android-device'].includes(arg));
+    if (!isCordovaDev) {
+      const excludeArchsOptions = excludeArchsOption ? excludeArchsOption.trim().split(/\s*,\s*/) : [];
+      const hasExcludeArchsOptions = (excludeArchsOptions?.length || 0) > 0;
+      const hasModernArchsOnlyEnabled = appDir && getMeteorConfig()?.modern?.webArchOnly !== false;
+      if (hasExcludeArchsOptions && hasModernArchsOnlyEnabled) {
+        console.warn('modern.webArchOnly and --exclude-archs are both active. If both are set, --exclude-archs takes priority.');
+      }
+      const automaticallyIgnoredLegacyArchs = (!hasExcludeArchsOptions && hasModernArchsOnlyEnabled) ? ['web.browser.legacy', 'web.cordova'] : [];
+      if (hasExcludeArchsOptions || automaticallyIgnoredLegacyArchs.length) {
+        const excludeArchs = [...excludeArchsOptions, ...automaticallyIgnoredLegacyArchs];
+        webArchs = webArchs.filter(arch => !excludeArchs.includes(arch));
+      }
+    }
   }
+
+  const forcedInclArchs = process.env.METEOR_FORCE_INCLUDE_ARCHS;
+  if (forcedInclArchs != null) {
+    const nextInclArchs = forcedInclArchs.trim().split(/\s*,\s*/);
+    webArchs = Array.from(new Set([...webArchs, ...nextInclArchs]));
+  }
+
+  const forcedExclArchs = process.env.METEOR_FORCE_EXCLUDE_ARCHS;
+  if (forcedExclArchs != null) {
+    const nextExclArchs = forcedExclArchs.trim().split(/\s*,\s*/);
+    webArchs = webArchs.filter(_webArch => !nextExclArchs.includes(_webArch));
+  }
+
   return webArchs;
 }
 
@@ -413,7 +451,8 @@ var runCommandOptions = {
     ...inspectOptions,
     'no-release-check': { type: Boolean },
     production: { type: Boolean },
-    'raw-logs': { type: Boolean },
+    'raw-logs': { type: Boolean, default: true },
+    timestamps: { type: Boolean, default: false }, // opposite of --raw-logs
     settings: { type: String, short: "s" },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
@@ -497,10 +536,7 @@ async function doRunCommand(options) {
     );
   }
 
-  if (options['raw-logs']) {
-    runLog.setRawLogs(true);
-  }
-
+  runLog.setRawLogs(options['raw-logs'] && !options.timestamps);
 
   let webArchs = projectContext.platformList.getWebArchs();
   if (! _.isEmpty(runTargets) ||
@@ -509,11 +545,16 @@ async function doRunCommand(options) {
       webArchs.push("web.cordova");
     }
   }
-  webArchs = filterWebArchs(webArchs, options['exclude-archs']);
+
+  webArchs = filterWebArchs(webArchs, options['exclude-archs'], options.appDir, options);
+  // Set the webArchs to include for compilation later
+  global.includedWebArchs = webArchs;
+
   const buildMode = options.production ? 'production' : 'development';
 
   let cordovaRunner;
-  if (!_.isEmpty(runTargets)) {
+  const shouldDisableCordova =  Boolean(JSON.parse(process.env.METEOR_CORDOVA_DISABLE || 'false'));
+  if (!shouldDisableCordova && !_.isEmpty(runTargets)) {
 
     async function prepareCordovaProject() {
       import { CordovaProject } from '../cordova/project.js';
@@ -570,7 +611,7 @@ async function doRunCommand(options) {
           open(`http://localhost:${options.port}`)
         }
       }
-    }, 
+    },
     open: options.open,
   });
 }
@@ -649,6 +690,7 @@ function getExamplesJSON(){
 const DEFAULT_SKELETON = "react";
 export const AVAILABLE_SKELETONS = [
   "apollo",
+  "babel",
   "bare",
   "blaze",
   "full",
@@ -660,6 +702,9 @@ export const AVAILABLE_SKELETONS = [
   "tailwind",
   "chakra-ui",
   "solid",
+  "legacy",
+  "coffeescript",
+  "angular"
 ];
 
 const SKELETON_INFO = {
@@ -674,8 +719,11 @@ const SKELETON_INFO = {
   "svelte": "To create a basic Svelte app",
   "tailwind": "To create an app using React and Tailwind",
   "chakra-ui": "To create an app Chakra UI and React",
-  "solid": "To create a basic Solid app"
-}
+  "solid": "To create a basic Solid app",
+  "coffeescript": "To create a basic CoffeeScript app",
+  "babel": "To create a React app with Babel support",
+  "angular": "To create a basic Angular app",
+};
 
 main.registerCommand({
   name: 'create',
@@ -685,6 +733,7 @@ main.registerCommand({
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean },
+    babel: { type: Boolean },
     bare: { type: Boolean },
     minimal: { type: Boolean },
     full: { type: Boolean },
@@ -696,7 +745,10 @@ main.registerCommand({
     svelte: { type: Boolean },
     tailwind: { type: Boolean },
     'chakra-ui': { type: Boolean },
+    coffeescript: { type: Boolean },
     solid: { type: Boolean },
+    angular: { type: Boolean },
+    legacy: { type: Boolean },
     prototype: { type: Boolean },
     from: { type: String },
   },
@@ -799,7 +851,7 @@ main.registerCommand({
             return transform(f);
           },
           transformContents: async function (contents, f) {
-            if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+            if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
               return Buffer.from(await transform(contents.toString()));
             } else {
               return contents;
@@ -1084,7 +1136,7 @@ main.registerCommand({
       "If you are new to Meteor, try some of the learning resources here:"
     );
     Console.info(
-      Console.url("https://www.meteor.com/tutorials"),
+      Console.url("https://docs.meteor.com/"),
       Console.options({ indent: 2 })
     );
 
@@ -1093,7 +1145,7 @@ main.registerCommand({
       "When you’re ready to deploy and host your new Meteor application, check out Cloud:"
     );
     Console.info(
-      Console.url("https://www.meteor.com/cloud"),
+      Console.url("https://galaxycloud.app/"),
       Console.options({ indent: 2 })
     );
 
@@ -1160,71 +1212,85 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/);
   }
 
-  try {
-    // Prototype option should use local skeleton.
-    // Maybe we should use a different skeleton for prototype
-    if (options.prototype) throw new Error("Using prototype option");
-    // if using the release option we should use the default skeleton
-    // using it as it was before 2.x
-    if (release.explicit) throw new Error("Using release option");
+  const copyFromLocalSkeleton = async () => {
+    await files.cp_r(
+      skeletonPath,
+      appPath,
+      {
+        transformFilename: function (f) {
+          return transform(f);
+        },
+        transformContents: function (contents, f) {
+          // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
+          if (/packages/.test(f)) {
+            const prototypePackages = () =>
+              "autopublish             # Publish all data to the clients (for prototyping)\n" +
+              "insecure                # Allow all DB writes from clients (for prototyping)";
 
-    await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`);
-  } catch (e) {
+            // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
+            if (options.prototype) {
+              return Buffer.from(
+                contents.toString().replace(/~prototype~/g, prototypePackages())
+              );
+            } else {
+              return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
+            }
+          }
+          if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
+            return Buffer.from(transform(contents.toString()));
+          } else {
+            return contents;
+          }
+        },
+        ignore: toIgnore,
+        preserveSymlinks: true,
+      }
+    );
+  };
 
-    if (
-      e.message !== "Using prototype option" &&
-      e.message !== "Using release option"
-    ) {
-      // something has happened while creating the app using git clone
-      Console.error(
-        `Something has happened while creating your app using git clone.
+  // Check if the local skeleton path exists
+  const skeletonPath = files.pathJoin(
+    __dirnameConverted,
+    "..",
+    "static-assets",
+    `skel-${skeleton}`
+  );
+
+  const useLocalSkeleton = files.exists(skeletonPath) ||
+    options.prototype ||
+    release.explicit;
+  if (useLocalSkeleton) {
+    // Use local skeleton
+    await copyFromLocalSkeleton();
+  } else {
+    try {
+      // Prototype option should use local skeleton.
+      // Maybe we should use a different skeleton for prototype
+      if (options.prototype) throw new Error("Using prototype option");
+      // if using the release option we should use the default skeleton
+      // using it as it was before 2.x
+      if (release.explicit) throw new Error("Using release option");
+
+      // If local skeleton doesn't exist, use setupExampleByURL
+      await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`);
+    } catch (e) {
+      if (
+        e.message !== "Using prototype option" &&
+        e.message !== "Using release option"
+      ) {
+        // something has happened while creating the app using git clone
+        Console.error(
+          `Something has happened while creating your app using git clone.
          Will use cached version of skeletons.
          Error message: `,
-        e.message
-      );
+          e.message
+        );
+      }
+      // For prototype or release options, use local skeleton
+      await copyFromLocalSkeleton();
     }
-
-       // TODO: decide if this should stay here or not.
-       await files.cp_r(
-        files.pathJoin(
-          __dirnameConverted,
-          "..",
-          "static-assets",
-          `skel-${skeleton}`
-        ),
-        appPath,
-        {
-          transformFilename: function (f) {
-            return transform(f);
-          },
-          transformContents: function (contents, f) {
-            // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
-            if (/packages/.test(f)) {
-              const prototypePackages = () =>
-                "autopublish             # Publish all data to the clients (for prototyping)\n" +
-                "insecure                # Allow all DB writes from clients (for prototyping)";
-
-              // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
-              if (options.prototype) {
-                return Buffer.from(
-                  contents.toString().replace(/~prototype~/g, prototypePackages())
-                );
-              } else {
-                return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
-              }
-            }
-            if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
-              return Buffer.from(transform(contents.toString()));
-            } else {
-              return contents;
-            }
-          },
-          ignore: toIgnore,
-          preserveSymlinks: true,
-        }
-      );
-      await setupMessages();
   }
+  await setupMessages();
 
   Console.info("");
 });
@@ -1344,7 +1410,7 @@ var buildCommand = async function (options) {
   let selectedPlatforms = null;
   if (options.platforms) {
     const platformsArray = options.platforms.split(",");
-
+    const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
     platformsArray.forEach(plat => {
       if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
         throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
@@ -1391,9 +1457,9 @@ on an OS X system.");
   // For example, if we want to build only android, there is no need to build
   // web.browser.
   let webArchs;
+  const baseWebArchs = projectContext.platformList.getWebArchs();
   if (selectedPlatforms) {
-    const filteredArchs = projectContext.platformList
-      .getWebArchs()
+    const filteredArchs = baseWebArchs
       .filter(arch => selectedPlatforms.includes(arch));
 
     if (
@@ -1404,6 +1470,11 @@ on an OS X system.");
     }
 
     webArchs = filteredArchs.length ? filteredArchs : undefined;
+  } else {
+    webArchs = filterWebArchs(baseWebArchs, options['exclude-archs'], options.appDir, {
+      ...options,
+      platforms: projectContext.platformList.getPlatforms(),
+    });
   }
 
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
@@ -1561,7 +1632,7 @@ https://guide.meteor.com/cordova.html#submitting-android
     });
   }
 
-  await files.rm_recursive(buildDir);
+  await files.rm_recursive_deferred(buildDir);
 
   const npmShrinkwrapFilePath = files.pathJoin(bundlePath, 'programs/server/npm-shrinkwrap.json');
   if (files.exists(npmShrinkwrapFilePath)) {
@@ -1794,9 +1865,15 @@ main.registerCommand({
                  "MONGO_URL will NOT be reset.");
   }
 
-  const resetMeteorNmCachePromise = options['skip-cache'] ? Promise.resolve() : files.rm_recursive_async(
+  const resetMeteorNpmCachePromise = options['skip-cache'] ? Promise.resolve() : files.rm_recursive_async(
     files.pathJoin(options.appDir, "node_modules", ".cache", "meteor")
   );
+
+  const rspackHelpers = require('../tool-env/rspack.js');
+  const rspackAppContexts = rspackHelpers.getRspackAppContexts(options.appDir);
+  const resetRspackPromises = rspackAppContexts.map((contextPath) => files.rm_recursive_async(
+    contextPath
+  ));
 
   if (options.db) {
     // XXX detect the case where Meteor is running the app, but
@@ -1816,7 +1893,8 @@ main.registerCommand({
       files.rm_recursive_async(
         files.pathJoin(options.appDir, ".meteor", "local")
       ),
-      resetMeteorNmCachePromise,
+      resetMeteorNpmCachePromise,
+      ...resetRspackPromises,
     ]);
 
     Console.info("Project reset.");
@@ -1834,7 +1912,8 @@ main.registerCommand({
     ...allExceptDb.map((_path) =>
       files.rm_recursive_async(files.pathJoin(options.appDir, _path))
     ),
-    resetMeteorNmCachePromise
+    resetMeteorNpmCachePromise,
+    ...resetRspackPromises,
   ];
   await Promise.all(allRemovePromises);
   Console.info("Project reset.");
@@ -2063,7 +2142,8 @@ testCommandOptions = {
     // like progress bars and spinners are unimportant.
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
-    'raw-logs': { type: Boolean },
+    'raw-logs': { type: Boolean, default: true },
+    timestamps: { type: Boolean, default: false }, // opposite of --raw-logs
 
     // Undocumented. See #Once
     once: { type: Boolean },
@@ -2113,7 +2193,10 @@ testCommandOptions = {
 
     'extra-packages': { type: String },
 
-    'exclude-archs': { type: String }
+    'exclude-archs': { type: String },
+
+    // Same as TINYTEST_FILTER
+    filter: { type: String, short: 'f' },
   }
 };
 
@@ -2134,6 +2217,9 @@ main.registerCommand(Object.assign(
 });
 
 async function doTestCommand(options) {
+  if (options.filter) {
+    process.env.TINYTEST_FILTER = options.filter;
+  }
   // This "metadata" is accessed in a few places. Using a global
   // variable here was more expedient than navigating the many layers
   // of abstraction across the build process.
@@ -2192,9 +2278,8 @@ async function doTestCommand(options) {
     serverArchitectures.push(DEPLOY_ARCH);
   }
 
-  if (options['raw-logs']) {
-    runLog.setRawLogs(true);
-  }
+  runLog.setRawLogs(options['raw-logs'] && !options.timestamps);
+
 
   var includePackages = [];
   if (options['extra-packages']) {
@@ -2465,7 +2550,9 @@ var runTestAppForPackages = async function (projectContext, options) {
   if (options.cordovaRunner) {
     webArchs.push("web.cordova");
   }
-  buildOptions.webArchs = filterWebArchs(webArchs, options['exclude-archs']);
+  buildOptions.webArchs = filterWebArchs(webArchs, options['exclude-archs'], projectContext.appDirectory, options);
+  // Set the webArchs to include for compilation later
+  global.includedWebArchs = buildOptions.webArchs;
 
   if (options.deploy) {
     // Run the constraint solver and build local packages.
@@ -3337,20 +3424,58 @@ const setupBenchmarkSuite = async (profilingPath) => {
   if (await files.exists(profilingPath)) {
     return;
   }
+
+  // Check git availability and version
   const [okGitVersion, errGitVersion] = await bash`git --version`;
   if (errGitVersion) throw new Error("git is not installed");
 
-  const parsedGitVersion = semver.coerce(okGitVersion.match(/\d+\.\d+\.\d+/)[0] || '')?.version;
-  const checkInvalidGitVersion = parsedGitVersion == null || semver.lt(parsedGitVersion, '2.25.0');
-  if (checkInvalidGitVersion) {
+  const parsedGitVersion = semver.coerce(okGitVersion.match(/\d+\.\d+\.\d+/)?.[0] || '')?.version;
+  if (!parsedGitVersion || semver.lt(parsedGitVersion, '2.25.0')) {
     throw new Error("git version is too old. Please upgrade to at least 2.25");
   }
 
-  // Set GIT_TERMINAL_PROMPT=0 to disable prompting
+  // Check tar availability
+  const [okTar, errTar] = await bash`tar --version`;
+  const hasTar = !errTar;
+
+  // Disable interactive git prompts
   process.env.GIT_TERMINAL_PROMPT = 0;
 
   const repoUrl = "https://github.com/meteor/performance";
-  const branch = "v3.2.0";
+  const branch = "v3.4.0";
+
+  let tarFailed = false;
+
+  // If tar is available, prefer tar-based extraction
+  if (hasTar) {
+    const tempDir = "/tmp/meteor-performance-benchmark-suite";
+    const tarCommand = [
+      `rm -rf ${tempDir}`,
+      `git clone --no-checkout --depth 1 --filter=tree:0 --sparse --progress --branch ${branch} --single-branch ${repoUrl} ${tempDir}`,
+      `cd ${tempDir}`,
+      `git sparse-checkout init --cone`,
+      `git sparse-checkout set scripts`,
+      `git checkout ${branch}`,
+      `mkdir -p ${profilingPath}/scripts`,
+      `tar -czf /tmp/scripts.tar.gz -C ./scripts .`,
+      `tar -xzf /tmp/scripts.tar.gz -C ${profilingPath}/scripts`,
+      `rm -rf ${tempDir}`,
+      `rm -f /tmp/scripts.tar.gz`
+    ].join(" && ");
+
+    const [okTarClone, errTarClone] = await bash`${tarCommand}`;
+    if (!errTarClone) {
+      Console.info("Meteor profiling suite cloned to: " + Console.path(profilingPath));
+      return;
+    } else {
+      Console.warn("Tar-based cloning failed. Will attempt standard git clone...");
+      tarFailed = errTarClone;
+    }
+  } else {
+    Console.warn("Tar not available. Will use standard git clone...");
+  }
+
+  // Fallback to plain git clone
   const gitCommand = [
     `mkdir -p ${profilingPath}`,
     `git clone --no-checkout --depth 1 --filter=tree:0 --sparse --progress --branch ${branch} --single-branch ${repoUrl} ${profilingPath}`,
@@ -3358,18 +3483,22 @@ const setupBenchmarkSuite = async (profilingPath) => {
     `git sparse-checkout init --cone`,
     `git sparse-checkout set scripts`,
     `git checkout ${branch}`,
-    `find ${profilingPath} -maxdepth 1 -type f -delete`,
+    `find ${profilingPath} -maxdepth 1 -type f -delete`
   ].join(" && ");
-  const [, errClone] = await bash`${gitCommand}`;
-  const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
-  if (errorMessage && errorMessage.includes("Cloning into")) {
-    throw new Error("error cloning benchmark");
+
+  const [okClone, errClone] = await bash`${gitCommand}`;
+  if (errClone) {
+    let combinedMessage = "Git clone failed.";
+    if (tarFailed) {
+      combinedMessage = `Tar-based cloning also failed:\n${tarFailed}\n\nGit fallback failed:\n${errClone}`;
+    }
+    throw new Error(combinedMessage);
   }
-  // remove .git folder from the example
+
+  // Remove .git folder if present
   await files.rm_recursive_async(files.pathJoin(profilingPath, ".git"));
-  Console.info(
-    "Meteor profiling suite cloned to: " + Console.path(profilingPath),
-  );
+
+  Console.info("Meteor profiling suite cloned to: " + Console.path(profilingPath));
 };
 
 async function doBenchmarkCommand(options) {
@@ -3389,9 +3518,10 @@ async function doBenchmarkCommand(options) {
 
   const meteorSizeEnvs = [
     !!options['size-only'] && 'METEOR_BUNDLE_SIZE_ONLY=true',
-    !!options['size'] && 'METEOR_BUNDLE_SIZE=true'
+    !!options['size'] && 'METEOR_BUNDLE_SIZE=true',
+    !!options['build'] && 'METEOR_BUNDLE_BUILD=true',
   ].filter(Boolean);
-  const meteorOptions = args.filter(arg => !['--size-only', '--size'].includes(arg));
+  const meteorOptions = args.filter(arg => !['--size-only', '--size', '--build'].includes(arg));
 
   const profilingCommand = [
     `${meteorSizeEnvs.join(' ')} ${profilingPath}/scripts/monitor-bundler.sh ${projectContext.projectDir} ${new Date().getTime()} ${meteorOptions.join(' ')}`.trim(),
@@ -3407,9 +3537,11 @@ main.registerCommand(
   name: 'profile',
   maxArgs: Infinity,
   options: {
+    ...buildCommands.options || {},
     ...runCommandOptions.options || {},
-  'size': { type: Boolean },
-  'size-only': { type: Boolean },
+    'size': { type: Boolean },
+    'size-only': { type: Boolean },
+    'build': { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never(),
 }, doBenchmarkCommand);
