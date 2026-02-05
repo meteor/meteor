@@ -1,10 +1,11 @@
-# Meteor.js 3 + Vue 3 and `vue-meteor-tracker`
+# Meteor.js 3 + Vue 3
 
 In this tutorial, we will create a simple To-Do app using [Vue 3](https://vuejs.org/) and Meteor 3.0. Meteor works well with other frameworks like [Blaze](https://www.blazejs.org/), [React](https://react.dev/), [Solid](https://www.solidjs.com/), and [Svelte](https://svelte.dev/).
 
 Vue.js is a powerful JavaScript framework for making user interfaces. It helps you build interactive applications by using templates that connect to data and update automatically when the data changes. Vue.js templates use a simple syntax similar to HTML and work with Vue’s reactivity system to show components in the browser.
 
 To start building your Vue.js app, you'll need a code editor. If you're unsure which one to choose, [Visual Studio Code](https://code.visualstudio.com/) is a good option.
+
 :::warning
 This tutorial uses the `vue-meteor-tracker` package, which is currently in beta and does not support async calls yet. However, it is still a valuable package, and we hope it will be updated soon. We are also working on a new tutorial that will use Meteor core packages instead.
 :::
@@ -36,13 +37,15 @@ To set up Meteor with Vue easily, run the following command, replacing `simple-t
 meteor create --vue simple-todos-vue
 ```
 
+Meteor will create all the necessary files for you. The `--vue` flag generates a project using Vue, Rspack and Tailwind CSS, and this is the approach walked through in this tutorial. Using [the Rspack bundler](../../about/modern-build-stack/rspack-bundler-integration.md) is the default convention in Meteor 3.4+, as it improves dev speed, enables more build features, and provides better control over bundle size and configuration.
+
+We provide the final app for both the Rspack and Meteor bundlers. This guide follows the Rspack version and reaches the same final state. The Meteor bundler version is for those who prefer the legacy bundler.
+
 ::: info
-You can find the final version of this app in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
+You can find the final version of this app on GitHub using the [Rspack bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-rspack) or the [Meteor bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-meteor).
 :::
 
-Meteor will create all the necessary files for you. The `--vue` flag generates a project using Vue, Vite and Tailwind CSS.
-
-You will find the `client` directory contains files for your client-side setup. Inside, there should be an empty `main.js` file required for Meteor's import mode. However, with Vite, the entry point is set in the `vite.config.js` file, pointing to `imports/ui/main.js`, which is where Meteor renders the main component.
+You will find the `client` directory contains files for your client-side setup. Inside, you can see for example `client/main.jsx` where Meteor is rendering your App main component into the HTML.
 
 Check the server directory for the server setup where you will see `server/main.js` populating your MongoDB database with some default data. There's no need to install MongoDB separately, as Meteor includes an embedded version.
 
@@ -52,7 +55,7 @@ To run your app, use:
 meteor npm run start
 ```
 
-Your Vue code will be located in the `imports/ui directory`, with `App.vue` as the root component of your app.
+Your Vue code will be located in the `imports/ui` directory, with `App.vue` as the root component of your app.
 
 Take a moment to explore the files created by Meteor. You don’t have to understand everything right away, but it helps to know where they are.
 
@@ -1366,7 +1369,7 @@ You have completed the tutorial!
 By now, you should have a good understanding of working with Meteor and Vue.
 
 ::: info
-You can find the final version of this app in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
+You can find the final version of this app on GitHub using the [Rspack bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-rspack) or the [Meteor bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-meteor).
 :::
 
 Here are some options for what you can do next:

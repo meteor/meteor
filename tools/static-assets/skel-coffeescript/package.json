@@ -15,7 +15,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^0.3.56",
+    "@meteorjs/rspack": "^1.0.0",
     "@rsdoctor/rspack-plugin": "^1.2.3",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",

@@ -26,6 +26,49 @@ const isMacOS = () => {
   return platform() === 'darwin';
 };
 
+const getGroupNameForGid = (gid) => {
+  try {
+    const data = readFileSync('/etc/group', 'utf8');
+    const line = data
+      .trim()
+      .split('\n')
+      .find((groupLine) => {
+        const [, , groupGid] = groupLine.trim().split(':');
+        return Number(groupGid) === gid;
+      });
+
+    if (!line) return null;
+    const [name] = line.trim().split(':');
+    return name || null;
+  } catch {
+    return null;
+  }
+};
+
+const getWritableGroupName = () => {
+  const { gid, uid } = userInfo();
+  const gidsToTry = new Set();
+
+  if (typeof gid === 'number') {
+    gidsToTry.add(gid);
+  }
+
+  if (typeof process.getgroups === 'function') {
+    process.getgroups().forEach((groupId) => gidsToTry.add(groupId));
+  }
+
+  for (const groupId of gidsToTry) {
+    const groupName = getGroupNameForGid(groupId);
+    if (groupName) {
+      return groupName;
+    }
+  }
+
+  if (Boolean(process.env.TRAVIS)) return 'travis';
+  if (isMacOS()) return 'staff';
+  return uid === 0 ? 'root' : null;
+};
+
 const removeTestSocketFile = () => {
   try {
     unlinkSync(testSocketFile);
@@ -131,9 +174,16 @@ testAsyncMulti(
     },
     async (test) => {
       // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
+      const groupToUse = getWritableGroupName();
+
+      if (!groupToUse) {
+        // Skip when no writable group could be determined for the current user.
+        test.isTrue(true);
+        return;
+      }
+
       const { httpServer, server } = prepareServer();
 
-      const groupToUse = Boolean(process.env.TRAVIS) && 'travis' || (isMacOS() ? 'staff' : 'root');
       process.env.UNIX_SOCKET_PATH = testSocketFile;
       process.env.UNIX_SOCKET_GROUP = groupToUse;
       process.env.UNIX_SOCKET_PERMISSIONS = '777';

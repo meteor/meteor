@@ -11,6 +11,7 @@ The Meteor bundler is made up of key components that enhance your experience in 
 - [**Minifier**](#minifier): Meteor uses the **SWC** minifier as a faster alternative to Terser.
 - [**Web archs**](#web-arch): Meteor now skips legacy architectures in development mode.
 - [**Watcher**](#watcher): Meteor now uses [`@parcel/watcher`](https://github.com/parcel-bundler/watcher) for a faster, more stable watch experience via native recursive file watching across all OS.
+- [**.meteorignore**](#meteorignore): Exclude files and directories from the bundler to reduce build and watch overhead.
 
 ## Quick start
 
@@ -44,6 +45,7 @@ You can also learn more about each part of the optimized components:
 - [**Minifier**](#minifier)
 - [**Web archs**](#web-arch)
 - [**Watcher**](#watcher)
+- [**.meteorignore**](#meteorignore)
 
 ---
 
@@ -519,6 +521,55 @@ METEOR_WATCH_POLLING_INTERVAL_MS=1000 METEOR_WATCH_FORCE_POLLING=true meteor run
 ```
 
 > Polling uses more CPU and RAM, but it's the most reliable option in some environments.
+
+---
+
+## .meteorignore
+
+> The `.meteorignore` file tells Meteor's bundler to skip specific files and directories, reducing unnecessary work during builds.
+
+Meteor's bundler processes every file in your project tree by default. In projects with folders that are not part of the app, such as documentation, design assets, or standalone tooling, the bundler still traverses and watches those directories. This adds overhead to both initial builds and file-change recompilations.
+
+You can place a `.meteorignore` file in any directory of your app or package. It uses the same pattern syntax as `.gitignore` and applies rules to the directory tree below it. Meteor's file watching system is fully integrated with `.meteorignore`, so you can add, remove, or modify these files during development and the changes take effect immediately.
+
+### Example .meteorignore
+
+Place this file at the root of your project as `.meteorignore`:
+
+```gitignore
+# Documentation
+docs/
+
+# Design and static assets not used by the app
+design/
+mockups/
+screenshots/
+
+# CI/CD and infrastructure
+docker/
+
+# Testing tools outside Meteor
+cypress/
+playwright/
+
+# Scripts and tooling unrelated to the app
+scripts/
+tools/
+benchmarks/
+
+# Misc
+LICENSE
+CHANGELOG.md
+CONTRIBUTING.md
+*.md
+!README.md
+```
+
+This keeps the bundler focused on your actual app code and Meteor packages, skipping folders and files that have no role in the build. The result is faster rebuilds during development, especially in larger projects with significant non-app content.
+
+You can also place `.meteorignore` files in subdirectories for more granular control. For example, a `.meteorignore` inside `packages/my-package/` applies only to that package's tree.
+
+For a more dynamic approach, you can use the [`METEOR_IGNORE`](../../cli/environment-variables.md#meteor-ignore) environment variable to define ignore patterns per command without modifying project files. This is especially useful when you need different ignore rules for `meteor run` and `meteor test`.
 
 ---
 

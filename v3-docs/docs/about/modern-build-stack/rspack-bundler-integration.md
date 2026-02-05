@@ -18,7 +18,7 @@ Starting with Meteor 3.4
 Add this Atmosphere package to your app:
 
 ``` bash
-meteor add rspack@1.0.0-rc340.3
+meteor add rspack
 ```
 
 On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
@@ -587,27 +587,6 @@ module.exports = defineConfig((Meteor) => {
 
 More info in [this forum post](https://forums.meteor.com/t/new-3-4-beta-12-release-faster-builds-smaller-bundles-and-modern-setups-with-the-rspack-integration/64124/94).
 
-### Cache
-
-Meteor cache remains active and continues to handle Atmosphere packages and intermediate builds. There’s an additional cache layer managed by Rspack to speed up rebuilds for your app code.
-
-This Rspack cache is enabled by default in persistent mode. If you [encounter issues](https://github.com/web-infra-dev/rspack/issues/11804) or prefer to disable it, you can do so in your `rspack.config.js` using the helper:
-
-```json
-const { defineConfig } = require('@meteorjs/rspack');
-const { rspack } = require('@rspack/core');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
-
-module.exports = defineConfig(Meteor => ({
-  // Disable cache, or use 'memory' to switch to in-memory cache
-  ...Meteor.setCache(false),
-}));
-
-
-```
-
-This helper provide a shortcut to apply the needed Rspack configuration and safely override defaults, so you don’t have to handle it manually.
-
 ### Split Vendor Chunk
 
 When using dynamic imports (`import()`), you might unintentionally include libraries like React, Mantine, or date utilities in multiple async chunks. To avoid this, it's best to define a stable `vendor` chunk for shared dependencies.
@@ -780,24 +759,6 @@ module.exports = defineConfig(Meteor => ({
 }));
 ```
 
-### Docker
-
-When running a Meteor app inside Docker using a Dockerfile that calls `meteor build`, `meteor deploy`, or `meteor run`, you may need an extra step before installing dependencies.
-
-In some setups, it’s recommended to run `meteor update --npm` before `meteor npm install`.
-
-This command checks that the NPM dependencies expected by the Meteor tool meet the minimum supported versions. Each Meteor release requires specific minimum versions of tools like Rspack and other NPM packages. Running this ensures your project aligns with the Meteor version in use, helping avoid build and deploy issues.
-
-If you encounter an error like `Rspack plugin error: Could not find rspack.config.js`, it’s often a sign that this step is missing.
-
-A typical Docker step would look like this:
-
-```dockerfile
-RUN (meteor update --npm 2>/dev/null || true) && meteor npm install && meteor build [...]
-```
-
-The `(meteor update --npm 2>/dev/null || true)` part is added for compatibility. The `--npm` option was introduced in Meteor 3.4. Older Meteor versions don’t support it and would fail. Redirecting the error and allowing the command to continue ensures the same Docker step works across versions, without breaking deployments on older Meteor releases.
-
 ## Benefits
 
 Meteor–Rspack integration sends your app code to Rspack to use modern bundler features. Meteor then uses Rspack’s output to handle Meteor-specific tasks (like Atmosphere package compilation) and create the final bundle.
@@ -835,6 +796,56 @@ This limitation only applies to Blaze. Any other modern project will work with H
 
 If you run into issues, try `meteor reset` or delete the `.meteor/local` and `_build` folders in the project root.
 
-For help or to report issues, post on [GitHub](https://github.com/meteor/meteor/issues) or the [Meteor forums](https://forums.meteor.com). We’re focused on making Meteor faster and your feedback helps.
+For help or to report issues, post on [GitHub](https://github.com/meteor/meteor/issues) or the [Meteor forums](https://forums.meteor.com). We're focused on making Meteor faster and your feedback helps.
 
 You can compare performance before and after enabling `modern` by running [`meteor profile`](../../cli/index.md#meteorprofile). Share your results to show progress to others.
+
+### Memory Crashes
+
+Large apps are more likely to hit memory limits during Meteor-Rspack builds, but this can also happen on smaller projects depending on the number of dependencies, cache size, and available system memory. If you experience crashes or out-of-memory errors, it's likely that the Rspack child process is running out of heap memory.
+
+A common first reaction is to set [`TOOL_NODE_FLAGS`](../../cli/environment-variables.md#tool-node-flags)` (`TOOL_NODE_FLAGS="--max-old-space-size=8192"`), but this flag is mainly for the Meteor tool's own Node.js process at startup. Rspack runs as a spawned child process and may not inherit it.
+
+Instead, use the standard `NODE_OPTIONS` environment variable, which Node.js propagates to child processes:
+
+```bash
+NODE_OPTIONS="--max-old-space-size=16384" meteor run
+```
+
+This raises the heap limit for the Rspack process and should reduce how often memory-related crashes occur. Adjust the value according to your machine's available memory.
+
+:::info
+For the Meteor 3.4.x series, as `NODE_OPTIONS` is confirmed to help, one option being considered is to automatically inherit memory settings from `TOOL_NODE_FLAGS` into the spawned Rspack process.
+:::
+
+Another approach is to disable Rspack's persistent cache, which is enabled by default and can be memory-intensive. See the [Cache](#cache) migration topic to disable it:
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  ...Meteor.setCache(false),
+}));
+```
+
+You can combine both solutions: raise the heap limit with `NODE_OPTIONS` and disable persistent cache to reduce overall memory pressure.
+
+Rspack itself has reported plans to optimize persistent cache and overall RAM consumption in [Rspack 2.0](https://rspack.rs/misc/planning/roadmap), which should improve memory behavior in future Meteor-Rspack releases.
+
+### Docker
+
+When building or deploying a Meteor-Rspack app inside Docker, you may encounter errors like `Rspack plugin error: Could not find rspack.config.js`. This typically means the NPM dependencies expected by Meteor are not aligned with the Meteor version in use.
+
+Each Meteor release requires specific minimum versions of NPM packages like Rspack. If these were not committed after upgrading Meteor locally, the Docker environment won't have them. To fix this, run `meteor update --npm` before `meteor npm install` in your Dockerfile:
+
+```dockerfile
+RUN (meteor update --npm 2>/dev/null || true) && meteor npm install && meteor build [...]
+```
+
+The `(meteor update --npm 2>/dev/null || true)` wrapper is for compatibility. The `--npm` option was introduced in Meteor 3.4. Older versions don't support it and would fail, so redirecting the error and allowing the command to continue ensures the same Docker step works across Meteor versions.
+
+> Keep `meteor update --npm` in the same Docker step as `meteor build` or `meteor deploy`. If you forget to commit and push the NPM bumps locally, this lets the Docker environment apply them on the fly. When using multiple Docker steps, each step is isolated, so NPM bumps won't carry over between steps.
+
+::: info
+To avoid this issue entirely, run `meteor update --npm` locally after upgrading Meteor, or run the app once so the bumps are applied, then commit and push both the Meteor update and the updated NPM dependencies.
+:::
