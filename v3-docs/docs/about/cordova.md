@@ -280,7 +280,7 @@ After building your Cordova project with Meteor, you can use **Android Studio** 
 6. In the **Organizer** window, click **Distribute App** and follow the prompts to configure signing and export the IPA file.
 7. Upload the IPA file to the App Store or distribute via TestFlight.
 
-# Legacy device support
+## Legacy device support
 
 Meteor distinguishes between legacy and modern browsers - see the [modern browsers package](../packages/modern-browsers). Web apps include different code bundles for each, but Cordova apps only have a single code bundle. From Meteor 3.3.2 onwards, the default code bundle changed from legacy to modern.
 
