@@ -151,6 +151,10 @@ export namespace Accounts {
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<void>;
 
+  function logoutAllClients(
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ): Promise<void>;
+
   function logoutOtherClients(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<void>;
@@ -275,16 +279,17 @@ export namespace Accounts {
 }
 
 export namespace Accounts {
-  function onLogout(func: Function): void;
-}
-
-export namespace Accounts {
+  function onLogout(func: Function): {
+    stop: () => void;
+  };
   function onLogout(
     func: (options: {
       user: Meteor.User;
       connection: Meteor.Connection;
     }) => void
-  ): void;
+  ): {
+    stop: () => void;
+  };
 }
 
 export namespace Accounts {
