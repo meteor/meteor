@@ -811,12 +811,10 @@ if (Meteor.isClient) (() => {
     async function (test, expect) {
       // Can't update own profile using ID - without allow/deny rules, updates are denied.
       // The server will reject the update with a 403 error.
-      const updatePromise = Meteor.users.updateAsync(
-        this.userId, { $set: { 'profile.updated': 42 } }
-      );
       try {
-        // Wait for the server result, not just the stub
-        await updatePromise.serverPromise;
+        await Meteor.users.updateAsync(
+          this.userId, { $set: { 'profile.updated': 42 } }
+        );
         test.fail("Expected update to be denied");
       } catch (err) {
         test.isTrue(err);
