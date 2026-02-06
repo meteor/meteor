@@ -30,7 +30,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 
 **Goal:** Add a command([meteor profile](/cli/#meteorprofile)) to measure if our changes are actually making our builds faster and smaller.
 
-[🔗 Unlocking Meteor 3.2: New Profiling Tool to Track Bundler Performance and Size](https://dev.to/meteor/unlocking-meteor-32-new-profiling-tool-to-track-bundler-performance-and-size-1jc8)
+🔗 [Unlocking Meteor 3.2: New Profiling Tool to Track Bundler Performance and Size](https://dev.to/meteor/unlocking-meteor-32-new-profiling-tool-to-track-bundler-performance-and-size-1jc8)
 
 #### Phase 2: External Transpiler Integration (SWC)
 
@@ -41,29 +41,25 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
    the same benefits.
  - To have an external transpiler working with Meteor and producing a bundle that is smaller or faster than the current Meteor bundle.
 
-[🔗 Faster Builds in Meteor 3.3: Modern Build Stack with SWC and Bundler Optimizations](https://dev.to/meteor/faster-builds-in-meteor-33-modern-build-stack-with-swc-and-bundler-optimizations-fm2)
+🔗 [Faster Builds in Meteor 3.3: Modern Build Stack with SWC and Bundler Optimizations](https://dev.to/meteor/faster-builds-in-meteor-33-modern-build-stack-with-swc-and-bundler-optimizations-fm2)
 
-#### Phase 3: HMR Improvements
-
-**Target Release:** 3.3 ✅
-
-**Goal:** Improve the HMR performance, so that it is faster and more reliable on what needs to be changed.
-
-#### Phase 4: Bundler Improvements & Feedback
+#### Phase 3: Bundler Improvements & Feedback
 
 **Target Release:** 3.3.2 ✅
 
 **Goal:** Improve the build size and make meteor use less resources for building, decreasing even more build and rebuild time.
 - Expanding compatibility and updates based on the feedback from the community, so that we can have a better experience with our new build tools, in this case SWC
 
-#### Phase 5: External Bundler integration (Rspack)
+#### Phase 4: External Bundler integration (Rspack)
 
 **Target Release:** 3.4 ✅
 
 **Goal:** Integrate an external bundler like Rspack with Meteor, producing a bundle that is smaller or faster than the current Meteor bundle.
 - This also enables features like tree-shaking, code-splitting, full ESM support, community plugins, and other optimizations that make Meteor apps leaner, faster, and more standardized to configure.
 
-#### Phase 6: Resource Optimization & Feedback
+🔗 [Meteor 3.4 is out: Rspack integration, 4x faster builds, 8x smaller bundles, and extended bundler features](https://blog.galaxycloud.app/meteor-3-4-is-out-rspack-integration-4x-faster-builds-8x-smaller-bundles-and-extended-bundler-features)
+
+#### Phase 5: Resource Optimization & Feedback
 
 **Target Release:** 3.4.x ⏳
 
@@ -84,7 +80,7 @@ We plan to document the changes in the Meteor documentation, including:
 
 **Feedback and discussion**
 
-[🔗 MongoDB Change Streams support in Meteor](https://forums.meteor.com/t/mongodb-change-streams-support-in-meteor/63681)
+🔗 [MongoDB Change Streams support in Meteor](https://forums.meteor.com/t/mongodb-change-streams-support-in-meteor/63681)
 
 ### Phase 1: Opined implementation
 
