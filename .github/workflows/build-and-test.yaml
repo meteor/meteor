@@ -39,6 +39,17 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Setup Node.js environment
         uses: actions/setup-node@v4.2.0
         with:
