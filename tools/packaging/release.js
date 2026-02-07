@@ -30,7 +30,6 @@ Object.assign(Release.prototype, {
   // defined by the packages in the checkout rather than by a
   // manifest. this.name will be null.
   isCheckout: function () {
-    console.log('Release.isCheckout() called... this is: ', this);
     return this.name === null;
   },
 
@@ -188,7 +187,6 @@ release.usingRightReleaseForApp = function (projectContext) {
 // for use. May not be called when running from a checkout.
 // 'track' is optional (it defaults to the default track).
 release.latestKnown = async function (track) {
-  console.log('release.latestKnown() called', track);
   if (! files.usesWarehouse()) {
     throw new Error("called from checkout?");
   }

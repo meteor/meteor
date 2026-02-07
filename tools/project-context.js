@@ -1615,7 +1615,6 @@ Object.assign(exports.ReleaseFile.prototype, {
     return self.unnormalizedReleaseName === '';
   },
   isCheckout: function () {
-    console.log('isCheckout() called... this is: ', this);
     var self = this;
     return self.unnormalizedReleaseName === 'none';
   },
