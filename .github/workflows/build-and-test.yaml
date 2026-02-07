@@ -16,6 +16,7 @@ env:
   METEOR_HEADLESS: true
   METEOR_PRETTY_OUTPUT: 0
   METEOR_SAVE_TMPDIRS: 1
+  METEOR_MODERN: true
   SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
   PRE_TEST_COMMANDS: |
     ulimit -c unlimited;
@@ -58,12 +59,12 @@ jobs:
           echo "en_US.UTF-8 UTF-8" | sudo tee /etc/locale.gen
           sudo locale-gen
 
-      # - name: Git Submodules
-      #   run: |
-      #     (git submodule sync && git submodule update --init --recursive) \
-      #       || (rm -fr .git/config .git/modules \
-      #           && git submodule deinit -f . \
-      #           && git submodule update --init --recursive)
+      - name: Git Submodules
+        run: |
+          (git submodule sync && git submodule update --init --recursive) \
+            || (rm -fr .git/config .git/modules \
+                && git submodule deinit -f . \
+                && git submodule update --init --recursive)
 
       - name: Cache dev_bundle
         uses: actions/cache@v4
@@ -171,16 +172,6 @@ jobs:
           chmod +x meteor
           chmod +x dev_bundle/bin/node
           chmod +x dev_bundle/bin/npm
-          
-      - name: 🔄 Get Ready (meteor --get-ready)
-        run: |
-          eval "$PRE_TEST_COMMANDS"
-          cd dev_bundle/lib
-          ../../meteor npm install @types/node@22.7.4 --save-dev
-          ../../meteor npm install -g typescript
-          cd ../../
-          ./meteor --get-ready
-        timeout-minutes: 60
 
       - name: 💾 Save Node Binary on Failure
         if: failure()
@@ -192,6 +183,18 @@ jobs:
 
       - name: List all files in the workspace
         run: |
+          echo "==> .meteor directory structure"
+          ls -la .meteor/
+          echo "==> .meteor/packages directory"
+          if [ -d .meteor/packages ]; then
+            echo "IS A DIRECTORY with $(ls .meteor/packages | wc -l) entries:"
+            ls -la .meteor/packages/ | head -20
+          elif [ -f .meteor/packages ]; then
+            echo "IS A FILE with content:"
+            cat .meteor/packages
+          else
+            echo "DOES NOT EXIST"
+          fi
           echo "==> Meteor" && ls -l meteor
           echo "==> Dev Bundle" && ls -l dev_bundle
           echo "==> Packages" && ls -l packages
@@ -261,7 +264,20 @@ jobs:
         run: |
           tar -xzf meteor.tar.gz
 
-      - name: 🔧 Setup Memory Logging
+      - name: Debug - Check workspace and disk space
+        run: |
+          echo "==> Checking .meteor directory"
+          ls -la .meteor 2>/dev/null || echo ".meteor directory not found!"
+          if [ -d .meteor/packages ]; then
+            echo ".meteor/packages exists with $(ls .meteor/packages | wc -l) packages"
+            ls .meteor/packages | head -20
+          fi
+          echo "==> Disk space"
+          df -h
+          echo "==> /tmp space"
+          df -h /tmp
+
+      - name: Setup Memory Logging
         run: |
           nohup bash -c 'while true; do
             ps -e -o user,%cpu,%mem,rss:10,vsz:10,command:20 --sort=-%mem \
@@ -284,8 +300,6 @@ jobs:
         run: |
           if [[ "${{ matrix.test }}" == "isolated" ]]; then
             echo "Running Isolated Tests..."
-            eval "$PRE_TEST_COMMANDS"
-            ./meteor self-test 'add debugOnly and prodOnly packages' --retries $METEOR_SELF_TEST_RETRIES --headless
             eval "$PRE_TEST_COMMANDS"
             ./meteor self-test --retries $METEOR_SELF_TEST_RETRIES --exclude "$SELF_TEST_EXCLUDE" --headless --with-tag "custom-warehouse"
           else
