@@ -134,7 +134,6 @@ jobs:
         with:
           path: |
             .babel-cache
-            .meteor
           key: v7-other-deps-cache-${{ github.ref_name }}-${{ hashFiles('meteor/**') }}-${{ github.sha }}
           restore-keys: |
             v7-other-deps-cache-${{ github.ref_name }}-${{ hashFiles('meteor/**') }}-
