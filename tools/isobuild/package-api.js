@@ -518,6 +518,16 @@ export class PackageAPI {
   versionsFrom(releases) {
     var self = this;
 
+    // When running from a checkout (e.g., in tests or during isopacket
+    // building), catalog.official may not be initialized yet, so we can't
+    // validate release versions referenced in versionsFrom(). Skip the
+    // validation entirely in checkout mode.
+    const files = require('../fs/files.ts');
+    if (files.inCheckout()) {
+      // Silently skip versionsFrom validation when running from checkout
+      return;
+    }
+
     // Packages in isopackets really ought to be in the core release, by
     // definition, so saying that they should use versions from another
     // release doesn't make sense. Moreover, if we're running from a
@@ -529,13 +539,6 @@ export class PackageAPI {
       buildmessage.error(
         "packages in isopackets may not use versionsFrom");
       // recover by ignoring
-      return;
-    }
-
-    
-    const files = require('../fs/files.ts');
-    if (files.inCheckout()) {
-      // silently skip versionsFrom validation when running from checkout
       return;
     }
 
