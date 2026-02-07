@@ -262,6 +262,7 @@ var newIsopacketBuildingCatalog = async function () {
       await isopacketCatalog.initialize({
         localPackageSearchDirs: [
           packagesDir,
+          files.pathJoin(packagesDir, "non-core"),
           files.pathJoin(packagesDir, "non-core", "*", "packages"),
         ],
         buildingIsopackets: true
