@@ -177,6 +177,13 @@ export function addToGitignore(dirPath: string, entry: string) {
 
 // Are we running Meteor from a git checkout?
 export const inCheckout = _.once(function () {
+  // If we're in a test sandbox (even in GitHub Actions), we're not in a checkout
+  // from the perspective of the tool being tested. The SANDBOX environment variable
+  // indicates we're running inside a fake warehouse for testing.
+  if(process.env.SANDBOX) {
+    return false;
+  }
+
   if(process.env.GITHUB_ACTIONS) {
     return true;
   }
