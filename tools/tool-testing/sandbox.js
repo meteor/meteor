@@ -631,9 +631,6 @@ async function newSelfTestCatalog() {
           files.pathJoin(packagesDir, "non-core"),
           files.pathJoin(packagesDir, "non-core", "*", "packages"),
         ],
-        // Skip versionsFrom validation since catalog.official isn't initialized
-        // yet when building test sandboxes from a checkout
-        buildingIsopackets: true,
       });
     });
   if (messages.hasMessages()) {

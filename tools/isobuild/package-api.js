@@ -532,6 +532,13 @@ export class PackageAPI {
       return;
     }
 
+    
+    const files = require('../fs/files.ts');
+    if (files.inCheckout()) {
+      // silently skip versionsFrom validation when running from checkout
+      return;
+    }
+
     releases = toArray(releases);
 
     // using for loop rather than underscore to help with useMyCaller
