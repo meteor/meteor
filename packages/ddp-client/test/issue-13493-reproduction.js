@@ -50,7 +50,7 @@ Tinytest.addAsync(
 
     const readyAutorun = Tracker.autorun(() => {
       readyComputationRuns++;
-      const ready = subscriptionHandles.every(h => h.ready());
+      subscriptionHandles.every(h => h.ready());
     });
 
     Tracker.flush();
@@ -90,5 +90,6 @@ Tinytest.addAsync(
 
     subAutorun.stop();
     readyAutorun.stop();
+    Tracker.flush();
   }
 );
