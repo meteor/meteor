@@ -25,7 +25,7 @@ This is a complete history of changes for Meteor releases.
     Enhanced Meteor’s core to support the Rspack integration.
   - ✅ Test suite additions
     Introduced tests for app skeletons and Meteor-Rspack features to ensure quality and reliability.
-  - 📃 [Documentation](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/rspack-bundler-integration.html)
+  - 📃 [Documentation](https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration.html)
     Complete documentation section covering all details of the Meteor-Rspack integration, including migration guides, configuration helpers and more.
   - Adopting Rspack gives you a faster build experience
   - Adopting Rspack produces smaller bundle sizes through advanced tree shaking
@@ -66,7 +66,7 @@ N/A
 Please run the following command to update your project:
 
 ```bash
-meteor update --release 3.4-rc.3
+meteor update --release 3.4
 ```
 
 To apply `react-meteor-data` changes:
@@ -85,7 +85,7 @@ meteor add react-meteor-data@4.0.1
 }
 ```
 
-Check out [the requirements for Meteor Bundler optimizations](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/meteor-bundler-optimizations.html#requirements) on existing apps.
+Check out [the requirements for Meteor Bundler optimizations](https://docs.meteor.com/about/modern-build-stack/meteor-bundler-optimizations.html#requirements) on existing apps.
 
 **Add `rspack` package to enable the Rspack Bundler integration:**
 
@@ -95,13 +95,13 @@ meteor add rspack
 
 > This package is added by default for new apps.
 
-Check out [the requirements for Rspack Bundler integration](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/rspack-bundler-integration.html#requirements) on existing apps.
+Check out [the requirements for Rspack Bundler integration](https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration.html#requirements) on existing apps.
 
-### [📃 Modern Build Stack docs](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack.html)
+### 📃 [Modern Build Stack docs](https://docs.meteor.com/about/modern-build-stack.html)
 
-### [☄️ Meteor Bundler optimizations docs](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/meteor-bundler-optimizations.html)
+### ☄️ [Meteor Bundler optimizations docs](https://docs.meteor.com/about/modern-build-stack/meteor-bundler-optimizations.html)
 
-### [⚡ Rspack Bundler integration docs](https://deploy-preview-13915.docs-online.meteor.com/about/modern-build-stack/rspack-bundler-integration.html)
+### ⚡ [Rspack Bundler integration docs](https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration.html)
 
 If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
 
