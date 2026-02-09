@@ -362,7 +362,6 @@ Tinytest.addAsync('livedata stub - reactive subscribe', async function(test) {
   // time.
   autorunHandle.stop();
   Tracker.flush();
-  // After #13493 fix: Check ready state directly instead of relying on reactive update.
   test.isFalse(completerHandle.ready());
   readyAutorunHandle.stop();
 

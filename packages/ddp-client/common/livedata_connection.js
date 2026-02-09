@@ -474,8 +474,6 @@ export class Connection {
         connection: self,
         remove() {
           delete this.connection._subscriptions[this.id];
-          // Fix for #13493: Don't call readyDeps.changed() on removal to avoid
-          // unnecessary reactive invalidations during subscription cleanup.
         },
         stop() {
           this.connection._sendQueued({ msg: 'unsub', id: id });
