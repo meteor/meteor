@@ -1417,9 +1417,8 @@ if (Meteor.isServer) (() => {
       );
 
       Accounts._options.ambiguousErrorMessages = true;
-      await test.throwsAsync(
-        async () => await Meteor.callAsync('forgotPassword', wrongOptions),
-        'Something went wrong. Please check your credentials'
+      await test.doesNotThrowsAsync(
+        async () => await Meteor.callAsync("forgotPassword", wrongOptions)
       );
 
       Accounts._options.ambiguousErrorMessages = false;

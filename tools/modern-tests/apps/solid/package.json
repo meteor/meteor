@@ -27,7 +27,7 @@
     "@rspack/core": "^1.4.8",
     "babel-loader": "10.0.0",
     "babel-preset-solid": "^1.8.15",
-    "playwright": "^1.54.2",
+    "playwright": "1.58.0",
     "solid-js": "^1.9.4",
     "solid-refresh": "0.7.5"
   }

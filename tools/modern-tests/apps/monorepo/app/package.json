@@ -21,7 +21,7 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "playwright": "^1.54.2"
+    "playwright": "1.58.0"
   },
   "meteor": {
     "mainModule": {

@@ -1,6 +1,6 @@
 # Meteor.js 3 + Svelte
 
-In this tutorial, we will create a simple To-Do app using [Svelte](https://svelte.dev/) and Meteor 3.0. Meteor works well with other frameworks like [React](https://react.dev/), [Vue 3](https://vuejs.org/), [Solid](https://www.solidjs.com/), and [Blaze](https://www.blazejs.org/).
+In this tutorial, we will create a simple To-Do app using [Svelte v5](https://svelte.dev/) and Meteor 3.0. Meteor works well with other frameworks like [React](https://react.dev/), [Vue 3](https://vuejs.org/), [Solid](https://www.solidjs.com/), and [Blaze](https://www.blazejs.org/).
 
 Svelte is a modern UI framework that compiles your code to highly efficient vanilla JavaScript at build time, resulting in smaller bundles and faster runtime performance. Launched in 2016, it has gained popularity for its simplicity and reactivity without a virtual DOM. Compared to older approaches, Svelte eliminates much of the boilerplate and runtime overhead found in frameworks like React. It uses a declarative syntax with built-in state management, transitions, and stores that can be integrated with Meteor's reactive data sources like [Tracker](https://docs.meteor.com/api/tracker.html) and [Minimongo](https://docs.meteor.com/api/collections.html). This means your UI updates automatically as data changes, without manual DOM manipulation.
 

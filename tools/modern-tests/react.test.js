@@ -9,7 +9,7 @@ import {
 import { testMeteorBundler, testMeteorRspackBundler } from './test-helpers';
 import fs from 'fs-extra';
 import path from 'path';
-import { assertMeteorReactApp } from "./assertions";
+import { assertMeteorReactApp, assertConsoleEval } from "./assertions";
 
 describe('React App Bundling /', () => {
 
@@ -72,9 +72,16 @@ describe('React App Bundling /', () => {
       server: 'server/main.js',
       test: 'tests/main.js'
     },
+    configFile: 'rspack.config.cjs',
     customAssertions: {
       afterRun: async ({ result }) => {
         await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
+
+        // Check if images exist and return 200 status code
+        await assertImagesExistAndLoad();
+
+        // Check custom plugin is disabled with Meteor.disablePlugins
+        await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/, { negate: true });
       },
       afterRunRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR output as enabled by default
@@ -82,6 +89,12 @@ describe('React App Bundling /', () => {
       },
       afterRunProduction: async ({ result }) => {
         await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
+
+        // Check if images exist and return 200 status code
+        await assertImagesExistAndLoad();
+
+        // Check custom plugin is disabled with Meteor.disablePlugins
+        await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/, { negate: true });
       },
       afterRunProductionRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR to not be enabled in production-like mode
@@ -89,12 +102,21 @@ describe('React App Bundling /', () => {
       },
       afterTest: async ({ result }) => {
         await waitForReactEnvs(result.outputLines);
+
+        // Check custom plugin is disabled with Meteor.disablePlugins
+        await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/, { negate: true });
       },
       afterTestOnce: async ({ result }) => {
         await waitForReactEnvs(result.outputLines);
+
+        // Check custom plugin is disabled with Meteor.disablePlugins
+        await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/, { negate: true });
       },
       afterBuild: async ({ result }) => {
         await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
+
+        // Check custom plugin is disabled with Meteor.disablePlugins
+        await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/, { negate: true });
       },
     }
   }));
@@ -121,4 +143,71 @@ export async function waitForReactEnvs(outputLines, options = {}) {
       options
     );
   }
+}
+
+/**
+ * Helper function to assert that images exist in the DOM and return 200 status code when fetched
+ * @returns {Promise<void>} - A promise that resolves when images are verified
+ */
+export async function assertImagesExistAndLoad() {
+  await assertConsoleEval(`
+    (async () => {
+      // Get the image elements
+      const imageGenerated = document.getElementById('image-generated');
+      const imagePublic = document.getElementById('image-public');
+
+      // Check if images exist
+      if (!imageGenerated || !imagePublic) {
+        return { success: false, error: 'Images not found in the DOM' };
+      }
+
+      // Function to check if an image URL returns 200
+      const checkImageStatus = async (url) => {
+        try {
+          const response = await fetch(url);
+          return { 
+            url, 
+            status: response.status, 
+            ok: response.ok 
+          };
+        } catch (error) {
+          return { 
+            url, 
+            status: 0, 
+            ok: false, 
+            error: error.message 
+          };
+        }
+      };
+
+      // Function to extract URL from background-image CSS property
+      const extractUrlFromBackgroundImage = (backgroundImage) => {
+        // Extract the URL from the background-image property (format: url("..."))
+        const urlMatch = backgroundImage.match(/url\\(['"]?([^'"\\)]+)['"]?\\)/);
+        return urlMatch ? urlMatch[1] : null;
+      };
+
+      // Get body's background-image
+      const bodyStyle = getComputedStyle(document.body);
+      const backgroundImage = bodyStyle.backgroundImage;
+      const backgroundImageUrl = extractUrlFromBackgroundImage(backgroundImage);
+
+      // Check both images and background image
+      const generatedResult = await checkImageStatus(imageGenerated.src);
+      const publicResult = await checkImageStatus(imagePublic.src);
+      
+      if (!backgroundImageUrl) {
+        return { 
+          ok: false, 
+          error: 'No background image URL found on body element' 
+         };
+      } 
+      
+      const backgroundResult = await checkImageStatus(backgroundImageUrl);
+
+      return {
+        success: generatedResult.ok && publicResult.ok && backgroundResult.ok,
+      };
+    })()
+  `, { success: true }, { exactMatch: false });
 }

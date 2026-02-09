@@ -66,7 +66,7 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
-    'ChakraUI Library Skeleton /',
+    'ChakraUI Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'chakra-ui',
       port: 3203,
@@ -114,6 +114,11 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.jsx',
         server: 'server/main.js',
         test: 'tests/main.js',
+      },
+      bodyStyles: {
+        'font-family':
+          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        padding: '10px',
       },
     }),
   );
