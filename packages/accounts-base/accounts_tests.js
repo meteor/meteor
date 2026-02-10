@@ -957,3 +957,24 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // cleanup
   await Meteor.users.removeAsync(u1.id);
 });
+// Regression test for Minimongo $ projection error
+Tinytest.addAsync(
+  'accounts - login token projection works without $ operator',
+  async function (test) {
+    const username = 'projectiontest' + Random.id();
+    const password = 'testpass123';
+    const userId = Accounts.createUser({ username, password });
+    const token = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, token);
+    const user = await Meteor.users.findOneAsync(
+      {'services.resume.loginTokens.hashedToken': Accounts._hashLoginToken(token.token)},
+      {fields: {'services.resume.loginTokens': 1}}
+    );
+    
+    test.isTrue(user, 'Should find user');
+    test.isTrue(user.services.resume.loginTokens, 'Should have loginTokens');
+    test.isTrue(user.services.resume.loginTokens.length > 0, 'Should have at least one token');
+
+    await Meteor.users.removeAsync(userId);
+  }
+);
