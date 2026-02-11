@@ -12,10 +12,10 @@
   },
   "homepage": "https://www.meteor.com/",
   "devDependencies": {
-    "@babel/core": "^7.28.4",
-    "@babel/eslint-parser": "^7.28.4",
+    "@babel/core": "^7.29.0",
+    "@babel/eslint-parser": "^7.28.6",
     "@babel/eslint-plugin": "^7.27.1",
-    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-react": "^7.28.5",
     "@types/lodash.isempty": "^4.4.9",
     "@types/node": "^24.10.13",
     "@types/sockjs": "^0.3.36",
@@ -32,7 +32,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
     "prettier": "^2.8.8",
-    "typescript": "^5.7.3"
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "install:modern": "cd tools/modern-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
