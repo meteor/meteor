@@ -1,4 +1,5 @@
 import isEmpty from "lodash.isempty";
+import { EJSON } from "meteor/ejson";
 import { ObserveHandle } from "./observe_handle";
 
 interface ObserveMultiplexerOptions {
