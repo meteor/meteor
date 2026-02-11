@@ -292,8 +292,7 @@ export class AccountsClient extends AccountsCommon {
     // getting the results of subscription rerun, we WILL NOT re-send this
     // method (because we never re-send methods whose results we've received)
     // but we WILL call loggedInAndDataReadyCallback at "reconnect quiesce"
-    // time. This will lead to makeClientLoggedIn(result.id) even though we
-    // haven't actually sent a login method!
+    // time. This will lead to makeClientLoggedIn(result.id) even though we haven't actually sent a login method!
     //
     // But by making sure that we send this "resume" login in that case (and
     // calling makeClientLoggedOut if it fails), we'll end up with an accurate
@@ -406,17 +405,26 @@ export class AccountsClient extends AccountsCommon {
       this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
 
       // use Tracker to make we sure have a user before calling the callbacks
-      Tracker.autorun(async (computation) => {
-        const user = await Tracker.withComputation(computation, () =>
-          Meteor.userAsync(),
-        );
+      // However, if we're using a custom connection (not Meteor.connection),
+      // the user won't be in the local Meteor.users collection
+      if (this.connection === Meteor.connection) {
+        Tracker.autorun(async (computation) => {
+          const user = await Tracker.withComputation(computation, () =>
+            Meteor.userAsync(),
+          );
 
-        if (user) {
-          loginCallbacks({ loginDetails: result });
-          this._setLoggingIn(false);
-          computation.stop();
-        }
-      });
+          if (user) {
+            loginCallbacks({ loginDetails: result });
+            this._setLoggingIn(false);
+            computation.stop();
+          }
+        });
+      } else {
+        // For custom DDP connections, call the callbacks immediately
+        // since we won't have a local user document
+        loginCallbacks({ loginDetails: result });
+        this._setLoggingIn(false);
+      }
 
     };
 
