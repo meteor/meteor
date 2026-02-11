@@ -30,7 +30,7 @@ var packageJson = {
     "@types/semver": "7.5.8",
     semver: "7.6.3",
     request: "2.88.2",
-    "uuid": "8.3.2",
+    uuid: "8.3.2",
     "graceful-fs": "4.2.11",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "6.1.11",
