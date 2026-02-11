@@ -17,7 +17,7 @@
     "@babel/eslint-plugin": "^7.27.1",
     "@babel/preset-react": "^7.27.1",
     "@types/lodash.isempty": "^4.4.9",
-    "@types/node": "^24.4.0",
+    "@types/node": "^24.10.13",
     "@types/sockjs": "^0.3.36",
     "@types/sockjs-client": "^1.5.4",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
