@@ -37,8 +37,24 @@ export default defineConfig({
                 link: "/tutorials/react/index",
               },
               {
-                text: "Meteor + Vue + vue-meteor-tracker",
-                link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
+                text: "Meteor.js 3 + Vue",
+                link: "/tutorials/vue/meteorjs3-vue3",
+              },
+              {
+                text: "Meteor.js 3 + Solid",
+                link: "/tutorials/solid/index",
+              },
+              {
+                text: "Meteor.js 3 + Blaze",
+                link: "/tutorials/blaze/index",
+              },
+              {
+                text: "Meteor.js 3 + Svelte",
+                link: "/tutorials/svelte/index",
+              },
+              {
+                link: "/tutorials/application-structure/index",
+                text: "Application structure",
               },
             ],
           },
@@ -71,10 +87,6 @@ export default defineConfig({
               {
                 text: "Packages on Atmosphere",
                 link: "https://atmospherejs.com/",
-              },
-              {
-                text: "VS Code Extension",
-                link: "https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox",
               },
               {
                 text: "DevTools - Chrome Extension",
@@ -114,7 +126,7 @@ export default defineConfig({
         ],
       },
       { text: "API", link: "/api/" },
-      { text: "Galaxy Cloud", link: "https://www.meteor.com/cloud" },
+      { text: "Galaxy Cloud", link: "https://galaxycloud.app" },
       {
         text: metadata.currentVersion,
         items: metadata.versions.reverse().map((v) => {
@@ -140,15 +152,21 @@ export default defineConfig({
           {
             text: "What is Meteor?",
             link: "/about/what-is#introduction",
-          },
-          {
-            text: "Meteor resources",
-            link: "/about/what-is#learning-more",
+            items:[
+              {
+                text: "Meteor resources",
+                link: "/about/what-is#learning-more",
+              },
+            ],
           },
           {
             text: "Roadmap",
             link: "/about/roadmap",
           },
+              {
+                text: "Contributing",
+                link: "/about/contributing",
+              }
         ],
         collapsed: true,
       },
@@ -164,26 +182,22 @@ export default defineConfig({
             link: "/about/web-apps",
           },
           {
-            text: "Cordova",
-            link: "/about/cordova",
-          },
-          {
             text: "Modern Build Stack",
             link: "/about/modern-build-stack.md",
             items: [
               {
-                text: "Transpiler: SWC",
-                link: "/about/modern-build-stack/transpiler-swc.md",
+                text: "Meteor Bundler",
+                link: "/about/modern-build-stack/meteor-bundler-optimizations.md",
               },
               {
-                text: "Bundler",
-                link: "/about/modern-build-stack/bundler.md",
-              },
-              {
-                text: "Dev Server",
-                link: "/about/modern-build-stack/dev-server.md",
+                text: "Rspack Bundler",
+                link: "/about/modern-build-stack/rspack-bundler-integration.md",
               },
             ]
+          },
+          {
+            text: "Cordova",
+            link: "/about/cordova",
           },
         ],
         collapsed: true,
@@ -280,127 +294,163 @@ export default defineConfig({
         text: "Packages",
         items: [
           {
-            text: "accounts-ui",
-            link: "/packages/accounts-ui",
+            text: "Overview",
+            link: "/packages/index",
           },
           {
-            text: "accounts-passwordless",
-            link: "/packages/accounts-passwordless",
+            text: "Accounts and security",
+            items: [
+              {
+                text: "accounts-ui",
+                link: "/packages/accounts-ui",
+              },
+              {
+                text: "accounts-passwordless",
+                link: "/packages/accounts-passwordless",
+              },
+              {
+                text: "accounts-2fa",
+                link: "/packages/accounts-2fa",
+              },
+              {
+                text: "roles",
+                link: "/packages/roles",
+              },
+              {
+                text: "service-configuration",
+                link: "/packages/service-configuration",
+              },
+              {
+                text: "oauth-encryption",
+                link: "/packages/oauth-encryption",
+              },
+              {
+                text: "browser-policy",
+                link: "/packages/browser-policy",
+              },
+            ]
           },
           {
-            text: "accounts-2fa",
-            link: "/packages/accounts-2fa",
+            text: "Developer tools",
+            items: [
+              {
+                text: "audit-arguments-checks",
+                link: "/packages/audit-argument-checks",
+              },
+              {
+                text: "bundler-visualizer",
+                link: "/packages/bundle-visualizer",
+              },
+              {
+                text: "hot-module-replacement",
+                link: "/packages/hot-module-replacement",
+              },
+              {
+                text: "fetch",
+                link: "/packages/fetch",
+              },
+              {
+                text: "logging",
+                link: "/packages/logging",
+              },
+              {
+                text: "underscore",
+                link: "/packages/underscore",
+              },
+              {
+                text: "autoupdate",
+                link: "/packages/autoupdate",
+              },
+              {
+                text: "modern-browsers",
+                link: "/packages/modern-browsers",
+              },
+              {
+                text: "modules",
+                link: "/packages/modules",
+              },
+              {
+                text: "random",
+                link: "/packages/random",
+              },
+
+              {
+                text: "server-render",
+                link: "/packages/server-render",
+              },
+              {
+                text: "standard-minifier-css",
+                link: "/packages/standard-minifier-css",
+              },
+              {
+                text: "url",
+                link: "/packages/url",
+              },
+              {
+                text: "webapp",
+                link: "/packages/webapp",
+              },
+            ]
           },
           {
-            text: "appcache",
-            link: "/packages/appcache",
-          },
-          {
-            text: "audit-arguments-checks",
-            link: "/packages/audit-argument-checks",
-          },
-          {
-            text: "autoupdate",
-            link: "/packages/autoupdate",
-          },
-          {
-            text: "browser-policy",
-            link: "/packages/browser-policy",
-          },
-          {
-            text: "bundler-visualizer",
-            link: "/packages/bundle-visualizer",
-          },
-          {
-            text: "coffeescript",
-            link: "/packages/coffeescript",
-          },
-          {
-            text: "ecmascript",
-            link: "/packages/ecmascript",
-          },
-          {
-            text: "fetch",
-            link: "/packages/fetch",
-          },
-          {
-            text: "hot-module-replacement",
-            link: "/packages/hot-module-replacement",
-          },
-          {
-            text: "roles",
-            link: "/packages/roles",
-          },
-          {
-            text: "less",
-            link: "/packages/less",
-          },
-          {
-            text: "logging",
-            link: "/packages/logging",
-          },
-          {
-            text: "markdown",
-            link: "/packages/markdown",
-          },
-          {
-            text: "modern-browsers",
-            link: "/packages/modern-browsers",
-          },
-          {
-            text: "modules",
-            link: "/packages/modules",
-          },
-          {
-            text: "oauth-encryption",
-            link: "/packages/oauth-encryption",
-          },
-          {
-            text: "random",
-            link: "/packages/random",
-          },
-          {
-            text: "react-meteor-data",
-            link: "/packages/react-meteor-data",
-          },
-          {
-            text: "server-render",
-            link: "/packages/server-render",
-          },
-          {
-            text: "standard-minifier-css",
-            link: "/packages/standard-minifier-css",
-          },
-          {
-            text: "underscore",
-            link: "/packages/underscore",
-          },
-          {
-            text: "url",
-            link: "/packages/url",
-          },
-          {
-            text: "webapp",
-            link: "/packages/webapp",
+            text: "Framework compatibility",
+            items: [
+              {
+                text: "coffeescript",
+                link: "/packages/coffeescript",
+              },
+              {
+                text: "ecmascript",
+                link: "/packages/ecmascript",
+              },
+              {
+                text: "less",
+                link: "/packages/less",
+              },
+              {
+                text: "react-meteor-data",
+                link: "/packages/react-meteor-data",
+              },
+            ]
           },
           {
             link: "/packages/packages-listing",
             text: "Maintained Packages",
           },
           {
-            link: "packages/community-packages",
+            link: "/community-packages/index",
             text: "Community Packages",
-          },
-        ],
-        collapsed: true,
-      },
-      {
-        text: "Community Packages",
-        link: "/community-packages/index",
-        items: [
-          {
-            text: "Meteor RPC",
-            link: "/community-packages/meteor-rpc",
+            items: [
+              {
+                text: "Meteor RPC",
+                link: "/community-packages/meteor-rpc",
+              },
+              {
+                text: "jam:method",
+                link: "/community-packages/jam-method",
+              },
+              {
+                text: "jam:pub-sub",
+                link: "/community-packages/pub-sub",
+              },
+              {
+                text: "jam:mongo-transactions",
+                link: "/community-packages/mongo-transactions",
+              },
+              {
+                text: "jam:soft-delete",
+                link: "/community-packages/soft-delete",
+              },
+              {
+                text: "jam:archive",
+                link: "/community-packages/archive",
+              },
+              {
+                text: "jam:offline",
+                link: "/community-packages/offline",
+              },
+            ],
+            collapsed: true,
           },
         ],
         collapsed: true,
@@ -437,8 +487,33 @@ export default defineConfig({
             link: "/tutorials/react/index",
           },
           {
-            link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
-            text: "Meteor + Vue + vue-meteor-tracker",
+            text: "Meteor.js 3 + Vue",
+            link: "/tutorials/vue/meteorjs3-vue3",
+          },
+          {
+            text: "Meteor.js 3 + Solid",
+            link: "/tutorials/solid/index",
+          },
+          {
+            text: "Meteor.js 3 + Blaze",
+            link: "/tutorials/blaze/index",
+          },
+          {
+            text: "Meteor.js 3 + Svelte",
+            link: "/tutorials/svelte/index",
+          },
+          {
+            link: "/tutorials/application-structure/index",
+            text: "Application structure",
+          },
+          {
+            text: "Production",
+            items:[
+              {
+                text: "Security",
+                link: "/tutorials/security/security",
+              }
+            ]
           },
         ],
         collapsed: true,

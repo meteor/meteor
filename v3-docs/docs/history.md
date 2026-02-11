@@ -10,6 +10,339 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.4.0, 30-01-2026
+
+### Highlights
+
+- **Meteor-Rspack Integration**, [PR#13910](https://github.com/meteor/meteor/pull/13910)
+  - ⚡ New `rspack` atmosphere package (requires at least rspack@1.7.1)
+    Orchestrates the full Rspack setup, including the development server and production builds.
+  - 📦 New `@meteorjs/rspack` npm package
+    Provides a default rspack.config.js. Applications can extend or override this configuration with their own.
+  - 🛠️ New `tools-core` package
+    Supplies runtime utilities for Meteor, designed to support this integration and future tool integrations.
+  - 🔑 Core updates
+    Enhanced Meteor’s core to support the Rspack integration.
+  - ✅ Test suite additions
+    Introduced tests for app skeletons and Meteor-Rspack features to ensure quality and reliability.
+  - 📃 [Documentation](https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration.html)
+    Complete documentation section covering all details of the Meteor-Rspack integration, including migration guides, configuration helpers and more.
+  - Adopting Rspack gives you a faster build experience
+  - Adopting Rspack produces smaller bundle sizes through advanced tree shaking
+  - Adopting Rspack lets you extend your app with modern setups and tooling
+- Support for `devOnly` packages and `Npm.devDepends` to optimize production builds, [PR#13797](https://github.com/meteor/meteor/pull/13797)
+- Introduced `Meteor.deferDev` to optimize server startup during development, [PR#14006](https://github.com/meteor/meteor/pull/14006)
+- Optimize react-meteor-data Suspense hooks and isEqual checks, [PR#456](https://github.com/meteor/react-packages/pull/456)
+- Meteor runtime now shows `--raw-logs` by default, use `--timestamps` to keep timestamps, [PR#13944](https://github.com/meteor/meteor/pull/13944)
+- Integrate `collection-extensions` into core, [PR#13830](https://github.com/meteor/meteor/pull/13830)
+- Fix OPLOG includeCollections/excludeCollections when admin.$cmd happens, [PR#13949](https://github.com/meteor/meteor/pull/13949)
+- Report Mongo SIGILL crash errors, [PR#13930](https://github.com/meteor/meteor/pull/13930)
+- Fix bulk remove in LocalCollection to remove all items, [PR#13965](https://github.com/meteor/meteor/pull/13965)
+- Treat web.cordova as a modern architecture, [PR#13983](https://github.com/meteor/meteor/pull/13983)
+- Improve and beautify server error messages, [PR#13848](https://github.com/meteor/meteor/pull/13848)
+- Upgrade Accounts UI CSS (breaking visual change for accounts-ui users), [PR#13840](https://github.com/meteor/meteor/pull/13840)
+- Support NonEmptyString to check package, [#12852](https://github.com/meteor/meteor/pull/12852)
+- Update TypeScript definitions for async support in accounts-base, [PR#13987](https://github.com/meteor/meteor/pull/13987)
+- Fix an error when files have identical names with different cases, [PR#13958](https://github.com/meteor/meteor/pull/13958)
+- Add experimental config disableBoilerplateResponse to improve React SSR, [PR#13855](https://github.com/meteor/meteor/pull/13855)
+- Upgrade to Node v22.22.0, TypeScript 5.9.2 and SWC 1.15.3, [PR#13997](https://github.com/meteor/meteor/pull/13997) and [PR#13760](https://github.com/meteor/meteor/pull/13760)
+
+All Merged PRs@[GitHub PRs 3.4](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.4)
+
+React Packages:
+- [react-meteor-data@4.0.1](https://github.com/meteor/react-packages/blob/master/packages/react-meteor-data/CHANGELOG.md#v401-2026-1-30)
+- [react-template-helper@0.4.0](https://github.com/meteor/react-packages/blob/master/packages/react-template-helper/CHANGELOG.md#v040-2026-1-30)
+
+#### Breaking Changes
+
+- `accounts-ui` CSS has changed, [PR#13840](https://github.com/meteor/meteor/pull/13840)
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.4
+```
+
+To apply `react-meteor-data` changes:
+
+```bash
+meteor add react-meteor-data@4.0.1
+```
+
+---
+
+**Add this to your `package.json` to enable the new modern build stack:**
+
+```json
+"meteor": {
+  "modern": true
+}
+```
+
+Check out [the requirements for Meteor Bundler optimizations](https://docs.meteor.com/about/modern-build-stack/meteor-bundler-optimizations.html#requirements) on existing apps.
+
+**Add `rspack` package to enable the Rspack Bundler integration:**
+
+```bash
+meteor add rspack
+```
+
+> This package is added by default for new apps.
+
+Check out [the requirements for Rspack Bundler integration](https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration.html#requirements) on existing apps.
+
+### 📃 [Modern Build Stack docs](https://docs.meteor.com/about/modern-build-stack.html)
+
+### ☄️ [Meteor Bundler optimizations docs](https://docs.meteor.com/about/modern-build-stack/meteor-bundler-optimizations.html)
+
+### ⚡ [Rspack Bundler integration docs](https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration.html)
+
+If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.2.0
+- accounts-password@3.2.2
+- accounts-ui-unstyled@1.8.0
+- accounts-ui@1.5.0
+- babel-compiler@7.13.0
+- boilerplate-generator@2.1.0
+- ecmascript@0.17.0
+- meteor@2.2.0
+- minifier-js@3.1.0
+- minimongo@2.0.5
+- mongo@2.2.0
+- react-fast-refresh@0.3.0
+- rspack@1.0.0
+- shell-server@0.7.0
+- standard-minifier-css@1.10.0
+- standard-minifier-js@3.2.0
+- standard-minifiers@1.2.0
+- static-html@1.5.0
+- test-in-browser@1.5.0
+- tools-core@1.0.0
+- typescript@5.9.3
+- webapp@2.1.0
+- meteor-tool@3.4.0
+
+#### Bumped NPM Packages
+
+- @meteorjs/rspack@1.0.0
+
+#### Special thanks to
+
+✨✨✨
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@italojs](https://github.com/italojs)
+- [@Grubba27](https://github.com/Grubba27)
+- [@welkinwong](https://github.com/welkinwong)
+- [@harryadel](https://github.com/harryadel)
+- [@vparpoil](https://github.com/vparpoil)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@turoar23](https://github.com/turoar23)
+- [@DipakHalkude](https://github.com/DipakHalkude)
+- [@sanki92](https://github.com/sanki92)
+- [@evolross](https://github.com/evolross)
+- [@malua](https://github.com/malua)
+- [@tmeyer24](https://github.com/tmeyer24)
+- [@jeetburman](https://github.com/jeetburman)
+- [@copleykj](https://github.com/copleykj)
+
+  ✨✨✨
+
+## v3.3.2, 01-09-2025
+
+### Highlights
+
+- Async-compatible account URLs and email-sending coverage [#13740](https://github.com/meteor/meteor/pull/13740)
+- Move `findUserByEmail` method from `accounts-password` to `accounts-base` [#13859](https://github.com/meteor/meteor/pull/13859)
+- Return `insertedId` on client `upsert` to match Meteor 2.x behavior [#13891](https://github.com/meteor/meteor/pull/13891)
+- Unrecognized operator bug fixed [#13895](https://github.com/meteor/meteor/pull/13895)
+- Security fix for `sha.js` [#13908](https://github.com/meteor/meteor/pull/13908)
+
+
+All Merged PRs@[GitHub PRs 3.3.2](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.3.2)
+
+#### Breaking Changes
+
+N/A
+
+##### Cordova Upgrade
+
+- Enable modern browser support for Cordova unless explicitly disabled [#13896](https://github.com/meteor/meteor/pull/13896)
+
+####  Internal API changes
+
+- lodash.template dependency was removed [#13898](https://github.com/meteor/meteor/pull/13898)
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.3.2
+```
+
+---
+
+If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.1.2
+- accounts-password@3.2.1
+- accounts-passwordless@3.0.2
+- meteor-node-stubs@1.2.24
+- babel-compiler@7.12.2
+- boilerplate-generator@2.0.2
+- ecmascript@0.16.13
+- minifier@3.0.4
+- minimongo@2.0.4
+- mongo@2.1.4
+- coffeescript-compiler@2.4.3
+- npm-mongo@6.16.1
+- shell-server@0.6.2
+- typescript@5.6.6
+
+#### Bumped NPM Packages
+
+- meteor-node-stubs@1.2.23
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs)
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@graemian](https://github.com/graemian)
+- [@Grubba27](https://github.com/Grubba27)
+- [@copleykj](https://github.com/copleykj)
+
+✨✨✨
+
+## v3.3.1, 05-08-2025
+
+### Highlights
+
+- **MongoDB Driver Upgrades**
+  - Upgraded core MongoDB driver to `6.16.0` to address latest issues reported [#13710](https://github.com/meteor/meteor/pull/13710)
+  - Introduced `npm-mongo-legacy` to maintain compatibility with MongoDB 3.6 via `mongodb@6.9.0` [#13736](https://github.com/meteor/meteor/pull/13736)
+  - Mitigated a cursor leak issue by synchronizing `next()` and `close()` operations [#13786](https://github.com/meteor/meteor/pull/13786)
+
+- **Improved SWC integration**
+  - Fixed edge cases in config cache invalidation [#13809](https://github.com/meteor/meteor/pull/13809)
+  - Ensured `@swc/helpers` is consistently used for better bundle size and performance [#13820](https://github.com/meteor/meteor/pull/13820)
+  - Updated to SWC `1.12.14` [#13851](https://github.com/meteor/meteor/pull/13851)
+
+- **Tooling and Build System**
+  - Fixed regression affecting rebuild behavior [#13810](https://github.com/meteor/meteor/pull/13810)
+  - Addressed issues getting performance profiles in mounted volumes [#13827](https://github.com/meteor/meteor/pull/13827)
+  - Fallback to Babel parser when Acorn fails to parse source code [#13844](https://github.com/meteor/meteor/pull/13844)
+
+- **Mobile Support**
+  - Upgraded Cordova platform to version 14 [#13837](https://github.com/meteor/meteor/pull/13837)
+
+- **Developer Experience**
+  - Added TypeScript types for `isModern` and `getMinimumBrowserVersions` functions [#13704](https://github.com/meteor/meteor/pull/13704)
+  - Enhanced CLI help output and documented admin commands [#13826](https://github.com/meteor/meteor/pull/13826)
+
+- **Vite Tooling**
+  - Updated official Meteor + Vite skeletons [#13835](https://github.com/meteor/meteor/pull/13835)
+
+- **Runtime & Dependencies**
+  - Updated to Node.js `22.18.0` and NPM `10.9.3` [#13877](https://github.com/meteor/meteor/pull/13877)
+  - Bumped `meteor-node-stubs` to `1.2.21` [#13825](https://github.com/meteor/meteor/pull/13825)
+
+All Merged PRs@[GitHub PRs 3.3.1](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.3.1)
+
+#### Breaking Changes
+
+##### MongoDB Driver Upgrades
+
+If you're using MongoDB 3.6 or earlier, install the new legacy package:
+
+```bash
+meteor add npm-mongo-legacy
+```
+This will pin the MongoDB driver to 6.9.0 for compatibility.
+
+If you’re on MongoDB 4+, the default [MongoDB driver 6.16.0](https://github.com/mongodb/node-mongodb-native/releases/tag/v6.16.0) is applied automatically.
+
+Please migrate your database as soon as possible to MongoDB 5 onward, as [MongoDB driver 6.17.0](https://github.com/mongodb/node-mongodb-native/releases/tag/v6.17.0) will drop MongoDB 4 support. We’ll keep offering `npm-mongo-legacy` so you can keep getting Meteor updates with your existing MongoDB legacy version.
+
+##### Cordova Upgrade
+
+The Cordova platform has been upgraded to version 14. Refer to the [Cordova Changelog](https://cordova.apache.org/announcements/2025/03/26/cordova-android-14.0.0.html) for more details on the changes and migration steps.
+
+####  Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.3.1
+```
+
+---
+
+While this is a patch release, Meteor 3.3, a recent minor update, introduced a modern build stack that’s now the default for new apps. Here’s how you can migrate to it.
+
+**Add this to your `package.json` to enable the new modern build stack:**
+
+```json
+"meteor": {
+  "modern": true
+}
+```
+
+Check the docs for help with the SWC migration, especially if your project uses many Babel plugins.
+
+[Modern Transpiler: SWC docs](https://docs.meteor.com/about/modern-build-stack/transpiler-swc.html)
+
+If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
+
+#### Bumped Meteor Packages
+
+- babel-compiler@7.12.1
+- callback-hook@1.6.1
+- ecmascript@0.16.12
+- minifier-js@3.0.3
+- minimongo@2.0.3
+- modern-browsers@0.2.3
+- mongo@2.1.3
+- npm-mongo-legacy@6.9.0
+- npm-mongo@6.16.0
+- standard-minifier-js@3.1.1
+- tinytest@1.3.2
+- typescript@5.6.5
+- meteor-tool@3.3.1
+
+#### Bumped NPM Packages
+
+- meteor-node-stubs@1.2.21
+
+#### Special thanks to
+
+✨✨✨
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@italojs](https://github.com/italojs)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@JorgenVatle](https://github.com/JorgenVatle)
+- [@welkinwong](https://github.com/welkinwong)
+- [@Saksham-Goel1107](https://github.com/Saksham-Goel1107)
+
+✨✨✨ 
 ## v3.3.0, 2025-06-11
 
 ### Highlights
@@ -122,7 +455,6 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@StorytellerCZ](https://github.com/StorytellerCZ)
 
 ✨✨✨ 
-
 ## v3.2.2, 2025-05-02
 
 ### Highlights
@@ -147,7 +479,7 @@ Please run the following command to update your project:
 
 ```bash
 
-meteor update --release 3.2.1
+meteor update --release 3.2.2
 
 ```
 
@@ -721,6 +1053,7 @@ For making this great framework even better!
   - `Accounts.sendVerificationEmail`
   - `Accounts.addEmail`
   - `Accounts.removeEmail`
+  - `Accounts.replaceEmailAsync`
   - `Accounts.verifyEmail`
   - `Accounts.createUserVerifyingEmail`
   - `Accounts.createUser`

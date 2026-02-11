@@ -15,9 +15,8 @@ function withoutInvocation(f) {
     return function () {
       CurrentInvocation.withValue(null, f);
     };
-  } else {
-    return f;
   }
+  return f;
 }
 
 function bindAndCatch(context, f) {
@@ -56,7 +55,7 @@ Meteor.setInterval = function (f, duration) {
  * @locus Anywhere
  * @param {Object} id The handle returned by `Meteor.setInterval`
  */
-Meteor.clearInterval = function(x) {
+Meteor.clearInterval = function (x) {
   return clearInterval(x);
 };
 
@@ -66,7 +65,7 @@ Meteor.clearInterval = function(x) {
  * @locus Anywhere
  * @param {Object} id The handle returned by `Meteor.setTimeout`
  */
-Meteor.clearTimeout = function(x) {
+Meteor.clearTimeout = function (x) {
   return clearTimeout(x);
 };
 
@@ -83,4 +82,55 @@ Meteor.clearTimeout = function(x) {
  */
 Meteor.defer = function (f) {
   Meteor._setImmediate(bindAndCatch("defer callback", f));
+};
+
+/**
+ * @memberOf Meteor
+ * @summary Defer execution of a function to run asynchronously in the background based on environment (similar to Meteor.isDevelopment ? Meteor.defer(fn) : Meteor.startup(fn)).
+ * @locus Anywhere
+ * @param {Function} func The function to run
+ * @param {Object} options The options object
+ * @param {Array<String>} options.on Condition to determine whether to defer the function, you can pass an array of environments ['development', 'production', 'test']
+ */
+Meteor.deferrable = function (f, options) {
+  var on = (options && options.on) || [];
+
+  // throw if on is not an array
+  if (!Array.isArray(on)) {
+    throw new Error("options.on must be an array");
+  }
+
+  var env = Meteor.isDevelopment
+    ? "development"
+    : Meteor.isProduction
+    ? "production"
+    : "test";
+
+  if (on.includes(env)) {
+    return Meteor.defer(f);
+  }
+
+  return f();
+};
+
+/**
+ * @memberOf Meteor
+ * @summary Defer execution of a function to run asynchronously in the background in development (similar to Meteor.isDevelopment ? Meteor.defer(fn) : Meteor.startup(fn)).
+ * @locus Anywhere
+ * @param {Function} func The function to run
+ * @param {Object} options The options object
+ */
+Meteor.deferDev = function (f) {
+  return Meteor.deferrable(f, { on: ["development", "test"] });
+};
+
+/**
+ * @memberOf Meteor
+ * @summary Defer execution of a function to run asynchronously in the background in production (similar to Meteor.isProduction ? Meteor.defer(fn) : Meteor.startup(fn)).
+ * @locus Anywhere
+ * @param {Function} func The function to run
+ * @param {Object} options The options object
+ */
+Meteor.deferProd = function (f) {
+  return Meteor.deferrable(f, { on: ["production"] });
 };

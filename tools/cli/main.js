@@ -2,6 +2,10 @@ var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile) {
   require('../tool-env/profile-require.js').start();
 }
+const { initMeteorConfig } = require('../tool-env/meteor-config');
+
+// Initialize meteorConfig globally
+initMeteorConfig();
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -287,7 +291,7 @@ main.captureAndExit = async function (header, title, f) {
 
 // NB: files required up to this point may not define commands
 
-const { isModernWatcherEnabled } = require('./commands.js');
+require('./commands.js');
 require('./commands-packages.js');
 require('./commands-packages-query.js');
 require('./commands-cordova.js');
@@ -865,7 +869,9 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   var appDir = files.findAppDir();
   if (appDir) {
     appDir = files.pathResolve(appDir);
-    global.modernWatcher = isModernWatcherEnabled(appDir);
+
+    // Renitialize meteorConfig globally when having appDir context
+    initMeteorConfig(appDir);
   }
 
   await require('../tool-env/isopackets.js').ensureIsopacketsLoadable();

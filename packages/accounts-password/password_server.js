@@ -1,6 +1,7 @@
 import argon2 from "argon2";
-import { hash as bcryptHash, compare as bcryptCompare } from "bcrypt";
 import { Accounts } from "meteor/accounts-base";
+import { check, Match } from 'meteor/check';
+import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
 
 // Utility for grabbing user
 const getUserById =
@@ -287,43 +288,6 @@ Accounts._checkPasswordAsync = checkPasswordAsync;
 ///
 
 
-/**
- * @summary Finds the user asynchronously with the specified username.
- * First tries to match username case sensitively; if that fails, it
- * tries case insensitively; but if more than one user matches the case
- * insensitive search, it returns null.
- * @locus Server
- * @param {String} username The username to look for
- * @param {Object} [options]
- * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
- * @returns {Promise<Object>} A user if found, else null
- * @importFromPackage accounts-base
- */
-Accounts.findUserByUsername =
-  async (username, options) =>
-    await Accounts._findUserByQuery({ username }, options);
-
-/**
- * @summary Finds the user asynchronously with the specified email.
- * First tries to match email case sensitively; if that fails, it
- * tries case insensitively; but if more than one user matches the case
- * insensitive search, it returns null.
- * @locus Server
- * @param {String} email The email address to look for
- * @param {Object} [options]
- * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
- * @returns {Promise<Object>} A user if found, else null
- * @importFromPackage accounts-base
- */
-Accounts.findUserByEmail =
-  async (email, options) =>
-    await Accounts._findUserByQuery({ email }, options);
-
-// XXX maybe this belongs in the check package
-const NonEmptyString = Match.Where(x => {
-  check(x, String);
-  return x.length > 0;
-});
 
 const passwordValidator = Match.OneOf(
   Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256), {
@@ -353,7 +317,7 @@ Accounts.registerLoginHandler("password", async options => {
   check(options, {
     user: Accounts._userQueryValidator,
     password: passwordValidator,
-    code: Match.Optional(NonEmptyString),
+    code: Match.Optional(Match.NonEmptyString),
   });
 
 
@@ -405,10 +369,9 @@ Accounts.registerLoginHandler("password", async options => {
  * @param {String} newUsername A new username for the user.
  * @importFromPackage accounts-base
  */
-Accounts.setUsername =
-  async (userId, newUsername) => {
-    check(userId, NonEmptyString);
-    check(newUsername, NonEmptyString);
+Accounts.setUsername = async (userId, newUsername) => {
+  check(userId, Match.NonEmptyString);
+  check(newUsername, Match.NonEmptyString);
 
     const user = await getUserById(userId, {
       fields: {
@@ -715,7 +678,7 @@ Accounts.sendResetPasswordEmail =
   async (userId, email, extraTokenData, extraParams) => {
     const { email: realEmail, user, token } =
       await Accounts.generateResetToken(userId, email, 'resetPassword', extraTokenData);
-    const url = Accounts.urls.resetPassword(token, extraParams);
+    const url = await Accounts._resolvePromise(Accounts.urls.resetPassword(token, extraParams));
     const options = await Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
     await Email.sendAsync(options);
 
@@ -749,7 +712,7 @@ Accounts.sendEnrollmentEmail =
     const { email: realEmail, user, token } =
       await Accounts.generateResetToken(userId, email, 'enrollAccount', extraTokenData);
 
-    const url = Accounts.urls.enrollAccount(token, extraParams);
+    const url = await Accounts._resolvePromise(Accounts.urls.enrollAccount(token, extraParams));
 
     const options =
       await Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
@@ -938,7 +901,7 @@ Accounts.sendVerificationEmail =
 
     const { email: realEmail, user, token } =
       await Accounts.generateVerificationToken(userId, email, extraTokenData);
-    const url = Accounts.urls.verifyEmail(token, extraParams);
+    const url = await Accounts._resolvePromise(Accounts.urls.verifyEmail(token, extraParams));
     const options = await Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
     await Email.sendAsync(options);
     if (Meteor.isDevelopment && !Meteor.isPackageTest) {
@@ -1037,9 +1000,9 @@ Meteor.methods(
  * @importFromPackage accounts-base
  */
 Accounts.replaceEmailAsync = async (userId, oldEmail, newEmail, verified) => {
-  check(userId, NonEmptyString);
-  check(oldEmail, NonEmptyString);
-  check(newEmail, NonEmptyString);
+  check(userId, Match.NonEmptyString);
+  check(oldEmail, Match.NonEmptyString);
+  check(newEmail, Match.NonEmptyString);
   check(verified, Match.Optional(Boolean));
 
   if (verified === void 0) {
@@ -1081,8 +1044,8 @@ Accounts.replaceEmailAsync = async (userId, oldEmail, newEmail, verified) => {
  * @importFromPackage accounts-base
  */
 Accounts.addEmailAsync = async (userId, newEmail, verified) => {
-  check(userId, NonEmptyString);
-  check(newEmail, NonEmptyString);
+  check(userId, Match.NonEmptyString);
+  check(newEmail, Match.NonEmptyString);
   check(verified, Match.Optional(Boolean));
 
   if (verified === void 0) {
@@ -1192,8 +1155,8 @@ Accounts.addEmailAsync = async (userId, newEmail, verified) => {
  */
 Accounts.removeEmail =
   async (userId, email) => {
-    check(userId, NonEmptyString);
-    check(email, NonEmptyString);
+    check(userId, Match.NonEmptyString);
+    check(email, Match.NonEmptyString);
 
     const user = await getUserById(userId, { fields: { _id: 1 } });
     if (!user)
@@ -1345,4 +1308,3 @@ await Meteor.users.createIndexAsync('services.password.reset.token',
   { unique: true, sparse: true });
 await Meteor.users.createIndexAsync('services.password.enroll.token',
   { unique: true, sparse: true });
-
