@@ -1,4 +1,4 @@
-const { defineConfig } = require('@meteorjs/rspack');
+const { defineConfig } = require("@meteorjs/rspack");
 
 /**
  * Rspack configuration for Meteor projects.
@@ -10,6 +10,17 @@ const { defineConfig } = require('@meteorjs/rspack');
  *
  * Use these flags to adjust your build settings based on environment.
  */
-module.exports = defineConfig(Meteor => {
-  return {};
+module.exports = defineConfig((Meteor) => {
+  return {
+    module: {
+      rules: [
+        // Add support for importing SVGs as React components
+        {
+          test: /\.svg$/i,
+          issuer: /\.[jt]sx?$/,
+          use: ["@svgr/webpack"],
+        },
+      ],
+    },
+  };
 });

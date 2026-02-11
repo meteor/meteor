@@ -964,6 +964,10 @@ Options:
              constraints.
   --no-lint  don't run linters on the published package and its local
              dependencies before publishing
+  --release <version> Specify the release of Meteor to resolve top-level version 
+             conflicts. This option is particularly useful during the migration
+             process when dealing with packages that have conflicting version
+             requirements.
 
 
 >>> publish-for-arch

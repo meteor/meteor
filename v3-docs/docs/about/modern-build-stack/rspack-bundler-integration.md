@@ -18,7 +18,7 @@ Starting with Meteor 3.4
 Add this Atmosphere package to your app:
 
 ``` bash
-meteor add rspack@1.0.0-beta340.14
+meteor add rspack
 ```
 
 On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
@@ -141,23 +141,24 @@ module.exports = defineConfig(Meteor => {
 
 You can use flags to control the final configuration based on the environment. The available flags are passed in the `Meteor` parameter.
 
-| Flag                | Type     | Description                                                                                               |
-|---------------------| -------- |-----------------------------------------------------------------------------------------------------------|
-| `isDevelopment`     | boolean  | True when running in development mode                                                                     |
-| `isProduction`      | boolean  | True when running in production mode                                                                      |
-| `isClient`          | boolean  | True when building or running client code                                                                 |
-| `isServer`          | boolean  | True when building or running server code                                                                 |
-| `isTest`            | boolean  | True when running in test mode                                                                            |
-| `isDebug`           | boolean  | True when debug mode is enabled                                                                           |
-| `isRun`             | boolean  | True when running the project with `meteor run`                                                           |
-| `isBuild`           | boolean  | True when building the project with `meteor build`                                                        |
-| `swcConfigOptions`  | object   | Project-level SWC config available for reusing                                                            |
-| `HtmlRspackPlugin`  | function | Custom HtmlRspackPlugin function for extending the config                                                 |
-| `compileWithMeteor` | function | Forces given npm deps ([Condition](https://rspack.rs/config/module#condition)[]) to be compiled by Meteor |
-| `compileWithRspack` | function | Forces given npm deps ([Condition](https://rspack.rs/config/module#condition)[]) to be compiled by Rspack |
-| `setCache`          | function | Enables or disables cache. Accepts true (persistent, default), false, or 'memory'                         |
-| `splitVendorChunk`  | function | Splits vendor libraries so they are automatically served from a separate chunk                            |
-| `extendSwcConfig`   | function | Extends the [SWC loader configuration](https://rspack.rs/guide/features/builtin-swc-loader#options) to apply only to the app code                                    |
+| Flag                | Type     | Description                                                                                                                       |
+|---------------------| -------- |-----------------------------------------------------------------------------------------------------------------------------------|
+| `isDevelopment`     | boolean  | True when running in development mode                                                                                             |
+| `isProduction`      | boolean  | True when running in production mode                                                                                              |
+| `isClient`          | boolean  | True when building or running client code                                                                                         |
+| `isServer`          | boolean  | True when building or running server code                                                                                         |
+| `isTest`            | boolean  | True when running in test mode                                                                                                    |
+| `isDebug`           | boolean  | True when debug mode is enabled                                                                                                   |
+| `isRun`             | boolean  | True when running the project with `meteor run`                                                                                   |
+| `isBuild`           | boolean  | True when building the project with `meteor build`                                                                                |
+| `swcConfigOptions`  | object   | Project-level SWC config available for reusing                                                                                    |
+| `HtmlRspackPlugin`  | function | Custom HtmlRspackPlugin function for extending the config                                                                         |
+| `compileWithMeteor` | function | Forces given npm deps ([Condition](https://rspack.rs/config/module#condition)[]) to be compiled by Meteor                         |
+| `compileWithRspack` | function | Forces given npm deps ([Condition](https://rspack.rs/config/module#condition)[]) to be compiled by Rspack                         |
+| `setCache`          | function | Enables or disables cache. Accepts true (persistent, default), false, or 'memory'                                                 |
+| `splitVendorChunk`  | function | Splits vendor libraries so they are automatically served from a separate chunk                                                    |
+| `extendSwcConfig`   | function | Extends the [SWC loader configuration](https://rspack.rs/guide/features/builtin-swc-loader#options) to apply only to the app code |
+| `extendConfig`      | function | Extends the config by applying merged object configs                                                                                 |
 
 Some configurations in the Rspack config are reserved for the Meteor-Rspack setup to work, such as Rspack options inside the `entry` and `output` objects. These will trigger warnings if modified. All other settings can be overridden, giving you the flexibility to make any setup compatible with the modern bundler.
 
@@ -520,7 +521,7 @@ You can still use HTML files near your Meteor client entry point to define custo
 
 ### Delegating Dependencies to Rspack
 
-**Meteor.compileWithRspack(deps: [Condition](https://rspack.rs/config/module#condition)[])**
+**Meteor.compileWithRspack(deps: [Condition](https://rspack.rs/config/module#condition)[], options?: [SwcLoaderOptions](https://v0.rspack.dev/guide/features/builtin-swc-loader#options))**
 
 This helper forces **Rspack (via SWC and custom loaders)** to parse and transpile specific npm dependencies during the build.
 
@@ -536,6 +537,8 @@ const { defineConfig } = require('@meteorjs/rspack');
 module.exports = defineConfig(Meteor => ({
   // Force-compile modern or local packages via SWC
   ...Meteor.compileWithRspack(['grubba-rpc']),
+  // Force-compile zod with ES5 target
+  ...Meteor.compileWithRspack(['zod'], { jsc: { target: 'es5' } }),
 }));
 ```
 
@@ -583,27 +586,6 @@ module.exports = defineConfig((Meteor) => {
 ```
 
 More info in [this forum post](https://forums.meteor.com/t/new-3-4-beta-12-release-faster-builds-smaller-bundles-and-modern-setups-with-the-rspack-integration/64124/94).
-
-### Cache
-
-Meteor cache remains active and continues to handle Atmosphere packages and intermediate builds. There’s an additional cache layer managed by Rspack to speed up rebuilds for your app code.
-
-This Rspack cache is enabled by default in persistent mode. If you [encounter issues](https://github.com/web-infra-dev/rspack/issues/11804) or prefer to disable it, you can do so in your `rspack.config.js` using the helper:
-
-```json
-const { defineConfig } = require('@meteorjs/rspack');
-const { rspack } = require('@rspack/core');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
-
-module.exports = defineConfig(Meteor => ({
-  // Disable cache, or use 'memory' to switch to in-memory cache
-  ...Meteor.setCache(false),
-}));
-
-
-```
-
-This helper provide a shortcut to apply the needed Rspack configuration and safely override defaults, so you don’t have to handle it manually.
 
 ### Split Vendor Chunk
 
@@ -758,6 +740,25 @@ RSPACK_DEVSERVER_PORT=3232 meteor run
 
 The reason is that the Rspack dev server is handled by the Meteor so it can make both dev server works together, and the info of the port needs to be properly shared via the env.
 
+### Disable Plugins
+
+Meteor allows disabling Rspack plugins that are added by default or through presets. This is useful when troubleshooting build issues or replacing a plugin with a custom implementation.
+
+Plugins are matched by name (constructor name) and can be specified as a string, RegExp, a predicate function, or an array of all.
+
+``` js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+    // Disable one or more Rspack plugins
+    ...Meteor.disablePlugins([
+        'DefinePlugin',
+        /Html/i,
+        p => p?.constructor?.name === 'CustomConsoleLogPlugin',
+    ]),
+}));
+```
+
 ## Benefits
 
 Meteor–Rspack integration sends your app code to Rspack to use modern bundler features. Meteor then uses Rspack’s output to handle Meteor-specific tasks (like Atmosphere package compilation) and create the final bundle.
@@ -795,6 +796,56 @@ This limitation only applies to Blaze. Any other modern project will work with H
 
 If you run into issues, try `meteor reset` or delete the `.meteor/local` and `_build` folders in the project root.
 
-For help or to report issues, post on [GitHub](https://github.com/meteor/meteor/issues) or the [Meteor forums](https://forums.meteor.com). We’re focused on making Meteor faster and your feedback helps.
+For help or to report issues, post on [GitHub](https://github.com/meteor/meteor/issues) or the [Meteor forums](https://forums.meteor.com). We're focused on making Meteor faster and your feedback helps.
 
 You can compare performance before and after enabling `modern` by running [`meteor profile`](../../cli/index.md#meteorprofile). Share your results to show progress to others.
+
+### Memory Crashes
+
+Large apps are more likely to hit memory limits during Meteor-Rspack builds, but this can also happen on smaller projects depending on the number of dependencies, cache size, and available system memory. If you experience crashes or out-of-memory errors, it's likely that the Rspack child process is running out of heap memory.
+
+A common first reaction is to set [`TOOL_NODE_FLAGS`](../../cli/environment-variables.md#tool-node-flags)` (`TOOL_NODE_FLAGS="--max-old-space-size=8192"`), but this flag is mainly for the Meteor tool's own Node.js process at startup. Rspack runs as a spawned child process and may not inherit it.
+
+Instead, use the standard `NODE_OPTIONS` environment variable, which Node.js propagates to child processes:
+
+```bash
+NODE_OPTIONS="--max-old-space-size=16384" meteor run
+```
+
+This raises the heap limit for the Rspack process and should reduce how often memory-related crashes occur. Adjust the value according to your machine's available memory.
+
+:::info
+For the Meteor 3.4.x series, as `NODE_OPTIONS` is confirmed to help, one option being considered is to automatically inherit memory settings from `TOOL_NODE_FLAGS` into the spawned Rspack process.
+:::
+
+Another approach is to disable Rspack's persistent cache, which is enabled by default and can be memory-intensive. See the [Cache](#cache) migration topic to disable it:
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  ...Meteor.setCache(false),
+}));
+```
+
+You can combine both solutions: raise the heap limit with `NODE_OPTIONS` and disable persistent cache to reduce overall memory pressure.
+
+Rspack itself has reported plans to optimize persistent cache and overall RAM consumption in [Rspack 2.0](https://rspack.rs/misc/planning/roadmap), which should improve memory behavior in future Meteor-Rspack releases.
+
+### Docker
+
+When building or deploying a Meteor-Rspack app inside Docker, you may encounter errors like `Rspack plugin error: Could not find rspack.config.js`. This typically means the NPM dependencies expected by Meteor are not aligned with the Meteor version in use.
+
+Each Meteor release requires specific minimum versions of NPM packages like Rspack. If these were not committed after upgrading Meteor locally, the Docker environment won't have them. To fix this, run `meteor update --npm` before `meteor npm install` in your Dockerfile:
+
+```dockerfile
+RUN (meteor update --npm 2>/dev/null || true) && meteor npm install && meteor build [...]
+```
+
+The `(meteor update --npm 2>/dev/null || true)` wrapper is for compatibility. The `--npm` option was introduced in Meteor 3.4. Older versions don't support it and would fail, so redirecting the error and allowing the command to continue ensures the same Docker step works across Meteor versions.
+
+> Keep `meteor update --npm` in the same Docker step as `meteor build` or `meteor deploy`. If you forget to commit and push the NPM bumps locally, this lets the Docker environment apply them on the fly. When using multiple Docker steps, each step is isolated, so NPM bumps won't carry over between steps.
+
+::: info
+To avoid this issue entirely, run `meteor update --npm` locally after upgrading Meteor, or run the app once so the bumps are applied, then commit and push both the Meteor update and the updated NPM dependencies.
+:::

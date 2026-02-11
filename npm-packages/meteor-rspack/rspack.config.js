@@ -9,6 +9,7 @@ const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitO
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
 const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
+const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
 const { generateEagerTestFile } = require("./lib/test.js");
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const { mergeMeteorRspackFragments } = require("./lib/meteorRspackConfigFactory.js");
@@ -19,7 +20,9 @@ const {
   splitVendorChunk,
   extendSwcConfig,
   makeWebNodeBuiltinsAlias,
+  disablePlugins,
 } = require('./lib/meteorRspackHelpers.js');
+const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -274,9 +277,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   // Expose Meteor's helpers to expand Rspack configs
   Meteor.compileWithMeteor = deps => compileWithMeteor(deps);
-  Meteor.compileWithRspack = deps =>
+  Meteor.compileWithRspack = (deps, options = {}) =>
     compileWithRspack(deps, {
-      options: Meteor.swcConfigOptions,
+      options: mergeSplitOverlap(Meteor.swcConfigOptions, options),
     });
   Meteor.setCache = enabled =>
     setCache(
@@ -285,6 +288,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     );
   Meteor.splitVendorChunk = () => splitVendorChunk();
   Meteor.extendSwcConfig = (customSwcConfig) => extendSwcConfig(customSwcConfig);
+  Meteor.extendConfig = (...configs) => mergeSplitOverlap(...configs);
+  Meteor.disablePlugins = matchers => prepareMeteorRspackConfig({
+    disablePlugins: matchers,
+  });
 
   // Add HtmlRspackPlugin function to Meteor
   Meteor.HtmlRspackPlugin = (options = {}) => {
@@ -391,6 +398,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     enableGlobalPolyfill: isDevEnvironment && !isServer,
   });
 
+  // Handle assets
+  const assetExternalsPlugin = new AssetExternalsPlugin();
+  const assetModuleFilename = _fileInfo => {
+    const filename = _fileInfo.filename;
+    const isPublic = filename.startsWith('/') || filename.startsWith('public');
+    if (isPublic) return `[name][ext][query]`;
+    return `${assetsContext}/[hash][ext][query]`;
+  };
+
   const rsdoctorModule = isBundleVisualizerEnabled
     ? safeRequire('@rsdoctor/rspack-plugin')
     : null;
@@ -411,6 +427,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         }),
       ]
     : [];
+  // Not supported in Meteor yet (Rspack 1.7+ is enabled by default)
+  const lazyCompilationConfig = { lazyCompilation: false };
 
   const clientEntry =
     isTest && isTestEager && isTestFullApp
@@ -420,6 +438,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           buildContext,
           ignoreEntries: [...meteorIgnoreEntries, "**/server/**"],
           prefix: "client",
+          extraEntry: path.resolve(process.cwd(), Meteor.mainClientEntry),
         })
       : isTest && isTestEager
       ? generateEagerTestFile({
@@ -460,7 +479,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       libraryTarget: 'commonjs2',
       publicPath: '/',
       chunkFilename: `${chunksContext}/[id]${isProd ? '.[chunkhash]' : ''}.js`,
-      assetModuleFilename: `${assetsContext}/[hash][ext][query]`,
+      assetModuleFilename,
       cssFilename: `${chunksContext}/[name]${
         isProd ? '.[contenthash]' : ''
       }.css`,
@@ -495,6 +514,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           ? [new reactRefreshModule()]
           : []),
         requireExternalsPlugin,
+        assetExternalsPlugin,
       ].filter(Boolean),
       new DefinePlugin({
         'Meteor.isClient': JSON.stringify(true),
@@ -527,7 +547,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         },
       },
     }),
-    ...merge(cacheStrategy, { experiments: { css: true } })
+    ...merge(cacheStrategy, { experiments: { css: true } }),
+    ...lazyCompilationConfig,
   };
 
   const serverEntry =
@@ -564,7 +585,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       filename: () => `../${buildContext}/${outputPath}`,
       libraryTarget: 'commonjs2',
       chunkFilename: `${chunksContext}/[id]${isProd ? '.[chunkhash]' : ''}.js`,
-      assetModuleFilename: `${assetsContext}/[hash][ext][query]`,
+      assetModuleFilename,
       ...(isProd && { clean: { keep: keepOutsideBuild() } }),
     },
     optimization: {
@@ -608,12 +629,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ),
       ...bannerPluginConfig,
       requireExternalsPlugin,
+      assetExternalsPlugin,
       ...doctorPluginConfig,
     ],
     watchOptions,
     devtool: isDevEnvironment || isNative || isTest ? 'source-map' : 'hidden-source-map',
     ...((isDevEnvironment || (isTest && !isTestEager) || isNative) &&
       cacheStrategy),
+    ...lazyCompilationConfig,
   };
 
   // Helper function to load and process config files
@@ -643,7 +666,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         "entry",
         "output.path",
         "output.filename",
-        "output.publicPath",
         ...(Meteor.isServer ? ["optimization.splitChunks", "optimization.runtimeChunk"] : []),
       ].filter(Boolean);
 
@@ -687,10 +709,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     }
 
     const nextUserConfig = await loadAndProcessConfig(
-      projectConfigPathToUse, 
-      'rspack.config.js', 
-      Meteor, 
-      argv, 
+      projectConfigPathToUse,
+      'rspack.config.js',
+      Meteor,
+      argv,
       isAngularEnabled
     );
 
@@ -754,8 +776,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       const nextOverrideConfig = await loadAndProcessConfig(
         overrideConfigPath,
         configNameFull,
-        Meteor, 
-        argv, 
+        Meteor,
+        argv,
         isAngularEnabled
       );
 
@@ -766,8 +788,23 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     }
   }
 
+  const shouldDisablePlugins = config?.disablePlugins != null;
+  if (shouldDisablePlugins) {
+    config = disablePlugins(config, config.disablePlugins);
+    delete config.disablePlugins;
+  }
+
   if (Meteor.isDebug || Meteor.isVerbose) {
     console.log('Config:', inspect(config, { depth: null, colors: true }));
+  }
+
+  // Check if lazyCompilation is enabled and warn the user
+  if (config.lazyCompilation === true || typeof config.lazyCompilation === 'object') {
+    console.warn(
+      '\n⚠️  Warning: lazyCompilation may not work correctly in the current Meteor-Rspack integration.\n' +
+        '   This feature will be evaluated for support in future Meteor versions.\n' +
+        '   If you encounter any issues, please disable it in your rspack config.\n',
+    );
   }
 
   return [config];

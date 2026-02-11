@@ -163,8 +163,14 @@ export function getConfigFilePath() {
     }
   }
 
-  // If no config file is found, throw an error
-  throw new Error('Could not find rspack.config.js, rspack.config.ts, rspack.config.mjs, or rspack.config.cjs. Make sure @meteorjs/rspack is installed correctly.');
+  // If no config file is found, throw an error with suggestion to run npm install
+  const isYarnProj = process.env.YARN_ENABLED === 'true';
+  const installCommand = isYarnProj ? 'yarn install' : 'npm install';
+  throw new Error(
+    `Could not find rspack.config.js, rspack.config.ts, rspack.config.mjs, or rspack.config.cjs.\n\n` +
+    `Try running \`${installCommand}\` in your project directory and then re-run the build.\n` +
+    `This will ensure @meteorjs/rspack is installed correctly.`
+  );
 }
 
 /**

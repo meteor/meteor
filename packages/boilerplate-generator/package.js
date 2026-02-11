@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '2.1.0-beta340.14',
+  version: '2.1.0',
 });
 
 Npm.depends({

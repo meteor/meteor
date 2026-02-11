@@ -388,6 +388,7 @@ export namespace Accounts {
     user: Meteor.User,
     password: Password
   ): Promise<{ userId: string; error?: any }>;
+}
 
 export namespace Accounts {
   type StampedLoginToken = {

@@ -152,6 +152,56 @@ function extendSwcConfig(swcConfig) {
   });
 }
 
+/**
+ * Remove plugins from a Rspack config by name, RegExp, predicate, or array of them.
+ * When using a function predicate, it receives both the plugin and its index in the plugins array.
+ *
+ * @param {object} config Rspack config object
+ * @param {string | RegExp | ((plugin: any, index: number) => boolean) | Array<string|RegExp|Function>} matchers
+ * @returns {object} The modified config object
+ */
+function disablePlugins(config, matchers) {
+  if (!config || typeof config !== "object") {
+    throw new TypeError("disablePlugins: `config` must be an object");
+  }
+
+  const plugins = Array.isArray(config.plugins) ? config.plugins : [];
+  const kept = [];
+
+  const list = Array.isArray(matchers) ? matchers : [matchers];
+
+  const getPluginName = (p) => {
+    if (!p) return "";
+    return (
+      (p.constructor && typeof p.constructor.name === "string" && p.constructor.name) ||
+      (typeof p.name === "string" && p.name) ||
+      (typeof p.pluginName === "string" && p.pluginName) ||
+      (typeof p.__pluginName === "string" && p.__pluginName) ||
+      ""
+    );
+  };
+
+  const predicates = list.map((m) => {
+    if (typeof m === "function") return m;
+    if (m instanceof RegExp) {
+      return (p) => m.test(getPluginName(p));
+    }
+    if (typeof m === "string") {
+      return (p) => getPluginName(p) === m;
+    }
+    throw new TypeError(
+      "disablePlugins: matchers must be string, RegExp, function, or array of them"
+    );
+  });
+
+  config.plugins = plugins.filter((p, index) => {
+    const matches = predicates.some(fn => fn(p, index));
+    return !matches;
+  });
+
+  return config;
+}
+
 module.exports = {
   compileWithMeteor,
   compileWithRspack,
@@ -159,4 +209,5 @@ module.exports = {
   splitVendorChunk,
   extendSwcConfig,
   makeWebNodeBuiltinsAlias,
+  disablePlugins,
 };

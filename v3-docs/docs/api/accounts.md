@@ -176,6 +176,8 @@ Meteor.users.deny({ update: () => true });
 <ApiBox name="Meteor.loggingIn" />
 
 For example, [the `accounts-ui` package](../packages/accounts-ui.md) uses this to display an
+ 
+
 animation while the login request is being processed.
 
 <ApiBox name="Meteor.loggingOut" />
@@ -204,6 +206,35 @@ This method can fail throwing one of the following errors:
 
 This function is provided by the `accounts-password` package. See the
 [Passwords](#passwords) section below.
+
+<ApiBox name="Meteor.loginWithToken" />
+
+Logs the user in using a valid Meteor login token (also called a resume token). This is typically used to restore a user's session across browser reloads, between tabs, or across DDP connections (such as in multi-server setups).
+
+**Arguments:**
+- `token` (`String`): The login token to use for authentication. Usually obtained from `Accounts._storedLoginToken()` or from a previous login session.
+- `callback` (`Function`, optional): Called with no arguments on success, or with a single `Error` argument on failure.
+
+**Returns:**
+- `void`
+
+**Usage example:**
+```js
+import { Meteor } from "meteor/meteor";
+const token = Accounts._storedLoginToken();
+Meteor.loginWithToken(token, (error) => {
+  if (error) {
+    console.error("Login with token failed", error);
+  } else {
+    console.log("Logged in with token!");
+  }
+});
+```
+
+**Notes:**
+- If the token is invalid, expired, or revoked, the callback will be called with an error and the user will not be logged in.
+- This method is used internally by Meteor to automatically restore login state on page reload and across tabs.
+- Can be used with custom DDP connections to authenticate across multiple Meteor servers sharing the same database.
 
 <ApiBox name="Meteor.loginWith<ExternalService>" />
 
@@ -265,7 +296,7 @@ Then, inside the server of your app (this example is for the Weebo service), imp
 
 ```js
 import { ServiceConfiguration } from "meteor/service-configuration";
-ServiceConfiguration.configurations.upsert(
+ServiceConfiguration.configurations.upsertAsync(
   { service: "weibo" },
   {
     $set: {
@@ -991,6 +1022,7 @@ Set the fields of the object by assigning to them:
   returns the body text for a reset password email.
 - `html`: An optional `Function` that takes a user object and a
   url, and returns the body html for a reset password email.
+
 - `enrollAccount`: Same as `resetPassword`, but for initial password setup for
   new accounts.
 - `verifyEmail`: Same as `resetPassword`, but for verifying the users email
@@ -998,7 +1030,10 @@ Set the fields of the object by assigning to them:
 
 Example:
 
+
 ```js
+
+
 import { Accounts } from "meteor/accounts-base";
 
 Accounts.emailTemplates.siteName = "AwesomeSite";

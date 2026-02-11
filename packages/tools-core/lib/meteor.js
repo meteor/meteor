@@ -203,6 +203,14 @@ export function isMeteorAppBuild() {
 }
 
 /**
+ * Checks if the current Meteor command is 'update'.
+ * @returns {boolean} True if the current command is 'update', false otherwise.
+ */
+export function isMeteorAppUpdate() {
+  return Package?.meteor?.global?.currentCommand?.name === 'update';
+}
+
+/**
  * Checks if the current Meteor command is 'test'.
  * @returns {boolean} True if the current command is 'test', false otherwise.
  */

@@ -142,16 +142,6 @@ BCp.initializeMeteorAppSwcrc = function () {
   return lastModifiedSwcConfig;
 };
 
-let lastModifiedSwcLegacyConfig;
-BCp.initializeMeteorAppLegacyConfig = function () {
-  const swcLegacyConfig = convertBabelTargetsForSwc(Babel.getMinimumModernBrowserVersions());
-  if (this.isVerbose() && !lastModifiedSwcLegacyConfig) {
-    logConfigBlock('SWC Legacy Config', swcLegacyConfig);
-  }
-  lastModifiedSwcLegacyConfig = swcLegacyConfig;
-  return lastModifiedSwcConfig;
-};
-
 // Helper function to check if @swc/helpers is available
 function hasSwcHelpers() {
   return fs.existsSync(`${getMeteorAppDir()}/node_modules/@swc/helpers`);
@@ -196,7 +186,6 @@ BCp.processFilesForTarget = function (inputFiles) {
 
   this.initializeMeteorAppConfig();
   this.initializeMeteorAppSwcrc();
-  this.initializeMeteorAppLegacyConfig();
   this.initializeMeteorAppSwcHelpersAvailable();
 
   inputFiles.forEach(function (inputFile) {
@@ -242,11 +231,13 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     sourceMap: null,
     bare: !! fileOptions.bare
   };
+  const arch = inputFile.getArch();
+  const isLegacyWebArch = arch.includes('legacy');
 
   // Check if the file is a Rspack output file
   // If it is, bypass SWC/Babel and just read the file and its map file
   // as the contents are already transpiled by Rspack.
-if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath)) {
+  if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath) && !isLegacyWebArch) {
     try {
       // Get the full path to the file
       const fullPath = inputFile.getPathInPackage();
@@ -290,7 +281,6 @@ if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath)) {
       ! excludedFileExtensionPattern.test(inputFilePath)) {
 
     const features = Object.assign({}, this.extraFeatures);
-    const arch = inputFile.getArch();
 
     const isNodeTarget = arch.startsWith("os.");
     if (isNodeTarget) {
@@ -381,7 +371,22 @@ if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath)) {
         filename,
         sourceFileName: filename,
         ...(isLegacyWebArch && {
-          env: { targets: lastModifiedSwcLegacyConfig || {} },
+          env: {
+            targets: {
+              chrome: '49',
+              edge: '15',
+              firefox: '30',
+              safari: '10',
+              ios: '10',
+              android: '5',
+              opera: '42',
+              ie: '11',
+              node: '8',
+              electron: '1.6',
+            },
+            mode: 'entry',
+            coreJs: '3.37',
+          },
         }),
       };
 
@@ -414,7 +419,6 @@ if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath)) {
         const isNodeModulesCode = packageName == null && inputFilePath.includes("node_modules/");
         const isAppCode = packageName == null && !isNodeModulesCode;
         const isPackageCode = packageName != null;
-        const isLegacyWebArch = arch.includes('legacy');
 
         const transpConfig = getMeteorConfig()?.modern?.transpiler;
         const hasModernTranspiler = transpConfig != null && transpConfig !== false;
