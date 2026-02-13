@@ -54,10 +54,6 @@ DDPServer.publicationStrategies = publicationStrategies;
 // * Subscription - A single subscription for a single client
 // * Server - An entire server that may talk to > 1 client. A DDP endpoint.
 //
-// Session and Subscription are file scope. For now, until we freeze
-// the interface, Server is package scope (in the future it should be
-// exported).
-
 
 DDPServer._SessionDocumentView = SessionDocumentView;
 
@@ -566,6 +562,8 @@ Object.assign(Session.prototype, {
         connection: self.connectionHandle,
         randomSeed: randomSeed,
         fence,
+        session: self,
+        messageId: msg.id,
       });
 
       const promise = new Promise((resolve, reject) => {
@@ -831,6 +829,10 @@ Object.assign(Session.prototype, {
     return forwardedFor[forwardedFor.length - httpForwardedCount];
   }
 });
+
+// Expose Session for internal use (e.g., meteor-otel instrumentation).
+// This is an internal API and may change without notice.
+DDPServer._Session = Session;
 
 /******************************************************************************/
 /* Subscription                                                               */
@@ -1462,12 +1464,23 @@ Object.assign(Server.prototype, {
    * @locus Server
    * @param {String|Object} name If String, name of the record set.  If Object, publications Dictionary of publish functions by name.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.
    * @param {Function} func Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments.
+   * @param {Object} [options]
+   * @param {Boolean} [options.otel] If true, enables OpenTelemetry tracing for this publication (requires meteor-otel package).
    */
   publish: function (name, handler, options) {
     var self = this;
 
     if (!isObject(name)) {
       options = options || {};
+
+      // Apply OpenTelemetry tracing if enabled
+      if (options.otel) {
+        if (Package['meteor-otel']) {
+          handler = Package['meteor-otel'].wrapPublication(name, handler);
+        } else {
+          Meteor._debug("[ddp-server] otel option requires meteor-otel package. Ignoring otel option for publish '" + name + "'");
+        }
+      }
 
       if (name && name in self.publish_handlers) {
         Meteor._debug("Ignoring duplicate publish named '" + name + "'");
@@ -1540,16 +1553,34 @@ Object.assign(Server.prototype, {
    * @summary Defines functions that can be invoked over the network by clients.
    * @locus Anywhere
    * @param {Object} methods Dictionary whose keys are method names and values are functions.
+   * @param {Object} [options]
+   * @param {Boolean|Array<String>} [options.otel] If true, enables OpenTelemetry tracing for all methods. If an array, enables tracing only for the specified method names (requires meteor-otel package).
    * @memberOf Meteor
    * @importFromPackage meteor
    */
-  methods: function (methods) {
+  methods: function (methods, options) {
     var self = this;
+    options = options || {};
+
+    // Normalize otel option: true means all, array means specific methods
+    var otelMethods = options.otel === true ? true : (Array.isArray(options.otel) ? options.otel : null);
+
     Object.entries(methods).forEach(function ([name, func]) {
       if (typeof func !== 'function')
         throw new Error("Method '" + name + "' must be a function");
       if (self.method_handlers[name])
         throw new Error("A method named '" + name + "' is already defined");
+
+      // Apply OpenTelemetry tracing if enabled for this method
+      var shouldTrace = otelMethods === true || (Array.isArray(otelMethods) && otelMethods.includes(name));
+      if (shouldTrace) {
+        if (Package['meteor-otel']) {
+          func = Package['meteor-otel'].wrapMethod(name, func);
+        } else {
+          Meteor._debug("[ddp-server] otel option requires meteor-otel package. Ignoring otel option for method '" + name + "'");
+        }
+      }
+
       self.method_handlers[name] = func;
     });
   },
