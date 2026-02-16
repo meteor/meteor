@@ -1156,6 +1156,14 @@ main.registerCommand({
    * @param {string} url
    */
   const setupExampleByURL = async (url) => {
+    if (typeof url !== "string" ||
+        !/^(?:https?:\/\/|git:\/\/|ssh:\/\/|git@)[^\s]+$/.test(url)) {
+      throw new Error(
+        "Invalid repository URL. " +
+        "Please provide an https, http, git, or ssh URL."
+      );
+    }
+
     const [ok, err] = await bash`git --version`;
     if (err) throw new Error("git is not installed");
     const isWindows = process.platform === "win32";
@@ -1163,9 +1171,10 @@ main.registerCommand({
     // Set GIT_TERMINAL_PROMPT=0 to disable prompting
     process.env.GIT_TERMINAL_PROMPT = 0;
 
-    const gitCommand = isWindows
-      ? `git clone --progress ${url} "${files.convertToOSPath(appPath)}"`
-      : `git clone --progress ${url} ${appPath}`;
+    const dest = isWindows
+      ? files.convertToOSPath(appPath)
+      : appPath;
+    const gitCommand = `git clone --progress "${url.replace(/"/g, '\\"')}" "${dest.replace(/"/g, '\\"')}"`;
     const [okClone, errClone] = await bash`${gitCommand}`;
     const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
     if (errorMessage && errorMessage.includes("Cloning into")) {
