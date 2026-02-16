@@ -697,7 +697,7 @@ export class AccountsServer extends AccountsCommon {
     methods.logoutAllClients = async function() {
       const logoutUserId = this.userId;
       accounts._setLoginToken(logoutUserId, this.connection, null);
-      accounts._clearAllLoginTokens(logoutUserId);
+      await accounts._clearAllLoginTokens(logoutUserId);
       await accounts._successfulLogout(this.connection, logoutUserId);
       await this.setUserId(null);
     };
@@ -962,8 +962,8 @@ export class AccountsServer extends AccountsCommon {
    * @private
    * @returns {Promise<void>}
    */
-  _clearAllLoginTokens(userId) {
-    this.users.updateAsync(userId, {
+  async _clearAllLoginTokens(userId) {
+    await this.users.updateAsync(userId, {
       $set: {
         'services.resume.loginTokens': [],
       },
