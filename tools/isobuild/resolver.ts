@@ -263,6 +263,27 @@ export default class Resolver {
             return result = { path: pathWithExt, stat };
           }
         });
+
+        // TypeScript ESM compatibility: allow importing .ts/.tsx/.mts files with .js/.jsx/.mjs extensions
+        // https://github.com/meteor/meteor/issues/12011
+        if (!result && /\.(m?jsx?)$/i.test(path)) {
+          const pathWithoutJsExt = path.replace(/\.(m?jsx?)$/i, '');
+          const jsExt = path.match(/\.(m?jsx?)$/i)![0].toLowerCase();
+          const tsExtMap: Record<string, string> = {
+            '.js': '.ts',
+            '.jsx': '.tsx',
+            '.mjs': '.mts',
+          };
+          const tsExt = tsExtMap[jsExt];
+          
+          if (tsExt && this.extensions.includes(tsExt)) {
+            const pathWithTsExt = pathWithoutJsExt + tsExt;
+            const stat = this.statOrNull(pathWithTsExt);
+            if (stat && !stat.isDirectory()) {
+              result = { path: pathWithTsExt, stat };
+            }
+          }
+        }
       }
     }
 
