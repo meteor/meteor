@@ -1120,27 +1120,6 @@ export class Connection {
     return Object.values(invokers).some((invoker) => !!invoker.sentMessage);
   }
 
-  async _processOneDataMessage(msg, updates) {
-    const messageType = msg.msg;
-
-    // msg is one of ['added', 'changed', 'removed', 'ready', 'updated']
-    if (messageType === 'added') {
-      await this._process_added(msg, updates);
-    } else if (messageType === 'changed') {
-      this._process_changed(msg, updates);
-    } else if (messageType === 'removed') {
-      this._process_removed(msg, updates);
-    } else if (messageType === 'ready') {
-      this._process_ready(msg, updates);
-    } else if (messageType === 'updated') {
-      this._process_updated(msg, updates);
-    } else if (messageType === 'nosub') {
-      // ignore this
-    } else {
-      Meteor._debug('discarding unknown livedata data message type', msg);
-    }
-  }
-
   _prepareBuffersToFlush() {
     const self = this;
     if (self._bufferedWritesFlushHandle) {

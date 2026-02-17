@@ -122,14 +122,14 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = any, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+    addExtension<T extends NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
 
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T = any, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
+    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.
@@ -573,14 +573,14 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = any, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+    addExtension<T extends NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
     
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T = any, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
+    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.
