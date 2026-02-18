@@ -129,22 +129,28 @@ export function findPackageDir(filepath: string) {
 }
 
 // Returns the hash of the current Git HEAD revision of the application,
-// if possible. Always resolves rather than rejecting (unless something
-// truly unexpected happens). The result value is a string when a Git
-// revision was successfully resolved, or undefined otherwise.
+// if possible. Always resolves rather than rejecting. The result value
+// is a string when a Git revision was successfully resolved, or
+// undefined otherwise.
 export function findGitCommitHash(path: string) {
   return new Promise<string|void>(resolve => {
     const appDir = findAppDir(path);
     if (appDir) {
-      execFile("git", ["rev-parse", "HEAD"], {
-        cwd: convertToOSPath(appDir),
-      }, (error: any, stdout: string) => {
-        if (! error && typeof stdout === "string") {
-          resolve(stdout.trim());
-        } else {
-          resolve();
-        }
-      });
+      try {
+        execFile("git", ["rev-parse", "HEAD"], {
+          cwd: convertToOSPath(appDir),
+        }, (error: any, stdout: string) => {
+          if (! error && typeof stdout === "string") {
+            resolve(stdout.trim());
+          } else {
+            resolve();
+          }
+        });
+      } catch (e) {
+        // execFile can throw synchronously (e.g. spawn EBADF when file
+        // descriptors are exhausted during heavy builds in git worktrees).
+        resolve();
+      }
     } else {
       resolve();
     }
