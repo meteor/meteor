@@ -167,7 +167,7 @@ export namespace Meteor {
       | EJSONable
       | EJSONable[]
       | EJSONableProperty
-      | EJSONableProperty[]
+      | EJSONableProperty[],
   >(name: string, ...args: any[]): Result;
 
   /**
@@ -180,7 +180,7 @@ export namespace Meteor {
       | EJSONable
       | EJSONable[]
       | EJSONableProperty
-      | EJSONableProperty[]
+      | EJSONableProperty[],
   >(
     name: string,
     ...args: any[]
@@ -194,7 +194,7 @@ export namespace Meteor {
       | EJSONable
       | EJSONable[]
       | EJSONableProperty
-      | EJSONableProperty[]
+      | EJSONableProperty[],
   > {
     /**
      * (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
@@ -206,7 +206,7 @@ export namespace Meteor {
     onResultReceived?:
       | ((
           error: global_Error | Meteor.Error | undefined,
-          result?: Result
+          result?: Result,
         ) => void)
       | undefined;
     /**
@@ -235,15 +235,15 @@ export namespace Meteor {
       | EJSONable
       | EJSONable[]
       | EJSONableProperty
-      | EJSONableProperty[]
+      | EJSONableProperty[],
   >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
     options?: MethodApplyOptions<Result>,
     asyncCallback?: (
       error: global_Error | Meteor.Error | undefined,
-      result?: Result
-    ) => void
+      result?: Result,
+    ) => void,
   ): Result;
 
   /**
@@ -258,15 +258,15 @@ export namespace Meteor {
       | EJSONable
       | EJSONable[]
       | EJSONableProperty
-      | EJSONableProperty[]
+      | EJSONableProperty[],
   >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
     options?: MethodApplyOptions<Result>,
     asyncCallback?: (
       error: global_Error | Meteor.Error | undefined,
-      result?: Result
-    ) => void
+      result?: Result,
+    ) => void,
   ): Promise<Result> & {
     stubPromise: Promise<Result>;
     serverPromise: Promise<Result>;
@@ -334,7 +334,7 @@ export namespace Meteor {
    */
   function deferrable<T extends Function>(
     func: T,
-    options: { on: Array<"development" | "production" | "test"> }
+    options: { on: Array<"development" | "production" | "test"> },
   ): T | void;
 
   /**
@@ -367,10 +367,10 @@ export namespace Meteor {
    * @param func A function that takes a callback as its final parameter
    * @param context Optional `this` object against which the original function will be invoked
    */
-  function wrapAsync<T extends Function>(
-    func: T,
-    context?: ThisParameterType<T>
-  ): Function;
+  function wrapAsync<TArgs extends any[], TResult>(
+    func: (...args: [...TArgs, (error: any, result: TResult) => void]) => void,
+    context?: any,
+  ): (...args: TArgs) => Promise<TResult>;
 
   function bindEnvironment<TFunc extends Function>(func: TFunc): TFunc;
 
@@ -409,17 +409,23 @@ export namespace Meteor {
 
   function loginWithMeteorDeveloperAccount(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function loginWithFacebook(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function loginWithGithub(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function loginWithGoogle(
@@ -432,33 +438,45 @@ export namespace Meteor {
         include_granted_scopes: boolean;
       };
     },
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function loginWithMeetup(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function loginWithTwitter(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function loginWithWeibo(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function loginWithPassword(
     user: { username: string } | { email: string } | { id: string } | string,
     password: string,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function loginWithToken(
     token: string,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function loggingIn(): boolean;
@@ -466,11 +484,15 @@ export namespace Meteor {
   function loggingOut(): boolean;
 
   function logout(
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
 
   function logoutOtherClients(
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+    callback?: (
+      error?: global_Error | Meteor.Error | Meteor.TypedError,
+    ) => void,
   ): void;
   /** Login **/
 
@@ -530,10 +552,10 @@ export namespace Meteor {
       | Mongo.Cursor<any>
       | Mongo.Cursor<any>[]
       | Promise<void | Mongo.Cursor<any> | Mongo.Cursor<any>[]>,
-    options?: { is_auto: boolean }
+    options?: { is_auto: boolean },
   ): void;
 
-  function _debug(...args: any[]): void;
+  function _debug(...args: unknown[]): void;
 }
 
 export interface Subscription {
@@ -554,7 +576,7 @@ export interface Subscription {
   changed(
     collection: string,
     id: string,
-    fields: Record<string, unknown>
+    fields: Record<string, unknown>,
   ): void;
   /** Access inside the publish function. The incoming connection for this subscription. */
   connection: Meteor.Connection;
