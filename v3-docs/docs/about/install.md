@@ -31,7 +31,7 @@ And it will prompt you to choose a project name and frontend framework.
 
 ## Installation
 
-Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://v3-docs.meteor.com/history.html) for the release notes.
+Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](/history) for the release notes.
 
 For Windows, Linux and OS X, you can run the following command:
 
