@@ -14,6 +14,8 @@ Package.onUse((api) => {
   api.use("callback-hook", ["client", "server"]);
   api.use("reactive-var", "client");
   api.use("url", ["client", "server"]);
+  api.use("webapp", "server");
+  api.use("routepolicy", "server");
 
   // needed for getting the currently logged-in user and handling reconnects
   api.use("ddp", ["client", "server"]);
