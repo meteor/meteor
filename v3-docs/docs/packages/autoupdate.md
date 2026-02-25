@@ -34,6 +34,26 @@ update will take place: Meteor will force a complete browser reload using the
 There is no soft update with Cordova apps, the client is always fully refreshed
 once a change is detected.
 
+### Modern Architecture Support (Meteor 3.4)
+
+**web.cordova as Modern Architecture** ([PR#13983](https://github.com/meteor/meteor/pull/13983))
+
+Starting with Meteor 3.4, `web.cordova` is treated as a modern architecture, bringing several benefits:
+
+- **Smaller Bundle Sizes**: Modern JavaScript features are preserved, reducing transpilation overhead
+- **Better Performance**: Native modern browser features in Cordova WebView
+- **Consistent Behavior**: Aligns with how modern web browsers are treated
+
+This change means Cordova apps now benefit from the same modern build optimizations as web browsers, resulting in faster load times and smaller bundle sizes.
+
+To leverage this in your existing Cordova apps, ensure you're using Meteor 3.4+ and your `mobile-config.js` targets modern WebView versions:
+
+```js
+// mobile-config.js
+App.setPreference('android-minSdkVersion', '23'); // Android 6.0+
+App.setPreference('ios-deployment-target', '12.0'); // iOS 12.0+
+```
+
 ### `usesCleartextTraffic`
 Starting with Android 9 (API level 28), [cleartext support is disabled](https://developer.android.com/training/articles/security-config) by default.
 During development `autoupdate` uses cleartext to publish new client versions.
@@ -59,4 +79,4 @@ should be on the same network, and you should run your app with `meteor run andr
 where *XXX.XXX.XXX.XXX* is your local development address, _e.g. 192.168.1.4_.
 
 > To have a better understanding of how HCP works for mobile apps already
-> published to production refer to [Hot code push on mobile](https://guide.meteor.com/cordova.html#hot-code-push)
+> published to production refer to [Hot code push on mobile](/troubleshooting/hot-code-push)

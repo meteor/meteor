@@ -118,4 +118,4 @@ Beyond these, we also track smaller tasks delivered in each release. These focus
 
 ---
 
-For more completed items, refer to our [changelog](https://docs.meteor.com/history.html).
+For more completed items, refer to our [changelog](/history).
