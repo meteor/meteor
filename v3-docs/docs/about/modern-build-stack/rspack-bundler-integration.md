@@ -190,7 +190,7 @@ Meteor entry points allow a modular, modern, bundler-compliant structure for you
 }
 ```
 
-Learn more in [“Modular application structure” in Meteor](https://docs.meteor.com/packages/modules.html#modular-application-structure).
+Learn more in [“Modular application structure” in Meteor](/packages/modules#modular-application-structure).
 
 Ensure your app defines these entry files with the correct paths where each module is expected to load. Organize your app so the loading order of modules is clear.
 
