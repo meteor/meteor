@@ -15,7 +15,7 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 `accounts-github`, `accounts-google`, `accounts-meetup`,
 `accounts-twitter`, or `accounts-weibo`.
 
-Read more about customizing user accounts in the [Accounts](http://guide.meteor.com/accounts.html) article in the Meteor Guide.
+Read more about customizing user accounts in the [Accounts](/tutorials/accounts/accounts) article in the Meteor Guide.
 
 ### Accounts with Session Storage {#accounts-session-storage}
 

@@ -414,8 +414,24 @@ export default defineConfig({
             ]
           },
           {
+            text: "Using Atmosphere packages",
+            link: "/packages/6.using-atmosphere-packages",
+          },
+          {
+            text: "Writing Atmosphere packages",
+            link: "/packages/7.writing-atmosphere-packages",
+          },
+          {
             link: "/packages/packages-listing",
             text: "Maintained Packages",
+          },
+          {
+            text: "Using npm packages",
+            link: "/packages/4.using-npm-packages",
+          },
+          {
+            text: "Writing npm packages",
+            link: "/packages/5.writing-npm-packages",
           },
           {
             link: "/community-packages/index",
@@ -467,6 +483,10 @@ export default defineConfig({
             text: "MongoDB Connection",
             link: "/troubleshooting/mongodb-connection",
           },
+          {
+            text: "Hot Code Push",
+            link: "/troubleshooting/hot-code-push",
+          },
         ],
         collapsed: true,
       },
@@ -507,12 +527,75 @@ export default defineConfig({
             text: "Application structure",
           },
           {
+            text: "Build System",
+            link: "/about/build-tool",
+          },
+          {
+            text: "Core Concepts",
+            items: [
+              {
+                text: "Methods",
+                link: "/tutorials/methods/methods",
+              },
+              {
+                text: "Data Loading",
+                link: "/tutorials/data-loading/data-loading",
+              },
+              {
+                text: "Collections & Schemas",
+                link: "/tutorials/collections/collections",
+              },
+              {
+                text: "Accounts",
+                link: "/tutorials/accounts/accounts",
+              },
+              {
+                text: "Routing",
+                link: "/tutorials/routing/routing",
+              },
+            ]
+          },
+          {
             text: "Production",
             items:[
               {
                 text: "Security",
                 link: "/tutorials/security/security",
-              }
+              },
+              {
+                text: "Testing",
+                link: "/tutorials/testing/testing",
+              },
+              {
+                text: "Deployment",
+                link: "/tutorials/deployment/deployment",
+              },
+            ]
+          },
+          {
+            text: "Advanced Topics",
+            items: [
+              {
+                text: "Apollo & GraphQL",
+                link: "/tutorials/apollo/apollo",
+              },
+              {
+                text: "Code Style",
+                link: "/tutorials/code-style/code-style",
+              },
+            ]
+          },
+          {
+            text: "Integrations",
+            items: [
+              {
+                text: "React Native",
+                link: "/tutorials/integrations/react-native",
+              },
+              {
+                text: "Flowbite UI",
+                link: "/tutorials/integrations/flowbite",
+              },
             ]
           },
         ],
@@ -538,10 +621,15 @@ export default defineConfig({
         text: "Performance",
         items: [
           {
+            text: "Performance Improvements",
+            link: "/performance/performance-improvement",
+          },
+          {
             text: "WebSocket Compression",
             link: "/performance/websocket-compression",
           },
         ],
+        collapsed: true,
       },
     ],
 
