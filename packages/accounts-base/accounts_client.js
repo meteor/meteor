@@ -280,7 +280,7 @@ export class AccountsClient extends AccountsCommon {
             return true;
           });
         }
-        options.userCallback(error, loginDetails);
+        await options.userCallback(error, loginDetails);
       }
     };
 
