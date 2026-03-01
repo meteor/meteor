@@ -49,14 +49,24 @@ export class MethodInvoker {
     if (this._methodResult && this._dataVisible) {
       // Call the callback. (This won't throw: the callback was wrapped with
       // bindEnvironment.)
-      this._callback(this._methodResult[0], this._methodResult[1]);
+      const result = this._callback(this._methodResult[0], this._methodResult[1]);
 
-      // Forget about this method.
-      delete this._connection._methodInvokers[this.methodId];
+      const finish = () => {
+        // Forget about this method.
+        delete this._connection._methodInvokers[this.methodId];
 
-      // Let the connection know that this method is finished, so it can try to
-      // move on to the next block of methods.
-      this._connection._outstandingMethodFinished();
+        // Let the connection know that this method is finished, so it can try to
+        // move on to the next block of methods.
+        this._connection._outstandingMethodFinished();
+      };
+
+      // If the callback returned a Promise (async callback), defer cleanup
+      // until the Promise settles. Otherwise, run cleanup immediately.
+      if (result && typeof result.then === 'function') {
+        result.then(finish, finish);
+      } else {
+        finish();
+      }
     }
   }
   // Call with the result of the method from the server. Only may be called
