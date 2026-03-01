@@ -252,6 +252,22 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'accounts async - async userCallback completes its async work',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      Meteor.logout(() => {
+        Meteor.loginWithPassword(username, password, async (err) => {
+          test.isFalse(!!err);
+          const user = await Meteor.userAsync();
+          test.isTrue(!!user);
+          removeTestUser(done);
+        });
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
   'accounts - onLogin callback receives { type: "resume" } param on ' +
   'reconnect, if already logged in',
   (test, done) => {
@@ -411,31 +427,14 @@ Tinytest.addAsync(
 
 Tinytest.addAsync('accounts - logoutAllClients', async function (test, done) {
   logoutAndCreateUser(test, done, async () => {
-    const user = await Meteor.userAsync()._id;
-    test.equal(user.services.resume.loginTokens.length, 1);
-    await Meteor.users.updateAsync(user._id, {
-      $push: {
-        'services.resume.loginTokens': {
-          hashedToken: 'test-token',
-          when: new Date(),
-        },
-      },
-    });
-    await Meteor.users.updateAsync(user._id, {
-      $push: {
-        'services.resume.loginTokens': {
-          hashedToken: 'test-token2',
-          when: new Date(),
-        },
-      },
-    });
-    test.equal(user.services.resume.loginTokens.length, 3);
+    const userId = Meteor.userId();
+    test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 1);
+    await Meteor.callAsync('pushFakeLoginToken', userId, 'test-token');
+    await Meteor.callAsync('pushFakeLoginToken', userId, 'test-token2');
+    test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 3);
     Meteor.logoutAllClients(async () => {
       test.isUndefined(Meteor.user());
-      test.equal(
-        (await Meteor.users.findOneAsync(user._id)).services.resume.loginTokens?.length,
-        0,
-      );
+      test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 0);
       removeTestUser(done);
     });
   });

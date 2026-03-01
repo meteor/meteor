@@ -2559,6 +2559,93 @@ if (Meteor.isClient) {
   );
 }
 
+if (Meteor.isClient) {
+  Tinytest.addAsync(
+    'livedata connection - onReconnect awaits async callbacks before sending outstanding methods',
+    async function(test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+      await startAndConnect(test, stream);
+      conn.methods({ do_something: function(x) {} });
+
+      // Queue a method before reconnect
+      conn.apply('do_something', ['original'], identity);
+      testGotMessage(test, stream, {
+        msg: 'method', method: 'do_something', params: ['original'], id: '*'
+      });
+
+      let outstandingMethodsSentDuringCallback = null;
+      const stopper = DDP.onReconnect(async (reconnectingConn) => {
+        if (reconnectingConn !== conn) return;
+        await new Promise(r => setTimeout(r, 10));
+        // Snapshot: were outstanding methods re-sent before this callback finished?
+        outstandingMethodsSentDuringCallback = stream.sent
+          .filter(msg => { const p = JSON.parse(msg); return p.msg === 'method'; });
+      });
+
+      stream.sent = [];
+      await stream.reset();
+      testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId));
+
+      await new Promise(r => setTimeout(r, 50)); // let async callback finish
+
+      test.isNotNull(outstandingMethodsSentDuringCallback);
+      // BUG: methods re-sent synchronously before async callback completed
+      // FIX: methods deferred until all callbacks complete → empty during callback
+      test.equal(outstandingMethodsSentDuringCallback.length, 0,
+        'Outstanding methods should not be re-sent before async reconnect callbacks complete');
+      stopper.stop();
+    }
+  );
+
+  Tinytest.addAsync(
+    'livedata connection - _maybeInvokeCallback awaits async callback before advancing method blocks',
+    async function(test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+      await startAndConnect(test, stream);
+      conn.methods({ login: function() {}, doSomething: function() {} });
+
+      let asyncCallbackDone = false;
+
+      await conn.applyAsync('login', [], { wait: true }, async function(err, result) {
+        await new Promise(r => setTimeout(r, 50));
+        asyncCallbackDone = true;
+      });
+
+      // This method is in the next block, blocked until login finishes
+      conn.apply('doSomething', ['next'], identity);
+
+      const loginMsg = testGotMessage(test, stream, {
+        msg: 'method', method: 'login', params: [], id: '*'
+      });
+      test.equal(stream.sent.length, 0); // doSomething blocked by wait
+
+      // Deliver result + data-done → triggers _maybeInvokeCallback
+      await stream.receive({ msg: 'result', id: loginMsg.id, result: 'ok' });
+      await stream.receive({ msg: 'updated', methods: [loginMsg.id] });
+
+      // BUG: _outstandingMethodFinished ran immediately → doSomething already sent
+      // FIX: deferred until async callback resolves → not yet sent
+      const sentMethods = stream.sent
+        .map(msg => JSON.parse(msg))
+        .filter(msg => msg.msg === 'method');
+      test.equal(sentMethods.length, 0,
+        'Next method block should not be sent while async callback is still running');
+
+      await new Promise(r => setTimeout(r, 100)); // let async callback finish
+      test.isTrue(asyncCallbackDone);
+
+      // NOW doSomething should be sent
+      const sentAfter = stream.sent
+        .map(msg => JSON.parse(msg))
+        .filter(msg => msg.msg === 'method');
+      test.equal(sentAfter.length, 1,
+        'Next method block should be sent after async callback completes');
+    }
+  );
+}
+
 // XXX also test:
 // - reconnect, with session resume.
 // - restart on update flag
