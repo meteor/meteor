@@ -28,14 +28,21 @@ if (Meteor.isClient) {
     Accounts._isolateLoginTokenForTest();
     const username = `u3_${Random.id()}`;
     const password = `p3_${Random.id()}`;
-    await new Promise((resolve, reject) => Accounts.createUser({ username, password }, (e)=> e?reject(e):resolve()));
+    await new Promise((resolve, reject) => Accounts.createUser({ username, password }, (e) => e ? reject(e) : resolve()));
     test.isTrue(!!Meteor.userId());
 
-    // Perform explicit fetch to refresh endpoint to ensure cookie present
-    let r = await fetch('/_accounts/cookie/refresh', { credentials: 'include' });
-    test.isTrue(r.status === 200 || r.status === 204, 'refresh reachable');
+    // Poll refresh until cookie is set (200), because _setHttpOnlyCookie is async and may not
+    // have completed yet — a stale cookie from a previous test could also cause 401. will be fixed after https://github.com/meteor/meteor/pull/14069
+    let r;
+    const loginStart = Date.now();
+    while (true) {
+      r = await fetch('/_accounts/cookie/refresh', { credentials: 'include' });
+      if (r.status === 200 || Date.now() - loginStart > 4000) break;
+      await new Promise(res => setTimeout(res, 100));
+    }
+    test.equal(r.status, 200, 'cookie set after login');
 
-    await new Promise(res => Meteor.logout(()=>res()));
+    await new Promise(res => Meteor.logout(() => res()));
     test.isFalse(!!Meteor.userId());
 
     // Poll refresh until 204 or timeout because _clearHttpOnlyCookie is async
