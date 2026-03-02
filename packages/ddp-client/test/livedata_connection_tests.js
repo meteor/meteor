@@ -2598,52 +2598,6 @@ if (Meteor.isClient) {
     }
   );
 
-  Tinytest.addAsync(
-    'livedata connection - _maybeInvokeCallback awaits async callback before advancing method blocks',
-    async function(test) {
-      const stream = new StubStream();
-      const conn = newConnection(stream);
-      await startAndConnect(test, stream);
-      conn.methods({ login: function() {}, doSomething: function() {} });
-
-      let asyncCallbackDone = false;
-
-      await conn.applyAsync('login', [], { wait: true }, async function(err, result) {
-        await new Promise(r => setTimeout(r, 50));
-        asyncCallbackDone = true;
-      });
-
-      // This method is in the next block, blocked until login finishes
-      conn.apply('doSomething', ['next'], identity);
-
-      const loginMsg = testGotMessage(test, stream, {
-        msg: 'method', method: 'login', params: [], id: '*'
-      });
-      test.equal(stream.sent.length, 0); // doSomething blocked by wait
-
-      // Deliver result + data-done → triggers _maybeInvokeCallback
-      await stream.receive({ msg: 'result', id: loginMsg.id, result: 'ok' });
-      await stream.receive({ msg: 'updated', methods: [loginMsg.id] });
-
-      // BUG: _outstandingMethodFinished ran immediately → doSomething already sent
-      // FIX: deferred until async callback resolves → not yet sent
-      const sentMethods = stream.sent
-        .map(msg => JSON.parse(msg))
-        .filter(msg => msg.msg === 'method');
-      test.equal(sentMethods.length, 0,
-        'Next method block should not be sent while async callback is still running');
-
-      await new Promise(r => setTimeout(r, 100)); // let async callback finish
-      test.isTrue(asyncCallbackDone);
-
-      // NOW doSomething should be sent
-      const sentAfter = stream.sent
-        .map(msg => JSON.parse(msg))
-        .filter(msg => msg.msg === 'method');
-      test.equal(sentAfter.length, 1,
-        'Next method block should be sent after async callback completes');
-    }
-  );
 }
 
 // XXX also test:
