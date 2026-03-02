@@ -425,7 +425,7 @@ Tinytest.addAsync(
   },
 );
 
-Tinytest.addAsync('accounts - logoutAllClients', async function (test, done) {
+Tinytest.addAsync('accounts - logoutAllClients', function (test, done) {
   logoutAndCreateUser(test, done, async () => {
     const userId = Meteor.userId();
     test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 1);
@@ -433,7 +433,7 @@ Tinytest.addAsync('accounts - logoutAllClients', async function (test, done) {
     await Meteor.callAsync('pushFakeLoginToken', userId, 'test-token2');
     test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 3);
     Meteor.logoutAllClients(async () => {
-      test.isUndefined(Meteor.user());
+      test.isFalse(!!Meteor.user());
       test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 0);
       removeTestUser(done);
     });
