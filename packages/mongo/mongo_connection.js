@@ -691,6 +691,7 @@ MongoConnection.prototype._createAsynchronousCursor = function(
     skip: cursorOptions.skip,
     projection: cursorOptions.fields || cursorOptions.projection,
     readPreference: cursorOptions.readPreference,
+    collation: cursorOptions.collation,
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
@@ -883,7 +884,11 @@ Object.assign(MongoConnection.prototype, {
           // We need to be able to compile the selector. Fall back to polling for
           // some newfangled $selector that minimongo doesn't support yet.
           try {
-            matcher = new Minimongo.Matcher(cursorDescription.selector);
+            matcher = new Minimongo.Matcher(
+              cursorDescription.selector,
+              undefined,
+              cursorDescription.options.collation
+            );
             return true;
           } catch (e) {
             // XXX make all compilation errors MinimongoError or something
@@ -904,7 +909,10 @@ Object.assign(MongoConnection.prototype, {
           if (!cursorDescription.options.sort)
             return true;
           try {
-            sorter = new Minimongo.Sorter(cursorDescription.options.sort);
+            sorter = new Minimongo.Sorter(
+              cursorDescription.options.sort,
+              cursorDescription.options.collation
+            );
             return true;
           } catch (e) {
             // XXX make all compilation errors MinimongoError or something

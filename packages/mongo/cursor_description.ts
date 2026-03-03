@@ -1,9 +1,21 @@
+interface CollationOptions {
+  locale: string;
+  caseLevel?: boolean;
+  caseFirst?: 'upper' | 'lower' | 'off';
+  strength?: 1 | 2 | 3 | 4 | 5;
+  numericOrdering?: boolean;
+  alternate?: 'non-ignorable' | 'shifted';
+  maxVariable?: 'punct' | 'space';
+  backwards?: boolean;
+}
+
 interface CursorOptions {
   limit?: number;
   skip?: number;
   sort?: Record<string, 1 | -1>;
   fields?: Record<string, 1 | 0>;
   projection?: Record<string, 1 | 0>;
+  collation?: CollationOptions;
   disableOplog?: boolean;
   _disableOplog?: boolean;
   tailable?: boolean;

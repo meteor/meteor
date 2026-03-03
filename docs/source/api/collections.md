@@ -211,6 +211,12 @@ On the client, there will be a period of time between when the page loads and
 when the published data arrives from the server during which your client-side
 collections will be empty.
 
+The `collation` option enables locale-aware string comparison for selectors and
+sorting, matching [MongoDB's collation feature](https://docs.mongodb.com/manual/reference/collation/).
+Collation is supported on both client (Minimongo, via `Intl.Collator`) and server,
+and is compatible with oplog-tailing. For example, `{collation: {locale: 'en', strength: 2}}`
+enables case-insensitive matching.
+
 {% apibox "Mongo.Collection#findOne" %}
 
 Equivalent to [`find`](#find)`(selector, options).`[`fetch`](#fetch)`()[0]` with
