@@ -1832,7 +1832,7 @@ function defaultValidateNewUserHook(user) {
   } else if (user.services && Object.values(user.services).length > 0) {
     // Find any email of any service and check it
     emailIsGood = Object.values(user.services).reduce(
-      (prev, service) => service.email && this._testEmailDomain(service.email),
+      (prev, service) => prev || (service.email && this._testEmailDomain(service.email)),
       false,
     );
   }
