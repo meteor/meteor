@@ -569,7 +569,17 @@ Object.assign(Session.prototype, {
         fence,
       });
 
-      const promise = new Promise(async (resolve, reject) => {
+      async function finish() {
+        await fence.arm();
+        unblock();
+      }
+
+      const payload = {
+        msg: "result",
+        id: msg.id
+      };
+
+      try {
         // XXX It'd be better if we could hook into method handlers better but
         // for now, we need to check if the ddp-rate-limiter exists since we
         // have a weak requirement for the ddp-rate-limiter package to be added
@@ -587,16 +597,15 @@ Object.assign(Session.prototype, {
           DDPRateLimiter._incrementRules(rules, rateLimiterInput);
           const rateLimitResult = DDPRateLimiter._checkRules(rules, rateLimiterInput);
           if (!rateLimitResult.allowed) {
-            reject(new Meteor.Error(
+            throw new Meteor.Error(
               "too-many-requests",
               DDPRateLimiter.getErrorMessage(rateLimitResult),
               {timeToReset: rateLimitResult.timeToReset}
-            ));
-            return;
+            );
           }
         }
 
-        resolve(DDPServer._CurrentWriteFence.withValue(
+        const result = await DDPServer._CurrentWriteFence.withValue(
           fence,
           () => DDP._CurrentMethodInvocation.withValue(
             invocation,
@@ -605,32 +614,21 @@ Object.assign(Session.prototype, {
               "call to '" + msg.method + "'"
             )
           )
-        ));
-      });
+        );
 
-      async function finish() {
-        await fence.arm();
-        unblock();
-      }
-
-      const payload = {
-        msg: "result",
-        id: msg.id
-      };
-      return promise.then(async result => {
         await finish();
         if (result !== undefined) {
           payload.result = result;
         }
         self.send(payload);
-      }, async (exception) => {
+      } catch (exception) {
         await finish();
         payload.error = wrapInternalException(
           exception,
           `while invoking method '${msg.method}'`
         );
         self.send(payload);
-      });
+      };
     }
   },
 
