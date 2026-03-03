@@ -15,7 +15,7 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 `accounts-github`, `accounts-google`, `accounts-meetup`,
 `accounts-twitter`, or `accounts-weibo`.
 
-Read more about customizing user accounts in the [Accounts](http://guide.meteor.com/accounts.html) article in the Meteor Guide.
+Read more about customizing user accounts in the [Accounts](/tutorials/accounts/accounts) article in the Meteor Guide.
 
 ### Accounts with Session Storage {#accounts-session-storage}
 
@@ -34,6 +34,41 @@ By default, Meteor uses Local Storage to store, among other things, login tokens
   }
 }
 ```
+
+### Accounts with HttpOnly Cookies {#accounts-httponly-cookies}
+
+Meteor 3.3 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This protects the token from malicious scripts and pairs nicely with in-memory client storage. Enable the feature with two small changes:
+
+1. On the server, call `Accounts.config` during startup and set both options:
+
+   ```ts
+   import { Accounts } from "meteor/accounts-base";
+   import { Meteor } from "meteor/meteor";
+
+   Meteor.startup(() => {
+     Accounts.config({
+       clientStorage: "none",
+       useHttpOnlyCookies: true,
+     });
+   });
+   ```
+
+2. Surface the same flags to the client via settings so the browser-side Accounts instance starts with the right defaults:
+
+   ```json
+   {
+     "public": {
+       "packages": {
+         "accounts": {
+           "clientStorage": "none",
+           "useHttpOnlyCookies": true
+         }
+       }
+     }
+   }
+   ```
+
+After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
 
 <ApiBox name="Meteor.user" hasCustomExample/>
 
@@ -183,6 +218,8 @@ animation while the login request is being processed.
 <ApiBox name="Meteor.loggingOut" />
 
 <ApiBox name="Meteor.logout" />
+
+<ApiBox name="Meteor.logoutAllClients" />
 
 <ApiBox name="Meteor.logoutOtherClients" />
 
