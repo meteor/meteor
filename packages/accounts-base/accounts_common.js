@@ -26,6 +26,7 @@ const VALID_CONFIG_KEYS = [
   'clientStorage',
   'ddpUrl',
   'connection',
+  'tokenTrackingStrategy',
 ];
 
 /**
