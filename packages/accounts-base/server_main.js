@@ -5,8 +5,7 @@ import { AccountsServer } from "./accounts_server.js";
  * @summary The namespace for all server-side accounts-related methods.
  */
 Accounts = new AccountsServer(Meteor.server, { ...Meteor.settings.packages?.accounts, ...Meteor.settings.packages?.['accounts-base'] });
-// TODO[FIBERS]: I need TLA
-Accounts.init().then();
+await Accounts.init();
 
 // Users table. Don't use the normal autopublish, since we want to hide
 // some fields. Code to autopublish this is in accounts_server.js.
