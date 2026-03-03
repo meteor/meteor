@@ -958,11 +958,8 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   await Meteor.users.removeAsync(u1.id);
 });
 
-// Tests for the defaultValidateNewUserHook reduce accumulator fix.
-// The bug: the reduce callback ignored the accumulator (`prev`), so only
-// the *last* service/email determined the result.  With the fix, any
-// valid email in the list is enough to pass validation.
 
+// Any valid email in the list is enough to pass validation
 Tinytest.addAsync(
   'accounts - restrictCreationByEmailDomain - services - valid email not last',
   async (test) => {
@@ -971,8 +968,6 @@ Tinytest.addAsync(
 
     try {
       // Valid service appears BEFORE a service with no email.
-      // Before the fix this would throw because the reduce only looked
-      // at the last service (github, which has no email).
       const userId = await Accounts.insertUserDoc(
         {},
         {
