@@ -15,6 +15,7 @@ export PATH=$METEOR_HOME:$PATH
 
 export URL='http://127.0.0.1:4096/'
 export METEOR_PACKAGE_DIRS='packages/deprecated'
+export METEOR_NO_DEPRECATION=true
 
 exec 3< <(./meteor test-packages --driver-package test-in-console -p 4096 --exclude ${TEST_PACKAGES_EXCLUDE:-''} $1)
 EXEC_PID=$!
