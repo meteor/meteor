@@ -957,3 +957,140 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // cleanup
   await Meteor.users.removeAsync(u1.id);
 });
+
+// Tests for the defaultValidateNewUserHook reduce accumulator fix.
+// The bug: the reduce callback ignored the accumulator (`prev`), so only
+// the *last* service/email determined the result.  With the fix, any
+// valid email in the list is enough to pass validation.
+
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - services - valid email not last',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      // Valid service appears BEFORE a service with no email.
+      // Before the fix this would throw because the reduce only looked
+      // at the last service (github, which has no email).
+      const userId = await Accounts.insertUserDoc(
+        {},
+        {
+          services: {
+            google: { id: 'g1', email: 'user@example.com' },
+            github: { id: 'gh1' },
+          },
+        }
+      );
+
+      test.isTrue(userId, 'user should have been created');
+      await Meteor.users.removeAsync(userId);
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - services - valid email last',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      // Valid service appears AFTER a service with no email — should
+      // also pass (sanity check that ordering doesn't matter either way).
+      const userId = await Accounts.insertUserDoc(
+        {},
+        {
+          services: {
+            github: { id: 'gh2' },
+            google: { id: 'g2', email: 'user@example.com' },
+          },
+        }
+      );
+
+      test.isTrue(userId, 'user should have been created');
+      await Meteor.users.removeAsync(userId);
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - services - all invalid rejects',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      await test.throwsAsync(async () => {
+        await Accounts.insertUserDoc(
+          {},
+          {
+            services: {
+              google: { id: 'g3', email: 'user@other.com' },
+              github: { id: 'gh3', email: 'user@nope.org' },
+            },
+          }
+        );
+      }, '@example.com email required');
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - emails - valid email not last',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      // Valid email is first, invalid email is last.
+      const userId = await Accounts.insertUserDoc(
+        {},
+        {
+          username: Random.id(),
+          emails: [
+            { address: 'good@example.com', verified: true },
+            { address: 'bad@other.com', verified: false },
+          ],
+        }
+      );
+
+      test.isTrue(userId, 'user should have been created');
+      await Meteor.users.removeAsync(userId);
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - function - services accumulator',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = (email) =>
+      email.endsWith('@allowed.io');
+
+    try {
+      const userId = await Accounts.insertUserDoc(
+        {},
+        {
+          services: {
+            google: { id: 'g4', email: 'yes@allowed.io' },
+            github: { id: 'gh4' },
+          },
+        }
+      );
+
+      test.isTrue(userId, 'user should have been created');
+      await Meteor.users.removeAsync(userId);
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
