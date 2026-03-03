@@ -42,7 +42,10 @@ jobs:
         run: Remove-Item -Recurse -Force ${{ github.workspace }}\*
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+          
 
       - name: Setup Node.js
         uses: actions/setup-node@v2
