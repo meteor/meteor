@@ -957,3 +957,37 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // cleanup
   await Meteor.users.removeAsync(u1.id);
 });
+
+Tinytest.addAsync(
+  'accounts - login does not create per-connection observers',
+  async (test) => {
+    const { Facts } = Package['facts-base'];
+    const getObserveHandles = () =>
+      Facts._factsByPackage?.['mongo-livedata']?.['observe-handles'] || 0;
+
+    const baseline = getObserveHandles();
+
+    // Create a test user with a login token.
+    const username = Random.id();
+    const userId = await Accounts.insertUserDoc({}, { username });
+    const stampedToken = Accounts._generateStampedLoginToken();
+    await Accounts._insertLoginToken(userId, stampedToken);
+
+    // Open 3 connections and log each in with the same token.
+    const conns = [];
+    for (let i = 0; i < 3; i++) {
+      const conn = DDP.connect(Meteor.absoluteUrl());
+      await conn.callAsync('login', { resume: stampedToken.token });
+      conns.push(conn);
+    }
+
+    // The observe-handles count should not have grown.
+    test.equal(
+      getObserveHandles(), baseline,
+      'login should not create new observe handles'
+    );
+
+    // Clean up.
+    conns.forEach(c => c.disconnect());
+  }
+);

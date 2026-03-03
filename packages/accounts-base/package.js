@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "3.2.0",
+  version: "3.3.0",
 });
 
 Package.onUse((api) => {
@@ -59,6 +59,7 @@ Package.onTest((api) => {
     "ddp",
     "accounts-password",
     "accounts-2fa",
+    "facts-base",
   ]);
 
   api.addFiles("accounts_tests_setup.js", "server");
