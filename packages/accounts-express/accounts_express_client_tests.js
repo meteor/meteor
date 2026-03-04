@@ -276,4 +276,125 @@ if (Meteor.isClient) {
       Meteor.logout();
     }
   });
+
+  // Test that credentials: 'include' is set when useHttpOnlyCookies is enabled
+  Tinytest.addAsync('accounts-express - client fetch - sets credentials include when httpOnly cookies enabled', async (test) => {
+    const originalFetch = window.fetch;
+    const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
+
+    try {
+      cleanUp();
+      Meteor.logout();
+
+      Accounts._useHttpOnlyCookies = true;
+
+      window.fetch = async (url, options = {}) => {
+        test.equal(options.credentials, 'include', 'credentials should be include when useHttpOnlyCookies is true');
+
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true }),
+          text: async () => JSON.stringify({ success: true })
+        };
+      };
+
+      const response = await Meteor.fetch(testUrl);
+      test.isTrue(response.ok);
+    } finally {
+      window.fetch = originalFetch;
+      Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
+    }
+  });
+
+  // Test that credentials is NOT set when useHttpOnlyCookies is disabled
+  Tinytest.addAsync('accounts-express - client fetch - does not set credentials when httpOnly cookies disabled', async (test) => {
+    const originalFetch = window.fetch;
+    const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
+
+    try {
+      cleanUp();
+      Meteor.logout();
+
+      Accounts._useHttpOnlyCookies = false;
+
+      window.fetch = async (url, options = {}) => {
+        test.isFalse('credentials' in options, 'credentials should not be set when useHttpOnlyCookies is false');
+
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true }),
+          text: async () => JSON.stringify({ success: true })
+        };
+      };
+
+      const response = await Meteor.fetch(testUrl);
+      test.isTrue(response.ok);
+    } finally {
+      window.fetch = originalFetch;
+      Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
+    }
+  });
+
+  // Test that user-provided credentials option is not overridden
+  Tinytest.addAsync('accounts-express - client fetch - does not override user-provided credentials', async (test) => {
+    const originalFetch = window.fetch;
+    const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
+
+    try {
+      cleanUp();
+      Meteor.logout();
+
+      Accounts._useHttpOnlyCookies = true;
+
+      window.fetch = async (url, options = {}) => {
+        test.equal(options.credentials, 'same-origin', 'user-provided credentials should not be overridden');
+
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true }),
+          text: async () => JSON.stringify({ success: true })
+        };
+      };
+
+      const response = await Meteor.fetch(testUrl, { credentials: 'same-origin' });
+      test.isTrue(response.ok);
+    } finally {
+      window.fetch = originalFetch;
+      Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
+    }
+  });
+
+  // Test that auth: false does not set credentials even with httpOnly cookies
+  Tinytest.addAsync('accounts-express - client fetch - auth false skips credentials include', async (test) => {
+    const originalFetch = window.fetch;
+    const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
+
+    try {
+      cleanUp();
+      Meteor.logout();
+
+      Accounts._useHttpOnlyCookies = true;
+
+      window.fetch = async (url, options = {}) => {
+        test.isFalse('credentials' in options, 'credentials should not be set when auth is false');
+        test.isFalse(options.headers?.has('Authorization'), 'Authorization should not be set when auth is false');
+
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true }),
+          text: async () => JSON.stringify({ success: true })
+        };
+      };
+
+      const response = await Meteor.fetch(testUrl, { auth: false });
+      test.isTrue(response.ok);
+    } finally {
+      window.fetch = originalFetch;
+      Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
+    }
+  });
 }

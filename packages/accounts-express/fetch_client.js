@@ -19,6 +19,14 @@ export const meteorFetch = async (url, options = {}) => {
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
+
+    // When HttpOnly cookies are enabled, include credentials so the
+    // browser sends the meteor_login_token cookie automatically.
+    // This covers the case where the in-memory token is unavailable
+    // (e.g. after page reload with clientStorage: 'none').
+    if (Accounts._useHttpOnlyCookies && !fetchOptions.credentials) {
+      fetchOptions.credentials = 'include';
+    }
   }
 
   return fetch(url, { ...fetchOptions, headers });

@@ -338,6 +338,39 @@ if (Meteor.isServer) {
     }
   });
 
+  // Test cookie-only authentication (no Bearer header)
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - cookie-only authentication', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      // Make request with only cookie, no Authorization header
+      const response = await makeRequestWithCookie(
+        Meteor.absoluteUrl('api/express-test-auth'),
+        token
+      );
+
+      const data = JSON.parse(response.content);
+
+      test.equal(data.meteorUserId, userId);
+      test.equal(data.reqUserId, userId);
+      test.isTrue(data.isSame);
+      test.equal(response.statusCode, 200);
+
+      // Also test optional auth route with cookie-only
+      const optionalResponse = await makeRequestWithCookie(
+        Meteor.absoluteUrl('api/express-test-auth-optional'),
+        token
+      );
+      const optionalData = JSON.parse(optionalResponse.content);
+
+      test.equal(optionalData.meteorUserId, userId);
+      test.equal(optionalData.reqUserId, userId);
+      test.isTrue(optionalData.authenticated);
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
   // Test concurrency/isolation
   Tinytest.addAsync('accounts-express - createAuthMiddleware - concurrency and isolation', async (test) => {
     // Create two test users with login tokens
