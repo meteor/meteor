@@ -5,6 +5,9 @@ Package.describe({
 });
 
 Npm.depends({
+  "permessage-deflate2": "0.1.8",
+  sockjs: "0.3.24",
+  "lodash.once": "4.1.1",
   "uWebSockets.js": "git+https://github.com/unetworking/uWebSockets.js#v20.52.0",
   "lodash.isempty": "4.4.0",
   "lodash.isstring": "4.0.1",
