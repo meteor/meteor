@@ -3,27 +3,9 @@ import { Accounts } from 'meteor/accounts-base';
 import { createAuthMiddleware } from 'meteor/accounts-express';
 import { Random } from 'meteor/random';
 import { WebApp } from 'meteor/webapp';
-import { HTTP } from 'meteor/http';
 
 // Tests for Express middleware authentication
 if (Meteor.isServer) {
-  // Helper function to make HTTP requests with auth token
-  const makeAuthRequest = async (url, token, options = {}) => {
-    const headers = options.headers || {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return new Promise((resolve, reject) => {
-      HTTP.get(url, { ...options, headers }, (err, res) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(res);
-        }
-      });
-    });
-  };
-
   // Helper function to create a test user with a login token
   const createUserWithToken = async () => {
     const username = Random.id();
@@ -33,31 +15,34 @@ if (Meteor.isServer) {
     return { userId, username, token: stampedToken.token };
   };
 
-  // Helper function to make HTTP requests with cookie token
-  const makeRequestWithCookie = async (url, token, options = {}) => {
-    const headers = options.headers || {};
-    const cookies = options.cookies || {};
-
+  // Helper: fetch with explicit Bearer token (auth: false to skip auto-auth, manual header)
+  const fetchWithToken = async (url, token, options = {}) => {
+    const headers = { ...options.headers };
     if (token) {
-      cookies['meteor_login_token'] = token;
+      headers['Authorization'] = `Bearer ${token}`;
     }
+    return Meteor.fetch(url, { ...options, headers, auth: false });
+  };
 
-    // Convert cookies object to cookie header string
-    if (Object.keys(cookies).length > 0) {
-      headers['Cookie'] = Object.entries(cookies)
-        .map(([key, value]) => `${key}=${value}`)
-        .join('; ');
+  // Helper: fetch with cookie
+  const fetchWithCookie = async (url, token, options = {}) => {
+    const headers = { ...options.headers };
+    if (token) {
+      headers['Cookie'] = `meteor_login_token=${token}`;
     }
+    return Meteor.fetch(url, { ...options, headers, auth: false });
+  };
 
-    return new Promise((resolve, reject) => {
-      HTTP.get(url, { ...options, headers }, (err, res) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(res);
-        }
-      });
+  // Helper: set cookie via endpoint and extract the cookie value from Set-Cookie header
+  const setCookieForToken = async (token) => {
+    const res = await Meteor.fetch(Meteor.absoluteUrl('_accounts/cookie/set'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+      auth: false,
     });
+    const setCookie = res.headers.get('set-cookie');
+    return setCookie ? setCookie.split(';')[0] : null; // e.g. "meteor_login_token=abc123"
   };
 
   // Setup test routes
@@ -125,66 +110,76 @@ if (Meteor.isServer) {
     });
     WebApp.handlers.use('/api/express-test-auth/prefix', prefixRouter);
 
+    // Echo route for server fetch tests
+    WebApp.handlers.get('/api/express-test-request-echo', createAuthMiddleware({ required: false }), (req, res) => {
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({
+        meteorUserId: Meteor.userId(),
+        reqUserId: req.userId,
+      }));
+    });
+
+    // Forwarding route for context token test
+    WebApp.handlers.get('/api/express-test-request-forward',
+      createAuthMiddleware({ required: true }),
+      async (req, res) => {
+        // Inside this handler, _CurrentEndpointInvocation has the loginToken
+        // Meteor.fetch() should auto-read it
+        const innerResponse = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'));
+        const innerData = await innerResponse.json();
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({
+          outerUserId: Meteor.userId(),
+          innerUserId: innerData.meteorUserId,
+        }));
+      }
+    );
+
     test.isTrue(true, 'Test routes set up successfully');
   });
 
   // Test unauthenticated requests
   Tinytest.addAsync('accounts-express - createAuthMiddleware - unauthenticated requests', async (test) => {
-    try {
-      // Make request without auth token to required auth route
-      await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'));
-      test.fail('Should have thrown an error for unauthorized request');
-    } catch (error) {
-      // Expect 401 Unauthorized
-      test.equal(error.response.statusCode, 401);
-      test.isTrue(error.response.content.includes('Unauthorized'));
-    }
+    // Make request without auth token to required auth route
+    const requiredRes = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth'), { auth: false });
+    test.equal(requiredRes.status, 401);
+    const requiredData = await requiredRes.json();
+    test.isTrue(requiredData.error.includes('Unauthorized'));
 
     // Test optional authentication route with no auth
-    const optionalResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth-optional'));
-    const optionalData = JSON.parse(optionalResponse.content);
+    const optionalRes = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth-optional'), { auth: false });
+    test.equal(optionalRes.status, 200);
+    const optionalData = await optionalRes.json();
 
     // Verify unauthenticated state
     test.isNull(optionalData.meteorUserId);
     test.isFalse(optionalData.authenticated);
-
-    // Verify response status for optional auth
-    test.equal(optionalResponse.statusCode, 200);
   });
 
   // Test valid authentication
   Tinytest.addAsync('accounts-express - createAuthMiddleware - valid authentication', async (test) => {
-    // Create a test user with a login token
     const { userId, token } = await createUserWithToken();
 
     try {
       // Make request with valid auth token to required auth route
-      const response = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), token);
+      const response = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth'), token);
+      test.equal(response.status, 200);
 
-      // Parse response
-      const data = JSON.parse(response.content);
-
-      // Verify user IDs match
+      const data = await response.json();
       test.equal(data.meteorUserId, userId);
       test.equal(data.reqUserId, userId);
       test.isTrue(data.isSame);
 
-      // Verify response status
-      test.equal(response.statusCode, 200);
-
       // Test optional authentication route with valid auth
-      const optionalResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth-optional'), token);
-      const optionalData = JSON.parse(optionalResponse.content);
+      const optionalRes = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth-optional'), token);
+      test.equal(optionalRes.status, 200);
 
-      // Verify authenticated state
+      const optionalData = await optionalRes.json();
       test.equal(optionalData.meteorUserId, userId);
       test.equal(optionalData.reqUserId, userId);
       test.isTrue(optionalData.authenticated);
-
-      // Verify response status for optional auth
-      test.equal(optionalResponse.statusCode, 200);
     } finally {
-      // Clean up
       await Meteor.users.removeAsync(userId);
     }
   });
@@ -192,112 +187,86 @@ if (Meteor.isServer) {
   // Test invalid/malformed authentication
   Tinytest.addAsync('accounts-express - createAuthMiddleware - invalid authentication', async (test) => {
     // Test with invalid token on required auth route
-    try {
-      await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), 'invalid-token');
-      test.fail('Should have thrown an error for invalid token');
-    } catch (error) {
-      // Expect 401 Unauthorized
-      test.equal(error.response.statusCode, 401);
-      test.isTrue(error.response.content.includes('Invalid token'));
-    }
+    const invalidRes = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth'), 'invalid-token');
+    test.equal(invalidRes.status, 401);
+    const invalidData = await invalidRes.json();
+    test.isTrue(invalidData.error.includes('Invalid token'));
 
     // Test with malformed token (wrong format) on required auth route
-    try {
-      await makeAuthRequest(
-        Meteor.absoluteUrl('api/express-test-auth'),
-        null,
-        { headers: { 'Authorization': 'NotBearer token' } }
-      );
-      test.fail('Should have thrown an error for malformed token');
-    } catch (error) {
-      // Expect 401 Unauthorized
-      test.equal(error.response.statusCode, 401);
-      test.isTrue(error.response.content.includes('Unauthorized'));
-    }
+    const malformedRes = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth'), {
+      headers: { 'Authorization': 'NotBearer token' },
+      auth: false,
+    });
+    test.equal(malformedRes.status, 401);
+    const malformedData = await malformedRes.json();
+    test.isTrue(malformedData.error.includes('Unauthorized'));
 
     // Test with token for nonexistent user on required auth route
     const { userId, token } = await createUserWithToken();
     await Meteor.users.removeAsync(userId); // Remove the user but keep the token
 
-    try {
-      await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), token);
-      test.fail('Should have thrown an error for nonexistent user');
-    } catch (error) {
-      // Expect 401 Unauthorized
-      test.equal(error.response.statusCode, 401);
-      test.isTrue(error.response.content.includes('Invalid token'));
-    }
+    const nonexistentRes = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth'), token);
+    test.equal(nonexistentRes.status, 401);
+    const nonexistentData = await nonexistentRes.json();
+    test.isTrue(nonexistentData.error.includes('Invalid token'));
 
     // Test with invalid token on optional auth route
-    const invalidTokenResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth-optional'), 'invalid-token');
-    const invalidTokenData = JSON.parse(invalidTokenResponse.content);
-
-    // Verify unauthenticated state with invalid token
-    test.isNull(invalidTokenData.meteorUserId);
-    test.isFalse(invalidTokenData.authenticated);
-    test.equal(invalidTokenResponse.statusCode, 200);
+    const invalidOptRes = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth-optional'), 'invalid-token');
+    test.equal(invalidOptRes.status, 200);
+    const invalidOptData = await invalidOptRes.json();
+    test.isNull(invalidOptData.meteorUserId);
+    test.isFalse(invalidOptData.authenticated);
 
     // Test with malformed token on optional auth route
-    const malformedTokenResponse = await makeAuthRequest(
-      Meteor.absoluteUrl('api/express-test-auth-optional'),
-      null,
-      { headers: { 'Authorization': 'NotBearer token' } }
-    );
-    const malformedTokenData = JSON.parse(malformedTokenResponse.content);
-
-    // Verify unauthenticated state with malformed token
-    test.isNull(malformedTokenData.meteorUserId);
-    test.isFalse(malformedTokenData.authenticated);
-    test.equal(malformedTokenResponse.statusCode, 200);
+    const malformedOptRes = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth-optional'), {
+      headers: { 'Authorization': 'NotBearer token' },
+      auth: false,
+    });
+    test.equal(malformedOptRes.status, 200);
+    const malformedOptData = await malformedOptRes.json();
+    test.isNull(malformedOptData.meteorUserId);
+    test.isFalse(malformedOptData.authenticated);
 
     // Test with token for nonexistent user on optional auth route
-    const nonexistentUserResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth-optional'), token);
-    const nonexistentUserData = JSON.parse(nonexistentUserResponse.content);
-
-    // Verify unauthenticated state with nonexistent user token
-    test.isNull(nonexistentUserData.meteorUserId);
-    test.isFalse(nonexistentUserData.authenticated);
-    test.equal(nonexistentUserResponse.statusCode, 200);
+    const nonexistentOptRes = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth-optional'), token);
+    test.equal(nonexistentOptRes.status, 200);
+    const nonexistentOptData = await nonexistentOptRes.json();
+    test.isNull(nonexistentOptData.meteorUserId);
+    test.isFalse(nonexistentOptData.authenticated);
   });
 
-  // Test token/session mismatch
+  // Test token/session mismatch (Bearer header takes precedence over cookie)
   Tinytest.addAsync('accounts-express - createAuthMiddleware - token/session mismatch', async (test) => {
-    // Create two test users with login tokens
     const user1 = await createUserWithToken();
     const user2 = await createUserWithToken();
 
     try {
       // Test with conflicting credentials (header token from user1, cookie token from user2)
-      // The implementation should prioritize one over the other consistently
-      const response = await makeAuthRequest(
-        Meteor.absoluteUrl('api/express-test-auth'),
-        user1.token,
-        { cookies: { 'meteor_login_token': user2.token } }
-      );
+      // The implementation should prioritize Bearer header over cookie
+      const response = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth'), {
+        headers: {
+          'Authorization': `Bearer ${user1.token}`,
+          'Cookie': `meteor_login_token=${user2.token}`,
+        },
+        auth: false,
+      });
+      test.equal(response.status, 200);
 
-      // Parse response
-      const data = JSON.parse(response.content);
-
-      // Verify that one user ID is consistently used (header takes precedence)
+      const data = await response.json();
+      // Verify that Bearer header takes precedence
       test.equal(data.meteorUserId, user1.userId);
       test.equal(data.reqUserId, user1.userId);
       test.isTrue(data.isSame);
 
       // Verify that cookie-only auth works
-      const cookieResponse = await makeRequestWithCookie(
-        Meteor.absoluteUrl('api/express-test-auth'),
-        user2.token
-      );
+      const cookieRes = await fetchWithCookie(Meteor.absoluteUrl('api/express-test-auth'), user2.token);
+      test.equal(cookieRes.status, 200);
 
-      // Parse response
-      const cookieData = JSON.parse(cookieResponse.content);
-
-      // Verify user IDs match
+      const cookieData = await cookieRes.json();
       test.equal(cookieData.meteorUserId, user2.userId);
       test.equal(cookieData.reqUserId, user2.userId);
       test.isTrue(cookieData.isSame);
     } finally {
-      // Clean up
       await Meteor.users.removeAsync(user1.userId);
       await Meteor.users.removeAsync(user2.userId);
     }
@@ -305,36 +274,28 @@ if (Meteor.isServer) {
 
   // Test middleware ordering/stacking
   Tinytest.addAsync('accounts-express - createAuthMiddleware - middleware stacking', async (test) => {
-    // Create a test user with a login token
     const { userId, token } = await createUserWithToken();
 
     try {
       // Test stacked middleware
-      const response = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth/stacked'), token);
+      const response = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth/stacked'), token);
+      test.equal(response.status, 200);
 
-      // Parse response
-      const data = JSON.parse(response.content);
-
-      // Verify user IDs match
+      const data = await response.json();
       test.equal(data.meteorUserId, userId);
       test.equal(data.reqUserId, userId);
       test.isTrue(data.isSame);
-
-      // Verify middleware executed in correct order
       test.equal(data.middlewareTest, 'passed');
 
       // Test prefix-mounted middleware
-      const prefixResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth/prefix'), token);
+      const prefixRes = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth/prefix'), token);
+      test.equal(prefixRes.status, 200);
 
-      // Parse response
-      const prefixData = JSON.parse(prefixResponse.content);
-
-      // Verify user IDs match
+      const prefixData = await prefixRes.json();
       test.equal(prefixData.meteorUserId, userId);
       test.equal(prefixData.reqUserId, userId);
       test.isTrue(prefixData.isSame);
     } finally {
-      // Clean up
       await Meteor.users.removeAsync(userId);
     }
   });
@@ -345,25 +306,19 @@ if (Meteor.isServer) {
 
     try {
       // Make request with only cookie, no Authorization header
-      const response = await makeRequestWithCookie(
-        Meteor.absoluteUrl('api/express-test-auth'),
-        token
-      );
+      const response = await fetchWithCookie(Meteor.absoluteUrl('api/express-test-auth'), token);
+      test.equal(response.status, 200);
 
-      const data = JSON.parse(response.content);
-
+      const data = await response.json();
       test.equal(data.meteorUserId, userId);
       test.equal(data.reqUserId, userId);
       test.isTrue(data.isSame);
-      test.equal(response.statusCode, 200);
 
       // Also test optional auth route with cookie-only
-      const optionalResponse = await makeRequestWithCookie(
-        Meteor.absoluteUrl('api/express-test-auth-optional'),
-        token
-      );
-      const optionalData = JSON.parse(optionalResponse.content);
+      const optionalRes = await fetchWithCookie(Meteor.absoluteUrl('api/express-test-auth-optional'), token);
+      test.equal(optionalRes.status, 200);
 
+      const optionalData = await optionalRes.json();
       test.equal(optionalData.meteorUserId, userId);
       test.equal(optionalData.reqUserId, userId);
       test.isTrue(optionalData.authenticated);
@@ -374,20 +329,18 @@ if (Meteor.isServer) {
 
   // Test concurrency/isolation
   Tinytest.addAsync('accounts-express - createAuthMiddleware - concurrency and isolation', async (test) => {
-    // Create two test users with login tokens
     const user1 = await createUserWithToken();
     const user2 = await createUserWithToken();
 
     try {
       // Make concurrent requests with different auth tokens
       const [response1, response2] = await Promise.all([
-        makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), user1.token),
-        makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), user2.token)
+        fetchWithToken(Meteor.absoluteUrl('api/express-test-auth'), user1.token),
+        fetchWithToken(Meteor.absoluteUrl('api/express-test-auth'), user2.token)
       ]);
 
-      // Parse responses
-      const data1 = JSON.parse(response1.content);
-      const data2 = JSON.parse(response2.content);
+      const data1 = await response1.json();
+      const data2 = await response2.json();
 
       // Verify each request has the correct user ID
       test.equal(data1.meteorUserId, user1.userId);
@@ -401,7 +354,6 @@ if (Meteor.isServer) {
       // Verify no cross-request contamination
       test.notEqual(data1.meteorUserId, data2.meteorUserId);
     } finally {
-      // Clean up
       await Meteor.users.removeAsync(user1.userId);
       await Meteor.users.removeAsync(user2.userId);
     }
@@ -412,15 +364,6 @@ if (Meteor.isServer) {
     const { userId, token } = await createUserWithToken();
 
     try {
-      // Set up a test route that echoes back auth info
-      WebApp.handlers.get('/api/express-test-request-echo', createAuthMiddleware({ required: false }), (req, res) => {
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({
-          meteorUserId: Meteor.userId(),
-          reqUserId: req.userId,
-        }));
-      });
-
       // Use Meteor.fetch with explicit token
       const response = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'), {
         token,
@@ -458,29 +401,103 @@ if (Meteor.isServer) {
     const { userId, token } = await createUserWithToken();
 
     try {
-      // Set up a route that makes a server-to-server request using context token
-      WebApp.handlers.get('/api/express-test-request-forward',
-        createAuthMiddleware({ required: true }),
-        async (req, res) => {
-          // Inside this handler, _CurrentEndpointInvocation has the loginToken
-          // Meteor.fetch() should auto-read it
-          const innerResponse = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'));
-          const innerData = await innerResponse.json();
-
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({
-            outerUserId: Meteor.userId(),
-            innerUserId: innerData.meteorUserId,
-          }));
-        }
-      );
-
       // Make request to the forwarding route
-      const response = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-request-forward'), token);
-      const data = JSON.parse(response.content);
+      const response = await fetchWithToken(Meteor.absoluteUrl('api/express-test-request-forward'), token);
+      test.equal(response.status, 200);
 
+      const data = await response.json();
       test.equal(data.outerUserId, userId);
       test.equal(data.innerUserId, userId);
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
+  // --- HttpOnly Cookie Roundtrip Integration Tests ---
+
+  // Test full roundtrip: set cookie via endpoint, then authenticate via Meteor.fetch
+  Tinytest.addAsync('accounts-express - cookie roundtrip - set cookie then authenticate via Meteor.fetch', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      // Step 1: Set the HttpOnly cookie via the cookie endpoint
+      const cookieValue = await setCookieForToken(token);
+      test.isTrue(!!cookieValue, 'Set-Cookie header should be present');
+
+      // Step 2: Use Meteor.fetch with the cookie to hit a protected endpoint
+      const authRes = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth'), {
+        headers: { 'Cookie': cookieValue },
+        auth: false, // skip Bearer token — we're testing cookie auth
+      });
+      test.equal(authRes.status, 200);
+
+      const data = await authRes.json();
+      test.equal(data.meteorUserId, userId);
+      test.equal(data.reqUserId, userId);
+      test.isTrue(data.isSame);
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
+  // Test that an expired cookie token is rejected
+  Tinytest.addAsync('accounts-express - cookie roundtrip - expired cookie is rejected', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      const cookieValue = await setCookieForToken(token);
+
+      // Expire the token by setting its `when` to a date far in the past
+      const hashedToken = Accounts._hashLoginToken(token);
+      await Meteor.users.updateAsync(
+        { _id: userId, 'services.resume.loginTokens.hashedToken': hashedToken },
+        { $set: { 'services.resume.loginTokens.$.when': new Date('2000-01-01') } }
+      );
+
+      // Hit the required auth endpoint with the expired cookie
+      const authRes = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth'), {
+        headers: { 'Cookie': cookieValue },
+        auth: false,
+      });
+      test.equal(authRes.status, 401);
+
+      const data = await authRes.json();
+      test.equal(data.error, 'Token expired');
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
+  // Test that a cleared cookie results in unauthenticated access
+  Tinytest.addAsync('accounts-express - cookie roundtrip - cleared cookie results in unauthenticated', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      const cookieValue = await setCookieForToken(token);
+
+      // Clear the cookie via the clear endpoint
+      const clearRes = await Meteor.fetch(Meteor.absoluteUrl('_accounts/cookie/clear'), {
+        method: 'POST',
+        headers: { 'Cookie': cookieValue },
+        auth: false,
+      });
+      test.equal(clearRes.status, 200);
+
+      // Extract the cleared cookie from Set-Cookie header
+      const clearedCookie = clearRes.headers.get('set-cookie');
+      test.isTrue(!!clearedCookie, 'Clear should return Set-Cookie header');
+      const clearedCookieValue = clearedCookie.split(';')[0]; // "meteor_login_token="
+
+      // Hit the optional auth endpoint with the cleared cookie
+      const authRes = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth-optional'), {
+        headers: { 'Cookie': clearedCookieValue },
+        auth: false,
+      });
+      test.equal(authRes.status, 200);
+
+      const data = await authRes.json();
+      test.isNull(data.meteorUserId);
+      test.isFalse(data.authenticated);
     } finally {
       await Meteor.users.removeAsync(userId);
     }

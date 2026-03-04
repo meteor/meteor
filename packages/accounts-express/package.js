@@ -26,7 +26,6 @@ Package.onTest((api) => {
     'random',
     'test-helpers',
     'webapp',
-    'http',
     'ddp',
   ]);
 
