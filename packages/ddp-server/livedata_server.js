@@ -301,7 +301,9 @@ Object.assign(Session.prototype, {
     }
 
     if (self.socket) {
-      self.socket.close();
+      if (!self.socket.isClosed) {
+        self.socket.close();
+      }
       self.socket._meteorSession = null;
     }
 
@@ -329,7 +331,7 @@ Object.assign(Session.prototype, {
   // It should be a JSON object (it will be stringified).
   send: function (msg) {
     const self = this;
-    if (self.socket) {
+    if (self.socket && !self.socket.isClosed) {
       if (Meteor._printSentDDP)
         Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
       self.socket.send(DDPCommon.stringifyDDP(msg));
@@ -1361,7 +1363,7 @@ Object.assign(Server.prototype, {
    */
   setPublicationStrategy(collectionName, strategy) {
     if (!Object.values(publicationStrategies).includes(strategy)) {
-      throw new Error(`Invalid merge strategy: ${strategy} 
+      throw new Error(`Invalid merge strategy: ${strategy}
         for collection ${collectionName}`);
     }
     this._publicationStrategies[collectionName] = strategy;
