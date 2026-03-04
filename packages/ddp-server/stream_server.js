@@ -1,5 +1,6 @@
 import once from 'lodash.once';
 import zlib from 'node:zlib';
+import { parse as parseUrl, format as formatUrl } from 'node:url';
 
 // By default, we use the permessage-deflate extension with default
 // configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
@@ -284,15 +285,12 @@ Object.assign(StreamServer.prototype, {
         // Store arguments for use within the closure below
         const args = arguments;
 
-        // TODO replace with url package
-        const url = Npm.require('url');
-
         // Rewrite /websocket and /websocket/ urls to /sockjs/websocket while
         // preserving query string.
-        const parsedUrl = url.parse(request.url);
+        const parsedUrl = parseUrl(request.url);
         if (parsedUrl.pathname === pathPrefix + '/websocket' || parsedUrl.pathname === pathPrefix + '/websocket/') {
           parsedUrl.pathname = self.prefix + '/websocket';
-          request.url = url.format(parsedUrl);
+          request.url = formatUrl(parsedUrl);
         }
         oldHttpServerListeners.forEach((oldListener) => {
           oldListener.apply(httpServer, args);
