@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
+import { createAuthMiddleware } from 'meteor/accounts-express';
 import { Random } from 'meteor/random';
 import { WebApp } from 'meteor/webapp';
 import { HTTP } from 'meteor/http';
@@ -62,13 +63,13 @@ if (Meteor.isServer) {
   // Setup test routes
   Tinytest.addAsync('accounts-express - createAuthMiddleware - setup test routes', async (test) => {
     // Route with auth middleware that returns 401 for unauthenticated requests
-    WebApp.handlers.use('/api/express-test-auth', Accounts.createAuthMiddleware({ required: true }));
+    WebApp.handlers.use('/api/express-test-auth', createAuthMiddleware({ required: true }));
 
     // Create a separate router for the optional authentication route
     const optionalAuthRouter = WebApp.express.Router();
 
     // Apply optional authentication middleware to the router
-    optionalAuthRouter.use(Accounts.createAuthMiddleware({ required: false }));
+    optionalAuthRouter.use(createAuthMiddleware({ required: false }));
 
     // Define the route handler on the router
     optionalAuthRouter.get('/', (req, res) => {
@@ -99,7 +100,7 @@ if (Meteor.isServer) {
         req.middlewareTest = 'passed';
         next();
       },
-      Accounts.createAuthMiddleware({ required: true }),
+      createAuthMiddleware({ required: true }),
       (req, res) => {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({
@@ -113,7 +114,7 @@ if (Meteor.isServer) {
 
     // Route with prefix-mounted middleware
     const prefixRouter = WebApp.express.Router();
-    prefixRouter.use(Accounts.createAuthMiddleware({ required: true }));
+    prefixRouter.use(createAuthMiddleware({ required: true }));
     prefixRouter.get('/', (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({
@@ -412,7 +413,7 @@ if (Meteor.isServer) {
 
     try {
       // Set up a test route that echoes back auth info
-      WebApp.handlers.get('/api/express-test-request-echo', Accounts.createAuthMiddleware({ required: false }), (req, res) => {
+      WebApp.handlers.get('/api/express-test-request-echo', createAuthMiddleware({ required: false }), (req, res) => {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({
           meteorUserId: Meteor.userId(),
@@ -459,7 +460,7 @@ if (Meteor.isServer) {
     try {
       // Set up a route that makes a server-to-server request using context token
       WebApp.handlers.get('/api/express-test-request-forward',
-        Accounts.createAuthMiddleware({ required: true }),
+        createAuthMiddleware({ required: true }),
         async (req, res) => {
           // Inside this handler, _CurrentEndpointInvocation has the loginToken
           // Meteor.fetch() should auto-read it
