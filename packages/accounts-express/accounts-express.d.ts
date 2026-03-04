@@ -1,6 +1,4 @@
-import { Accounts } from 'meteor/accounts-base';
-
-interface RequestOptions extends RequestInit {
+interface MeteorFetchOptions extends RequestInit {
   /** Set to false to skip the authentication header. Default: true */
   auth?: boolean;
   /** Explicit token to use (server only). If omitted, uses context token. */
@@ -15,25 +13,23 @@ interface AuthMiddlewareOptions {
 declare module 'meteor/meteor' {
   namespace Meteor {
     /**
-     * Make an authenticated HTTP request.
-     * On the client, automatically includes the login token.
-     * On the server, uses explicit token or current endpoint context token.
+     * When accounts-express is loaded, Meteor.fetch is extended with
+     * authentication support. The login token is automatically included
+     * in requests unless `auth: false` is passed.
      */
     function fetch(
       url: string | Request,
-      options?: RequestOptions
+      options?: MeteorFetchOptions
     ): Promise<Response>;
   }
 }
 
-declare module 'meteor/accounts-base' {
-  namespace Accounts {
-    /**
-     * Create Express middleware that authenticates requests using Meteor login tokens.
-     * Tokens can be provided via Authorization Bearer header or meteor_login_token cookie.
-     */
-    function createAuthMiddleware(
-      options?: AuthMiddlewareOptions
-    ): (req: any, res: any, next: () => void) => Promise<void>;
-  }
+declare module 'meteor/accounts-express' {
+  /**
+   * Create Express middleware that authenticates requests using Meteor login tokens.
+   * Tokens can be provided via Authorization Bearer header or meteor_login_token cookie.
+   */
+  function createAuthMiddleware(
+    options?: AuthMiddlewareOptions
+  ): (req: any, res: any, next: () => void) => Promise<void>;
 }

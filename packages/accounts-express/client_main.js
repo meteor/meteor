@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
-import { meteorFetch } from './fetch_client.js';
+import { createAuthFetch } from './fetch_client.js';
 
-Meteor.fetch = meteorFetch;
+// Wrap the base Meteor.fetch with auth functionality
+Meteor.fetch = createAuthFetch(Meteor.fetch);
 
-export { meteorFetch };
+export { createAuthFetch };

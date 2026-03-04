@@ -1,33 +1,34 @@
 import { Accounts } from 'meteor/accounts-base';
+import { Meteor } from 'meteor/meteor';
 
 /**
- * @summary Make an authenticated HTTP request. Automatically includes
- * the user's login token in the Authorization header.
+ * @summary Extends Meteor.fetch with authentication. Automatically
+ * includes the user's login token in the Authorization header.
  * @locus Client
- * @param {string|Request} url - The URL to fetch or a Request object
- * @param {Object} [options] - Standard fetch options plus:
- * @param {boolean} [options.auth=true] - Set to false to skip auth header
- * @returns {Promise<Response>} - The fetch response
+ * @param {Function} originalFetch - The base Meteor.fetch to wrap
+ * @returns {Function} Enhanced fetch function with auth support
  */
-export const meteorFetch = async (url, options = {}) => {
-  const { auth = true, ...fetchOptions } = options;
+export function createAuthFetch(originalFetch) {
+  return async function (url, options = {}) {
+    const { auth = true, ...fetchOptions } = options;
 
-  const headers = new Headers(fetchOptions.headers || {});
+    const headers = new Headers(fetchOptions.headers || {});
 
-  if (auth) {
-    const token = Accounts._storedLoginToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+    if (auth) {
+      const token = Accounts._storedLoginToken();
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+
+      // When HttpOnly cookies are enabled, include credentials so the
+      // browser sends the meteor_login_token cookie automatically.
+      // This covers the case where the in-memory token is unavailable
+      // (e.g. after page reload with clientStorage: 'none').
+      if (Accounts._useHttpOnlyCookies && !fetchOptions.credentials) {
+        fetchOptions.credentials = 'include';
+      }
     }
 
-    // When HttpOnly cookies are enabled, include credentials so the
-    // browser sends the meteor_login_token cookie automatically.
-    // This covers the case where the in-memory token is unavailable
-    // (e.g. after page reload with clientStorage: 'none').
-    if (Accounts._useHttpOnlyCookies && !fetchOptions.credentials) {
-      fetchOptions.credentials = 'include';
-    }
-  }
-
-  return fetch(url, { ...fetchOptions, headers });
-};
+    return originalFetch(url, { ...fetchOptions, headers });
+  };
+}

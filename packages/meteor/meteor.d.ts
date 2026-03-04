@@ -358,6 +358,17 @@ export namespace Meteor {
   function startup(func: Function): void;
 
   /**
+   * Wrapper around the standard `fetch` API. Packages can extend this
+   * function to add middleware-like behavior (e.g. accounts-express with authentication).
+   * @param url The URL to fetch or a Request object
+   * @param options Standard fetch options
+   */
+  function fetch(
+    url: string | Request,
+    options?: RequestInit
+  ): Promise<Response>;
+
+  /**
    * Wrap a function that takes a callback function as its final parameter.
    * The signature of the callback of the wrapped function should be `function(error, result){}`.
    * On the server, the wrapped function can be used either synchronously (without passing a callback) or asynchronously

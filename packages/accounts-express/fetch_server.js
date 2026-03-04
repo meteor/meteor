@@ -1,36 +1,34 @@
 import { _CurrentEndpointInvocation } from 'meteor/accounts-base';
 
 /**
- * @summary Make an authenticated HTTP request from the server.
- * Automatically includes the login token from the current endpoint
- * invocation context, or uses an explicitly provided token.
+ * @summary Extends Meteor.fetch with authentication. Automatically
+ * includes the login token from the current endpoint invocation
+ * context, or uses an explicitly provided token.
  * @locus Server
- * @param {string|Request} url - The URL to fetch or a Request object
- * @param {Object} [options] - Standard fetch options plus:
- * @param {boolean} [options.auth=true] - Set to false to skip auth header
- * @param {string} [options.token] - Explicit token to use. If omitted,
- *   attempts to use the token from the current endpoint invocation context.
- * @returns {Promise<Response>} - The fetch response
+ * @param {Function} originalFetch - The base Meteor.fetch to wrap
+ * @returns {Function} Enhanced fetch function with auth support
  */
-export const meteorFetch = async (url, options = {}) => {
-  const { auth = true, token: explicitToken, ...fetchOptions } = options;
+export function createAuthFetch(originalFetch) {
+  return async function (url, options = {}) {
+    const { auth = true, token: explicitToken, ...fetchOptions } = options;
 
-  const headers = new Headers(fetchOptions.headers || {});
+    const headers = new Headers(fetchOptions.headers || {});
 
-  if (auth) {
-    let token = explicitToken;
+    if (auth) {
+      let token = explicitToken;
 
-    if (!token) {
-      const invocation = _CurrentEndpointInvocation.get();
-      if (invocation?.loginToken) {
-        token = invocation.loginToken;
+      if (!token) {
+        const invocation = _CurrentEndpointInvocation.get();
+        if (invocation?.loginToken) {
+          token = invocation.loginToken;
+        }
+      }
+
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
       }
     }
 
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-  }
-
-  return fetch(url, { ...fetchOptions, headers });
-};
+    return originalFetch(url, { ...fetchOptions, headers });
+  };
+}

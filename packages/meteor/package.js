@@ -55,6 +55,8 @@ Package.onUse(function (api) {
   api.addFiles('url_server.js', 'server');
   api.addFiles('url_common.js', ['client', 'server']);
 
+  api.addFiles('fetch.js', ['client', 'server']);
+
   // People expect process.exit() to not swallow console output.
   // On Windows, it sometimes does, so we fix it for all apps and packages
   api.addFiles('flush-buffers-on-exit-in-windows.js', 'server');

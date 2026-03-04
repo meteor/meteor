@@ -1,7 +1,7 @@
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import { createWebAppAuthMiddleware } from './create_auth_middleware.js';
-import { meteorFetch } from './fetch_server.js';
+import { createAuthFetch } from './fetch_server.js';
 
 /**
  * @summary Create Express middleware that authenticates requests using
@@ -14,13 +14,14 @@ import { meteorFetch } from './fetch_server.js';
  *   to null).
  * @returns {Function} Express middleware function
  */
-Accounts.createAuthMiddleware = function (options = {}) {
+function createAuthMiddleware(options = {}) {
   return createWebAppAuthMiddleware({
     ...options,
-    hashLoginTokenFn: this._hashLoginToken,
+    hashLoginTokenFn: Accounts._hashLoginToken,
   });
-};
+}
 
-Meteor.fetch = meteorFetch;
+// Wrap the base Meteor.fetch with auth functionality
+Meteor.fetch = createAuthFetch(Meteor.fetch);
 
-export { createWebAppAuthMiddleware, meteorFetch };
+export { createAuthMiddleware, createAuthFetch };
