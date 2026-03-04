@@ -1,10 +1,11 @@
-# Meteor.js 3 + Vue 3 and `vue-meteor-tracker`
+# Meteor.js 3 + Vue 3
 
 In this tutorial, we will create a simple To-Do app using [Vue 3](https://vuejs.org/) and Meteor 3.0. Meteor works well with other frameworks like [Blaze](https://www.blazejs.org/), [React](https://react.dev/), [Solid](https://www.solidjs.com/), and [Svelte](https://svelte.dev/).
 
 Vue.js is a powerful JavaScript framework for making user interfaces. It helps you build interactive applications by using templates that connect to data and update automatically when the data changes. Vue.js templates use a simple syntax similar to HTML and work with Vue’s reactivity system to show components in the browser.
 
 To start building your Vue.js app, you'll need a code editor. If you're unsure which one to choose, [Visual Studio Code](https://code.visualstudio.com/) is a good option.
+
 :::warning
 This tutorial uses the `vue-meteor-tracker` package, which is currently in beta and does not support async calls yet. However, it is still a valuable package, and we hope it will be updated soon. We are also working on a new tutorial that will use Meteor core packages instead.
 :::
@@ -25,7 +26,7 @@ First, ensure you have Node.js version 20 installed. You can install the latest 
 npx meteor
 ```
 
-If you encounter any issues, please refer to the requirements and details in [our documentation](https://v3-docs.meteor.com/about/install.html).
+If you encounter any issues, please refer to the requirements and details in [our documentation](/about/install).
 
 
 ### 1.2: Create a Meteor.js Project
@@ -36,13 +37,15 @@ To set up Meteor with Vue easily, run the following command, replacing `simple-t
 meteor create --vue simple-todos-vue
 ```
 
+Meteor will create all the necessary files for you. The `--vue` flag generates a project using Vue, Rspack and Tailwind CSS, and this is the approach walked through in this tutorial. Using [the Rspack bundler](../../about/modern-build-stack/rspack-bundler-integration.md) is the default convention in Meteor 3.4+, as it improves dev speed, enables more build features, and provides better control over bundle size and configuration.
+
+We provide the final app for both the Rspack and Meteor bundlers. This guide follows the Rspack version and reaches the same final state. The Meteor bundler version is for those who prefer the legacy bundler.
+
 ::: info
-You can find the final version of this app in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
+You can find the final version of this app on GitHub using the [Rspack bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-rspack) or the [Meteor bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-meteor).
 :::
 
-Meteor will create all the necessary files for you. The `--vue` flag generates a project using Vue, Vite and Tailwind CSS.
-
-You will find the `client` directory contains files for your client-side setup. Inside, there should be an empty `main.js` file required for Meteor's import mode. However, with Vite, the entry point is set in the `vite.config.js` file, pointing to `imports/ui/main.js`, which is where Meteor renders the main component.
+You will find the `client` directory contains files for your client-side setup. Inside, you can see for example `client/main.jsx` where Meteor is rendering your App main component into the HTML.
 
 Check the server directory for the server setup where you will see `server/main.js` populating your MongoDB database with some default data. There's no need to install MongoDB separately, as Meteor includes an embedded version.
 
@@ -52,7 +55,7 @@ To run your app, use:
 meteor npm run start
 ```
 
-Your Vue code will be located in the `imports/ui directory`, with `App.vue` as the root component of your app.
+Your Vue code will be located in the `imports/ui` directory, with `App.vue` as the root component of your app.
 
 Take a moment to explore the files created by Meteor. You don’t have to understand everything right away, but it helps to know where they are.
 
@@ -191,7 +194,7 @@ In the next step, we will connect to the MongoDB database to store our tasks.
 
 
 Meteor already sets up MongoDB for you. In order to use our database we need to create a *collection*, which is where we will store our *documents*, in our case our `tasks`.
-You can read more about collections [here](http://guide.meteor.com/collections.html).
+You can read more about collections [here](/tutorials/collections/collections).
 
 
 In this step we will implement all the necessary code to have a basic collection for our tasks up and running.
@@ -210,7 +213,7 @@ export const TasksCollection = new Mongo.Collection('tasks');
 ```
 :::
 
-The code above instantiates a new MongoDB collection and exports it. You can read more about app structure and imports/exports [here](https://guide.meteor.com/structure.html).
+The code above instantiates a new MongoDB collection and exports it. You can read more about app structure and imports/exports [here](/tutorials/application-structure/).
 
 ### 2.2: Initialize Tasks Collection
 
@@ -413,7 +416,7 @@ const tasks = autorun(() => TasksCollection.find({}).fetch()).result;
 
 Now you can edit the `addTask` function to insert a new task into the database. To do it, we will need to implement a Meteor Method.
 
-Methods are essentially RPC calls to the server that let you perform operations on the server side securely. You can read more about Meteor Methods [here](https://guide.meteor.com/methods.html).
+Methods are essentially RPC calls to the server that let you perform operations on the server side securely. You can read more about Meteor Methods [here](/tutorials/methods/methods).
 
 To create your methods, you can create a file called `tasksMethods.js`.
 
@@ -472,7 +475,7 @@ Inside the function, we are adding a task to the `tasks` collection by calling `
 ### 3.5: Show Newest Tasks First
 
 
-Now, you just need to make a change which will improve user experience: we will show the newest tasks first. We can accomplish this quickly by sorting our [MongoDB](https://guide.meteor.com/collections.html#mongo-collections) query.
+Now, you just need to make a change which will improve user experience: we will show the newest tasks first. We can accomplish this quickly by sorting our [MongoDB](/tutorials/collections/collections#mongo-collections) query.
 
 
 ::: code-group
@@ -862,7 +865,7 @@ Meteor already comes with authentication and account management system out of th
 meteor add accounts-password
 ```
 
-> There are many more authentication methods supported. You can read more about the accounts system [here](https://docs.meteor.com/api/accounts.html).
+> There are many more authentication methods supported. You can read more about the accounts system [here](/api/accounts).
 
 
 
@@ -1257,7 +1260,7 @@ Your app should look like this:
 
 ## 8: Deploying
 
-Deploying a Meteor application is similar to deploying any other Node.js app that uses websockets. You can find deployment options in [our guide](https://guide.meteor.com/deployment), including Meteor Up, Docker, and our recommended method, Galaxy.
+Deploying a Meteor application is similar to deploying any other Node.js app that uses websockets. You can find deployment options in [our guide](/tutorials/deployment/deployment), including Meteor Up, Docker, and our recommended method, Galaxy.
 
 In this tutorial, we will deploy our app on [Galaxy](https://www.meteor.com/hosting), which is our own cloud solution. Galaxy offers a free plan, so you can deploy and test your app. Pretty cool, right?
 
@@ -1366,7 +1369,7 @@ You have completed the tutorial!
 By now, you should have a good understanding of working with Meteor and Vue.
 
 ::: info
-You can find the final version of this app in our [GitHub repository](https://github.com/meteor/meteor3-vue3).
+You can find the final version of this app on GitHub using the [Rspack bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-rspack) or the [Meteor bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-meteor).
 :::
 
 Here are some options for what you can do next:
