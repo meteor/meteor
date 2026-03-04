@@ -60,15 +60,15 @@ if (Meteor.isServer) {
   };
 
   // Setup test routes
-  Tinytest.addAsync('accounts - auth middleware - setup test routes', async (test) => {
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - setup test routes', async (test) => {
     // Route with auth middleware that returns 401 for unauthenticated requests
-    WebApp.handlers.use('/api/test-auth', Accounts.auth({ required: true }));
+    WebApp.handlers.use('/api/express-test-auth', Accounts.createAuthMiddleware({ required: true }));
 
     // Create a separate router for the optional authentication route
     const optionalAuthRouter = WebApp.express.Router();
 
     // Apply optional authentication middleware to the router
-    optionalAuthRouter.use(Accounts.auth({ required: false }));
+    optionalAuthRouter.use(Accounts.createAuthMiddleware({ required: false }));
 
     // Define the route handler on the router
     optionalAuthRouter.get('/', (req, res) => {
@@ -80,11 +80,11 @@ if (Meteor.isServer) {
       }));
     });
 
-    // Mount the router at a path that isn't a sub-path of '/api/test-auth'
-    WebApp.handlers.use('/api/test-auth-optional', optionalAuthRouter);
+    // Mount the router at a path that isn't a sub-path of '/api/express-test-auth'
+    WebApp.handlers.use('/api/express-test-auth-optional', optionalAuthRouter);
 
     // Simple route that returns user info
-    WebApp.handlers.get('/api/test-auth', (req, res) => {
+    WebApp.handlers.get('/api/express-test-auth', (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({
         meteorUserId: Meteor.userId(),
@@ -94,12 +94,12 @@ if (Meteor.isServer) {
     });
 
     // Route with multiple middleware layers
-    WebApp.handlers.get('/api/test-auth/stacked', 
+    WebApp.handlers.get('/api/express-test-auth/stacked',
       (req, res, next) => {
         req.middlewareTest = 'passed';
         next();
       },
-      Accounts.auth({ required: true }),
+      Accounts.createAuthMiddleware({ required: true }),
       (req, res) => {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({
@@ -113,7 +113,7 @@ if (Meteor.isServer) {
 
     // Route with prefix-mounted middleware
     const prefixRouter = WebApp.express.Router();
-    prefixRouter.use(Accounts.auth({ required: true }));
+    prefixRouter.use(Accounts.createAuthMiddleware({ required: true }));
     prefixRouter.get('/', (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({
@@ -122,16 +122,16 @@ if (Meteor.isServer) {
         isSame: Meteor.userId() === req.userId
       }));
     });
-    WebApp.handlers.use('/api/test-auth/prefix', prefixRouter);
+    WebApp.handlers.use('/api/express-test-auth/prefix', prefixRouter);
 
     test.isTrue(true, 'Test routes set up successfully');
   });
 
   // Test unauthenticated requests
-  Tinytest.addAsync('accounts - auth middleware - unauthenticated requests', async (test) => {
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - unauthenticated requests', async (test) => {
     try {
       // Make request without auth token to required auth route
-      await makeAuthRequest(Meteor.absoluteUrl('api/test-auth'));
+      await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'));
       test.fail('Should have thrown an error for unauthorized request');
     } catch (error) {
       // Expect 401 Unauthorized
@@ -140,7 +140,7 @@ if (Meteor.isServer) {
     }
 
     // Test optional authentication route with no auth
-    const optionalResponse = await makeAuthRequest(Meteor.absoluteUrl('api/test-auth-optional'));
+    const optionalResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth-optional'));
     const optionalData = JSON.parse(optionalResponse.content);
 
     // Verify unauthenticated state
@@ -152,13 +152,13 @@ if (Meteor.isServer) {
   });
 
   // Test valid authentication
-  Tinytest.addAsync('accounts - auth middleware - valid authentication', async (test) => {
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - valid authentication', async (test) => {
     // Create a test user with a login token
     const { userId, token } = await createUserWithToken();
 
     try {
       // Make request with valid auth token to required auth route
-      const response = await makeAuthRequest(Meteor.absoluteUrl('api/test-auth'), token);
+      const response = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), token);
 
       // Parse response
       const data = JSON.parse(response.content);
@@ -172,7 +172,7 @@ if (Meteor.isServer) {
       test.equal(response.statusCode, 200);
 
       // Test optional authentication route with valid auth
-      const optionalResponse = await makeAuthRequest(Meteor.absoluteUrl('api/test-auth-optional'), token);
+      const optionalResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth-optional'), token);
       const optionalData = JSON.parse(optionalResponse.content);
 
       // Verify authenticated state
@@ -189,10 +189,10 @@ if (Meteor.isServer) {
   });
 
   // Test invalid/malformed authentication
-  Tinytest.addAsync('accounts - auth middleware - invalid authentication', async (test) => {
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - invalid authentication', async (test) => {
     // Test with invalid token on required auth route
     try {
-      await makeAuthRequest(Meteor.absoluteUrl('api/test-auth'), 'invalid-token');
+      await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), 'invalid-token');
       test.fail('Should have thrown an error for invalid token');
     } catch (error) {
       // Expect 401 Unauthorized
@@ -203,8 +203,8 @@ if (Meteor.isServer) {
     // Test with malformed token (wrong format) on required auth route
     try {
       await makeAuthRequest(
-        Meteor.absoluteUrl('api/test-auth'), 
-        null, 
+        Meteor.absoluteUrl('api/express-test-auth'),
+        null,
         { headers: { 'Authorization': 'NotBearer token' } }
       );
       test.fail('Should have thrown an error for malformed token');
@@ -219,7 +219,7 @@ if (Meteor.isServer) {
     await Meteor.users.removeAsync(userId); // Remove the user but keep the token
 
     try {
-      await makeAuthRequest(Meteor.absoluteUrl('api/test-auth'), token);
+      await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), token);
       test.fail('Should have thrown an error for nonexistent user');
     } catch (error) {
       // Expect 401 Unauthorized
@@ -228,7 +228,7 @@ if (Meteor.isServer) {
     }
 
     // Test with invalid token on optional auth route
-    const invalidTokenResponse = await makeAuthRequest(Meteor.absoluteUrl('api/test-auth-optional'), 'invalid-token');
+    const invalidTokenResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth-optional'), 'invalid-token');
     const invalidTokenData = JSON.parse(invalidTokenResponse.content);
 
     // Verify unauthenticated state with invalid token
@@ -238,7 +238,7 @@ if (Meteor.isServer) {
 
     // Test with malformed token on optional auth route
     const malformedTokenResponse = await makeAuthRequest(
-      Meteor.absoluteUrl('api/test-auth-optional'),
+      Meteor.absoluteUrl('api/express-test-auth-optional'),
       null,
       { headers: { 'Authorization': 'NotBearer token' } }
     );
@@ -250,7 +250,7 @@ if (Meteor.isServer) {
     test.equal(malformedTokenResponse.statusCode, 200);
 
     // Test with token for nonexistent user on optional auth route
-    const nonexistentUserResponse = await makeAuthRequest(Meteor.absoluteUrl('api/test-auth-optional'), token);
+    const nonexistentUserResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth-optional'), token);
     const nonexistentUserData = JSON.parse(nonexistentUserResponse.content);
 
     // Verify unauthenticated state with nonexistent user token
@@ -260,7 +260,7 @@ if (Meteor.isServer) {
   });
 
   // Test token/session mismatch
-  Tinytest.addAsync('accounts - auth middleware - token/session mismatch', async (test) => {
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - token/session mismatch', async (test) => {
     // Create two test users with login tokens
     const user1 = await createUserWithToken();
     const user2 = await createUserWithToken();
@@ -269,7 +269,7 @@ if (Meteor.isServer) {
       // Test with conflicting credentials (header token from user1, cookie token from user2)
       // The implementation should prioritize one over the other consistently
       const response = await makeAuthRequest(
-        Meteor.absoluteUrl('api/test-auth'),
+        Meteor.absoluteUrl('api/express-test-auth'),
         user1.token,
         { cookies: { 'meteor_login_token': user2.token } }
       );
@@ -277,15 +277,14 @@ if (Meteor.isServer) {
       // Parse response
       const data = JSON.parse(response.content);
 
-      // Verify that one user ID is consistently used (in this case, we expect header to take precedence)
-      // If the implementation prioritizes cookies instead, this test would need to be adjusted
+      // Verify that one user ID is consistently used (header takes precedence)
       test.equal(data.meteorUserId, user1.userId);
       test.equal(data.reqUserId, user1.userId);
       test.isTrue(data.isSame);
 
       // Verify that cookie-only auth works
       const cookieResponse = await makeRequestWithCookie(
-        Meteor.absoluteUrl('api/test-auth'),
+        Meteor.absoluteUrl('api/express-test-auth'),
         user2.token
       );
 
@@ -304,13 +303,13 @@ if (Meteor.isServer) {
   });
 
   // Test middleware ordering/stacking
-  Tinytest.addAsync('accounts - auth middleware - middleware stacking', async (test) => {
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - middleware stacking', async (test) => {
     // Create a test user with a login token
     const { userId, token } = await createUserWithToken();
 
     try {
       // Test stacked middleware
-      const response = await makeAuthRequest(Meteor.absoluteUrl('api/test-auth/stacked'), token);
+      const response = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth/stacked'), token);
 
       // Parse response
       const data = JSON.parse(response.content);
@@ -324,7 +323,7 @@ if (Meteor.isServer) {
       test.equal(data.middlewareTest, 'passed');
 
       // Test prefix-mounted middleware
-      const prefixResponse = await makeAuthRequest(Meteor.absoluteUrl('api/test-auth/prefix'), token);
+      const prefixResponse = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth/prefix'), token);
 
       // Parse response
       const prefixData = JSON.parse(prefixResponse.content);
@@ -340,7 +339,7 @@ if (Meteor.isServer) {
   });
 
   // Test concurrency/isolation
-  Tinytest.addAsync('accounts - auth middleware - concurrency and isolation', async (test) => {
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - concurrency and isolation', async (test) => {
     // Create two test users with login tokens
     const user1 = await createUserWithToken();
     const user2 = await createUserWithToken();
@@ -348,8 +347,8 @@ if (Meteor.isServer) {
     try {
       // Make concurrent requests with different auth tokens
       const [response1, response2] = await Promise.all([
-        makeAuthRequest(Meteor.absoluteUrl('api/test-auth'), user1.token),
-        makeAuthRequest(Meteor.absoluteUrl('api/test-auth'), user2.token)
+        makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), user1.token),
+        makeAuthRequest(Meteor.absoluteUrl('api/express-test-auth'), user2.token)
       ]);
 
       // Parse responses
@@ -371,6 +370,85 @@ if (Meteor.isServer) {
       // Clean up
       await Meteor.users.removeAsync(user1.userId);
       await Meteor.users.removeAsync(user2.userId);
+    }
+  });
+
+  // Test server-side Meteor.fetch() with explicit token
+  Tinytest.addAsync('accounts-express - server fetch - explicit token', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      // Set up a test route that echoes back auth info
+      WebApp.handlers.get('/api/express-test-request-echo', Accounts.createAuthMiddleware({ required: false }), (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({
+          meteorUserId: Meteor.userId(),
+          reqUserId: req.userId,
+        }));
+      });
+
+      // Use Meteor.fetch with explicit token
+      const response = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'), {
+        token,
+      });
+      const data = await response.json();
+
+      test.equal(data.meteorUserId, userId);
+      test.equal(data.reqUserId, userId);
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
+  // Test server-side Meteor.fetch() with auth: false
+  Tinytest.addAsync('accounts-express - server fetch - auth false skips token', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      // Use Meteor.fetch with auth: false -- should not send token
+      const response = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'), {
+        token,
+        auth: false,
+      });
+      const data = await response.json();
+
+      // Should be unauthenticated since auth: false
+      test.isNull(data.meteorUserId);
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
+  // Test server-side Meteor.fetch() auto-reads token from endpoint context
+  Tinytest.addAsync('accounts-express - server fetch - context token forwarding', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      // Set up a route that makes a server-to-server request using context token
+      WebApp.handlers.get('/api/express-test-request-forward',
+        Accounts.createAuthMiddleware({ required: true }),
+        async (req, res) => {
+          // Inside this handler, _CurrentEndpointInvocation has the loginToken
+          // Meteor.fetch() should auto-read it
+          const innerResponse = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'));
+          const innerData = await innerResponse.json();
+
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({
+            outerUserId: Meteor.userId(),
+            innerUserId: innerData.meteorUserId,
+          }));
+        }
+      );
+
+      // Make request to the forwarding route
+      const response = await makeAuthRequest(Meteor.absoluteUrl('api/express-test-request-forward'), token);
+      const data = JSON.parse(response.content);
+
+      test.equal(data.outerUserId, userId);
+      test.equal(data.innerUserId, userId);
+    } finally {
+      await Meteor.users.removeAsync(userId);
     }
   });
 }

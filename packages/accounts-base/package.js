@@ -61,8 +61,6 @@ Package.onTest((api) => {
     "ddp",
     "accounts-password",
     "accounts-2fa",
-    "webapp",
-    "http",
   ]);
 
   api.addFiles("accounts_tests_setup.js", "server");

@@ -2,7 +2,6 @@ import {
   AccountsClient,
   AccountsTest,
 } from "./accounts_client.js";
-import { fetchWithAuth } from "./accounts_client_auth.js";
 
 /**
  * @namespace Accounts
@@ -18,19 +17,10 @@ Accounts = new AccountsClient(Meteor.settings?.public?.packages?.accounts || {})
  */
 Meteor.users = Accounts.users;
 
-/**
- * @summary A function that adds an auth token to a fetch request.
- * @locus Anywhere
- * @type {Function}
- * @importFromPackage meteor
- */
-Meteor.fetchWithAuth = fetchWithAuth;
-
 export {
   Accounts,
   AccountsClient,
   AccountsTest,
-  fetchWithAuth,
   // For backwards compatibility. Note that exporting an object as the
   // default export is *not* the same as exporting its properties as named
   // exports, as was previously assumed.

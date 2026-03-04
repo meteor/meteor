@@ -6,7 +6,7 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
-import { createWebAppAuthMiddleware, _CurrentEndpointInvocation } from "./accounts_server_auth.js";
+export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -139,19 +139,6 @@ export class AccountsServer extends AccountsCommon {
     this._CurrentEndpointInvocation = _CurrentEndpointInvocation;
   }
 
-  /**
-   * @summary Express middleware for authentication
-   * @locus Server
-   * @param {Object} options - Options for the middleware
-   * @param {boolean} options.required - Whether authentication is required (true) or optional (false)
-   * @returns {Function} Express middleware function
-   */
-  auth(options = {}) {
-    return createWebAppAuthMiddleware({
-      ...options,
-      hashLoginTokenFn: this._hashLoginToken,
-    });
-  }
 
   ///
   /// CURRENT USER

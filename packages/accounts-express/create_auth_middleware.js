@@ -1,7 +1,5 @@
 import { Meteor } from 'meteor/meteor';
-import { Accounts } from 'meteor/accounts-base';
-
-export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
+import { Accounts, _CurrentEndpointInvocation } from 'meteor/accounts-base';
 
 export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false }) {
   return async function meteorWebAppAuthMiddleware(req, res, next) {
@@ -28,8 +26,7 @@ export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false 
     // If no token and authentication is optional, continue without authentication
     if (!token) {
       if (!required) {
-        // Set up Meteor environment with null userId for unauthenticated requests
-        return _CurrentEndpointInvocation.withValue({ userId: null }, () => {
+        return _CurrentEndpointInvocation.withValue({ userId: null, loginToken: null }, () => {
           next();
         });
       }
@@ -43,8 +40,7 @@ export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false 
     });
     if (!user) {
       if (!required) {
-        // Set up Meteor environment with null userId for invalid tokens when authentication is optional
-        return _CurrentEndpointInvocation.withValue({ userId: null }, () => {
+        return _CurrentEndpointInvocation.withValue({ userId: null, loginToken: null }, () => {
           next();
         });
       }
@@ -56,8 +52,7 @@ export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false 
     );
     if (!tokenData) {
       if (!required) {
-        // Set up Meteor environment with null userId for missing token data when authentication is optional
-        return _CurrentEndpointInvocation.withValue({ userId: null }, () => {
+        return _CurrentEndpointInvocation.withValue({ userId: null, loginToken: null }, () => {
           next();
         });
       }
@@ -67,8 +62,7 @@ export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false 
     const tokenAge = Date.now() - tokenData.when.getTime();
     if (tokenAge > Accounts._getTokenLifetimeMs()) {
       if (!required) {
-        // Set up Meteor environment with null userId for expired tokens when authentication is optional
-        return _CurrentEndpointInvocation.withValue({ userId: null }, () => {
+        return _CurrentEndpointInvocation.withValue({ userId: null, loginToken: null }, () => {
           next();
         });
       }
@@ -77,7 +71,7 @@ export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false 
 
     req.userId = user._id;
 
-    _CurrentEndpointInvocation.withValue({ userId: user._id }, () => {
+    _CurrentEndpointInvocation.withValue({ userId: user._id, loginToken: token }, () => {
       next();
     });
   };
