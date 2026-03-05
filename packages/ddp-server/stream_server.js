@@ -1,4 +1,5 @@
 import once from 'lodash.once';
+import net from 'node:net';
 import zlib from 'node:zlib';
 import { parse as parseUrl, format as formatUrl } from 'node:url';
 
@@ -33,11 +34,15 @@ const websocketExtensions = once(function () {
   return extensions;
 });
 
-const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
+const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  '';
+
+const uwsSettings = Meteor.settings?.packages?.['ddp-server']?.uws;
+const uwsSettingsConfig = uwsSettings || {};
+const isWebsocketPath = (pathname) => pathname === `${pathPrefix}/websocket` || pathname === `${pathPrefix}/websocket/`;
 
 // Keep SockJS as default transport for compatibility with existing tests and
-// tooling. uWebSockets.js can be enabled explicitly.
-const useUWebSockets = !!process.env.DISABLE_SOCKJS;
+// tooling. uWebSockets.js can be enabled explicitly via env or settings.
+const useUWebSockets = !!process.env.DISABLE_SOCKJS || !!uwsSettings;
 
 StreamServer = function () {
   const self = this;
@@ -49,7 +54,7 @@ StreamServer = function () {
   } else {
     // Because we are installing directly onto WebApp.httpServer instead of using
     // WebApp.app, we have to process the path prefix ourselves.
-    self.prefix = pathPrefix + '/sockjs';
+    self.prefix = `${pathPrefix}/sockjs`;
     self._setupSockJS();
   }
 };
@@ -58,7 +63,7 @@ Object.assign(StreamServer.prototype, {
   _setupSockJS: function () {
     const self = this;
 
-    RoutePolicy.declare(self.prefix + '/', 'network');
+    RoutePolicy.declare(`${self.prefix}/`, 'network');
 
     const sockjs = Npm.require('sockjs');
     const serverOptions = {
@@ -138,9 +143,7 @@ Object.assign(StreamServer.prototype, {
         socket.write(data);
       };
       socket.on('close', function () {
-        self.open_sockets = self.open_sockets.filter(function(value) {
-          return value !== socket;
-        });
+        self.open_sockets = self.open_sockets.filter((s) => s !== socket);
       });
       self.open_sockets.push(socket);
 
@@ -152,7 +155,7 @@ Object.assign(StreamServer.prototype, {
 
       // call all our callbacks when we get a new socket. they will do the
       // work of setting up handlers and such for specific messages.
-      self.registration_callbacks.forEach(function (callback) {
+      self.registration_callbacks.forEach((callback) => {
         callback(socket);
       });
     });
@@ -165,7 +168,18 @@ Object.assign(StreamServer.prototype, {
 
     const uws = Npm.require('uWebSockets.js');
     self.uwsApp = uws.App();
-    const uwsPort = +process.env.WEBSOCKETS_PORT || 5001;
+
+    const uwsPort = Number(uwsSettingsConfig.port) || 5001;
+    const uwsPayloadLength = Number(uwsSettingsConfig.payloadLength) || 48;
+    const uwsSocketTimeout = Number(uwsSettingsConfig.timeout) || 45;
+    const uwsHost = uwsSettingsConfig.host || '127.0.0.1';
+    const uwsProxyHost = uwsHost === '0.0.0.0'
+      ? '127.0.0.1'
+      : uwsHost === '::'
+        ? '::1'
+        : uwsHost;
+
+    self._proxyWebsocketEndpointToUWS(uwsProxyHost, uwsPort);
 
     self.uwsApp.get('/*', function (res) {
       res.end('OK');
@@ -173,7 +187,7 @@ Object.assign(StreamServer.prototype, {
 
     self.uwsApp.ws('/*', {
       maxBackpressure: 16 * 1024 * 1024,
-      maxPayloadLength: (+process.env.WEBSOCKETS_PAYLOAD_LENGTH || 48) * 1024,
+      maxPayloadLength: uwsPayloadLength * 1024,
 
       open(socket) {
         socket.on = function (event, callback) {
@@ -192,9 +206,9 @@ Object.assign(StreamServer.prototype, {
           }
         };
 
-        socket.setWebsocketTimeout(45 * 1000);
+        socket.setWebsocketTimeout(uwsSocketTimeout * 1000);
 
-        self.registration_callbacks.forEach(function (callback) {
+        self.registration_callbacks.forEach((callback) => {
           callback(socket);
         });
       },
@@ -219,11 +233,11 @@ Object.assign(StreamServer.prototype, {
 
       close(socket) {
         socket.isClosed = true;
-        self.open_sockets = self.open_sockets.filter(function (value) {
-          return value !== socket;
-        });
+        self.open_sockets = self.open_sockets.filter((s) => s !== socket);
 
         const closeListener = self._close_listeners.get(socket);
+        self._close_listeners.delete(socket);
+        self._message_listeners.delete(socket);
         if (closeListener) {
           closeListener();
         }
@@ -241,11 +255,13 @@ Object.assign(StreamServer.prototype, {
     });
 
     WebApp.onListening(function () {
-      self.uwsApp.listen(uwsPort, function (listenSocket) {
+      const onListen = function (listenSocket) {
         if (!listenSocket) {
           throw new Error(`uWebSockets.js could not listen to port ${uwsPort}!`);
         }
-      });
+      };
+
+      self.uwsApp.listen(uwsHost, uwsPort, onListen);
     });
   },
 
@@ -254,7 +270,7 @@ Object.assign(StreamServer.prototype, {
   register: function (callback) {
     const self = this;
     self.registration_callbacks.push(callback);
-    self.all_sockets().forEach(function (socket) {
+    self.all_sockets().forEach((socket) => {
       callback(socket);
     });
   },
@@ -281,21 +297,87 @@ Object.assign(StreamServer.prototype, {
 
       // request and upgrade have different arguments passed but
       // we only care about the first one which is always request
-      const newListener = function(request /*, moreArguments */) {
+      const newListener = function (request /*, moreArguments */) {
         // Store arguments for use within the closure below
         const args = arguments;
 
         // Rewrite /websocket and /websocket/ urls to /sockjs/websocket while
         // preserving query string.
         const parsedUrl = parseUrl(request.url);
-        if (parsedUrl.pathname === pathPrefix + '/websocket' || parsedUrl.pathname === pathPrefix + '/websocket/') {
-          parsedUrl.pathname = self.prefix + '/websocket';
+        if (isWebsocketPath(parsedUrl.pathname)) {
+          parsedUrl.pathname = `${self.prefix}/websocket`;
           request.url = formatUrl(parsedUrl);
         }
         oldHttpServerListeners.forEach((oldListener) => {
           oldListener.apply(httpServer, args);
         });
       };
+      httpServer.addListener(event, newListener);
+    });
+  },
+
+  // Keep /websocket on WebApp.httpServer usable in uWS mode by proxying
+  // websocket upgrades to the internal uWS listener port.
+  _proxyWebsocketEndpointToUWS: function (proxyHost, uwsPort) {
+    ['request', 'upgrade'].forEach((event) => {
+      const httpServer = WebApp.httpServer;
+      const oldHttpServerListeners = httpServer.listeners(event).slice(0);
+      httpServer.removeAllListeners(event);
+
+      const newListener = function (request /*, moreArguments */) {
+        const args = arguments;
+        const parsedUrl = parseUrl(request.url);
+        if (!isWebsocketPath(parsedUrl.pathname)) {
+          oldHttpServerListeners.forEach((oldListener) => {
+            oldListener.apply(httpServer, args);
+          });
+          return;
+        }
+
+        if (event === 'request') {
+          const response = args[1];
+          response.writeHead(400, {
+            'Content-Type': 'text/plain; charset=UTF-8',
+          });
+          response.end('Not a valid websocket request');
+          return;
+        }
+
+        const socket = args[1];
+        const head = args[2];
+        const upstream = net.connect({
+          host: proxyHost,
+          port: uwsPort,
+        });
+
+        upstream.on('connect', () => {
+          const requestLine = `${request.method} ${request.url} HTTP/${request.httpVersion}\r\n`;
+          let headers = '';
+          for (let i = 0; i < request.rawHeaders.length; i += 2) {
+            headers += `${request.rawHeaders[i]}: ${request.rawHeaders[i + 1]}\r\n`;
+          }
+          upstream.write(`${requestLine}${headers}\r\n`);
+          if (head && head.length) {
+            upstream.write(head);
+          }
+          socket.pipe(upstream).pipe(socket);
+        });
+
+        const cleanup = () => {
+          if (!upstream.destroyed) {
+            upstream.destroy();
+          }
+          if (!socket.destroyed) {
+            socket.destroy();
+          }
+        };
+
+        upstream.on('error', cleanup);
+        upstream.on('close', cleanup);
+        socket.on('error', cleanup);
+        socket.on('close', cleanup);
+      };
+
       httpServer.addListener(event, newListener);
     });
   }
