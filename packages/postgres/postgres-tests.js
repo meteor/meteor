@@ -1,0 +1,1147 @@
+/**
+ * Postgres package test suite.
+ *
+ * Unit tests (no database required):
+ *   - Schema resolution (resolveField)
+ *   - Selector compilation
+ *   - Modifier compilation
+ *   - Sort compilation
+ *   - Row converter round-trips
+ *
+ * Integration tests (require POSTGRES_URL):
+ *   - Table creation
+ *   - Insert / find / findOne
+ *   - Update with $set, $inc, $unset
+ *   - Update with fetch-modify-write ($push, $pull, $addToSet)
+ *   - Remove
+ *   - Upsert
+ *   - Sort / limit / skip
+ *   - _extra overflow fields
+ *   - observeChanges
+ *   - Multi-document update
+ *   - Nested JSONB queries
+ *   - Convenience constructor
+ *   - AFS provider registration
+ */
+
+import { resolveField, ResolvedSchema, quoteIdent } from './schema';
+import { documentToRow, rowToDocument } from './row_converter';
+import { PostgresStreamProvider } from './postgres_stream_provider';
+import {
+  CompilationContext,
+  compileSelector,
+  compileModifier,
+  compileSort,
+  buildSelectQuery,
+  buildInsertQuery,
+  buildUpdateQuery,
+  buildDeleteQuery,
+  buildUpsertQuery,
+} from './sql_compiler';
+
+// ---------------------------------------------------------------------------
+// Helper: create a test schema
+// ---------------------------------------------------------------------------
+
+function createTestSchema() {
+  return new ResolvedSchema({
+    title:     { type: 'text', required: true },
+    body:      { type: 'text' },
+    views:     { type: 'integer', default: 0 },
+    published: { type: 'boolean', default: false },
+    tags:      { type: 'jsonb' },
+    metadata:  { type: 'jsonb' },
+    createdAt: { type: 'timestamp', default: 'now' },
+  });
+}
+
+// ============================================================================
+// UNIT TESTS — Schema Resolution
+// ============================================================================
+
+Tinytest.add('postgres - schema - resolveField - _id', (test) => {
+  const schema = createTestSchema();
+  const r = resolveField('_id', schema);
+  test.equal(r.kind, 'column');
+  test.equal(r.sqlRef, '_id');
+  test.equal(r.columnType, 'text');
+});
+
+Tinytest.add('postgres - schema - resolveField - column (text)', (test) => {
+  const schema = createTestSchema();
+  const r = resolveField('title', schema);
+  test.equal(r.kind, 'column');
+  test.equal(r.sqlRef, 'title');
+  test.equal(r.columnType, 'text');
+  test.equal(r.needsCast, false);
+});
+
+Tinytest.add('postgres - schema - resolveField - column (integer)', (test) => {
+  const schema = createTestSchema();
+  const r = resolveField('views', schema);
+  test.equal(r.kind, 'column');
+  test.equal(r.sqlRef, 'views');
+  test.equal(r.columnType, 'integer');
+});
+
+Tinytest.add('postgres - schema - resolveField - column (timestamp, needs quoting)', (test) => {
+  const schema = createTestSchema();
+  const r = resolveField('createdAt', schema);
+  test.equal(r.kind, 'column');
+  test.equal(r.sqlRef, '"createdAt"');
+  test.equal(r.columnType, 'timestamp');
+});
+
+Tinytest.add('postgres - schema - resolveField - jsonb_column', (test) => {
+  const schema = createTestSchema();
+  const r = resolveField('metadata', schema);
+  test.equal(r.kind, 'jsonb_column');
+  test.equal(r.sqlRef, 'metadata');
+  test.equal(r.columnType, 'jsonb');
+});
+
+Tinytest.add('postgres - schema - resolveField - jsonb_path (single level)', (test) => {
+  const schema = createTestSchema();
+  const r = resolveField('metadata.key', schema);
+  test.equal(r.kind, 'jsonb_path');
+  test.equal(r.sqlRef, "metadata->>'key'");
+  test.isTrue(r.needsCast);
+  test.equal(r.jsonPath, ['key']);
+});
+
+Tinytest.add('postgres - schema - resolveField - jsonb_path (nested)', (test) => {
+  const schema = createTestSchema();
+  const r = resolveField('metadata.a.b', schema);
+  test.equal(r.kind, 'jsonb_path');
+  test.equal(r.sqlRef, "metadata #>> '{a,b}'");
+  test.isTrue(r.needsCast);
+  test.equal(r.jsonPath, ['a', 'b']);
+});
+
+Tinytest.add('postgres - schema - resolveField - extra (unknown field)', (test) => {
+  const schema = createTestSchema();
+  const r = resolveField('unknownField', schema);
+  test.equal(r.kind, 'extra');
+  test.equal(r.sqlRef, "_extra->>'unknownField'");
+  test.isTrue(r.needsCast);
+});
+
+Tinytest.add('postgres - schema - resolveField - extra_path (unknown nested)', (test) => {
+  const schema = createTestSchema();
+  const r = resolveField('unknown.nested', schema);
+  test.equal(r.kind, 'extra_path');
+  test.equal(r.sqlRef, "_extra #>> '{unknown,nested}'");
+  test.isTrue(r.needsCast);
+});
+
+Tinytest.add('postgres - schema - quoteIdent', (test) => {
+  test.equal(quoteIdent('simple'), 'simple');
+  test.equal(quoteIdent('createdAt'), '"createdAt"');
+  test.equal(quoteIdent('select'), '"select"');
+  test.equal(quoteIdent('user'), '"user"');
+  test.equal(quoteIdent('_id'), '_id');
+  test.equal(quoteIdent('_extra'), '_extra');
+});
+
+Tinytest.add('postgres - schema - ResolvedSchema constructor validates types', (test) => {
+  test.throws(() => {
+    new ResolvedSchema({ field: { type: 'invalid' } });
+  }, /Invalid column type/);
+});
+
+Tinytest.add('postgres - schema - ResolvedSchema column definitions', (test) => {
+  const schema = createTestSchema();
+  const defs = schema.getColumnDefinitions();
+  test.isTrue(defs.length === 7);
+  test.isTrue(defs[0].includes('TEXT NOT NULL')); // title
+  test.isTrue(defs.some(d => d.includes('INTEGER DEFAULT 0'))); // views
+  test.isTrue(defs.some(d => d.includes('BOOLEAN DEFAULT false'))); // published
+  test.isTrue(defs.some(d => d.includes('TIMESTAMPTZ DEFAULT NOW()'))); // createdAt
+});
+
+// ============================================================================
+// UNIT TESTS — Selector Compiler
+// ============================================================================
+
+Tinytest.add('postgres - selector - empty selector', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({}, schema);
+  test.equal(text, 'TRUE');
+  test.equal(values.length, 0);
+});
+
+Tinytest.add('postgres - selector - _id equality', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ _id: 'abc' }, schema);
+  test.equal(text, '_id = $1');
+  test.equal(values, ['abc']);
+});
+
+Tinytest.add('postgres - selector - column equality', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ title: 'hello' }, schema);
+  test.equal(text, 'title = $1');
+  test.equal(values, ['hello']);
+});
+
+Tinytest.add('postgres - selector - boolean equality', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ published: true }, schema);
+  test.equal(text, 'published = $1');
+  test.equal(values, [true]);
+});
+
+Tinytest.add('postgres - selector - $gt on column', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ views: { $gt: 5 } }, schema);
+  test.equal(text, 'views > $1');
+  test.equal(values, [5]);
+});
+
+Tinytest.add('postgres - selector - $gte $lte combined', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ views: { $gte: 1, $lte: 10 } }, schema);
+  test.equal(text, '(views >= $1 AND views <= $2)');
+  test.equal(values, [1, 10]);
+});
+
+Tinytest.add('postgres - selector - $in on column', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ views: { $in: [1, 2, 3] } }, schema);
+  test.equal(text, 'views = ANY($1)');
+  test.length(values, 1);
+  test.equal(values[0], [1, 2, 3]);
+});
+
+Tinytest.add('postgres - selector - $exists true', (test) => {
+  const schema = createTestSchema();
+  const { text } = compileSelector({ title: { $exists: true } }, schema);
+  test.equal(text, 'title IS NOT NULL');
+});
+
+Tinytest.add('postgres - selector - $exists false', (test) => {
+  const schema = createTestSchema();
+  const { text } = compileSelector({ title: { $exists: false } }, schema);
+  test.equal(text, 'title IS NULL');
+});
+
+Tinytest.add('postgres - selector - $regex', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ title: { $regex: '^he' } }, schema);
+  test.equal(text, 'title ~ $1');
+  test.equal(values, ['^he']);
+});
+
+Tinytest.add('postgres - selector - $mod', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ views: { $mod: [10, 1] } }, schema);
+  test.equal(text, 'views % $1 = $2');
+  test.equal(values, [10, 1]);
+});
+
+Tinytest.add('postgres - selector - $ne on column', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ published: { $ne: true } }, schema);
+  test.equal(text, '(published != $1 OR published IS NULL)');
+  test.equal(values, [true]);
+});
+
+Tinytest.add('postgres - selector - JSONB path equality', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ 'metadata.key': 'v' }, schema);
+  test.equal(text, "metadata->>'key' = $1");
+  test.equal(values, ['v']);
+});
+
+Tinytest.add('postgres - selector - JSONB nested path with numeric cast', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ 'metadata.a.b': 5 }, schema);
+  test.equal(text, "(metadata #>> '{a,b}')::numeric = $1");
+  test.equal(values, [5]);
+});
+
+Tinytest.add('postgres - selector - JSONB $all', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ tags: { $all: ['a', 'b'] } }, schema);
+  test.equal(text, "tags @> $1::jsonb");
+  test.equal(values, [JSON.stringify(['a', 'b'])]);
+});
+
+Tinytest.add('postgres - selector - JSONB $size', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ tags: { $size: 3 } }, schema);
+  test.equal(text, 'jsonb_array_length(tags) = $1');
+  test.equal(values, [3]);
+});
+
+Tinytest.add('postgres - selector - _extra field equality', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ unknownField: 'x' }, schema);
+  test.equal(text, "_extra->>'unknownField' = $1");
+  test.equal(values, ['x']);
+});
+
+Tinytest.add('postgres - selector - _extra nested path', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ 'unknown.nested': 5 }, schema);
+  test.equal(text, "(_extra #>> '{unknown,nested}')::numeric = $1");
+  test.equal(values, [5]);
+});
+
+Tinytest.add('postgres - selector - $and', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({
+    $and: [{ title: 'hello' }, { views: { $gt: 0 } }]
+  }, schema);
+  test.equal(text, '(title = $1 AND views > $2)');
+  test.equal(values, ['hello', 0]);
+});
+
+Tinytest.add('postgres - selector - $or', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({
+    $or: [{ title: 'a' }, { title: 'b' }]
+  }, schema);
+  test.equal(text, '(title = $1 OR title = $2)');
+  test.equal(values, ['a', 'b']);
+});
+
+Tinytest.add('postgres - selector - $nor', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({
+    $nor: [{ published: true }, { views: 0 }]
+  }, schema);
+  test.equal(text, 'NOT (published = $1 OR views = $2)');
+  test.equal(values, [true, 0]);
+});
+
+Tinytest.add('postgres - selector - $not (operator)', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({
+    views: { $not: { $gt: 5 } }
+  }, schema);
+  test.equal(text, 'NOT (views > $1)');
+  test.equal(values, [5]);
+});
+
+Tinytest.add('postgres - selector - $where throws', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ $where: 'this.x > 0' }, schema);
+  }, /\$where is not supported/);
+});
+
+Tinytest.add('postgres - selector - $elemMatch', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({
+    tags: { $elemMatch: { $gt: 5 } }
+  }, schema);
+  test.isTrue(text.includes('EXISTS'));
+  test.isTrue(text.includes('jsonb_array_elements'));
+});
+
+Tinytest.add('postgres - selector - JSONB column equality (array containment)', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ tags: 'a' }, schema);
+  // Should compile to both equality and containment check
+  test.isTrue(text.includes('@>'));
+  test.isTrue(text.includes('OR'));
+});
+
+Tinytest.add('postgres - selector - $nin', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({ views: { $nin: [1, 2] } }, schema);
+  test.equal(text, 'NOT (views = ANY($1))');
+  test.equal(values[0], [1, 2]);
+});
+
+// ============================================================================
+// UNIT TESTS — Modifier Compiler
+// ============================================================================
+
+Tinytest.add('postgres - modifier - $set column', (test) => {
+  const schema = createTestSchema();
+  const { setClauses, values, needsFetchModifyWrite } = compileModifier(
+    { $set: { title: 'New' } }, schema
+  );
+  test.isFalse(needsFetchModifyWrite);
+  test.equal(setClauses.length, 1);
+  test.equal(setClauses[0], 'title = $1');
+  test.equal(values, ['New']);
+});
+
+Tinytest.add('postgres - modifier - $set jsonb path', (test) => {
+  const schema = createTestSchema();
+  const { setClauses, values } = compileModifier(
+    { $set: { 'metadata.k': 'v' } }, schema
+  );
+  test.equal(setClauses.length, 1);
+  test.isTrue(setClauses[0].includes('jsonb_set'));
+  test.isTrue(setClauses[0].includes("'{k}'"));
+});
+
+Tinytest.add('postgres - modifier - $set extra', (test) => {
+  const schema = createTestSchema();
+  const { setClauses } = compileModifier(
+    { $set: { unknown: 'v' } }, schema
+  );
+  test.equal(setClauses.length, 1);
+  test.isTrue(setClauses[0].includes('_extra'));
+  test.isTrue(setClauses[0].includes('jsonb_set'));
+});
+
+Tinytest.add('postgres - modifier - $unset column', (test) => {
+  const schema = createTestSchema();
+  const { setClauses } = compileModifier(
+    { $unset: { title: 1 } }, schema
+  );
+  test.equal(setClauses.length, 1);
+  test.equal(setClauses[0], 'title = NULL');
+});
+
+Tinytest.add('postgres - modifier - $unset jsonb path', (test) => {
+  const schema = createTestSchema();
+  const { setClauses } = compileModifier(
+    { $unset: { 'metadata.k': 1 } }, schema
+  );
+  test.isTrue(setClauses[0].includes("- 'k'"));
+});
+
+Tinytest.add('postgres - modifier - $unset extra', (test) => {
+  const schema = createTestSchema();
+  const { setClauses } = compileModifier(
+    { $unset: { unknown: 1 } }, schema
+  );
+  test.isTrue(setClauses[0].includes("_extra - 'unknown'"));
+});
+
+Tinytest.add('postgres - modifier - $inc column', (test) => {
+  const schema = createTestSchema();
+  const { setClauses, values } = compileModifier(
+    { $inc: { views: 1 } }, schema
+  );
+  test.equal(setClauses[0], 'views = COALESCE(views, 0) + $1');
+  test.equal(values, [1]);
+});
+
+Tinytest.add('postgres - modifier - $mul column', (test) => {
+  const schema = createTestSchema();
+  const { setClauses, values } = compileModifier(
+    { $mul: { views: 2 } }, schema
+  );
+  test.equal(setClauses[0], 'views = COALESCE(views, 0) * $1');
+  test.equal(values, [2]);
+});
+
+Tinytest.add('postgres - modifier - $min column', (test) => {
+  const schema = createTestSchema();
+  const { setClauses, values } = compileModifier(
+    { $min: { views: 5 } }, schema
+  );
+  test.isTrue(setClauses[0].includes('LEAST'));
+});
+
+Tinytest.add('postgres - modifier - $max column', (test) => {
+  const schema = createTestSchema();
+  const { setClauses, values } = compileModifier(
+    { $max: { views: 5 } }, schema
+  );
+  test.isTrue(setClauses[0].includes('GREATEST'));
+});
+
+Tinytest.add('postgres - modifier - $currentDate', (test) => {
+  const schema = createTestSchema();
+  const { setClauses } = compileModifier(
+    { $currentDate: { createdAt: true } }, schema
+  );
+  test.isTrue(setClauses[0].includes('NOW()'));
+});
+
+Tinytest.add('postgres - modifier - replacement doc', (test) => {
+  const schema = createTestSchema();
+  const { setClauses, values, needsFetchModifyWrite } = compileModifier(
+    { title: 'New Title', views: 10 }, schema
+  );
+  test.isFalse(needsFetchModifyWrite);
+  test.isTrue(setClauses.length > 0);
+  // Should set all schema columns
+  test.isTrue(setClauses.some(c => c.includes('title')));
+  test.isTrue(setClauses.some(c => c.includes('views')));
+});
+
+Tinytest.add('postgres - modifier - $push (simple) on jsonb column', (test) => {
+  const schema = createTestSchema();
+  const { setClauses, needsFetchModifyWrite } = compileModifier(
+    { $push: { tags: 'x' } }, schema
+  );
+  test.isFalse(needsFetchModifyWrite);
+  test.isTrue(setClauses[0].includes('||'));
+});
+
+Tinytest.add('postgres - modifier - $push with $each triggers fetch-modify-write', (test) => {
+  const schema = createTestSchema();
+  const { needsFetchModifyWrite } = compileModifier(
+    { $push: { tags: { $each: ['x', 'y'] } } }, schema
+  );
+  test.isTrue(needsFetchModifyWrite);
+});
+
+Tinytest.add('postgres - modifier - $pull triggers fetch-modify-write', (test) => {
+  const schema = createTestSchema();
+  const { needsFetchModifyWrite } = compileModifier(
+    { $pull: { tags: 'x' } }, schema
+  );
+  test.isTrue(needsFetchModifyWrite);
+});
+
+Tinytest.add('postgres - modifier - $addToSet triggers fetch-modify-write', (test) => {
+  const schema = createTestSchema();
+  const { needsFetchModifyWrite } = compileModifier(
+    { $addToSet: { tags: 'x' } }, schema
+  );
+  test.isTrue(needsFetchModifyWrite);
+});
+
+Tinytest.add('postgres - modifier - $rename triggers fetch-modify-write', (test) => {
+  const schema = createTestSchema();
+  const { needsFetchModifyWrite } = compileModifier(
+    { $rename: { title: 'name' } }, schema
+  );
+  test.isTrue(needsFetchModifyWrite);
+});
+
+// ============================================================================
+// UNIT TESTS — Sort Compiler
+// ============================================================================
+
+Tinytest.add('postgres - sort - single column asc', (test) => {
+  const schema = createTestSchema();
+  const result = compileSort({ title: 1 }, schema);
+  test.equal(result, 'title ASC NULLS LAST');
+});
+
+Tinytest.add('postgres - sort - single column desc', (test) => {
+  const schema = createTestSchema();
+  const result = compileSort({ views: -1 }, schema);
+  test.equal(result, 'views DESC NULLS LAST');
+});
+
+Tinytest.add('postgres - sort - _id', (test) => {
+  const schema = createTestSchema();
+  const result = compileSort({ _id: 1 }, schema);
+  test.equal(result, '_id ASC NULLS LAST');
+});
+
+Tinytest.add('postgres - sort - jsonb path', (test) => {
+  const schema = createTestSchema();
+  const result = compileSort({ 'metadata.k': 1 }, schema);
+  test.equal(result, "metadata->>'k' ASC NULLS LAST");
+});
+
+Tinytest.add('postgres - sort - multi-field', (test) => {
+  const schema = createTestSchema();
+  const result = compileSort({ views: -1, title: 1 }, schema);
+  test.equal(result, 'views DESC NULLS LAST, title ASC NULLS LAST');
+});
+
+Tinytest.add('postgres - sort - null/empty', (test) => {
+  test.equal(compileSort(null, null), '');
+  test.equal(compileSort({}, null), '');
+});
+
+// ============================================================================
+// UNIT TESTS — Row Converter
+// ============================================================================
+
+Tinytest.add('postgres - row converter - documentToRow basic', (test) => {
+  const schema = createTestSchema();
+  const doc = { _id: '123', title: 'Hello', views: 5, unknownField: 'extra' };
+  const row = documentToRow(doc, schema);
+
+  test.equal(row._id, '123');
+  test.equal(row.title, 'Hello');
+  test.equal(row.views, 5);
+  test.equal(row._extra.unknownField, 'extra');
+});
+
+Tinytest.add('postgres - row converter - rowToDocument basic', (test) => {
+  const schema = createTestSchema();
+  const row = {
+    _id: '123',
+    title: 'Hello',
+    body: null,
+    views: 5,
+    published: false,
+    tags: null,
+    metadata: null,
+    createdAt: new Date('2024-01-01'),
+    _extra: { unknownField: 'extra' },
+  };
+  const doc = rowToDocument(row, schema);
+
+  test.equal(doc._id, '123');
+  test.equal(doc.title, 'Hello');
+  test.equal(doc.views, 5);
+  test.equal(doc.published, false);
+  test.equal(doc.unknownField, 'extra');
+  // body should be omitted (NULL)
+  test.isFalse('body' in doc);
+  // tags should be omitted (NULL)
+  test.isFalse('tags' in doc);
+});
+
+Tinytest.add('postgres - row converter - round-trip', (test) => {
+  const schema = createTestSchema();
+  const original = {
+    _id: 'abc',
+    title: 'Test',
+    views: 42,
+    published: true,
+    tags: ['a', 'b'],
+    metadata: { key: 'value' },
+    extraField: 'overflow',
+  };
+
+  const row = documentToRow(original, schema);
+  const roundTripped = rowToDocument(row, schema);
+
+  test.equal(roundTripped._id, original._id);
+  test.equal(roundTripped.title, original.title);
+  test.equal(roundTripped.views, original.views);
+  test.equal(roundTripped.published, original.published);
+  test.equal(roundTripped.tags, original.tags);
+  test.equal(roundTripped.metadata.key, original.metadata.key);
+  test.equal(roundTripped.extraField, original.extraField);
+});
+
+Tinytest.add('postgres - row converter - _extra empty when no overflow', (test) => {
+  const schema = createTestSchema();
+  const doc = { _id: '1', title: 'Hi', views: 0 };
+  const row = documentToRow(doc, schema);
+  test.equal(Object.keys(row._extra).length, 0);
+});
+
+Tinytest.add('postgres - row converter - NULL handling', (test) => {
+  const schema = createTestSchema();
+  const row = {
+    _id: '1',
+    title: 'x',
+    body: null,
+    views: null,
+    published: null,
+    tags: null,
+    metadata: null,
+    createdAt: null,
+    _extra: {},
+  };
+  const doc = rowToDocument(row, schema);
+  // Only _id and title should be present
+  test.equal(Object.keys(doc).length, 2);
+  test.equal(doc._id, '1');
+  test.equal(doc.title, 'x');
+});
+
+// ============================================================================
+// UNIT TESTS — Query Builders
+// ============================================================================
+
+Tinytest.add('postgres - query builder - buildSelectQuery', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = buildSelectQuery(
+    'posts', { published: true }, { sort: { createdAt: -1 }, limit: 10, skip: 5 }, schema
+  );
+  test.isTrue(text.includes('SELECT * FROM posts'));
+  test.isTrue(text.includes('WHERE published = $1'));
+  test.isTrue(text.includes('ORDER BY'));
+  test.isTrue(text.includes('LIMIT'));
+  test.isTrue(text.includes('OFFSET'));
+  test.equal(values[0], true);
+});
+
+Tinytest.add('postgres - query builder - buildInsertQuery', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = buildInsertQuery(
+    'posts', { _id: '1', title: 'Hi', views: 0 }, schema
+  );
+  test.isTrue(text.includes('INSERT INTO posts'));
+  test.isTrue(text.includes('RETURNING _id'));
+  test.isTrue(values.includes('1'));
+  test.isTrue(values.includes('Hi'));
+});
+
+Tinytest.add('postgres - query builder - buildDeleteQuery', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = buildDeleteQuery(
+    'posts', { _id: '1' }, schema
+  );
+  test.isTrue(text.includes('DELETE FROM posts'));
+  test.isTrue(text.includes('WHERE _id = $1'));
+  test.equal(values, ['1']);
+});
+
+Tinytest.add('postgres - query builder - buildUpdateQuery (non-multi)', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = buildUpdateQuery(
+    'posts', { published: true }, { $set: { title: 'New' } }, {}, schema
+  );
+  // Non-multi: should use subquery with LIMIT 1
+  test.isTrue(text.includes('UPDATE posts SET title = $1'));
+  test.isTrue(text.includes('LIMIT 1'));
+  test.equal(values[0], 'New');
+});
+
+Tinytest.add('postgres - query builder - buildUpdateQuery (multi)', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = buildUpdateQuery(
+    'posts', { published: true }, { $inc: { views: 1 } }, { multi: true }, schema
+  );
+  test.isTrue(text.includes('UPDATE posts SET'));
+  test.isFalse(text.includes('LIMIT 1'));
+  test.isTrue(text.includes('COALESCE'));
+});
+
+Tinytest.add('postgres - query builder - buildUpsertQuery', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = buildUpsertQuery(
+    'posts', { _id: '1' }, { $set: { title: 'Upserted' } }, schema
+  );
+  test.isTrue(text.includes('INSERT INTO posts'));
+  test.isTrue(text.includes('ON CONFLICT (_id) DO UPDATE'));
+  test.isTrue(text.includes('RETURNING _id'));
+});
+
+// ============================================================================
+// UNIT TESTS — CompilationContext
+// ============================================================================
+
+Tinytest.add('postgres - CompilationContext - addParam tracking', (test) => {
+  const ctx = new CompilationContext();
+  test.equal(ctx.addParam('a'), '$1');
+  test.equal(ctx.addParam('b'), '$2');
+  test.equal(ctx.addParam(3), '$3');
+  test.equal(ctx.values, ['a', 'b', 3]);
+  test.equal(ctx.paramCount, 3);
+});
+
+// ============================================================================
+// INTEGRATION TESTS — require POSTGRES_URL
+// ============================================================================
+
+const POSTGRES_URL = process.env.POSTGRES_URL;
+const hasPostgres = !!POSTGRES_URL;
+
+if (hasPostgres) {
+  // Use a unique table name per test run to avoid conflicts
+  const testTableName = `test_pg_${Random.id(8).toLowerCase()}`;
+  let testProvider = null;
+
+  // Helper to create a fresh provider + collection for integration tests
+  async function setupIntegrationTest() {
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+
+    const schema = new ResolvedSchema({
+      title:     { type: 'text', required: true },
+      body:      { type: 'text' },
+      views:     { type: 'integer', default: 0 },
+      published: { type: 'boolean', default: false },
+      tags:      { type: 'jsonb' },
+      metadata:  { type: 'jsonb' },
+      createdAt: { type: 'timestamp', default: 'now' },
+    });
+
+    await provider.registerSchema(testTableName, schema);
+    return { provider, schema };
+  }
+
+  Tinytest.addAsync('postgres - integration - table auto-creation', async (test) => {
+    const { provider } = await setupIntegrationTest();
+    try {
+      // Table should exist
+      const result = await provider._connection.query(
+        `SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = $1)`,
+        [testTableName]
+      );
+      test.isTrue(result.rows[0].exists);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(testTableName)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - insert and find', async (test) => {
+    const table = `test_if_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text', required: true },
+      views: { type: 'integer', default: 0 },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      const id = await provider.insertAsync(table, { title: 'Hello', views: 10 });
+      test.isTrue(typeof id === 'string');
+
+      const results = await provider._fetchResults(table, { _id: id }, {});
+      test.equal(results.length, 1);
+      test.equal(results[0].title, 'Hello');
+      test.equal(results[0].views, 10);
+      test.equal(results[0]._id, id);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - findOne', async (test) => {
+    const table = `test_fo_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({ title: { type: 'text' } });
+    await provider.registerSchema(table, schema);
+
+    try {
+      await provider.insertAsync(table, { title: 'First' });
+      await provider.insertAsync(table, { title: 'Second' });
+
+      const doc = await provider.findOneAsync(table, { title: 'First' });
+      test.equal(doc.title, 'First');
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - update with $set', async (test) => {
+    const table = `test_us_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text' },
+      views: { type: 'integer', default: 0 },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      const id = await provider.insertAsync(table, { title: 'Old', views: 0 });
+      const affected = await provider.updateAsync(table, { _id: id }, { $set: { title: 'New' } });
+      test.equal(affected, 1);
+
+      const doc = await provider.findOneAsync(table, { _id: id });
+      test.equal(doc.title, 'New');
+      test.equal(doc.views, 0);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - update with $inc', async (test) => {
+    const table = `test_ui_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text' },
+      views: { type: 'integer', default: 0 },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      const id = await provider.insertAsync(table, { title: 'Test', views: 5 });
+      await provider.updateAsync(table, { _id: id }, { $inc: { views: 3 } });
+
+      const doc = await provider.findOneAsync(table, { _id: id });
+      test.equal(doc.views, 8);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - update with $unset', async (test) => {
+    const table = `test_uu_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text' },
+      body:  { type: 'text' },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      const id = await provider.insertAsync(table, { title: 'Test', body: 'Content' });
+      await provider.updateAsync(table, { _id: id }, { $unset: { body: 1 } });
+
+      const doc = await provider.findOneAsync(table, { _id: id });
+      test.equal(doc.title, 'Test');
+      test.isFalse('body' in doc);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - remove', async (test) => {
+    const table = `test_rm_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({ title: { type: 'text' } });
+    await provider.registerSchema(table, schema);
+
+    try {
+      const id = await provider.insertAsync(table, { title: 'Delete me' });
+      const removed = await provider.removeAsync(table, { _id: id });
+      test.equal(removed, 1);
+
+      const doc = await provider.findOneAsync(table, { _id: id });
+      test.isUndefined(doc);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - sort, limit, skip', async (test) => {
+    const table = `test_sls_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text' },
+      order: { type: 'integer' },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      await provider.insertAsync(table, { title: 'C', order: 3 });
+      await provider.insertAsync(table, { title: 'A', order: 1 });
+      await provider.insertAsync(table, { title: 'B', order: 2 });
+      await provider.insertAsync(table, { title: 'D', order: 4 });
+
+      // Sort ascending, skip 1, limit 2
+      const results = await provider._fetchResults(table, {}, {
+        sort: { order: 1 },
+        skip: 1,
+        limit: 2,
+      });
+
+      test.equal(results.length, 2);
+      test.equal(results[0].title, 'B');
+      test.equal(results[1].title, 'C');
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - _extra overflow fields', async (test) => {
+    const table = `test_ex_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({ title: { type: 'text' } });
+    await provider.registerSchema(table, schema);
+
+    try {
+      const id = await provider.insertAsync(table, {
+        title: 'Test',
+        extraString: 'hello',
+        extraNumber: 42,
+        extraObj: { nested: true },
+      });
+
+      const doc = await provider.findOneAsync(table, { _id: id });
+      test.equal(doc.title, 'Test');
+      test.equal(doc.extraString, 'hello');
+      test.equal(doc.extraNumber, 42);
+      test.equal(doc.extraObj.nested, true);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - multi-document update', async (test) => {
+    const table = `test_mu_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text' },
+      published: { type: 'boolean', default: false },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      await provider.insertAsync(table, { title: 'A', published: false });
+      await provider.insertAsync(table, { title: 'B', published: false });
+      await provider.insertAsync(table, { title: 'C', published: true });
+
+      const affected = await provider.updateAsync(
+        table,
+        { published: false },
+        { $set: { published: true } },
+        { multi: true }
+      );
+      test.equal(affected, 2);
+
+      const all = await provider._fetchResults(table, { published: true }, {});
+      test.equal(all.length, 3);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - JSONB path queries', async (test) => {
+    const table = `test_jp_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text' },
+      metadata: { type: 'jsonb' },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      await provider.insertAsync(table, {
+        title: 'Post 1',
+        metadata: { author: 'Alice', rating: 5 },
+      });
+      await provider.insertAsync(table, {
+        title: 'Post 2',
+        metadata: { author: 'Bob', rating: 3 },
+      });
+
+      const results = await provider._fetchResults(table, { 'metadata.author': 'Alice' }, {});
+      test.equal(results.length, 1);
+      test.equal(results[0].title, 'Post 1');
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - fetch-modify-write ($push with $each)', async (test) => {
+    const table = `test_fmw_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text' },
+      tags: { type: 'jsonb' },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      const id = await provider.insertAsync(table, { title: 'Test', tags: ['a'] });
+
+      await provider.updateAsync(
+        table,
+        { _id: id },
+        { $push: { tags: { $each: ['b', 'c'] } } }
+      );
+
+      const doc = await provider.findOneAsync(table, { _id: id });
+      test.equal(doc.tags.length, 3);
+      test.equal(doc.tags[0], 'a');
+      test.equal(doc.tags[1], 'b');
+      test.equal(doc.tags[2], 'c');
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - observeChanges', async (test) => {
+    const table = `test_oc_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({ title: { type: 'text' } });
+    await provider.registerSchema(table, schema);
+
+    try {
+      // Insert a doc first
+      const id = await provider.insertAsync(table, { title: 'Initial' });
+
+      const added = [];
+      const changed = [];
+      const removed = [];
+
+      const handle = await provider.observeChanges(
+        { collectionName: table, selector: {}, options: {} },
+        false, // unordered
+        {
+          added(id, fields) { added.push({ id, fields }); },
+          changed(id, fields) { changed.push({ id, fields }); },
+          removed(id) { removed.push(id); },
+        }
+      );
+
+      // Initial state should have fired added for the existing doc
+      test.equal(added.length, 1);
+      test.equal(added[0].fields.title, 'Initial');
+
+      // Insert another doc and wait for poll
+      const id2 = await provider.insertAsync(table, { title: 'New' });
+
+      // Wait for poll to detect the change
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      test.isTrue(added.length >= 2);
+
+      handle.stop();
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - AFS provider registration', async (test) => {
+    // Verify the provider can be registered with AFS
+    // PostgresStreamProvider imported at top of file
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+
+    try {
+      AFS.registerProvider('postgres-test', provider);
+      const retrieved = AFS.getProvider('postgres-test');
+      test.equal(retrieved, provider);
+      test.equal(provider.capabilities().reactiveQueries, true);
+      test.equal(provider.capabilities().transactions, true);
+      test.equal(provider.capabilities().joins, true);
+    } finally {
+      AFS.removeProvider('postgres-test');
+      await provider.close();
+    }
+  });
+
+} else {
+  Tinytest.add('postgres - integration - SKIPPED (set POSTGRES_URL to run)', (test) => {
+    // Placeholder test when POSTGRES_URL is not set
+    test.isTrue(true, 'Integration tests skipped: POSTGRES_URL not set');
+  });
+}

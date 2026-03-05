@@ -393,3 +393,29 @@ Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
 Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
+
+// ---------------------------------------------------------------------------
+// AFS Integration
+// ---------------------------------------------------------------------------
+// When the afs package is loaded, register each Mongo.Collection with AFS
+// so other packages can find collections by name regardless of data source.
+if (Meteor.isServer) {
+  Meteor.startup(() => {
+    if (Package.afs) {
+      const { registerMongoWithAFS } = require('../mongo_stream_provider');
+      registerMongoWithAFS();
+
+      // Register all existing Mongo.Collections with AFS
+      for (const [name, collection] of Mongo._collections) {
+        Package.afs.AFS.registerCollection(name, collection);
+      }
+    }
+  });
+}
+
+// Register collections with AFS as they're created (if afs is loaded)
+Mongo.Collection.addExtension(function (name) {
+  if (Package.afs && name) {
+    Package.afs.AFS.registerCollection(name, this);
+  }
+});

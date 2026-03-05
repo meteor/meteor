@@ -73,6 +73,9 @@ Package.onUse(function (api) {
   // If the facts package is loaded, publish some statistics.
   api.use("facts-base", "server", { weak: true });
 
+  // AFS integration - register MongoDB as a provider when afs is loaded
+  api.use("afs", { weak: true });
+
   api.use("callback-hook", "server");
 
   // Stuff that should be exposed via a real API, but we haven't yet.
@@ -103,6 +106,7 @@ Package.onUse(function (api) {
   api.addFiles("remote_collection_driver.ts", "server");
   api.addFiles("collection/collection_extensions.js", ["client", "server"]);
   api.addFiles("collection/collection.js", ["client", "server"]);
+  api.addFiles("mongo_stream_provider.js", "server");
   api.addFiles("connection_options.ts", "server");
   // For zodern:types to pick up our published types.
   // Both the .d.ts file and package-types.json must be published
