@@ -133,7 +133,7 @@ Object.assign(StreamServer.prototype, {
       // and setting it back to zero when we set up the heartbeat in
       // livedata_server.js.
       socket.setWebsocketTimeout = function (timeout) {
-        if ((socket.protocol === 'websocket' || socket.protocol === 'websocket-raw') && socket._session.recv) {
+        if ((socket.protocol === 'websocket' || socket.protocol === 'websocket-raw') && socket._session && socket._session.recv) {
           socket._session.recv.connection.setTimeout(timeout);
         }
       };

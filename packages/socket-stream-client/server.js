@@ -1,6 +1,5 @@
-import {
-  setMinimumBrowserVersions,
-} from "meteor/modern-browsers";
+import { Meteor } from "meteor/meteor";
+import { setMinimumBrowserVersions } from "meteor/modern-browsers";
 
 setMinimumBrowserVersions({
   chrome: 16,
@@ -13,6 +12,7 @@ setMinimumBrowserVersions({
   electron: [0, 20],
 }, module.id);
 
-if (process.env.DISABLE_SOCKJS) {
-  __meteor_runtime_config__.DISABLE_SOCKJS = process.env.DISABLE_SOCKJS;
+const disableSockJS = !!process.env.DISABLE_SOCKJS || !!Meteor.settings?.packages?.['ddp-server']?.uws;
+if (disableSockJS) {
+  __meteor_runtime_config__.DISABLE_SOCKJS = disableSockJS;
 }
