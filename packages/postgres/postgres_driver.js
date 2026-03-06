@@ -186,8 +186,23 @@ export class PostgresConnection extends EventEmitter {
     // Register callback
     const shouldListen = !this._notifyCallbacks.has(channel);
     if (shouldListen) {
-      await this.query(fnSql);
-      await this.query(triggerSql);
+      const client = await this.getClient();
+      try {
+        await client.query('BEGIN');
+        await client.query(fnSql);
+        await client.query(triggerSql);
+        await client.query('COMMIT');
+      } catch (error) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackError) {
+          Log.error('Postgres: rollback failed after trigger/function setup error:', rollbackError);
+        }
+        throw error;
+      } finally {
+        client.release();
+      }
+
       this._notifyCallbacks.set(channel, new Set());
     }
     this._notifyCallbacks.get(channel).add(callback);
@@ -249,6 +264,10 @@ export class PostgresConnection extends EventEmitter {
     await attempt();
   }
 
+  /**
+   * Attach shared LISTEN client handlers for notifications and reconnects.
+   * @param {Object} client - pg client used for LISTEN/NOTIFY
+   */
   _attachListenClientHandlers(client) {
     client.on('notification', (msg) => {
       const callbacks = this._notifyCallbacks.get(msg.channel);
@@ -274,9 +293,13 @@ export class PostgresConnection extends EventEmitter {
 
     client.on('error', (err) => {
       Log.error('Postgres LISTEN client error:', err);
-      const oldClient = this._listenClient;
+      if (this._listenClient !== client) {
+        try { client.end(); } catch (e) { /* ignore */ }
+        return;
+      }
+
       this._listenClient = null;
-      try { oldClient.end(); } catch (e) { /* ignore */ }
+      try { client.end(); } catch (e) { /* ignore */ }
       this.emit('listen:lost', { error: err });
       this._reconnectListenClient();
     });
