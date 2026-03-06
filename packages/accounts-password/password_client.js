@@ -1,4 +1,8 @@
-// Used in the various functions below to handle errors consistently
+/**
+ * @summary Reports an error via callback if provided, otherwise throws it.
+ * @param {Error} error The error to report.
+ * @param {Function} [callback] Optional callback. If provided, called with the error; otherwise the error is thrown.
+ */
 const reportError = (error, callback) => {
    if (callback) {
      callback(error);
@@ -7,10 +11,41 @@ const reportError = (error, callback) => {
    }
 };
 
+/**
+ * @summary Validates that a password is a non-empty string. Reports an error via callback if invalid.
+ * @param {*} password The password value to validate.
+ * @param {Function} [callback] Optional callback for error reporting.
+ * @returns {boolean} `true` if the password is valid, `false` otherwise.
+ */
+const validatePasswordString = (password, callback) => {
+  if (typeof password !== "string") {
+    reportError(new Meteor.Error(400, "Password must be a string"), callback);
+    return false;
+  }
+  if (!password) {
+    reportError(new Meteor.Error(400, "Password may not be empty"), callback);
+    return false;
+  }
+  return true;
+};
+
+/**
+ * @summary Internal helper that performs a password-based login, optionally with a 2FA code.
+ * @param {Object} options
+ * @param {String|Object} options.selector Username, email string, or selector object.
+ * @param {String} options.password The user's plaintext password (hashed before sending).
+ * @param {String} [options.code] Optional 2FA code.
+ * @param {Function} [options.callback] Optional callback.
+ * @returns {String|Object} The resolved selector.
+ */
 const internalLoginWithPassword = ({ selector, password, code, callback }) => {
-  if (typeof selector === 'string')
-    if (!selector.includes('@')) selector = { username: selector };
-    else selector = { email: selector };
+  if (typeof selector === 'string') {
+    if (!selector.includes('@')) {
+      selector = { username: selector };
+    } else {
+      selector = { email: selector };
+    }
+  }
   Accounts.callLoginMethod({
     methodArguments: [
       {
@@ -23,7 +58,7 @@ const internalLoginWithPassword = ({ selector, password, code, callback }) => {
       if (error) {
         reportError(error, callback);
       } else {
-        callback && callback(error, result);
+        callback?.(error, result);
       }
     },
   });
@@ -165,13 +200,7 @@ Accounts.changePassword = (oldPassword, newPassword, callback) => {
     return reportError(new Error("Must be logged in to change password."), callback);
   }
 
-  if (!(typeof newPassword === "string" || newPassword instanceof String)) {
-    return reportError(new Meteor.Error(400, "Password must be a string"), callback);
-  }
-
-  if (!newPassword) {
-    return reportError(new Meteor.Error(400, "Password may not be empty"), callback);
-  }
+  if (!validatePasswordString(newPassword, callback)) return;
 
   Accounts.connection.apply(
     'changePassword',
@@ -183,7 +212,7 @@ Accounts.changePassword = (oldPassword, newPassword, callback) => {
         reportError(
           error || new Error("No result from changePassword."), callback);
       } else {
-        callback && callback();
+        callback?.();
       }
     }
   );
@@ -209,11 +238,7 @@ Accounts.forgotPassword = (options, callback) => {
     return reportError(new Meteor.Error(400, "Must pass options.email"), callback);
   }
 
-  if (callback) {
-    Accounts.connection.call("forgotPassword", options, callback);
-  } else {
-    Accounts.connection.call("forgotPassword", options);
-  }
+  Accounts.connection.call("forgotPassword", options, ...callback ? [callback] : []);
 };
 
 // Resets a password based on a token originally created by
@@ -232,17 +257,11 @@ Accounts.forgotPassword = (options, callback) => {
  * @importFromPackage accounts-base
  */
 Accounts.resetPassword = (token, newPassword, callback) => {
-  if (!(typeof token === "string" || token instanceof String)) {
+  if (typeof token !== "string") {
     return reportError(new Meteor.Error(400, "Token must be a string"), callback);
   }
 
-  if (!(typeof newPassword === "string" || newPassword instanceof String)) {
-    return reportError(new Meteor.Error(400, "Password must be a string"), callback);
-  }
-
-  if (!newPassword) {
-    return reportError(new Meteor.Error(400, "Password may not be empty"), callback);
-  }
+  if (!validatePasswordString(newPassword, callback)) return;
 
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
