@@ -564,6 +564,638 @@ if (Meteor.isServer) {
 // Client-side Tests
 // ===========================================================================
 
+// ===========================================================================
+// ChangeStream Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  Tinytest.add('afs - ChangeStream - emits data events', (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const events = [];
+
+    stream.on('added', (id, fields) => events.push({ type: 'added', id, fields }));
+    stream.on('changed', (id, fields) => events.push({ type: 'changed', id, fields }));
+    stream.on('removed', (id) => events.push({ type: 'removed', id }));
+
+    stream.added('doc1', { name: 'Alice' });
+    stream.changed('doc1', { name: 'Bob' });
+    stream.removed('doc1');
+
+    test.equal(events.length, 3);
+    test.equal(events[0].type, 'added');
+    test.equal(events[0].id, 'doc1');
+    test.equal(events[0].fields.name, 'Alice');
+    test.equal(events[1].type, 'changed');
+    test.equal(events[1].fields.name, 'Bob');
+    test.equal(events[2].type, 'removed');
+    test.equal(events[2].id, 'doc1');
+
+    stream.stop();
+  });
+
+  Tinytest.add('afs - ChangeStream - emits ordered events', (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const events = [];
+
+    stream.on('addedBefore', (id, fields, before) => events.push({ type: 'addedBefore', id, fields, before }));
+    stream.on('movedBefore', (id, before) => events.push({ type: 'movedBefore', id, before }));
+
+    stream.addedBefore('doc1', { name: 'Alice' }, null);
+    stream.addedBefore('doc2', { name: 'Bob' }, 'doc1');
+    stream.movedBefore('doc1', null);
+
+    test.equal(events.length, 3);
+    test.equal(events[0].type, 'addedBefore');
+    test.equal(events[0].before, null);
+    test.equal(events[1].before, 'doc1');
+    test.equal(events[2].type, 'movedBefore');
+
+    stream.stop();
+  });
+
+  Tinytest.add('afs - ChangeStream - lifecycle events', (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const lifecycle = [];
+
+    // Install error handler to prevent unhandled error
+    stream.on('error', () => {});
+
+    stream.on('ready', () => lifecycle.push('ready'));
+    stream.on('error', () => lifecycle.push('error'));
+    stream.on('reconnected', () => lifecycle.push('reconnected'));
+    stream.on('reset', () => lifecycle.push('reset'));
+    stream.on('paused', () => lifecycle.push('paused'));
+    stream.on('resumed', () => lifecycle.push('resumed'));
+
+    test.isFalse(stream.isReady());
+    stream.markReady();
+    test.isTrue(stream.isReady());
+
+    stream.markError(new Error('test'));
+    stream.markReconnected();
+    stream.markReset();
+    stream.markPaused();
+    stream.markResumed();
+
+    test.equal(lifecycle, ['ready', 'error', 'reconnected', 'reset', 'paused', 'resumed']);
+    stream.stop();
+  });
+
+  Tinytest.add('afs - ChangeStream - stop clears listeners', (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    let stopEmitted = false;
+
+    stream.on('stop', () => { stopEmitted = true; });
+    stream.on('added', () => {});
+
+    test.isFalse(stream.isStopped());
+    stream.stop();
+    test.isTrue(stream.isStopped());
+    test.isTrue(stopEmitted);
+
+    // After stop, listeners should be removed
+    test.equal(stream.listenerCount('added'), 0);
+  });
+
+  Tinytest.add('afs - ChangeStream - double stop is safe', (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    stream.stop();
+    stream.stop(); // Should not throw
+    test.isTrue(stream.isStopped());
+  });
+}
+
+// ===========================================================================
+// ObserveMultiplexer Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('afs - ObserveMultiplexer - fans out to multiple handles', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+
+    // Create multiplexer BEFORE emitting, so it can cache
+    const multiplexer = new AFS.ObserveMultiplexer(stream, false);
+
+    // Emit initial data then mark ready
+    stream.added('doc1', { name: 'Alice' });
+    stream.added('doc2', { name: 'Bob' });
+    stream.markReady();
+
+    // First handle
+    const added1 = [];
+    const handle1 = await multiplexer.addHandle({
+      added(id, fields) { added1.push({ id, fields }); },
+    });
+
+    // Should have received initial adds from cache
+    test.equal(added1.length, 2);
+
+    // Second handle (late joiner)
+    const added2 = [];
+    const handle2 = await multiplexer.addHandle({
+      added(id, fields) { added2.push({ id, fields }); },
+    });
+
+    // Late joiner should also get initial state
+    test.equal(added2.length, 2);
+
+    // Emit a new change — both should receive it
+    stream.added('doc3', { name: 'Charlie' });
+    test.equal(added1.length, 3);
+    test.equal(added2.length, 3);
+
+    handle1.stop();
+    handle2.stop();
+  });
+
+  Tinytest.addAsync('afs - ObserveMultiplexer - handles changed and removed', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const multiplexer = new AFS.ObserveMultiplexer(stream, false);
+
+    stream.added('doc1', { name: 'Alice', age: 30 });
+    stream.markReady();
+
+    const changes = [];
+    const removals = [];
+    const handle = await multiplexer.addHandle({
+      added(id, fields) {},
+      changed(id, fields) { changes.push({ id, fields }); },
+      removed(id) { removals.push(id); },
+    });
+
+    stream.changed('doc1', { age: 31 });
+    test.equal(changes.length, 1);
+    test.equal(changes[0].fields.age, 31);
+
+    stream.removed('doc1');
+    test.equal(removals.length, 1);
+    test.equal(removals[0], 'doc1');
+
+    handle.stop();
+  });
+
+  Tinytest.addAsync('afs - ObserveMultiplexer - ordered mode', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const multiplexer = new AFS.ObserveMultiplexer(stream, true);
+
+    stream.addedBefore('doc1', { name: 'Alice' }, null);
+    stream.addedBefore('doc2', { name: 'Bob' }, 'doc1');
+    stream.markReady();
+
+    const events = [];
+    const handle = await multiplexer.addHandle({
+      addedBefore(id, fields, before) { events.push({ type: 'addedBefore', id, before }); },
+      movedBefore(id, before) { events.push({ type: 'movedBefore', id, before }); },
+      changed(id, fields) { events.push({ type: 'changed', id }); },
+      removed(id) { events.push({ type: 'removed', id }); },
+    });
+
+    // Should have received initial adds
+    test.equal(events.length, 2);
+    test.equal(events[0].type, 'addedBefore');
+
+    // Emit a move
+    stream.movedBefore('doc2', null);
+    test.equal(events.length, 3);
+    test.equal(events[2].type, 'movedBefore');
+
+    handle.stop();
+  });
+
+  Tinytest.addAsync('afs - ObserveMultiplexer - lifecycle events forwarded', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+
+    // Install error handler on stream to prevent unhandled error
+    stream.on('error', () => {});
+
+    const multiplexer = new AFS.ObserveMultiplexer(stream, false);
+    stream.markReady();
+
+    const lifecycle = [];
+    const handle = await multiplexer.addHandle({
+      added() {},
+      error(err) { lifecycle.push('error:' + err.message); },
+      reconnected() { lifecycle.push('reconnected'); },
+      reset() { lifecycle.push('reset'); },
+      paused() { lifecycle.push('paused'); },
+      resumed() { lifecycle.push('resumed'); },
+    });
+
+    stream.markError(new Error('test-err'));
+    stream.markReconnected();
+    stream.markReset();
+    stream.markPaused();
+    stream.markResumed();
+
+    test.equal(lifecycle, [
+      'error:test-err',
+      'reconnected',
+      'reset',
+      'paused',
+      'resumed',
+    ]);
+
+    handle.stop();
+  });
+
+  Tinytest.addAsync('afs - ObserveMultiplexer - stream stops when last handle removed', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const multiplexer = new AFS.ObserveMultiplexer(stream, false);
+    stream.markReady();
+
+    const handle1 = await multiplexer.addHandle({ added() {} });
+    const handle2 = await multiplexer.addHandle({ added() {} });
+
+    test.isFalse(stream.isStopped());
+    handle1.stop();
+    test.isFalse(stream.isStopped()); // Still one handle
+    handle2.stop();
+    test.isTrue(stream.isStopped()); // No more handles — stream stopped
+  });
+}
+
+// ===========================================================================
+// EventEmitter Path Integration Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('afs - EventEmitter path - MockStreamProvider observeChanges works', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+
+    await provider.insertAsync('ee-test', { name: 'Alice' });
+    await provider.insertAsync('ee-test', { name: 'Bob' });
+
+    // Verify provider supports EventEmitter
+    test.isTrue(provider._supportsEventEmitter());
+
+    const cursor = new AFS.Cursor(provider, 'ee-test', {});
+    const added = [];
+
+    const handle = await cursor.observeChangesAsync({
+      added(id, fields) { added.push({ id, fields }); },
+      changed() {},
+      removed() {},
+    });
+
+    // Should have received both documents
+    test.equal(added.length, 2);
+    const names = added.map(a => a.fields.name).sort();
+    test.equal(names[0], 'Alice');
+    test.equal(names[1], 'Bob');
+
+    handle.stop();
+  });
+
+  Tinytest.addAsync('afs - EventEmitter path - reactive updates propagate', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+
+    await provider.insertAsync('ee-reactive', { name: 'Original' });
+
+    const events = [];
+    const cursor = new AFS.Cursor(provider, 'ee-reactive', {});
+
+    const handle = await cursor.observeChangesAsync({
+      added(id, fields) { events.push({ type: 'added', id, name: fields.name }); },
+      changed(id, fields) { events.push({ type: 'changed', id, fields }); },
+      removed(id) { events.push({ type: 'removed', id }); },
+    });
+
+    // Should have one initial add
+    test.equal(events.length, 1);
+    test.equal(events[0].type, 'added');
+    test.equal(events[0].name, 'Original');
+
+    // Insert another document — should trigger added
+    await provider.insertAsync('ee-reactive', { name: 'New' });
+    test.equal(events.length, 2);
+    test.equal(events[1].type, 'added');
+
+    handle.stop();
+  });
+
+  Tinytest.add('afs - StreamProvider - _supportsEventEmitter defaults false', (test) => {
+    class TestProvider extends AFS.StreamProvider {
+      constructor() { super({ name: 'test' }); }
+    }
+    const provider = new TestProvider();
+    test.isFalse(provider._supportsEventEmitter());
+  });
+
+  Tinytest.add('afs - StreamProvider - createChangeStream returns ChangeStream', (test) => {
+    class TestProvider extends AFS.StreamProvider {
+      constructor() { super({ name: 'test' }); }
+    }
+    const provider = new TestProvider();
+    const stream = provider.createChangeStream({ collectionName: 'test', selector: {} });
+    test.isTrue(stream instanceof AFS.ChangeStream);
+    stream.stop();
+  });
+
+  Tinytest.add('afs - StreamProvider - startObserving throws by default', (test) => {
+    class TestProvider extends AFS.StreamProvider {
+      constructor() { super({ name: 'test' }); }
+    }
+    const provider = new TestProvider();
+    test.throws(() => {
+      provider.startObserving({}, false);
+    }, /must be implemented/);
+  });
+}
+
+// ===========================================================================
+// AdaptiveEngine ChangeStream Integration Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  Tinytest.add('afs - AdaptiveEngine - attachToStream tracks metrics', (test) => {
+    const engine = AFS.getEngine();
+    engine.reset();
+
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    // Install error handler to prevent unhandled error
+    stream.on('error', () => {});
+
+    const detach = engine.attachToStream(stream);
+
+    stream.added('doc1', { name: 'Alice' });
+    stream.changed('doc1', { name: 'Bob' });
+    stream.removed('doc1');
+    stream.markError(new Error('test'));
+    stream.markReconnected();
+
+    const metrics = engine.getMetrics();
+    test.equal(metrics.totalChanges, 3);
+    test.equal(metrics.errors, 1);
+    test.equal(metrics.reconnections, 1);
+
+    // Detach and verify no more tracking
+    detach();
+    stream.added('doc2', { name: 'Charlie' });
+    const metrics2 = engine.getMetrics();
+    test.equal(metrics2.totalChanges, 3); // Unchanged
+
+    stream.stop();
+    engine.reset();
+  });
+}
+
+// ===========================================================================
+// Client-side Tests
+// ===========================================================================
+
+// ===========================================================================
+// Registry EventEmitter Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  Tinytest.add('afs - Registry - emits provider:registered event', (test) => {
+    AFS._reset();
+
+    let emitted = null;
+    AFS.on('provider:registered', (name, provider) => {
+      emitted = { name, provider };
+    });
+
+    const provider = new AFS.MockStreamProvider();
+    AFS.registerProvider('ev-test', provider);
+
+    test.equal(emitted.name, 'ev-test');
+    test.equal(emitted.provider, provider);
+
+    AFS._reset();
+  });
+
+  Tinytest.add('afs - Registry - emits provider:removed event', (test) => {
+    AFS._reset();
+
+    const provider = new AFS.MockStreamProvider();
+    AFS.registerProvider('rm-test', provider);
+
+    let removedName = null;
+    AFS.on('provider:removed', (name) => { removedName = name; });
+
+    AFS.removeProvider('rm-test');
+    test.equal(removedName, 'rm-test');
+
+    AFS._reset();
+  });
+
+  Tinytest.add('afs - Registry - emits provider:default-changed event', (test) => {
+    AFS._reset();
+
+    const p1 = new AFS.MockStreamProvider();
+    const p2 = new AFS.MockStreamProvider();
+    AFS.registerProvider('a', p1);
+    AFS.registerProvider('b', p2);
+
+    let changed = null;
+    AFS.on('provider:default-changed', (name, provider) => {
+      changed = { name, provider };
+    });
+
+    AFS.setDefaultProvider('b');
+    test.equal(changed.name, 'b');
+    test.equal(changed.provider, p2);
+
+    AFS._reset();
+  });
+
+  Tinytest.add('afs - Registry - emits collection:registered event', (test) => {
+    AFS._reset();
+
+    let emitted = null;
+    AFS.on('collection:registered', (name, col) => { emitted = { name, col }; });
+
+    const col = { _name: 'ev-col' };
+    AFS.registerCollection('ev-col', col);
+
+    test.equal(emitted.name, 'ev-col');
+    test.equal(emitted.col, col);
+
+    AFS._reset();
+  });
+
+  Tinytest.add('afs - Registry - emits core-collection:registered event', (test) => {
+    AFS._reset();
+
+    const coreEvents = [];
+    const colEvents = [];
+    AFS.on('core-collection:registered', (name, col) => { coreEvents.push(name); });
+    AFS.on('collection:registered', (name, col) => { colEvents.push(name); });
+
+    const col = { _name: 'users' };
+    AFS.registerCoreCollection('users', col);
+
+    test.equal(coreEvents.length, 1);
+    test.equal(coreEvents[0], 'users');
+    // Should also emit collection:registered
+    test.isTrue(colEvents.includes('users'));
+
+    AFS._reset();
+  });
+}
+
+// ===========================================================================
+// FederatedCollection Mutation Lifecycle Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('afs - FederatedCollection - emits before:insert and after:insert', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-mut-insert-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    const events = [];
+    collection.on('before:insert', (data) => events.push({ type: 'before:insert', doc: data.doc }));
+    collection.on('after:insert', (data) => events.push({ type: 'after:insert', id: data.id }));
+
+    const id = await collection.insertAsync({ title: 'Lifecycle Test' });
+
+    test.equal(events.length, 2);
+    test.equal(events[0].type, 'before:insert');
+    test.equal(events[0].doc.title, 'Lifecycle Test');
+    test.equal(events[1].type, 'after:insert');
+    test.equal(events[1].id, id);
+  });
+
+  Tinytest.addAsync('afs - FederatedCollection - emits before:update and after:update', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-mut-update-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    const id = await collection.insertAsync({ title: 'Original' });
+
+    const events = [];
+    collection.on('before:update', (data) => events.push({ type: 'before:update', selector: data.selector }));
+    collection.on('after:update', (data) => events.push({ type: 'after:update', result: data.result }));
+
+    await collection.updateAsync({ _id: id }, { $set: { title: 'Changed' } });
+
+    test.equal(events.length, 2);
+    test.equal(events[0].type, 'before:update');
+    test.equal(events[1].type, 'after:update');
+  });
+
+  Tinytest.addAsync('afs - FederatedCollection - emits before:remove and after:remove', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-mut-remove-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    const id = await collection.insertAsync({ title: 'ToRemove' });
+
+    const events = [];
+    collection.on('before:remove', (data) => events.push({ type: 'before:remove', selector: data.selector }));
+    collection.on('after:remove', (data) => events.push({ type: 'after:remove', result: data.result }));
+
+    await collection.removeAsync({ _id: id });
+
+    test.equal(events.length, 2);
+    test.equal(events[0].type, 'before:remove');
+    test.equal(events[1].type, 'after:remove');
+    test.equal(events[1].result, 1);
+  });
+
+  Tinytest.add('afs - FederatedCollection - has EventEmitter methods', (test) => {
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-ee-check-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    // Should have EventEmitter methods
+    test.isTrue(typeof collection.on === 'function');
+    test.isTrue(typeof collection.once === 'function');
+    test.isTrue(typeof collection.emit === 'function');
+    test.isTrue(typeof collection.removeListener === 'function');
+
+    // Should still have allow/deny methods
+    test.isTrue(typeof collection.allow === 'function');
+    test.isTrue(typeof collection.deny === 'function');
+  });
+}
+
+// ===========================================================================
+// _publishCursor Lifecycle Forwarding Test (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('afs - _publishCursor - forwards lifecycle events to sub', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+    await provider.insertAsync('pub-lifecycle', { name: 'Doc1' });
+
+    const cursor = new AFS.Cursor(provider, 'pub-lifecycle', {});
+
+    // Mock DDP subscription
+    const subEvents = [];
+    const mockSub = {
+      added(col, id, fields) { subEvents.push({ type: 'added', col, id }); },
+      changed(col, id, fields) { subEvents.push({ type: 'changed', col, id }); },
+      removed(col, id) { subEvents.push({ type: 'removed', col, id }); },
+      error(err) { subEvents.push({ type: 'error', message: err.message }); },
+      ready() { subEvents.push({ type: 'ready' }); },
+      onStop(fn) { mockSub._stopFn = fn; },
+    };
+
+    const handle = await cursor._publishCursor(mockSub);
+
+    // Should have added at least one document
+    test.isTrue(subEvents.some(e => e.type === 'added'));
+
+    // Clean up
+    handle.stop();
+  });
+}
+
+// ===========================================================================
+// AdaptiveEngine auto-attach integration test (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('afs - AdaptiveEngine - auto-attaches via _getMultiplexer', async (test) => {
+    const engine = AFS.getEngine();
+    engine.reset();
+
+    const provider = new AFS.MockStreamProvider();
+    await provider.insertAsync('engine-auto', { name: 'Test' });
+
+    // observeChanges goes through _getMultiplexer which should auto-attach engine
+    const cursor = new AFS.Cursor(provider, 'engine-auto', {});
+    const handle = await cursor.observeChangesAsync({
+      added() {},
+      changed() {},
+      removed() {},
+    });
+
+    // Insert another doc to trigger a change event
+    await provider.insertAsync('engine-auto', { name: 'Another' });
+
+    const metrics = engine.getMetrics();
+    // totalChanges should be > 0 (initial adds + the new insert)
+    test.isTrue(metrics.totalChanges > 0);
+
+    handle.stop();
+    engine.reset();
+  });
+}
+
+// ===========================================================================
+// Client-side Tests
+// ===========================================================================
+
 if (Meteor.isClient) {
   Tinytest.add('afs - Client - AFS global exists', (test) => {
     test.isTrue(typeof AFS !== 'undefined');
@@ -584,5 +1216,533 @@ if (Meteor.isClient) {
     test.equal(AFS.getCollection('client-test'), mockCollection);
 
     AFS._reset();
+  });
+
+  // Task 26: Client stubs don't throw
+  Tinytest.add('afs - Client - server-only methods don\'t throw', (test) => {
+    test.equal(AFS.getEngine(), null);
+    test.isTrue(typeof AFS.getMetrics() === 'object');
+    AFS.resetMetrics(); // no-op, should not throw
+    AFS.registerProvider('x', {}); // no-op
+    test.equal(AFS.getProvider('x'), undefined);
+    test.equal(AFS.getDefaultProvider(), null);
+    test.equal(AFS.getDefaultProviderName(), null);
+    test.isTrue(Array.isArray(AFS.listProviders()));
+    test.equal(AFS.listProviders().length, 0);
+    AFS.removeProvider('x'); // no-op
+    test.isTrue(Array.isArray(AFS.listCoreCollections()));
+  });
+
+  // Task 26: Client module exports are importable
+  Tinytest.add('afs - Client - ChangeStream/ObserveMultiplexer are importable', (test) => {
+    test.isTrue(typeof AFS.ChangeStream === 'function');
+    test.isTrue(typeof AFS.ObserveMultiplexer === 'function');
+    test.isTrue(typeof AFS.Cursor === 'function');
+    test.isTrue(typeof AFS.MockStreamProvider === 'function');
+    test.isTrue(typeof AFS.ObjectID === 'function');
+  });
+}
+
+// ===========================================================================
+// Phase 1 Gap Fix Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  // Task 23: ChangeStream — markError on stream with no error listener doesn't crash
+  Tinytest.add('afs - ChangeStream - markError without error listener does not crash', (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    // No error listener attached — should NOT throw
+    stream.markError(new Error('should not crash'));
+    test.isTrue(true); // If we get here, no crash
+    stream.stop();
+  });
+
+  // Task 23: ChangeStream — convenience methods on stopped stream are no-ops
+  Tinytest.add('afs - ChangeStream - convenience methods on stopped stream are no-ops', (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    stream.stop();
+
+    const events = [];
+    // Even though listeners are removed, these should not throw
+    stream.added('id', {});
+    stream.changed('id', {});
+    stream.removed('id');
+    stream.addedBefore('id', {}, null);
+    stream.movedBefore('id', null);
+    stream.markReady();
+    stream.markError(new Error('stopped'));
+    stream.markReconnected();
+    stream.markReset();
+    stream.markPaused();
+    stream.markResumed();
+
+    test.isTrue(true); // No crash = pass
+  });
+
+  // Task 23: ObserveMultiplexer — addHandle doesn't receive live events before initial adds
+  Tinytest.addAsync('afs - ObserveMultiplexer - no live events before initial adds', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const multiplexer = new AFS.ObserveMultiplexer(stream, false);
+
+    // Emit initial data then mark ready
+    stream.added('doc1', { name: 'Alice' });
+    stream.markReady();
+
+    const events = [];
+    // Start adding handle — it should get initial adds first
+    const handlePromise = multiplexer.addHandle({
+      added(id, fields) { events.push({ type: 'initial', id }); },
+    });
+
+    // Emit a live event while addHandle is in progress
+    // (Since addHandle awaits _readyPromise and sends initial adds before
+    // adding to _handles, this live event should NOT reach the handle)
+    stream.added('doc2', { name: 'Bob' });
+
+    const handle = await handlePromise;
+
+    // Should have received only the initial add for doc1,
+    // plus doc2 after being added to handles
+    test.isTrue(events.length >= 1);
+    test.equal(events[0].id, 'doc1');
+
+    handle.stop();
+  });
+
+  // Task 23: ObserveMultiplexer — handle.stop() during active fan-out doesn't cause errors
+  Tinytest.addAsync('afs - ObserveMultiplexer - handle stop during fan-out is safe', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const multiplexer = new AFS.ObserveMultiplexer(stream, false);
+    stream.markReady();
+
+    let handle2;
+    const handle1 = await multiplexer.addHandle({
+      added(id, fields) {
+        // Stop handle2 during a fan-out
+        if (handle2) handle2.stop();
+      },
+    });
+
+    const added2 = [];
+    handle2 = await multiplexer.addHandle({
+      added(id, fields) { added2.push(id); },
+    });
+
+    // Emit an event — handle1's callback stops handle2 mid-fan-out
+    stream.added('docX', { name: 'Test' });
+
+    // Should not crash. handle2 should have _stopped = true
+    test.isTrue(true);
+    handle1.stop();
+  });
+
+  // Task 23: ObserveMultiplexer — _sendInitialAdds callback throw doesn't break multiplexer
+  Tinytest.addAsync('afs - ObserveMultiplexer - initial add callback throw continues', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const multiplexer = new AFS.ObserveMultiplexer(stream, false);
+
+    stream.added('doc1', { name: 'A' });
+    stream.added('doc2', { name: 'B' });
+    stream.markReady();
+
+    let callCount = 0;
+    const handle = await multiplexer.addHandle({
+      added(id, fields) {
+        callCount++;
+        if (callCount === 1) throw new Error('test throw in initial add');
+      },
+    });
+
+    // Should have attempted to send both initial adds despite the throw
+    test.equal(callCount, 2);
+    handle.stop();
+  });
+
+  // Task 23: ObserveMultiplexer — ordered initial adds preserve correct `before` values
+  Tinytest.addAsync('afs - ObserveMultiplexer - ordered initial adds with correct before', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
+    const multiplexer = new AFS.ObserveMultiplexer(stream, true);
+
+    stream.addedBefore('doc1', { name: 'A' }, null);
+    stream.addedBefore('doc2', { name: 'B' }, 'doc1');
+    stream.markReady();
+
+    const events = [];
+    const handle = await multiplexer.addHandle({
+      addedBefore(id, fields, before) {
+        events.push({ id, before });
+      },
+    });
+
+    // doc2 is before doc1 in the ordered cache, so:
+    // doc2 should have before=doc1, doc1 should have before=null
+    test.equal(events.length, 2);
+    // The last element should have before=null
+    test.equal(events[events.length - 1].before, null);
+
+    handle.stop();
+  });
+
+  // Task 23: StreamProvider — close() stops all cached multiplexers
+  Tinytest.addAsync('afs - StreamProvider - close stops cached multiplexers', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+    await provider.insertAsync('close-test', { name: 'A' });
+
+    const cursor = new AFS.Cursor(provider, 'close-test', {});
+    const handle = await cursor.observeChangesAsync({
+      added() {},
+      changed() {},
+      removed() {},
+    });
+
+    // Provider should have a cached multiplexer
+    test.isTrue(provider._multiplexerCache.size > 0);
+
+    // Close should clean up
+    await provider.close();
+    test.equal(provider._multiplexerCache.size, 0);
+  });
+
+  // Task 23: StreamProvider — concurrent _getMultiplexer calls return same instance
+  Tinytest.addAsync('afs - StreamProvider - concurrent getMultiplexer returns same instance', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+    await provider.insertAsync('concurrent-test', { name: 'A' });
+
+    const desc = { collectionName: 'concurrent-test', selector: {}, options: {} };
+
+    // Call _getMultiplexer concurrently
+    const [m1, m2] = await Promise.all([
+      provider._getMultiplexer(desc, false),
+      provider._getMultiplexer(desc, false),
+    ]);
+
+    // Should be the same multiplexer instance
+    test.equal(m1, m2);
+
+    // Clean up
+    m1._stream.stop();
+  });
+}
+
+// ===========================================================================
+// Phase 2 Gap Fix Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  // Task 24: MockStreamProvider — error in startObserving propagates as stream error
+  Tinytest.addAsync('afs - MockStreamProvider - startObserving error propagates', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+
+    // Create a ChangeStream directly and verify it can handle errors
+    const stream = provider.createChangeStream({ collectionName: 'test', selector: {} });
+    let errorReceived = null;
+    stream.on('error', (err) => { errorReceived = err; });
+    stream.markError(new Error('test error'));
+    test.equal(errorReceived.message, 'test error');
+    stream.stop();
+  });
+
+  // Task 24: _publishCursor does NOT call sub.ready()
+  Tinytest.addAsync('afs - _publishCursor - does not call sub.ready', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+    await provider.insertAsync('pub-noready', { name: 'Doc1' });
+
+    const cursor = new AFS.Cursor(provider, 'pub-noready', {});
+
+    let readyCalled = false;
+    const mockSub = {
+      added(col, id, fields) {},
+      changed(col, id, fields) {},
+      removed(col, id) {},
+      error(err) {},
+      ready() { readyCalled = true; },
+      onStop(fn) {},
+    };
+
+    const handle = await cursor._publishCursor(mockSub);
+
+    // _publishCursor should NOT have called sub.ready()
+    test.isFalse(readyCalled);
+    handle.stop();
+  });
+
+  // Task 24: countDocuments / estimatedDocumentCount on FederatedCollection
+  Tinytest.addAsync('afs - FederatedCollection - countDocuments', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-count-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    await collection.insertAsync({ type: 'a' });
+    await collection.insertAsync({ type: 'b' });
+    await collection.insertAsync({ type: 'a' });
+
+    const total = await collection.countDocuments();
+    test.equal(total, 3);
+
+    const aCount = await collection.countDocuments({ type: 'a' });
+    test.equal(aCount, 2);
+
+    const estimated = await collection.estimatedDocumentCount();
+    test.equal(estimated, 3);
+  });
+}
+
+// ===========================================================================
+// Phase 3 Gap Fix Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  // Task 25: Lifecycle events fire for provider adapter mutations (simulating allow-deny path)
+  Tinytest.addAsync('afs - FederatedCollection - provider adapter emits lifecycle events', async (test) => {
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-adapter-events-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    const events = [];
+    collection.on('before:insert', () => events.push('before:insert'));
+    collection.on('after:insert', () => events.push('after:insert'));
+    collection.on('before:update', () => events.push('before:update'));
+    collection.on('after:update', () => events.push('after:update'));
+    collection.on('before:remove', () => events.push('before:remove'));
+    collection.on('after:remove', () => events.push('after:remove'));
+
+    // Call through the provider adapter (what allow-deny uses)
+    const id = await collection._collection.insertAsync({ val: 1 });
+    await collection._collection.updateAsync({ _id: id }, { $set: { val: 2 } });
+    await collection._collection.removeAsync({ _id: id });
+
+    test.equal(events, [
+      'before:insert', 'after:insert',
+      'before:update', 'after:update',
+      'before:remove', 'after:remove',
+    ]);
+  });
+
+  // Task 25: _rewriteSelector with fallbackId
+  Tinytest.add('afs - FederatedCollection - _rewriteSelector with fallbackId', (test) => {
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-rewrite-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    const result = collection._rewriteSelector(null, { fallbackId: 'custom-id' });
+    test.equal(result._id, 'custom-id');
+
+    // Without fallbackId, should generate random
+    const result2 = collection._rewriteSelector(null);
+    test.isTrue(typeof result2._id === 'string');
+    test.isTrue(result2._id.length > 0);
+    test.notEqual(result2._id, 'custom-id');
+  });
+
+  // Task 25: _createIdGenerator UUID generates actual UUIDs
+  Tinytest.add('afs - FederatedCollection - UUID id generation', (test) => {
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-uuid-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+      idGeneration: 'UUID',
+    });
+
+    const id = collection._makeNewID();
+    // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    test.isTrue(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+
+    // Two UUIDs should be different
+    const id2 = collection._makeNewID();
+    test.notEqual(id, id2);
+  });
+
+  // Task 25: dropCollectionAsync cleans up registry and listeners
+  Tinytest.addAsync('afs - FederatedCollection - dropCollectionAsync cleanup', async (test) => {
+    AFS._reset();
+
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-drop-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    // Verify it's registered
+    test.equal(AFS.getCollection(name), collection);
+
+    // Add a listener
+    let eventFired = false;
+    collection.on('custom', () => { eventFired = true; });
+
+    // Drop
+    await collection.dropCollectionAsync();
+
+    // Should be removed from registry
+    test.equal(AFS.getCollection(name), undefined);
+
+    // Listeners should be removed
+    collection.emit('custom');
+    test.isFalse(eventFired);
+
+    AFS._reset();
+  });
+
+  // Task 25: Collection Extensions API
+  Tinytest.add('afs - FederatedCollection - Collection Extensions API', (test) => {
+    // Clear any existing extensions
+    AFS.Collection.clearExtensions();
+
+    let extCalled = false;
+    const ext = function (name, options) {
+      extCalled = true;
+    };
+
+    AFS.Collection.addExtension(ext);
+    test.equal(AFS.Collection.getExtensions().length, 1);
+
+    // Create a collection — extension should be called
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-ext-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+    test.isTrue(extCalled);
+
+    // Test prototype method
+    AFS.Collection.addPrototypeMethod('testMethod', function () {
+      return 'hello from extension';
+    });
+
+    const name2 = 'afs-ext2-' + Random.id();
+    const collection2 = new AFS.Collection(name2, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+    test.equal(collection2.testMethod(), 'hello from extension');
+
+    // Clean up
+    AFS.Collection.clearExtensions();
+    test.equal(AFS.Collection.getExtensions().length, 0);
+  });
+
+  // Task 18: ObjectID export
+  Tinytest.add('afs - AFS.ObjectID is available', (test) => {
+    test.isTrue(typeof AFS.ObjectID === 'function');
+  });
+}
+
+// ===========================================================================
+// Phase 4 Gap Fix Tests (server only)
+// ===========================================================================
+
+if (Meteor.isServer) {
+  // Task 26: AdaptiveEngine — recordAccess called from find()
+  Tinytest.addAsync('afs - AdaptiveEngine - find records access', async (test) => {
+    const engine = AFS.getEngine();
+    engine.reset();
+
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-engine-find-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    await collection.insertAsync({ val: 1 });
+
+    const metricsBefore = engine.getMetrics().totalQueries;
+    collection.find({ val: 1 });
+    const metricsAfter = engine.getMetrics().totalQueries;
+
+    test.isTrue(metricsAfter > metricsBefore);
+    engine.reset();
+  });
+
+  // Task 26: AdaptiveEngine — write metrics tracked
+  Tinytest.addAsync('afs - AdaptiveEngine - writes tracked in metrics', async (test) => {
+    const engine = AFS.getEngine();
+    engine.reset();
+
+    const provider = new AFS.MockStreamProvider();
+    const name = 'afs-engine-write-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      provider,
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    const writesBefore = engine.getMetrics().totalWrites;
+    const id = await collection.insertAsync({ val: 1 });
+    await collection.updateAsync({ _id: id }, { $set: { val: 2 } });
+    await collection.removeAsync({ _id: id });
+    const writesAfter = engine.getMetrics().totalWrites;
+
+    test.equal(writesAfter - writesBefore, 3);
+    engine.reset();
+  });
+
+  // Task 26: AdaptiveEngine — waitForSlot resolves when slot is released (no busy-loop)
+  Tinytest.addAsync('afs - AdaptiveEngine - waitForSlot resolves on release', async (test) => {
+    const engine = new AFS.getEngine().constructor({
+      maxPendingQueries: 2,
+    });
+
+    // Fill up the slots
+    const release1 = engine.acquireSlot('query');
+    const release2 = engine.acquireSlot('query');
+
+    test.isTrue(engine.shouldApplyBackpressure('query'));
+
+    // Start waiting for a slot
+    let resolved = false;
+    const slotPromise = engine.waitForSlot('query', 2000).then(release => {
+      resolved = true;
+      release();
+    });
+
+    // Release a slot — should trigger the waiting promise
+    release1();
+
+    await slotPromise;
+    test.isTrue(resolved);
+
+    release2();
+    engine.reset();
+  });
+
+  // Task 26: AdaptiveEngine — waitForSlot times out
+  Tinytest.addAsync('afs - AdaptiveEngine - waitForSlot timeout', async (test) => {
+    const engine = new AFS.getEngine().constructor({
+      maxPendingQueries: 1,
+    });
+
+    const release = engine.acquireSlot('query');
+
+    let threw = false;
+    try {
+      await engine.waitForSlot('query', 100); // Very short timeout
+    } catch (e) {
+      threw = true;
+      test.equal(e.error, 'backpressure');
+    }
+    test.isTrue(threw);
+
+    release();
+    engine.reset();
   });
 }

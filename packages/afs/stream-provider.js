@@ -1,3 +1,6 @@
+import { ChangeStream } from './change-stream';
+import { ObserveMultiplexer } from './observe-multiplexer';
+
 /**
  * StreamProvider - Abstract base class for all AFS data source adapters.
  *
@@ -10,6 +13,9 @@
  *
  * Subclasses SHOULD implement: findOneAsync, upsertAsync, createIndexAsync,
  * dropIndexAsync, rawDatabase, rawCollection, capabilities.
+ *
+ * Subclasses MAY implement: _supportsEventEmitter, startObserving
+ * (to opt into the EventEmitter-based reactive path via ChangeStream).
  */
 export class StreamProvider {
   /**
@@ -23,6 +29,8 @@ export class StreamProvider {
     this.name = options.name || 'unknown';
     this._connected = false;
     this._collections = new Map();
+    this._multiplexerCache = new Map();
+    this._multiplexerPending = new Map();
   }
 
   // ---------------------------------------------------------------------------
@@ -39,10 +47,26 @@ export class StreamProvider {
 
   /**
    * Close the connection to the data source.
+   * Subclasses MUST call super.close() or _closeMultiplexers() to clean up.
    * @returns {Promise<void>}
    */
   async close() {
+    this._closeMultiplexers();
     throw new Error(`${this.constructor.name}.close() must be implemented`);
+  }
+
+  /**
+   * Stop all cached multiplexers and their underlying ChangeStreams.
+   * Called automatically from close().
+   */
+  _closeMultiplexers() {
+    for (const [, multiplexer] of this._multiplexerCache) {
+      if (!multiplexer._stream.isStopped()) {
+        multiplexer._stream.stop();
+      }
+    }
+    this._multiplexerCache.clear();
+    this._multiplexerPending.clear();
   }
 
   /**
@@ -117,6 +141,30 @@ export class StreamProvider {
       ...options,
       upsert: true,
     });
+  }
+
+  /**
+   * Count documents matching a selector.
+   * Default implementation fetches all and counts. Override for efficiency.
+   * @param {string} collectionName
+   * @param {Object} selector
+   * @param {Object} [options]
+   * @returns {Promise<number>}
+   */
+  async countAsync(collectionName, selector, options) {
+    const docs = await this._fetchResults(collectionName, selector, options || {});
+    return docs.length;
+  }
+
+  /**
+   * Fetch results for a query. Override in subclasses.
+   * @param {string} collectionName
+   * @param {Object} selector
+   * @param {Object} options
+   * @returns {Promise<Array>}
+   */
+  async _fetchResults(collectionName, selector, options) {
+    throw new Error(`${this.constructor.name}._fetchResults() must be implemented`);
   }
 
   // ---------------------------------------------------------------------------
@@ -286,6 +334,107 @@ export class StreamProvider {
       joins: false,
       upsert: true,
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // EventEmitter-based reactive support (opt-in)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Whether this provider supports the EventEmitter-based reactive path.
+   * Override to return true when the provider implements startObserving().
+   * @returns {boolean}
+   */
+  _supportsEventEmitter() {
+    return false;
+  }
+
+  /**
+   * Create a ChangeStream for a cursor description.
+   * Convenience factory — providers can use this or construct ChangeStream directly.
+   * @param {Object} cursorDescription
+   * @returns {ChangeStream}
+   */
+  createChangeStream(cursorDescription) {
+    return new ChangeStream(cursorDescription);
+  }
+
+  /**
+   * Start observing a query and return a ChangeStream that emits changes.
+   * Override this in providers that support EventEmitter mode.
+   *
+   * The returned ChangeStream must eventually emit 'ready' after sending
+   * the initial result set via added/addedBefore events.
+   *
+   * @param {Object} cursorDescription
+   * @param {boolean} ordered
+   * @returns {ChangeStream}
+   */
+  startObserving(cursorDescription, ordered) {
+    throw new Error(
+      `${this.constructor.name}.startObserving() must be implemented ` +
+      `when _supportsEventEmitter() returns true`
+    );
+  }
+
+  /**
+   * Get or create a cached ObserveMultiplexer for a cursor description.
+   * Ensures identical queries share the same multiplexer (and thus the
+   * same underlying ChangeStream/driver), so late-joining observers
+   * receive the correct initial state from the cache.
+   *
+   * @param {Object} cursorDescription
+   * @param {boolean} ordered
+   * @returns {Promise<ObserveMultiplexer>}
+   */
+  async _getMultiplexer(cursorDescription, ordered) {
+    const key = EJSON.stringify({ ...cursorDescription, ordered });
+
+    if (this._multiplexerCache.has(key)) {
+      return this._multiplexerCache.get(key);
+    }
+
+    // Check if another call is already creating this multiplexer
+    if (this._multiplexerPending.has(key)) {
+      return this._multiplexerPending.get(key);
+    }
+
+    const promise = this._createMultiplexer(cursorDescription, ordered, key);
+    this._multiplexerPending.set(key, promise);
+
+    try {
+      const multiplexer = await promise;
+      this._multiplexerCache.set(key, multiplexer);
+      return multiplexer;
+    } finally {
+      this._multiplexerPending.delete(key);
+    }
+  }
+
+  /**
+   * Create a new multiplexer for a cursor description.
+   * @private
+   */
+  async _createMultiplexer(cursorDescription, ordered, key) {
+    const stream = this.startObserving(cursorDescription, ordered);
+
+    // Auto-attach the adaptive engine for metrics collection
+    let detachEngine = null;
+    if (typeof AFS !== 'undefined' && AFS._engine) {
+      detachEngine = AFS._engine.attachToStream(stream);
+    }
+
+    const self = this;
+    const multiplexer = new ObserveMultiplexer(stream, ordered, {
+      onEmpty() {
+        // When the last handle is removed, clean up
+        if (detachEngine) detachEngine();
+        self._multiplexerCache.delete(key);
+        stream.stop();
+      },
+    });
+
+    return multiplexer;
   }
 
   // ---------------------------------------------------------------------------

@@ -8,7 +8,20 @@
  *
  * This enables packages like accounts-base to find the users collection
  * regardless of whether it's backed by MongoDB, PostgreSQL, or anything else.
+ *
+ * Extends EventEmitter to emit lifecycle events:
+ *   - provider:registered(name, provider)
+ *   - provider:removed(name)
+ *   - provider:default-changed(name, provider)
+ *   - collection:registered(name, collection)
+ *   - collection:removed(name)
+ *   - core-collection:registered(name, collection)
  */
+
+const { EventEmitter } = require('events');
+const _registryEmitter = new EventEmitter();
+_registryEmitter.setMaxListeners(0);
+
 export const Registry = {
   // ---------------------------------------------------------------------------
   // Provider management
@@ -35,6 +48,8 @@ export const Registry = {
     if (!this._defaultProviderName) {
       this._defaultProviderName = name;
     }
+
+    _registryEmitter.emit('provider:registered', name, provider);
   },
 
   /**
@@ -55,6 +70,7 @@ export const Registry = {
       throw new Error(`AFS: Cannot set default to unregistered provider '${name}'`);
     }
     this._defaultProviderName = name;
+    _registryEmitter.emit('provider:default-changed', name, this._providers.get(name));
   },
 
   /**
@@ -93,6 +109,7 @@ export const Registry = {
       const first = this._providers.keys().next().value;
       this._defaultProviderName = first || null;
     }
+    _registryEmitter.emit('provider:removed', name);
   },
 
   // ---------------------------------------------------------------------------
@@ -109,6 +126,7 @@ export const Registry = {
    */
   registerCollection(name, collection) {
     this._collections.set(name, collection);
+    _registryEmitter.emit('collection:registered', name, collection);
   },
 
   /**
@@ -135,6 +153,7 @@ export const Registry = {
   removeCollection(name) {
     this._collections.delete(name);
     this._coreCollections.delete(name);
+    _registryEmitter.emit('collection:removed', name);
   },
 
   // ---------------------------------------------------------------------------
@@ -158,6 +177,8 @@ export const Registry = {
     this._coreCollections.set(name, collection);
     // Also register in the general collection registry
     this._collections.set(name, collection);
+    _registryEmitter.emit('core-collection:registered', name, collection);
+    _registryEmitter.emit('collection:registered', name, collection);
   },
 
   /**
@@ -215,5 +236,43 @@ export const Registry = {
     this._collections.clear();
     this._coreCollections.clear();
     this._defaultProviderName = null;
+    _registryEmitter.removeAllListeners();
+  },
+
+  // ---------------------------------------------------------------------------
+  // EventEmitter delegation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Subscribe to registry events.
+   * @param {string} event - Event name
+   * @param {Function} listener - Callback
+   * @returns {Object} The Registry (for chaining)
+   */
+  on(event, listener) {
+    _registryEmitter.on(event, listener);
+    return this;
+  },
+
+  /**
+   * Subscribe to a registry event once.
+   * @param {string} event
+   * @param {Function} listener
+   * @returns {Object}
+   */
+  once(event, listener) {
+    _registryEmitter.once(event, listener);
+    return this;
+  },
+
+  /**
+   * Unsubscribe from a registry event.
+   * @param {string} event
+   * @param {Function} listener
+   * @returns {Object}
+   */
+  off(event, listener) {
+    _registryEmitter.removeListener(event, listener);
+    return this;
   },
 };

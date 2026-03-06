@@ -56,11 +56,19 @@ export class AFSCursor {
    * @returns {Promise<Array<Object>>}
    */
   async fetchAsync() {
+    const startTime = Date.now();
     const results = await this._provider._fetchResults(
       this._collectionName,
       this._selector,
       this._options
     );
+    const duration = Date.now() - startTime;
+
+    // Record query execution time for adaptive engine
+    if (typeof AFS !== 'undefined' && AFS._engine) {
+      AFS._engine.recordQueryExecution(this._collectionName, duration);
+    }
+
     if (this._transform) {
       return results.map(doc => this._transform(doc));
     }
@@ -127,10 +135,17 @@ export class AFSCursor {
    * @returns {Promise<number>}
    */
   async countAsync() {
+    if (this._provider.countAsync) {
+      return this._provider.countAsync(
+        this._collectionName,
+        this._selector,
+        // Don't apply skip/limit for counting
+        { ...this._options, skip: undefined, limit: undefined }
+      );
+    }
     const docs = await this._provider._fetchResults(
       this._collectionName,
       this._selector,
-      // Don't apply skip/limit for counting
       { ...this._options, skip: undefined, limit: undefined }
     );
     return docs.length;
@@ -205,6 +220,16 @@ export class AFSCursor {
       callbacks.movedBefore
     );
 
+    if (this._provider._supportsEventEmitter()) {
+      // New EventEmitter path: provider returns a ChangeStream,
+      // and the provider's _getMultiplexer handles caching and fan-out
+      return this._provider._getMultiplexer(
+        this._cursorDescription,
+        ordered
+      ).then(multiplexer => multiplexer.addHandle(callbacks, options));
+    }
+
+    // Legacy callback path (unchanged)
     return this._provider.observeChanges(
       this._cursorDescription,
       ordered,
@@ -237,6 +262,20 @@ export class AFSCursor {
         },
         removed(id) {
           sub.removed(collection, id);
+        },
+
+        // Lifecycle events — forward to subscription when supported
+        error(err) {
+          Meteor._debug('Cursor error in publication for ' + collection + ':', err);
+          if (typeof sub.error === 'function') {
+            sub.error(new Meteor.Error('observe-error', err.message));
+          }
+        },
+        reconnected() {
+          Meteor._debug('Cursor reconnected for ' + collection);
+        },
+        reset() {
+          Meteor._debug('Cursor reset for ' + collection);
         },
       },
       { nonMutatingCallbacks: true }

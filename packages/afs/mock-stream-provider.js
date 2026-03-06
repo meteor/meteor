@@ -1,4 +1,5 @@
 import { StreamProvider } from './stream-provider';
+import { ChangeStream } from './change-stream';
 
 /**
  * MockStreamProvider - An in-memory StreamProvider for testing.
@@ -22,6 +23,7 @@ export class MockStreamProvider extends StreamProvider {
   }
 
   async close() {
+    this._closeMultiplexers();
     this._connected = false;
     this._localCollections = {};
   }
@@ -68,6 +70,15 @@ export class MockStreamProvider extends StreamProvider {
   }
 
   // ---------------------------------------------------------------------------
+  // Count
+  // ---------------------------------------------------------------------------
+
+  async countAsync(collectionName, selector, options = {}) {
+    const lc = this._getLocalCollection(collectionName);
+    return lc.find(selector, options).count();
+  }
+
+  // ---------------------------------------------------------------------------
   // Query
   // ---------------------------------------------------------------------------
 
@@ -103,6 +114,57 @@ export class MockStreamProvider extends StreamProvider {
     }
 
     return cursor.observeChanges(callbacks);
+  }
+
+  // ---------------------------------------------------------------------------
+  // EventEmitter-based reactive support
+  // ---------------------------------------------------------------------------
+
+  _supportsEventEmitter() {
+    return true;
+  }
+
+  startObserving(cursorDescription, ordered) {
+    const stream = this.createChangeStream(cursorDescription);
+    const lc = this._getLocalCollection(cursorDescription.collectionName);
+    const cursor = lc.find(
+      cursorDescription.selector,
+      cursorDescription.options || {}
+    );
+
+    // Bridge LocalCollection's observeChanges into the ChangeStream.
+    // We defer setup to a microtask so that the caller can attach
+    // listeners (via ObserveMultiplexer) before initial adds fire.
+    const bridgeCallbacks = ordered
+      ? {
+          addedBefore(id, fields, before) { stream.addedBefore(id, fields, before); },
+          movedBefore(id, before) { stream.movedBefore(id, before); },
+          changed(id, fields) { stream.changed(id, fields); },
+          removed(id) { stream.removed(id); },
+        }
+      : {
+          added(id, fields) { stream.added(id, fields); },
+          changed(id, fields) { stream.changed(id, fields); },
+          removed(id) { stream.removed(id); },
+        };
+
+    // Use Promise.resolve().then() to defer initial emission to next microtask.
+    // This ensures the ObserveMultiplexer has time to bind its listeners.
+    Promise.resolve().then(() => {
+      if (stream.isStopped()) return;
+      const lcHandle = cursor.observeChanges(bridgeCallbacks);
+      stream.markReady();
+
+      stream.on('stop', () => {
+        lcHandle.stop();
+      });
+    }).catch(err => {
+      if (!stream.isStopped()) {
+        stream.markError(err);
+      }
+    });
+
+    return stream;
   }
 
   // ---------------------------------------------------------------------------

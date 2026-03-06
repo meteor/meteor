@@ -1,5 +1,7 @@
 import { AFSCursor } from './cursor';
 
+const { EventEmitter } = require('events');
+
 // Lightweight local collection driver for AFS.
 // Replicates the same pattern as mongo/local_collection_driver.js
 // without depending on the mongo package.
@@ -27,6 +29,34 @@ function openLocalCollection(name, conn) {
   return conn._afs_collections[name];
 }
 
+// ---------------------------------------------------------------------------
+// Collection Extensions API (matches Mongo.Collection extension pattern)
+// ---------------------------------------------------------------------------
+
+const _CollectionExtensions = {
+  _extensions: [],
+  _prototypeMethods: new Map(),
+  _staticMethods: new Map(),
+
+  addExtension(ext) { this._extensions.push(ext); },
+  removeExtension(ext) { this._extensions = this._extensions.filter(e => e !== ext); },
+  addPrototypeMethod(name, method) { this._prototypeMethods.set(name, method); },
+  removePrototypeMethod(name) { this._prototypeMethods.delete(name); },
+  addStaticMethod(name, method) { this._staticMethods.set(name, method); },
+  removeStaticMethod(name) { this._staticMethods.delete(name); },
+  clearExtensions() { this._extensions = []; this._prototypeMethods.clear(); this._staticMethods.clear(); },
+  getExtensions() { return [...this._extensions]; },
+  getPrototypeMethods() { return new Map(this._prototypeMethods); },
+  getStaticMethods() { return new Map(this._staticMethods); },
+
+  _applyExtensions(instance, name, options) {
+    for (const ext of this._extensions) { ext.call(instance, name, options); }
+    for (const [methodName, method] of this._prototypeMethods) {
+      instance[methodName] = method.bind(instance);
+    }
+  },
+};
+
 /**
  * FederatedCollection - A collection that works with any StreamProvider.
  *
@@ -48,6 +78,10 @@ export class FederatedCollection {
    * @param {boolean} [options._preventAutopublish=false] - Prevent auto-publishing
    */
   constructor(name, options = {}) {
+    // Initialize EventEmitter
+    EventEmitter.call(this);
+    this.setMaxListeners(0);
+
     // Validate name
     if (!name && name !== null) {
       Meteor._debug(
@@ -93,6 +127,9 @@ export class FederatedCollection {
     if (name && typeof AFS !== 'undefined') {
       AFS.registerCollection(name, this);
     }
+
+    // Apply collection extensions
+    _CollectionExtensions._applyExtensions(this, name, options);
   }
 
   // ---------------------------------------------------------------------------
@@ -114,6 +151,11 @@ export class FederatedCollection {
     options = this._getFindOptions(options);
 
     if (Meteor.isServer && this._provider) {
+      // Record access pattern for adaptive engine
+      if (typeof AFS !== 'undefined' && AFS._engine) {
+        AFS._engine.recordAccess(this._name, selector, options);
+      }
+
       // Server with provider: use AFSCursor backed by StreamProvider
       return new AFSCursor(
         this._provider,
@@ -207,7 +249,11 @@ export class FederatedCollection {
     }
 
     if (this._provider && Meteor.isServer) {
-      return this._provider.insertAsync(this._name, doc);
+      this.emit('before:insert', { doc });
+      const id = await this._provider.insertAsync(this._name, doc);
+      this.emit('after:insert', { doc, id });
+      if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
+      return id;
     }
 
     return this._collection.insertAsync(doc);
@@ -228,7 +274,11 @@ export class FederatedCollection {
     }
 
     if (this._provider && Meteor.isServer) {
-      return this._provider.updateAsync(this._name, selector, modifier, options);
+      this.emit('before:update', { selector, modifier, options });
+      const result = await this._provider.updateAsync(this._name, selector, modifier, options);
+      this.emit('after:update', { selector, modifier, options, result });
+      if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
+      return result;
     }
 
     return this._collection.updateAsync(selector, modifier, options);
@@ -247,7 +297,11 @@ export class FederatedCollection {
     }
 
     if (this._provider && Meteor.isServer) {
-      return this._provider.removeAsync(this._name, selector);
+      this.emit('before:remove', { selector });
+      const result = await this._provider.removeAsync(this._name, selector);
+      this.emit('after:remove', { selector, result });
+      if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
+      return result;
     }
 
     return this._collection.removeAsync(selector);
@@ -407,9 +461,18 @@ export class FederatedCollection {
 
   _createIdGenerator(name, idGeneration) {
     if (idGeneration === 'UUID') {
+      if (Meteor.isServer) {
+        const crypto = Npm.require('crypto');
+        return function () {
+          return crypto.randomUUID();
+        };
+      }
+      // Client fallback: use Random.hexString for UUID-like IDs
       return function () {
-        const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
-        return src.id();
+        const hex = Random.hexString(32);
+        return [hex.slice(0,8), hex.slice(8,12), '4' + hex.slice(13,16),
+                ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16) + hex.slice(17,20),
+                hex.slice(20,32)].join('-');
       };
     }
     // Default: STRING
@@ -446,6 +509,7 @@ export class FederatedCollection {
   _createProviderAdapter() {
     const provider = this._provider;
     const collectionName = this._name;
+    const self = this;
 
     return {
       // Required for allow/deny validated methods
@@ -462,27 +526,60 @@ export class FederatedCollection {
       },
 
       insert(doc) {
-        return Promise.await(provider.insertAsync(collectionName, doc));
+        self.emit('before:insert', { doc });
+        const id = Promise.await(provider.insertAsync(collectionName, doc));
+        self.emit('after:insert', { doc, id });
+        if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
+        return id;
       },
 
       async insertAsync(doc) {
-        return provider.insertAsync(collectionName, doc);
+        self.emit('before:insert', { doc });
+        const id = await provider.insertAsync(collectionName, doc);
+        self.emit('after:insert', { doc, id });
+        if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
+        return id;
       },
 
       update(selector, modifier, options) {
-        return Promise.await(provider.updateAsync(collectionName, selector, modifier, options));
+        self.emit('before:update', { selector, modifier, options });
+        const result = Promise.await(provider.updateAsync(collectionName, selector, modifier, options));
+        self.emit('after:update', { selector, modifier, options, result });
+        if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
+        return result;
       },
 
       async updateAsync(selector, modifier, options) {
-        return provider.updateAsync(collectionName, selector, modifier, options);
+        self.emit('before:update', { selector, modifier, options });
+        const result = await provider.updateAsync(collectionName, selector, modifier, options);
+        self.emit('after:update', { selector, modifier, options, result });
+        if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
+        return result;
       },
 
       remove(selector) {
-        return Promise.await(provider.removeAsync(collectionName, selector));
+        self.emit('before:remove', { selector });
+        const result = Promise.await(provider.removeAsync(collectionName, selector));
+        self.emit('after:remove', { selector, result });
+        if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
+        return result;
       },
 
       async removeAsync(selector) {
-        return provider.removeAsync(collectionName, selector);
+        self.emit('before:remove', { selector });
+        const result = await provider.removeAsync(collectionName, selector);
+        self.emit('after:remove', { selector, result });
+        if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
+        return result;
+      },
+
+      // Count support
+      async countDocuments(selector, options) {
+        return provider.countAsync(collectionName, selector, options);
+      },
+
+      async estimatedDocumentCount(options) {
+        return provider.countAsync(collectionName, {}, options);
       },
 
       // Required for DDP replication store
@@ -532,7 +629,7 @@ export class FederatedCollection {
     }
   }
 
-  _rewriteSelector(selector) {
+  _rewriteSelector(selector, { fallbackId } = {}) {
     // Shorthand: scalars match _id
     if (LocalCollection._selectorIsId(selector)) {
       selector = { _id: selector };
@@ -543,7 +640,7 @@ export class FederatedCollection {
     }
 
     if (!selector || ('_id' in selector && !selector._id)) {
-      return { _id: Random.id() };
+      return { _id: fallbackId || Random.id() };
     }
 
     return selector;
@@ -598,6 +695,7 @@ export class FederatedCollection {
       async beginUpdate(batchSize, reset) {
         if (batchSize > 1 || reset) self._collection.pauseObservers();
         if (reset) await self._collection.remove({});
+        self.emit('replication:batch-started', { batchSize, reset });
       },
 
       update(msg) {
@@ -631,7 +729,6 @@ export class FederatedCollection {
           } else {
             self._collection.update(mongoId, replace);
           }
-          return;
         } else if (msg.msg === 'added') {
           if (doc) {
             throw new Error('Expected not to find a document already present for an add');
@@ -665,10 +762,13 @@ export class FederatedCollection {
         } else {
           throw new Error("I don't know how to deal with this message");
         }
+
+        self.emit('replication:update', { msg: msg.msg, id: msg.id });
       },
 
       endUpdate() {
         self._collection.resumeObserversClient();
+        self.emit('replication:batch-ended');
       },
 
       getDoc(id) {
@@ -682,6 +782,7 @@ export class FederatedCollection {
       async beginUpdate(batchSize, reset) {
         if (batchSize > 1 || reset) self._collection.pauseObservers();
         if (reset) await self._collection.removeAsync({});
+        self.emit('replication:batch-started', { batchSize, reset });
       },
 
       async update(msg) {
@@ -697,7 +798,6 @@ export class FederatedCollection {
           } else {
             await self._collection.updateAsync(mongoId, replace);
           }
-          return;
         } else if (msg.msg === 'added') {
           if (doc) {
             throw new Error('Expected not to find a document already present for an add');
@@ -731,10 +831,13 @@ export class FederatedCollection {
         } else {
           throw new Error("I don't know how to deal with this message");
         }
+
+        self.emit('replication:update', { msg: msg.msg, id: msg.id });
       },
 
       async endUpdate() {
         await self._collection.resumeObserversServer();
+        self.emit('replication:batch-ended');
       },
 
       async getDoc(id) {
@@ -775,14 +878,82 @@ export class FederatedCollection {
 
   async dropCollectionAsync() {
     if (this._provider && this._provider.dropCollectionAsync) {
-      return this._provider.dropCollectionAsync(this._name);
+      await this._provider.dropCollectionAsync(this._name);
+    } else if (this._collection.dropCollectionAsync) {
+      await this._collection.dropCollectionAsync();
+    } else {
+      throw new Error('Can only call dropCollectionAsync on server collections');
     }
-    if (this._collection.dropCollectionAsync) {
-      return this._collection.dropCollectionAsync();
+
+    // Clean up registry
+    if (this._name && typeof AFS !== 'undefined') {
+      AFS.removeCollection(this._name);
     }
-    throw new Error('Can only call dropCollectionAsync on server collections');
+
+    // Clean up local collection cache
+    if (this._name && _afsLocalCollections[this._name]) {
+      delete _afsLocalCollections[this._name];
+    }
+
+    // Remove all EventEmitter listeners
+    this.removeAllListeners();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Count methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Count documents matching a selector.
+   * @param {Object} [selector={}]
+   * @param {Object} [options]
+   * @returns {Promise<number>}
+   */
+  async countDocuments(selector = {}, options = {}) {
+    if (this._provider && this._provider.countAsync) {
+      return this._provider.countAsync(this._name, selector, options);
+    }
+    if (this._collection.find) {
+      return this._collection.find(selector, options).count();
+    }
+    throw new Error('countDocuments is not available on this collection');
+  }
+
+  /**
+   * Estimated document count (no filter, fast path).
+   * @param {Object} [options]
+   * @returns {Promise<number>}
+   */
+  async estimatedDocumentCount(options = {}) {
+    return this.countDocuments({}, options);
   }
 }
 
+// Mix in EventEmitter methods (on, once, emit, removeListener, etc.)
+// Applied first so AllowDeny wins on any property conflicts.
+Object.getOwnPropertyNames(EventEmitter.prototype).forEach(key => {
+  if (key !== 'constructor') {
+    FederatedCollection.prototype[key] = EventEmitter.prototype[key];
+  }
+});
+
 // Mix in allow/deny methods from the allow-deny package
 Object.assign(FederatedCollection.prototype, AllowDeny.CollectionPrototype);
+
+// Collection Extensions static API
+FederatedCollection.addExtension = (ext) => _CollectionExtensions.addExtension(ext);
+FederatedCollection.removeExtension = (ext) => _CollectionExtensions.removeExtension(ext);
+FederatedCollection.addPrototypeMethod = (name, method) => _CollectionExtensions.addPrototypeMethod(name, method);
+FederatedCollection.removePrototypeMethod = (name) => _CollectionExtensions.removePrototypeMethod(name);
+FederatedCollection.addStaticMethod = (name, method) => {
+  _CollectionExtensions.addStaticMethod(name, method);
+  FederatedCollection[name] = method;
+};
+FederatedCollection.removeStaticMethod = (name) => {
+  _CollectionExtensions.removeStaticMethod(name);
+  delete FederatedCollection[name];
+};
+FederatedCollection.clearExtensions = () => _CollectionExtensions.clearExtensions();
+FederatedCollection.getExtensions = () => _CollectionExtensions.getExtensions();
+FederatedCollection.getPrototypeMethods = () => _CollectionExtensions.getPrototypeMethods();
+FederatedCollection.getStaticMethods = () => _CollectionExtensions.getStaticMethods();

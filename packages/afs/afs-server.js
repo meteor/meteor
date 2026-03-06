@@ -4,6 +4,8 @@ import { FederatedCollection } from './collection';
 import { AdaptiveEngine } from './adaptive-engine';
 import { MockStreamProvider } from './mock-stream-provider';
 import { Registry } from './registry';
+import { ChangeStream } from './change-stream';
+import { ObserveMultiplexer } from './observe-multiplexer';
 
 /**
  * AFS - Adaptive Federated Streams
@@ -18,6 +20,9 @@ AFS = {
   Cursor: AFSCursor,
   Collection: FederatedCollection,
   MockStreamProvider,
+  ChangeStream,
+  ObserveMultiplexer,
+  ObjectID: MongoID.ObjectID,
 
   // Singleton instances
   _engine: new AdaptiveEngine(),
@@ -65,6 +70,14 @@ AFS = {
 
   listCollections() {
     return Registry.listCollections();
+  },
+
+  removeCollection(name) {
+    Registry.removeCollection(name);
+  },
+
+  getDefaultProviderName() {
+    return Registry.getDefaultProviderName();
   },
 
   // ---------------------------------------------------------------------------
@@ -115,6 +128,14 @@ AFS = {
     this._engine.reset();
   },
 
+  // ---------------------------------------------------------------------------
+  // EventEmitter delegation (Registry events)
+  // ---------------------------------------------------------------------------
+
+  on(event, listener) { return Registry.on(event, listener); },
+  once(event, listener) { return Registry.once(event, listener); },
+  off(event, listener) { return Registry.off(event, listener); },
+
   /**
    * Get the AFS version info.
    */
@@ -122,4 +143,14 @@ AFS = {
 };
 
 // Export for ES module imports
-export { AFS, StreamProvider, AFSCursor, FederatedCollection, AdaptiveEngine, MockStreamProvider, Registry };
+export {
+  AFS,
+  StreamProvider,
+  AFSCursor,
+  FederatedCollection,
+  AdaptiveEngine,
+  MockStreamProvider,
+  Registry,
+  ChangeStream,
+  ObserveMultiplexer,
+};

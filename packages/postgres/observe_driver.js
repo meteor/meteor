@@ -6,9 +6,15 @@
  * using DiffSequence. LISTEN/NOTIFY triggers immediate re-poll
  * (debounced) for low-latency reactivity.
  *
- * Includes observer multiplexing — identical cursor descriptions
+ * Emits changes into an AFS.ChangeStream instead of manually
+ * managing observer callbacks. The ChangeStream + ObserveMultiplexer
+ * handle fan-out to N consumers.
+ *
+ * Includes driver caching — identical cursor descriptions
  * share a single driver instance.
  */
+
+import { ChangeStream } from 'meteor/afs';
 
 const POLLING_INTERVAL_MS = parseInt(
   process.env.METEOR_POSTGRES_POLLING_INTERVAL_MS || '1000',
@@ -17,31 +23,32 @@ const POLLING_INTERVAL_MS = parseInt(
 
 const NOTIFY_DEBOUNCE_MS = 50;
 
-// Multiplexer cache: key → PostgresObserveDriver
-const _multiplexerCache = new Map();
+// Driver cache: key → PostgresObserveDriver
+const _driverCache = new Map();
 
 /**
  * Get or create an observe driver for a cursor description.
+ * Returns the driver's ChangeStream for consumers to listen on.
  *
  * @param {Object} cursorDescription
  * @param {boolean} ordered
  * @param {Object} provider - PostgresStreamProvider
- * @returns {PostgresObserveDriver}
+ * @returns {ChangeStream}
  */
 export function getObserveDriver(cursorDescription, ordered, provider) {
   const key = EJSON.stringify({ ...cursorDescription, ordered });
 
-  if (_multiplexerCache.has(key)) {
-    const driver = _multiplexerCache.get(key);
+  if (_driverCache.has(key)) {
+    const driver = _driverCache.get(key);
     if (!driver._stopped) {
-      return driver;
+      return driver._stream;
     }
-    _multiplexerCache.delete(key);
+    _driverCache.delete(key);
   }
 
   const driver = new PostgresObserveDriver(cursorDescription, ordered, provider, key);
-  _multiplexerCache.set(key, driver);
-  return driver;
+  _driverCache.set(key, driver);
+  return driver._stream;
 }
 
 class PostgresObserveDriver {
@@ -50,14 +57,22 @@ class PostgresObserveDriver {
     this._ordered = ordered;
     this._provider = provider;
     this._cacheKey = cacheKey;
-    this._observers = new Set();
     this._stopped = false;
     this._pollTimer = null;
     this._notifyDebounceTimer = null;
     this._notifyCallback = null;
 
-    // Current result state
+    // Create the ChangeStream that this driver emits into
+    this._stream = new ChangeStream(cursorDescription);
+
+    // Clean up when the stream is stopped externally
+    this._stream.on('stop', () => {
+      this.stop();
+    });
+
+    // Current result state for diffing
     this._lastResults = ordered ? [] : new IdMap(MongoID.idStringify, MongoID.idParse);
+    this._polling = false;
 
     this._initialized = false;
     this._initPromise = this._init();
@@ -84,11 +99,18 @@ class PostgresObserveDriver {
       // LISTEN/NOTIFY setup may fail (permissions, etc.) — fall back to polling only
       Log.warn('Postgres: LISTEN/NOTIFY setup failed for ' + collectionName + ', using polling only:', e.message);
       this._notifyCallback = null;
+      // Emit degraded mode event on the connection for observability
+      if (this._provider._connection && this._provider._connection.emit) {
+        this._provider._connection.emit('listen:failed', { collectionName, error: e });
+      }
     }
 
     // Run initial poll
     await this._poll();
     this._initialized = true;
+
+    // Mark the stream as ready after initial data is sent
+    this._stream.markReady();
 
     // Start polling interval
     this._pollTimer = setInterval(() => {
@@ -97,24 +119,30 @@ class PostgresObserveDriver {
   }
 
   async _poll() {
-    if (this._stopped) return;
+    if (this._stopped || this._polling) return;
+    this._polling = true;
 
-    const { collectionName, selector, options } = this._cursorDescription;
-
-    let results;
     try {
-      results = await this._provider._fetchResults(collectionName, selector, options || {});
-    } catch (e) {
-      Log.error('Postgres observe query error:', e);
-      return;
-    }
+      const { collectionName, selector, options } = this._cursorDescription;
 
-    if (this._stopped) return;
+      let results;
+      try {
+        results = await this._provider._fetchResults(collectionName, selector, options || {});
+      } catch (e) {
+        Log.error('Postgres observe query error:', e);
+        this._stream.markError(e);
+        return;
+      }
 
-    if (this._ordered) {
-      this._diffOrdered(results);
-    } else {
-      this._diffUnordered(results);
+      if (this._stopped) return;
+
+      if (this._ordered) {
+        this._diffOrdered(results);
+      } else {
+        this._diffUnordered(results);
+      }
+    } finally {
+      this._polling = false;
     }
   }
 
@@ -123,44 +151,29 @@ class PostgresObserveDriver {
     this._lastResults = newResults;
 
     if (!this._initialized && oldResults.length === 0) {
-      // Initial results — fire added for each
+      // Initial results — emit added for each
       for (let i = 0; i < newResults.length; i++) {
         const doc = newResults[i];
         const fields = EJSON.clone(doc);
         delete fields._id;
-        for (const observer of this._observers) {
-          if (observer.addedBefore) {
-            const before = i < newResults.length - 1 ? newResults[i + 1]._id : null;
-            observer.addedBefore(doc._id, fields, before);
-          } else if (observer.added) {
-            observer.added(doc._id, fields);
-          }
-        }
+        const before = i < newResults.length - 1 ? newResults[i + 1]._id : null;
+        this._stream.addedBefore(doc._id, fields, before);
       }
       return;
     }
 
     DiffSequence.diffQueryOrderedChanges(oldResults, newResults, {
       addedBefore: (id, fields, before) => {
-        for (const observer of this._observers) {
-          if (observer.addedBefore) observer.addedBefore(id, fields, before);
-          else if (observer.added) observer.added(id, fields);
-        }
+        this._stream.addedBefore(id, fields, before);
       },
       movedBefore: (id, before) => {
-        for (const observer of this._observers) {
-          if (observer.movedBefore) observer.movedBefore(id, before);
-        }
+        this._stream.movedBefore(id, before);
       },
       changed: (id, fields) => {
-        for (const observer of this._observers) {
-          if (observer.changed) observer.changed(id, fields);
-        }
+        this._stream.changed(id, fields);
       },
       removed: (id) => {
-        for (const observer of this._observers) {
-          if (observer.removed) observer.removed(id);
-        }
+        this._stream.removed(id);
       },
     });
   }
@@ -176,78 +189,26 @@ class PostgresObserveDriver {
     this._lastResults = newResults;
 
     if (!this._initialized && oldResults.size() === 0) {
-      // Initial results — fire added for each
+      // Initial results — emit added for each
       newResults.forEach((doc, id) => {
         const fields = EJSON.clone(doc);
         delete fields._id;
-        for (const observer of this._observers) {
-          if (observer.added) observer.added(id, fields);
-        }
+        this._stream.added(id, fields);
       });
       return;
     }
 
     DiffSequence.diffQueryUnorderedChanges(oldResults, newResults, {
       added: (id, fields) => {
-        for (const observer of this._observers) {
-          if (observer.added) observer.added(id, fields);
-        }
+        this._stream.added(id, fields);
       },
       changed: (id, fields) => {
-        for (const observer of this._observers) {
-          if (observer.changed) observer.changed(id, fields);
-        }
+        this._stream.changed(id, fields);
       },
       removed: (id) => {
-        for (const observer of this._observers) {
-          if (observer.removed) observer.removed(id);
-        }
+        this._stream.removed(id);
       },
     });
-  }
-
-  /**
-   * Add an observer and fire initial added callbacks.
-   * @param {Object} callbacks - { added, changed, removed } or { addedBefore, movedBefore, changed, removed }
-   * @returns {Promise<{ stop: Function }>}
-   */
-  async addObserver(callbacks) {
-    // Wait for initialization
-    await this._initPromise;
-
-    this._observers.add(callbacks);
-
-    // Fire initial state
-    if (this._ordered) {
-      const results = this._lastResults;
-      for (let i = 0; i < results.length; i++) {
-        const doc = results[i];
-        const fields = EJSON.clone(doc);
-        delete fields._id;
-        if (callbacks.addedBefore) {
-          const before = i < results.length - 1 ? results[i + 1]._id : null;
-          callbacks.addedBefore(doc._id, fields, before);
-        } else if (callbacks.added) {
-          callbacks.added(doc._id, fields);
-        }
-      }
-    } else {
-      this._lastResults.forEach((doc, id) => {
-        const fields = EJSON.clone(doc);
-        delete fields._id;
-        if (callbacks.added) callbacks.added(id, fields);
-      });
-    }
-
-    const self = this;
-    return {
-      stop() {
-        self._observers.delete(callbacks);
-        if (self._observers.size === 0) {
-          self.stop();
-        }
-      },
-    };
   }
 
   /**
@@ -275,7 +236,12 @@ class PostgresObserveDriver {
       this._notifyCallback = null;
     }
 
-    // Remove from multiplexer cache
-    _multiplexerCache.delete(this._cacheKey);
+    // Stop the ChangeStream (if not already stopped)
+    if (!this._stream.isStopped()) {
+      this._stream.stop();
+    }
+
+    // Remove from driver cache
+    _driverCache.delete(this._cacheKey);
   }
 }

@@ -46,6 +46,7 @@ export class PostgresStreamProvider extends StreamProvider {
   }
 
   async close() {
+    this._closeMultiplexers();
     if (this._connection) {
       await this._connection.close();
       this._connection = null;
@@ -162,8 +163,21 @@ export class PostgresStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
 
   async observeChanges(cursorDescription, ordered, callbacks, options = {}) {
-    const driver = getObserveDriver(cursorDescription, ordered, this);
-    return driver.addObserver(callbacks);
+    // Delegate to the EventEmitter path via the cached multiplexer
+    const multiplexer = await this._getMultiplexer(cursorDescription, ordered);
+    return multiplexer.addHandle(callbacks, options);
+  }
+
+  // ---------------------------------------------------------------------------
+  // EventEmitter-based reactive support
+  // ---------------------------------------------------------------------------
+
+  _supportsEventEmitter() {
+    return true;
+  }
+
+  startObserving(cursorDescription, ordered) {
+    return getObserveDriver(cursorDescription, ordered, this);
   }
 
   // ---------------------------------------------------------------------------

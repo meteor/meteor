@@ -35,6 +35,9 @@ export class AdaptiveEngine {
     this._pendingQueries = 0;
     this._pendingWrites = 0;
 
+    // Promise-based wait queue for backpressure
+    this._waitingForSlot = { query: [], write: [] };
+
     // Performance metrics
     this._metrics = {
       totalQueries: 0,
@@ -43,6 +46,9 @@ export class AdaptiveEngine {
       prefetchMisses: 0,
       throttledQueries: 0,
       backpressureEvents: 0,
+      totalChanges: 0,
+      errors: 0,
+      reconnections: 0,
     };
   }
 
@@ -222,34 +228,59 @@ export class AdaptiveEngine {
   acquireSlot(type = 'query') {
     if (type === 'write') {
       this._pendingWrites++;
-      return () => { this._pendingWrites--; };
+      return () => {
+        this._pendingWrites--;
+        this._notifySlotAvailable('write');
+      };
     }
     this._pendingQueries++;
-    return () => { this._pendingQueries--; };
+    return () => {
+      this._pendingQueries--;
+      this._notifySlotAvailable('query');
+    };
+  }
+
+  /**
+   * Notify waiters that a slot has become available.
+   * @private
+   */
+  _notifySlotAvailable(type) {
+    const waiting = this._waitingForSlot[type];
+    if (waiting && waiting.length > 0 && !this.shouldApplyBackpressure(type)) {
+      const { resolve } = waiting.shift();
+      resolve(this.acquireSlot(type));
+    }
   }
 
   /**
    * Wait until a slot is available (if backpressure is active).
+   * Uses Promise-based notification instead of polling.
    * @param {string} type - 'query' or 'write'
    * @param {number} [timeout=5000] - Max wait time in ms
    * @returns {Promise<Function>} Release function
    */
   async waitForSlot(type = 'query', timeout = 5000) {
-    const startTime = Date.now();
-
-    while (this.shouldApplyBackpressure(type)) {
-      if (Date.now() - startTime > timeout) {
-        this._metrics.backpressureEvents++;
-        throw new Meteor.Error(
-          'backpressure',
-          `Too many pending ${type} operations. Try again later.`
-        );
-      }
-      // Wait a small interval then check again
-      await new Promise(resolve => setTimeout(resolve, 10));
+    if (!this.shouldApplyBackpressure(type)) {
+      return this.acquireSlot(type);
     }
 
-    return this.acquireSlot(type);
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        // Remove from queue
+        const waiting = this._waitingForSlot[type];
+        const idx = waiting.findIndex(w => w.resolve === wrappedResolve);
+        if (idx !== -1) waiting.splice(idx, 1);
+        this._metrics.backpressureEvents++;
+        reject(new Meteor.Error('backpressure', `Too many pending ${type} operations.`));
+      }, timeout);
+
+      const wrappedResolve = (slot) => {
+        clearTimeout(timer);
+        resolve(slot);
+      };
+
+      this._waitingForSlot[type].push({ resolve: wrappedResolve });
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -278,6 +309,7 @@ export class AdaptiveEngine {
     this._throttleState.clear();
     this._pendingQueries = 0;
     this._pendingWrites = 0;
+    this._waitingForSlot = { query: [], write: [] };
     this._metrics = {
       totalQueries: 0,
       totalWrites: 0,
@@ -285,6 +317,42 @@ export class AdaptiveEngine {
       prefetchMisses: 0,
       throttledQueries: 0,
       backpressureEvents: 0,
+      totalChanges: 0,
+      errors: 0,
+      reconnections: 0,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // ChangeStream integration
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Attach to a ChangeStream to collect reactive metrics.
+   * Tracks total changes, errors, and reconnections.
+   *
+   * @param {ChangeStream} stream - The ChangeStream to monitor
+   * @returns {Function} Detach function to stop monitoring
+   */
+  attachToStream(stream) {
+    const onAdded = () => { this._metrics.totalChanges = (this._metrics.totalChanges || 0) + 1; };
+    const onChanged = () => { this._metrics.totalChanges = (this._metrics.totalChanges || 0) + 1; };
+    const onRemoved = () => { this._metrics.totalChanges = (this._metrics.totalChanges || 0) + 1; };
+    const onError = () => { this._metrics.errors = (this._metrics.errors || 0) + 1; };
+    const onReconnected = () => { this._metrics.reconnections = (this._metrics.reconnections || 0) + 1; };
+
+    stream.on('added', onAdded);
+    stream.on('changed', onChanged);
+    stream.on('removed', onRemoved);
+    stream.on('error', onError);
+    stream.on('reconnected', onReconnected);
+
+    return () => {
+      stream.removeListener('added', onAdded);
+      stream.removeListener('changed', onChanged);
+      stream.removeListener('removed', onRemoved);
+      stream.removeListener('error', onError);
+      stream.removeListener('reconnected', onReconnected);
     };
   }
 

@@ -5,12 +5,16 @@
 
 import { quoteIdent } from './schema';
 
-export class PostgresConnection {
+const { EventEmitter } = Npm.require('events');
+
+export class PostgresConnection extends EventEmitter {
   /**
    * @param {string} url - PostgreSQL connection URL
    * @param {Object} [options]
    */
   constructor(url, options = {}) {
+    super();
+    this.setMaxListeners(0);
     this._url = url;
     this._options = options;
     this._pool = null;
@@ -53,6 +57,7 @@ export class PostgresConnection {
 
     this._connected = true;
     Log.info('Postgres: connected to ' + this._url.replace(/\/\/[^@]*@/, '//***@'));
+    this.emit('connected');
   }
 
   /**
@@ -76,6 +81,7 @@ export class PostgresConnection {
     this._connected = false;
     this._knownTables.clear();
     this._notifyCallbacks.clear();
+    this.emit('disconnected');
   }
 
   /**
@@ -188,6 +194,7 @@ export class PostgresConnection {
     // Set up LISTEN on dedicated client (once)
     await this._ensureListenClient();
     await this._listenClient.query(`LISTEN ${quoteIdent(channel)}`);
+    this.emit('listen:ready', { channel, collectionName });
   }
 
   /**
@@ -219,9 +226,81 @@ export class PostgresConnection {
 
     this._listenClient.on('error', (err) => {
       Log.error('Postgres LISTEN client error:', err);
-      // Attempt to reconnect
+      // Properly end the errored client to avoid pool slot leak
+      const oldClient = this._listenClient;
       this._listenClient = null;
+      try { oldClient.end(); } catch (e) { /* ignore */ }
+      this.emit('listen:lost', { error: err });
+      // Attempt to reconnect
+      this._reconnectListenClient();
     });
+  }
+
+  /**
+   * Reconnect the LISTEN client with exponential backoff.
+   * Re-subscribes to all active LISTEN channels.
+   * @private
+   */
+  async _reconnectListenClient() {
+    if (!this._connected) return; // Pool is closed, give up
+    if (this._listenClient) return; // Already reconnected
+
+    let delay = 1000;
+    const maxDelay = 30000;
+
+    this.emit('listen:reconnecting');
+
+    const attempt = async () => {
+      if (!this._connected) return;
+      if (this._listenClient) return;
+
+      try {
+        this._listenClient = await this._pool.connect();
+
+        // Re-attach notification handler
+        this._listenClient.on('notification', (msg) => {
+          const callbacks = this._notifyCallbacks.get(msg.channel);
+          if (callbacks) {
+            let payload;
+            try {
+              payload = JSON.parse(msg.payload);
+            } catch (e) {
+              payload = { op: 'UNKNOWN', id: null };
+            }
+            for (const cb of callbacks) {
+              try {
+                cb(payload);
+              } catch (e) {
+                Log.error('Postgres LISTEN callback error:', e);
+              }
+            }
+          }
+        });
+
+        this._listenClient.on('error', (err) => {
+          Log.error('Postgres LISTEN client error:', err);
+          const oldClient = this._listenClient;
+          this._listenClient = null;
+          try { oldClient.end(); } catch (e) { /* ignore */ }
+          this.emit('listen:lost', { error: err });
+          this._reconnectListenClient();
+        });
+
+        // Re-LISTEN all channels
+        for (const channel of this._notifyCallbacks.keys()) {
+          await this._listenClient.query(`LISTEN ${quoteIdent(channel)}`);
+        }
+
+        this.emit('listen:reconnected');
+      } catch (e) {
+        Log.warn('Postgres: LISTEN reconnect failed, retrying in ' + delay + 'ms');
+        const nextDelay = delay;
+        delay = Math.min(delay * 2, maxDelay);
+        setTimeout(() => attempt(), nextDelay);
+      }
+    };
+
+    await attempt();
   }
 
   /**
