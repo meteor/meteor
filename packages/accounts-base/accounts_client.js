@@ -710,6 +710,12 @@ export class AccountsClient extends AccountsCommon {
     attemptToMatchHash(this, this.savedHash, defaultSuccessHandler);
   };
 
+  /**
+   * @summary Shared implementation for registering account link callbacks.
+   * @param {String} type The callback type (e.g. 'reset-password', 'verify-email', 'enroll-account').
+   * @param {Function} callback The function to call when the link is clicked.
+   * @locus Client
+   */
   _registerLinkCallback(type, callback) {
     if (this._accountsCallbacks[type]) {
       Meteor._debug(
