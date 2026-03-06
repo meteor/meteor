@@ -14,5 +14,5 @@ setMinimumBrowserVersions({
 
 const disableSockJS = !!process.env.DISABLE_SOCKJS || !!Meteor.settings?.packages?.['ddp-server']?.uws;
 if (disableSockJS) {
-  __meteor_runtime_config__.DISABLE_SOCKJS = disableSockJS;
+  __meteor_runtime_config__.DISABLE_SOCKJS = '1';
 }
