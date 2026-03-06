@@ -109,7 +109,7 @@ export class AccountsClient extends AccountsCommon {
     if (!this._loginFuncs[funcName]) {
       throw new Error(`${funcName} was not defined`);
     }
-    return this._loginFuncs[funcName].apply(this, funcArgs);
+    return this._loginFuncs[funcName].call(this, ...funcArgs);
   }
 
   /**
@@ -123,7 +123,7 @@ export class AccountsClient extends AccountsCommon {
     if (!this._loginFuncs[funcName]) {
       throw new Error(`${funcName} was not defined`);
     }
-    return this._loginFuncs[funcName].apply(this, funcArgs);
+    return this._loginFuncs[funcName].call(this, ...funcArgs);
   }
 
   /**
