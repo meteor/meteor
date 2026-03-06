@@ -142,11 +142,11 @@ export class AccountsClient extends AccountsCommon {
         this._loggingOut.set(false);
         this._loginCallbacksCalled = false;
         this.makeClientLoggedOut();
-        callback && callback();
+        callback?.();
       })
       .catch((e) => {
         this._loggingOut.set(false);
-        callback && callback(e);
+        callback?.(e);
       });
   }
 
@@ -166,11 +166,11 @@ export class AccountsClient extends AccountsCommon {
         this._loggingOut.set(false);
         this._loginCallbacksCalled = false;
         this.makeClientLoggedOut();
-        callback && callback();
+        callback?.();
       })
       .catch((e) => {
         this._loggingOut.set(false);
-        callback && callback(e);
+        callback?.(e);
       });
   }
 
@@ -215,7 +215,7 @@ export class AccountsClient extends AccountsCommon {
       'removeOtherTokens',
       [],
       { wait: true },
-      err => callback && callback(err)
+      err => callback?.(err)
     );
   }
 
