@@ -710,6 +710,16 @@ export class AccountsClient extends AccountsCommon {
     attemptToMatchHash(this, this.savedHash, defaultSuccessHandler);
   };
 
+  _registerLinkCallback(type, callback) {
+    if (this._accountsCallbacks[type]) {
+      Meteor._debug(
+        `Accounts callback for "${type}" was registered more than once. ` +
+        "Only one callback added will be executed."
+      );
+    }
+    this._accountsCallbacks[type] = callback;
+  };
+
   /**
    * @summary Register a function to call when a reset password link is clicked
    * in an email sent by
@@ -728,12 +738,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   onResetPasswordLink(callback) {
-    if (this._accountsCallbacks["reset-password"]) {
-      Meteor._debug("Accounts.onResetPasswordLink was called more than once. " +
-        "Only one callback added will be executed.");
-    }
-
-    this._accountsCallbacks["reset-password"] = callback;
+    this._registerLinkCallback("reset-password", callback);
   };
 
   /**
@@ -755,12 +760,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   onEmailVerificationLink(callback) {
-    if (this._accountsCallbacks["verify-email"]) {
-      Meteor._debug("Accounts.onEmailVerificationLink was called more than once. " +
-        "Only one callback added will be executed.");
-    }
-
-    this._accountsCallbacks["verify-email"] = callback;
+    this._registerLinkCallback("verify-email", callback);
   };
 
   /**
@@ -782,12 +782,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   onEnrollmentLink(callback) {
-    if (this._accountsCallbacks["enroll-account"]) {
-      Meteor._debug("Accounts.onEnrollmentLink was called more than once. " +
-        "Only one callback added will be executed.");
-    }
-
-    this._accountsCallbacks["enroll-account"] = callback;
+    this._registerLinkCallback("enroll-account", callback);
   };
 
 }
