@@ -288,7 +288,7 @@ Object.assign(Session.prototype, {
     // was attached, close it.
 
     // Already destroyed.
-    if (! self.inQueue)
+    if (!self.inQueue)
       return;
 
     // Drop the merge box data immediately.
@@ -1010,7 +1010,7 @@ Object.assign(Subscription.prototype, {
       self.ready();
     } else if (Array.isArray(res)) {
       // Check all the elements are cursors
-      if (! res.every(isCursor)) {
+      if (!res.every(isCursor)) {
         self.error(new Error("Publish function returned an array of non-Cursors"));
         return;
       }
@@ -1589,7 +1589,7 @@ Object.assign(Server.prototype, {
   apply: function (name, args, options, callback) {
     // We were passed 3 arguments. They may be either (name, args, options)
     // or (name, args, callback)
-    if (! callback && typeof options === 'function') {
+    if (!callback && typeof options === 'function') {
       callback = options;
       options = {};
     } else {
@@ -1617,7 +1617,7 @@ Object.assign(Server.prototype, {
     // Run the handler
     var handler = this.method_handlers[name];
 
-    if (! handler) {
+    if (!handler) {
       return Promise.reject(
         new Meteor.Error(404, `Method '${name}' not found`)
       );
