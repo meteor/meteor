@@ -163,10 +163,6 @@ export default defineConfig({
             text: "Roadmap",
             link: "/about/roadmap",
           },
-              {
-                text: "Contributing",
-                link: "/about/contributing",
-              }
         ],
         collapsed: true,
       },
@@ -631,6 +627,20 @@ export default defineConfig({
           {
             text: "WebSocket Compression",
             link: "/performance/websocket-compression",
+          },
+        ],
+        collapsed: true,
+      },
+      {
+        text: "Community",
+        items: [
+          {
+            text: "Contributing",
+            link: "/community/contributing",
+          },
+          {
+            text: "Contributors",
+            link: "/community/contributors",
           },
         ],
         collapsed: true,

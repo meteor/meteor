@@ -1,6 +1,6 @@
 {
   "name": "@meteorjs/rspack",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Configuration logic for using Rspack in Meteor projects",
   "main": "index.js",
   "type": "commonjs",
@@ -12,8 +12,15 @@
     "node-polyfill-webpack-plugin": "^4.1.0",
     "webpack-merge": "^6.0.1"
   },
+  "scripts": {
+    "bump": "node ./scripts/bump-version.js",
+    "publish:beta": "bash ./scripts/publish-beta.sh"
+  },
   "peerDependencies": {
     "@rspack/cli": ">=1.3.0",
     "@rspack/core": ">=1.3.0"
+  },
+  "devDependencies": {
+    "semver": "^7.7.4"
   }
 }
