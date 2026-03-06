@@ -24,9 +24,10 @@
  *   - AFS provider registration
  */
 
-import { resolveField, ResolvedSchema, quoteIdent } from './schema';
+import { resolveField, ResolvedSchema, quoteIdent, quoteLiteral } from './schema';
 import { documentToRow, rowToDocument } from './row_converter';
 import { PostgresStreamProvider } from './postgres_stream_provider';
+import { PostgresConnection } from './postgres_driver';
 import {
   CompilationContext,
   compileSelector,
@@ -143,6 +144,11 @@ Tinytest.add('postgres - schema - quoteIdent', (test) => {
   test.equal(quoteIdent('_extra'), '_extra');
 });
 
+Tinytest.add('postgres - schema - quoteLiteral', (test) => {
+  test.equal(quoteLiteral("O'Reilly"), "'O''Reilly'");
+  test.equal(quoteLiteral(null), 'NULL');
+});
+
 Tinytest.add('postgres - schema - ResolvedSchema constructor validates types', (test) => {
   test.throws(() => {
     new ResolvedSchema({ field: { type: 'invalid' } });
@@ -157,6 +163,43 @@ Tinytest.add('postgres - schema - ResolvedSchema column definitions', (test) => 
   test.isTrue(defs.some(d => d.includes('INTEGER DEFAULT 0'))); // views
   test.isTrue(defs.some(d => d.includes('BOOLEAN DEFAULT false'))); // published
   test.isTrue(defs.some(d => d.includes('TIMESTAMPTZ DEFAULT NOW()'))); // createdAt
+});
+
+Tinytest.add('postgres - schema - ResolvedSchema escapes string defaults', (test) => {
+  const schema = new ResolvedSchema({
+    publisher: { type: 'text', default: "O'Reilly" },
+  });
+  const defs = schema.getColumnDefinitions();
+  test.equal(defs, ["publisher TEXT DEFAULT 'O''Reilly'"]);
+});
+
+Tinytest.addAsync('postgres - driver - setupListenNotify escapes literals and avoids duplicate LISTEN', async (test) => {
+  const conn = new PostgresConnection('postgres://example');
+  const queries = [];
+  const listenQueries = [];
+
+  conn.query = async (text) => {
+    queries.push(text);
+    return { rows: [], rowCount: 0 };
+  };
+
+  conn._ensureListenClient = async () => {
+    conn._listenClient = {
+      query: async (text) => {
+        listenQueries.push(text);
+        return { rows: [], rowCount: 0 };
+      },
+    };
+  };
+
+  const callback = () => {};
+  await conn.setupListenNotify(`posts'"draft"`, callback);
+  await conn.setupListenNotify(`posts'"draft"`, callback);
+
+  test.equal(queries.length, 2);
+  test.isTrue(queries[0].includes("pg_notify('meteor_pg_posts''\"draft\"'"));
+  test.isTrue(queries[1].includes("tgname = 'meteor_pg_posts''\"draft\"_notify_trigger'"));
+  test.equal(listenQueries, ['LISTEN "meteor_pg_posts\'""draft"""']);
 });
 
 // ============================================================================

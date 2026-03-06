@@ -28,6 +28,17 @@ export function quoteIdent(name) {
 }
 
 /**
+ * Quote a SQL string literal.
+ */
+export function quoteLiteral(value) {
+  if (value === null) {
+    return 'NULL';
+  }
+
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+/**
  * ResolvedSchema — normalizes user schema into typed column maps.
  *
  * Provides field resolution: given a field path, determines whether it
@@ -98,7 +109,7 @@ export class ResolvedSchema {
         } else if (typeof col.default === 'number') {
           def += ` DEFAULT ${col.default}`;
         } else if (typeof col.default === 'string') {
-          def += ` DEFAULT '${col.default}'`;
+          def += ` DEFAULT ${quoteLiteral(col.default)}`;
         }
       }
 
