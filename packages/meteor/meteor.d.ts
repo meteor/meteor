@@ -1,6 +1,6 @@
-import { Mongo } from 'meteor/mongo';
-import { EJSONable, EJSONableProperty } from 'meteor/ejson';
-import { DDP } from 'meteor/ddp';
+import { Mongo } from "meteor/mongo";
+import { EJSONable, EJSONableProperty } from "meteor/ejson";
+import { DDP } from "meteor/ddp";
 
 export type global_Error = Error;
 
@@ -21,7 +21,7 @@ export namespace Meteor {
   var release: string;
 
   var meteorRelease: string;
-  
+
   interface ErrorConstructor {
     new (...args: any[]): Error;
     errorType: string;
@@ -181,7 +181,13 @@ export namespace Meteor {
       | EJSONable[]
       | EJSONableProperty
       | EJSONableProperty[]
-  >(name: string, ...args: any[]): Promise<Result> & { stubPromise: Promise<Result>, serverPromise: Promise<Result> };
+  >(
+    name: string,
+    ...args: any[]
+  ): Promise<Result> & {
+    stubPromise: Promise<Result>;
+    serverPromise: Promise<Result>;
+  };
 
   interface MethodApplyOptions<
     Result extends
@@ -261,7 +267,10 @@ export namespace Meteor {
       error: global_Error | Meteor.Error | undefined,
       result?: Result
     ) => void
-  ): Promise<Result> & { stubPromise: Promise<Result>, serverPromise: Promise<Result> };
+  ): Promise<Result> & {
+    stubPromise: Promise<Result>;
+    serverPromise: Promise<Result>;
+  };
   /** Method **/
 
   /** Url **/
@@ -317,6 +326,28 @@ export namespace Meteor {
    * @param func The function to run
    */
   function defer(func: Function): void;
+
+  /**
+   * Wrap a function so that it only runs in the specified environments.
+   * @param func The function to wrap
+   * @param options An object with an `on` property that is an array of environment names: `"development"`, `"production"`, and/or `"test"`.
+   */
+  function deferrable<T extends Function>(
+    func: T,
+    options: { on: Array<"development" | "production" | "test"> }
+  ): T | void;
+
+  /**
+   * Wrap a function so that it only runs in development environment.
+   * @param func The function to wrap
+   */
+  function deferDev<T extends Function>(func: T): T | void;
+
+  /**
+   * Wrap a function so that it only runs in production environment.
+   * @param func The function to wrap
+   */
+  function deferProd<T extends Function>(func: T): T | void;
   /** Timeout **/
 
   /** utils **/
@@ -336,7 +367,10 @@ export namespace Meteor {
    * @param func A function that takes a callback as its final parameter
    * @param context Optional `this` object against which the original function will be invoked
    */
-  function wrapAsync<T extends Function>(func: T, context?: ThisParameterType<T>): Function;
+  function wrapAsync<T extends Function>(
+    func: T,
+    context?: ThisParameterType<T>
+  ): Function;
 
   function bindEnvironment<TFunc extends Function>(func: TFunc): TFunc;
 
@@ -396,7 +430,7 @@ export namespace Meteor {
        * others can be set using Meteor's standard OAuth login parameters */
       loginUrlParameters?: {
         include_granted_scopes: boolean;
-      },
+      };
     },
     callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
@@ -439,7 +473,6 @@ export namespace Meteor {
     callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
   /** Login **/
-
 
   /** Connection **/
   function reconnect(): void;
@@ -518,7 +551,11 @@ export interface Subscription {
    * @param fields The fields in the document that have changed, together with their new values.  If a field is not present in `fields` it was left unchanged; if it is present in `fields` and
    * has a value of `undefined` it was removed from the document.  If `_id` is present it is ignored.
    */
-  changed(collection: string, id: string, fields: Record<string, unknown>): void;
+  changed(
+    collection: string,
+    id: string,
+    fields: Record<string, unknown>
+  ): void;
   /** Access inside the publish function. The incoming connection for this subscription. */
   connection: Meteor.Connection;
   /**

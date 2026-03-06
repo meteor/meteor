@@ -743,7 +743,7 @@ export default class LocalCollection {
       for (const id of specificIds) {
         const doc = this._docs.get(id);
 
-        if (doc && !fn(doc, id)) {
+        if (doc && fn(doc, id) === false) {
           break
         }
       }
@@ -1720,7 +1720,7 @@ LocalCollection._removeFromResultsSync = (query, doc) => {
   } else {
     const id = doc._id;  // in case callback mutates doc
 
-    query.removed(doc._id);
+    query.removed(id);
     query.results.remove(id);
   }
 };
@@ -1734,7 +1734,7 @@ LocalCollection._removeFromResultsAsync = async (query, doc) => {
   } else {
     const id = doc._id;  // in case callback mutates doc
 
-    await query.removed(doc._id);
+    await query.removed(id);
     query.results.remove(id);
   }
 };

@@ -1,0 +1,551 @@
+/* VARIABLES */
+:root {
+  /* Layout & Sizing */
+  --login-buttons-accounts-dialog-width: 250px;
+  --meteor-accounts-base-padding: 8px;
+  --meteor-accounts-dialog-border-width: 1px;
+  --configure-login-service-dialog-width: 530px;
+  --button-border-radius: 4px;
+  --dialog-border-radius: 8px;
+  --input-border-radius: 4px;
+  
+  /* Colors - Primary */
+  --login-buttons-color: #4e40b8;
+  --login-buttons-color-active: #6c5ce7;
+  
+  /* Colors - Config */
+  --login-buttons-config-color: #cc3a1a;
+  --login-buttons-config-color-border: #a32e15;
+  --login-buttons-config-color-active: #e5532e;
+  --login-buttons-config-color-active-border: #cc3a1a;
+  
+  /* Colors - UI */
+  --color-text-primary: #2d2d2d;
+  --color-text-secondary: #4a4a4a;
+  --color-text-disabled: #999;
+  --color-background-primary: #fff;
+  --color-background-secondary: #f8f9fa;
+  --color-background-disabled: #e0e0e0;
+  --color-border: #e6e6e6;
+  --color-input-border: #d1d1d1;
+  --color-input-focus-border: var(--login-buttons-color);
+  --color-error: #e74c3c;
+  --color-success: #2ecc71;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  
+  /* Typography */
+  --font-family-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --font-family-monospace: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  --font-size-base: 16px;
+  --font-size-small: 0.875rem;
+  --font-size-smaller: 0.8125rem;
+  --font-size-smallest: 0.75rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+  --line-height-base: 1.5;
+  
+  /* Effects */
+  --box-shadow-dialog: 0 10px 25px rgba(0, 0, 0, 0.1);
+  --box-shadow-button-active: 0 2px 4px 0 rgba(0, 0, 0, 0.1) inset;
+  --box-shadow-input-focus: 0 0 0 3px rgba(78, 64, 184, 0.2);
+  
+  /* Transitions */
+  --transition-speed-fast: 0.1s;
+  --transition-speed-normal: 0.2s;
+  --transition-speed-slow: 0.3s;
+  --transition-timing: cubic-bezier(0.25, 0.1, 0.25, 1);
+  
+  /* Dark Theme Variables - These can be overridden by users */
+  --login-buttons-color-dark: #8c7ae6;
+  --login-buttons-color-active-dark: #a29bfe;
+  --color-text-primary-dark: #f5f5f5;
+  --color-text-secondary-dark: #d1d1d1;
+  --color-text-disabled-dark: #777;
+  --color-background-primary-dark: #121212;
+  --color-background-secondary-dark: #1e1e1e;
+  --color-background-disabled-dark: #444;
+  --color-border-dark: #333;
+  --color-input-border-dark: #444;
+  --color-input-focus-border-dark: var(--login-buttons-color-dark);
+  --color-error-dark: #ff6b6b;
+  --color-success-dark: #55efc4;
+  --color-overlay-dark: rgba(0, 0, 0, 0.8);
+  --box-shadow-dialog-dark: 0 10px 25px rgba(0, 0, 0, 0.3);
+  --box-shadow-button-active-dark: 0 2px 4px 0 rgba(0, 0, 0, 0.3) inset;
+  --box-shadow-input-focus-dark: 0 0 0 3px rgba(140, 122, 230, 0.3);
+}
+
+/* Dark Theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Colors (Dark) - Use the dark theme variables with fallbacks */
+    --login-buttons-color: var(--login-buttons-color-dark, #7986CB);
+    --login-buttons-color-active: var(--login-buttons-color-active-dark, #9FA8DA);
+    --color-text-primary: var(--color-text-primary-dark, #eee);
+    --color-text-secondary: var(--color-text-secondary-dark, #bbb);
+    --color-text-disabled: var(--color-text-disabled-dark, #666);
+    --color-background-primary: var(--color-background-primary-dark, #121212);
+    --color-background-secondary: var(--color-background-secondary-dark, #1e1e1e);
+    --color-background-disabled: var(--color-background-disabled-dark, #444);
+    --color-border: var(--color-border-dark, #333);
+    --color-input-border: var(--color-input-border-dark, #444);
+    --color-input-focus-border: var(--color-input-focus-border-dark, var(--login-buttons-color, #7986CB));
+    --color-error: var(--color-error-dark, #e57373);
+    --color-success: var(--color-success-dark, #81c784);
+    --color-overlay: var(--color-overlay-dark, rgba(0, 0, 0, 0.8));
+    
+    /* Effects (Dark) */
+    --box-shadow-dialog: var(--box-shadow-dialog-dark, 0 4px 12px rgba(0, 0, 0, 0.5));
+    --box-shadow-button-active: var(--box-shadow-button-active-dark, 0 2px 3px 0 rgba(0, 0, 0, 0.4) inset);
+    --box-shadow-input-focus: var(--box-shadow-input-focus-dark, 0 0 0 2px rgba(121, 134, 203, 0.25));
+  }
+}
+
+/* LOGIN BUTTONS */
+
+#login-buttons {
+  display: inline-block;
+  line-height: 1;
+}
+
+#login-buttons .login-button {
+  position: relative;
+}
+
+#login-buttons button.login-button {
+  width: 100%;
+}
+
+#login-buttons .login-buttons-with-only-one-button {
+  display: inline-block;
+}
+
+#login-buttons .login-buttons-with-only-one-button .login-button {
+  display: inline-block;
+}
+
+#login-buttons .login-buttons-with-only-one-button .login-text-and-button {
+  display: inline-block;
+}
+
+#login-buttons .login-display-name {
+  display: inline-block;
+  padding-right: 2px;
+  line-height: var(--line-height-base);
+  font-family: var(--font-family-primary);
+}
+
+#login-buttons .loading {
+  line-height: 1;
+  background-image: url(data:image/gif;base64,R0lGODlhEAALAPQAAP///wAAANra2tDQ0Orq6gYGBgAAAC4uLoKCgmBgYLq6uiIiIkpKSoqKimRkZL6+viYmJgQEBE5OTubm5tjY2PT09Dg4ONzc3PLy8ra2tqCgoMrKyu7u7gAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCwAAACwAAAAAEAALAAAFLSAgjmRpnqSgCuLKAq5AEIM4zDVw03ve27ifDgfkEYe04kDIDC5zrtYKRa2WQgAh+QQJCwAAACwAAAAAEAALAAAFJGBhGAVgnqhpHIeRvsDawqns0qeN5+y967tYLyicBYE7EYkYAgAh+QQJCwAAACwAAAAAEAALAAAFNiAgjothLOOIJAkiGgxjpGKiKMkbz7SN6zIawJcDwIK9W/HISxGBzdHTuBNOmcJVCyoUlk7CEAAh+QQJCwAAACwAAAAAEAALAAAFNSAgjqQIRRFUAo3jNGIkSdHqPI8Tz3V55zuaDacDyIQ+YrBH+hWPzJFzOQQaeavWi7oqnVIhACH5BAkLAAAALAAAAAAQAAsAAAUyICCOZGme1rJY5kRRk7hI0mJSVUXJtF3iOl7tltsBZsNfUegjAY3I5sgFY55KqdX1GgIAIfkECQsAAAAsAAAAABAACwAABTcgII5kaZ4kcV2EqLJipmnZhWGXaOOitm2aXQ4g7P2Ct2ER4AMul00kj5g0Al8tADY2y6C+4FIIACH5BAkLAAAALAAAAAAQAAsAAAUvICCOZGme5ERRk6iy7qpyHCVStA3gNa/7txxwlwv2isSacYUc+l4tADQGQ1mvpBAAIfkECQsAAAAsAAAAABAACwAABS8gII5kaZ7kRFGTqLLuqnIcJVK0DeA1r/u3HHCXC/aKxJpxhRz6Xi0ANAZDWa+kEAA7AAAAAAAAAAAA);
+  width: 16px;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+#login-buttons .login-button, .accounts-dialog .login-button {
+  cursor: pointer;
+  -webkit-user-select: none; /* Safari support */
+  user-select: none;
+  padding: 0.625rem 1.25rem;
+
+  font-size: var(--font-size-small);
+  font-family: var(--font-family-primary);
+  line-height: var(--line-height-base);
+  font-weight: var(--font-weight-medium);
+
+  text-align: center;
+  color: var(--color-background-primary);
+
+  background: var(--login-buttons-color);
+  border: none;
+  
+  border-radius: var(--button-border-radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: background-color var(--transition-speed-normal) var(--transition-timing),
+              box-shadow var(--transition-speed-normal) var(--transition-timing),
+              transform var(--transition-speed-fast) var(--transition-timing);
+}
+
+#login-buttons .login-button:hover, .accounts-dialog .login-button:hover {
+  background: var(--login-buttons-color-active);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+#login-buttons .login-button:active, .accounts-dialog .login-button:active {
+  background: var(--login-buttons-color-active);
+  transform: translateY(1px);
+  box-shadow: var(--box-shadow-button-active);
+}
+
+#login-buttons .login-button.login-button-disabled,
+#login-buttons .login-button.login-button-disabled:active,
+.accounts-dialog .login-button.login-button-disabled,
+.accounts-dialog .login-button.login-button-disabled:active {
+  color: var(--color-text-disabled);
+  background: var(--color-background-disabled);
+  border: none;
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Reset styles for dialog elements */
+.accounts-dialog * {
+  padding: 0;
+  margin: 0;
+  line-height: inherit;
+  color: inherit;
+  font: inherit;
+  font-family: var(--font-family-primary);
+}
+
+.accounts-dialog .login-button {
+  width: auto;
+  margin-bottom: 4px;
+}
+
+#login-buttons .login-buttons-padding {
+  display: inline-block;
+  width: 30px;
+}
+
+#login-buttons .login-display-name {
+  margin-right: 4px;
+}
+
+#login-buttons .configure-button {
+  background: var(--login-buttons-config-color);
+  border-color: var(--login-buttons-config-color-border);
+}
+
+#login-buttons .configure-button:active,
+#login-buttons .configure-button:hover {
+  background: var(--login-buttons-config-color-active);
+  border-color: var(--login-buttons-config-color-active-border);
+}
+
+#login-buttons .login-image {
+  display: inline-block;
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 16px;
+  height: 16px;
+}
+
+#login-buttons .text-besides-image {
+  margin-left: 18px;
+}
+
+#login-buttons .no-services {
+  color: red;
+}
+
+#login-buttons .login-link-and-dropdown-list {
+  position: relative;
+}
+
+#login-buttons .login-close-text {
+  float: left;
+  position: relative;
+  padding-bottom: 8px;
+}
+
+#login-buttons .login-text-and-button .loading,
+#login-buttons .login-link-and-dropdown-list .loading {
+  display: inline-block;
+}
+
+#login-buttons.login-buttons-dropdown-align-left #login-dropdown-list .loading {
+  float: right;
+}
+
+#login-buttons.login-buttons-dropdown-align-right #login-dropdown-list .loading {
+  float: left;
+}
+
+#login-buttons .login-close-text-clear {
+  clear: both;
+}
+
+#login-buttons .or {
+  text-align: center;
+}
+
+#login-buttons .hline {
+  text-decoration: line-through;
+  color: lightgrey;
+}
+
+#login-buttons .or-text {
+  font-weight: bold;
+}
+
+#login-buttons #signup-link {
+  float: right;
+}
+
+#login-buttons #forgot-password-link,
+#login-buttons #resend-passwordless-code {
+  float: left;
+}
+
+#login-buttons #back-to-login-link {
+  float: right;
+}
+
+#login-buttons a, .accounts-dialog a {
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--login-buttons-color);
+  transition: color var(--transition-speed-normal) var(--transition-timing);
+}
+
+#login-buttons a:hover, .accounts-dialog a:hover {
+  color: var(--login-buttons-color-active);
+  text-decoration: underline;
+}
+
+#login-buttons.login-buttons-dropdown-align-right .login-close-text {
+  float: right;
+}
+
+.accounts-dialog {
+  border: var(--meteor-accounts-dialog-border-width) solid var(--color-border);
+  z-index: 1000;
+  background: var(--color-background-primary);
+  border-radius: var(--dialog-border-radius);
+
+  padding: 24px;
+  margin: -8px -12px 0 -12px;
+
+  width: var(--login-buttons-accounts-dialog-width);
+
+  box-shadow: var(--box-shadow-dialog);
+
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+}
+
+.accounts-dialog > * {
+  line-height: 1.6;
+}
+
+.accounts-dialog > .login-close-text {
+  line-height: inherit;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.accounts-dialog label, .accounts-dialog .title {
+  font-size: var(--font-size-small);
+  margin-top: 1rem;
+  margin-bottom: 0.375rem;
+  display: block;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  letter-spacing: 0.01em;
+}
+
+.accounts-dialog input[type=text],
+.accounts-dialog input[type=email],
+.accounts-dialog input[type=password] {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+#login-buttons input[type=text]:focus,
+#login-buttons input[type=email]:focus,
+#login-buttons input[type=password]:focus,
+.accounts-dialog input[type=text]:focus,
+.accounts-dialog input[type=email]:focus,
+.accounts-dialog input[type=password]:focus {
+  outline: none;
+  border-color: var(--color-input-focus-border);
+  box-shadow: var(--box-shadow-input-focus);
+}
+
+.accounts-dialog .login-button-form-submit {
+  margin-top: 8px;
+}
+
+.accounts-dialog .message {
+  font-size: var(--font-size-smaller);
+  margin-top: 10px;
+  line-height: 1.4;
+  padding: 0.375rem 0;
+}
+
+.accounts-dialog .error-message {
+  color: var(--color-error);
+  padding: 0.375rem 0.625rem;
+  background-color: rgba(231, 76, 60, 0.1);
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+}
+
+.accounts-dialog .info-message {
+  color: var(--color-success);
+  padding: 0.375rem 0.625rem;
+  background-color: rgba(46, 204, 113, 0.1);
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+}
+
+.accounts-dialog .additional-link {
+  font-size: var(--font-size-smallest);
+  margin-top: 1rem;
+  display: inline-block;
+}
+
+.accounts-dialog .accounts-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+
+  font-size: 18px;
+  font-weight: var(--font-weight-bold);
+  line-height: 18px;
+  text-decoration: none;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  transition: opacity var(--transition-speed-normal) var(--transition-timing);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.accounts-dialog .accounts-close:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.accounts-dialog #login-buttons-cancel-reset-password {
+  float: right;
+}
+
+.accounts-dialog #login-buttons-cancel-enroll-account {
+  float: right;
+}
+
+#login-dropdown-list {
+  position: absolute;
+  top: calc(-1 * var(--meteor-accounts-dialog-border-width));
+  left: calc(-1 * var(--meteor-accounts-dialog-border-width));
+}
+
+#login-buttons.login-buttons-dropdown-align-right #login-dropdown-list {
+  left: auto;
+  right: calc(-1 * var(--meteor-accounts-dialog-border-width));
+}
+
+#login-buttons-message-dialog .message {
+  /* we intentionally want it bigger on this dialog since it's the only thing displayed */
+  font-size: 100%;
+}
+
+.accounts-centered-dialog {
+  font-family: var(--font-family-primary);
+
+  z-index: 1001;
+  position: fixed;
+  
+  /* Modern centering approach using transform */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--login-buttons-accounts-dialog-width);
+}
+
+#configure-login-service-dialog {
+  width: var(--configure-login-service-dialog-width);
+  /* Using transform for centering instead of negative margins */
+}
+
+#configure-login-service-dialog table {
+  width: 100%;
+}
+
+#configure-login-service-dialog input[type=text] {
+  width: 100%;
+  font-family: var(--font-family-monospace);
+}
+
+#configure-login-service-dialog ol {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+#configure-login-service-dialog ol li {
+  margin-left: 30px;
+}
+
+#configure-login-service-dialog .configuration_labels {
+  width: 30%;
+}
+
+#configure-login-service-dialog .configuration_inputs {
+  width: 70%;
+}
+
+#configure-login-service-dialog .new-section {
+  margin-top: 10px;
+}
+
+#configure-login-service-dialog .url {
+  font-family: var(--font-family-monospace);
+}
+
+#configure-login-service-dialog-save-configuration {
+  float: right;
+}
+
+.configure-login-service-dismiss-button {
+  float: left;
+}
+
+#just-verified-dismiss-button, #messages-dialog-dismiss-button {
+  margin-top: 8px;
+}
+
+.hide-background {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
+  background-color: var(--color-overlay);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+#login-buttons input[type=text],
+#login-buttons input[type=email],
+#login-buttons input[type=password],
+.accounts-dialog input[type=text],
+.accounts-dialog input[type=email],
+.accounts-dialog input[type=password] {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--input-border-radius);
+  line-height: var(--line-height-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background-color: var(--color-background-primary);
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color var(--transition-speed-normal) var(--transition-timing),
+              box-shadow var(--transition-speed-normal) var(--transition-timing);
+}

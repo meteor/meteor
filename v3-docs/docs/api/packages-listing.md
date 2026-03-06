@@ -106,6 +106,7 @@
 ### [mongo-id](https://github.com/meteor/meteor/tree/devel/packages/mongo-id) {#mongo-id}
 ### [mongo-livedata](https://github.com/meteor/meteor/tree/devel/packages/mongo-livedata) {#mongo-livedata}
 ### [npm-mongo](https://github.com/meteor/meteor/tree/devel/packages/npm-mongo) {#npm-mongo}
+### [npm-mongo-legacy](https://github.com/meteor/meteor/tree/devel/packages/npm-mongo-legacy) {#npm-mongo-legacy}
 ### [oauth](https://github.com/meteor/meteor/tree/devel/packages/oauth) {#oauth}
 ### [oauth-encryption](https://github.com/meteor/meteor/tree/devel/packages/oauth-encryption) {#oauth-encryption}
 ### [oauth1](https://github.com/meteor/meteor/tree/devel/packages/oauth1) {#oauth1}
@@ -145,7 +146,6 @@
 ### [twitter-config-ui](https://github.com/meteor/meteor/tree/devel/packages/twitter-config-ui) {#twitter-config-ui}
 ### [twitter-oauth](https://github.com/meteor/meteor/tree/devel/packages/twitter-oauth) {#twitter-oauth}
 ### [typescript](https://github.com/meteor/meteor/tree/devel/packages/typescript) {#typescript}
-### [underscore](https://github.com/meteor/meteor/tree/devel/packages/underscore) {#underscore}
 ### [url](https://github.com/meteor/meteor/tree/devel/packages/url) {#url}
 ### [webapp](https://github.com/meteor/meteor/tree/devel/packages/webapp) {#webapp}
 ### [webapp-hashing](https://github.com/meteor/meteor/tree/devel/packages/webapp-hashing) {#webapp-hashing}
