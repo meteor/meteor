@@ -3,7 +3,7 @@
  * table creation, and LISTEN/NOTIFY infrastructure.
  */
 
-import { quoteIdent } from './schema';
+import { quoteIdent, quoteLiteral } from './schema';
 import { EventEmitter } from 'events';
 
 export class PostgresConnection extends EventEmitter {
@@ -147,20 +147,22 @@ export class PostgresConnection extends EventEmitter {
    */
   async setupListenNotify(collectionName, callback) {
     const channel = `meteor_pg_${collectionName}`;
+    const quotedChannel = quoteLiteral(channel);
 
     // Create trigger function if not exists
     const triggerFnName = `${channel}_notify_fn`;
     const triggerName = `${channel}_notify_trigger`;
+    const quotedTriggerName = quoteLiteral(triggerName);
 
     const fnSql = `
       CREATE OR REPLACE FUNCTION ${quoteIdent(triggerFnName)}()
       RETURNS TRIGGER AS $$
       BEGIN
         IF TG_OP = 'DELETE' THEN
-          PERFORM pg_notify('${channel}', json_build_object('op', TG_OP, 'id', OLD._id)::text);
+          PERFORM pg_notify(${quotedChannel}, json_build_object('op', TG_OP, 'id', OLD._id)::text);
           RETURN OLD;
         ELSE
-          PERFORM pg_notify('${channel}', json_build_object('op', TG_OP, 'id', NEW._id)::text);
+          PERFORM pg_notify(${quotedChannel}, json_build_object('op', TG_OP, 'id', NEW._id)::text);
           RETURN NEW;
         END IF;
       END;
@@ -171,7 +173,7 @@ export class PostgresConnection extends EventEmitter {
       DO $$
       BEGIN
         IF NOT EXISTS (
-          SELECT 1 FROM pg_trigger WHERE tgname = '${triggerName}'
+          SELECT 1 FROM pg_trigger WHERE tgname = ${quotedTriggerName}
         ) THEN
           CREATE TRIGGER ${quoteIdent(triggerName)}
           AFTER INSERT OR UPDATE OR DELETE ON ${quoteIdent(collectionName)}
@@ -181,18 +183,35 @@ export class PostgresConnection extends EventEmitter {
       $$;
     `;
 
-    await this.query(fnSql);
-    await this.query(triggerSql);
-
     // Register callback
-    if (!this._notifyCallbacks.has(channel)) {
+    const shouldListen = !this._notifyCallbacks.has(channel);
+    if (shouldListen) {
+      const client = await this.getClient();
+      try {
+        await client.query('BEGIN');
+        await client.query(fnSql);
+        await client.query(triggerSql);
+        await client.query('COMMIT');
+      } catch (error) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackError) {
+          Log.error('Postgres: rollback failed after trigger/function setup error:', rollbackError);
+        }
+        throw error;
+      } finally {
+        client.release();
+      }
+
       this._notifyCallbacks.set(channel, new Set());
     }
     this._notifyCallbacks.get(channel).add(callback);
 
     // Set up LISTEN on dedicated client (once)
     await this._ensureListenClient();
-    await this._listenClient.query(`LISTEN ${quoteIdent(channel)}`);
+    if (shouldListen) {
+      await this._listenClient.query(`LISTEN ${quoteIdent(channel)}`);
+    }
     this.emit('listen:ready', { channel, collectionName });
   }
 
@@ -203,36 +222,7 @@ export class PostgresConnection extends EventEmitter {
     if (this._listenClient) return;
 
     this._listenClient = await this._pool.connect();
-
-    this._listenClient.on('notification', (msg) => {
-      const callbacks = this._notifyCallbacks.get(msg.channel);
-      if (callbacks) {
-        let payload;
-        try {
-          payload = JSON.parse(msg.payload);
-        } catch (e) {
-          payload = { op: 'UNKNOWN', id: null };
-        }
-        for (const cb of callbacks) {
-          try {
-            cb(payload);
-          } catch (e) {
-            Log.error('Postgres LISTEN callback error:', e);
-          }
-        }
-      }
-    });
-
-    this._listenClient.on('error', (err) => {
-      Log.error('Postgres LISTEN client error:', err);
-      // Properly end the errored client to avoid pool slot leak
-      const oldClient = this._listenClient;
-      this._listenClient = null;
-      try { oldClient.end(); } catch (e) { /* ignore */ }
-      this.emit('listen:lost', { error: err });
-      // Attempt to reconnect
-      this._reconnectListenClient();
-    });
+    this._attachListenClientHandlers(this._listenClient);
   }
 
   /**
@@ -255,35 +245,7 @@ export class PostgresConnection extends EventEmitter {
 
       try {
         this._listenClient = await this._pool.connect();
-
-        // Re-attach notification handler
-        this._listenClient.on('notification', (msg) => {
-          const callbacks = this._notifyCallbacks.get(msg.channel);
-          if (callbacks) {
-            let payload;
-            try {
-              payload = JSON.parse(msg.payload);
-            } catch (e) {
-              payload = { op: 'UNKNOWN', id: null };
-            }
-            for (const cb of callbacks) {
-              try {
-                cb(payload);
-              } catch (e) {
-                Log.error('Postgres LISTEN callback error:', e);
-              }
-            }
-          }
-        });
-
-        this._listenClient.on('error', (err) => {
-          Log.error('Postgres LISTEN client error:', err);
-          const oldClient = this._listenClient;
-          this._listenClient = null;
-          try { oldClient.end(); } catch (e) { /* ignore */ }
-          this.emit('listen:lost', { error: err });
-          this._reconnectListenClient();
-        });
+        this._attachListenClientHandlers(this._listenClient);
 
         // Re-LISTEN all channels
         for (const channel of this._notifyCallbacks.keys()) {
@@ -300,6 +262,47 @@ export class PostgresConnection extends EventEmitter {
     };
 
     await attempt();
+  }
+
+  /**
+   * Attach shared LISTEN client handlers for notifications and reconnects.
+   * @param {Object} client - pg client used for LISTEN/NOTIFY
+   */
+  _attachListenClientHandlers(client) {
+    client.on('notification', (msg) => {
+      const callbacks = this._notifyCallbacks.get(msg.channel);
+      if (!callbacks) {
+        return;
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(msg.payload);
+      } catch (e) {
+        payload = { op: 'UNKNOWN', id: null };
+      }
+
+      for (const cb of callbacks) {
+        try {
+          cb(payload);
+        } catch (e) {
+          Log.error('Postgres LISTEN callback error:', e);
+        }
+      }
+    });
+
+    client.on('error', (err) => {
+      Log.error('Postgres LISTEN client error:', err);
+      if (this._listenClient !== client) {
+        try { client.end(); } catch (e) { /* ignore */ }
+        return;
+      }
+
+      this._listenClient = null;
+      try { client.end(); } catch (e) { /* ignore */ }
+      this.emit('listen:lost', { error: err });
+      this._reconnectListenClient();
+    });
   }
 
   /**

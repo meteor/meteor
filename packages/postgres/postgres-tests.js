@@ -24,9 +24,10 @@
  *   - AFS provider registration
  */
 
-import { resolveField, ResolvedSchema, quoteIdent } from './schema';
+import { resolveField, ResolvedSchema, quoteIdent, quoteLiteral } from './schema';
 import { documentToRow, rowToDocument } from './row_converter';
 import { PostgresStreamProvider } from './postgres_stream_provider';
+import { PostgresConnection } from './postgres_driver';
 import {
   CompilationContext,
   compileSelector,
@@ -143,6 +144,11 @@ Tinytest.add('postgres - schema - quoteIdent', (test) => {
   test.equal(quoteIdent('_extra'), '_extra');
 });
 
+Tinytest.add('postgres - schema - quoteLiteral', (test) => {
+  test.equal(quoteLiteral("O'Reilly"), "'O''Reilly'");
+  test.equal(quoteLiteral(null), 'NULL');
+});
+
 Tinytest.add('postgres - schema - ResolvedSchema constructor validates types', (test) => {
   test.throws(() => {
     new ResolvedSchema({ field: { type: 'invalid' } });
@@ -157,6 +163,112 @@ Tinytest.add('postgres - schema - ResolvedSchema column definitions', (test) => 
   test.isTrue(defs.some(d => d.includes('INTEGER DEFAULT 0'))); // views
   test.isTrue(defs.some(d => d.includes('BOOLEAN DEFAULT false'))); // published
   test.isTrue(defs.some(d => d.includes('TIMESTAMPTZ DEFAULT NOW()'))); // createdAt
+});
+
+Tinytest.add('postgres - schema - ResolvedSchema escapes string defaults', (test) => {
+  const schema = new ResolvedSchema({
+    publisher: { type: 'text', default: "O'Reilly" },
+  });
+  const defs = schema.getColumnDefinitions();
+  test.equal(defs, ["publisher TEXT DEFAULT 'O''Reilly'"]);
+});
+
+Tinytest.addAsync('postgres - driver - setupListenNotify handles escaping and deduplication', async (test) => {
+  const conn = new PostgresConnection('postgres://example');
+  conn._notifyCallbacks = new Map();
+  // Use both single and double quotes to exercise literal and identifier escaping together.
+  const collectionName = `posts'"draft"`;
+  const channel = `meteor_pg_${collectionName}`;
+  const triggerName = `${channel}_notify_trigger`;
+  const queries = [];
+  const listenQueries = [];
+  let directQueryCalls = 0;
+
+  conn.getClient = async () => ({
+    query: async (text) => {
+      queries.push(text);
+      return { rows: [], rowCount: 0 };
+    },
+    release() {},
+  });
+
+  conn.query = async () => {
+    directQueryCalls += 1;
+    return { rows: [], rowCount: 0 };
+  };
+
+  conn._ensureListenClient = async () => {
+    conn._listenClient = {
+      on() {},
+      query: async (text) => {
+        listenQueries.push(text);
+        return { rows: [], rowCount: 0 };
+      },
+    };
+    conn._attachListenClientHandlers(conn._listenClient);
+  };
+
+  const callback = () => {};
+  await conn.setupListenNotify(collectionName, callback);
+  await conn.setupListenNotify(collectionName, callback);
+
+  test.equal(queries[0], 'BEGIN');
+  test.isTrue(queries[1].includes(`pg_notify(${quoteLiteral(channel)}`));
+  test.isFalse(queries[1].includes(`pg_notify('${channel}'`));
+  test.isTrue(queries[2].includes(`tgname = ${quoteLiteral(triggerName)}`));
+  test.equal(queries[3], 'COMMIT');
+  test.equal(queries.length, 4);
+  test.equal(directQueryCalls, 0);
+  test.equal(listenQueries, [`LISTEN ${quoteIdent(channel)}`]);
+});
+
+Tinytest.addAsync('postgres - driver - ensureListenClient attaches shared handlers', async (test) => {
+  const conn = new PostgresConnection('postgres://example');
+  const listenClient = { on() {} };
+  let attachedClient = null;
+
+  conn._pool = {
+    connect: async () => listenClient,
+  };
+  conn._attachListenClientHandlers = (client) => {
+    attachedClient = client;
+  };
+
+  await conn._ensureListenClient();
+
+  test.equal(conn._listenClient, listenClient);
+  test.equal(attachedClient, listenClient);
+});
+
+Tinytest.addAsync('postgres - driver - setupListenNotify rolls back trigger setup failures', async (test) => {
+  const conn = new PostgresConnection('postgres://example');
+  const queries = [];
+  let released = false;
+  const expectedError = new Error('boom');
+
+  conn.getClient = async () => ({
+    query: async (text) => {
+      queries.push(text);
+      if (text.includes('CREATE OR REPLACE FUNCTION')) {
+        throw expectedError;
+      }
+      return { rows: [], rowCount: 0 };
+    },
+    release() {
+      released = true;
+    },
+  });
+  conn._ensureListenClient = async () => {
+    throw new Error('should not listen after trigger setup failure');
+  };
+
+  await test.throwsAsync(async () => {
+    await conn.setupListenNotify('posts', () => {});
+  }, /boom/);
+
+  test.equal(queries[0], 'BEGIN');
+  test.equal(queries[2], 'ROLLBACK');
+  test.isTrue(released);
 });
 
 // ============================================================================
