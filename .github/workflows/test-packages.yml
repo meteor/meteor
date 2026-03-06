@@ -14,7 +14,7 @@ jobs:
           - 'oplog,polling'
     runs-on: ubuntu-22.04
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
       cancel-in-progress: true
     timeout-minutes: 90
     env:

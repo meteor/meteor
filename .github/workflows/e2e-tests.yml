@@ -32,7 +32,8 @@ jobs:
           - Babel
           - Blaze
           - Coffeescript
-          - Library
+          - Full Skeleton
+          - Tailwind Skeleton
           - Monorepo
           - React
           - R.Router
