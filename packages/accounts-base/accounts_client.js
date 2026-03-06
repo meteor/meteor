@@ -127,27 +127,32 @@ export class AccountsClient extends AccountsCommon {
   }
 
   /**
+   * @summary Shared implementation for logout methods.
+   * @param {String} methodName The server method to call (e.g. 'logout', 'logoutAllClients').
+   * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+   * @locus Client
+   */
+  async _callLogoutMethod(methodName, callback) {
+    this._loggingOut.set(true);
+    try {
+      await this.connection.applyAsync(methodName, [], { wait: true });
+      this._loginCallbacksCalled = false;
+      this.makeClientLoggedOut();
+      callback?.();
+    } catch (e) {
+      callback?.(e);
+    } finally {
+      this._loggingOut.set(false);
+    }
+  }
+
+  /**
    * @summary Log the user out.
    * @locus Client
    * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
    */
   logout(callback) {
-    this._loggingOut.set(true);
-
-    this.connection.applyAsync('logout', [], {
-      // TODO[FIBERS]: Look this { wait: true } later.
-      wait: true
-    })
-      .then((result) => {
-        this._loggingOut.set(false);
-        this._loginCallbacksCalled = false;
-        this.makeClientLoggedOut();
-        callback && callback();
-      })
-      .catch((e) => {
-        this._loggingOut.set(false);
-        callback && callback(e);
-      });
+    this._callLogoutMethod('logout', callback);
   }
 
   /**
@@ -156,22 +161,7 @@ export class AccountsClient extends AccountsCommon {
    * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
    */
   logoutAllClients(callback) {
-    this._loggingOut.set(true);
-
-    this.connection.applyAsync('logoutAllClients', [], {
-      // TODO[FIBERS]: Look this { wait: true } later.
-      wait: true
-    })
-      .then((result) => {
-        this._loggingOut.set(false);
-        this._loginCallbacksCalled = false;
-        this.makeClientLoggedOut();
-        callback && callback();
-      })
-      .catch((e) => {
-        this._loggingOut.set(false);
-        callback && callback(e);
-      });
+    this._callLogoutMethod('logoutAllClients', callback);
   }
 
   /**
