@@ -18,7 +18,7 @@
  *   - core-collection:registered(name, collection)
  */
 
-const { EventEmitter } = require('events');
+import { EventEmitter } from 'events';
 const _registryEmitter = new EventEmitter();
 _registryEmitter.setMaxListeners(0);
 

@@ -24,7 +24,7 @@
  *   - stop()                    — ChangeStream is being torn down
  */
 
-const { EventEmitter } = require('events');
+import { EventEmitter } from 'events';
 
 export class ChangeStream extends EventEmitter {
   /**

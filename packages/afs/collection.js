@@ -1,6 +1,5 @@
 import { AFSCursor } from './cursor';
-
-const { EventEmitter } = require('events');
+import { EventEmitter } from 'events';
 
 // Lightweight local collection driver for AFS.
 // Replicates the same pattern as mongo/local_collection_driver.js
