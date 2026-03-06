@@ -4,8 +4,7 @@
  */
 
 import { quoteIdent } from './schema';
-
-const { EventEmitter } = Npm.require('events');
+import { EventEmitter } from 'events';
 
 export class PostgresConnection extends EventEmitter {
   /**
