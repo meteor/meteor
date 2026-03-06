@@ -1824,7 +1824,7 @@ function defaultValidateNewUserHook(user) {
     return true;
   }
 
-  function hasValidEmail(user) {
+  const hasValidEmail = (user) => {
     // Option A: user-provided emails
     if (user.emails?.length) {
       return user.emails.some(email => this._testEmailDomain(email.address));
