@@ -2,18 +2,31 @@ import { DDP } from '../common/namespace.js';
 import { Meteor } from 'meteor/meteor';
 import { loadAsyncStubHelpers } from "./queue_stub_helpers";
 
-const getDDPUrl = () => {
-  const absoluteUrl = Meteor.absoluteUrl();
-  const protocol = absoluteUrl.split('//')[0] || window.location.protocol;
-  const runtimeConfig = typeof __meteor_runtime_config__ !== 'undefined'
-    ? __meteor_runtime_config__
-    : Object.create(null);
-
+export const _calculateDDPUrl = ({
+  absoluteUrl,
+  runtimeConfig = Object.create(null),
+  browserHost,
+  browserProtocol,
+}) => {
   if (runtimeConfig.DDP_DEFAULT_CONNECTION_URL) {
     return runtimeConfig.DDP_DEFAULT_CONNECTION_URL;
   }
 
-  return `${protocol}//${window.location.host}/`;
+  const protocol = (absoluteUrl && absoluteUrl.split('//')[0]) || browserProtocol;
+  return `${protocol}//${browserHost}/`;
+};
+
+const getDDPUrl = () => {
+  const runtimeConfig = typeof __meteor_runtime_config__ !== 'undefined'
+    ? __meteor_runtime_config__
+    : Object.create(null);
+
+  return _calculateDDPUrl({
+    absoluteUrl: Meteor.absoluteUrl(),
+    runtimeConfig,
+    browserHost: window.location.host,
+    browserProtocol: window.location.protocol,
+  });
 };
 
 // Meteor.refresh can be called on the client (if you're in common code) but it
