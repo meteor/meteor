@@ -24,7 +24,7 @@
  *   - AFS provider registration
  */
 
-import { resolveField, ResolvedSchema, quoteIdent, quoteLiteral } from './schema';
+import { resolveField, ResolvedSchema, quoteIdent, quoteLiteral, quoteTextArray } from './schema';
 import { documentToRow, rowToDocument } from './row_converter';
 import { PostgresStreamProvider } from './postgres_stream_provider';
 import { PostgresConnection } from './postgres_driver';
@@ -114,7 +114,7 @@ Tinytest.add('postgres - schema - resolveField - jsonb_path (nested)', (test) =>
   const schema = createTestSchema();
   const r = resolveField('metadata.a.b', schema);
   test.equal(r.kind, 'jsonb_path');
-  test.equal(r.sqlRef, "metadata #>> '{a,b}'");
+  test.equal(r.sqlRef, "metadata #>> ARRAY['a', 'b']");
   test.isTrue(r.needsCast);
   test.equal(r.jsonPath, ['a', 'b']);
 });
@@ -131,7 +131,7 @@ Tinytest.add('postgres - schema - resolveField - extra_path (unknown nested)', (
   const schema = createTestSchema();
   const r = resolveField('unknown.nested', schema);
   test.equal(r.kind, 'extra_path');
-  test.equal(r.sqlRef, "_extra #>> '{unknown,nested}'");
+  test.equal(r.sqlRef, "_extra #>> ARRAY['unknown', 'nested']");
   test.isTrue(r.needsCast);
 });
 
@@ -147,6 +147,10 @@ Tinytest.add('postgres - schema - quoteIdent', (test) => {
 Tinytest.add('postgres - schema - quoteLiteral', (test) => {
   test.equal(quoteLiteral("O'Reilly"), "'O''Reilly'");
   test.equal(quoteLiteral(null), 'NULL');
+});
+
+Tinytest.add('postgres - schema - quoteTextArray', (test) => {
+  test.equal(quoteTextArray(['a', "b'c"]), "ARRAY['a', 'b''c']");
 });
 
 Tinytest.add('postgres - schema - ResolvedSchema constructor validates types', (test) => {
@@ -368,7 +372,7 @@ Tinytest.add('postgres - selector - JSONB path equality', (test) => {
 Tinytest.add('postgres - selector - JSONB nested path with numeric cast', (test) => {
   const schema = createTestSchema();
   const { text, values } = compileSelector({ 'metadata.a.b': 5 }, schema);
-  test.equal(text, "(metadata #>> '{a,b}')::numeric = $1");
+  test.equal(text, "(metadata #>> ARRAY['a', 'b'])::numeric = $1");
   test.equal(values, [5]);
 });
 
@@ -396,8 +400,17 @@ Tinytest.add('postgres - selector - _extra field equality', (test) => {
 Tinytest.add('postgres - selector - _extra nested path', (test) => {
   const schema = createTestSchema();
   const { text, values } = compileSelector({ 'unknown.nested': 5 }, schema);
-  test.equal(text, "(_extra #>> '{unknown,nested}')::numeric = $1");
+  test.equal(text, "(_extra #>> ARRAY['unknown', 'nested'])::numeric = $1");
   test.equal(values, [5]);
+});
+
+Tinytest.add('postgres - selector - $type escapes string literal', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = compileSelector({
+    metadata: { $type: "string' OR '1'='1" },
+  }, schema);
+  test.equal(text, "jsonb_typeof(metadata) = 'string'' OR ''1''=''1'");
+  test.equal(values, []);
 });
 
 Tinytest.add('postgres - selector - $and', (test) => {
@@ -489,7 +502,7 @@ Tinytest.add('postgres - modifier - $set jsonb path', (test) => {
   );
   test.equal(setClauses.length, 1);
   test.isTrue(setClauses[0].includes('jsonb_set'));
-  test.isTrue(setClauses[0].includes("'{k}'"));
+  test.isTrue(setClauses[0].includes("ARRAY['k']"));
 });
 
 Tinytest.add('postgres - modifier - $set extra', (test) => {
@@ -525,6 +538,15 @@ Tinytest.add('postgres - modifier - $unset extra', (test) => {
     { $unset: { unknown: 1 } }, schema
   );
   test.isTrue(setClauses[0].includes("_extra - 'unknown'"));
+});
+
+Tinytest.add('postgres - modifier - json path segments are escaped', (test) => {
+  const schema = createTestSchema();
+  const { setClauses } = compileModifier(
+    { $set: { "metadata.k' ] , '{}'::jsonb) --": 'v' } }, schema
+  );
+  test.isTrue(setClauses[0].includes("ARRAY['k'' ] , ''{}''::jsonb) --']"));
+  test.isFalse(setClauses[0].includes("'{k' ] , '{}'::jsonb) --}'"));
 });
 
 Tinytest.add('postgres - modifier - $inc column', (test) => {
@@ -1148,6 +1170,42 @@ if (hasPostgres) {
       const results = await provider._fetchResults(table, { 'metadata.author': 'Alice' }, {});
       test.equal(results.length, 1);
       test.equal(results[0].title, 'Post 1');
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - integration - $type selector treats operand as data', async (test) => {
+    const table = `test_ty_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text' },
+      metadata: { type: 'jsonb' },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      await provider.insertAsync(table, {
+        title: 'Object metadata',
+        metadata: { author: 'Alice' },
+      });
+      await provider.insertAsync(table, {
+        title: 'String metadata',
+        metadata: 'plain text',
+      });
+
+      const stringMatches = await provider._fetchResults(table, { metadata: { $type: 'string' } }, {});
+      test.equal(stringMatches.length, 1);
+      test.equal(stringMatches[0].title, 'String metadata');
+
+      const injectedOperandMatches = await provider._fetchResults(table, {
+        metadata: { $type: "string' OR '1'='1" },
+      }, {});
+      test.equal(injectedOperandMatches.length, 0);
     } finally {
       await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
       await provider.close();
