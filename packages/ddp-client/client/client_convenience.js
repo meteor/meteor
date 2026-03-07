@@ -1,6 +1,6 @@
-import { DDP } from '../common/namespace.js';
 import { Meteor } from 'meteor/meteor';
-import { loadAsyncStubHelpers } from "./queue_stub_helpers";
+import { DDP } from '../common/namespace.js';
+import { loadAsyncStubHelpers } from './queue_stub_helpers';
 
 export const _calculateDDPUrl = ({
   absoluteUrl,
