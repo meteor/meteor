@@ -1176,6 +1176,42 @@ if (hasPostgres) {
     }
   });
 
+  Tinytest.addAsync('postgres - integration - $type selector treats operand as data', async (test) => {
+    const table = `test_ty_${Random.id(8).toLowerCase()}`;
+
+
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      title: { type: 'text' },
+      metadata: { type: 'jsonb' },
+    });
+    await provider.registerSchema(table, schema);
+
+    try {
+      await provider.insertAsync(table, {
+        title: 'Object metadata',
+        metadata: { author: 'Alice' },
+      });
+      await provider.insertAsync(table, {
+        title: 'String metadata',
+        metadata: 'plain text',
+      });
+
+      const stringMatches = await provider._fetchResults(table, { metadata: { $type: 'string' } }, {});
+      test.equal(stringMatches.length, 1);
+      test.equal(stringMatches[0].title, 'String metadata');
+
+      const injectedOperandMatches = await provider._fetchResults(table, {
+        metadata: { $type: "string' OR '1'='1" },
+      }, {});
+      test.equal(injectedOperandMatches.length, 0);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
   Tinytest.addAsync('postgres - integration - fetch-modify-write ($push with $each)', async (test) => {
     const table = `test_fmw_${Random.id(8).toLowerCase()}`;
 
