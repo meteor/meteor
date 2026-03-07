@@ -38,6 +38,10 @@ export function quoteLiteral(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
+export function quoteTextArray(parts) {
+  return `ARRAY[${parts.map(part => quoteLiteral(part)).join(', ')}]`;
+}
+
 /**
  * ResolvedSchema — normalizes user schema into typed column maps.
  *
@@ -202,9 +206,9 @@ export function resolveField(fieldPath, schema) {
       const jsonPath = parts.slice(1);
       let sqlRef;
       if (jsonPath.length === 1) {
-        sqlRef = `${quoteIdent(topLevel)}->>'${jsonPath[0]}'`;
+        sqlRef = `${quoteIdent(topLevel)}->>${quoteLiteral(jsonPath[0])}`;
       } else {
-        sqlRef = `${quoteIdent(topLevel)} #>> '{${jsonPath.join(',')}}'`;
+        sqlRef = `${quoteIdent(topLevel)} #>> ${quoteTextArray(jsonPath)}`;
       }
       return {
         kind: 'jsonb_path',
@@ -224,7 +228,7 @@ export function resolveField(fieldPath, schema) {
   if (!hasNested) {
     return {
       kind: 'extra',
-      sqlRef: `_extra->>'${topLevel}'`,
+      sqlRef: `_extra->>${quoteLiteral(topLevel)}`,
       columnType: null,
       topLevelField: topLevel,
       jsonPath: null,
@@ -235,7 +239,7 @@ export function resolveField(fieldPath, schema) {
   const jsonPath = parts;
   return {
     kind: 'extra_path',
-    sqlRef: `_extra #>> '{${jsonPath.join(',')}}'`,
+    sqlRef: `_extra #>> ${quoteTextArray(jsonPath)}`,
     columnType: null,
     topLevelField: topLevel,
     jsonPath: parts.slice(1),

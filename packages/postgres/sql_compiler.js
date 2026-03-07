@@ -6,7 +6,7 @@
  * a field targets a native column, JSONB path, or _extra overflow.
  */
 
-import { resolveField, quoteIdent } from './schema';
+import { resolveField, quoteIdent, quoteLiteral, quoteTextArray } from './schema';
 import { documentToRow } from './row_converter';
 
 // ---------------------------------------------------------------------------
@@ -162,16 +162,16 @@ function compileNullCheck(resolved, isNull) {
     const quotedTop = quoteIdent(topLevelField);
     if (resolved.jsonPath && resolved.jsonPath.length === 1) {
       return isNull
-        ? `NOT (${quotedTop} ? '${resolved.jsonPath[0]}')`
-        : `${quotedTop} ? '${resolved.jsonPath[0]}'`;
+        ? `NOT (${quotedTop} ? ${quoteLiteral(resolved.jsonPath[0])})`
+        : `${quotedTop} ? ${quoteLiteral(resolved.jsonPath[0])}`;
     }
     return isNull ? `${sqlRef} IS NULL` : `${sqlRef} IS NOT NULL`;
   }
   if (kind === 'extra' || kind === 'extra_path') {
     if (kind === 'extra') {
       return isNull
-        ? `NOT (_extra ? '${topLevelField}')`
-        : `_extra ? '${topLevelField}'`;
+        ? `NOT (_extra ? ${quoteLiteral(topLevelField)})`
+        : `_extra ? ${quoteLiteral(topLevelField)}`;
     }
     return isNull ? `${sqlRef} IS NULL` : `${sqlRef} IS NOT NULL`;
   }
@@ -343,7 +343,7 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx) {
       }
       // _extra field
       const topRef = resolved.kind === 'extra'
-        ? `_extra->'${resolved.topLevelField}'`
+        ? `_extra->${quoteLiteral(resolved.topLevelField)}`
         : sqlRef;
       const param = ctx.addParam(operand);
       return `jsonb_array_length(${topRef}) = ${param}`;
@@ -355,7 +355,7 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx) {
       if (kind === 'jsonb_column') {
         arrayRef = sqlRef;
       } else if (kind === 'extra') {
-        arrayRef = `_extra->'${resolved.topLevelField}'`;
+        arrayRef = `_extra->${quoteLiteral(resolved.topLevelField)}`;
       } else {
         throw new Error(`$elemMatch requires a JSONB array field, got ${kind} for ${fieldPath}`);
       }
@@ -367,7 +367,7 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx) {
           innerClauses.push(compileElemOperator('elem', subKey, subVal, ctx));
         } else {
           // Field within array element
-          const subRef = `elem->>'${subKey}'`;
+          const subRef = `elem->>${quoteLiteral(subKey)}`;
           if (typeof subVal === 'object' && subVal !== null && !Array.isArray(subVal) && !(subVal instanceof Date)) {
             for (const [subOp, subOperand] of Object.entries(subVal)) {
               innerClauses.push(compileElemOperator(subRef, subOp, subOperand, ctx));
@@ -391,7 +391,7 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx) {
       };
       const pgType = typeMap[operand] || operand;
       if (kind === 'jsonb_column') {
-        return `jsonb_typeof(${sqlRef}) = '${pgType}'`;
+        return `jsonb_typeof(${sqlRef}) = ${quoteLiteral(pgType)}`;
       }
       return 'TRUE'; // Fallback for non-JSONB columns
     }
@@ -595,21 +595,21 @@ function compileSet(field, value, schema, ctx) {
 
   if (resolved.kind === 'jsonb_path') {
     const quotedTop = quoteIdent(resolved.topLevelField);
-    const path = `{${resolved.jsonPath.join(',')}}`;
+    const path = quoteTextArray(resolved.jsonPath);
     const param = ctx.addParam(JSON.stringify(value));
-    return `${quotedTop} = jsonb_set(COALESCE(${quotedTop}, '{}'), '${path}', ${param}::jsonb)`;
+    return `${quotedTop} = jsonb_set(COALESCE(${quotedTop}, '{}'), ${path}, ${param}::jsonb)`;
   }
 
   if (resolved.kind === 'extra') {
     const param = ctx.addParam(JSON.stringify(value));
-    return `_extra = jsonb_set(COALESCE(_extra, '{}'), '{${resolved.topLevelField}}', ${param}::jsonb)`;
+    return `_extra = jsonb_set(COALESCE(_extra, '{}'), ${quoteTextArray([resolved.topLevelField])}, ${param}::jsonb)`;
   }
 
   if (resolved.kind === 'extra_path') {
     const parts = field.split('.');
-    const path = `{${parts.join(',')}}`;
+    const path = quoteTextArray(parts);
     const param = ctx.addParam(JSON.stringify(value));
-    return `_extra = jsonb_set(COALESCE(_extra, '{}'), '${path}', ${param}::jsonb)`;
+    return `_extra = jsonb_set(COALESCE(_extra, '{}'), ${path}, ${param}::jsonb)`;
   }
 
   return null;
@@ -629,20 +629,18 @@ function compileUnset(field, schema, ctx) {
   if (resolved.kind === 'jsonb_path') {
     const quotedTop = quoteIdent(resolved.topLevelField);
     if (resolved.jsonPath.length === 1) {
-      return `${quotedTop} = ${quotedTop} - '${resolved.jsonPath[0]}'`;
+      return `${quotedTop} = ${quotedTop} - ${quoteLiteral(resolved.jsonPath[0])}`;
     }
-    const path = `{${resolved.jsonPath.join(',')}}`;
-    return `${quotedTop} = ${quotedTop} #- '${path}'`;
+    return `${quotedTop} = ${quotedTop} #- ${quoteTextArray(resolved.jsonPath)}`;
   }
 
   if (resolved.kind === 'extra') {
-    return `_extra = _extra - '${resolved.topLevelField}'`;
+    return `_extra = _extra - ${quoteLiteral(resolved.topLevelField)}`;
   }
 
   if (resolved.kind === 'extra_path') {
     const parts = field.split('.');
-    const path = `{${parts.join(',')}}`;
-    return `_extra = _extra #- '${path}'`;
+    return `_extra = _extra #- ${quoteTextArray(parts)}`;
   }
 
   return null;
@@ -658,14 +656,14 @@ function compileInc(field, value, schema, ctx) {
 
   if (resolved.kind === 'jsonb_path') {
     const quotedTop = quoteIdent(resolved.topLevelField);
-    const path = `{${resolved.jsonPath.join(',')}}`;
+    const path = quoteTextArray(resolved.jsonPath);
     const param = ctx.addParam(value);
-    return `${quotedTop} = jsonb_set(COALESCE(${quotedTop}, '{}'), '${path}', to_jsonb(COALESCE((${quotedTop} #>> '${path}')::numeric, 0) + ${param}))`;
+    return `${quotedTop} = jsonb_set(COALESCE(${quotedTop}, '{}'), ${path}, to_jsonb(COALESCE((${quotedTop} #>> ${path})::numeric, 0) + ${param}))`;
   }
 
   if (resolved.kind === 'extra') {
     const param = ctx.addParam(value);
-    return `_extra = jsonb_set(COALESCE(_extra, '{}'), '{${resolved.topLevelField}}', to_jsonb(COALESCE((_extra->>'${resolved.topLevelField}')::numeric, 0) + ${param}))`;
+    return `_extra = jsonb_set(COALESCE(_extra, '{}'), ${quoteTextArray([resolved.topLevelField])}, to_jsonb(COALESCE((_extra->>${quoteLiteral(resolved.topLevelField)})::numeric, 0) + ${param}))`;
   }
 
   if (resolved.kind === 'jsonb_column') {
@@ -687,14 +685,14 @@ function compileMul(field, value, schema, ctx) {
 
   if (resolved.kind === 'jsonb_path') {
     const quotedTop = quoteIdent(resolved.topLevelField);
-    const path = `{${resolved.jsonPath.join(',')}}`;
+    const path = quoteTextArray(resolved.jsonPath);
     const param = ctx.addParam(value);
-    return `${quotedTop} = jsonb_set(COALESCE(${quotedTop}, '{}'), '${path}', to_jsonb(COALESCE((${quotedTop} #>> '${path}')::numeric, 0) * ${param}))`;
+    return `${quotedTop} = jsonb_set(COALESCE(${quotedTop}, '{}'), ${path}, to_jsonb(COALESCE((${quotedTop} #>> ${path})::numeric, 0) * ${param}))`;
   }
 
   if (resolved.kind === 'extra') {
     const param = ctx.addParam(value);
-    return `_extra = jsonb_set(COALESCE(_extra, '{}'), '{${resolved.topLevelField}}', to_jsonb(COALESCE((_extra->>'${resolved.topLevelField}')::numeric, 0) * ${param}))`;
+    return `_extra = jsonb_set(COALESCE(_extra, '{}'), ${quoteTextArray([resolved.topLevelField])}, to_jsonb(COALESCE((_extra->>${quoteLiteral(resolved.topLevelField)})::numeric, 0) * ${param}))`;
   }
 
   return null;
@@ -731,12 +729,11 @@ function compileCurrentDate(field, schema) {
 
   if (resolved.kind === 'jsonb_path') {
     const quotedTop = quoteIdent(resolved.topLevelField);
-    const path = `{${resolved.jsonPath.join(',')}}`;
-    return `${quotedTop} = jsonb_set(COALESCE(${quotedTop}, '{}'), '${path}', to_jsonb(NOW()))`;
+    return `${quotedTop} = jsonb_set(COALESCE(${quotedTop}, '{}'), ${quoteTextArray(resolved.jsonPath)}, to_jsonb(NOW()))`;
   }
 
   if (resolved.kind === 'extra') {
-    return `_extra = jsonb_set(COALESCE(_extra, '{}'), '{${resolved.topLevelField}}', to_jsonb(NOW()))`;
+    return `_extra = jsonb_set(COALESCE(_extra, '{}'), ${quoteTextArray([resolved.topLevelField])}, to_jsonb(NOW()))`;
   }
 
   return null;
@@ -753,7 +750,7 @@ function compileSimplePush(field, value, schema, ctx) {
   if (resolved.kind === 'extra') {
     const param = ctx.addParam(JSON.stringify(value));
     const topField = resolved.topLevelField;
-    return `_extra = jsonb_set(COALESCE(_extra, '{}'), '{${topField}}', COALESCE(_extra->'${topField}', '[]'::jsonb) || ${param}::jsonb)`;
+    return `_extra = jsonb_set(COALESCE(_extra, '{}'), ${quoteTextArray([topField])}, COALESCE(_extra->${quoteLiteral(topField)}, '[]'::jsonb) || ${param}::jsonb)`;
   }
 
   return null;
