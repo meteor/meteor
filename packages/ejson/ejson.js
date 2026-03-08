@@ -518,6 +518,9 @@ EJSON.equals = (a, b, options) => {
   let ret;
   const aKeys = keysOf(a);
   const bKeys = keysOf(b);
+  if (aKeys.length !== bKeys.length) {
+    return false;
+  }
   if (keyOrderSensitive) {
     i = 0;
     ret = aKeys.every(key => {
