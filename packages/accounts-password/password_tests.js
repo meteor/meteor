@@ -775,6 +775,12 @@ if (Meteor.isClient) (() => {
       } catch (err) {
         test.isTrue(err);
         test.equal(err.error, 403);
+        await simplePollAsync(() => {
+          const user = Meteor.user();
+          return user
+            && !Object.prototype.hasOwnProperty.call(user, "disallowed")
+            && !Object.prototype.hasOwnProperty.call(user.profile, "updated");
+        });
         test.isFalse(
           Object.prototype.hasOwnProperty.call(Meteor.user(), "disallowed")
         );
@@ -820,6 +826,11 @@ if (Meteor.isClient) (() => {
         test.isTrue(err);
         test.equal(err.error, 403);
       }
+      await simplePollAsync(() => {
+        const user = Meteor.user();
+        return user
+          && !Object.prototype.hasOwnProperty.call(user.profile, 'updated');
+      });
       // Verify the update didn't actually persist
       test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
       expect(() => {})();
