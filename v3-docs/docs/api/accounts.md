@@ -15,11 +15,11 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 `accounts-github`, `accounts-google`, `accounts-meetup`,
 `accounts-twitter`, or `accounts-weibo`.
 
-Read more about customizing user accounts in the [Accounts](http://guide.meteor.com/accounts.html) article in the Meteor Guide.
+Read more about customizing user accounts in the [Accounts](/tutorials/accounts/accounts) article in the Meteor Guide.
 
 ### Accounts with Session Storage {#accounts-session-storage}
 
-By default, Meteor uses Local Storage to store, among other things, login tokens in your browser session. But, for some applications, it makes sense to use Session Storage instead. You can achieve this by adding this to your settings:
+By default, Meteor uses Local Storage to store, among other things, login tokens in your browser session. But, for some applications, it makes sense to use Session Storage instead. Session Storage will not persist across client sessions. You can achieve this by adding this to your settings:
 
 ```json
 {
@@ -176,11 +176,15 @@ Meteor.users.deny({ update: () => true });
 <ApiBox name="Meteor.loggingIn" />
 
 For example, [the `accounts-ui` package](../packages/accounts-ui.md) uses this to display an
+ 
+
 animation while the login request is being processed.
 
 <ApiBox name="Meteor.loggingOut" />
 
 <ApiBox name="Meteor.logout" />
+
+<ApiBox name="Meteor.logoutAllClients" />
 
 <ApiBox name="Meteor.logoutOtherClients" />
 
@@ -202,6 +206,35 @@ This method can fail throwing one of the following errors:
 
 This function is provided by the `accounts-password` package. See the
 [Passwords](#passwords) section below.
+
+<ApiBox name="Meteor.loginWithToken" />
+
+Logs the user in using a valid Meteor login token (also called a resume token). This is typically used to restore a user's session across browser reloads, between tabs, or across DDP connections (such as in multi-server setups).
+
+**Arguments:**
+- `token` (`String`): The login token to use for authentication. Usually obtained from `Accounts._storedLoginToken()` or from a previous login session.
+- `callback` (`Function`, optional): Called with no arguments on success, or with a single `Error` argument on failure.
+
+**Returns:**
+- `void`
+
+**Usage example:**
+```js
+import { Meteor } from "meteor/meteor";
+const token = Accounts._storedLoginToken();
+Meteor.loginWithToken(token, (error) => {
+  if (error) {
+    console.error("Login with token failed", error);
+  } else {
+    console.log("Logged in with token!");
+  }
+});
+```
+
+**Notes:**
+- If the token is invalid, expired, or revoked, the callback will be called with an error and the user will not be logged in.
+- This method is used internally by Meteor to automatically restore login state on page reload and across tabs.
+- Can be used with custom DDP connections to authenticate across multiple Meteor servers sharing the same database.
 
 <ApiBox name="Meteor.loginWith<ExternalService>" />
 
@@ -263,7 +296,7 @@ Then, inside the server of your app (this example is for the Weebo service), imp
 
 ```js
 import { ServiceConfiguration } from "meteor/service-configuration";
-ServiceConfiguration.configurations.upsert(
+ServiceConfiguration.configurations.upsertAsync(
   { service: "weibo" },
   {
     $set: {
@@ -533,7 +566,8 @@ password-based users or from an external service login flow. `options` may come
 from an untrusted client so make sure to validate any values you read from
 it. The `user` argument is created on the server and contains a
 proposed user object with all the automatically generated fields
-required for the user to log in, including the `_id`.
+required for the user to log in, including a temporary `_id` (the final _id is
+generated upon document insertion and not available in this function).
 
 The function should return the user document (either the one passed in or a
 newly-created object) with whatever modifications are desired. The returned
@@ -772,10 +806,75 @@ authentication. In addition to the basic username and password-based
 sign-in process, it also supports email-based sign-in including
 address verification and password recovery emails.
 
-The Meteor server stores passwords using the
-[bcrypt](http://en.wikipedia.org/wiki/Bcrypt) algorithm. This helps
+### Password encryption and security
+
+Starting from `accounts-passwords:4.0.0`, you can choose which algorithm is used by the Meteor server to store passwords : either [bcrypt](http://en.wikipedia.org/wiki/Bcrypt) or
+[Argon2](http://en.wikipedia.org/wiki/Argon2) algorithm. Both are robust and contribute to
 protect against embarrassing password leaks if the server's database is
 compromised.
+
+Before version 4.0.0, `bcrypt` was the only available option. argon2 has been introduced because it is  considered the most secure option. This algorithm is specifically designed to resist GPU-based brute force attacks. For more details, see the [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+
+As of January 2025, **`bcrypt` is still the default option** to enable a smooth transition. In the future, `argon2` will replace `bcrypt` as default and `bcrypt` option will be deprecated.
+
+Passwords are hashed on the client using **SHA-256** algorithm before being sent to the server. This ensures that sensitive data is never transmitted in plain text. Once received by the server, the hashed value is further encrypted and securely stored in the `Meteor.users` collection.
+
+
+**About the migration process from `bcrypt` to `argon2`**
+
+The transition from `bcrypt` to `argon2` happens automatically upon user login. If Argon2 encryption is enabled in an existing application, each user's password is re-encrypted during their next successful login.
+- Step 1: The password is first validated against the existing `bcrypt` hash.
+- Step 2: If authentication succeeds, the password is re-encrypted using `Argon2`.
+- Step 3: The new `Argon2` hash replaces the old `bcrypt` hash in the database.
+
+
+To monitor the migration progress, you can count users still using bcrypt:
+```js
+const bcryptUsers = await Meteor.users.find({ "services.password.bcrypt": { $exists: true } }).countAsync();
+const totalUsers = await Meteor.users.find({ "services.password": { $exists: true } }).countAsync();
+console.log("Remaining users to migrate:", bcryptUsers, "/", totalUsers);
+```
+Once `bcryptUsers` reaches 0, the migration is complete.
+
+**Enabling Argon2 encryption**
+
+To enable Argon2 encryption, you need a small configuration change on the server: 
+
+```js
+Accounts.config({
+    argon2Enabled: true,
+});
+```
+
+**Configuring `argon2` parameters**
+
+One enabled, the `accounts-password` package allows customization of Argon2's parameters. The configurable options include:
+
+- `type`: `argon2id` (provides a blend of resistance against GPU and side-channel attacks)
+- `timeCost` (default: 2) – This controls the computational cost of the hashing process, affecting both the security level and performance.
+- `memoryCost`: 19456 (19 MiB) - The amount of memory used by the algorithm in KiB per thread
+- `parallelism`: 1 - The number of threads used by the algorithm
+
+To update the values, use the following configuration:
+```js
+Accounts.config({
+    argon2Enabled: true,
+    argon2Type: "argon2id",
+    argon2TimeCost: 2,
+    argon2MemoryCost: 19456,
+    argon2Parallelism: 1,
+});
+```
+
+Other Argon2 parameters, such as `hashLength`, are kept to default values:
+- `hashLength`: 32 bytes - The length of the hash output in bytes
+
+The default values are the minimum [OWASP recommendations for Argon2 parameters](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#introduction). When updating these values, consider the trade-offs between security and performance on the target infrastructure.
+
+For more information about Argon2's parameters, refer to the [argon2 options documentation](https://github.com/ranisalt/node-argon2/wiki/Options).
+
+
+### Using passwords
 
 To add password support to your application, run this command in your terminal:
 
@@ -822,6 +921,8 @@ By default, an email address is added with `{ verified: false }`. Use
 email with a link the user can use to verify their email address.
 
 <ApiBox name="Accounts.removeEmail" />
+
+<ApiBox name="Accounts.replaceEmailAsync" />
 
 <ApiBox name="Accounts.verifyEmail" />
 
@@ -890,11 +991,172 @@ be called.
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#Accounts-emailTemplates).
 
+## Email Link Callbacks and URL Customization
+
+When Meteor sends account-related emails, those emails contain URLs that users click
+to complete actions like password reset. This section explains how these URLs work
+and how to customize them.
+
+### How Email URLs Work
+
+By default, Meteor generates URLs using hash fragments:
+
+- `https://yourapp.com/#/reset-password/TOKEN`
+- `https://yourapp.com/#/verify-email/TOKEN`
+- `https://yourapp.com/#/enroll-account/TOKEN`
+
+**Security Note:** Hash fragments (the part after `#`) are intentionally used because
+they are never sent to the server in HTTP requests. This prevents sensitive tokens
+from appearing in server logs, proxy logs, or HTTP referrer headers.
+
+When a user clicks these links, Meteor's client-side code automatically parses
+`window.location.hash` and triggers the appropriate callback registered with
+the functions below.
+
 <ApiBox name="Accounts.onResetPasswordLink" />
 
 <ApiBox name="Accounts.onEnrollmentLink" />
 
 <ApiBox name="Accounts.onEmailVerificationLink" />
+
+### Complete Example: Custom Password Reset Flow
+
+Here's how to implement password reset without `accounts-ui`:
+
+```js
+// client/accounts-hooks.js
+import { Accounts } from 'meteor/accounts-base';
+
+// Register at top level, NOT inside Meteor.startup()
+let doneCallback;
+
+Accounts.onResetPasswordLink((token, done) => {
+  // Store token and done callback for your UI
+  Session.set('resetPasswordToken', token);
+  doneCallback = done;
+
+  // Show your password reset form
+  // The login process is suspended until done() is called
+});
+
+// In your password reset form submit handler:
+function submitNewPassword(newPassword) {
+  const token = Session.get('resetPasswordToken');
+
+  Accounts.resetPassword(token, newPassword, (error) => {
+    if (error) {
+      alert('Reset failed: ' + error.reason);
+    } else {
+      Session.set('resetPasswordToken', null);
+      doneCallback(); // Re-enables auto-login
+    }
+  });
+}
+```
+
+### Customizing Email URLs 
+
+<ApiBox name="Accounts.urls" />
+
+`Accounts.urls` is a server-side object containing functions that generate URLs
+for account emails. Override these to customize the URL format.
+
+| Property | Signature | Description |
+|----------|-----------|-------------|
+| `resetPassword` | `(token, extraParams?) => string` | Password reset URL |
+| `verifyEmail` | `(token, extraParams?) => string` | Email verification URL |
+| `enrollAccount` | `(token, extraParams?) => string` | Account enrollment URL |
+| `loginToken` | `(selector, token, extraParams?) => string` | Login token URL |
+
+#### Async URL Generation
+
+The URL methods can also return **Promises** that resolve to strings. This is useful when
+URL generation requires asynchronous operations, such as:
+- Looking up user data from the database
+- Calling external services (e.g., URL shorteners)
+- Generating signed URLs from cloud providers
+
+The email-sending functions (`Accounts.sendResetPasswordEmail`, `Accounts.sendEnrollmentEmail`,
+and `Accounts.sendVerificationEmail`) handle both synchronous and asynchronous URL methods
+transparently.
+
+**Example: Async URL with database lookup**
+
+```js
+// Server-side
+import { Accounts } from 'meteor/accounts-base';
+import { Meteor } from 'meteor/meteor';
+
+Accounts.urls.resetPassword = async (token, extraParams) => {
+  // Example: Look up user preference for custom domain
+  const user = await Meteor.users.findOneAsync({ 'services.password.reset.token': token });
+  const domain = user?.profile?.preferredDomain || Meteor.absoluteUrl();
+
+  return `${domain}reset-password/${token}`;
+};
+```
+
+**Example: Using a URL shortener service**
+
+```js
+// Server-side
+Accounts.urls.verifyEmail = async (token) => {
+  const longUrl = Meteor.absoluteUrl(`verify-email/${token}`);
+
+  // Shorten the URL using an external service
+  const shortUrl = await shortenUrl(longUrl);
+  return shortUrl;
+};
+```
+
+**Example: Using Clean URLs Instead of Hash Fragments**
+
+If your router doesn't handle hash fragments well, you can override `Accounts.urls`
+to use clean URLs:
+
+```js
+// Server-side
+import { Accounts } from 'meteor/accounts-base';
+import { Meteor } from 'meteor/meteor';
+
+Accounts.urls.resetPassword = (token) => {
+  return Meteor.absoluteUrl(`reset-password/${token}`);
+};
+
+Accounts.urls.verifyEmail = (token) => {
+  return Meteor.absoluteUrl(`verify-email/${token}`);
+};
+
+Accounts.urls.enrollAccount = (token) => {
+  return Meteor.absoluteUrl(`enroll-account/${token}`);
+};
+```
+
+**Important:** When using clean URLs (without `#/`), the built-in
+`Accounts.onResetPasswordLink`, `Accounts.onEnrollmentLink`, and
+`Accounts.onEmailVerificationLink` callbacks won't work automatically.
+Handle tokens in your router instead:
+
+```js
+// Example with a router
+Router.route('/reset-password/:token', function() {
+  const token = this.params.token;
+  // Show password reset UI, call Accounts.resetPassword(token, newPassword)
+});
+```
+
+### Router Integration
+
+You have three options when integrating with client-side routers:
+
+1. **Keep default hash URLs** - Works out of the box
+   with `Accounts.on*Link` callbacks. No router configuration needed.
+
+2. **Override `Accounts.urls` for clean URLs** - More "modern" looking URLs,
+   but requires handling tokens in your router.
+
+3. **Use hashbang mode** - Some routers support `#!/` routes. Configure your
+   router accordingly and update `Accounts.urls` to use `#!/` instead of `#/`.
 
 <ApiBox name="Accounts.emailTemplates" />
 
@@ -921,6 +1183,7 @@ Set the fields of the object by assigning to them:
   returns the body text for a reset password email.
 - `html`: An optional `Function` that takes a user object and a
   url, and returns the body html for a reset password email.
+
 - `enrollAccount`: Same as `resetPassword`, but for initial password setup for
   new accounts.
 - `verifyEmail`: Same as `resetPassword`, but for verifying the users email
@@ -928,7 +1191,10 @@ Set the fields of the object by assigning to them:
 
 Example:
 
+
 ```js
+
+
 import { Accounts } from "meteor/accounts-base";
 
 Accounts.emailTemplates.siteName = "AwesomeSite";

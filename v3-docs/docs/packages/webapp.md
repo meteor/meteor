@@ -29,7 +29,7 @@ WebApp.handlers.use("/hello", (req, res, next) => {
 
 One of the really cool things you can do with WebApp is serve static HTML for a landing page where TTFB (time to first byte) is of utmost importance.
 
-The [Bundle Visualizer](https://docs.meteor.com/packages/bundle-visualizer.html) and [Dynamic Imports](https://docs.meteor.com/packages/dynamic-import.html) are great tools to help you minimize initial page load times. But sometimes you just need to skinny down your initial page load to bare metal.
+The [Bundle Visualizer](/packages/bundle-visualizer) and [Dynamic Imports](/packages/dynamic-import) are great tools to help you minimize initial page load times. But sometimes you just need to skinny down your initial page load to bare metal.
 
 The good news is that WebApp makes this is really easy to do.
 
@@ -102,6 +102,58 @@ We're reading the contents of index.html using the [Assets](../api/assets.md) mo
 We're using the [connect-route](https://www.npmjs.com/package/connect-route) NPM package to simplify WebApp route processing. But you can use any package you want to understand what is being requested.
 
 And finally, if you decide to use this technique you'll want to make sure you understand how conflicting client side routing will affect user experience.
+
+### React SSR Optimization (Meteor 3.4)
+
+**Experimental: Disable Boilerplate Response** ([PR#13855](https://github.com/meteor/meteor/pull/13855))
+
+Meteor 3.4 introduces an experimental configuration option to improve React Server-Side Rendering (SSR) performance by disabling the default boilerplate HTML response.
+
+When using React SSR with packages like `server-render`, you may want to completely control the HTML output without Meteor's default boilerplate injection. Enable this with:
+
+```js
+// server/main.js
+import { WebApp } from 'meteor/webapp';
+
+WebApp.addHtmlAttributeHook(() => ({
+  disableBoilerplateResponse: true
+}));
+```
+
+**Benefits:**
+- **Full SSR Control**: Complete control over the HTML output for SSR frameworks
+- **Better Performance**: Reduces overhead by skipping boilerplate generation
+- **Cleaner Output**: No automatic script/link injection, allowing custom placement
+
+**Use Cases:**
+- Advanced React SSR implementations
+- Custom HTML structure requirements
+- Integration with SSR frameworks like Next.js patterns in Meteor
+
+**Important Notes:**
+- This is an experimental feature and may change in future releases
+- When enabled, you're responsible for including all necessary scripts and assets
+- Best used with the `server-render` package for full SSR implementations
+
+Example with server-render:
+
+```js
+import { onPageLoad } from 'meteor/server-render';
+import { renderToString } from 'react-dom/server';
+import { WebApp } from 'meteor/webapp';
+
+WebApp.addHtmlAttributeHook(() => ({
+  disableBoilerplateResponse: true
+}));
+
+onPageLoad(sink => {
+  const html = renderToString(<App />);
+
+  sink.renderIntoElementById('root', html);
+  sink.appendToHead('<link rel="stylesheet" href="/styles.css">');
+  sink.appendToBody('<script src="/client.js"></script>');
+});
+```
 
 ### Dynamic Runtime Configuration
 

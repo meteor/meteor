@@ -337,22 +337,22 @@ if (Meteor.isClient) {
         },{
           returnServerResultPromise: true,
         });
-       await restrictedCollectionForFetchTest
-         .updateAsync(
-           fetchId,
-           { $set: { updated: true } },
-           {
-             returnServerResultPromise: true,
-           }
-         )
-         .catch(
-           expect(function(err) {
-             test.equal(
-               err.reason,
-               'Test: Fields in doc: _id,field1,field2,field3'
-             );
-           })
-         );
+        await restrictedCollectionForFetchTest
+          .updateAsync(
+            fetchId,
+            { $set: { updated: true } },
+            {
+              returnServerResultPromise: true,
+            }
+          )
+          .catch(
+            expect(function(err) {
+              test.equal(
+                err.reason,
+                'Test: Fields in doc: _id,field1,field2,field3'
+              );
+            })
+          );
 
         await restrictedCollectionForFetchTest
           .removeAsync(fetchId, {
@@ -732,8 +732,8 @@ if (Meteor.isClient) {
       ]);
     })();
 
-    
-      [restrictedCollectionDefaultInsecure, restrictedCollectionDefaultSecure].forEach(
+
+    [restrictedCollectionDefaultInsecure, restrictedCollectionDefaultSecure].forEach(
       function(collection) {
         var canUpdateId, canRemoveId;
 
@@ -874,6 +874,7 @@ if (Meteor.isClient) {
                 { returnServerResultPromise: true }
               )
               .then(async function(res) {
+                console.log('res', res);
                 test.equal(res, 0);
                 // nothing has changed
                 test.equal(await collection.find().countAsync(), 3);
@@ -1043,7 +1044,7 @@ if (Meteor.isClient) {
     );
     testAsyncMulti(
       'collection - restricted collection allows client-side id, ' +
-        idGeneration,
+      idGeneration,
       [
         async function(test, expect) {
           var self = this;
@@ -1202,6 +1203,7 @@ Tinytest.addAsync(
           error ? reject(error) : resolve(result)
         );
       });
+      console.log('id', id);
       await new Promise((resolve, reject) => {
         AllowAsyncValidateCollection.update(
           id,
@@ -1223,88 +1225,181 @@ Tinytest.addAsync(
   }
 );
 
-function configAllAsyncAllowDeny(collection, configType = 'allow', enabled) {
-  collection[configType]({
-    async insertAsync(selector, doc) {
-      if (doc.force) return true;
-      await Meteor._sleepForMs(100);
-      return enabled;
-    },
-    async updateAsync() {
-      await Meteor._sleepForMs(100);
-      return enabled;
-    },
-    async removeAsync() {
-      await Meteor._sleepForMs(100);
-      return enabled;
-    },
-  });
+function configAllAllowDeny(collection, configType = 'allow', enabled, isAsync = true) {
+  const handler = isAsync
+    ? {
+      async insertAsync(selector, doc) {
+        if (doc.force) return configType === 'allow';
+        await Meteor._sleepForMs(100);
+        return enabled;
+      },
+      async updateAsync() {
+        await Meteor._sleepForMs(100);
+        return enabled;
+      },
+      async removeAsync() {
+        await Meteor._sleepForMs(100);
+        return enabled;
+      },
+    }
+    : {
+      insert(selector, doc) {
+        if (doc.force) return configType === 'allow';
+        return enabled;
+      },
+      update() {
+        return enabled;
+      },
+      remove() {
+        return enabled;
+      },
+    };
+
+  collection[configType](handler);
 }
 
-async function runAllAsyncExpect(test, collection, allow) {
+async function runAllExpect(test, collection, allow, isAsync = true) {
   let id;
-  /* async tests */
+
+  const resolveSyncCallback = (resolve, reject) =>
+    (error, result) => {
+    if (error) {
+      reject(error);
+      return;
+    }
+    resolve(result);
+  };
+  const methods = isAsync
+    ? {
+      insert: async (doc) => await collection.insertAsync(doc),
+      update: async (id, modifier) => await collection.updateAsync(id, modifier),
+      remove: async (id) => await collection.removeAsync(id),
+    }
+    : {
+      insert: (doc) =>
+        new Promise((resolve, reject) =>
+          collection.insert(doc, resolveSyncCallback(resolve, reject))
+        ),
+      update: (id, modifier) =>
+        new Promise((resolve, reject) =>
+          collection.update(id, modifier, resolveSyncCallback(resolve, reject))
+        ),
+      remove: (id) =>
+        new Promise((resolve, reject) =>
+          collection.remove(id, resolveSyncCallback(resolve, reject))
+        ),
+    };
+
   try {
-    id = await collection.insertAsync({ num: 2 });
+    id = await methods.insert({ num: 2 });
     test.isTrue(allow);
   } catch (e) {
     test.isTrue(!allow);
   }
+
   try {
-    id = await collection.insertAsync({ force: true });
-    await collection.updateAsync(id, { $set: { num: 22 } });
+    id = await methods.insert({ force: true });
+    await methods.update(id, { $set: { num: 22 } });
     test.isTrue(allow);
   } catch (e) {
     test.isTrue(!allow);
   }
+
   try {
-    await collection.removeAsync(id);
+    id = await methods.insert({ force: true });
+    await methods.remove(id);
     test.isTrue(allow);
   } catch (e) {
     test.isTrue(!allow);
   }
 }
 
-var AllowDenyAsyncRulesCollections = {};
+const AllowDenyRulesCollections = {};
 
-testAsyncMulti("collection - async definitions on allow/deny rules", [
-  async function (test) {
-    AllowDenyAsyncRulesCollections.allowed =
-      AllowDenyAsyncRulesCollections.allowed ||
-      new Mongo.Collection(`allowdeny-async-rules-allowed`);
-    if (Meteor.isServer) {
-      await AllowDenyAsyncRulesCollections.allowed.removeAsync();
-    }
+function createAllowDenyRulesTest(collections, isAsync = true) {
+  return [
+    async function (test) {
+      const collectionName = `allowdeny-${isAsync ? "async" : "sync"}-rules-noRules`;
+      collections.noRules =
+        collections.noRules || new Mongo.Collection(collectionName);
+      if (Meteor.isServer) {
+        await collections.noRules.removeAsync();
+      }
 
-    configAllAsyncAllowDeny(AllowDenyAsyncRulesCollections.allowed, 'allow', true);
-    if (Meteor.isClient) {
-      await runAllAsyncExpect(test, AllowDenyAsyncRulesCollections.allowed, true);
-    }
-  },
-  async function (test) {
-    AllowDenyAsyncRulesCollections.notAllowed =
-      AllowDenyAsyncRulesCollections.notAllowed ||
-      new Mongo.Collection(`allowdeny-async-rules-notAllowed`);
-    if (Meteor.isServer) {
-      await AllowDenyAsyncRulesCollections.notAllowed.removeAsync();
-    }
+      if (Meteor.isClient) {
+        await runAllExpect(test, collections.noRules, collections.noRules._isInsecure(), isAsync);
+      }
+    },
+    async function (test) {
+      const collectionName = `allowdeny-${isAsync ? "async" : "sync"}-rules-allowed`;
+      collections.allowed =
+        collections.allowed || new Mongo.Collection(collectionName);
+      if (Meteor.isServer) {
+        await collections.allowed.removeAsync();
+      }
 
-    configAllAsyncAllowDeny(AllowDenyAsyncRulesCollections.notAllowed, 'allow', false);
-    if (Meteor.isClient) {
-      await runAllAsyncExpect(test, AllowDenyAsyncRulesCollections.notAllowed, false);
-    }
-  },
-  async function (test) {
-    AllowDenyAsyncRulesCollections.denied =
-      AllowDenyAsyncRulesCollections.denied ||
-      new Mongo.Collection(`allowdeny-async-rules-denied`);
-    if (Meteor.isServer) {
-      await AllowDenyAsyncRulesCollections.denied.removeAsync();
-    }
+      configAllAllowDeny(collections.allowed, 'allow', true, isAsync);
+      if (Meteor.isClient) {
+        await runAllExpect(test, collections.allowed, true, isAsync);
+      }
+    },
+    async function (test) {
+      const collectionName = `allowdeny-${isAsync ? "async" : "sync"}-rules-notAllowed`;
+      collections.notAllowed =
+        collections.notAllowed || new Mongo.Collection(collectionName);
+      if (Meteor.isServer) {
+        await collections.notAllowed.removeAsync();
+      }
 
-    configAllAsyncAllowDeny(AllowDenyAsyncRulesCollections.denied, 'deny', true);
-    if (Meteor.isClient) {
-      await runAllAsyncExpect(test, AllowDenyAsyncRulesCollections.denied, false);
-    }
-  },
-]);
+      configAllAllowDeny(collections.notAllowed, 'allow', false, isAsync);
+      if (Meteor.isClient) {
+        await runAllExpect(test, collections.notAllowed, false, isAsync);
+      }
+    },
+    async function (test) {
+      const collectionName = `allowdeny-${isAsync ? "async" : "sync"}-rules-denied`;
+      collections.denied =
+        collections.denied || new Mongo.Collection(collectionName);
+      if (Meteor.isServer) {
+        await collections.denied.removeAsync();
+      }
+
+      configAllAllowDeny(collections.denied, 'deny', true, isAsync);
+      if (Meteor.isClient) {
+        await runAllExpect(test, collections.denied, false, isAsync);
+      }
+    },
+    async function (test) {
+      const collectionName = `allowdeny-${isAsync ? "async" : "sync"}-rules-allowThenDeny`;
+      collections.allowThenDeny =
+        collections.allowThenDeny || new Mongo.Collection(collectionName);
+      if (Meteor.isServer) {
+        await collections.allowThenDeny.removeAsync();
+      }
+
+      configAllAllowDeny(collections.allowThenDeny, 'allow', true, isAsync);
+      configAllAllowDeny(collections.allowThenDeny, 'deny', true, isAsync);
+      if (Meteor.isClient) {
+        await runAllExpect(test, collections.allowThenDeny, false, isAsync);
+      }
+    },
+    async function (test) {
+      const collectionName = `allowdeny-${isAsync ? "async" : "sync"}-rules-allowThenNotDenied`;
+      collections.allowThenNotDenied =
+        collections.allowThenNotDenied || new Mongo.Collection(collectionName);
+      if (Meteor.isServer) {
+        await collections.allowThenNotDenied.removeAsync();
+      }
+
+      configAllAllowDeny(collections.allowThenNotDenied, 'allow', true, isAsync);
+      configAllAllowDeny(collections.allowThenNotDenied, 'deny', false, isAsync);
+      if (Meteor.isClient) {
+        await runAllExpect(test, collections.allowThenNotDenied, true, isAsync);
+      }
+    },
+  ];
+}
+
+testAsyncMulti("collection - async definitions on allow/deny rules", createAllowDenyRulesTest(AllowDenyRulesCollections, true));
+
+testAsyncMulti("collection - sync definitions on allow/deny rules", createAllowDenyRulesTest(AllowDenyRulesCollections, false));

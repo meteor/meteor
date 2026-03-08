@@ -9,7 +9,11 @@ const meteorToolLink =
 const getMeteorVersionFromDevel = async () => {
   const response = await fetch(meteorToolLink);
   const text = await response.text();
-  const version = text.match(/version: '(.*)'/)[1];
+  const version = text
+    .match(/version: (.*)/)[1]
+    .replaceAll("'", "")
+    .replaceAll('"', "")
+    .replaceAll(",", "");
   return version;
 };
 

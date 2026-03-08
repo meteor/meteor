@@ -1,8 +1,3 @@
----
-meteor_version: 3.0.4
-node_version: 20.18.0
-npm_version: 10.8.2
----
 # Meteor 3.0 Migration Guide
 
 :::info You are reading the migration guide for Meteor 3!
@@ -14,26 +9,30 @@ This guide is for users with Meteor 2.x projects understand the changes between 
 
 ## What's the status of version 3.0?
 
-Meteor 3.0 is currently in its official version!
-
-**Latest version:** `{{ $frontmatter.meteor_version }}` <br/>
-**Node.js version:** `{{ $frontmatter.node_version }} LTS` <br/>
-**NPM version:** `{{ $frontmatter.npm_version }}`
+Meteor 3.0 is currently in its official version. [Check the documentation for the latest version information.](https://docs.meteor.com/)
 
 ## How to try Meteor 3.0?
 
-You can create a new Meteor 3.0 project by running the command below:
+You can install the latest Meteor version command below:
 
 ```bash-vue
-  meteor create my-new-project --release {{ $frontmatter.meteor_version }}
+  npx meteor
 ```
+
+and to create a new Meteor project:
+
+```bash-vue
+  meteor create
+```
+
+This will prompt the project creator wizard to help you set up a new project.
 
 ## How to upgrade from Meteor 2.x?
 
 You can upgrade your Meteor 2.x project by running the command below inside your project folder:
 
 ```bash-vue
-meteor update --release {{ $frontmatter.meteor_version }}
+meteor update
 meteor reset # resets project to a fresh state
 ```
 

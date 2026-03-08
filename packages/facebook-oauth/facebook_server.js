@@ -2,7 +2,7 @@ Facebook = {};
 import crypto from 'crypto';
 import { Accounts } from 'meteor/accounts-base';
 
-const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '17.0';
+const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '22.0';
 
 Facebook.handleAuthFromAccessToken = async (accessToken, expiresAt) => {
   // include basic fields from facebook
@@ -26,11 +26,12 @@ Facebook.handleAuthFromAccessToken = async (accessToken, expiresAt) => {
   };
 };
 
-Accounts.registerLoginHandler(request => {
+Accounts.registerLoginHandler(async request => {
   if (request.facebookSignIn !== true) {
     return;
   }
-  const facebookData = Facebook.handleAuthFromAccessToken(request.accessToken, (+new Date) + (1000 * request.expirationTime));
+  const facebookData = await Facebook.handleAuthFromAccessToken(request.accessToken, (+new Date) + (1000 * request.expirationTime));
+  if (!facebookData) return;
   return Accounts.updateOrCreateUserFromExternalService('facebook', facebookData.serviceData, facebookData.options);
 });
 
@@ -96,7 +97,6 @@ const getTokenResponse = async (query) => {
     .then((res) => res.json())
     .then(data => {
       const fbAccessToken = data.access_token;
-      console.log("-> fbAccessToken", fbAccessToken);
       const fbExpires = data.expires_in;
       if (!fbAccessToken) {
         throw new Error("Failed to complete OAuth handshake with facebook " +
