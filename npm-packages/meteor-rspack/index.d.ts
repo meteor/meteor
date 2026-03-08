@@ -75,6 +75,12 @@ type MeteorEnv = Record<string, any> & {
   disablePlugins: (
     matchers: string | RegExp | ((plugin: any, index: number) => boolean) | Array<string | RegExp | ((plugin: any, index: number) => boolean)>
   ) => Record<string, any>;
+  /**
+   * Omit `Meteor.isDevelopment` and `Meteor.isProduction` from the DefinePlugin so
+   * the bundle is not tied to a specific Meteor environment (portable / isomorphic builds).
+   * @returns A config fragment with `meteor.enablePortableBuild: true`
+   */
+  enablePortableBuild: () => Record<string, any>;
 }
 
 export type ConfigFactory = (

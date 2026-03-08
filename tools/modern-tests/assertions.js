@@ -146,6 +146,43 @@ export async function assertFileExist(tempDir, filePath, options = {}) {
 }
 
 /**
+ * Helper function to assert that a path does NOT exist
+ * Retries until the path is gone or the timeout is exceeded
+ * @param {string} basePath - Base directory path
+ * @param {string} relPath - Relative path from basePath to check
+ * @param {Object} options - Additional options
+ * @param {number} options.timeout - Maximum time to wait in milliseconds (default: 5000)
+ * @param {number} options.checkInterval - Interval between checks in milliseconds (default: 100)
+ * @returns {Promise<void>}
+ */
+export async function assertPathNotExist(basePath, relPath, options = {}) {
+  const { timeout = 5000, checkInterval = 100 } = options;
+  const fullPath = path.join(basePath, relPath);
+  const startTime = Date.now();
+
+  const check = async () => {
+    const exists = await fs.pathExists(fullPath);
+    if (exists && Date.now() - startTime < timeout) {
+      await new Promise(r => setTimeout(r, checkInterval));
+      return check();
+    }
+    if (exists) {
+      const stat = await fs.stat(fullPath);
+      const isDir = stat.isDirectory();
+      let contents = '';
+      if (isDir) {
+        const entries = await fs.readdir(fullPath);
+        contents = ` (contains: ${entries.join(', ')})`;
+      }
+      console.error(`assertPathNotExist FAILED: ${relPath} still exists at ${fullPath} [${isDir ? 'dir' : 'file'}, ${stat.size} bytes]${contents}`);
+    }
+    expect(exists).toBe(false);
+  };
+
+  await check();
+}
+
+/**
  * Helper function to evaluate JavaScript code in the browser console and assert the result
  * @param {string} code - JavaScript code to evaluate in the browser console
  * @param {any} expectedResult - Expected result of the evaluation

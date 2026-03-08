@@ -218,7 +218,7 @@ class Runner {
           { arrow: true }
         );
       } else {
-        runLog.log("App running at: " + self.rootUrl,  { arrow: true });
+        runLog.log("App running at " + self.rootUrl,  { arrow: true });
       }
 
       if (process.platform === "win32") {

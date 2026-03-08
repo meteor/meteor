@@ -17,6 +17,7 @@ const {
   isMeteorAppBuild,
   isMeteorAppDebug,
   isMeteorAppTest,
+  isMeteorAppTestFullApp,
   isMeteorAppConfigModernVerbose,
   isMeteorBlazeProject,
   isMeteorLessProject,
@@ -154,7 +155,9 @@ export function configureMeteorForRspack() {
   const initialEntrypointContexts = [
     initialEntrypoints.mainClient,
     initialEntrypoints.mainServer,
-  ].map(entrypoint => path.dirname(entrypoint));
+  ]
+    .filter(Boolean)
+    .map(entrypoint => path.dirname(entrypoint));
   const includedDirs = ['public', 'private', '.meteor', RSPACK_BUILD_CONTEXT];
   const ignoredDirs = projectRootFilesAndFolders.directories.filter(
     dir => !includedDirs.includes(dir),
@@ -338,7 +341,7 @@ export function configureMeteorForRspack() {
     isServer: true,
   });
 
-  const appEntrypoints = {
+  let appEntrypoints = {
     mainClient: `${RSPACK_BUILD_CONTEXT}/${mainClientModule}`,
     mainServer: `${RSPACK_BUILD_CONTEXT}/${mainServerModule}`,
     ...((isTestModule && {
@@ -349,6 +352,13 @@ export function configureMeteorForRspack() {
       testServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     }),
   };
+  if (isMeteorAppTestFullApp()) {
+    appEntrypoints = {
+      ...appEntrypoints,
+      mainClient: `${RSPACK_BUILD_CONTEXT}/${testClientModule}`,
+      mainServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
+    };
+  }
   // Set entry points in environment variables if they exist
   setMeteorAppEntrypoints(appEntrypoints);
 

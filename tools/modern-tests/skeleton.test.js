@@ -53,6 +53,18 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
+    "Other / Bare Skeleton /",
+    testMeteorSkeleton({
+      skeletonName: "bare",
+      port: 3219,
+      checkAppTitle: false,
+      checkBodyStyles: false,
+      skipTestClient: true,
+      skipBuildCacheCheck: true,
+    })
+  );
+
+  describe(
     'Blaze Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'blaze',
@@ -93,7 +105,7 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
-    'Full Library Skeleton /',
+    'Other / Full Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'full',
       port: 3204,
@@ -102,7 +114,7 @@ describe('Meteor Skeletons /', () => {
         server: 'server/main.js',
         test: 'imports/api/links/methods.tests.js',
       },
-    }),
+    })
   );
 
   describe(
@@ -150,7 +162,7 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
-    'Tailwind Library Skeleton /',
+    'Other / Tailwind Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'tailwind',
       port: 3208,
@@ -161,19 +173,19 @@ describe('Meteor Skeletons /', () => {
       },
       customAssertions: {
         afterRun: async () => {
-          // Verify Tailwind styles for ".bg-gray-100" element
+          // Verify Tailwind styles for '.bg-gray-100' element
           await assertStyles('.bg-gray-100', {
             ['background-color']: 'oklch(0.967 0.003 264.542)',
           });
         },
         afterRunProduction: async () => {
-          // Verify Tailwind styles for ".bg-gray-100" element
+          // Verify Tailwind styles for '.bg-gray-100' element
           await assertStyles('.bg-gray-100', {
             ['background-color']: 'lab(96.1596 -0.0823438 -1.13575)',
           });
         },
       },
-    }),
+    })
   );
 
   describe(

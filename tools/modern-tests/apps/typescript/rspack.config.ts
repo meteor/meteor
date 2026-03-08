@@ -16,6 +16,7 @@ const require = createRequire(import.meta.url);
  */
 export default defineConfig(Meteor => {
   return {
+    ...Meteor.enablePortableBuild(),
     ...Meteor.extendSwcConfig({
       jsc: {
         baseUrl: process.cwd(),

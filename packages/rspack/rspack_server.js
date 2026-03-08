@@ -28,7 +28,7 @@ const RSPACK_ASSETS_REGEX = new RegExp(
   `^\/${rspackAssetsContext}\/(.+)$`,
 );
 
-if (Meteor.isDevelopment) {
+if (global?.Package?.['tools-core'] != null && Meteor.isDevelopment) {
   const { shuffleString } = require('meteor/tools-core/lib/string');
   const { createProxyMiddleware } = require('http-proxy-middleware');
 

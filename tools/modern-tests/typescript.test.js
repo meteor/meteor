@@ -19,6 +19,8 @@ describe('TypeScript App Bundling /', () => {
       testServer: 'tests/server.ts',
     },
     buildDir: 'build',
+    assetsContext: 'assets',
+    chunksContext: 'chunks',
     configFile: 'rspack.config.ts',
     customAssertions: {
       afterCreate({ tempDir }) {
@@ -40,7 +42,18 @@ describe('TypeScript App Bundling /', () => {
         });
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
         await waitForTypeScriptErrorFree(result.outputLines);
-        await assertFileExist(tempDir, '.meteor/local/types');
+        await assertFileExist(tempDir, ".meteor/local/types");
+        // Portable build: Meteor.isDevelopment and Meteor.isProduction must not be defined
+        await waitForMeteorOutput(
+          result.outputLines,
+          /[^ ]*Meteor.isDevelopment[^ ]*: [^ ]*false[^ ]*/,
+          { negate: true }
+        );
+        await waitForMeteorOutput(
+          result.outputLines,
+          /[^ ]*Meteor.isProduction[^ ]*: [^ ]*true[^ ]*/,
+          { negate: true }
+        );
       },
       afterRunRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR output as enabled by default
@@ -52,6 +65,17 @@ describe('TypeScript App Bundling /', () => {
           'white-space': 'break-spaces',
         });
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
+        // Portable build: Meteor.isDevelopment and Meteor.isProduction must not be defined
+        await waitForMeteorOutput(
+          result.outputLines,
+          /[^ ]*Meteor.isDevelopment[^ ]*: [^ ]*false[^ ]*/,
+          { negate: true }
+        );
+        await waitForMeteorOutput(
+          result.outputLines,
+          /[^ ]*Meteor.isProduction[^ ]*: [^ ]*true[^ ]*/,
+          { negate: true }
+        );
       },
       afterRunProductionRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR to not be enabled in production-like mode
@@ -65,6 +89,17 @@ describe('TypeScript App Bundling /', () => {
       },
       afterBuild: async ({ result }) => {
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
+        // Portable build: Meteor.isDevelopment and Meteor.isProduction must not be defined
+        await waitForMeteorOutput(
+          result.outputLines,
+          /[^ ]*Meteor.isDevelopment[^ ]*: [^ ]*false[^ ]*/,
+          { negate: true }
+        );
+        await waitForMeteorOutput(
+          result.outputLines,
+          /[^ ]*Meteor.isProduction[^ ]*: [^ ]*true[^ ]*/,
+          { negate: true }
+        );
       },
     }
   }));

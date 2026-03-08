@@ -17,7 +17,7 @@
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^1.0.0",
+    "@meteorjs/rspack": "^1.0.0-beta.1",
     "@rspack/cli": "^1.4.8",
     "@rspack/core": "^1.4.8",
     "@tailwindcss/postcss": "^4.1.12",
