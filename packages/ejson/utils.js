@@ -4,7 +4,13 @@ export const isObject = (fn) => typeof fn === 'object';
 
 export const keysOf = (obj) => Object.keys(obj);
 
-export const lengthOf = (obj) => Object.keys(obj).length;
+export const lengthOf = (obj) => {
+  let count = 0;
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key) && ++count > 2) return count;
+  }
+  return count;
+};
 
 export const hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 
