@@ -1,6 +1,166 @@
 // Tests for MongoDB collation support in the mongo package.
-// These test that collation options flow through to the MongoDB driver
-// and that observeChanges works correctly with collation-aware Minimongo.
+//
+// Client tests use Mongo.Collection(null) (local-only, backed by Minimongo)
+// to verify that the Mongo.Collection API correctly passes collation through.
+//
+// Server tests use real MongoDB collections to verify the full integration
+// path through the MongoDB driver (createIndex, oplog, countDocuments, etc.).
+
+// ── Client tests (Mongo.Collection(null) → Minimongo) ──────────────────────
+
+if (Meteor.isClient) {
+
+  Tinytest.add(
+    'mongo collation - client - find with case-insensitive collation',
+    function (test) {
+      var c = new Mongo.Collection(null);
+      var collation = { locale: 'en', strength: 2 };
+
+      c.insert({ _id: 'a', name: 'Alice' });
+      c.insert({ _id: 'b', name: 'bob' });
+      c.insert({ _id: 'c', name: 'Charlie' });
+
+      // Case-insensitive equality
+      var docs = c.find(
+        { name: 'alice' },
+        { collation: collation }
+      ).fetch();
+      test.equal(docs.length, 1);
+      test.equal(docs[0].name, 'Alice');
+
+      // Case-insensitive findOne
+      var doc = c.findOne(
+        { name: 'BOB' },
+        { collation: collation }
+      );
+      test.isTrue(doc);
+      test.equal(doc.name, 'bob');
+
+      // Without collation, no match
+      var noMatch = c.findOne({ name: 'alice' });
+      test.isFalse(noMatch);
+    }
+  );
+
+  Tinytest.add(
+    'mongo collation - client - find with $in operator',
+    function (test) {
+      var c = new Mongo.Collection(null);
+      var collation = { locale: 'en', strength: 2 };
+
+      c.insert({ _id: 'a', name: 'Alice' });
+      c.insert({ _id: 'b', name: 'Bob' });
+      c.insert({ _id: 'c', name: 'Charlie' });
+
+      var docs = c.find(
+        { name: { $in: ['alice', 'charlie'] } },
+        { collation: collation, sort: { _id: 1 } }
+      ).fetch();
+      test.equal(docs.length, 2);
+      test.equal(docs[0].name, 'Alice');
+      test.equal(docs[1].name, 'Charlie');
+    }
+  );
+
+  Tinytest.add(
+    'mongo collation - client - sort with collation',
+    function (test) {
+      var c = new Mongo.Collection(null);
+      var collation = { locale: 'en', strength: 2 };
+
+      c.insert({ _id: 'a', name: 'banana' });
+      c.insert({ _id: 'b', name: 'Apple' });
+      c.insert({ _id: 'c', name: 'cherry' });
+
+      var docs = c.find(
+        {},
+        { collation: collation, sort: { name: 1 } }
+      ).fetch();
+      test.equal(docs.length, 3);
+      test.equal(docs[0].name, 'Apple');
+      test.equal(docs[1].name, 'banana');
+      test.equal(docs[2].name, 'cherry');
+    }
+  );
+
+  Tinytest.add(
+    'mongo collation - client - sort with numericOrdering',
+    function (test) {
+      var c = new Mongo.Collection(null);
+      var collation = { locale: 'en', numericOrdering: true };
+
+      c.insert({ _id: 'a', val: '2' });
+      c.insert({ _id: 'b', val: '10' });
+      c.insert({ _id: 'c', val: '1' });
+
+      var docs = c.find(
+        {},
+        { collation: collation, sort: { val: 1 } }
+      ).fetch();
+      test.equal(docs.length, 3);
+      test.equal(docs[0].val, '1');
+      test.equal(docs[1].val, '2');
+      test.equal(docs[2].val, '10');
+    }
+  );
+
+  Tinytest.add(
+    'mongo collation - client - inequality operators with collation',
+    function (test) {
+      var c = new Mongo.Collection(null);
+      var collation = { locale: 'en', strength: 2 };
+
+      c.insert({ _id: 'a', name: 'Alice' });
+      c.insert({ _id: 'b', name: 'Bob' });
+      c.insert({ _id: 'c', name: 'Charlie' });
+
+      // $gt with collation (case-insensitive ordering)
+      var docs = c.find(
+        { name: { $gt: 'bob' } },
+        { collation: collation, sort: { name: 1 } }
+      ).fetch();
+      test.equal(docs.length, 1);
+      test.equal(docs[0].name, 'Charlie');
+
+      // $lte with collation
+      docs = c.find(
+        { name: { $lte: 'bob' } },
+        { collation: collation, sort: { name: 1 } }
+      ).fetch();
+      test.equal(docs.length, 2);
+      test.equal(docs[0].name, 'Alice');
+      test.equal(docs[1].name, 'Bob');
+    }
+  );
+
+  Tinytest.add(
+    'mongo collation - client - strength 1 ignores accents and case',
+    function (test) {
+      var c = new Mongo.Collection(null);
+      var collation = { locale: 'en', strength: 1 };
+
+      c.insert({ _id: 'a', name: 'café' });
+      c.insert({ _id: 'b', name: 'resume' });
+
+      var doc = c.findOne(
+        { name: 'CAFE' },
+        { collation: collation }
+      );
+      test.isTrue(doc);
+      test.equal(doc.name, 'café');
+
+      var doc2 = c.findOne(
+        { name: 'résumé' },
+        { collation: collation }
+      );
+      test.isTrue(doc2);
+      test.equal(doc2.name, 'resume');
+    }
+  );
+
+}
+
+// ── Server tests (real MongoDB) ─────────────────────────────────────────────
 
 var makeCollection = function () {
   return new Mongo.Collection('collation_' + Random.id());
