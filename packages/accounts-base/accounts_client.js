@@ -138,11 +138,11 @@ export class AccountsClient extends AccountsCommon {
       await this.connection.applyAsync(methodName, [], { wait: true });
       this._loginCallbacksCalled = false;
       this.makeClientLoggedOut();
+      this._loggingOut.set(false);
       callback?.();
     } catch (e) {
-      callback?.(e);
-    } finally {
       this._loggingOut.set(false);
+      callback?.(e);
     }
   }
 
