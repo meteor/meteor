@@ -1989,9 +1989,9 @@ async function minifyCssFiles (files, {
   });
 
   const cacheEntries = [];
-  const result = _.flatten(sources.map((source) => {
+  const result = sources.flatMap((source) => {
+    const inputHash = inputHashesByCssFile.get(source);
     return source._minifiedFiles.map((file) => {
-      const inputHash = inputHashesByCssFile.get(source);
       const newFile = new File({
         info: 'minified css',
         arch,
@@ -2018,7 +2018,7 @@ async function minifyCssFiles (files, {
 
       return newFile;
     });
-  }));
+  });
 
   CSS_MINIFY_CACHE.set(cacheKey, cacheEntries);
   return result;

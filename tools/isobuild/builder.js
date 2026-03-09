@@ -1,4 +1,5 @@
 import assert from "assert";
+import fs from "fs";
 import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
 import files, {
   symlinkWithOverwrite, realpath, rm_recursive_deferred,
@@ -766,22 +767,31 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           const hash = optimisticHashOrNull(thisAbsFrom);
 
           if (this.previousWrittenHashes[thisRelTo] !== hash) {
-            const content = optimisticReadFile(thisAbsFrom);
+            const destPath = files.pathResolve(this.buildPath, thisRelTo);
 
-            files.writeFile(
-                files.pathResolve(this.buildPath, thisRelTo),
-                // The reason we call files.writeFile here instead of
-                // files.copyFile is so that we can read the file using
-                // optimisticReadFile instead of files.createReadStream.
-                content,
-                // Logic borrowed from files.copyFile: "Create the file as
-                // readable and writable by everyone, and executable by everyone
-                // if the original file is executably by owner. (This mode will be
-                // modified by umask.) We don't copy the mode *directly* because
-                // this function is used by 'meteor create' which is copying from
-                // the read-only tools tree into a writable app."
-                { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
-            );
+            // Try hardlink first — nearly instant compared to read+write,
+            // and safe for read-only cached build artifacts (isopacks).
+            // Falls back to copy for cross-device links or permission errors.
+            let linked = false;
+            try {
+              fs.linkSync(files.convertToOSPath(thisAbsFrom),
+                          files.convertToOSPath(destPath));
+              linked = true;
+            } catch (e) {
+              if (e.code !== "EXDEV" &&
+                  e.code !== "EPERM" &&
+                  e.code !== "ENOSYS" &&
+                  e.code !== "ENOTSUP") {
+                throw e;
+              }
+            }
+
+            if (!linked) {
+              const content = optimisticReadFile(thisAbsFrom);
+              files.writeFile(destPath, content, {
+                mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666,
+              });
+            }
           }
 
           this.writtenHashes[thisRelTo] = hash;
