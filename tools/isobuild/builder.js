@@ -773,15 +773,31 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
             // and safe for read-only cached build artifacts (isopacks).
             // Falls back to copy for cross-device links or permission errors.
             let linked = false;
+            const osFrom = files.convertToOSPath(thisAbsFrom);
+            const osDest = files.convertToOSPath(destPath);
             try {
-              fs.linkSync(files.convertToOSPath(thisAbsFrom),
-                          files.convertToOSPath(destPath));
+              fs.linkSync(osFrom, osDest);
               linked = true;
             } catch (e) {
-              if (e.code !== "EXDEV" &&
-                  e.code !== "EPERM" &&
-                  e.code !== "ENOSYS" &&
-                  e.code !== "ENOTSUP") {
+              if (e.code === "EEXIST") {
+                // Destination exists from a previous build (in-place rebuild).
+                // Remove it and retry.
+                fs.unlinkSync(osDest);
+                try {
+                  fs.linkSync(osFrom, osDest);
+                  linked = true;
+                } catch (e2) {
+                  if (e2.code !== "EXDEV" &&
+                      e2.code !== "EPERM" &&
+                      e2.code !== "ENOSYS" &&
+                      e2.code !== "ENOTSUP") {
+                    throw e2;
+                  }
+                }
+              } else if (e.code !== "EXDEV" &&
+                         e.code !== "EPERM" &&
+                         e.code !== "ENOSYS" &&
+                         e.code !== "ENOTSUP") {
                 throw e;
               }
             }
