@@ -171,11 +171,20 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/core-runtime/package-registry.js";
 import { optimisticLStatOrNull } from '../fs/optimistic';
+import LRUCache from 'lru-cache';
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
 const MINIFY_PLAIN_FUNCTION = Buffer.from('function(', 'utf8');
 const MINIFY_RENAMED_FUNCTION = Buffer.from('function __minifyJs(', 'utf8');
+
+const CSS_MINIFY_CACHE_SIZE = process.env.METEOR_CSS_MINIFY_CACHE_SIZE || 1024 * 1024 * 50;
+const CSS_MINIFY_CACHE = new LRUCache({
+  max: CSS_MINIFY_CACHE_SIZE,
+  length(entry) {
+    return entry.reduce((sum, item) => sum + item.data.length + (item.sourceMap ? JSON.stringify(item.sourceMap).length : 0), 0);
+  }
+});
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -1933,6 +1942,33 @@ async function minifyCssFiles (files, {
   minifyMode,
   watchSet
 }) {
+  // Build a cache key from all input file hashes + arch + minifyMode.
+  const cacheKeyHash = createHash("sha1");
+  files.forEach(file => cacheKeyHash.update(file.hash()).update("\0"));
+  cacheKeyHash.update(arch).update("\0").update(minifyMode || "");
+  const cacheKey = cacheKeyHash.digest("hex");
+
+  if (CSS_MINIFY_CACHE.has(cacheKey)) {
+    return CSS_MINIFY_CACHE.get(cacheKey).map(cached => {
+      const newFile = new File({
+        info: 'minified css',
+        arch,
+        data: Buffer.from(cached.data, 'utf8'),
+        hash: cached.inputHash,
+      });
+      if (cached.sourceMap) {
+        newFile.setSourceMap(cached.sourceMap, '/');
+      }
+      if (cached.path) {
+        newFile.setUrlFromRelPath(cached.path);
+        newFile.targetPath = cached.path;
+      } else {
+        newFile.setUrlToHash('.css', '?meteor_css_resource=true');
+      }
+      return newFile;
+    });
+  }
+
   const inputHashesByCssFile = new Map;
   const sources = files.map(file => {
     const cssFile = new CssFile(file, { arch, watchSet });
@@ -1952,13 +1988,15 @@ async function minifyCssFiles (files, {
     }
   });
 
-  return _.flatten(sources.map((source) => {
+  const cacheEntries = [];
+  const result = _.flatten(sources.map((source) => {
     return source._minifiedFiles.map((file) => {
+      const inputHash = inputHashesByCssFile.get(source);
       const newFile = new File({
         info: 'minified css',
         arch,
         data: Buffer.from(file.data, 'utf8'),
-        hash: inputHashesByCssFile.get(source),
+        hash: inputHash,
       });
       if (file.sourceMap) {
         newFile.setSourceMap(file.sourceMap, '/');
@@ -1971,9 +2009,19 @@ async function minifyCssFiles (files, {
         newFile.setUrlToHash('.css', '?meteor_css_resource=true');
       }
 
+      cacheEntries.push({
+        data: file.data,
+        sourceMap: file.sourceMap || null,
+        path: file.path || null,
+        inputHash,
+      });
+
       return newFile;
     });
   }));
+
+  CSS_MINIFY_CACHE.set(cacheKey, cacheEntries);
+  return result;
 }
 
 const { createHash } = require("crypto");

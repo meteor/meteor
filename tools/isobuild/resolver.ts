@@ -53,8 +53,11 @@ export default class Resolver {
   static getOrCreate = wrap(function (options: ResolverOptions) {
     return new Resolver(options);
   }, {
-    makeCacheKey(options) {
-      return JSON.stringify(options);
+    makeCacheKey(options: ResolverOptions) {
+      return options.sourceRoot + "\0" +
+        options.targetArch + "\0" +
+        options.extensions.join(",") + "\0" +
+        options.nodeModulesPaths.join(",");
     }
   });
 
@@ -82,9 +85,9 @@ export default class Resolver {
     this.resolve = wrap((id, absParentPath) => {
       return resolve.call(this, id, absParentPath);
     }, {
-      makeCacheKey(id, absParentPath) {
+      makeCacheKey(id: string, absParentPath: string) {
         // Only the directory of the absParentPath matters for caching.
-        return JSON.stringify([id, pathDirname(absParentPath)]);
+        return id + "\0" + pathDirname(absParentPath);
       }
     });
 

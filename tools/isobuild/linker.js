@@ -101,12 +101,10 @@ Object.assign(Module.prototype, {
     }
 
     // Find all global references in any files
-    var assignedVariables = [];
-    for (const file of self.files) {
-      assignedVariables = assignedVariables.concat(
-          await file.computeAssignedVariables());
-    }
-    assignedVariables = _.uniq(assignedVariables);
+    const results = await Promise.all(
+      self.files.map(file => file.computeAssignedVariables())
+    );
+    const assignedVariables = [...new Set(results.flat())];
 
     return assignedVariables;
   }),
@@ -129,11 +127,7 @@ Object.assign(Module.prototype, {
 
       const ret = [];
       for (const file of eagerFiles) {
-        const cacheKey = JSON.stringify([
-          file._inputHash,
-          file.bare,
-          file.servePath,
-        ]);
+        const cacheKey = file._inputHash + "\0" + file.bare + "\0" + file.servePath;
 
         if (APP_PRELINK_CACHE.has(cacheKey)) {
           ret.push(APP_PRELINK_CACHE.get(cacheKey));
