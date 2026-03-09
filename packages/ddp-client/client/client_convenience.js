@@ -2,6 +2,53 @@ import { Meteor } from 'meteor/meteor';
 import { DDP } from '../common/namespace.js';
 import { loadAsyncStubHelpers } from './queue_stub_helpers';
 
+const normalizeRuntimePrefix = runtimePrefix => {
+  if (!runtimePrefix) {
+    return '';
+  }
+
+  const withLeadingSlash = runtimePrefix.startsWith('/')
+    ? runtimePrefix
+    : `/${runtimePrefix}`;
+
+  return withLeadingSlash.endsWith('/')
+    ? withLeadingSlash
+    : `${withLeadingSlash}/`;
+};
+
+const extractPathPrefix = (absoluteUrl, runtimeConfig) => {
+  const pathFromAbsoluteUrl = (() => {
+    if (!absoluteUrl) {
+      return '';
+    }
+
+    try {
+      return new URL(absoluteUrl).pathname || '/';
+    } catch {
+      return '';
+    }
+  })();
+  const normalizedRuntimePrefix = normalizeRuntimePrefix(runtimeConfig.ROOT_URL_PATH_PREFIX);
+
+  if (pathFromAbsoluteUrl && pathFromAbsoluteUrl !== '/') {
+    return pathFromAbsoluteUrl.startsWith('/')
+      ? pathFromAbsoluteUrl
+      : `/${pathFromAbsoluteUrl}`;
+  }
+
+  if (normalizedRuntimePrefix) {
+    return normalizedRuntimePrefix;
+  }
+
+  if (pathFromAbsoluteUrl) {
+    return pathFromAbsoluteUrl.startsWith('/')
+      ? pathFromAbsoluteUrl
+      : `/${pathFromAbsoluteUrl}`;
+  }
+
+  return '/';
+};
+
 export const _calculateDDPUrl = ({
   absoluteUrl,
   runtimeConfig = Object.create(null),
@@ -13,7 +60,8 @@ export const _calculateDDPUrl = ({
   }
 
   const protocol = (absoluteUrl && absoluteUrl.split('//')[0]) || browserProtocol;
-  return `${protocol}//${browserHost}/`;
+  const pathPrefix = extractPathPrefix(absoluteUrl, runtimeConfig);
+  return `${protocol}//${browserHost}${pathPrefix}`;
 };
 
 const getDDPUrl = () => {
@@ -35,7 +83,8 @@ Meteor.refresh = () => {};
 
 // By default, connect to the current browser host so mirrored domains
 // establish their websocket connection against the same host users loaded.
-// Keep the protocol from Meteor.absoluteUrl() to preserve force-ssl behavior.
+// Keep the protocol and app path from Meteor.absoluteUrl() to preserve
+// force-ssl and deploy-path behavior.
 const ddpUrl = getDDPUrl() || '/';
 
 const retry = new Retry();
