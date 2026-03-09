@@ -4062,8 +4062,3 @@ Tinytest.addAsync('minimongo - operation result fields (async)', async test => {
   const removeResult = await c.removeAsync({name: 'doc1'});
   test.equal(removeResult, 1, 'remove should return removed count');
 });
-
-// ---- Collation support ----
-// NOTE: Collation tests that verify Minimongo internals (Matcher, Sorter,
-// LocalCollection) are in minimongo_tests.js so they run on both client
-// and server.
