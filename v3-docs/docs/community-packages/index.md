@@ -24,6 +24,10 @@ Please bear in mind if you are adding a package to this list, try providing as m
 
 ## List of Community Packages
 
+#### Compliance
+
+- [`freedombase:legal-management`](./legal-management.md), Management of legal documents like Terms of Service and user consent made easy
+
 #### Method/Subscription helpers
 
 - [`meteor-rpc`](./meteor-rpc.md), Meteor Methods Evolved with type checking and runtime validation
@@ -39,3 +43,4 @@ Please bear in mind if you are adding a package to this list, try providing as m
 #### Utilities
 
 - [`jam:offline`](./offline.md), An easy way to give your Meteor app offline capabilities and make it feel instant
+- [`storyteller:cdn`](./cdn.md), Serve Meteor content from a CDN
