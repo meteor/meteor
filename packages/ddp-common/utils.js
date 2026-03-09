@@ -77,41 +77,62 @@ DDPCommon.parseDDP = function (stringMessage) {
 };
 
 DDPCommon.stringifyDDP = function (msg) {
-  const copy = EJSON.clone(msg);
-
-  // swizzle 'changed' messages from 'fields undefined' rep to 'fields
-  // and cleared' rep
-  if (hasOwn.call(msg, 'fields')) {
-    const cleared = [];
-
-    Object.keys(msg.fields).forEach(key => {
-      const value = msg.fields[key];
-
-      if (typeof value === "undefined") {
-        cleared.push(key);
-        delete copy.fields[key];
-      }
-    });
-
-    if (! isEmpty(cleared)) {
-      copy.cleared = cleared;
-    }
-
-    if (isEmpty(copy.fields)) {
-      delete copy.fields;
-    }
-  }
-
-  // adjust types to basic
-  ['fields', 'params', 'result'].forEach(field => {
-    if (hasOwn.call(copy, field)) {
-      copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
-    }
-  });
-
   if (msg.id && typeof msg.id !== 'string') {
     throw new Error("Message id is not a string");
   }
 
-  return JSON.stringify(copy);
+  const hasFields = hasOwn.call(msg, 'fields');
+  const hasParams = hasOwn.call(msg, 'params');
+  const hasResult = hasOwn.call(msg, 'result');
+
+  // Fast path: messages without fields/params/result need no EJSON conversion
+  // (e.g. 'removed', 'ready', 'nosub', 'ping', 'pong')
+  if (!hasFields && !hasParams && !hasResult) {
+    return JSON.stringify(msg);
+  }
+
+  // Build wire-format object without cloning the entire message.
+  // Uses EJSON.toJSONValue (copy-on-write) per field — only allocates new
+  // objects for subtrees that actually contain EJSON types (Date, Binary, etc.).
+  const wire = {};
+
+  for (const key of Object.keys(msg)) {
+    if (key === 'fields' || key === 'params' || key === 'result') {
+      continue;
+    }
+    wire[key] = msg[key];
+  }
+
+  if (hasFields) {
+    const cleared = [];
+    const wireFields = {};
+    let hasAnyField = false;
+
+    for (const key of Object.keys(msg.fields)) {
+      const value = msg.fields[key];
+      if (typeof value === 'undefined') {
+        cleared.push(key);
+      } else {
+        wireFields[key] = EJSON.toJSONValue(value);
+        hasAnyField = true;
+      }
+    }
+
+    if (hasAnyField) {
+      wire.fields = wireFields;
+    }
+    if (cleared.length > 0) {
+      wire.cleared = cleared;
+    }
+  }
+
+  if (hasParams) {
+    wire.params = EJSON.toJSONValue(msg.params);
+  }
+
+  if (hasResult) {
+    wire.result = EJSON.toJSONValue(msg.result);
+  }
+
+  return JSON.stringify(wire);
 };
