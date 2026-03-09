@@ -88,6 +88,200 @@ Tinytest.add('ejson - NaN and Inf', test => {
   ));
 });
 
+Tinytest.add('ejson - toJSONValue primitives pass through unchanged', test => {
+  test.equal(EJSON.toJSONValue(42), 42);
+  test.equal(EJSON.toJSONValue('hello'), 'hello');
+  test.equal(EJSON.toJSONValue(true), true);
+  test.equal(EJSON.toJSONValue(false), false);
+  test.equal(EJSON.toJSONValue(null), null);
+  test.equal(EJSON.toJSONValue(undefined), undefined);
+  test.equal(EJSON.toJSONValue(0), 0);
+  test.equal(EJSON.toJSONValue(''), '');
+});
+
+Tinytest.add('ejson - toJSONValue converts Date to {$date}', test => {
+  const d = new Date('2024-06-15T12:00:00Z');
+  const result = EJSON.toJSONValue(d);
+  test.equal(result, {$date: d.getTime()});
+});
+
+Tinytest.add('ejson - toJSONValue converts NaN and Infinity', test => {
+  test.equal(EJSON.toJSONValue(NaN), {$InfNaN: 0});
+  test.equal(EJSON.toJSONValue(Infinity), {$InfNaN: 1});
+  test.equal(EJSON.toJSONValue(-Infinity), {$InfNaN: -1});
+});
+
+Tinytest.add('ejson - toJSONValue handles pure-primitive objects', test => {
+  const obj = {a: 1, b: 'hello', c: true, d: null};
+  const result = EJSON.toJSONValue(obj);
+  test.equal(result, {a: 1, b: 'hello', c: true, d: null});
+});
+
+Tinytest.add('ejson - toJSONValue converts nested Dates', test => {
+  const d = new Date('2024-01-01');
+  const obj = {name: 'test', createdAt: d, meta: {updatedAt: d}};
+  const result = EJSON.toJSONValue(obj);
+  test.equal(result.name, 'test');
+  test.equal(result.createdAt, {$date: d.getTime()});
+  test.equal(result.meta, {updatedAt: {$date: d.getTime()}});
+});
+
+Tinytest.add('ejson - toJSONValue handles arrays', test => {
+  // Pure-primitive array
+  const arr = [1, 'two', true, null];
+  const result = EJSON.toJSONValue(arr);
+  test.equal(result, [1, 'two', true, null]);
+
+  // Array with a Date
+  const d = new Date();
+  const arrWithDate = ['a', d, 'b'];
+  const result2 = EJSON.toJSONValue(arrWithDate);
+  test.equal(result2[0], 'a');
+  test.equal(result2[1], {$date: d.getTime()});
+  test.equal(result2[2], 'b');
+  test.length(result2, 3);
+
+  // Empty array
+  test.equal(EJSON.toJSONValue([]), []);
+});
+
+Tinytest.add('ejson - toJSONValue handles NaN/Infinity inside objects and arrays', test => {
+  const obj = {a: 1, b: NaN, c: Infinity, d: -Infinity, e: 'normal'};
+  const result = EJSON.toJSONValue(obj);
+  test.equal(result.a, 1);
+  test.equal(result.b, {$InfNaN: 0});
+  test.equal(result.c, {$InfNaN: 1});
+  test.equal(result.d, {$InfNaN: -1});
+  test.equal(result.e, 'normal');
+
+  const arr = [NaN, 42, Infinity];
+  const result2 = EJSON.toJSONValue(arr);
+  test.equal(result2[0], {$InfNaN: 0});
+  test.equal(result2[1], 42);
+  test.equal(result2[2], {$InfNaN: 1});
+});
+
+Tinytest.add('ejson - toJSONValue escapes $-prefixed keys that look like EJSON types', test => {
+  const obj = {$date: 12345};
+  const result = EJSON.toJSONValue(obj);
+  // Should be wrapped in $escape to prevent misinterpretation
+  test.isTrue('$escape' in result);
+  test.equal(result.$escape.$date, 12345);
+});
+
+Tinytest.add('ejson - fromJSONValue primitives pass through unchanged', test => {
+  test.equal(EJSON.fromJSONValue(42), 42);
+  test.equal(EJSON.fromJSONValue('hello'), 'hello');
+  test.equal(EJSON.fromJSONValue(true), true);
+  test.equal(EJSON.fromJSONValue(false), false);
+  test.equal(EJSON.fromJSONValue(null), null);
+  test.equal(EJSON.fromJSONValue(0), 0);
+  test.equal(EJSON.fromJSONValue(''), '');
+});
+
+Tinytest.add('ejson - fromJSONValue converts {$date} to Date', test => {
+  const ts = 1718452800000;
+  const result = EJSON.fromJSONValue({$date: ts});
+  test.instanceOf(result, Date);
+  test.equal(result.getTime(), ts);
+});
+
+Tinytest.add('ejson - fromJSONValue converts {$InfNaN} back', test => {
+  test.isTrue(Number.isNaN(EJSON.fromJSONValue({$InfNaN: 0})));
+  test.equal(EJSON.fromJSONValue({$InfNaN: 1}), Infinity);
+  test.equal(EJSON.fromJSONValue({$InfNaN: -1}), -Infinity);
+});
+
+Tinytest.add('ejson - fromJSONValue handles pure-primitive objects', test => {
+  const obj = {a: 1, b: 'hello', c: true, d: null};
+  const result = EJSON.fromJSONValue(obj);
+  test.equal(result, {a: 1, b: 'hello', c: true, d: null});
+});
+
+Tinytest.add('ejson - fromJSONValue converts nested {$date} values', test => {
+  const ts = Date.now();
+  const obj = {name: 'test', createdAt: {$date: ts}, meta: {updatedAt: {$date: ts}}};
+  const result = EJSON.fromJSONValue(obj);
+  test.equal(result.name, 'test');
+  test.instanceOf(result.createdAt, Date);
+  test.equal(result.createdAt.getTime(), ts);
+  test.instanceOf(result.meta.updatedAt, Date);
+  test.equal(result.meta.updatedAt.getTime(), ts);
+});
+
+Tinytest.add('ejson - fromJSONValue handles arrays with EJSON types', test => {
+  const ts = Date.now();
+  const arr = ['a', {$date: ts}, 'b'];
+  const result = EJSON.fromJSONValue(arr);
+  test.equal(result[0], 'a');
+  test.instanceOf(result[1], Date);
+  test.equal(result[1].getTime(), ts);
+  test.equal(result[2], 'b');
+  test.length(result, 3);
+
+  // Pure-primitive array
+  test.equal(EJSON.fromJSONValue([1, 2, 3]), [1, 2, 3]);
+
+  // Empty array
+  test.equal(EJSON.fromJSONValue([]), []);
+});
+
+Tinytest.add('ejson - fromJSONValue unescapes $escape wrapper', test => {
+  const input = {$escape: {$date: 12345}};
+  const result = EJSON.fromJSONValue(input);
+  test.equal(result, {$date: 12345});
+  test.isFalse('$escape' in result);
+});
+
+Tinytest.add('ejson - toJSONValue/fromJSONValue round-trip', test => {
+  const d = new Date();
+  const cases = [
+    42,
+    'hello',
+    true,
+    null,
+    {a: 1, b: 'two'},
+    [1, 2, 3],
+    d,
+    NaN,
+    Infinity,
+    -Infinity,
+    {name: 'test', ts: d, scores: [1, 2, 3]},
+    {nested: {deep: {date: d, val: 42}}},
+    [d, 'a', {x: d}],
+    {$date: 12345}, // $-prefixed key → escape/unescape round-trip
+    {a: NaN, b: Infinity, c: -Infinity, d: 'normal'},
+    {}, // empty object
+    [], // empty array
+  ];
+
+  cases.forEach(original => {
+    const json = EJSON.toJSONValue(original);
+    const restored = EJSON.fromJSONValue(json);
+    test.isTrue(
+      EJSON.equals(original, restored),
+      `Round-trip failed for: ${EJSON.stringify(original)}`
+    );
+  });
+});
+
+Tinytest.add('ejson - toJSONValue does not mutate the input', test => {
+  const d = new Date();
+  const obj = {name: 'test', createdAt: d, tags: ['a', 'b']};
+  const originalName = obj.name;
+  const originalDate = obj.createdAt;
+  const originalTags = obj.tags;
+
+  EJSON.toJSONValue(obj);
+
+  // Original object must be untouched
+  test.equal(obj.name, originalName);
+  test.equal(obj.createdAt, originalDate);
+  test.equal(obj.tags, originalTags);
+  test.instanceOf(obj.createdAt, Date);
+  test.equal(obj.tags[0], 'a');
+});
+
 Tinytest.add('ejson - clone', test => {
   const cloneTest = (x, identical) => {
     const y = EJSON.clone(x);
