@@ -545,9 +545,10 @@ Object.assign(Session.prototype, {
   send: function (msg) {
     var self = this;
     if (self.socket) {
+      const stringMsg = DDPCommon.stringifyDDP(msg);
       if (Meteor._printSentDDP)
-        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
-      self.socket.send(DDPCommon.stringifyDDP(msg));
+        Meteor._debug("Sent DDP", stringMsg);
+      self.socket.send(stringMsg);
     }
   },
 
