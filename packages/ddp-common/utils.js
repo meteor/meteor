@@ -81,13 +81,9 @@ DDPCommon.stringifyDDP = function (msg) {
     throw new Error("Message id is not a string");
   }
 
-  const hasFields = hasOwn.call(msg, 'fields');
-  const hasParams = hasOwn.call(msg, 'params');
-  const hasResult = hasOwn.call(msg, 'result');
-
   // Fast path: messages without fields/params/result need no EJSON conversion
   // (e.g. 'removed', 'ready', 'nosub', 'ping', 'pong')
-  if (!hasFields && !hasParams && !hasResult) {
+  if (msg.fields === undefined && msg.params === undefined && msg.result === undefined) {
     return JSON.stringify(msg);
   }
 
@@ -96,41 +92,37 @@ DDPCommon.stringifyDDP = function (msg) {
   // objects for subtrees that actually contain EJSON types (Date, Binary, etc.).
   const wire = {};
 
-  for (const key of Object.keys(msg)) {
+  for (const key in msg) {
     if (key === 'fields' || key === 'params' || key === 'result') {
       continue;
     }
     wire[key] = msg[key];
   }
 
-  if (hasFields) {
-    const cleared = [];
+  if (msg.fields !== undefined) {
+    let cleared = null;
     const wireFields = {};
     let hasAnyField = false;
 
-    for (const key of Object.keys(msg.fields)) {
+    for (const key in msg.fields) {
       const value = msg.fields[key];
-      if (typeof value === 'undefined') {
-        cleared.push(key);
+      if (value === undefined) {
+        (cleared ??= []).push(key);
       } else {
         wireFields[key] = EJSON.toJSONValue(value);
         hasAnyField = true;
       }
     }
 
-    if (hasAnyField) {
-      wire.fields = wireFields;
-    }
-    if (cleared.length > 0) {
-      wire.cleared = cleared;
-    }
+    if (hasAnyField) wire.fields = wireFields;
+    if (cleared !== null) wire.cleared = cleared;
   }
 
-  if (hasParams) {
+  if (msg.params !== undefined) {
     wire.params = EJSON.toJSONValue(msg.params);
   }
 
-  if (hasResult) {
+  if (msg.result !== undefined) {
     wire.result = EJSON.toJSONValue(msg.result);
   }
 
