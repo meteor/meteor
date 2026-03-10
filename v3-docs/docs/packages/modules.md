@@ -252,6 +252,39 @@ To disable eager loading of modules on a given architecture, simply provide a ma
 }
 ```
 
+### meteor.settings
+
+The `meteor` section of `package.json` can also include a `settings` property. This is equivalent to running your app with `--settings settings.json` — the value is used to populate `Meteor.settings` at runtime, with no extra file or flag required.
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.jsx",
+      "server": "server/main.js"
+    },
+    "settings": {
+      "packages": {
+        "mongo": { "reactivity": ["changeStreams", "oplog", "polling"] }
+      },
+      "public": {
+        "theme": "dark"
+      }
+    }
+  }
+}
+```
+
+Just like with a settings file, any keys under `public` are forwarded to the client and accessible via `Meteor.settings.public`. All other keys are server-only.
+
+::: tip Priority
+If you pass `--settings <file>` on the command line, that file takes precedence and `meteor.settings` in `package.json` is ignored. Using both at the same time is an error.
+:::
+
+::: tip Reactive updates
+When `meteor.settings` in `package.json` changes while the app is running, Meteor detects the file change and restarts the server automatically — the same behaviour as editing a `--settings` file.
+:::
+
 ### Historic behind Modular application structure
 
 If you want to understand how Meteor works without `meteor.mainModule` on `package.json` keep reading this section, but we don't recommend this approach anymore.

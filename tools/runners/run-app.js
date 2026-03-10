@@ -648,7 +648,7 @@ Object.assign(AppRunner.prototype, {
       if (self.settingsFile && packageJsonSettings) {
          buildmessage.error(`You passed the argument --settings (${self.settingsFile}) and you also have a "meteor.settings" field in package.json.
           Please use only one. Restart your app after fixing this.`);
-        return {outcome: 'stopped'};
+        return;
       }
 
       if (self.settingsFile) {

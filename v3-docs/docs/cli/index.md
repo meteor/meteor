@@ -55,7 +55,7 @@ This is the default command. Simply running `meteor` is the same as `meteor run`
 | `--production` | Simulate production mode. Minify and bundle CSS and JS files |
 | `--raw-logs` | Run without parsing logs from stdout and stderr (default: true) |
 | `--timestamps` | Run with timestamps in logs, the same as passing `--raw-logs=false`. |
-| `--settings`, `-s <file>` | Set optional data for Meteor.settings on the server |
+| `--settings`, `-s <file>` | Set optional data for Meteor.settings on the server. Alternatively, define settings inline via the `meteor.settings` field in `package.json` (using both at once is an error) |
 | `--release <version>` | Specify the release of Meteor to use |
 | `--verbose` | Print all output from builds logs |
 | `--no-lint` | Don't run linters used by the app on every rebuild |

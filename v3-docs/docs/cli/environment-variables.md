@@ -110,7 +110,7 @@ Colon-delimited list of local package directories to look in, outside your norma
 
 When running your bundled application in production mode, pass a string of JSON containing your settings with `METEOR_SETTINGS='{ "server_only_setting": "foo", "public": { "client_and_server_setting": "bar" } }'`.
 
-> In development, this is accomplished with `meteor --settings [file.json]` in order to provide full-reactivity when changing settings.  Those settings are simply passed as a string here. Please see the [Meteor.settings](../api/meteor#Meteor-settings) documentation for further information.
+> In development, this is accomplished with `meteor --settings [file.json]` in order to provide full-reactivity when changing settings. Alternatively, you can define settings inline in the `meteor.settings` field of your project's `package.json` — Meteor will treat it identically to `--settings`. Those settings are simply passed as a string here. Please see the [Meteor.settings](../api/meteor#Meteor-settings) documentation for further information.
 
 ## METEOR_SQLITE_JOURNAL_MODE
 (_development_)
