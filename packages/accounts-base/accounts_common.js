@@ -57,6 +57,8 @@ export class AccountsCommon {
     this.connection = undefined;
     this._initConnection(options || {});
 
+    // There is an allow call in accounts_server.js that restricts writes to
+    // this collection.
     this.users = this._initializeCollection(options || {});
 
     // Callback exceptions are printed with Meteor._debug and ignored.
