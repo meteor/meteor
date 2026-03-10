@@ -63,6 +63,109 @@ Tinytest.add('ejson - equality and falsiness', test => {
   test.isFalse(EJSON.equals({foo: 'foo'}, undefined));
 });
 
+Tinytest.add('ejson - equals type-mismatch early exit', test => {
+  // Cross-type primitives: typeof a !== typeof b → false
+  test.isFalse(EJSON.equals('hello', 42));
+  test.isFalse(EJSON.equals(42, 'hello'));
+  test.isFalse(EJSON.equals(1, true));
+  test.isFalse(EJSON.equals(true, 1));
+  test.isFalse(EJSON.equals('true', true));
+  test.isFalse(EJSON.equals(true, 'true'));
+  test.isFalse(EJSON.equals('1', 1));
+  test.isFalse(EJSON.equals(1, '1'));
+
+  // Falsy cross-type: both are falsy but different types
+  test.isFalse(EJSON.equals(0, false));
+  test.isFalse(EJSON.equals(false, 0));
+  test.isFalse(EJSON.equals('', 0));
+  test.isFalse(EJSON.equals(0, ''));
+  test.isFalse(EJSON.equals('', false));
+  test.isFalse(EJSON.equals(false, ''));
+
+  // null/undefined vs primitives (typeof null is 'object', differs from 'number'/'string')
+  test.isFalse(EJSON.equals(null, 0));
+  test.isFalse(EJSON.equals(0, null));
+  test.isFalse(EJSON.equals(null, ''));
+  test.isFalse(EJSON.equals('', null));
+  test.isFalse(EJSON.equals(null, false));
+  test.isFalse(EJSON.equals(false, null));
+  test.isFalse(EJSON.equals(undefined, 0));
+  test.isFalse(EJSON.equals(0, undefined));
+  test.isFalse(EJSON.equals(undefined, ''));
+  test.isFalse(EJSON.equals('', undefined));
+  test.isFalse(EJSON.equals(undefined, false));
+  test.isFalse(EJSON.equals(false, undefined));
+  test.isFalse(EJSON.equals(null, undefined));
+  test.isFalse(EJSON.equals(undefined, null));
+});
+
+Tinytest.add('ejson - equals same-type primitives', test => {
+  // Same-type, same-value → caught by a === b
+  test.isTrue(EJSON.equals(0, 0));
+  test.isTrue(EJSON.equals(1, 1));
+  test.isTrue(EJSON.equals(-1, -1));
+  test.isTrue(EJSON.equals('', ''));
+  test.isTrue(EJSON.equals('hello', 'hello'));
+  test.isTrue(EJSON.equals(true, true));
+  test.isTrue(EJSON.equals(false, false));
+
+  // Same-type, different-value → typeof a !== 'object', then NaN check returns false
+  test.isFalse(EJSON.equals(1, 2));
+  test.isFalse(EJSON.equals('a', 'b'));
+  test.isFalse(EJSON.equals(true, false));
+  test.isFalse(EJSON.equals(false, true));
+  test.isFalse(EJSON.equals(0, 1));
+  test.isTrue(EJSON.equals(0, -0)); // 0 === -0 in JS, caught by a === b
+});
+
+Tinytest.add('ejson - equals null vs object', test => {
+  // Both typeof 'object', but one is null
+  test.isFalse(EJSON.equals(null, {}));
+  test.isFalse(EJSON.equals({}, null));
+  test.isFalse(EJSON.equals(null, []));
+  test.isFalse(EJSON.equals([], null));
+  test.isFalse(EJSON.equals(null, new Date()));
+  test.isFalse(EJSON.equals(new Date(), null));
+});
+
+Tinytest.add('ejson - equals nested falsy and type-mismatch fields', test => {
+  // Objects with falsy fields of different types
+  test.isFalse(EJSON.equals({a: 0}, {a: false}));
+  test.isFalse(EJSON.equals({a: ''}, {a: 0}));
+  test.isFalse(EJSON.equals({a: ''}, {a: false}));
+  test.isFalse(EJSON.equals({a: null}, {a: undefined}));
+  test.isFalse(EJSON.equals({a: null}, {a: 0}));
+  test.isFalse(EJSON.equals({a: null}, {a: ''}));
+  test.isFalse(EJSON.equals({a: null}, {a: false}));
+
+  // Objects with same falsy values should be equal
+  test.isTrue(EJSON.equals({a: 0}, {a: 0}));
+  test.isTrue(EJSON.equals({a: ''}, {a: ''}));
+  test.isTrue(EJSON.equals({a: false}, {a: false}));
+  test.isTrue(EJSON.equals({a: null}, {a: null}));
+  test.isTrue(EJSON.equals({a: undefined}, {a: undefined}));
+
+  // Deeply nested type mismatches
+  test.isFalse(EJSON.equals(
+    {a: {b: {c: 0}}},
+    {a: {b: {c: false}}}
+  ));
+  test.isFalse(EJSON.equals(
+    {a: {b: {c: null}}},
+    {a: {b: {c: undefined}}}
+  ));
+  test.isTrue(EJSON.equals(
+    {a: {b: {c: 0}}},
+    {a: {b: {c: 0}}}
+  ));
+
+  // Arrays with type-mismatched elements
+  test.isFalse(EJSON.equals([0, 1, 2], [false, 1, 2]));
+  test.isFalse(EJSON.equals([0, '', 2], [0, false, 2]));
+  test.isFalse(EJSON.equals([null], [undefined]));
+  test.isTrue(EJSON.equals([0, '', null], [0, '', null]));
+});
+
 Tinytest.add('ejson - NaN and Inf', test => {
   test.equal(EJSON.parse('{"$InfNaN": 1}'), Infinity);
   test.equal(EJSON.parse('{"$InfNaN": -1}'), -Infinity);

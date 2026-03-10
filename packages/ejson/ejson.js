@@ -447,18 +447,21 @@ EJSON.equals = (a, b, options) => {
     return true;
   }
 
-  // This differs from the IEEE spec for NaN equality, b/c we don't want
-  // anything ever with a NaN to be poisoned from becoming equal to anything.
-  if (Number.isNaN(a) && Number.isNaN(b)) {
-    return true;
-  }
-
-  // if either one is falsy, they'd have to be === to be equal
-  if (!a || !b) {
+  // If types differ, they can't be equal.
+  // This also handles mixed null/primitive cases since typeof null is 'object'.
+  if (typeof a !== typeof b) {
     return false;
   }
 
-  if (!(isObject(a) && isObject(b))) {
+  // Same-type primitives that aren't === can only be equal if both are NaN.
+  // This skips the NaN check entirely for strings, booleans, etc.
+  if (typeof a !== 'object') {
+    return Number.isNaN(a) && Number.isNaN(b);
+  }
+
+  // Both are typeof 'object' — but either could be null.
+  // (If both were null, a === b would have caught it above.)
+  if (a === null || b === null) {
     return false;
   }
 
