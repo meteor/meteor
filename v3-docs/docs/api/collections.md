@@ -198,7 +198,7 @@ Greetings.findOne({ name: 'John' }); // 🧾 Data is available (Optimistic-UI)
 
 Read more about server and stub promises on calling methods, [please refer to the docs](./meteor.md#Meteor-callAsync).
 
-Read more about collections and how to use them in the [Collections](http://guide.meteor.com/collections.html) article in the Meteor Guide.
+Read more about collections and how to use them in the [Collections](/tutorials/collections/collections) article in the Meteor Guide.
 
 
 <ApiBox name="Mongo.Collection#find" instanceName="Collection"/>
@@ -508,7 +508,7 @@ While `allow` and `deny` make it easy to get started building an app, it's
 harder than it seems to write secure `allow` and `deny` rules. We recommend
 that developers avoid `allow` and `deny`, and switch directly to custom methods
 once they are ready to remove `insecure` mode from their app. See
-[the Meteor Guide on security](https://guide.meteor.com/security.html#allow-deny)
+[the Meteor Guide on security](/tutorials/security/security#allow-deny)
 for more details.
 :::
 
@@ -649,7 +649,7 @@ While `allow` and `deny` make it easy to get started building an app, it's
 harder than it seems to write secure `allow` and `deny` rules. We recommend
 that developers avoid `allow` and `deny`, and switch directly to custom methods
 once they are ready to remove `insecure` mode from their app. See
-[the Meteor Guide on security](https://guide.meteor.com/security.html#allow-deny)
+[the Meteor Guide on security](/tutorials/security/security#allow-deny)
 for more details.
 :::
 
@@ -668,6 +668,93 @@ if no `deny` rules return `true` and at least one `allow` rule returns
 The methods (like `update` or `insert`) you call on the resulting _raw_ collection return promises and can be used outside of a Fiber.
 
 <ApiBox name="Mongo.Collection#rawDatabase" instanceName="Collection"/>
+
+## Collection Extensions
+
+**Integrated into core in Meteor 3.4** ([PR#13830](https://github.com/meteor/meteor/pull/13830))
+
+Meteor provides a powerful Collection Extensions API that allows you to extend the functionality of all collection instances. These static methods on `Mongo.Collection` let you add constructor extensions, prototype methods, and static methods to customize collection behavior.
+
+These APIs were previously available through the community package [lai:collection-extensions](https://github.com/Meteor-Community-Packages/meteor-collection-extensions) and are now integrated directly into Meteor core. The same APIs are exported under `CollectionExtensions` for backwards compatibility. 
+
+<ApiBox name="Mongo.Collection.addExtension" />
+
+Add a constructor extension function that runs when collections are created. The extension function is called with `(name, options)` and `this` bound to the collection instance.
+
+Example:
+```js
+Mongo.Collection.addExtension(function(name, options) {
+  this._customProperty = 'value';
+  console.log(`Collection ${name} was created`);
+});
+```
+
+<ApiBox name="Mongo.Collection.addPrototypeMethod" />
+
+Add a prototype method to all collection instances. The method is bound to the collection instance and available on all collections.
+
+Example:
+```js
+Mongo.Collection.addPrototypeMethod('customMethod', function() {
+  return `${this._name} is awesome`;
+});
+
+// Now available on all collections
+const Users = new Mongo.Collection('users');
+console.log(Users.customMethod()); // "users is awesome"
+```
+
+<ApiBox name="Mongo.Collection.addStaticMethod" />
+
+Add a static method to the `Mongo.Collection` constructor itself.
+
+Example:
+```js
+Mongo.Collection.addStaticMethod('getAllCollections', function() {
+  return Array.from(Mongo._collections.values());
+});
+
+// Now available as static method
+const allCollections = Mongo.Collection.getAllCollections();
+```
+
+<ApiBox name="Mongo.Collection.removeExtension" />
+
+Remove a constructor extension (useful for testing).
+
+<ApiBox name="Mongo.Collection.removePrototypeMethod" />
+
+Remove a prototype method from all collection instances.
+
+<ApiBox name="Mongo.Collection.removeStaticMethod" />
+
+Remove a static method from the `Mongo.Collection` constructor.
+
+<ApiBox name="Mongo.Collection.clearExtensions" />
+
+Clear all extensions, prototype methods, and static methods. This is useful for testing to ensure a clean state.
+
+<ApiBox name="Mongo.Collection.getExtensions" />
+
+Get all registered constructor extensions. Returns an array of extension functions. Useful for debugging.
+
+<ApiBox name="Mongo.Collection.getPrototypeMethods" />
+
+Get all registered prototype methods. Returns a Map of method names to functions. Useful for debugging.
+
+<ApiBox name="Mongo.Collection.getStaticMethods" />
+
+Get all registered static methods. Returns a Map of method names to functions. Useful for debugging.
+
+### Legacy Aliases
+
+### Mongo.Collection.addPrototype
+
+> **Deprecated** — backwards compatibility alias for [`addPrototypeMethod`](#Mongo-Collection-addPrototypeMethod). Use `addPrototypeMethod` instead.
+
+### Mongo.Collection.removePrototype
+
+> **Deprecated** — backwards compatibility alias for [`removePrototypeMethod`](#Mongo-Collection-removePrototypeMethod). Use `removePrototypeMethod` instead.
 
 
 ## Cursors {#mongo_cursor}

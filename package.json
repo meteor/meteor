@@ -35,7 +35,11 @@
     "typescript": "^5.4.5"
   },
   "scripts": {
-    "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js"
+    "install:unit": "cd tools/unit-tests && npm install",
+    "test:unit": "cd tools/unit-tests && npm test",
+    "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
+    "install:e2e": "cd tools/modern-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
+    "test:e2e": "cd tools/modern-tests && npm test -- "
   },
   "jshintConfig": {
     "esversion": 11

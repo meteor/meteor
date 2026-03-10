@@ -293,7 +293,9 @@ class NodeModulesDirectory {
         // Normalize .npm/package/node_modules/... paths so that they get
         // copied into the bundle as if they were in the top-level local
         // node_modules directory of the package.
-        if (relParts[1] === "package") {
+        if (relParts[1] === "devPackage") {
+          relParts.splice(0, 2, 'dev');
+        } else if (relParts[1] === "package") {
           relParts.splice(0, 2);
         } else if (relParts[1] === "plugin") {
           relParts.splice(0, 3);
@@ -1989,6 +1991,29 @@ function hashOfFiles(files) {
   ClientTarget.prototype[method] = Profile(`ClientTarget#${method}`, ClientTarget.prototype[method]);
 });
 
+/**
+ * Collects all dev-only package names.
+ *
+ * @returns {string[]} Array of dev-only package names
+ */
+function getDevOnlyPackages() {
+  const targets = global.meteorBundlerTargets || {};
+  return [
+    ...new Set(
+        ['web.browser', 'server'].flatMap(target => {
+          const pkgMap = targets[target]?.unibuilds;
+
+          if (!pkgMap) {
+            return [];
+          }
+
+          return pkgMap
+              .filter(unibuild => unibuild?.pkg?.devOnly)
+              .map(unibuild => unibuild?.pkg.name);
+        })
+    )
+  ];
+}
 
 //////////////////// JsImageTarget and JsImage  ////////////////////
 
@@ -2418,6 +2443,10 @@ class JsImage {
       addNodeModulesDirToObject(nmd, nodeModulesDirectories);
     });
 
+    var devOnlySkipPackages = [];
+    const isProductionLike = ['build', 'deploy'].includes(global.currentCommand?.name) && buildMode === 'production';
+    if (isProductionLike) devOnlySkipPackages = getDevOnlyPackages();
+
     // If multiple load files share the same asset, only write one copy of
     // each. (eg, for app assets).
     var assetFilesBySha = {};
@@ -2427,6 +2456,11 @@ class JsImage {
     for (const item of self.jsToLoad) {
       if (! item.targetPath) {
         throw new Error("No targetPath?");
+      }
+
+      // Skip dev-only packages on build for production
+      if (devOnlySkipPackages.some(_package => item?.targetPath?.includes(`${_package}.js`))) {
+        continue;
       }
 
       var loadItem = {
@@ -2543,6 +2577,11 @@ class JsImage {
     for (const nmd of Object.values(nodeModulesDirectories)) {
       assert.strictEqual(typeof nmd.preferredBundlePath, "string");
 
+      // Skip dev-only packages on build for production
+      if (devOnlySkipPackages.includes(nmd?.packageName)) {
+        continue;
+      }
+
       // Skip calculating isPortable in 'meteor run' since the
       // modules are never rebuilt
       if (includeNodeModules !== 'symlink' && !nmd.isPortable()) {
@@ -2551,9 +2590,25 @@ class JsImage {
       }
 
       if (nmd.sourcePath !== nmd.preferredBundlePath) {
+        const hasDevNodeModules = nmd.sourcePath.includes('npm/dev/node_modules')
+            || nmd.sourcePath.includes('devPackage/node_modules');
+        // Skip copy dev node_modules in production-like mode
+        if (isProductionLike && hasDevNodeModules) {
+          continue;
+        }
+        // Skip copy prod node_modules in dev mode when dev node_modules exist
+        if (!isProductionLike
+            && files.exists(`${nmd.sourceRoot}/npm/dev/node_modules`)
+            && nmd.sourcePath.includes('npm/node_modules')) {
+          continue;
+        }
+        // Ensure to copy dev node_modules to proper context
+        const to = hasDevNodeModules
+            ? nmd.preferredBundlePath.replace('/dev/node_modules', '/node_modules')
+            : nmd.preferredBundlePath;
         var copyOptions = {
           from: nmd.sourcePath,
-          to: nmd.preferredBundlePath,
+          to: to,
           npmDiscards: nmd.npmDiscards,
           symlink: includeNodeModules === 'symlink'
         };
@@ -3078,6 +3133,7 @@ Node.js ${process.version}. To run the application:
   $ export MONGO_URL='mongodb://user:password@host:port/databasename'
   $ export ROOT_URL='http://example.com'
   $ export MAIL_URL='smtp://user:password@mailhost:port/'
+  $ export METEOR_SETTINGS='{"public":{"key":"value"}}'
   $ node main.js
 
 Use the PORT environment variable to set the port where the
@@ -3465,6 +3521,11 @@ async function bundle({
     // Server
     if (! hasCachedBundle) {
       targets.server = await makeServerTarget(app, webArchs);
+    }
+
+    if (buildOptions.buildMode === 'production') {
+      // Store targets in global variable for access in JsImage.write
+      global.meteorBundlerTargets = targets;
     }
 
     if (outputPath !== null) {
