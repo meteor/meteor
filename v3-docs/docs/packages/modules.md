@@ -277,12 +277,9 @@ The `meteor` section of `package.json` can also include a `settings` property. T
 
 Just like with a settings file, any keys under `public` are forwarded to the client and accessible via `Meteor.settings.public`. All other keys are server-only.
 
-::: tip Priority
-If you pass `--settings <file>` on the command line, that file takes precedence and `meteor.settings` in `package.json` is ignored. Using both at the same time is an error.
-:::
 
 ::: tip Reactive updates
-When `meteor.settings` in `package.json` changes while the app is running, Meteor detects the file change and restarts the server automatically — the same behaviour as editing a `--settings` file.
+While in development mode, changes to `meteor.settings` in `package.json` will be detected and the server will automatically restart — the same behaviour as editing a `--settings` file.
 :::
 
 ### Historic behind Modular application structure
