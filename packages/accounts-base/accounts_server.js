@@ -7,7 +7,6 @@ import {
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
 
-const hasOwn = Object.prototype.hasOwnProperty;
 
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
@@ -801,7 +800,7 @@ export class AccountsServer extends AccountsCommon {
 
         if (Package["oauth-encryption"]) {
           const { OAuthEncryption } = Package["oauth-encryption"]
-          if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
+          if (Object.hasOwn(options, 'secret') && OAuthEncryption.keyIsLoaded())
             options.secret = OAuthEncryption.seal(options.secret);
         }
 
@@ -1006,7 +1005,7 @@ export class AccountsServer extends AccountsCommon {
   // the observe that we started when we associated the connection with
   // this token.
   _removeTokenFromConnection(connectionId) {
-    if (hasOwn.call(this._userObservesForConnections, connectionId)) {
+    if (Object.hasOwn(this._userObservesForConnections, connectionId)) {
       const observe = this._userObservesForConnections[connectionId];
       if (typeof observe === 'number') {
         // We're in the process of setting up an observe for this connection. We
@@ -1218,7 +1217,7 @@ export class AccountsServer extends AccountsCommon {
 
     // If the user set loginExpirationInDays to null, then we need to clear the
     // timer that periodically expires tokens.
-    if (hasOwn.call(this._options, 'loginExpirationInDays') &&
+    if (Object.hasOwn(this._options, 'loginExpirationInDays') &&
       this._options.loginExpirationInDays === null &&
       this.expireTokenInterval) {
       Meteor.clearInterval(this.expireTokenInterval);
@@ -1375,7 +1374,7 @@ export class AccountsServer extends AccountsCommon {
         "Can't use updateOrCreateUserFromExternalService with internal service "
         + serviceName);
     }
-    if (!hasOwn.call(serviceData, 'id')) {
+    if (!Object.hasOwn(serviceData, 'id')) {
       throw new Error(
         `Service data for service ${serviceName} must include id`);
     }
@@ -1525,7 +1524,7 @@ export class AccountsServer extends AccountsCommon {
   ) {
     // Some tests need the ability to add users with the same case insensitive
     // value, hence the _skipCaseInsensitiveChecksForTest check
-    const skipCheck = Object.prototype.hasOwnProperty.call(
+    const skipCheck = Object.hasOwn(
       this._skipCaseInsensitiveChecksForTest,
       fieldValue
     );
