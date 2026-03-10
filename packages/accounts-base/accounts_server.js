@@ -1849,6 +1849,11 @@ function defaultValidateNewUserHook(user) {
 }
 
 const setupUsersCollection = async users => {
+  // Ensure the users collection is never in "insecure" mode, even if the
+  // insecure package happens to be loaded (e.g. by another package's tests).
+  // Without explicit allow rules, all client-side writes are denied.
+  users.deny({});
+
   /// DEFAULT INDEXES ON USERS
   await users.createIndexAsync('username', { unique: true, sparse: true });
   await users.createIndexAsync('emails.address', { unique: true, sparse: true });
