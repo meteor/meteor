@@ -2,6 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const { createIgnoreRegex, createIgnoreGlobConfig } = require("./ignore.js");
 
+// Normalize a path to always use forward slashes (POSIX style).
+// Module identifiers in bundled JS must use '/' regardless of OS.
+const toPosix = (p) => p.replace(/\\/g, '/');
+
 /**
  * Generates eager test files dynamically
  * @param {Object} options - Options for generating the test file
@@ -58,14 +62,14 @@ const generateEagerTestFile = ({
     : "/\\.(?:test|spec)s?\\.[^.]+$/";
 
   const content = `${
-    globalImportPath ? `import '${globalImportPath}';\n\n` : ""
+    globalImportPath ? `import '${toPosix(globalImportPath)}';\n\n` : ""
   }${
     excludeMeteorIgnoreRegex
       ? `const MeteorIgnoreRegex = ${excludeMeteorIgnoreRegex.toString()};`
       : ""
   }
 {
-  const ctx = import.meta.webpackContext('${projectDir}', {
+  const ctx = import.meta.webpackContext('${toPosix(projectDir)}', {
     recursive: true,
     regExp: ${regExp},
     exclude: ${excludeFoldersRegex.toString()},
@@ -81,9 +85,9 @@ const generateEagerTestFile = ({
   }).forEach(ctx);
   ${
     extraEntry
-      ? `const extra = import.meta.webpackContext('${path.dirname(
+      ? `const extra = import.meta.webpackContext('${toPosix(path.dirname(
           extraEntry
-        )}', {
+        ))}', {
     recursive: false,
     regExp: ${new RegExp(`${path.basename(extraEntry)}$`).toString()},
     mode: 'eager',

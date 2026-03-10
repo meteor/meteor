@@ -38,41 +38,11 @@ const npmLinkLocalRspack = process.env.NPM_LINK_RSPACK !== 'false';
 
 const WAIT_ON = isCI ? 2000 : 500;
 
+const { linkLocalRspack: _linkLocalRspack } = require('./scripts/link-rspack');
+
 async function linkLocalRspack(appDir) {
   if (!npmLinkLocalRspack) return;
-  const repoRoot = path.resolve(process.cwd(), '..', '..');
-
-  const meteorBin = path.join(repoRoot, "meteor");
-  console.log(`Running meteor update --npm in ${appDir}...`);
-  (await execa(meteorBin, ["update", "--npm"], {
-    cwd: appDir,
-    stdio: "inherit",
-  }));
-
-  const rspackPackageDir = path.join(repoRoot, 'npm-packages', 'meteor-rspack');
-  const constantsPath = path.join(repoRoot, 'packages', 'rspack', 'lib', 'constants.js');
-  const constantsContent = await fs.readFile(constantsPath, 'utf8');
-  const rspackVersionMatch = constantsContent.match(/DEFAULT_RSPACK_VERSION\s*=\s*['"]([^'"]+)['"]/);
-  const rspackVersion = rspackVersionMatch?.[1];
-  if (rspackVersion) {
-    console.log(`Installing @rspack/core@${rspackVersion} and @rspack/cli@${rspackVersion}...`);
-    await execa(
-      "npm",
-      [
-        "install",
-        `@rspack/core@${rspackVersion}`,
-        `@rspack/cli@${rspackVersion}`,
-        "--no-save",
-        "--no-package-lock",
-      ],
-      { cwd: rspackPackageDir }
-    );
-  }
-  console.log(`Installing ignore-loader in the app...`);
-  await execa('npm', ['install', 'ignore-loader', '--save'], { cwd: appDir });
-  console.log(`Linking local meteor-rspack from ${rspackPackageDir}...`);
-  await execa('npm', ['link', rspackPackageDir], { cwd: appDir });
-  console.log('Local meteor-rspack linked successfully.');
+  await _linkLocalRspack(appDir);
 }
 
 /**
