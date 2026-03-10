@@ -775,21 +775,14 @@ if (Meteor.isClient) (() => {
       } catch (err) {
         test.isTrue(err);
         test.equal(err.error, 403);
-        await simplePollAsync(() => {
-          const user = Meteor.user();
-          return user
-            && !Object.prototype.hasOwnProperty.call(user, "disallowed")
-            && !Object.prototype.hasOwnProperty.call(user.profile, "updated");
-        });
-        test.isFalse(
-          Object.prototype.hasOwnProperty.call(Meteor.user(), "disallowed")
-        );
-        test.isFalse(
-          Object.prototype.hasOwnProperty.call(
-            Meteor.user().profile,
-            "updated"
-          )
-        );
+        test.equal(await Meteor.callAsync('countUsersOnServer', {
+          _id: this.userId,
+          disallowed: { $exists: true },
+        }), 0);
+        test.equal(await Meteor.callAsync('countUsersOnServer', {
+          _id: this.userId,
+          'profile.updated': { $exists: true },
+        }), 0);
       }
       expect(() => {})();
     },
@@ -826,13 +819,10 @@ if (Meteor.isClient) (() => {
         test.isTrue(err);
         test.equal(err.error, 403);
       }
-      await simplePollAsync(() => {
-        const user = Meteor.user();
-        return user
-          && !Object.prototype.hasOwnProperty.call(user.profile, 'updated');
-      });
-      // Verify the update didn't actually persist
-      test.isFalse(Object.prototype.hasOwnProperty.call(Meteor.user().profile, 'updated'));
+      test.equal(await Meteor.callAsync('countUsersOnServer', {
+        _id: this.userId,
+        'profile.updated': { $exists: true },
+      }), 0);
       expect(() => {})();
     },
     logoutStep
