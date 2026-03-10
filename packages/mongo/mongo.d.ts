@@ -53,6 +53,50 @@ export namespace Mongo {
     ? T
     : U;
 
+  /**
+   * Configuration options for Mongo Collection constructor
+   */
+  interface CollectionOptions<T = any, U = T> {
+    /**
+     * The server connection that will manage this collection. Uses the default connection if not specified. 
+     * Pass the return value of calling `DDP.connect` to specify a different server. Pass `null` to specify 
+     * no connection. Unmanaged (`name` is null) collections cannot specify a connection.
+     */
+    connection?: DDP.DDPStatic | null | undefined;
+    
+    /** 
+     * The method of generating the `_id` fields of new documents in this collection. Possible values:
+     * - **`'STRING'`**: random strings
+     * - **`'MONGO'`**: random [`Mongo.ObjectID`](#mongo_object_id) values
+     * 
+     * The default id generation technique is `'STRING'`.
+     */
+    idGeneration?: string | undefined;
+    
+    /**
+     * An optional transformation function. Documents will be passed through this function before being 
+     * returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, 
+     * `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` 
+     * or to cursors returned from publish functions.
+     */
+    transform?: (doc: T) => U;
+    
+    /** 
+     * Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. 
+     * Default `true`. 
+     */
+    defineMutationMethods?: boolean | undefined;
+    
+    // Internal options (from normalizeOptions function)
+    /** @internal */
+    _driver?: any;
+    /** @internal */
+    _preventAutopublish?: boolean;
+    
+    // Allow additional properties for extensibility
+    [key: string]: any;
+  }
+
   var Collection: CollectionStatic;
   interface CollectionStatic {
     /**
@@ -61,27 +105,7 @@ export namespace Mongo {
      */
     new <T extends NpmModuleMongodb.Document, U = T>(
       name: string | null,
-      options?: {
-        /**
-         * The server connection that will manage this collection. Uses the default connection if not specified. Pass the return value of calling `DDP.connect` to specify a different
-         * server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection.
-         */
-        connection?: DDP.DDPStatic | null | undefined;
-        /** The method of generating the `_id` fields of new documents in this collection.  Possible values:
-         * - **`'STRING'`**: random strings
-         * - **`'MONGO'`**:  random [`Mongo.ObjectID`](#mongo_object_id) values
-         *
-         * The default id generation technique is `'STRING'`.
-         */
-        idGeneration?: string | undefined;
-        /**
-         * An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of
-         * `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
-         */
-        transform?: (doc: T) => U;
-        /** Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`. */
-        defineMutationMethods?: boolean | undefined;
-      }
+      options?: CollectionOptions<T, U>
     ): Collection<T, U>;
 
     /**
@@ -92,6 +116,68 @@ export namespace Mongo {
     getCollection<
         TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
     >(name: string): TCollection;
+
+    // Collection Extensions API
+    /**
+     * Add a constructor extension function that runs when collections are created.
+     * @param extension Extension function called with (name, options) and 'this' bound to collection instance
+     */
+    addExtension<T = any, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+
+    /**
+     * Add a prototype method to all collection instances.
+     * @param name The name of the method to add
+     * @param method The method function, bound to the collection instance
+     */
+    addPrototypeMethod<T = any, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
+
+    /**
+     * Add a static method to the Mongo.Collection constructor.
+     * @param name The name of the static method to add
+     * @param method The static method function
+     */
+    addStaticMethod(name: string, method: Function): void;
+
+    /**
+     * Remove a constructor extension (useful for testing).
+     * @param extension The extension function to remove
+     */
+    removeExtension(extension: Function): void;
+
+    /**
+     * Remove a prototype method from all collection instances.
+     * @param name The name of the method to remove
+     */
+    removePrototypeMethod(name: string): void;
+
+    /**
+     * Remove a static method from the Mongo.Collection constructor.
+     * @param name The name of the static method to remove
+     */
+    removeStaticMethod(name: string): void;
+
+    /**
+     * Clear all extensions, prototype methods, and static methods (useful for testing).
+     */
+    clearExtensions(): void;
+
+    /**
+     * Get all registered constructor extensions (useful for debugging).
+     * @returns Array of registered extension functions
+     */
+    getExtensions(): Array<Function>;
+
+    /**
+     * Get all registered prototype methods (useful for debugging).
+     * @returns Map of method names to functions
+     */
+    getPrototypeMethods(): Map<string, Function>;
+
+    /**
+     * Get all registered static methods (useful for debugging).
+     * @returns Map of method names to functions
+     */
+    getStaticMethods(): Map<string, Function>;
   }
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T> = undefined>(options: {
@@ -478,6 +564,87 @@ export namespace Mongo {
     toHexString(): string;
     equals(otherID: ObjectID): boolean;
   }
+
+  /**
+   * Collection Extensions API
+   */
+  interface CollectionExtensions {
+    /**
+     * Add a constructor extension function that runs when collections are created.
+     * @param extension Extension function called with (name, options) and 'this' bound to collection instance
+     */
+    addExtension<T = any, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+    
+    /**
+     * Add a prototype method to all collection instances.
+     * @param name The name of the method to add
+     * @param method The method function, bound to the collection instance
+     */
+    addPrototypeMethod<T = any, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
+
+    /**
+     * Add a static method to the Mongo.Collection constructor.
+     * @param name The name of the static method to add
+     * @param method The static method function
+     */
+    addStaticMethod(name: string, method: Function): void;
+
+    /**
+     * Remove a constructor extension (useful for testing).
+     * @param extension The extension function to remove
+     */
+    removeExtension(extension: Function): void;
+
+    /**
+     * Remove a prototype method from all collection instances.
+     * @param name The name of the method to remove
+     */
+    removePrototypeMethod(name: string): void;
+
+    /**
+     * Remove a static method from the Mongo.Collection constructor.
+     * @param name The name of the static method to remove
+     */
+    removeStaticMethod(name: string): void;
+
+    /**
+     * Clear all extensions, prototype methods, and static methods (useful for testing).
+     */
+    clearExtensions(): void;
+
+    /**
+     * Get all registered constructor extensions (useful for debugging).
+     * @returns Array of registered extension functions
+     */
+    getExtensions(): Array<Function>;
+
+    /**
+     * Get all registered prototype methods (useful for debugging).
+     * @returns Map of method names to functions
+     */
+    getPrototypeMethods(): Map<string, Function>;
+
+    /**
+     * Get all registered static methods (useful for debugging).
+     * @returns Map of method names to functions
+     */
+    getStaticMethods(): Map<string, Function>;
+  }
+
+  var CollectionExtensions: CollectionExtensions;
+
+  /**
+   * Retrieve a Meteor collection instance by name. Only collections defined with `new Mongo.Collection(...)` are available with this method.
+   * @param name Name of your collection as it was defined with `new Mongo.Collection()`.
+   * @returns The collection instance or undefined if not found
+   */
+  function getCollection<T extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined>(name: string): T;
+
+  /**
+   * A record of all defined Mongo.Collection instances, indexed by collection name.
+   * @internal
+   */
+  var _collections: Map<string, Collection<any, any>>;
 
   function setConnectionOptions(options: any): void;
 }

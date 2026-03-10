@@ -451,7 +451,8 @@ var runCommandOptions = {
     ...inspectOptions,
     'no-release-check': { type: Boolean },
     production: { type: Boolean },
-    'raw-logs': { type: Boolean },
+    'raw-logs': { type: Boolean, default: true },
+    timestamps: { type: Boolean, default: false }, // opposite of --raw-logs
     settings: { type: String, short: "s" },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
@@ -535,10 +536,7 @@ async function doRunCommand(options) {
     );
   }
 
-  if (options['raw-logs']) {
-    runLog.setRawLogs(true);
-  }
-
+  runLog.setRawLogs(options['raw-logs'] && !options.timestamps);
 
   let webArchs = projectContext.platformList.getWebArchs();
   if (! _.isEmpty(runTargets) ||
@@ -692,6 +690,7 @@ function getExamplesJSON(){
 const DEFAULT_SKELETON = "react";
 export const AVAILABLE_SKELETONS = [
   "apollo",
+  "babel",
   "bare",
   "blaze",
   "full",
@@ -703,6 +702,9 @@ export const AVAILABLE_SKELETONS = [
   "tailwind",
   "chakra-ui",
   "solid",
+  "legacy",
+  "coffeescript",
+  "angular"
 ];
 
 const SKELETON_INFO = {
@@ -717,8 +719,11 @@ const SKELETON_INFO = {
   "svelte": "To create a basic Svelte app",
   "tailwind": "To create an app using React and Tailwind",
   "chakra-ui": "To create an app Chakra UI and React",
-  "solid": "To create a basic Solid app"
-}
+  "solid": "To create a basic Solid app",
+  "coffeescript": "To create a basic CoffeeScript app",
+  "babel": "To create a React app with Babel support",
+  "angular": "To create a basic Angular app",
+};
 
 main.registerCommand({
   name: 'create',
@@ -728,6 +733,7 @@ main.registerCommand({
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean },
+    babel: { type: Boolean },
     bare: { type: Boolean },
     minimal: { type: Boolean },
     full: { type: Boolean },
@@ -739,7 +745,10 @@ main.registerCommand({
     svelte: { type: Boolean },
     tailwind: { type: Boolean },
     'chakra-ui': { type: Boolean },
+    coffeescript: { type: Boolean },
     solid: { type: Boolean },
+    angular: { type: Boolean },
+    legacy: { type: Boolean },
     prototype: { type: Boolean },
     from: { type: String },
   },
@@ -842,7 +851,7 @@ main.registerCommand({
             return transform(f);
           },
           transformContents: async function (contents, f) {
-            if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+            if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
               return Buffer.from(await transform(contents.toString()));
             } else {
               return contents;
@@ -1127,7 +1136,7 @@ main.registerCommand({
       "If you are new to Meteor, try some of the learning resources here:"
     );
     Console.info(
-      Console.url("https://www.meteor.com/tutorials"),
+      Console.url("https://docs.meteor.com/"),
       Console.options({ indent: 2 })
     );
 
@@ -1136,7 +1145,7 @@ main.registerCommand({
       "When you’re ready to deploy and host your new Meteor application, check out Cloud:"
     );
     Console.info(
-      Console.url("https://www.meteor.com/cloud"),
+      Console.url("https://galaxycloud.app/"),
       Console.options({ indent: 2 })
     );
 
@@ -1227,7 +1236,7 @@ main.registerCommand({
               return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
             }
           }
-          if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+          if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
@@ -1856,9 +1865,15 @@ main.registerCommand({
                  "MONGO_URL will NOT be reset.");
   }
 
-  const resetMeteorNmCachePromise = options['skip-cache'] ? Promise.resolve() : files.rm_recursive_async(
+  const resetMeteorNpmCachePromise = options['skip-cache'] ? Promise.resolve() : files.rm_recursive_async(
     files.pathJoin(options.appDir, "node_modules", ".cache", "meteor")
   );
+
+  const rspackHelpers = require('../tool-env/rspack.js');
+  const rspackAppContexts = rspackHelpers.getRspackAppContexts(options.appDir);
+  const resetRspackPromises = rspackAppContexts.map((contextPath) => files.rm_recursive_async(
+    contextPath
+  ));
 
   if (options.db) {
     // XXX detect the case where Meteor is running the app, but
@@ -1878,7 +1893,8 @@ main.registerCommand({
       files.rm_recursive_async(
         files.pathJoin(options.appDir, ".meteor", "local")
       ),
-      resetMeteorNmCachePromise,
+      resetMeteorNpmCachePromise,
+      ...resetRspackPromises,
     ]);
 
     Console.info("Project reset.");
@@ -1896,7 +1912,8 @@ main.registerCommand({
     ...allExceptDb.map((_path) =>
       files.rm_recursive_async(files.pathJoin(options.appDir, _path))
     ),
-    resetMeteorNmCachePromise
+    resetMeteorNpmCachePromise,
+    ...resetRspackPromises,
   ];
   await Promise.all(allRemovePromises);
   Console.info("Project reset.");
@@ -2125,7 +2142,8 @@ testCommandOptions = {
     // like progress bars and spinners are unimportant.
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
-    'raw-logs': { type: Boolean },
+    'raw-logs': { type: Boolean, default: true },
+    timestamps: { type: Boolean, default: false }, // opposite of --raw-logs
 
     // Undocumented. See #Once
     once: { type: Boolean },
@@ -2176,7 +2194,7 @@ testCommandOptions = {
     'extra-packages': { type: String },
 
     'exclude-archs': { type: String },
-    
+
     // Same as TINYTEST_FILTER
     filter: { type: String, short: 'f' },
   }
@@ -2260,9 +2278,8 @@ async function doTestCommand(options) {
     serverArchitectures.push(DEPLOY_ARCH);
   }
 
-  if (options['raw-logs']) {
-    runLog.setRawLogs(true);
-  }
+  runLog.setRawLogs(options['raw-logs'] && !options.timestamps);
+
 
   var includePackages = [];
   if (options['extra-packages']) {
@@ -3425,7 +3442,7 @@ const setupBenchmarkSuite = async (profilingPath) => {
   process.env.GIT_TERMINAL_PROMPT = 0;
 
   const repoUrl = "https://github.com/meteor/performance";
-  const branch = "v3.3.0";
+  const branch = "v3.4.0";
 
   let tarFailed = false;
 

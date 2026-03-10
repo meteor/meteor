@@ -3,11 +3,20 @@ import { Meteor } from 'meteor/meteor';
 import { Configuration } from 'meteor/service-configuration';
 import { DDP } from 'meteor/ddp';
 
+/**
+ * Object containing functions that generate URLs for account-related emails.
+ * Override these to customize URLs in password reset, enrollment, and verification emails.
+ * URL methods can return either a string or a Promise that resolves to a string.
+ */
 export interface URLS {
-  resetPassword: (token: string) => string;
-  verifyEmail: (token: string) => string;
-  loginToken: (token: string) => string;
-  enrollAccount: (token: string) => string;
+  /** Generates the URL for password reset emails. Can return a Promise for async URL generation. */
+  resetPassword: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for email verification emails. Can return a Promise for async URL generation. */
+  verifyEmail: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for login token emails. Can return a Promise for async URL generation. */
+  loginToken: (selector: string, token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for account enrollment emails. Can return a Promise for async URL generation. */
+  enrollAccount: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
 }
 
 export interface EmailFields {
@@ -362,11 +371,11 @@ export namespace Accounts {
    * - a login method result object
    **/
   function registerLoginHandler(
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
   function registerLoginHandler(
     name: string,
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
 
   type Password =
@@ -387,7 +396,7 @@ export namespace Accounts {
   function _checkPasswordAsync(
     user: Meteor.User,
     password: Password
-  ): Promise<{ userId: string; error?: any }>
+  ): Promise<{ userId: string; error?: any }>;
 }
 
 export namespace Accounts {

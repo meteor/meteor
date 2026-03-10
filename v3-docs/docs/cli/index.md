@@ -53,7 +53,8 @@ This is the default command. Simply running `meteor` is the same as `meteor run`
 | `--mobile-server <url>` | Location where mobile builds connect (defaults to local IP and port). Can include URL scheme (e.g., https://example.com:443) |
 | `--cordova-server-port <port>` | Local port where Cordova will serve content |
 | `--production` | Simulate production mode. Minify and bundle CSS and JS files |
-| `--raw-logs` | Run without parsing logs from stdout and stderr |
+| `--raw-logs` | Run without parsing logs from stdout and stderr (default: true) |
+| `--timestamps` | Run with timestamps in logs, the same as passing `--raw-logs=false`. |
 | `--settings`, `-s <file>` | Set optional data for Meteor.settings on the server |
 | `--release <version>` | Specify the release of Meteor to use |
 | `--verbose` | Print all output from builds logs |
@@ -247,10 +248,10 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
   Typescript # To create an app using TypeScript and React
   Vue       # To create a basic Vue3-based app
   Svelte    # To create a basic Svelte app
-  Tailwind # To create an app using React and Tailwind 
-  Chakra-ui # To create an app Chakra UI and React 
-  Solid # To create a basic Solid app 
-  Apollo # To create a basic Apollo + React app 
+  Tailwind # To create an app using React and Tailwind
+  Chakra-ui # To create an app Chakra UI and React
+  Solid # To create a basic Solid app
+  Apollo # To create a basic Apollo + React app
   Bare # To create an empty app
 ```
 :::
@@ -267,17 +268,20 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 
 ### Application Types
 
-| Option | Description | Tutorial / Example |
-|--------|-------------|----------|
-| `--react` | Create a React app (default) | [Meteor 3 with React](https://docs.meteor.com/tutorials/react/), [Meteor 2 with React](https://react-tutorial.meteor.com/) |
-| `--vue` | Vue 3 + Tailwind CSS + Vite | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
-| `--svelte` | Svelte | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
-| `--blaze` | Basic Blaze app | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
-| `--solid` | Solid + Vite | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
-| `--apollo` | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
-| `--typescript` | React + TypeScript | [TypeScript Guide](https://guide.meteor.com/build-tool.html#typescript) |
-| `--tailwind` | React + Tailwind CSS | - |
-| `--chakra-ui` | React + Chakra UI | [Simple Tasks Example](https://github.com/fredmaiaarantes/simpletasks) |
+| Option           | Description             | Tutorial / Example |
+|------------------|-------------------------|----------|
+| `--react`        | Create a React app (default) | [Meteor 3 with React](https://docs.meteor.com/tutorials/react/), [Meteor 2 with React](https://react-tutorial.meteor.com/) |
+| `--vue`          | Vue 3 + Tailwind CSS | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
+| `--svelte`       | Svelte                  | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
+| `--blaze`        | Basic Blaze app         | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
+| `--solid`        | Solid               | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
+| `--apollo`       | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
+| `--typescript`   | React + TypeScript      | [TypeScript Guide](/about/build-tool#typescript) |
+| `--tailwind`     | React + Tailwind CSS    | - |
+| `--chakra-ui`    | React + Chakra UI       | [Simple Tasks Example](https://github.com/fredmaiaarantes/simpletasks) |
+ | `--coffeescript` | CoffeeScript            | - |
+ | `--babel`        | React with Babel support | - |
+| `--angular`      | Angular + Typescript    | - |
 
 ### Project Structure Options
 
@@ -289,7 +293,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--package` | Create a new package instead of an application |
 
 ::: warning Prototype Mode
-The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](https://guide.meteor.com/security.html#checklist).
+The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
 :::
 
 ### Included Packages
@@ -354,12 +358,12 @@ The `--prototype` option adds packages that make development faster but shouldn'
 </details>
 
 ::: tip File Structure
-To learn more about the recommended file structure for Meteor apps, check the [Meteor Guide](https://guide.meteor.com/structure.html#javascript-structure).
+To learn more about the recommended file structure for Meteor apps, check the [Meteor Guide](/tutorials/application-structure/#javascript-structure).
 :::
 
 ##  meteor generate  {meteorgenerate}
 
-``meteor generate`` is a command to generate boilerplate for your current project. `meteor generate` receives a name as a parameter, and generates files containing code to create a [Collection](https://docs.meteor.com/api/collections.html) with that name, [Methods](https://docs.meteor.com/api/meteor.html#methods) to perform basic CRUD operations on that Collection, and a [Subscription](https://docs.meteor.com/api/meteor.html#Meteor-publish) to read its data with reactivity from the client. 
+``meteor generate`` is a command to generate boilerplate for your current project. `meteor generate` receives a name as a parameter, and generates files containing code to create a [Collection](https://docs.meteor.com/api/collections.html) with that name, [Methods](https://docs.meteor.com/api/meteor.html#methods) to perform basic CRUD operations on that Collection, and a [Subscription](https://docs.meteor.com/api/meteor.html#Meteor-publish) to read its data with reactivity from the client.
 
 If you run ``meteor generate``  without arguments, it will ask you for a name, and name the auto-generated Collection accordingly. It will also ask if you do want Methods for your API and Publications to be generated as well.
 
