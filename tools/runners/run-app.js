@@ -12,6 +12,7 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { eachline } from "../utils/eachline";
+import { getMeteorConfig } from '../tool-env/meteor-config';
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -642,8 +643,18 @@ Object.assign(AppRunner.prototype, {
       title: "preparing to run",
       rootPath: process.cwd()
     }, async function () {
+      const packageJsonSettings = getMeteorConfig()?.settings;
+
+      if (self.settingsFile && packageJsonSettings) {
+         buildmessage.error(`You passed the argument --settings (${self.settingsFile}) and you also have a "meteor.settings" field in package.json.
+          Please use only one. Restart your app after fixing this.`);
+        return {outcome: 'stopped'};
+      }
+
       if (self.settingsFile) {
         settings = files.getSettings(self.settingsFile, settingsWatchSet);
+      } else if (packageJsonSettings) {
+        settings = JSON.stringify(packageJsonSettings);
       }
     });
     if (settingsMessages.hasMessages()) {

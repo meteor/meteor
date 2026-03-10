@@ -11,6 +11,28 @@ const startupPromise = new Promise(resolve => {
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
+describe("meteor.settings", () => {
+  const config = require("./package.json").meteor;
+
+  it("reflects meteor.settings from package.json in Meteor.settings", async () => {
+    await startupPromise;
+
+    const expectedSettings = config?.settings || {};
+    const expectedPublic = expectedSettings.public || {};
+
+    if (Meteor.isServer) {
+      assert.deepEqual(Meteor.settings, {
+        ...expectedSettings,
+        public: expectedPublic,
+      });
+    }
+
+    if (Meteor.isClient) {
+      assert.deepEqual(Meteor.settings.public, expectedPublic);
+    }
+  });
+});
+
 describe("meteor.{mainModule,testModule}", () => {
   // These tests test the consequences of having various meteor.mainModule
   // configurations in package.json.

@@ -1849,6 +1849,7 @@ export class MeteorConfig {
         ...normalizeModernConfig(modernForced || this._config?.modern || false),
         ...(this._config?.verbose || this._config?.modern?.verbose) && { verbose: true },
       },
+      settings: this._config?.settings ?? null,
     });
 
     return this._config;

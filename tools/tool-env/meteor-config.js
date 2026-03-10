@@ -45,7 +45,7 @@ export const normalizeModernConfig = (r = false) => Object.fromEntries(
 /**
  * Initializes the Meteor configuration based on the application directory.
  * Reads configuration from package.json if available, and applies environment variables.
- * 
+ *
  * @param {string|null} appDir - The application directory path. If null, only environment variables are used.
  * @returns {Object} - The initialized Meteor configuration object.
  */
@@ -69,6 +69,7 @@ export function initMeteorConfig(appDir = process.cwd()) {
       ...normalizeModernConfig(modernForced || packageJson?.meteor?.modern || false),
       ...(packageJson?.meteor?.verbose || packageJson?.meteor?.modern?.verbose) && { verbose: true },
     },
+    settings: packageJson?.meteor?.settings ?? null,
   });
   return meteorConfig;
 }

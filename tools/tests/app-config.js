@@ -267,3 +267,85 @@ selftest.define("modernConfig", async function () {
 
   await run.stop();
 });
+
+async function writeSettingsConfig(s, run, settings) {
+  const json = JSON.parse(s.read("package.json"));
+
+  json.meteor = {
+    testModule: "tests.js",
+  };
+
+  if (typeof settings !== "undefined") {
+    json.meteor.settings = settings;
+  }
+
+  s.write("package.json", JSON.stringify(json, null, 2) + "\n");
+
+  run.waitSecs(10);
+  run.forbid(" 0 passing ");
+  await run.match("SERVER FAILURES: 0");
+  await run.match("CLIENT FAILURES: 0");
+}
+
+selftest.define("packageJsonSettings", async function () {
+  const s = new Sandbox();
+  await s.init();
+
+  await s.createApp("app-config-settings", "app-config");
+  s.cd("app-config-settings");
+
+  s.set("TEST_BROWSER_DRIVER", "puppeteer");
+
+  const run = s.run(
+    "test",
+    "--full-app",
+    "--driver-package", "meteortesting:mocha"
+  );
+
+  run.waitSecs(60);
+  await run.match("App running at");
+
+  // No settings in package.json → Meteor.settings should be empty
+  await writeSettingsConfig(s, run);
+
+  // Arbitrary nested settings object
+  await writeSettingsConfig(s, run, {
+    packages: { mongo: { reactivity: ["changeStreams", "oplog"] } },
+  });
+
+  // Settings with a public subset (client-accessible)
+  await writeSettingsConfig(s, run, {
+    public: { theme: "dark" },
+    secret: "server-only",
+  });
+
+  // Remove settings again → back to empty
+  await writeSettingsConfig(s, run);
+
+  await run.stop();
+});
+
+selftest.define("packageJsonSettings conflicts with --settings flag", async function () {
+  var s = new Sandbox({ fakeMongo: true });
+  await s.init();
+
+  await s.createApp("app-config-settings-conflict", "standard-app");
+  s.cd("app-config-settings-conflict");
+
+  // Write a valid settings file for the --settings flag
+  s.write("extra-settings.json", JSON.stringify({ fromFile: true }));
+
+  // Add meteor.settings to package.json so both sources are present
+  const json = JSON.parse(s.read("package.json"));
+  json.meteor = json.meteor || {};
+  json.meteor.settings = { fromPackageJson: true };
+  s.write("package.json", JSON.stringify(json, null, 2) + "\n");
+
+  const run = s.run("--settings", "extra-settings.json");
+  await run.tellMongo({ stdout: " [initandlisten] waiting for connections on port" });
+
+  run.waitSecs(15);
+  await run.match("You have defined settings in both the --settings flag");
+  await run.match("Waiting for file change");
+  await run.stop();
+});
