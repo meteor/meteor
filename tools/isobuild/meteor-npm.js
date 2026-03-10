@@ -7,7 +7,6 @@ var assert = require('assert');
 var cleanup = require('../tool-env/cleanup.js');
 var fs = require('fs');
 var files = require('../fs/files');
-var _ = require('underscore');
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
@@ -42,7 +41,7 @@ meteorNpm.npmVersion = "10.1.0";
 // directory, we will have temporary directories that we clean up
 var tmpDirs = [];
 cleanup.onExit(function () {
-  _.each(tmpDirs, function (dir) {
+  tmpDirs.forEach(function (dir) {
     if (files.exists(dir)) {
       files.rm_recursive(dir);
     }
@@ -72,7 +71,7 @@ meteorNpm.updateDependencies = async function (packageName,
   var newPackageNpmDir =
     convertColonsInPath(packageNpmDir) + '-new-' + utils.randomToken();
 
-  if (! npmDependencies || _.isEmpty(npmDependencies)) {
+  if (! npmDependencies || Object.keys(npmDependencies).length === 0) {
     // No NPM dependencies? Delete the .npm directory if it exists (because,
     // eg, we used to have NPM dependencies but don't any more).  We'd like to
     // do this in as atomic a way as possible in case multiple meteor
@@ -145,7 +144,7 @@ meteorNpm.updateDependencies = async function (packageName,
     if (files.exists(newPackageNpmDir)) {
       await files.rm_recursive_deferred(newPackageNpmDir);
     }
-    tmpDirs = _.without(tmpDirs, newPackageNpmDir);
+    tmpDirs = tmpDirs.filter(d => d !== newPackageNpmDir);
   }
 
   return true;
@@ -195,7 +194,7 @@ export const getProdPackageNames = wrapOptimistic(nodeModulesDir => {
 
     Object.keys(deps).forEach(name => {
       const resDir = resolve(name);
-      if (! resDir || _.has(dirs, resDir)) {
+      if (! resDir || (resDir in dirs)) {
         return;
       }
 
@@ -508,7 +507,7 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     // put .meteor-portable files only in the individual top-level package
     // directories, so that they will get cleared away the next time those
     // packages are (re)installed.
-    const result = _.has(portableCache, portableFile)
+    const result = (portableFile in portableCache)
       ? portableCache[portableFile]
       : optimisticReadJsonOrNull(portableFile, {
           // Make optimisticReadJsonOrNull return null if there's a
@@ -662,7 +661,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     getShrinkwrappedDependenciesTree(packageNpmDir);
 
   const npmTree = { dependencies: {} };
-  _.each(npmDependencies, (version, name) => {
+  Object.entries(npmDependencies).forEach(([name, version]) => {
     npmTree.dependencies[name] = { version };
   });
 
@@ -692,7 +691,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
 
   let preservedShrinkwrap;
 
-  if (_.isEmpty(npmDependencies)) {
+  if (Object.keys(npmDependencies).length === 0) {
     // If there are no npmDependencies, make sure nothing is installed.
     preservedShrinkwrap = { dependencies: {} };
 
@@ -717,8 +716,9 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     // https://github.com/npm/npm/blob/latest/CHANGELOG.md#no-more-partial-shrinkwraps-breaking
   }
 
-  if (! _.isEmpty(preservedShrinkwrap &&
-                  preservedShrinkwrap.dependencies)) {
+  if (preservedShrinkwrap &&
+      preservedShrinkwrap.dependencies &&
+      Object.keys(preservedShrinkwrap.dependencies).length > 0) {
     const newShrinkwrapFile = files.pathJoin(
       newPackageNpmDir,
       'npm-shrinkwrap.json'
@@ -778,14 +778,14 @@ function isSubtreeOf(subsetTree, supersetTree, predicate) {
     return true;
   }
 
-  if (_.isObject(subsetTree)) {
-    return _.isObject(supersetTree) &&
-      _.every(subsetTree, (value, key) => {
+  if (subsetTree && typeof subsetTree === 'object') {
+    return supersetTree && typeof supersetTree === 'object' &&
+      Object.entries(subsetTree).every(([key, value]) => {
         return isSubtreeOf(value, supersetTree[key], predicate);
       });
   }
 
-  if (_.isFunction(predicate)) {
+  if (typeof predicate === 'function') {
     const result = predicate(subsetTree, supersetTree);
     if (typeof result === "boolean") {
       return result;
@@ -1112,11 +1112,10 @@ var canonicalVersion = function (depObj) {
 // the structure of npmDependencies (e.g. {gcd: '0.0.0'}), so that
 // they can be diffed. This only returns top-level dependencies.
 var treeToDependencies = function (tree) {
-  return _.object(
-    _.map(
-      tree.dependencies, function (properties, name) {
-        return [name, canonicalVersion(properties)];
-      }));
+  return Object.fromEntries(
+    Object.entries(tree.dependencies).map(function ([name, properties]) {
+      return [name, canonicalVersion(properties)];
+    }));
 };
 
 var getInstalledDependencies = function (dir) {
@@ -1255,7 +1254,7 @@ function minimizeDependencyTree(tree) {
 
     if (module.dependencies) {
       minimized.dependencies = {};
-      _.each(module.dependencies, function (subModule, name) {
+      Object.entries(module.dependencies).forEach(function ([name, subModule]) {
         minimized.dependencies[name] = minimizeModule(subModule);
       });
     }
@@ -1263,7 +1262,7 @@ function minimizeDependencyTree(tree) {
   }
 
   var newTopLevelDependencies = {};
-  _.each(tree.dependencies, function (module, name) {
+  Object.entries(tree.dependencies).forEach(function ([name, module]) {
     newTopLevelDependencies[name] = minimizeModule(module);
   });
   return {dependencies: newTopLevelDependencies};

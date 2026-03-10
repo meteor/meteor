@@ -1,5 +1,3 @@
-var _ = require('underscore');
-
 var buildmessage = require('../utils/buildmessage.js');
 var compiler = require('./compiler.js');
 var files = require('../fs/files');
@@ -106,7 +104,7 @@ export class IsopackCache {
   // package whose dependencies have all already been built.
   getIsopack(name) {
     var self = this;
-    if (! _.has(self._isopacks, name)) {
+    if (!(name in self._isopacks)) {
       throw Error("isopack " + name + " not yet loaded?");
     }
     return self._isopacks[name];
@@ -195,12 +193,12 @@ export class IsopackCache {
   async _ensurePackageLoaded(name, onStack) {
     var self = this;
     buildmessage.assertInCapture();
-    if (_.has(self._isopacks, name)) {
+    if (name in self._isopacks) {
       return;
     }
 
     var ensureLoaded = async function (depName) {
-      if (_.has(onStack, depName)) {
+      if (depName in onStack) {
         buildmessage.error("circular dependency between packages " +
                            name + " and " + depName);
         // recover by not enforcing one of the dependencies
@@ -217,7 +215,7 @@ export class IsopackCache {
     }
     var previousIsopack = null;
     if (self._previousIsopackCache &&
-        _.has(self._previousIsopackCache._isopacks, name)) {
+        (name in self._previousIsopackCache._isopacks)) {
       var previousInfo = self._previousIsopackCache._packageMap.getInfo(name);
       if ((packageInfo.kind === 'versioned' &&
            previousInfo.kind === 'versioned' &&
@@ -438,7 +436,7 @@ export class IsopackCache {
     var watchSet = watch.WatchSet.fromJSON(
       isopackBuildInfoJson.pluginDependencies);
 
-    _.each(isopackBuildInfoJson.unibuildDependencies, function (deps) {
+    Object.values(isopackBuildInfoJson.unibuildDependencies).forEach(function (deps) {
       watchSet.merge(watch.WatchSet.fromJSON(deps));
     });
     return watch.isUpToDate(watchSet);

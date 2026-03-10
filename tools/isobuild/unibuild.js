@@ -1,6 +1,5 @@
 "use strict";
 
-import _ from "underscore";
 import files from "../fs/files";
 import { WatchSet, sha1 } from "../fs/watch";
 import { NodeModulesDirectory } from "./bundler.js";
@@ -85,11 +84,12 @@ export class Unibuild {
 
     // Provided for backwards compatibility; please use
     // unibuild.nodeModulesDirectories instead!
-    _.some(this.nodeModulesDirectories, (nmd, nodeModulesPath) => {
+    Object.entries(this.nodeModulesDirectories).some(([nodeModulesPath, nmd]) => {
       if (! nmd.local) {
         this.nodeModulesPath = nodeModulesPath;
         return true;
       }
+      return false;
     });
   }
 
@@ -117,7 +117,7 @@ export class Unibuild {
 
     const resources = [];
 
-    _.each(unibuildJson.resources, function (resource) {
+    (unibuildJson.resources || []).forEach(function (resource) {
       rejectBadPath(resource.file);
 
       const data = files.readBufferWithLengthAndOffset(
@@ -198,7 +198,7 @@ export class Unibuild {
       // are exports.
       declaredExports = [];
 
-      _.each(unibuildJson.packageVariables, function (pv) {
+      (unibuildJson.packageVariables || []).forEach(function (pv) {
         if (pv.export) {
           declaredExports.push({
             name: pv.name,
@@ -238,7 +238,7 @@ export class Unibuild {
     const unibuildJson = {
       format: "isopack-2-unibuild",
       declaredExports: unibuild.declaredExports,
-      uses: _.map(unibuild.uses, u => ({
+      uses: (unibuild.uses || []).map(u => ({
         'package': u.package,
         // For cosmetic value, leave false values for these options out of
         // the JSON file.
@@ -246,14 +246,14 @@ export class Unibuild {
         unordered: u.unordered || undefined,
         weak: u.weak || undefined,
       })),
-      implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
+      implies: (!unibuild.implies || unibuild.implies.length === 0 ? undefined : unibuild.implies),
       resources: [],
     };
 
     // Figure out where the npm dependencies go.
     let node_modules = {};
     for (const nmd of Object.values(unibuild.nodeModulesDirectories)) {
-      const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
+      const bundlePath = (nmd.sourcePath in npmDirsToCopy)
           // We already have this npm directory from another unibuild.
           ? npmDirsToCopy[nmd.sourcePath]
           : npmDirsToCopy[nmd.sourcePath] =
@@ -278,7 +278,7 @@ export class Unibuild {
     const concat = { head: [], body: [] };
     const offset = { head: 0, body: 0 };
 
-    _.each(unibuild.resources, function (resource) {
+    unibuild.resources.forEach(function (resource) {
       if (["head", "body"].includes(resource.type)) {
         if (concat[resource.type].length) {
           concat[resource.type].push(Buffer.from("\n", "utf8"));

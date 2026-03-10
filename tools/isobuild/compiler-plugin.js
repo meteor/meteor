@@ -5,7 +5,6 @@ var colonConverter = require('../utils/colon-converter.js');
 var files = require('../fs/files');
 var compiler = require('./compiler.js');
 var linker = require('./linker.js');
-var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
 import {readAndWatchFileWithHash, sha1, WatchSet,} from '../fs/watch';
@@ -137,23 +136,20 @@ export class CompilerPluginProcessor {
     // plugin id -> {sourceProcessor, resourceSlots}
     var sourceProcessorsWithSlots = {};
 
-    const sourceBatches = [];
-    for (const unibuild of self.unibuilds) {
+    // Create all batches first, then init them in parallel
+    const sourceBatches = self.unibuilds.map(unibuild => {
       const { pkg: { name }, arch } = unibuild;
       const sourceRoot = name
           && self.isopackCache.getSourceRoot(name, arch)
           || self.sourceRoot;
-
-      const batch = new PackageSourceBatch(unibuild, self, {
+      return new PackageSourceBatch(unibuild, self, {
         sourceRoot,
         linkerCacheDir: self.linkerCacheDir,
         scannerCacheDir: self.scannerCacheDir,
       });
+    });
 
-      await batch.init();
-
-      sourceBatches.push(batch);
-    }
+    await Promise.all(sourceBatches.map(batch => batch.init()));
 
     // If we failed to match sources with processors, we're done.
     if (buildmessage.jobHasMessages()) {
@@ -161,15 +157,15 @@ export class CompilerPluginProcessor {
     }
 
     // Find out which files go with which CompilerPlugins.
-    _.each(sourceBatches, function (sourceBatch) {
-      _.each(sourceBatch.resourceSlots, function (resourceSlot) {
+    sourceBatches.forEach(function (sourceBatch) {
+      sourceBatch.resourceSlots.forEach(function (resourceSlot) {
         var sourceProcessor = resourceSlot.sourceProcessor;
         // Skip non-sources.
         if (! sourceProcessor) {
           return;
         }
 
-        if (! _.has(sourceProcessorsWithSlots, sourceProcessor.id)) {
+        if (!(sourceProcessor.id in sourceProcessorsWithSlots)) {
           sourceProcessorsWithSlots[sourceProcessor.id] = {
             sourceProcessor: sourceProcessor,
             resourceSlots: []
@@ -269,7 +265,7 @@ class InputFile extends buildPluginModule.InputFile {
   getSourceRoot(tolerant = false) {
     const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
 
-    if (_.isString(sourceRoot)) {
+    if (typeof sourceRoot === 'string') {
       return sourceRoot;
     }
 
@@ -314,7 +310,7 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   _stat(absPath) {
-    return _.has(this._statCache, absPath)
+    return (absPath in this._statCache)
       ? this._statCache[absPath]
       : this._statCache[absPath] = optimisticStatOrNull(absPath);
   }
@@ -329,7 +325,7 @@ class InputFile extends buildPluginModule.InputFile {
     }
 
     const sourceRoot = this.getSourceRoot(true);
-    if (! _.isString(sourceRoot)) {
+    if (typeof sourceRoot !== 'string') {
       return this._controlFileCache[basename] = null;
     }
 
@@ -611,7 +607,7 @@ class ResourceSlot {
   }
 
   _getOption(name, options) {
-    if (options && _.has(options, name)) {
+    if (options && (name in options)) {
       return options[name];
     }
     const fileOptions = this.inputResource.fileOptions;
@@ -878,7 +874,7 @@ class OutputResource {
     this._errors = resourceSlot.errors;
 
     let sourcePath = resourceSlot.inputResource.path;
-    if (_.has(options, "sourcePath") &&
+    if (("sourcePath" in options) &&
         typeof options.sourcePath === "string") {
       sourcePath = options.sourcePath;
     }
@@ -1112,7 +1108,7 @@ export class PackageSourceBatch {
     }, (depUnibuild, { weak, unordered }) => {
       let packageName = depUnibuild.pkg.name;
 
-      _.each(depUnibuild.declaredExports, function (symbol) {
+      depUnibuild.declaredExports.forEach(function (symbol) {
         // Slightly hacky implementation of test-only exports.
         if (! symbol.testOnly || self.unibuild.pkg.isTest) {
           self.importedSymbolToPackageName[symbol.name] = packageName;
@@ -1123,7 +1119,7 @@ export class PackageSourceBatch {
     });
 
     self.useMeteorInstall =
-        _.isString(self.sourceRoot) &&
+        typeof self.sourceRoot === 'string' &&
         self.processor.isopackCache.uses(
             self.unibuild.pkg,
             "modules",
@@ -1256,7 +1252,7 @@ export class PackageSourceBatch {
       const nmds = this.unibuild.nodeModulesDirectories;
       this._nodeModulesPaths = [];
 
-      _.each(nmds, (nmd, path) => {
+      Object.entries(nmds).forEach(([path, nmd]) => {
         if (! nmd.local) {
           this._nodeModulesPaths.push(
             files.convertToOSPath(path.replace(/\/$/g, "")));
@@ -1305,7 +1301,7 @@ export class PackageSourceBatch {
 
       map.set(name, {
         files: inputFiles,
-        mainModule: _.find(inputFiles, file => file.mainModule) || null,
+        mainModule: inputFiles.find(file => file.mainModule) || null,
         batch,
         importScannerWatchSet: new WatchSet(),
       });
@@ -1377,7 +1373,7 @@ export class PackageSourceBatch {
       }
 
       const nodeModulesPaths = [];
-      _.each(batch.unibuild.nodeModulesDirectories, (nmd, sourcePath) => {
+      Object.entries(batch.unibuild.nodeModulesDirectories || {}).forEach(([sourcePath, nmd]) => {
         if (! nmd.local) {
           // Local node_modules directories will be found by the
           // ImportScanner, but we need to tell it about any external
@@ -1464,7 +1460,7 @@ export class PackageSourceBatch {
         await ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
       }
 
-      if (! _.isEmpty(nextMissingModules)) {
+      if (Object.keys(nextMissingModules).length > 0) {
         await handleMissing(nextMissingModules);
       }
     }
@@ -1630,7 +1626,7 @@ export class PackageSourceBatch {
           return;
         }
 
-        if (! _.has(topLevelMissingIDs, packageDir)) {
+        if (!(packageDir in topLevelMissingIDs)) {
           // This information will be used to recommend installing npm
           // packages below.
           topLevelMissingIDs[packageDir] = id;
@@ -1710,7 +1706,7 @@ export class PackageSourceBatch {
             (self.unibuild.kind === "main" ? "" : (":" + self.unibuild.kind)) +
             ".js"),
       name: self.unibuild.pkg.name || null,
-      declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
+      declaredExports: self.unibuild.declaredExports.map(e => e.name),
       imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
       includeSourceMapInstructions: isWeb,
@@ -1843,10 +1839,10 @@ export class PackageSourceBatch {
   }
 }
 
-_.each([
+[
   "getResources",
   "_linkJS",
-], method => {
+].forEach(method => {
   const proto = PackageSourceBatch.prototype;
   proto[method] = Profile(
     "PackageSourceBatch#" + method,
@@ -1855,10 +1851,10 @@ _.each([
 });
 
 // static methods to measure in profile
-_.each([
+[
   "computeJsOutputFilesMap",
   "_watchOutputFiles"
-], method => {
+].forEach(method => {
   PackageSourceBatch[method] = Profile(
     "PackageSourceBatch." + method,
     PackageSourceBatch[method]);
