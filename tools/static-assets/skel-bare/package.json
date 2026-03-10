@@ -2,7 +2,7 @@
   "name": "~name~",
   "private": true,
   "scripts": {
-    "start": "meteor run"
+    "start": "meteor run --settings settings.json"
   },
   "dependencies": {
     "@babel/runtime": "^7.23.5",

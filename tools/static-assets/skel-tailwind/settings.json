@@ -1,0 +1,7 @@
+{
+  "packages": {
+    "mongo": {
+      "reactivity": ["changeStreams", "oplog", "polling"]
+    }
+  }
+}
