@@ -71,7 +71,7 @@ jobs:
         run: npm install
 
       - name: Install test deps
-        run: npm run install:modern
+        run: npm run install:e2e
 
       - name: Prepare Meteor
         run: ./meteor --get-ready
@@ -83,4 +83,4 @@ jobs:
           retry_on: error
           timeout_minutes: 15
           retry_wait_seconds: 90
-          command: npm run test:modern -- -t="${{ matrix.category }}"
+          command: npm run test:e2e -- -t="${{ matrix.category }}"
