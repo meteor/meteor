@@ -9,7 +9,8 @@ Full-stack JavaScript platform for modern web and mobile applications.
 ./meteor create my-app                       # Create app
 ./meteor self-test                           # CLI tests
 ./meteor test-packages ./packages/<name>     # Package tests
-npm run test:modern                          # E2E tests (Jest + Playwright)
+npm run test:unit                            # Unit tests (Jest)
+npm run test:e2e                             # E2E tests (Jest + Playwright)
 ```
 
 ## Structure

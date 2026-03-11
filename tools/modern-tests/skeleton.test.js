@@ -116,8 +116,9 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.js',
       },
       bodyStyles: {
-        'font-family':
-          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        'font-family': process.platform === 'darwin'
+          ? 'Inter, -apple-system, "system-ui", "Segoe UI", Roboto, sans-serif'
+          : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         padding: '10px',
       },
     }),
