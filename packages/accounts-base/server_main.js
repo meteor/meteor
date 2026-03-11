@@ -8,6 +8,9 @@ Accounts = new AccountsServer(Meteor.server, { ...Meteor.settings.packages?.acco
 // TODO[FIBERS]: I need TLA
 Accounts.init().then();
 
+// Register HttpOnly cookie endpoints and helpers
+import './server_http_cookies.js';
+
 // Users table. Don't use the normal autopublish, since we want to hide
 // some fields. Code to autopublish this is in accounts_server.js.
 // XXX Allow users to configure this collection name.
