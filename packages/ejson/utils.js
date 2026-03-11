@@ -7,7 +7,7 @@ export const keysOf = (obj) => Object.keys(obj);
 export const lengthOf = (obj) => {
   let count = 0;
   for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) count++;
+    if (hasOwn(obj, key)) count++;
   }
   return count;
 };
@@ -23,7 +23,7 @@ export const lengthOf = (obj) => {
 export const lengthOfWithLimit = (obj, limit) => {
   let count = 0;
   for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key) && ++count > limit) return count;
+    if (hasOwn(obj, key) && ++count > limit) return count;
   }
   return count;
 };
