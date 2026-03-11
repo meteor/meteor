@@ -1566,9 +1566,12 @@ export class PackageSourceBatch {
       );
       const fileHash = sha1(bufferData);
 
-      // The getter's from file (file.data and file.hash) are async, unfortunately.
-      // That's why we need the Object.assign here.
-      Object.assign(file, { data: bufferData, hash: fileHash });
+      // Update data, hash, AND _inputHash. The _inputHash must also be
+      // updated because the in-memory LINKER_CACHE uses _inputHash for
+      // cache keys. Without this, the linker may return a stale cached
+      // result from a prior build (e.g., a plugin build) that had fewer
+      // install() calls, causing "Cannot find package" errors at runtime.
+      Object.assign(file, { data: bufferData, hash: fileHash, _inputHash: fileHash });
       break;
     }
 
