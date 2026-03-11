@@ -95,6 +95,7 @@ export class Connection {
     self._lastSessionId = null;
     self._versionSuggestion = null; // The last proposed DDP version.
     self._version = null; // The DDP version agreed on by client and server.
+    self._serializer = 'json'; // Negotiated serializer, switches after 'connected'.
     self._stores = Object.create(null); // name -> object with methods
     self._methodHandlers = Object.create(null); // name -> func
     self._nextMethodId = 1;
@@ -1030,7 +1031,9 @@ export class Connection {
   // Sends the DDP stringification of the given message object
   _send(obj) {
     const supportsBinary = this._stream._supportsBinary || false;
-    this._stream.send(DDPCommon.stringifyDDP(obj, { supportsBinary }));
+    // Handshake messages are always JSON regardless of negotiated serializer.
+    const serializer = (obj.msg === 'connect') ? 'json' : this._serializer;
+    this._stream.send(DDPCommon.stringifyDDP(obj, { serializer, supportsBinary }));
   }
 
   // Always queues the call before sending the message

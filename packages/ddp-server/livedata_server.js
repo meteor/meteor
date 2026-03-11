@@ -83,6 +83,7 @@ var Session = function (server, version, socket, options) {
 
   self.server = server;
   self.version = version;
+  self._serializer = DDPCommon.SERIALIZER_FOR_VERSION[version] || 'json';
 
   self.initialized = false;
   self.socket = socket;
@@ -330,10 +331,11 @@ Object.assign(Session.prototype, {
   send: function (msg) {
     const self = this;
     if (self.socket) {
+      // Handshake messages are always JSON regardless of negotiated serializer.
+      const serializer = (msg.msg === 'connected') ? 'json' : self._serializer;
       if (Meteor._printSentDDP)
         Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
-      // Server always uses native WebSocket (faye-websocket), so binary is always supported
-      self.socket.send(DDPCommon.stringifyDDP(msg, { supportsBinary: true }));
+      self.socket.send(DDPCommon.stringifyDDP(msg, { serializer, supportsBinary: true }));
     }
   },
 
@@ -1288,8 +1290,8 @@ Server = function (options = {}) {
       var msg = {msg: 'error', reason: reason};
       if (offendingMessage)
         msg.offendingMessage = offendingMessage;
-      // Server always uses native WebSocket, so binary is supported
-      socket.send(DDPCommon.stringifyDDP(msg, { supportsBinary: true }));
+      // Pre-session errors are always JSON.
+      socket.send(DDPCommon.stringifyDDP(msg, { serializer: 'json', supportsBinary: true }));
     };
 
     socket.on('data', function (raw_msg) {
@@ -1298,7 +1300,11 @@ Server = function (options = {}) {
       }
       try {
         try {
-          var msg = DDPCommon.parseDDP(raw_msg);
+          // Before session exists, parse as JSON (the 'connect' message).
+          // After session, use the negotiated serializer.
+          var serializerName = socket._meteorSession
+            ? socket._meteorSession._serializer : 'json';
+          var msg = DDPCommon.parseDDP(raw_msg, serializerName);
         } catch (err) {
           sendError('Parse error');
           return;
@@ -1405,7 +1411,7 @@ Object.assign(Server.prototype, {
           msg.support.every(isString) &&
           msg.support.includes(msg.version))) {
       socket.send(DDPCommon.stringifyDDP({msg: 'failed',
-                                version: DDPCommon.SUPPORTED_DDP_VERSIONS[0]}, { supportsBinary: true }));
+                                version: DDPCommon.SUPPORTED_DDP_VERSIONS[0]}, { serializer: 'json', supportsBinary: true }));
       socket.close();
       return;
     }
@@ -1418,7 +1424,7 @@ Object.assign(Server.prototype, {
       // The best version to use (according to the client's stated preferences)
       // is not the one the client is trying to use. Inform them about the best
       // version to use.
-      socket.send(DDPCommon.stringifyDDP({msg: 'failed', version: version}, { supportsBinary: true }));
+      socket.send(DDPCommon.stringifyDDP({msg: 'failed', version: version}, { serializer: 'json', supportsBinary: true }));
       socket.close();
       return;
     }
