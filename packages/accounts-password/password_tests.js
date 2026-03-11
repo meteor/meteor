@@ -1,4 +1,6 @@
 Accounts._connectionCloseDelayMsForTests = 1000;
+Accounts._options.ambiguousErrorMessages = false;
+
 const makeTestConnAsync =
   (test) =>
     new Promise((resolve, reject) => {

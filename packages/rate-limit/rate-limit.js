@@ -57,6 +57,23 @@ class Rule {
       });
   }
 
+  async matchAsync(input) {
+      for (const [key, matcher] of Object.entries(this._matchers)) {
+        if (matcher !== null) {
+          if (!hasOwn.call(input, key)) {
+            return false;
+          } else if (typeof matcher === 'function') {
+            if (!(await matcher(input[key]))) {
+              return false;
+            }
+          } else if (matcher !== input[key]) {
+            return false;
+          }
+        }
+      };
+    return true;
+  }
+
   // Generates unique key string for provided input by concatenating all the
   // keys in the matcher with the corresponding values in the input.
   // Only called if rule matches input.
@@ -143,43 +160,61 @@ class RateLimiter {
     const matchedRules = this._findAllMatchingRules(input);
     matchedRules.forEach((rule) => {
       const ruleResult = rule.apply(input);
-      let numInvocations = rule.counters[ruleResult.key];
-
-      if (ruleResult.timeToNextReset < 0) {
-        // Reset all the counters since the rule has reset
-        rule.resetCounter();
-        ruleResult.timeSinceLastReset = new Date().getTime() -
-          rule._lastResetTime;
-        ruleResult.timeToNextReset = rule.options.intervalTime;
-        numInvocations = 0;
-      }
-
-      if (numInvocations > rule.options.numRequestsAllowed) {
-        // Only update timeToReset if the new time would be longer than the
-        // previously set time. This is to ensure that if this input triggers
-        // multiple rules, we return the longest period of time until they can
-        // successfully make another call
-        if (reply.timeToReset < ruleResult.timeToNextReset) {
-          reply.timeToReset = ruleResult.timeToNextReset;
-        }
-        reply.allowed = false;
-        reply.numInvocationsLeft = 0;
-        reply.ruleId = rule.id;
-        rule._executeCallback(reply, input);
-      } else {
-        // If this is an allowed attempt and we haven't failed on any of the
-        // other rules that match, update the reply field.
-        if (rule.options.numRequestsAllowed - numInvocations <
-          reply.numInvocationsLeft && reply.allowed) {
-          reply.timeToReset = ruleResult.timeToNextReset;
-          reply.numInvocationsLeft = rule.options.numRequestsAllowed -
-            numInvocations;
-        }
-        reply.ruleId = rule.id;
-        rule._executeCallback(reply, input);
-      }
+      this._handleRuleResult(rule, ruleResult, reply, input);
     });
     return reply;
+  }
+
+  checkRules(rules, input) {
+    const reply = {
+      allowed: true,
+      timeToReset: 0,
+      numInvocationsLeft: Infinity,
+    };
+
+    rules.forEach((rule) => {
+      const ruleResult = rule.apply(input);
+      this._handleRuleResult(rule, ruleResult, reply, input);
+    });
+    return reply;
+  }
+
+  _handleRuleResult(rule, ruleResult, reply, input) {
+    let numInvocations = rule.counters[ruleResult.key];
+
+    if (ruleResult.timeToNextReset < 0) {
+      // Reset all the counters since the rule has reset
+      rule.resetCounter();
+      ruleResult.timeSinceLastReset = new Date().getTime() -
+        rule._lastResetTime;
+      ruleResult.timeToNextReset = rule.options.intervalTime;
+      numInvocations = 0;
+    }
+
+    if (numInvocations > rule.options.numRequestsAllowed) {
+      // Only update timeToReset if the new time would be longer than the
+      // previously set time. This is to ensure that if this input triggers
+      // multiple rules, we return the longest period of time until they can
+      // successfully make another call
+      if (reply.timeToReset < ruleResult.timeToNextReset) {
+        reply.timeToReset = ruleResult.timeToNextReset;
+      }
+      reply.allowed = false;
+      reply.numInvocationsLeft = 0;
+      reply.ruleId = rule.id;
+      rule._executeCallback(reply, input);
+    } else {
+      // If this is an allowed attempt and we haven't failed on any of the
+      // other rules that match, update the reply field.
+      if (rule.options.numRequestsAllowed - numInvocations <
+        reply.numInvocationsLeft && reply.allowed) {
+        reply.timeToReset = ruleResult.timeToNextReset;
+        reply.numInvocationsLeft = rule.options.numRequestsAllowed -
+          numInvocations;
+      }
+      reply.ruleId = rule.id;
+      rule._executeCallback(reply, input);
+    }
   }
 
   /**
@@ -228,27 +263,51 @@ class RateLimiter {
   increment(input) {
     // Only increment rule counters that match this input
     const matchedRules = this._findAllMatchingRules(input);
-    matchedRules.forEach((rule) => {
-      const ruleResult = rule.apply(input);
+    const _incrementForInput = (rule) => this._incrementRule(rule, input);
+    matchedRules.forEach(_incrementForInput);
+  }
 
-      if (ruleResult.timeSinceLastReset > rule.options.intervalTime) {
-        // Reset all the counters since the rule has reset
-        rule.resetCounter();
-      }
+  /**
+  * Increment counters in every rule that match to this input
+  * @param  {array} rules Array of rules to increment
+  * @param  {object} input Dictionary object containing attributes that may
+  * match to rules
+  */
+  incrementRules(rules, input) {
+    const _incrementForInput = (rule) => this._incrementRule(rule, input);
+    rules.forEach(_incrementForInput);
+  }
 
-      // Check whether the key exists, incrementing it if so or otherwise
-      // adding the key and setting its value to 1
-      if (hasOwn.call(rule.counters, ruleResult.key)) {
-        rule.counters[ruleResult.key]++;
-      } else {
-        rule.counters[ruleResult.key] = 1;
-      }
-    });
+  _incrementRule(rule, input) {
+    const ruleResult = rule.apply(input);
+
+    if (ruleResult.timeSinceLastReset > rule.options.intervalTime) {
+      // Reset all the counters since the rule has reset
+      rule.resetCounter();
+    }
+
+    // Check whether the key exists, incrementing it if so or otherwise
+    // adding the key and setting its value to 1
+    if (hasOwn.call(rule.counters, ruleResult.key)) {
+      rule.counters[ruleResult.key]++;
+    } else {
+      rule.counters[ruleResult.key] = 1;
+    }
   }
 
   // Returns an array of all rules that apply to provided input
   _findAllMatchingRules(input) {
     return Object.values(this.rules).filter(rule => rule.match(input));
+  }
+
+  async _findAllMatchingRulesAsync(input) {
+    const matches = [];
+    for (const rule of Object.values(this.rules)) {
+      if (await rule.matchAsync(input)) {
+        matches.push(rule);
+      }
+    }
+    return matches;
   }
 
   /**

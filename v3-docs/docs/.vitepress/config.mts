@@ -617,6 +617,10 @@ export default defineConfig({
         text: "Performance",
         items: [
           {
+            text: "Change Streams Observer Driver",
+            link: "/performance/change-streams-observer-driver",
+          },
+          {
             text: "Performance Improvements",
             link: "/performance/performance-improvement",
           },
