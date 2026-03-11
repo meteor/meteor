@@ -9,7 +9,8 @@ import {AccountsCommon} from "./accounts_common.js";
  * @param {Object} options an object with fields:
  * @param {Object} options.connection Optional DDP connection to reuse.
  * @param {String} options.ddpUrl Optional URL for creating a new DDP connection.
- * @param {'session' | 'local'} options.clientStorage Optional Define what kind of storage you want for credentials on the client. Default is 'local' to use `localStorage`. Set to 'session' to use session storage.
+ * @param {'session' | 'local' | 'none'} options.clientStorage Optional Define what kind of storage you want for credentials on the client. Default is 'local' to use `localStorage`. Set to 'session' to use session storage. Use 'none' to avoid persisting tokens.
+ * @param {Boolean} options.useHttpOnlyCookies Optional Enable HttpOnly cookie flow for auth resume. When enabled, the client will try to refresh a login token from a server HttpOnly cookie during startup, and will sync the cookie after logins/logouts.
  */
 export class AccountsClient extends AccountsCommon {
   constructor(options) {
@@ -29,8 +30,14 @@ export class AccountsClient extends AccountsCommon {
 
     this.initStorageLocation();
 
+    // Read HttpOnly cookie setting from options or public settings
+    this._useHttpOnlyCookies = !!(options?.useHttpOnlyCookies || Meteor.settings?.public?.packages?.accounts?.useHttpOnlyCookies);
+
     // Defined in localstorage_token.js.
     this._initLocalStorage();
+
+    // Try to resume via HttpOnly cookie if enabled
+    this._initHttpOnlyCookieLogin();
 
     // This is for .registerClientLoginFunction & .callLoginFunction.
     this._loginFuncs = {};
@@ -42,13 +49,29 @@ export class AccountsClient extends AccountsCommon {
 
   initStorageLocation(options) {
     // Determine whether to use local or session storage to storage credentials and anything else.
-    this.storageLocation = (options?.clientStorage === 'session' || Meteor.settings?.public?.packages?.accounts?.clientStorage === 'session') ? window.sessionStorage : Meteor._localStorage;
+    const desired = options?.clientStorage || Meteor.settings?.public?.packages?.accounts?.clientStorage;
+    if (desired === 'session') {
+      this.storageLocation = window.sessionStorage;
+    } else if (desired === 'none') {
+      // In-memory, non-persistent storage shim
+      const mem = new Map();
+      this.storageLocation = {
+        getItem: (k) => mem.get(k) || null,
+        setItem: (k, v) => { mem.set(k, String(v)); },
+        removeItem: (k) => { mem.delete(k); },
+      };
+    } else {
+      this.storageLocation = Meteor._localStorage;
+    }
   }
 
   config(options) {
     super.config(options);
 
     this.initStorageLocation(options);
+    if (Object.prototype.hasOwnProperty.call(options || {}, 'useHttpOnlyCookies')) {
+      this._useHttpOnlyCookies = !!options.useHttpOnlyCookies;
+    }
   }
 
   ///
@@ -431,11 +454,19 @@ export class AccountsClient extends AccountsCommon {
     this._unstoreLoginToken();
     this.connection.setUserId(null);
     this._reconnectStopper && this._reconnectStopper.stop();
+    // Clear HttpOnly cookie if enabled
+    if (this._useHttpOnlyCookies) {
+      this._clearHttpOnlyCookie();
+    }
   }
 
   makeClientLoggedIn(userId, token, tokenExpires) {
     this._storeLoginToken(userId, token, tokenExpires);
     this.connection.setUserId(userId);
+    // Sync HttpOnly cookie if enabled
+    if (this._useHttpOnlyCookies) {
+      this._setHttpOnlyCookie(token, tokenExpires);
+    }
   }
 
   ///
@@ -522,6 +553,29 @@ export class AccountsClient extends AccountsCommon {
     });
   };
 
+  // Attempt startup login using an HttpOnly cookie by requesting a
+  // short-lived resume token from the server.
+  async loginWithCookie() {
+    try {
+      const res = await fetch('/_accounts/cookie/refresh', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) return;
+      const body = await res.json();
+      if (body && body.token) {
+        this.loginWithToken(body.token, (err) => {
+          if (err) {
+            this.makeClientLoggedOut();
+          }
+        });
+      }
+    } catch (_e) {
+      // ignore
+    }
+  }
+
   // Semi-internal API. Call this function to re-enable auto login after
   // if it was disabled at startup.
   _enableAutoLogin() {
@@ -562,6 +616,26 @@ export class AccountsClient extends AccountsCommon {
     // connect a second time
     this._lastLoginTokenWhenPolled = null;
   };
+
+  async _setHttpOnlyCookie(token, tokenExpires) {
+    try {
+      await fetch('/_accounts/cookie/set', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, tokenExpires }),
+      });
+    } catch (_e) {}
+  }
+
+  async _clearHttpOnlyCookie() {
+    try {
+      await fetch('/_accounts/cookie/clear', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (_e) {}
+  }
 
   // This is private, but it is exported for now because it is used by a
   // test in accounts-password.
@@ -657,6 +731,15 @@ export class AccountsClient extends AccountsCommon {
     }, 3000);
   };
 
+  _initHttpOnlyCookieLogin() {
+    if (!this._useHttpOnlyCookies) return;
+    // Only attempt cookie resume if we didn't find a local token
+    const hasLocalToken = !!this._storedLoginToken();
+    if (!hasLocalToken) {
+      this.loginWithCookie();
+    }
+  }
+
   _pollStoredLoginToken() {
     if (! this._autoLoginEnabled) {
       return;
@@ -701,6 +784,22 @@ export class AccountsClient extends AccountsCommon {
   };
 
   /**
+   * @summary Shared implementation for registering account link callbacks.
+   * @param {String} type The callback type (e.g. 'reset-password', 'verify-email', 'enroll-account').
+   * @param {Function} callback The function to call when the link is clicked.
+   * @locus Client
+   */
+  _registerLinkCallback(type, callback) {
+    if (this._accountsCallbacks[type]) {
+      Meteor._debug(
+        `Accounts callback for "${type}" was registered more than once. ` +
+        "Only one callback added will be executed."
+      );
+    }
+    this._accountsCallbacks[type] = callback;
+  };
+
+  /**
    * @summary Register a function to call when a reset password link is clicked
    * in an email sent by
    * [`Accounts.sendResetPasswordEmail`](#Accounts-sendResetPasswordEmail).
@@ -718,12 +817,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   onResetPasswordLink(callback) {
-    if (this._accountsCallbacks["reset-password"]) {
-      Meteor._debug("Accounts.onResetPasswordLink was called more than once. " +
-        "Only one callback added will be executed.");
-    }
-
-    this._accountsCallbacks["reset-password"] = callback;
+    this._registerLinkCallback("reset-password", callback);
   };
 
   /**
@@ -745,12 +839,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   onEmailVerificationLink(callback) {
-    if (this._accountsCallbacks["verify-email"]) {
-      Meteor._debug("Accounts.onEmailVerificationLink was called more than once. " +
-        "Only one callback added will be executed.");
-    }
-
-    this._accountsCallbacks["verify-email"] = callback;
+    this._registerLinkCallback("verify-email", callback);
   };
 
   /**
@@ -772,12 +861,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   onEnrollmentLink(callback) {
-    if (this._accountsCallbacks["enroll-account"]) {
-      Meteor._debug("Accounts.onEnrollmentLink was called more than once. " +
-        "Only one callback added will be executed.");
-    }
-
-    this._accountsCallbacks["enroll-account"] = callback;
+    this._registerLinkCallback("enroll-account", callback);
   };
 
 }
