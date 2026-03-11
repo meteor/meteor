@@ -6,7 +6,7 @@ import assert from 'assert';
 import LRUCache from 'lru-cache';
 import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
-import { findAssignedGlobals } from './js-analyze.js';
+import { findAssignedGlobals, findAssignedGlobalsAsync } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
 
 // A rather small cache size, assuming only one module is being linked
@@ -91,16 +91,44 @@ Object.assign(Module.prototype, {
   computeAssignedVariables: Profile("linker Module#computeAssignedVariables", async function () {
     var self = this;
 
-    // The assigned variables in the app aren't actually used for anything:
-    // we're using the global namespace, so there's no header where we declare
-    // all of the assigned variables as vars.  So there's no use wasting time
-    // running static analysis on app code.
     if (self.useGlobalNamespace) {
       return [];
     }
 
-    // Find all global references in any files
-    var assignedVariables = [];
+    // Batch-submit all files to the worker pool when available.
+    const pool = global.__meteor_worker_pool;
+    if (pool) {
+      try {
+        // Collect files eligible for analysis (skip node_modules).
+        const eligible = [];
+        for (let i = 0; i < self.files.length; i++) {
+          const file = self.files[i];
+          if (file.absModuleId) {
+            const parts = file.absModuleId.split("/");
+            const nmi = parts.indexOf("node_modules");
+            if (nmi >= 0 && parts[nmi + 1] !== "meteor") {
+              continue;
+            }
+          }
+          eligible.push({ source: file.source, hash: file._inputHash });
+        }
+
+        if (eligible.length > 0) {
+          const results = await pool.submitAll('analyze-globals', eligible);
+          const assignedVariables = [];
+          for (const globals of results) {
+            assignedVariables.push(...Object.keys(globals));
+          }
+          return [...new Set(assignedVariables)];
+        }
+        return [];
+      } catch (_) {
+        // Worker pool failed — fall through to sequential fallback.
+      }
+    }
+
+    // Fallback: sequential per-file analysis.
+    const assignedVariables = [];
     for (const file of self.files) {
       const vars = await file.computeAssignedVariables();
       assignedVariables.push(...vars);
@@ -628,7 +656,7 @@ Object.assign(File.prototype, {
         line: e.lineNumber,
         column: e.column
       };
-      if (self.sourceMap) {
+      if (self.sourceMap && self.sourceMap.version) {
         var parsed = await new sourcemap.SourceMapConsumer(self.sourceMap);
         var original = parsed.originalPositionFor(
           {line: e.lineNumber, column: e.column - 1});
@@ -751,7 +779,7 @@ const getPrelinkedOutputCached = require("optimism").wrap(
 
       let chunk = result.code;
 
-      if (result.map) {
+      if (result.map && result.map.version) {
         const sourcemapConsumer = await new sourcemap.SourceMapConsumer(result.map);
         chunk = sourcemap.SourceNode.fromStringWithSourceMap(
           result.code,
@@ -907,6 +935,16 @@ var bannerPadding = function (bannerWidth) {
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
 export var prelink = Profile("linker.prelink", async function (options) {
+  // Resolve async OutputResource properties before creating File objects.
+  await Promise.all(options.inputFiles.map(async (file) => {
+    const d = file.data;
+    if (d && typeof d.then === 'function') await d;
+    const h = file.hash;
+    if (h && typeof h.then === 'function') await h;
+    const sm = file.sourceMap;
+    if (sm && typeof sm.then === 'function') await sm;
+  }));
+
   var module = new Module({
     name: options.name,
     combinedServePath: options.combinedServePath,
@@ -1131,6 +1169,19 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   deps
 }) {
   buildmessage.assertInJob();
+
+  // OutputResource getters (data, hash, sourceMap) call async _get(), so they
+  // return Promises. Awaiting each triggers finalize() and sets own properties
+  // via _set/Object.defineProperty, which shadow the prototype getters. After
+  // this, all property accesses in the File constructor are synchronous.
+  await Promise.all(inputFiles.map(async (file) => {
+    const d = file.data;
+    if (d && typeof d.then === 'function') await d;
+    const h = file.hash;
+    if (h && typeof h.then === 'function') await h;
+    const sm = file.sourceMap;
+    if (sm && typeof sm.then === 'function') await sm;
+  }));
 
   var module = new Module({
     name,

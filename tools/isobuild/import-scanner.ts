@@ -8,7 +8,7 @@ import {
   matches as archMatches,
   isLegacyArch,
 } from "../utils/archinfo";
-import {findImportedModuleIdentifiers} from "./js-analyze.js";
+import {findImportedModuleIdentifiers, findImportedModuleIdentifiersAsync} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
 import buildmessage from "../utils/buildmessage.js";
 import {Profile} from "../tool-env/profile";
@@ -731,8 +731,10 @@ export default class ImportScanner {
     checkProperty("bare");
 
     async function getChunk(file: File) {
-      if (file.sourceMap) {
-        const consumer = await new SourceMapConsumer(file.sourceMap);
+      // Resolve sourceMap (may be a Promise from async OutputResource getter).
+      const sm = await file.sourceMap;
+      if (sm && sm.version) {
+        const consumer = await new SourceMapConsumer(sm);
         const node = SourceNode.fromStringWithSourceMap(
           await scanner.getDataString(file),
           consumer
@@ -744,13 +746,18 @@ export default class ImportScanner {
       }
     }
 
+    const [oldChunk, newChunk] = await Promise.all([
+      getChunk(oldFile),
+      getChunk(newFile),
+    ]);
+
     const {
       code: combinedDataString,
       map: combinedSourceMap,
     } = new SourceNode(null, null, null, [
-      await getChunk(oldFile),
+      oldChunk,
       "\n\n",
-      await getChunk(newFile)
+      newChunk
     ]).toStringWithSourceMap({
       file: oldFile.servePath || newFile.servePath
     });
@@ -768,10 +775,28 @@ export default class ImportScanner {
   }
 
   async scanImports() {
-    for (const file of this.outputFiles) {
-      if (!file.lazy) {
-        await this.scanFile(file);
+    const nonLazyFiles = this.outputFiles.filter(f => !f.lazy);
+
+    // Pre-compute import identifiers for all non-lazy files in parallel.
+    // This parallelizes Reify compilation and worker pool parsing across
+    // files instead of processing them one at a time. Each file's deps
+    // are independent (per-file data, per-file hash, per-file cache key).
+    // Errors are caught and ignored here — scanFile will re-attempt
+    // findImportedModuleIdentifiers and report errors via buildmessage.
+    await Promise.all(nonLazyFiles.map(async file => {
+      try {
+        file.deps = file.deps ||
+          await this.findImportedModuleIdentifiers(file);
+      } catch (_) {
+        // scanFile will retry and handle parse errors properly.
       }
+    }));
+
+    // Scan files sequentially for dependency resolution (modifies shared
+    // state: adds discovered files, sets import statuses). The expensive
+    // findImportedModuleIdentifiers call is skipped since deps are cached.
+    for (const file of nonLazyFiles) {
+      await this.scanFile(file);
     }
 
     return this;
@@ -1020,7 +1045,7 @@ export default class ImportScanner {
       return IMPORT_SCANNER_CACHE.get(fileHash) as Record<string, ImportInfo>;
     }
 
-    const result = findImportedModuleIdentifiers(
+    const result = await findImportedModuleIdentifiersAsync(
       await this.getDataString(file),
         fileHash,
     );

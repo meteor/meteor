@@ -132,9 +132,8 @@ export class MeteorMinifier {
 MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle', async function (files, options) {
   const mode = options.minifyMode;
 
-  // don't minify anything for development
   if (mode === 'development') {
-    files.forEach(function (file) {
+    files.forEach((file) => {
       file.addJavaScript({
         data: file.getContentsAsBuffer(),
         sourceMap: file.getSourceMap(),
@@ -144,106 +143,73 @@ MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle'
     return;
   }
 
-  // this function tries its best to locate the original source file
-  // that the error being reported was located inside of
   function maybeThrowMinifyErrorBySourceFile(error, file) {
     const lines = file.getContentsAsString().split(/\n/);
     const lineContent = lines[error.line - 1];
-
     let originalSourceFileLineNumber = 0;
 
-    // Count backward from the failed line to find the oringal filename
     for (let i = (error.line - 1); i >= 0; i--) {
-        let currentLine = lines[i];
-
-        // If the line is a boatload of slashes (8 or more), we're in the right place.
-        if (/^\/\/\/{6,}$/.test(currentLine)) {
-
-            // If 4 lines back is the same exact line, we've found the framing.
-            if (lines[i - 4] === currentLine) {
-
-                // So in that case, 2 lines back is the file path.
-                let originalFilePath = lines[i - 2].substring(3).replace(/\s+\/\//, "");
-
-                throw new Error(
-                    `terser minification error (${error.name}:${error.message})\n` +
-                    `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` +
-                    `Line content: ${lineContent}\n`);
-            }
+      const currentLine = lines[i];
+      if (/^\/\/\/{6,}$/.test(currentLine)) {
+        if (lines[i - 4] === currentLine) {
+          const originalFilePath = lines[i - 2].substring(3).replace(/\s+\/\//, "");
+          throw new Error(
+            `terser minification error (${error.name}:${error.message})\n` +
+            `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` +
+            `Line content: ${lineContent}\n`);
         }
-        originalSourceFileLineNumber++;
+      }
+      originalSourceFileLineNumber++;
     }
   }
-    
-  // this object will collect all the minified code in the
-  // data field and post-minfiication file sizes in the stats field
+
   const toBeAdded = {
     data: "",
-    stats: Object.create(null)
+    stats: Object.create(null),
   };
 
-  for (let file of files) {
-    // Don't reminify *.min.js.
+  // Separate pre-minified files from those needing minification.
+  const filesToMinify = [];
+  for (const file of files) {
     if (/\.min\.js$/.test(file.getPathInBundle())) {
       toBeAdded.data += file.getContentsAsString();
       Plugin.nudge();
-      continue;
+    } else {
+      filesToMinify.push(file);
     }
- 
-    let minified;
-    let label = 'minify file'
-    if (file.getPathInBundle() === 'app/app.js') {
-      label = 'minify app/app.js'
-    }
-    if (file.getPathInBundle() === 'packages/modules.js') {
-      label = 'minify packages/modules.js'
-    }
+  }
 
+  for (const file of filesToMinify) {
+    let minified;
     try {
-      // Need to update this approach for async/await
       let minifyPromise;
-      Profile.time(label, () => {
+      Profile.time('minify file', () => {
         minifyPromise = this.minifyOneFile(file);
       });
       minified = await minifyPromise;
-      
+
       if (!(minified && typeof minified.code === "string")) {
         throw new Error(`Invalid minification result for ${file.getPathInBundle()}`);
       }
-    }
-    catch (err) {
+    } catch (err) {
       maybeThrowMinifyErrorBySourceFile(err, file);
-      var filePath = file.getPathInBundle();
-      err.message += " while minifying " + filePath;
+      err.message += " while minifying " + file.getPathInBundle();
       throw err;
     }
 
     if (statsEnabled) {
-      let tree;
-      Profile.time('extractModuleSizesTree', () => {
-        tree = extractModuleSizesTree(minified.code);
-        if (tree) {
-          toBeAdded.stats[file.getPathInBundle()] = [Buffer.byteLength(minified.code), tree];
-        } else {
-          toBeAdded.stats[file.getPathInBundle()] = Buffer.byteLength(minified.code);
-        }
-        // append the minified code to the "running sum"
-        // of code being minified
-      });
-      // Add the minified code outside of the Profile.time
-      toBeAdded.data += minified.code;
-    } else {
-      // If stats are disabled, still need to add the minified code
-      toBeAdded.data += minified.code;
+      const tree = extractModuleSizesTree(minified.code);
+      if (tree) {
+        toBeAdded.stats[file.getPathInBundle()] = [Buffer.byteLength(minified.code), tree];
+      } else {
+        toBeAdded.stats[file.getPathInBundle()] = Buffer.byteLength(minified.code);
+      }
     }
-
+    toBeAdded.data += minified.code;
     toBeAdded.data += '\n\n';
-    
     Plugin.nudge();
   }
 
-  // this is where the minified code gets added to one
-  // JS file that is delivered to the client
   if (files.length) {
     files[0].addJavaScript(toBeAdded);
   }

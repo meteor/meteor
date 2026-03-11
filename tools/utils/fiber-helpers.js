@@ -109,6 +109,21 @@ Object.assign(exports.EnvironmentVariable.prototype, {
   }
 });
 
+// Run a function in an isolated AsyncLocalStorage context. Creates a
+// shallow clone of the parent store with a cloned _meteor_dynamics
+// object, so EnvironmentVariable.set() calls within `fn` don't corrupt
+// sibling or parent contexts. Use this when running concurrent tasks
+// that call buildmessage.enterJob() or other EnvironmentVariable-mutating code.
+exports.withIsolatedContext = function (fn) {
+  var als = global.__METEOR_ASYNC_LOCAL_STORAGE;
+  var parentStore = als.getStore() || {};
+  var childStore = Object.assign({}, parentStore);
+  if (childStore._meteor_dynamics) {
+    childStore._meteor_dynamics = Object.assign({}, childStore._meteor_dynamics);
+  }
+  return als.run(childStore, fn);
+};
+
 // This is like Meteor.bindEnvironment.
 // Experimentally, we are NOT including onException or _this in this version.
 exports.bindEnvironment = function (func) {

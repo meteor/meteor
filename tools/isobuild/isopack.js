@@ -449,63 +449,76 @@ Object.assign(Isopack.prototype, {
       return;
     }
 
-    self.sourceProcessors.compiler = new buildPluginModule.SourceProcessorSet(
-      self.displayName(), { hardcodeJs: true, singlePackage: true });
-    self.sourceProcessors.linter = new buildPluginModule.SourceProcessorSet(
-      self.displayName(), { singlePackage: true, allowConflicts: true });
-    self.sourceProcessors.minifier = new buildPluginModule.SourceProcessorSet(
-      self.displayName(), { singlePackage: true });
+    // Guard against concurrent initialization from parallel compilations.
+    // Multiple packages compiled in parallel may all try to initialize the
+    // same plugin package simultaneously. Only the first caller initializes;
+    // subsequent callers wait for the same promise.
+    if (self._pluginInitPromise) {
+      await self._pluginInitPromise;
+      return;
+    }
 
-    for (const [name, pluginsByArch] of Object.entries(self.plugins)) {
-      var arch = archinfo.mostSpecificMatch(
-          archinfo.host(), Object.keys(pluginsByArch));
-      if (! arch) {
-        buildmessage.error("package `" + name + "` is built for incompatible " +
-            "architecture");
-        // Recover by ignoring plugin
-        // XXX does this recovery work?
-        continue;
-      }
+    self._pluginInitPromise = (async () => {
+      self.sourceProcessors.compiler = new buildPluginModule.SourceProcessorSet(
+        self.displayName(), { hardcodeJs: true, singlePackage: true });
+      self.sourceProcessors.linter = new buildPluginModule.SourceProcessorSet(
+        self.displayName(), { singlePackage: true, allowConflicts: true });
+      self.sourceProcessors.minifier = new buildPluginModule.SourceProcessorSet(
+        self.displayName(), { singlePackage: true });
 
-      var plugin = pluginsByArch[arch];
-      await buildmessage.enterJob({
-        title: "loading plugin `" + name +
-            "` from package `" + self.name + "`"
-        // don't necessarily have rootPath anymore
-        // (XXX we do, if the isopack was locally built, which is
-        // the important case for debugging. it'd be nice to get this
-        // case right.)
-      }, async function () {
-        // Make a new Plugin API object for this plugin.
-        const Plugin = self._makePluginApi(name);
-        const __meteor_bootstrap__ = {
-          isFibersDisabled: true,
-          // Set to null to tell Meteor.startup to call hooks immediately
-          // XXX: should we fully support startup hooks in build plugins?
-          startupHooks: null
-        };
+      for (const [name, pluginsByArch] of Object.entries(self.plugins)) {
+        var arch = archinfo.mostSpecificMatch(
+            archinfo.host(), Object.keys(pluginsByArch));
+        if (! arch) {
+          buildmessage.error("package `" + name + "` is built for incompatible " +
+              "architecture");
+          // Recover by ignoring plugin
+          // XXX does this recovery work?
+          continue;
+        }
 
-        await plugin.load({
-          Plugin,
-          Profile,
-          __meteor_bootstrap__
+        var plugin = pluginsByArch[arch];
+        await buildmessage.enterJob({
+          title: "loading plugin `" + name +
+              "` from package `" + self.name + "`"
+          // don't necessarily have rootPath anymore
+          // (XXX we do, if the isopack was locally built, which is
+          // the important case for debugging. it'd be nice to get this
+          // case right.)
+        }, async function () {
+          // Make a new Plugin API object for this plugin.
+          const Plugin = self._makePluginApi(name);
+          const __meteor_bootstrap__ = {
+            isFibersDisabled: true,
+            // Set to null to tell Meteor.startup to call hooks immediately
+            // XXX: should we fully support startup hooks in build plugins?
+            startupHooks: null
+          };
+
+          await plugin.load({
+            Plugin,
+            Profile,
+            __meteor_bootstrap__
+          });
         });
-      });
-    }
-
-    // Instantiate each of the registered batch plugins.  Note that we don't
-    // do this directly in the registerCompiler (etc) call, because we want
-    // to allow people to do something like:
-    //   Plugin.registerCompiler({...}, function () { return new C; });
-    //   var C = function () {...}
-    // and so we want to wait for C to be defined.
-    for (const sourceProcessorSet of Object.values(self.sourceProcessors)) {
-      for (const sourceProcessor of sourceProcessorSet.allSourceProcessors) {
-        await sourceProcessor.instantiatePlugin();
       }
-    }
 
-    self._pluginsInitialized = true;
+      // Instantiate each of the registered batch plugins.  Note that we don't
+      // do this directly in the registerCompiler (etc) call, because we want
+      // to allow people to do something like:
+      //   Plugin.registerCompiler({...}, function () { return new C; });
+      //   var C = function () {...}
+      // and so we want to wait for C to be defined.
+      for (const sourceProcessorSet of Object.values(self.sourceProcessors)) {
+        for (const sourceProcessor of sourceProcessorSet.allSourceProcessors) {
+          await sourceProcessor.instantiatePlugin();
+        }
+      }
+
+      self._pluginsInitialized = true;
+    })();
+
+    await self._pluginInitPromise;
   }),
 
   _makePluginApi: function (pluginName) {

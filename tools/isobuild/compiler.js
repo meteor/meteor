@@ -121,28 +121,32 @@ compiler.compile = Profile(function (packageSource, options) {
   //
   // We run this even if we have no dependencies, because we might
   // need to delete dependencies we used to have.
+  // Run prod and dev npm updates in parallel (they use separate cache dirs)
   var nodeModulesPath = null;
   var devNodeModulesPath = null;
-  if (packageSource.npmCacheDirectory) {
-    if (await meteorNpm.updateDependencies(packageSource.name,
-                                     packageSource.npmCacheDirectory,
-                                     packageSource.npmDependencies)) {
-      nodeModulesPath = files.pathJoin(
-        packageSource.npmCacheDirectory,
-        'node_modules'
-      );
-    }
-  }
-
-  if (packageSource.npmDevCacheDirectory) {
-    if (await meteorNpm.updateDependencies(packageSource.name,
-        packageSource.npmDevCacheDirectory,
-        packageSource.npmDevDependencies)) {
-      devNodeModulesPath = files.pathJoin(
+  const [npmResult, npmDevResult] = await Promise.all([
+    packageSource.npmCacheDirectory
+      ? meteorNpm.updateDependencies(packageSource.name,
+          packageSource.npmCacheDirectory,
+          packageSource.npmDependencies)
+      : null,
+    packageSource.npmDevCacheDirectory
+      ? meteorNpm.updateDependencies(packageSource.name,
           packageSource.npmDevCacheDirectory,
-          'node_modules'
-      );
-    }
+          packageSource.npmDevDependencies)
+      : null,
+  ]);
+  if (npmResult) {
+    nodeModulesPath = files.pathJoin(
+      packageSource.npmCacheDirectory,
+      'node_modules'
+    );
+  }
+  if (npmDevResult) {
+    devNodeModulesPath = files.pathJoin(
+      packageSource.npmDevCacheDirectory,
+      'node_modules'
+    );
   }
 
   // Find all the isobuild:* pseudo-packages that this package depends on. Why
@@ -189,25 +193,32 @@ compiler.compile = Profile(function (packageSource, options) {
     isobuildFeatures
   });
 
-  for (const architecture of packageSource.architectures) {
-    if (architecture.arch === 'web.cordova' && !includeCordovaUnibuild) {
-      continue;
-    }
-    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
+  // Compile all architectures in parallel (they produce independent unibuilds)
+  const archsToCompile = packageSource.architectures.filter(architecture => {
+    if (architecture.arch === 'web.cordova' && !includeCordovaUnibuild) return false;
+    if (global.includedWebArchs != null &&
+        ![...global.includedWebArchs, 'os'].includes(architecture.arch)) return false;
+    return true;
+  });
 
-    await files.withCache(async () => {
-      const unibuildResult = await compileUnibuild({
-        isopack: isopk,
-        sourceArch: architecture,
-        isopackCache: isopackCache,
-        nodeModulesPath: nodeModulesPath,
-        devNodeModulesPath: devNodeModulesPath,
-      });
+  const archResults = await Promise.all(
+    archsToCompile.map(architecture =>
+      files.withCache(async () => {
+        return await compileUnibuild({
+          isopack: isopk,
+          sourceArch: architecture,
+          isopackCache: isopackCache,
+          nodeModulesPath: nodeModulesPath,
+          devNodeModulesPath: devNodeModulesPath,
+        });
+      })
+    )
+  );
 
-      Object.assign(pluginProviderPackageNames,
-          unibuildResult.pluginProviderPackageNames);
-    });
-  }
+  archResults.forEach(result => {
+    Object.assign(pluginProviderPackageNames,
+        result.pluginProviderPackageNames);
+  });
 
   if (options.includePluginProviderPackageMap) {
     isopk.setPluginProviderPackageMap(
@@ -233,22 +244,47 @@ compiler.lint = Profile(function (packageSource, options) {
   const warnings = new buildmessage._MessageSet();
   let linted = false;
 
-  for (const architecture of packageSource.architectures) {
-    if (!options.includeCordovaUnibuild && architecture.arch === 'web.cordova') {
-      continue;
-    }
-    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
+  const archsToLint = packageSource.architectures.filter(architecture => {
+    if (!options.includeCordovaUnibuild && architecture.arch === 'web.cordova') return false;
+    if (global.includedWebArchs != null &&
+        ![...global.includedWebArchs, 'os'].includes(architecture.arch)) return false;
+    return true;
+  });
 
-    const unibuildWarnings = await lintUnibuild({
-      isopack: options.isopack,
+  // Pre-initialize all plugin packages before parallel linting.
+  // ensurePluginsInitialized loads Reify modules which cannot be
+  // evaluated concurrently on the same isopack.
+  const allPluginPackages = new Set();
+  for (const architecture of archsToLint) {
+    const pkgs = await getActivePluginPackages(options.isopack, {
       isopackCache: options.isopackCache,
-      sourceArch: architecture
+      uses: architecture.uses
     });
+    for (const pkg of Object.values(pkgs)) {
+      allPluginPackages.add(pkg);
+    }
+  }
+  for (const pkg of allPluginPackages) {
+    await pkg.ensurePluginsInitialized();
+  }
+
+  // Now lint all architectures in parallel (plugins already initialized)
+  const lintResults = await Promise.all(
+    archsToLint.map(architecture =>
+      lintUnibuild({
+        isopack: options.isopack,
+        isopackCache: options.isopackCache,
+        sourceArch: architecture
+      })
+    )
+  );
+
+  lintResults.forEach(unibuildWarnings => {
     if (unibuildWarnings) {
       linted = true;
       warnings.merge(unibuildWarnings);
     }
-  }
+  });
 
   return {warnings, linted};
 });

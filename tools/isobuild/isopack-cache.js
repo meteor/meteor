@@ -62,14 +62,15 @@ export class IsopackCache {
       files.mkdir_p(self.cacheDir);
     }
 
+    // Sequential loading with depth-first dependency resolution.
     var onStack = {};
     if (rootPackageNames) {
       for (const name of rootPackageNames) {
-        await self._ensurePackageLoaded(name, onStack);
+        await self._ensurePackageLoadedSequential(name, onStack);
       }
     } else {
       await self._packageMap.eachPackage(async function (name) {
-        await self._ensurePackageLoaded(name, onStack);
+        await self._ensurePackageLoadedSequential(name, onStack);
         await requestGarbageCollection();
       });
     }
@@ -190,24 +191,16 @@ export class IsopackCache {
     }
   }
 
-  async _ensurePackageLoaded(name, onStack) {
+  // Loads a package and all its dependencies. The loadDeps parameter is a
+  // strategy function: async (depNames) => void. In parallel mode it uses
+  // Promise.all with dedup; in sequential mode it loads deps one at a time
+  // with circular dependency detection.
+  async _ensurePackageLoaded(name, loadDeps) {
     var self = this;
     buildmessage.assertInCapture();
     if (name in self._isopacks) {
       return;
     }
-
-    var ensureLoaded = async function (depName) {
-      if (depName in onStack) {
-        buildmessage.error("circular dependency between packages " +
-                           name + " and " + depName);
-        // recover by not enforcing one of the dependencies
-        return;
-      }
-      onStack[depName] = true;
-      await self._ensurePackageLoaded(depName, onStack);
-      delete onStack[depName];
-    };
 
     var packageInfo = self._packageMap.getInfo(name);
     if (! packageInfo) {
@@ -231,15 +224,58 @@ export class IsopackCache {
     if (packageInfo.kind === 'local') {
       var packageNames =
             packageInfo.packageSource.getPackagesToLoadFirst(self._packageMap);
-      await buildmessage.enterJob("preparing to build package " + name, async function () {
-        for (const depName of packageNames) {
-          await ensureLoaded(depName);
-        }
-        // If we failed to load something that this package depends on, don't
-        // load it.
-        if (buildmessage.jobHasMessages()) {
+
+      await loadDeps(packageNames);
+
+      // If we failed to load something that this package depends on, don't
+      // load it.
+      if (buildmessage.jobHasMessages()) {
+        return;
+      }
+
+      // Fast path 1: if the previous in-memory isopack is still valid,
+      // reuse it immediately without entering the serial build queue.
+      // This avoids O(n) queue wait on rebuilds where nothing changed.
+      if (previousIsopack && self._checkUpToDatePreloaded(previousIsopack)) {
+        self.allLoadedLocalPackagesWatchSet.merge(previousIsopack.getMergedWatchSet());
+        self._isopacks[name] = previousIsopack;
+        return;
+      }
+
+      // Fast path 2: if the on-disk cache is up-to-date, load the
+      // isopack from disk without entering the serial build queue.
+      // This avoids serialization on initial startup when all packages
+      // are already compiled and cached.
+      // Skip for plugin packages — they need ensurePluginsInitialized
+      // called inside a buildmessage job context (provided by the
+      // build queue path in _loadLocalPackage).
+      if (self.cacheDir && !packageInfo.packageSource.containsPlugins()) {
+        var isopackBuildInfoJson = files.readJSONOrNull(
+          self._isopackBuildInfoPath(name));
+        if (self._checkUpToDate(isopackBuildInfoJson)) {
+          var pluginCacheDir;
+          if (self._pluginCacheDirRoot) {
+            pluginCacheDir = self._pluginCacheDirForLocal(name);
+            files.mkdir_p(pluginCacheDir);
+          }
+
+          var isopack = new isopackModule.Isopack();
+          await isopack.initFromPath(name, self._isopackDir(name), {
+            isopackBuildInfoJson: isopackBuildInfoJson,
+            pluginCacheDir: pluginCacheDir,
+          });
+          isopack.setPluginProviderPackageMap(
+            self._packageMap.makeSubsetMap(
+              Object.keys(isopackBuildInfoJson.pluginProviderPackageMap)));
+
+          self.allLoadedLocalPackagesWatchSet.merge(isopack.getMergedWatchSet());
+          self._isopacks[name] = isopack;
           return;
         }
+      }
+
+      // Build the package.
+      await buildmessage.enterJob("preparing to build package " + name, async function () {
         await Profile.time('IsopackCache Build local isopack', async () => {
           await self._loadLocalPackage(name, packageInfo, previousIsopack);
         });
@@ -281,12 +317,9 @@ export class IsopackCache {
               await isopack.initFromPath(name, isopackPath, {
                 pluginCacheDir: pluginCacheDir
               });
-              // If loading the isopack fails, then we don't need to look for more
+              // If loading the isopack fails, we don't need to look for more
               // packages to load, but we should still recover by putting it in
               // self._isopacks.
-              if (buildmessage.jobHasMessages()) {
-                return;
-              }
               packagesToLoad = await isopack.getStrongOrderedUsedAndImpliedPackages();
             });
         }
@@ -296,12 +329,35 @@ export class IsopackCache {
       // Also load its dependencies. This is so that if this package is being
       // built as part of a plugin, all the transitive dependencies of the
       // plugin are loaded.
-      for (const packageToLoad of packagesToLoad) {
-        await ensureLoaded(packageToLoad);
-      }
+      await loadDeps(packagesToLoad);
     } else {
       throw Error("unknown packageInfo kind?");
     }
+  }
+
+  // Sequential fallback used when circular dependencies are detected.
+  // Preserves the original depth-first loading with onStack cycle detection.
+  async _ensurePackageLoadedSequential(name, onStack) {
+    var self = this;
+    if (name in self._isopacks) {
+      return;
+    }
+
+    var loadDeps = async function (depNames) {
+      for (const depName of depNames) {
+        if (depName in onStack) {
+          buildmessage.error("circular dependency between packages " +
+                             name + " and " + depName);
+          // recover by not enforcing one of the dependencies
+          continue;
+        }
+        onStack[depName] = true;
+        await self._ensurePackageLoadedSequential(depName, onStack);
+        delete onStack[depName];
+      }
+    };
+
+    await self._ensurePackageLoaded(name, loadDeps);
   }
 
   async _loadLocalPackage(name, packageInfo, previousIsopack) {
@@ -342,6 +398,16 @@ export class IsopackCache {
           isopack.setPluginProviderPackageMap(
             self._packageMap.makeSubsetMap(
               Object.keys(isopackBuildInfoJson.pluginProviderPackageMap)));
+          // Pre-initialize plugins now (while we're inside the serialized
+          // build queue's enterJob context) so that compiler.compile(the app)
+          // doesn't have to pay the ~3-4s per-plugin JsImage#load cost later.
+          // On fresh process starts with a warm disk cache, this moves ~27s of
+          // plugin initialization from Build App into prepareProjectForBuild
+          // where progress messages are shown.
+          if (Object.keys(isopack.plugins).length > 0) {
+            await isopack.ensurePluginsInitialized();
+          }
+
           // Because we don't save linter messages to disk, we have to relint
           // this package.
           // XXX save linter messages to disk?

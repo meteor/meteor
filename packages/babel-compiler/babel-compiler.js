@@ -50,33 +50,43 @@ var isMeteorPre144 = semver.lt(process.version, "4.8.1");
 var enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
 
 function compileWithBabel(source, babelOptions, cacheOptions) {
+  // Babel options contain plugin functions which cannot be serialized
+  // across worker thread boundaries (DataCloneError), so Babel
+  // compilation always runs on the main thread.
   return profile('Babel.compile', function () {
     return Babel.compile(source, babelOptions, cacheOptions);
   });
 }
 
 function compileWithSwc(source, swcOptions = {}, { features }) {
+  // Build reify options from features.
+  const reifyOptions = {
+    ...(features.topLevelAwait && { topLevelAwait: true }),
+    ...(features.compileForShell && { moduleAlias: 'module' }),
+    ...((features.modernBrowsers || features.nodeMajorVersion >= 8) && {
+      avoidModernSyntax: false,
+      generateLetDeclarations: true,
+    }),
+  };
+
+  // SWC compilation runs on the main thread. The @meteorjs/swc-core
+  // and @meteorjs/reify packages are package-specific npm deps that
+  // live in .npm/package/node_modules/ — worker threads cannot
+  // resolve them. Main-thread SWC is already fast (~150ms for 108
+  // files) so there's no meaningful gain from offloading it.
   return profile('SWC.compile', function () {
-    // Perform SWC transformation.
     const transformed = SWC.transformSync(source, swcOptions);
 
     let content = transformed.code;
 
-    // Preserve Meteor-specific features: reify modules, nested imports, and top-level await support.
     const result = reifyCompile(content, {
       parse: reifyAcornParse,
       generateLetDeclarations: false,
       ast: false,
-      // Enforce reify options for proper compatibility.
       avoidModernSyntax: true,
       enforceStrictMode: false,
       dynamicImport: true,
-      ...(features.topLevelAwait && { topLevelAwait: true }),
-      ...(features.compileForShell && { moduleAlias: 'module' }),
-      ...((features.modernBrowsers || features.nodeMajorVersion >= 8) && {
-        avoidModernSyntax: false,
-        generateLetDeclarations: true,
-      }),
+      ...reifyOptions,
     });
     content = result.code;
 
@@ -178,7 +188,7 @@ BCp.initializeMeteorAppSwcHelpersAvailable = function () {
   return hasSwcHelpersAvailable;
 };
 
-BCp.processFilesForTarget = function (inputFiles) {
+BCp.processFilesForTarget = async function (inputFiles) {
   var compiler = this;
 
   // Reset this cache for each batch processed.
@@ -188,26 +198,43 @@ BCp.processFilesForTarget = function (inputFiles) {
   this.initializeMeteorAppSwcrc();
   this.initializeMeteorAppSwcHelpersAvailable();
 
-  inputFiles.forEach(function (inputFile) {
+  const lazyFiles = [];
+  const nonLazyPromises = [];
+
+  for (const inputFile of inputFiles) {
     if (inputFile.supportsLazyCompilation) {
-      inputFile.addJavaScript({
-        path: inputFile.getPathInPackage(),
-        bare: !! inputFile.getFileOptions().bare
-      }, function () {
-        return compiler.processOneFileForTarget(inputFile);
-      });
+      lazyFiles.push(inputFile);
     } else {
-      var toBeAdded = compiler.processOneFileForTarget(inputFile);
-      if (toBeAdded) {
-        inputFile.addJavaScript(toBeAdded);
-      }
+      // Non-lazy files: compile in parallel via worker pool (when available).
+      nonLazyPromises.push(
+        compiler.processOneFileForTarget(inputFile)
+          .then((toBeAdded) => ({ inputFile, toBeAdded }))
+      );
     }
-  });
+  }
+
+  // Await all non-lazy compilations (pool processes them in parallel).
+  const nonLazyResults = await Promise.all(nonLazyPromises);
+  for (const { inputFile, toBeAdded } of nonLazyResults) {
+    if (toBeAdded) {
+      inputFile.addJavaScript(toBeAdded);
+    }
+  }
+
+  // Lazy files use deferred compilation callbacks.
+  for (const inputFile of lazyFiles) {
+    inputFile.addJavaScript({
+      path: inputFile.getPathInPackage(),
+      bare: !!inputFile.getFileOptions().bare,
+    }, function () {
+      return compiler.processOneFileForTarget(inputFile);
+    });
+  }
 };
 
 // Returns an object suitable for passing to inputFile.addJavaScript, or
 // null to indicate there was an error, and nothing should be added.
-BCp.processOneFileForTarget = function (inputFile, source) {
+BCp.processOneFileForTarget = async function (inputFile, source) {
   this._babelrcCache = this._babelrcCache || Object.create(null);
   this._swcCache = this._swcCache || Object.create(null);
   this._swcIncompatible = this._swcIncompatible || Object.create(null);
@@ -415,7 +442,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     var babelOptions = { filename };
     try {
-      var result = (() => {
+      var result = await (async () => {
         const isNodeModulesCode = packageName == null && inputFilePath.includes("node_modules/");
         const isAppCode = packageName == null && !isNodeModulesCode;
         const isPackageCode = packageName != null;
@@ -482,7 +509,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             }
 
             const swcOptions = setupSWCOptions();
-            compilation = compileWithSwc(
+            compilation = await compileWithSwc(
               source,
               swcOptions,
               { features },
@@ -494,7 +521,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             // Set up Babel options only when compiling with Babel
             babelOptions = setupBabelOptions();
 
-            compilation = compileWithBabel(source, babelOptions, cacheOptions);
+            compilation = await compileWithBabel(source, babelOptions, cacheOptions);
             usedSwc = false;
           }
 
@@ -513,7 +540,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
           // If SWC fails, fall back to Babel
 
           babelOptions = setupBabelOptions();
-          compilation = compileWithBabel(source, babelOptions, cacheOptions);
+          compilation = await compileWithBabel(source, babelOptions, cacheOptions);
           if (this.isVerbose()) {
             logTranspilation({
               usedSwc: false,
