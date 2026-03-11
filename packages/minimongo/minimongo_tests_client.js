@@ -4011,6 +4011,29 @@ Tinytest.addAsync('minimongo - asyncIterator', async (test) => {
   test.equal(itemIds, ['a', 'b']);
 });
 
+['forEachAsync', 'mapAsync'].forEach((methodName) => {
+  Tinytest.addAsync(`minimongo - awaiting ${methodName} item callbacks`, async (test) => {
+    const collection = new LocalCollection();
+
+    collection.insert({ _id: 'a' });
+    collection.insert({ _id: 'b' });
+
+    const result = ['before'];
+
+    await collection.find()[methodName](async function(item) {
+      await Meteor._sleepForMs(0);
+      result.push(item._id + '1');
+      await Meteor._sleepForMs(0);
+      result.push(item._id + '2');
+    });
+
+    result.push('after');
+
+    // Verify that each item callback was awaited correctly, in order
+    test.equal(result, ['before', 'a1', 'a2', 'b1', 'b2', 'after']);
+  });
+});
+
 Tinytest.add('minimongo - operation result fields (sync)', test => {
   const c = new LocalCollection();
 
