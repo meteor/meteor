@@ -966,6 +966,22 @@ const toJSONValueHelper = function(item) {
     return { $date: item.getTime() };
   }
 
+  // Handle Infinity, -Infinity, NaN (not representable in JSON)
+  if (typeof item === 'number') {
+    if (isNaN(item)) return { $InfNaN: 0 };
+    if (item === Infinity) return { $InfNaN: 1 };
+    if (item === -Infinity) return { $InfNaN: -1 };
+  }
+
+  // Handle plain objects whose keys start with '$' — they look like EJSON
+  // special types and must be wrapped in $literal to survive the round-trip.
+  if (isObject(item) && !Array.isArray(item)) {
+    const ks = Object.keys(item);
+    if (ks.length > 0 && ks.every(k => k.charAt(0) === '$')) {
+      return { $literal: item };
+    }
+  }
+
   // No conversion needed
   return undefined;
 };
@@ -1058,9 +1074,22 @@ const fromJSONValueHelper = function(value) {
         return Base64.decode(value.$binary);
       }
 
-      // Handle dates ($date)
-      if (value.$date) {
+      // Handle dates ($date) — use hasOwnProperty to correctly handle $date: 0
+      if (Object.prototype.hasOwnProperty.call(value, '$date')) {
         return new Date(value.$date);
+      }
+
+      // Handle Infinity/NaN ($InfNaN)
+      if (Object.prototype.hasOwnProperty.call(value, '$InfNaN')) {
+        const v = value.$InfNaN;
+        if (v === 0) return NaN;
+        if (v === 1) return Infinity;
+        if (v === -1) return -Infinity;
+      }
+
+      // Handle literal objects ($literal) — unwrap to the inner value
+      if (Object.prototype.hasOwnProperty.call(value, '$literal')) {
+        return value.$literal;
       }
     }
   }

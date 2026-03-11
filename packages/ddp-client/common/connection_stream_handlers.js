@@ -13,7 +13,7 @@ export class ConnectionStreamHandlers {
   async onMessage(raw_msg) {
     let msg;
     try {
-      msg = DDPCommon.parseDDP(raw_msg);
+      msg = DDPCommon.parseDDP(raw_msg, this._connection._serializer);
     } catch (e) {
       Meteor._debug('Exception while parsing DDP', e);
       return;
@@ -27,16 +27,17 @@ export class ConnectionStreamHandlers {
 
     if (msg === null || !msg.msg) {
       if(!msg || !msg.testMessageOnConnect) {
-        if (Object.keys(msg).length === 1 && msg.server_id) return;
+        if (msg && Object.keys(msg).length === 1 && msg.server_id) return;
         Meteor._debug('discarding invalid livedata message', msg);
       }
       return;
     }
 
-    // Important: This was missing from previous version
-    // We need to set the current version before routing the message
     if (msg.msg === 'connected') {
       this._connection._version = this._connection._versionSuggestion;
+      // Switch to the negotiated serializer for all subsequent messages.
+      this._connection._serializer =
+        DDPCommon.SERIALIZER_FOR_VERSION[this._connection._version] || 'json';
     }
 
     await this._routeMessage(msg);
