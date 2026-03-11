@@ -32,6 +32,29 @@ function getMeteorConfig() {
 
 let swc;
 
+// Native Rust minifier — ~5x faster than SWC.
+// oxc-minify is ESM-only, so we load the native NAPI binding directly
+// (same approach as oxc-parser in js-analyze.js).
+let oxcMinifySync;
+try {
+  const oxcTargets = {
+    'win32-x64': '@oxc-minify/binding-win32-x64-msvc',
+    'win32-ia32': '@oxc-minify/binding-win32-ia32-msvc',
+    'win32-arm64': '@oxc-minify/binding-win32-arm64-msvc',
+    'darwin-x64': '@oxc-minify/binding-darwin-x64',
+    'darwin-arm64': '@oxc-minify/binding-darwin-arm64',
+    'linux-x64': '@oxc-minify/binding-linux-x64-gnu',
+    'linux-arm64': '@oxc-minify/binding-linux-arm64-gnu',
+  };
+  const oxcPkg = oxcTargets[process.platform + '-' + process.arch];
+  if (oxcPkg) {
+    const oxcBinding = require(oxcPkg);
+    oxcMinifySync = oxcBinding.minifySync;
+  }
+} catch (e) {
+  oxcMinifySync = null;
+}
+
 // Register the minifier only when Plugin is available (not in tests)
 if (typeof Plugin !== 'undefined') {
   Plugin.registerMinifier({
@@ -43,6 +66,40 @@ if (typeof Plugin !== 'undefined') {
 }
 
 export class MeteorMinifier {
+  _minifyWithOxc(file) {
+    return Profile('_minifyWithOxc', () => {
+      if (!oxcMinifySync) {
+        throw new Error('oxc-minify native binding not available');
+      }
+
+      const content = file.getContentsAsString();
+      const filename = file.getPathInBundle() || 'input.js';
+
+      const result = oxcMinifySync(filename, content, {
+        compress: {
+          target: 'es2015',
+          dropDebugger: false,
+          unused: true,
+        },
+        mangle: true,
+        codegen: { removeWhitespace: true },
+        sourcemap: true,
+      });
+
+      if (result.errors && result.errors.length > 0) {
+        const err = result.errors[0];
+        throw new Error(
+          `oxc minification error: ${err.message || err}`
+        );
+      }
+
+      return {
+        code: result.code,
+        map: result.map || null,
+      };
+    })();
+  }
+
   _minifyWithSWC(file) {
     return Profile('_minifyWithSWC', () => {
       swc = swc || require('@meteorjs/swc-core'); 
@@ -112,6 +169,22 @@ export class MeteorMinifier {
         (meteorConfig?.modern === true ||
           (meteorConfig?.modern &&
             meteorConfig?.modern?.minifier === true));
+
+      // oxc-minify: opt-in via METEOR_USE_OXC_MINIFIER=1 env var
+      // or meteor config { modern: { minifier: 'oxc' } }
+      const useOxc = process.env.METEOR_USE_OXC_MINIFIER === '1' ||
+        (meteorConfig?.modern?.minifier === 'oxc');
+
+      if (useOxc && oxcMinifySync) {
+        try {
+          Meteor._debug(`Minifying using oxc  | file: ${file.getPathInBundle()}`);
+          return this._minifyWithOxc(file);
+        } catch (oxcError) {
+          Meteor._debug(`oxc failed, falling back to SWC  | file: ${file.getPathInBundle()}`);
+          // Fall through to SWC/Terser
+        }
+      }
+
       // check if config is an empty object
       if(meteorConfig && Object.keys(meteorConfig).length === 0 || !modern) {
         Meteor._debug(`Minifying using Terser  | file: ${file.getPathInBundle()}`);
