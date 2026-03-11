@@ -11,9 +11,14 @@ module.exports = {
   transformIgnorePatterns: [
     "/node_modules/(?!(execa|wait-on|is-docker|is-stream|human-signals|merge-stream|npm-run-path|onetime|mimic-fn|strip-final-newline|path-key|shebug-command|shebug-regex)/)"
   ],
-  // Use Babel to transform JavaScript files
   transform: {
-    "^.+\\.js$": "babel-jest"
+    "^.+\\.js$": ["@swc/jest", {
+      jsc: {
+        parser: { syntax: "ecmascript" },
+        target: "es2022",
+      },
+      module: { type: "commonjs" },
+    }],
   },
   // Playwright configuration
   globals: {
