@@ -2783,18 +2783,19 @@ class JsImage {
     // Rebuild binary npm packages if host arch matches image arch.
     const rebuildBinaries = archinfo.matches(archinfo.host(), ret.arch);
 
-    // Process all load items in parallel: file reads, source maps,
-    // assets, and node_modules directory scanning all run concurrently.
-    const loadResults = await Promise.all(json.load.map(async (item) => {
+    for (const item of json.load) {
       rejectBadPath(item.path);
 
       let nodeModulesDirectories;
       if (item.node_modules) {
-        nodeModulesDirectories =
-            await NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
-              sourceRoot: dir,
-              rebuildBinaries,
-            });
+        Object.assign(
+            ret.nodeModulesDirectories,
+            nodeModulesDirectories =
+                await NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
+                  sourceRoot: dir,
+                  rebuildBinaries,
+                })
+        );
       }
 
       var loadItem = {
@@ -2818,14 +2819,6 @@ class JsImage {
         });
       }
 
-      return { loadItem, nodeModulesDirectories };
-    }));
-
-    // Merge results in order (Promise.all preserves order).
-    for (const { loadItem, nodeModulesDirectories } of loadResults) {
-      if (nodeModulesDirectories) {
-        Object.assign(ret.nodeModulesDirectories, nodeModulesDirectories);
-      }
       ret.jsToLoad.push(loadItem);
     }
 
