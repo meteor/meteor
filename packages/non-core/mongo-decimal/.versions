@@ -31,7 +31,7 @@ minimongo@2.0.2
 modern-browsers@0.1.11
 modules@0.20.3
 modules-runtime@0.13.2
-mongo@2.3.0-beta350
+mongo@2.0.3
 mongo-decimal@0.2.0
 mongo-dev-server@1.1.1
 mongo-id@1.0.9
