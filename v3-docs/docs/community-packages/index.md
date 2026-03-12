@@ -24,6 +24,10 @@ Please bear in mind if you are adding a package to this list, try providing as m
 
 ## List of Community Packages
 
+#### AI/LLM helpers
+
+- [Wormhole](./wormhole.md) Meteor Wormhole, MCP and REST API endpoint creator
+
 #### Method/Subscription helpers
 
 - [`meteor-rpc`](./meteor-rpc.md), Meteor Methods Evolved with type checking and runtime validation
