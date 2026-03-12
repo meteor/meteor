@@ -1030,10 +1030,9 @@ export class Connection {
 
   // Sends the DDP stringification of the given message object
   _send(obj) {
-    const supportsBinary = this._stream._supportsBinary || false;
     // Handshake messages are always JSON regardless of negotiated serializer.
     const serializer = (obj.msg === 'connect') ? 'json' : this._serializer;
-    this._stream.send(DDPCommon.stringifyDDP(obj, { serializer, supportsBinary }));
+    this._stream.send(DDPCommon.stringifyDDP(obj, { serializer }));
   }
 
   // Always queues the call before sending the message

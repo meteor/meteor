@@ -158,9 +158,6 @@ export class ClientStream extends StreamClientCommon {
       fayeOptions
     ));
 
-    // Mark that native WebSocket connections support binary frames
-    this._supportsBinary = true;
-
     this._clearConnectionTimer();
     this.connectionTimer = Meteor.setTimeout(() => {
       this._lostConnection(new this.ConnectionError('DDP connection timed out'));
@@ -198,14 +195,11 @@ export class ClientStream extends StreamClientCommon {
     });
 
     clientOnIfCurrent('message', 'stream message callback', message => {
-      // Accept both string (JSON/Base64-CBOR) and binary (native CBOR) frames
-      // Convert Buffer to Uint8Array for binary frames
-      const data = typeof message.data === 'string'
-        ? message.data
-        : new Uint8Array(message.data);
+      // Ignore binary frames, where message.data is a Buffer
+      if (typeof message.data !== 'string') return;
 
       this.forEachCallback('message', callback => {
-        callback(data);
+        callback(message.data);
       });
     });
   }

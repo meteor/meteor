@@ -335,7 +335,7 @@ Object.assign(Session.prototype, {
       const serializer = (msg.msg === 'connected') ? 'json' : self._serializer;
       if (Meteor._printSentDDP)
         Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
-      self.socket.send(DDPCommon.stringifyDDP(msg, { serializer, supportsBinary: true }));
+      self.socket.send(DDPCommon.stringifyDDP(msg, { serializer }));
     }
   },
 
@@ -1291,7 +1291,7 @@ Server = function (options = {}) {
       if (offendingMessage)
         msg.offendingMessage = offendingMessage;
       // Pre-session errors are always JSON.
-      socket.send(DDPCommon.stringifyDDP(msg, { serializer: 'json', supportsBinary: true }));
+      socket.send(DDPCommon.stringifyDDP(msg, { serializer: 'json' }));
     };
 
     socket.on('data', function (raw_msg) {
@@ -1411,7 +1411,7 @@ Object.assign(Server.prototype, {
           msg.support.every(isString) &&
           msg.support.includes(msg.version))) {
       socket.send(DDPCommon.stringifyDDP({msg: 'failed',
-                                version: DDPCommon.SUPPORTED_DDP_VERSIONS[0]}, { serializer: 'json', supportsBinary: true }));
+                                version: DDPCommon.SUPPORTED_DDP_VERSIONS[0]}, { serializer: 'json' }));
       socket.close();
       return;
     }
@@ -1424,7 +1424,7 @@ Object.assign(Server.prototype, {
       // The best version to use (according to the client's stated preferences)
       // is not the one the client is trying to use. Inform them about the best
       // version to use.
-      socket.send(DDPCommon.stringifyDDP({msg: 'failed', version: version}, { serializer: 'json', supportsBinary: true }));
+      socket.send(DDPCommon.stringifyDDP({msg: 'failed', version: version}, { serializer: 'json' }));
       socket.close();
       return;
     }
