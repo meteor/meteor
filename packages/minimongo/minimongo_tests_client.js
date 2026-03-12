@@ -1,5 +1,4 @@
 import {hasOwn} from './common';
-import { EJSON } from 'meteor/ejson';
 
 // Hack to make LocalCollection generate ObjectIDs by default.
 LocalCollection._useOID = true;
@@ -832,12 +831,9 @@ Tinytest.add('minimongo - selector_compiler', test => {
   matchCount({a: {$bitsAllClear: 16}}, 2);
   matchCount({a: {$bitsAllClear: 129}}, 3);
   matchCount({a: {$bitsAllClear: 255}}, 1);
-
   matchCount({a: {$bitsAnySet: 0}}, 0);
-
   matchCount({a: {$bitsAnySet: 9}}, 3);
   matchCount({a: {$bitsAnySet: 255}}, 4);
-
   matchCount({a: {$bitsAnyClear: 0}}, 0);
   matchCount({a: {$bitsAnyClear: 18}}, 3);
   matchCount({a: {$bitsAnyClear: 24}}, 3);
@@ -870,13 +866,10 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // Tests on negative numbers
 
   c.remove({});
-
   c.insert({a: -0});
   c.insert({a: -1});
   c.insert({a: -54});
 
-  const matchingDocs = c.find({a: {$bitsAllSet: 0}}).fetch();
-  
   // Tests with bitmask.
   matchCount({a: {$bitsAllSet: 0}}, 3);
   matchCount({a: {$bitsAllSet: 2}}, 2);
@@ -885,12 +878,9 @@ Tinytest.add('minimongo - selector_compiler', test => {
   matchCount({a: {$bitsAllClear: 0}}, 3);
   matchCount({a: {$bitsAllClear: 53}}, 2);
   matchCount({a: {$bitsAllClear: 127}}, 1);
-
   matchCount({a: {$bitsAnySet: 0}}, 0);
-
   matchCount({a: {$bitsAnySet: 2}}, 2);
   matchCount({a: {$bitsAnySet: 127}}, 2);
-
   matchCount({a: {$bitsAnyClear: 0}}, 0);
   matchCount({a: {$bitsAnyClear: 53}}, 2);
   matchCount({a: {$bitsAnyClear: 127}}, 2);
@@ -921,15 +911,12 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // Tests on BinData.
 
   c.remove({});
-
   c.insert({a: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')});
   c.insert({a: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')});
   c.insert({a: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')});
   c.insert({a: EJSON.parse('{"$binary": "////////////////////////////"}')});
 
-
   // Tests with binary string bitmask.
-  const mask1 = EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}');
   matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4);
   matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 3);
   matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')}}, 2);
