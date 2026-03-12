@@ -4553,7 +4553,7 @@ Meteor.isServer && testAsyncMulti(
         },
       });
 
-      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id, bad) => {
+      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id) => {
         test.equal(insertId, id);
       })
     },
@@ -4567,12 +4567,12 @@ Meteor.isServer && testAsyncMulti(
       let insertId;
       await Collection.find({}).observeChangesAsync({
         added(id) {
-          insertId = _id;
+          insertId = id;
           throw new Error('Test error in sync added observeChangesAsync');
         },
       });
 
-      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id, bad) => {
+      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id) => {
         test.equal(insertId, id);
       })
     }

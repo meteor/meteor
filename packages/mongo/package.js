@@ -80,6 +80,7 @@ Package.onUse(function (api) {
 
   api.export("Mongo");
   api.export("CollectionExtensions");
+  api.export("CollectionHooks");
   api.export("ObserveMultiplexer", "server", { testOnly: true });
 
   api.addFiles(
@@ -124,6 +125,7 @@ Package.onTest(function (api) {
     "base64",
     "typescript",
   ]);
+  api.use(["accounts-base", "accounts-password"]);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles("tests/mongo_livedata_tests.js", ["client", "server"]);
@@ -136,4 +138,8 @@ Package.onTest(function (api) {
   api.addFiles("tests/oplog_tests.js", "server");
   api.addFiles("tests/oplog_v2_converter_tests.js", "server");
   api.addFiles("tests/doc_fetcher_tests.js", "server");
+
+  // Collection hooks tests
+  api.addFiles("tests/hooks/client/main.js", "client");
+  api.addFiles("tests/hooks/server/main.js", "server");
 });

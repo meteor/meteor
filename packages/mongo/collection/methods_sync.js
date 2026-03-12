@@ -1,3 +1,5 @@
+import { CollectionHooks, runFindHooks } from './collection_hooks';
+
 export const SyncMethods = {
   /**
    * @summary Find the documents in a collection that match the selector.
@@ -25,10 +27,16 @@ export const SyncMethods = {
     // Collection.find() (return all docs) behaves differently
     // from Collection.find(undefined) (return 0 docs).  so be
     // careful about the length of arguments.
-    return this._collection.find(
-      this._getFindSelector(args),
-      this._getFindOptions(args)
-    );
+    const selector = this._getFindSelector(args);
+    const options = this._getFindOptions(args);
+    const hooks = this._hooks?.find;
+    if (!CollectionHooks._directEnv.get() && hooks &&
+        (hooks.before.length || hooks.after.length)) {
+      return runFindHooks(this, selector, options, () =>
+        this._collection.find(selector, options)
+      );
+    }
+    return this._collection.find(selector, options);
   },
 
   /**

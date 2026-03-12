@@ -12,12 +12,21 @@ import {
   validateCollectionName
 } from './collection_utils';
 import { ReplicationMethods } from './methods_replication';
+import {
+  CollectionHooks as _CollectionHooks,
+  setupHookRegistrationMethods,
+  setupHookOptions,
+  setupDirectMethods,
+} from './collection_hooks';
 
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
  */
 Mongo = {};
+
+// Expose CollectionHooks as a package-level global (for api.export and package consumers)
+CollectionHooks = _CollectionHooks;
 
 /**
  * @summary Constructor for a Collection
@@ -62,7 +71,12 @@ Mongo.Collection = function Collection(name, options) {
   setupAutopublish(this, name, options);
 
   Mongo._collections.set(name, this);
-  
+
+  // Set up collection hooks (before/after/direct)
+  setupHookRegistrationMethods(this);
+  setupHookOptions(this);
+  setupDirectMethods(this);
+
   // Apply collection extensions
   CollectionExtensions._applyExtensions(this, name, options);
 };

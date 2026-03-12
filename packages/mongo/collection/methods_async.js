@@ -1,3 +1,12 @@
+import {
+  CollectionHooks,
+  runInsertHooks,
+  runUpdateHooks,
+  runRemoveHooks,
+  runUpsertHooks,
+  runFindOneHooks,
+} from './collection_hooks';
+
 export const AsyncMethods = {
   /**
    * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
@@ -16,10 +25,29 @@ export const AsyncMethods = {
    * @returns {Object}
    */
   findOneAsync(...args) {
-    return this._collection.findOneAsync(
-      this._getFindSelector(args),
-      this._getFindOptions(args)
-    );
+    const selector = this._getFindSelector(args);
+    const options = this._getFindOptions(args);
+    const isDirect = CollectionHooks._directEnv.get();
+    const findHooks = this._hooks?.find;
+    const findOneHooks = this._hooks?.findOne;
+    const hasFindHooks = !isDirect && findHooks &&
+      (findHooks.before.length || findHooks.after.length);
+    const hasFindOneHooks = !isDirect && findOneHooks &&
+      (findOneHooks.before.length || findOneHooks.after.length);
+
+    if (hasFindHooks || hasFindOneHooks) {
+      // Route through this.find() so that before.find/after.find hooks also fire,
+      // matching historical behaviour where findOne was find(s, {limit:1}).fetch()[0].
+      const coreFindOne = () => this.find(selector, { ...options, limit: 1 })
+        .fetchAsync()
+        .then(docs => docs[0]);
+
+      if (hasFindOneHooks) {
+        return runFindOneHooks(this, selector, options, coreFindOne);
+      }
+      return coreFindOne();
+    }
+    return this._collection.findOneAsync(selector, options);
   },
 
   _insertAsync(doc, options = {}) {
@@ -101,6 +129,11 @@ export const AsyncMethods = {
    * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
    */
   insertAsync(doc, options) {
+    const hooks = this._hooks?.insert;
+    if (!CollectionHooks._directEnv.get() && hooks &&
+        (hooks.before.length || hooks.after.length)) {
+      return runInsertHooks(this, doc, () => this._insertAsync(doc, options));
+    }
     return this._insertAsync(doc, options);
   },
 
@@ -146,6 +179,18 @@ export const AsyncMethods = {
       fallbackId: insertedId,
     });
 
+    const hooks = this._hooks?.update;
+    if (!CollectionHooks._directEnv.get() && hooks &&
+        (hooks.before.length || hooks.after.length)) {
+      const coreUpdate = () => {
+        if (this._isRemoteCollection()) {
+          return this._callMutatorMethodAsync('updateAsync', [selector, modifier, options], options);
+        }
+        return this._collection.updateAsync(selector, modifier, options);
+      };
+      return runUpdateHooks(this, selector, modifier, options, coreUpdate);
+    }
+
     if (this._isRemoteCollection()) {
       const args = [selector, modifier, options];
 
@@ -176,6 +221,18 @@ export const AsyncMethods = {
   removeAsync(selector, options = {}) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
+    const hooks = this._hooks?.remove;
+    if (!CollectionHooks._directEnv.get() && hooks &&
+        (hooks.before.length || hooks.after.length)) {
+      const coreRemove = () => {
+        if (this._isRemoteCollection()) {
+          return this._callMutatorMethodAsync('removeAsync', [selector], options);
+        }
+        return this._collection.removeAsync(selector);
+      };
+      return runRemoveHooks(this, selector, coreRemove);
+    }
+
     if (this._isRemoteCollection()) {
       return this._callMutatorMethodAsync('removeAsync', [selector], options);
     }
@@ -197,6 +254,25 @@ export const AsyncMethods = {
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
    */
   async upsertAsync(selector, modifier, options) {
+    const upsertHooks = this._hooks?.upsert;
+    const insertHooks = this._hooks?.insert;
+    const updateHooks = this._hooks?.update;
+
+    const hasUpsertHooks = upsertHooks?.before?.length ||
+      insertHooks?.after?.length || updateHooks?.after?.length;
+
+    if (!CollectionHooks._directEnv.get() && hasUpsertHooks) {
+      selector = CollectionHooks.normalizeSelector(selector);
+      const coreUpsert = () => CollectionHooks.directOp(() =>
+        this.updateAsync(selector, modifier, {
+          ...options,
+          _returnObject: true,
+          upsert: true,
+        })
+      );
+      return runUpsertHooks(this, selector, modifier, options || {}, coreUpsert);
+    }
+
     return this.updateAsync(
       selector,
       modifier,
