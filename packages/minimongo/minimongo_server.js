@@ -6,7 +6,6 @@ import {
   pathsToTree,
   projectionDetails,
 } from './common.js';
-import { EJSON } from 'meteor/ejson';
 
 Minimongo._pathsElidingNumericKeys = paths => paths.map(path =>
   path.split('.').filter(part => !isNumericKey(part)).join('.')

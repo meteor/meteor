@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['ecmascript', 'reactive-dict'], 'client');
+  api.use(['ecmascript', 'reactive-dict', 'ejson'], 'client');
 
   // Session can work with or without reload, but if reload is present
   // it should load first so we can detect it at startup and populate

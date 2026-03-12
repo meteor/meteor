@@ -8,7 +8,6 @@ import {
   populateDocumentWithQueryFields,
   projectionDetails,
 } from './common.js';
-import { EJSON } from 'meteor/ejson';
 
 import { getAsyncMethodName } from './constants';
 

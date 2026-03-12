@@ -496,7 +496,7 @@ if (Meteor.isServer) {
         added: function(id, fields) {
           self.xs.push(fields.x);
           test.notEqual(self.expects.length, 0);
-          self.expects.pop();
+          self.expects.pop()();
         },
         changed: function() {
           test.fail({ unexpected: 'changed' });

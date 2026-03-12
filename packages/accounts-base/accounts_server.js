@@ -1,6 +1,5 @@
 import crypto from 'crypto';
-import { Meteor } from 'meteor/meteor';
-import { EJSON } from 'meteor/ejson';
+import { Meteor } from 'meteor/meteor'
 import { check, Match } from 'meteor/check';
 import {
   AccountsCommon,

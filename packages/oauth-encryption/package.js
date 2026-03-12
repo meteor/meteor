@@ -6,7 +6,7 @@ Package.describe({
 Package.onUse(api => {
   api.use('ecmascript', 'server');
   api.use("modules@0.19.1-beta300.7", "server");
-  api.use("ejson", "server");
+  api.use("ejson@1.1.3", "server");
   api.mainModule("encrypt.js", "server");
   api.export("OAuthEncryption", "server");
 });

@@ -1,4 +1,3 @@
-import { EJSON } from 'meteor/ejson';
 // XXX docs
 import { isPlainObject } from './isPlainObject';
 

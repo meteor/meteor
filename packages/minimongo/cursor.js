@@ -1,7 +1,6 @@
 import LocalCollection from './local_collection.js';
 import { hasOwn } from './common.js';
 import { ASYNC_CURSOR_METHODS, getAsyncMethodName } from './constants';
-import { EJSON } from 'meteor/ejson';
 
 // Cursor: a specification for a particular subset of documents, w/ a defined
 // order, limit, and offset.  creating a Cursor with LocalCollection.find(),

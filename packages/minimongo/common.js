@@ -1,5 +1,4 @@
 import LocalCollection from './local_collection.js';
-import { EJSON } from 'meteor/ejson';
 
 export const hasOwn = Object.prototype.hasOwnProperty;
 

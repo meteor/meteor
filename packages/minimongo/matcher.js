@@ -4,7 +4,6 @@ import {
   hasOwn,
   nothingMatcher,
 } from './common.js';
-import { EJSON } from 'meteor/ejson';
 
 const Decimal = Package['mongo-decimal']?.Decimal || class DecimalStub {}
 
