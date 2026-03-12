@@ -474,7 +474,7 @@ var launchMongo = async function(options) {
     if (options.multiple) {
       // This is only for testing, so we're OK with incurring the replset
       // setup on each startup.
-      await files.rm_recursive(dbPath);
+      await files.rm_recursive_deferred(dbPath);
       files.mkdir_p(dbPath, 0o755);
     } else if (portFile) {
       var portFileExists = false;
@@ -1022,6 +1022,12 @@ Object.assign(MRp, {
         '\n\n' +
         "Looks like MongoDB doesn't understand your locale settings. See\n" +
         'https://github.com/meteor/meteor/issues/4019 for more details.';
+    }
+
+    if (signal === "SIGILL"){
+      message +=
+        '\n\n' +
+        "MongoDB crashed with SIGILL, you may be running a build of Meteor not compatible with your architecture. If this persists, try re-installing Meteor.";
     }
 
     runLog.log(message);

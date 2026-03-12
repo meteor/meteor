@@ -1,0 +1,46 @@
+name: Run Profiler
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-profiler:
+    if: github.event.issue.pull_request && contains(github.event.comment.body , '/profile')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout Pull Request
+        run: gh pr checkout ${{ github.event.issue.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Set ENVs
+        run: |
+          value="VALUE"
+          echo "Key=$value" >> $GITHUB_ENV
+
+          PR_NUMBER="${{ github.event.issue.number }}"
+          echo "PrNumber=$PR_NUMBER" >> $GITHUB_ENV
+
+      - name: Run CI
+        run: |
+          echo "Running meteor profiler..."
+          echo $PR_NUMBER
+          git status
+          ls
+
+      - name: Comment PR
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: |
+            Hello world !!!! :wave:
+            this is pr number: #${{ env.PrNumber }}
+            testing value: ${{ env.Key }}
+          pr-number: ${{ github.event.issue.number }}

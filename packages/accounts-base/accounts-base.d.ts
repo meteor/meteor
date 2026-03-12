@@ -3,10 +3,20 @@ import { Meteor } from 'meteor/meteor';
 import { Configuration } from 'meteor/service-configuration';
 import { DDP } from 'meteor/ddp';
 
+/**
+ * Object containing functions that generate URLs for account-related emails.
+ * Override these to customize URLs in password reset, enrollment, and verification emails.
+ * URL methods can return either a string or a Promise that resolves to a string.
+ */
 export interface URLS {
-  resetPassword: (token: string) => string;
-  verifyEmail: (token: string) => string;
-  enrollAccount: (token: string) => string;
+  /** Generates the URL for password reset emails. Can return a Promise for async URL generation. */
+  resetPassword: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for email verification emails. Can return a Promise for async URL generation. */
+  verifyEmail: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for login token emails. Can return a Promise for async URL generation. */
+  loginToken: (selector: string, token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for account enrollment emails. Can return a Promise for async URL generation. */
+  enrollAccount: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
 }
 
 export interface EmailFields {
@@ -82,6 +92,11 @@ export namespace Accounts {
     passwordEnrollTokenExpirationInDays?: number | undefined;
     ambiguousErrorMessages?: boolean | undefined;
     bcryptRounds?: number | undefined;
+    argon2Enabled?: string | false;
+    argon2Type?: string | undefined;
+    argon2TimeCost: number | undefined;
+    argon2MemoryCost: number | undefined;
+    argon2Parallelism: number | undefined;
     defaultFieldSelector?: { [key: string]: 0 | 1 } | undefined;
     collection?: string | undefined;
     loginTokenExpirationHours?: number | undefined;
@@ -183,6 +198,8 @@ export namespace Accounts {
 
   function removeEmail(userId: string, email: string): Promise<void>;
 
+  function replaceEmailAsync(userId: string, oldEmail: string, newEmail: string, verified?: boolean): Promise<void>;
+
   function onCreateUser(
     func: (options: { profile?: {} | undefined }, user: Meteor.User) => void
   ): void;
@@ -197,26 +214,43 @@ export namespace Accounts {
     options?: { fields?: Mongo.FieldSpecifier | undefined }
   ): Promise<Meteor.User | null | undefined>;
 
+  interface SendEmailOptions {
+    from: string;
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+    headers?: Header | undefined;
+  }
+
+  interface SendEmailResult {
+    email: string;
+    user: Meteor.User;
+    token: string;
+    url: string;
+    options: SendEmailOptions;
+  }
+
   function sendEnrollmentEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): Promise<void>;
+  ): Promise<SendEmailResult>;
 
   function sendResetPasswordEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): Promise<void>;
+  ): Promise<SendEmailResult>;
 
   function sendVerificationEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): Promise<void>;
+  ): Promise<SendEmailResult>;
 
   function setUsername(userId: string, newUsername: string): Promise<void>;
 
@@ -337,11 +371,11 @@ export namespace Accounts {
    * - a login method result object
    **/
   function registerLoginHandler(
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
   function registerLoginHandler(
     name: string,
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
 
   type Password =
@@ -353,16 +387,16 @@ export namespace Accounts {
 
   /**
    *
-   * Check whether the provided password matches the bcrypt'ed password in
+   * Check whether the provided password matches the encrypted password in
    * the database user record. `password` can be a string (in which case
-   * it will be run through SHA256 before bcrypt) or an object with
-   * properties `digest` and `algorithm` (in which case we bcrypt
+   * it will be run through SHA256 before bcrypt or argon2) or an object with
+   * properties `digest` and `algorithm` (in which case we bcrypt/argon2
    * `password.digest`).
    */
   function _checkPasswordAsync(
     user: Meteor.User,
     password: Password
-  ): Promise<{ userId: string; error?: any }>
+  ): Promise<{ userId: string; error?: any }>;
 }
 
 export namespace Accounts {

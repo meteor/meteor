@@ -131,7 +131,7 @@ var identifyBrowser = function(userAgentString) {
       patch: 0
     };
   }
-  var userAgent = lookupUserAgent(userAgentString.substring(0, 150));
+  var userAgent = lookupUserAgent(userAgentString);
   return {
     name: camelCase(userAgent.family),
     major: +userAgent.major,
@@ -436,7 +436,7 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
-async function getBoilerplateAsync(request, arch) {
+async function getBoilerplateAsync(request, arch, response) {
   let boilerplate = boilerplateByArch[arch];
   await runtimeConfig.hooks.forEachAsync(async hook => {
     const meteorRuntimeConfig = await hook({
@@ -469,7 +469,7 @@ async function getBoilerplateAsync(request, arch) {
     promise = promise
       .then(() => {
         const callback = boilerplateDataCallbacks[key];
-        return callback(request, data, arch);
+        return callback(request, data, arch, response);
       })
       .then(result => {
         // Callbacks should return false if they did not make any changes.
@@ -1224,6 +1224,7 @@ async function runWebAppServer() {
       }
 
       var request = WebApp.categorizeRequest(req);
+      var response = res;
 
       if (request.url.query && request.url.query['meteor_css_resource']) {
         // In this case, we're requesting a CSS resource in the meteor-specific
@@ -1283,7 +1284,7 @@ async function runWebAppServer() {
       // Promise that will be resolved when the program is unpaused.
       await WebApp.clientPrograms[arch].paused;
 
-      return getBoilerplateAsync(request, arch)
+      return getBoilerplateAsync(request, arch, response)
         .then(({ stream, statusCode, headers: newHeaders }) => {
           if (!statusCode) {
             statusCode = res.statusCode ? res.statusCode : 200;
@@ -1295,10 +1296,12 @@ async function runWebAppServer() {
 
           res.writeHead(statusCode, headers);
 
-          stream.pipe(res, {
-            // End the response when the stream ends.
-            end: true,
-          });
+          if (!disableBoilerplateResponse) {
+            stream.pipe(res, {
+              // End the response when the stream ends.
+              end: true,
+            });
+          }
         })
         .catch(error => {
           Log.error('Error running template: ' + error.stack);
@@ -1552,6 +1555,11 @@ var additionalStaticJs = {};
 WebAppInternals.addStaticJs = function(contents) {
   additionalStaticJs['/' + sha1(contents) + '.js'] = contents;
 };
+
+var disableBoilerplateResponse = false;
+WebAppInternals.disableBoilerplateResponse = function() {
+  disableBoilerplateResponse = true;
+}
 
 // Exported for tests
 WebAppInternals.getBoilerplate = getBoilerplate;

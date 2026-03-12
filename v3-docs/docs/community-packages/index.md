@@ -27,3 +27,15 @@ Please bear in mind if you are adding a package to this list, try providing as m
 #### Method/Subscription helpers
 
 - [`meteor-rpc`](./meteor-rpc.md), Meteor Methods Evolved with type checking and runtime validation
+- [`jam:method`](./jam-method.md), An easy way to create Meteor methods with extensions to offline handling
+- [`jam:pub-sub`](./pub-sub.md), Publish / subscribe using a Method and/or Change Streams, and cache subscriptions for Meteor apps
+
+#### MongoDB collection extensions
+
+- [`jam:mongo-transactions`](./mongo-transactions.md), An easy way to use Mongo Transactions for Meteor apps
+- [`jam:soft-delete`](./soft-delete.md), An easy way to add soft deletes to your Meteor app
+- [`jam:archive`](./archive.md),
+
+#### Utilities
+
+- [`jam:offline`](./offline.md), An easy way to give your Meteor app offline capabilities and make it feel instant
